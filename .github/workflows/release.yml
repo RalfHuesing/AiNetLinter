@@ -51,7 +51,7 @@ jobs:
       - name: Rename and Prepare
         shell: pwsh
         run: |
-          $publishedExecutable = Get-ChildItem -Path "./publish" -File | Where-Object { $_.Name -match "AiNetLinter" -and $_.Extension -notmatch "json|pdb|dll" } | Select-Object -First 1
+          $publishedExecutable = Get-ChildItem -Path "./publish" -File | Where-Object { $_.Name -match "AiNetLinter" -and $_.Extension -in ".exe", "" } | Select-Object -First 1
           $newName = "${{ matrix.executable }}"
 
           if ($publishedExecutable) {
