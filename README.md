@@ -147,6 +147,28 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `1`: Regelbrüche wurden identifiziert und ausgegeben.
 *   `2`: Fataler Fehler (z. B. IO-Exception, MSBuildWorkspace-Ladefehler).
 
+### Ausgabeformate
+
+Alle Dateipfade in der Ausgabe sind **relativ zum `--path`-Argument** (Verzeichnis bzw. übergeordnetes Verzeichnis bei `.sln`/`.slnx`), mit Forward-Slashes.
+
+#### Text (Standard, LLM-optimiert)
+
+Token-effiziente Ausgabe für AI-Agenten. Bei Erfolg: `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, gefolgt von sortierten Einzeilern.
+
+```
+# AiNetLinter · 2 violations
+Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausserhalb betroffener Stellen/Zeilen.
+
+src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed
+src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500)
+```
+
+Zeilenformat: `{relativerPfad}:{zeile} {RegelName} | {Details}`
+
+#### SARIF (`--format sarif`)
+
+Strukturiertes JSON für CI/CD-Integration. `artifactLocation.uri` enthält relative Pfade (Basis: `--path`).
+
 ---
 
 ## 6. Lokale Warnungs-Unterdrückung (Suppression)
