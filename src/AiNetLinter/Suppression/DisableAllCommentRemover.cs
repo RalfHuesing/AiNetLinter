@@ -1,0 +1,62 @@
+using System.Text.RegularExpressions;
+
+namespace AiNetLinter.Suppression;
+
+/// <summary>
+/// Entfernt exakte ainetlinter-disable-all-Zeilen aus C#-Quelldateien.
+/// </summary>
+public static partial class DisableAllCommentRemover
+{
+    /// <summary>
+    /// Ergebnis eines Remove-Laufs.
+    /// </summary>
+    public sealed record RemoveResult(int ScannedFiles, int ModifiedFiles);
+
+    /// <summary>
+    /// Entfernt exakte Disable-all-Zeilen aus allen analysierbaren .cs-Dateien unter path.
+    /// </summary>
+    public static async Task<RemoveResult> RemoveAsync(string path)
+    {
+        var absolutePaths = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(path);
+        return RemoveFromFiles(absolutePaths);
+    }
+
+    /// <summary>
+    /// Entfernt exakte Disable-all-Zeilen aus einer Datei, sofern vorhanden.
+    /// </summary>
+    public static bool TryRemoveFromFile(string absolutePath)
+    {
+        var content = File.ReadAllText(absolutePath);
+        var updated = RemoveDisableAllLines(content);
+        if (string.Equals(content, updated, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        File.WriteAllText(absolutePath, updated);
+        return true;
+    }
+
+    internal static string RemoveDisableAllLines(string content)
+    {
+        return DisableAllLinePattern().Replace(content, string.Empty);
+    }
+
+    private static RemoveResult RemoveFromFiles(IReadOnlyList<string> absolutePaths)
+    {
+        int modified = 0;
+
+        foreach (var absolutePath in absolutePaths)
+        {
+            if (TryRemoveFromFile(absolutePath))
+            {
+                modified++;
+            }
+        }
+
+        return new RemoveResult(absolutePaths.Count, modified);
+    }
+
+    [GeneratedRegex(@"^// ainetlinter-disable all(?:\r?\n|$)", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex DisableAllLinePattern();
+}
