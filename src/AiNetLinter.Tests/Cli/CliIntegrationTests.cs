@@ -40,7 +40,7 @@ public sealed class CliIntegrationTests
         // Assert
         Assert.Null(error == "" ? null : error);
         Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
-        Assert.Contains("[SUCCESS]", output);
+        Assert.Contains("OK", output);
     }
 
     [Fact]
