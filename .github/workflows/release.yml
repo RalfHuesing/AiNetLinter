@@ -44,7 +44,7 @@ jobs:
           -c Release
           -r ${{ matrix.rid }}
           --self-contained true
-          -p:PublishSingleFile=true
+          -p:PublishSingleFile=false
           -p:PublishTrimmed=false
           -o ./publish
 
@@ -71,7 +71,8 @@ jobs:
             # 7z ist auf allen GitHub Windows-Runnern vorinstalliert und archiviert rekursiv korrekt
             7z a "../AiNetLinter-${{ matrix.rid }}.zip" . -r | Out-Null
           } else {
-            tar -czf "../AiNetLinter-${{ matrix.rid }}.tar.gz" .
+            # Auf Linux/macOS nutzen wir das native zip-Tool, um Dateirechte (executable bits) zu erhalten
+            zip -r "../AiNetLinter-${{ matrix.rid }}.zip" .
           }
           Pop-Location
 
@@ -79,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: archive-${{ matrix.rid }}
-          path: ./AiNetLinter-${{ matrix.rid }}.*
+          path: ./AiNetLinter-${{ matrix.rid }}.zip
           if-no-files-found: error
           retention-days: 1
 
