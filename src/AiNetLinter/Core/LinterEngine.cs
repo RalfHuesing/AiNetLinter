@@ -59,33 +59,19 @@ public sealed class LinterEngine
 
     private void AnalyzeSingleFile(string file, ConcurrentBag<RuleViolation> violations)
     {
-        try
+        var content = File.ReadAllText(file);
+        var fileViolations = LinterAnalyzer.Analyze(file, content, _config);
+        foreach (var violation in fileViolations)
         {
-            var content = File.ReadAllText(file);
-            var fileViolations = LinterAnalyzer.Analyze(file, content, _config);
-            foreach (var violation in fileViolations)
-            {
-                violations.Add(violation);
-            }
-        }
-        catch (Exception ex)
-        {
-            violations.Add(new RuleViolation
-            {
-                FilePath = file,
-                LineNumber = 1,
-                RuleName = "System.IO.Exception",
-                Details = $"Fehler beim Lesen der Datei: {ex.Message}",
-                Guidance = "Stelle sicher, dass die Datei zugreifbar ist und die Berechtigungen stimmen."
-            });
+            violations.Add(violation);
         }
     }
 
-    private static void RunTestSentinel(HashSet<string> testClasses, List<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
+    private void RunTestSentinel(HashSet<string> testClasses, List<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
     {
         foreach (var srcClass in sourceClasses)
         {
-            if (srcClass.MaxCognitiveComplexity > 3)
+            if (srcClass.MaxCognitiveComplexity > _config.Metrics.MinCognitiveComplexityForTest)
             {
                 CheckTestPresence(srcClass, testClasses, violations);
             }
@@ -94,8 +80,12 @@ public sealed class LinterEngine
 
     private void RunInheritanceDepthCheck(List<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
     {
-        var classMap = sourceClasses.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (var cls in sourceClasses)
+        var mergedClasses = sourceClasses.GroupBy(c => c.FullyQualifiedName, StringComparer.OrdinalIgnoreCase)
+            .Select(MergeClassInfos)
+            .ToList();
+
+        var classMap = mergedClasses.ToDictionary(c => c.FullyQualifiedName, StringComparer.OrdinalIgnoreCase);
+        foreach (var cls in mergedClasses)
         {
             var depth = GetInheritanceDepth(cls, classMap);
             if (depth > _config.Metrics.MaxInheritanceDepth)
@@ -112,6 +102,26 @@ public sealed class LinterEngine
         }
     }
 
+    private static ClassInfo MergeClassInfos(IGrouping<string, ClassInfo> group)
+    {
+        var list = group.ToList();
+        if (list.Count == 1) return list[0];
+
+        var baseClassEntry = list.FirstOrDefault(c => !string.IsNullOrEmpty(c.BaseClass)) ?? list[0];
+
+        return new ClassInfo
+        {
+            Name = baseClassEntry.Name,
+            FilePath = baseClassEntry.FilePath,
+            LineNumber = baseClassEntry.LineNumber,
+            MaxCognitiveComplexity = list.Max(c => c.MaxCognitiveComplexity),
+            BaseClass = baseClassEntry.BaseClass,
+            Namespace = baseClassEntry.Namespace,
+            Usings = list.SelectMany(c => c.Usings).Distinct().ToArray(),
+            HasTestMethods = list.Any(c => c.HasTestMethods)
+        };
+    }
+
     private static int GetInheritanceDepth(ClassInfo cls, Dictionary<string, ClassInfo> classMap)
     {
         int depth = 0;
@@ -120,18 +130,43 @@ public sealed class LinterEngine
         {
             depth++;
             if (depth > 20) return depth;
-            current = ResolveNextClass(current.BaseClass, classMap);
+            current = ResolveNextClass(current, current.BaseClass, classMap);
         }
         return depth;
     }
 
-    private static ClassInfo? ResolveNextClass(string baseClass, Dictionary<string, ClassInfo> classMap)
+    private static ClassInfo? ResolveNextClass(ClassInfo current, string baseClass, Dictionary<string, ClassInfo> classMap)
     {
-        if (classMap.TryGetValue(baseClass, out var parent))
+        if (baseClass.Contains('.'))
         {
-            return parent;
+            return classMap.TryGetValue(baseClass, out var parent) ? parent : null;
+        }
+
+        return ResolveFromNamespace(current, baseClass, classMap)
+            ?? ResolveFromUsings(current, baseClass, classMap)
+            ?? ResolveGlobally(baseClass, classMap);
+    }
+
+    private static ClassInfo? ResolveFromNamespace(ClassInfo current, string baseClass, Dictionary<string, ClassInfo> classMap)
+    {
+        if (string.IsNullOrEmpty(current.Namespace)) return null;
+        var fqName = $"{current.Namespace}.{baseClass}";
+        return classMap.TryGetValue(fqName, out var parent) ? parent : null;
+    }
+
+    private static ClassInfo? ResolveFromUsings(ClassInfo current, string baseClass, Dictionary<string, ClassInfo> classMap)
+    {
+        foreach (var ns in current.Usings)
+        {
+            var fqName = $"{ns}.{baseClass}";
+            if (classMap.TryGetValue(fqName, out var parent)) return parent;
         }
         return null;
+    }
+
+    private static ClassInfo? ResolveGlobally(string baseClass, Dictionary<string, ClassInfo> classMap)
+    {
+        return classMap.TryGetValue(baseClass, out var parent) ? parent : null;
     }
 
     private static void CollectClassesFromFile(string file, HashSet<string> testClasses, List<ClassInfo> sourceClasses)
@@ -155,13 +190,23 @@ public sealed class LinterEngine
     {
         if (IsTestFile(file))
         {
-            foreach (var cls in classes)
+            AddTestClasses(classes, testClasses);
+        }
+        else
+        {
+            sourceClasses.AddRange(classes);
+        }
+    }
+
+    private static void AddTestClasses(List<ClassInfo> classes, HashSet<string> testClasses)
+    {
+        foreach (var cls in classes)
+        {
+            if (cls.HasTestMethods)
             {
                 testClasses.Add(cls.Name);
             }
-            return;
         }
-        sourceClasses.AddRange(classes);
     }
 
     private static bool IsTestFile(string file)
@@ -430,60 +475,4 @@ public sealed class LinterEngine
                            !file.Contains($"{Path.DirectorySeparatorChar}.vs{Path.DirectorySeparatorChar}"));
     }
 
-    /// <summary>
-    /// Hilfs-Walker zum Sammeln aller deklarierten Klassen und deren maximalen Komplexitäten.
-    /// </summary>
-    private sealed class ClassCollector : CSharpSyntaxWalker
-    {
-        public List<ClassInfo> Classes { get; } = new();
-        private readonly string _filePath;
-
-        public ClassCollector(string filePath)
-        {
-            _filePath = filePath;
-        }
-
-        public override void VisitClassDeclaration(ClassDeclarationSyntax node)
-        {
-            var maxComplexity = GetMaxMethodComplexity(node);
-            var baseClass = GetBaseClass(node);
-
-            Classes.Add(new ClassInfo
-            {
-                Name = node.Identifier.Text,
-                FilePath = _filePath,
-                LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-                MaxCognitiveComplexity = maxComplexity,
-                BaseClass = baseClass
-            });
-
-            base.VisitClassDeclaration(node);
-        }
-
-        private static int GetMaxMethodComplexity(ClassDeclarationSyntax node)
-        {
-            var max = 0;
-            foreach (var method in node.Members.OfType<MethodDeclarationSyntax>())
-            {
-                max = Math.Max(max, ComplexityCalculator.GetCognitiveComplexity(method));
-            }
-            return max;
-        }
-
-        private static string? GetBaseClass(ClassDeclarationSyntax node)
-        {
-            if (node.BaseList == null) return null;
-            if (node.BaseList.Types.Count == 0) return null;
-            return node.BaseList.Types[0].Type.ToString();
-        }
-    }
-
-    internal sealed class ClassInfo
-    {
-        public required string Name { get; init; }
-        public required string FilePath { get; init; }
-        public required int LineNumber { get; init; }
-        public required int MaxCognitiveComplexity { get; init; }
-        public string? BaseClass { get; init; }
-    }
 }
