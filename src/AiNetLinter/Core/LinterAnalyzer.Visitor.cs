@@ -85,6 +85,21 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         }
 
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
+
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null)
+        {
+            Classes.Add(new ClassInfo
+            {
+                Name = symbol.Name,
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                MaxCognitiveComplexity = GetMaxMethodComplexity(node),
+                Symbol = symbol,
+                HasTestMethods = CheckForTestMethods(node)
+            });
+        }
+
         base.VisitClassDeclaration(node);
     }
 
@@ -191,7 +206,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitIdentifierName(IdentifierNameSyntax node)
     {
-        if (!_config.Global.AllowDynamic && node.Identifier.Text == "dynamic")
+        if (!_config.Global.AllowDynamic && IsDynamicType(node))
         {
             _violations.Add(new RuleViolation
             {
@@ -244,7 +259,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitCatchClause(CatchClauseSyntax node)
     {
-        if (!_config.Global.EnforceNoSilentCatch || IsTestFile())
+        if (!_config.Global.EnforceNoSilentCatch || _isTestFile)
         {
             base.VisitCatchClause(node);
             return;
@@ -275,5 +290,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var hasThrow = node.Block.DescendantNodes().OfType<ThrowStatementSyntax>().Any();
         var hasInvoke = node.Block.DescendantNodes().OfType<InvocationExpressionSyntax>().Any();
         return !hasThrow && !hasInvoke;
+    }
+
+    private bool IsDynamicType(IdentifierNameSyntax node)
+    {
+        var typeInfo = _semanticModel.GetTypeInfo(node);
+        return typeInfo.Type?.TypeKind == TypeKind.Dynamic;
     }
 }

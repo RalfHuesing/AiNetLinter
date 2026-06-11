@@ -18,31 +18,38 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly LinterConfig _config;
     private readonly List<RuleViolation> _violations = new();
     private string _currentNamespace = "";
+    private readonly bool _isTestFile;
 
-    private LinterAnalyzer(string filePath, SyntaxTree tree, SemanticModel semanticModel, LinterConfig config)
+    public List<ClassInfo> Classes { get; } = new();
+
+    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile)
         : base(SyntaxWalkerDepth.Node)
     {
         _filePath = filePath;
-        _tree = tree;
+        _tree = semanticModel.SyntaxTree;
         _semanticModel = semanticModel;
         _config = config;
+        _isTestFile = isTestFile;
     }
 
     /// <summary>
     /// Analysiert ein Dokument und gibt alle gefundenen Verstöße zurück.
     /// </summary>
-    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SyntaxTree tree, SemanticModel semanticModel, LinterConfig config)
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile = false)
     {
-        var analyzer = new LinterAnalyzer(filePath, tree, semanticModel, config);
+        var analyzer = new LinterAnalyzer(filePath, semanticModel, config, isTestFile);
         analyzer.RunAnalysis();
         return analyzer._violations;
     }
 
-    private void RunAnalysis()
+    internal IReadOnlyCollection<RuleViolation> Violations => _violations;
+
+    internal void RunAnalysis()
     {
         CheckLineCount();
         CheckNullableEnable();
         Visit(_tree.GetRoot());
+        FilterSuppressedViolations();
     }
 
     private void CheckLineCount()
@@ -134,7 +141,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool ShouldSkipXmlDoc(SyntaxNode node)
     {
         if (!_config.Global.EnforceXmlDocumentation) return true;
-        if (IsTestFile()) return true;
+        if (_isTestFile) return true;
         if (node is MethodDeclarationSyntax method && method.Modifiers.Any(m => m.IsKind(SyntaxKind.OverrideKeyword)))
         {
             return true;
@@ -199,7 +206,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool ShouldSkipPascalCase()
     {
         if (!_config.Global.EnforcePascalCase) return true;
-        return IsTestFile();
+        return _isTestFile;
     }
 
     private void CheckSemanticNaming(ParameterListSyntax parameterList, bool isPublicMethod)
@@ -217,7 +224,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (!_config.Global.EnforceSemanticNaming) return true;
         if (!isPublicMethod) return true;
-        return IsTestFile();
+        return _isTestFile;
     }
 
     private static HashSet<string> GetForbiddenNames()
@@ -244,16 +251,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         }
     }
 
-    private bool IsTestFile()
-    {
-        if (string.IsNullOrEmpty(_filePath)) return false;
-        if (_filePath.EndsWith("Tests.cs", StringComparison.OrdinalIgnoreCase)) return true;
-        if (_filePath.EndsWith("Test.cs", StringComparison.OrdinalIgnoreCase)) return true;
-
-        var normalized = _filePath.Replace('\\', '/');
-        return normalized.Contains("/Tests/");
-    }
-
     private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node)
     {
         return node.Modifiers.Any(m => 
@@ -270,7 +267,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private void CheckNullableEnable()
     {
         if (!_config.Global.EnforceNullableEnable) return;
-        if (IsTestFile()) return;
+        if (_isTestFile) return;
 
         var nullableContext = _semanticModel.GetNullableContext(0);
         var isEnabled = nullableContext.HasFlag(NullableContext.Enabled);
@@ -286,5 +283,83 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = "Füge '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."
             });
         }
+    }
+
+    private int GetMaxMethodComplexity(ClassDeclarationSyntax node)
+    {
+        var max = 0;
+        foreach (var method in node.Members.OfType<MethodDeclarationSyntax>())
+        {
+            max = Math.Max(max, ComplexityCalculator.GetCognitiveComplexity(method));
+        }
+        return max;
+    }
+
+    private bool CheckForTestMethods(ClassDeclarationSyntax node)
+    {
+        return node.Members.OfType<MethodDeclarationSyntax>()
+            .SelectMany(m => m.AttributeLists)
+            .SelectMany(al => al.Attributes)
+            .Any(IsTestAttribute);
+    }
+
+    private bool IsTestAttribute(AttributeSyntax attr)
+    {
+        var symbol = _semanticModel.GetSymbolInfo(attr).Symbol;
+        var attrType = symbol?.ContainingType;
+        if (attrType == null) return false;
+
+        var ns = attrType.ContainingNamespace?.ToDisplayString();
+        if (ns == null) return false;
+
+        return ns.StartsWith("Xunit", StringComparison.OrdinalIgnoreCase) ||
+               ns.StartsWith("NUnit", StringComparison.OrdinalIgnoreCase) ||
+               ns.StartsWith("Microsoft.VisualStudio.TestTools.UnitTesting", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void FilterSuppressedViolations()
+    {
+        var activeViolations = _violations
+            .Where(v => !IsSuppressed(v.RuleName ?? "", v.LineNumber))
+            .ToList();
+        _violations.Clear();
+        _violations.AddRange(activeViolations);
+    }
+
+    private bool IsSuppressed(string ruleName, int lineNumber)
+    {
+        return IsFileWideSuppressed(ruleName) || IsLineSuppressed(ruleName, lineNumber);
+    }
+
+    private bool IsFileWideSuppressed(string ruleName)
+    {
+        var text = _tree.GetText();
+        foreach (var line in text.Lines)
+        {
+            var lineText = line.ToString();
+            if (MatchDisableComment(lineText, ruleName))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsLineSuppressed(string ruleName, int lineNumber)
+    {
+        var text = _tree.GetText();
+        if (lineNumber <= 0 || lineNumber > text.Lines.Count) return false;
+
+        var lineText = text.Lines[lineNumber - 1].ToString();
+        return MatchDisableComment(lineText, ruleName);
+    }
+
+    private static bool MatchDisableComment(string lineText, string ruleName)
+    {
+        int index = lineText.IndexOf("ainetlinter-disable");
+        if (index < 0) return false;
+
+        var suffix = lineText.Substring(index + "ainetlinter-disable".Length).Trim();
+        return suffix.Length == 0 || suffix.StartsWith(ruleName, StringComparison.OrdinalIgnoreCase);
     }
 }
