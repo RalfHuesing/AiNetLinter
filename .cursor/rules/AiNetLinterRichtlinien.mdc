@@ -48,7 +48,7 @@ Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle ma
 
 ## 4. Dokumentation & Update-Pflicht
 
-*   **Update-Pflicht (ohne Extra-Auftrag):** Relevante Markdown-Dokumentation (wie `README.md` oder die in `Docs/` befindlichen Dokumente) **muss mit der Code-/Konfig-Änderung mitgeliefert werden** — der Nutzer muss **nicht** extra auffordern, diese anzupassen. 
+*   **Update-Pflicht (ohne Extra-Auftrag):** Relevante Markdown-Dokumentation (wie `README.md` oder die in `Docs/` befindlichen Dokumente) sowie die globale Beispielkonfiguration `rules.json` **müssen mit der Code-/Konfig-Änderung mitgeliefert und aktualisiert werden** — der Nutzer muss **nicht** extra auffordern, diese anzupassen. 
 *   Bei jeder Feature-Änderung oder Erweiterung des Linter-Regelwerks muss die `ROADMAP.md` entsprechend aktualisiert werden.
 
 ---
