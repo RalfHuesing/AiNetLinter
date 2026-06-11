@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
+using AiNetLinter.Suppression;
 
 [assembly: InternalsVisibleTo("AiNetLinter.Tests")]
 
@@ -63,12 +64,14 @@ public sealed class LinterEngine
         var state = CreateAnalysisState(solution);
         await AnalyzeSolutionAsync(state, catalog);
 
+        var suppressionCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         if (_config.Global.EnableTestSentinel)
         {
-            RunTestSentinel(state.TestClasses, state.SourceClasses, state.Violations);
+            RunTestSentinel(state.TestClasses, state.SourceClasses, state.Violations, suppressionCache);
         }
 
-        RunInheritanceDepthCheck(state.SourceClasses, state.Violations);
+        RunInheritanceDepthCheck(state.SourceClasses, state.Violations, suppressionCache);
 
         return state.Violations.ToArray();
     }
@@ -254,13 +257,14 @@ public sealed class LinterEngine
     private void RunTestSentinel(
         ConcurrentDictionary<string, byte> testClasses,
         ConcurrentBag<ClassInfo> sourceClasses,
-        ConcurrentBag<RuleViolation> violations)
+        ConcurrentBag<RuleViolation> violations,
+        Dictionary<string, string> suppressionCache)
     {
         foreach (var srcClass in sourceClasses)
         {
             if (srcClass.MaxCognitiveComplexity > _config.Metrics.MinCognitiveComplexityForTest)
             {
-                CheckTestPresence(srcClass, testClasses, violations);
+                CheckTestPresence(srcClass, testClasses, violations, suppressionCache);
             }
         }
     }
@@ -268,12 +272,15 @@ public sealed class LinterEngine
     private static void CheckTestPresence(
         ClassInfo srcClass,
         ConcurrentDictionary<string, byte> testClasses,
-        ConcurrentBag<RuleViolation> violations)
+        ConcurrentBag<RuleViolation> violations,
+        Dictionary<string, string> suppressionCache)
     {
         string expectedTest1 = $"{srcClass.Name}Tests";
         string expectedTest2 = $"{srcClass.Name}Test";
 
-        if (!testClasses.ContainsKey(expectedTest1) && !testClasses.ContainsKey(expectedTest2))
+        if (!testClasses.ContainsKey(expectedTest1) &&
+            !testClasses.ContainsKey(expectedTest2) &&
+            !IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, suppressionCache))
         {
             violations.Add(new RuleViolation
             {
@@ -286,12 +293,20 @@ public sealed class LinterEngine
         }
     }
 
-    private void RunInheritanceDepthCheck(ConcurrentBag<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
+    private void RunInheritanceDepthCheck(
+        ConcurrentBag<ClassInfo> sourceClasses,
+        ConcurrentBag<RuleViolation> violations,
+        Dictionary<string, string> suppressionCache)
     {
         foreach (var cls in sourceClasses)
         {
             var depth = GetInheritanceDepth(cls.Symbol);
-            if (depth > _config.Metrics.MaxInheritanceDepth)
+            if (depth > _config.Metrics.MaxInheritanceDepth &&
+                !IsSuppressedViolation(
+                    cls.FilePath,
+                    nameof(_config.Metrics.MaxInheritanceDepth),
+                    cls.LineNumber,
+                    suppressionCache))
             {
                 violations.Add(new RuleViolation
                 {
@@ -303,6 +318,21 @@ public sealed class LinterEngine
                 });
             }
         }
+    }
+
+    private static bool IsSuppressedViolation(
+        string filePath,
+        string ruleName,
+        int lineNumber,
+        Dictionary<string, string> suppressionCache)
+    {
+        if (!suppressionCache.TryGetValue(filePath, out var fileContent))
+        {
+            fileContent = File.Exists(filePath) ? File.ReadAllText(filePath) : string.Empty;
+            suppressionCache[filePath] = fileContent;
+        }
+
+        return SuppressionEvaluator.IsSuppressed(fileContent, ruleName, lineNumber);
     }
 
     private static int GetInheritanceDepth(INamedTypeSymbol symbol)
