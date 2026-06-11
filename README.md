@@ -54,7 +54,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 
 ## 3. Kernfeatures von AiNetLinter
 
-*   **Roslyn-basierte Blitz-Analyse:** Das Tool nutzt bewusst **nicht** den schweren `MSBuildWorkspace` (der ein vollständiges Kompilieren erfordert), sondern parst C#-Dateien direkt über `CSharpSyntaxTree.ParseText` und analysiert sie mit einem optimierten `CSharpSyntaxWalker`. Das erlaubt Analysen von hunderten Quelldateien in wenigen Millisekunden.
+*   **Roslyn-basierte semantische Analyse:** Das Tool nutzt den `MSBuildWorkspace` von Roslyn, um die gesamte Solution (.sln / .slnx) inklusive aller Projekte und deren Abhängigkeiten vollständig im Speicher zu evaluieren. Dadurch stehen dem Linter echte semantische Informationen und Typsymbole zur Verfügung, was eine fehlerfreie Vererbungstiefen- und Namespace-Kopplungs-Prüfung ermöglicht.
 *   **JSON-Konfiguration:** Einfache, declarative Steuerung aller Regeln über eine zentrale `rules.json`.
 *   **Actionable AI-Feedback auf stdout:** Fehlermeldungen sind so formuliert, dass sie einem AI-Agenten im Terminal eine präzise, direkt ausführbare Arbeitsanweisung geben.
 *   **Unit-Test-Integration:** Der Linter kann direkt als Assert-Schritt in klassischen xUnit/NUnit-Tests ausgeführt werden, um die Einhaltung der Regeln im lokalen Entwicklungs-Loop zu erzwingen.
@@ -108,7 +108,7 @@ ainetlinter --config <Pfad-zur-Config-JSON> --path <Pfad-zur-slnx-oder-Verzeichn
 ### Parameter
 
 *   `-c`, `--config` (Pfad): Der Pfad zur `rules.json`.
-*   `-p`, `--path` (Pfad): Der Pfad zur modernen `.slnx`-Projektmappendatei, einer `.csproj` oder direkt zu einem Quellcode-Verzeichnis.
+*   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis, das eine solche Datei enthält (Erforderlich).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Logging-Ausgaben für Debugging-Zwecke.
 
 ### CLI-Ausgabe (Beispiel für AI-Agenten)
