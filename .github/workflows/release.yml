@@ -55,7 +55,9 @@ jobs:
           $newName = "${{ matrix.executable }}"
 
           if ($publishedExecutable) {
-            Rename-Item -Path $publishedExecutable.FullName -NewName $newName
+            if ($publishedExecutable.Name -ne $newName) {
+              Rename-Item -Path $publishedExecutable.FullName -NewName $newName
+            }
           } else {
             Write-Error "Keine ausfuehrbare Datei gefunden!"
             exit 1
