@@ -1,3 +1,5 @@
+using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AiNetLinter.Configuration;
@@ -16,46 +18,42 @@ public static class Program
     /// </summary>
     public static async Task<int> Main(string[] args)
     {
-        try
+        var configOpt = new Option<string>(new[] { "--config", "-c" }, "Pfad zur JSON-Konfigurationsdatei (rules.json)") { IsRequired = true };
+        var pathOpt = new Option<string>(new[] { "--path", "-p" }, "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis") { IsRequired = true };
+        var graphOpt = new Option<string?>(new[] { "--graph", "-g" }, "Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md)");
+        var formatOpt = new Option<string>(new[] { "--format", "-f" }, () => "text", "Ausgabeformat: text (Standard) oder sarif");
+        var verboseOpt = new Option<bool>(new[] { "--verbose", "-v" }, "Detaillierte Protokollausgabe aktivieren");
+
+        var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
         {
-            var (configPath, targetPath, graphPath, format, verbose) = ParseArguments(args);
-            if (string.IsNullOrWhiteSpace(configPath) || string.IsNullOrWhiteSpace(targetPath))
+            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt
+        };
+
+        root.SetHandler(async context =>
+        {
+            try
             {
-                ShowUsage();
-                return 1;
+                var linterArgs = new LinterArgs
+                {
+                    ConfigPath = context.ParseResult.GetValueForOption(configOpt) ?? "",
+                    TargetPath = context.ParseResult.GetValueForOption(pathOpt) ?? "",
+                    GraphPath = context.ParseResult.GetValueForOption(graphOpt),
+                    Format = context.ParseResult.GetValueForOption(formatOpt) ?? "text",
+                    Verbose = context.ParseResult.GetValueForOption(verboseOpt)
+                };
+                
+                var exitCode = await ExecuteLinterAsync(linterArgs);
+                context.ExitCode = exitCode;
             }
-
-            var linterArgs = new LinterArgs(configPath, targetPath, graphPath, format, verbose);
-            return await ExecuteLinterAsync(linterArgs);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
-            Console.Error.WriteLine(ex.StackTrace);
-            return 2;
-        }
-    }
-
-    private static (string? configPath, string? targetPath, string? graphPath, string format, bool verbose) ParseArguments(string[] args)
-    {
-        string? configPath = FindArgument(args, "--config", "-c");
-        string? targetPath = FindArgument(args, "--path", "-p");
-        string? graphPath = FindArgument(args, "--graph", "-g");
-        string? format = FindArgument(args, "--format", "-f") ?? "text";
-        bool verbose = args.Contains("--verbose") || args.Contains("-v");
-        return (configPath, targetPath, graphPath, format.ToLowerInvariant(), verbose);
-    }
-
-    private static string? FindArgument(string[] args, string longName, string shortName)
-    {
-        for (int i = 0; i < args.Length - 1; i++)
-        {
-            if (args[i] == longName || args[i] == shortName)
+            catch (Exception ex)
             {
-                return args[i + 1];
+                Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
+                Console.Error.WriteLine(ex.StackTrace);
+                context.ExitCode = 2;
             }
-        }
-        return null;
+        });
+
+        return await root.InvokeAsync(args);
     }
 
     private static void LogStart(bool verbose, string configPath, string targetPath)
@@ -181,19 +179,6 @@ public static class Program
         }
     }
 
-    private static void ShowUsage()
-    {
-        Console.WriteLine("AiNetLinter - CLI-Linter für AI-optimierten .NET Code\n");
-        Console.WriteLine("Verwendung:");
-        Console.WriteLine("  ainetlinter --config <Pfad-zu-rules.json> --path <Pfad-zur-Solution-oder-Ordner>");
-        Console.WriteLine("\nOptionen:");
-        Console.WriteLine("  -c, --config    Pfad zur JSON-Konfigurationsdatei (rules.json) (Erforderlich)");
-        Console.WriteLine("  -p, --path      Pfad zur .slnx, .csproj, einer .cs Datei oder einem Verzeichnis (Erforderlich)");
-        Console.WriteLine("  -g, --graph     Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md) (Optional)");
-        Console.WriteLine("  -f, --format    Ausgabeformat: text (Standard) oder sarif (Optional)");
-        Console.WriteLine("  -v, --verbose   Detaillierte Protokollausgabe aktivieren");
-    }
-
     private sealed class SarifDocument
     {
         [JsonPropertyName("$schema")]
@@ -252,11 +237,12 @@ public static class Program
         public int StartLine { get; set; }
     }
 
-    private sealed record LinterArgs(
-        string ConfigPath,
-        string TargetPath,
-        string? GraphPath,
-        string Format,
-        bool Verbose
-    );
+    private sealed class LinterArgs
+    {
+        public required string ConfigPath { get; init; }
+        public required string TargetPath { get; init; }
+        public string? GraphPath { get; init; }
+        public required string Format { get; init; }
+        public required bool Verbose { get; init; }
+    }
 }

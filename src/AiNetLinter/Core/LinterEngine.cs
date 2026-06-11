@@ -87,21 +87,52 @@ public sealed class LinterEngine
         var compilation = await project.GetCompilationAsync();
         if (compilation == null) return;
 
+        bool isTestProj = IsTestProject(project);
+
         foreach (var document in project.Documents)
         {
-            await AnalyzeDocumentAsync(document, context);
+            await AnalyzeDocumentAsync(document, isTestProj, context);
         }
     }
 
-    private async Task AnalyzeDocumentAsync(Document document, AnalysisContext context)
+    private static bool IsTestProject(Project project)
+    {
+        foreach (var reference in project.MetadataReferences)
+        {
+            if (IsTestReference(reference.Display))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool IsTestReference(string? display)
+    {
+        if (string.IsNullOrEmpty(display)) return false;
+
+        var keywords = new[] { "xunit", "nunit", "testplatform", "unittesting" };
+        foreach (var keyword in keywords)
+        {
+            if (display.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisContext context)
     {
         if (!IsValidDocument(document, context.SolutionDir)) return;
 
-        var tree = await document.GetSyntaxTreeAsync();
         var semanticModel = await document.GetSemanticModelAsync();
-        if (tree == null || semanticModel == null) return;
+        if (semanticModel == null) return;
 
-        AnalyzeAndCollect(document.FilePath ?? document.Name, tree, semanticModel, context);
+        var filePath = document.FilePath ?? document.Name;
+        bool isTestFile = isTestProj || IsTestFile(filePath);
+
+        AnalyzeAndCollect(filePath, semanticModel, isTestFile, context);
     }
 
     private static bool IsValidDocument(Document document, string? solutionDir)
@@ -128,33 +159,27 @@ public sealed class LinterEngine
                path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void AnalyzeAndCollect(string filePath, SyntaxTree tree, SemanticModel semanticModel, AnalysisContext context)
+    private void AnalyzeAndCollect(string filePath, SemanticModel semanticModel, bool isTestFile, AnalysisContext context)
     {
-        var fileViolations = LinterAnalyzer.Analyze(filePath, tree, semanticModel, _config);
-        foreach (var violation in fileViolations)
+        var analyzer = new LinterAnalyzer(filePath, semanticModel, _config, isTestFile);
+        analyzer.RunAnalysis();
+
+        foreach (var violation in analyzer.Violations)
         {
             context.Violations.Add(violation);
         }
 
-        CollectClassesFromDocument(semanticModel, filePath, context);
-    }
-
-    private static void CollectClassesFromDocument(SemanticModel semanticModel, string filePath, AnalysisContext context)
-    {
-        var collector = new ClassCollector(filePath, semanticModel);
-        collector.Visit(semanticModel.SyntaxTree.GetRoot());
-
-        if (IsTestFile(filePath))
+        if (isTestFile)
         {
-            AddTestClasses(collector.Classes, context.TestClasses);
+            AddTestClasses(analyzer.Classes, context.TestClasses);
         }
         else
         {
-            context.SourceClasses.AddRange(collector.Classes);
+            context.SourceClasses.AddRange(analyzer.Classes);
         }
     }
 
-    private static void AddTestClasses(List<ClassInfo> classes, HashSet<string> testClasses)
+    private static void AddTestClasses(IReadOnlyCollection<ClassInfo> classes, HashSet<string> testClasses)
     {
         foreach (var cls in classes)
         {
