@@ -1,8 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.MSBuild;
-using Microsoft.Build.Locator;
+using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
@@ -27,12 +26,16 @@ public sealed class LinterEngine
     /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path)
     {
-        var slnPath = FindSolutionFile(path);
-        RegisterMSBuild();
+        using var catalog = await SourceFileCatalog.LoadAsync(path);
+        return await RunAsync(catalog);
+    }
 
-        using var workspace = MSBuildWorkspace.Create(CreateWorkspaceProperties());
-        var solution = await workspace.OpenSolutionAsync(slnPath);
-        return await RunAsync(solution);
+    /// <summary>
+    /// Führt die Analyse auf einer geladenen Solution aus.
+    /// </summary>
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog)
+    {
+        return await RunAsync(catalog.Solution, catalog);
     }
 
     /// <summary>
@@ -40,23 +43,13 @@ public sealed class LinterEngine
     /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution)
     {
-        var violations = new ConcurrentBag<RuleViolation>();
-        var testClasses = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
-        var sourceClasses = new ConcurrentBag<ClassInfo>();
-
-        await AnalyzeSolutionAsync(solution, violations, testClasses, sourceClasses);
-
-        if (_config.Global.EnableTestSentinel)
-        {
-            RunTestSentinel(testClasses, sourceClasses, violations);
-        }
-
-        RunInheritanceDepthCheck(sourceClasses, violations);
-
-        return violations.ToArray();
+        return await RunAsync(solution, catalog: null);
     }
 
-    internal static Dictionary<string, string> CreateWorkspaceProperties() => new()
+    /// <summary>
+    /// Erzeugt MSBuild-Workspace-Eigenschaften für Design-Time-Laden.
+    /// </summary>
+    public static Dictionary<string, string> CreateWorkspaceProperties() => new()
     {
         ["DesignTimeBuild"] = "true",
         ["SkipCompilerExecution"] = "true",
@@ -65,56 +58,82 @@ public sealed class LinterEngine
         ["RunCodeAnalysis"] = "false",
     };
 
+    private async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, SourceFileCatalog? catalog)
+    {
+        var state = CreateAnalysisState(solution);
+        await AnalyzeSolutionAsync(state, catalog);
+
+        if (_config.Global.EnableTestSentinel)
+        {
+            RunTestSentinel(state.TestClasses, state.SourceClasses, state.Violations);
+        }
+
+        RunInheritanceDepthCheck(state.SourceClasses, state.Violations);
+
+        return state.Violations.ToArray();
+    }
+
+    private static AnalysisState CreateAnalysisState(Solution solution)
+    {
+        return new AnalysisState(
+            solution,
+            new ConcurrentBag<RuleViolation>(),
+            new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase),
+            new ConcurrentBag<ClassInfo>());
+    }
+
     private static ParallelOptions CreateParallelOptions() => new()
     {
         MaxDegreeOfParallelism = Environment.ProcessorCount
     };
 
-    private static void RegisterMSBuild()
-    {
-        if (!MSBuildLocator.IsRegistered)
-        {
-            MSBuildLocator.RegisterDefaults();
-        }
-    }
-
-    private sealed record AnalysisContext(
+    private sealed record AnalysisState(
+        Solution Solution,
         ConcurrentBag<RuleViolation> Violations,
         ConcurrentDictionary<string, byte> TestClasses,
-        ConcurrentBag<ClassInfo> SourceClasses,
-        string? SolutionDir
+        ConcurrentBag<ClassInfo> SourceClasses
     );
 
-    private sealed record DocumentWorkItem(Document Document, bool IsTestProject);
-
-    private async Task AnalyzeSolutionAsync(
-        Solution solution,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, byte> testClasses,
-        ConcurrentBag<ClassInfo> sourceClasses)
+    private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath);
-        var context = new AnalysisContext(violations, testClasses, sourceClasses, solutionDir);
-        var workItems = await CollectDocumentWorkItemsAsync(solution, solutionDir);
+        var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
+        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
-            AnalyzeWorkItemAsync(item, context));
+            AnalyzeWorkItemAsync(item, state));
     }
 
-    private static async Task<List<DocumentWorkItem>> CollectDocumentWorkItemsAsync(Solution solution, string? solutionDir)
+    private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> ResolveWorkItemsAsync(
+        Solution solution,
+        SourceFileCatalog? catalog,
+        string? solutionDir)
     {
-        var workItems = new List<DocumentWorkItem>();
+        if (catalog != null)
+        {
+            return await catalog.CollectDocumentWorkItemsAsync();
+        }
+
+        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir);
+    }
+
+    private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsFromSolutionAsync(
+        Solution solution,
+        string? solutionDir)
+    {
+        var workItems = new List<CatalogDocumentWorkItem>();
 
         foreach (var project in solution.Projects)
         {
-            var projectItems = await CollectProjectWorkItemsAsync(project, solutionDir);
-            workItems.AddRange(projectItems);
+            var items = await CollectProjectDocumentsAsync(project, solutionDir);
+            workItems.AddRange(items);
         }
 
         return workItems;
     }
 
-    private static async Task<IReadOnlyList<DocumentWorkItem>> CollectProjectWorkItemsAsync(Project project, string? solutionDir)
+    private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectProjectDocumentsAsync(
+        Project project,
+        string? solutionDir)
     {
         var compilation = await project.GetCompilationAsync();
         if (compilation == null)
@@ -122,25 +141,33 @@ public sealed class LinterEngine
             return [];
         }
 
-        bool isTestProject = IsTestProject(project);
-        var workItems = new List<DocumentWorkItem>();
+        var isTestProject = IsTestProject(project);
+        return CollectValidDocuments(project, solutionDir, isTestProject);
+    }
+
+    private static List<CatalogDocumentWorkItem> CollectValidDocuments(
+        Project project,
+        string? solutionDir,
+        bool isTestProject)
+    {
+        var workItems = new List<CatalogDocumentWorkItem>();
 
         foreach (var document in project.Documents)
         {
-            if (!IsValidDocument(document, solutionDir))
+            if (!SourceFileCatalog.IsValidDocument(document, solutionDir))
             {
                 continue;
             }
 
-            workItems.Add(new DocumentWorkItem(document, isTestProject));
+            workItems.Add(new CatalogDocumentWorkItem(document, isTestProject));
         }
 
         return workItems;
     }
 
-    private async ValueTask AnalyzeWorkItemAsync(DocumentWorkItem item, AnalysisContext context)
+    private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state)
     {
-        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, context);
+        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state);
     }
 
     private static bool IsTestProject(Project project)
@@ -152,6 +179,7 @@ public sealed class LinterEngine
                 return true;
             }
         }
+
         return false;
     }
 
@@ -167,10 +195,11 @@ public sealed class LinterEngine
                 return true;
             }
         }
+
         return false;
     }
 
-    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisContext context)
+    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state)
     {
         var semanticModel = await document.GetSemanticModelAsync();
         if (semanticModel == null) return;
@@ -178,52 +207,28 @@ public sealed class LinterEngine
         var filePath = document.FilePath ?? document.Name;
         bool isTestFile = isTestProj || IsTestFile(filePath);
 
-        AnalyzeAndCollect(filePath, semanticModel, isTestFile, context);
+        AnalyzeAndCollect(filePath, semanticModel, isTestFile, state);
     }
 
-    private static bool IsValidDocument(Document document, string? solutionDir)
-    {
-        var path = document.FilePath ?? document.Name;
-        if (string.IsNullOrEmpty(path)) return false;
-        if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
-        if (IsGeneratedPath(path)) return false;
-
-        return IsInSolutionDir(document.FilePath, solutionDir);
-    }
-
-    private static bool IsInSolutionDir(string? filePath, string? solutionDir)
-    {
-        if (filePath == null || solutionDir == null) return true;
-        return filePath.StartsWith(solutionDir, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        return path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
-               path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
-               path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
-               path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void AnalyzeAndCollect(string filePath, SemanticModel semanticModel, bool isTestFile, AnalysisContext context)
+    private void AnalyzeAndCollect(string filePath, SemanticModel semanticModel, bool isTestFile, AnalysisState state)
     {
         var analyzer = new LinterAnalyzer(filePath, semanticModel, _config, isTestFile);
         analyzer.RunAnalysis();
 
         foreach (var violation in analyzer.Violations)
         {
-            context.Violations.Add(violation);
+            state.Violations.Add(violation);
         }
 
         if (isTestFile)
         {
-            AddTestClasses(analyzer.Classes, context.TestClasses);
+            AddTestClasses(analyzer.Classes, state.TestClasses);
         }
         else
         {
             foreach (var cls in analyzer.Classes)
             {
-                context.SourceClasses.Add(cls);
+                state.SourceClasses.Add(cls);
             }
         }
     }
@@ -310,29 +315,7 @@ public sealed class LinterEngine
             if (depth > 20) return depth;
             current = current.BaseType;
         }
+
         return depth;
-    }
-
-    private static string FindSolutionFile(string path)
-    {
-        if (File.Exists(path)) return GetValidFile(path);
-        if (Directory.Exists(path)) return SearchInDirectory(path);
-        throw new FileNotFoundException($"Keine .sln oder .slnx Datei gefunden unter: {path}");
-    }
-
-    private static string GetValidFile(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        if (ext == ".sln" || ext == ".slnx") return path;
-        throw new FileNotFoundException($"Keine gültige Solution-Datei: {path}");
-    }
-
-    private static string SearchInDirectory(string dir)
-    {
-        var files = Directory.GetFiles(dir, "*.slnx")
-            .Concat(Directory.GetFiles(dir, "*.sln"))
-            .ToArray();
-        if (files.Length > 0) return files[0];
-        throw new FileNotFoundException($"Keine .sln oder .slnx Datei im Verzeichnis gefunden: {dir}");
     }
 }

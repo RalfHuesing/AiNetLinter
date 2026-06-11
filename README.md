@@ -63,6 +63,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
 *   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
 *   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
+*   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
 
 ---
 
@@ -138,11 +139,51 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 
 ### Parameter
 
-*   `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich).
+*   `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
 *   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
+*   `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
+*   `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
+
+### Inkrementelle Migration (Baseline / Ratchet)
+
+**Use-Case:** Bestehende („alte“) Projekte mit hunderten oder tausenden Verstößen schrittweise auf AiNetLinter-Stand bringen — ohne Big-Bang-Refactoring und ohne Git-Integration.
+
+**Workflow:**
+
+1. **Einmalig einfrieren** — alle aktuellen Dateien per Checksumme in der Baseline speichern:
+   ```bash
+   ainetlinter --path ./MeinProjekt.slnx --create-baseline ainetlinter-baseline.json
+   ```
+2. **Baseline ins Repository committen** — die Datei `ainetlinter-baseline.json` versionieren.
+3. **Regulärer Lauf / CI** — nur Verstöße in geänderten Dateien melden:
+   ```bash
+   ainetlinter --config rules.json --path ./MeinProjekt.slnx --baseline ainetlinter-baseline.json
+   ```
+4. **Datei bearbeiten** — Verstöße nur in dieser Datei werden ausgegeben; die Baseline wird automatisch mit den aktuellen Checksummen aktualisiert (weicher Ratchet).
+
+**Semantik:**
+
+| Zustand | Verhalten |
+| :--- | :--- |
+| Checksumme identisch mit Baseline | Datei unverändert → Verstöße werden **nicht** gemeldet |
+| Checksumme abweichend oder Datei neu | Datei wurde angefasst → Verstöße werden **gemeldet** |
+| Irgendeine Abweichung erkannt | Gesamte Baseline-Datei wird neu geschrieben |
+
+**Weicher Ratchet:** Nach einem Lauf mit geänderten Dateien werden die neuen Checksummen eingefroren — auch wenn noch Verstöße bestehen. Um weitere Verbesserungen zu erzwingen, die Datei erneut bearbeiten.
+
+**Baseline-Format** (relative Pfade mit Forward-Slashes, Basis: `--path`):
+
+```json
+{
+  "version": 1,
+  "files": {
+    "src/MyApp/Program.cs": "a1b2c3d4e5f6..."
+  }
+}
+```
 
 ### Exit-Codes
 
@@ -221,12 +262,13 @@ public sealed class ArchitectureTests
     {
         var solutionPath = Path.GetFullPath("../../../../AiNetLinter.slnx");
         var configPath = Path.GetFullPath("../../../../rules.json");
+        var baselinePath = Path.GetFullPath("../../../../ainetlinter-baseline.json");
         var linterCliPath = Path.GetFullPath("../../../../src/AiNetLinter/bin/Debug/net10.0/AiNetLinter.exe");
 
         var processInfo = new ProcessStartInfo
         {
             FileName = linterCliPath,
-            Arguments = $"--config \"{configPath}\" --path \"{solutionPath}\"",
+            Arguments = $"--config \"{configPath}\" --path \"{solutionPath}\" --baseline \"{baselinePath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
