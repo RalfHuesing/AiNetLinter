@@ -1,0 +1,13 @@
+{
+  "Global": {
+    "EnforceSealedClasses": true,
+    "AllowDynamic": false,
+    "AllowOutParameters": false
+  },
+  "Metrics": {
+    "MaxLineCount": 500,
+    "MaxMethodParameterCount": 4,
+    "MaxCyclomaticComplexity": 5,
+    "MaxCognitiveComplexity": 5
+  }
+}
