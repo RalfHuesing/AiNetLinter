@@ -50,19 +50,54 @@ internal static class AnalyzerHelpers
         return CheckParentPublicContext(parent.Parent);
     }
 
+    private enum NullableState
+    {
+        None,
+        Enabled,
+        Disabled
+    }
+
     public static bool IsNullableEnabledGlobally(string filePath)
     {
         var dir = Path.GetDirectoryName(filePath);
         while (dir != null)
         {
-            var csprojFiles = SafeGetCsprojFiles(dir);
-            if (csprojFiles.Length > 0)
-            {
-                return CheckCsprojListForNullable(csprojFiles);
-            }
+            var state = CheckDirectoryForNullable(dir);
+            if (state == NullableState.Enabled) return true;
+            if (state == NullableState.Disabled) return false;
+
             dir = Path.GetDirectoryName(dir);
         }
         return false;
+    }
+
+    private static NullableState CheckDirectoryForNullable(string dir)
+    {
+        var propsState = CheckPropsFile(dir);
+        if (propsState != NullableState.None) return propsState;
+
+        return CheckCsprojFiles(dir);
+    }
+
+    private static NullableState CheckPropsFile(string dir)
+    {
+        var propsPath = Path.Combine(dir, "Directory.Build.props");
+        if (File.Exists(propsPath))
+        {
+            return GetNullableStateFromXml(propsPath);
+        }
+        return NullableState.None;
+    }
+
+    private static NullableState CheckCsprojFiles(string dir)
+    {
+        var csprojFiles = SafeGetCsprojFiles(dir);
+        foreach (var csproj in csprojFiles)
+        {
+            var state = GetNullableStateFromXml(csproj);
+            if (state != NullableState.None) return state;
+        }
+        return NullableState.None;
     }
 
     private static string[] SafeGetCsprojFiles(string dir)
@@ -78,27 +113,25 @@ internal static class AnalyzerHelpers
         }
     }
 
-    private static bool CheckCsprojListForNullable(string[] csprojFiles)
-    {
-        foreach (var csproj in csprojFiles)
-        {
-            if (IsCsprojNullableEnabled(csproj)) return true;
-        }
-        return false;
-    }
-
-    private static bool IsCsprojNullableEnabled(string csproj)
+    private static NullableState GetNullableStateFromXml(string filePath)
     {
         try
         {
-            var content = File.ReadAllText(csproj);
-            return content.Contains("<Nullable>enable</Nullable>") || 
-                   content.Contains("<Nullable>annotations</Nullable>");
+            var content = File.ReadAllText(filePath);
+            if (content.Contains("<Nullable>enable</Nullable>") || 
+                content.Contains("<Nullable>annotations</Nullable>"))
+            {
+                return NullableState.Enabled;
+            }
+            if (content.Contains("<Nullable>disable</Nullable>"))
+            {
+                return NullableState.Disabled;
+            }
         }
         catch (System.Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Csproj check error: {ex.Message}");
-            return false;
+            System.Diagnostics.Debug.WriteLine($"Xml read error: {ex.Message}");
         }
+        return NullableState.None;
     }
 }
