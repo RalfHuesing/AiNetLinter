@@ -68,10 +68,11 @@ public sealed class LinterEngine
 
         if (_config.Global.EnableTestSentinel)
         {
-            RunTestSentinel(state.TestClasses, state.SourceClasses, state.Violations, suppressionCache);
+            RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, suppressionCache);
         }
 
         RunInheritanceDepthCheck(state.SourceClasses, state.Violations, suppressionCache);
+        AddPartialClassViolations(state.PartialClassParts, state.Violations);
 
         return state.Violations.ToArray();
     }
@@ -81,8 +82,9 @@ public sealed class LinterEngine
         return new AnalysisState(
             solution,
             new ConcurrentBag<RuleViolation>(),
-            new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase),
-            new ConcurrentBag<ClassInfo>());
+            new TestCoverageIndex(),
+            new ConcurrentBag<ClassInfo>(),
+            new ConcurrentBag<PartialClassPart>());
     }
 
     private static ParallelOptions CreateParallelOptions() => new()
@@ -93,8 +95,9 @@ public sealed class LinterEngine
     private sealed record AnalysisState(
         Solution Solution,
         ConcurrentBag<RuleViolation> Violations,
-        ConcurrentDictionary<string, byte> TestClasses,
-        ConcurrentBag<ClassInfo> SourceClasses
+        TestCoverageIndex TestCoverage,
+        ConcurrentBag<ClassInfo> SourceClasses,
+        ConcurrentBag<PartialClassPart> PartialClassParts
     );
 
     private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog)
@@ -217,7 +220,15 @@ public sealed class LinterEngine
     {
         var analyzer = new LinterAnalyzer(filePath, semanticModel, _config, isTestFile);
         analyzer.RunAnalysis();
+        CollectAnalyzerResults(analyzer, semanticModel, isTestFile, state);
+    }
 
+    private void CollectAnalyzerResults(
+        LinterAnalyzer analyzer,
+        SemanticModel semanticModel,
+        bool isTestFile,
+        AnalysisState state)
+    {
         foreach (var violation in analyzer.Violations)
         {
             state.Violations.Add(violation);
@@ -225,25 +236,45 @@ public sealed class LinterEngine
 
         if (isTestFile)
         {
-            AddTestClasses(analyzer.Classes, state.TestClasses);
+            AddTestCoverage(analyzer, semanticModel, state.TestCoverage);
+            return;
         }
-        else
+
+        foreach (var cls in analyzer.Classes)
         {
-            foreach (var cls in analyzer.Classes)
-            {
-                state.SourceClasses.Add(cls);
-            }
+            state.SourceClasses.Add(cls);
+        }
+
+        foreach (var part in analyzer.PartialClassParts)
+        {
+            state.PartialClassParts.Add(part);
         }
     }
 
-    private static void AddTestClasses(IReadOnlyCollection<ClassInfo> classes, ConcurrentDictionary<string, byte> testClasses)
+    private void AddTestCoverage(LinterAnalyzer analyzer, SemanticModel semanticModel, TestCoverageIndex index)
     {
-        foreach (var cls in classes)
+        foreach (var cls in analyzer.Classes)
         {
             if (cls.HasTestMethods)
             {
-                testClasses.TryAdd(cls.Name, 0);
+                index.AddTestClass(cls.Name);
             }
+        }
+
+        TestCoverageCollector.Collect(
+            semanticModel.SyntaxTree,
+            semanticModel,
+            index,
+            _config.TestSentinel);
+    }
+
+    private void AddPartialClassViolations(
+        ConcurrentBag<PartialClassPart> parts,
+        ConcurrentBag<RuleViolation> violations)
+    {
+        foreach (var violation in PartialClassLineAggregator.BuildViolations(parts.ToArray(), _config))
+        {
+            violations.Add(violation);
         }
     }
 
@@ -255,7 +286,7 @@ public sealed class LinterEngine
     }
 
     private void RunTestSentinel(
-        ConcurrentDictionary<string, byte> testClasses,
+        TestCoverageIndex testCoverage,
         ConcurrentBag<ClassInfo> sourceClasses,
         ConcurrentBag<RuleViolation> violations,
         Dictionary<string, string> suppressionCache)
@@ -264,33 +295,36 @@ public sealed class LinterEngine
         {
             if (srcClass.MaxCognitiveComplexity > _config.Metrics.MinCognitiveComplexityForTest)
             {
-                CheckTestPresence(srcClass, testClasses, violations, suppressionCache);
+                CheckTestPresence(srcClass, testCoverage, violations, suppressionCache);
             }
         }
     }
 
-    private static void CheckTestPresence(
+    private void CheckTestPresence(
         ClassInfo srcClass,
-        ConcurrentDictionary<string, byte> testClasses,
+        TestCoverageIndex testCoverage,
         ConcurrentBag<RuleViolation> violations,
         Dictionary<string, string> suppressionCache)
     {
-        string expectedTest1 = $"{srcClass.Name}Tests";
-        string expectedTest2 = $"{srcClass.Name}Test";
-
-        if (!testClasses.ContainsKey(expectedTest1) &&
-            !testClasses.ContainsKey(expectedTest2) &&
-            !IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, suppressionCache))
+        if (TestCoverageResolver.IsCovered(srcClass.Name, testCoverage, _config.TestSentinel))
         {
-            violations.Add(new RuleViolation
-            {
-                FilePath = srcClass.FilePath,
-                LineNumber = srcClass.LineNumber,
-                RuleName = "StaticTestSentinel",
-                Details = $"Die Klasse '{srcClass.Name}' hat eine hohe Relevanz (max. Kognitive Komplexität: {srcClass.MaxCognitiveComplexity}), aber es wurde keine Testklasse '{expectedTest1}' im Test-Projekt gefunden.",
-                Guidance = $"Schreibe Unit Tests für '{srcClass.Name}' und lege die Testklasse '{expectedTest1}' im Test-Projekt an."
-            });
+            return;
         }
+
+        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, suppressionCache))
+        {
+            return;
+        }
+
+        string expectedTest = $"{srcClass.Name}Tests";
+        violations.Add(new RuleViolation
+        {
+            FilePath = srcClass.FilePath,
+            LineNumber = srcClass.LineNumber,
+            RuleName = "StaticTestSentinel",
+            Details = $"Die Klasse '{srcClass.Name}' hat eine hohe Relevanz (max. Kognitive Komplexität: {srcClass.MaxCognitiveComplexity}), aber es wurde keine Testabdeckung gefunden.",
+            Guidance = $"Schreibe Unit Tests für '{srcClass.Name}' (z. B. '{expectedTest}', typeof-Referenz oder // @covers {srcClass.Name}).",
+        });
     }
 
     private void RunInheritanceDepthCheck(

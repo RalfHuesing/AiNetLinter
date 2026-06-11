@@ -1,3 +1,4 @@
+using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Output;
@@ -25,11 +26,16 @@ public static class ViolationSummaryBuilder
     /// <summary>
     /// Gruppiert Verstöße nach Regelname, sortiert absteigend nach Anzahl.
     /// </summary>
-    public static IReadOnlyList<RuleViolationCount> BuildByRule(IReadOnlyCollection<RuleViolation> violations)
+    public static IReadOnlyList<RuleViolationCount> BuildByRule(
+        IReadOnlyCollection<RuleViolation> violations,
+        LinterConfig? config = null)
     {
         return violations
             .GroupBy(v => v.RuleName, StringComparer.Ordinal)
-            .Select(g => new RuleViolationCount(g.Count(), g.Key))
+            .Select(g => new RuleViolationCount(
+                g.Count(),
+                g.Key,
+                config == null ? "general" : RuleMetadataRegistry.Resolve(g.Key, config).Intent))
             .OrderByDescending(x => x.Count)
             .ThenBy(x => x.RuleName, StringComparer.Ordinal)
             .ToArray();
@@ -44,4 +50,4 @@ public sealed record FileViolationCount(int Count, string RelativePath);
 /// <summary>
 /// Anzahl der Verstöße pro Regel.
 /// </summary>
-public sealed record RuleViolationCount(int Count, string RuleName);
+public sealed record RuleViolationCount(int Count, string RuleName, string Intent = "general");

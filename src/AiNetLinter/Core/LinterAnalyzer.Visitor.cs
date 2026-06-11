@@ -96,7 +96,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 MaxCognitiveComplexity = GetMaxMethodComplexity(node),
                 Symbol = symbol,
-                HasTestMethods = CheckForTestMethods(node)
+                HasTestMethods = CheckForTestMethods(node),
+                IsPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)),
             });
         }
 
@@ -204,14 +205,17 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxCognitiveComplexity),
                 Details = $"Die Methode '{node.Identifier.Text}' hat eine Kognitive Komplexität von {cognitiveComplexity} (erlaubt sind maximal {_config.Metrics.MaxCognitiveComplexity}).",
-                Guidance = "Vereinfache verschachtelte Kontrollstrukturen (If-in-If etc.) und lagere Logik in flache Hilfsmethoden aus."
+                Guidance = CognitiveComplexityGuidance.Build(
+                    node,
+                    cognitiveComplexity,
+                    _config.Metrics.MaxCognitiveComplexity),
             });
         }
     }
 
     public override void VisitParameter(ParameterSyntax node)
     {
-        if (!_config.Global.AllowOutParameters && node.Modifiers.Any(SyntaxKind.OutKeyword))
+        if (ShouldReportOutParameter(node))
         {
             _violations.Add(new RuleViolation
             {
@@ -224,6 +228,41 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         }
 
         base.VisitParameter(node);
+    }
+
+    private bool ShouldReportOutParameter(ParameterSyntax node)
+    {
+        if (_config.Global.AllowOutParameters)
+        {
+            return false;
+        }
+
+        if (!node.Modifiers.Any(SyntaxKind.OutKeyword))
+        {
+            return false;
+        }
+
+        return !IsAllowedTryPatternOut(node);
+    }
+
+    private bool IsAllowedTryPatternOut(ParameterSyntax node)
+    {
+        if (!_config.Global.AllowTryPatternOutParameters)
+        {
+            return false;
+        }
+
+        if (node.Parent?.Parent is not MethodDeclarationSyntax method)
+        {
+            return false;
+        }
+
+        if (!method.Identifier.Text.StartsWith("Try", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
     }
 
     public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -287,7 +326,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             return;
         }
 
-        if (IsSwallowed(node))
+        if (IsSwallowed(node) && !IsAllowedCancellationCatch(node))
         {
             _violations.Add(new RuleViolation
             {
@@ -302,6 +341,21 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         base.VisitCatchClause(node);
     }
 
+    private bool IsAllowedCancellationCatch(CatchClauseSyntax node)
+    {
+        if (!_config.Global.AllowCancellationShutdownCatch)
+        {
+            return false;
+        }
+
+        if (node.Declaration?.Type is not IdentifierNameSyntax { Identifier.Text: "OperationCanceledException" })
+        {
+            return false;
+        }
+
+        return node.Filter != null;
+    }
+
     private static bool IsSwallowed(CatchClauseSyntax node)
     {
         if (node.Block.Statements.Count == 0)
@@ -312,6 +366,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var hasThrow = node.Block.DescendantNodes().OfType<ThrowStatementSyntax>().Any();
         var hasInvoke = node.Block.DescendantNodes().OfType<InvocationExpressionSyntax>().Any();
         return !hasThrow && !hasInvoke;
+    }
+
+    public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+    {
+        CheckMinimalApiAsParameters(node);
+        base.VisitInvocationExpression(node);
     }
 
     private bool IsDynamicType(IdentifierNameSyntax node)

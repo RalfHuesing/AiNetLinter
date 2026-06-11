@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Output;
@@ -12,7 +13,10 @@ public static class SarifWriter
     /// <summary>
     /// Serialisiert die Verstöße als SARIF-JSON und gibt sie auf stdout aus.
     /// </summary>
-    public static void Write(IReadOnlyCollection<RuleViolation> violations, string outputRoot)
+    public static void Write(
+        IReadOnlyCollection<RuleViolation> violations,
+        string outputRoot,
+        LinterConfig? config = null)
     {
         var doc = new SarifDocument();
         var run = new SarifRun();
@@ -20,9 +24,13 @@ public static class SarifWriter
 
         foreach (var violation in violations)
         {
+            var metadata = config == null
+                ? new RuleMetadataEntry()
+                : RuleMetadataRegistry.Resolve(violation.RuleName ?? "UnknownRule", config);
             var result = new SarifResult
             {
                 RuleId = violation.RuleName ?? "UnknownRule",
+                Level = RuleMetadataRegistry.ToSarifLevel(metadata.Severity),
             };
             result.Message.Text = $"{violation.Details} Guidance: {violation.Guidance}";
 
@@ -72,6 +80,7 @@ public static class SarifWriter
     private sealed class SarifResult
     {
         public string RuleId { get; set; } = "";
+        public string Level { get; set; } = "error";
         public SarifMessage Message { get; } = new();
         public List<SarifLocation> Locations { get; } = new();
     }

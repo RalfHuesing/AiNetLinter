@@ -16,7 +16,11 @@ internal static class CliCommandBuilder
         Option<string?> CreateBaseline,
         Option<string?> Baseline,
         Option<bool> AddDisableAll,
-        Option<bool> RemoveDisableAll);
+        Option<bool> RemoveDisableAll,
+        Option<bool> DebtReport,
+        Option<bool> WaveReady,
+        Option<bool> OnlyChanged,
+        Option<string?> GitSince);
 
     internal sealed record ParsedArgs(
         string? ConfigPath,
@@ -27,7 +31,11 @@ internal static class CliCommandBuilder
         string? CreateBaselinePath,
         string? BaselinePath,
         bool AddDisableAll,
-        bool RemoveDisableAll);
+        bool RemoveDisableAll,
+        bool DebtReport,
+        bool WaveReady,
+        bool OnlyChanged,
+        string? GitSince);
 
     internal static (RootCommand Root, Options Options) Build()
     {
@@ -36,6 +44,7 @@ internal static class CliCommandBuilder
         {
             options.Config, options.Path, options.Graph, options.Format, options.Verbose,
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
+            options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
         };
 
         return (root, options);
@@ -52,7 +61,11 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateBaselineCreateOption(),
             CliOptionFactory.CreateBaselineOption(),
             CliOptionFactory.CreateAddDisableAllOption(),
-            CliOptionFactory.CreateRemoveDisableAllOption());
+            CliOptionFactory.CreateRemoveDisableAllOption(),
+            CliOptionFactory.CreateDebtReportOption(),
+            CliOptionFactory.CreateWaveReadyOption(),
+            CliOptionFactory.CreateOnlyChangedOption(),
+            CliOptionFactory.CreateGitSinceOption());
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -66,6 +79,10 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.CreateBaseline),
             parseResult.GetValue(options.Baseline),
             parseResult.GetValue(options.AddDisableAll),
-            parseResult.GetValue(options.RemoveDisableAll));
+            parseResult.GetValue(options.RemoveDisableAll),
+            parseResult.GetValue(options.DebtReport),
+            parseResult.GetValue(options.WaveReady),
+            parseResult.GetValue(options.OnlyChanged),
+            parseResult.GetValue(options.GitSince));
     }
 }

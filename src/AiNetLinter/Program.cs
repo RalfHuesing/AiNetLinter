@@ -5,6 +5,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
+using AiNetLinter.Scope;
 using AiNetLinter.Suppression;
 
 namespace AiNetLinter;
@@ -51,16 +52,19 @@ public static class Program
             BaselinePath = parsed.BaselinePath,
             AddDisableAll = parsed.AddDisableAll,
             RemoveDisableAll = parsed.RemoveDisableAll,
+            DebtReport = parsed.DebtReport,
+            WaveReady = parsed.WaveReady,
+            OnlyChanged = parsed.OnlyChanged,
+            GitSince = parsed.GitSince,
         };
     }
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
-        if (HasConflictingModeOptions(args))
+        var modeError = ValidateModeOptions(args);
+        if (modeError.HasValue)
         {
-            Console.Error.WriteLine(
-                "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
-            return 1;
+            return modeError.Value;
         }
 
         var maintenanceExitCode = await TryRunMaintenanceModeAsync(args);
@@ -69,6 +73,45 @@ public static class Program
             return maintenanceExitCode.Value;
         }
 
+        if (args.DebtReport)
+        {
+            return await RunDebtReportAsync(args);
+        }
+
+        var onlyChangedError = ValidateOnlyChangedOption(args);
+        if (onlyChangedError.HasValue)
+        {
+            return onlyChangedError.Value;
+        }
+
+        return await RunAuditAsync(args);
+    }
+
+    private static int? ValidateModeOptions(LinterArgs args)
+    {
+        if (!HasConflictingModeOptions(args))
+        {
+            return null;
+        }
+
+        Console.Error.WriteLine(
+            "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
+        return 1;
+    }
+
+    private static int? ValidateOnlyChangedOption(LinterArgs args)
+    {
+        if (!args.OnlyChanged || args.BaselinePath != null)
+        {
+            return null;
+        }
+
+        Console.Error.WriteLine("[ERROR]: --only-changed erfordert --baseline.");
+        return 1;
+    }
+
+    private static async Task<int> RunAuditAsync(LinterArgs args)
+    {
         var config = TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
@@ -83,6 +126,26 @@ public static class Program
         }
 
         return await AuditWithoutBaselineAsync(args, config);
+    }
+
+    private static async Task<int> RunDebtReportAsync(LinterArgs args)
+    {
+        LinterConfig? config = null;
+        IReadOnlyCollection<Models.RuleViolation>? violations = null;
+
+        if (!string.IsNullOrWhiteSpace(args.ConfigPath))
+        {
+            config = TryLoadConfig(args.ConfigPath, isRequired: false);
+            if (config != null)
+            {
+                var engine = new LinterEngine(config);
+                violations = await engine.RunAsync(args.TargetPath);
+            }
+        }
+
+        var report = await DebtReportBuilder.BuildAsync(args.TargetPath, violations);
+        Console.WriteLine(report);
+        return 0;
     }
 
     private static async Task<int?> TryRunMaintenanceModeAsync(LinterArgs args)
@@ -212,7 +275,8 @@ public static class Program
             LogBaselineUpdate(args.Verbose, comparison);
         }
 
-        return WriteViolationsAndExit(filtered, args.Format, outputRoot);
+        var scoped = ApplyScopeFilters(filtered, args, outputRoot, comparison.ChangedFiles);
+        return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
     }
 
     private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config)
@@ -220,23 +284,45 @@ public static class Program
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(args.TargetPath);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        return WriteViolationsAndExit(violations, args.Format, outputRoot);
+        var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
+        return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
+    }
+
+    private static IReadOnlyCollection<Models.RuleViolation> ApplyScopeFilters(
+        IReadOnlyCollection<Models.RuleViolation> violations,
+        LinterArgs args,
+        string outputRoot,
+        IReadOnlyCollection<string> onlyChangedFiles)
+    {
+        var gitFiles = args.GitSince != null
+            ? GitChangedFilesResolver.ResolveSince(args.TargetPath, args.GitSince)
+            : [];
+
+        var changedFiles = args.OnlyChanged ? onlyChangedFiles : [];
+
+        return ViolationScopeFilter.Apply(violations, new ViolationScopeOptions
+        {
+            WaveReady = args.WaveReady,
+            GitChangedFiles = gitFiles,
+            OnlyChangedFiles = changedFiles,
+        }, outputRoot);
     }
 
     private static int WriteViolationsAndExit(
         IReadOnlyCollection<Models.RuleViolation> violations,
         string format,
-        string outputRoot)
+        string outputRoot,
+        LinterConfig config)
     {
         if (format == "sarif")
         {
-            SarifWriter.Write(violations, outputRoot);
+            SarifWriter.Write(violations, outputRoot, config);
             return violations.Count > 0 ? 1 : 0;
         }
 
         if (violations.Count > 0)
         {
-            Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot));
+            Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot, config));
             return 1;
         }
 
@@ -343,5 +429,9 @@ public static class Program
         public string? BaselinePath { get; init; }
         public bool AddDisableAll { get; init; }
         public bool RemoveDisableAll { get; init; }
+        public bool DebtReport { get; init; }
+        public bool WaveReady { get; init; }
+        public bool OnlyChanged { get; init; }
+        public string? GitSince { get; init; }
     }
 }

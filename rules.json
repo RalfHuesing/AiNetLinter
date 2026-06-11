@@ -3,13 +3,16 @@
     "EnforceSealedClasses": true,
     "AllowDynamic": false,
     "AllowOutParameters": false,
+    "AllowTryPatternOutParameters": true,
     "EnforceValueObjectContracts": true,
     "EnableTestSentinel": true,
     "EnforcePascalCase": true,
     "EnforceXmlDocumentation": true,
     "EnforceSemanticNaming": true,
     "EnforceNullableEnable": true,
-    "EnforceNoSilentCatch": true
+    "EnforceNoSilentCatch": true,
+    "AllowCancellationShutdownCatch": true,
+    "EnforceMinimalApiAsParameters": false
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -18,7 +21,26 @@
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
-    "MinCognitiveComplexityForTest": 3
+    "MinCognitiveComplexityForTest": 3,
+    "AggregatePartialClassLineCount": false
+  },
+  "TestSentinel": {
+    "ClassNamePatterns": [
+      "{Name}Tests",
+      "{Name}Test",
+      "{Name}IntegrationTests",
+      "{Name}*Tests"
+    ],
+    "RecognizeTypeofReference": true,
+    "RecognizeCoversComment": true
+  },
+  "RuleMetadata": {
+    "MaxLineCount": { "severity": "error", "intent": "agent-context" },
+    "MaxCognitiveComplexity": { "severity": "error", "intent": "agent-context" },
+    "AllowOutParameters": { "severity": "warning", "intent": "csharp-idiom" },
+    "StaticTestSentinel": { "severity": "warning", "intent": "test-coverage" },
+    "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
+    "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" }
   },
   "ForbiddenNamespaceDependencies": []
 }
