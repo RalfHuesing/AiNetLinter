@@ -84,7 +84,10 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "EnforceXmlDocumentation": true,
     "EnforceSemanticNaming": true,
     "EnforceNullableEnable": true,
-    "EnforceNoSilentCatch": true
+    "EnforceNoSilentCatch": true,
+    "AllowTryPatternOutParameters": true,
+    "AllowCancellationShutdownCatch": true,
+    "EnforceMinimalApiAsParameters": false
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -93,7 +96,17 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
-    "MinCognitiveComplexityForTest": 3
+    "MinCognitiveComplexityForTest": 3,
+    "AggregatePartialClassLineCount": false
+  },
+  "TestSentinel": {
+    "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
+    "RecognizeTypeofReference": true,
+    "RecognizeCoversComment": true
+  },
+  "RuleMetadata": {
+    "MaxLineCount": { "severity": "error", "intent": "agent-context" },
+    "StaticTestSentinel": { "severity": "warning", "intent": "test-coverage" }
   },
   "ForbiddenNamespaceDependencies": [
     {
@@ -111,6 +124,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden. |
 | `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
 | `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
+| `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`-Methoden (Standard: `true`, idiomatisches C#). |
+| `AllowCancellationShutdownCatch` | Global | Erlaubt leere `catch (OperationCanceledException) when (...)` bei Host-Shutdown. |
+| `EnforceMinimalApiAsParameters` | Global | Prüft Minimal-API-Endpunkte auf fehlendes `[AsParameters]` bei >4 Parametern (opt-in). |
 | `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
 | `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
 | `EnforcePascalCase` | Global | Validiert PascalCase-Schreibweise für Klassen, Structs, Records, Interfaces, Methoden und Properties. |
@@ -125,6 +141,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
 | `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |
 | `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
+| `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
+| `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
+| `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
 
 ---
 
@@ -149,6 +168,25 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
+*   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
+*   `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
+*   `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
+*   `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
+
+### Wellen-Workflow (Agent-Migration)
+
+Für schrittweise Freischaltung von Legacy-Code (z. B. 5 Dateien pro Welle):
+
+```bash
+# Tech-Debt-Übersicht (kein Audit, Exit 0)
+ainetlinter --path ./MeinProjekt.slnx --debt-report
+
+# Nur bereits freigeschaltete Dateien mit Verstößen
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready
+
+# Diese Woche angefasste, freigeschaltete Dateien
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-since HEAD~7
+```
 
 ### Inkrementelle Migration (Baseline / Ratchet)
 
@@ -211,21 +249,21 @@ Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausser
 1 src/AiNetLinter/Models/RuleViolation.cs
 
 ## Summary · by rule
-| Rule | Count |
-|------|------:|
-| EnforceSealedClasses | 1 |
-| MaxLineCount | 1 |
+| Rule | Count | Intent |
+|------|------:|--------|
+| EnforceSealedClasses | 1 | general |
+| MaxLineCount | 1 | agent-context |
 
 ## Violations
-src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed
-src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500)
+src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed → Füge den 'sealed' Modifikator hinzu.
+src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500) → Teile die Datei in kleinere Klassen auf.
 ```
 
 **Summary-Formate:**
 - Datei: `{anzahl} {relativerPfad}` — absteigend nach Anzahl
-- Regel: Markdown-Tabelle `| Rule | Count |` — absteigend nach Anzahl
+- Regel: Markdown-Tabelle `| Rule | Count | Intent |` — absteigend nach Anzahl
 
-**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details}`
+**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details} → {Guidance}` (Guidance nur wenn vorhanden)
 
 #### SARIF (`--format sarif`)
 

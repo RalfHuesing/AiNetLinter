@@ -13,4 +13,5 @@ public sealed record ClassInfo
     public required int MaxCognitiveComplexity { get; init; }
     public required INamedTypeSymbol Symbol { get; init; }
     public required bool HasTestMethods { get; init; }
+    public bool IsPartial { get; init; }
 }

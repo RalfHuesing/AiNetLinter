@@ -22,6 +22,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly bool _isTestFile;
 
     public List<ClassInfo> Classes { get; } = new();
+    public List<PartialClassPart> PartialClassParts { get; } = new();
 
     internal LinterAnalyzer(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile)
         : base(SyntaxWalkerDepth.Node)
@@ -57,6 +58,13 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         var text = _tree.GetText();
         var lineCount = text.Lines.Count;
+
+        if (_config.Metrics.AggregatePartialClassLineCount && HasPartialRootDeclarations())
+        {
+            RecordPartialClassParts(lineCount);
+            return;
+        }
+
         if (lineCount > _config.Metrics.MaxLineCount)
         {
             _violations.Add(new RuleViolation
@@ -67,6 +75,36 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Details = $"Die Datei hat {lineCount} Zeilen (erlaubt sind maximal {_config.Metrics.MaxLineCount}).",
                 Guidance = "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf."
             });
+        }
+    }
+
+    private bool HasPartialRootDeclarations()
+    {
+        return _tree.GetRoot().DescendantNodes()
+            .OfType<TypeDeclarationSyntax>()
+            .Any(t => t.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+    }
+
+    private void RecordPartialClassParts(int fileLineCount)
+    {
+        foreach (var typeDecl in _tree.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>())
+        {
+            if (!typeDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)))
+            {
+                continue;
+            }
+
+            var symbol = _semanticModel.GetDeclaredSymbol(typeDecl) as INamedTypeSymbol;
+            if (symbol == null)
+            {
+                continue;
+            }
+
+            PartialClassParts.Add(new PartialClassPart(
+                symbol.ToDisplayString(),
+                _filePath,
+                GetLineNumber(typeDecl),
+                fileLineCount));
         }
     }
 

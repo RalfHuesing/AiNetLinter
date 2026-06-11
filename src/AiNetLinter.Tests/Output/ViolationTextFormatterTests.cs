@@ -68,9 +68,9 @@ public sealed class ViolationTextFormatterTests
             .TrimStart('\n');
         var lines = violationsSection.Split('\n');
 
-        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed", lines[0]);
-        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed", lines[1]);
-        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang", lines[2]);
+        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed → Guidance text", lines[0]);
+        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed → Guidance text", lines[1]);
+        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang → Guidance text", lines[2]);
     }
 
     [Fact]
