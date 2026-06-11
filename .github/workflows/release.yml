@@ -68,7 +68,10 @@ jobs:
           }
 
           if ("${{ matrix.os }}" -eq "windows-latest") {
-            Compress-Archive -Path "./publish/*" -DestinationPath "./AiNetLinter-${{ matrix.rid }}.zip"
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $publishPath = (Resolve-Path "./publish").Path
+            $zipPath = (Join-Path (Resolve-Path ".").Path "AiNetLinter-${{ matrix.rid }}.zip")
+            [System.IO.Compression.ZipFile]::CreateFromDirectory($publishPath, $zipPath)
           } else {
             tar -czf "./AiNetLinter-${{ matrix.rid }}.tar.gz" -C "./publish" .
           }
