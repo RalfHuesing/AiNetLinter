@@ -7,12 +7,15 @@
     "EnableTestSentinel": true,
     "EnforcePascalCase": true,
     "EnforceXmlDocumentation": true,
-    "EnforceSemanticNaming": true
+    "EnforceSemanticNaming": true,
+    "EnforceNullableEnable": true,
+    "EnforceNoSilentCatch": true
   },
   "Metrics": {
     "MaxLineCount": 500,
     "MaxMethodParameterCount": 4,
     "MaxCyclomaticComplexity": 5,
-    "MaxCognitiveComplexity": 5
+    "MaxCognitiveComplexity": 5,
+    "MaxInheritanceDepth": 2
   }
 }
