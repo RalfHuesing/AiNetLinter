@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 using AiNetLinter.Metrics;
+using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Core;
 
@@ -356,10 +357,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private static bool MatchDisableComment(string lineText, string ruleName)
     {
-        int index = lineText.IndexOf("ainetlinter-disable");
-        if (index < 0) return false;
-
-        var suffix = lineText.Substring(index + "ainetlinter-disable".Length).Trim();
-        return suffix.Length == 0 || suffix.StartsWith(ruleName, StringComparison.OrdinalIgnoreCase);
+        return SuppressionCommentParser.MatchesRule(lineText, ruleName);
     }
 }

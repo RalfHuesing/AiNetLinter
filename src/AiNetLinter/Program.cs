@@ -5,6 +5,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
+using AiNetLinter.Suppression;
 
 namespace AiNetLinter;
 
@@ -48,20 +49,22 @@ public static class Program
             Verbose = parsed.Verbose,
             CreateBaselinePath = parsed.CreateBaselinePath,
             BaselinePath = parsed.BaselinePath,
+            AddDisableAll = parsed.AddDisableAll,
         };
     }
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
-        if (HasConflictingBaselineOptions(args))
+        if (HasConflictingModeOptions(args))
         {
-            Console.Error.WriteLine("[ERROR]: --create-baseline und --baseline dürfen nicht gleichzeitig verwendet werden.");
+            Console.Error.WriteLine("[ERROR]: --create-baseline und --add-disable-all dürfen nicht mit --baseline kombiniert werden.");
             return 1;
         }
 
-        if (args.CreateBaselinePath != null)
+        var maintenanceExitCode = await TryRunMaintenanceModeAsync(args);
+        if (maintenanceExitCode.HasValue)
         {
-            return await CreateBaselineAsync(args);
+            return maintenanceExitCode.Value;
         }
 
         var config = TryLoadConfig(args.ConfigPath, isRequired: true);
@@ -80,9 +83,41 @@ public static class Program
         return await AuditWithoutBaselineAsync(args, config);
     }
 
-    private static bool HasConflictingBaselineOptions(LinterArgs args)
+    private static async Task<int?> TryRunMaintenanceModeAsync(LinterArgs args)
     {
-        return args.CreateBaselinePath != null && args.BaselinePath != null;
+        if (args.CreateBaselinePath != null)
+        {
+            return await CreateBaselineAsync(args);
+        }
+
+        if (args.AddDisableAll)
+        {
+            return await AddDisableAllAsync(args);
+        }
+
+        return null;
+    }
+
+    private static bool HasConflictingModeOptions(LinterArgs args)
+    {
+        return args.BaselinePath != null && (args.CreateBaselinePath != null || args.AddDisableAll) ||
+               args.CreateBaselinePath != null && args.AddDisableAll;
+    }
+
+    private static async Task<int> AddDisableAllAsync(LinterArgs args)
+    {
+        LogDisableAllInject(args.Verbose, args.TargetPath);
+
+        var result = await DisableAllCommentInjector.InjectAsync(args.TargetPath);
+
+        if (args.Verbose)
+        {
+            Console.WriteLine(
+                $"[INFO]: {result.ModifiedFiles} von {result.TotalFiles} Dateien geändert, {result.SkippedFiles} übersprungen.");
+        }
+
+        Console.WriteLine("OK");
+        return 0;
     }
 
     private static async Task<int> CreateBaselineAsync(LinterArgs args)
@@ -182,6 +217,14 @@ public static class Program
         }
     }
 
+    private static void LogDisableAllInject(bool verbose, string targetPath)
+    {
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Füge Disable-all-Kommentar ein unter: {targetPath}");
+        }
+    }
+
     private static void LogBaselineUpdate(bool verbose, BaselineComparisonResult comparison)
     {
         if (!verbose)
@@ -245,5 +288,6 @@ public static class Program
         public required bool Verbose { get; init; }
         public string? CreateBaselinePath { get; init; }
         public string? BaselinePath { get; init; }
+        public bool AddDisableAll { get; init; }
     }
 }

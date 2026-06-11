@@ -122,6 +122,24 @@ namespace TestNamespace
     }
 
     [Fact]
+    public void Analyze_WithDisableAllComment_IgnoresAllViolations()
+    {
+        const string source = @"
+// ainetlinter-disable all
+namespace TestNamespace
+{
+    public class UnsealedClass
+    {
+        public void Work(int a, int b, int c, int d, int e) {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void Analyze_WithVariableNamedDynamic_DoesNotThrowViolation()
     {
         const string source = @"
