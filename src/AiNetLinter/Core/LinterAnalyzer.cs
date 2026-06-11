@@ -8,30 +8,32 @@ using AiNetLinter.Metrics;
 namespace AiNetLinter.Core;
 
 /// <summary>
-/// Analysiert eine C#-Syntaxstruktur und findet Regelverstöße.
+/// Analysiert eine C#-Syntaxstruktur und findet Regelverstöße mit Semantik.
 /// </summary>
 public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 {
     private readonly string _filePath;
-    private readonly string _fileContent;
+    private readonly SyntaxTree _tree;
+    private readonly SemanticModel _semanticModel;
     private readonly LinterConfig _config;
     private readonly List<RuleViolation> _violations = new();
     private string _currentNamespace = "";
 
-    private LinterAnalyzer(string filePath, string fileContent, LinterConfig config)
+    private LinterAnalyzer(string filePath, SyntaxTree tree, SemanticModel semanticModel, LinterConfig config)
         : base(SyntaxWalkerDepth.Node)
     {
         _filePath = filePath;
-        _fileContent = fileContent;
+        _tree = tree;
+        _semanticModel = semanticModel;
         _config = config;
     }
 
     /// <summary>
-    /// Analysiert eine Datei und gibt alle gefundenen Verstöße zurück.
+    /// Analysiert ein Dokument und gibt alle gefundenen Verstöße zurück.
     /// </summary>
-    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, string fileContent, LinterConfig config)
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SyntaxTree tree, SemanticModel semanticModel, LinterConfig config)
     {
-        var analyzer = new LinterAnalyzer(filePath, fileContent, config);
+        var analyzer = new LinterAnalyzer(filePath, tree, semanticModel, config);
         analyzer.RunAnalysis();
         return analyzer._violations;
     }
@@ -39,18 +41,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private void RunAnalysis()
     {
         CheckLineCount();
-
-        var tree = CSharpSyntaxTree.ParseText(_fileContent);
-        var root = tree.GetRoot();
-        
-        CheckNullableEnable(root);
-        
-        Visit(root);
+        CheckNullableEnable();
+        Visit(_tree.GetRoot());
     }
 
     private void CheckLineCount()
     {
-        var lineCount = _fileContent.Split('\n').Length;
+        var text = _tree.GetText();
+        var lineCount = text.Lines.Count;
         if (lineCount > _config.Metrics.MaxLineCount)
         {
             _violations.Add(new RuleViolation
@@ -141,7 +139,34 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         {
             return true;
         }
-        return !AnalyzerHelpers.IsInPublicContext(node);
+        return !IsInPublicContext(node);
+    }
+
+    private static bool IsInPublicContext(SyntaxNode node)
+    {
+        var current = node;
+        while (current != null)
+        {
+            if (!IsPublic(current))
+            {
+                return false;
+            }
+            current = current.Parent;
+        }
+        return true;
+    }
+
+    private static bool IsPublic(SyntaxNode node)
+    {
+        if (node is BaseTypeDeclarationSyntax typeDecl)
+        {
+            return typeDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
+        }
+        if (node is MethodDeclarationSyntax method)
+        {
+            return method.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
+        }
+        return true;
     }
 
     private static bool HasXmlDocumentation(SyntaxNode node)
@@ -221,7 +246,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private bool IsTestFile()
     {
-        return AnalyzerHelpers.IsTestFile(_filePath);
+        if (string.IsNullOrEmpty(_filePath)) return false;
+        if (_filePath.EndsWith("Tests.cs", StringComparison.OrdinalIgnoreCase)) return true;
+        if (_filePath.EndsWith("Test.cs", StringComparison.OrdinalIgnoreCase)) return true;
+
+        var normalized = _filePath.Replace('\\', '/');
+        return normalized.Contains("/Tests/");
     }
 
     private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node)
@@ -237,31 +267,24 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
     }
 
-    private void CheckNullableEnable(SyntaxNode root)
+    private void CheckNullableEnable()
     {
-        if (ShouldSkipNullable()) return;
+        if (!_config.Global.EnforceNullableEnable) return;
+        if (IsTestFile()) return;
 
-        var hasNullableEnable = root.DescendantNodes(descendIntoTrivia: true)
-            .OfType<NullableDirectiveTriviaSyntax>()
-            .Any(d => d.SettingToken.IsKind(SyntaxKind.EnableKeyword));
+        var nullableContext = _semanticModel.GetNullableContext(0);
+        var isEnabled = nullableContext.HasFlag(NullableContext.Enabled);
 
-        if (!hasNullableEnable)
+        if (!isEnabled)
         {
             _violations.Add(new RuleViolation
             {
                 FilePath = _filePath,
                 LineNumber = 1,
                 RuleName = nameof(_config.Global.EnforceNullableEnable),
-                Details = "Die Datei deklariert kein '#nullable enable'.",
-                Guidance = "Füge '#nullable enable' am Anfang der Datei hinzu, um Compile-Time-Nullprüfungen zu aktivieren."
+                Details = "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Prüfungen.",
+                Guidance = "Füge '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."
             });
         }
-    }
-
-    private bool ShouldSkipNullable()
-    {
-        if (!_config.Global.EnforceNullableEnable) return true;
-        if (IsTestFile()) return true;
-        return AnalyzerHelpers.IsNullableEnabledGlobally(_filePath);
     }
 }

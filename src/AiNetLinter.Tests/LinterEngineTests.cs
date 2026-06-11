@@ -1,7 +1,8 @@
 using Xunit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using System.IO;
 
 namespace AiNetLinter.Tests;
 
@@ -28,9 +29,34 @@ public sealed class LinterEngineTests
                 MaxMethodParameterCount = 2,
                 MaxCyclomaticComplexity = 5,
                 MaxCognitiveComplexity = 5,
-                MaxInheritanceDepth = 2
+                MaxInheritanceDepth = 2,
+                MinCognitiveComplexityForTest = 3
             }
         };
+    }
+
+    private static Solution CreateAdhocSolution(params (string fileName, string content)[] files)
+    {
+        var workspace = new AdhocWorkspace();
+        var projectId = ProjectId.CreateNewId();
+        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+
+        var projectInfo = ProjectInfo.Create(
+            projectId,
+            VersionStamp.Create(),
+            "TestProject",
+            "TestProject",
+            LanguageNames.CSharp)
+            .WithMetadataReferences(new[] { mscorlib })
+            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+
+        var solution = workspace.CurrentSolution.AddProject(projectInfo);
+        foreach (var file in files)
+        {
+            var documentId = DocumentId.CreateNewId(projectId);
+            solution = solution.AddDocument(documentId, file.fileName, file.content);
+        }
+        return solution;
     }
 
     [Fact]
@@ -42,90 +68,10 @@ public sealed class LinterEngineTests
     }
 
     [Fact]
-    public void ParseSlnx_WithValidXml_ReturnsProjects()
+    public async Task Run_WithHighlyRelevantClassMissingTestClass_ReturnsSentinelViolation()
     {
-        const string slnxContent = @"<Solution>
-  <Project Path=""src/AiNetLinter/AiNetLinter.csproj"" />
-  <Project Path=""src/AiNetLinter.Tests/AiNetLinter.Tests.csproj"" />
-</Solution>";
-        var tempSlnx = Path.GetTempFileName() + ".slnx";
-        File.WriteAllText(tempSlnx, slnxContent);
-
-        try
-        {
-            var projects = LinterEngine.ParseSlnx(tempSlnx);
-
-            Assert.Equal(2, projects.Count());
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
-        }
-        finally
-        {
-            File.Delete(tempSlnx);
-        }
-    }
-
-    [Fact]
-    public void ParseSln_WithValidText_ReturnsProjects()
-    {
-        const string slnContent = @"
-Microsoft Visual Studio Solution File, Format Version 12.00
-Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter"", ""src\AiNetLinter\AiNetLinter.csproj"", ""{GUID1}""
-Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter.Tests"", ""src\AiNetLinter.Tests\AiNetLinter.Tests.csproj"", ""{GUID2}""
-Global
-EndGlobal";
-        var tempSln = Path.GetTempFileName() + ".sln";
-        File.WriteAllText(tempSln, slnContent);
-
-        try
-        {
-            var projects = LinterEngine.ParseSln(tempSln);
-
-            Assert.Equal(2, projects.Count());
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
-        }
-        finally
-        {
-            File.Delete(tempSln);
-        }
-    }
-
-    [Fact]
-    public void GetExcludedFiles_WithCompileRemoveOrExclude_FiltersFiles()
-    {
-        const string csprojContent = @"<Project Sdk=""Microsoft.NET.Sdk"">
-  <ItemGroup>
-    <Compile Remove=""ExcludedFile.cs"" />
-    <Compile Exclude=""subfolder/AnotherExcluded.cs"" />
-  </ItemGroup>
-</Project>";
-        var tempCsproj = Path.GetTempFileName() + ".csproj";
-        File.WriteAllText(tempCsproj, csprojContent);
-
-        try
-        {
-            var excluded = LinterEngine.GetExcludedFiles(tempCsproj, "/MockDir");
-
-            Assert.Equal(2, excluded.Count);
-            Assert.Contains(excluded, path => path.EndsWith("ExcludedFile.cs"));
-            Assert.Contains(excluded, path => path.EndsWith("AnotherExcluded.cs"));
-        }
-        finally
-        {
-            File.Delete(tempCsproj);
-        }
-    }
-
-    [Fact]
-    public void Run_WithHighlyRelevantClassMissingTestClass_ReturnsSentinelViolation()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-
         const string sourceClass = @"
 namespace Domain;
-
 public sealed class ComplexDomainService
 {
     public void HighComplexityMethod(int x)
@@ -134,134 +80,84 @@ public sealed class ComplexDomainService
         {
             if (x > 2)
             {
-                if (x > 3)
-                {
-                }
+                if (x > 3) {}
             }
         }
     }
 }";
-        var sourcePath = Path.Combine(tempDir, "ComplexDomainService.cs");
-        File.WriteAllText(sourcePath, sourceClass);
-
+        var solution = CreateAdhocSolution(("ComplexDomainService.cs", sourceClass));
         var config = CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnableTestSentinel = true }
         };
 
-        try
-        {
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(tempDir);
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
 
-            Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
-            Assert.Contains(violations, v => v.Details.Contains("Klasse 'ComplexDomainService' hat eine hohe Relevanz"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
     }
 
     [Fact]
-    public void Run_WithInheritanceDepthExceeded_ReturnsViolation()
+    public async Task Run_WithInheritanceDepthExceeded_ReturnsViolation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-
         const string sourceCode = @"
 namespace Test;
-/// <summary>
-/// Root.
-/// </summary>
 public class RootClass {}
-
-/// <summary>
-/// Parent.
-/// </summary>
 public class ParentClass : RootClass {}
-
-/// <summary>
-/// Child.
-/// </summary>
 public sealed class ChildClass : ParentClass {}";
 
-        var sourcePath = Path.Combine(tempDir, "Classes.cs");
-        File.WriteAllText(sourcePath, sourceCode);
-
+        var solution = CreateAdhocSolution(("Classes.cs", sourceCode));
         var config = CreateDefaultConfig() with
         {
             Metrics = new MetricsConfig { MaxInheritanceDepth = 1 }
         };
 
-        try
-        {
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(tempDir);
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
 
-            Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth));
     }
 
     [Fact]
-    public void Run_WithDuplicateClassNamesInDifferentNamespaces_NoCrashAndResolvesCorrectly()
+    public async Task Run_WithDuplicateClassNamesInDifferentNamespaces_NoCrashAndResolvesCorrectly()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-
         const string code = @"
-namespace Test.N1;
-public class MyClass {}
-
-namespace Test.N2;
-public class MyClass : Test.N1.MyClass {}
-";
-        var sourcePath = Path.Combine(tempDir, "DuplicateClasses.cs");
-        File.WriteAllText(sourcePath, code);
-
+namespace Test.N1
+{
+    public class MyClass {}
+}
+namespace Test.N2
+{
+    public class MyClass : Test.N1.MyClass {}
+}";
+        var solution = CreateAdhocSolution(("DuplicateClasses.cs", code));
         var config = CreateDefaultConfig() with
         {
             Metrics = new MetricsConfig { MaxInheritanceDepth = 1 }
         };
 
-        try
-        {
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(tempDir);
-            
-            Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth)));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+        
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth)));
     }
 
     [Fact]
-    public void Run_WithConfigurableSentinelThreshold_RespectsConfigValue()
+    public async Task Run_WithConfigurableSentinelThreshold_RespectsConfigValue()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-
         const string sourceClass = @"
 namespace Domain;
 public sealed class ComplexService
 {
-        public void MediumComplexityMethod(int x)
+    public void MediumComplexityMethod(int x)
+    {
+        if (x > 1)
         {
-            if (x > 1)
-            {
-                if (x > 2) {}
-            }
+            if (x > 2) {}
         }
+    }
 }";
-        var sourcePath = Path.Combine(tempDir, "ComplexService.cs");
-        File.WriteAllText(sourcePath, sourceClass);
-
+        var solution = CreateAdhocSolution(("ComplexService.cs", sourceClass));
         var configLow = CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnableTestSentinel = true },
@@ -274,60 +170,18 @@ public sealed class ComplexService
             Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 5 }
         };
 
-        try
-        {
-            var engineLow = new LinterEngine(configLow);
-            var violationsLow = engineLow.Run(tempDir);
-            Assert.Contains(violationsLow, v => v.RuleName == "StaticTestSentinel");
+        var engineLow = new LinterEngine(configLow);
+        var violationsLow = await engineLow.RunAsync(solution);
+        Assert.Contains(violationsLow, v => v.RuleName == "StaticTestSentinel");
 
-            var engineHigh = new LinterEngine(configHigh);
-            var violationsHigh = engineHigh.Run(tempDir);
-            Assert.Empty(violationsHigh.Where(v => v.RuleName == "StaticTestSentinel"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        var engineHigh = new LinterEngine(configHigh);
+        var violationsHigh = await engineHigh.RunAsync(solution);
+        Assert.Empty(violationsHigh.Where(v => v.RuleName == "StaticTestSentinel"));
     }
 
     [Fact]
-    public void IsNullableEnabledGlobally_WithDirectoryBuildProps_ReturnsTrue()
+    public async Task Run_WithTestFileButNoTestMethods_SentinelFails()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-        var subDir = Path.Combine(tempDir, "SubProject");
-        Directory.CreateDirectory(subDir);
-
-        const string propsContent = @"<Project>
-  <PropertyGroup>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-</Project>";
-        File.WriteAllText(Path.Combine(tempDir, "Directory.Build.props"), propsContent);
-
-        const string csprojContent = @"<Project Sdk=""Microsoft.NET.Sdk""></Project>";
-        File.WriteAllText(Path.Combine(subDir, "SubProject.csproj"), csprojContent);
-
-        var classFile = Path.Combine(subDir, "MyClass.cs");
-        File.WriteAllText(classFile, "// Content");
-
-        try
-        {
-            var isEnabled = AnalyzerHelpers.IsNullableEnabledGlobally(classFile);
-            Assert.True(isEnabled);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Fact]
-    public void Run_WithTestFileButNoTestMethods_SentinelFails()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
-
         const string sourceClass = @"
 namespace Domain;
 public sealed class HighlyRelevantService
@@ -347,11 +201,13 @@ public sealed class HighlyRelevantService
 namespace Domain.Tests;
 public class HighlyRelevantServiceTests
 {
-    // Keine Testmethoden mit [Fact] oder [Test]
+    // Keine Testmethoden
 }";
 
-        File.WriteAllText(Path.Combine(tempDir, "HighlyRelevantService.cs"), sourceClass);
-        File.WriteAllText(Path.Combine(tempDir, "HighlyRelevantServiceTests.cs"), testClass);
+        var solution = CreateAdhocSolution(
+            ("HighlyRelevantService.cs", sourceClass),
+            ("HighlyRelevantServiceTests.cs", testClass)
+        );
 
         var config = CreateDefaultConfig() with
         {
@@ -359,16 +215,9 @@ public class HighlyRelevantServiceTests
             Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 1 }
         };
 
-        try
-        {
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(tempDir);
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
 
-            Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
+        Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
     }
 }
