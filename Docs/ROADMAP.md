@@ -103,5 +103,48 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Projektbasierte Test-Dateierkennung:** Bestimme Testprojekte dynamisch durch Analyse ihrer referenzierten Test-Assemblies (`xunit`, `nunit` etc.) im MSBuild-Projekt, um fragile Dateipfad-Heuristiken abzulösen.
 - [ ] **Sequentielles Projekt-Laden für riesige Solutions (Performance & RAM):** Möglichkeit implementieren, Projekte im MSBuildWorkspace sequentiell zu laden und zu entladen, um Out-of-Memory Exceptions bei großen Monolithen vorzubeugen.
 
+---
+
+## Epic 13: Scope-Verwirrung & Immutability (Scope- & Zustands-Leitplanken)
+*Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte).*
+- [ ] **Variable Shadowing (Verdeckung) verbieten:**
+  - Statische Prüfung (über `SemanticModel` / `SyntaxTree`), ob lokale Variablen oder Parameter Felder/Eigenschaften der Klasse oder Parameter äußerer Methoden verdecken (`Shadowing`).
+  - Fehlermeldung bei Verstößen, da Shadowing die Variablenverfolgung bei LLMs stört.
+  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceNoVariableShadowing`).
+- [ ] **MaxMethodOverloads limitieren:**
+  - Methode overload count analysieren. Warnung, wenn eine Klasse mehr als `MaxMethodOverloads` (Standard: 2) gleichnamige Methoden deklariert.
+  - LLMs scheitern oft bei der Zuordnung feiner Typunterschiede bei übermäßigem Overloading.
+  - Konfigurierbar unter `MetricsConfig` (z. B. `MaxMethodOverloads`).
+- [ ] **Verbot von Parameter-Reassignment (Readonly Parameter):**
+  - Analysiere, ob Parameter innerhalb von Methodenkörpern überschrieben werden (z. B. `amount = amount * 2`).
+  - Parameter müssen implizit als `readonly` behandelt werden, da Reassignment den linearen Tokenizer-Fluss stört.
+  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceReadonlyParameters`).
+- [ ] **Immutability-Check für Klassenfelder:**
+  - Warnung, wenn `private` Felder nicht als `readonly` deklariert sind, obwohl sie nur im Konstruktor zugewiesen werden. Minimiert veränderlichen Zustand für sicherere KI-Edits.
+  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceReadonlyFields`).
+
+---
+
+## Epic 14: Topologische Kopplung & Magic Values (Kopplung & Semantik)
+*Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein.*
+- [ ] **Efferent Coupling limitieren (Constructor Dependencies):**
+  - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
+  - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster massiv.
+  - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
+- [ ] **Vermeidung von Magic Values (Numbers & Strings):**
+  - Finde literale Werte (Magic Numbers/Strings wie `status == 4` oder `role == "Admin"`) direkt in Methodenkörpern.
+  - Ausnahmen deklarieren für `0`, `1`, `-1` und leere Strings.
+  - Erzwinge stattdessen Konstanten (`const`), `static readonly` Felder oder `enum`s, um die Semantik explizit zu benennen.
+  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceNoMagicValues`).
+
+---
+
+## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
+*Hinweis: Konfigurierbar über die `rules.json`.*
+- [ ] **Exceptions for Control Flow verbieten:**
+  - Warnung bei der Verwendung von `throw` in Methoden, die keine Konstruktoren oder explizite Validierungs-Guards (z. B. Methoden mit Suffix `Guard` oder `Validate`) sind.
+  - Erzwinge das Result-Pattern (`Result<T>`) für fachliche Fehlerzustände, da KI-Agenten Kontrollflussbrüche durch Exceptions schwer statisch verfolgen können.
+  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceResultPatternOverExceptions`).
+
 
 
