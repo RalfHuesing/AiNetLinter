@@ -65,6 +65,11 @@ jobs:
             Copy-Item "rules.json" "./publish/rules.json"
           }
 
+          # README.md ins Publish-Verzeichnis kopieren
+          if (Test-Path "README.md") {
+            Copy-Item "README.md" "./publish/README.md"
+          }
+
           # Archiv aus dem Publish-Verzeichnis erstellen (kein "publish/"-Prefix im Archiv)
           Push-Location "./publish"
           if ("${{ matrix.os }}" -eq "windows-latest") {
