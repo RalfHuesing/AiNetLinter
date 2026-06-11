@@ -29,4 +29,10 @@
     <ProjectReference Include="..\AiNetLinter\AiNetLinter.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Build.Framework" Version="18.7.1">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>
