@@ -252,4 +252,121 @@ EndGlobal";
             File.Delete(tempCsproj);
         }
     }
+
+    [Fact]
+    public void Analyze_WithForbiddenNamespaceDependency_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace MyApp.Features.Invoicing;
+
+using MyApp.Features.Customer;
+
+public sealed class InvoiceService {}";
+        var config = CreateDefaultConfig() with
+        {
+            ForbiddenNamespaceDependencies = new[]
+            {
+                new NamespaceRule
+                {
+                    SourceNamespace = "MyApp.Features.Invoicing",
+                    TargetNamespace = "MyApp.Features.Customer"
+                }
+            }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("InvoiceService.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == "ForbiddenNamespaceDependency");
+    }
+
+    [Fact]
+    public void Analyze_WithValueObjectNotRecordOrStruct_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Domain;
+
+public class EmailValueObject
+{
+    public string Address { get; }
+}";
+        var config = CreateDefaultConfig(); // EnforceValueObjectContracts is true by default
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Email.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceValueObjectContracts));
+        Assert.Contains(violations, v => v.Details.Contains("ist als 'class' deklariert"));
+    }
+
+    [Fact]
+    public void Analyze_WithValueObjectMutableProperty_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Domain;
+
+public sealed record MoneyValueObject
+{
+    public decimal Amount { get; set; }
+}";
+        var config = CreateDefaultConfig();
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Money.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceValueObjectContracts));
+        Assert.Contains(violations, v => v.Details.Contains("veränderbare Eigenschaft"));
+    }
+
+    [Fact]
+    public void Run_WithHighlyRelevantClassMissingTestClass_ReturnsSentinelViolation()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+
+        const string sourceClass = @"
+namespace Domain;
+
+public sealed class ComplexDomainService
+{
+    public void HighComplexityMethod(int x)
+    {
+        if (x > 1)
+        {
+            if (x > 2)
+            {
+                if (x > 3)
+                {
+                }
+            }
+        }
+    }
+}";
+        var sourcePath = Path.Combine(tempDir, "ComplexDomainService.cs");
+        File.WriteAllText(sourcePath, sourceClass);
+
+        var config = CreateDefaultConfig(); // EnableTestSentinel is true by default
+
+        try
+        {
+            // Act
+            var engine = new LinterEngine(config);
+            var violations = engine.Run(tempDir);
+
+            // Assert
+            Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
+            Assert.Contains(violations, v => v.Details.Contains("Klasse 'ComplexDomainService' hat eine hohe Relevanz"));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }

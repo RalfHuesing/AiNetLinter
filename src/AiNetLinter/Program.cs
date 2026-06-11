@@ -14,14 +14,14 @@ public static class Program
     {
         try
         {
-            var (configPath, targetPath, verbose) = ParseArguments(args);
+            var (configPath, targetPath, graphPath, verbose) = ParseArguments(args);
             if (string.IsNullOrWhiteSpace(configPath) || string.IsNullOrWhiteSpace(targetPath))
             {
                 ShowUsage();
                 return 1;
             }
 
-            return ExecuteLinter(configPath, targetPath, verbose);
+            return ExecuteLinter(configPath, targetPath, graphPath, verbose);
         }
         catch (Exception ex)
         {
@@ -32,12 +32,13 @@ public static class Program
         }
     }
 
-    private static (string? configPath, string? targetPath, bool verbose) ParseArguments(string[] args)
+    private static (string? configPath, string? targetPath, string? graphPath, bool verbose) ParseArguments(string[] args)
     {
         string? configPath = FindArgument(args, "--config", "-c");
         string? targetPath = FindArgument(args, "--path", "-p");
+        string? graphPath = FindArgument(args, "--graph", "-g");
         bool verbose = args.Contains("--verbose") || args.Contains("-v");
-        return (configPath, targetPath, verbose);
+        return (configPath, targetPath, graphPath, verbose);
     }
 
     private static string? FindArgument(string[] args, string longName, string shortName)
@@ -52,30 +53,55 @@ public static class Program
         return null;
     }
 
-    private static int ExecuteLinter(string configPath, string targetPath, bool verbose)
+    private static void LogStart(bool verbose, string configPath, string targetPath)
     {
-        if (!File.Exists(configPath))
-        {
-            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
-            return 1;
-        }
-
         if (verbose)
         {
             Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
             Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
+        }
+    }
+
+    private static LinterConfig? TryLoadConfig(string configPath)
+    {
+        if (!File.Exists(configPath))
+        {
+            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
+            return null;
         }
 
         var config = LoadConfig(configPath);
         if (config == null)
         {
             Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
+        }
+        return config;
+    }
+
+    private static void GenerateGraphIfRequested(LinterEngine engine, string targetPath, string? graphPath)
+    {
+        if (!string.IsNullOrEmpty(graphPath))
+        {
+            engine.GenerateMermaidGraph(targetPath, graphPath);
+            Console.WriteLine($"[INFO]: Mermaid-Abhängigkeitsgraph wurde generiert unter: {graphPath}");
+        }
+    }
+
+    private static int ExecuteLinter(string configPath, string targetPath, string? graphPath, bool verbose)
+    {
+        LogStart(verbose, configPath, targetPath);
+
+        var config = TryLoadConfig(configPath);
+        if (config == null)
+        {
             return 1;
         }
 
         var engine = new LinterEngine(config);
-        var violations = engine.Run(targetPath);
+        
+        GenerateGraphIfRequested(engine, targetPath, graphPath);
 
+        var violations = engine.Run(targetPath);
         if (violations.Count > 0)
         {
             PrintViolations(violations);
@@ -117,6 +143,7 @@ public static class Program
         Console.WriteLine("\nOptionen:");
         Console.WriteLine("  -c, --config    Pfad zur JSON-Konfigurationsdatei (rules.json) (Erforderlich)");
         Console.WriteLine("  -p, --path      Pfad zur .slnx, .csproj, einer .cs Datei oder einem Verzeichnis (Erforderlich)");
+        Console.WriteLine("  -g, --graph     Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md) (Optional)");
         Console.WriteLine("  -v, --verbose   Detaillierte Protokollausgabe aktivieren");
     }
 }

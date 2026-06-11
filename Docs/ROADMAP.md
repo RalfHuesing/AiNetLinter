@@ -48,7 +48,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 6: Future Capabilities (Roadmap)
-- [ ] **Namespace-Kopplung (Vertical Slices):** Verbot von unerlaubten slice-übergreifenden Abhängigkeiten
-- [ ] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge
-- [ ] **Traceability-Graphen:** Analyse von Seiteneffekten bei Code-Änderungen
-- [ ] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
+- [x] **Namespace-Kopplung (Vertical Slices):** Verbot von unerlaubten slice-übergreifenden Abhängigkeiten (mittels ForbiddenNamespaceDependencies)
+- [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von *ValueObject Suffix)
+- [x] **Traceability-Graphen:** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
+- [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
