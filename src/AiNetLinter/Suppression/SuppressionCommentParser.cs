@@ -55,6 +55,15 @@ public static class SuppressionCommentParser
         return suffix != null && IsDisableAllSuffix(suffix);
     }
 
+    /// <summary>
+    /// Prüft, ob eine Zeile exakt dem Disable-all-Kommentar entspricht.
+    /// </summary>
+    public static bool IsExactDisableAllLine(string lineText)
+    {
+        var normalizedLine = lineText.TrimEnd('\r');
+        return string.Equals(normalizedLine, DisableAllLine, StringComparison.Ordinal);
+    }
+
     private static string? GetDisableSuffix(string lineText)
     {
         int index = lineText.IndexOf(DisableMarker, StringComparison.Ordinal);

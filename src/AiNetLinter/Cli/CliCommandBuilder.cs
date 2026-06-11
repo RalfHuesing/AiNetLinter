@@ -15,7 +15,8 @@ internal static class CliCommandBuilder
         Option<bool> Verbose,
         Option<string?> CreateBaseline,
         Option<string?> Baseline,
-        Option<bool> AddDisableAll);
+        Option<bool> AddDisableAll,
+        Option<bool> RemoveDisableAll);
 
     internal sealed record ParsedArgs(
         string? ConfigPath,
@@ -25,7 +26,8 @@ internal static class CliCommandBuilder
         bool Verbose,
         string? CreateBaselinePath,
         string? BaselinePath,
-        bool AddDisableAll);
+        bool AddDisableAll,
+        bool RemoveDisableAll);
 
     internal static (RootCommand Root, Options Options) Build()
     {
@@ -33,7 +35,7 @@ internal static class CliCommandBuilder
         var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
         {
             options.Config, options.Path, options.Graph, options.Format, options.Verbose,
-            options.CreateBaseline, options.Baseline, options.AddDisableAll,
+            options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
         };
 
         return (root, options);
@@ -41,43 +43,16 @@ internal static class CliCommandBuilder
 
     private static Options CreateOptions()
     {
-        var configOpt = new Option<string?>("--config", "-c")
-        {
-            Description = "Pfad zur JSON-Konfigurationsdatei (rules.json)",
-        };
-        var pathOpt = new Option<string>("--path", "-p")
-        {
-            Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis",
-            Required = true,
-        };
-        var graphOpt = new Option<string?>("--graph", "-g")
-        {
-            Description = "Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md)",
-        };
-        var formatOpt = new Option<string>("--format", "-f")
-        {
-            Description = "Ausgabeformat: text (Standard) oder sarif",
-            DefaultValueFactory = _ => "text",
-        };
-        var verboseOpt = new Option<bool>("--verbose", "-v")
-        {
-            Description = "Detaillierte Protokollausgabe aktivieren",
-        };
-        var createBaselineOpt = new Option<string?>("--create-baseline")
-        {
-            Description = "Erzeugt eine Baseline-JSON mit Datei-Checksummen am angegebenen Pfad",
-        };
-        var baselineOpt = new Option<string?>("--baseline")
-        {
-            Description = "Pfad zur Baseline-JSON für inkrementelle Migration",
-        };
-        var addDisableAllOpt = new Option<bool>("--add-disable-all")
-        {
-            Description = "Fügt '// ainetlinter-disable all' oben in alle .cs-Dateien unter --path ein",
-        };
-
         return new Options(
-            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt, addDisableAllOpt);
+            CliOptionFactory.CreateConfigOption(),
+            CliOptionFactory.CreatePathOption(),
+            CliOptionFactory.CreateGraphOption(),
+            CliOptionFactory.CreateFormatOption(),
+            CliOptionFactory.CreateVerboseOption(),
+            CliOptionFactory.CreateBaselineCreateOption(),
+            CliOptionFactory.CreateBaselineOption(),
+            CliOptionFactory.CreateAddDisableAllOption(),
+            CliOptionFactory.CreateRemoveDisableAllOption());
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -90,6 +65,7 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.Verbose),
             parseResult.GetValue(options.CreateBaseline),
             parseResult.GetValue(options.Baseline),
-            parseResult.GetValue(options.AddDisableAll));
+            parseResult.GetValue(options.AddDisableAll),
+            parseResult.GetValue(options.RemoveDisableAll));
     }
 }

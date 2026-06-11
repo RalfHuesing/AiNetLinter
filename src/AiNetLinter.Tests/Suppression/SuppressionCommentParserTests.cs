@@ -28,6 +28,16 @@ public sealed class SuppressionCommentParserTests
         Assert.True(SuppressionCommentParser.ContainsDisableAll(content));
     }
 
+    [Theory]
+    [InlineData("// ainetlinter-disable all", true)]
+    [InlineData("// ainetlinter-disable all\r", true)]
+    [InlineData(" // ainetlinter-disable all", false)]
+    [InlineData("// ainetlinter-disable all extra", false)]
+    public void IsExactDisableAllLine_MatchesOnlyExactLine(string line, bool expected)
+    {
+        Assert.Equal(expected, SuppressionCommentParser.IsExactDisableAllLine(line));
+    }
+
     [Fact]
     public void ContainsDisableAll_IgnoresRuleSpecificComment()
     {

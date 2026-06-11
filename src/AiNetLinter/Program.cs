@@ -50,6 +50,7 @@ public static class Program
             CreateBaselinePath = parsed.CreateBaselinePath,
             BaselinePath = parsed.BaselinePath,
             AddDisableAll = parsed.AddDisableAll,
+            RemoveDisableAll = parsed.RemoveDisableAll,
         };
     }
 
@@ -57,7 +58,8 @@ public static class Program
     {
         if (HasConflictingModeOptions(args))
         {
-            Console.Error.WriteLine("[ERROR]: --create-baseline und --add-disable-all dürfen nicht mit --baseline kombiniert werden.");
+            Console.Error.WriteLine(
+                "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
             return 1;
         }
 
@@ -95,25 +97,68 @@ public static class Program
             return await AddDisableAllAsync(args);
         }
 
+        if (args.RemoveDisableAll)
+        {
+            return await RemoveDisableAllAsync(args);
+        }
+
         return null;
     }
 
     private static bool HasConflictingModeOptions(LinterArgs args)
     {
-        return args.BaselinePath != null && (args.CreateBaselinePath != null || args.AddDisableAll) ||
-               args.CreateBaselinePath != null && args.AddDisableAll;
+        var maintenanceModeCount = CountMaintenanceModes(args);
+        return maintenanceModeCount > 1 ||
+               args.BaselinePath != null && maintenanceModeCount > 0;
+    }
+
+    private static int CountMaintenanceModes(LinterArgs args)
+    {
+        int count = 0;
+        if (args.CreateBaselinePath != null) count++;
+        if (args.AddDisableAll) count++;
+        if (args.RemoveDisableAll) count++;
+        return count;
     }
 
     private static async Task<int> AddDisableAllAsync(LinterArgs args)
     {
+        var config = TryLoadConfig(args.ConfigPath, isRequired: true);
+        if (config == null)
+        {
+            return 1;
+        }
+
         LogDisableAllInject(args.Verbose, args.TargetPath);
 
-        var result = await DisableAllCommentInjector.InjectAsync(args.TargetPath);
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(args.TargetPath);
+        var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
+        var violatingPaths = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, outputRoot);
+        var result = DisableAllCommentInjector.InjectIntoFiles(violatingPaths);
 
         if (args.Verbose)
         {
             Console.WriteLine(
-                $"[INFO]: {result.ModifiedFiles} von {result.TotalFiles} Dateien geändert, {result.SkippedFiles} übersprungen.");
+                $"[INFO]: Audit fand {violations.Count} Verstöße in {result.CandidateFiles} Dateien.");
+            Console.WriteLine(
+                $"[INFO]: {result.ModifiedFiles} Dateien geändert, {result.SkippedFiles} übersprungen.");
+        }
+
+        Console.WriteLine("OK");
+        return 0;
+    }
+
+    private static async Task<int> RemoveDisableAllAsync(LinterArgs args)
+    {
+        LogDisableAllRemove(args.Verbose, args.TargetPath);
+
+        var result = await DisableAllCommentRemover.RemoveAsync(args.TargetPath);
+
+        if (args.Verbose)
+        {
+            Console.WriteLine(
+                $"[INFO]: {result.ModifiedFiles} von {result.ScannedFiles} Dateien bereinigt.");
         }
 
         Console.WriteLine("OK");
@@ -221,7 +266,15 @@ public static class Program
     {
         if (verbose)
         {
-            Console.WriteLine($"[INFO]: Füge Disable-all-Kommentar ein unter: {targetPath}");
+            Console.WriteLine($"[INFO]: Audit und Disable-all-Injection unter: {targetPath}");
+        }
+    }
+
+    private static void LogDisableAllRemove(bool verbose, string targetPath)
+    {
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Entferne Disable-all-Kommentare unter: {targetPath}");
         }
     }
 
@@ -289,5 +342,6 @@ public static class Program
         public string? CreateBaselinePath { get; init; }
         public string? BaselinePath { get; init; }
         public bool AddDisableAll { get; init; }
+        public bool RemoveDisableAll { get; init; }
     }
 }

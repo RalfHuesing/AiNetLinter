@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AiNetLinter.Suppression;
 using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
@@ -6,29 +7,46 @@ namespace AiNetLinter.Tests.Suppression;
 public sealed class DisableAllCliTests
 {
     [Fact]
-    public void AddDisableAll_OnDirectory_WritesCommentAndSkipsOnSecondRun()
+    public void AddDisableAll_OnViolatingFixture_InjectOnlyIntoViolatingFiles()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"ainetlinter-disable-{Guid.NewGuid():N}");
-        var sourceFile = Path.Combine(tempDir, "Legacy.cs");
-        Directory.CreateDirectory(tempDir);
-        File.WriteAllText(sourceFile, "namespace Legacy;");
+        var fixtureRoot = GetFixtureRoot();
+        var configPath = Path.Combine(fixtureRoot, "rules.json");
+        var violatingFile = Path.Combine(fixtureRoot, "src", "BaselineMini", "ViolatingClass.cs");
+        var originalContent = File.ReadAllText(violatingFile);
         try
         {
-            var firstRun = RunLinter($"--path \"{tempDir}\" --add-disable-all");
-            Assert.Equal(0, firstRun.ExitCode);
-            Assert.Contains("OK", firstRun.Output);
-            Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(sourceFile));
+            var result = RunLinter(
+                $"--config \"{configPath}\" --path \"{fixtureRoot}\" --add-disable-all");
 
-            var secondRun = RunLinter($"--path \"{tempDir}\" --add-disable-all");
-            Assert.Equal(0, secondRun.ExitCode);
-            Assert.Equal(1, CountDisableAllMarkers(File.ReadAllText(sourceFile)));
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("OK", result.Output);
+            Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(violatingFile));
         }
         finally
         {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
+            File.WriteAllText(violatingFile, originalContent);
+        }
+    }
+
+    [Fact]
+    public void RemoveDisableAll_OnFixture_RemovesExactDisableAllLine()
+    {
+        var fixtureRoot = GetFixtureRoot();
+        var violatingFile = Path.Combine(fixtureRoot, "src", "BaselineMini", "ViolatingClass.cs");
+        var originalContent = File.ReadAllText(violatingFile);
+        var injectedContent = DisableAllCommentInjector.PrependDisableAll(originalContent);
+        try
+        {
+            File.WriteAllText(violatingFile, injectedContent);
+
+            var result = RunLinter($"--path \"{fixtureRoot}\" --remove-disable-all");
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Equal(originalContent, File.ReadAllText(violatingFile));
+        }
+        finally
+        {
+            File.WriteAllText(violatingFile, originalContent);
         }
     }
 
@@ -45,18 +63,17 @@ public sealed class DisableAllCliTests
         Assert.Equal(1, exitCode);
     }
 
-    private static int CountDisableAllMarkers(string content)
+    [Fact]
+    public async Task Main_AddAndRemoveDisableAll_ReturnsExitCodeOne()
     {
-        const string marker = "// ainetlinter-disable all";
-        int count = 0;
-        int index = 0;
-        while ((index = content.IndexOf(marker, index, StringComparison.Ordinal)) >= 0)
+        var exitCode = await AiNetLinter.Program.Main(new[]
         {
-            count++;
-            index += marker.Length;
-        }
+            "--path", ".",
+            "--add-disable-all",
+            "--remove-disable-all",
+        });
 
-        return count;
+        Assert.Equal(1, exitCode);
     }
 
     private static (int ExitCode, string Output, string Error) RunLinter(string arguments)
@@ -82,6 +99,12 @@ public sealed class DisableAllCliTests
         process.WaitForExit();
 
         return (process.ExitCode, output, error);
+    }
+
+    private static string GetFixtureRoot()
+    {
+        var root = FindSolutionRoot();
+        return Path.Combine(root, "tests", "Fixtures", "BaselineMini");
     }
 
     private static string FindSolutionRoot()
