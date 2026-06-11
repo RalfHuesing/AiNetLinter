@@ -40,4 +40,27 @@ public sealed class TestClass
         var violations = LinterAnalyzer.Analyze("Test.cs", source, config);
         Assert.Empty(violations);
     }
+
+    [Fact]
+    public void Analyze_WithForbiddenNamespaceInStatement_ReturnsViolation()
+    {
+        const string source = @"
+namespace MyFeature.Domain;
+public sealed class DomainService
+{
+    public void Run()
+    {
+        var helper = new MyFeature.Infrastructure.DbHelper();
+    }
+}";
+        var config = CreateDefaultConfig() with
+        {
+            ForbiddenNamespaceDependencies = new[]
+            {
+                new NamespaceRule { SourceNamespace = "MyFeature.Domain", TargetNamespace = "MyFeature.Infrastructure" }
+            }
+        };
+        var violations = LinterAnalyzer.Analyze("Test.cs", source, config);
+        Assert.Contains(violations, v => v.RuleName == "ForbiddenNamespaceDependency");
+    }
 }

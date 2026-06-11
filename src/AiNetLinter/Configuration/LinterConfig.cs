@@ -46,4 +46,5 @@ public sealed record MetricsConfig
     public int MaxCyclomaticComplexity { get; init; } = 5;
     public int MaxCognitiveComplexity { get; init; } = 5;
     public int MaxInheritanceDepth { get; init; } = 2;
+    public int MinCognitiveComplexityForTest { get; init; } = 3;
 }

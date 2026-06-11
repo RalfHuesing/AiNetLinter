@@ -206,4 +206,169 @@ public sealed class ChildClass : ParentClass {}";
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public void Run_WithDuplicateClassNamesInDifferentNamespaces_NoCrashAndResolvesCorrectly()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+
+        const string code = @"
+namespace Test.N1;
+public class MyClass {}
+
+namespace Test.N2;
+public class MyClass : Test.N1.MyClass {}
+";
+        var sourcePath = Path.Combine(tempDir, "DuplicateClasses.cs");
+        File.WriteAllText(sourcePath, code);
+
+        var config = CreateDefaultConfig() with
+        {
+            Metrics = new MetricsConfig { MaxInheritanceDepth = 1 }
+        };
+
+        try
+        {
+            var engine = new LinterEngine(config);
+            var violations = engine.Run(tempDir);
+            
+            Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth)));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void Run_WithConfigurableSentinelThreshold_RespectsConfigValue()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+
+        const string sourceClass = @"
+namespace Domain;
+public sealed class ComplexService
+{
+        public void MediumComplexityMethod(int x)
+        {
+            if (x > 1)
+            {
+                if (x > 2) {}
+            }
+        }
+}";
+        var sourcePath = Path.Combine(tempDir, "ComplexService.cs");
+        File.WriteAllText(sourcePath, sourceClass);
+
+        var configLow = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnableTestSentinel = true },
+            Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 1 }
+        };
+
+        var configHigh = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnableTestSentinel = true },
+            Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 5 }
+        };
+
+        try
+        {
+            var engineLow = new LinterEngine(configLow);
+            var violationsLow = engineLow.Run(tempDir);
+            Assert.Contains(violationsLow, v => v.RuleName == "StaticTestSentinel");
+
+            var engineHigh = new LinterEngine(configHigh);
+            var violationsHigh = engineHigh.Run(tempDir);
+            Assert.Empty(violationsHigh.Where(v => v.RuleName == "StaticTestSentinel"));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void IsNullableEnabledGlobally_WithDirectoryBuildProps_ReturnsTrue()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+        var subDir = Path.Combine(tempDir, "SubProject");
+        Directory.CreateDirectory(subDir);
+
+        const string propsContent = @"<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>";
+        File.WriteAllText(Path.Combine(tempDir, "Directory.Build.props"), propsContent);
+
+        const string csprojContent = @"<Project Sdk=""Microsoft.NET.Sdk""></Project>";
+        File.WriteAllText(Path.Combine(subDir, "SubProject.csproj"), csprojContent);
+
+        var classFile = Path.Combine(subDir, "MyClass.cs");
+        File.WriteAllText(classFile, "// Content");
+
+        try
+        {
+            var isEnabled = AnalyzerHelpers.IsNullableEnabledGlobally(classFile);
+            Assert.True(isEnabled);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void Run_WithTestFileButNoTestMethods_SentinelFails()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+
+        const string sourceClass = @"
+namespace Domain;
+public sealed class HighlyRelevantService
+{
+    public void ComplexMethod(int x)
+    {
+        if (x > 1)
+        {
+            if (x > 2)
+            {
+                if (x > 3) {}
+            }
+        }
+    }
+}";
+        const string testClass = @"
+namespace Domain.Tests;
+public class HighlyRelevantServiceTests
+{
+    // Keine Testmethoden mit [Fact] oder [Test]
+}";
+
+        File.WriteAllText(Path.Combine(tempDir, "HighlyRelevantService.cs"), sourceClass);
+        File.WriteAllText(Path.Combine(tempDir, "HighlyRelevantServiceTests.cs"), testClass);
+
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnableTestSentinel = true },
+            Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 1 }
+        };
+
+        try
+        {
+            var engine = new LinterEngine(config);
+            var violations = engine.Run(tempDir);
+
+            Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }

@@ -16,6 +16,7 @@
     "MaxMethodParameterCount": 4,
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
-    "MaxInheritanceDepth": 2
+    "MaxInheritanceDepth": 2,
+    "MinCognitiveComplexityForTest": 3
   }
 }
