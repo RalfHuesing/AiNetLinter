@@ -16,6 +16,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     private readonly string _fileContent;
     private readonly LinterConfig _config;
     private readonly List<RuleViolation> _violations = new();
+    private string _currentNamespace = "";
 
     private LinterAnalyzer(string filePath, string fileContent, LinterConfig config)
         : base(SyntaxWalkerDepth.Node)
@@ -48,7 +49,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     private void CheckLineCount()
     {
-        // Einfaches Zeilenzählen anhand von Zeilenumbrüchen
         var lineCount = _fileContent.Split('\n').Length;
         if (lineCount > _config.Metrics.MaxLineCount)
         {
@@ -61,6 +61,60 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf."
             });
         }
+    }
+
+    public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+    {
+        var prevNamespace = _currentNamespace;
+        _currentNamespace = node.Name.ToString();
+        base.VisitNamespaceDeclaration(node);
+        _currentNamespace = prevNamespace;
+    }
+
+    public override void VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
+    {
+        _currentNamespace = node.Name.ToString();
+        base.VisitFileScopedNamespaceDeclaration(node);
+    }
+
+    public override void VisitUsingDirective(UsingDirectiveSyntax node)
+    {
+        CheckForbiddenNamespace(node);
+        base.VisitUsingDirective(node);
+    }
+
+    private void CheckForbiddenNamespace(UsingDirectiveSyntax node)
+    {
+        if (node.Name == null) return;
+        var importedNamespace = node.Name.ToString();
+        if (importedNamespace == null) return;
+
+        foreach (var rule in _config.ForbiddenNamespaceDependencies)
+        {
+            if (IsViolation(rule, importedNamespace))
+            {
+                AddNamespaceViolation(node, importedNamespace);
+            }
+        }
+    }
+
+    private bool IsViolation(NamespaceRule rule, string importedNamespace)
+    {
+        if (rule.SourceNamespace == null || rule.TargetNamespace == null) return false;
+        return _currentNamespace.StartsWith(rule.SourceNamespace) && 
+               importedNamespace.StartsWith(rule.TargetNamespace);
+    }
+
+    private void AddNamespaceViolation(UsingDirectiveSyntax node, string importedNamespace)
+    {
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(node),
+            RuleName = "ForbiddenNamespaceDependency",
+            Details = $"Der Namespace '{_currentNamespace}' darf nicht vom Namespace '{importedNamespace}' abhängen.",
+            Guidance = "Entferne die Abhängigkeit oder nutze Abstraktion/Events statt direkter Kopplung."
+        });
     }
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -78,7 +132,72 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
             });
         }
 
+        CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
         base.VisitClassDeclaration(node);
+    }
+
+    public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
+    {
+        CheckValueObjectContract(node, node.Identifier.Text, isRecord: true);
+        base.VisitRecordDeclaration(node);
+    }
+
+    public override void VisitStructDeclaration(StructDeclarationSyntax node)
+    {
+        CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
+        base.VisitStructDeclaration(node);
+    }
+
+    private bool ShouldCheckValueObject(string name)
+    {
+        if (!_config.Global.EnforceValueObjectContracts) return false;
+        return name.EndsWith("ValueObject");
+    }
+
+    private static bool IsStructOrReadOnly(TypeDeclarationSyntax node)
+    {
+        if (node is StructDeclarationSyntax) return true;
+        return node.Modifiers.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword));
+    }
+
+    private void CheckValueObjectContract(TypeDeclarationSyntax node, string name, bool isRecord)
+    {
+        if (!ShouldCheckValueObject(name))
+        {
+            return;
+        }
+
+        if (!isRecord && !IsStructOrReadOnly(node))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Global.EnforceValueObjectContracts),
+                Details = $"Das Value Object '{name}' ist als 'class' deklariert.",
+                Guidance = "Value Objects müssen als 'record' oder 'readonly struct' deklariert werden, um Unveränderlichkeit zu garantieren."
+            });
+        }
+
+        CheckValueObjectProperties(node, name);
+    }
+
+    private void CheckValueObjectProperties(TypeDeclarationSyntax node, string name)
+    {
+        foreach (var prop in node.Members.OfType<PropertyDeclarationSyntax>())
+        {
+            if (prop.AccessorList != null && prop.AccessorList.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)))
+            {
+                _violations.Add(new RuleViolation
+                {
+                    FilePath = _filePath,
+                    LineNumber = GetLineNumber(prop),
+                    RuleName = nameof(_config.Global.EnforceValueObjectContracts),
+                    Details = $"Das Value Object '{name}' enthält eine veränderbare Eigenschaft '{prop.Identifier.Text}' (hat einen 'set'-Accessor).",
+                    Guidance = "Entferne den 'set'-Accessor und benutze get-only oder 'init' für Eigenschaften in Value Objects."
+                });
+            }
+        }
     }
 
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)

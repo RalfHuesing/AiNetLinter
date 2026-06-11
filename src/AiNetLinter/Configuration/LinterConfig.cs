@@ -7,6 +7,16 @@ public sealed record LinterConfig
 {
     public required GlobalConfig Global { get; init; }
     public required MetricsConfig Metrics { get; init; }
+    public IReadOnlyCollection<NamespaceRule> ForbiddenNamespaceDependencies { get; init; } = Array.Empty<NamespaceRule>();
+}
+
+/// <summary>
+/// Definition einer verbotenen Abhängigkeit zwischen Namespaces.
+/// </summary>
+public sealed record NamespaceRule
+{
+    public required string SourceNamespace { get; init; }
+    public required string TargetNamespace { get; init; }
 }
 
 /// <summary>
@@ -17,6 +27,8 @@ public sealed record GlobalConfig
     public bool EnforceSealedClasses { get; init; } = true;
     public bool AllowDynamic { get; init; } = false;
     public bool AllowOutParameters { get; init; } = false;
+    public bool EnforceValueObjectContracts { get; init; } = true;
+    public bool EnableTestSentinel { get; init; } = true;
 }
 
 /// <summary>
