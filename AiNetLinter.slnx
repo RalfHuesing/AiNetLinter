@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/AiNetLinter.Tests/AiNetLinter.Tests.csproj" />
     <Project Path="src/AiNetLinter/AiNetLinter.csproj" />
   </Folder>
 </Solution>
