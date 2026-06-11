@@ -12,17 +12,41 @@ public sealed class TestCoverageIndex
     /// <summary>
     /// Registriert eine Testklasse mit mindestens einer Testmethode.
     /// </summary>
-    public void AddTestClass(string className) => _testClassNames.Add(className);
+    public void AddTestClass(string className)
+    {
+        if (string.IsNullOrWhiteSpace(className))
+        {
+            return;
+        }
+
+        _testClassNames.Add(className);
+    }
 
     /// <summary>
     /// Registriert einen per typeof/nameof referenzierten Typnamen aus einem Test.
     /// </summary>
-    public void AddReferencedType(string typeName) => _referencedTypeNames.Add(typeName);
+    public void AddReferencedType(string typeName)
+    {
+        if (string.IsNullOrWhiteSpace(typeName))
+        {
+            return;
+        }
+
+        _referencedTypeNames.Add(typeName);
+    }
 
     /// <summary>
     /// Registriert einen @covers-Kommentar aus einer Testdatei.
     /// </summary>
-    public void AddCoversComment(string coveredTypeName) => _coversComments.Add(coveredTypeName);
+    public void AddCoversComment(string coveredTypeName)
+    {
+        if (string.IsNullOrWhiteSpace(coveredTypeName))
+        {
+            return;
+        }
+
+        _coversComments.Add(coveredTypeName);
+    }
 
     internal IReadOnlyCollection<string> TestClassNames => _testClassNames;
     internal IReadOnlyCollection<string> ReferencedTypeNames => _referencedTypeNames;

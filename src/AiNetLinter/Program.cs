@@ -409,7 +409,13 @@ public static class Program
         {
             var content = File.ReadAllText(configPath);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<LinterConfig>(content, options);
+            var config = JsonSerializer.Deserialize<LinterConfig>(content, options);
+            return config is null ? null : LinterConfigNormalizer.Normalize(config);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine($"[ERROR]: Ungültige Konfiguration in '{configPath}': {ex.Message}");
+            return null;
         }
         catch (Exception ex)
         {
