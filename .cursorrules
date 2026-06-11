@@ -1,0 +1,61 @@
+# AiNetLinter - Projektrichtlinien für KI-Agenten
+
+Diese Richtlinien gelten für alle automatisierten Code-Edits, Refactorings und Implementierungsaufgaben im Repository `AiNetLinter`. Sie dienen als strikte Leitplanken für das LLM, um höchste Code-Qualität, Kompilierbarkeit und AI-Readability zu garantieren.
+
+---
+
+## 1. Greenfield-Kontext & Invarianten
+
+*   **Keine Abwärtskompatibilität:** Das Projekt ist ein reines **Greenfield-Projekt** unter .NET 10. Es gibt keine produktiven Altdaten, Legacy-Konfigurationen oder Migrationszwänge. Wähle bei Änderungen immer den saubersten, modernsten Weg.
+*   **Zero-Warning-Directive:** Alle Builds müssen absolut sauber kompiliert werden. **0 Compiler-Warnungen und 0 Code-Analyzer-Warnungen** sind der Soll-Zustand. Compiler-Warnungen werden wie Fehler behandelt.
+*   **Tests sind Pflicht:** Jede neue oder geänderte Fachlogik erfordert entsprechende xUnit v3 Tests. Ein Task gilt erst als fertig, wenn alle Tests grün sind.
+
+---
+
+## 2. Stil- & Designregeln (AI-Readability)
+
+Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle maximal verständlich, wartbar und fehlerfrei editierbar bleibt:
+
+*   **Sealed by Default:** Jede konkrete Klasse (die nicht `abstract` oder `static` ist) **muss** als `sealed` deklariert werden. Dies hält Vererbungshierarchien flach und optimiert die Laufzeit.
+*   **Immutability:** Setze konsequent auf `record`, `readonly struct` und Pure Functions. Vermeide veränderliche Zustände und Seiteneffekte.
+*   **Dateigrößen-Limit:** Keine `.cs`-Datei darf mehr als **500 Zeilen** Code enthalten, um den "Lost in the Middle"-Effekt in Kontextfenstern zu vermeiden.
+*   **Methoden-Grenzwerte:**
+    *   Maximal **4 Parameter** pro Methode. Überschreitungen müssen in ein Parameter-Objekt (`record`) gekapselt werden.
+    *   Maximale zyklomatische Komplexität: **5** pro Methode.
+    *   Maximale kognitive Komplexität: **5** pro Methode.
+    *   Verwende konsequent Early Returns zur Flachhaltung des Codes.
+*   **Semantisches Naming:** Bezeichnernamen müssen präzise die Absicht (Intent) beschreiben (PascalCase). Vermeide zu spezifische Laufzeit-Bedingungen im Methodennamen.
+*   **Dokumentation:** Verwende XML-Doc-Comments (`///`), um komplexe Methoden oder Seiteneffekte zu erklären, statt den Methodennamen unleserlich zu strecken. Der Sprachserver (LSP) stellt diese Infos dem AI-Agenten bereit.
+
+---
+
+## 3. Negative Constraints (Verbote)
+
+*   **KEIN dynamic:** Das Schlüsselwort `dynamic` ist strikt verboten, da es die statische Analyse von LLMs bricht.
+*   **KEINE out-Parameter:** Verwende stattdessen C#-Tuples oder Records für mehrere Rückgabewerte.
+*   **KEINE Interface-Wüsten:** Erzeuge keine Interfaces, wenn es nur eine einzige Implementierung gibt (z. B. kein `ILinterEngine`, da es nur `LinterEngine` gibt).
+*   **KEIN AssemblyLoadContext (ALC):** Implementiere kein dynamisches Laden von DLLs zur Laufzeit. Alles wird statisch kompiliert.
+*   **KEINE Plugin-Systeme:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
+*   **KEIN stilles Exception-Schlucken:** Leere `catch (Exception)` Blöcke sind verboten. Ausnahmen müssen geloggt oder als typisierte Fehlerzustände/Exceptions nach oben gereicht werden.
+*   **KEIN Dependency Injection Overhead:** Für CLI-Helfer und lokale Logik wird kein DI-Container verwendet. Nutze statische Klassen oder direkte Instanziierung.
+
+---
+
+## 4. Quellcode-Kommentare
+
+*   **Fokus auf das „Warum“:** LLMs verstehen C#-Syntax perfekt. Kommentare wie `// Initialisiert Liste` sind Rauschen und verschwenden Kontext-Token. Dokumentiere nur **fachliche Hintergründe, Concurrency-Szenarien oder API-Einschränkungen**.
+*   **Aktualität:** Veraltete Kommentare müssen bei Codeänderung sofort angepasst oder gelöscht werden, um nachfolgende Agenten nicht in die Irre zu führen.
+
+---
+
+## 5. Systematischer Debugging-Workflow
+
+Tritt während der Bearbeitung ein Fehler auf, gehe strukturiert vor:
+1.  **Stacktrace analysieren:** Ermittle den genauen Fehlerursprung.
+2.  **Erst Hypothese, dann Code:** Erkläre dem Benutzer kurz in 1–2 Sätzen, *warum* der Fehler auftritt und *was* die vorgeschlagene Änderung bewirkt. Vermeide blindes Herumprobieren.
+
+---
+
+## 6. Commit-Vorschläge
+
+Jede Antwort, die Dateiänderungen im Workspace vornimmt, schließt **zwingend** mit einem Abschnitt `### Commit-Vorschlag` ab. Dieser enthält einen einzigen, 1:1 kopierbaren Codeblock mit einer aussagekräftigen Commit-Message im **Conventional Commits** Format (Deutsch, imperativ, z. B. `feat(core): add syntax walker for sealed classes`).
