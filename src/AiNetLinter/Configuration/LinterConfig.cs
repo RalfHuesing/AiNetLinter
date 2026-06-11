@@ -43,6 +43,7 @@ public sealed record MetricsConfig
 {
     public int MaxLineCount { get; init; } = 500;
     public int MaxMethodParameterCount { get; init; } = 4;
+    public int MaxMethodLineCount { get; init; } = 42;
     public int MaxCyclomaticComplexity { get; init; } = 5;
     public int MaxCognitiveComplexity { get; init; } = 5;
     public int MaxInheritanceDepth { get; init; } = 2;
