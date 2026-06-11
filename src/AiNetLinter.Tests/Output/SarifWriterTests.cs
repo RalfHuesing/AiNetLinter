@@ -4,6 +4,7 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
+[Collection("ConsoleTestCollection")]
 public sealed class SarifWriterTests
 {
     private static readonly string OutputRoot = Path.GetFullPath(@"C:\Projects\MyApp");

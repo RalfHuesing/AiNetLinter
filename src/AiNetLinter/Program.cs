@@ -1,6 +1,6 @@
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Text.Json;
+using AiNetLinter.Cli;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
@@ -18,46 +18,37 @@ public static class Program
     /// </summary>
     public static async Task<int> Main(string[] args)
     {
-        var configOpt = new Option<string?>(new[] { "--config", "-c" }, "Pfad zur JSON-Konfigurationsdatei (rules.json)");
-        var pathOpt = new Option<string>(new[] { "--path", "-p" }, "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis") { IsRequired = true };
-        var graphOpt = new Option<string?>(new[] { "--graph", "-g" }, "Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md)");
-        var formatOpt = new Option<string>(new[] { "--format", "-f" }, () => "text", "Ausgabeformat: text (Standard) oder sarif");
-        var verboseOpt = new Option<bool>(new[] { "--verbose", "-v" }, "Detaillierte Protokollausgabe aktivieren");
-        var createBaselineOpt = new Option<string?>(new[] { "--create-baseline" }, "Erzeugt eine Baseline-JSON mit Datei-Checksummen am angegebenen Pfad");
-        var baselineOpt = new Option<string?>(new[] { "--baseline" }, "Pfad zur Baseline-JSON für inkrementelle Migration");
+        var (root, options) = CliCommandBuilder.Build();
 
-        var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
-        {
-            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt
-        };
-
-        root.SetHandler(async context =>
+        root.SetAction(async parseResult =>
         {
             try
             {
-                var linterArgs = new LinterArgs
-                {
-                    ConfigPath = context.ParseResult.GetValueForOption(configOpt),
-                    TargetPath = context.ParseResult.GetValueForOption(pathOpt) ?? "",
-                    GraphPath = context.ParseResult.GetValueForOption(graphOpt),
-                    Format = context.ParseResult.GetValueForOption(formatOpt) ?? "text",
-                    Verbose = context.ParseResult.GetValueForOption(verboseOpt),
-                    CreateBaselinePath = context.ParseResult.GetValueForOption(createBaselineOpt),
-                    BaselinePath = context.ParseResult.GetValueForOption(baselineOpt),
-                };
-
-                var exitCode = await ExecuteLinterAsync(linterArgs);
-                context.ExitCode = exitCode;
+                return await ExecuteLinterAsync(ToLinterArgs(CliCommandBuilder.Parse(parseResult, options)));
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
                 Console.Error.WriteLine(ex.StackTrace);
-                context.ExitCode = 2;
+                return 2;
             }
         });
 
-        return await root.InvokeAsync(args);
+        return await root.Parse(args).InvokeAsync();
+    }
+
+    private static LinterArgs ToLinterArgs(CliCommandBuilder.ParsedArgs parsed)
+    {
+        return new LinterArgs
+        {
+            ConfigPath = parsed.ConfigPath,
+            TargetPath = parsed.TargetPath,
+            GraphPath = parsed.GraphPath,
+            Format = parsed.Format,
+            Verbose = parsed.Verbose,
+            CreateBaselinePath = parsed.CreateBaselinePath,
+            BaselinePath = parsed.BaselinePath,
+        };
     }
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
