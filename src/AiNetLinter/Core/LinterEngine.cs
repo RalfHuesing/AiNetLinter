@@ -54,30 +54,33 @@ public sealed class LinterEngine
 
     private static IEnumerable<string> ResolveFiles(string path)
     {
-        if (File.Exists(path))
-        {
-            var extension = Path.GetExtension(path).ToLowerInvariant();
-            if (extension == ".cs")
-            {
-                return new[] { path };
-            }
-
-            if (extension is ".csproj" or ".slnx" or ".sln")
-            {
-                // In der Roadmap steht die genaue Auswertung von .slnx.
-                // Für das Grundgerüst suchen wir einfach im Verzeichnis der Datei nach .cs Dateien.
-                var dir = Path.GetDirectoryName(path);
-                return string.IsNullOrEmpty(dir) 
-                    ? Array.Empty<string>() 
-                    : GetCsFilesFromDirectory(dir);
-            }
-
-            return Array.Empty<string>();
-        }
-
         if (Directory.Exists(path))
         {
             return GetCsFilesFromDirectory(path);
+        }
+
+        if (!File.Exists(path))
+        {
+            return Array.Empty<string>();
+        }
+
+        return ResolveSingleFile(path);
+    }
+
+    private static IEnumerable<string> ResolveSingleFile(string path)
+    {
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        if (extension == ".cs")
+        {
+            return new[] { path };
+        }
+
+        if (extension is ".csproj" or ".slnx" or ".sln")
+        {
+            var dir = Path.GetDirectoryName(path);
+            return string.IsNullOrEmpty(dir) 
+                ? Array.Empty<string>() 
+                : GetCsFilesFromDirectory(dir);
         }
 
         return Array.Empty<string>();

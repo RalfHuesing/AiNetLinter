@@ -1,81 +1,27 @@
 using System.Text.Json;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Models;
 
 namespace AiNetLinter;
 
+/// <summary>
+/// Der CLI-Einstiegspunkt für den Linter.
+/// </summary>
 public static class Program
 {
     public static int Main(string[] args)
     {
         try
         {
-            // Simple CLI-Argumenten-Parser
-            string? configPath = null;
-            string? targetPath = null;
-            bool verbose = false;
-
-            for (int i = 0; i < args.Length; i++)
-            {
-                if ((args[i] == "--config" || args[i] == "-c") && i + 1 < args.Length)
-                {
-                    configPath = args[++i];
-                }
-                else if ((args[i] == "--path" || args[i] == "-p") && i + 1 < args.Length)
-                {
-                    targetPath = args[++i];
-                }
-                else if (args[i] == "--verbose" || args[i] == "-v")
-                {
-                    verbose = true;
-                }
-            }
-
+            var (configPath, targetPath, verbose) = ParseArguments(args);
             if (string.IsNullOrWhiteSpace(configPath) || string.IsNullOrWhiteSpace(targetPath))
             {
                 ShowUsage();
                 return 1;
             }
 
-            if (!File.Exists(configPath))
-            {
-                Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
-                return 1;
-            }
-
-            if (verbose)
-            {
-                Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
-                Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
-            }
-
-            // Konfiguration deserialisieren
-            var configContent = File.ReadAllText(configPath);
-            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var config = JsonSerializer.Deserialize<LinterConfig>(configContent, jsonOptions);
-
-            if (config == null)
-            {
-                Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
-                return 1;
-            }
-
-            // Engine starten
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(targetPath);
-
-            if (violations.Count > 0)
-            {
-                Console.WriteLine($"\n[INFO]: Es wurden {violations.Count} Regelverstöße gefunden:\n");
-                foreach (var violation in violations)
-                {
-                    Console.WriteLine(violation.ToString());
-                }
-                return 1;
-            }
-
-            Console.WriteLine("[SUCCESS]: Alle Prüfungen erfolgreich durchgeführt. Keine Regelverstöße gefunden.");
-            return 0;
+            return ExecuteLinter(configPath, targetPath, verbose);
         }
         catch (Exception ex)
         {
@@ -83,6 +29,83 @@ public static class Program
             Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex.Message}");
             Console.Error.WriteLine(ex.StackTrace);
             return 1;
+        }
+    }
+
+    private static (string? configPath, string? targetPath, bool verbose) ParseArguments(string[] args)
+    {
+        string? configPath = FindArgument(args, "--config", "-c");
+        string? targetPath = FindArgument(args, "--path", "-p");
+        bool verbose = args.Contains("--verbose") || args.Contains("-v");
+        return (configPath, targetPath, verbose);
+    }
+
+    private static string? FindArgument(string[] args, string longName, string shortName)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == longName || args[i] == shortName)
+            {
+                return args[i + 1];
+            }
+        }
+        return null;
+    }
+
+    private static int ExecuteLinter(string configPath, string targetPath, bool verbose)
+    {
+        if (!File.Exists(configPath))
+        {
+            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
+            return 1;
+        }
+
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
+            Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
+        }
+
+        var config = LoadConfig(configPath);
+        if (config == null)
+        {
+            Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
+            return 1;
+        }
+
+        var engine = new LinterEngine(config);
+        var violations = engine.Run(targetPath);
+
+        if (violations.Count > 0)
+        {
+            PrintViolations(violations);
+            return 1;
+        }
+
+        Console.WriteLine("[SUCCESS]: Alle Prüfungen erfolgreich durchgeführt. Keine Regelverstöße gefunden.");
+        return 0;
+    }
+
+    private static LinterConfig? LoadConfig(string configPath)
+    {
+        try
+        {
+            var content = File.ReadAllText(configPath);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<LinterConfig>(content, options);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void PrintViolations(IReadOnlyCollection<RuleViolation> violations)
+    {
+        Console.WriteLine($"\n[INFO]: Es wurden {violations.Count} Regelverstöße gefunden:\n");
+        foreach (var violation in violations)
+        {
+            Console.WriteLine(violation.ToString());
         }
     }
 

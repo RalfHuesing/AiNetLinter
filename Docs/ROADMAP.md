@@ -15,13 +15,13 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 2: Core Roslyn Rules Implementation
-- [/] **Regel: EnforceSealedClasses** – Zwingt konkrete Klassen zu `sealed` (Skelett vorhanden)
-- [/] **Regel: AllowDynamic** – Verbietet `dynamic` Typisierung (Skelett vorhanden)
-- [/] **Regel: AllowOutParameters** – Verbietet `out`-Parameter (Skelett vorhanden)
-- [/] **Regel: MaxLineCount** – Validiert maximale Zeilenanzahl pro Datei (Skelett vorhanden)
-- [/] **Regel: MaxMethodParameterCount** – Validiert Parameterlimit pro Methode (Skelett vorhanden)
-- [ ] **Regel: MaxCyclomaticComplexity** – McCabe-Komplexität über Roslyn analysieren
-- [ ] **Regel: MaxCognitiveComplexity** – Kognitive Komplexität nach SonarSource-Standard analysieren
+- [x] **Regel: EnforceSealedClasses** – Zwingt konkrete Klassen zu `sealed`
+- [x] **Regel: AllowDynamic** – Verbietet `dynamic` Typisierung
+- [x] **Regel: AllowOutParameters** – Verbietet `out`-Parameter
+- [x] **Regel: MaxLineCount** – Validiert maximale Zeilenanzahl pro Datei
+- [x] **Regel: MaxMethodParameterCount** – Validiert Parameterlimit pro Methode
+- [x] **Regel: MaxCyclomaticComplexity** – McCabe-Komplexität über Roslyn analysieren
+- [x] **Regel: MaxCognitiveComplexity** – Kognitive Komplexität nach SonarSource-Standard analysieren
 
 ---
 
