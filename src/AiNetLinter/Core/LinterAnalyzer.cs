@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
+using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Core;
 
@@ -96,7 +97,33 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
             });
         }
 
-        // TODO: Komplexitäts-Checks hier integrieren, sobald der ComplexityCalculator implementiert ist.
+        // Zyklomatische Komplexität prüfen
+        var cyclomaticComplexity = ComplexityCalculator.GetCyclomaticComplexity(node);
+        if (cyclomaticComplexity > _config.Metrics.MaxCyclomaticComplexity)
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Metrics.MaxCyclomaticComplexity),
+                Details = $"Die Methode '{node.Identifier.Text}' hat eine Zyklomatische Komplexität von {cyclomaticComplexity} (erlaubt sind maximal {_config.Metrics.MaxCyclomaticComplexity}).",
+                Guidance = "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten)."
+            });
+        }
+
+        // Kognitive Komplexität prüfen
+        var cognitiveComplexity = ComplexityCalculator.GetCognitiveComplexity(node);
+        if (cognitiveComplexity > _config.Metrics.MaxCognitiveComplexity)
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Metrics.MaxCognitiveComplexity),
+                Details = $"Die Methode '{node.Identifier.Text}' hat eine Kognitive Komplexität von {cognitiveComplexity} (erlaubt sind maximal {_config.Metrics.MaxCognitiveComplexity}).",
+                Guidance = "Vereinfache verschachtelte Kontrollstrukturen (If-in-If etc.) und lagere Logik in flache Hilfsmethoden aus."
+            });
+        }
 
         base.VisitMethodDeclaration(node);
     }
