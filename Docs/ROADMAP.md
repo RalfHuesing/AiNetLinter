@@ -26,10 +26,10 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 3: Project & Solution Parsing
-- [ ] Parse moderne `.slnx`-Dateien (XML-basiert), um enthaltene Projekte zu extrahieren
-- [ ] Parse klassische `.sln`-Dateien, falls vorhanden
-- [ ] Parse `.csproj`-Dateien, um alle kompilierten `.cs`-Quelldateien zu identifizieren
-- [/] Ignorieren von generierten oder transienten Code-Dateien (z. B. `obj/`, `bin/`, `.vs/`)
+- [x] Parse moderne `.slnx`-Dateien (XML-basiert), um enthaltene Projekte zu extrahieren
+- [x] Parse klassische `.sln`-Dateien, falls vorhanden
+- [x] Parse `.csproj`-Dateien, um alle kompilierten `.cs`-Quelldateien zu identifizieren
+- [x] Ignorieren von generierten oder transienten Code-Dateien (z. B. `obj/`, `bin/`, `.vs/`)
 
 ---
 
