@@ -30,7 +30,7 @@ public sealed class LinterEngine
         var slnPath = FindSolutionFile(path);
         RegisterMSBuild();
 
-        using var workspace = MSBuildWorkspace.Create();
+        using var workspace = MSBuildWorkspace.Create(CreateWorkspaceProperties());
         var solution = await workspace.OpenSolutionAsync(slnPath);
         return await RunAsync(solution);
     }
@@ -41,8 +41,8 @@ public sealed class LinterEngine
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution)
     {
         var violations = new ConcurrentBag<RuleViolation>();
-        var testClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var sourceClasses = new List<ClassInfo>();
+        var testClasses = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+        var sourceClasses = new ConcurrentBag<ClassInfo>();
 
         await AnalyzeSolutionAsync(solution, violations, testClasses, sourceClasses);
 
@@ -56,6 +56,20 @@ public sealed class LinterEngine
         return violations.ToArray();
     }
 
+    internal static Dictionary<string, string> CreateWorkspaceProperties() => new()
+    {
+        ["DesignTimeBuild"] = "true",
+        ["SkipCompilerExecution"] = "true",
+        ["ProvideCommandLineArgs"] = "true",
+        ["RunAnalyzers"] = "false",
+        ["RunCodeAnalysis"] = "false",
+    };
+
+    private static ParallelOptions CreateParallelOptions() => new()
+    {
+        MaxDegreeOfParallelism = Environment.ProcessorCount
+    };
+
     private static void RegisterMSBuild()
     {
         if (!MSBuildLocator.IsRegistered)
@@ -66,33 +80,67 @@ public sealed class LinterEngine
 
     private sealed record AnalysisContext(
         ConcurrentBag<RuleViolation> Violations,
-        HashSet<string> TestClasses,
-        List<ClassInfo> SourceClasses,
+        ConcurrentDictionary<string, byte> TestClasses,
+        ConcurrentBag<ClassInfo> SourceClasses,
         string? SolutionDir
     );
 
-    private async Task AnalyzeSolutionAsync(Solution solution, ConcurrentBag<RuleViolation> violations, HashSet<string> testClasses, List<ClassInfo> sourceClasses)
+    private sealed record DocumentWorkItem(Document Document, bool IsTestProject);
+
+    private async Task AnalyzeSolutionAsync(
+        Solution solution,
+        ConcurrentBag<RuleViolation> violations,
+        ConcurrentDictionary<string, byte> testClasses,
+        ConcurrentBag<ClassInfo> sourceClasses)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath);
         var context = new AnalysisContext(violations, testClasses, sourceClasses, solutionDir);
+        var workItems = await CollectDocumentWorkItemsAsync(solution, solutionDir);
+
+        await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
+            AnalyzeWorkItemAsync(item, context));
+    }
+
+    private static async Task<List<DocumentWorkItem>> CollectDocumentWorkItemsAsync(Solution solution, string? solutionDir)
+    {
+        var workItems = new List<DocumentWorkItem>();
 
         foreach (var project in solution.Projects)
         {
-            await AnalyzeProjectAsync(project, context);
+            var projectItems = await CollectProjectWorkItemsAsync(project, solutionDir);
+            workItems.AddRange(projectItems);
         }
+
+        return workItems;
     }
 
-    private async Task AnalyzeProjectAsync(Project project, AnalysisContext context)
+    private static async Task<IReadOnlyList<DocumentWorkItem>> CollectProjectWorkItemsAsync(Project project, string? solutionDir)
     {
         var compilation = await project.GetCompilationAsync();
-        if (compilation == null) return;
+        if (compilation == null)
+        {
+            return [];
+        }
 
-        bool isTestProj = IsTestProject(project);
+        bool isTestProject = IsTestProject(project);
+        var workItems = new List<DocumentWorkItem>();
 
         foreach (var document in project.Documents)
         {
-            await AnalyzeDocumentAsync(document, isTestProj, context);
+            if (!IsValidDocument(document, solutionDir))
+            {
+                continue;
+            }
+
+            workItems.Add(new DocumentWorkItem(document, isTestProject));
         }
+
+        return workItems;
+    }
+
+    private async ValueTask AnalyzeWorkItemAsync(DocumentWorkItem item, AnalysisContext context)
+    {
+        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, context);
     }
 
     private static bool IsTestProject(Project project)
@@ -124,8 +172,6 @@ public sealed class LinterEngine
 
     private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisContext context)
     {
-        if (!IsValidDocument(document, context.SolutionDir)) return;
-
         var semanticModel = await document.GetSemanticModelAsync();
         if (semanticModel == null) return;
 
@@ -175,17 +221,20 @@ public sealed class LinterEngine
         }
         else
         {
-            context.SourceClasses.AddRange(analyzer.Classes);
+            foreach (var cls in analyzer.Classes)
+            {
+                context.SourceClasses.Add(cls);
+            }
         }
     }
 
-    private static void AddTestClasses(IReadOnlyCollection<ClassInfo> classes, HashSet<string> testClasses)
+    private static void AddTestClasses(IReadOnlyCollection<ClassInfo> classes, ConcurrentDictionary<string, byte> testClasses)
     {
         foreach (var cls in classes)
         {
             if (cls.HasTestMethods)
             {
-                testClasses.Add(cls.Name);
+                testClasses.TryAdd(cls.Name, 0);
             }
         }
     }
@@ -197,7 +246,10 @@ public sealed class LinterEngine
         return file.Contains($"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}");
     }
 
-    private void RunTestSentinel(HashSet<string> testClasses, List<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
+    private void RunTestSentinel(
+        ConcurrentDictionary<string, byte> testClasses,
+        ConcurrentBag<ClassInfo> sourceClasses,
+        ConcurrentBag<RuleViolation> violations)
     {
         foreach (var srcClass in sourceClasses)
         {
@@ -208,12 +260,15 @@ public sealed class LinterEngine
         }
     }
 
-    private static void CheckTestPresence(ClassInfo srcClass, HashSet<string> testClasses, ConcurrentBag<RuleViolation> violations)
+    private static void CheckTestPresence(
+        ClassInfo srcClass,
+        ConcurrentDictionary<string, byte> testClasses,
+        ConcurrentBag<RuleViolation> violations)
     {
         string expectedTest1 = $"{srcClass.Name}Tests";
         string expectedTest2 = $"{srcClass.Name}Test";
 
-        if (!testClasses.Contains(expectedTest1) && !testClasses.Contains(expectedTest2))
+        if (!testClasses.ContainsKey(expectedTest1) && !testClasses.ContainsKey(expectedTest2))
         {
             violations.Add(new RuleViolation
             {
@@ -226,7 +281,7 @@ public sealed class LinterEngine
         }
     }
 
-    private void RunInheritanceDepthCheck(List<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
+    private void RunInheritanceDepthCheck(ConcurrentBag<ClassInfo> sourceClasses, ConcurrentBag<RuleViolation> violations)
     {
         foreach (var cls in sourceClasses)
         {

@@ -220,4 +220,47 @@ public class HighlyRelevantServiceTests
 
         Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
     }
+
+    [Fact]
+    public void CreateWorkspaceProperties_ContainsDesignTimeBuildKeys()
+    {
+        var properties = LinterEngine.CreateWorkspaceProperties();
+
+        Assert.Contains("DesignTimeBuild", properties.Keys);
+        Assert.Contains("SkipCompilerExecution", properties.Keys);
+        Assert.Contains("ProvideCommandLineArgs", properties.Keys);
+        Assert.Contains("RunAnalyzers", properties.Keys);
+        Assert.Contains("RunCodeAnalysis", properties.Keys);
+        Assert.Equal("true", properties["DesignTimeBuild"]);
+        Assert.Equal("false", properties["RunAnalyzers"]);
+    }
+
+    [Fact]
+    public async Task Run_WithManyDocuments_ProducesExpectedViolations()
+    {
+        var files = new (string fileName, string content)[16];
+        for (int i = 0; i < 16; i++)
+        {
+            files[i] = ($"Class{i}.cs", $@"
+namespace Domain;
+public class UnsealedClass{i}
+{{
+    public void TooManyParams(int a, int b, int c) {{}}
+}}");
+        }
+
+        var solution = CreateAdhocSolution(files);
+        var config = CreateDefaultConfig();
+        var engine = new LinterEngine(config);
+
+        var violations = await engine.RunAsync(solution);
+
+        var violationKeys = violations
+            .Select(v => (v.RuleName, v.FilePath, v.LineNumber))
+            .ToHashSet();
+
+        Assert.Equal(32, violationKeys.Count);
+        Assert.Equal(16, violationKeys.Count(v => v.RuleName == nameof(GlobalConfig.EnforceSealedClasses)));
+        Assert.Equal(16, violationKeys.Count(v => v.RuleName == nameof(MetricsConfig.MaxMethodParameterCount)));
+    }
 }
