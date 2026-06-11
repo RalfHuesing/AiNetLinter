@@ -59,6 +59,17 @@ public sealed class LinterEngineTests
         return solution;
     }
 
+    private static async Task<Solution> CreateSolutionWithFileOnDiskAsync(string fileName, string content)
+    {
+        var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"ainetlinter-engine-{Guid.NewGuid():N}")).FullName;
+        var filePath = Path.Combine(tempDir, fileName);
+        await File.WriteAllTextAsync(filePath, content);
+
+        var solution = CreateAdhocSolution((fileName, content));
+        var documentId = solution.Projects.First().Documents.First(d => d.Name == fileName).Id;
+        return solution.WithDocumentFilePath(documentId, filePath);
+    }
+
     [Fact]
     public void LinterEngine_CanBeInitialized()
     {
@@ -95,6 +106,62 @@ public sealed class ComplexDomainService
         var violations = await engine.RunAsync(solution);
 
         Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
+    }
+
+    [Fact]
+    public async Task Run_WithDisableAllComment_SuppressesStaticTestSentinel()
+    {
+        const string sourceClass = """
+            // ainetlinter-disable all
+            namespace Domain;
+            public sealed class ComplexDomainService
+            {
+                public void HighComplexityMethod(int x)
+                {
+                    if (x > 1)
+                    {
+                        if (x > 2)
+                        {
+                            if (x > 3) {}
+                        }
+                    }
+                }
+            }
+            """;
+
+        var solution = await CreateSolutionWithFileOnDiskAsync("ComplexDomainService.cs", sourceClass);
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnableTestSentinel = true }
+        };
+
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "StaticTestSentinel"));
+    }
+
+    [Fact]
+    public async Task Run_WithDisableAllComment_SuppressesMaxInheritanceDepth()
+    {
+        const string sourceCode = """
+            // ainetlinter-disable all
+            namespace Test;
+            public class RootClass {}
+            public class ParentClass : RootClass {}
+            public sealed class ChildClass : ParentClass {}
+            """;
+
+        var solution = await CreateSolutionWithFileOnDiskAsync("Classes.cs", sourceCode);
+        var config = CreateDefaultConfig() with
+        {
+            Metrics = new MetricsConfig { MaxInheritanceDepth = 1 }
+        };
+
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth)));
     }
 
     [Fact]

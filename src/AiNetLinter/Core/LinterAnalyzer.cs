@@ -329,34 +329,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private bool IsSuppressed(string ruleName, int lineNumber)
     {
-        return IsFileWideSuppressed(ruleName) || IsLineSuppressed(ruleName, lineNumber);
-    }
-
-    private bool IsFileWideSuppressed(string ruleName)
-    {
-        var text = _tree.GetText();
-        foreach (var line in text.Lines)
-        {
-            var lineText = line.ToString();
-            if (MatchDisableComment(lineText, ruleName))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private bool IsLineSuppressed(string ruleName, int lineNumber)
-    {
-        var text = _tree.GetText();
-        if (lineNumber <= 0 || lineNumber > text.Lines.Count) return false;
-
-        var lineText = text.Lines[lineNumber - 1].ToString();
-        return MatchDisableComment(lineText, ruleName);
-    }
-
-    private static bool MatchDisableComment(string lineText, string ruleName)
-    {
-        return SuppressionCommentParser.MatchesRule(lineText, ruleName);
+        return SuppressionEvaluator.IsSuppressed(_tree.GetText().ToString(), ruleName, lineNumber);
     }
 }
