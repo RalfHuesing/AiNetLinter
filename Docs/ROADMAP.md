@@ -101,6 +101,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Robuste dynamic-Erkennung:** Überprüfe `dynamic` über das `SemanticModel` (`TypeKind.Dynamic`), um unberechtigte Fehlermeldungen bei lokalen Variablen namens `dynamic` zu vermeiden.
 - [x] **Unterstützung für ainetlinter-disable:** Erlaube das Unterdrücken von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
 - [x] **Projektbasierte Test-Dateierkennung:** Bestimme Testprojekte dynamisch durch Analyse ihrer referenzierten Test-Assemblies (`xunit`, `nunit` etc.) im MSBuild-Projekt, um fragile Dateipfad-Heuristiken abzulösen.
+- [x] **LLM-optimierte CLI-Textausgabe:** Kompakte, token-effiziente Standardausgabe mit relativem Pfad (Basis `--path`), sortierten Einzeilern, LLM-Anweisungsheader und relativem SARIF-URI statt absoluter `file://`-Pfade.
 - [ ] **Sequentielles Projekt-Laden für riesige Solutions (Performance & RAM):** Möglichkeit implementieren, Projekte im MSBuildWorkspace sequentiell zu laden und zu entladen, um Out-of-Memory Exceptions bei großen Monolithen vorzubeugen.
 
 ---
