@@ -1,0 +1,66 @@
+## Visual Studio
+.vs/
+[Db]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Log]/
+[Log]s/
+
+## Visual Studio Code
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+
+## Rider / IntelliJ
+.idea/
+*.sln.iml
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Mono/Xamarin
+*.userprefs
+
+## Build results
+[Aa]rtifacts/
+TestResults/
+*.trx
+
+## NuGet Packages
+*.nupkg
+# The packages folder can be ignored because of PackageReference usage
+**/[Pp]ackages/*
+!**/[Pp]ackages/repositories.config
+project.lock.json
+project.assets.json
+
+## MSBuild
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## OS Metadata
+.DS_Store
+Thumbs.db
+
+## Crash dumps
+*.dmp
+*.rp
+
+## Local config files (if any)
+appsettings.Development.json
+appsettings.Local.json
