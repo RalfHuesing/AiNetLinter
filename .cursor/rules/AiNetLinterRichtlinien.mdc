@@ -1,3 +1,8 @@
+---
+description: AI coding guidelines, constraints, and documentation rules for the AiNetLinter project.
+globs: *
+alwaysApply: true
+---
 # AiNetLinter - Projektrichtlinien für KI-Agenten
 
 Diese Richtlinien gelten für alle automatisierten Code-Edits, Refactorings und Implementierungsaufgaben im Repository `AiNetLinter`. Sie dienen als strikte Leitplanken für das LLM, um höchste Code-Qualität, Kompilierbarkeit und AI-Readability zu garantieren.
@@ -16,7 +21,7 @@ Diese Richtlinien gelten für alle automatisierten Code-Edits, Refactorings und 
 
 Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle maximal verständlich, wartbar und fehlerfrei editierbar bleibt:
 
-*   **Sealed by Default:** Jede konkrete Klasse (die nicht `abstract` oder `static` ist) **muss** als `sealed` deklariert werden. Dies hält Vererbungshierarchien flach und optimiert die Laufzeit.
+*   **Sealed by Default:** Jede konkrete Klasse (die nicht `abstract` oder `static` sind) **muss** als `sealed` deklariert werden. Dies hält Vererbungshierarchien flach und optimiert die Laufzeit.
 *   **Immutability:** Setze konsequent auf `record`, `readonly struct` und Pure Functions. Vermeide veränderliche Zustände und Seiteneffekte.
 *   **Dateigrößen-Limit:** Keine `.cs`-Datei darf mehr als **500 Zeilen** Code enthalten, um den "Lost in the Middle"-Effekt in Kontextfenstern zu vermeiden.
 *   **Methoden-Grenzwerte:**
@@ -41,14 +46,21 @@ Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle ma
 
 ---
 
-## 4. Quellcode-Kommentare
+## 4. Dokumentation & Update-Pflicht
+
+*   **Update-Pflicht (ohne Extra-Auftrag):** Relevante Markdown-Dokumentation (wie `README.md` oder die in `Docs/` befindlichen Dokumente) **muss mit der Code-/Konfig-Änderung mitgeliefert werden** — der Nutzer muss **nicht** extra auffordern, diese anzupassen. 
+*   Bei jeder Feature-Änderung oder Erweiterung des Linter-Regelwerks muss die `ROADMAP.md` entsprechend aktualisiert werden.
+
+---
+
+## 5. Quellcode-Kommentare
 
 *   **Fokus auf das „Warum“:** LLMs verstehen C#-Syntax perfekt. Kommentare wie `// Initialisiert Liste` sind Rauschen und verschwenden Kontext-Token. Dokumentiere nur **fachliche Hintergründe, Concurrency-Szenarien oder API-Einschränkungen**.
 *   **Aktualität:** Veraltete Kommentare müssen bei Codeänderung sofort angepasst oder gelöscht werden, um nachfolgende Agenten nicht in die Irre zu führen.
 
 ---
 
-## 5. Systematischer Debugging-Workflow
+## 6. Systematischer Debugging-Workflow
 
 Tritt während der Bearbeitung ein Fehler auf, gehe strukturiert vor:
 1.  **Stacktrace analysieren:** Ermittle den genauen Fehlerursprung.
@@ -56,6 +68,6 @@ Tritt während der Bearbeitung ein Fehler auf, gehe strukturiert vor:
 
 ---
 
-## 6. Commit-Vorschläge
+## 7. Commit-Vorschläge
 
 Jede Antwort, die Dateiänderungen im Workspace vornimmt, schließt **zwingend** mit einem Abschnitt `### Commit-Vorschlag` ab. Dieser enthält einen einzigen, 1:1 kopierbaren Codeblock mit einer aussagekräftigen Commit-Message im **Conventional Commits** Format (Deutsch, imperativ, z. B. `feat(core): add syntax walker for sealed classes`).
