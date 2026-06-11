@@ -7,13 +7,13 @@ namespace AiNetLinter.Tests.Cli;
 public sealed class CliIntegrationTests
 {
     [Fact]
-    public void RunLinterCli_OnMainProject_ReturnsSuccess()
+    public void RunLinterCli_OnWholeSolution_ReturnsSuccess()
     {
         // Arrange
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
-        var configPath = Path.Combine(rootDir, "src", "AiNetLinter.Tests", "Cli", "rules.json");
-        var targetPath = Path.Combine(rootDir, "src", "AiNetLinter");
+        var configPath = Path.Combine(rootDir, "rules.json");
+        var targetPath = Path.Combine(rootDir, "src");
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
@@ -49,8 +49,8 @@ public sealed class CliIntegrationTests
         // Arrange
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
-        var configPath = Path.Combine(rootDir, "src", "AiNetLinter.Tests", "Cli", "non-existent-config.json");
-        var targetPath = Path.Combine(rootDir, "src", "AiNetLinter");
+        var configPath = Path.Combine(rootDir, "non-existent-config.json");
+        var targetPath = Path.Combine(rootDir, "src");
 
         var processInfo = new ProcessStartInfo
         {
