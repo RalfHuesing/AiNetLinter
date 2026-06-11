@@ -162,6 +162,20 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ---
 
+## Epic 17: Agent-Workflow Features (SAN-Refactoring)
+- [x] **Try*-Ausnahme für out-Parameter:** `AllowTryPatternOutParameters` erlaubt `out` in `bool Try*`-Methoden (idiomatisches C#)
+- [x] **Guidance im Text-Output:** Detail-Zeilen mit `→ {Guidance}` für LLM-Refactor-Hints
+- [x] **Smarter Static Test Sentinel:** Flexible Klassenname-Patterns, `typeof`/`nameof`-Referenzen und `// @covers`-Kommentare
+- [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter
+- [x] **Tech-Debt-Report (`--debt-report`):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
+- [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`), `--git-since`
+- [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in rules.json, Intent-Spalte in Summary, SARIF level
+- [x] **Minimal-API-[AsParameters]-Check:** Opt-in via `EnforceMinimalApiAsParameters`
+- [x] **Partial-Class-Aggregation:** `AggregatePartialClassLineCount` summiert Zeilen über partial-Teile
+- [x] **Erweiterte kognitive Guidance:** Konkrete Extract-Method-Hints bei starker Komplexitätsüberschreitung
+
+---
+
 ## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
 *Hinweis: Konfigurierbar über die `rules.json`.*
 - [ ] **Exceptions for Control Flow verbieten:**

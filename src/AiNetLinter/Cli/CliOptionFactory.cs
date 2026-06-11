@@ -53,4 +53,24 @@ internal static class CliOptionFactory
     {
         Description = "Entfernt exakte '// ainetlinter-disable all'-Zeilen aus allen .cs-Dateien unter --path",
     };
+
+    internal static Option<bool> CreateDebtReportOption() => new("--debt-report")
+    {
+        Description = "Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0",
+    };
+
+    internal static Option<bool> CreateWaveReadyOption() => new("--wave-ready")
+    {
+        Description = "Nur Verstöße in Dateien ohne '// ainetlinter-disable all'",
+    };
+
+    internal static Option<bool> CreateOnlyChangedOption() => new("--only-changed")
+    {
+        Description = "Nur Verstöße in geänderten Dateien (erfordert --baseline)",
+    };
+
+    internal static Option<string?> CreateGitSinceOption() => new("--git-since")
+    {
+        Description = "Nur Verstöße in per git diff geänderten .cs-Dateien seit Ref (z. B. HEAD~1)",
+    };
 }
