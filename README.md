@@ -21,6 +21,7 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 #### 2. Radikale Reduzierung der Komplexität
 *   **Wissenschaftlicher Hintergrund:** LLMs generieren Code linear (Token für Token). Verschachtelte `if-else`-Kaskaden, tiefe Schleifen und komplexe Verzweigungen zwingen die Attention Heads des Modells, komplexe Zustandsmatrizen im Arbeitsspeicher mitzuführen. Dies führt nachweislich zu Logikfehlern und Halluzinationen.
 *   **Konsequenz für den Code:** `AiNetLinter` prüft sowohl die klassische **zyklomatische Komplexität** als auch die **kognitive Komplexität** (SonarSource-Standard). Flacher Code mit Early Returns ist für KIs um Welten einfacher fehlerfrei zu erweitern.
+*   **Methodenlänge (Max. 42 Codezeilen):** Lange, aber flache Methoden ohne Verzweigungen entgehen der kognitiven Komplexitätsprüfung, belasten aber trotzdem das Kontextfenster und erschweren präzise Diffs. Daher begrenzt `MaxMethodLineCount` die reine Codezeilenanzahl pro Methode (ohne Kommentare und Leerzeilen).
 
 #### 3. Der "Human-Naturalness Channel" & Semantische Namen
 *   **Wissenschaftlicher Hintergrund:** Studien zur KI-Code-Kognition (z. B. *"When Names Disappear: Revealing What LLMs Actually Understand About Code"*, 2025) belegen, dass LLMs Code über zwei Kanäle verstehen: den *strukturellen Kanal* (Syntax, Typen) und den *linguistischen Kanal* (Bezeichnernamen, Kommentare). Fehlen sprechende Namen (z. B. durch Obfuskation oder generische Bezeichner wie `Check1()`), bricht die KI-Performance um bis zu 30 % ein.
@@ -86,6 +87,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
   "Metrics": {
     "MaxLineCount": 500,
     "MaxMethodParameterCount": 4,
+    "MaxMethodLineCount": 42,
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
@@ -116,6 +118,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
+| `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
 | `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |

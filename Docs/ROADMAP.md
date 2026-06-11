@@ -20,6 +20,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Regel: AllowOutParameters** – Verbietet `out`-Parameter
 - [x] **Regel: MaxLineCount** – Validiert maximale Zeilenanzahl pro Datei
 - [x] **Regel: MaxMethodParameterCount** – Validiert Parameterlimit pro Methode
+- [x] **Regel: MaxMethodLineCount** – Validiert maximale Codezeilenanzahl pro Methode (ohne Kommentare/Leerzeilen, Standard: 42)
 - [x] **Regel: MaxCyclomaticComplexity** – McCabe-Komplexität über Roslyn analysieren
 - [x] **Regel: MaxCognitiveComplexity** – Kognitive Komplexität nach SonarSource-Standard analysieren
 

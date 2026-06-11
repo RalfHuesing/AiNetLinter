@@ -26,6 +26,7 @@ Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle ma
 *   **Dateigrößen-Limit:** Keine `.cs`-Datei darf mehr als **500 Zeilen** Code enthalten, um den "Lost in the Middle"-Effekt in Kontextfenstern zu vermeiden.
 *   **Methoden-Grenzwerte:**
     *   Maximal **4 Parameter** pro Methode. Überschreitungen müssen in ein Parameter-Objekt (`record`) gekapselt werden.
+    *   Maximale Codezeilenanzahl: **42** pro Methode (ohne Kommentare und Leerzeilen).
     *   Maximale zyklomatische Komplexität: **5** pro Methode.
     *   Maximale kognitive Komplexität: **5** pro Methode.
     *   Verwende konsequent Early Returns zur Flachhaltung des Codes.

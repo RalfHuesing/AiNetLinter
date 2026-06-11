@@ -154,8 +154,30 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         }
 
         CheckMethodComplexities(node);
+        CheckMethodLineCount(node);
 
         base.VisitMethodDeclaration(node);
+    }
+
+    private void CheckMethodLineCount(MethodDeclarationSyntax node)
+    {
+        var codeLineCount = MethodLineCounter.GetCodeLineCount(node);
+        if (codeLineCount == 0)
+        {
+            return;
+        }
+
+        if (codeLineCount > _config.Metrics.MaxMethodLineCount)
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Metrics.MaxMethodLineCount),
+                Details = $"Die Methode '{node.Identifier.Text}' hat {codeLineCount} Codezeilen (erlaubt sind maximal {_config.Metrics.MaxMethodLineCount}, ohne Kommentare und Leerzeilen).",
+                Guidance = "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code für KI-Agenten besser editierbar zu halten."
+            });
+        }
     }
 
     private void CheckMethodComplexities(MethodDeclarationSyntax node)
