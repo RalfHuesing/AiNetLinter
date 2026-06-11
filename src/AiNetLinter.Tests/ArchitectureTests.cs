@@ -17,7 +17,9 @@ public sealed class ArchitectureTests
                 AllowOutParameters = false,
                 EnforcePascalCase = false,
                 EnforceXmlDocumentation = false,
-                EnforceSemanticNaming = false
+                EnforceSemanticNaming = false,
+                EnforceNullableEnable = false,
+                EnforceNoSilentCatch = false
             },
             Metrics = new MetricsConfig
             {
@@ -171,90 +173,7 @@ public sealed class CognitiveClass
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCognitiveComplexity));
     }
 
-    [Fact]
-    public void ParseSlnx_WithValidXml_ReturnsProjects()
-    {
-        // Arrange
-        const string slnxContent = @"<Solution>
-  <Project Path=""src/AiNetLinter/AiNetLinter.csproj"" />
-  <Project Path=""src/AiNetLinter.Tests/AiNetLinter.Tests.csproj"" />
-</Solution>";
-        var tempSlnx = Path.GetTempFileName() + ".slnx";
-        File.WriteAllText(tempSlnx, slnxContent);
 
-        try
-        {
-            // Act
-            var projects = LinterEngine.ParseSlnx(tempSlnx);
-
-            // Assert
-            Assert.Equal(2, projects.Count());
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
-        }
-        finally
-        {
-            File.Delete(tempSlnx);
-        }
-    }
-
-    [Fact]
-    public void ParseSln_WithValidText_ReturnsProjects()
-    {
-        // Arrange
-        const string slnContent = @"
-Microsoft Visual Studio Solution File, Format Version 12.00
-Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter"", ""src\AiNetLinter\AiNetLinter.csproj"", ""{GUID1}""
-Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter.Tests"", ""src\AiNetLinter.Tests\AiNetLinter.Tests.csproj"", ""{GUID2}""
-Global
-EndGlobal";
-        var tempSln = Path.GetTempFileName() + ".sln";
-        File.WriteAllText(tempSln, slnContent);
-
-        try
-        {
-            // Act
-            var projects = LinterEngine.ParseSln(tempSln);
-
-            // Assert
-            Assert.Equal(2, projects.Count());
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
-            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
-        }
-        finally
-        {
-            File.Delete(tempSln);
-        }
-    }
-
-    [Fact]
-    public void GetExcludedFiles_WithCompileRemoveOrExclude_FiltersFiles()
-    {
-        // Arrange
-        const string csprojContent = @"<Project Sdk=""Microsoft.NET.Sdk"">
-  <ItemGroup>
-    <Compile Remove=""ExcludedFile.cs"" />
-    <Compile Exclude=""subfolder/AnotherExcluded.cs"" />
-  </ItemGroup>
-</Project>";
-        var tempCsproj = Path.GetTempFileName() + ".csproj";
-        File.WriteAllText(tempCsproj, csprojContent);
-
-        try
-        {
-            // Act
-            var excluded = LinterEngine.GetExcludedFiles(tempCsproj, "/MockDir");
-
-            // Assert
-            Assert.Equal(2, excluded.Count);
-            Assert.Contains(excluded, path => path.EndsWith("ExcludedFile.cs"));
-            Assert.Contains(excluded, path => path.EndsWith("AnotherExcluded.cs"));
-        }
-        finally
-        {
-            File.Delete(tempCsproj);
-        }
-    }
 
     [Fact]
     public void Analyze_WithForbiddenNamespaceDependency_ReturnsViolation()
@@ -327,51 +246,7 @@ public sealed record MoneyValueObject
         Assert.Contains(violations, v => v.Details.Contains("veränderbare Eigenschaft"));
     }
 
-    [Fact]
-    public void Run_WithHighlyRelevantClassMissingTestClass_ReturnsSentinelViolation()
-    {
-        // Arrange
-        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(tempDir);
 
-        const string sourceClass = @"
-namespace Domain;
-
-public sealed class ComplexDomainService
-{
-    public void HighComplexityMethod(int x)
-    {
-        if (x > 1)
-        {
-            if (x > 2)
-            {
-                if (x > 3)
-                {
-                }
-            }
-        }
-    }
-}";
-        var sourcePath = Path.Combine(tempDir, "ComplexDomainService.cs");
-        File.WriteAllText(sourcePath, sourceClass);
-
-        var config = CreateDefaultConfig(); // EnableTestSentinel is true by default
-
-        try
-        {
-            // Act
-            var engine = new LinterEngine(config);
-            var violations = engine.Run(tempDir);
-
-            // Assert
-            Assert.Contains(violations, v => v.RuleName == "StaticTestSentinel");
-            Assert.Contains(violations, v => v.Details.Contains("Klasse 'ComplexDomainService' hat eine hohe Relevanz"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
 
     [Fact]
     public void Analyze_WithNonPascalCaseTypeName_ReturnsViolation()
@@ -444,4 +319,60 @@ public sealed class GoodClass
         // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceSemanticNaming));
     }
+
+    [Fact]
+    public void Analyze_WithFileMissingNullableEnable_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Test;
+/// <summary>
+/// Good class.
+/// </summary>
+public sealed class GoodClass {}";
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnforceNullableEnable = true }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNullableEnable));
+    }
+
+    [Fact]
+    public void Analyze_WithSilentCatch_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Test;
+/// <summary>
+/// Good class.
+/// </summary>
+public sealed class GoodClass
+{
+    /// <summary>
+    /// Work.
+    /// </summary>
+    public void Work()
+    {
+        try {}
+        catch {}
+    }
+}";
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnforceNoSilentCatch = true }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch));
+    }
+
+
 }

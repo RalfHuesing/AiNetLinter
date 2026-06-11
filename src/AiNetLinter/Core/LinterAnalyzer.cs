@@ -44,6 +44,9 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         // 2. Syntax-Baum parsen und ablaufen
         var tree = CSharpSyntaxTree.ParseText(_fileContent);
         var root = tree.GetRoot();
+        
+        CheckNullableEnable(root);
+        
         Visit(root);
     }
 
@@ -334,26 +337,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         {
             return true;
         }
-        return !IsInPublicContext(node);
-    }
-
-    private static bool IsInPublicContext(SyntaxNode node)
-    {
-        if (node is MemberDeclarationSyntax member && !member.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
-        {
-            return false;
-        }
-        return CheckParentPublicContext(node.Parent);
-    }
-
-    private static bool CheckParentPublicContext(SyntaxNode? parent)
-    {
-        if (parent == null) return true;
-        if (parent is TypeDeclarationSyntax typeDecl && !typeDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
-        {
-            return false;
-        }
-        return CheckParentPublicContext(parent.Parent);
+        return !AnalyzerHelpers.IsInPublicContext(node);
     }
 
     private static bool HasXmlDocumentation(SyntaxNode node)
@@ -433,17 +417,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     private bool IsTestFile()
     {
-        if (string.IsNullOrEmpty(_filePath)) return false;
-        return CheckTestPath(_filePath);
-    }
-
-    private static bool CheckTestPath(string path)
-    {
-        if (path.EndsWith("Tests.cs")) return true;
-        if (path.EndsWith("Test.cs")) return true;
-        return path.Contains($"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}") ||
-               path.Contains("/Tests/") ||
-               path.Contains("\\Tests\\");
+        return AnalyzerHelpers.IsTestFile(_filePath);
     }
 
     private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node)
@@ -457,5 +431,68 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     private static int GetLineNumber(SyntaxNode node)
     {
         return node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+    }
+
+    public override void VisitCatchClause(CatchClauseSyntax node)
+    {
+        if (!_config.Global.EnforceNoSilentCatch || IsTestFile())
+        {
+            base.VisitCatchClause(node);
+            return;
+        }
+
+        if (IsSwallowed(node))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Global.EnforceNoSilentCatch),
+                Details = "Stummes Abfangen (Silent Swallowing) einer Exception erkannt.",
+                Guidance = "Wirf die Exception erneut (throw;) oder protokolliere sie, um Fehler im agentischen Loop sichtbar zu machen."
+            });
+        }
+
+        base.VisitCatchClause(node);
+    }
+
+    private static bool IsSwallowed(CatchClauseSyntax node)
+    {
+        if (node.Block.Statements.Count == 0)
+        {
+            return true;
+        }
+
+        var hasThrow = node.Block.DescendantNodes().OfType<ThrowStatementSyntax>().Any();
+        var hasInvoke = node.Block.DescendantNodes().OfType<InvocationExpressionSyntax>().Any();
+        return !hasThrow && !hasInvoke;
+    }
+
+    private void CheckNullableEnable(SyntaxNode root)
+    {
+        if (ShouldSkipNullable()) return;
+
+        var hasNullableEnable = root.DescendantNodes(descendIntoTrivia: true)
+            .OfType<NullableDirectiveTriviaSyntax>()
+            .Any(d => d.SettingToken.IsKind(SyntaxKind.EnableKeyword));
+
+        if (!hasNullableEnable)
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = 1,
+                RuleName = nameof(_config.Global.EnforceNullableEnable),
+                Details = "Die Datei deklariert kein '#nullable enable'.",
+                Guidance = "Füge '#nullable enable' am Anfang der Datei hinzu, um Compile-Time-Nullprüfungen zu aktivieren."
+            });
+        }
+    }
+
+    private bool ShouldSkipNullable()
+    {
+        if (!_config.Global.EnforceNullableEnable) return true;
+        if (IsTestFile()) return true;
+        return AnalyzerHelpers.IsNullableEnabledGlobally(_filePath);
     }
 }

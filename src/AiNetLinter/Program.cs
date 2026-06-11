@@ -123,8 +123,9 @@ public static class Program
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             return JsonSerializer.Deserialize<LinterConfig>(content, options);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Failed to load config: {ex.Message}");
             return null;
         }
     }

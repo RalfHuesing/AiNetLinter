@@ -32,6 +32,8 @@ public sealed record GlobalConfig
     public bool EnforcePascalCase { get; init; } = true;
     public bool EnforceXmlDocumentation { get; init; } = true;
     public bool EnforceSemanticNaming { get; init; } = true;
+    public bool EnforceNullableEnable { get; init; } = true;
+    public bool EnforceNoSilentCatch { get; init; } = true;
 }
 
 /// <summary>
@@ -43,4 +45,5 @@ public sealed record MetricsConfig
     public int MaxMethodParameterCount { get; init; } = 4;
     public int MaxCyclomaticComplexity { get; init; } = 5;
     public int MaxCognitiveComplexity { get; init; } = 5;
+    public int MaxInheritanceDepth { get; init; } = 2;
 }
