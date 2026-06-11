@@ -18,5 +18,6 @@
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
     "MinCognitiveComplexityForTest": 3
-  }
+  },
+  "ForbiddenNamespaceDependencies": []
 }
