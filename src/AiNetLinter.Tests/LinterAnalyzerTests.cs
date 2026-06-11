@@ -17,7 +17,12 @@ public sealed class LinterAnalyzerTests
                 EnforceSealedClasses = true,
                 AllowDynamic = false,
                 AllowOutParameters = false,
-                EnforceValueObjectContracts = true
+                EnforceValueObjectContracts = true,
+                EnforcePascalCase = false,
+                EnforceXmlDocumentation = false,
+                EnforceSemanticNaming = false,
+                EnforceNullableEnable = false,
+                EnforceNoSilentCatch = false
             },
             Metrics = new MetricsConfig
             {
@@ -64,7 +69,7 @@ namespace TestNamespace
 }";
         var config = CreateDefaultConfig();
         var (tree, model) = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", tree, model, config);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Empty(violations);
     }
 
@@ -94,7 +99,46 @@ namespace MyFeature.Infrastructure
             }
         };
         var (tree, model) = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", tree, model, config);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Contains(violations, v => v.RuleName == "ForbiddenNamespaceDependency");
+    }
+
+    [Fact]
+    public void Analyze_WithSuppressionComment_IgnoresViolation()
+    {
+        const string source = @"
+// ainetlinter-disable MaxMethodParameterCount
+namespace TestNamespace
+{
+    public sealed class TestClass
+    {
+        public void Work(int a, int b, int c, int d, int e) {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_WithVariableNamedDynamic_DoesNotThrowViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class TestClass
+    {
+        public void Work()
+        {
+            var dynamic = 5;
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Metrics = config.Metrics with { MaxLineCount = 50 } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
     }
 }
