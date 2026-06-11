@@ -106,7 +106,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## GitHub Release
-- [ ] **Release-Infrastruktur & ZIP-Archive reparieren:**
+- [x] **Release-Infrastruktur & ZIP-Archive reparieren:**
   - **Ziel:** Nur noch 3 saubere Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `rules.json` daneben.
   - **Problem:** Die aktuellen ZIP-Archive sind unvollständig; es fehlen die notwendigen MSBuild-BuildHost-DLLs in den Unterordnern `BuildHost-netcore` and `BuildHost-net472`, weshalb der Linter mit einem Fatal Error bezüglich fehlender BuildHost-DLLs abbricht.
   - **Status:** Wir haben uns bereits mehrfach geirrt und verschiedene Anpassungen am Github-Workflow vorgenommen, die nicht funktionierten.
