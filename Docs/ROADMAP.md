@@ -41,9 +41,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 5: Self-Testing CLI Integration (Dogfooding)
-- [/] Erstellung einer test-spezifischen `rules.json` für den Eigenlauf des Tools
-- [/] Implementierung von Integrationstests, die den kompilierten Linter (`AiNetLinter.dll` / `.exe`) auf die eigene Codebase loslassen
-- [ ] Automatisches Einbinden des Linters in den `dotnet test` Build-Prozess
+- [x] Erstellung einer zentralen `rules.json` für den Eigenlauf des Tools
+- [x] Implementierung von Integrationstests, die den kompilierten Linter (`AiNetLinter.dll` / `.exe`) auf die eigene Codebase loslassen
+- [x] Automatisches Einbinden des Linters in den `dotnet test` Build-Prozess (Integrationstest führt CLI auf gesamtem src/ Ordner aus)
 
 ---
 
