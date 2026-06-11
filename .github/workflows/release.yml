@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  # 1. JOB: Baue alle Binaries parallel
+  # 1. JOB: Baue alle Binaries parallel und erstelle Plattform-Archive
   build:
     strategy:
       matrix:
@@ -38,64 +38,62 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Publish Single File
+      - name: Publish
         run: >
-          dotnet publish src/AiNetLinter/AiNetLinter.csproj 
-          -c Release 
-          -r ${{ matrix.rid }} 
-          --self-contained true 
-          -p:PublishSingleFile=true 
-          -p:PublishTrimmed=false 
+          dotnet publish src/AiNetLinter/AiNetLinter.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:PublishTrimmed=false
           -o ./publish
 
-      - name: Rename and Prepare
+      - name: Prepare Release Archive
         shell: pwsh
         run: |
-          $publishedExecutable = Get-ChildItem -Path "./publish" -File | Where-Object { $_.Name -match "AiNetLinter" -and $_.Extension -in ".exe", "" } | Select-Object -First 1
-          $newName = "${{ matrix.executable }}"
-
-          if ($publishedExecutable) {
-            if ($publishedExecutable.Name -ne $newName) {
-              Rename-Item -Path $publishedExecutable.FullName -NewName $newName
-            }
-          } else {
-            Write-Error "Keine ausfuehrbare Datei gefunden!"
-            exit 1
+          # Umbenennen der ausfuehrbaren Datei auf plattformspezifischen Namen
+          $exe = Get-ChildItem -Path "./publish" -File |
+                 Where-Object { $_.Name -match "AiNetLinter" -and $_.Extension -in ".exe", "" } |
+                 Select-Object -First 1
+          if (-not $exe) { Write-Error "Ausfuehrbare Datei nicht gefunden!"; exit 1 }
+          if ($exe.Name -ne "${{ matrix.executable }}") {
+            Rename-Item -Path $exe.FullName -NewName "${{ matrix.executable }}"
           }
 
+          # rules.json ins Publish-Verzeichnis kopieren
           if (Test-Path "rules.json") {
             Copy-Item "rules.json" "./publish/rules.json"
           }
 
+          # Archiv aus dem Publish-Verzeichnis erstellen (kein "publish/"-Prefix im Archiv)
+          Push-Location "./publish"
           if ("${{ matrix.os }}" -eq "windows-latest") {
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $publishPath = (Resolve-Path "./publish").Path
-            $zipPath = (Join-Path (Resolve-Path ".").Path "AiNetLinter-${{ matrix.rid }}.zip")
-            [System.IO.Compression.ZipFile]::CreateFromDirectory($publishPath, $zipPath)
+            # 7z ist auf allen GitHub Windows-Runnern vorinstalliert und archiviert rekursiv korrekt
+            7z a "../AiNetLinter-${{ matrix.rid }}.zip" . -r | Out-Null
           } else {
-            tar -czf "./AiNetLinter-${{ matrix.rid }}.tar.gz" -C "./publish" .
+            tar -czf "../AiNetLinter-${{ matrix.rid }}.tar.gz" .
           }
+          Pop-Location
 
-      - name: Upload Artifacts to Action
+      - name: Upload Archive as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.rid }}
-          path: |
-            ./AiNetLinter-${{ matrix.rid }}.*
-          if-no-files-found: warn
-          retention-days: 1 # Brauchen wir nur kurz fuer den naechsten Job
+          name: archive-${{ matrix.rid }}
+          path: ./AiNetLinter-${{ matrix.rid }}.*
+          if-no-files-found: error
+          retention-days: 1
 
-  # 2. JOB: Erstelle das GitHub Release (Laeuft nur EINMAL, wenn Build fertig ist)
+  # 2. JOB: Erstelle das GitHub Release mit allen Archiven
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all Artifacts
+      - name: Download all Archives
         uses: actions/download-artifact@v4
         with:
-          pattern: binaries-*
+          pattern: archive-*
           path: ./release-files
-          merge-multiple: true # Legt alle Dateien (exe, mac, linux) in denselben Ordner
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
