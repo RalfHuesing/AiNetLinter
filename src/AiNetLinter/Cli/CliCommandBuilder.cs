@@ -14,7 +14,8 @@ internal static class CliCommandBuilder
         Option<string> Format,
         Option<bool> Verbose,
         Option<string?> CreateBaseline,
-        Option<string?> Baseline);
+        Option<string?> Baseline,
+        Option<bool> AddDisableAll);
 
     internal sealed record ParsedArgs(
         string? ConfigPath,
@@ -23,9 +24,22 @@ internal static class CliCommandBuilder
         string Format,
         bool Verbose,
         string? CreateBaselinePath,
-        string? BaselinePath);
+        string? BaselinePath,
+        bool AddDisableAll);
 
     internal static (RootCommand Root, Options Options) Build()
+    {
+        var options = CreateOptions();
+        var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
+        {
+            options.Config, options.Path, options.Graph, options.Format, options.Verbose,
+            options.CreateBaseline, options.Baseline, options.AddDisableAll,
+        };
+
+        return (root, options);
+    }
+
+    private static Options CreateOptions()
     {
         var configOpt = new Option<string?>("--config", "-c")
         {
@@ -57,16 +71,13 @@ internal static class CliCommandBuilder
         {
             Description = "Pfad zur Baseline-JSON für inkrementelle Migration",
         };
-
-        var options = new Options(
-            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt);
-
-        var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
+        var addDisableAllOpt = new Option<bool>("--add-disable-all")
         {
-            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt,
+            Description = "Fügt '// ainetlinter-disable all' oben in alle .cs-Dateien unter --path ein",
         };
 
-        return (root, options);
+        return new Options(
+            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt, addDisableAllOpt);
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -78,6 +89,7 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.Format) ?? "text",
             parseResult.GetValue(options.Verbose),
             parseResult.GetValue(options.CreateBaseline),
-            parseResult.GetValue(options.Baseline));
+            parseResult.GetValue(options.Baseline),
+            parseResult.GetValue(options.AddDisableAll));
     }
 }

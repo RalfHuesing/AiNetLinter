@@ -61,7 +61,8 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
 *   **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
 *   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
-*   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
+*   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
+*   **Bulk-Suppression (`--add-disable-all`):** Fügt den dateiweiten Disable-all-Kommentar automatisch oben in alle `.cs`-Dateien unter `--path` ein — für gezieltes Ausschließen großer Legacy-Bereiche.
 *   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
 *   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
 
@@ -143,6 +144,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
 *   `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
 *   `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
+*   `--add-disable-all` (Flag): Fügt `// ainetlinter-disable all` oben in alle `.cs`-Dateien unter `--path` ein; erfordert keine `--config` (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
@@ -235,14 +237,27 @@ Strukturiertes JSON für CI/CD-Integration. `artifactLocation.uri` enthält rela
 Sollte es notwendig sein, bestimmte Regeln für eine Datei oder Zeile zu deaktivieren, kann dies über C#-Kommentare gelöst werden:
 
 ```csharp
+// ainetlinter-disable all
+// Deaktiviert alle AiNetLinter-Regeln für die gesamte Datei.
+
 // ainetlinter-disable MaxLineCount
-// Dieser Kommentar oben in der Datei deaktiviert die MaxLineCount Prüfung für die gesamte Datei.
+// Deaktiviert nur die MaxLineCount-Prüfung dateiweit.
 
 public void LegacyMethod(int a, int b, int c, int d, int e) // ainetlinter-disable MaxMethodParameterCount
 {
     // Deaktiviert den Parameter-Count-Linter exklusiv für diese Zeile
 }
 ```
+
+### Bulk-Ausschluss großer Projekte
+
+Für Legacy-Codebases oder Teilbereiche, die vorerst nicht geprüft werden sollen:
+
+```bash
+ainetlinter --path ./MeinProjekt.slnx --add-disable-all
+```
+
+Der Befehl durchläuft alle analysierbaren `.cs`-Dateien (Solution-Projekte oder rekursiv im Verzeichnis) und fügt `// ainetlinter-disable all` am Dateianfang ein. Bereits markierte Dateien werden übersprungen.
 
 ---
 
