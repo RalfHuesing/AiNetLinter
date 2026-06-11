@@ -102,7 +102,8 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Robuste dynamic-Erkennung:** Überprüfe `dynamic` über das `SemanticModel` (`TypeKind.Dynamic`), um unberechtigte Fehlermeldungen bei lokalen Variablen namens `dynamic` zu vermeiden.
 - [x] **Unterstützung für ainetlinter-disable:** Erlaube das Unterdrücken von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
 - [x] **Dateiweites Disable-all (`// ainetlinter-disable all`):** Deaktiviert alle Regeln für eine gesamte Quelldatei.
-- [x] **CLI Bulk-Suppression (`--add-disable-all`):** Fügt den Disable-all-Kommentar automatisch oben in alle `.cs`-Dateien unter `--path` ein.
+- [x] **CLI Bulk-Suppression (`--add-disable-all`):** Fügt den Disable-all-Kommentar nur in Dateien mit Audit-Verstößen ein.
+- [x] **CLI Bulk-Entfernung (`--remove-disable-all`):** Entfernt exakte `// ainetlinter-disable all`-Zeilen per Regex aus allen `.cs`-Dateien unter `--path`.
 - [x] **Projektbasierte Test-Dateierkennung:** Bestimme Testprojekte dynamisch durch Analyse ihrer referenzierten Test-Assemblies (`xunit`, `nunit` etc.) im MSBuild-Projekt, um fragile Dateipfad-Heuristiken abzulösen.
 - [x] **LLM-optimierte CLI-Textausgabe:** Kompakte, token-effiziente Standardausgabe mit relativem Pfad (Basis `--path`), sortierten Einzeilern, LLM-Anweisungsheader und relativem SARIF-URI statt absoluter `file://`-Pfade.
 - [x] **Parallele Dokument-Analyse & MSBuild Design-Time-Properties:** `MSBuildWorkspace` mit `DesignTimeBuild`/`SkipCompilerExecution` für schnelleres Laden; parallele Roslyn-Analyse aller `.cs`-Dokumente mit thread-sicheren Sammlungen (`ConcurrentBag`/`ConcurrentDictionary`).

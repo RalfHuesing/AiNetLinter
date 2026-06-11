@@ -62,7 +62,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
 *   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
 *   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
-*   **Bulk-Suppression (`--add-disable-all`):** Fügt den dateiweiten Disable-all-Kommentar automatisch oben in alle `.cs`-Dateien unter `--path` ein — für gezieltes Ausschließen großer Legacy-Bereiche.
+*   **Gezielte Bulk-Suppression (`--add-disable-all` / `--remove-disable-all`):** Audit-basiertes Einfügen des Disable-all-Kommentars nur in Dateien mit Verstößen sowie sicheres Entfernen exakter Disable-all-Zeilen.
 *   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
 *   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
 
@@ -144,7 +144,8 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
 *   `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
 *   `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
-*   `--add-disable-all` (Flag): Fügt `// ainetlinter-disable all` oben in alle `.cs`-Dateien unter `--path` ein; erfordert keine `--config` (Optional).
+*   `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
+*   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
@@ -249,15 +250,31 @@ public void LegacyMethod(int a, int b, int c, int d, int e) // ainetlinter-disab
 }
 ```
 
-### Bulk-Ausschluss großer Projekte
+### Gezielter Bulk-Ausschluss (nur betroffene Dateien)
 
-Für Legacy-Codebases oder Teilbereiche, die vorerst nicht geprüft werden sollen:
+Für Legacy-Codebases, in denen vorerst nur Dateien mit aktuellen Verstößen ausgeschlossen werden sollen:
 
 ```bash
-ainetlinter --path ./MeinProjekt.slnx --add-disable-all
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --add-disable-all
 ```
 
-Der Befehl durchläuft alle analysierbaren `.cs`-Dateien (Solution-Projekte oder rekursiv im Verzeichnis) und fügt `// ainetlinter-disable all` am Dateianfang ein. Bereits markierte Dateien werden übersprungen.
+**Ablauf:**
+1. Vollständiger Audit-Lauf mit der angegebenen `rules.json`
+2. Ermittlung aller Dateien mit mindestens einem Verstoß
+3. Einfügen von `// ainetlinter-disable all` am Dateianfang — nur in diesen Dateien
+4. Bereits markierte Dateien werden übersprungen
+
+Saubere Dateien bleiben unverändert und werden weiterhin geprüft.
+
+### Bulk-Entfernung des Disable-all-Kommentars
+
+Zum Rückbau nach Refactoring oder wenn der Ausschluss nicht mehr nötig ist:
+
+```bash
+ainetlinter --path ./MeinProjekt.slnx --remove-disable-all
+```
+
+Es werden ausschließlich Zeilen entfernt, die **exakt** `// ainetlinter-disable all` entsprechen (Zeilenanfang bis Zeilenende, `\r\n` und `\n` werden berücksichtigt). Abweichende Varianten wie eingerückte oder erweiterte Kommentare bleiben unangetastet.
 
 ---
 
