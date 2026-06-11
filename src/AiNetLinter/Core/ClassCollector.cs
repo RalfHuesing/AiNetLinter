@@ -6,60 +6,38 @@ using AiNetLinter.Metrics;
 namespace AiNetLinter.Core;
 
 /// <summary>
-/// Hilfs-Walker zum Sammeln aller deklarierten Klassen und deren maximalen Komplexitäten.
+/// Hilfs-Walker zum Sammeln aller deklarierten Klassen und deren maximalen Komplexitäten mit Semantik.
 /// </summary>
 internal sealed class ClassCollector : CSharpSyntaxWalker
 {
     public List<ClassInfo> Classes { get; } = new();
     private readonly string _filePath;
-    private readonly List<string> _usings = new();
+    private readonly SemanticModel _semanticModel;
 
-    public ClassCollector(string filePath)
+    public ClassCollector(string filePath, SemanticModel semanticModel)
     {
         _filePath = filePath;
-    }
-
-    public override void VisitUsingDirective(UsingDirectiveSyntax node)
-    {
-        if (node.Name != null)
-        {
-            _usings.Add(node.Name.ToString());
-        }
-        base.VisitUsingDirective(node);
+        _semanticModel = semanticModel;
     }
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
-        var maxComplexity = GetMaxMethodComplexity(node);
-        var baseClass = GetBaseClass(node);
-
-        Classes.Add(new ClassInfo
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null)
         {
-            Name = node.Identifier.Text,
-            FilePath = _filePath,
-            LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-            MaxCognitiveComplexity = maxComplexity,
-            BaseClass = baseClass,
-            Namespace = GetNamespace(node),
-            Usings = _usings.ToArray(),
-            HasTestMethods = CheckForTestMethods(node)
-        });
+            var maxComplexity = GetMaxMethodComplexity(node);
+            Classes.Add(new ClassInfo
+            {
+                Name = symbol.Name,
+                FilePath = _filePath,
+                LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
+                MaxCognitiveComplexity = maxComplexity,
+                Symbol = symbol,
+                HasTestMethods = CheckForTestMethods(node)
+            });
+        }
 
         base.VisitClassDeclaration(node);
-    }
-
-    private static string? GetNamespace(ClassDeclarationSyntax node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is BaseNamespaceDeclarationSyntax ns)
-            {
-                return ns.Name.ToString();
-            }
-            parent = parent.Parent;
-        }
-        return null;
     }
 
     private static bool CheckForTestMethods(ClassDeclarationSyntax node)
@@ -84,13 +62,6 @@ internal sealed class ClassCollector : CSharpSyntaxWalker
         }
         return max;
     }
-
-    private static string? GetBaseClass(ClassDeclarationSyntax node)
-    {
-        if (node.BaseList == null) return null;
-        if (node.BaseList.Types.Count == 0) return null;
-        return node.BaseList.Types[0].Type.ToString();
-    }
 }
 
 internal sealed class ClassInfo
@@ -99,9 +70,6 @@ internal sealed class ClassInfo
     public required string FilePath { get; init; }
     public required int LineNumber { get; init; }
     public required int MaxCognitiveComplexity { get; init; }
-    public string? BaseClass { get; init; }
-    public string? Namespace { get; init; }
-    public required IReadOnlyList<string> Usings { get; init; }
+    public required INamedTypeSymbol Symbol { get; init; }
     public required bool HasTestMethods { get; init; }
-    public string FullyQualifiedName => string.IsNullOrEmpty(Namespace) ? Name : $"{Namespace}.{Name}";
 }

@@ -14,7 +14,7 @@ public static class Program
     /// <summary>
     /// Der Einstiegspunkt für die Ausführung der Linter-CLI.
     /// </summary>
-    public static int Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         try
         {
@@ -26,7 +26,7 @@ public static class Program
             }
 
             var linterArgs = new LinterArgs(configPath, targetPath, graphPath, format, verbose);
-            return ExecuteLinter(linterArgs);
+            return await ExecuteLinterAsync(linterArgs);
         }
         catch (Exception ex)
         {
@@ -83,16 +83,7 @@ public static class Program
         return config;
     }
 
-    private static void GenerateGraphIfRequested(LinterEngine engine, string targetPath, string? graphPath)
-    {
-        if (!string.IsNullOrEmpty(graphPath))
-        {
-            engine.GenerateMermaidGraph(targetPath, graphPath);
-            Console.WriteLine($"[INFO]: Mermaid-Abhängigkeitsgraph wurde generiert unter: {graphPath}");
-        }
-    }
-
-    private static int ExecuteLinter(LinterArgs args)
+    private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
         LogStart(args.Verbose, args.ConfigPath, args.TargetPath);
 
@@ -103,9 +94,8 @@ public static class Program
         }
 
         var engine = new LinterEngine(config);
-        GenerateGraphIfRequested(engine, args.TargetPath, args.GraphPath);
+        var violations = await engine.RunAsync(args.TargetPath);
 
-        var violations = engine.Run(args.TargetPath);
         if (args.Format == "sarif")
         {
             PrintSarifViolations(violations);
@@ -177,7 +167,7 @@ public static class Program
         Console.WriteLine(json);
     }
 
-    private static string GetFileUri(string filePath)
+    private static string GetFileUri(string? filePath)
     {
         if (string.IsNullOrEmpty(filePath)) return "";
         try

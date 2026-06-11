@@ -82,4 +82,15 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Sicherer Test Sentinel:** Stelle sicher, dass gefundene Testklassen tatsächliche Testmethoden (mit `[Fact]`, `[Theory]`, `[Test]` oder `[TestMethod]` Attributen) enthalten, um zu verhindern, dass leere Testdateien den Sentinel austricksen.
 - [x] **SARIF CLI-Ausgabeformat:** Füge die Option `--format sarif` hinzu, um die Regelverstöße im standardisierten SARIF-Format (Static Analysis Results Interchange Format) auf `stdout` auszugeben, zur direkten Integration in GitHub Actions/GitLab CI.
 
+---
+
+## Epic 11: Roslyn Workspace & Semantische Analyse (Roslyn Workspace Refactoring)
+- [x] **Integration von MSBuildWorkspace & MSBuildLocator:** Binde die benötigten NuGet-Pakete ein und initialisiere den MSBuildWorkspace zur vollständigen Evaluierung der Solution-Struktur (.sln / .slnx).
+- [x] **Umstellung auf Solution-weites Laden:** Ersetze das textbasierte Parsen einzelner Dateien durch das Laden der Solution in den Speicher und das Abfragen der `Compilation` und des `SemanticModel` pro Dokument.
+- [x] **Semantische Vererbungstiefen-Prüfung:** Nutze `INamedTypeSymbol.BaseType` des semantischen Modells, um die exakte Vererbungshierarchie über Projektgrenzen hinweg ohne textbasierte Heuristiken zu ermitteln.
+- [x] **Semantische Nullable-Prüfung:** Nutze `compilation.Options.NullableContextOptions`, um die Nullability-Einstellungen direkt vom Compiler auswerten zu lassen (inkl. Directory.Build.props und konditionaler Flags).
+- [x] **Semantische Namespace-Kopplungs-Prüfung:** Analysiere Symbol-Referenzen über `SemanticModel.GetSymbolInfo`, um unerlaubte Namespace-Abhängigkeiten zuverlässig auf Typ- und Member-Ebene zu erkennen.
+- [x] **Bereinigung von veraltetem Code:** Entferne obsolete textbasierte Heuristiken (manuelles Csproj-Parsing, manuelle Dateisuchen und String-basierte Namespace-Suchen).
+
+
 

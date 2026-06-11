@@ -28,35 +28,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitUsingDirective(UsingDirectiveSyntax node)
     {
-        CheckForbiddenNamespace(node);
+        if (node.Name != null)
+        {
+            CheckForbiddenNamespaceString(node.Name.ToString(), node);
+        }
         base.VisitUsingDirective(node);
     }
 
-    public override void VisitQualifiedName(QualifiedNameSyntax node)
-    {
-        if (node.Parent is not QualifiedNameSyntax && node.Parent is not MemberAccessExpressionSyntax)
-        {
-            CheckForbiddenNamespaceString(node.ToString(), node);
-        }
-        base.VisitQualifiedName(node);
-    }
-
-    public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-    {
-        if (node.Parent is not MemberAccessExpressionSyntax)
-        {
-            CheckForbiddenNamespaceString(node.ToString(), node);
-        }
-        base.VisitMemberAccessExpression(node);
-    }
-
-    private void CheckForbiddenNamespace(UsingDirectiveSyntax node)
-    {
-        if (node.Name == null) return;
-        CheckForbiddenNamespaceString(node.Name.ToString(), node);
-    }
-
-    private void CheckForbiddenNamespaceString(string referencedNamespace, SyntaxNode node)
+    private void CheckForbiddenNamespaceString(string? referencedNamespace, SyntaxNode node)
     {
         if (string.IsNullOrEmpty(referencedNamespace)) return;
 
@@ -224,7 +203,43 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             });
         }
 
+        CheckForbiddenSymbolNamespace(node);
         base.VisitIdentifierName(node);
+    }
+
+    private void CheckForbiddenSymbolNamespace(IdentifierNameSyntax node)
+    {
+        var symbol = GetTargetSymbol(node);
+        if (symbol == null) return;
+
+        CheckSymbolNamespace(symbol, node);
+    }
+
+    private ISymbol? GetTargetSymbol(IdentifierNameSyntax node)
+    {
+        SyntaxNode target = node;
+        while (target.Parent is NameSyntax || target.Parent is MemberAccessExpressionSyntax)
+        {
+            target = target.Parent;
+        }
+
+        return _semanticModel.GetSymbolInfo(target).Symbol ?? 
+               _semanticModel.GetSymbolInfo(node).Symbol;
+    }
+
+    private void CheckSymbolNamespace(ISymbol symbol, SyntaxNode node)
+    {
+        if (symbol is INamedTypeSymbol typeSymbol)
+        {
+            CheckForbiddenNamespaceString(typeSymbol.ContainingNamespace?.ToDisplayString(), node);
+            return;
+        }
+        
+        var ns = symbol is INamespaceSymbol nsSymbol 
+            ? nsSymbol.ToDisplayString() 
+            : symbol.ContainingType?.ContainingNamespace?.ToDisplayString();
+            
+        CheckForbiddenNamespaceString(ns, node);
     }
 
     public override void VisitCatchClause(CatchClauseSyntax node)

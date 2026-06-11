@@ -13,7 +13,7 @@ public sealed class CliIntegrationTests
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
-        var targetPath = Path.Combine(rootDir, "src");
+        var targetPath = rootDir;
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
@@ -50,7 +50,7 @@ public sealed class CliIntegrationTests
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "non-existent-config.json");
-        var targetPath = Path.Combine(rootDir, "src");
+        var targetPath = rootDir;
 
         var processInfo = new ProcessStartInfo
         {

@@ -1,4 +1,6 @@
 using Xunit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
@@ -27,17 +29,42 @@ public sealed class LinterAnalyzerTests
         };
     }
 
+    private static (SyntaxTree, SemanticModel) GetSemanticContext(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        var compilation = CSharpCompilation.Create("TestAssembly")
+            .AddSyntaxTrees(tree)
+            .AddReferences(mscorlib)
+            .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            
+        var errors = compilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+            
+        if (errors.Any())
+        {
+            throw new System.Exception("Compilation errors:\n" + string.Join("\n", errors));
+        }
+
+        var semanticModel = compilation.GetSemanticModel(tree);
+        return (tree, semanticModel);
+    }
+
     [Fact]
     public void Analyze_WithValidCode_HasNoViolations()
     {
         const string source = @"
-namespace TestNamespace;
-public sealed class TestClass
+namespace TestNamespace
 {
-    public void Work(int x, int y) {}
+    public sealed class TestClass
+    {
+        public void Work(int x, int y) {}
+    }
 }";
         var config = CreateDefaultConfig();
-        var violations = LinterAnalyzer.Analyze("Test.cs", source, config);
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", tree, model, config);
         Assert.Empty(violations);
     }
 
@@ -45,13 +72,19 @@ public sealed class TestClass
     public void Analyze_WithForbiddenNamespaceInStatement_ReturnsViolation()
     {
         const string source = @"
-namespace MyFeature.Domain;
-public sealed class DomainService
+namespace MyFeature.Domain
 {
-    public void Run()
+    public sealed class DomainService
     {
-        var helper = new MyFeature.Infrastructure.DbHelper();
+        public void Run()
+        {
+            var helper = new MyFeature.Infrastructure.DbHelper();
+        }
     }
+}
+namespace MyFeature.Infrastructure
+{
+    public sealed class DbHelper {}
 }";
         var config = CreateDefaultConfig() with
         {
@@ -60,7 +93,8 @@ public sealed class DomainService
                 new NamespaceRule { SourceNamespace = "MyFeature.Domain", TargetNamespace = "MyFeature.Infrastructure" }
             }
         };
-        var violations = LinterAnalyzer.Analyze("Test.cs", source, config);
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", tree, model, config);
         Assert.Contains(violations, v => v.RuleName == "ForbiddenNamespaceDependency");
     }
 }

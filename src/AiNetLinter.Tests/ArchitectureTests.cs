@@ -1,4 +1,6 @@
 using Xunit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
@@ -23,7 +25,7 @@ public sealed class ArchitectureTests
             },
             Metrics = new MetricsConfig
             {
-                MaxLineCount = 10, // Small line count to test lines limit
+                MaxLineCount = 10,
                 MaxMethodParameterCount = 2,
                 MaxCyclomaticComplexity = 5,
                 MaxCognitiveComplexity = 5
@@ -31,57 +33,53 @@ public sealed class ArchitectureTests
         };
     }
 
+    private static (SyntaxTree, SemanticModel) GetSemanticContext(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        var compilation = CSharpCompilation.Create("TestAssembly")
+            .AddSyntaxTrees(tree)
+            .AddReferences(mscorlib);
+        var semanticModel = compilation.GetSemanticModel(tree);
+        return (tree, semanticModel);
+    }
+
     [Fact]
     public void Analyze_WithCompliantCode_ReturnsZeroViolations()
     {
-        // Arrange
         const string sourceCode = @"
 namespace CompliantNamespace;
-
 public sealed class GoodClass
 {
-    public void Calculate(int a, string b)
-    {
-        // Clean implementation
-    }
+    public void Calculate(int a, string b) {}
 }";
         var config = CreateDefaultConfig();
-
-        // Act
-        var violations = LinterAnalyzer.Analyze("TestFile.cs", sourceCode, config);
-
-        // Assert
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("TestFile.cs", tree, model, config);
         Assert.Empty(violations);
     }
 
     [Fact]
     public void Analyze_WithViolations_ReturnsExpectedViolations()
     {
-        // Arrange
         const string sourceCode = @"
 namespace BadNamespace;
-
 public class NonSealedClass
 {
     public void DoSomething(int a, string b, double c, bool d)
     {
         dynamic badVariable = 42;
     }
-
     public void OutMethod(out int value)
     {
         value = 10;
     }
 }";
         var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("TestFile.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("TestFile.cs", sourceCode, config);
-
-        // Assert
         Assert.NotEmpty(violations);
-        
-        // Assert specific violations exist
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceSealedClasses));
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxMethodParameterCount));
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.AllowDynamic));
@@ -91,7 +89,6 @@ public class NonSealedClass
     [Fact]
     public void Analyze_WithFileTooLong_ReturnsLineCountViolation()
     {
-        // Arrange
         const string sourceCode = @"
 // Line 1
 // Line 2
@@ -106,22 +103,18 @@ public class NonSealedClass
 // Line 11
 // Line 12
 ";
-        var config = CreateDefaultConfig(); // MaxLineCount is 10
+        var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("LongFile.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("LongFile.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxLineCount));
     }
 
     [Fact]
     public void Analyze_WithHighCyclomaticComplexity_ReturnsCyclomaticComplexityViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace ComplexNamespace;
-
 public sealed class ComplexClass
 {
     public void Verify(int x)
@@ -134,21 +127,17 @@ public sealed class ComplexClass
     }
 }";
         var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("ComplexFile.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("ComplexFile.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity));
     }
 
     [Fact]
     public void Analyze_WithHighCognitiveComplexity_ReturnsCognitiveComplexityViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace CognitiveNamespace;
-
 public sealed class CognitiveClass
 {
     public void Nesting(int a, int b, int c)
@@ -157,34 +146,26 @@ public sealed class CognitiveClass
         {
             if (b > 0)
             {
-                if (c > 0)
-                {
-                }
+                if (c > 0) {}
             }
         }
     }
 }";
         var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("CognitiveFile.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("CognitiveFile.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCognitiveComplexity));
     }
-
-
 
     [Fact]
     public void Analyze_WithForbiddenNamespaceDependency_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace MyApp.Features.Invoicing;
-
 using MyApp.Features.Customer;
-
 public sealed class InvoiceService {}";
+
         var config = CreateDefaultConfig() with
         {
             ForbiddenNamespaceDependencies = new[]
@@ -196,31 +177,25 @@ public sealed class InvoiceService {}";
                 }
             }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("InvoiceService.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("InvoiceService.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == "ForbiddenNamespaceDependency");
     }
 
     [Fact]
     public void Analyze_WithValueObjectNotRecordOrStruct_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Domain;
-
 public class EmailValueObject
 {
     public string Address { get; }
 }";
-        var config = CreateDefaultConfig(); // EnforceValueObjectContracts is true by default
+        var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Email.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Email.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceValueObjectContracts));
         Assert.Contains(violations, v => v.Details.Contains("ist als 'class' deklariert"));
     }
@@ -228,30 +203,23 @@ public class EmailValueObject
     [Fact]
     public void Analyze_WithValueObjectMutableProperty_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Domain;
-
 public sealed record MoneyValueObject
 {
     public decimal Amount { get; set; }
 }";
         var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Money.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Money.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceValueObjectContracts));
         Assert.Contains(violations, v => v.Details.Contains("veränderbare Eigenschaft"));
     }
 
-
-
     [Fact]
     public void Analyze_WithNonPascalCaseTypeName_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Test;
 public sealed class badClass {}";
@@ -259,18 +227,15 @@ public sealed class badClass {}";
         {
             Global = new GlobalConfig { EnforcePascalCase = true }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Source.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforcePascalCase));
     }
 
     [Fact]
     public void Analyze_WithPublicMethodMissingXmlDoc_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Test;
 /// <summary>
@@ -284,18 +249,15 @@ public sealed class GoodClass
         {
             Global = new GlobalConfig { EnforceXmlDocumentation = true }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Source.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceXmlDocumentation));
     }
 
     [Fact]
     public void Analyze_WithGenericParameterName_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Test;
 /// <summary>
@@ -312,18 +274,15 @@ public sealed class GoodClass
         {
             Global = new GlobalConfig { EnforceSemanticNaming = true }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Source.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceSemanticNaming));
     }
 
     [Fact]
     public void Analyze_WithFileMissingNullableEnable_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Test;
 /// <summary>
@@ -334,18 +293,15 @@ public sealed class GoodClass {}";
         {
             Global = new GlobalConfig { EnforceNullableEnable = true }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Source.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNullableEnable));
     }
 
     [Fact]
     public void Analyze_WithSilentCatch_ReturnsViolation()
     {
-        // Arrange
         const string sourceCode = @"
 namespace Test;
 /// <summary>
@@ -366,13 +322,9 @@ public sealed class GoodClass
         {
             Global = new GlobalConfig { EnforceNoSilentCatch = true }
         };
+        var (tree, model) = GetSemanticContext(sourceCode);
+        var violations = LinterAnalyzer.Analyze("Source.cs", tree, model, config);
 
-        // Act
-        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
-
-        // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch));
     }
-
-
 }
