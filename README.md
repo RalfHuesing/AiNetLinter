@@ -54,30 +54,49 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 
 ## 3. Kernfeatures von AiNetLinter
 
-*   **Roslyn-basierte semantische Analyse:** Das Tool nutzt den `MSBuildWorkspace` von Roslyn, um die gesamte Solution (.sln / .slnx) inklusive aller Projekte und deren Abhängigkeiten vollständig im Speicher zu evaluieren. Dadurch stehen dem Linter echte semantische Informationen und Typsymbole zur Verfügung, was eine fehlerfreie Vererbungstiefen- und Namespace-Kopplungs-Prüfung ermöglicht.
-*   **JSON-Konfiguration:** Einfache, declarative Steuerung aller Regeln über eine zentrale `rules.json`.
-*   **Actionable AI-Feedback auf stdout:** Fehlermeldungen sind so formuliert, dass sie einem AI-Agenten im Terminal eine präzise, direkt ausführbare Arbeitsanweisung geben.
-*   **Unit-Test-Integration:** Der Linter kann direkt als Assert-Schritt in klassischen xUnit/NUnit-Tests ausgeführt werden, um die Einhaltung der Regeln im lokalen Entwicklungs-Loop zu erzwingen.
+*   **Roslyn-basierte semantische Analyse:** Evaluierung der gesamten Solution (.sln / .slnx) über einen einzigen Syntax-Walk pro Dokument. Nutzt echte Semantik-Informationen statt textbasierter Heuristiken.
+*   **Feingranulares Regelwerk:** Umfassende Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
+*   **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
+*   **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
+*   **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
+*   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
+*   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
+*   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
 
 ---
 
 ## 4. Konfiguration (`rules.json`)
 
-Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur:
+Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur. Beispiel einer vollständigen Konfiguration:
 
 ```json
 {
   "Global": {
     "EnforceSealedClasses": true,
     "AllowDynamic": false,
-    "AllowOutParameters": false
+    "AllowOutParameters": false,
+    "EnforceValueObjectContracts": true,
+    "EnableTestSentinel": true,
+    "EnforcePascalCase": true,
+    "EnforceXmlDocumentation": true,
+    "EnforceSemanticNaming": true,
+    "EnforceNullableEnable": true,
+    "EnforceNoSilentCatch": true
   },
   "Metrics": {
     "MaxLineCount": 500,
     "MaxMethodParameterCount": 4,
     "MaxCyclomaticComplexity": 5,
-    "MaxCognitiveComplexity": 5
-  }
+    "MaxCognitiveComplexity": 5,
+    "MaxInheritanceDepth": 2,
+    "MinCognitiveComplexityForTest": 3
+  },
+  "ForbiddenNamespaceDependencies": [
+    {
+      "SourceNamespace": "MyFeature.Domain",
+      "TargetNamespace": "MyFeature.Infrastructure"
+    }
+  ]
 }
 ```
 
@@ -85,13 +104,22 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 
 | Regel | Bereich | Beschreibung |
 | :--- | :--- | :--- |
-| `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen (die nicht `abstract` oder `static` sind) dazu, als `sealed` deklariert zu werden. Reduziert Vererbungsketten und optimiert die .NET-Runtime (Devirtualisierung). |
-| `AllowDynamic` | Global | Verbietet das Schlüsselwort `dynamic`. Löscht Typsicherheit und verhindert, dass LLMs die verfügbaren Member statisch analysieren können. |
-| `AllowOutParameters` | Global | Verbietet `out`-Parameter. Erzwingt stattdessen C#-Tuples oder dedizierte Records für mehrere Rückgabewerte, was für KIs intuitiver lesbar ist. |
-| `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro `.cs`-Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
-| `MaxMethodParameterCount`| Metrics | Maximale Anzahl an Parametern pro Methode (Standard: 4). Erzwingt bei Überschreitung das Kapseln in Parameter-Objects (`record`). |
-| `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode. |
-| `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource-Standard) pro Methode, um verschachtelte Kontrollstrukturen zu unterbinden. |
+| `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden. |
+| `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
+| `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
+| `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
+| `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
+| `EnforcePascalCase` | Global | Validiert PascalCase-Schreibweise für Klassen, Structs, Records, Interfaces, Methoden und Properties. |
+| `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Schnittstellen für LSP-Integrationen. |
+| `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
+| `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
+| `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. |
+| `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
+| `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
+| `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
+| `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
+| `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |
+| `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
 
 ---
 
@@ -102,36 +130,44 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 ### Aufruf-Syntax
 
 ```bash
-ainetlinter --config <Pfad-zur-Config-JSON> --path <Pfad-zur-slnx-oder-Verzeichnis>
+ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichnis> [Optionen]
 ```
 
 ### Parameter
 
-*   `-c`, `--config` (Pfad): Der Pfad zur `rules.json`.
-*   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis, das eine solche Datei enthält (Erforderlich).
-*   `-v`, `--verbose` (Flag): Aktiviert detaillierte Logging-Ausgaben für Debugging-Zwecke.
+*   `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich).
+*   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
+*   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
+*   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
+*   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 
-### CLI-Ausgabe (Beispiel für AI-Agenten)
+### Exit-Codes
 
-Tritt ein Regelverstoß auf, gibt das Tool strukturierte Fehlermeldungen auf `stdout` aus und beendet sich mit einem Exit-Code ungleich 0 (`1`).
+*   `0`: Erfolg (Keine Regelverstöße gefunden).
+*   `1`: Regelbrüche wurden identifiziert und ausgegeben.
+*   `2`: Fataler Fehler (z. B. IO-Exception, MSBuildWorkspace-Ladefehler).
 
-```plaintext
-[ARCH-ERROR]: Die Methode 'CalculateDiscount' in 'C:\Entwicklung\Project\Services\InvoiceService.cs' auf Zeile 45 bricht die AI-Readability-Regeln.
-- Erwartete Kognitive Komplexität: max. 5
-- Tatsächliche Kognitive Komplexität: 8
-Bitte refaktoriere die Methode, indem du verschachtelte Logik in kleine, pure Hilfsmethoden oder Pattern Matchings auslagerst.
+---
 
-[ARCH-ERROR]: Die Klasse 'CustomerRepository' in 'C:\Entwicklung\Project\Repositories\CustomerRepository.cs' auf Zeile 12 ist nicht als 'sealed' deklariert.
-Bitte füge den Modifikator 'sealed' zur Klassendeklaration hinzu, um die Vererbungshierarchie flach zu halten.
+## 6. Lokale Warnungs-Unterdrückung (Suppression)
+
+Sollte es notwendig sein, bestimmte Regeln für eine Datei oder Zeile zu deaktivieren, kann dies über C#-Kommentare gelöst werden:
+
+```csharp
+// ainetlinter-disable MaxLineCount
+// Dieser Kommentar oben in der Datei deaktiviert die MaxLineCount Prüfung für die gesamte Datei.
+
+public void LegacyMethod(int a, int b, int c, int d, int e) // ainetlinter-disable MaxMethodParameterCount
+{
+    // Deaktiviert den Parameter-Count-Linter exklusiv für diese Zeile
+}
 ```
 
 ---
 
-## 6. Integration in Unit Tests
+## 7. Integration in Unit Tests
 
-Um sicherzustellen, dass AI-Agenten (und menschliche Entwickler) die Regeln während der Arbeit einhalten, kann `AiNetLinter` über ein Test-Projekt integriert werden. Dadurch wird ein Regelbruch sofort im lokalen Test-Runner (z. B. via `dotnet test`) gemeldet.
-
-### Beispiel für einen xUnit-Test in C#
+Um sicherzustellen, dass AI-Agenten die Regeln während der Arbeit einhalten, kann `AiNetLinter` über ein Test-Projekt integriert werden.
 
 ```csharp
 using Xunit;
@@ -143,10 +179,9 @@ public sealed class ArchitectureTests
     [Fact]
     public void Enforce_AiNetLinter_Rules_On_Solution()
     {
-        // Pfad zur Solution und Config ermitteln
-        var solutionPath = Path.GetFullPath("../../../../MyProject.slnx");
-        var configPath = Path.GetFullPath("../../../../ainetlinter-rules.json");
-        var linterCliPath = Path.GetFullPath("../../../../tools/ainetlinter.exe");
+        var solutionPath = Path.GetFullPath("../../../../AiNetLinter.slnx");
+        var configPath = Path.GetFullPath("../../../../rules.json");
+        var linterCliPath = Path.GetFullPath("../../../../src/AiNetLinter/bin/Debug/net10.0/AiNetLinter.exe");
 
         var processInfo = new ProcessStartInfo
         {
@@ -164,19 +199,18 @@ public sealed class ArchitectureTests
         string output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
 
-        // Wenn der Linter Fehler findet (ExitCode != 0), schlägt der Test fehl
-        // und gibt die genauen Handlungsanweisungen für den AI-Agenten aus.
-        Assert.True(process.ExitCode == 0, $"AiNetLinter hat Verstöße gefunden:\n{output}");
+        Assert.True(process.ExitCode == 0, $"AiNetLinter hat Verstoesse gefunden:\n{output}");
     }
 }
 ```
 
 ---
 
-## 7. Zukunfts-Roadmap (Ausblick)
+## 8. Zukunfts-Roadmap (Ausblick)
 
-In zukünftigen Versionen soll `AiNetLinter` um folgende Konzepte erweitert werden:
-*   **Architekturschnitte validieren (Namespace-Kopplung):** Einbindung von Regeln ähnlich wie ArchUnitNET, um unzulässige Abhängigkeiten zwischen Vertical Slices (z. B. `MyApp.Features.Invoicing` darf nicht direkt von `MyApp.Features.Customer` abhängen) direkt auf Syntax-Ebene zu verbieten.
-*   **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (z. B. automatische Validierung von feingranularen Value Objects wie `PositiveInteger`), um manuelle Werteprüfungen überflüssig zu machen.
-*   **Traceability-Graphen:** Automatische Analyse von Abhängigkeiten, um AI-Agenten vorab mitzuteilen, welche Teile des Systems von einer geplanten Änderung betroffen sein werden.
-*   **Statische Test-Präsenzprüfung & Relevanz-Analyse (Static Test Sentinel):** Statische Ermittlung der Kritikalität von Klassen und Methoden auf Basis von Komplexität und Kopplung (wie viele andere Klassen hängen von dieser ab?). Der Linter prüft rein statisch (z. B. über Namenskonventionen wie `[ClassName]Tests.cs` oder Referenz-Suchen im Testprojekt), ob für diesen relevanten Code Test-Deklarationen existieren, und schlägt bei ungetesteten, aber hochrelevanten Codebereichen Alarm. Die inhaltliche Sinnhaftigkeit der Tests kann zwar statisch nicht verifiziert werden, aber das Tool erzwingt das Vorhandensein von Testgerüsten – was KI-Agenten effektiv dazu zwingt, für neuen oder komplexen Code sofort begleitende Unit Tests zu schreiben.
+*   **Scope-Verwirrungs-Linter (Context Ambiguity):** Erkennung und Verbot von Variable Shadowing (lokale Variablen verbergen Klassenfelder) und übermäßigem Method Overloading (max. 2), da LLMs hierdurch oft falschen Kontext interpretieren.
+*   **Deterministische Zustandsprüfung:** Verbot von Parameter-Reassignment (Parameter in Methoden überschreiben) und Erzwingen von `readonly` Feldern auf Klassenebene.
+*   **Topologische Kopplungsprüfung:** Begrenzung von Fan-Out / Fan-In auf Konstruktor-Ebene (z. B. `MaxConstructorDependencies = 5`), um übermäßigen Kontextaufwand für KIs zu verringern.
+*   **Vermeidung von Magic Values:** Warnungen bei unbenannten Literalen (Magic Numbers / Magic Strings) in Methoden zur Erhöhung des semantischen Namensraums.
+*   **Result-Pattern über Exception Control Flow:** Flaggen von fachlichen `throw` Ausdrücken außerhalb von Konstruktoren zur Forcierung des Result-Patterns.
+*   **Optimiertes Speicher-Management:** Sequentielles Laden und Entladen von Projekten im `MSBuildWorkspace` für sehr große Monolithen.
