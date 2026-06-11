@@ -1,0 +1,24 @@
+{
+  "Global": {
+    "EnforceSealedClasses": true,
+    "AllowDynamic": false,
+    "AllowOutParameters": false,
+    "EnforceValueObjectContracts": false,
+    "EnableTestSentinel": false,
+    "EnforcePascalCase": false,
+    "EnforceXmlDocumentation": false,
+    "EnforceSemanticNaming": false,
+    "EnforceNullableEnable": false,
+    "EnforceNoSilentCatch": false
+  },
+  "Metrics": {
+    "MaxLineCount": 500,
+    "MaxMethodParameterCount": 4,
+    "MaxMethodLineCount": 42,
+    "MaxCyclomaticComplexity": 5,
+    "MaxCognitiveComplexity": 5,
+    "MaxInheritanceDepth": 2,
+    "MinCognitiveComplexityForTest": 3
+  },
+  "ForbiddenNamespaceDependencies": []
+}

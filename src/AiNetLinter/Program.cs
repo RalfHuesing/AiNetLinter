@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
@@ -17,15 +18,17 @@ public static class Program
     /// </summary>
     public static async Task<int> Main(string[] args)
     {
-        var configOpt = new Option<string>(new[] { "--config", "-c" }, "Pfad zur JSON-Konfigurationsdatei (rules.json)") { IsRequired = true };
+        var configOpt = new Option<string?>(new[] { "--config", "-c" }, "Pfad zur JSON-Konfigurationsdatei (rules.json)");
         var pathOpt = new Option<string>(new[] { "--path", "-p" }, "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis") { IsRequired = true };
         var graphOpt = new Option<string?>(new[] { "--graph", "-g" }, "Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md)");
         var formatOpt = new Option<string>(new[] { "--format", "-f" }, () => "text", "Ausgabeformat: text (Standard) oder sarif");
         var verboseOpt = new Option<bool>(new[] { "--verbose", "-v" }, "Detaillierte Protokollausgabe aktivieren");
+        var createBaselineOpt = new Option<string?>(new[] { "--create-baseline" }, "Erzeugt eine Baseline-JSON mit Datei-Checksummen am angegebenen Pfad");
+        var baselineOpt = new Option<string?>(new[] { "--baseline" }, "Pfad zur Baseline-JSON für inkrementelle Migration");
 
         var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
         {
-            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt
+            configOpt, pathOpt, graphOpt, formatOpt, verboseOpt, createBaselineOpt, baselineOpt
         };
 
         root.SetHandler(async context =>
@@ -34,11 +37,13 @@ public static class Program
             {
                 var linterArgs = new LinterArgs
                 {
-                    ConfigPath = context.ParseResult.GetValueForOption(configOpt) ?? "",
+                    ConfigPath = context.ParseResult.GetValueForOption(configOpt),
                     TargetPath = context.ParseResult.GetValueForOption(pathOpt) ?? "",
                     GraphPath = context.ParseResult.GetValueForOption(graphOpt),
                     Format = context.ParseResult.GetValueForOption(formatOpt) ?? "text",
-                    Verbose = context.ParseResult.GetValueForOption(verboseOpt)
+                    Verbose = context.ParseResult.GetValueForOption(verboseOpt),
+                    CreateBaselinePath = context.ParseResult.GetValueForOption(createBaselineOpt),
+                    BaselinePath = context.ParseResult.GetValueForOption(baselineOpt),
                 };
 
                 var exitCode = await ExecuteLinterAsync(linterArgs);
@@ -55,46 +60,104 @@ public static class Program
         return await root.InvokeAsync(args);
     }
 
-    private static void LogStart(bool verbose, string configPath, string targetPath)
-    {
-        if (verbose)
-        {
-            Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
-            Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
-        }
-    }
-
-    private static LinterConfig? TryLoadConfig(string configPath)
-    {
-        if (!File.Exists(configPath))
-        {
-            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
-            return null;
-        }
-
-        var config = LoadConfig(configPath);
-        if (config == null)
-        {
-            Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
-        }
-        return config;
-    }
-
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
-        LogStart(args.Verbose, args.ConfigPath, args.TargetPath);
+        if (HasConflictingBaselineOptions(args))
+        {
+            Console.Error.WriteLine("[ERROR]: --create-baseline und --baseline dürfen nicht gleichzeitig verwendet werden.");
+            return 1;
+        }
 
-        var config = TryLoadConfig(args.ConfigPath);
+        if (args.CreateBaselinePath != null)
+        {
+            return await CreateBaselineAsync(args);
+        }
+
+        var config = TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
             return 1;
         }
 
+        LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
+
+        if (args.BaselinePath != null)
+        {
+            return await AuditWithBaselineAsync(args, config);
+        }
+
+        return await AuditWithoutBaselineAsync(args, config);
+    }
+
+    private static bool HasConflictingBaselineOptions(LinterArgs args)
+    {
+        return args.CreateBaselinePath != null && args.BaselinePath != null;
+    }
+
+    private static async Task<int> CreateBaselineAsync(LinterArgs args)
+    {
+        LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!);
+
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
+        var checksums = catalog.ComputeChecksums(outputRoot);
+
+        BaselineWriter.Write(args.CreateBaselinePath!, checksums);
+
+        if (args.Verbose)
+        {
+            Console.WriteLine($"[INFO]: Baseline mit {checksums.Count} Dateien geschrieben.");
+        }
+
+        Console.WriteLine("OK");
+        return 0;
+    }
+
+    private static async Task<int> AuditWithBaselineAsync(LinterArgs args, LinterConfig config)
+    {
+        BaselineFile storedBaseline;
+        try
+        {
+            storedBaseline = BaselineReader.Read(args.BaselinePath!);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException)
+        {
+            Console.Error.WriteLine($"[ERROR]: {ex.Message}");
+            return 1;
+        }
+
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
+        var currentChecksums = catalog.ComputeChecksums(outputRoot);
+        var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
+
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(catalog);
+        var filtered = BaselineViolationFilter.Filter(violations, comparison.ChangedFiles, outputRoot);
+
+        if (comparison.HasAnyChange)
+        {
+            BaselineWriter.Write(args.BaselinePath!, currentChecksums);
+            LogBaselineUpdate(args.Verbose, comparison);
+        }
+
+        return WriteViolationsAndExit(filtered, args.Format, outputRoot);
+    }
+
+    private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config)
+    {
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(args.TargetPath);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
+        return WriteViolationsAndExit(violations, args.Format, outputRoot);
+    }
 
-        if (args.Format == "sarif")
+    private static int WriteViolationsAndExit(
+        IReadOnlyCollection<Models.RuleViolation> violations,
+        string format,
+        string outputRoot)
+    {
+        if (format == "sarif")
         {
             SarifWriter.Write(violations, outputRoot);
             return violations.Count > 0 ? 1 : 0;
@@ -108,6 +171,63 @@ public static class Program
 
         Console.WriteLine("OK");
         return 0;
+    }
+
+    private static void LogStart(bool verbose, string configPath, string targetPath)
+    {
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
+            Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
+        }
+    }
+
+    private static void LogBaselineCreate(bool verbose, string targetPath, string baselinePath)
+    {
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Erzeuge Baseline für: {targetPath}");
+            Console.WriteLine($"[INFO]: Ausgabedatei: {baselinePath}");
+        }
+    }
+
+    private static void LogBaselineUpdate(bool verbose, BaselineComparisonResult comparison)
+    {
+        if (!verbose)
+        {
+            return;
+        }
+
+        var changedCount = comparison.ChangedFiles.Count;
+        var removedCount = comparison.RemovedFiles.Count;
+        Console.WriteLine($"[INFO]: Baseline aktualisiert: {changedCount} geändert, {removedCount} entfernt.");
+    }
+
+    private static LinterConfig? TryLoadConfig(string? configPath, bool isRequired)
+    {
+        if (string.IsNullOrWhiteSpace(configPath))
+        {
+            if (isRequired)
+            {
+                Console.Error.WriteLine("[ERROR]: --config ist erforderlich für den Audit-Lauf.");
+            }
+
+            return null;
+        }
+
+        if (!File.Exists(configPath))
+        {
+            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
+            return null;
+        }
+
+        var config = LoadConfig(configPath);
+        if (config == null)
+        {
+            Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
+        }
+
+        return config;
     }
 
     private static LinterConfig? LoadConfig(string configPath)
@@ -127,10 +247,12 @@ public static class Program
 
     private sealed class LinterArgs
     {
-        public required string ConfigPath { get; init; }
+        public string? ConfigPath { get; init; }
         public required string TargetPath { get; init; }
         public string? GraphPath { get; init; }
         public required string Format { get; init; }
         public required bool Verbose { get; init; }
+        public string? CreateBaselinePath { get; init; }
+        public string? BaselinePath { get; init; }
     }
 }

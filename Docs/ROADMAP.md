@@ -151,6 +151,14 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ---
 
+## Epic 16: Baseline Ratchet (Inkrementelle Migration)
+- [x] **Checksum-basierte Baseline:** `--create-baseline` erzeugt JSON mit SHA-256-Checksummen aller analysierbaren `.cs`-Dateien
+- [x] **Baseline-Filter im Audit:** `--baseline` unterdrückt Verstöße in unveränderten Dateien (Checksum-Vergleich)
+- [x] **Automatisches Baseline-Update:** Bei erkannter Checksum-Abweichung wird die gesamte Baseline-Datei neu geschrieben (weicher Ratchet)
+- [x] **SourceFileCatalog:** Gemeinsame Solution-Enumeration für Linter und Baseline ohne Git-Abhängigkeit
+
+---
+
 ## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
 *Hinweis: Konfigurierbar über die `rules.json`.*
 - [ ] **Exceptions for Control Flow verbieten:**
