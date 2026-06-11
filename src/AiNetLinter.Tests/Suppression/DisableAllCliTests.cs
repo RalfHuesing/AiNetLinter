@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AiNetLinter.Suppression;
+using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
@@ -9,45 +10,27 @@ public sealed class DisableAllCliTests
     [Fact]
     public void AddDisableAll_OnViolatingFixture_InjectOnlyIntoViolatingFiles()
     {
-        var fixtureRoot = GetFixtureRoot();
-        var configPath = Path.Combine(fixtureRoot, "rules.json");
-        var violatingFile = Path.Combine(fixtureRoot, "src", "BaselineMini", "ViolatingClass.cs");
-        var originalContent = File.ReadAllText(violatingFile);
-        try
-        {
-            var result = RunLinter(
-                $"--config \"{configPath}\" --path \"{fixtureRoot}\" --add-disable-all");
+        using var workspace = new BaselineMiniFixtureWorkspace();
 
-            Assert.Equal(0, result.ExitCode);
-            Assert.Contains("OK", result.Output);
-            Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(violatingFile));
-        }
-        finally
-        {
-            File.WriteAllText(violatingFile, originalContent);
-        }
+        var result = RunLinter(
+            $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --add-disable-all");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("OK", result.Output);
+        Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(workspace.ViolatingClassPath));
     }
 
     [Fact]
     public void RemoveDisableAll_OnFixture_RemovesExactDisableAllLine()
     {
-        var fixtureRoot = GetFixtureRoot();
-        var violatingFile = Path.Combine(fixtureRoot, "src", "BaselineMini", "ViolatingClass.cs");
-        var originalContent = File.ReadAllText(violatingFile);
-        var injectedContent = DisableAllCommentInjector.PrependDisableAll(originalContent);
-        try
-        {
-            File.WriteAllText(violatingFile, injectedContent);
+        using var workspace = new BaselineMiniFixtureWorkspace();
+        var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
+        File.WriteAllText(workspace.ViolatingClassPath, DisableAllCommentInjector.PrependDisableAll(originalContent));
 
-            var result = RunLinter($"--path \"{fixtureRoot}\" --remove-disable-all");
+        var result = RunLinter($"--path \"{workspace.RootPath}\" --remove-disable-all");
 
-            Assert.Equal(0, result.ExitCode);
-            Assert.Equal(originalContent, File.ReadAllText(violatingFile));
-        }
-        finally
-        {
-            File.WriteAllText(violatingFile, originalContent);
-        }
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(originalContent, File.ReadAllText(workspace.ViolatingClassPath));
     }
 
     [Fact]
@@ -99,12 +82,6 @@ public sealed class DisableAllCliTests
         process.WaitForExit();
 
         return (process.ExitCode, output, error);
-    }
-
-    private static string GetFixtureRoot()
-    {
-        var root = FindSolutionRoot();
-        return Path.Combine(root, "tests", "Fixtures", "BaselineMini");
     }
 
     private static string FindSolutionRoot()

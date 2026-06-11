@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AiNetLinter.Baseline;
+using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
 namespace AiNetLinter.Tests.Baseline;
@@ -56,21 +57,19 @@ public sealed class BaselineCliTests
     [Fact]
     public void AuditWithBaseline_ChangedFile_ReportsViolationsAndUpdatesBaseline()
     {
-        var fixtureRoot = GetFixtureRoot();
-        var sourceFile = Path.Combine(fixtureRoot, "src", "BaselineMini", "ViolatingClass.cs");
+        using var workspace = new BaselineMiniFixtureWorkspace();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
-        var configPath = Path.Combine(fixtureRoot, "rules.json");
-        var originalContent = File.ReadAllText(sourceFile);
+        var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
         try
         {
-            RunLinter($"--path \"{fixtureRoot}\" --create-baseline \"{baselinePath}\"");
+            RunLinter($"--path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
             var baselineBefore = BaselineReader.Read(baselinePath);
             var relativePath = baselineBefore.Files.Keys.First(k => k.EndsWith("ViolatingClass.cs", StringComparison.OrdinalIgnoreCase));
 
-            File.WriteAllText(sourceFile, originalContent + Environment.NewLine);
+            File.WriteAllText(workspace.ViolatingClassPath, originalContent + Environment.NewLine);
 
             var auditResult = RunLinter(
-                $"--config \"{configPath}\" --path \"{fixtureRoot}\" --baseline \"{baselinePath}\"");
+                $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
 
             Assert.Equal(1, auditResult.ExitCode);
             Assert.Contains("EnforceSealedClasses", auditResult.Output);
@@ -79,12 +78,11 @@ public sealed class BaselineCliTests
             Assert.NotEqual(baselineBefore.Files[relativePath], baselineAfter.Files[relativePath]);
 
             var secondAudit = RunLinter(
-                $"--config \"{configPath}\" --path \"{fixtureRoot}\" --baseline \"{baselinePath}\"");
+                $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
             Assert.Equal(0, secondAudit.ExitCode);
         }
         finally
         {
-            File.WriteAllText(sourceFile, originalContent);
             DeleteIfExists(baselinePath);
         }
     }
