@@ -12,6 +12,9 @@ namespace AiNetLinter.Core;
 /// </summary>
 public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 {
+    private static string ResolveClassName(INamedTypeSymbol symbol, string identifierText) =>
+        string.IsNullOrWhiteSpace(symbol.Name) ? identifierText : symbol.Name;
+
     public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
     {
         var prevNamespace = _currentNamespace;
@@ -91,7 +94,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         {
             Classes.Add(new ClassInfo
             {
-                Name = symbol.Name,
+                Name = ResolveClassName(symbol, node.Identifier.Text),
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 MaxCognitiveComplexity = GetMaxMethodComplexity(node),
