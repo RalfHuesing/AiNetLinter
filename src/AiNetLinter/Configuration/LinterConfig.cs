@@ -29,6 +29,9 @@ public sealed record GlobalConfig
     public bool AllowOutParameters { get; init; } = false;
     public bool EnforceValueObjectContracts { get; init; } = true;
     public bool EnableTestSentinel { get; init; } = true;
+    public bool EnforcePascalCase { get; init; } = true;
+    public bool EnforceXmlDocumentation { get; init; } = true;
+    public bool EnforceSemanticNaming { get; init; } = true;
 }
 
 /// <summary>

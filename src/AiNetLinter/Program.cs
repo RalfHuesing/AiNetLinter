@@ -10,6 +10,9 @@ namespace AiNetLinter;
 /// </summary>
 public static class Program
 {
+    /// <summary>
+    /// Der Einstiegspunkt für die Ausführung der Linter-CLI.
+    /// </summary>
     public static int Main(string[] args)
     {
         try

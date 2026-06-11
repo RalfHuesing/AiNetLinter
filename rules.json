@@ -2,7 +2,12 @@
   "Global": {
     "EnforceSealedClasses": true,
     "AllowDynamic": false,
-    "AllowOutParameters": false
+    "AllowOutParameters": false,
+    "EnforceValueObjectContracts": true,
+    "EnableTestSentinel": true,
+    "EnforcePascalCase": true,
+    "EnforceXmlDocumentation": true,
+    "EnforceSemanticNaming": true
   },
   "Metrics": {
     "MaxLineCount": 500,

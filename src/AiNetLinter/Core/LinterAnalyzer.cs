@@ -119,6 +119,9 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
+        CheckXmlDoc(node, node.Identifier.Text, "Klasse");
+        CheckPascalCase(node.Identifier, "Klasse");
+
         // Prüfen, ob die Klasse sealed ist (sofern konfiguriert)
         if (_config.Global.EnforceSealedClasses && !IsSealedOrStaticOrAbstract(node))
         {
@@ -138,14 +141,31 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
+        CheckXmlDoc(node, node.Identifier.Text, "Record");
+        CheckPascalCase(node.Identifier, "Record");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: true);
         base.VisitRecordDeclaration(node);
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
+        CheckXmlDoc(node, node.Identifier.Text, "Struct");
+        CheckPascalCase(node.Identifier, "Struct");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
         base.VisitStructDeclaration(node);
+    }
+
+    public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
+    {
+        CheckXmlDoc(node, node.Identifier.Text, "Interface");
+        CheckPascalCase(node.Identifier, "Interface");
+        base.VisitInterfaceDeclaration(node);
+    }
+
+    public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+    {
+        CheckPascalCase(node.Identifier, "Eigenschaft");
+        base.VisitPropertyDeclaration(node);
     }
 
     private bool ShouldCheckValueObject(string name)
@@ -202,6 +222,12 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
+        CheckXmlDoc(node, node.Identifier.Text, "Methode");
+        CheckPascalCase(node.Identifier, "Methode");
+        
+        bool isPublicMethod = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
+        CheckSemanticNaming(node.ParameterList, isPublicMethod);
+
         // Parameter-Anzahl prüfen
         var paramCount = node.ParameterList.Parameters.Count;
         if (paramCount > _config.Metrics.MaxMethodParameterCount)
@@ -281,6 +307,143 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         }
 
         base.VisitIdentifierName(node);
+    }
+
+    private void CheckXmlDoc(SyntaxNode node, string name, string kind)
+    {
+        if (ShouldSkipXmlDoc(node)) return;
+
+        if (!HasXmlDocumentation(node))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = nameof(_config.Global.EnforceXmlDocumentation),
+                Details = $"Das öffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
+                Guidance = "Füge ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben."
+            });
+        }
+    }
+
+    private bool ShouldSkipXmlDoc(SyntaxNode node)
+    {
+        if (!_config.Global.EnforceXmlDocumentation) return true;
+        if (IsTestFile()) return true;
+        if (node is MethodDeclarationSyntax method && method.Modifiers.Any(m => m.IsKind(SyntaxKind.OverrideKeyword)))
+        {
+            return true;
+        }
+        return !IsInPublicContext(node);
+    }
+
+    private static bool IsInPublicContext(SyntaxNode node)
+    {
+        if (node is MemberDeclarationSyntax member && !member.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
+        {
+            return false;
+        }
+        return CheckParentPublicContext(node.Parent);
+    }
+
+    private static bool CheckParentPublicContext(SyntaxNode? parent)
+    {
+        if (parent == null) return true;
+        if (parent is TypeDeclarationSyntax typeDecl && !typeDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
+        {
+            return false;
+        }
+        return CheckParentPublicContext(parent.Parent);
+    }
+
+    private static bool HasXmlDocumentation(SyntaxNode node)
+    {
+        var trivia = node.GetLeadingTrivia();
+        return trivia.Any(t => 
+            t.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia) || 
+            t.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia));
+    }
+
+    private void CheckPascalCase(SyntaxToken identifier, string kind)
+    {
+        if (ShouldSkipPascalCase()) return;
+
+        var name = identifier.Text;
+        if (string.IsNullOrEmpty(name)) return;
+        if (!char.IsUpper(name[0]))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = identifier.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
+                RuleName = nameof(_config.Global.EnforcePascalCase),
+                Details = $"Der Name '{name}' ({kind}) ist nicht in PascalCase geschrieben.",
+                Guidance = "Ändere den ersten Buchstaben des Namens in einen Großbuchstaben."
+            });
+        }
+    }
+
+    private bool ShouldSkipPascalCase()
+    {
+        if (!_config.Global.EnforcePascalCase) return true;
+        return IsTestFile();
+    }
+
+    private void CheckSemanticNaming(ParameterListSyntax parameterList, bool isPublicMethod)
+    {
+        if (ShouldSkipSemanticNaming(isPublicMethod)) return;
+
+        var genericNames = GetForbiddenNames();
+        foreach (var param in parameterList.Parameters)
+        {
+            CheckParameterSemantic(param, genericNames);
+        }
+    }
+
+    private bool ShouldSkipSemanticNaming(bool isPublicMethod)
+    {
+        if (!_config.Global.EnforceSemanticNaming) return true;
+        if (!isPublicMethod) return true;
+        return IsTestFile();
+    }
+
+    private static HashSet<string> GetForbiddenNames()
+    {
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "data", "temp", "obj", "val", "tmp", "item", "param"
+        };
+    }
+
+    private void CheckParameterSemantic(ParameterSyntax param, HashSet<string> genericNames)
+    {
+        var name = param.Identifier.Text;
+        if (genericNames.Contains(name))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(param),
+                RuleName = nameof(_config.Global.EnforceSemanticNaming),
+                Details = $"Der Parameter '{name}' in einer öffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
+                Guidance = "Verwende einen aussagekräftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
+            });
+        }
+    }
+
+    private bool IsTestFile()
+    {
+        if (string.IsNullOrEmpty(_filePath)) return false;
+        return CheckTestPath(_filePath);
+    }
+
+    private static bool CheckTestPath(string path)
+    {
+        if (path.EndsWith("Tests.cs")) return true;
+        if (path.EndsWith("Test.cs")) return true;
+        return path.Contains($"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}") ||
+               path.Contains("/Tests/") ||
+               path.Contains("\\Tests\\");
     }
 
     private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node)

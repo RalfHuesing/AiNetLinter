@@ -14,7 +14,10 @@ public sealed class ArchitectureTests
             {
                 EnforceSealedClasses = true,
                 AllowDynamic = false,
-                AllowOutParameters = false
+                AllowOutParameters = false,
+                EnforcePascalCase = false,
+                EnforceXmlDocumentation = false,
+                EnforceSemanticNaming = false
             },
             Metrics = new MetricsConfig
             {
@@ -368,5 +371,77 @@ public sealed class ComplexDomainService
         {
             Directory.Delete(tempDir, true);
         }
+    }
+
+    [Fact]
+    public void Analyze_WithNonPascalCaseTypeName_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Test;
+public sealed class badClass {}";
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnforcePascalCase = true }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforcePascalCase));
+    }
+
+    [Fact]
+    public void Analyze_WithPublicMethodMissingXmlDoc_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Test;
+/// <summary>
+/// Good doc.
+/// </summary>
+public sealed class GoodClass
+{
+    public void MissingDocMethod() {}
+}";
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnforceXmlDocumentation = true }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceXmlDocumentation));
+    }
+
+    [Fact]
+    public void Analyze_WithGenericParameterName_ReturnsViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace Test;
+/// <summary>
+/// Good class.
+/// </summary>
+public sealed class GoodClass
+{
+    /// <summary>
+    /// Method with bad param name.
+    /// </summary>
+    public void Save(string data) {}
+}";
+        var config = CreateDefaultConfig() with
+        {
+            Global = new GlobalConfig { EnforceSemanticNaming = true }
+        };
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("Source.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceSemanticNaming));
     }
 }
