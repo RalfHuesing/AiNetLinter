@@ -156,17 +156,32 @@ Alle Dateipfade in der Ausgabe sind **relativ zum `--path`-Argument** (Verzeichn
 
 #### Text (Standard, LLM-optimiert)
 
-Token-effiziente Ausgabe für AI-Agenten. Bei Erfolg: `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, gefolgt von sortierten Einzeilern.
+Token-effiziente Ausgabe für AI-Agenten. Bei Erfolg: `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, parsebare Summary-Segmente (nach Datei und Regel) und sortierte Detail-Einzeiler.
 
 ```
 # AiNetLinter · 2 violations
 Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausserhalb betroffener Stellen/Zeilen.
 
+## Summary · by file
+1 src/AiNetLinter/Core/LinterAnalyzer.cs
+1 src/AiNetLinter/Models/RuleViolation.cs
+
+## Summary · by rule
+| Rule | Count |
+|------|------:|
+| EnforceSealedClasses | 1 |
+| MaxLineCount | 1 |
+
+## Violations
 src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed
 src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500)
 ```
 
-Zeilenformat: `{relativerPfad}:{zeile} {RegelName} | {Details}`
+**Summary-Formate:**
+- Datei: `{anzahl} {relativerPfad}` — absteigend nach Anzahl
+- Regel: Markdown-Tabelle `| Rule | Count |` — absteigend nach Anzahl
+
+**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details}`
 
 #### SARIF (`--format sarif`)
 

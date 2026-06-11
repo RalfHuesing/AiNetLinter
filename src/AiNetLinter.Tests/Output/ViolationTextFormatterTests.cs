@@ -30,6 +30,30 @@ public sealed class ViolationTextFormatterTests
     }
 
     [Fact]
+    public void Format_IncludesSummarySectionsBeforeViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed"),
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 10, "MaxLineCount", "Zu lang")
+        };
+
+        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var summaryByFileIndex = result.IndexOf("## Summary · by file", StringComparison.Ordinal);
+        var summaryByRuleIndex = result.IndexOf("## Summary · by rule", StringComparison.Ordinal);
+        var violationsIndex = result.IndexOf("## Violations", StringComparison.Ordinal);
+        var detailIndex = result.IndexOf("src/Foo.cs:5 EnforceSealedClasses", StringComparison.Ordinal);
+
+        Assert.True(summaryByFileIndex >= 0);
+        Assert.True(summaryByRuleIndex > summaryByFileIndex);
+        Assert.True(violationsIndex > summaryByRuleIndex);
+        Assert.True(detailIndex > violationsIndex);
+        Assert.Contains("2 src/Foo.cs", result);
+        Assert.Contains("| EnforceSealedClasses | 1 |", result);
+        Assert.Contains("| MaxLineCount | 1 |", result);
+    }
+
+    [Fact]
     public void Format_SortsByFilePathThenLineNumber()
     {
         var violations = new[]
@@ -40,11 +64,13 @@ public sealed class ViolationTextFormatterTests
         };
 
         var result = ViolationTextFormatter.Format(violations, OutputRoot);
-        var lines = result.Split('\n');
+        var violationsSection = result[(result.IndexOf("## Violations", StringComparison.Ordinal) + "## Violations".Length)..]
+            .TrimStart('\n');
+        var lines = violationsSection.Split('\n');
 
-        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed", lines[3]);
-        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed", lines[4]);
-        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang", lines[5]);
+        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed", lines[0]);
+        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed", lines[1]);
+        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang", lines[2]);
     }
 
     [Fact]

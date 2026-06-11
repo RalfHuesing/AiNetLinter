@@ -1,3 +1,4 @@
+using System.Text;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Output;
@@ -20,13 +21,36 @@ public static class ViolationTextFormatter
             return string.Empty;
         }
 
-        var lines = violations
+        var byFile = ViolationSummaryBuilder.BuildByFile(violations, outputRoot);
+        var byRule = ViolationSummaryBuilder.BuildByRule(violations);
+        var detailLines = violations
             .OrderBy(v => PathNormalizer.ToRelative(outputRoot, v.FilePath), StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.LineNumber)
             .Select(v => FormatViolationLine(v, outputRoot))
             .ToArray();
 
-        return $"# AiNetLinter · {violations.Count} violations\n{InstructionLine}\n\n{string.Join('\n', lines)}";
+        var output = new StringBuilder();
+        output.Append($"# AiNetLinter · {violations.Count} violations\n");
+        output.Append(InstructionLine);
+        output.Append("\n\n## Summary · by file\n");
+        output.Append(FormatFileSummary(byFile));
+        output.Append("\n\n## Summary · by rule\n");
+        output.Append(FormatRuleSummary(byRule));
+        output.Append("\n\n## Violations\n");
+        output.Append(string.Join('\n', detailLines));
+        return output.ToString();
+    }
+
+    private static string FormatFileSummary(IReadOnlyList<FileViolationCount> byFile)
+    {
+        return string.Join('\n', byFile.Select(x => $"{x.Count} {x.RelativePath}"));
+    }
+
+    private static string FormatRuleSummary(IReadOnlyList<RuleViolationCount> byRule)
+    {
+        var lines = new List<string> { "| Rule | Count |", "|------|------:|" };
+        lines.AddRange(byRule.Select(x => $"| {x.RuleName} | {x.Count} |"));
+        return string.Join('\n', lines);
     }
 
     private static string FormatViolationLine(RuleViolation violation, string outputRoot)
