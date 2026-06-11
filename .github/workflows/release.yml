@@ -67,13 +67,18 @@ jobs:
             Copy-Item "rules.json" "./publish/rules.json"
           }
 
+          if ("${{ matrix.os }}" -eq "windows-latest") {
+            Compress-Archive -Path "./publish/*" -DestinationPath "./AiNetLinter-${{ matrix.rid }}.zip"
+          } else {
+            tar -czf "./AiNetLinter-${{ matrix.rid }}.tar.gz" -C "./publish" .
+          }
+
       - name: Upload Artifacts to Action
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.rid }}
           path: |
-            ./publish/${{ matrix.executable }}
-            ./publish/rules.json
+            ./AiNetLinter-${{ matrix.rid }}.*
           if-no-files-found: warn
           retention-days: 1 # Brauchen wir nur kurz fuer den naechsten Job
 
