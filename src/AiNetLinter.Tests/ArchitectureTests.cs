@@ -167,4 +167,89 @@ public sealed class CognitiveClass
         // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCognitiveComplexity));
     }
+
+    [Fact]
+    public void ParseSlnx_WithValidXml_ReturnsProjects()
+    {
+        // Arrange
+        const string slnxContent = @"<Solution>
+  <Project Path=""src/AiNetLinter/AiNetLinter.csproj"" />
+  <Project Path=""src/AiNetLinter.Tests/AiNetLinter.Tests.csproj"" />
+</Solution>";
+        var tempSlnx = Path.GetTempFileName() + ".slnx";
+        File.WriteAllText(tempSlnx, slnxContent);
+
+        try
+        {
+            // Act
+            var projects = LinterEngine.ParseSlnx(tempSlnx);
+
+            // Assert
+            Assert.Equal(2, projects.Count());
+            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
+            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
+        }
+        finally
+        {
+            File.Delete(tempSlnx);
+        }
+    }
+
+    [Fact]
+    public void ParseSln_WithValidText_ReturnsProjects()
+    {
+        // Arrange
+        const string slnContent = @"
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter"", ""src\AiNetLinter\AiNetLinter.csproj"", ""{GUID1}""
+Project(""{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"") = ""AiNetLinter.Tests"", ""src\AiNetLinter.Tests\AiNetLinter.Tests.csproj"", ""{GUID2}""
+Global
+EndGlobal";
+        var tempSln = Path.GetTempFileName() + ".sln";
+        File.WriteAllText(tempSln, slnContent);
+
+        try
+        {
+            // Act
+            var projects = LinterEngine.ParseSln(tempSln);
+
+            // Assert
+            Assert.Equal(2, projects.Count());
+            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.csproj"));
+            Assert.Contains(projects, p => p.EndsWith("AiNetLinter.Tests.csproj"));
+        }
+        finally
+        {
+            File.Delete(tempSln);
+        }
+    }
+
+    [Fact]
+    public void GetExcludedFiles_WithCompileRemoveOrExclude_FiltersFiles()
+    {
+        // Arrange
+        const string csprojContent = @"<Project Sdk=""Microsoft.NET.Sdk"">
+  <ItemGroup>
+    <Compile Remove=""ExcludedFile.cs"" />
+    <Compile Exclude=""subfolder/AnotherExcluded.cs"" />
+  </ItemGroup>
+</Project>";
+        var tempCsproj = Path.GetTempFileName() + ".csproj";
+        File.WriteAllText(tempCsproj, csprojContent);
+
+        try
+        {
+            // Act
+            var excluded = LinterEngine.GetExcludedFiles(tempCsproj, "/MockDir");
+
+            // Assert
+            Assert.Equal(2, excluded.Count);
+            Assert.Contains(excluded, path => path.EndsWith("ExcludedFile.cs"));
+            Assert.Contains(excluded, path => path.EndsWith("AnotherExcluded.cs"));
+        }
+        finally
+        {
+            File.Delete(tempCsproj);
+        }
+    }
 }
