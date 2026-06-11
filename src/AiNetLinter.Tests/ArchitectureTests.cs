@@ -109,4 +109,62 @@ public class NonSealedClass
         // Assert
         Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxLineCount));
     }
+
+    [Fact]
+    public void Analyze_WithHighCyclomaticComplexity_ReturnsCyclomaticComplexityViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace ComplexNamespace;
+
+public sealed class ComplexClass
+{
+    public void Verify(int x)
+    {
+        if (x > 1) {}
+        if (x > 2) {}
+        if (x > 3) {}
+        if (x > 4) {}
+        if (x > 5) {}
+    }
+}";
+        var config = CreateDefaultConfig();
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("ComplexFile.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity));
+    }
+
+    [Fact]
+    public void Analyze_WithHighCognitiveComplexity_ReturnsCognitiveComplexityViolation()
+    {
+        // Arrange
+        const string sourceCode = @"
+namespace CognitiveNamespace;
+
+public sealed class CognitiveClass
+{
+    public void Nesting(int a, int b, int c)
+    {
+        if (a > 0)
+        {
+            if (b > 0)
+            {
+                if (c > 0)
+                {
+                }
+            }
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+
+        // Act
+        var violations = LinterAnalyzer.Analyze("CognitiveFile.cs", sourceCode, config);
+
+        // Assert
+        Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCognitiveComplexity));
+    }
 }
