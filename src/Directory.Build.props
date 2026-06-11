@@ -1,0 +1,10 @@
+<Project>
+  <!-- Transitive Abhängigkeit von Microsoft.CodeAnalysis.Workspaces.MSBuild:
+       MSBuild.Locator 1.11+ verlangt ExcludeAssets/PrivateAssets, damit keine MSBuild-Runtime ins Output kopiert wird. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48">
+      <PrivateAssets>all</PrivateAssets>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

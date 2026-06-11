@@ -4,6 +4,7 @@ using System.IO;
 
 namespace AiNetLinter.Tests.Cli;
 
+[Collection("ConsoleTestCollection")]
 public sealed class CliIntegrationTests
 {
     [Fact]
