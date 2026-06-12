@@ -65,8 +65,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             FilePath = _filePath,
             LineNumber = GetLineNumber(node),
             RuleName = "ForbiddenNamespaceDependency",
-            Details = $"Der Namespace '{_currentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhängen (Referenz gefunden: '{node}').",
-            Guidance = "Entferne die Abhängigkeit oder nutze Abstraktion/Events statt direkter Kopplung."
+            Details = $"Der Namespace '{_currentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhaengen (Referenz gefunden: '{node}').",
+            Guidance = "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung."
         });
     }
 
@@ -83,7 +83,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Global.EnforceSealedClasses),
                 Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-                Guidance = "Füge den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."
+                Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."
             });
         }
 
@@ -194,7 +194,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxCyclomaticComplexity),
-                Details = $"Die Methode '{node.Identifier.Text}' hat eine Zyklomatische Komplexität von {cyclomaticComplexity} (erlaubt sind maximal {_config.Metrics.MaxCyclomaticComplexity}).",
+                Details = $"Die Methode '{node.Identifier.Text}' hat eine Zyklomatische Komplexitaet von {cyclomaticComplexity} (erlaubt sind maximal {_config.Metrics.MaxCyclomaticComplexity}).",
                 Guidance = "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten)."
             });
         }
@@ -207,7 +207,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxCognitiveComplexity),
-                Details = $"Die Methode '{node.Identifier.Text}' hat eine Kognitive Komplexität von {cognitiveComplexity} (erlaubt sind maximal {_config.Metrics.MaxCognitiveComplexity}).",
+                Details = $"Die Methode '{node.Identifier.Text}' hat eine Kognitive Komplexitaet von {cognitiveComplexity} (erlaubt sind maximal {_config.Metrics.MaxCognitiveComplexity}).",
                 Guidance = CognitiveComplexityGuidance.Build(
                     node,
                     cognitiveComplexity,
@@ -225,8 +225,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Global.AllowOutParameters),
-                Details = $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schlüsselwort.",
-                Guidance = "Verwende C#-Tuples oder Records für mehrere Rückgabewerte."
+                Details = $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schluesselwort.",
+                Guidance = "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte."
             });
         }
 

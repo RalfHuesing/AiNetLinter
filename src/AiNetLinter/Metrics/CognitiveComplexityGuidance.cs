@@ -25,7 +25,7 @@ public static class CognitiveComplexityGuidance
         var nestedIfCount = method.DescendantNodes().OfType<IfStatementSyntax>().Count();
         if (nestedIfCount >= 2)
         {
-            return $"{baseGuidance} Extrahiere erkannte if-Blöcke in Methoden wie TryResolve{method.Identifier.Text}().";
+            return $"{baseGuidance} Extrahiere erkannte if-Bloecke in Methoden wie TryResolve{method.Identifier.Text}().";
         }
 
         return baseGuidance;

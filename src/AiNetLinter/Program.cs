@@ -203,9 +203,9 @@ public static class Program
         if (args.Verbose)
         {
             Console.WriteLine(
-                $"[INFO]: Audit fand {violations.Count} Verstöße in {result.CandidateFiles} Dateien.");
+                $"[INFO]: Audit fand {violations.Count} Verstoesse in {result.CandidateFiles} Dateien.");
             Console.WriteLine(
-                $"[INFO]: {result.ModifiedFiles} Dateien geändert, {result.SkippedFiles} übersprungen.");
+                $"[INFO]: {result.ModifiedFiles} Dateien geaendert, {result.SkippedFiles} uebersprungen.");
         }
 
         Console.WriteLine("OK");
@@ -343,7 +343,7 @@ public static class Program
     {
         if (verbose)
         {
-            Console.WriteLine($"[INFO]: Erzeuge Baseline für: {targetPath}");
+            Console.WriteLine($"[INFO]: Erzeuge Baseline fuer: {targetPath}");
             Console.WriteLine($"[INFO]: Ausgabedatei: {baselinePath}");
         }
     }
@@ -373,7 +373,7 @@ public static class Program
 
         var changedCount = comparison.ChangedFiles.Count;
         var removedCount = comparison.RemovedFiles.Count;
-        Console.WriteLine($"[INFO]: Baseline aktualisiert: {changedCount} geändert, {removedCount} entfernt.");
+        Console.WriteLine($"[INFO]: Baseline aktualisiert: {changedCount} geaendert, {removedCount} entfernt.");
     }
 
     private static LinterConfig? TryLoadConfig(string? configPath, bool isRequired)
@@ -382,7 +382,7 @@ public static class Program
         {
             if (isRequired)
             {
-                Console.Error.WriteLine("[ERROR]: --config ist erforderlich für den Audit-Lauf.");
+                Console.Error.WriteLine("[ERROR]: --config ist erforderlich fuer den Audit-Lauf.");
             }
 
             return null;
@@ -414,7 +414,7 @@ public static class Program
         }
         catch (InvalidOperationException ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Ungültige Konfiguration in '{configPath}': {ex.Message}");
+            Console.Error.WriteLine($"[ERROR]: Ungueltige Konfiguration in '{configPath}': {ex.Message}");
             return null;
         }
         catch (Exception ex)

@@ -20,7 +20,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateGraphOption() => new("--graph", "-g")
     {
-        Description = "Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm (.md)",
+        Description = "Pfad fuer das zu generierende Mermaid-Abhaengigkeitsdiagramm (.md)",
     };
 
     internal static Option<string> CreateFormatOption() => new("--format", "-f")
@@ -41,12 +41,12 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateBaselineOption() => new("--baseline")
     {
-        Description = "Pfad zur Baseline-JSON für inkrementelle Migration",
+        Description = "Pfad zur Baseline-JSON fuer inkrementelle Migration",
     };
 
     internal static Option<bool> CreateAddDisableAllOption() => new("--add-disable-all")
     {
-        Description = "Audit-Lauf und '// ainetlinter-disable all' nur in Dateien mit Verstößen einfügen",
+        Description = "Audit-Lauf und '// ainetlinter-disable all' nur in Dateien mit Verstoessen einfuegen",
     };
 
     internal static Option<bool> CreateRemoveDisableAllOption() => new("--remove-disable-all")
@@ -61,16 +61,16 @@ internal static class CliOptionFactory
 
     internal static Option<bool> CreateWaveReadyOption() => new("--wave-ready")
     {
-        Description = "Nur Verstöße in Dateien ohne '// ainetlinter-disable all'",
+        Description = "Nur Verstoesse in Dateien ohne '// ainetlinter-disable all'",
     };
 
     internal static Option<bool> CreateOnlyChangedOption() => new("--only-changed")
     {
-        Description = "Nur Verstöße in geänderten Dateien (erfordert --baseline)",
+        Description = "Nur Verstoesse in geaenderten Dateien (erfordert --baseline)",
     };
 
     internal static Option<string?> CreateGitSinceOption() => new("--git-since")
     {
-        Description = "Nur Verstöße in per git diff geänderten .cs-Dateien seit Ref (z. B. HEAD~1)",
+        Description = "Nur Verstoesse in per git diff geaenderten .cs-Dateien seit Ref (z. B. HEAD~1)",
     };
 }

@@ -64,8 +64,8 @@ public sealed partial class LinterAnalyzer
             FilePath = _filePath,
             LineNumber = GetLineNumber(parameter),
             RuleName = nameof(_config.Global.EnforceMinimalApiAsParameters),
-            Details = $"Minimal-API-Endpunkt mit {parameterCount} Parametern: Composite-Typ '{parameter.Type}' benötigt [AsParameters].",
-            Guidance = "Füge [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl.",
+            Details = $"Minimal-API-Endpunkt mit {parameterCount} Parametern: Composite-Typ '{parameter.Type}' benoetigt [AsParameters].",
+            Guidance = "Fuege [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl.",
         });
     }
 
