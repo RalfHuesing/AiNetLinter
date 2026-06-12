@@ -42,8 +42,8 @@ public static class PartialClassLineAggregator
             FilePath = first.FilePath,
             LineNumber = first.LineNumber,
             RuleName = nameof(config.Metrics.MaxLineCount),
-            Details = $"Der partial-Typ '{group.Key}' hat insgesamt {totalLines} Zeilen über {group.Count()} Dateien (erlaubt sind maximal {config.Metrics.MaxLineCount}).",
-            Guidance = "Teile den partial-Typ in kleinere, logisch getrennte Typen oder reduziere die Dateigröße der Teile.",
+            Details = $"Der partial-Typ '{group.Key}' hat insgesamt {totalLines} Zeilen ueber {group.Count()} Dateien (erlaubt sind maximal {config.Metrics.MaxLineCount}).",
+            Guidance = "Teile den partial-Typ in kleinere, logisch getrennte Typen oder reduziere die Dateigroesse der Teile.",
         };
     }
 }

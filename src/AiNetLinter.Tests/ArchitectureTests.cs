@@ -215,7 +215,7 @@ public sealed record MoneyValueObject
         var violations = LinterAnalyzer.Analyze("Money.cs", model, config);
 
         Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.EnforceValueObjectContracts));
-        Assert.Contains(violations, v => v.Details.Contains("veränderbare Eigenschaft"));
+        Assert.Contains(violations, v => v.Details.Contains("veraenderbare Eigenschaft"));
     }
 
     [Fact]

@@ -20,7 +20,7 @@ public sealed class SarifWriterTests
                 LineNumber = 7,
                 RuleName = "EnforceSealedClasses",
                 Details = "Klasse nicht sealed",
-                Guidance = "sealed hinzufügen"
+                Guidance = "sealed hinzufuegen"
             }
         };
 
