@@ -302,6 +302,60 @@ public sealed class AgentFeaturesTests
         Assert.Equal("error", metadata.Severity);
     }
 
+    [Fact]
+    public void Analyze_SwallowedCatchWithIgnoredVariable_NoSilentCatchViolation()
+    {
+        const string source = """
+            namespace Test;
+            public sealed class Worker
+            {
+                public void Run()
+                {
+                    try
+                    {
+                        int.Parse("x");
+                    }
+                    catch (System.Exception ignored)
+                    {
+                    }
+                }
+            }
+            """;
+
+        var config = CreateConfig(g => g with { EnforceNoSilentCatch = true });
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Worker.cs", model, config);
+
+        Assert.DoesNotContain(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch));
+    }
+
+    [Fact]
+    public void Analyze_SwallowedCatchWithExpectedVariable_NoSilentCatchViolation()
+    {
+        const string source = """
+            namespace Test;
+            public sealed class Worker
+            {
+                public void Run()
+                {
+                    try
+                    {
+                        int.Parse("x");
+                    }
+                    catch (System.Exception expectedEx)
+                    {
+                    }
+                }
+            }
+            """;
+
+        var config = CreateConfig(g => g with { EnforceNoSilentCatch = true });
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Worker.cs", model, config);
+
+        Assert.DoesNotContain(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch));
+    }
+
     private static Solution CreateSolutionWithXunit(params (string content, string fileName)[] files)
     {
         var workspace = new AdhocWorkspace();

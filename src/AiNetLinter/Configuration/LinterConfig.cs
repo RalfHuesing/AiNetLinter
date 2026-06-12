@@ -28,6 +28,7 @@ public sealed record NamespaceRule
 public sealed record GlobalConfig
 {
     public bool EnforceSealedClasses { get; init; } = true;
+    public bool AllowUnsealedPartialClasses { get; init; } = false;
     public bool AllowDynamic { get; init; } = false;
     public bool AllowOutParameters { get; init; } = false;
     public bool EnforceValueObjectContracts { get; init; } = true;

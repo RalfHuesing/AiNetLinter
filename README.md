@@ -76,6 +76,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 {
   "Global": {
     "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": false,
     "AllowDynamic": false,
     "AllowOutParameters": false,
     "EnforceValueObjectContracts": true,
@@ -122,6 +123,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | Regel | Bereich | Beschreibung |
 | :--- | :--- | :--- |
 | `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden. |
+| `AllowUnsealedPartialClasses` | Global | Erlaubt es, `partial` Klassen unsealed zu lassen (Standard: `false`, nützlich z. B. bei Blazor Page-Components). |
 | `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
 | `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
 | `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`-Methoden (Standard: `true`, idiomatisches C#). |
@@ -133,7 +135,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Schnittstellen für LSP-Integrationen. |
 | `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
-| `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. |
+| `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), werden ignoriert. |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
@@ -285,6 +287,15 @@ Sollte es notwendig sein, bestimmte Regeln für eine Datei oder Zeile zu deaktiv
 public void LegacyMethod(int a, int b, int c, int d, int e) // ainetlinter-disable MaxMethodParameterCount
 {
     // Deaktiviert den Parameter-Count-Linter exklusiv für diese Zeile
+}
+
+try
+{
+    int.Parse("not-a-number");
+}
+catch (Exception) // ainetlinter-disable EnforceNoSilentCatch
+{
+    // Deaktiviert den Silent-Catch-Linter exklusiv für diese catch-Zeile
 }
 ```
 
