@@ -86,6 +86,19 @@ public sealed class ViolationTextFormatterTests
         Assert.Contains("src/Core/Bar.cs:12 MaxMethodParameterCount | 6 Parameter", result);
     }
 
+    [Fact]
+    public void Format_IncludesDynamicRuleInstructions()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Klasse 'Bar' nicht sealed")
+        };
+
+        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("-> EnforceSealedClasses: Konkrete Klassen muessen 'sealed' sein.", result);
+    }
+
     private static RuleViolation CreateViolation(string filePath, int line, string rule, string details) =>
         new()
         {

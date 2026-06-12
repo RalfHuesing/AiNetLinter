@@ -159,4 +159,39 @@ namespace TestNamespace
         var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Empty(violations);
     }
+
+    [Fact]
+    public void Analyze_WithUnsealedPartialClass_AllowUnsealedPartialClasses_NoViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public partial class PartialClass
+    {
+        public void Work() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { AllowUnsealedPartialClasses = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_WithUnsealedPartialClass_DefaultEnforced_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public partial class PartialClass
+    {
+        public void Work() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "EnforceSealedClasses");
+    }
 }

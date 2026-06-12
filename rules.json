@@ -1,6 +1,7 @@
 {
   "Global": {
     "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": false,
     "AllowDynamic": false,
     "AllowOutParameters": false,
     "AllowTryPatternOutParameters": true,

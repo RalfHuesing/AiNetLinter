@@ -75,17 +75,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckXmlDoc(node, node.Identifier.Text, "Klasse");
         CheckPascalCase(node.Identifier, "Klasse");
 
-        if (_config.Global.EnforceSealedClasses && !IsSealedOrStaticOrAbstract(node))
-        {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Global.EnforceSealedClasses),
-                Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-                Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."
-            });
-        }
+        CheckSealedClass(node);
 
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
 
@@ -323,24 +313,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitCatchClause(CatchClauseSyntax node)
     {
-        if (!_config.Global.EnforceNoSilentCatch || _isTestFile)
-        {
-            base.VisitCatchClause(node);
-            return;
-        }
-
-        if (IsSwallowed(node) && !IsAllowedCancellationCatch(node))
-        {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Global.EnforceNoSilentCatch),
-                Details = "Stummes Abfangen (Silent Swallowing) einer Exception erkannt.",
-                Guidance = "Wirf die Exception erneut (throw;) oder protokolliere sie, um Fehler im agentischen Loop sichtbar zu machen."
-            });
-        }
-
+        CheckSilentCatch(node);
         base.VisitCatchClause(node);
     }
 
@@ -369,6 +342,60 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var hasThrow = node.Block.DescendantNodes().OfType<ThrowStatementSyntax>().Any();
         var hasInvoke = node.Block.DescendantNodes().OfType<InvocationExpressionSyntax>().Any();
         return !hasThrow && !hasInvoke;
+    }
+
+    private static bool IsExplicitlyIgnored(CatchClauseSyntax node)
+    {
+        if (node.Declaration == null) return false;
+        var name = node.Declaration.Identifier.Text;
+        return name.StartsWith("ignored", StringComparison.OrdinalIgnoreCase) ||
+               name.StartsWith("expected", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void CheckSealedClass(ClassDeclarationSyntax node)
+    {
+        if (ShouldSkipSealedCheck(node)) return;
+
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(node),
+            RuleName = nameof(_config.Global.EnforceSealedClasses),
+            Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
+            Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."
+        });
+    }
+
+    private bool ShouldSkipSealedCheck(ClassDeclarationSyntax node)
+    {
+        if (!_config.Global.EnforceSealedClasses) return true;
+        if (IsSealedOrStaticOrAbstract(node)) return true;
+
+        bool isPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
+        return isPartial && _config.Global.AllowUnsealedPartialClasses;
+    }
+
+    private void CheckSilentCatch(CatchClauseSyntax node)
+    {
+        if (ShouldSkipSilentCatch(node)) return;
+
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(node),
+            RuleName = nameof(_config.Global.EnforceNoSilentCatch),
+            Details = "Stummes Abfangen (Silent Swallowing) einer Exception erkannt.",
+            Guidance = "Wirf die Exception erneut (throw;) oder protokolliere sie, um Fehler im agentischen Loop sichtbar zu machen. Falls das Abfangen bewusst geschieht, benenne die Exception-Variable 'ignored' oder nutze die Inline-Unterdrueckung '// ainetlinter-disable EnforceNoSilentCatch' an der catch-Zeile."
+        });
+    }
+
+    private bool ShouldSkipSilentCatch(CatchClauseSyntax node)
+    {
+        if (!_config.Global.EnforceNoSilentCatch) return true;
+        if (_isTestFile) return true;
+        if (!IsSwallowed(node)) return true;
+        if (IsAllowedCancellationCatch(node)) return true;
+        return IsExplicitlyIgnored(node);
     }
 
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
