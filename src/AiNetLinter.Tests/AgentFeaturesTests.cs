@@ -139,7 +139,7 @@ public sealed class AgentFeaturesTests
 
         var result = ViolationTextFormatter.Format(violations, @"C:\repo", CreateConfig());
 
-        Assert.Contains("→ Vereinfache verschachtelte Kontrollstrukturen.", result);
+        Assert.Contains("-> Vereinfache verschachtelte Kontrollstrukturen.", result);
     }
 
     [Fact]

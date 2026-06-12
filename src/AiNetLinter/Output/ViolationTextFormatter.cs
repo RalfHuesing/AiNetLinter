@@ -10,7 +10,7 @@ namespace AiNetLinter.Output;
 public static class ViolationTextFormatter
 {
     private const string InstructionLine =
-        "Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausserhalb betroffener Stellen/Zeilen.";
+        "Behebe nur die gelisteten Verstoesse. Minimaler Diff - kein Refactoring ausserhalb betroffener Stellen/Zeilen.";
 
     /// <summary>
     /// Erzeugt die vollständige Textausgabe inklusive LLM-Anweisungsheader und sortierter Verstoßliste.
@@ -34,11 +34,11 @@ public static class ViolationTextFormatter
             .ToArray();
 
         var output = new StringBuilder();
-        output.Append($"# AiNetLinter · {violations.Count} violations\n");
+        output.Append($"# AiNetLinter - {violations.Count} violations\n");
         output.Append(InstructionLine);
-        output.Append("\n\n## Summary · by file\n");
+        output.Append("\n\n## Summary - by file\n");
         output.Append(FormatFileSummary(byFile));
-        output.Append("\n\n## Summary · by rule\n");
+        output.Append("\n\n## Summary - by rule\n");
         output.Append(FormatRuleSummary(byRule));
         output.Append("\n\n## Violations\n");
         output.Append(string.Join('\n', detailLines));
@@ -71,7 +71,7 @@ public static class ViolationTextFormatter
         var line = $"{relativePath}:{violation.LineNumber} {violation.RuleName} | {violation.Details}";
         if (!string.IsNullOrWhiteSpace(violation.Guidance))
         {
-            line += $" → {violation.Guidance}";
+            line += $" -> {violation.Guidance}";
         }
 
         return line;

@@ -322,8 +322,8 @@ public sealed class LinterEngine
             FilePath = srcClass.FilePath,
             LineNumber = srcClass.LineNumber,
             RuleName = "StaticTestSentinel",
-            Details = $"Die Klasse '{srcClass.Name}' hat eine hohe Relevanz (max. Kognitive Komplexität: {srcClass.MaxCognitiveComplexity}), aber es wurde keine Testabdeckung gefunden.",
-            Guidance = $"Schreibe Unit Tests für '{srcClass.Name}' (z. B. '{expectedTest}', typeof-Referenz oder // @covers {srcClass.Name}).",
+            Details = $"Die Klasse '{srcClass.Name}' hat eine hohe Relevanz (max. Kognitive Komplexitaet: {srcClass.MaxCognitiveComplexity}), aber es wurde keine Testabdeckung gefunden.",
+            Guidance = $"Schreibe Unit Tests fuer '{srcClass.Name}' (z. B. '{expectedTest}', typeof-Referenz oder // @covers {srcClass.Name}).",
         });
     }
 

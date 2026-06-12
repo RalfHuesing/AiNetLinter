@@ -23,7 +23,7 @@ public static class DebtReportBuilder
 
         var lines = new List<string>
         {
-            "# AiNetLinter · debt report",
+            "# AiNetLinter - debt report",
             "## disable-all by folder",
         };
         lines.AddRange(disableAllByFolder.Select(x => $"{x.Count} {x.Folder}"));

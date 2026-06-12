@@ -135,7 +135,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Global.EnforceValueObjectContracts),
                 Details = $"Das Value Object '{name}' ist als 'class' deklariert.",
-                Guidance = "Value Objects müssen als 'record' oder 'readonly struct' deklariert werden, um Unveränderlichkeit zu garantieren."
+                Guidance = "Value Objects muessen als 'record' oder 'readonly struct' deklariert werden, um Unveraenderlichkeit zu garantieren."
             });
         }
 
@@ -153,8 +153,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                     FilePath = _filePath,
                     LineNumber = GetLineNumber(prop),
                     RuleName = nameof(_config.Global.EnforceValueObjectContracts),
-                    Details = $"Das Value Object '{name}' enthält eine veränderbare Eigenschaft '{prop.Identifier.Text}' (hat einen 'set'-Accessor).",
-                    Guidance = "Entferne den 'set'-Accessor und benutze get-only oder 'init' für Eigenschaften in Value Objects."
+                    Details = $"Das Value Object '{name}' enthaelt eine veraenderbare Eigenschaft '{prop.Identifier.Text}' (hat einen 'set'-Accessor).",
+                    Guidance = "Entferne den 'set'-Accessor und benutze get-only oder 'init' fuer Eigenschaften in Value Objects."
                 });
             }
         }
@@ -171,8 +171,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Global.EnforceXmlDocumentation),
-                Details = $"Das öffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
-                Guidance = "Füge ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben."
+                Details = $"Das oeffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
+                    Guidance = "Fuege ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben."
             });
         }
     }
@@ -237,7 +237,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = identifier.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
                 RuleName = nameof(_config.Global.EnforcePascalCase),
                 Details = $"Der Name '{name}' ({kind}) ist nicht in PascalCase geschrieben.",
-                Guidance = "Ändere den ersten Buchstaben des Namens in einen Großbuchstaben."
+                Guidance = "Aendere den ersten Buchstaben des Namens in einen Grossbuchstaben."
             });
         }
     }
@@ -284,8 +284,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(param),
                 RuleName = nameof(_config.Global.EnforceSemanticNaming),
-                Details = $"Der Parameter '{name}' in einer öffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
-                Guidance = "Verwende einen aussagekräftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
+                Details = $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
+                Guidance = "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
             });
         }
     }
@@ -318,8 +318,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = 1,
                 RuleName = nameof(_config.Global.EnforceNullableEnable),
-                Details = "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Prüfungen.",
-                Guidance = "Füge '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."
+                Details = "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Pruefungen.",
+                Guidance = "Fuege '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."
             });
         }
     }

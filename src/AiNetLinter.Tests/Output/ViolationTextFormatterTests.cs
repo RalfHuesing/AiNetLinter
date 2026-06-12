@@ -25,7 +25,7 @@ public sealed class ViolationTextFormatterTests
 
         var result = ViolationTextFormatter.Format(violations, OutputRoot);
 
-        Assert.StartsWith("# AiNetLinter · 1 violations", result);
+        Assert.StartsWith("# AiNetLinter - 1 violations", result);
         Assert.Contains("Minimaler Diff", result);
     }
 
@@ -39,8 +39,8 @@ public sealed class ViolationTextFormatterTests
         };
 
         var result = ViolationTextFormatter.Format(violations, OutputRoot);
-        var summaryByFileIndex = result.IndexOf("## Summary · by file", StringComparison.Ordinal);
-        var summaryByRuleIndex = result.IndexOf("## Summary · by rule", StringComparison.Ordinal);
+        var summaryByFileIndex = result.IndexOf("## Summary - by file", StringComparison.Ordinal);
+        var summaryByRuleIndex = result.IndexOf("## Summary - by rule", StringComparison.Ordinal);
         var violationsIndex = result.IndexOf("## Violations", StringComparison.Ordinal);
         var detailIndex = result.IndexOf("src/Foo.cs:5 EnforceSealedClasses", StringComparison.Ordinal);
 
@@ -68,9 +68,9 @@ public sealed class ViolationTextFormatterTests
             .TrimStart('\n');
         var lines = violationsSection.Split('\n');
 
-        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed → Guidance text", lines[0]);
-        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed → Guidance text", lines[1]);
-        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang → Guidance text", lines[2]);
+        Assert.Equal("src/Foo.cs:5 EnforceSealedClasses | Nicht sealed -> Guidance text", lines[0]);
+        Assert.Equal("src/Foo.cs:20 EnforceSealedClasses | Nicht sealed -> Guidance text", lines[1]);
+        Assert.Equal("src/Zoo.cs:10 MaxLineCount | Zu lang -> Guidance text", lines[2]);
     }
 
     [Fact]
