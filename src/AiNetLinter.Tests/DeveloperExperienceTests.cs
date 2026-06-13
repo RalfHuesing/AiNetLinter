@@ -23,6 +23,7 @@ namespace AiNetLinter.Tests;
 // @covers ImpactExecutor
 // @covers PostAnalysisChecks
 // @covers TestProjectDetector
+// @covers CursorRulesGenerator
 
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
@@ -292,5 +293,86 @@ public sealed class DeveloperExperienceTests
                 File.Delete(tempPath);
             }
         }
+    }
+
+    [Fact]
+    public void SyncCursorRules_GeneratesMdcFile_WritesSuccessfully()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig
+            {
+                EnforceSealedClasses = true,
+                EnforceNoSilentCatch = true,
+                EnforceResultPatternOverExceptions = true
+            },
+            Metrics = new MetricsConfig
+            {
+                MaxLineCount = 500,
+                MaxMethodLineCount = 42
+            },
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["*.Tests"] = new()
+                {
+                    Global = new GlobalConfigOverride
+                    {
+                        EnforceNoMagicValues = false
+                    }
+                }
+            }
+        };
+
+        try
+        {
+            CursorRulesGenerator.Sync(tempDir, config, verbose: false);
+
+            var mdcPath = Path.Combine(tempDir, ".cursor", "rules", "AiNetLinter.mdc");
+            Assert.True(File.Exists(mdcPath));
+
+            var content = File.ReadAllText(mdcPath);
+            Assert.Contains("description: C#-Codequalität", content);
+            Assert.Contains("MaxLineCount", content);
+            Assert.Contains("EnforceSealedClasses", content);
+            Assert.Contains("*.Tests", content);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void SyncCursorRules_OnSelfRepository_UpdatesMdc()
+    {
+        var root = FindProjectRoot();
+        var configPath = Path.Combine(root, "rules.json");
+        var config = LinterConfigLoader.TryLoadConfig(configPath, isRequired: true);
+        Assert.NotNull(config);
+
+        CursorRulesGenerator.Sync(root, config, verbose: true);
+
+        var mdcPath = Path.Combine(root, ".cursor", "rules", "AiNetLinter.mdc");
+        Assert.True(File.Exists(mdcPath));
+    }
+
+    private static string FindProjectRoot()
+    {
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null)
+        {
+            if (dir.GetFiles("rules.json").Any())
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+        throw new InvalidOperationException("Project root not found.");
     }
 }

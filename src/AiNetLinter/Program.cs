@@ -79,6 +79,7 @@ public static class Program
             Fix = parsed.Fix,
             HasImpact = parsed.HasImpact,
             ImpactRef = parsed.ImpactRef,
+            SyncCursorRules = parsed.SyncCursorRules,
         };
     }
 
@@ -165,6 +166,27 @@ public static class Program
         if (args.PlaybookPath != null)
         {
             await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose, config);
+        }
+
+        if (args.SyncCursorRules)
+        {
+            TrySyncCursorRules(args.TargetPath, config, args.Verbose);
+        }
+    }
+
+    private static void TrySyncCursorRules(string targetPath, LinterConfig config, bool verbose)
+    {
+        try
+        {
+            if (verbose)
+            {
+                Console.WriteLine("[INFO]: Synchronisiere Cursor-Regeln (.mdc)...");
+            }
+            CursorRulesGenerator.Sync(targetPath, config, verbose);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
         }
     }
 

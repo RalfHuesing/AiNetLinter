@@ -89,4 +89,9 @@ internal static class CliOptionFactory
         Description = "Semantische Diff-Impact-Analyse seit Git-Ref (z. B. HEAD~1 oder leer fuer uncommitted)",
         Arity = ArgumentArity.ZeroOrOne
     };
+
+    internal static Option<bool> CreateSyncCursorRulesOption() => new("--sync-cursor-rules", "-scr")
+    {
+        Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei",
+    };
 }

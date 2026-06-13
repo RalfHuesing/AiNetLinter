@@ -3,47 +3,20 @@ description: AI coding guidelines, constraints, and documentation rules for the 
 globs: *
 alwaysApply: true
 ---
-# AiNetLinter Rules (LLM-optimized)
+# AiNetLinter Architecture & Workflow Guidelines
 
-Strikte Leitplanken für Code-Erstellung, Refactorings und Builds in `AiNetLinter` (.NET 10). Zero-Warning-Directive (0 Warnings/Errors).
+Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `AiNetLinter` (.NET 10).
 
-## 1. Code-Qualitätsmetriken & Struktur
-- **Dateigröße:** Max 500 Codezeilen pro `.cs`-Datei.
-- **Methoden-Grenzwerte:**
-  - Max 4 Parameter (sonst in `record` als Parameter Object kapseln).
-  - Max 42 Codezeilen (ohne Kommentare/Leerzeilen).
-  - Max 5 kognitive Komplexität (McCabe).
-  - Max 5 zyklomatische Komplexität.
-  - Verwende Early Returns.
-- **Konstruktor- & Überladungs-Grenzwerte:**
-  - Max 5 Constructor-Parameter (Dependencies).
-  - Max 3 Methodenüberladungen.
-- **Sealed-by-Default:** Konkrete Klassen immer als `sealed` deklarieren.
-- **Immutability:** Bevorzuge `record`, `readonly struct` und Pure Functions.
+> [!NOTE]
+> Die allgemeinen Code-Qualitätsmetriken, Grenzwerte und aktiven Linter-Regeln werden automatisch über die Regeldatei [AiNetLinter.mdc](file:///.cursor/rules/AiNetLinter.mdc) synchronisiert.
 
-## 2. API- & Typ-Regeln
-- **Dokumentationspflicht:** Jedes öffentliche Element (Klassen, Records, Structs, Interfaces, Properties, Methoden) MUSS ein XML-Doc (`/// <summary>`) besitzen. Auch partial-Deklarationsblöcke in geteilten Dateien.
-- **Namenskonvention:** PascalCase für Klassen/Methoden/Properties. Keine generischen Namen wie `data`, `temp`, `obj`, `val`, `tmp`, `item`, `param` für Parameter.
-- **Nullable:** Nutze `#nullable enable` am Dateianfang.
-- **dynamic:** Die Verwendung von `dynamic` ist verboten.
-- **out-Parameter:** Verboten (außer `Try`-Muster, das ein `bool` zurückgibt). Bevorzuge Tuples/Records für Mehrfachrückgaben.
-- **Keine Interface-Wüsten:** Keine Interfaces deklarieren, wenn es nur eine Implementierung gibt.
-
-## 3. Zustands- & Kontrollfluss-Regeln
-- **Konstanten & Magic Values:** Keine magischen Literale (Zahlen/Strings) im Code-Rumpf verwenden. Erlaubte Ausnahmen: `0`, `1`, `""`, oder als `const` deklariert.
-- **Readonly Parameter & Fields:** Parameter nicht neu zuweisen (Methoden-Scope). Private Felder als `readonly` deklarieren, wenn sie nur im Konstruktor/Initialisierer gesetzt werden.
-- **Shadowing:** Keine Variablen- oder Parameter-Namen verwenden, die Felder, Properties oder äußere Parameter verdecken (Shadowing).
-- **Silent Catch:** Keine leeren catch-Blöcke. Ausnahmen müssen geloggt oder neu geworfen werden. Ausnahmen: Exception-Name beginnt mit `ignored`/`expected` (z.B. `catch (Exception ignored)`), oder Nutzung von `// ainetlinter-disable EnforceNoSilentCatch`.
-- **OperationCanceledException:** Nur mit catch-Filter fangen.
-- **Exception für Kontrollfluss:** Verboten. Nutze Result-Pattern (`Result<T>`). `throw` ist nur in Konstruktoren oder Validierungs-Guards (Methoden-Suffix `Guard` oder `Validate`) erlaubt.
-
-## 4. Architektur-Verbote (Constraints)
+## 1. Architektur-Verbote (Constraints)
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
 - **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
 - **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
 
-## 5. Updates & Tests
+## 2. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
-- **Architektur-Orientierung:** Unter [codegraph.md](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe, sollte aufgrund seiner Größe (ca. 500 Zeilen) jedoch nur gezielt gelesen werden.
+- **Architektur-Orientierung:** Unter [codegraph.md](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
