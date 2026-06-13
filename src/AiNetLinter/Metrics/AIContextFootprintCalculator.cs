@@ -19,6 +19,14 @@ public static class AIContextFootprintCalculator
     /// <returns>Die Gesamtzahl transitiv referenzierter Codezeilen.</returns>
     public static int Calculate(INamedTypeSymbol classSymbol)
     {
+        return CalculateDetailed(classSymbol).TotalLines;
+    }
+
+    /// <summary>
+    /// Berechnet den transitiven AI-Context-Footprint und ermittelt die Top-Abhängigkeiten.
+    /// </summary>
+    public static (int TotalLines, List<(string Name, int Lines)> TopDependencies) CalculateDetailed(INamedTypeSymbol classSymbol)
+    {
         var visited = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
         QueueSymbols(classSymbol, visited);
 
@@ -30,7 +38,26 @@ public static class AIContextFootprintCalculator
             totalLines += SumLinesForSymbol(symbol, visitedTrees);
         }
 
-        return totalLines;
+        var targetOriginal = classSymbol.OriginalDefinition;
+        var deps = new List<(string Name, int Lines)>();
+        foreach (var symbol in visited)
+        {
+            if (SymbolEqualityComparer.Default.Equals(symbol, targetOriginal))
+            {
+                continue;
+            }
+
+            var symbolTrees = symbol.DeclaringSyntaxReferences.Select(r => r.SyntaxTree).Distinct().ToList();
+            int symLines = symbolTrees.Sum(t => t.GetText().Lines.Count);
+
+            deps.Add((symbol.ToDisplayString(), symLines));
+        }
+
+        var topDeps = deps.OrderByDescending(d => d.Lines)
+            .Take(3)
+            .ToList();
+
+        return (totalLines, topDeps);
     }
 
     private static int SumLinesForSymbol(INamedTypeSymbol symbol, HashSet<SyntaxTree> visitedTrees)

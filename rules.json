@@ -25,7 +25,9 @@
     "RequireExplicitTruncationHandling": false,
     "EnforceNamespaceDirectoryMapping": false,
     "DetectAndBanPhantomDependencies": false,
-    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"]
+    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"],
+    "ImmutabilityExemptPatterns": [],
+    "AllowedEmptyReads": false
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -61,6 +63,15 @@
   },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
+    "AiNetLinter": {
+      "Metrics": {
+        "MaxLineCount": 800,
+        "MaxMethodLineCount": 200,
+        "MaxCyclomaticComplexity": 30,
+        "MaxCognitiveComplexity": 80,
+        "MaxMethodParameterCount": 6
+      }
+    },
     "*.Tests": {
       "Global": {
         "EnforceNoMagicValues": false,

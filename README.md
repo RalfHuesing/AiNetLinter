@@ -319,6 +319,8 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
 *   `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
 *   `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
+*   `--check` (Flag): Drift-Check für `--sync-cursor-rules`. Prüft, ob `.cursor/rules/AiNetLinter.mdc` aktuell ist (Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung, keine Workspace-Mutation) (Optional).
+*   `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
 
 ### Wellen-Workflow (Agent-Migration)
 
@@ -551,3 +553,32 @@ public sealed class ArchitectureTests
 
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
 *   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
+
+---
+
+## 10. Consumer-Setup & Pragmatic Defaults
+
+### Consumer-Setup-Checkliste
+
+Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt empfiehlt sich folgendes Vorgehen:
+
+1. **Explizite Konfiguration:** Erstelle eine `rules.json` mit **allen** verfügbaren Konfigurations-Keys explizit eingetragen. Dies zwingt Entwickler zur bewussten Aktivierung/Deaktivierung neuer Regeln bei Updates.
+2. **Projekt-Overrides für Tests:** Definiere unter `ProjectOverrides` (z. B. für `*.Tests`) pragmatischere Schwellenwerte. So dürfen im Testcode Literale (Magic Values) verwendet werden und das Sealing konkreter Klassen kann deaktiviert werden.
+3. **Synchronisation der MDC-Dateien:** Nutze `--sync-cursor-rules` im Pre-Commit- oder CI-Schritt, um die `.cursor/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.cursor/rules/CodeQualitaet.mdc` verwaltet werden.
+4. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 8). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
+5. **MSBuild BuildHost-Verzeichnis:** Stelle sicher, dass bei der Distribution des Linters im CI-Build/Publish-Prozess die Verzeichnisse `BuildHost-netcore/` und `BuildHost-net472/` stets direkt neben der ausführbaren `AiNetLinter.exe` liegen.
+
+### Pragmatic Agent Defaults
+
+Bei größeren Migrations-Szenarien sollten viele Regeln schrittweise eingeführt werden. Hier ist die empfohlene Konfigurationsebene ("Pragmatic Agent Defaults"):
+
+| Regel | Pragmatic | Strict | Begründung / Kontext |
+| :--- | :--- | :--- | :--- |
+| `DetectAndBanPhantomDependencies` | **on** | **on** | Verhindert, dass KIs nicht-existente Typen/Namespaces oder dynamische Reflektion erzeugen. |
+| `RequireExplicitTruncationHandling` | **on** | **on** | Schützt vor Endlosschleifen beim I/O-Lesen. |
+| `MaxAIContextFootprint` | **5000** | **4000** | Schont das RAG-Kontextbudget der LLM-Modelle. |
+| `AllowUnsealedPartialClasses` | **on** | **on** | Erforderlich für UI-Frameworks wie Blazor (Komponenten-Klassen). |
+| `EnforceExplicitStateImmutability` | **off** | **on** | Sollte bei Legacy-Projekten zunächst deaktiviert bleiben und erst bei refaktorierter Immutability aktiviert werden. |
+| `EnforceNamespaceDirectoryMapping` | **off** | **on** | Bei Feature-Foldern oder älteren Namespace-Strukturen deaktivieren. |
+| `EnforceResultPatternOverExceptions` | **off** | **on** | Deaktivieren, falls im Altsystem noch weitreichend Exceptions geweworfen werden (z. B. zur Validierung). |
+| `MaxCyclomaticComplexity` | **8** | **5** | Ein pragmatischerer Wert (8) verhindert übermäßiges Aufsplittern bei komplexen Altrechner-Methoden. |

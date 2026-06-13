@@ -34,6 +34,11 @@ public static class SarifWriter
             };
             result.Message.Text = $"{violation.Details} Guidance: {violation.Guidance}";
 
+            if (!string.IsNullOrEmpty(metadata.Intent))
+            {
+                result.Properties.Tags.Add(metadata.Intent);
+            }
+
             var loc = new SarifLocation();
             loc.PhysicalLocation.ArtifactLocation.Uri =
                 PathNormalizer.ToRelative(outputRoot, violation.FilePath);
@@ -83,6 +88,12 @@ public static class SarifWriter
         public string Level { get; set; } = "error";
         public SarifMessage Message { get; } = new();
         public List<SarifLocation> Locations { get; } = new();
+        public SarifProperties Properties { get; } = new();
+    }
+
+    private sealed class SarifProperties
+    {
+        public List<string> Tags { get; } = new();
     }
 
     private sealed class SarifMessage

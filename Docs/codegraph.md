@@ -36,6 +36,7 @@ classDiagram
     }
     class AutoFixerTests {
         +FixSealedClasses_SealsConcreteClassesWithoutDescendants()
+        +FixSealedClasses_SealsPrivateNestedClasses()
         +FixNullableEnable_PrependsNullableDirective()
         +FixReadonlyFields_AddsReadonlyKeyword()
     }
@@ -186,6 +187,7 @@ classDiagram
     }
     class SarifWriterTests {
         +Write_UsesRelativeUriInArtifactLocation()
+        +Write_IncludesIntentTagsInProperties()
     }
     class ViolationSummaryBuilderTests {
         +BuildByFile_GroupsMultipleViolationsPerFile()
@@ -339,12 +341,11 @@ classDiagram
     }
     class CursorRulesGenerator {
         +Sync()
+        +GenerateContent()
     }
-    class RuleDescriptor {
+    class RuleDefinition {
     }
-    class OverrideDescriptor {
-    }
-    class MetricOverrideDescriptor {
+    class MetricDescriptor {
     }
     class DiffImpactAnalyzer {
         +AnalyzeAsync()
@@ -406,6 +407,10 @@ classDiagram
     class RepoPlaybookGenerator {
         +GenerateAsync()
     }
+    class PlaybookDocInfo {
+    }
+    class PlaybookDocScanResult {
+    }
     class PlaybookStats {
     }
     class PlaybookSyntaxWalker {
@@ -431,6 +436,7 @@ classDiagram
     }
     class AIContextFootprintCalculator {
         +Calculate()
+        +CalculateDetailed()
     }
     class CognitiveComplexityGuidance {
         +Build()
@@ -504,6 +510,8 @@ classDiagram
     class SarifDriver {
     }
     class SarifResult {
+    }
+    class SarifProperties {
     }
     class SarifMessage {
     }
@@ -582,6 +590,7 @@ classDiagram
     SarifRun --> SarifTool : nutzt
     SarifTool --> SarifDriver : nutzt
     SarifResult --> SarifMessage : nutzt
+    SarifResult --> SarifProperties : nutzt
     SarifLocation --> SarifPhysicalLocation : nutzt
     SarifPhysicalLocation --> SarifArtifactLocation : nutzt
     SarifPhysicalLocation --> SarifRegion : nutzt

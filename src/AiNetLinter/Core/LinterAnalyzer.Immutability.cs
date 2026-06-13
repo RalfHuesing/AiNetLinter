@@ -92,6 +92,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         {
             return true;
         }
+        if (HasImmutabilityExemptPattern(className))
+        {
+            return true;
+        }
+        if (IsConfigurationBindingOrJsonSerializable(node))
+        {
+            return true;
+        }
         return HasDtoOrEntityAttribute(node);
     }
 
@@ -99,6 +107,75 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         var suffixes = _config.Global.ImmutabilityExemptSuffixes;
         return suffixes != null && suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool HasImmutabilityExemptPattern(string className)
+    {
+        var patterns = _config.Global.ImmutabilityExemptPatterns;
+        if (patterns == null) return false;
+        return patterns.Any(p => MatchWildcard(className, p));
+    }
+
+    private static bool MatchWildcard(string text, string pattern)
+    {
+        if (string.IsNullOrEmpty(pattern)) return false;
+        if (pattern == "*") return true;
+
+        if (pattern.StartsWith("*") && pattern.EndsWith("*"))
+        {
+            var middle = pattern.Substring(1, pattern.Length - 2);
+            return text.Contains(middle, StringComparison.OrdinalIgnoreCase);
+        }
+        if (pattern.StartsWith("*"))
+        {
+            var end = pattern.Substring(1);
+            return text.EndsWith(end, StringComparison.OrdinalIgnoreCase);
+        }
+        if (pattern.EndsWith("*"))
+        {
+            var start = pattern.Substring(0, pattern.Length - 1);
+            return text.StartsWith(start, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(text, pattern, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsConfigurationBindingOrJsonSerializable(ClassDeclarationSyntax node)
+    {
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol == null) return false;
+
+        foreach (var attr in symbol.GetAttributes())
+        {
+            var attrName = attr.AttributeClass?.Name;
+            if (attrName != null && (
+                attrName.Contains("JsonSerializable") || 
+                attrName.Contains("Configure") || 
+                attrName.Contains("Options")))
+            {
+                return true;
+            }
+        }
+
+        foreach (var iface in symbol.AllInterfaces)
+        {
+            if (iface.Name.Contains("IOptions") || iface.Name.Contains("IConfiguration"))
+            {
+                return true;
+            }
+        }
+
+        var currentBase = symbol.BaseType;
+        while (currentBase != null)
+        {
+            if (currentBase.Name.Contains("IOptions") || currentBase.Name.Contains("IConfiguration"))
+            {
+                return true;
+            }
+            currentBase = currentBase.BaseType;
+        }
+
+        return false;
     }
 
     private bool HasDtoOrEntityAttribute(ClassDeclarationSyntax node)

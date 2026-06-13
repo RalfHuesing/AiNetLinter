@@ -5,12 +5,16 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Cli;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Metrics;
 using AiNetLinter.Output;
 using AiNetLinter.Scope;
 using AiNetLinter.Suppression;
@@ -80,6 +84,8 @@ public static class Program
             HasImpact = parsed.HasImpact,
             ImpactRef = parsed.ImpactRef,
             SyncCursorRules = parsed.SyncCursorRules,
+            Check = parsed.Check,
+            Footprint = parsed.Footprint,
         };
     }
 
@@ -89,6 +95,16 @@ public static class Program
         if (validationError.HasValue)
         {
             return validationError.Value;
+        }
+
+        if (args.SyncCursorRules)
+        {
+            return RunSyncCursorRules(args);
+        }
+
+        if (args.Footprint != null)
+        {
+            return await RunFootprintAnalysisAsync(args);
         }
 
         var maintenanceExitCode = await TryRunMaintenanceModeAsync(args);
@@ -382,5 +398,145 @@ public static class Program
     private static async Task<int> RunImpactAnalysisAsync(LinterArgs args)
     {
         return await ImpactExecutor.RunImpactAnalysisAsync(args);
+    }
+
+    private static int RunSyncCursorRules(LinterArgs args)
+    {
+        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        if (config == null)
+        {
+            return 1;
+        }
+
+        string baseDir = ResolveBaseDirectory(args.TargetPath);
+        var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
+        var mdcPath = Path.Combine(cursorRulesDir, "AiNetLinter.mdc");
+
+        var content = CursorRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json");
+
+        if (args.Check)
+        {
+            if (!File.Exists(mdcPath))
+            {
+                Console.Error.WriteLine($"[ERROR]: Die Datei '{mdcPath}' existiert nicht.");
+                return 1;
+            }
+
+            var existing = File.ReadAllText(mdcPath, Encoding.UTF8);
+            var existingLines = existing.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            var contentLines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            bool match = true;
+            if (existingLines.Length != contentLines.Length)
+            {
+                match = false;
+            }
+            else
+            {
+                for (int i = 0; i < existingLines.Length; i++)
+                {
+                    if (i == 0 && existingLines[0].StartsWith("<!--") && contentLines[0].StartsWith("<!--"))
+                    {
+                        continue;
+                    }
+                    if (existingLines[i] != contentLines[i])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!match)
+            {
+                Console.Error.WriteLine("[ERROR]: Drift erkannt! Die generierten Cursor-Regeln stimmen nicht mit der Datei auf der Festplatte überein.");
+                return 1;
+            }
+
+            Console.WriteLine("[OK]: Cursor-Regeln sind aktuell.");
+            return 0;
+        }
+        else
+        {
+            if (!Directory.Exists(cursorRulesDir))
+            {
+                Directory.CreateDirectory(cursorRulesDir);
+            }
+            File.WriteAllText(mdcPath, content, Encoding.UTF8);
+            Console.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
+            return 0;
+        }
+    }
+
+    private static string ResolveBaseDirectory(string targetPath)
+    {
+        if (Directory.Exists(targetPath))
+        {
+            return targetPath;
+        }
+        if (File.Exists(targetPath))
+        {
+            return Path.GetDirectoryName(targetPath) ?? targetPath;
+        }
+        return targetPath;
+    }
+
+    private static async Task<int> RunFootprintAnalysisAsync(LinterArgs args)
+    {
+        try
+        {
+            using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+            var solution = catalog.Solution;
+            INamedTypeSymbol? targetSymbol = null;
+
+            foreach (var project in solution.Projects)
+            {
+                var compilation = await project.GetCompilationAsync();
+                if (compilation == null) continue;
+
+                foreach (var syntaxTree in compilation.SyntaxTrees)
+                {
+                    var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                    var root = await syntaxTree.GetRootAsync();
+                    var classDecls = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
+                    foreach (var classDecl in classDecls)
+                    {
+                        var symbol = semanticModel.GetDeclaredSymbol(classDecl);
+                        if (symbol is INamedTypeSymbol namedSymbol && (
+                            string.Equals(namedSymbol.Name, args.Footprint, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(namedSymbol.ToDisplayString(), args.Footprint, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            targetSymbol = namedSymbol;
+                            break;
+                        }
+                    }
+                    if (targetSymbol != null) break;
+                }
+                if (targetSymbol != null) break;
+            }
+
+            if (targetSymbol == null)
+            {
+                Console.Error.WriteLine($"[ERROR]: Klasse '{args.Footprint}' wurde in der Solution nicht gefunden.");
+                return 1;
+            }
+
+            var (totalLines, topDeps) = AIContextFootprintCalculator.CalculateDetailed(targetSymbol);
+
+            Console.WriteLine($"AI-Context-Footprint fuer Klasse '{targetSymbol.ToDisplayString()}':");
+            Console.WriteLine($"Gesamt transitive Zeilen: {totalLines}");
+            Console.WriteLine("Top-Abhängigkeiten:");
+            foreach (var dep in topDeps)
+            {
+                Console.WriteLine($"  + {dep.Name} ({dep.Lines} Zeilen)");
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR]: Fehler bei der Footprint-Analyse: {ex.Message}");
+            return 2;
+        }
     }
 }

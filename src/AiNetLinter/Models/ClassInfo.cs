@@ -38,6 +38,11 @@ public sealed record ClassInfo
     public required int AIContextFootprint { get; init; }
 
     /// <summary>
+    /// Die Top-Abhängigkeiten, die den AI-Context-Footprint beeinflussen.
+    /// </summary>
+    public IReadOnlyList<(string Name, int Lines)> AIContextFootprintDetails { get; init; } = Array.Empty<(string, int)>();
+
+    /// <summary>
     /// Gibt an, ob die Klasse Testmethoden enthält.
     /// </summary>
     public required bool HasTestMethods { get; init; }

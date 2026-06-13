@@ -37,6 +37,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
         {
+            var footprintResult = AIContextFootprintCalculator.CalculateDetailed(symbol);
             Classes.Add(new ClassInfo
             {
                 Name = ResolveClassName(symbol, node.Identifier.Text),
@@ -44,7 +45,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 MaxCognitiveComplexity = GetMaxMethodComplexity(node),
                 InheritanceDepth = GetInheritanceDepth(symbol),
-                AIContextFootprint = AIContextFootprintCalculator.Calculate(symbol),
+                AIContextFootprint = footprintResult.TotalLines,
+                AIContextFootprintDetails = footprintResult.TopDependencies,
                 HasTestMethods = CheckForTestMethods(node),
                 IsPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)),
                 ProjectName = _projectName,
@@ -150,8 +152,21 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool IsViolation(NamespaceRule rule, string referencedNamespace)
     {
         if (rule.SourceNamespace == null || rule.TargetNamespace == null) return false;
-        return _currentNamespace.StartsWith(rule.SourceNamespace) && 
-               referencedNamespace.StartsWith(rule.TargetNamespace);
+        return NamespaceMatches(_currentNamespace, rule.SourceNamespace) && 
+               NamespaceMatches(referencedNamespace, rule.TargetNamespace);
+    }
+
+    private static bool NamespaceMatches(string ns, string pattern)
+    {
+        if (string.IsNullOrEmpty(ns) || string.IsNullOrEmpty(pattern)) return false;
+
+        if (pattern.Contains('*'))
+        {
+            var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+            return System.Text.RegularExpressions.Regex.IsMatch(ns, regexPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        return ns.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
     }
 
     private void AddNamespaceViolation(SyntaxNode node, string referencedNamespace)

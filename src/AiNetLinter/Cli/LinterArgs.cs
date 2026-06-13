@@ -96,4 +96,14 @@ public sealed class LinterArgs
     /// Holt oder setzt einen Wert, der angibt, ob Cursor-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
     /// </summary>
     public bool SyncCursorRules { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob eine Drift-Prüfung ohne Dateischreiben durchgeführt werden soll.
+    /// </summary>
+    public bool Check { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt den Namen der Klasse für eine detaillierte Footprint-Analyse.
+    /// </summary>
+    public string? Footprint { get; init; }
 }

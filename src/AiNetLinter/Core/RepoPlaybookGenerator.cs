@@ -10,6 +10,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
+using AiNetLinter.Output;
+using AiNetLinter.Models;
 
 namespace AiNetLinter.Core;
 
@@ -51,14 +53,30 @@ public sealed class RepoPlaybookGenerator
             ["all"] = "Alle Linter-Regeln deaktiviert fuer diese Datei oder diesen Bereich."
         };
 
+    private sealed record PlaybookDocInfo(
+        string FilePath,
+        string ProjectName,
+        bool HasDisableAll,
+        int LineCount,
+        List<string> Namespaces
+    );
 
-    /// <summary>
-    /// Generiert das Playbook und schreibt es in die angegebene Datei.
-    /// </summary>
-    /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
-    /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
-    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
+    private sealed record PlaybookDocScanResult(
+        int ResultMethods,
+        int Throws,
+        bool HasDisableAll,
+        int LineCount,
+        List<string> Namespaces
+    );
+
+    private sealed record PlaybookStats(
+        int TotalResultMethods,
+        int TotalThrows,
+        Dictionary<string, int> SuppressionCounts,
+        List<PlaybookDocInfo> DocInfos,
+        List<RuleViolation> Violations
+    );
+
     /// <summary>
     /// Generiert das Playbook und schreibt es in die angegebene Datei.
     /// </summary>
@@ -70,7 +88,8 @@ public sealed class RepoPlaybookGenerator
     public static async Task GenerateAsync(Solution solution, string outputPath, bool verbose, LinterConfig? config = null)
     {
         var stats = await ScanSolutionAsync(solution, config);
-        await WritePlaybookFileAsync(outputPath, stats, verbose);
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
+        await WritePlaybookFileAsync(outputPath, stats, verbose, solutionDir, config);
     }
 
     private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config)
@@ -78,39 +97,44 @@ public sealed class RepoPlaybookGenerator
         int totalResultMethods = 0;
         int totalThrows = 0;
         var suppressionCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var docInfos = new List<PlaybookDocInfo>();
 
         foreach (var project in solution.Projects)
         {
-            var projectStats = await ScanProjectAsync(project, suppressionCounts, config);
-            totalResultMethods += projectStats.ResultMethods;
-            totalThrows += projectStats.Throws;
+            foreach (var document in project.Documents)
+            {
+                var docScan = await ScanDocumentAsync(document, suppressionCounts, config);
+                totalResultMethods += docScan.ResultMethods;
+                totalThrows += docScan.Throws;
+                
+                docInfos.Add(new PlaybookDocInfo(
+                    document.FilePath ?? string.Empty,
+                    project.Name,
+                    docScan.HasDisableAll,
+                    docScan.LineCount,
+                    docScan.Namespaces
+                ));
+            }
         }
 
-        return new PlaybookStats(totalResultMethods, totalThrows, suppressionCounts);
-    }
-
-    private static async Task<(int ResultMethods, int Throws)> ScanProjectAsync(Project project, Dictionary<string, int> suppressionCounts, LinterConfig? config)
-    {
-        int totalResultMethods = 0;
-        int totalThrows = 0;
-
-        foreach (var document in project.Documents)
+        List<RuleViolation> violations = new();
+        if (config != null)
         {
-            var docStats = await ScanDocumentAsync(document, suppressionCounts, config);
-            totalResultMethods += docStats.ResultMethods;
-            totalThrows += docStats.Throws;
+            var engine = new LinterEngine(config);
+            var results = await engine.RunAsync(solution);
+            violations.AddRange(results);
         }
 
-        return (totalResultMethods, totalThrows);
+        return new PlaybookStats(totalResultMethods, totalThrows, suppressionCounts, docInfos, violations);
     }
 
-    private static async Task<(int ResultMethods, int Throws)> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts, LinterConfig? config)
+    private static async Task<PlaybookDocScanResult> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts, LinterConfig? config)
     {
         var semanticModel = await document.GetSemanticModelAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
         if (semanticModel == null || syntaxRoot == null)
         {
-            return (0, 0);
+            return new PlaybookDocScanResult(0, 0, false, 0, []);
         }
 
         var effectiveConfig = config != null ? ProjectConfigResolver.ResolveForDocument(document, config) : null;
@@ -119,9 +143,20 @@ public sealed class RepoPlaybookGenerator
         var walker = new PlaybookSyntaxWalker(semanticModel, allowedExceptions);
         walker.Visit(syntaxRoot);
 
+        var text = (await document.GetTextAsync()).ToString();
+        bool hasDisableAll = text.Contains("ainetlinter-disable all");
+
         CollectSuppressionsFromTrivia(syntaxRoot, suppressionCounts);
 
-        return (walker.ResultPatternCount, walker.ThrowCount);
+        var namespaces = syntaxRoot.DescendantNodes()
+            .OfType<BaseNamespaceDeclarationSyntax>()
+            .Select(ns => ns.Name.ToString())
+            .Distinct()
+            .ToList();
+
+        int lineCount = syntaxRoot.GetText().Lines.Count;
+
+        return new PlaybookDocScanResult(walker.ResultPatternCount, walker.ThrowCount, hasDisableAll, lineCount, namespaces);
     }
 
     private static void CollectSuppressionsFromTrivia(SyntaxNode root, Dictionary<string, int> suppressionCounts)
@@ -176,7 +211,12 @@ public sealed class RepoPlaybookGenerator
         return rule.TrimEnd(',', ';', '.', '\'', '"');
     }
 
-    private static async Task WritePlaybookFileAsync(string outputPath, PlaybookStats stats, bool verbose)
+    private static async Task WritePlaybookFileAsync(
+        string outputPath,
+        PlaybookStats stats,
+        bool verbose,
+        string solutionDir,
+        LinterConfig? config)
     {
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -185,6 +225,11 @@ public sealed class RepoPlaybookGenerator
         }
 
         var sb = new StringBuilder();
+        sb.AppendLine("---");
+        sb.AppendLine("description: Repo-Statistik, bei Architektur-Fragen lesen");
+        sb.AppendLine("globs: ");
+        sb.AppendLine("alwaysApply: false");
+        sb.AppendLine("---");
         sb.AppendLine("<!-- Auto-generated by AiNetLinter. Do not edit manually. -->");
         sb.AppendLine("# AI Repository Playbook (Auto-Generated)");
         sb.AppendLine("Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.");
@@ -197,6 +242,119 @@ public sealed class RepoPlaybookGenerator
         sb.AppendLine("## 2. Abweichungen / Unterdrueckte Linter-Regeln");
 
         AppendSuppressionList(sb, stats.SuppressionCounts);
+        sb.AppendLine();
+
+        if (config != null)
+        {
+            sb.AppendLine("## 3. Migrations-Status");
+            sb.AppendLine();
+            
+            int totalFiles = stats.DocInfos.Count;
+            int waveReadyFiles = stats.DocInfos.Count(d => !d.HasDisableAll);
+            double waveReadyPercentage = totalFiles > 0 ? (double)waveReadyFiles / totalFiles * 100 : 0;
+            
+            sb.AppendLine($"- **Wave-ready Dateien:** {waveReadyFiles} / {totalFiles} ({waveReadyPercentage:F0} %)");
+            
+            var filesWithDisableAll = stats.DocInfos.Where(d => d.HasDisableAll).Select(d => d.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var waveReadyViolations = stats.Violations.Where(v => !filesWithDisableAll.Contains(v.FilePath)).ToList();
+            
+            sb.AppendLine($"- **Verstösse nur wave-ready (default rules):** {waveReadyViolations.Count}");
+            sb.AppendLine($"- **Top-Ordner wave-ready-Verstöße:**");
+            
+            var folderGroups = waveReadyViolations
+                .Select(v => {
+                    if (string.IsNullOrEmpty(v.FilePath) || string.IsNullOrEmpty(solutionDir))
+                    {
+                        return "Root";
+                    }
+                    var rel = PathNormalizer.ToRelative(solutionDir, v.FilePath);
+                    var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                    return string.IsNullOrEmpty(dir) ? "Root" : dir;
+                })
+                .GroupBy(d => d)
+                .Select(g => new { Folder = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(3)
+                .ToList();
+                
+            if (folderGroups.Count == 0)
+            {
+                sb.AppendLine("  - Keine offenen Verstöße in wave-ready Dateien.");
+            }
+            else
+            {
+                foreach (var folder in folderGroups)
+                {
+                    sb.AppendLine($"  - `{folder.Folder}/`: {folder.Count}");
+                }
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("## 4. Architektur-Slices (aus Namespace)");
+            sb.AppendLine();
+            
+            var allNamespaces = stats.DocInfos.SelectMany(d => d.Namespaces).Distinct().ToList();
+            var commonPrefix = FindCommonPrefix(allNamespaces);
+            
+            var sliceGroups = stats.DocInfos
+                .Select(d => {
+                    var ns = d.Namespaces.FirstOrDefault() ?? "";
+                    var relNs = ns;
+                    if (!string.IsNullOrEmpty(commonPrefix) && ns.StartsWith(commonPrefix))
+                    {
+                        relNs = ns.Substring(commonPrefix.Length);
+                    }
+                    var parts = relNs.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    var slice = parts.Length > 0 ? string.Join(".", parts.Take(2)) : "Root";
+                    return new { Doc = d, Slice = slice };
+                })
+                .GroupBy(x => x.Slice)
+                .Select(g => {
+                    var docs = g.Select(x => x.Doc).ToList();
+                    var sortedLocs = docs.Select(d => d.LineCount).OrderBy(x => x).ToList();
+                    int medianLoc = sortedLocs.Count > 0 ? sortedLocs[sortedLocs.Count / 2] : 0;
+                    int disableAllCount = docs.Count(d => d.HasDisableAll);
+                    return new { Slice = g.Key, FileCount = docs.Count, MedianLoc = medianLoc, DisableAllCount = disableAllCount };
+                })
+                .OrderByDescending(x => x.FileCount)
+                .Take(5)
+                .ToList();
+                
+            foreach (var slice in sliceGroups)
+            {
+                var disableAllStr = slice.DisableAllCount > 0 ? $", {slice.DisableAllCount}× disable-all" : "";
+                sb.AppendLine($"- **{slice.Slice}.***: {slice.FileCount} files, median Footprint {slice.MedianLoc} LOC{disableAllStr}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)");
+            sb.AppendLine();
+            sb.AppendLine("| Intent | Offene Verstöße (wave-ready) | Regeln |");
+            sb.AppendLine("| :--- | ---: | :--- |");
+            
+            var intentGroups = waveReadyViolations
+                .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
+                .Select(g => new {
+                    Intent = g.Key,
+                    Count = g.Count(),
+                    Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct())
+                })
+                .OrderByDescending(x => x.Count)
+                .ToList();
+                
+            if (intentGroups.Count == 0)
+            {
+                sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
+            }
+            else
+            {
+                foreach (var group in intentGroups)
+                {
+                    sb.AppendLine($"| {group.Intent} | {group.Count} | {group.Rules} |");
+                }
+            }
+            sb.AppendLine();
+        }
 
         await File.WriteAllTextAsync(outputPath, sb.ToString(), Encoding.UTF8);
 
@@ -204,6 +362,21 @@ public sealed class RepoPlaybookGenerator
         {
             Console.WriteLine($"[INFO]: Repo-Playbook erfolgreich generiert unter: {outputPath}");
         }
+    }
+
+    private static string FindCommonPrefix(List<string> strings)
+    {
+        if (strings == null || strings.Count == 0) return string.Empty;
+        var first = strings[0];
+        int len = first.Length;
+        foreach (var s in strings)
+        {
+            int i = 0;
+            while (i < len && i < s.Length && first[i] == s[i]) i++;
+            len = i;
+            if (len == 0) return string.Empty;
+        }
+        return first.Substring(0, len);
     }
 
     private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts)
@@ -225,12 +398,6 @@ public sealed class RepoPlaybookGenerator
             sb.AppendLine($"  *Bedeutung:* {description}");
         }
     }
-
-    private sealed record PlaybookStats(
-        int TotalResultMethods,
-        int TotalThrows,
-        Dictionary<string, int> SuppressionCounts
-    );
 
     private sealed class PlaybookSyntaxWalker : CSharpSyntaxWalker
     {

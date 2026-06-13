@@ -90,7 +90,9 @@ public static class ProjectConfigResolver
                 RequireExplicitTruncationHandling = og.RequireExplicitTruncationHandling ?? global.Global.RequireExplicitTruncationHandling,
                 EnforceNamespaceDirectoryMapping = og.EnforceNamespaceDirectoryMapping ?? global.Global.EnforceNamespaceDirectoryMapping,
                 DetectAndBanPhantomDependencies = og.DetectAndBanPhantomDependencies ?? global.Global.DetectAndBanPhantomDependencies,
-                ImmutabilityExemptSuffixes = og.ImmutabilityExemptSuffixes ?? global.Global.ImmutabilityExemptSuffixes
+                ImmutabilityExemptSuffixes = og.ImmutabilityExemptSuffixes ?? global.Global.ImmutabilityExemptSuffixes,
+                ImmutabilityExemptPatterns = og.ImmutabilityExemptPatterns ?? global.Global.ImmutabilityExemptPatterns,
+                AllowedEmptyReads = og.AllowedEmptyReads ?? global.Global.AllowedEmptyReads
             };
         }
 

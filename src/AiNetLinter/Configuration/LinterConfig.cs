@@ -75,6 +75,8 @@ public sealed record GlobalConfig
     {
         "Dto", "Entity", "Model", "Request", "Response", "Command"
     };
+    public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
+    public bool AllowedEmptyReads { get; init; } = false;
 }
 
 /// <summary>
@@ -250,6 +252,8 @@ public sealed record GlobalConfigOverride
     public bool? EnforceNamespaceDirectoryMapping { get; init; }
     public bool? DetectAndBanPhantomDependencies { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptSuffixes { get; init; }
+    public IReadOnlyCollection<string>? ImmutabilityExemptPatterns { get; init; }
+    public bool? AllowedEmptyReads { get; init; }
 }
 
 /// <summary>
