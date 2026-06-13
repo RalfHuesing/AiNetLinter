@@ -3,72 +3,41 @@ description: AI coding guidelines, constraints, and documentation rules for the 
 globs: *
 alwaysApply: true
 ---
-# AiNetLinter - Projektrichtlinien für KI-Agenten
+# AiNetLinter Rules (LLM-optimized)
 
-Diese Richtlinien gelten für alle automatisierten Code-Edits, Refactorings und Implementierungsaufgaben im Repository `AiNetLinter`. Sie dienen als strikte Leitplanken für das LLM, um höchste Code-Qualität, Kompilierbarkeit und AI-Readability zu garantieren.
+Strikte Leitplanken für Code-Erstellung, Refactorings und Builds in `AiNetLinter` (.NET 10). Zero-Warning-Directive (0 Warnings/Errors).
 
----
+## 1. Code-Qualitätsmetriken & Struktur
+- **Dateigröße:** Max 500 Codezeilen pro `.cs`-Datei.
+- **Methoden-Grenzwerte:**
+  - Max 4 Parameter (sonst in `record` als Parameter Object kapseln).
+  - Max 42 Codezeilen (ohne Kommentare/Leerzeilen).
+  - Max 5 kognitive Komplexität (McCabe).
+  - Max 5 zyklomatische Komplexität.
+  - Verwende Early Returns.
+- **Konstruktor- & Überladungs-Grenzwerte:**
+  - Max 20 Constructor-Parameter (Dependencies).
+  - Max 10 Methodenüberladungen.
+- **Sealed-by-Default:** Konkrete Klassen immer als `sealed` deklarieren.
+- **Immutability:** Bevorzuge `record`, `readonly struct` und Pure Functions.
 
-## 1. Greenfield-Kontext & Invarianten
+## 2. API- & Typ-Regeln
+- **Dokumentationspflicht:** Jedes öffentliche Element (Klassen, Records, Structs, Interfaces, Properties, Methoden) MUSS ein XML-Doc (`/// <summary>`) besitzen. Auch partial-Deklarationsblöcke in geteilten Dateien.
+- **Namenskonvention:** PascalCase für Klassen/Methoden/Properties. Keine generischen Namen wie `data`, `temp`, `obj`, `val`, `tmp`, `item`, `param` für Parameter.
+- **Nullable:** Nutze `#nullable enable` am Dateianfang.
+- **dynamic:** Die Verwendung von `dynamic` ist verboten.
+- **out-Parameter:** Verboten (außer `Try`-Muster, das ein `bool` zurückgibt). Bevorzuge Tuples/Records für Mehrfachrückgaben.
+- **Keine Interface-Wüsten:** Keine Interfaces deklarieren, wenn es nur eine Implementierung gibt.
 
-*   **Keine Abwärtskompatibilität:** Das Projekt ist ein reines **Greenfield-Projekt** unter .NET 10. Es gibt keine produktiven Altdaten, Legacy-Konfigurationen oder Migrationszwänge. Wähle bei Änderungen immer den saubersten, modernsten Weg.
-*   **Zero-Warning-Directive:** Alle Builds müssen absolut sauber kompiliert werden. **0 Compiler-Warnungen und 0 Code-Analyzer-Warnungen** sind der Soll-Zustand. Compiler-Warnungen werden wie Fehler behandelt.
-*   **Tests sind Pflicht:** Jede neue oder geänderte Fachlogik erfordert entsprechende xUnit v3 Tests. Ein Task gilt erst als fertig, wenn alle Tests grün sind.
+## 3. Zustands- & Kontrollfluss-Regeln
+- **Konstanten & Magic Values:** Keine magischen Literale (Zahlen/Strings) im Code-Rumpf verwenden. Erlaubte Ausnahmen: `0`, `1`, `""`, oder als `const` deklariert.
+- **Readonly Parameter & Fields:** Parameter nicht neu zuweisen (Methoden-Scope). Private Felder als `readonly` deklarieren, wenn sie nur im Konstruktor/Initialisierer gesetzt werden.
+- **Shadowing:** Keine Variablen- oder Parameter-Namen verwenden, die Felder, Properties oder äußere Parameter verdecken (Shadowing).
+- **Silent Catch:** Keine leeren catch-Blöcke. Ausnahmen müssen geloggt oder neu geworfen werden. Ausnahmen: Exception-Name beginnt mit `ignored`/`expected` (z.B. `catch (Exception ignored)`), oder Nutzung von `// ainetlinter-disable EnforceNoSilentCatch`.
+- **OperationCanceledException:** Nur mit catch-Filter fangen.
+- **Exception für Kontrollfluss:** Verboten. Nutze Result-Pattern (`Result<T>`). `throw` ist nur in Konstruktoren oder Validierungs-Guards (Methoden-Suffix `Guard` oder `Validate`) erlaubt.
 
----
-
-## 2. Stil- & Designregeln (AI-Readability)
-
-Der Code von `AiNetLinter` muss so aufgebaut sein, dass er für Sprachmodelle maximal verständlich, wartbar und fehlerfrei editierbar bleibt:
-
-*   **Sealed by Default:** Jede konkrete Klasse (die nicht `abstract` oder `static` sind) **muss** als `sealed` deklariert werden. Dies hält Vererbungshierarchien flach und optimiert die Laufzeit.
-*   **Immutability:** Setze konsequent auf `record`, `readonly struct` und Pure Functions. Vermeide veränderliche Zustände und Seiteneffekte.
-*   **Dateigrößen-Limit:** Keine `.cs`-Datei darf mehr als **500 Zeilen** Code enthalten, um den "Lost in the Middle"-Effekt in Kontextfenstern zu vermeiden.
-*   **Methoden-Grenzwerte:**
-    *   Maximal **4 Parameter** pro Methode. Überschreitungen müssen in ein Parameter-Objekt (`record`) gekapselt werden.
-    *   Maximale Codezeilenanzahl: **42** pro Methode (ohne Kommentare und Leerzeilen).
-    *   Maximale zyklomatische Komplexität: **5** pro Methode.
-    *   Maximale kognitive Komplexität: **5** pro Methode.
-    *   Verwende konsequent Early Returns zur Flachhaltung des Codes.
-*   **Semantisches Naming:** Bezeichnernamen müssen präzise die Absicht (Intent) beschreiben (PascalCase). Vermeide zu spezifische Laufzeit-Bedingungen im Methodennamen.
-*   **Dokumentation:** Verwende XML-Doc-Comments (`///`), um komplexe Methoden oder Seiteneffekte zu erklären, statt den Methodennamen unleserlich zu strecken. Der Sprachserver (LSP) stellt diese Infos dem AI-Agenten bereit.
-
----
-
-## 3. Negative Constraints (Verbote)
-
-*   **KEIN dynamic:** Das Schlüsselwort `dynamic` ist strikt verboten, da es die statische Analyse von LLMs bricht.
-*   **KEINE out-Parameter:** Verwende stattdessen C#-Tuples oder Records für mehrere Rückgabewerte.
-*   **KEINE Interface-Wüsten:** Erzeuge keine Interfaces, wenn es nur eine einzige Implementierung gibt (z. B. kein `ILinterEngine`, da es nur `LinterEngine` gibt).
-*   **KEIN AssemblyLoadContext (ALC):** Implementiere kein dynamisches Laden von DLLs zur Laufzeit. Alles wird statisch kompiliert.
-*   **KEINE Plugin-Systeme:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
-*   **KEIN stilles Exception-Schlucken:** Leere `catch (Exception)` Blöcke sind verboten. Ausnahmen müssen geloggt oder als typisierte Fehlerzustände/Exceptions nach oben gereicht werden.
-*   **KEIN Dependency Injection Overhead:** Für CLI-Helfer und lokale Logik wird kein DI-Container verwendet. Nutze statische Klassen oder direkte Instanziierung.
-
----
-
-## 4. Dokumentation & Update-Pflicht
-
-*   **Update-Pflicht (ohne Extra-Auftrag):** Relevante Markdown-Dokumentation (wie `README.md` oder die in `Docs/` befindlichen Dokumente) sowie die globale Beispielkonfiguration `rules.json` **müssen mit der Code-/Konfig-Änderung mitgeliefert und aktualisiert werden** — der Nutzer muss **nicht** extra auffordern, diese anzupassen. 
-*   Bei jeder Feature-Änderung oder Erweiterung des Linter-Regelwerks muss die `ROADMAP.md` entsprechend aktualisiert werden.
-
----
-
-## 5. Quellcode-Kommentare
-
-*   **Fokus auf das „Warum“:** LLMs verstehen C#-Syntax perfekt. Kommentare wie `// Initialisiert Liste` sind Rauschen und verschwenden Kontext-Token. Dokumentiere nur **fachliche Hintergründe, Concurrency-Szenarien oder API-Einschränkungen**.
-*   **Aktualität:** Veraltete Kommentare müssen bei Codeänderung sofort angepasst oder gelöscht werden, um nachfolgende Agenten nicht in die Irre zu führen.
-
----
-
-## 6. Systematischer Debugging-Workflow
-
-Tritt während der Bearbeitung ein Fehler auf, gehe strukturiert vor:
-1.  **Stacktrace analysieren:** Ermittle den genauen Fehlerursprung.
-2.  **Erst Hypothese, dann Code:** Erkläre dem Benutzer kurz in 1–2 Sätzen, *warum* der Fehler auftritt und *was* die vorgeschlagene Änderung bewirkt. Vermeide blindes Herumprobieren.
-
----
-
-## 7. Commit-Vorschläge
-
-Jede Antwort, die Dateiänderungen im Workspace vornimmt, schließt **zwingend** mit einem Abschnitt `### Commit-Vorschlag` ab. Dieser enthält einen einzigen, 1:1 kopierbaren Codeblock mit einer aussagekräftigen Commit-Message im **Conventional Commits** Format (Deutsch, imperativ, z. B. `feat(core): add syntax walker for sealed classes`).
+## 4. Updates & Tests
+- **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
+- **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
+- **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
