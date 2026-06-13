@@ -18,6 +18,12 @@ public static class RuleMetadataRegistry
             ["EnforceNoSilentCatch"] = new() { Severity = "error", Intent = "agent-resilience" },
             ["ForbiddenNamespaceDependency"] = new() { Severity = "error", Intent = "architecture" },
             ["EnforceResultPatternOverExceptions"] = new() { Severity = "error", Intent = "control-flow" },
+            ["EnforceNoVariableShadowing"] = new() { Severity = "error", Intent = "agent-resilience" },
+            ["EnforceReadonlyParameters"] = new() { Severity = "error", Intent = "agent-resilience" },
+            ["EnforceReadonlyFields"] = new() { Severity = "error", Intent = "agent-resilience" },
+            ["EnforceNoMagicValues"] = new() { Severity = "error", Intent = "general" },
+            ["MaxMethodOverloads"] = new() { Severity = "warning", Intent = "agent-context" },
+            ["MaxConstructorDependencies"] = new() { Severity = "warning", Intent = "agent-context" },
         };
 
     /// <summary>
