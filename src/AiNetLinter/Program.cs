@@ -38,6 +38,7 @@ public static class Program
     /// <returns>Der Exit-Code des Programms (0 = Erfolg, 1 = Linter-Verstoesse, 2 = Fataler Fehler).</returns>
     public static async Task<int> Main(string[] args)
     {
+        Console.OutputEncoding = Encoding.UTF8;
         var (root, options) = CliCommandBuilder.Build();
 
         root.SetAction(async parseResult =>

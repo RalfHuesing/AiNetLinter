@@ -93,14 +93,20 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private static bool IsGuardOrCheckPresentForInvocation(InvocationExpressionSyntax invocation)
     {
         if (IsInsideCondition(invocation)) return true;
+        var declarator = FindEnclosingVariableDeclarator(invocation);
+        return declarator != null && IsVariableCheckedInBlock(declarator);
+    }
 
-        var parent = invocation.Parent;
-        if (parent is EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator })
+    private static VariableDeclaratorSyntax? FindEnclosingVariableDeclarator(SyntaxNode node)
+    {
+        var current = node.Parent;
+        while (current != null && current is not StatementSyntax)
         {
-            return IsVariableCheckedInBlock(declarator);
+            if (current is EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator })
+                return declarator;
+            current = current.Parent;
         }
-
-        return false;
+        return null;
     }
 
     private static bool IsVariableCheckedInBlock(VariableDeclaratorSyntax declarator)

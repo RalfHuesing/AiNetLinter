@@ -398,4 +398,59 @@ namespace TestNamespace
         var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Contains(violations, v => v.RuleName == "DetectAndBanPhantomDependencies");
     }
+
+    [Fact]
+    public void Analyze_TruncationSafety_AwaitedReadWithGuard_HasNoViolation()
+    {
+        const string source = @"
+using System.Threading.Tasks;
+namespace TestNamespace
+{
+    public class MyStream
+    {
+        public Task<string> ReadAsync() => Task.FromResult(string.Empty);
+    }
+    public sealed class AsyncReadTest
+    {
+        public async Task Run(MyStream stream)
+        {
+            var raw = await stream.ReadAsync();
+            if (string.IsNullOrEmpty(raw))
+                throw new System.Exception(""Empty response"");
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { RequireExplicitTruncationHandling = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("MyService.cs", model, config, isTestFile: false);
+        Assert.DoesNotContain(violations, v => v.RuleName == "RequireExplicitTruncationHandling");
+    }
+
+    [Fact]
+    public void Analyze_TruncationSafety_AwaitedReadWithoutGuard_HasViolation()
+    {
+        const string source = @"
+using System.Threading.Tasks;
+namespace TestNamespace
+{
+    public class MyStream
+    {
+        public Task<string> ReadAsync() => Task.FromResult(string.Empty);
+    }
+    public sealed class AsyncReadTest
+    {
+        public async Task Run(MyStream stream)
+        {
+            var raw = await stream.ReadAsync();
+            _ = raw.Length;
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { RequireExplicitTruncationHandling = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("MyService.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "RequireExplicitTruncationHandling");
+    }
 }
