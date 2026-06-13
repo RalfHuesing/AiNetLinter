@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,6 +20,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly SemanticModel _semanticModel;
     private readonly LinterConfig _config;
     private readonly List<RuleViolation> _violations = new();
+    // ainetlinter-disable EnforceExplicitStateImmutability
+    // Dieser veraenderliche Zustand ist fuer den CSharpSyntaxWalker erforderlich (Visitor-Pattern).
     private string _currentNamespace = "";
     private readonly bool _isTestFile;
     private readonly string? _projectName;
@@ -211,16 +215,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private void FilterSuppressedViolations()
     {
+        var fileContent = _tree.GetText().ToString();
         var activeViolations = _violations
-            .Where(v => !IsSuppressed(v.RuleName ?? "", v.LineNumber))
+            .Where(v => !SuppressionEvaluator.IsSuppressed(fileContent, v.RuleName ?? "", v.LineNumber))
             .ToList();
         _violations.Clear();
         _violations.AddRange(activeViolations);
-    }
-
-    private bool IsSuppressed(string ruleName, int lineNumber)
-    {
-        return SuppressionEvaluator.IsSuppressed(_tree.GetText().ToString(), ruleName, lineNumber);
     }
 
     private void CheckReadonlyFields()

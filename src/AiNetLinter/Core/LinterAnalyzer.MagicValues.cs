@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -39,6 +41,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!IsTargetLiteral(node)) return false;
         if (IsExceptionValue(node)) return false;
         if (IsConstDeclaration(node)) return false;
+        if (IsAttributeArgument(node)) return false;
         return IsInsideBody(node);
     }
 
@@ -59,16 +62,27 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private static bool IsExceptionNumeric(object? value)
     {
         if (value == null) return false;
-        try
+        var type = value.GetType();
+        if (type == typeof(decimal))
         {
-            var d = Convert.ToDouble(value);
-            return d == 0.0 || d == 1.0;
+            return (decimal)value is 0m or 1m or -1m;
         }
-        catch (Exception ignored)
+        return IsPrimitiveNumeric(type, value);
+    }
+
+    private static bool IsPrimitiveNumeric(Type type, object value)
+    {
+        if (!type.IsPrimitive || type == typeof(bool) || type == typeof(char))
         {
-            _ = ignored;
             return false;
         }
+        var d = Convert.ToDouble(value);
+        return d is 0.0 or 1.0 or -1.0;
+    }
+
+    private static bool IsAttributeArgument(SyntaxNode node)
+    {
+        return node.Ancestors().OfType<AttributeArgumentSyntax>().Any();
     }
 
     private static bool IsInsideBody(SyntaxNode node)

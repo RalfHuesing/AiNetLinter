@@ -146,7 +146,30 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "AllowTryPatternOutParameters": true,
     "AllowCancellationShutdownCatch": true,
     "EnforceMinimalApiAsParameters": false,
-    "EnforceResultPatternOverExceptions": true
+    "EnforceResultPatternOverExceptions": true,
+    "EnforceNoVariableShadowing": true,
+    "EnforceReadonlyParameters": true,
+    "EnforceReadonlyFields": true,
+    "EnforceNoMagicValues": true,
+    "EnforceExplicitStateImmutability": true,
+    "AllowedExceptions": [
+      "ArgumentException",
+      "ArgumentNullException",
+      "ArgumentOutOfRangeException",
+      "InvalidOperationException",
+      "NotSupportedException",
+      "KeyNotFoundException",
+      "IndexOutOfRangeException",
+      "TimeoutException",
+      "ObjectDisposedException",
+      "NotImplementedException"
+    ],
+    "EnforceStrictBoundaryForBusinessLogic": true,
+    "PreventContextDependentOverloads": true,
+    "RequireExplicitTruncationHandling": true,
+    "EnforceNamespaceDirectoryMapping": true,
+    "DetectAndBanPhantomDependencies": true,
+    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"]
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -157,8 +180,10 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxInheritanceDepth": 2,
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
-    "MaxMethodOverloads": 2,
-    "MaxConstructorDependencies": 5
+    "MaxMethodOverloads": 3,
+    "MaxConstructorDependencies": 5,
+    "MaxDirectoryDepth": 4,
+    "MaxAIContextFootprint": 5000
   },
   "TestSentinel": {
     "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
@@ -399,15 +424,15 @@ Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausser
 | MaxLineCount | 1 | agent-context |
 
 ## Violations
-src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed → Füge den 'sealed' Modifikator hinzu.
-src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500) → Teile die Datei in kleinere Klassen auf.
+src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed -> Füge den 'sealed' Modifikator hinzu.
+src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500) -> Teile die Datei in kleinere Klassen auf.
 ```
 
 **Summary-Formate:**
 - Datei: `{anzahl} {relativerPfad}` — absteigend nach Anzahl
 - Regel: Markdown-Tabelle `| Rule | Count | Intent |` — absteigend nach Anzahl
 
-**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details} → {Guidance}` (Guidance nur wenn vorhanden)
+**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details} -> {Guidance}` (Guidance nur wenn vorhanden)
 
 #### SARIF (`--format sarif`)
 

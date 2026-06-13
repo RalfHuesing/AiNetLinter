@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace AiNetLinter.Suppression;
 
 /// <summary>
@@ -9,9 +11,15 @@ public static class SuppressionEvaluator
     /// Prüft, ob ein Verstoß für die angegebene Regel unterdrückt ist.
     /// Ein passender Kommentar in beliebiger Zeile der Datei unterdrückt alle Verstöße dieser Regel.
     /// </summary>
+    /// <param name="fileContent">Der gesamte Inhalt der Datei als Zeichenkette.</param>
+    /// <param name="ruleName">Der Name der zu prüfenden Regel.</param>
+    /// <param name="lineNumber">Die Zeilennummer des Verstoßes.</param>
+    /// <returns>True, wenn der Verstoß unterdrückt ist; andernfalls False.</returns>
     public static bool IsSuppressed(string fileContent, string ruleName, int lineNumber)
     {
-        foreach (var line in fileContent.Split('\n'))
+        var lines = fileContent.Split('\n');
+
+        foreach (var line in lines)
         {
             if (SuppressionCommentParser.MatchesRule(line, ruleName))
             {
@@ -19,13 +27,7 @@ public static class SuppressionEvaluator
             }
         }
 
-        if (lineNumber <= 0)
-        {
-            return false;
-        }
-
-        var lines = fileContent.Split('\n');
-        if (lineNumber > lines.Length)
+        if (lineNumber <= 0 || lineNumber > lines.Length)
         {
             return false;
         }

@@ -5,14 +5,18 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 
 ## 1. Genutzte Architekturmuster
 - **Result-Pattern-Nutzung:** 0 Methoden liefern `Result` oder `Result<T>` zurueck.
-- **Kontrollfluss-Exceptions:** 25 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
+- **Kontrollfluss-Exceptions:** 20 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
 
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
 Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
+- **MaxConstructorDependencies:** 3 mal deaktiviert.
+  *Bedeutung:* Zu viele Konstruktorabhaengigkeiten (max. 20).
 - **MaxMethodLineCount:** 1 mal deaktiviert.
   *Bedeutung:* Methode hat zu viele Codezeilen (max. 42 Zeilen).
 - **MaxCognitiveComplexity:** 1 mal deaktiviert.
   *Bedeutung:* Zu hohe kognitive Komplexitaet (max. 5).
 - **MaxCyclomaticComplexity:** 1 mal deaktiviert.
   *Bedeutung:* Zu hohe zyklomatische Komplexitaet (max. 5).
+- **EnforceExplicitStateImmutability:** 1 mal deaktiviert.
+  *Bedeutung:* Regel 'EnforceExplicitStateImmutability'.

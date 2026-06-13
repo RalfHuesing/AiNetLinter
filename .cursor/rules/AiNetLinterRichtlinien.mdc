@@ -16,8 +16,8 @@ Strikte Leitplanken für Code-Erstellung, Refactorings und Builds in `AiNetLinte
   - Max 5 zyklomatische Komplexität.
   - Verwende Early Returns.
 - **Konstruktor- & Überladungs-Grenzwerte:**
-  - Max 20 Constructor-Parameter (Dependencies).
-  - Max 10 Methodenüberladungen.
+  - Max 5 Constructor-Parameter (Dependencies).
+  - Max 3 Methodenüberladungen.
 - **Sealed-by-Default:** Konkrete Klassen immer als `sealed` deklarieren.
 - **Immutability:** Bevorzuge `record`, `readonly struct` und Pure Functions.
 

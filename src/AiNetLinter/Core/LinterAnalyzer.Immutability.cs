@@ -88,23 +88,31 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private bool IsDtoOrEntity(ClassDeclarationSyntax node, string className)
     {
-        var suffixes = new[] { "Dto", "Entity", "Model", "Request", "Response", "Command" };
-        if (suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase)))
+        if (HasImmutabilityExemptSuffix(className))
         {
             return true;
         }
+        return HasDtoOrEntityAttribute(node);
+    }
 
+    private bool HasImmutabilityExemptSuffix(string className)
+    {
+        var suffixes = _config.Global.ImmutabilityExemptSuffixes;
+        return suffixes != null && suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool HasDtoOrEntityAttribute(ClassDeclarationSyntax node)
+    {
         var symbol = _semanticModel.GetDeclaredSymbol(node);
-        if (symbol != null)
-        {
-            var attributes = symbol.GetAttributes();
-            return attributes.Any(attr => 
-            {
-                var name = attr.AttributeClass?.Name ?? "";
-                return name.Contains("Dto") || name.Contains("Entity");
-            });
-        }
+        if (symbol == null) return false;
 
-        return false;
+        return symbol.GetAttributes().Any(IsDtoOrEntityAttribute);
+    }
+
+    private static bool IsDtoOrEntityAttribute(AttributeData attr)
+    {
+        var name = attr.AttributeClass?.Name;
+        if (name == null) return false;
+        return name.Contains("Dto") || name.Contains("Entity");
     }
 }

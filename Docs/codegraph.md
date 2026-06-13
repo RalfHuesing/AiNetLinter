@@ -89,7 +89,7 @@ classDiagram
         +Throw_InMethodEndingWithGuard_IsAllowed()
         +Throw_InMethodEndingWithValidate_IsAllowed()
         +Throw_InLocalFunctionEndingWithGuard_IsAllowed()
-        +Throw_InLocalFunctionNestedInGuardMethod_IsAllowed()
+        +Throw_InLocalFunctionNestedInGuardMethod_IsDisallowed()
         +ThrowStatement_InNormalMethod_IsDisallowed()
         +ThrowExpression_InNormalMethod_IsDisallowed()
         +Throw_InPropertyAccessor_IsDisallowed()
@@ -126,6 +126,7 @@ classDiagram
         +ProjectConfigResolver_WithWildcardMatch_MergesOverrides()
         +AIContextFootprintCalculator_SimpleClass_CalculatesLines()
         +RepoPlaybookGenerator_ScansAndGeneratesMarkdown()
+        +RepoPlaybookGenerator_WithAllowedException_FiltersThrowFromMetric()
         +LinterConfigLoader_WithNonExistentFile_ReturnsNull()
         +LinterConfigLoader_WithValidJson_LoadsConfig()
     }
@@ -284,7 +285,18 @@ classDiagram
     }
     class CliOptionFactory {
     }
+    class DebtReportExecutor {
+        +RunDebtReportAsync()
+    }
+    class ImpactExecutor {
+        +RunImpactAnalysisAsync()
+    }
     class LinterArgs {
+    }
+    class MaintenanceExecutor {
+        +AddDisableAllAsync()
+        +RemoveDisableAllAsync()
+        +CreateBaselineAsync()
     }
     class LinterConfig {
     }
@@ -318,11 +330,15 @@ classDiagram
         +Resolve()
         +ToSarifLevel()
     }
+    class AnalysisState {
+    }
     class CodegraphGenerator {
         +GenerateAsync()
     }
     class DiffImpactAnalyzer {
         +AnalyzeAsync()
+    }
+    class DocumentContext {
     }
     class LinterAnalyzer {
         +VisitUsingDirective()
@@ -368,16 +384,13 @@ classDiagram
         +RunAsync()
         +CreateWorkspaceProperties()
     }
-    class AnalysisState {
-    }
-    class DocumentContext {
-    }
-    class TestSentinelContext {
-    }
     class PartialClassLineAggregator {
         +BuildViolations()
     }
     class PartialClassPart {
+    }
+    class PostAnalysisChecks {
+        +Run()
     }
     class RepoPlaybookGenerator {
         +GenerateAsync()
@@ -399,6 +412,11 @@ classDiagram
     }
     class TestCoverageResolver {
         +IsCovered()
+    }
+    class TestProjectDetector {
+        +IsTestProject()
+    }
+    class TestSentinelContext {
     }
     class AIContextFootprintCalculator {
         +Calculate()
@@ -544,11 +562,11 @@ classDiagram
     LinterConfig --> TestSentinelConfig : nutzt
     ProjectOverrideEntry --> GlobalConfigOverride : nutzt
     ProjectOverrideEntry --> MetricsConfigOverride : nutzt
+    AnalysisState --> TestCoverageIndex : nutzt
+    DocumentContext --> LinterConfig : nutzt
     LinterAnalyzer --> LinterConfig : nutzt
     AnalyzerArgs --> LinterConfig : nutzt
     LinterEngine --> LinterConfig : nutzt
-    AnalysisState --> TestCoverageIndex : nutzt
-    DocumentContext --> LinterConfig : nutzt
     TestSentinelContext --> TestCoverageIndex : nutzt
     SarifRun --> SarifTool : nutzt
     SarifTool --> SarifDriver : nutzt

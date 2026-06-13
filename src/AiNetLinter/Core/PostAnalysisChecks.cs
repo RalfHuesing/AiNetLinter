@@ -23,21 +23,16 @@ internal static class PostAnalysisChecks
     /// <param name="config">Die globale Konfiguration.</param>
     public static void Run(AnalysisState state, LinterConfig config)
     {
-        RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, state.FileContents, config);
+        RunTestSentinel(state, config);
         RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents, config);
         RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents, config);
         AddPartialClassViolations(state.PartialClassParts, state.Violations, config);
     }
 
-    private static void RunTestSentinel(
-        TestCoverageIndex testCoverage,
-        ConcurrentBag<ClassInfo> sourceClasses,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents,
-        LinterConfig config)
+    private static void RunTestSentinel(AnalysisState state, LinterConfig config)
     {
-        var context = new TestSentinelContext(testCoverage, violations, fileContents);
-        foreach (var srcClass in sourceClasses)
+        var context = new TestSentinelContext(state.TestCoverage, state.Violations, state.FileContents);
+        foreach (var srcClass in state.SourceClasses)
         {
             CheckClassTestSentinel(srcClass, context, config);
         }

@@ -71,6 +71,10 @@ public sealed record GlobalConfig
     public bool RequireExplicitTruncationHandling { get; init; } = true;
     public bool EnforceNamespaceDirectoryMapping { get; init; } = true;
     public bool DetectAndBanPhantomDependencies { get; init; } = true;
+    public IReadOnlyCollection<string> ImmutabilityExemptSuffixes { get; init; } = new[]
+    {
+        "Dto", "Entity", "Model", "Request", "Response", "Command"
+    };
 }
 
 /// <summary>
@@ -245,6 +249,7 @@ public sealed record GlobalConfigOverride
     public bool? RequireExplicitTruncationHandling { get; init; }
     public bool? EnforceNamespaceDirectoryMapping { get; init; }
     public bool? DetectAndBanPhantomDependencies { get; init; }
+    public IReadOnlyCollection<string>? ImmutabilityExemptSuffixes { get; init; }
 }
 
 /// <summary>

@@ -82,7 +82,15 @@ public static class ProjectConfigResolver
                 EnforceNoVariableShadowing = og.EnforceNoVariableShadowing ?? global.Global.EnforceNoVariableShadowing,
                 EnforceReadonlyParameters = og.EnforceReadonlyParameters ?? global.Global.EnforceReadonlyParameters,
                 EnforceReadonlyFields = og.EnforceReadonlyFields ?? global.Global.EnforceReadonlyFields,
-                EnforceNoMagicValues = og.EnforceNoMagicValues ?? global.Global.EnforceNoMagicValues
+                EnforceNoMagicValues = og.EnforceNoMagicValues ?? global.Global.EnforceNoMagicValues,
+                EnforceExplicitStateImmutability = og.EnforceExplicitStateImmutability ?? global.Global.EnforceExplicitStateImmutability,
+                AllowedExceptions = og.AllowedExceptions ?? global.Global.AllowedExceptions,
+                EnforceStrictBoundaryForBusinessLogic = og.EnforceStrictBoundaryForBusinessLogic ?? global.Global.EnforceStrictBoundaryForBusinessLogic,
+                PreventContextDependentOverloads = og.PreventContextDependentOverloads ?? global.Global.PreventContextDependentOverloads,
+                RequireExplicitTruncationHandling = og.RequireExplicitTruncationHandling ?? global.Global.RequireExplicitTruncationHandling,
+                EnforceNamespaceDirectoryMapping = og.EnforceNamespaceDirectoryMapping ?? global.Global.EnforceNamespaceDirectoryMapping,
+                DetectAndBanPhantomDependencies = og.DetectAndBanPhantomDependencies ?? global.Global.DetectAndBanPhantomDependencies,
+                ImmutabilityExemptSuffixes = og.ImmutabilityExemptSuffixes ?? global.Global.ImmutabilityExemptSuffixes
             };
         }
 
@@ -102,7 +110,8 @@ public static class ProjectConfigResolver
                 AggregatePartialClassLineCount = om.AggregatePartialClassLineCount ?? global.Metrics.AggregatePartialClassLineCount,
                 MaxMethodOverloads = om.MaxMethodOverloads ?? global.Metrics.MaxMethodOverloads,
                 MaxConstructorDependencies = om.MaxConstructorDependencies ?? global.Metrics.MaxConstructorDependencies,
-                MaxAIContextFootprint = om.MaxAIContextFootprint ?? global.Metrics.MaxAIContextFootprint
+                MaxAIContextFootprint = om.MaxAIContextFootprint ?? global.Metrics.MaxAIContextFootprint,
+                MaxDirectoryDepth = om.MaxDirectoryDepth ?? global.Metrics.MaxDirectoryDepth
             };
         }
 

@@ -20,6 +20,9 @@ namespace AiNetLinter.Tests;
 // @covers AIContextFootprintCalculator
 // @covers ProjectConfigResolver
 // @covers LinterConfigLoader
+// @covers ImpactExecutor
+// @covers PostAnalysisChecks
+// @covers TestProjectDetector
 
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
@@ -63,14 +66,46 @@ public sealed class DeveloperExperienceTests
     {
         var globalConfig = new LinterConfig
         {
-            Global = new GlobalConfig { EnforceNoMagicValues = true, EnforceSealedClasses = true },
-            Metrics = new MetricsConfig { MaxLineCount = 100, MaxMethodLineCount = 10 },
+            Global = new GlobalConfig
+            {
+                EnforceNoMagicValues = true,
+                EnforceSealedClasses = true,
+                EnforceExplicitStateImmutability = true,
+                AllowedExceptions = new[] { "Exception" },
+                EnforceStrictBoundaryForBusinessLogic = true,
+                PreventContextDependentOverloads = true,
+                RequireExplicitTruncationHandling = true,
+                EnforceNamespaceDirectoryMapping = true,
+                DetectAndBanPhantomDependencies = true,
+                ImmutabilityExemptSuffixes = new[] { "Dto" }
+            },
+            Metrics = new MetricsConfig
+            {
+                MaxLineCount = 100,
+                MaxMethodLineCount = 10,
+                MaxDirectoryDepth = 4
+            },
             ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
             {
                 ["*.Tests"] = new()
                 {
-                    Global = new GlobalConfigOverride { EnforceNoMagicValues = false },
-                    Metrics = new MetricsConfigOverride { MaxMethodLineCount = 50 }
+                    Global = new GlobalConfigOverride
+                    {
+                        EnforceNoMagicValues = false,
+                        EnforceExplicitStateImmutability = false,
+                        AllowedExceptions = new[] { "CustomException" },
+                        EnforceStrictBoundaryForBusinessLogic = false,
+                        PreventContextDependentOverloads = false,
+                        RequireExplicitTruncationHandling = false,
+                        EnforceNamespaceDirectoryMapping = false,
+                        DetectAndBanPhantomDependencies = false,
+                        ImmutabilityExemptSuffixes = new[] { "TestDto" }
+                    },
+                    Metrics = new MetricsConfigOverride
+                    {
+                        MaxMethodLineCount = 50,
+                        MaxDirectoryDepth = 8
+                    }
                 }
             }
         };
@@ -81,6 +116,19 @@ public sealed class DeveloperExperienceTests
         Assert.True(resolved.Global.EnforceSealedClasses);   // Kept from global
         Assert.Equal(100, resolved.Metrics.MaxLineCount);   // Kept from global
         Assert.Equal(50, resolved.Metrics.MaxMethodLineCount); // Overridden
+
+        // Verify Epic 20 rules
+        Assert.False(resolved.Global.EnforceExplicitStateImmutability);
+        Assert.Contains("CustomException", resolved.Global.AllowedExceptions);
+        Assert.False(resolved.Global.EnforceStrictBoundaryForBusinessLogic);
+        Assert.False(resolved.Global.PreventContextDependentOverloads);
+        Assert.False(resolved.Global.RequireExplicitTruncationHandling);
+        Assert.False(resolved.Global.EnforceNamespaceDirectoryMapping);
+        Assert.False(resolved.Global.DetectAndBanPhantomDependencies);
+        Assert.Contains("TestDto", resolved.Global.ImmutabilityExemptSuffixes);
+
+        // Verify Metrics
+        Assert.Equal(8, resolved.Metrics.MaxDirectoryDepth);
     }
 
     [Fact]
@@ -147,6 +195,58 @@ public sealed class DeveloperExperienceTests
             Assert.Contains("AI Repository Playbook", content);
             Assert.Contains("EnforceNoMagicValues:** 1 mal deaktiviert.", content);
             Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RepoPlaybookGenerator_WithAllowedException_FiltersThrowFromMetric()
+    {
+        const string source = """
+            namespace TestNamespace;
+            public class WorkClass
+            {
+                public string GetResult()
+                {
+                    throw new System.ArgumentNullException();
+                }
+            }
+            """;
+
+        var workspace = new AdhocWorkspace();
+        var projectId = ProjectId.CreateNewId();
+        var projectInfo = ProjectInfo.Create(projectId, VersionStamp.Create(), "PlaybookProj", "PlaybookProj", LanguageNames.CSharp)
+            .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) })
+            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var solution = workspace.CurrentSolution.AddProject(projectInfo);
+        var docId = DocumentId.CreateNewId(projectId);
+        solution = solution.AddDocument(docId, "WorkClass.cs", source);
+
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig
+            {
+                AllowedExceptions = new[] { "ArgumentNullException" }
+            },
+            Metrics = new MetricsConfig()
+        };
+
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
+        try
+        {
+            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, verbose: false, config: config);
+
+            Assert.True(File.Exists(tempPath));
+            var content = File.ReadAllText(tempPath);
+            // Since ArgumentNullException is allowed, the throws count should be 0.
+            Assert.Contains("Kontrollfluss-Exceptions:** 0", content);
         }
         finally
         {

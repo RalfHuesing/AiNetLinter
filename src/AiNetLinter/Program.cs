@@ -139,7 +139,7 @@ public static class Program
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
 
-        await GenerateOptionalOutputsAsync(catalog.Solution, args);
+        await GenerateOptionalOutputsAsync(catalog.Solution, args, config);
 
         var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
         try
@@ -155,7 +155,7 @@ public static class Program
         }
     }
 
-    private static async Task GenerateOptionalOutputsAsync(Solution solution, LinterArgs args)
+    private static async Task GenerateOptionalOutputsAsync(Solution solution, LinterArgs args, LinterConfig config)
     {
         if (args.GraphPath != null)
         {
@@ -164,7 +164,7 @@ public static class Program
 
         if (args.PlaybookPath != null)
         {
-            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose);
+            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose, config);
         }
     }
 
@@ -219,7 +219,7 @@ public static class Program
         }
     }
 
-    private static async Task TryGeneratePlaybookAsync(Solution solution, string playbookPath, bool verbose)
+    private static async Task TryGeneratePlaybookAsync(Solution solution, string playbookPath, bool verbose, LinterConfig config)
     {
         try
         {
@@ -227,7 +227,7 @@ public static class Program
             {
                 Console.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
             }
-            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose);
+            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose, config);
         }
         catch (Exception ex)
         {
