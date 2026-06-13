@@ -41,6 +41,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Symbol = symbol,
                 HasTestMethods = CheckForTestMethods(node),
                 IsPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)),
+                ProjectName = _projectName,
             });
         }
 

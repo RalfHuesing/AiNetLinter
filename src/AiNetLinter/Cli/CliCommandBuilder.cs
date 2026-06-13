@@ -11,6 +11,7 @@ internal static class CliCommandBuilder
         Option<string?> Config,
         Option<string> Path,
         Option<string?> Graph,
+        Option<string?> Playbook,
         Option<string> Format,
         Option<bool> Verbose,
         Option<string?> CreateBaseline,
@@ -26,6 +27,7 @@ internal static class CliCommandBuilder
         string? ConfigPath,
         string TargetPath,
         string? GraphPath,
+        string? PlaybookPath,
         string Format,
         bool Verbose,
         string? CreateBaselinePath,
@@ -42,7 +44,7 @@ internal static class CliCommandBuilder
         var options = CreateOptions();
         var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
         {
-            options.Config, options.Path, options.Graph, options.Format, options.Verbose,
+            options.Config, options.Path, options.Graph, options.Playbook, options.Format, options.Verbose,
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
         };
@@ -56,6 +58,7 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateConfigOption(),
             CliOptionFactory.CreatePathOption(),
             CliOptionFactory.CreateGraphOption(),
+            CliOptionFactory.CreatePlaybookOption(),
             CliOptionFactory.CreateFormatOption(),
             CliOptionFactory.CreateVerboseOption(),
             CliOptionFactory.CreateBaselineCreateOption(),
@@ -74,6 +77,7 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.Config),
             parseResult.GetValue(options.Path) ?? "",
             parseResult.GetValue(options.Graph),
+            parseResult.GetValue(options.Playbook),
             parseResult.GetValue(options.Format) ?? "text",
             parseResult.GetValue(options.Verbose),
             parseResult.GetValue(options.CreateBaseline),
