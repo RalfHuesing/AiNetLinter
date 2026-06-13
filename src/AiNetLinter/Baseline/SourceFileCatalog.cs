@@ -132,7 +132,7 @@ public sealed class SourceFileCatalog : IDisposable
             return [];
         }
 
-        var isTestProject = IsTestProject(project);
+        var isTestProject = TestProjectDetector.IsTestProject(project);
         return CollectValidDocuments(project, solutionDir, isTestProject);
     }
 
@@ -154,35 +154,6 @@ public sealed class SourceFileCatalog : IDisposable
         }
 
         return workItems;
-    }
-
-    private static bool IsTestProject(Project project)
-    {
-        foreach (var reference in project.MetadataReferences)
-        {
-            if (IsTestReference(reference.Display))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsTestReference(string? display)
-    {
-        if (string.IsNullOrEmpty(display)) return false;
-
-        var keywords = new[] { "xunit", "nunit", "testplatform", "unittesting" };
-        foreach (var keyword in keywords)
-        {
-            if (display.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool IsInSolutionDir(string? filePath, string? solutionDir)

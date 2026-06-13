@@ -1,8 +1,11 @@
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
+using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Core;
 
@@ -40,7 +43,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 MaxCognitiveComplexity = GetMaxMethodComplexity(node),
-                Symbol = symbol,
+                InheritanceDepth = GetInheritanceDepth(symbol),
+                AIContextFootprint = AIContextFootprintCalculator.Calculate(symbol),
                 HasTestMethods = CheckForTestMethods(node),
                 IsPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)),
                 ProjectName = _projectName,
@@ -351,5 +355,19 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         var typeInfo = _semanticModel.GetTypeInfo(node);
         return typeInfo.Type?.TypeKind == TypeKind.Dynamic;
+    }
+
+    private static int GetInheritanceDepth(INamedTypeSymbol symbol)
+    {
+        int depth = 0;
+        var current = symbol.BaseType;
+        while (current != null && current.SpecialType != SpecialType.System_Object)
+        {
+            depth++;
+            if (depth > 20) return depth;
+            current = current.BaseType;
+        }
+
+        return depth;
     }
 }
