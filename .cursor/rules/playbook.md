@@ -9,7 +9,7 @@ Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
 ## 1. Genutzte Architekturmuster
-- **Result-Pattern-Nutzung:** 0 Methoden liefern `Result` oder `Result<T>` zurueck.
+- **Result-Pattern-Nutzung:** 5 Methoden liefern `Result` oder `Result<T>` zurueck.
 - **Kontrollfluss-Exceptions:** 20 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
 
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
@@ -28,18 +28,16 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 102 / 116 (88 %)
+- **Wave-ready Dateien:** 103 / 117 (88 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
-## 4. Architektur-Slices (aus Namespace)
+## 4. Architektur-Slices (nach Ordner)
 
-- **Core.***: 27 files, median Footprint 158 LOC, 1× disable-all
-- **Tests.***: 12 files, median Footprint 195 LOC, 3× disable-all
-- **Baseline.***: 10 files, median Footprint 24 LOC
-- **Root.***: 8 files, median Footprint 11 LOC
-- **Output.***: 7 files, median Footprint 86 LOC, 1× disable-all
+- **src/AiNetLinter/**: 74 files, median Footprint 86 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 42 files, median Footprint 70 LOC, 8× disable-all
+- **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)
 

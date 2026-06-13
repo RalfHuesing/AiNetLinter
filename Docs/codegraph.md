@@ -69,6 +69,8 @@ classDiagram
     class CliIntegrationTests {
         +RunLinterCli_OnWholeSolution_ReturnsSuccess()
         +GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
+        +SyncCursorRulesAndPlaybook_Combined_GeneratesBoth()
+        +GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
         +RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
     }
     class CognitiveComplexityWalkerTests {
@@ -105,6 +107,14 @@ classDiagram
         +MagicValues_Exceptions_AreAllowed()
         +MagicValues_ConstDeclarations_AreAllowed()
         +MagicValues_AttributeArguments_AreAllowed()
+    }
+    class PlaybookGeneratorRound2Tests {
+        +BuildContentAsync_ReturnsPlaybookString()
+        +BuildContentAsync_ProducesIdenticalContentToGenerateAsync()
+        +BuildContentAsync_DiffersFromStaleFile()
+        +GenerateAsync_ArchitectureSliceHeading_UsesOrdner()
+        +BuildContentAsync_ProjectInternalResultSuffix_CountsAsResultPattern()
+        +BuildContentAsync_ExternalResultType_NotCountedAsProjectInternal()
     }
     class ScopeImmutabilityTests {
         +Shadowing_ParameterShadowsField_IsDisallowed()
@@ -406,6 +416,7 @@ classDiagram
     }
     class RepoPlaybookGenerator {
         +GenerateAsync()
+        +BuildContentAsync()
     }
     class PlaybookDocInfo {
     }

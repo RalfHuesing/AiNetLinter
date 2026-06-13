@@ -87,9 +87,32 @@ public sealed class RepoPlaybookGenerator
     /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
     public static async Task GenerateAsync(Solution solution, string outputPath, bool verbose, LinterConfig? config = null)
     {
+        var content = await BuildContentAsync(solution, verbose, config);
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+        await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
+        if (verbose)
+        {
+            Console.WriteLine($"[INFO]: Repo-Playbook erfolgreich generiert unter: {outputPath}");
+        }
+    }
+
+    /// <summary>
+    /// Generiert den Playbook-Inhalt als String (ohne Datei zu schreiben).
+    /// Für den --check-Modus und Tests.
+    /// </summary>
+    /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
+    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
+    /// <param name="config">Die globale Linter-Konfiguration.</param>
+    /// <returns>Der generierte Markdown-Inhalt.</returns>
+    public static async Task<string> BuildContentAsync(Solution solution, bool verbose, LinterConfig? config = null)
+    {
         var stats = await ScanSolutionAsync(solution, config);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-        await WritePlaybookFileAsync(outputPath, stats, verbose, solutionDir, config);
+        return BuildContent(stats, solutionDir, config);
     }
 
     private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config)
@@ -211,19 +234,8 @@ public sealed class RepoPlaybookGenerator
         return rule.TrimEnd(',', ';', '.', '\'', '"');
     }
 
-    private static async Task WritePlaybookFileAsync(
-        string outputPath,
-        PlaybookStats stats,
-        bool verbose,
-        string solutionDir,
-        LinterConfig? config)
+    private static string BuildContent(PlaybookStats stats, string solutionDir, LinterConfig? config)
     {
-        var directory = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
         var sb = new StringBuilder();
         sb.AppendLine("---");
         sb.AppendLine("description: Repo-Statistik, bei Architektur-Fragen lesen");
@@ -248,21 +260,22 @@ public sealed class RepoPlaybookGenerator
         {
             sb.AppendLine("## 3. Migrations-Status");
             sb.AppendLine();
-            
+
             int totalFiles = stats.DocInfos.Count;
             int waveReadyFiles = stats.DocInfos.Count(d => !d.HasDisableAll);
             double waveReadyPercentage = totalFiles > 0 ? (double)waveReadyFiles / totalFiles * 100 : 0;
-            
+
             sb.AppendLine($"- **Wave-ready Dateien:** {waveReadyFiles} / {totalFiles} ({waveReadyPercentage:F0} %)");
-            
+
             var filesWithDisableAll = stats.DocInfos.Where(d => d.HasDisableAll).Select(d => d.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var waveReadyViolations = stats.Violations.Where(v => !filesWithDisableAll.Contains(v.FilePath)).ToList();
-            
+
             sb.AppendLine($"- **Verstösse nur wave-ready (default rules):** {waveReadyViolations.Count}");
             sb.AppendLine($"- **Top-Ordner wave-ready-Verstöße:**");
-            
+
             var folderGroups = waveReadyViolations
-                .Select(v => {
+                .Select(v =>
+                {
                     if (string.IsNullOrEmpty(v.FilePath) || string.IsNullOrEmpty(solutionDir))
                     {
                         return "Root";
@@ -276,7 +289,7 @@ public sealed class RepoPlaybookGenerator
                 .OrderByDescending(x => x.Count)
                 .Take(3)
                 .ToList();
-                
+
             if (folderGroups.Count == 0)
             {
                 sb.AppendLine("  - Keine offenen Verstöße in wave-ready Dateien.");
@@ -290,26 +303,14 @@ public sealed class RepoPlaybookGenerator
             }
             sb.AppendLine();
 
-            sb.AppendLine("## 4. Architektur-Slices (aus Namespace)");
+            sb.AppendLine("## 4. Architektur-Slices (nach Ordner)");
             sb.AppendLine();
-            
-            var allNamespaces = stats.DocInfos.SelectMany(d => d.Namespaces).Distinct().ToList();
-            var commonPrefix = FindCommonPrefix(allNamespaces);
-            
+
             var sliceGroups = stats.DocInfos
-                .Select(d => {
-                    var ns = d.Namespaces.FirstOrDefault() ?? "";
-                    var relNs = ns;
-                    if (!string.IsNullOrEmpty(commonPrefix) && ns.StartsWith(commonPrefix))
-                    {
-                        relNs = ns.Substring(commonPrefix.Length);
-                    }
-                    var parts = relNs.Split('.', StringSplitOptions.RemoveEmptyEntries);
-                    var slice = parts.Length > 0 ? string.Join(".", parts.Take(2)) : "Root";
-                    return new { Doc = d, Slice = slice };
-                })
+                .Select(d => new { Doc = d, Slice = GetFolderSlice(d.FilePath, solutionDir) })
                 .GroupBy(x => x.Slice)
-                .Select(g => {
+                .Select(g =>
+                {
                     var docs = g.Select(x => x.Doc).ToList();
                     var sortedLocs = docs.Select(d => d.LineCount).OrderBy(x => x).ToList();
                     int medianLoc = sortedLocs.Count > 0 ? sortedLocs[sortedLocs.Count / 2] : 0;
@@ -319,11 +320,11 @@ public sealed class RepoPlaybookGenerator
                 .OrderByDescending(x => x.FileCount)
                 .Take(5)
                 .ToList();
-                
+
             foreach (var slice in sliceGroups)
             {
                 var disableAllStr = slice.DisableAllCount > 0 ? $", {slice.DisableAllCount}× disable-all" : "";
-                sb.AppendLine($"- **{slice.Slice}.***: {slice.FileCount} files, median Footprint {slice.MedianLoc} LOC{disableAllStr}");
+                sb.AppendLine($"- **{slice.Slice}/**: {slice.FileCount} files, median Footprint {slice.MedianLoc} LOC{disableAllStr}");
             }
             sb.AppendLine();
 
@@ -331,17 +332,18 @@ public sealed class RepoPlaybookGenerator
             sb.AppendLine();
             sb.AppendLine("| Intent | Offene Verstöße (wave-ready) | Regeln |");
             sb.AppendLine("| :--- | ---: | :--- |");
-            
+
             var intentGroups = waveReadyViolations
                 .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Intent = g.Key,
                     Count = g.Count(),
                     Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct())
                 })
                 .OrderByDescending(x => x.Count)
                 .ToList();
-                
+
             if (intentGroups.Count == 0)
             {
                 sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
@@ -356,27 +358,19 @@ public sealed class RepoPlaybookGenerator
             sb.AppendLine();
         }
 
-        await File.WriteAllTextAsync(outputPath, sb.ToString(), Encoding.UTF8);
-
-        if (verbose)
-        {
-            Console.WriteLine($"[INFO]: Repo-Playbook erfolgreich generiert unter: {outputPath}");
-        }
+        return sb.ToString();
     }
 
-    private static string FindCommonPrefix(List<string> strings)
+    private static string GetFolderSlice(string filePath, string solutionDir)
     {
-        if (strings == null || strings.Count == 0) return string.Empty;
-        var first = strings[0];
-        int len = first.Length;
-        foreach (var s in strings)
+        if (string.IsNullOrEmpty(filePath) || string.IsNullOrEmpty(solutionDir))
         {
-            int i = 0;
-            while (i < len && i < s.Length && first[i] == s[i]) i++;
-            len = i;
-            if (len == 0) return string.Empty;
+            return "Root";
         }
-        return first.Substring(0, len);
+        var rel = PathNormalizer.ToRelative(solutionDir, filePath).Replace('\\', '/');
+        var parts = rel.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) return string.Join("/", parts.Take(2));
+        return parts.Length == 1 ? parts[0] : "Root";
     }
 
     private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts)
@@ -423,6 +417,13 @@ public sealed class RepoPlaybookGenerator
             base.VisitMethodDeclaration(node);
         }
 
+        private bool IsProjectInternal(ITypeSymbol typeSymbol)
+        {
+            return SymbolEqualityComparer.Default.Equals(
+                typeSymbol.ContainingAssembly,
+                _semanticModel.Compilation.Assembly);
+        }
+
         public override void VisitThrowStatement(ThrowStatementSyntax node)
         {
             if (!IsAllowedException(node.Expression))
@@ -452,9 +453,14 @@ public sealed class RepoPlaybookGenerator
             return _allowedExceptions.Contains(typeSymbol.Name);
         }
 
-        private static bool IsOrContainsResult(ITypeSymbol typeSymbol)
+        private bool IsOrContainsResult(ITypeSymbol typeSymbol)
         {
             if (typeSymbol.Name == "Result")
+            {
+                return true;
+            }
+
+            if (IsProjectInternal(typeSymbol) && typeSymbol.Name.EndsWith("Result", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -467,7 +473,7 @@ public sealed class RepoPlaybookGenerator
             return false;
         }
 
-        private static bool IsGenericResultWrapper(INamedTypeSymbol namedType)
+        private bool IsGenericResultWrapper(INamedTypeSymbol namedType)
         {
             if (!namedType.IsGenericType)
             {

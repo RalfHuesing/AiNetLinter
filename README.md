@@ -309,7 +309,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 *   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
-*   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` (Optional).
+*   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 *   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
@@ -319,7 +319,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
 *   `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
 *   `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
-*   `--check` (Flag): Drift-Check für `--sync-cursor-rules`. Prüft, ob `.cursor/rules/AiNetLinter.mdc` aktuell ist (Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung, keine Workspace-Mutation) (Optional).
+*   `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-cursor-rules`: Prüft `.cursor/rules/AiNetLinter.mdc`. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
 *   `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
 
 ### Wellen-Workflow (Agent-Migration)
