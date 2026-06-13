@@ -20,6 +20,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly List<RuleViolation> _violations = new();
     private string _currentNamespace = "";
     private readonly bool _isTestFile;
+    private readonly HashSet<IFieldSymbol> _privateFieldsToAnalyze = new(SymbolEqualityComparer.Default);
+    private readonly HashSet<IFieldSymbol> _fieldsModifiedOutsideConstructor = new(SymbolEqualityComparer.Default);
 
     public List<ClassInfo> Classes { get; } = new();
     public List<PartialClassPart> PartialClassParts { get; } = new();
@@ -51,6 +53,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckLineCount();
         CheckNullableEnable();
         Visit(_tree.GetRoot());
+        CheckReadonlyFields();
         FilterSuppressedViolations();
     }
 
@@ -368,5 +371,33 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool IsSuppressed(string ruleName, int lineNumber)
     {
         return SuppressionEvaluator.IsSuppressed(_tree.GetText().ToString(), ruleName, lineNumber);
+    }
+
+    private void CheckReadonlyFields()
+    {
+        if (!_config.Global.EnforceReadonlyFields) return;
+
+        foreach (var field in _privateFieldsToAnalyze)
+        {
+            CheckSingleFieldReadonly(field);
+        }
+    }
+
+    private void CheckSingleFieldReadonly(IFieldSymbol field)
+    {
+        if (_fieldsModifiedOutsideConstructor.Contains(field)) return;
+
+        var syntaxRef = field.DeclaringSyntaxReferences.FirstOrDefault();
+        var syntaxNode = syntaxRef?.GetSyntax();
+        var lineNumber = syntaxNode != null ? GetLineNumber(syntaxNode) : 1;
+
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = lineNumber,
+            RuleName = "EnforceReadonlyFields",
+            Details = $"Das private Feld '{field.Name}' wird nur im Konstruktor oder Initialisierer zugewiesen, ist aber nicht als 'readonly' deklariert.",
+            Guidance = "Fuege den 'readonly' Modifikator zum Feld hinzu, um unabsichtliche Modifikationen zu verhindern."
+        });
     }
 }

@@ -14,7 +14,11 @@
     "EnforceNoSilentCatch": true,
     "AllowCancellationShutdownCatch": true,
     "EnforceMinimalApiAsParameters": false,
-    "EnforceResultPatternOverExceptions": false
+    "EnforceResultPatternOverExceptions": false,
+    "EnforceNoVariableShadowing": false,
+    "EnforceReadonlyParameters": false,
+    "EnforceReadonlyFields": false,
+    "EnforceNoMagicValues": false
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -24,7 +28,9 @@
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
     "MinCognitiveComplexityForTest": 3,
-    "AggregatePartialClassLineCount": false
+    "AggregatePartialClassLineCount": false,
+    "MaxMethodOverloads": 10,
+    "MaxConstructorDependencies": 20
   },
   "TestSentinel": {
     "ClassNamePatterns": [

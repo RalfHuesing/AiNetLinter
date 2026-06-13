@@ -123,19 +123,19 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## Epic 13: Scope-Verwirrung & Immutability (Scope- & Zustands-Leitplanken)
 *Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte).*
-- [ ] **Variable Shadowing (Verdeckung) verbieten:**
+- [x] **Variable Shadowing (Verdeckung) verbieten:**
   - Statische Prüfung (über `SemanticModel` / `SyntaxTree`), ob lokale Variablen oder Parameter Felder/Eigenschaften der Klasse oder Parameter äußerer Methoden verdecken (`Shadowing`).
   - Fehlermeldung bei Verstößen, da Shadowing die Variablenverfolgung bei LLMs stört.
   - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceNoVariableShadowing`).
-- [ ] **MaxMethodOverloads limitieren:**
+- [x] **MaxMethodOverloads limitieren:**
   - Methode overload count analysieren. Warnung, wenn eine Klasse mehr als `MaxMethodOverloads` (Standard: 2) gleichnamige Methoden deklariert.
   - LLMs scheitern oft bei der Zuordnung feiner Typunterschiede bei übermäßigem Overloading.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxMethodOverloads`).
-- [ ] **Verbot von Parameter-Reassignment (Readonly Parameter):**
+- [x] **Verbot von Parameter-Reassignment (Readonly Parameter):**
   - Analysiere, ob Parameter innerhalb von Methodenkörpern überschrieben werden (z. B. `amount = amount * 2`).
   - Parameter müssen implizit als `readonly` behandelt werden, da Reassignment den linearen Tokenizer-Fluss stört.
   - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceReadonlyParameters`).
-- [ ] **Immutability-Check für Klassenfelder:**
+- [x] **Immutability-Check für Klassenfelder:**
   - Warnung, wenn `private` Felder nicht als `readonly` deklariert sind, obwohl sie nur im Konstruktor zugewiesen werden. Minimiert veränderlichen Zustand für sicherere KI-Edits.
   - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceReadonlyFields`).
 
@@ -143,11 +143,11 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## Epic 14: Topologische Kopplung & Magic Values (Kopplung & Semantik)
 *Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein.*
-- [ ] **Efferent Coupling limitieren (Constructor Dependencies):**
+- [x] **Efferent Coupling limitieren (Constructor Dependencies):**
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
   - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster massiv.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
-- [ ] **Vermeidung von Magic Values (Numbers & Strings):**
+- [x] **Vermeidung von Magic Values (Numbers & Strings):**
   - Finde literale Werte (Magic Numbers/Strings wie `status == 4` oder `role == "Admin"`) direkt in Methodenkörpern.
   - Ausnahmen deklarieren für `0`, `1`, `-1` und leere Strings.
   - Erzwinge stattdessen Konstanten (`const`), `static readonly` Felder oder `enum`s, um die Semantik explizit zu benennen.

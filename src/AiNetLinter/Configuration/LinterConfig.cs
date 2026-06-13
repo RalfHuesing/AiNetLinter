@@ -42,6 +42,10 @@ public sealed record GlobalConfig
     public bool AllowCancellationShutdownCatch { get; init; } = true;
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
     public bool EnforceResultPatternOverExceptions { get; init; } = true;
+    public bool EnforceNoVariableShadowing { get; init; } = true;
+    public bool EnforceReadonlyParameters { get; init; } = true;
+    public bool EnforceReadonlyFields { get; init; } = true;
+    public bool EnforceNoMagicValues { get; init; } = true;
 }
 
 /// <summary>
@@ -57,6 +61,8 @@ public sealed record MetricsConfig
     public int MaxInheritanceDepth { get; init; } = 2;
     public int MinCognitiveComplexityForTest { get; init; } = 3;
     public bool AggregatePartialClassLineCount { get; init; } = false;
+    public int MaxMethodOverloads { get; init; } = 2;
+    public int MaxConstructorDependencies { get; init; } = 5;
 }
 
 /// <summary>
