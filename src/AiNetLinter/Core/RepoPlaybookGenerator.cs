@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Core;
 
@@ -58,13 +59,21 @@ public sealed class RepoPlaybookGenerator
     /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
     /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
     /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
-    public static async Task GenerateAsync(Solution solution, string outputPath, bool verbose)
+    /// <summary>
+    /// Generiert das Playbook und schreibt es in die angegebene Datei.
+    /// </summary>
+    /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
+    /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
+    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
+    /// <param name="config">Die globale Linter-Konfiguration.</param>
+    /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
+    public static async Task GenerateAsync(Solution solution, string outputPath, bool verbose, LinterConfig? config = null)
     {
-        var stats = await ScanSolutionAsync(solution);
+        var stats = await ScanSolutionAsync(solution, config);
         await WritePlaybookFileAsync(outputPath, stats, verbose);
     }
 
-    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution)
+    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config)
     {
         int totalResultMethods = 0;
         int totalThrows = 0;
@@ -72,7 +81,7 @@ public sealed class RepoPlaybookGenerator
 
         foreach (var project in solution.Projects)
         {
-            var projectStats = await ScanProjectAsync(project, suppressionCounts);
+            var projectStats = await ScanProjectAsync(project, suppressionCounts, config);
             totalResultMethods += projectStats.ResultMethods;
             totalThrows += projectStats.Throws;
         }
@@ -80,14 +89,14 @@ public sealed class RepoPlaybookGenerator
         return new PlaybookStats(totalResultMethods, totalThrows, suppressionCounts);
     }
 
-    private static async Task<(int ResultMethods, int Throws)> ScanProjectAsync(Project project, Dictionary<string, int> suppressionCounts)
+    private static async Task<(int ResultMethods, int Throws)> ScanProjectAsync(Project project, Dictionary<string, int> suppressionCounts, LinterConfig? config)
     {
         int totalResultMethods = 0;
         int totalThrows = 0;
 
         foreach (var document in project.Documents)
         {
-            var docStats = await ScanDocumentAsync(document, suppressionCounts);
+            var docStats = await ScanDocumentAsync(document, suppressionCounts, config);
             totalResultMethods += docStats.ResultMethods;
             totalThrows += docStats.Throws;
         }
@@ -95,7 +104,7 @@ public sealed class RepoPlaybookGenerator
         return (totalResultMethods, totalThrows);
     }
 
-    private static async Task<(int ResultMethods, int Throws)> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts)
+    private static async Task<(int ResultMethods, int Throws)> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts, LinterConfig? config)
     {
         var semanticModel = await document.GetSemanticModelAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
@@ -104,7 +113,10 @@ public sealed class RepoPlaybookGenerator
             return (0, 0);
         }
 
-        var walker = new PlaybookSyntaxWalker(semanticModel);
+        var effectiveConfig = config != null ? ProjectConfigResolver.ResolveForDocument(document, config) : null;
+        var allowedExceptions = effectiveConfig?.Global?.AllowedExceptions;
+
+        var walker = new PlaybookSyntaxWalker(semanticModel, allowedExceptions);
         walker.Visit(syntaxRoot);
 
         CollectSuppressionsFromTrivia(syntaxRoot, suppressionCounts);
@@ -223,13 +235,15 @@ public sealed class RepoPlaybookGenerator
     private sealed class PlaybookSyntaxWalker : CSharpSyntaxWalker
     {
         private readonly SemanticModel _semanticModel;
+        private readonly IReadOnlyCollection<string>? _allowedExceptions;
 
         public int ResultPatternCount { get; private set; }
         public int ThrowCount { get; private set; }
 
-        public PlaybookSyntaxWalker(SemanticModel semanticModel) : base(SyntaxWalkerDepth.Node)
+        public PlaybookSyntaxWalker(SemanticModel semanticModel, IReadOnlyCollection<string>? allowedExceptions) : base(SyntaxWalkerDepth.Node)
         {
             _semanticModel = semanticModel;
+            _allowedExceptions = allowedExceptions;
         }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
@@ -244,14 +258,31 @@ public sealed class RepoPlaybookGenerator
 
         public override void VisitThrowStatement(ThrowStatementSyntax node)
         {
-            ThrowCount++;
+            if (!IsAllowedException(node.Expression))
+            {
+                ThrowCount++;
+            }
             base.VisitThrowStatement(node);
         }
 
         public override void VisitThrowExpression(ThrowExpressionSyntax node)
         {
-            ThrowCount++;
+            if (!IsAllowedException(node.Expression))
+            {
+                ThrowCount++;
+            }
             base.VisitThrowExpression(node);
+        }
+
+        private bool IsAllowedException(ExpressionSyntax? expression)
+        {
+            if (expression is not ObjectCreationExpressionSyntax creation) return false;
+            if (_allowedExceptions == null) return false;
+
+            var typeSymbol = _semanticModel.GetTypeInfo(creation).Type;
+            if (typeSymbol == null) return false;
+
+            return _allowedExceptions.Contains(typeSymbol.Name);
         }
 
         private static bool IsOrContainsResult(ITypeSymbol typeSymbol)

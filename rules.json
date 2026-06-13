@@ -24,7 +24,8 @@
     "PreventContextDependentOverloads": false,
     "RequireExplicitTruncationHandling": false,
     "EnforceNamespaceDirectoryMapping": false,
-    "DetectAndBanPhantomDependencies": false
+    "DetectAndBanPhantomDependencies": false,
+    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"]
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -36,7 +37,7 @@
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
     "MaxMethodOverloads": 3,
-    "MaxConstructorDependencies": 20,
+    "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
     "MaxAIContextFootprint": 5000
   },

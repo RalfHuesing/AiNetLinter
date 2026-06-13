@@ -106,7 +106,22 @@ public static class ViolationTextFormatter
         ["EnforceNullableEnable"] = "-> EnforceNullableEnable: Fuege '#nullable enable' am Dateianfang hinzu.",
         ["AllowDynamic"] = "-> AllowDynamic: 'dynamic' ist verboten. Nutze statische Typisierung oder Interfaces.",
         ["AllowOutParameters"] = "-> AllowOutParameters: 'out'-Parameter sind verboten. Benutze Tuples oder Records fuer mehrere Rueckgabewerte.",
-        ["StaticTestSentinel"] = "-> StaticTestSentinel: Fehlende Testabdeckung fuer komplexe Klasse. Schreibe einen Unit-Test."
+        ["StaticTestSentinel"] = "-> StaticTestSentinel: Fehlende Testabdeckung fuer komplexe Klasse. Schreibe einen Unit-Test.",
+        ["EnforceExplicitStateImmutability"] = "-> EnforceExplicitStateImmutability: Vermeide veraenderlichen Zustand. Verwende 'readonly' Felder, 'init'-only Properties oder 'record' Typen.",
+        ["EnforceStrictBoundaryForBusinessLogic"] = "-> EnforceStrictBoundaryForBusinessLogic: Business-Logic-Klassen (z.B. Calculator, Rule) duerfen keine I/O-Operationen oder Datenbankzugriffe durchfuehren. Kapsle diese in Interfaces.",
+        ["PreventContextDependentOverloads"] = "-> PreventContextDependentOverloads: Zu viele Methodenueberladungen mit identischer Parameteranzahl, die sich nur durch primitive Typen unterscheiden. Verwende explizite Methodennamen.",
+        ["RequireExplicitTruncationHandling"] = "-> RequireExplicitTruncationHandling: Zeichenketten-Abschneiden (Truncation) muss explizit behandelt werden, um Datenverlust zu vermeiden.",
+        ["EnforceNamespaceDirectoryMapping"] = "-> EnforceNamespaceDirectoryMapping: Der Namespace der Datei muss dem Pfad im Dateisystem entsprechen.",
+        ["DetectAndBanPhantomDependencies"] = "-> DetectAndBanPhantomDependencies: Banned dependencies detected (Phantom-Abhaengigkeiten). Nutze nur explizit erlaubte Namespace-Pfade.",
+        ["EnforceNoMagicValues"] = "-> EnforceNoMagicValues: Vermeide magische Literale. Deklariere Konstanten ('const' oder 'static readonly') oder benutze Enums.",
+        ["EnforceNoVariableShadowing"] = "-> EnforceNoVariableShadowing: Shadowing von Variablen/Parametern verboten. Benenne lokale Variablen eindeutig.",
+        ["EnforceReadonlyParameters"] = "-> EnforceReadonlyParameters: Parameter sind schreibgeschuetzt und duerfen innerhalb der Methode nicht neu zugewiesen werden.",
+        ["EnforceReadonlyFields"] = "-> EnforceReadonlyFields: Private Felder, die nur im Konstruktor zugewiesen werden, muessen als 'readonly' deklariert sein.",
+        ["MaxDirectoryDepth"] = "-> MaxDirectoryDepth: Die Verzeichnistiefe des Projekts ueberschreitet das erlaubte Maximum.",
+        ["MaxInheritanceDepth"] = "-> MaxInheritanceDepth: Zu tiefe Vererbungshierarchie. Bevorzuge Komposition statt Vererbung.",
+        ["MaxAIContextFootprint"] = "-> MaxAIContextFootprint: Der transitive Code-Footprint fuer KI-Agenten ist zu gross. Reduziere Kopplung und Abhaengigkeiten.",
+        ["MaxMethodOverloads"] = "-> MaxMethodOverloads: Zu viele Methodenueberladungen. Verwende verschiedene Methodennamen oder optionale Parameter.",
+        ["MaxConstructorDependencies"] = "-> MaxConstructorDependencies: Zu viele Konstruktor-Abhaengigkeiten. Teile die Klasse auf oder nutze ein Parameter-Objekt."
     };
 
     private static string GetRuleInstruction(string ruleName)

@@ -93,45 +93,40 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         });
     }
 
+    private static readonly string[] LogicSuffixes = ["Calculator", "Rule", "Policy", "Engine"];
+    private static readonly string[] ForbiddenIoSuffixes = ["DbContext", "Repository", "Client", "Connection", "Store", "HttpClient"];
+    private static readonly string[] StaticIoClasses = ["File", "Directory", "Console", "Path", "Socket"];
+
     private bool IsLogicMethod(MethodDeclarationSyntax node)
     {
-        if (IsInLogicClass(node)) return true;
         if (node.Body == null && node.ExpressionBody == null) return false;
-        
-        var text = node.ToString();
-        return HasMathOperations(text) && HasComplexLogic(text);
+        return IsInLogicClass(node) || HasPureLogicAttribute(node);
     }
 
-    private bool IsInLogicClass(MethodDeclarationSyntax node)
+    private static bool HasPureLogicAttribute(MethodDeclarationSyntax node)
+    {
+        return node.AttributeLists
+            .SelectMany(static al => al.Attributes)
+            .Any(static a => a.Name.ToString().EndsWith("PureLogic", StringComparison.Ordinal));
+    }
+
+    private static bool IsInLogicClass(MethodDeclarationSyntax node)
     {
         if (node.Parent is ClassDeclarationSyntax classDecl)
         {
             var className = classDecl.Identifier.Text;
-            var logicSuffixes = new[] { "Calculator", "Rule", "Policy", "Engine" };
-            return logicSuffixes.Any(s => className.EndsWith(s, StringComparison.Ordinal));
+            return LogicSuffixes.Any(s => className.EndsWith(s, StringComparison.Ordinal));
         }
         return false;
     }
 
-    private static bool HasMathOperations(string text)
-    {
-        return text.Contains('+') || text.Contains('-') || text.Contains('*') || text.Contains('/');
-    }
-
-    private static bool HasComplexLogic(string text)
-    {
-        return text.Contains("&&") || text.Contains("||") || text.Contains("switch") || text.Contains("if");
-    }
-
     private static bool IsForbiddenIoType(string typeName)
     {
-        var forbiddenSuffixes = new[] { "DbContext", "Repository", "Client", "Connection", "Store", "HttpClient" };
-        return forbiddenSuffixes.Any(s => typeName.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+        return ForbiddenIoSuffixes.Any(s => typeName.EndsWith(s, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsStaticIoClass(string className)
     {
-        var ioClasses = new[] { "File", "Directory", "Console", "Path", "Socket" };
-        return ioClasses.Contains(className);
+        return StaticIoClasses.Contains(className);
     }
 }

@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;

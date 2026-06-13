@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -54,7 +56,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (ShouldSkipSemanticNaming(isPublicMethod)) return;
 
-        var genericNames = GetForbiddenNames();
+        var genericNames = ForbiddenNames;
         foreach (var param in parameterList.Parameters)
         {
             CheckParameterSemantic(param, genericNames);
@@ -68,13 +70,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return _isTestFile;
     }
 
-    private static HashSet<string> GetForbiddenNames()
+    private static readonly HashSet<string> ForbiddenNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "data", "temp", "obj", "val", "tmp", "item", "param"
-        };
-    }
+        "data", "temp", "obj", "val", "tmp", "item", "param"
+    };
 
     private void CheckParameterSemantic(ParameterSyntax param, HashSet<string> genericNames)
     {

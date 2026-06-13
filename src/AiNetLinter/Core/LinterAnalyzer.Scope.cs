@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -208,32 +210,28 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return IsPrimitiveSpecialType(symbol.SpecialType);
     }
 
-    private static bool IsPrimitiveName(string name)
+    private static readonly HashSet<string> PrimitiveNames = new(StringComparer.Ordinal)
     {
-        var primitives = new[] 
-        {
-            "Int32", "Int64", "Int16", "String", "Boolean", 
-            "Double", "Single", "Decimal", "Char", "Byte", "Guid" 
-        };
-        return primitives.Contains(name);
-    }
+        "Int32", "Int64", "Int16", "String", "Boolean", 
+        "Double", "Single", "Decimal", "Char", "Byte", "Guid"
+    };
 
-    private static bool IsPrimitiveSpecialType(SpecialType specialType)
+    private static readonly HashSet<SpecialType> PrimitiveSpecialTypes = new()
     {
-        var specialTypes = new[]
-        {
-            SpecialType.System_Int32,
-            SpecialType.System_Int64,
-            SpecialType.System_String,
-            SpecialType.System_Boolean,
-            SpecialType.System_Double,
-            SpecialType.System_Single,
-            SpecialType.System_Decimal,
-            SpecialType.System_Char,
-            SpecialType.System_Byte
-        };
-        return specialTypes.Contains(specialType);
-    }
+        SpecialType.System_Int32,
+        SpecialType.System_Int64,
+        SpecialType.System_String,
+        SpecialType.System_Boolean,
+        SpecialType.System_Double,
+        SpecialType.System_Single,
+        SpecialType.System_Decimal,
+        SpecialType.System_Char,
+        SpecialType.System_Byte
+    };
+
+    private static bool IsPrimitiveName(string name) => PrimitiveNames.Contains(name);
+
+    private static bool IsPrimitiveSpecialType(SpecialType specialType) => PrimitiveSpecialTypes.Contains(specialType);
 
     private void CheckNamespaceDirectoryMapping()
     {

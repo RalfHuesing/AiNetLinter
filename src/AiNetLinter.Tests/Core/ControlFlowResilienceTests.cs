@@ -148,7 +148,7 @@ public sealed class Test
     }
 
     [Fact]
-    public void Throw_InLocalFunctionNestedInGuardMethod_IsAllowed()
+    public void Throw_InLocalFunctionNestedInGuardMethod_IsDisallowed()
     {
         const string source = @"
 public sealed class Test
@@ -163,8 +163,10 @@ public sealed class Test
 }";
         var model = GetSemanticContext(source);
         var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true));
-        Assert.Empty(violations);
+        Assert.Single(violations);
+        Assert.Equal("EnforceResultPatternOverExceptions", violations.First().RuleName);
     }
+
 
     [Fact]
     public void ThrowStatement_InNormalMethod_IsDisallowed()

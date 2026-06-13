@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -44,8 +46,24 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool IsAllowedCancellationCatch(CatchClauseSyntax node)
     {
         if (!_config.Global.AllowCancellationShutdownCatch) return false;
-        if (node.Declaration?.Type is not IdentifierNameSyntax { Identifier.Text: "OperationCanceledException" }) return false;
-        return node.Filter != null;
+        if (node.Declaration?.Type == null) return false;
+
+        var typeInfo = _semanticModel.GetTypeInfo(node.Declaration.Type);
+        var typeName = typeInfo.Type?.ToDisplayString();
+        if (IsCancellationExceptionName(typeName) || IsCancellationExceptionName(node.Declaration.Type.ToString()))
+        {
+            return node.Filter != null;
+        }
+
+        return false;
+    }
+
+    private static bool IsCancellationExceptionName(string? name)
+    {
+        return name == "OperationCanceledException" || 
+               name == "TaskCanceledException" ||
+               name == "System.OperationCanceledException" ||
+               name == "System.Threading.Tasks.TaskCanceledException";
     }
 
     private static bool IsSwallowed(CatchClauseSyntax node)
@@ -144,8 +162,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private static bool IsContainer(SyntaxNode node)
     {
-        if (node is MethodDeclarationSyntax || node is ConstructorDeclarationSyntax) return true;
-        return node is LocalFunctionStatementSyntax lf && IsGuardOrValidateName(lf.Identifier.Text);
+        return node is MethodDeclarationSyntax 
+            || node is ConstructorDeclarationSyntax 
+            || node is LocalFunctionStatementSyntax 
+            || node is AnonymousFunctionExpressionSyntax;
     }
 
     private static bool IsGuardOrValidateName(string name) =>
