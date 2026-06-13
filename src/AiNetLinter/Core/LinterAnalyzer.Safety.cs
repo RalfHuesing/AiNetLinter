@@ -60,35 +60,31 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private static bool IsReadOperation(string typeName, string methodName)
     {
         if (typeName == "File")
-        {
             return IsFileReadMethod(methodName);
-        }
+
+        if (typeName == "HttpClient")
+            return IsHttpClientReadMethod(methodName);
 
         if (IsStreamOrReader(typeName))
-        {
             return IsStreamReadMethod(methodName);
-        }
 
         return false;
     }
 
-    private static bool IsFileReadMethod(string methodName)
-    {
-        if (methodName.StartsWith("Read")) return true;
-        return methodName.StartsWith("Open");
-    }
+    private static bool IsFileReadMethod(string methodName) =>
+        methodName.StartsWith("Read") || methodName.StartsWith("Open");
 
-    private static bool IsStreamReadMethod(string methodName)
-    {
-        if (methodName.StartsWith("Read")) return true;
-        if (methodName == "CopyToAsync") return true;
-        return methodName == "ReadLine";
-    }
+    private static bool IsHttpClientReadMethod(string methodName) =>
+        methodName == "GetStringAsync" || methodName == "GetByteArrayAsync";
 
-    private static bool IsStreamOrReader(string typeName)
-    {
-        return typeName.Contains("Stream") || typeName == "HttpContent" || typeName == "StreamReader";
-    }
+    private static bool IsStreamReadMethod(string methodName) =>
+        methodName.StartsWith("Read") || methodName == "CopyToAsync" || methodName == "ReadLine";
+
+    private static bool IsStreamOrReader(string typeName) =>
+        typeName.Contains("Stream")
+        || typeName == "HttpContent"
+        || typeName == "TextReader"
+        || typeName == "BinaryReader";
 
     private static bool IsGuardOrCheckPresentForInvocation(InvocationExpressionSyntax invocation)
     {
