@@ -31,7 +31,13 @@ public sealed class ScopeImmutabilityTests
                 EnforceNoVariableShadowing = shadowing,
                 EnforceReadonlyParameters = readonlyParams,
                 EnforceReadonlyFields = readonlyFields,
-                EnforceNoMagicValues = false
+                EnforceNoMagicValues = false,
+                EnforceExplicitStateImmutability = false,
+                EnforceStrictBoundaryForBusinessLogic = false,
+                PreventContextDependentOverloads = false,
+                RequireExplicitTruncationHandling = false,
+                EnforceNamespaceDirectoryMapping = false,
+                DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig
             {
