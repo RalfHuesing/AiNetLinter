@@ -429,7 +429,17 @@ Das Playbook wird über das CLI-Argument `--playbook <Pfad>` generiert, standard
 ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
 ```
 
+### Roslyn-basierter CLI Auto-Fixer (`--fix`)
+Triviale Linter-Verstöße kosten KI-Agenten wertvolle Prompt-Zyklen. Die Option `--fix` behebt einfache Verstöße (wie das Fehlen von `sealed` bei konkreten Klassen, `readonly` bei privaten Feldern oder das Fehlen von `#nullable enable` am Dateianfang) vollautomatisiert über Roslyn-Syntaxbaum-Transformationen direkt beim Audit-Lauf.
+
+### Semantische Diff-Impact-Analyse (`--impact`)
+Bei Änderungen öffentlicher, interner oder geschützter Methodensignaturen hilft die Impact-Analyse, alle davon betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution zu ermitteln. Sie analysiert dazu das Git-Diff (`git diff -U0`), ordnet geänderte Zeilen den deklarierten Methoden zu und sucht deren Referenzen.
+Aufrufbeispiel:
+```bash
+ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
+```
+
 ## 9. Zukunfts-Roadmap (Ausblick)
 
-*   **Interaktive automatische Korrektur (CLI Auto-Fix):** Direkte Integration von Roslyn Code-Fixes, um einfache Verstöße (wie fehlende `sealed` Modifikatoren, fehlende `readonly` Modifikatoren oder fehlendes `#nullable enable`) direkt über einen CLI-Parameter beheben zu lassen.
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
+*   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
