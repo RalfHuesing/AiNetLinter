@@ -41,7 +41,9 @@ Um zu verstehen, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen e
 #### 5. Semantische Verankerung (`EnforceSemanticNaming` / `EnforceNoMagicValues`)
 *   **Wissenschaftlicher Hintergrund:** LLMs verstehen Programmcode über zwei parallele Kanäle: den *strukturellen Kanal* (Syntaxbaum) und den *linguistischen Kanal* (Semantik der Namen). Studien zeigen, dass der linguistische Kanal die stärkste Rolle beim logischen Verstehen spielt. Generische Bezeichner (z. B. `data`, `temp`, `obj`) oder namenlose Magic Literale besitzen im Vektorraum der KI keine semantische Einbettung, was die Vorhersagequalität mindert (Radford et al., 2019).
 *   **Konsequenz:** Alle Werte und Parameter müssen sprechend benannt sein, um eine korrekte Vektor-Einbettung (Embedding) und damit fehlerfreie Code-Generierung zu ermöglichen.
-*   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsup#### 6. Expliziter Kontrollfluss mit Fail-Fast-Präzisierung (`EnforceResultPatternOverExceptions` / `EnforceNoSilentCatch`)
+*   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsupervised Multitask Learners". OpenAI Blog.*
+
+#### 6. Expliziter Kontrollfluss mit Fail-Fast-Präzisierung (`EnforceResultPatternOverExceptions` / `EnforceNoSilentCatch`)
 *   **Wissenschaftlicher Hintergrund:** Exceptions für den Kontrollfluss verschleiern Zustandstransitionen (Madaan et al., 2023). Allerdings führt das vollständige Verbot aller Exception-Throws bei KIs zu *Silent Failures*, da Modelle aufgrund ihres Reinforcement-Learning-Bias (RLVR) extreme Angst vor Programmabstürzen haben und Fehler stumm schlucken (Karpathy, 2024). Um dies zu beheben, erlaubt `AiNetLinter` das Werfen technischer Standard-Laufzeitausnahmen (wie `ArgumentNullException`, `InvalidOperationException`), damit der Agent bei echten Bugs sofort hart fehlschlägt ("Fail-Fast") und sich anhand des Stacktraces korrigiert.
 *   **Konsequenz:** Fachlicher Kontrollfluss nutzt das Result-Pattern (`Result<T>`); echte Programmierfehler oder Infrastruktur-Ausfälle werfen standardisierte Ausnahmen für deterministisches Fail-Fast.
 *   **Referenz:** 
@@ -90,8 +92,6 @@ Um zu verstehen, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen e
 *   **Wissenschaftlicher Hintergrund:** LLMs neigen dazu, Paket-Abhängigkeiten oder Klassen zu halluzinieren, die in der realen Codebasis nicht existieren. Bannen von ungelösten Namespace-using-Statements und dynamischer Reflection zwingt die KI zur Compile-Zeit-Verifizierung und verhindert "Phantom-Logik".
 *   **Konsequenz:** Der Import von Namespaces, die Roslyn im Kompilierungskontext nicht auflösen kann, sowie String-basierte Reflection (`Type.GetType`) sind verboten.
 *   **Referenz:** *Scale AI (2026). "SWE Atlas: Measuring Coding Agents".*
-
---- B. ein neues Enum-Mitglied im `switch` vergessen wurde).
 
 ---
 
