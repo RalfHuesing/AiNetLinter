@@ -313,7 +313,13 @@ public static class ProjectConfigResolver
         }
         
         return global with { Global = mergedGlobal };
-}
+    }
 }
 ```
+
+### Dokumentations- & Auslieferungs-Richtlinie (Implementierungshilfe)
+Bei der späteren Umsetzung dieses Features müssen folgende Punkte erfüllt werden:
+1. **README-Aktualisierung:** Die `README.md` muss um diesen konkreten Use-Case (z. B. "Warum wir in Testprojekten andere Regeln anwenden") als Best-Practice-Beispiel erweitert werden.
+2. **Beispiel-Konfigurationen:** In der mitgelieferten `rules.json` des Repositories muss ein vorkonfiguriertes, lauffähiges Beispiel für ein `ProjectOverrides`-Szenario ausgeliefert werden (z. B. Deaktivierung von `EnforceNoMagicValues` für alle `*.Tests` Projekte), damit Entwickler und LLMs direkt eine Vorlage vorfinden.
+
 
