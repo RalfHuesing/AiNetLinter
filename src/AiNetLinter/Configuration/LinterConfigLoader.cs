@@ -50,6 +50,10 @@ public static class LinterConfigLoader
             var content = File.ReadAllText(configPath);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var config = JsonSerializer.Deserialize<LinterConfig>(content, options);
+            if (config?.Global?.ImmutabilityExemptSuffixes != null && config.Global.ImmutabilityExemptSuffixes.Count > 30)
+            {
+                Console.Error.WriteLine("[WARNING]: Config-Smell — zu breite Ausnahme (mehr als 30 ImmutabilityExemptSuffixes). Erwäge Wildcard-Muster zu nutzen.");
+            }
             return config is null ? null : LinterConfigNormalizer.Normalize(config);
         }
         catch (InvalidOperationException ex)

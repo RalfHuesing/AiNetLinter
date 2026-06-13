@@ -94,4 +94,14 @@ internal static class CliOptionFactory
     {
         Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei",
     };
+
+    internal static Option<bool> CreateCheckOption() => new("--check")
+    {
+        Description = "Prueft auf Drift (z. B. bei --sync-cursor-rules) ohne Dateien zu schreiben",
+    };
+
+    internal static Option<string?> CreateFootprintOption() => new("--footprint")
+    {
+        Description = "Zeigt den detaillierten AI-Context-Footprint fuer eine Klasse an",
+    };
 }

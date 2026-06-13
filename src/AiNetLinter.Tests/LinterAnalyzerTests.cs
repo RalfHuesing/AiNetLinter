@@ -357,7 +357,7 @@ namespace TestNamespace
         var config = CreateDefaultConfig();
         config = config with { Global = config.Global with { RequireExplicitTruncationHandling = true } };
         var (tree, model) = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        var violations = LinterAnalyzer.Analyze("MyService.cs", model, config, isTestFile: false);
         Assert.Contains(violations, v => v.RuleName == "RequireExplicitTruncationHandling");
     }
 

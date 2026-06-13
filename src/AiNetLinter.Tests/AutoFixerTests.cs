@@ -84,6 +84,43 @@ public sealed class AutoFixerTests
     }
 
     [Fact]
+    public async Task FixSealedClasses_SealsPrivateNestedClasses()
+    {
+        var source = """
+            namespace TestNamespace;
+            public sealed class OuterClass
+            {
+                private class InnerClass {}
+            }
+            """;
+
+        var solution = CreateTestSolution(new() { ["File.cs"] = source });
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".cs");
+        var document = solution.Projects.First().Documents.First();
+        var solutionWithPaths = solution.WithDocumentFilePath(document.Id, tempPath);
+
+        var violations = new List<RuleViolation>
+        {
+            new() { FilePath = tempPath, LineNumber = 4, RuleName = "EnforceSealedClasses", Details = "InnerClass", Guidance = "" }
+        };
+
+        try
+        {
+            var fixedCount = await LinterAutoFixer.FixAsync(solutionWithPaths, violations, verbose: false);
+
+            Assert.True(File.Exists(tempPath));
+            var newContent = File.ReadAllText(tempPath);
+
+            Assert.Contains("private sealed class InnerClass", newContent);
+            Assert.Equal(1, fixedCount);
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
     public async Task FixNullableEnable_PrependsNullableDirective()
     {
         var source = """

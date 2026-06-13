@@ -231,6 +231,20 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Regel: EnforceNamespaceDirectoryMapping** – Erzwingt exakte Namespace-Ordner-Konformität und begrenzt die Ordnertiefe (MaxDirectoryDepth).
 - [x] **Regel: DetectAndBanPhantomDependencies** – Verhindert nicht-referenzierte using-Imports und dynamische Reflection-Lade-APIs.
 
+---
+
+## Epic 21: Consumer Integration & DX Refinements
+- [x] **Konfigurations-Erweiterungen:** Support für `ImmutabilityExemptPatterns` (Wildcards) und `AllowedEmptyReads` in `LinterConfig`.
+- [x] **Immutability Heuristiken:** Roslyn-basierte Erkennung von `IConfiguration`/`IOptions` Bindings und `[JsonSerializable]`.
+- [x] **Truncation & Test-Ausnahme:** Guidance-Update mit C#-Beispiel, Berücksichtigung von `AllowedEmptyReads` und Ausnehmen von Test-Fakes (Fake, Mock, Test).
+- [x] **Namespace-Abhängigkeiten mit Wildcards:** Glob-Matching für verbotene Namespace-Kopplungen.
+- [x] **Auto-Fixer sealed nested classes:** Erweiterung des automatischen Sealing auf private verschachtelte Klassen.
+- [x] **Cursor-Rules Generator Overhaul:** Vollständiges Rendern aller globalen Schalter, Metadaten-Tags und tabellarische Darstellung der `ProjectOverrides`.
+- [x] **Schnellerer Rules-Sync & CLI `--check`:** Direkter Konfigurations-Check und Drift-Erkennung ohne Laden der Solution (Exit 1 bei Abweichung).
+- [x] **Detaillierter Footprint & Debug-CLI:** `--footprint <Klassenname>` mit Auswertung der Top-3 Abhängigkeiten zur RAG-Optimierung.
+- [x] **Repo-Playbook-Generator Erweiterung:** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
+- [x] **SARIF Intent-Tags:** Export von `RuleMetadata.Intent` in `properties.tags` für CI-Dashboards.
+
 
 
 

@@ -17,7 +17,15 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private void CheckTruncationHandling(InvocationExpressionSyntax node)
     {
         if (!_config.Global.RequireExplicitTruncationHandling) return;
+        if (_config.Global.AllowedEmptyReads) return;
         if (_isTestFile) return;
+
+        if (_filePath.Contains("Fake", StringComparison.OrdinalIgnoreCase) || 
+            _filePath.Contains("Mock", StringComparison.OrdinalIgnoreCase) || 
+            _filePath.Contains("Test", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
 
         var symbol = _semanticModel.GetSymbolInfo(node).Symbol;
         if (symbol == null) return;
@@ -47,7 +55,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             LineNumber = GetLineNumber(node),
             RuleName = "RequireExplicitTruncationHandling",
             Details = $"Der I/O-Leseaufruf '{methodName}' von '{typeName}' besitzt keine unmittelbare Validierung der Laenge oder Vollstaendigkeit (Truncation-Schutz).",
-            Guidance = "Prüfe die Anzahl gelesener Bytes/Zeichen (z.B. '> 0' oder 'Length') unmittelbar nach dem Aufruf, um Halluzinationen bei Teil-Daten zu verhindern."
+            Guidance = "Prüfe die Anzahl gelesener Bytes/Zeichen (z.B. '> 0' oder 'Length') oder ob die Rückgabe leer ist (z.B. string.IsNullOrEmpty). Beispiel:\n" +
+                       "var json = await response.Content.ReadAsStringAsync(cancellationToken);\n" +
+                       "if (string.IsNullOrEmpty(json))\n" +
+                       "{\n" +
+                       "    throw new InvalidOperationException(\"Response body was empty.\");\n" +
+                       "}"
         });
     }
 

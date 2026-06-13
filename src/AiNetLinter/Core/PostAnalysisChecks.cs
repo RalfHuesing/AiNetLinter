@@ -145,12 +145,24 @@ internal static class PostAnalysisChecks
         if (footprint > effectiveConfig.Metrics.MaxAIContextFootprint &&
             !IsSuppressedViolation(cls.FilePath, "AIContextFootprint", cls.LineNumber, fileContents))
         {
+            var detailsBuilder = new System.Text.StringBuilder();
+            detailsBuilder.AppendLine($"{cls.Name} ({footprint} > {effectiveConfig.Metrics.MaxAIContextFootprint})");
+            if (cls.AIContextFootprintDetails != null && cls.AIContextFootprintDetails.Count > 0)
+            {
+                foreach (var dep in cls.AIContextFootprintDetails)
+                {
+                    var shortName = dep.Name.Contains('.') ? dep.Name.Substring(dep.Name.LastIndexOf('.') + 1) : dep.Name;
+                    detailsBuilder.AppendLine($"  + {shortName} ({dep.Lines})");
+                }
+                detailsBuilder.Append("  → Top-3 transitive Abhängigkeiten reduzieren oder Facade einführen");
+            }
+
             violations.Add(new RuleViolation
             {
                 FilePath = cls.FilePath,
                 LineNumber = cls.LineNumber,
                 RuleName = "AIContextFootprint",
-                Details = $"Die Klasse '{cls.Name}' hat einen AI-Context-Footprint von {footprint} transitiven Zeilen (erlaubt sind maximal {effectiveConfig.Metrics.MaxAIContextFootprint}).",
+                Details = detailsBuilder.ToString().TrimEnd('\r', '\n'),
                 Guidance = "Reduziere die Kopplung der Klasse zu anderen Klassen oder lagere Abhaengigkeiten aus, um Attention Dilution fuer KIs zu minimieren."
             });
         }
