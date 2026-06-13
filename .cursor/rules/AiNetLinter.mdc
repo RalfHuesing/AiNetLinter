@@ -1,4 +1,4 @@
-﻿<!-- Generator-Version: 1.0.20 | Quelle: rules.json | Generiert am: 2026-06-13 21:58:25 -->
+﻿<!-- Generator-Version: 1.0.20 | Quelle: rules.json | Generiert am: 2026-06-13 22:03:48 -->
 ---
 description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)
 globs: *.cs
