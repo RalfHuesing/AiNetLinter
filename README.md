@@ -399,6 +399,5 @@ public sealed class ArchitectureTests
 
 ## 8. Zukunfts-Roadmap (Ausblick)
 
-*   **Optimiertes Speicher-Management:** Sequentielles Laden und Entladen von Projekten im `MSBuildWorkspace` für sehr große Monolithen zur drastischen RAM-Ersparnis während der Analyse.
 *   **Interaktive automatische Korrektur (CLI Auto-Fix):** Direkte Integration von Roslyn Code-Fixes, um einfache Verstöße (wie fehlende `sealed` Modifikatoren, fehlende `readonly` Modifikatoren oder fehlendes `#nullable enable`) direkt über einen CLI-Parameter beheben zu lassen.
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
