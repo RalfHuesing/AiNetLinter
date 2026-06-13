@@ -79,21 +79,238 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private void CheckMethodOverloads(TypeDeclarationSyntax node)
     {
-        var methods = node.Members.OfType<MethodDeclarationSyntax>();
-        foreach (var group in methods.GroupBy(static m => m.Identifier.Text))
+        if (_isTestFile) return;
+
+        var methods = node.Members.OfType<MethodDeclarationSyntax>().ToList();
+        var groups = methods.GroupBy(static m => m.Identifier.Text);
+        foreach (var group in groups)
         {
-            var count = group.Count();
-            if (count > _config.Metrics.MaxMethodOverloads)
+            CheckMethodGroup(node, group.Key, group.ToList());
+        }
+    }
+
+    private void CheckMethodGroup(TypeDeclarationSyntax node, string methodName, List<MethodDeclarationSyntax> groupMethods)
+    {
+        var count = groupMethods.Count;
+        if (count > _config.Metrics.MaxMethodOverloads)
+        {
+            AddMaxOverloadsViolation(node, methodName, groupMethods[0], count);
+        }
+
+        if (_config.Global.PreventContextDependentOverloads && count > 1)
+        {
+            CheckPrimitiveOverloadConflicts(groupMethods);
+        }
+    }
+
+    private void AddMaxOverloadsViolation(TypeDeclarationSyntax node, string methodName, MethodDeclarationSyntax firstMethod, int count)
+    {
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(firstMethod),
+            RuleName = "MaxMethodOverloads",
+            Details = $"Der Typ '{node.Identifier.Text}' deklariert {count} Ueberladungen fuer die Methode '{methodName}' (erlaubt sind maximal {_config.Metrics.MaxMethodOverloads}).",
+            Guidance = "Reduziere die Anzahl der Ueberladungen, indem du unterschiedliche, sprechende Methodennamen waehlst."
+        });
+    }
+
+    private void CheckPrimitiveOverloadConflicts(List<MethodDeclarationSyntax> methodGroup)
+    {
+        for (int i = 0; i < methodGroup.Count; i++)
+        {
+            CheckSinglePrimitiveOverloadConflict(methodGroup, i);
+        }
+    }
+
+    private void CheckSinglePrimitiveOverloadConflict(List<MethodDeclarationSyntax> methodGroup, int startIndex)
+    {
+        var methodA = methodGroup[startIndex];
+        for (int j = startIndex + 1; j < methodGroup.Count; j++)
+        {
+            var methodB = methodGroup[j];
+            if (ArePrimitiveOverloadConflicts(methodA, methodB))
             {
-                _violations.Add(new RuleViolation
-                {
-                    FilePath = _filePath,
-                    LineNumber = GetLineNumber(group.First()),
-                    RuleName = "MaxMethodOverloads",
-                    Details = $"Der Typ '{node.Identifier.Text}' deklariert {count} Ueberladungen fuer die Methode '{group.Key}' (erlaubt sind maximal {_config.Metrics.MaxMethodOverloads}).",
-                    Guidance = "Reduziere die Anzahl der Methodenueberladungen, indem du unterschiedliche Methodennamen waehlst oder optionale Parameter verwendest."
-                });
+                AddPrimitiveOverloadConflictViolation(methodA, methodB);
             }
         }
+    }
+
+    private void AddPrimitiveOverloadConflictViolation(MethodDeclarationSyntax methodA, MethodDeclarationSyntax methodB)
+    {
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(methodB),
+            RuleName = "PreventContextDependentOverloads",
+            Details = $"Die Methode '{methodB.Identifier.Text}' steht im Konflikt mit einer Überladung in Zeile {GetLineNumber(methodA)}. Beide unterscheiden sich nur in primitiven Typen.",
+            Guidance = "Verwende explizite Methodennamen (z.B. 'ProcessInt' statt 'Process'), um Mehrdeutigkeiten für KI-Agenten zu vermeiden."
+        });
+    }
+
+    private bool ArePrimitiveOverloadConflicts(MethodDeclarationSyntax a, MethodDeclarationSyntax b)
+    {
+        var paramsA = a.ParameterList.Parameters;
+        var paramsB = b.ParameterList.Parameters;
+
+        if (paramsA.Count != paramsB.Count) return false;
+
+        return CheckPrimitiveDifferences(paramsA, paramsB);
+    }
+
+    private bool CheckPrimitiveDifferences(SeparatedSyntaxList<ParameterSyntax> paramsA, SeparatedSyntaxList<ParameterSyntax> paramsB)
+    {
+        var hasPrimitiveDiff = false;
+        for (int i = 0; i < paramsA.Count; i++)
+        {
+            var diffResult = CompareParameterTypes(paramsA[i], paramsB[i]);
+            if (diffResult == ParameterDiff.NotPrimitive) return false;
+            if (diffResult == ParameterDiff.PrimitiveDiff)
+            {
+                hasPrimitiveDiff = true;
+            }
+        }
+        return hasPrimitiveDiff;
+    }
+
+    private enum ParameterDiff
+    {
+        SameType,
+        PrimitiveDiff,
+        NotPrimitive
+    }
+
+    private ParameterDiff CompareParameterTypes(ParameterSyntax paramA, ParameterSyntax paramB)
+    {
+        var typeA = GetParameterType(paramA);
+        var typeB = GetParameterType(paramB);
+        if (typeA == null || typeB == null) return ParameterDiff.NotPrimitive;
+
+        if (SymbolEqualityComparer.Default.Equals(typeA, typeB)) return ParameterDiff.SameType;
+
+        return IsBothPrimitive(typeA, typeB) ? ParameterDiff.PrimitiveDiff : ParameterDiff.NotPrimitive;
+    }
+
+    private ITypeSymbol? GetParameterType(ParameterSyntax param)
+    {
+        if (param.Type == null) return null;
+        return _semanticModel.GetTypeInfo(param.Type).Type;
+    }
+
+    private static bool IsBothPrimitive(ITypeSymbol a, ITypeSymbol b)
+    {
+        return IsPrimitiveType(a) && IsPrimitiveType(b);
+    }
+
+    private static bool IsPrimitiveType(ITypeSymbol symbol)
+    {
+        if (IsPrimitiveName(symbol.Name)) return true;
+        return IsPrimitiveSpecialType(symbol.SpecialType);
+    }
+
+    private static bool IsPrimitiveName(string name)
+    {
+        var primitives = new[] 
+        {
+            "Int32", "Int64", "Int16", "String", "Boolean", 
+            "Double", "Single", "Decimal", "Char", "Byte", "Guid" 
+        };
+        return primitives.Contains(name);
+    }
+
+    private static bool IsPrimitiveSpecialType(SpecialType specialType)
+    {
+        var specialTypes = new[]
+        {
+            SpecialType.System_Int32,
+            SpecialType.System_Int64,
+            SpecialType.System_String,
+            SpecialType.System_Boolean,
+            SpecialType.System_Double,
+            SpecialType.System_Single,
+            SpecialType.System_Decimal,
+            SpecialType.System_Char,
+            SpecialType.System_Byte
+        };
+        return specialTypes.Contains(specialType);
+    }
+
+    private void CheckNamespaceDirectoryMapping()
+    {
+        if (_isTestFile) return;
+
+        var relativePath = GetRelativePath();
+        if (string.IsNullOrEmpty(relativePath)) return;
+        if (relativePath == ".") return;
+
+        var pathParts = relativePath.Split(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+
+        CheckDirectoryDepth(pathParts);
+        CheckNamespaceMappingRule(pathParts, relativePath);
+    }
+
+    private string? GetRelativePath()
+    {
+        var fileDirectory = System.IO.Path.GetDirectoryName(_filePath);
+        if (string.IsNullOrEmpty(fileDirectory)) return null;
+
+        var projectDir = FindProjectDirectory(fileDirectory);
+        if (string.IsNullOrEmpty(projectDir)) return null;
+
+        return System.IO.Path.GetRelativePath(projectDir, fileDirectory);
+    }
+
+    private void CheckDirectoryDepth(string[] pathParts)
+    {
+        if (pathParts.Length <= _config.Metrics.MaxDirectoryDepth) return;
+
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = 1,
+            RuleName = "MaxDirectoryDepth",
+            Details = $"Die Dateitiefe betraegt {pathParts.Length} Ordner (erlaubt sind maximal {_config.Metrics.MaxDirectoryDepth} ab csproj).",
+            Guidance = "Verflache die Projektstruktur und nutze Feature-Ordner statt tiefer Hierarchien, um KIs die Navigation zu erleichtern."
+        });
+    }
+
+    private void CheckNamespaceMappingRule(string[] pathParts, string relativePath)
+    {
+        if (!_config.Global.EnforceNamespaceDirectoryMapping) return;
+
+        var namespaceDeclaration = _tree.GetRoot().DescendantNodes()
+            .OfType<BaseNamespaceDeclarationSyntax>()
+            .FirstOrDefault();
+
+        if (namespaceDeclaration == null) return;
+
+        var expectedSuffix = string.Join(".", pathParts);
+        var declaredNamespace = namespaceDeclaration.Name.ToString();
+        
+        if (!declaredNamespace.EndsWith(expectedSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(namespaceDeclaration),
+                RuleName = "EnforceNamespaceDirectoryMapping",
+                Details = $"Der Namespace '{declaredNamespace}' stimmt nicht mit dem physischen Ordnerpfad '{relativePath}' ueberein.",
+                Guidance = $"Passe den Namespace an, sodass er auf '.{expectedSuffix}' endet, oder verschiebe die Datei."
+            });
+        }
+    }
+
+    private static string FindProjectDirectory(string startDir)
+    {
+        var current = startDir;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (System.IO.Directory.GetFiles(current, "*.csproj").Any())
+            {
+                return current;
+            }
+            current = System.IO.Path.GetDirectoryName(current);
+        }
+        return "";
     }
 }

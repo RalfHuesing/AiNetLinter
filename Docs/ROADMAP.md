@@ -219,6 +219,19 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   - *LLM-Impact:* Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
 
+---
+
+## Epic 20: AI-Readability & Agentic Resilience Upgrades
+- [x] **Regel: EnforceExplicitStateImmutability** – Zwingt Klassen (außer DTOs/Entities) zur Unveränderlichkeit (init Properties, readonly private fields).
+- [x] **Fehlerbehandlung: Refine Exception Control Flow** – Erlaubt das Werfen von fatalen/technischen Standard-Exceptions für Fail-Fast-Muster.
+- [x] **Token-Hygiene: Refine XML Documentation** – Reduziert XML-Dokumentationspflichten auf Typ-Deklarationen zur Token-Einsparung.
+- [x] **Regel: EnforceStrictBoundaryForBusinessLogic** – Isoliert reine Geschäftslogik-Berechnungen in statischen, I/O-freien Methoden.
+- [x] **Regel: PreventContextDependentOverloads** – Limitierung auf max. 3 Methodenüberladungen und Verbot primitiver Überladungskonflikte.
+- [x] **Regel: RequireExplicitTruncationHandling** – Erzwingt unmittelbare Validierung nach I/O- oder Stream-Leseoperationen.
+- [x] **Regel: EnforceNamespaceDirectoryMapping** – Erzwingt exakte Namespace-Ordner-Konformität und begrenzt die Ordnertiefe (MaxDirectoryDepth).
+- [x] **Regel: DetectAndBanPhantomDependencies** – Verhindert nicht-referenzierte using-Imports und dynamische Reflection-Lade-APIs.
+
+
 
 
 

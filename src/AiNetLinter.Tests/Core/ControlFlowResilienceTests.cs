@@ -24,7 +24,14 @@ public sealed class ControlFlowResilienceTests
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
-                EnforceResultPatternOverExceptions = enabled
+                EnforceResultPatternOverExceptions = enabled,
+                AllowedExceptions = System.Array.Empty<string>(),
+                EnforceExplicitStateImmutability = false,
+                EnforceStrictBoundaryForBusinessLogic = false,
+                PreventContextDependentOverloads = false,
+                RequireExplicitTruncationHandling = false,
+                EnforceNamespaceDirectoryMapping = false,
+                DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig
             {
