@@ -68,10 +68,7 @@ public sealed class LinterEngine
         var state = CreateAnalysisState(solution);
         await AnalyzeSolutionAsync(state, catalog);
 
-        RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, state.FileContents);
-        RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents);
-        RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents);
-        AddPartialClassViolations(state.PartialClassParts, state.Violations);
+        PostAnalysisChecks.Run(state, _config);
 
         return state.Violations.ToArray();
     }
@@ -92,14 +89,7 @@ public sealed class LinterEngine
         MaxDegreeOfParallelism = Environment.ProcessorCount
     };
 
-    private sealed record AnalysisState(
-        Solution Solution,
-        ConcurrentBag<RuleViolation> Violations,
-        TestCoverageIndex TestCoverage,
-        ConcurrentBag<ClassInfo> SourceClasses,
-        ConcurrentBag<PartialClassPart> PartialClassParts,
-        ConcurrentDictionary<string, string> FileContents
-    );
+
 
     private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog)
     {
@@ -149,7 +139,7 @@ public sealed class LinterEngine
             return [];
         }
 
-        var isTestProject = IsTestProject(project);
+        var isTestProject = TestProjectDetector.IsTestProject(project);
         return CollectValidDocuments(project, solutionDir, isTestProject);
     }
 
@@ -178,34 +168,7 @@ public sealed class LinterEngine
         await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state);
     }
 
-    private static bool IsTestProject(Project project)
-    {
-        foreach (var reference in project.MetadataReferences)
-        {
-            if (IsTestReference(reference.Display))
-            {
-                return true;
-            }
-        }
 
-        return false;
-    }
-
-    private static bool IsTestReference(string? display)
-    {
-        if (string.IsNullOrEmpty(display)) return false;
-
-        var keywords = new[] { "xunit", "nunit", "testplatform", "unittesting" };
-        foreach (var keyword in keywords)
-        {
-            if (display.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state)
     {
@@ -275,190 +238,10 @@ public sealed class LinterEngine
             effectiveConfig.TestSentinel);
     }
 
-    private void AddPartialClassViolations(
-        ConcurrentBag<PartialClassPart> parts,
-        ConcurrentBag<RuleViolation> violations)
-    {
-        foreach (var violation in PartialClassLineAggregator.BuildViolations(parts.ToArray(), _config))
-        {
-            violations.Add(violation);
-        }
-    }
-
     private static bool IsTestFile(string file)
     {
         if (file.EndsWith("Tests.cs")) return true;
         if (file.EndsWith("Test.cs")) return true;
         return file.Contains($"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}");
     }
-
-    private void RunTestSentinel(
-        TestCoverageIndex testCoverage,
-        ConcurrentBag<ClassInfo> sourceClasses,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        var context = new TestSentinelContext(testCoverage, violations, fileContents);
-        foreach (var srcClass in sourceClasses)
-        {
-            CheckClassTestSentinel(srcClass, context);
-        }
-    }
-
-    private void CheckClassTestSentinel(ClassInfo srcClass, TestSentinelContext context)
-    {
-        var effectiveConfig = srcClass.ProjectName != null
-            ? ProjectConfigResolver.ResolveForProject(srcClass.ProjectName, _config)
-            : _config;
-
-        if (effectiveConfig.Global.EnableTestSentinel &&
-            srcClass.MaxCognitiveComplexity > effectiveConfig.Metrics.MinCognitiveComplexityForTest)
-        {
-            CheckTestPresence(srcClass, context, effectiveConfig);
-        }
-    }
-
-    private void CheckTestPresence(
-        ClassInfo srcClass,
-        TestSentinelContext context,
-        LinterConfig effectiveConfig)
-    {
-        if (TestCoverageResolver.IsCovered(srcClass.Name, context.TestCoverage, effectiveConfig.TestSentinel))
-        {
-            return;
-        }
-
-        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, context.FileContents))
-        {
-            return;
-        }
-
-        string expectedTest = $"{srcClass.Name}Tests";
-        context.Violations.Add(new RuleViolation
-        {
-            FilePath = srcClass.FilePath,
-            LineNumber = srcClass.LineNumber,
-            RuleName = "StaticTestSentinel",
-            Details = $"Die Klasse '{srcClass.Name}' hat eine hohe Relevanz (max. Kognitive Komplexitaet: {srcClass.MaxCognitiveComplexity}), aber es wurde keine Testabdeckung gefunden.",
-            Guidance = $"Schreibe Unit Tests fuer '{srcClass.Name}' (z. B. '{expectedTest}', typeof-Referenz oder // @covers {srcClass.Name}).",
-        });
-    }
-
-    private void RunInheritanceDepthCheck(
-        ConcurrentBag<ClassInfo> sourceClasses,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        foreach (var cls in sourceClasses)
-        {
-            CheckClassInheritanceDepth(cls, violations, fileContents);
-        }
-    }
-
-    private void CheckClassInheritanceDepth(
-        ClassInfo cls,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        var effectiveConfig = cls.ProjectName != null
-            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, _config)
-            : _config;
-
-        var depth = GetInheritanceDepth(cls.Symbol);
-        if (depth > effectiveConfig.Metrics.MaxInheritanceDepth &&
-            !IsSuppressedViolation(cls.FilePath, nameof(effectiveConfig.Metrics.MaxInheritanceDepth), cls.LineNumber, fileContents))
-        {
-            violations.Add(new RuleViolation
-            {
-                FilePath = cls.FilePath,
-                LineNumber = cls.LineNumber,
-                RuleName = nameof(effectiveConfig.Metrics.MaxInheritanceDepth),
-                Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {effectiveConfig.Metrics.MaxInheritanceDepth}).",
-                Guidance = "Halte Vererbungshierarchien flach (max. 2 Ebenen) oder nutze Komposition statt Vererbung."
-            });
-        }
-    }
-
-    private void RunAIContextFootprintCheck(
-        ConcurrentBag<ClassInfo> sourceClasses,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        foreach (var cls in sourceClasses)
-        {
-            CheckClassAIContextFootprint(cls, violations, fileContents);
-        }
-    }
-
-    private void CheckClassAIContextFootprint(
-        ClassInfo cls,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        var effectiveConfig = cls.ProjectName != null
-            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, _config)
-            : _config;
-
-        if (effectiveConfig.Metrics.MaxAIContextFootprint <= 0)
-        {
-            return;
-        }
-
-        var footprint = AIContextFootprintCalculator.Calculate(cls.Symbol);
-        if (footprint > effectiveConfig.Metrics.MaxAIContextFootprint &&
-            !IsSuppressedViolation(cls.FilePath, "AIContextFootprint", cls.LineNumber, fileContents))
-        {
-            violations.Add(new RuleViolation
-            {
-                FilePath = cls.FilePath,
-                LineNumber = cls.LineNumber,
-                RuleName = "AIContextFootprint",
-                Details = $"Die Klasse '{cls.Name}' hat einen AI-Context-Footprint von {footprint} transitiven Zeilen (erlaubt sind maximal {effectiveConfig.Metrics.MaxAIContextFootprint}).",
-                Guidance = "Reduziere die Kopplung der Klasse zu anderen Klassen oder lagere Abhaengigkeiten aus, um Attention Dilution fuer KIs zu minimieren."
-            });
-        }
-    }
-
-    private static bool IsSuppressedViolation(
-        string filePath,
-        string ruleName,
-        int lineNumber,
-        ConcurrentDictionary<string, string> fileContents)
-    {
-        if (!fileContents.TryGetValue(filePath, out var fileContent))
-        {
-            fileContent = File.Exists(filePath) ? File.ReadAllText(filePath) : string.Empty;
-            fileContents[filePath] = fileContent;
-        }
-
-        return SuppressionEvaluator.IsSuppressed(fileContent, ruleName, lineNumber);
-    }
-
-    private static int GetInheritanceDepth(INamedTypeSymbol symbol)
-    {
-        int depth = 0;
-        var current = symbol.BaseType;
-        while (current != null && current.SpecialType != SpecialType.System_Object)
-        {
-            depth++;
-            if (depth > 20) return depth;
-            current = current.BaseType;
-        }
-
-        return depth;
-    }
-
-    private sealed record DocumentContext(
-        string FilePath,
-        SemanticModel SemanticModel,
-        bool IsTestFile,
-        LinterConfig EffectiveConfig,
-        string ProjectName
-    );
-
-    private sealed record TestSentinelContext(
-        TestCoverageIndex TestCoverage,
-        ConcurrentBag<RuleViolation> Violations,
-        ConcurrentDictionary<string, string> FileContents
-    );
 }
