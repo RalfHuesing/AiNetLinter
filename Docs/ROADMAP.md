@@ -187,9 +187,29 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 18: Performance-Optimierungen (Parallelisierung & Caching)
-- [/] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution zur optimalen Core-Auslastung.
-- [/] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
-- [/] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
+- [x] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution zur optimalen Core-Auslastung.
+- [x] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
+- [x] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
+
+---
+
+## Epic 19: AI-Developer Experience (AI-DX) & Tooling
+- [ ] **AI-Context-Footprint (Metrik):**
+  - *Beschreibung:* Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten, um die Token-Belastung für KIs zu messen.
+  - *LLM-Impact:* Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
+  - *Machbarkeit:* 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
+- [ ] **Automatisch generiertes Repo-Playbook:**
+  - *Beschreibung:* Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
+  - *LLM-Impact:* Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
+  - *Machbarkeit:* 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
+- [ ] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
+  - *Beschreibung:* Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI.
+  - *LLM-Impact:* Extrem hoch. Spart der KI zeit- und tokenaufwendige Edit-Zyklen für triviale syntaktische Anpassungen.
+  - *Machbarkeit:* 100% machbar. Roslyn bietet über `CodeFixProvider` standardisierte Transformations-APIs. Die CLI kann diese über `Workspace.TryApplyChanges` direkt anwenden.
+- [ ] **Semantische Diff-Impact-Analyse:**
+  - *Beschreibung:* Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
+  - *LLM-Impact:* Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
+  - *Machbarkeit:* 100% machbar. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.
 
 
 
