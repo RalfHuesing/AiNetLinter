@@ -30,8 +30,31 @@ public sealed class SourceFileCatalog : IDisposable
         RegisterMSBuild();
 
         var workspace = MSBuildWorkspace.Create(LinterEngine.CreateWorkspaceProperties());
+        var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+        workspace.RegisterWorkspaceFailedHandler(e =>
+        {
+            if (e.Diagnostic.Kind == Microsoft.CodeAnalysis.WorkspaceDiagnosticKind.Failure)
+            {
+                failures.Add(e.Diagnostic.Message);
+            }
+        });
+
         var solution = await workspace.OpenSolutionAsync(slnPath);
+
+        foreach (var msg in failures.Distinct(StringComparer.Ordinal))
+        {
+            Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");
+        }
+
         return new SourceFileCatalog(workspace, solution);
+    }
+
+    /// <summary>
+    /// Erzeugt eine neue Catalog-Instanz mit einer aktualisierten In-Memory-Solution (z.B. nach AutoFix).
+    /// </summary>
+    internal SourceFileCatalog WithUpdatedSolution(Solution updatedSolution)
+    {
+        return new SourceFileCatalog(_workspace, updatedSolution);
     }
 
     /// <summary>
@@ -126,11 +149,7 @@ public sealed class SourceFileCatalog : IDisposable
         Project project,
         string? solutionDir)
     {
-        var compilation = await project.GetCompilationAsync();
-        if (compilation == null)
-        {
-            return [];
-        }
+        if (!project.SupportsCompilation) return [];
 
         var isTestProject = TestProjectDetector.IsTestProject(project);
         return CollectValidDocuments(project, solutionDir, isTestProject);

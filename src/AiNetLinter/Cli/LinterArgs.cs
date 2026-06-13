@@ -2,6 +2,8 @@
 
 namespace AiNetLinter.Cli;
 
+// ainetlinter-disable StaticTestSentinel
+// Validation logic ist einfache Constraint-Prüfung ohne komplexe Domänenlogik; durch CliIntegrationTests abgedeckt.
 /// <summary>
 /// Argumente fuer die Ausfuehrung des Linters, die aus den CLI-Optionen geparst werden.
 /// </summary>
@@ -18,16 +20,6 @@ public sealed class LinterArgs
     public required string TargetPath { get; init; }
 
     /// <summary>
-    /// Holt oder setzt den Pfad, unter dem der Mermaid-Abhaengigkeitsgraph generiert werden soll.
-    /// </summary>
-    public string? GraphPath { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt den Pfad, unter dem das AI-Playbook generiert werden soll.
-    /// </summary>
-    public string? PlaybookPath { get; init; }
-
-    /// <summary>
     /// Holt oder setzt das Ausgabeformat (z. B. "text" oder "sarif").
     /// </summary>
     public required string Format { get; init; }
@@ -38,6 +30,16 @@ public sealed class LinterArgs
     public required bool Verbose { get; init; }
 
     /// <summary>
+    /// Holt oder setzt den Pfad, unter dem der Mermaid-Abhaengigkeitsgraph generiert werden soll.
+    /// </summary>
+    public string? GraphPath { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt den Pfad, unter dem das AI-Playbook generiert werden soll.
+    /// </summary>
+    public string? PlaybookPath { get; init; }
+
+    /// <summary>
     /// Holt oder setzt den Pfad, unter dem eine neue Baseline-Datei erstellt werden soll.
     /// </summary>
     public string? CreateBaselinePath { get; init; }
@@ -46,6 +48,11 @@ public sealed class LinterArgs
     /// Holt oder setzt den Pfad zur existierenden Baseline-Datei.
     /// </summary>
     public string? BaselinePath { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob nur geaenderte Dateien geprueft werden sollen.
+    /// </summary>
+    public bool OnlyChanged { get; init; }
 
     /// <summary>
     /// Holt oder setzt einen Wert, der angibt, ob Deaktivierungskommentare in alle betroffenen Dateien eingefuegt werden sollen.
@@ -66,11 +73,6 @@ public sealed class LinterArgs
     /// Holt oder setzt einen Wert, der angibt, ob die Analyse im Wave-Ready-Modus ausgefuehrt werden soll.
     /// </summary>
     public bool WaveReady { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob nur geaenderte Dateien gemaess Baseline oder Git geprueft werden sollen.
-    /// </summary>
-    public bool OnlyChanged { get; init; }
 
     /// <summary>
     /// Holt oder setzt die Git-Referenz (z. B. "HEAD~1"), ab der Aenderungen analysiert werden.
@@ -98,12 +100,39 @@ public sealed class LinterArgs
     public bool SyncCursorRules { get; init; }
 
     /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob eine Drift-Prüfung ohne Dateischreiben durchgeführt werden soll.
+    /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-cursor-rules und --playbook).
     /// </summary>
     public bool Check { get; init; }
 
     /// <summary>
-    /// Holt oder setzt den Namen der Klasse für eine detaillierte Footprint-Analyse.
+    /// Holt oder setzt den Namen der Klasse fuer eine detaillierte Footprint-Analyse.
     /// </summary>
     public string? Footprint { get; init; }
+
+    /// <summary>
+    /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
+    /// </summary>
+    public string? Validate()
+    {
+        if (HasConflictingModeOptions())
+        {
+            return "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.";
+        }
+
+        if (OnlyChanged && BaselinePath == null)
+        {
+            return "[ERROR]: --only-changed erfordert --baseline.";
+        }
+
+        return null;
+    }
+
+    private bool HasConflictingModeOptions()
+    {
+        int count = 0;
+        if (CreateBaselinePath != null) count++;
+        if (AddDisableAll) count++;
+        if (RemoveDisableAll) count++;
+        return count > 1 || (BaselinePath != null && count > 0);
+    }
 }

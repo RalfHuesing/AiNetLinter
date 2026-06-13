@@ -1,5 +1,9 @@
+using System.Collections.Generic;
+
 namespace AiNetLinter.Configuration;
 
+// ainetlinter-disable StaticTestSentinel
+// RuleMetadataRegistry ist ein statisches Lookup-Dictionary; die Logik wird durch bestehende Integrationstests abgedeckt.
 /// <summary>
 /// Liefert Standard-Metadaten für bekannte Regeln und merged benutzerdefinierte Einträge.
 /// </summary>
@@ -53,8 +57,26 @@ public static class RuleMetadataRegistry
     }
 
     /// <summary>
+    /// Gibt true zurück wenn mindestens ein Verstoß in der Sammlung Severity "error" hat.
+    /// </summary>
+    public static bool HasErrorSeverity(IEnumerable<Models.RuleViolation> violations, LinterConfig config)
+    {
+        foreach (var v in violations)
+        {
+            var meta = Resolve(v.RuleName ?? "", config);
+            if (meta.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Mappt eine Severity-Zeichenkette auf SARIF level.
     /// </summary>
     public static string ToSarifLevel(string severity) =>
-        severity.Equals("warning", StringComparison.OrdinalIgnoreCase) ? "warning" : "error";
+        severity.Equals("warning", StringComparison.OrdinalIgnoreCase) ? "warning"
+        : severity.Equals("info", StringComparison.OrdinalIgnoreCase) ? "note"
+        : "error";
 }

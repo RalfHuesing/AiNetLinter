@@ -28,11 +28,16 @@ internal static class CliOptionFactory
         Description = "Pfad fuer das zu generierende AI Repository-Playbook (.md)",
     };
 
-    internal static Option<string> CreateFormatOption() => new("--format", "-f")
+    internal static Option<string> CreateFormatOption()
     {
-        Description = "Ausgabeformat: text (Standard) oder sarif",
-        DefaultValueFactory = _ => "text",
-    };
+        var option = new Option<string>("--format", "-f")
+        {
+            Description = "Ausgabeformat: text (Standard) oder sarif",
+            DefaultValueFactory = _ => "text",
+        };
+        option.AcceptOnlyFromAmong("text", "sarif");
+        return option;
+    }
 
     internal static Option<bool> CreateVerboseOption() => new("--verbose", "-v")
     {

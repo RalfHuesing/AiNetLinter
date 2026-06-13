@@ -77,6 +77,46 @@ public sealed record GlobalConfig
     };
     public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
     public bool AllowedEmptyReads { get; init; } = false;
+
+    /// <summary>
+    /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
+    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
+    /// </summary>
+    public GlobalConfig Apply(GlobalConfigOverride? @override)
+    {
+        return this with
+        {
+            EnforceSealedClasses = @override?.EnforceSealedClasses ?? EnforceSealedClasses,
+            AllowUnsealedPartialClasses = @override?.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
+            AllowDynamic = @override?.AllowDynamic ?? AllowDynamic,
+            AllowOutParameters = @override?.AllowOutParameters ?? AllowOutParameters,
+            EnforceValueObjectContracts = @override?.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
+            EnableTestSentinel = @override?.EnableTestSentinel ?? EnableTestSentinel,
+            EnforcePascalCase = @override?.EnforcePascalCase ?? EnforcePascalCase,
+            EnforceXmlDocumentation = @override?.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
+            EnforceSemanticNaming = @override?.EnforceSemanticNaming ?? EnforceSemanticNaming,
+            EnforceNullableEnable = @override?.EnforceNullableEnable ?? EnforceNullableEnable,
+            EnforceNoSilentCatch = @override?.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
+            AllowTryPatternOutParameters = @override?.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
+            AllowCancellationShutdownCatch = @override?.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
+            EnforceMinimalApiAsParameters = @override?.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
+            EnforceResultPatternOverExceptions = @override?.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
+            EnforceNoVariableShadowing = @override?.EnforceNoVariableShadowing ?? EnforceNoVariableShadowing,
+            EnforceReadonlyParameters = @override?.EnforceReadonlyParameters ?? EnforceReadonlyParameters,
+            EnforceReadonlyFields = @override?.EnforceReadonlyFields ?? EnforceReadonlyFields,
+            EnforceNoMagicValues = @override?.EnforceNoMagicValues ?? EnforceNoMagicValues,
+            EnforceExplicitStateImmutability = @override?.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
+            AllowedExceptions = @override?.AllowedExceptions ?? AllowedExceptions,
+            EnforceStrictBoundaryForBusinessLogic = @override?.EnforceStrictBoundaryForBusinessLogic ?? EnforceStrictBoundaryForBusinessLogic,
+            PreventContextDependentOverloads = @override?.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
+            RequireExplicitTruncationHandling = @override?.RequireExplicitTruncationHandling ?? RequireExplicitTruncationHandling,
+            EnforceNamespaceDirectoryMapping = @override?.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
+            DetectAndBanPhantomDependencies = @override?.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
+            ImmutabilityExemptSuffixes = @override?.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
+            ImmutabilityExemptPatterns = @override?.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
+            AllowedEmptyReads = @override?.AllowedEmptyReads ?? AllowedEmptyReads,
+        };
+    }
 }
 
 /// <summary>
@@ -100,6 +140,29 @@ public sealed record MetricsConfig
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
     /// </summary>
     public int MaxAIContextFootprint { get; init; } = 5000;
+
+    /// <summary>
+    /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
+    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
+    /// </summary>
+    public MetricsConfig Apply(MetricsConfigOverride? @override)
+    {
+        return this with
+        {
+            MaxLineCount = @override?.MaxLineCount ?? MaxLineCount,
+            MaxMethodParameterCount = @override?.MaxMethodParameterCount ?? MaxMethodParameterCount,
+            MaxMethodLineCount = @override?.MaxMethodLineCount ?? MaxMethodLineCount,
+            MaxCyclomaticComplexity = @override?.MaxCyclomaticComplexity ?? MaxCyclomaticComplexity,
+            MaxCognitiveComplexity = @override?.MaxCognitiveComplexity ?? MaxCognitiveComplexity,
+            MaxInheritanceDepth = @override?.MaxInheritanceDepth ?? MaxInheritanceDepth,
+            MinCognitiveComplexityForTest = @override?.MinCognitiveComplexityForTest ?? MinCognitiveComplexityForTest,
+            AggregatePartialClassLineCount = @override?.AggregatePartialClassLineCount ?? AggregatePartialClassLineCount,
+            MaxMethodOverloads = @override?.MaxMethodOverloads ?? MaxMethodOverloads,
+            MaxConstructorDependencies = @override?.MaxConstructorDependencies ?? MaxConstructorDependencies,
+            MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
+            MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
+        };
+    }
 }
 
 /// <summary>

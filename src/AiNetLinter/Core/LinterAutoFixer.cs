@@ -28,11 +28,16 @@ public sealed class LinterAutoFixer
     /// <param name="solution">Die zu korrigierende Roslyn-Solution.</param>
     /// <param name="violations">Die Liste der aktuell erkannten Linter-Verstoesse.</param>
     /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <returns>Die Anzahl der erfolgreich behobenen Verstoesse.</returns>
-    public static async Task<int> FixAsync(Solution solution, IReadOnlyCollection<RuleViolation> violations, bool verbose)
+    /// <param name="dryRun">Wenn true, werden Aenderungen nur angezeigt, aber nicht auf Disk geschrieben.</param>
+    /// <returns>Die Anzahl der behobenen (oder im DryRun: behebaren) Verstoesse sowie die aktualisierte Solution.</returns>
+    public static async Task<(int FixedCount, Solution UpdatedSolution)> FixAsync(
+        Solution solution,
+        IReadOnlyCollection<RuleViolation> violations,
+        bool verbose,
+        bool dryRun = false)
     {
         var baseTypes = await CollectBaseTypesAsync(solution);
-        var context = new FixContext(baseTypes, verbose);
+        var context = new FixContext(baseTypes, verbose, dryRun);
         var currentSolution = solution;
         int fixedCount = 0;
 
@@ -50,7 +55,7 @@ public sealed class LinterAutoFixer
             }
         }
 
-        return fixedCount;
+        return (fixedCount, currentSolution);
     }
 
     private static bool IsFixable(string? ruleName)
@@ -114,6 +119,12 @@ public sealed class LinterAutoFixer
         var oldText = await document.GetTextAsync();
         var newText = await updatedDoc.GetTextAsync();
         if (oldText.ToString() == newText.ToString()) return (solution, 0);
+
+        if (context.DryRun)
+        {
+            Console.WriteLine($"[DRY-RUN]: Würde {fixedCount} Fix(es) anwenden auf: {document.Name}");
+            return (solution, fixedCount);
+        }
 
         await File.WriteAllTextAsync(document.FilePath, newText.ToString(), newText.Encoding ?? Encoding.UTF8);
         LogFixApplied(document.Name, context.Verbose);
@@ -307,5 +318,6 @@ public sealed class LinterAutoFixer
 
     private sealed record FixContext(
         HashSet<INamedTypeSymbol> BaseTypes,
-        bool Verbose);
+        bool Verbose,
+        bool DryRun);
 }

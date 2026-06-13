@@ -185,11 +185,8 @@ internal static class PostAnalysisChecks
         int lineNumber,
         ConcurrentDictionary<string, string> fileContents)
     {
-        if (!fileContents.TryGetValue(filePath, out var fileContent))
-        {
-            fileContent = File.Exists(filePath) ? File.ReadAllText(filePath) : string.Empty;
-            fileContents[filePath] = fileContent;
-        }
+        var fileContent = fileContents.GetOrAdd(filePath,
+            fp => File.Exists(fp) ? File.ReadAllText(fp) : string.Empty);
 
         return SuppressionEvaluator.IsSuppressed(fileContent, ruleName, lineNumber);
     }

@@ -64,7 +64,7 @@ public sealed class AutoFixerTests
         
         try
         {
-            var fixedCount = await LinterAutoFixer.FixAsync(solutionWithPaths, violations, verbose: false);
+            var (fixedCount, _) = await LinterAutoFixer.FixAsync(solutionWithPaths, violations, verbose: false);
 
             Assert.True(File.Exists(tempPath));
             var newContent = File.ReadAllText(tempPath);
@@ -106,7 +106,7 @@ public sealed class AutoFixerTests
 
         try
         {
-            var fixedCount = await LinterAutoFixer.FixAsync(solutionWithPaths, violations, verbose: false);
+            var (fixedCount, _) = await LinterAutoFixer.FixAsync(solutionWithPaths, violations, verbose: false);
 
             Assert.True(File.Exists(tempPath));
             var newContent = File.ReadAllText(tempPath);
@@ -140,7 +140,7 @@ public sealed class AutoFixerTests
 
         try
         {
-            var fixedCount = await LinterAutoFixer.FixAsync(solutionWithPath, violations, verbose: false);
+            var (fixedCount, _) = await LinterAutoFixer.FixAsync(solutionWithPath, violations, verbose: false);
 
             Assert.True(File.Exists(tempPath));
             var newContent = File.ReadAllText(tempPath);
@@ -178,7 +178,7 @@ public sealed class AutoFixerTests
 
         try
         {
-            var fixedCount = await LinterAutoFixer.FixAsync(solutionWithPath, violations, verbose: false);
+            var (fixedCount, _) = await LinterAutoFixer.FixAsync(solutionWithPath, violations, verbose: false);
 
             Assert.True(File.Exists(tempPath));
             var newContent = File.ReadAllText(tempPath);
