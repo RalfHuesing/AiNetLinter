@@ -81,6 +81,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (!_config.Global.EnforceResultPatternOverExceptions) return;
 
+        if (IsAllowedFatalExceptionThrow(node)) return;
+
         if (!IsThrowAllowed(node))
         {
             _violations.Add(new RuleViolation
@@ -92,6 +94,28 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = "Verwende fuer fachliche Fehlerzustaende das Result-Pattern (Result<T>) statt Exceptions, um den Kontrollfluss fuer KI-Agenten explizit zu machen. 'throw' ist nur in Konstruktoren oder Validierungs-Guards (Methoden mit Suffix 'Guard' oder 'Validate') erlaubt."
             });
         }
+    }
+
+    private bool IsAllowedFatalExceptionThrow(SyntaxNode node)
+    {
+        var expr = GetExceptionExpression(node);
+        if (expr is not ObjectCreationExpressionSyntax creation) return false;
+
+        var typeSymbol = _semanticModel.GetTypeInfo(creation).Type;
+        if (typeSymbol == null) return false;
+
+        var allowed = _config.Global.AllowedExceptions;
+        return allowed != null && allowed.Contains(typeSymbol.Name);
+    }
+
+    private static ExpressionSyntax? GetExceptionExpression(SyntaxNode node)
+    {
+        return node switch
+        {
+            ThrowStatementSyntax ts => ts.Expression,
+            ThrowExpressionSyntax te => te.Expression,
+            _ => null
+        };
     }
 
     private bool IsThrowAllowed(SyntaxNode node)

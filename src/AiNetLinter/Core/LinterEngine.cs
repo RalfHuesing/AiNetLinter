@@ -40,7 +40,7 @@ public sealed class LinterEngine
     /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog)
     {
-        return await RunAsync(catalog.Solution, catalog);
+        return await RunInternalAsync(catalog.Solution, catalog);
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class LinterEngine
     /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution)
     {
-        return await RunAsync(solution, catalog: null);
+        return await RunInternalAsync(solution, catalog: null);
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public sealed class LinterEngine
         ["RunCodeAnalysis"] = "false",
     };
 
-    private async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, SourceFileCatalog? catalog)
+    private async Task<IReadOnlyCollection<RuleViolation>> RunInternalAsync(Solution solution, SourceFileCatalog? catalog)
     {
         var state = CreateAnalysisState(solution);
         await AnalyzeSolutionAsync(state, catalog);

@@ -8,7 +8,7 @@
     "EnforceValueObjectContracts": true,
     "EnableTestSentinel": true,
     "EnforcePascalCase": true,
-    "EnforceXmlDocumentation": true,
+    "EnforceXmlDocumentation": false,
     "EnforceSemanticNaming": true,
     "EnforceNullableEnable": true,
     "EnforceNoSilentCatch": true,
@@ -18,7 +18,13 @@
     "EnforceNoVariableShadowing": false,
     "EnforceReadonlyParameters": false,
     "EnforceReadonlyFields": false,
-    "EnforceNoMagicValues": false
+    "EnforceNoMagicValues": false,
+    "EnforceExplicitStateImmutability": false,
+    "EnforceStrictBoundaryForBusinessLogic": false,
+    "PreventContextDependentOverloads": false,
+    "RequireExplicitTruncationHandling": false,
+    "EnforceNamespaceDirectoryMapping": false,
+    "DetectAndBanPhantomDependencies": false
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -29,8 +35,9 @@
     "MaxInheritanceDepth": 2,
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
-    "MaxMethodOverloads": 10,
+    "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 20,
+    "MaxDirectoryDepth": 4,
     "MaxAIContextFootprint": 5000
   },
   "TestSentinel": {

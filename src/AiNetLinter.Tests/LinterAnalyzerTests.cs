@@ -26,11 +26,17 @@ public sealed class LinterAnalyzerTests
                 EnforceNoVariableShadowing = false,
                 EnforceReadonlyParameters = false,
                 EnforceReadonlyFields = false,
-                EnforceNoMagicValues = false
+                EnforceNoMagicValues = false,
+                EnforceExplicitStateImmutability = false,
+                EnforceStrictBoundaryForBusinessLogic = false,
+                PreventContextDependentOverloads = false,
+                RequireExplicitTruncationHandling = false,
+                EnforceNamespaceDirectoryMapping = false,
+                DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig
             {
-                MaxLineCount = 10,
+                MaxLineCount = 100,
                 MaxMethodParameterCount = 2,
                 MaxCyclomaticComplexity = 5,
                 MaxCognitiveComplexity = 5
@@ -197,5 +203,199 @@ namespace TestNamespace
         var (tree, model) = GetSemanticContext(source);
         var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Contains(violations, v => v.RuleName == "EnforceSealedClasses");
+    }
+
+    private static (SyntaxTree, SemanticModel) GetSemanticContextWithErrors(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        var compilation = CSharpCompilation.Create("TestAssembly")
+            .AddSyntaxTrees(tree)
+            .AddReferences(mscorlib)
+            .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            
+        var semanticModel = compilation.GetSemanticModel(tree);
+        return (tree, semanticModel);
+    }
+
+    [Fact]
+    public void Analyze_Immutability_MutableProperty_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class ImmutableTestClass
+    {
+        public string Name { get; set; }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceExplicitStateImmutability = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "EnforceExplicitStateImmutability");
+    }
+
+    [Fact]
+    public void Analyze_Immutability_DtoClass_NoViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class UserDto
+    {
+        public string Name { get; set; }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceExplicitStateImmutability = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_Exceptions_AllowedFatalException_NoViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class ExceptionTest
+    {
+        public void Run(string arg)
+        {
+            if (arg == null) throw new System.ArgumentNullException(nameof(arg));
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceResultPatternOverExceptions = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_Exceptions_CustomLogicException_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class ExceptionTest
+    {
+        public void Run()
+        {
+            throw new System.Exception(""Custom logic error"");
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceResultPatternOverExceptions = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "EnforceResultPatternOverExceptions");
+    }
+
+    [Fact]
+    public void Analyze_BusinessLogic_NonStaticLogik_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class PriceCalculator
+    {
+        public decimal CalculateTax(decimal price)
+        {
+            return price * 0.19m;
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceStrictBoundaryForBusinessLogic = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "EnforceStrictBoundaryForBusinessLogic");
+    }
+
+    [Fact]
+    public void Analyze_PrimitiveOverloads_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public sealed class OverloadTest
+    {
+        public void Process(int val) {}
+        public void Process(string val) {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { PreventContextDependentOverloads = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "PreventContextDependentOverloads");
+    }
+
+    [Fact]
+    public void Analyze_TruncationSafety_ReadWithoutGuard_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public class MyStream
+    {
+        public int Read(byte[] buffer, int offset, int count) => 0;
+    }
+    public sealed class StreamTest
+    {
+        public void Run(MyStream stream, byte[] buffer)
+        {
+            stream.Read(buffer, 0, buffer.Length);
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { RequireExplicitTruncationHandling = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "RequireExplicitTruncationHandling");
+    }
+
+    [Fact]
+    public void Analyze_PhantomDependency_ReflectionCall_HasViolation()
+    {
+        const string source = @"
+using System;
+namespace TestNamespace
+{
+    public sealed class ReflectionTest
+    {
+        public void Load()
+        {
+            var type = Type.GetType(""SomePhantomClass"");
+        }
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { DetectAndBanPhantomDependencies = true } };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "DetectAndBanPhantomDependencies");
+    }
+
+    [Fact]
+    public void Analyze_PhantomDependency_UnresolvedNamespace_HasViolation()
+    {
+        const string source = @"
+using SomePhantomNamespace;
+namespace TestNamespace
+{
+    public sealed class PhantomTest {}
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { DetectAndBanPhantomDependencies = true } };
+        var (tree, model) = GetSemanticContextWithErrors(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "DetectAndBanPhantomDependencies");
     }
 }

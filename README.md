@@ -41,12 +41,12 @@ Um zu verstehen, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen e
 #### 5. Semantische Verankerung (`EnforceSemanticNaming` / `EnforceNoMagicValues`)
 *   **Wissenschaftlicher Hintergrund:** LLMs verstehen Programmcode über zwei parallele Kanäle: den *strukturellen Kanal* (Syntaxbaum) und den *linguistischen Kanal* (Semantik der Namen). Studien zeigen, dass der linguistische Kanal die stärkste Rolle beim logischen Verstehen spielt. Generische Bezeichner (z. B. `data`, `temp`, `obj`) oder namenlose Magic Literale besitzen im Vektorraum der KI keine semantische Einbettung, was die Vorhersagequalität mindert (Radford et al., 2019).
 *   **Konsequenz:** Alle Werte und Parameter müssen sprechend benannt sein, um eine korrekte Vektor-Einbettung (Embedding) und damit fehlerfreie Code-Generierung zu ermöglichen.
-*   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsupervised Multitask Learners". OpenAI Blog.*
-
-#### 6. Expliziter Kontrollfluss (`EnforceResultPatternOverExceptions` / `EnforceNoSilentCatch`)
-*   **Wissenschaftlicher Hintergrund:** Exceptions brechen den linearen Kontrollfluss und erzeugen implizite Sprungmarken, die für statische Codeanalysen der KI unsichtbar sind. Stumme catch-Blöcke (Silent Swallowing) verbergen Fehler vor dem agentischen Loop, was dazu führt, dass KIs in Endlosschleifen geraten oder fehlerhafte Ausgabezustände ignorieren (Madaan et al., 2023).
-*   **Konsequenz:** Die Forcierung des Result-Patterns (`Result<T>`) macht Fehlerpfade explizit im Typensystem sichtbar und zwingt die KI zur expliziten Behandlung.
-*   **Referenz:** *Madaan, A. et al. (2023). "Self-Refine: Iterative Refinement with Self-Feedback". arXiv:2303.17651.*
+*   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsup#### 6. Expliziter Kontrollfluss mit Fail-Fast-Präzisierung (`EnforceResultPatternOverExceptions` / `EnforceNoSilentCatch`)
+*   **Wissenschaftlicher Hintergrund:** Exceptions für den Kontrollfluss verschleiern Zustandstransitionen (Madaan et al., 2023). Allerdings führt das vollständige Verbot aller Exception-Throws bei KIs zu *Silent Failures*, da Modelle aufgrund ihres Reinforcement-Learning-Bias (RLVR) extreme Angst vor Programmabstürzen haben und Fehler stumm schlucken (Karpathy, 2024). Um dies zu beheben, erlaubt `AiNetLinter` das Werfen technischer Standard-Laufzeitausnahmen (wie `ArgumentNullException`, `InvalidOperationException`), damit der Agent bei echten Bugs sofort hart fehlschlägt ("Fail-Fast") und sich anhand des Stacktraces korrigiert.
+*   **Konsequenz:** Fachlicher Kontrollfluss nutzt das Result-Pattern (`Result<T>`); echte Programmierfehler oder Infrastruktur-Ausfälle werfen standardisierte Ausnahmen für deterministisches Fail-Fast.
+*   **Referenz:** 
+    * *Madaan, A. et al. (2023). "Self-Refine: Iterative Refinement with Self-Feedback". arXiv:2303.17651.*
+    * *Karpathy, A. (2024). "LLMs are mortally terrified of exceptions". Hacker News Discussion.*
 
 #### 7. Begrenzung der Kopplungsdichte (`MaxConstructorDependencies` / `ForbiddenNamespaceDependencies`)
 *   **Wissenschaftlicher Hintergrund:** Je höher die Kopplung (Fan-Out) einer Klasse, desto mehr Abhängigkeiten muss ein AI-Agent laden und in sein Kontextfenster pressen, um eine Änderung durchzuführen. Dies verwässert die Aufmerksamkeit (Attention Dilution) und erhöht die Kosten und Fehlerrate (Ozkaya, 2020).
@@ -58,6 +58,40 @@ Um zu verstehen, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen e
     *   `#nullable enable` ist Pflicht (erzwingt Null-Checks).
     *   `required` Properties in Records (verhindert unvollständiges Instanziieren).
     *   Exhaustive Pattern Matching (Compiler wirft Fehler, wenn z. B. ein neues Enum-Mitglied im `switch` vergessen wurde).
+
+#### 9. Strikte Zustand-Immutabilität (`EnforceExplicitStateImmutability`)
+*   **Wissenschaftlicher Hintergrund:** Autoregressive Sprachmodelle scheitern überdurchschnittlich oft an der Verfolgung und konsistenten Aktualisierung von veränderlichem Zustand (*State Management Failures*). Das Erzwingen struktureller Unveränderlichkeit (Immutabilität) verlagert Zustandsänderungen in explizite, funktionale Rückgaben, was die kognitive Belastung für KIs minimiert.
+*   **Konsequenz:** Klassen, die nicht explizit als DTOs/Entities deklariert sind, müssen als `readonly struct` oder `record` aufgebaut sein bzw. dürfen nur get-only/`init`-Properties und `readonly`-Felder besitzen.
+*   **Referenz:** *DAPLab (2026). "9 Critical Failure Patterns of Coding Agents". Columbia University.*
+
+#### 10. Isolierung zustandsloser Berechnungen (`EnforceStrictBoundaryForBusinessLogic`)
+*   **Wissenschaftlicher Hintergrund:** Wenn KI-Agenten komplexe Berechnungsregeln mit asynchronem I/O (Datenbank- oder API-Aufrufe) vermischen, kommt es häufig zu logischen Inkonsistenzen und unvollständigen Tests (*Business Logic Mismatch*). Reine zustandslose Berechnungen lassen sich lokal in Millisekunden per Unit-Test validieren.
+*   **Konsequenz:** Komplexe Geschäftslogik und Rechenoperationen müssen in als `static` deklarierten, zustandslosen Methoden ohne I/O-Typen gekapselt sein.
+*   **Referenz:** *Tian, P. (2026). "Agentic Coding in Production: What SWE-bench Scores Don't Tell You".*
+
+#### 11. Eindeutige Aufruf-Signaturen (`PreventContextDependentOverloads`)
+*   **Wissenschaftlicher Hintergrund:** LLMs verwechseln im Vektorraum sehr leicht überladene Methoden mit identischem Namen, die sich nur durch primitive Typen (wie `Process(int)` vs. `Process(long)`) unterscheiden. Dies führt zu Vertauschungen von Argument-Reihenfolgen bei der Code-Generierung (*Parameter Hallucinations*).
+*   **Konsequenz:** Methoden-Überladungen sind auf maximal 3 beschränkt. Überladungen, die sich nur in primitiven Typen bei gleicher Parameteranzahl unterscheiden, sind verboten (fordern explizite Methodennamen).
+*   **Referenz:** *DAPLab (2026). "9 Critical Failure Patterns of Coding Agents" (Category 4: Data Management).*
+
+#### 12. Puffer- und Stream-Abschneideschutz (`RequireExplicitTruncationHandling`)
+*   **Wissenschaftlicher Hintergrund:** Wenn KI-Agenten Daten über unvollständige Eingaben, Streams oder abgeschnittene Ausgaben verarbeiten, neigen sie dazu, fiktiven "Phantom-Code" (wie nicht-existente Basisklassen) zu erfinden, um die Lücke zu erklären (*Spiraling Hallucination Loops*). Das Erzwingen expliziter Längenguards stoppt diese Spiralen.
+*   **Konsequenz:** Alle Dateilese- und Stream-Leseoperationen müssen unmittelbare Längen- oder Vollständigkeits-Checks im Rumpf aufweisen.
+*   **Referenz:** *Surge AI (2026). "When Coding Agents Spiral Into 693 Lines of Hallucinations".*
+
+#### 13. Navigations-Hygiene & Feature-Ordner (`EnforceNamespaceDirectoryMapping` / `MaxDirectoryDepth`)
+*   **Wissenschaftlicher Hintergrund:** Das passive Durchsuchen großer, verstreuter Klassenstrukturen flutet das Kontextfenster mit irrelevanten Informationen (*Context Rot*). Zudem treiben tiefe Ordnerpfade die Anzahl und Latenz von Agenten-Navigationsbefehlen (`cd`, `ls`) in die Höhe.
+*   **Konsequenz:** Der Namespace muss exakt der physischen Ordnerstruktur (Feature Folder) entsprechen; die Ordnertiefe ab csproj wird auf maximal 4 begrenzt.
+*   **Referenz:** 
+    * *Chroma Research (2025). "Context Rot: How Increasing Input Tokens Impacts LLM Performance".*
+    * *Arize AI (2026). "Context management in agent harnesses".*
+
+#### 14. Referenz-Grounding (`DetectAndBanPhantomDependencies`)
+*   **Wissenschaftlicher Hintergrund:** LLMs neigen dazu, Paket-Abhängigkeiten oder Klassen zu halluzinieren, die in der realen Codebasis nicht existieren. Bannen von ungelösten Namespace-using-Statements und dynamischer Reflection zwingt die KI zur Compile-Zeit-Verifizierung und verhindert "Phantom-Logik".
+*   **Konsequenz:** Der Import von Namespaces, die Roslyn im Kompilierungskontext nicht auflösen kann, sowie String-basierte Reflection (`Type.GetType`) sind verboten.
+*   **Referenz:** *Scale AI (2026). "SWE Atlas: Measuring Coding Agents".*
+
+--- B. ein neues Enum-Mitglied im `switch` vergessen wurde).
 
 ---
 
@@ -152,15 +186,21 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
 | `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
 | `EnforcePascalCase` | Global | Validiert PascalCase-Schreibweise für Klassen, Structs, Records, Interfaces, Methoden und Properties. |
-| `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Schnittstellen für LSP-Integrationen. |
+| `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Typ-Deklarationen (Klassen/Interfaces) (Standard: `false`). |
 | `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
 | `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), werden ignoriert. |
-| `EnforceResultPatternOverExceptions` | Global | Verbietet die Verwendung von `throw` für fachlichen Kontrollfluss außerhalb von Konstruktoren und Validierungs-Guards (Methoden mit Suffix `Guard` oder `Validate`). |
+| `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
 | `EnforceNoVariableShadowing` | Global | Verbietet das Verdecken von Feldern, Eigenschaften und äußeren Parametern durch lokale Variablen und Parameter. |
 | `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). |
 | `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. |
 | `EnforceNoMagicValues` | Global | Verbietet Magic Numbers und Magic Strings direkt in Methodenkörpern außerhalb von Konstanten-Deklarationen (Ausnahmen: `0`, `1`, `""`). |
+| `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
+| `EnforceStrictBoundaryForBusinessLogic` | Global | Zwingt reine Rechen- und Logikfunktionen in zustandslose `static` Methoden ohne I/O-Aufrufe. |
+| `PreventContextDependentOverloads` | Global | Verbietet Methodenüberladungen, die sich nur durch primitive Typen bei gleicher Parameteranzahl unterscheiden. |
+| `RequireExplicitTruncationHandling` | Global | Erzwingt unmittelbare Validierung (Länge/EOF-Check) nach I/O- und Stream-Leseoperationen. |
+| `EnforceNamespaceDirectoryMapping` | Global | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen. |
+| `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
@@ -169,8 +209,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |
 | `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
-| `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 2). |
+| `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
 | `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). |
+| `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
 | `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
 | `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |

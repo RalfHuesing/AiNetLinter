@@ -81,6 +81,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         CheckLineCount();
         CheckNullableEnable();
+        CheckNamespaceDirectoryMapping();
         Visit(_tree.GetRoot());
         CheckReadonlyFields();
         FilterSuppressedViolations();

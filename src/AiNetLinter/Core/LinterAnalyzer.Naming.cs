@@ -113,10 +113,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (!_config.Global.EnforceXmlDocumentation) return true;
         if (_isTestFile) return true;
-        if (node is MethodDeclarationSyntax method && method.Modifiers.Any(m => m.IsKind(SyntaxKind.OverrideKeyword)))
+
+        // XML-Dokumentation wird nur für Typen (Klassen, Interfaces, Structs, Records) verlangt,
+        // um redundanten Boilerplate-Kommentierungstext (Token-Müll) zu vermeiden.
+        if (node is not BaseTypeDeclarationSyntax)
         {
             return true;
         }
+
         return !IsInPublicContext(node);
     }
 

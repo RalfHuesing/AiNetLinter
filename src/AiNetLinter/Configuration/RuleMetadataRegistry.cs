@@ -25,6 +25,13 @@ public static class RuleMetadataRegistry
             ["MaxMethodOverloads"] = new() { Severity = "warning", Intent = "agent-context" },
             ["MaxConstructorDependencies"] = new() { Severity = "warning", Intent = "agent-context" },
             ["AIContextFootprint"] = new() { Severity = "warning", Intent = "agent-context" },
+            ["EnforceExplicitStateImmutability"] = new() { Severity = "error", Intent = "agent-resilience" },
+            ["EnforceStrictBoundaryForBusinessLogic"] = new() { Severity = "error", Intent = "architecture" },
+            ["PreventContextDependentOverloads"] = new() { Severity = "error", Intent = "agent-context" },
+            ["RequireExplicitTruncationHandling"] = new() { Severity = "warning", Intent = "agent-resilience" },
+            ["EnforceNamespaceDirectoryMapping"] = new() { Severity = "error", Intent = "architecture" },
+            ["MaxDirectoryDepth"] = new() { Severity = "warning", Intent = "agent-context" },
+            ["DetectAndBanPhantomDependencies"] = new() { Severity = "error", Intent = "architecture" },
         };
 
     /// <summary>

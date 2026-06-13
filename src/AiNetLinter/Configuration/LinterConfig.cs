@@ -52,6 +52,25 @@ public sealed record GlobalConfig
     public bool EnforceReadonlyParameters { get; init; } = true;
     public bool EnforceReadonlyFields { get; init; } = true;
     public bool EnforceNoMagicValues { get; init; } = true;
+    public bool EnforceExplicitStateImmutability { get; init; } = true;
+    public IReadOnlyCollection<string> AllowedExceptions { get; init; } = new[]
+    {
+        "ArgumentException",
+        "ArgumentNullException",
+        "ArgumentOutOfRangeException",
+        "InvalidOperationException",
+        "NotSupportedException",
+        "KeyNotFoundException",
+        "IndexOutOfRangeException",
+        "TimeoutException",
+        "ObjectDisposedException",
+        "NotImplementedException"
+    };
+    public bool EnforceStrictBoundaryForBusinessLogic { get; init; } = true;
+    public bool PreventContextDependentOverloads { get; init; } = true;
+    public bool RequireExplicitTruncationHandling { get; init; } = true;
+    public bool EnforceNamespaceDirectoryMapping { get; init; } = true;
+    public bool DetectAndBanPhantomDependencies { get; init; } = true;
 }
 
 /// <summary>
@@ -67,8 +86,9 @@ public sealed record MetricsConfig
     public int MaxInheritanceDepth { get; init; } = 2;
     public int MinCognitiveComplexityForTest { get; init; } = 3;
     public bool AggregatePartialClassLineCount { get; init; } = false;
-    public int MaxMethodOverloads { get; init; } = 2;
+    public int MaxMethodOverloads { get; init; } = 3;
     public int MaxConstructorDependencies { get; init; } = 5;
+    public int MaxDirectoryDepth { get; init; } = 4;
 
     /// <summary>
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
@@ -217,6 +237,14 @@ public sealed record GlobalConfigOverride
     /// Verbietet magische Literale.
     /// </summary>
     public bool? EnforceNoMagicValues { get; init; }
+
+    public bool? EnforceExplicitStateImmutability { get; init; }
+    public IReadOnlyCollection<string>? AllowedExceptions { get; init; }
+    public bool? EnforceStrictBoundaryForBusinessLogic { get; init; }
+    public bool? PreventContextDependentOverloads { get; init; }
+    public bool? RequireExplicitTruncationHandling { get; init; }
+    public bool? EnforceNamespaceDirectoryMapping { get; init; }
+    public bool? DetectAndBanPhantomDependencies { get; init; }
 }
 
 /// <summary>
@@ -278,4 +306,6 @@ public sealed record MetricsConfigOverride
     /// Der maximale transitive AI-Context-Footprint.
     /// </summary>
     public int? MaxAIContextFootprint { get; init; }
+
+    public int? MaxDirectoryDepth { get; init; }
 }

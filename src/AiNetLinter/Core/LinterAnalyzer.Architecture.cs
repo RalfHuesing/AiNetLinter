@@ -16,6 +16,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (node.Name != null)
         {
             CheckForbiddenNamespaceString(node.Name.ToString(), node);
+            CheckPhantomNamespace(node);
         }
         base.VisitUsingDirective(node);
     }
@@ -28,6 +29,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
         CheckMethodOverloads(node);
         CheckPrimaryConstructorDependencies(node);
+        CheckClassImmutability(node);
 
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
@@ -265,7 +267,84 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
     {
         CheckMinimalApiAsParameters(node);
+        CheckPhantomReflection(node);
+        CheckTruncationHandling(node);
         base.VisitInvocationExpression(node);
+    }
+
+    private void CheckPhantomNamespace(UsingDirectiveSyntax node)
+    {
+        if (!_config.Global.DetectAndBanPhantomDependencies) return;
+        if (_isTestFile) return;
+
+        if (node.Name != null)
+        {
+            var symbolInfo = _semanticModel.GetSymbolInfo(node.Name);
+            if (symbolInfo.Symbol == null)
+            {
+                _violations.Add(new RuleViolation
+                {
+                    FilePath = _filePath,
+                    LineNumber = GetLineNumber(node),
+                    RuleName = "DetectAndBanPhantomDependencies",
+                    Details = $"Der importierte Namespace '{node.Name}' kann nicht aufgeloest werden. Ist die NuGet-Abhaengigkeit in der csproj deklariert?",
+                    Guidance = "Entferne das using-Statement oder fuege die entsprechende Projektreferenz/.csproj-Abhaengigkeit hinzu."
+                });
+            }
+        }
+    }
+
+    private void CheckPhantomReflection(InvocationExpressionSyntax node)
+    {
+        if (!_config.Global.DetectAndBanPhantomDependencies) return;
+        if (_isTestFile) return;
+
+        var symbol = _semanticModel.GetSymbolInfo(node).Symbol;
+        if (symbol == null) return;
+
+        CheckPhantomReflectionSymbol(node, symbol);
+    }
+
+    private void CheckPhantomReflectionSymbol(InvocationExpressionSyntax node, ISymbol symbol)
+    {
+        var containingTypeSymbol = symbol.ContainingType;
+        var containingType = containingTypeSymbol != null ? containingTypeSymbol.ToDisplayString() : "";
+        var methodName = symbol.Name;
+
+        if (IsForbiddenReflectionCall(containingType, methodName))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = "DetectAndBanPhantomDependencies",
+                Details = $"Die Verwendung von dynamischer Reflection '{containingType}.{methodName}' ist fuer KI-Lesbarkeit nicht gestattet.",
+                Guidance = "Verwende statische Typ-Ausdruecke wie 'typeof(MyClass)' oder Generics, um die Compile-Zeit-Sicherheit zu wahren."
+            });
+        }
+    }
+
+    private static bool IsForbiddenReflectionCall(string containingType, string methodName)
+    {
+        if (IsTypeGetType(containingType, methodName)) return true;
+        if (IsAssemblyLoad(containingType, methodName)) return true;
+        return IsActivatorCreate(containingType, methodName);
+    }
+
+    private static bool IsTypeGetType(string containingType, string methodName)
+    {
+        return containingType == "System.Type" && methodName == "GetType";
+    }
+
+    private static bool IsAssemblyLoad(string containingType, string methodName)
+    {
+        if (!containingType.StartsWith("System.Reflection.Assembly")) return false;
+        return methodName.StartsWith("Load") || methodName.StartsWith("LoadFrom");
+    }
+
+    private static bool IsActivatorCreate(string containingType, string methodName)
+    {
+        return containingType == "System.Activator" && methodName == "CreateInstance";
     }
 
     private bool IsDynamicType(IdentifierNameSyntax node)

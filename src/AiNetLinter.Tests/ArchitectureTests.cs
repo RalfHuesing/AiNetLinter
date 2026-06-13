@@ -21,7 +21,13 @@ public sealed class ArchitectureTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false
+                EnforceNoSilentCatch = false,
+                EnforceExplicitStateImmutability = false,
+                EnforceStrictBoundaryForBusinessLogic = false,
+                PreventContextDependentOverloads = false,
+                RequireExplicitTruncationHandling = false,
+                EnforceNamespaceDirectoryMapping = false,
+                DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig
             {
@@ -235,16 +241,12 @@ public sealed class badClass {}";
     }
 
     [Fact]
-    public void Analyze_WithPublicMethodMissingXmlDoc_ReturnsViolation()
+    public void Analyze_WithPublicTypeMissingXmlDoc_ReturnsViolation()
     {
         const string sourceCode = @"
 namespace Test;
-/// <summary>
-/// Good doc.
-/// </summary>
-public sealed class GoodClass
+public sealed class MissingDocClass
 {
-    public void MissingDocMethod() {}
 }";
         var config = CreateDefaultConfig() with
         {
