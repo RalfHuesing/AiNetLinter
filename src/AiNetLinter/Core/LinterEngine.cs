@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
@@ -64,14 +67,12 @@ public sealed class LinterEngine
         var state = CreateAnalysisState(solution);
         await AnalyzeSolutionAsync(state, catalog);
 
-        var suppressionCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
         if (_config.Global.EnableTestSentinel)
         {
-            RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, suppressionCache);
+            RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, state.FileContents);
         }
 
-        RunInheritanceDepthCheck(state.SourceClasses, state.Violations, suppressionCache);
+        RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents);
         AddPartialClassViolations(state.PartialClassParts, state.Violations);
 
         return state.Violations.ToArray();
@@ -84,7 +85,8 @@ public sealed class LinterEngine
             new ConcurrentBag<RuleViolation>(),
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
-            new ConcurrentBag<PartialClassPart>());
+            new ConcurrentBag<PartialClassPart>(),
+            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
     }
 
     private static ParallelOptions CreateParallelOptions() => new()
@@ -97,7 +99,8 @@ public sealed class LinterEngine
         ConcurrentBag<RuleViolation> Violations,
         TestCoverageIndex TestCoverage,
         ConcurrentBag<ClassInfo> SourceClasses,
-        ConcurrentBag<PartialClassPart> PartialClassParts
+        ConcurrentBag<PartialClassPart> PartialClassParts,
+        ConcurrentDictionary<string, string> FileContents
     );
 
     private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog)
@@ -126,11 +129,12 @@ public sealed class LinterEngine
         Solution solution,
         string? solutionDir)
     {
-        var workItems = new List<CatalogDocumentWorkItem>();
+        var tasks = solution.Projects.Select(project => CollectProjectDocumentsAsync(project, solutionDir));
+        var results = await Task.WhenAll(tasks);
 
-        foreach (var project in solution.Projects)
+        var workItems = new List<CatalogDocumentWorkItem>();
+        foreach (var items in results)
         {
-            var items = await CollectProjectDocumentsAsync(project, solutionDir);
             workItems.AddRange(items);
         }
 
@@ -211,6 +215,9 @@ public sealed class LinterEngine
         if (semanticModel == null) return;
 
         var filePath = document.FilePath ?? document.Name;
+        var sourceText = await document.GetTextAsync();
+        state.FileContents[filePath] = sourceText.ToString();
+
         bool isTestFile = isTestProj || IsTestFile(filePath);
 
         AnalyzeAndCollect(filePath, semanticModel, isTestFile, state);
@@ -289,13 +296,13 @@ public sealed class LinterEngine
         TestCoverageIndex testCoverage,
         ConcurrentBag<ClassInfo> sourceClasses,
         ConcurrentBag<RuleViolation> violations,
-        Dictionary<string, string> suppressionCache)
+        ConcurrentDictionary<string, string> fileContents)
     {
         foreach (var srcClass in sourceClasses)
         {
             if (srcClass.MaxCognitiveComplexity > _config.Metrics.MinCognitiveComplexityForTest)
             {
-                CheckTestPresence(srcClass, testCoverage, violations, suppressionCache);
+                CheckTestPresence(srcClass, testCoverage, violations, fileContents);
             }
         }
     }
@@ -304,14 +311,14 @@ public sealed class LinterEngine
         ClassInfo srcClass,
         TestCoverageIndex testCoverage,
         ConcurrentBag<RuleViolation> violations,
-        Dictionary<string, string> suppressionCache)
+        ConcurrentDictionary<string, string> fileContents)
     {
         if (TestCoverageResolver.IsCovered(srcClass.Name, testCoverage, _config.TestSentinel))
         {
             return;
         }
 
-        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, suppressionCache))
+        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, fileContents))
         {
             return;
         }
@@ -330,7 +337,7 @@ public sealed class LinterEngine
     private void RunInheritanceDepthCheck(
         ConcurrentBag<ClassInfo> sourceClasses,
         ConcurrentBag<RuleViolation> violations,
-        Dictionary<string, string> suppressionCache)
+        ConcurrentDictionary<string, string> fileContents)
     {
         foreach (var cls in sourceClasses)
         {
@@ -340,7 +347,7 @@ public sealed class LinterEngine
                     cls.FilePath,
                     nameof(_config.Metrics.MaxInheritanceDepth),
                     cls.LineNumber,
-                    suppressionCache))
+                    fileContents))
             {
                 violations.Add(new RuleViolation
                 {
@@ -358,12 +365,12 @@ public sealed class LinterEngine
         string filePath,
         string ruleName,
         int lineNumber,
-        Dictionary<string, string> suppressionCache)
+        ConcurrentDictionary<string, string> fileContents)
     {
-        if (!suppressionCache.TryGetValue(filePath, out var fileContent))
+        if (!fileContents.TryGetValue(filePath, out var fileContent))
         {
             fileContent = File.Exists(filePath) ? File.ReadAllText(filePath) : string.Empty;
-            suppressionCache[filePath] = fileContent;
+            fileContents[filePath] = fileContent;
         }
 
         return SuppressionEvaluator.IsSuppressed(fileContent, ruleName, lineNumber);
