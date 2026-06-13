@@ -71,11 +71,12 @@ public sealed class SourceFileCatalog : IDisposable
     public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync()
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
-        var workItems = new List<CatalogDocumentWorkItem>();
+        var tasks = Solution.Projects.Select(project => CollectProjectWorkItemsAsync(project, solutionDir));
+        var results = await Task.WhenAll(tasks);
 
-        foreach (var project in Solution.Projects)
+        var workItems = new List<CatalogDocumentWorkItem>();
+        foreach (var projectItems in results)
         {
-            var projectItems = await CollectProjectWorkItemsAsync(project, solutionDir);
             workItems.AddRange(projectItems);
         }
 

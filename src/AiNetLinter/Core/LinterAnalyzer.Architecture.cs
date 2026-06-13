@@ -190,20 +190,40 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitIdentifierName(IdentifierNameSyntax node)
     {
-        if (!_config.Global.AllowDynamic && IsDynamicType(node))
+        bool hasNamespaceRules = _config.ForbiddenNamespaceDependencies != null && _config.ForbiddenNamespaceDependencies.Count > 0;
+        bool hasDynamicCheck = !_config.Global.AllowDynamic;
+
+        if (hasNamespaceRules || hasDynamicCheck)
         {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Global.AllowDynamic),
-                Details = "Die Verwendung des Typs 'dynamic' ist nicht gestattet.",
-                Guidance = "Verwende stattdessen stark typisierte Schnittstellen, Klassen oder generische Typen."
-            });
+            CheckIdentifierRules(node, hasNamespaceRules, hasDynamicCheck);
         }
 
-        CheckForbiddenSymbolNamespace(node);
         base.VisitIdentifierName(node);
+    }
+
+    private void CheckIdentifierRules(IdentifierNameSyntax node, bool hasNamespaceRules, bool hasDynamicCheck)
+    {
+        if (hasDynamicCheck && IsDynamicType(node))
+        {
+            ReportDynamicViolation(node);
+        }
+
+        if (hasNamespaceRules)
+        {
+            CheckForbiddenSymbolNamespace(node);
+        }
+    }
+
+    private void ReportDynamicViolation(IdentifierNameSyntax node)
+    {
+        _violations.Add(new RuleViolation
+        {
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(node),
+            RuleName = nameof(_config.Global.AllowDynamic),
+            Details = "Die Verwendung des Typs 'dynamic' ist nicht gestattet.",
+            Guidance = "Verwende stattdessen stark typisierte Schnittstellen, Klassen oder generische Typen."
+        });
     }
 
     private void CheckForbiddenSymbolNamespace(IdentifierNameSyntax node)
