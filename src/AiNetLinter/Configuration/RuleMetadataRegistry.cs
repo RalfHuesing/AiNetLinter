@@ -24,6 +24,7 @@ public static class RuleMetadataRegistry
             ["EnforceNoMagicValues"] = new() { Severity = "error", Intent = "general" },
             ["MaxMethodOverloads"] = new() { Severity = "warning", Intent = "agent-context" },
             ["MaxConstructorDependencies"] = new() { Severity = "warning", Intent = "agent-context" },
+            ["AIContextFootprint"] = new() { Severity = "warning", Intent = "agent-context" },
         };
 
     /// <summary>

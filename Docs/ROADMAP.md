@@ -194,11 +194,11 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 19: AI-Developer Experience (AI-DX) & Tooling
-- [ ] **AI-Context-Footprint (Metrik):**
+- [x] **AI-Context-Footprint (Metrik):**
   - *Beschreibung:* Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten, um die Token-Belastung für KIs zu messen.
   - *LLM-Impact:* Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
-- [ ] **Automatisch generiertes Repo-Playbook:**
+- [x] **Automatisch generiertes Repo-Playbook:**
   - *Beschreibung:* Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
   - *LLM-Impact:* Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
   - *Machbarkeit:* 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
@@ -214,7 +214,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   - *Beschreibung:* Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
   - *LLM-Impact:* Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
-- [ ] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
+- [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
   - *Beschreibung:* Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceNoMagicValues` für Testprojekte).
   - *LLM-Impact:* Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
