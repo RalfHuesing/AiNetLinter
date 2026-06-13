@@ -30,26 +30,41 @@ internal static class CliCommandBuilder
         Option<bool> Check,
         Option<string?> Footprint);
 
-    // ainetlinter-disable MaxConstructorDependencies
-    // Diese Records dienen als Behaelter fuer CLI-Argumente und haben keine logischen Abhaengigkeiten.
-    internal sealed record ParsedArgs(
-        string? ConfigPath,
-        string TargetPath,
+    internal sealed record OutputOptions(
         string? GraphPath,
         string? PlaybookPath,
         string Format,
-        bool Verbose,
+        bool Verbose);
+
+    internal sealed record BaselineOptions(
         string? CreateBaselinePath,
         string? BaselinePath,
+        bool OnlyChanged);
+
+    internal sealed record MaintenanceOptions(
         bool AddDisableAll,
-        bool RemoveDisableAll,
-        bool DebtReport,
+        bool RemoveDisableAll);
+
+    internal sealed record ScopeOptions(
         bool WaveReady,
-        bool OnlyChanged,
-        string? GitSince,
-        bool Fix,
+        string? GitSince);
+
+    internal sealed record ImpactOptions(
         bool HasImpact,
-        string? ImpactRef,
+        string? ImpactRef);
+
+    // ainetlinter-disable MaxConstructorDependencies
+    // Dieser Record ist ein CLI-Parsing-DTO und hat keine logischen Abhaengigkeiten.
+    internal sealed record ParsedArgs(
+        string? ConfigPath,
+        string TargetPath,
+        OutputOptions Output,
+        BaselineOptions Baseline,
+        MaintenanceOptions Maintenance,
+        ScopeOptions Scope,
+        bool DebtReport,
+        bool Fix,
+        ImpactOptions Impact,
         bool SyncCursorRules,
         bool Check,
         string? Footprint);
@@ -95,25 +110,30 @@ internal static class CliCommandBuilder
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
     {
         return new ParsedArgs(
-            parseResult.GetValue(options.Config),
-            parseResult.GetValue(options.Path) ?? "",
-            parseResult.GetValue(options.Graph),
-            parseResult.GetValue(options.Playbook),
-            parseResult.GetValue(options.Format) ?? "text",
-            parseResult.GetValue(options.Verbose),
-            parseResult.GetValue(options.CreateBaseline),
-            parseResult.GetValue(options.Baseline),
-            parseResult.GetValue(options.AddDisableAll),
-            parseResult.GetValue(options.RemoveDisableAll),
-            parseResult.GetValue(options.DebtReport),
-            parseResult.GetValue(options.WaveReady),
-            parseResult.GetValue(options.OnlyChanged),
-            parseResult.GetValue(options.GitSince),
-            parseResult.GetValue(options.Fix),
-            parseResult.Tokens.Any(t => t.Value == "--impact" || t.Value == "-im"),
-            parseResult.GetValue(options.Impact),
-            parseResult.GetValue(options.SyncCursorRules),
-            parseResult.GetValue(options.Check),
-            parseResult.GetValue(options.Footprint));
+            ConfigPath: parseResult.GetValue(options.Config),
+            TargetPath: parseResult.GetValue(options.Path) ?? "",
+            Output: new OutputOptions(
+                GraphPath: parseResult.GetValue(options.Graph),
+                PlaybookPath: parseResult.GetValue(options.Playbook),
+                Format: parseResult.GetValue(options.Format) ?? "text",
+                Verbose: parseResult.GetValue(options.Verbose)),
+            Baseline: new BaselineOptions(
+                CreateBaselinePath: parseResult.GetValue(options.CreateBaseline),
+                BaselinePath: parseResult.GetValue(options.Baseline),
+                OnlyChanged: parseResult.GetValue(options.OnlyChanged)),
+            Maintenance: new MaintenanceOptions(
+                AddDisableAll: parseResult.GetValue(options.AddDisableAll),
+                RemoveDisableAll: parseResult.GetValue(options.RemoveDisableAll)),
+            Scope: new ScopeOptions(
+                WaveReady: parseResult.GetValue(options.WaveReady),
+                GitSince: parseResult.GetValue(options.GitSince)),
+            DebtReport: parseResult.GetValue(options.DebtReport),
+            Fix: parseResult.GetValue(options.Fix),
+            Impact: new ImpactOptions(
+                HasImpact: parseResult.GetResult(options.Impact) is not null,
+                ImpactRef: parseResult.GetValue(options.Impact)),
+            SyncCursorRules: parseResult.GetValue(options.SyncCursorRules),
+            Check: parseResult.GetValue(options.Check),
+            Footprint: parseResult.GetValue(options.Footprint));
     }
 }

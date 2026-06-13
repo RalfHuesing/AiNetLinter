@@ -129,18 +129,18 @@ public sealed class LinterEngine
         return workItems;
     }
 
-    private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectProjectDocumentsAsync(
+    private static Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectProjectDocumentsAsync(
         Project project,
         string? solutionDir)
     {
-        var compilation = await project.GetCompilationAsync();
-        if (compilation == null)
+        if (!project.SupportsCompilation)
         {
-            return [];
+            return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>([]);
         }
 
         var isTestProject = TestProjectDetector.IsTestProject(project);
-        return CollectValidDocuments(project, solutionDir, isTestProject);
+        return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>(
+            CollectValidDocuments(project, solutionDir, isTestProject));
     }
 
     private static List<CatalogDocumentWorkItem> CollectValidDocuments(

@@ -68,21 +68,21 @@ public static class Program
         {
             ConfigPath = parsed.ConfigPath,
             TargetPath = parsed.TargetPath,
-            GraphPath = parsed.GraphPath,
-            PlaybookPath = parsed.PlaybookPath,
-            Format = parsed.Format,
-            Verbose = parsed.Verbose,
-            CreateBaselinePath = parsed.CreateBaselinePath,
-            BaselinePath = parsed.BaselinePath,
-            AddDisableAll = parsed.AddDisableAll,
-            RemoveDisableAll = parsed.RemoveDisableAll,
+            Format = parsed.Output.Format,
+            Verbose = parsed.Output.Verbose,
+            GraphPath = parsed.Output.GraphPath,
+            PlaybookPath = parsed.Output.PlaybookPath,
+            CreateBaselinePath = parsed.Baseline.CreateBaselinePath,
+            BaselinePath = parsed.Baseline.BaselinePath,
+            OnlyChanged = parsed.Baseline.OnlyChanged,
+            AddDisableAll = parsed.Maintenance.AddDisableAll,
+            RemoveDisableAll = parsed.Maintenance.RemoveDisableAll,
+            WaveReady = parsed.Scope.WaveReady,
+            GitSince = parsed.Scope.GitSince,
             DebtReport = parsed.DebtReport,
-            WaveReady = parsed.WaveReady,
-            OnlyChanged = parsed.OnlyChanged,
-            GitSince = parsed.GitSince,
             Fix = parsed.Fix,
-            HasImpact = parsed.HasImpact,
-            ImpactRef = parsed.ImpactRef,
+            HasImpact = parsed.Impact.HasImpact,
+            ImpactRef = parsed.Impact.ImpactRef,
             SyncCursorRules = parsed.SyncCursorRules,
             Check = parsed.Check,
             Footprint = parsed.Footprint,
@@ -136,16 +136,10 @@ public static class Program
 
     private static int? ValidateArgs(LinterArgs args)
     {
-        if (HasConflictingModeOptions(args))
+        var error = args.Validate();
+        if (error != null)
         {
-            Console.Error.WriteLine(
-                "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
-            return 1;
-        }
-
-        if (args.OnlyChanged && args.BaselinePath == null)
-        {
-            Console.Error.WriteLine("[ERROR]: --only-changed erfordert --baseline.");
+            Console.Error.WriteLine(error);
             return 1;
         }
 
@@ -224,12 +218,22 @@ public static class Program
 
         var engine = new LinterEngine(config);
         var initialViolations = await engine.RunAsync(catalog);
-        var fixedCount = await LinterAutoFixer.FixAsync(catalog.Solution, initialViolations, args.Verbose);
+        var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
+            catalog.Solution, initialViolations, args.Verbose, dryRun: args.Check);
+
+        if (args.Check)
+        {
+            if (fixedCount > 0)
+            {
+                Console.WriteLine($"[DRY-RUN]: {fixedCount} einfache Regelverstoesse wuerden automatisch behoben.");
+            }
+            return (catalog, false);
+        }
+
         if (fixedCount > 0)
         {
             Console.WriteLine(FixedCountMessageFormat, fixedCount);
-            var reloaded = await SourceFileCatalog.LoadAsync(args.TargetPath);
-            return (reloaded, true);
+            return (catalog.WithUpdatedSolution(updatedSolution), true);
         }
 
         return (catalog, false);
@@ -327,23 +331,6 @@ public static class Program
         return null;
     }
 
-    private static bool HasConflictingModeOptions(LinterArgs args)
-    {
-        var maintenanceModeCount = CountMaintenanceModes(args);
-        return maintenanceModeCount > 1 ||
-               args.BaselinePath != null && maintenanceModeCount > 0;
-    }
-
-    private static int CountMaintenanceModes(LinterArgs args)
-    {
-        int count = 0;
-        if (args.CreateBaselinePath != null) count++;
-        if (args.AddDisableAll) count++;
-        if (args.RemoveDisableAll) count++;
-        return count;
-    }
-
-
 
     private static async Task<int> AuditWithBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
     {
@@ -411,20 +398,25 @@ public static class Program
         string outputRoot,
         LinterConfig config)
     {
+        if (violations.Count == 0)
+        {
+            if (format != "sarif") Console.WriteLine("OK");
+            else SarifWriter.Write(violations, outputRoot, config);
+            return 0;
+        }
+
+        var hasError = RuleMetadataRegistry.HasErrorSeverity(violations, config);
+
         if (format == "sarif")
         {
             SarifWriter.Write(violations, outputRoot, config);
-            return violations.Count > 0 ? 1 : 0;
         }
-
-        if (violations.Count > 0)
+        else
         {
             Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot, config));
-            return 1;
         }
 
-        Console.WriteLine("OK");
-        return 0;
+        return hasError ? 1 : 0;
     }
 
     private static async Task<int> RunImpactAnalysisAsync(LinterArgs args)

@@ -25,8 +25,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private string _currentNamespace = "";
     private readonly bool _isTestFile;
     private readonly string? _projectName;
-    private readonly HashSet<IFieldSymbol> _privateFieldsToAnalyze = new(SymbolEqualityComparer.Default);
-    private readonly HashSet<IFieldSymbol> _fieldsModifiedOutsideConstructor = new(SymbolEqualityComparer.Default);
+    private readonly FieldReadonlyTracker _fieldTracker = new();
 
     public List<ClassInfo> Classes { get; } = new();
     public List<PartialClassPart> PartialClassParts { get; } = new();
@@ -227,28 +226,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (!_config.Global.EnforceReadonlyFields) return;
 
-        foreach (var field in _privateFieldsToAnalyze)
+        foreach (var field in _fieldTracker.GetReadonlyCandidates())
         {
-            CheckSingleFieldReadonly(field);
+            _violations.Add(FieldReadonlyTracker.BuildViolation(field, _filePath));
         }
-    }
-
-    private void CheckSingleFieldReadonly(IFieldSymbol field)
-    {
-        if (_fieldsModifiedOutsideConstructor.Contains(field)) return;
-
-        var syntaxRef = field.DeclaringSyntaxReferences.FirstOrDefault();
-        var syntaxNode = syntaxRef?.GetSyntax();
-        var lineNumber = syntaxNode != null ? GetLineNumber(syntaxNode) : 1;
-
-        _violations.Add(new RuleViolation
-        {
-            FilePath = _filePath,
-            LineNumber = lineNumber,
-            RuleName = "EnforceReadonlyFields",
-            Details = $"Das private Feld '{field.Name}' wird nur im Konstruktor oder Initialisierer zugewiesen, ist aber nicht als 'readonly' deklariert.",
-            Guidance = "Fuege den 'readonly' Modifikator zum Feld hinzu, um unabsichtliche Modifikationen zu verhindern."
-        });
     }
 }
 

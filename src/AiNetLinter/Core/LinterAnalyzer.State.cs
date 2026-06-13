@@ -169,11 +169,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.EnforceReadonlyFields) return;
 
         var symbol = _semanticModel.GetSymbolInfo(expression).Symbol as IFieldSymbol;
-        if (symbol == null || !_privateFieldsToAnalyze.Contains(symbol)) return;
+        if (symbol == null || !_fieldTracker.IsCandidate(symbol)) return;
 
         if (!IsInsideConstructorOfDeclaringType(expression, symbol.ContainingType))
         {
-            _fieldsModifiedOutsideConstructor.Add(symbol);
+            _fieldTracker.MarkModifiedOutsideConstructor(symbol);
         }
     }
 
@@ -212,6 +212,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
         if (symbol == null || symbol.IsReadOnly || symbol.IsConst) return;
 
-        _privateFieldsToAnalyze.Add(symbol);
+        _fieldTracker.RegisterCandidate(symbol);
     }
 }

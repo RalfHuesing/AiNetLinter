@@ -2,6 +2,7 @@ namespace AiNetLinter.Baseline;
 
 /// <summary>
 /// Vergleicht gespeicherte Baseline-Checksummen mit dem aktuellen Dateistand.
+/// Erkennt Umbenennungen anhand identischer SHA-256-Hashes, um falsch-positive "neue Datei"-Meldungen zu vermeiden.
 /// </summary>
 public static class BaselineComparer
 {
@@ -14,7 +15,7 @@ public static class BaselineComparer
     {
         var changed = FindChecksumChanges(storedBaseline, currentChecksums);
         var removed = FindRemovedFiles(storedBaseline, currentChecksums);
-        AddNewFiles(storedBaseline, currentChecksums, changed);
+        AddNewFiles(storedBaseline, currentChecksums, changed, removed);
 
         var hasAnyChange = changed.Count > 0 || removed.Count > 0;
         return new BaselineComparisonResult
@@ -67,14 +68,37 @@ public static class BaselineComparer
     private static void AddNewFiles(
         BaselineFile storedBaseline,
         IReadOnlyDictionary<string, string> currentChecksums,
-        HashSet<string> changed)
+        HashSet<string> changed,
+        HashSet<string> removed)
     {
-        foreach (var relativePath in currentChecksums.Keys)
+        var storedHashToPath = BuildHashIndex(storedBaseline.Files);
+
+        foreach (var (relativePath, currentHash) in currentChecksums)
         {
-            if (!storedBaseline.Files.ContainsKey(relativePath))
+            if (storedBaseline.Files.ContainsKey(relativePath))
+            {
+                continue;
+            }
+
+            if (storedHashToPath.TryGetValue(currentHash, out var originalPath) && removed.Contains(originalPath))
+            {
+                // Gleicher Hash unter anderem Pfad → Umbenennung, keine Inhaltsänderung
+                removed.Remove(originalPath);
+            }
+            else
             {
                 changed.Add(relativePath);
             }
         }
+    }
+
+    private static Dictionary<string, string> BuildHashIndex(IReadOnlyDictionary<string, string> files)
+    {
+        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, hash) in files)
+        {
+            index.TryAdd(hash, path);
+        }
+        return index;
     }
 }

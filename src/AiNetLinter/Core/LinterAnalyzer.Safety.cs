@@ -20,13 +20,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (_config.Global.AllowedEmptyReads) return;
         if (_isTestFile) return;
 
-        if (_filePath.Contains("Fake", StringComparison.OrdinalIgnoreCase) || 
-            _filePath.Contains("Mock", StringComparison.OrdinalIgnoreCase) || 
-            _filePath.Contains("Test", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var symbol = _semanticModel.GetSymbolInfo(node).Symbol;
         if (symbol == null) return;
 

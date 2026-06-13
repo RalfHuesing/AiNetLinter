@@ -1,7 +1,5 @@
 #nullable enable
 
-using System;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
@@ -53,70 +51,12 @@ public static class ProjectConfigResolver
         return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
     }
 
-    // ainetlinter-disable MaxMethodLineCount
-    // ainetlinter-disable MaxCognitiveComplexity
-    // ainetlinter-disable MaxCyclomaticComplexity
     private static LinterConfig MergeConfig(LinterConfig global, ProjectOverrideEntry overrides)
     {
-        var mergedGlobal = global.Global;
-        if (overrides.Global != null)
+        return global with
         {
-            var og = overrides.Global;
-            mergedGlobal = global.Global with
-            {
-                EnforceSealedClasses = og.EnforceSealedClasses ?? global.Global.EnforceSealedClasses,
-                AllowUnsealedPartialClasses = og.AllowUnsealedPartialClasses ?? global.Global.AllowUnsealedPartialClasses,
-                AllowDynamic = og.AllowDynamic ?? global.Global.AllowDynamic,
-                AllowOutParameters = og.AllowOutParameters ?? global.Global.AllowOutParameters,
-                EnforceValueObjectContracts = og.EnforceValueObjectContracts ?? global.Global.EnforceValueObjectContracts,
-                EnableTestSentinel = og.EnableTestSentinel ?? global.Global.EnableTestSentinel,
-                EnforcePascalCase = og.EnforcePascalCase ?? global.Global.EnforcePascalCase,
-                EnforceXmlDocumentation = og.EnforceXmlDocumentation ?? global.Global.EnforceXmlDocumentation,
-                EnforceSemanticNaming = og.EnforceSemanticNaming ?? global.Global.EnforceSemanticNaming,
-                EnforceNullableEnable = og.EnforceNullableEnable ?? global.Global.EnforceNullableEnable,
-                EnforceNoSilentCatch = og.EnforceNoSilentCatch ?? global.Global.EnforceNoSilentCatch,
-                AllowTryPatternOutParameters = og.AllowTryPatternOutParameters ?? global.Global.AllowTryPatternOutParameters,
-                AllowCancellationShutdownCatch = og.AllowCancellationShutdownCatch ?? global.Global.AllowCancellationShutdownCatch,
-                EnforceMinimalApiAsParameters = og.EnforceMinimalApiAsParameters ?? global.Global.EnforceMinimalApiAsParameters,
-                EnforceResultPatternOverExceptions = og.EnforceResultPatternOverExceptions ?? global.Global.EnforceResultPatternOverExceptions,
-                EnforceNoVariableShadowing = og.EnforceNoVariableShadowing ?? global.Global.EnforceNoVariableShadowing,
-                EnforceReadonlyParameters = og.EnforceReadonlyParameters ?? global.Global.EnforceReadonlyParameters,
-                EnforceReadonlyFields = og.EnforceReadonlyFields ?? global.Global.EnforceReadonlyFields,
-                EnforceNoMagicValues = og.EnforceNoMagicValues ?? global.Global.EnforceNoMagicValues,
-                EnforceExplicitStateImmutability = og.EnforceExplicitStateImmutability ?? global.Global.EnforceExplicitStateImmutability,
-                AllowedExceptions = og.AllowedExceptions ?? global.Global.AllowedExceptions,
-                EnforceStrictBoundaryForBusinessLogic = og.EnforceStrictBoundaryForBusinessLogic ?? global.Global.EnforceStrictBoundaryForBusinessLogic,
-                PreventContextDependentOverloads = og.PreventContextDependentOverloads ?? global.Global.PreventContextDependentOverloads,
-                RequireExplicitTruncationHandling = og.RequireExplicitTruncationHandling ?? global.Global.RequireExplicitTruncationHandling,
-                EnforceNamespaceDirectoryMapping = og.EnforceNamespaceDirectoryMapping ?? global.Global.EnforceNamespaceDirectoryMapping,
-                DetectAndBanPhantomDependencies = og.DetectAndBanPhantomDependencies ?? global.Global.DetectAndBanPhantomDependencies,
-                ImmutabilityExemptSuffixes = og.ImmutabilityExemptSuffixes ?? global.Global.ImmutabilityExemptSuffixes,
-                ImmutabilityExemptPatterns = og.ImmutabilityExemptPatterns ?? global.Global.ImmutabilityExemptPatterns,
-                AllowedEmptyReads = og.AllowedEmptyReads ?? global.Global.AllowedEmptyReads
-            };
-        }
-
-        var mergedMetrics = global.Metrics;
-        if (overrides.Metrics != null)
-        {
-            var om = overrides.Metrics;
-            mergedMetrics = global.Metrics with
-            {
-                MaxLineCount = om.MaxLineCount ?? global.Metrics.MaxLineCount,
-                MaxMethodParameterCount = om.MaxMethodParameterCount ?? global.Metrics.MaxMethodParameterCount,
-                MaxMethodLineCount = om.MaxMethodLineCount ?? global.Metrics.MaxMethodLineCount,
-                MaxCyclomaticComplexity = om.MaxCyclomaticComplexity ?? global.Metrics.MaxCyclomaticComplexity,
-                MaxCognitiveComplexity = om.MaxCognitiveComplexity ?? global.Metrics.MaxCognitiveComplexity,
-                MaxInheritanceDepth = om.MaxInheritanceDepth ?? global.Metrics.MaxInheritanceDepth,
-                MinCognitiveComplexityForTest = om.MinCognitiveComplexityForTest ?? global.Metrics.MinCognitiveComplexityForTest,
-                AggregatePartialClassLineCount = om.AggregatePartialClassLineCount ?? global.Metrics.AggregatePartialClassLineCount,
-                MaxMethodOverloads = om.MaxMethodOverloads ?? global.Metrics.MaxMethodOverloads,
-                MaxConstructorDependencies = om.MaxConstructorDependencies ?? global.Metrics.MaxConstructorDependencies,
-                MaxAIContextFootprint = om.MaxAIContextFootprint ?? global.Metrics.MaxAIContextFootprint,
-                MaxDirectoryDepth = om.MaxDirectoryDepth ?? global.Metrics.MaxDirectoryDepth
-            };
-        }
-
-        return global with { Global = mergedGlobal, Metrics = mergedMetrics };
+            Global = global.Global.Apply(overrides.Global),
+            Metrics = global.Metrics.Apply(overrides.Metrics),
+        };
     }
 }
