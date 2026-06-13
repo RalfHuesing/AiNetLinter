@@ -13,7 +13,8 @@
     "EnforceNullableEnable": true,
     "EnforceNoSilentCatch": true,
     "AllowCancellationShutdownCatch": true,
-    "EnforceMinimalApiAsParameters": false
+    "EnforceMinimalApiAsParameters": false,
+    "EnforceResultPatternOverExceptions": false
   },
   "Metrics": {
     "MaxLineCount": 500,

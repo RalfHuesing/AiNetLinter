@@ -41,6 +41,7 @@ public sealed record GlobalConfig
     public bool AllowTryPatternOutParameters { get; init; } = true;
     public bool AllowCancellationShutdownCatch { get; init; } = true;
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
+    public bool EnforceResultPatternOverExceptions { get; init; } = true;
 }
 
 /// <summary>
