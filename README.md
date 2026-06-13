@@ -116,6 +116,12 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Gezielte Bulk-Suppression (`--add-disable-all` / `--remove-disable-all`):** Audit-basiertes Einfügen des Disable-all-Kommentars nur in Dateien mit Verstößen sowie sicheres Entfernen exakter Disable-all-Zeilen.
 *   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
 *   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
+*   **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Flexibles Überschreiben oder Deaktivieren von Linter-Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) in der Konfiguration.
+*   **AI-Context-Footprint (Metrik):** Berechnet die Summe aller Codezeilen einer Klasse inklusive aller transitiv referenzierten eigenen Typen, um hohe Kopplung und große Kontext-Footprints für KIs zu vermeiden.
+*   **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
+*   **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
+*   **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
+
 
 ---
 
@@ -215,6 +221,28 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
 | `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
 | `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
+
+### Projekt-spezifische Regel-Konfiguration (Project Overrides)
+
+In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. In Testprojekten sind beispielsweise literale Werte (Magic Values) in Assertions erwünscht. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
+
+```json
+  "ProjectOverrides": {
+    "*.Tests": {
+      "Global": {
+        "EnforceNoMagicValues": false,
+        "EnforceSealedClasses": false
+      },
+      "Metrics": {
+        "MaxMethodLineCount": 100
+      }
+    }
+  }
+```
+
+### AI-Context-Footprint (Metrik)
+
+Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst plus aller transitiv im Quellcode referenzierten eigenen Klassen/Typen. Steigt diese Metrik über den konfigurierten Schwellenwert (`MaxAIContextFootprint`, standardmäßig `5000` Zeilen), wird ein Regelverstoß gemeldet. Dies hilft Entwicklern, hohe Kopplung zu vermeiden und die Token-Belastung für KIs gering zu halten.
 
 ---
 
@@ -317,6 +345,28 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-sin
     "src/MyApp/Program.cs": "a1b2c3d4e5f6..."
   }
 }
+```
+
+### Roslyn-basierter CLI Auto-Fixer (`--fix`)
+
+Triviale Linter-Verstöße kosten KI-Agenten wertvolle Prompt-Zyklen. Die Option `--fix` behebt einfache Verstöße (wie das Fehlen von `sealed` bei konkreten Klassen, `readonly` bei privaten Feldern oder das Fehlen von `#nullable enable` am Dateianfang) vollautomatisiert über Roslyn-Syntaxbaum-Transformationen direkt beim Audit-Lauf.
+
+### Semantische Diff-Impact-Analyse (`--impact` / `-im`)
+
+Bei Änderungen öffentlicher, interner oder geschützter Methodensignaturen hilft die Impact-Analyse, alle davon betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution zu ermitteln. Sie analysiert dazu das Git-Diff (`git diff -U0`), ordnet geänderte Zeilen den deklarierten Methoden zu und sucht deren Referenzen.
+
+Aufrufbeispiel:
+```bash
+ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
+```
+
+### Automatisch generiertes Repo-Playbook (`--playbook` / `-pb`)
+
+Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
+
+Das Playbook wird über das CLI-Argument `--playbook <Pfad>` oder `-pb <Pfad>` generiert, standardmäßig unter `.cursor/rules/playbook.md`:
+```bash
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
 ```
 
 ### Exit-Codes
@@ -471,45 +521,7 @@ public sealed class ArchitectureTests
 
 ---
 
-## 9. Neue Features (Epic 19)
-
-### Projekt-spezifische Regel-Konfiguration (Project Overrides)
-In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. In Testprojekten sind beispielsweise literale Werte (Magic Values) in Assertions erwünscht. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
-```json
-  "ProjectOverrides": {
-    "*.Tests": {
-      "Global": {
-        "EnforceNoMagicValues": false,
-        "EnforceSealedClasses": false
-      },
-      "Metrics": {
-        "MaxMethodLineCount": 100
-      }
-    }
-  }
-```
-
-### AI-Context-Footprint (Metrik)
-Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst plus aller transitiv im Quellcode referenzierten eigenen Klassen/Typen. Steigt diese Metrik über den konfigurierten Schwellenwert (`MaxAIContextFootprint`, standardmäßig `5000` Zeilen), wird ein Regelverstoß gemeldet. Dies hilft Entwicklern, hohe Kopplung zu vermeiden und die Token-Belastung für KIs gering zu halten.
-
-### Automatisch generiertes Repo-Playbook
-Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
-Das Playbook wird über das CLI-Argument `--playbook <Pfad>` generiert, standardmäßig unter `.cursor/rules/playbook.md`:
-```bash
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
-```
-
-### Roslyn-basierter CLI Auto-Fixer (`--fix`)
-Triviale Linter-Verstöße kosten KI-Agenten wertvolle Prompt-Zyklen. Die Option `--fix` behebt einfache Verstöße (wie das Fehlen von `sealed` bei konkreten Klassen, `readonly` bei privaten Feldern oder das Fehlen von `#nullable enable` am Dateianfang) vollautomatisiert über Roslyn-Syntaxbaum-Transformationen direkt beim Audit-Lauf.
-
-### Semantische Diff-Impact-Analyse (`--impact`)
-Bei Änderungen öffentlicher, interner oder geschützter Methodensignaturen hilft die Impact-Analyse, alle davon betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution zu ermitteln. Sie analysiert dazu das Git-Diff (`git diff -U0`), ordnet geänderte Zeilen den deklarierten Methoden zu und sucht deren Referenzen.
-Aufrufbeispiel:
-```bash
-ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
-```
-
-## 10. Zukunfts-Roadmap (Ausblick)
+## 9. Zukunfts-Roadmap (Ausblick)
 
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
 *   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
