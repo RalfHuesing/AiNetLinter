@@ -202,11 +202,11 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   - *Beschreibung:* Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
   - *LLM-Impact:* Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
   - *Machbarkeit:* 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
-- [ ] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
+- [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
   - *Beschreibung:* Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI.
   - *LLM-Impact:* Extrem hoch. Spart der KI zeit- und tokenaufwendige Edit-Zyklen für triviale syntaktische Anpassungen.
   - *Machbarkeit:* 100% machbar. Roslyn bietet über `CodeFixProvider` standardisierte Transformations-APIs. Die CLI kann diese über `Workspace.TryApplyChanges` direkt anwenden.
-- [ ] **Semantische Diff-Impact-Analyse:**
+- [x] **Semantische Diff-Impact-Analyse:**
   - *Beschreibung:* Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
   - *LLM-Impact:* Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
   - *Machbarkeit:* 100% machbar. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.

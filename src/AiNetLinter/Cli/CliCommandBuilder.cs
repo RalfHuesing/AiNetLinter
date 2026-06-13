@@ -21,7 +21,9 @@ internal static class CliCommandBuilder
         Option<bool> DebtReport,
         Option<bool> WaveReady,
         Option<bool> OnlyChanged,
-        Option<string?> GitSince);
+        Option<string?> GitSince,
+        Option<bool> Fix,
+        Option<string?> Impact);
 
     internal sealed record ParsedArgs(
         string? ConfigPath,
@@ -37,7 +39,10 @@ internal static class CliCommandBuilder
         bool DebtReport,
         bool WaveReady,
         bool OnlyChanged,
-        string? GitSince);
+        string? GitSince,
+        bool Fix,
+        bool HasImpact,
+        string? ImpactRef);
 
     internal static (RootCommand Root, Options Options) Build()
     {
@@ -47,6 +52,7 @@ internal static class CliCommandBuilder
             options.Config, options.Path, options.Graph, options.Playbook, options.Format, options.Verbose,
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
+            options.Fix, options.Impact,
         };
 
         return (root, options);
@@ -68,7 +74,9 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateDebtReportOption(),
             CliOptionFactory.CreateWaveReadyOption(),
             CliOptionFactory.CreateOnlyChangedOption(),
-            CliOptionFactory.CreateGitSinceOption());
+            CliOptionFactory.CreateGitSinceOption(),
+            CliOptionFactory.CreateFixOption(),
+            CliOptionFactory.CreateImpactOption());
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -87,6 +95,9 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.DebtReport),
             parseResult.GetValue(options.WaveReady),
             parseResult.GetValue(options.OnlyChanged),
-            parseResult.GetValue(options.GitSince));
+            parseResult.GetValue(options.GitSince),
+            parseResult.GetValue(options.Fix),
+            parseResult.Tokens.Any(t => t.Value == "--impact" || t.Value == "-im"),
+            parseResult.GetValue(options.Impact));
     }
 }

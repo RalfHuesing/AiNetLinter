@@ -198,11 +198,13 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
-*   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
+*   `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 *   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
 *   `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
 *   `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
 *   `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
+*   `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
+*   `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
 
 ### Wellen-Workflow (Agent-Migration)
 

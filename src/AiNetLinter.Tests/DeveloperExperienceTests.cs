@@ -19,6 +19,7 @@ namespace AiNetLinter.Tests;
 // @covers PlaybookSyntaxWalker
 // @covers AIContextFootprintCalculator
 // @covers ProjectConfigResolver
+// @covers LinterConfigLoader
 
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
@@ -146,6 +147,43 @@ public sealed class DeveloperExperienceTests
             Assert.Contains("AI Repository Playbook", content);
             Assert.Contains("EnforceNoMagicValues:** 1 mal deaktiviert.", content);
             Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Fact]
+    public void LinterConfigLoader_WithNonExistentFile_ReturnsNull()
+    {
+        var result = LinterConfigLoader.TryLoadConfig("nonexistent_file.json", isRequired: false);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void LinterConfigLoader_WithValidJson_LoadsConfig()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_config.json");
+        var json = """
+            {
+                "global": {
+                    "enforceSealedClasses": true
+                },
+                "metrics": {
+                    "maxLineCount": 500
+                }
+            }
+            """;
+        File.WriteAllText(tempPath, json);
+        try
+        {
+            var result = LinterConfigLoader.TryLoadConfig(tempPath, isRequired: false);
+            Assert.NotNull(result);
+            Assert.True(result.Global.EnforceSealedClasses);
         }
         finally
         {

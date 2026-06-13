@@ -1,5 +1,11 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
 using System.CommandLine;
-using System.Text.Json;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Cli;
 using AiNetLinter.Baseline;
@@ -16,9 +22,16 @@ namespace AiNetLinter;
 /// </summary>
 public static class Program
 {
+    private const string FixedCountMessageFormat = "[INFO]: {0} einfache Regelverstoesse wurden automatisch behoben.";
+    private const string NoImpactCallSitesMessage = "Keine betroffenen Aufrufstellen gefunden.";
+    private const string ImpactHeaderMessage = "# Semantische Diff-Impact-Analyse";
+    private const string CallSitesFoundMessage = "Gefundene betroffene Aufrufstellen fuer geaenderte Signaturen:";
+
     /// <summary>
     /// Der Einstiegspunkt für die Ausführung der Linter-CLI.
     /// </summary>
+    /// <param name="args">Die Befehlszeilenargumente.</param>
+    /// <returns>Der Exit-Code des Programms (0 = Erfolg, 1 = Linter-Verstoesse, 2 = Fataler Fehler).</returns>
     public static async Task<int> Main(string[] args)
     {
         var (root, options) = CliCommandBuilder.Build();
@@ -63,15 +76,18 @@ public static class Program
             WaveReady = parsed.WaveReady,
             OnlyChanged = parsed.OnlyChanged,
             GitSince = parsed.GitSince,
+            Fix = parsed.Fix,
+            HasImpact = parsed.HasImpact,
+            ImpactRef = parsed.ImpactRef,
         };
     }
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
-        var modeError = ValidateModeOptions(args);
-        if (modeError.HasValue)
+        var validationError = ValidateArgs(args);
+        if (validationError.HasValue)
         {
-            return modeError.Value;
+            return validationError.Value;
         }
 
         var maintenanceExitCode = await TryRunMaintenanceModeAsync(args);
@@ -85,60 +101,96 @@ public static class Program
             return await RunDebtReportAsync(args);
         }
 
-        var onlyChangedError = ValidateOnlyChangedOption(args);
-        if (onlyChangedError.HasValue)
+        if (args.HasImpact)
         {
-            return onlyChangedError.Value;
+            return await RunImpactAnalysisAsync(args);
         }
 
         return await RunAuditAsync(args);
     }
 
-    private static int? ValidateModeOptions(LinterArgs args)
+    private static int? ValidateArgs(LinterArgs args)
     {
-        if (!HasConflictingModeOptions(args))
+        if (HasConflictingModeOptions(args))
         {
-            return null;
+            Console.Error.WriteLine(
+                "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
+            return 1;
         }
 
-        Console.Error.WriteLine(
-            "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.");
-        return 1;
-    }
-
-    private static int? ValidateOnlyChangedOption(LinterArgs args)
-    {
-        if (!args.OnlyChanged || args.BaselinePath != null)
+        if (args.OnlyChanged && args.BaselinePath == null)
         {
-            return null;
+            Console.Error.WriteLine("[ERROR]: --only-changed erfordert --baseline.");
+            return 1;
         }
 
-        Console.Error.WriteLine("[ERROR]: --only-changed erfordert --baseline.");
-        return 1;
+        return null;
     }
 
     private static async Task<int> RunAuditAsync(LinterArgs args)
     {
-        var config = TryLoadConfig(args.ConfigPath, isRequired: true);
+        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
             return 1;
         }
 
-        LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
+        LinterLogger.LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
 
+        await GenerateOptionalOutputsAsync(catalog.Solution, args);
+
+        var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
+        try
+        {
+            return await ExecuteAuditAsync(args, config, currentCatalog);
+        }
+        finally
+        {
+            if (needsDispose)
+            {
+                currentCatalog.Dispose();
+            }
+        }
+    }
+
+    private static async Task GenerateOptionalOutputsAsync(Solution solution, LinterArgs args)
+    {
         if (args.GraphPath != null)
         {
-            await TryGenerateCodegraphAsync(catalog.Solution, args.GraphPath, args.Verbose);
+            await TryGenerateCodegraphAsync(solution, args.GraphPath, args.Verbose);
         }
 
         if (args.PlaybookPath != null)
         {
-            await TryGeneratePlaybookAsync(catalog.Solution, args.PlaybookPath, args.Verbose);
+            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose);
+        }
+    }
+
+    private static async Task<(SourceFileCatalog Catalog, bool NeedsDispose)> ApplyAutoFixIfNeededAsync(
+        SourceFileCatalog catalog, LinterConfig config, LinterArgs args)
+    {
+        if (!args.Fix)
+        {
+            return (catalog, false);
         }
 
+        var engine = new LinterEngine(config);
+        var initialViolations = await engine.RunAsync(catalog);
+        var fixedCount = await LinterAutoFixer.FixAsync(catalog.Solution, initialViolations, args.Verbose);
+        if (fixedCount > 0)
+        {
+            Console.WriteLine(FixedCountMessageFormat, fixedCount);
+            var reloaded = await SourceFileCatalog.LoadAsync(args.TargetPath);
+            return (reloaded, true);
+        }
+
+        return (catalog, false);
+    }
+
+    private static async Task<int> ExecuteAuditAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
+    {
         if (args.BaselinePath != null)
         {
             return await AuditWithBaselineAsync(args, config, catalog);
@@ -190,7 +242,7 @@ public static class Program
 
         if (!string.IsNullOrWhiteSpace(args.ConfigPath))
         {
-            config = TryLoadConfig(args.ConfigPath, isRequired: false);
+            config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
             if (config != null)
             {
                 var engine = new LinterEngine(config);
@@ -241,13 +293,13 @@ public static class Program
 
     private static async Task<int> AddDisableAllAsync(LinterArgs args)
     {
-        var config = TryLoadConfig(args.ConfigPath, isRequired: true);
+        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
             return 1;
         }
 
-        LogDisableAllInject(args.Verbose, args.TargetPath);
+        LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath);
 
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(args.TargetPath);
@@ -269,7 +321,7 @@ public static class Program
 
     private static async Task<int> RemoveDisableAllAsync(LinterArgs args)
     {
-        LogDisableAllRemove(args.Verbose, args.TargetPath);
+        LinterLogger.LogDisableAllRemove(args.Verbose, args.TargetPath);
 
         var result = await DisableAllCommentRemover.RemoveAsync(args.TargetPath);
 
@@ -285,7 +337,7 @@ public static class Program
 
     private static async Task<int> CreateBaselineAsync(LinterArgs args)
     {
-        LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!);
+        LinterLogger.LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!);
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
@@ -326,7 +378,7 @@ public static class Program
         if (comparison.HasAnyChange)
         {
             BaselineWriter.Write(args.BaselinePath!, currentChecksums);
-            LogBaselineUpdate(args.Verbose, comparison);
+            LinterLogger.LogBaselineUpdate(args.Verbose, comparison);
         }
 
         var scoped = ApplyScopeFilters(filtered, args, outputRoot, comparison.ChangedFiles);
@@ -384,115 +436,25 @@ public static class Program
         return 0;
     }
 
-    private static void LogStart(bool verbose, string configPath, string targetPath)
+    private static async Task<int> RunImpactAnalysisAsync(LinterArgs args)
     {
-        if (verbose)
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        var callSites = await DiffImpactAnalyzer.AnalyzeAsync(catalog.Solution, args.TargetPath, args.ImpactRef, args.Verbose);
+
+        if (callSites.Count == 0)
         {
-            Console.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
-            Console.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
+            Console.WriteLine(NoImpactCallSitesMessage);
         }
-    }
-
-    private static void LogBaselineCreate(bool verbose, string targetPath, string baselinePath)
-    {
-        if (verbose)
+        else
         {
-            Console.WriteLine($"[INFO]: Erzeuge Baseline fuer: {targetPath}");
-            Console.WriteLine($"[INFO]: Ausgabedatei: {baselinePath}");
-        }
-    }
-
-    private static void LogDisableAllInject(bool verbose, string targetPath)
-    {
-        if (verbose)
-        {
-            Console.WriteLine($"[INFO]: Audit und Disable-all-Injection unter: {targetPath}");
-        }
-    }
-
-    private static void LogDisableAllRemove(bool verbose, string targetPath)
-    {
-        if (verbose)
-        {
-            Console.WriteLine($"[INFO]: Entferne Disable-all-Kommentare unter: {targetPath}");
-        }
-    }
-
-    private static void LogBaselineUpdate(bool verbose, BaselineComparisonResult comparison)
-    {
-        if (!verbose)
-        {
-            return;
-        }
-
-        var changedCount = comparison.ChangedFiles.Count;
-        var removedCount = comparison.RemovedFiles.Count;
-        Console.WriteLine($"[INFO]: Baseline aktualisiert: {changedCount} geaendert, {removedCount} entfernt.");
-    }
-
-    private static LinterConfig? TryLoadConfig(string? configPath, bool isRequired)
-    {
-        if (string.IsNullOrWhiteSpace(configPath))
-        {
-            if (isRequired)
+            Console.WriteLine(ImpactHeaderMessage);
+            Console.WriteLine(CallSitesFoundMessage);
+            foreach (var callSite in callSites)
             {
-                Console.Error.WriteLine("[ERROR]: --config ist erforderlich fuer den Audit-Lauf.");
+                Console.WriteLine(callSite);
             }
-
-            return null;
         }
 
-        if (!File.Exists(configPath))
-        {
-            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
-            return null;
-        }
-
-        var config = LoadConfig(configPath);
-        if (config == null)
-        {
-            Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
-        }
-
-        return config;
-    }
-
-    private static LinterConfig? LoadConfig(string configPath)
-    {
-        try
-        {
-            var content = File.ReadAllText(configPath);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var config = JsonSerializer.Deserialize<LinterConfig>(content, options);
-            return config is null ? null : LinterConfigNormalizer.Normalize(config);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.Error.WriteLine($"[ERROR]: Ungueltige Konfiguration in '{configPath}': {ex.Message}");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to load config: {ex.Message}");
-            return null;
-        }
-    }
-
-    private sealed class LinterArgs
-    {
-        public string? ConfigPath { get; init; }
-        public required string TargetPath { get; init; }
-        public string? GraphPath { get; init; }
-        public string? PlaybookPath { get; init; }
-        public required string Format { get; init; }
-        public required bool Verbose { get; init; }
-        public string? CreateBaselinePath { get; init; }
-        public string? BaselinePath { get; init; }
-        public bool AddDisableAll { get; init; }
-        public bool RemoveDisableAll { get; init; }
-        public bool DebtReport { get; init; }
-        public bool WaveReady { get; init; }
-        public bool OnlyChanged { get; init; }
-        public string? GitSince { get; init; }
+        return 0;
     }
 }

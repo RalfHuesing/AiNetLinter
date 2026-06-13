@@ -34,6 +34,11 @@ classDiagram
         +Analyze_WithFileMissingNullableEnable_ReturnsViolation()
         +Analyze_WithSilentCatch_ReturnsViolation()
     }
+    class AutoFixerTests {
+        +FixSealedClasses_SealsConcreteClassesWithoutDescendants()
+        +FixNullableEnable_PrependsNullableDirective()
+        +FixReadonlyFields_AddsReadonlyKeyword()
+    }
     class BaselineCliTests {
         +CreateBaseline_WithoutConfig_WritesJsonAndReturnsSuccess()
         +AuditWithBaseline_UnchangedFiles_ReturnsSuccess()
@@ -121,6 +126,11 @@ classDiagram
         +ProjectConfigResolver_WithWildcardMatch_MergesOverrides()
         +AIContextFootprintCalculator_SimpleClass_CalculatesLines()
         +RepoPlaybookGenerator_ScansAndGeneratesMarkdown()
+        +LinterConfigLoader_WithNonExistentFile_ReturnsNull()
+        +LinterConfigLoader_WithValidJson_LoadsConfig()
+    }
+    class DiffImpactAnalyzerTests {
+        +ParseGitDiffHunks_WithValidDiff_ParsesHunksCorrectly()
     }
     class BaselineMiniFixtureWorkspace {
         +Dispose()
@@ -265,6 +275,8 @@ classDiagram
     }
     class CliOptionFactory {
     }
+    class LinterArgs {
+    }
     class LinterConfig {
     }
     class NamespaceRule {
@@ -283,6 +295,9 @@ classDiagram
     }
     class MetricsConfigOverride {
     }
+    class LinterConfigLoader {
+        +TryLoadConfig()
+    }
     class LinterConfigNormalizer {
         +Normalize()
     }
@@ -296,6 +311,9 @@ classDiagram
     }
     class CodegraphGenerator {
         +GenerateAsync()
+    }
+    class DiffImpactAnalyzer {
+        +AnalyzeAsync()
     }
     class LinterAnalyzer {
         +VisitUsingDirective()
@@ -329,6 +347,11 @@ classDiagram
         +VisitFieldDeclaration()
     }
     class AnalyzerArgs {
+    }
+    class LinterAutoFixer {
+        +FixAsync()
+    }
+    class FixContext {
     }
     class LinterEngine {
         +RunAsync()
@@ -418,6 +441,13 @@ classDiagram
     }
     class FolderCount {
     }
+    class LinterLogger {
+        +LogStart()
+        +LogBaselineCreate()
+        +LogDisableAllInject()
+        +LogDisableAllRemove()
+        +LogBaselineUpdate()
+    }
     class OutputRootResolver {
         +Resolve()
     }
@@ -460,8 +490,6 @@ classDiagram
     }
     class Program {
         +Main()
-    }
-    class LinterArgs {
     }
     class DisableAllDetector {
         +HasDisableAll()
