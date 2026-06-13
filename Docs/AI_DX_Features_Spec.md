@@ -223,3 +223,97 @@ public sealed class DiffImpactAnalyzer
     }
 }
 ```
+
+---
+
+## 5. Projekt-spezifische Regel-Konfiguration (Project Overrides)
+
+### Zielsetzung & Konzept
+In großen Solutions (z. B. Monolithen mit mehreren Projekten) haben verschiedene Modultypen unterschiedliche Qualitätsanforderungen. Insbesondere **Testprojekte** erfordern oft pragmatischere Regeln als der Produktionscode:
+* In Unit Tests sind literale Werte (Magic Values) in `Assert.Equal("Expected", result)` erwünscht und erhöhen die Lesbarkeit, während sie im Business-Code verboten sind.
+* Vererbungs- und Kopplungslimits können in Test-Infrastrukturen anders gewichtet sein.
+
+Dieses Feature führt eine optionale Sektion `ProjectOverrides` in der `rules.json` ein. Dadurch können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden, während eine zentrale Konfigurationsdatei erhalten bleibt.
+
+### LLM-Impact
+* **Nutzen:** KI-Agenten neigen bei striktem Regel-Dogfooding dazu, in Testdateien künstliche Hilfskonstanten anzulegen (z. B. `private const string Exp = "Expected"`), nur um die Magic-Value-Regel zu umgehen. Dies bläht den Testcode auf und erschwert die lineare Kontextanalyse des Modells. Durch gezieltes Deaktivieren dieser Regeln in Testprojekten bleibt der Testcode flach, direkt und für KIs wesentlich schneller erfassbar.
+
+### Technische Umsetzung mit Roslyn
+1. Erweiterung der `LinterConfig`-Klasse um ein Dictionary `ProjectOverrides` (Key: Glob-Muster für den Projektnamen, Value: eine Teil-Konfiguration).
+2. Beim Start der Analyse eines Dokuments ermitteln wir dessen Roslyn-Projektnamen (`document.Project.Name`).
+3. Wir vergleichen den Namen mit den Wildcard-Patterns aus der Konfiguration.
+4. Bei einem Treffer mergen wir die globalen Einstellungen mit den Overrides des Projekts (z. B. Überschreiben von `EnforceNoMagicValues = false`).
+5. Die Analyse des jeweiligen Dokuments erfolgt mit dieser angepassten Konfigurations-Instanz.
+
+### C#-Implementierungs-Blueprint
+
+**Erweiterung der Konfigurationsstruktur (`LinterConfig.cs`):**
+```csharp
+public sealed record LinterConfig
+{
+    public required GlobalConfig Global { get; init; }
+    public required MetricsConfig Metrics { get; init; }
+    public IReadOnlyDictionary<string, ProjectOverrideEntry> ProjectOverrides { get; init; } 
+        = new Dictionary<string, ProjectOverrideEntry>();
+}
+
+public sealed record ProjectOverrideEntry
+{
+    public GlobalConfigOverride? Global { get; init; }
+    public MetricsConfigOverride? Metrics { get; init; }
+}
+
+// Ermöglicht das selektive Überschreiben einzelner Eigenschaften (Nullable-Properties)
+public sealed record GlobalConfigOverride
+{
+    public bool? EnforceNoMagicValues { get; init; }
+    public bool? EnforceSealedClasses { get; init; }
+}
+```
+
+**Ermittlung der effektiven Konfiguration pro Dokument:**
+```csharp
+using System.IO;
+using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
+
+public static class ProjectConfigResolver
+{
+    public static LinterConfig ResolveForDocument(Document document, LinterConfig globalConfig)
+    {
+        var projectName = document.Project.Name;
+        
+        foreach (var pattern in globalConfig.ProjectOverrides.Keys)
+        {
+            if (IsMatch(projectName, pattern))
+            {
+                return MergeConfig(globalConfig, globalConfig.ProjectOverrides[pattern]);
+            }
+        }
+        
+        return globalConfig;
+    }
+
+    private static bool IsMatch(string name, string pattern)
+    {
+        var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+        return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
+    }
+
+    private static LinterConfig MergeConfig(LinterConfig global, ProjectOverrideEntry overrides)
+    {
+        var mergedGlobal = global.Global;
+        if (overrides.Global != null)
+        {
+            mergedGlobal = global.Global with
+            {
+                EnforceNoMagicValues = overrides.Global.EnforceNoMagicValues ?? global.Global.EnforceNoMagicValues,
+                EnforceSealedClasses = overrides.Global.EnforceSealedClasses ?? global.Global.EnforceSealedClasses
+            };
+        }
+        
+        return global with { Global = mergedGlobal };
+}
+}
+```
+
