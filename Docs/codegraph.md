@@ -295,6 +295,16 @@ classDiagram
     }
     class Options {
     }
+    class OutputOptions {
+    }
+    class BaselineOptions {
+    }
+    class MaintenanceOptions {
+    }
+    class ScopeOptions {
+    }
+    class ImpactOptions {
+    }
     class ParsedArgs {
     }
     class CliOptionFactory {
@@ -306,6 +316,7 @@ classDiagram
         +RunImpactAnalysisAsync()
     }
     class LinterArgs {
+        +Validate()
     }
     class MaintenanceExecutor {
         +AddDisableAllAsync()
@@ -317,8 +328,10 @@ classDiagram
     class NamespaceRule {
     }
     class GlobalConfig {
+        +Apply()
     }
     class MetricsConfig {
+        +Apply()
     }
     class TestSentinelConfig {
     }
@@ -342,6 +355,7 @@ classDiagram
     }
     class RuleMetadataRegistry {
         +Resolve()
+        +HasErrorSeverity()
         +ToSarifLevel()
     }
     class AnalysisState {
@@ -361,6 +375,8 @@ classDiagram
         +AnalyzeAsync()
     }
     class DocumentContext {
+    }
+    class FieldReadonlyTracker {
     }
     class LinterAnalyzer {
         +VisitUsingDirective()
@@ -587,6 +603,11 @@ classDiagram
     class ViolatingFilePathResolver {
         +ResolveAbsolutePaths()
     }
+    ParsedArgs --> OutputOptions : nutzt
+    ParsedArgs --> BaselineOptions : nutzt
+    ParsedArgs --> MaintenanceOptions : nutzt
+    ParsedArgs --> ScopeOptions : nutzt
+    ParsedArgs --> ImpactOptions : nutzt
     LinterConfig --> GlobalConfig : nutzt
     LinterConfig --> MetricsConfig : nutzt
     LinterConfig --> TestSentinelConfig : nutzt
@@ -595,6 +616,7 @@ classDiagram
     AnalysisState --> TestCoverageIndex : nutzt
     DocumentContext --> LinterConfig : nutzt
     LinterAnalyzer --> LinterConfig : nutzt
+    LinterAnalyzer --> FieldReadonlyTracker : nutzt
     AnalyzerArgs --> LinterConfig : nutzt
     LinterEngine --> LinterConfig : nutzt
     TestSentinelContext --> TestCoverageIndex : nutzt

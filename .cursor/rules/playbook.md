@@ -17,25 +17,21 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 - **MaxConstructorDependencies:** 3 mal deaktiviert.
   *Bedeutung:* Zu viele Konstruktorabhaengigkeiten (max. 20).
-- **MaxMethodLineCount:** 1 mal deaktiviert.
-  *Bedeutung:* Methode hat zu viele Codezeilen (max. 42 Zeilen).
-- **MaxCognitiveComplexity:** 1 mal deaktiviert.
-  *Bedeutung:* Zu hohe kognitive Komplexitaet (max. 5).
-- **MaxCyclomaticComplexity:** 1 mal deaktiviert.
-  *Bedeutung:* Zu hohe zyklomatische Komplexitaet (max. 5).
+- **StaticTestSentinel:** 2 mal deaktiviert.
+  *Bedeutung:* Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.
 - **EnforceExplicitStateImmutability:** 1 mal deaktiviert.
   *Bedeutung:* Regel 'EnforceExplicitStateImmutability'.
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 103 / 117 (88 %)
+- **Wave-ready Dateien:** 104 / 118 (88 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 74 files, median Footprint 86 LOC, 6× disable-all
+- **src/AiNetLinter/**: 75 files, median Footprint 84 LOC, 6× disable-all
 - **src/AiNetLinter.Tests/**: 42 files, median Footprint 70 LOC, 8× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
