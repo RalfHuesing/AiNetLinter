@@ -17,6 +17,7 @@ public static class RuleMetadataRegistry
             ["EnforceMinimalApiAsParameters"] = new() { Severity = "error", Intent = "aspnet-binding" },
             ["EnforceNoSilentCatch"] = new() { Severity = "error", Intent = "agent-resilience" },
             ["ForbiddenNamespaceDependency"] = new() { Severity = "error", Intent = "architecture" },
+            ["EnforceResultPatternOverExceptions"] = new() { Severity = "error", Intent = "control-flow" },
         };
 
     /// <summary>

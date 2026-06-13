@@ -179,7 +179,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
 *Hinweis: Konfigurierbar über die `rules.json`.*
-- [ ] **Exceptions for Control Flow verbieten:**
+- [x] **Exceptions for Control Flow verbieten:**
   - Warnung bei der Verwendung von `throw` in Methoden, die keine Konstruktoren oder explizite Validierungs-Guards (z. B. Methoden mit Suffix `Guard` oder `Validate`) sind.
   - Erzwinge das Result-Pattern (`Result<T>`) für fachliche Fehlerzustände, da KI-Agenten Kontrollflussbrüche durch Exceptions schwer statisch verfolgen können.
   - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceResultPatternOverExceptions`).

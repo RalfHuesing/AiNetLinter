@@ -88,7 +88,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "EnforceNoSilentCatch": true,
     "AllowTryPatternOutParameters": true,
     "AllowCancellationShutdownCatch": true,
-    "EnforceMinimalApiAsParameters": false
+    "EnforceMinimalApiAsParameters": false,
+    "EnforceResultPatternOverExceptions": true
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -136,6 +137,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
 | `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), werden ignoriert. |
+| `EnforceResultPatternOverExceptions` | Global | Verbietet die Verwendung von `throw` für fachlichen Kontrollfluss außerhalb von Konstruktoren und Validierungs-Guards (Methoden mit Suffix `Guard` oder `Validate`). |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |

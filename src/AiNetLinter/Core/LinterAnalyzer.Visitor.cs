@@ -404,6 +404,68 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         base.VisitInvocationExpression(node);
     }
 
+    public override void VisitThrowStatement(ThrowStatementSyntax node)
+    {
+        CheckResultPatternViolation(node);
+        base.VisitThrowStatement(node);
+    }
+
+    public override void VisitThrowExpression(ThrowExpressionSyntax node)
+    {
+        CheckResultPatternViolation(node);
+        base.VisitThrowExpression(node);
+    }
+
+    private void CheckResultPatternViolation(SyntaxNode node)
+    {
+        if (!_config.Global.EnforceResultPatternOverExceptions) return;
+
+        if (!IsThrowAllowed(node))
+        {
+            _violations.Add(new RuleViolation
+            {
+                FilePath = _filePath,
+                LineNumber = GetLineNumber(node),
+                RuleName = "EnforceResultPatternOverExceptions",
+                Details = "Verwendung von 'throw' fuer Kontrollfluss erkannt.",
+                Guidance = "Verwende fuer fachliche Fehlerzustaende das Result-Pattern (Result<T>) statt Exceptions, um den Kontrollfluss fuer KI-Agenten explizit zu machen. 'throw' ist nur in Konstruktoren oder Validierungs-Guards (Methoden mit Suffix 'Guard' oder 'Validate') erlaubt."
+            });
+        }
+    }
+
+    private bool IsThrowAllowed(SyntaxNode node)
+    {
+        var container = GetEnclosingContainer(node);
+        if (container is ConstructorDeclarationSyntax) return true;
+        if (container is MethodDeclarationSyntax method) return IsGuardOrValidateName(method.Identifier.Text);
+        if (container is LocalFunctionStatementSyntax localFunc) return IsGuardOrValidateName(localFunc.Identifier.Text);
+        return false;
+    }
+
+    private static SyntaxNode? GetEnclosingContainer(SyntaxNode node)
+    {
+        var current = node.Parent;
+        while (current != null)
+        {
+            if (IsEnclosingType(current)) return null;
+            if (IsContainer(current)) return current;
+            current = current.Parent;
+        }
+        return null;
+    }
+
+    private static bool IsEnclosingType(SyntaxNode node) =>
+        node is TypeDeclarationSyntax || node is NamespaceDeclarationSyntax || node is CompilationUnitSyntax;
+
+    private static bool IsContainer(SyntaxNode node)
+    {
+        if (node is MethodDeclarationSyntax || node is ConstructorDeclarationSyntax) return true;
+        return node is LocalFunctionStatementSyntax lf && IsGuardOrValidateName(lf.Identifier.Text);
+    }
+
+    private static bool IsGuardOrValidateName(string name) =>
+        name.EndsWith("Guard", StringComparison.Ordinal) || name.EndsWith("Validate", StringComparison.Ordinal);
+
     private bool IsDynamicType(IdentifierNameSyntax node)
     {
         var typeInfo = _semanticModel.GetTypeInfo(node);
