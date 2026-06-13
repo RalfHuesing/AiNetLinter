@@ -214,6 +214,11 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   - *Beschreibung:* Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
   - *LLM-Impact:* Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
+- [ ] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
+  - *Beschreibung:* Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceNoMagicValues` für Testprojekte).
+  - *LLM-Impact:* Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
+  - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
+
 
 
 
