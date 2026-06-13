@@ -78,4 +78,15 @@ internal static class CliOptionFactory
     {
         Description = "Nur Verstoesse in per git diff geaenderten .cs-Dateien seit Ref (z. B. HEAD~1)",
     };
+
+    internal static Option<bool> CreateFixOption() => new("--fix")
+    {
+        Description = "Automatische Behebung einfacher Verstoesse (z. B. sealed, readonly, #nullable enable) direkt ueber die CLI",
+    };
+
+    internal static Option<string?> CreateImpactOption() => new("--impact", "-im")
+    {
+        Description = "Semantische Diff-Impact-Analyse seit Git-Ref (z. B. HEAD~1 oder leer fuer uncommitted)",
+        Arity = ArgumentArity.ZeroOrOne
+    };
 }
