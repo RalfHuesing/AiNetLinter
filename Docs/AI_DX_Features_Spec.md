@@ -223,3 +223,122 @@ public sealed class DiffImpactAnalyzer
     }
 }
 ```
+
+---
+
+## 5. Dynamischer, LLM-orientierter Codegraph
+
+### Zielsetzung & Konzept
+Um sich in einer fremden oder großen Codebase zurechtzufinden, benötigt eine KI eine kompakte, semantische Übersicht über die Systemarchitektur. Die Option `ainetlinter --graph <pfad.md>` (oder `-g`) analysiert die gesamte Solution und generiert ein aktualisiertes, visuelles Abhängigkeitsdiagramm im Mermaid-Format sowie eine Übersicht der Rollen direkt in den Projekt-Dokumenten.
+
+### LLM-Impact
+* **Nutzen:** Anstatt dass die KI mühsam Dutzende Quelldateien einlesen muss, um die Beziehungen von Klassen und Interfaces zu verstehen, lädt sie einfach das generierte Diagramm. Dies schützt vor Fehlannahmen bezüglich Vererbungshierarchien, spart Kontext-Token und verkürzt die Einarbeitungszeit autonomer Agenten signifikant.
+
+### Technische Umsetzung mit Roslyn
+1. Traversieren aller Projekte und Dokumente in der Solution.
+2. Ermittlung aller deklarierten Typen (Klassen, Interfaces, Structs) über die Syntax-Deklarationen und das `SemanticModel`.
+3. Auswertung der Vererbung (`BaseType`) und der Interface-Implementierung (`Interfaces`).
+4. Erfassung von Assoziationsbeziehungen (Typen von privaten Feldern, Properties, Konstruktor-Parametern).
+5. Filterung auf projektinterne Typen (Ausschluss von Typen aus `System`, `Microsoft` oder Third-Party-NuGet-Paketen), um das Diagramm übersichtlich zu halten.
+6. Generierung und Ausgabe von Mermaid-Klassendiagramm-Syntax (`classDiagram`) in eine Markdown-Datei.
+
+### C#-Implementierungs-Blueprint
+```csharp
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+public sealed class CodegraphGenerator
+{
+    public static async Task GenerateAsync(Solution solution, string outputPath)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Codebase-Architektur & Abhaengigkeitsgraph (Auto-Generated)");
+        sb.AppendLine("Dieses Dokument visualisiert die interne Klassenstruktur und deren Beziehungen.");
+        sb.AppendLine();
+        sb.AppendLine("```mermaid");
+        sb.AppendLine("classDiagram");
+
+        var allTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        
+        // 1. Sammle alle im Quellcode deklarierten Typen der Solution
+        foreach (var project in solution.Projects)
+        {
+            foreach (var document in project.Documents)
+            {
+                var semanticModel = await document.GetSemanticModelAsync();
+                if (semanticModel == null) continue;
+                
+                var root = await document.GetSyntaxRootAsync();
+                if (root == null) continue;
+                
+                var classNodes = root.DescendantNodes().OfType<TypeDeclarationSyntax>();
+                foreach (var classNode in classNodes)
+                {
+                    var symbol = semanticModel.GetDeclaredSymbol(classNode);
+                    if (symbol is INamedTypeSymbol namedType)
+                    {
+                        allTypes.Add(namedType);
+                    }
+                }
+            }
+        }
+
+        // 2. Generiere Mermaid-Klassen und Beziehungen
+        foreach (var type in allTypes)
+        {
+            var typeName = type.Name;
+            sb.AppendLine($"    class {typeName} {{");
+            
+            // Fuege wichtige public Methoden hinzu
+            foreach (var method in type.GetMembers().OfType<IMethodSymbol>()
+                .Where(m => m.DeclaredAccessibility == Accessibility.Public && !m.IsImplicitlyDeclared))
+            {
+                sb.AppendLine($"        +{method.Name}()");
+            }
+            sb.AppendLine("    }");
+
+            // Vererbung & Interface-Implementierung (Generalisierung)
+            if (type.BaseType != null && allTypes.Contains(type.BaseType))
+            {
+                sb.AppendLine($"    {type.BaseType.Name} <|-- {typeName} : erbt");
+            }
+            
+            foreach (var iface in type.Interfaces)
+            {
+                if (allTypes.Contains(iface))
+                {
+                    sb.AppendLine($"    {iface.Name} <|.. {typeName} : implementiert");
+                }
+            }
+
+            // Abhaengigkeiten / Kompositionen (Felder & Properties)
+            var referencedTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+            foreach (var field in type.GetMembers().OfType<IFieldSymbol>())
+            {
+                if (field.Type is INamedTypeSymbol fieldType && allTypes.Contains(fieldType))
+                    referencedTypes.Add(fieldType);
+            }
+            foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
+            {
+                if (prop.Type is INamedTypeSymbol propType && allTypes.Contains(propType))
+                    referencedTypes.Add(propType);
+            }
+
+            foreach (var dep in referencedTypes)
+            {
+                sb.AppendLine($"    {typeName} --> {dep.Name} : nutzt");
+            }
+        }
+
+        sb.AppendLine("```");
+        await File.WriteAllTextAsync(outputPath, sb.ToString(), Encoding.UTF8);
+}
+}
+```
+
