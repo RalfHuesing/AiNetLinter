@@ -78,6 +78,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckSealedClass(node);
 
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
+        CheckMethodOverloads(node);
+        CheckPrimaryConstructorDependencies(node);
 
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
@@ -102,6 +104,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckXmlDoc(node, node.Identifier.Text, "Record");
         CheckPascalCase(node.Identifier, "Record");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: true);
+        CheckMethodOverloads(node);
+        CheckPrimaryConstructorDependencies(node);
         base.VisitRecordDeclaration(node);
     }
 
@@ -110,6 +114,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckXmlDoc(node, node.Identifier.Text, "Struct");
         CheckPascalCase(node.Identifier, "Struct");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
+        CheckMethodOverloads(node);
+        CheckPrimaryConstructorDependencies(node);
         base.VisitStructDeclaration(node);
     }
 
@@ -219,6 +225,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte."
             });
         }
+
+        CheckVariableShadowing(node.Identifier, node);
 
         base.VisitParameter(node);
     }
