@@ -93,6 +93,16 @@ public sealed class RepoPlaybookGenerator
         {
             Directory.CreateDirectory(directory);
         }
+
+        if (File.Exists(outputPath) && await File.ReadAllTextAsync(outputPath, Encoding.UTF8) == content)
+        {
+            if (verbose)
+            {
+                Console.WriteLine($"[INFO]: Repo-Playbook ist bereits aktuell (kein Schreibzugriff): {outputPath}");
+            }
+            return;
+        }
+
         await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
         if (verbose)
         {
