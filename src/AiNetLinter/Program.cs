@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Text.Json;
+using Microsoft.CodeAnalysis;
 using AiNetLinter.Cli;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
@@ -125,12 +126,39 @@ public static class Program
 
         LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
 
-        if (args.BaselinePath != null)
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+
+        if (args.GraphPath != null)
         {
-            return await AuditWithBaselineAsync(args, config);
+            await TryGenerateCodegraphAsync(catalog.Solution, args.GraphPath, args.Verbose);
         }
 
-        return await AuditWithoutBaselineAsync(args, config);
+        if (args.BaselinePath != null)
+        {
+            return await AuditWithBaselineAsync(args, config, catalog);
+        }
+
+        return await AuditWithoutBaselineAsync(args, config, catalog);
+    }
+
+    private static async Task TryGenerateCodegraphAsync(Solution solution, string graphPath, bool verbose)
+    {
+        try
+        {
+            if (verbose)
+            {
+                Console.WriteLine($"[INFO]: Generiere Codegraph unter: {graphPath}");
+            }
+            await CodegraphGenerator.GenerateAsync(solution, graphPath);
+            if (verbose)
+            {
+                Console.WriteLine("[INFO]: Codegraph erfolgreich generiert.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR]: Fehler beim Generieren des Codegraphen: {ex.Message}");
+        }
     }
 
     private static async Task<int> RunDebtReportAsync(LinterArgs args)
@@ -252,7 +280,7 @@ public static class Program
         return 0;
     }
 
-    private static async Task<int> AuditWithBaselineAsync(LinterArgs args, LinterConfig config)
+    private static async Task<int> AuditWithBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
     {
         BaselineFile storedBaseline;
         try
@@ -265,7 +293,6 @@ public static class Program
             return 1;
         }
 
-        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var currentChecksums = catalog.ComputeChecksums(outputRoot);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
@@ -284,10 +311,10 @@ public static class Program
         return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
     }
 
-    private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config)
+    private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
     {
         var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(args.TargetPath);
+        var violations = await engine.RunAsync(catalog);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
         return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
