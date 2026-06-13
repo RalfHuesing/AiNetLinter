@@ -171,6 +171,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
 | `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 2). |
 | `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). |
+| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
 | `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
 | `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
 
@@ -195,6 +196,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 *   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
+*   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` (Optional).
 *   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `-v`, `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 *   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
@@ -397,7 +399,35 @@ public sealed class ArchitectureTests
 
 ---
 
-## 8. Zukunfts-Roadmap (Ausblick)
+## 8. Neue Features (Epic 19)
+
+### Projekt-spezifische Regel-Konfiguration (Project Overrides)
+In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. In Testprojekten sind beispielsweise literale Werte (Magic Values) in Assertions erwünscht. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
+```json
+  "ProjectOverrides": {
+    "*.Tests": {
+      "Global": {
+        "EnforceNoMagicValues": false,
+        "EnforceSealedClasses": false
+      },
+      "Metrics": {
+        "MaxMethodLineCount": 100
+      }
+    }
+  }
+```
+
+### AI-Context-Footprint (Metrik)
+Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst plus aller transitiv im Quellcode referenzierten eigenen Klassen/Typen. Steigt diese Metrik über den konfigurierten Schwellenwert (`MaxAIContextFootprint`, standardmäßig `5000` Zeilen), wird ein Regelverstoß gemeldet. Dies hilft Entwicklern, hohe Kopplung zu vermeiden und die Token-Belastung für KIs gering zu halten.
+
+### Automatisch generiertes Repo-Playbook
+Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
+Das Playbook wird über das CLI-Argument `--playbook <Pfad>` generiert, standardmäßig unter `.cursor/rules/playbook.md`:
+```bash
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
+```
+
+## 9. Zukunfts-Roadmap (Ausblick)
 
 *   **Interaktive automatische Korrektur (CLI Auto-Fix):** Direkte Integration von Roslyn Code-Fixes, um einfache Verstöße (wie fehlende `sealed` Modifikatoren, fehlende `readonly` Modifikatoren oder fehlendes `#nullable enable`) direkt über einen CLI-Parameter beheben zu lassen.
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.

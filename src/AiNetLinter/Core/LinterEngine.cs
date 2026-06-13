@@ -8,6 +8,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 using AiNetLinter.Suppression;
+using AiNetLinter.Metrics;
 
 [assembly: InternalsVisibleTo("AiNetLinter.Tests")]
 
@@ -67,12 +68,9 @@ public sealed class LinterEngine
         var state = CreateAnalysisState(solution);
         await AnalyzeSolutionAsync(state, catalog);
 
-        if (_config.Global.EnableTestSentinel)
-        {
-            RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, state.FileContents);
-        }
-
+        RunTestSentinel(state.TestCoverage, state.SourceClasses, state.Violations, state.FileContents);
         RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents);
+        RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents);
         AddPartialClassViolations(state.PartialClassParts, state.Violations);
 
         return state.Violations.ToArray();
@@ -220,20 +218,22 @@ public sealed class LinterEngine
 
         bool isTestFile = isTestProj || IsTestFile(filePath);
 
-        AnalyzeAndCollect(filePath, semanticModel, isTestFile, state);
+        var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config);
+        var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
+
+        AnalyzeAndCollect(context, state);
     }
 
-    private void AnalyzeAndCollect(string filePath, SemanticModel semanticModel, bool isTestFile, AnalysisState state)
+    private void AnalyzeAndCollect(DocumentContext context, AnalysisState state)
     {
-        var analyzer = new LinterAnalyzer(filePath, semanticModel, _config, isTestFile);
+        var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);
         analyzer.RunAnalysis();
-        CollectAnalyzerResults(analyzer, semanticModel, isTestFile, state);
+        CollectAnalyzerResults(analyzer, context, state);
     }
 
     private void CollectAnalyzerResults(
         LinterAnalyzer analyzer,
-        SemanticModel semanticModel,
-        bool isTestFile,
+        DocumentContext context,
         AnalysisState state)
     {
         foreach (var violation in analyzer.Violations)
@@ -241,9 +241,9 @@ public sealed class LinterEngine
             state.Violations.Add(violation);
         }
 
-        if (isTestFile)
+        if (context.IsTestFile)
         {
-            AddTestCoverage(analyzer, semanticModel, state.TestCoverage);
+            AddTestCoverage(analyzer, context.SemanticModel, context.EffectiveConfig, state.TestCoverage);
             return;
         }
 
@@ -258,7 +258,7 @@ public sealed class LinterEngine
         }
     }
 
-    private void AddTestCoverage(LinterAnalyzer analyzer, SemanticModel semanticModel, TestCoverageIndex index)
+    private void AddTestCoverage(LinterAnalyzer analyzer, SemanticModel semanticModel, LinterConfig effectiveConfig, TestCoverageIndex index)
     {
         foreach (var cls in analyzer.Classes)
         {
@@ -272,7 +272,7 @@ public sealed class LinterEngine
             semanticModel.SyntaxTree,
             semanticModel,
             index,
-            _config.TestSentinel);
+            effectiveConfig.TestSentinel);
     }
 
     private void AddPartialClassViolations(
@@ -298,33 +298,43 @@ public sealed class LinterEngine
         ConcurrentBag<RuleViolation> violations,
         ConcurrentDictionary<string, string> fileContents)
     {
+        var context = new TestSentinelContext(testCoverage, violations, fileContents);
         foreach (var srcClass in sourceClasses)
         {
-            if (srcClass.MaxCognitiveComplexity > _config.Metrics.MinCognitiveComplexityForTest)
-            {
-                CheckTestPresence(srcClass, testCoverage, violations, fileContents);
-            }
+            CheckClassTestSentinel(srcClass, context);
+        }
+    }
+
+    private void CheckClassTestSentinel(ClassInfo srcClass, TestSentinelContext context)
+    {
+        var effectiveConfig = srcClass.ProjectName != null
+            ? ProjectConfigResolver.ResolveForProject(srcClass.ProjectName, _config)
+            : _config;
+
+        if (effectiveConfig.Global.EnableTestSentinel &&
+            srcClass.MaxCognitiveComplexity > effectiveConfig.Metrics.MinCognitiveComplexityForTest)
+        {
+            CheckTestPresence(srcClass, context, effectiveConfig);
         }
     }
 
     private void CheckTestPresence(
         ClassInfo srcClass,
-        TestCoverageIndex testCoverage,
-        ConcurrentBag<RuleViolation> violations,
-        ConcurrentDictionary<string, string> fileContents)
+        TestSentinelContext context,
+        LinterConfig effectiveConfig)
     {
-        if (TestCoverageResolver.IsCovered(srcClass.Name, testCoverage, _config.TestSentinel))
+        if (TestCoverageResolver.IsCovered(srcClass.Name, context.TestCoverage, effectiveConfig.TestSentinel))
         {
             return;
         }
 
-        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, fileContents))
+        if (IsSuppressedViolation(srcClass.FilePath, "StaticTestSentinel", srcClass.LineNumber, context.FileContents))
         {
             return;
         }
 
         string expectedTest = $"{srcClass.Name}Tests";
-        violations.Add(new RuleViolation
+        context.Violations.Add(new RuleViolation
         {
             FilePath = srcClass.FilePath,
             LineNumber = srcClass.LineNumber,
@@ -341,23 +351,71 @@ public sealed class LinterEngine
     {
         foreach (var cls in sourceClasses)
         {
-            var depth = GetInheritanceDepth(cls.Symbol);
-            if (depth > _config.Metrics.MaxInheritanceDepth &&
-                !IsSuppressedViolation(
-                    cls.FilePath,
-                    nameof(_config.Metrics.MaxInheritanceDepth),
-                    cls.LineNumber,
-                    fileContents))
+            CheckClassInheritanceDepth(cls, violations, fileContents);
+        }
+    }
+
+    private void CheckClassInheritanceDepth(
+        ClassInfo cls,
+        ConcurrentBag<RuleViolation> violations,
+        ConcurrentDictionary<string, string> fileContents)
+    {
+        var effectiveConfig = cls.ProjectName != null
+            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, _config)
+            : _config;
+
+        var depth = GetInheritanceDepth(cls.Symbol);
+        if (depth > effectiveConfig.Metrics.MaxInheritanceDepth &&
+            !IsSuppressedViolation(cls.FilePath, nameof(effectiveConfig.Metrics.MaxInheritanceDepth), cls.LineNumber, fileContents))
+        {
+            violations.Add(new RuleViolation
             {
-                violations.Add(new RuleViolation
-                {
-                    FilePath = cls.FilePath,
-                    LineNumber = cls.LineNumber,
-                    RuleName = nameof(_config.Metrics.MaxInheritanceDepth),
-                    Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {_config.Metrics.MaxInheritanceDepth}).",
-                    Guidance = "Halte Vererbungshierarchien flach (max. 2 Ebenen) oder nutze Komposition statt Vererbung."
-                });
-            }
+                FilePath = cls.FilePath,
+                LineNumber = cls.LineNumber,
+                RuleName = nameof(effectiveConfig.Metrics.MaxInheritanceDepth),
+                Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {effectiveConfig.Metrics.MaxInheritanceDepth}).",
+                Guidance = "Halte Vererbungshierarchien flach (max. 2 Ebenen) oder nutze Komposition statt Vererbung."
+            });
+        }
+    }
+
+    private void RunAIContextFootprintCheck(
+        ConcurrentBag<ClassInfo> sourceClasses,
+        ConcurrentBag<RuleViolation> violations,
+        ConcurrentDictionary<string, string> fileContents)
+    {
+        foreach (var cls in sourceClasses)
+        {
+            CheckClassAIContextFootprint(cls, violations, fileContents);
+        }
+    }
+
+    private void CheckClassAIContextFootprint(
+        ClassInfo cls,
+        ConcurrentBag<RuleViolation> violations,
+        ConcurrentDictionary<string, string> fileContents)
+    {
+        var effectiveConfig = cls.ProjectName != null
+            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, _config)
+            : _config;
+
+        if (effectiveConfig.Metrics.MaxAIContextFootprint <= 0)
+        {
+            return;
+        }
+
+        var footprint = AIContextFootprintCalculator.Calculate(cls.Symbol);
+        if (footprint > effectiveConfig.Metrics.MaxAIContextFootprint &&
+            !IsSuppressedViolation(cls.FilePath, "AIContextFootprint", cls.LineNumber, fileContents))
+        {
+            violations.Add(new RuleViolation
+            {
+                FilePath = cls.FilePath,
+                LineNumber = cls.LineNumber,
+                RuleName = "AIContextFootprint",
+                Details = $"Die Klasse '{cls.Name}' hat einen AI-Context-Footprint von {footprint} transitiven Zeilen (erlaubt sind maximal {effectiveConfig.Metrics.MaxAIContextFootprint}).",
+                Guidance = "Reduziere die Kopplung der Klasse zu anderen Klassen oder lagere Abhaengigkeiten aus, um Attention Dilution fuer KIs zu minimieren."
+            });
         }
     }
 
@@ -389,4 +447,18 @@ public sealed class LinterEngine
 
         return depth;
     }
+
+    private sealed record DocumentContext(
+        string FilePath,
+        SemanticModel SemanticModel,
+        bool IsTestFile,
+        LinterConfig EffectiveConfig,
+        string ProjectName
+    );
+
+    private sealed record TestSentinelContext(
+        TestCoverageIndex TestCoverage,
+        ConcurrentBag<RuleViolation> Violations,
+        ConcurrentDictionary<string, string> FileContents
+    );
 }

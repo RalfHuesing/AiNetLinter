@@ -23,6 +23,11 @@ internal static class CliOptionFactory
         Description = "Pfad fuer das zu generierende Mermaid-Abhaengigkeitsdiagramm (.md)",
     };
 
+    internal static Option<string?> CreatePlaybookOption() => new("--playbook", "-pb")
+    {
+        Description = "Pfad fuer das zu generierende AI Repository-Playbook (.md)",
+    };
+
     internal static Option<string> CreateFormatOption() => new("--format", "-f")
     {
         Description = "Ausgabeformat: text (Standard) oder sarif",

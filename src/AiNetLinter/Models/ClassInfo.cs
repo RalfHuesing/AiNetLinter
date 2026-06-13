@@ -14,4 +14,9 @@ public sealed record ClassInfo
     public required INamedTypeSymbol Symbol { get; init; }
     public required bool HasTestMethods { get; init; }
     public bool IsPartial { get; init; }
+
+    /// <summary>
+    /// Der Name des Projekts, zu dem die Klasse gehört.
+    /// </summary>
+    public string? ProjectName { get; init; }
 }

@@ -30,7 +30,8 @@
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
     "MaxMethodOverloads": 10,
-    "MaxConstructorDependencies": 20
+    "MaxConstructorDependencies": 20,
+    "MaxAIContextFootprint": 5000
   },
   "TestSentinel": {
     "ClassNamePatterns": [
@@ -50,5 +51,16 @@
     "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
     "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" }
   },
-  "ForbiddenNamespaceDependencies": []
+  "ForbiddenNamespaceDependencies": [],
+  "ProjectOverrides": {
+    "*.Tests": {
+      "Global": {
+        "EnforceNoMagicValues": false,
+        "EnforceSealedClasses": false
+      },
+      "Metrics": {
+        "MaxMethodLineCount": 100
+      }
+    }
+  }
 }

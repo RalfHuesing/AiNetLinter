@@ -62,6 +62,7 @@ classDiagram
     }
     class CliIntegrationTests {
         +RunLinterCli_OnWholeSolution_ReturnsSuccess()
+        +GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
         +RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
     }
     class CognitiveComplexityWalkerTests {
@@ -114,6 +115,12 @@ classDiagram
         +IsCovered_SkipsNullTestClassName_InWildcardPattern()
         +IsCovered_ThrowsForEmptySourceClassName()
         +IsCovered_ThrowsForMissingClassNamePatterns()
+    }
+    class DeveloperExperienceTests {
+        +ProjectConfigResolver_NoOverrides_ReturnsGlobalConfig()
+        +ProjectConfigResolver_WithWildcardMatch_MergesOverrides()
+        +AIContextFootprintCalculator_SimpleClass_CalculatesLines()
+        +RepoPlaybookGenerator_ScansAndGeneratesMarkdown()
     }
     class BaselineMiniFixtureWorkspace {
         +Dispose()
@@ -270,8 +277,18 @@ classDiagram
     }
     class RuleMetadataEntry {
     }
+    class ProjectOverrideEntry {
+    }
+    class GlobalConfigOverride {
+    }
+    class MetricsConfigOverride {
+    }
     class LinterConfigNormalizer {
         +Normalize()
+    }
+    class ProjectConfigResolver {
+        +ResolveForDocument()
+        +ResolveForProject()
     }
     class RuleMetadataRegistry {
         +Resolve()
@@ -294,6 +311,8 @@ classDiagram
         +VisitThrowStatement()
         +VisitThrowExpression()
         +Analyze()
+        +Analyze()
+        +Analyze()
         +VisitLiteralExpression()
         +VisitInterfaceDeclaration()
         +VisitPropertyDeclaration()
@@ -309,6 +328,8 @@ classDiagram
         +VisitArgument()
         +VisitFieldDeclaration()
     }
+    class AnalyzerArgs {
+    }
     class LinterEngine {
         +RunAsync()
         +RunAsync()
@@ -317,10 +338,24 @@ classDiagram
     }
     class AnalysisState {
     }
+    class DocumentContext {
+    }
+    class TestSentinelContext {
+    }
     class PartialClassLineAggregator {
         +BuildViolations()
     }
     class PartialClassPart {
+    }
+    class RepoPlaybookGenerator {
+        +GenerateAsync()
+    }
+    class PlaybookStats {
+    }
+    class PlaybookSyntaxWalker {
+        +VisitMethodDeclaration()
+        +VisitThrowStatement()
+        +VisitThrowExpression()
     }
     class TestCoverageCollector {
         +Collect()
@@ -332,6 +367,9 @@ classDiagram
     }
     class TestCoverageResolver {
         +IsCovered()
+    }
+    class AIContextFootprintCalculator {
+        +Calculate()
     }
     class CognitiveComplexityGuidance {
         +Build()
@@ -467,9 +505,14 @@ classDiagram
     LinterConfig --> GlobalConfig : nutzt
     LinterConfig --> MetricsConfig : nutzt
     LinterConfig --> TestSentinelConfig : nutzt
+    ProjectOverrideEntry --> GlobalConfigOverride : nutzt
+    ProjectOverrideEntry --> MetricsConfigOverride : nutzt
     LinterAnalyzer --> LinterConfig : nutzt
+    AnalyzerArgs --> LinterConfig : nutzt
     LinterEngine --> LinterConfig : nutzt
     AnalysisState --> TestCoverageIndex : nutzt
+    DocumentContext --> LinterConfig : nutzt
+    TestSentinelContext --> TestCoverageIndex : nutzt
     SarifRun --> SarifTool : nutzt
     SarifTool --> SarifDriver : nutzt
     SarifResult --> SarifMessage : nutzt

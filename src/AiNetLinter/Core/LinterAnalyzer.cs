@@ -20,13 +20,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly List<RuleViolation> _violations = new();
     private string _currentNamespace = "";
     private readonly bool _isTestFile;
+    private readonly string? _projectName;
     private readonly HashSet<IFieldSymbol> _privateFieldsToAnalyze = new(SymbolEqualityComparer.Default);
     private readonly HashSet<IFieldSymbol> _fieldsModifiedOutsideConstructor = new(SymbolEqualityComparer.Default);
 
     public List<ClassInfo> Classes { get; } = new();
     public List<PartialClassPart> PartialClassParts { get; } = new();
 
-    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile)
+    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile, string? projectName = null)
         : base(SyntaxWalkerDepth.Node)
     {
         _filePath = filePath;
@@ -34,16 +35,44 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         _semanticModel = semanticModel;
         _config = config;
         _isTestFile = isTestFile;
+        _projectName = projectName;
     }
 
     /// <summary>
     /// Analysiert ein Dokument und gibt alle gefundenen Verstöße zurück.
     /// </summary>
-    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile = false)
+    /// <param name="args">Die Argumente für die Analyse.</param>
+    /// <returns>Eine Liste aller gefundenen Regelverstöße.</returns>
+    public static IReadOnlyCollection<RuleViolation> Analyze(AnalyzerArgs args)
     {
-        var analyzer = new LinterAnalyzer(filePath, semanticModel, config, isTestFile);
+        var analyzer = new LinterAnalyzer(args.FilePath, args.SemanticModel, args.Config, args.IsTestFile, args.ProjectName);
         analyzer.RunAnalysis();
         return analyzer._violations;
+    }
+
+    /// <summary>
+    /// Analysiert ein Dokument und gibt alle gefundenen Verstöße zurück.
+    /// </summary>
+    /// <param name="filePath">Der Dateipfad.</param>
+    /// <param name="semanticModel">Das semantische Modell.</param>
+    /// <param name="config">Die Konfiguration.</param>
+    /// <returns>Eine Liste aller gefundenen Regelverstöße.</returns>
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config)
+    {
+        return Analyze(new AnalyzerArgs(filePath, semanticModel, config));
+    }
+
+    /// <summary>
+    /// Analysiert ein Dokument und gibt alle gefundenen Verstöße zurück.
+    /// </summary>
+    /// <param name="filePath">Der Dateipfad.</param>
+    /// <param name="semanticModel">Das semantische Modell.</param>
+    /// <param name="config">Die Konfiguration.</param>
+    /// <param name="isTestFile">Gibt an, ob es sich um ein Test-Dokument handelt.</param>
+    /// <returns>Eine Liste aller gefundenen Regelverstöße.</returns>
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile)
+    {
+        return Analyze(new AnalyzerArgs(filePath, semanticModel, config, isTestFile));
     }
 
     internal IReadOnlyCollection<RuleViolation> Violations => _violations;
@@ -221,3 +250,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         });
     }
 }
+
+/// <summary>
+/// Argumente für die Ausführung der Analyse über LinterAnalyzer.
+/// </summary>
+public sealed record AnalyzerArgs(
+    string FilePath,
+    SemanticModel SemanticModel,
+    LinterConfig Config,
+    bool IsTestFile = false,
+    string? ProjectName = null
+);

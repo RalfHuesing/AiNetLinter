@@ -52,6 +52,7 @@ public static class Program
             ConfigPath = parsed.ConfigPath,
             TargetPath = parsed.TargetPath,
             GraphPath = parsed.GraphPath,
+            PlaybookPath = parsed.PlaybookPath,
             Format = parsed.Format,
             Verbose = parsed.Verbose,
             CreateBaselinePath = parsed.CreateBaselinePath,
@@ -133,6 +134,11 @@ public static class Program
             await TryGenerateCodegraphAsync(catalog.Solution, args.GraphPath, args.Verbose);
         }
 
+        if (args.PlaybookPath != null)
+        {
+            await TryGeneratePlaybookAsync(catalog.Solution, args.PlaybookPath, args.Verbose);
+        }
+
         if (args.BaselinePath != null)
         {
             return await AuditWithBaselineAsync(args, config, catalog);
@@ -158,6 +164,22 @@ public static class Program
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[ERROR]: Fehler beim Generieren des Codegraphen: {ex.Message}");
+        }
+    }
+
+    private static async Task TryGeneratePlaybookAsync(Solution solution, string playbookPath, bool verbose)
+    {
+        try
+        {
+            if (verbose)
+            {
+                Console.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
+            }
+            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR]: Fehler beim Generieren des Repo-Playbooks: {ex.Message}");
         }
     }
 
@@ -461,6 +483,7 @@ public static class Program
         public string? ConfigPath { get; init; }
         public required string TargetPath { get; init; }
         public string? GraphPath { get; init; }
+        public string? PlaybookPath { get; init; }
         public required string Format { get; init; }
         public required bool Verbose { get; init; }
         public string? CreateBaselinePath { get; init; }
