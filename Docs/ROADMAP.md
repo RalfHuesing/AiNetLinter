@@ -38,6 +38,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] Ausgangs-Exit-Codes definieren (0 = Erfolg, 1 = Regelbrüche, >1 = Fatale Fehler)
 - [x] Strukturierte, maschinenlesbare AI-Fehlermeldungen auf `stdout` ausgeben
 - [x] Unterstützung von Verbose-Logging (`--verbose` oder `-v`)
+- [x] Datum + Zeit im Header von jeglichem Text-Output zur Nachverfolgbarkeit
 
 ---
 

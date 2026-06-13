@@ -240,9 +240,10 @@ Alle Dateipfade in der Ausgabe sind **relativ zum `--path`-Argument** (Verzeichn
 
 #### Text (Standard, LLM-optimiert)
 
-Token-effiziente Ausgabe für AI-Agenten. Bei Erfolg: `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, parsebare Summary-Segmente (nach Datei und Regel) und sortierte Detail-Einzeiler.
+Token-effiziente Ausgabe für AI-Agenten. Jeder Text-Lauf gibt zuerst einen `# Run: [Datum und Uhrzeit]` Header aus. Bei Erfolg folgt `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, parsebare Summary-Segmente (nach Datei und Regel) und sortierte Detail-Einzeiler.
 
 ```
+# Run: 2026-06-13 09:06:13
 # AiNetLinter · 2 violations
 Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausserhalb betroffener Stellen/Zeilen.
 

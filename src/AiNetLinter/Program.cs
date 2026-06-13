@@ -26,7 +26,12 @@ public static class Program
         {
             try
             {
-                return await ExecuteLinterAsync(ToLinterArgs(CliCommandBuilder.Parse(parseResult, options)));
+                var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
+                if (linterArgs.Format != "sarif")
+                {
+                    Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                }
+                return await ExecuteLinterAsync(linterArgs);
             }
             catch (Exception ex)
             {
