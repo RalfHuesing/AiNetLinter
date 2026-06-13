@@ -45,4 +45,5 @@ Strikte Leitplanken für Code-Erstellung, Refactorings und Builds in `AiNetLinte
 ## 5. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
+- **Architektur-Orientierung:** Unter [codegraph.md](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe, sollte aufgrund seiner Größe (ca. 500 Zeilen) jedoch nur gezielt gelesen werden.
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
