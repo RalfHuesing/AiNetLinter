@@ -97,7 +97,15 @@ public static class Program
             return validationError.Value;
         }
 
-        if (args.SyncCursorRules)
+        if (args.Check && args.PlaybookPath != null)
+        {
+            return await RunPlaybookCheckAsync(args);
+        }
+
+        // Schneller Pfad: --sync-cursor-rules ohne --playbook.
+        // Wenn --playbook ebenfalls gesetzt ist, fällt der Aufruf durch zu RunAuditAsync,
+        // das beide Ausgaben via GenerateOptionalOutputsAsync erzeugt.
+        if (args.SyncCursorRules && args.PlaybookPath == null)
         {
             return RunSyncCursorRules(args);
         }
@@ -274,6 +282,30 @@ public static class Program
     }
 
 
+
+    private static async Task<int> RunPlaybookCheckAsync(LinterArgs args)
+    {
+        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(catalog.Solution, args.Verbose, config);
+
+        if (!File.Exists(args.PlaybookPath))
+        {
+            Console.Error.WriteLine($"[ERROR]: Die Playbook-Datei '{args.PlaybookPath}' existiert nicht.");
+            return 1;
+        }
+
+        var existingContent = await File.ReadAllTextAsync(args.PlaybookPath!, Encoding.UTF8);
+        if (generatedContent == existingContent)
+        {
+            Console.WriteLine("[OK]: Playbook ist aktuell.");
+            return 0;
+        }
+
+        Console.Error.WriteLine("[ERROR]: Drift erkannt! Das generierte Playbook stimmt nicht mit der Datei auf der Festplatte überein.");
+        return 1;
+    }
 
     private static async Task<int?> TryRunMaintenanceModeAsync(LinterArgs args)
     {
