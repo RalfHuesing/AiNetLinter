@@ -177,7 +177,26 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 
 ---
 
-## 5. CLI-Schnittstelle
+## 5. Kompilieren & Bereitstellen (Build & Deployment)
+
+Da `AiNetLinter` auf Roslyn-Compiler-Diensten und `MSBuildWorkspace` aufbaut, muss das Tool für die Verwendung in anderen Repositories speziell kompiliert und verpackt werden.
+
+### Lokalen Build erzeugen
+Um das Tool als eigenständiges, plattformspezifisches CLI-Tool für Windows zu kompilieren:
+```bash
+dotnet publish src/AiNetLinter/AiNetLinter.csproj -c Release -r win-x64 --self-contained true -o ./publish
+```
+
+### WICHTIG: MSBuild-Abhängigkeiten (BuildHost-Ordner)
+`MSBuildWorkspace` benötigt externe Host-Prozesse zum Parsen von Visual Studio Projektdateien. Nach dem Build müssen zwingend folgende Unterordner im selben Verzeichnis wie die `AiNetLinter.exe` liegen:
+*   `BuildHost-netcore/`
+*   `BuildHost-net472/`
+
+Diese Ordner werden standardmäßig beim `dotnet publish` automatisch erzeugt. **Wenn Sie das Tool in ein anderes Repository kopieren (z. B. in einen `tools/`-Ordner), müssen diese beiden Unterordner mitsamt ihren DLLs zwingend mitkopiert werden.** Andernfalls bricht das Tool bei der Analyse einer Solution mit einem fatalen MSBuildWorkspace-Ladefehler ab.
+
+---
+
+## 6. CLI-Schnittstelle
 
 `AiNetLinter` wird als Windows .NET 10 Core CLI-Tool ausgeführt.
 
@@ -305,7 +324,7 @@ Strukturiertes JSON für CI/CD-Integration. `artifactLocation.uri` enthält rela
 
 ---
 
-## 6. Lokale Warnungs-Unterdrückung (Suppression)
+## 7. Lokale Warnungs-Unterdrückung (Suppression)
 
 Sollte es notwendig sein, bestimmte Regeln für eine Datei oder Zeile zu deaktivieren, kann dies über C#-Kommentare gelöst werden:
 
@@ -359,9 +378,11 @@ Es werden ausschließlich Zeilen entfernt, die **exakt** `// ainetlinter-disable
 
 ---
 
-## 7. Integration in Unit Tests
+## 8. Integration in Unit Tests
 
-Um sicherzustellen, dass AI-Agenten die Regeln während der Arbeit einhalten, kann `AiNetLinter` über ein Test-Projekt integriert werden.
+Um sicherzustellen, dass AI-Agenten (wie Cursor oder Claude Code) die Linter-Regeln im laufenden Entwicklungsbetrieb eines Repositories nicht verletzen, empfiehlt sich die Integration als Unit-Test.
+
+Hier ist ein C#-Integrationsbeispiel für ein beliebiges anderes Projekt:
 
 ```csharp
 using Xunit;
@@ -373,10 +394,13 @@ public sealed class ArchitectureTests
     [Fact]
     public void Enforce_AiNetLinter_Rules_On_Solution()
     {
-        var solutionPath = Path.GetFullPath("../../../../AiNetLinter.slnx");
-        var configPath = Path.GetFullPath("../../../../rules.json");
-        var baselinePath = Path.GetFullPath("../../../../ainetlinter-baseline.json");
-        var linterCliPath = Path.GetFullPath("../../../../src/AiNetLinter/bin/Debug/net10.0/AiNetLinter.exe");
+        // Pfade relativ zu diesem Testprojekt auflösen
+        var solutionPath = Path.GetFullPath("../../../MyProject.slnx");
+        var configPath = Path.GetFullPath("../../../rules.json");
+        var baselinePath = Path.GetFullPath("../../../ainetlinter-baseline.json");
+        
+        // Pfad zur bereitgestellten AiNetLinter.exe (samt den BuildHost-Ordnern im selben Pfad)
+        var linterCliPath = Path.GetFullPath("../../../tools/ainetlinter/AiNetLinter.exe");
 
         var processInfo = new ProcessStartInfo
         {
@@ -394,14 +418,19 @@ public sealed class ArchitectureTests
         string output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
 
+        // Wenn der Linter Verstöße findet, liefert er Exit-Code 1 und der Test schlägt fehl
         Assert.True(process.ExitCode == 0, $"AiNetLinter hat Verstoesse gefunden:\n{output}");
     }
 }
 ```
 
+> [!IMPORTANT]
+> **MSBuild-Abhängigkeiten beachten:**
+> Für diesen Test müssen im Verzeichnis `tools/ainetlinter/` neben der `AiNetLinter.exe` auch unbedingt die beiden Unterordner `BuildHost-netcore/` und `BuildHost-net472/` liegen, die beim Build/Publish des Tools erzeugt werden. Andernfalls schlägt die Analyse fehl.
+
 ---
 
-## 8. Neue Features (Epic 19)
+## 9. Neue Features (Epic 19)
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
 In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. In Testprojekten sind beispielsweise literale Werte (Magic Values) in Assertions erwünscht. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
@@ -439,7 +468,7 @@ Aufrufbeispiel:
 ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
 ```
 
-## 9. Zukunfts-Roadmap (Ausblick)
+## 10. Zukunfts-Roadmap (Ausblick)
 
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
 *   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
