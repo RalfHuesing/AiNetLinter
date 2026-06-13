@@ -210,7 +210,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   - *Beschreibung:* Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
   - *LLM-Impact:* Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
   - *Machbarkeit:* 100% machbar. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.
-- [ ] **Dynamischer, LLM-orientierter Codegraph:**
+- [x] **Dynamischer, LLM-orientierter Codegraph:**
   - *Beschreibung:* Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
   - *LLM-Impact:* Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
   - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
