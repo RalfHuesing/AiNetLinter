@@ -37,7 +37,12 @@ Strikte Leitplanken für Code-Erstellung, Refactorings und Builds in `AiNetLinte
 - **OperationCanceledException:** Nur mit catch-Filter fangen.
 - **Exception für Kontrollfluss:** Verboten. Nutze Result-Pattern (`Result<T>`). `throw` ist nur in Konstruktoren oder Validierungs-Guards (Methoden-Suffix `Guard` oder `Validate`) erlaubt.
 
-## 4. Updates & Tests
+## 4. Architektur-Verbote (Constraints)
+- **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
+- **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
+- **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
+
+## 5. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
