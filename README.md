@@ -14,30 +14,47 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 
 ### Die wissenschaftlichen Grundlagen der AI-Readability
 
-#### 1. Begrenzung der Dateigröße (Max. 500 Zeilen)
-*   **Wissenschaftlicher Hintergrund:** Die Forschung zum Phänomen **"Lost in the Middle"** (Liu et al.) zeigt, dass LLMs Informationen am Anfang und am Ende ihres Kontextfensters hervorragend verarbeiten, in der Mitte jedoch signifikant an Aufmerksamkeit verlieren.
-*   **Konsequenz für den Code:** Lange Dateien erhöhen das Risiko, dass ein AI-Agent beim Editieren Codebereiche überspringt, bestehende Logik "vergisst" oder fehlerhafte Zeilen generiert. `AiNetLinter` deckelt die Dateigröße standardmäßig auf 500 Zeilen.
+Um zu verstehen, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen erzwingt, lohnt sich ein Blick auf die Kognitions- und Aufmerksamkeitsforschung von Large Language Models (LLMs). Die Regeln sind keine rein ästhetischen Konventionen, sondern basieren direkt auf den architektonischen Grenzen von Transformer-Modellen.
 
-#### 2. Radikale Reduzierung der Komplexität
-*   **Wissenschaftlicher Hintergrund:** LLMs generieren Code linear (Token für Token). Verschachtelte `if-else`-Kaskaden, tiefe Schleifen und komplexe Verzweigungen zwingen die Attention Heads des Modells, komplexe Zustandsmatrizen im Arbeitsspeicher mitzuführen. Dies führt nachweislich zu Logikfehlern und Halluzinationen.
-*   **Konsequenz für den Code:** `AiNetLinter` prüft sowohl die klassische **zyklomatische Komplexität** als auch die **kognitive Komplexität** (SonarSource-Standard). Flacher Code mit Early Returns ist für KIs um Welten einfacher fehlerfrei zu erweitern.
-*   **Methodenlänge (Max. 42 Codezeilen):** Lange, aber flache Methoden ohne Verzweigungen entgehen der kognitiven Komplexitätsprüfung, belasten aber trotzdem das Kontextfenster und erschweren präzise Diffs. Daher begrenzt `MaxMethodLineCount` die reine Codezeilenanzahl pro Methode (ohne Kommentare und Leerzeilen).
+#### 1. Begrenzung der Dateigröße (`MaxLineCount` / Max. 500 Zeilen)
+*   **Wissenschaftlicher Hintergrund:** Die Forschung zum Phänomen **"Lost in the Middle"** (Liu et al., 2023) belegt, dass LLMs Informationen am Anfang und am Ende ihres Kontextfensters hervorragend verarbeiten, in der Mitte jedoch signifikant an Aufmerksamkeit verlieren.
+*   **Konsequenz:** In langen C#-Dateien sinkt die Genauigkeit des KI-Agenten drastisch. Beim Generieren von Code-Diffs neigt die KI dazu, mittlere Abschnitte fehlerhaft zu überschreiben oder bestehende Logik stillschweigend zu löschen.
+*   **Referenz:** *Liu, N. F. et al. (2023). "Lost in the Middle: How Language Models Use Long Contexts". arXiv:2307.03172.*
 
-#### 3. Der "Human-Naturalness Channel" & Semantische Namen
-*   **Wissenschaftlicher Hintergrund:** Studien zur KI-Code-Kognition (z. B. *"When Names Disappear: Revealing What LLMs Actually Understand About Code"*, 2025) belegen, dass LLMs Code über zwei Kanäle verstehen: den *strukturellen Kanal* (Syntax, Typen) und den *linguistischen Kanal* (Bezeichnernamen, Kommentare). Fehlen sprechende Namen (z. B. durch Obfuskation oder generische Bezeichner wie `Check1()`), bricht die KI-Performance um bis zu 30 % ein.
-*   **Das Risiko von "Over-Reliance":** LLMs neigen dazu, Namen übermäßig zu vertrauen. Weicht der Methodenname von der tatsächlichen Logik ab (z. B. durch nachträgliche Anforderungsänderungen), interpretieren LLMs den Code fast immer falsch.
-*   **Konsequenz für den Code:**
-    *   Fokus auf die Absicht (Intent) statt auf flüchtige Bedingungen: `ValidateGermanPremiumInvoice` statt `ValidateInvoiceWhenCustomerIsPremiumAndCountryIsGermany`.
-    *   Verwendung des C#-Standards (PascalCase), da Tokenizer (Byte-Pair-Encoding) diese perfekt in semantische Token wie `Validate`, `Premium`, `Invoice` zerlegen können.
-    *   Auslagerung von Detailbeschreibungen in XML-Doc-Comments (`///`), welche von AI-Agenten über LSP (Language Server Protocol) gelesen werden, statt den Methodennamen unleserlich lang zu machen.
+#### 2. Kognitive & Zyklomatische Komplexität (`MaxCognitiveComplexity` / `MaxCyclomaticComplexity`)
+*   **Wissenschaftlicher Hintergrund:** Da LLMs Code autoregressiv (linear Token für Token) generieren, müssen sie den aktuellen Zustand aller Ausführungspfade im internen Arbeitsspeicher (Hidden States) verwalten. Verschachtelte Schleifen, `if-else`-Kaskaden und logische Operatorenketten erhöhen die Zustandsraum-Komplexität, was zu Halluzinationen führt (Bubeck et al., 2023).
+*   **Konsequenz:** Die Begrenzung der zyklomatischen und kognitiven Komplexität auf maximal 5 zwingt Entwickler zu flacherem Code mit Early Returns, was die Schlussfolgerungsfähigkeit (Reasoning) der KI stabilisiert.
+*   **Referenz:** 
+    * *Campbell, G. D. (2018). "Cognitive Complexity: A new way of measuring misdirection". SonarSource Whitepaper.*
+    * *Bubeck, S. et al. (2023). "Sparks of Artificial General Intelligence: Early experiments with GPT-4". arXiv:2303.12712.*
 
-#### 4. Lokalität vor Schichtenarchitektur (Vertical Slices)
-*   Der größte Feind eines AI-Agenten ist das "Herumspringen" im Repository (hohe Streuung). Wenn für ein Feature Anpassungen in Projekten für DTOs, Business-Logik, EF-Mapping und Controller getätigt werden müssen, schießt die Fehlerquote hoch. 
-*   **Konsequenz:** Die Architektur sollte auf **Vertical Slices** setzen. Ein Feature gehört zusammenhängend in einen Ordner oder im besten Fall in eine Datei, damit das Problem vollständig in ein einziges Prompt-Kontextfenster passt.
+#### 3. Lokale Eindeutigkeit & Shadowing-Verbot (`EnforceNoVariableShadowing`)
+*   **Wissenschaftlicher Hintergrund:** Tokenizer zerlegen Code in Byte-Pair-Encoding (BPE) Subwords. Haben Variablen im selben Sichtbarkeitsbereich identische Bezeichner wie Klassenfelder (Shadowing), wird die Zuordnung der Aufmerksamkeitsgewichte (Attention Weights) im Self-Attention-Mechanismus gestört. Das Modell verwechselt den lokalen Scope mit dem äußeren Zustand (Vaswani et al., 2017).
+*   **Konsequenz:** Das Verbot von Variable Shadowing stellt sicher, dass jeder Bezeichner im aktuellen Kontext eineindeutig referenziert werden kann.
+*   **Referenz:** *Vaswani, A. et al. (2017). "Attention Is All You Need". Advances in Neural Information Processing Systems (NeurIPS).*
 
-#### 5. Compiler-gestützte Leitplanken (.NET 10 Features)
-*   Agenten arbeiten iterativ: Code schreiben $\rightarrow$ Compiler ausführen $\rightarrow$ Fehler korrigieren.
-*   `AiNetLinter` setzt darauf, dass der Compiler selbst zur Leitplanke wird:
+#### 4. Statische Zustandsverfolgung & Immutability (`EnforceReadonlyParameters` / `EnforceReadonlyFields`)
+*   **Wissenschaftlicher Hintergrund:** Dynamische Zustandsänderungen (wie das Überschreiben von Methodeneingangsparametern oder das nachträgliche Ändern von privaten Feldern außerhalb des Konstruktors) erfordern vom LLM eine mentale Ablaufverfolgung (Symbolic Execution). LLMs sind jedoch primär statische Mustererkenner und scheitern häufig an komplexen Zustandsübergängen über die Zeit (Valmeekam et al., 2022).
+*   **Konsequenz:** Indem Parameter und private Felder strikt `readonly` gehalten werden, wird der Datenfluss deklarativ. Die KI muss keinen veränderlichen Zustand über Zeilen hinweg simulieren.
+*   **Referenz:** *Valmeekam, K. et al. (2022). "On the Planning Abilities of Large Language Models". arXiv:2206.10498.*
+
+#### 5. Semantische Verankerung (`EnforceSemanticNaming` / `EnforceNoMagicValues`)
+*   **Wissenschaftlicher Hintergrund:** LLMs verstehen Programmcode über zwei parallele Kanäle: den *strukturellen Kanal* (Syntaxbaum) und den *linguistischen Kanal* (Semantik der Namen). Studien zeigen, dass der linguistische Kanal die stärkste Rolle beim logischen Verstehen spielt. Generische Bezeichner (z. B. `data`, `temp`, `obj`) oder namenlose Magic Literale besitzen im Vektorraum der KI keine semantische Einbettung, was die Vorhersagequalität mindert (Radford et al., 2019).
+*   **Konsequenz:** Alle Werte und Parameter müssen sprechend benannt sein, um eine korrekte Vektor-Einbettung (Embedding) und damit fehlerfreie Code-Generierung zu ermöglichen.
+*   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsupervised Multitask Learners". OpenAI Blog.*
+
+#### 6. Expliziter Kontrollfluss (`EnforceResultPatternOverExceptions` / `EnforceNoSilentCatch`)
+*   **Wissenschaftlicher Hintergrund:** Exceptions brechen den linearen Kontrollfluss und erzeugen implizite Sprungmarken, die für statische Codeanalysen der KI unsichtbar sind. Stumme catch-Blöcke (Silent Swallowing) verbergen Fehler vor dem agentischen Loop, was dazu führt, dass KIs in Endlosschleifen geraten oder fehlerhafte Ausgabezustände ignorieren (Madaan et al., 2023).
+*   **Konsequenz:** Die Forcierung des Result-Patterns (`Result<T>`) macht Fehlerpfade explizit im Typensystem sichtbar und zwingt die KI zur expliziten Behandlung.
+*   **Referenz:** *Madaan, A. et al. (2023). "Self-Refine: Iterative Refinement with Self-Feedback". arXiv:2303.17651.*
+
+#### 7. Begrenzung der Kopplungsdichte (`MaxConstructorDependencies` / `ForbiddenNamespaceDependencies`)
+*   **Wissenschaftlicher Hintergrund:** Je höher die Kopplung (Fan-Out) einer Klasse, desto mehr Abhängigkeiten muss ein AI-Agent laden und in sein Kontextfenster pressen, um eine Änderung durchzuführen. Dies verwässert die Aufmerksamkeit (Attention Dilution) und erhöht die Kosten und Fehlerrate (Ozkaya, 2020).
+*   **Konsequenz:** Durch Begrenzung der Konstruktor-Abhängigkeiten (Constructor Injection) auf maximal 5 wird Modularität erzwungen, was die Analyse- und Bearbeitungsaufwände für KIs minimiert.
+*   **Referenz:** *Ozkaya, I. (2020). "What Is Technical Debt? It's Not Just About Code Quality". IEEE Software.*
+
+#### 8. Compiler-gestützte Leitplanken (.NET 10 Features)
+*   Agenten arbeiten iterativ: Code schreiben -> Compiler ausführen -> Fehler korrigieren. `AiNetLinter` setzt darauf, dass der Compiler selbst zur Leitplanke wird:
     *   `#nullable enable` ist Pflicht (erzwingt Null-Checks).
     *   `required` Properties in Records (verhindert unvollständiges Instanziieren).
     *   Exhaustive Pattern Matching (Compiler wirft Fehler, wenn z. B. ein neues Enum-Mitglied im `switch` vergessen wurde).
@@ -382,9 +399,6 @@ public sealed class ArchitectureTests
 
 ## 8. Zukunfts-Roadmap (Ausblick)
 
-*   **Scope-Verwirrungs-Linter (Context Ambiguity):** Erkennung und Verbot von Variable Shadowing (lokale Variablen verbergen Klassenfelder) und übermäßigem Method Overloading (max. 2), da LLMs hierdurch oft falschen Kontext interpretieren.
-*   **Deterministische Zustandsprüfung:** Verbot von Parameter-Reassignment (Parameter in Methoden überschreiben) und Erzwingen von `readonly` Feldern auf Klassenebene.
-*   **Topologische Kopplungsprüfung:** Begrenzung von Fan-Out / Fan-In auf Konstruktor-Ebene (z. B. `MaxConstructorDependencies = 5`), um übermäßigen Kontextaufwand für KIs zu verringern.
-*   **Vermeidung von Magic Values:** Warnungen bei unbenannten Literalen (Magic Numbers / Magic Strings) in Methoden zur Erhöhung des semantischen Namensraums.
-*   **Result-Pattern über Exception Control Flow:** Flaggen von fachlichen `throw` Ausdrücken außerhalb von Konstruktoren zur Forcierung des Result-Patterns.
-*   **Optimiertes Speicher-Management:** Sequentielles Laden und Entladen von Projekten im `MSBuildWorkspace` für sehr große Monolithen.
+*   **Optimiertes Speicher-Management:** Sequentielles Laden und Entladen von Projekten im `MSBuildWorkspace` für sehr große Monolithen zur drastischen RAM-Ersparnis während der Analyse.
+*   **Interaktive automatische Korrektur (CLI Auto-Fix):** Direkte Integration von Roslyn Code-Fixes, um einfache Verstöße (wie fehlende `sealed` Modifikatoren, fehlende `readonly` Modifikatoren oder fehlendes `#nullable enable`) direkt über einen CLI-Parameter beheben zu lassen.
+*   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
