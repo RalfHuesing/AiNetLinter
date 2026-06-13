@@ -20,8 +20,8 @@ public sealed class CodegraphGeneratorTests
         var projectInfo = ProjectInfo.Create(
             projectId,
             VersionStamp.Create(),
-            "TestProject",
-            "TestProject",
+            "AppProject",
+            "AppProject",
             LanguageNames.CSharp,
             metadataReferences: new[]
             {
@@ -40,7 +40,7 @@ public sealed class CodegraphGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_CorrectlyExtractsRelationshipsAndMethods()
+    public async Task GenerateAsync_ProducesCompactTextWithRelationships()
     {
         const string baseSource = @"
 public interface IBaseService
@@ -83,30 +83,86 @@ public sealed class ChildClass : BaseClass, IBaseService
 
             var content = await File.ReadAllTextAsync(tempFile);
 
-            // Verifiziere das Vorhandensein der Klassen
-            Assert.Contains("class IBaseService", content);
-            Assert.Contains("class BaseClass", content);
-            Assert.Contains("class ChildClass", content);
+            // Alle drei Typen vorhanden
+            Assert.Contains("BaseClass", content);
+            Assert.Contains("ChildClass", content);
+            Assert.Contains("IBaseService", content);
 
-            // Verifiziere public Methoden
-            Assert.Contains("+Run()", content);
-            Assert.Contains("+BaseMethod()", content);
-            Assert.Contains("+GetValue()", content);
+            // Interface-Marker
+            Assert.Contains("[interface]", content);
 
-            // Verifiziere Generalisierung und Implementierung
-            Assert.Contains("BaseClass <|-- ChildClass : erbt", content);
-            Assert.Contains("IBaseService <|.. ChildClass : implementiert", content);
+            // Vererbung
+            Assert.Contains(": BaseClass", content);
 
-            // Verifiziere Assoziationen (Feld- und Property-Abhaengigkeiten)
-            Assert.Contains("ChildClass --> BaseClass : nutzt", content);
-            Assert.Contains("ChildClass --> IBaseService : nutzt", content);
+            // Interface-Implementierung
+            Assert.Contains("impl IBaseService", content);
+
+            // Abhaengigkeiten (Felder + Properties + Konstruktor-Parameter)
+            Assert.Contains("→ ", content);
+            Assert.Contains("BaseClass", content);
+
+            // Kein Methoden-Listing
+            Assert.DoesNotContain("+Run()", content);
+            Assert.DoesNotContain("+BaseMethod()", content);
+            Assert.DoesNotContain("+GetValue()", content);
+
+            // Kein Mermaid
+            Assert.DoesNotContain("```mermaid", content);
+            Assert.DoesNotContain("classDiagram", content);
         }
         finally
         {
             if (File.Exists(tempFile))
-            {
                 File.Delete(tempFile);
-            }
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GroupsByNamespace()
+    {
+        const string source = @"
+namespace App.Services { public sealed class UserService {} }
+namespace App.Models { public sealed record User(string Name); }
+";
+        var solution = CreateTestSolution(("File.cs", source));
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await CodegraphGenerator.GenerateAsync(solution, tempFile);
+            var content = await File.ReadAllTextAsync(tempFile);
+
+            Assert.Contains("## App.Services", content);
+            Assert.Contains("## App.Models", content);
+            Assert.Contains("[record]", content);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAsync_PartialClass_ShowsPartialModifier()
+    {
+        const string part1 = "public partial class MyService { public void MethodA() {} }";
+        const string part2 = "public partial class MyService { public void MethodB() {} }";
+        var solution = CreateTestSolution(("Part1.cs", part1), ("Part2.cs", part2));
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await CodegraphGenerator.GenerateAsync(solution, tempFile);
+            var content = await File.ReadAllTextAsync(tempFile);
+
+            Assert.Contains("partial", content);
+            Assert.DoesNotContain("+MethodA()", content);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
         }
     }
 }

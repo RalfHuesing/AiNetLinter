@@ -14,7 +14,7 @@ Die verbindlichen Coding-Richtlinien, Architektur-Constraints und Linter-Metrike
 
 ## Orientierungshilfen
 
-- **Abhängigkeitsgraph:** [Docs/codegraph.md](Docs/codegraph.md) — auto-generierter Mermaid-Graph der Klassenstruktur. Bei unbekannter Architektur als erstes lesen.
+- **Abhängigkeitsgraph:** [Docs/codegraph.md](Docs/codegraph.md) — auto-generierter kompakter Text-Graph (nur Produktionscode, namespace-gruppiert, mit Typ-Kind und Abhängigkeiten). Bei unbekannter Architektur als erstes lesen.
 - **Regelquelle:** `rules.json` ist die Single Source of Truth für alle Linter-Regeln. Änderungen dort regenerieren die `.mdc`-Dateien.
 
 ## Technologie

@@ -12,150 +12,206 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Core;
 
 /// <summary>
-/// Analysiert eine Solution und generiert ein Mermaid-Klassendiagramm der internen Strukturen.
+/// Analysiert eine Solution und generiert einen kompakten Abhängigkeitsgraphen (nur Produktionscode).
 /// </summary>
 public sealed class CodegraphGenerator
 {
+    private sealed record TypeInfo(
+        string Name,
+        string Modifiers,
+        string? BaseType,
+        IReadOnlyList<string> Interfaces,
+        IReadOnlyList<string> Dependencies);
+
     /// <summary>
     /// Generiert den Abhängigkeitsgraphen und schreibt ihn in die angegebene Datei.
     /// </summary>
-    /// <param name="solution">Die zu analysierende Roslyn Solution.</param>
-    /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
     public static async Task GenerateAsync(Solution solution, string outputPath)
     {
-        var allTypes = await CollectDeclaredTypesAsync(solution);
-        
-        using var writer = new StreamWriter(outputPath, false, Encoding.UTF8);
-        await writer.WriteLineAsync("# Codebase-Architektur & Abhaengigkeitsgraph (Auto-Generated)");
-        await writer.WriteLineAsync("Dieses Dokument visualisiert die interne Klassenstruktur und deren Beziehungen.");
-        await writer.WriteLineAsync();
-        await writer.WriteLineAsync("```mermaid");
-        await writer.WriteLineAsync("classDiagram");
-
-        WriteClasses(writer, allTypes);
-        WriteRelationships(writer, allTypes);
-
-        await writer.WriteLineAsync("```");
+        var typesByNamespace = await CollectProductionTypesAsync(solution);
+        var content = BuildContent(typesByNamespace);
+        await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
     }
 
-    private static async Task<HashSet<INamedTypeSymbol>> CollectDeclaredTypesAsync(Solution solution)
+    private static async Task<SortedDictionary<string, List<TypeInfo>>> CollectProductionTypesAsync(Solution solution)
     {
         var allTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
         foreach (var project in solution.Projects)
         {
+            if (!project.SupportsCompilation) continue;
+            if (TestProjectDetector.IsTestProject(project)) continue;
+
             foreach (var document in project.Documents)
             {
-                await ExtractTypesFromDocumentAsync(document, allTypes);
+                if (!IsValidDocument(document)) continue;
+                await ExtractTypesAsync(document, allTypes);
             }
         }
 
-        return allTypes;
+        return GroupByNamespace(allTypes);
     }
 
-    private static async Task ExtractTypesFromDocumentAsync(Document document, HashSet<INamedTypeSymbol> allTypes)
+    private static SortedDictionary<string, List<TypeInfo>> GroupByNamespace(HashSet<INamedTypeSymbol> allTypes)
     {
-        var semanticModel = await document.GetSemanticModelAsync();
-        if (semanticModel == null)
-        {
-            return;
-        }
+        var result = new SortedDictionary<string, List<TypeInfo>>(StringComparer.Ordinal);
 
-        var root = await document.GetSyntaxRootAsync();
-        if (root == null)
-        {
-            return;
-        }
-
-        var classNodes = root.DescendantNodes().OfType<TypeDeclarationSyntax>();
-        foreach (var classNode in classNodes)
-        {
-            var symbol = semanticModel.GetDeclaredSymbol(classNode);
-            if (symbol is INamedTypeSymbol namedType)
-            {
-                allTypes.Add(namedType);
-            }
-        }
-    }
-
-    private static void WriteClasses(StreamWriter writer, HashSet<INamedTypeSymbol> types)
-    {
-        foreach (var type in types)
-        {
-            var typeName = type.Name;
-            writer.WriteLine($"    class {typeName} {{");
-
-            var publicMethods = type.GetMembers().OfType<IMethodSymbol>()
-                .Where(m => m.DeclaredAccessibility == Accessibility.Public && !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
-
-            foreach (var method in publicMethods)
-            {
-                writer.WriteLine($"        +{method.Name}()");
-            }
-
-            writer.WriteLine("    }");
-        }
-    }
-
-    private static void WriteRelationships(StreamWriter writer, HashSet<INamedTypeSymbol> allTypes)
-    {
         foreach (var type in allTypes)
         {
-            var typeName = type.Name;
+            var ns = ResolveNamespaceKey(type);
+            if (!result.TryGetValue(ns, out var list))
+            {
+                list = [];
+                result[ns] = list;
+            }
+            list.Add(BuildTypeInfo(type, allTypes));
+        }
 
-            WriteInheritanceAndInterfaces(writer, type, typeName, allTypes);
-            WriteUsages(writer, type, typeName, allTypes);
+        foreach (var list in result.Values)
+            list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+
+        return result;
+    }
+
+    private static string ResolveNamespaceKey(INamedTypeSymbol type)
+    {
+        var ns = type.ContainingNamespace;
+        if (ns == null || ns.IsGlobalNamespace) return "(global)";
+        return ns.ToDisplayString();
+    }
+
+    private static bool IsValidDocument(Document document)
+    {
+        var path = document.FilePath ?? document.Name;
+        if (string.IsNullOrEmpty(path)) return false;
+        if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
+        return !IsGeneratedPath(path);
+    }
+
+    private static bool IsGeneratedPath(string path) =>
+        path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
+        path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
+        path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task ExtractTypesAsync(Document document, HashSet<INamedTypeSymbol> allTypes)
+    {
+        var semanticModel = await document.GetSemanticModelAsync();
+        if (semanticModel == null) return;
+
+        var root = await document.GetSyntaxRootAsync();
+        if (root == null) return;
+
+        foreach (var node in root.DescendantNodes().OfType<TypeDeclarationSyntax>())
+        {
+            if (semanticModel.GetDeclaredSymbol(node) is INamedTypeSymbol symbol)
+                allTypes.Add(symbol);
         }
     }
 
-    private static void WriteInheritanceAndInterfaces(StreamWriter writer, INamedTypeSymbol type, string typeName, HashSet<INamedTypeSymbol> allTypes)
+    private static TypeInfo BuildTypeInfo(INamedTypeSymbol type, HashSet<INamedTypeSymbol> allTypes)
     {
-        if (type.BaseType != null && allTypes.Contains(type.BaseType))
-        {
-            writer.WriteLine($"    {type.BaseType.Name} <|-- {typeName} : erbt");
-        }
+        var modifiers = BuildModifiers(ResolveKind(type), type.DeclaringSyntaxReferences.Length > 1);
 
-        foreach (var iface in type.Interfaces)
+        var baseType = type.BaseType != null && allTypes.Contains(type.BaseType)
+            ? type.BaseType.Name : null;
+
+        var interfaces = type.Interfaces
+            .Where(allTypes.Contains)
+            .Select(i => i.Name)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToArray();
+
+        var deps = CollectDependencies(type, allTypes);
+
+        return new TypeInfo(type.Name, modifiers, baseType, interfaces, deps);
+    }
+
+    private static string BuildModifiers(string kind, bool isPartial)
+    {
+        if (!string.IsNullOrEmpty(kind) && isPartial) return $"{kind}, partial";
+        if (isPartial) return "partial";
+        return kind;
+    }
+
+    private static string ResolveKind(INamedTypeSymbol type)
+    {
+        if (type.TypeKind == TypeKind.Interface) return "interface";
+        if (type.TypeKind == TypeKind.Struct) return "struct";
+        if (type.TypeKind == TypeKind.Enum) return "enum";
+        if (type.IsRecord) return "record";
+        if (type.IsAbstract && !type.IsStatic) return "abstract";
+        return "";
+    }
+
+    private static IReadOnlyList<string> CollectDependencies(INamedTypeSymbol type, HashSet<INamedTypeSymbol> allTypes)
+    {
+        var deps = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var member in type.GetMembers())
         {
-            if (allTypes.Contains(iface))
+            if (member is IFieldSymbol field && field.Type is INamedTypeSymbol ft && allTypes.Contains(ft))
             {
-                writer.WriteLine($"    {iface.Name} <|.. {typeName} : implementiert");
+                deps.Add(ft.Name);
+            }
+            else if (member is IPropertySymbol prop && prop.Type is INamedTypeSymbol pt && allTypes.Contains(pt))
+            {
+                deps.Add(pt.Name);
+            }
+            else if (member is IMethodSymbol method && IsRelevantMethod(method))
+            {
+                CollectMethodSignatureDeps(method, allTypes, deps);
             }
         }
+
+        return deps.OrderBy(d => d, StringComparer.Ordinal).ToArray();
     }
 
-    private static void WriteUsages(StreamWriter writer, INamedTypeSymbol type, string typeName, HashSet<INamedTypeSymbol> allTypes)
+    private static bool IsRelevantMethod(IMethodSymbol method) =>
+        method.MethodKind == MethodKind.Ordinary || method.MethodKind == MethodKind.Constructor;
+
+    private static void CollectMethodSignatureDeps(IMethodSymbol method, HashSet<INamedTypeSymbol> allTypes, HashSet<string> deps)
     {
-        var referencedTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-
-        CollectFieldDependencies(type, allTypes, referencedTypes);
-        CollectPropertyDependencies(type, allTypes, referencedTypes);
-
-        foreach (var dep in referencedTypes)
+        foreach (var param in method.Parameters)
         {
-            writer.WriteLine($"    {typeName} --> {dep.Name} : nutzt");
+            if (param.Type is INamedTypeSymbol pt && allTypes.Contains(pt))
+                deps.Add(pt.Name);
         }
+
+        if (method.ReturnType is INamedTypeSymbol rt && allTypes.Contains(rt))
+            deps.Add(rt.Name);
     }
 
-    private static void CollectFieldDependencies(INamedTypeSymbol type, HashSet<INamedTypeSymbol> allTypes, HashSet<INamedTypeSymbol> referencedTypes)
+    private static string BuildContent(SortedDictionary<string, List<TypeInfo>> typesByNamespace)
     {
-        foreach (var field in type.GetMembers().OfType<IFieldSymbol>())
+        var totalTypes = typesByNamespace.Values.Sum(v => v.Count);
+        var sb = new StringBuilder();
+
+        sb.AppendLine("# Codegraph (auto-generated)");
+        sb.AppendLine($"Produktionscode · {totalTypes} Typen · {typesByNamespace.Count} Namespaces");
+
+        foreach (var (ns, types) in typesByNamespace)
         {
-            if (field.Type is INamedTypeSymbol fieldType && allTypes.Contains(fieldType))
-            {
-                referencedTypes.Add(fieldType);
-            }
+            sb.AppendLine();
+            sb.AppendLine($"## {ns} ({types.Count})");
+
+            foreach (var t in types)
+                sb.AppendLine(BuildTypeLine(t));
         }
+
+        return sb.ToString();
     }
 
-    private static void CollectPropertyDependencies(INamedTypeSymbol type, HashSet<INamedTypeSymbol> allTypes, HashSet<INamedTypeSymbol> referencedTypes)
+    private static string BuildTypeLine(TypeInfo t)
     {
-        foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
-        {
-            if (prop.Type is INamedTypeSymbol propType && allTypes.Contains(propType))
-            {
-                referencedTypes.Add(propType);
-            }
-        }
+        var sb = new StringBuilder();
+        sb.Append($"- {t.Name}");
+
+        if (!string.IsNullOrEmpty(t.Modifiers)) sb.Append($" [{t.Modifiers}]");
+        if (t.BaseType != null) sb.Append($" : {t.BaseType}");
+        if (t.Interfaces.Count > 0) sb.Append($" impl {string.Join(", ", t.Interfaces)}");
+        if (t.Dependencies.Count > 0) sb.Append($" → {string.Join(", ", t.Dependencies)}");
+
+        return sb.ToString();
     }
 }
