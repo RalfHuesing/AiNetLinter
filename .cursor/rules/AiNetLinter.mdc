@@ -1,0 +1,43 @@
+﻿---
+description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)
+globs: *.cs
+alwaysApply: true
+---
+# C#-Codequalität (AiNetLinter)
+
+Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `AiNetLinter` geprüft. Schreibe neuen Code direkt konform zu diesen Regeln.
+
+## 1. Aktive Metriken & Grenzwerte (Produktions-Code)
+
+| Regel | Limit | Beschreibung / Anweisung |
+| :--- | :---: | :--- |
+| `MaxLineCount` | **500** | Maximale Zeilenanzahl pro Datei. |
+| `MaxMethodLineCount` | **42** | Codezeilen pro Methode (ohne Kommentare/Klammern). |
+| `MaxMethodParameterCount` | **4** | Parameter pro Methode. Bei Überschreitung einen `record` (Parameter Object) nutzen. |
+| `MaxCyclomaticComplexity` | **5** | Maximale zyklomatische Komplexität (McCabe) pro Methode. |
+| `MaxCognitiveComplexity` | **5** | Maximale kognitive Komplexität pro Methode. |
+| `MaxInheritanceDepth` | **2** | Maximale Vererbungstiefe. |
+| `MaxMethodOverloads` | **3** | Maximale Anzahl an Methodenüberladungen pro Name in einer Klasse. |
+| `MaxConstructorDependencies` | **5** | Maximale Anzahl an Konstruktor-Abhängigkeiten. |
+| `MaxDirectoryDepth` | **4** | Maximale Ordnertiefe ab csproj-Ebene. |
+| `MaxAIContextFootprint` | **5000** | Maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten. |
+
+## 2. Globale Qualitäts-Regeln (Aktiviert)
+
+- **`EnforceSealedClasses`**: Konkrete Klassen müssen als `sealed` (oder `sealed partial`) deklariert sein.
+- **`EnforceNoSilentCatch`**: Leere catch-Blöcke sind verboten. Benenne die Exception-Variable `ignored` oder wirf sie mit `throw;` weiter.
+- **`EnforceNullableEnable`**: Nutze `#nullable enable` am Dateianfang.
+- **`EnforceValueObjectContracts`**: Klassen mit Suffix `ValueObject` müssen `record` oder `readonly struct` sein.
+- **`EnforcePascalCase`**: Erzwingt PascalCase für öffentliche Typen/Methoden/Properties.
+- **`EnforceSemanticNaming`**: Keine generischen Namen (data, temp, obj) in öffentlichen Signaturen.
+- **`ImmutabilityExemptSuffixes`**: Folgende Typ-Suffixe sind von der Immutability-Prüfung ausgenommen: `Dto`, `Entity`, `Model`, `Request`, `Response`, `Command`.
+
+## 3. Projekt-spezifische Abweichungen (Overrides)
+
+Der Linter erlaubt in bestimmten Projekten Abweichungen von den obigen Regeln:
+
+### Bereich: `*.Tests`
+- **`EnforceNoMagicValues`**: Deaktiviert (Literale Werte in Ausdrücken sind erlaubt).
+- **`EnforceSealedClasses`**: Deaktiviert (Klassen müssen nicht 'sealed' sein).
+- **`MaxMethodLineCount`**: Geändert auf **100**.
+

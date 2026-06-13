@@ -91,4 +91,9 @@ public sealed class LinterArgs
     /// Holt oder setzt die optionale Git-Referenz, die fuer die Diff-Impact-Analyse genutzt wird.
     /// </summary>
     public string? ImpactRef { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob Cursor-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
+    /// </summary>
+    public bool SyncCursorRules { get; init; }
 }

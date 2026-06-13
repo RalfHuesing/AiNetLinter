@@ -318,6 +318,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
 *   `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
 *   `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
+*   `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
 
 ### Wellen-Workflow (Agent-Migration)
 

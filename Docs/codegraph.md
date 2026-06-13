@@ -129,6 +129,8 @@ classDiagram
         +RepoPlaybookGenerator_WithAllowedException_FiltersThrowFromMetric()
         +LinterConfigLoader_WithNonExistentFile_ReturnsNull()
         +LinterConfigLoader_WithValidJson_LoadsConfig()
+        +SyncCursorRules_GeneratesMdcFile_WritesSuccessfully()
+        +SyncCursorRules_OnSelfRepository_UpdatesMdc()
     }
     class DiffImpactAnalyzerTests {
         +ParseGitDiffHunks_WithValidDiff_ParsesHunksCorrectly()
@@ -334,6 +336,15 @@ classDiagram
     }
     class CodegraphGenerator {
         +GenerateAsync()
+    }
+    class CursorRulesGenerator {
+        +Sync()
+    }
+    class RuleDescriptor {
+    }
+    class OverrideDescriptor {
+    }
+    class MetricOverrideDescriptor {
     }
     class DiffImpactAnalyzer {
         +AnalyzeAsync()

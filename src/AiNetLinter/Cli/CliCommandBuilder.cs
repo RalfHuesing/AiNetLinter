@@ -25,7 +25,8 @@ internal static class CliCommandBuilder
         Option<bool> OnlyChanged,
         Option<string?> GitSince,
         Option<bool> Fix,
-        Option<string?> Impact);
+        Option<string?> Impact,
+        Option<bool> SyncCursorRules);
 
     // ainetlinter-disable MaxConstructorDependencies
     // Diese Records dienen als Behaelter fuer CLI-Argumente und haben keine logischen Abhaengigkeiten.
@@ -46,7 +47,8 @@ internal static class CliCommandBuilder
         string? GitSince,
         bool Fix,
         bool HasImpact,
-        string? ImpactRef);
+        string? ImpactRef,
+        bool SyncCursorRules);
 
     internal static (RootCommand Root, Options Options) Build()
     {
@@ -56,7 +58,7 @@ internal static class CliCommandBuilder
             options.Config, options.Path, options.Graph, options.Playbook, options.Format, options.Verbose,
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
-            options.Fix, options.Impact,
+            options.Fix, options.Impact, options.SyncCursorRules,
         };
 
         return (root, options);
@@ -80,7 +82,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateOnlyChangedOption(),
             CliOptionFactory.CreateGitSinceOption(),
             CliOptionFactory.CreateFixOption(),
-            CliOptionFactory.CreateImpactOption());
+            CliOptionFactory.CreateImpactOption(),
+            CliOptionFactory.CreateSyncCursorRulesOption());
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -102,6 +105,7 @@ internal static class CliCommandBuilder
             parseResult.GetValue(options.GitSince),
             parseResult.GetValue(options.Fix),
             parseResult.Tokens.Any(t => t.Value == "--impact" || t.Value == "-im"),
-            parseResult.GetValue(options.Impact));
+            parseResult.GetValue(options.Impact),
+            parseResult.GetValue(options.SyncCursorRules));
     }
 }
