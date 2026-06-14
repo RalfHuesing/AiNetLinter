@@ -44,11 +44,30 @@ internal static class PostAnalysisChecks
             ? ProjectConfigResolver.ResolveForProject(srcClass.ProjectName, config)
             : config;
 
-        if (effectiveConfig.Global.EnableTestSentinel &&
-            srcClass.MaxCognitiveComplexity > effectiveConfig.Metrics.MinCognitiveComplexityForTest)
+        if (!effectiveConfig.Global.EnableTestSentinel) return;
+        if (srcClass.MaxCognitiveComplexity <= effectiveConfig.Metrics.MinCognitiveComplexityForTest) return;
+        if (IsExemptFromSentinel(srcClass, effectiveConfig.TestSentinel)) return;
+
+        CheckTestPresence(srcClass, context, effectiveConfig);
+    }
+
+    private static bool IsExemptFromSentinel(ClassInfo srcClass, TestSentinelConfig sentinelConfig)
+    {
+        var suffixes = sentinelConfig.ExemptClassNameSuffixes;
+        if (suffixes.Count > 0 && suffixes.Any(s => srcClass.Name.EndsWith(s, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if (sentinelConfig.ExemptStaticClasses && srcClass.IsStatic)
+            return true;
+
+        var exemptBases = sentinelConfig.ExemptWhenInheritsFrom;
+        if (exemptBases.Count > 0 && srcClass.BaseTypeNames.Count > 0)
         {
-            CheckTestPresence(srcClass, context, effectiveConfig);
+            if (srcClass.BaseTypeNames.Any(b => exemptBases.Contains(b, StringComparer.OrdinalIgnoreCase)))
+                return true;
         }
+
+        return false;
     }
 
     private static void CheckTestPresence(

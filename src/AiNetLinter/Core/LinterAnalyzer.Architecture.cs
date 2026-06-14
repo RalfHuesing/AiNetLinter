@@ -54,6 +54,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 AIContextFootprintDetails = footprintResult.TopDependencies,
                 HasTestMethods = CheckForTestMethods(node),
                 IsPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)),
+                IsStatic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)),
+                BaseTypeNames = GetBaseTypeNames(symbol),
                 ProjectName = _projectName,
             });
         }
@@ -217,6 +219,24 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (node is StructDeclarationSyntax) return true;
         return node.Modifiers.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword));
+    }
+
+    private static IReadOnlyCollection<string> GetBaseTypeNames(INamedTypeSymbol? symbol)
+    {
+        if (symbol == null) return Array.Empty<string>();
+        var names = new List<string>();
+
+        var current = symbol.BaseType;
+        while (current != null && current.SpecialType != SpecialType.System_Object)
+        {
+            names.Add(current.Name);
+            current = current.BaseType;
+        }
+
+        foreach (var iface in symbol.AllInterfaces)
+            names.Add(iface.Name);
+
+        return names.AsReadOnly();
     }
 
     private static string ResolveClassName(INamedTypeSymbol symbol, string identifierText) =>

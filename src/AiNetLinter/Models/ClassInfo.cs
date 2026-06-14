@@ -53,6 +53,16 @@ public sealed record ClassInfo
     public bool IsPartial { get; init; }
 
     /// <summary>
+    /// Gibt an, ob die Klasse als static deklariert ist.
+    /// </summary>
+    public bool IsStatic { get; init; }
+
+    /// <summary>
+    /// Namen aller Basisklassen und implementierten Interfaces (transitiv, ohne System.Object).
+    /// </summary>
+    public IReadOnlyCollection<string> BaseTypeNames { get; init; } = Array.Empty<string>();
+
+    /// <summary>
     /// Der Name des Projekts, zu dem die Klasse gehört.
     /// </summary>
     public string? ProjectName { get; init; }
