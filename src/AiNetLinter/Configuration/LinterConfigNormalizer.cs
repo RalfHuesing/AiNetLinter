@@ -25,7 +25,12 @@ public static class LinterConfigNormalizer
 
         return config with
         {
-            TestSentinel = testSentinel with { ClassNamePatterns = patterns },
+            TestSentinel = testSentinel with
+            {
+                ClassNamePatterns = patterns,
+                ExemptClassNameSuffixes = testSentinel.ExemptClassNameSuffixes ?? Array.Empty<string>(),
+                ExemptWhenInheritsFrom = testSentinel.ExemptWhenInheritsFrom ?? Array.Empty<string>(),
+            },
             MagicValues = magicValues,
             FileFilters = fileFilters,
         };
