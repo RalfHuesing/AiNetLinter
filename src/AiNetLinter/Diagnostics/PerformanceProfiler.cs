@@ -125,6 +125,23 @@ public sealed class PerformanceProfiler
         _postAnalysisStepDurations[stepName] = durationMs;
     }
 
+    private sealed record ProfilerContext(
+        string SolutionName,
+        string TargetPath,
+        string? SolutionFilePath,
+        string? AbsoluteRulesPath,
+        DateTime Timestamp);
+
+    private sealed record PhaseDurationSnapshot
+    {
+        public double WorkspaceLoadMs { get; init; }
+        public double AutoFixMs { get; init; }
+        public double DocumentAnalysisMs { get; init; }
+        public double PostAnalysisMs { get; init; }
+        public double OptionalOutputsMs { get; init; }
+        public double OutputWritingMs { get; init; }
+    }
+
     /// <summary>
     /// Generiert die Berichte im base-Verzeichnis unter measurements/ (wenn aktiviert).
     /// </summary>
@@ -132,150 +149,154 @@ public sealed class PerformanceProfiler
     {
         if (!_enabled || !_initialized) return;
         _totalStopwatch.Stop();
-
         try
         {
-            var solutionName = "UnknownProject";
-            if (!string.IsNullOrEmpty(solutionFilePath))
-            {
-                solutionName = Path.GetFileNameWithoutExtension(solutionFilePath);
-            }
-            else if (!string.IsNullOrEmpty(targetPath))
-            {
-                var cleanedPath = targetPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                solutionName = Path.GetFileName(cleanedPath);
-                if (string.IsNullOrEmpty(solutionName))
-                {
-                    solutionName = "TargetProject";
-                }
-            }
-
-            var timestamp = DateTime.Now;
-            var dirName = $"{solutionName}-{timestamp:yyyy-MM-dd-HH-mm-ss-fff}-{Guid.NewGuid().ToString("N")[..8]}";
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var measurementsDir = Path.Combine(baseDir, "measurements");
-            var targetDir = Path.Combine(measurementsDir, solutionName, timestamp.ToString("yyyy-MM-dd"), dirName);
-
-            Directory.CreateDirectory(targetDir);
-
+            var ctx = new ProfilerContext(
+                ResolveSolutionName(targetPath, solutionFilePath),
+                targetPath, solutionFilePath,
+                ResolveAbsoluteRulesPath(rulesFilePath),
+                DateTime.Now);
+            var targetDir = SetupTargetDirectory(ctx);
+            var phases = CollectPhaseDurations();
             var totalMs = _totalStopwatch.Elapsed.TotalMilliseconds;
-            _phaseDurations.TryGetValue("WorkspaceLoading", out var workspaceLoadMs);
-            _phaseDurations.TryGetValue("AutoFix", out var autoFixMs);
-            _phaseDurations.TryGetValue("DocumentAnalysis", out var documentAnalysisMs);
-            _phaseDurations.TryGetValue("PostAnalysis", out var postAnalysisMs);
-            _phaseDurations.TryGetValue("OptionalOutputs", out var optionalOutputsMs);
-            _phaseDurations.TryGetValue("OutputWriting", out var outputWritingMs);
-
-            var documentCount = _documentEntries.Count;
-            var totalViolations = _documentEntries.Sum(d => d.ViolationsCount);
-            var avgDocMs = documentCount > 0 ? _documentEntries.Average(d => d.DurationMs) : 0.0;
-
-            string? absoluteRulesPath = null;
-            if (!string.IsNullOrEmpty(rulesFilePath))
-            {
-                try
-                {
-                    absoluteRulesPath = Path.GetFullPath(rulesFilePath);
-                }
-                catch (Exception ignored)
-                {
-                    _ = ignored;
-                    absoluteRulesPath = rulesFilePath;
-                }
-            }
-
-            // 1. JSON Report schreiben
-            var jsonReport = new ProfilerJsonReport
-            {
-                SolutionName = solutionName,
-                SolutionPath = solutionFilePath ?? targetPath,
-                RulesPath = absoluteRulesPath,
-                Arguments = _arguments,
-                Timestamp = timestamp.ToString("o"),
-                Summary = new ProfilerSummary
-                {
-                    TotalDurationMs = totalMs,
-                    WorkspaceLoadDurationMs = workspaceLoadMs,
-                    AutoFixDurationMs = autoFixMs,
-                    AnalysisDurationMs = documentAnalysisMs,
-                    PostAnalysisDurationMs = postAnalysisMs,
-                    OptionalOutputsDurationMs = optionalOutputsMs,
-                    OutputWritingDurationMs = outputWritingMs,
-                    DocumentCount = documentCount,
-                    TotalViolationsCount = totalViolations,
-                    AverageDocumentAnalysisDurationMs = avgDocMs
-                },
-                PostAnalysisSteps = _postAnalysisStepDurations.ToDictionary(k => k.Key, v => v.Value),
-                Documents = _documentEntries.OrderByDescending(d => d.DurationMs).ToList()
-            };
-
-            var jsonPath = Path.Combine(targetDir, "performance.json");
-            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(jsonPath, JsonSerializer.Serialize(jsonReport, jsonOptions), Encoding.UTF8);
-
-            // 2. Human-readable Text Log schreiben
-            var logPath = Path.Combine(targetDir, "performance.log");
-            using var writer = new StreamWriter(logPath, false, Encoding.UTF8);
-            
-            writer.WriteLine($"=== PERFORMANCE LOG: {solutionName} ===");
-            writer.WriteLine($"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss.fff}");
-            writer.WriteLine($"Target Path: {targetPath}");
-            if (!string.IsNullOrEmpty(solutionFilePath))
-            {
-                writer.WriteLine($"Solution File: {solutionFilePath}");
-            }
-            if (!string.IsNullOrEmpty(absoluteRulesPath))
-            {
-                writer.WriteLine($"Rules File: {absoluteRulesPath}");
-            }
-            if (!string.IsNullOrEmpty(_arguments))
-            {
-                writer.WriteLine($"Arguments: {_arguments}");
-            }
-            writer.WriteLine();
-
-            writer.WriteLine("--- Phases ---");
-            WritePhaseLine(writer, "Workspace Loading", workspaceLoadMs, totalMs);
-            WritePhaseLine(writer, "Auto-Fix Execution", autoFixMs, totalMs);
-            WritePhaseLine(writer, "Document Analysis (overall)", documentAnalysisMs, totalMs);
-            WritePhaseLine(writer, "Post-Analysis Checks (overall)", postAnalysisMs, totalMs);
-            WritePhaseLine(writer, "Optional Outputs (Playbook/Graph)", optionalOutputsMs, totalMs);
-            WritePhaseLine(writer, "Output Writing", outputWritingMs, totalMs);
-            writer.WriteLine();
-
-            if (_postAnalysisStepDurations.Count > 0)
-            {
-                writer.WriteLine("--- Post-Analysis Steps ---");
-                foreach (var step in _postAnalysisStepDurations.OrderByDescending(s => s.Value))
-                {
-                    writer.WriteLine($"  {step.Key,-30}: {step.Value,10:F2} ms");
-                }
-                writer.WriteLine();
-            }
-
-            if (_documentEntries.Count > 0)
-            {
-                writer.WriteLine("--- Top 20 Slowest Documents ---");
-                var topSlowDocs = _documentEntries.OrderByDescending(d => d.DurationMs).Take(20);
-                foreach (var doc in topSlowDocs)
-                {
-                    writer.WriteLine($"  {doc.DurationMs,10:F2} ms | Violations: {doc.ViolationsCount,3} | {doc.FilePath}");
-                }
-                writer.WriteLine();
-            }
-
-            writer.WriteLine("=== SUMMARY ===");
-            writer.WriteLine($"- Total Run Duration    : {totalMs:F2} ms");
-            writer.WriteLine($"- Documents Analyzed    : {documentCount}");
-            writer.WriteLine($"- Avg. Doc Analysis Time: {avgDocMs:F2} ms");
-            writer.WriteLine($"- Total Violations Found: {totalViolations}");
-
+            WriteJsonFile(targetDir, BuildProfilerReport(ctx, phases, totalMs));
+            WriteLogFile(targetDir, ctx, phases, totalMs);
             Console.WriteLine($"[INFO]: Performance-Messdaten erzeugt unter: {targetDir}");
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[ERROR]: Fehler beim Schreiben des Performance-Reports: {ex.Message}");
         }
+    }
+
+    private static string ResolveSolutionName(string targetPath, string? solutionFilePath)
+    {
+        if (!string.IsNullOrEmpty(solutionFilePath))
+            return Path.GetFileNameWithoutExtension(solutionFilePath);
+        if (!string.IsNullOrEmpty(targetPath))
+        {
+            var cleanedPath = targetPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var name = Path.GetFileName(cleanedPath);
+            return string.IsNullOrEmpty(name) ? "TargetProject" : name;
+        }
+        return "UnknownProject";
+    }
+
+    private static string? ResolveAbsoluteRulesPath(string? rulesFilePath)
+    {
+        if (string.IsNullOrEmpty(rulesFilePath)) return null;
+        try { return Path.GetFullPath(rulesFilePath); }
+        catch (Exception ignored) { _ = ignored; return rulesFilePath; }
+    }
+
+    private static string SetupTargetDirectory(ProfilerContext ctx)
+    {
+        var dirName = $"{ctx.SolutionName}-{ctx.Timestamp:yyyy-MM-dd-HH-mm-ss-fff}-{Guid.NewGuid().ToString("N")[..8]}";
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var targetDir = Path.Combine(baseDir, "measurements", ctx.SolutionName, ctx.Timestamp.ToString("yyyy-MM-dd"), dirName);
+        Directory.CreateDirectory(targetDir);
+        return targetDir;
+    }
+
+    private PhaseDurationSnapshot CollectPhaseDurations()
+    {
+        _phaseDurations.TryGetValue("WorkspaceLoading", out var workspaceLoadMs);
+        _phaseDurations.TryGetValue("AutoFix", out var autoFixMs);
+        _phaseDurations.TryGetValue("DocumentAnalysis", out var documentAnalysisMs);
+        _phaseDurations.TryGetValue("PostAnalysis", out var postAnalysisMs);
+        _phaseDurations.TryGetValue("OptionalOutputs", out var optionalOutputsMs);
+        _phaseDurations.TryGetValue("OutputWriting", out var outputWritingMs);
+        return new PhaseDurationSnapshot
+        {
+            WorkspaceLoadMs = workspaceLoadMs,
+            AutoFixMs = autoFixMs,
+            DocumentAnalysisMs = documentAnalysisMs,
+            PostAnalysisMs = postAnalysisMs,
+            OptionalOutputsMs = optionalOutputsMs,
+            OutputWritingMs = outputWritingMs
+        };
+    }
+
+    private ProfilerJsonReport BuildProfilerReport(ProfilerContext ctx, PhaseDurationSnapshot phases, double totalMs)
+    {
+        var documentCount = _documentEntries.Count;
+        var totalViolations = _documentEntries.Sum(d => d.ViolationsCount);
+        var avgDocMs = documentCount > 0 ? _documentEntries.Average(d => d.DurationMs) : 0.0;
+        return new ProfilerJsonReport
+        {
+            SolutionName = ctx.SolutionName,
+            SolutionPath = ctx.SolutionFilePath ?? ctx.TargetPath,
+            RulesPath = ctx.AbsoluteRulesPath,
+            Arguments = _arguments,
+            Timestamp = ctx.Timestamp.ToString("o"),
+            Summary = new ProfilerSummary
+            {
+                TotalDurationMs = totalMs,
+                WorkspaceLoadDurationMs = phases.WorkspaceLoadMs,
+                AutoFixDurationMs = phases.AutoFixMs,
+                AnalysisDurationMs = phases.DocumentAnalysisMs,
+                PostAnalysisDurationMs = phases.PostAnalysisMs,
+                OptionalOutputsDurationMs = phases.OptionalOutputsMs,
+                OutputWritingDurationMs = phases.OutputWritingMs,
+                DocumentCount = documentCount,
+                TotalViolationsCount = totalViolations,
+                AverageDocumentAnalysisDurationMs = avgDocMs
+            },
+            PostAnalysisSteps = _postAnalysisStepDurations.ToDictionary(k => k.Key, v => v.Value),
+            Documents = _documentEntries.OrderByDescending(d => d.DurationMs).ToList()
+        };
+    }
+
+    private static void WriteJsonFile(string targetDir, ProfilerJsonReport report)
+    {
+        var jsonPath = Path.Combine(targetDir, "performance.json");
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        File.WriteAllText(jsonPath, JsonSerializer.Serialize(report, jsonOptions), Encoding.UTF8);
+    }
+
+    private void WriteLogFile(string targetDir, ProfilerContext ctx, PhaseDurationSnapshot phases, double totalMs)
+    {
+        var logPath = Path.Combine(targetDir, "performance.log");
+        using var writer = new StreamWriter(logPath, false, Encoding.UTF8);
+        writer.WriteLine($"=== PERFORMANCE LOG: {ctx.SolutionName} ===");
+        writer.WriteLine($"Timestamp: {ctx.Timestamp:yyyy-MM-dd HH:mm:ss.fff}");
+        writer.WriteLine($"Target Path: {ctx.TargetPath}");
+        if (!string.IsNullOrEmpty(ctx.SolutionFilePath))
+            writer.WriteLine($"Solution File: {ctx.SolutionFilePath}");
+        if (!string.IsNullOrEmpty(ctx.AbsoluteRulesPath))
+            writer.WriteLine($"Rules File: {ctx.AbsoluteRulesPath}");
+        if (!string.IsNullOrEmpty(_arguments))
+            writer.WriteLine($"Arguments: {_arguments}");
+        writer.WriteLine();
+        writer.WriteLine("--- Phases ---");
+        WritePhaseLine(writer, "Workspace Loading", phases.WorkspaceLoadMs, totalMs);
+        WritePhaseLine(writer, "Auto-Fix Execution", phases.AutoFixMs, totalMs);
+        WritePhaseLine(writer, "Document Analysis (overall)", phases.DocumentAnalysisMs, totalMs);
+        WritePhaseLine(writer, "Post-Analysis Checks (overall)", phases.PostAnalysisMs, totalMs);
+        WritePhaseLine(writer, "Optional Outputs (Playbook/Graph)", phases.OptionalOutputsMs, totalMs);
+        WritePhaseLine(writer, "Output Writing", phases.OutputWritingMs, totalMs);
+        writer.WriteLine();
+        if (_postAnalysisStepDurations.Count > 0)
+        {
+            writer.WriteLine("--- Post-Analysis Steps ---");
+            foreach (var step in _postAnalysisStepDurations.OrderByDescending(s => s.Value))
+                writer.WriteLine($"  {step.Key,-30}: {step.Value,10:F2} ms");
+            writer.WriteLine();
+        }
+        if (_documentEntries.Count > 0)
+        {
+            writer.WriteLine("--- Top 20 Slowest Documents ---");
+            foreach (var doc in _documentEntries.OrderByDescending(d => d.DurationMs).Take(20))
+                writer.WriteLine($"  {doc.DurationMs,10:F2} ms | Violations: {doc.ViolationsCount,3} | {doc.FilePath}");
+            writer.WriteLine();
+        }
+        writer.WriteLine("=== SUMMARY ===");
+        var docCount = _documentEntries.Count;
+        var avgMs = docCount > 0 ? _documentEntries.Average(d => d.DurationMs) : 0.0;
+        writer.WriteLine($"- Total Run Duration    : {totalMs:F2} ms");
+        writer.WriteLine($"- Documents Analyzed    : {docCount}");
+        writer.WriteLine($"- Avg. Doc Analysis Time: {avgMs:F2} ms");
+        writer.WriteLine($"- Total Violations Found: {_documentEntries.Sum(d => d.ViolationsCount)}");
     }
 
     private static void WritePhaseLine(StreamWriter writer, string label, double phaseMs, double totalMs)

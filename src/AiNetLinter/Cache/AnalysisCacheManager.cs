@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -29,8 +30,11 @@ internal sealed class AnalysisCacheManager
         var cacheDir = Path.Combine(exeDir, "cache");
         Directory.CreateDirectory(cacheDir);
 
-        var fileName = BuildCacheFileName(solutionPath, rulesJsonContent);
+        var prefix = BuildCacheFilePrefix(solutionPath, rulesJsonContent);
+        var fileName = $"{prefix}-{GetBuildTimestamp()}.json";
         var cachePath = Path.Combine(cacheDir, fileName);
+
+        CleanupOldCacheFiles(cacheDir, prefix, fileName);
 
         var cache = TryReadCache(cachePath) ?? new AnalysisCacheFile();
         return new AnalysisCacheManager(cachePath, cache);
@@ -65,13 +69,31 @@ internal sealed class AnalysisCacheManager
         _dirty = false;
     }
 
-    private static string BuildCacheFileName(string solutionPath, string rulesJsonContent)
+    private static string BuildCacheFilePrefix(string solutionPath, string rulesJsonContent)
     {
         var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
         var hashInput = solutionPath.ToLowerInvariant() + rulesJsonContent;
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(hashInput));
         var hash8 = Convert.ToHexString(hashBytes)[..8].ToLowerInvariant();
-        return $"{solutionName}-{hash8}.json";
+        return $"{solutionName}-{hash8}";
+    }
+
+    private static string GetBuildTimestamp()
+    {
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        if (string.IsNullOrEmpty(assemblyPath) || !File.Exists(assemblyPath))
+            return "unknown";
+        return File.GetLastWriteTimeUtc(assemblyPath).ToString("yyyyMMddHHmmss");
+    }
+
+    private static void CleanupOldCacheFiles(string cacheDir, string prefix, string currentFileName)
+    {
+        foreach (var file in Directory.EnumerateFiles(cacheDir, $"{prefix}-*.json"))
+        {
+            if (Path.GetFileName(file).Equals(currentFileName, StringComparison.OrdinalIgnoreCase)) continue;
+            try { File.Delete(file); }
+            catch (Exception ignored) { _ = ignored; }
+        }
     }
 
     private static AnalysisCacheFile? TryReadCache(string path)
