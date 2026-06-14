@@ -137,6 +137,14 @@ public sealed record MetricsConfig
     public int MaxDirectoryDepth { get; init; } = 4;
 
     /// <summary>
+    /// Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden.
+    /// Beispiel: ["System.", "System.Windows.", "Microsoft.AspNetCore.Components."]
+    /// Leer = alle Typen zählen (bisheriges Verhalten).
+    /// </summary>
+    public IReadOnlyCollection<string> InheritanceDepthFrameworkPrefixes { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
     /// </summary>
     public int MaxAIContextFootprint { get; init; } = 5000;
@@ -161,6 +169,7 @@ public sealed record MetricsConfig
             MaxConstructorDependencies = @override?.MaxConstructorDependencies ?? MaxConstructorDependencies,
             MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
             MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
+            InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
         };
     }
 }
@@ -380,4 +389,9 @@ public sealed record MetricsConfigOverride
     public int? MaxAIContextFootprint { get; init; }
 
     public int? MaxDirectoryDepth { get; init; }
+
+    /// <summary>
+    /// Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden.
+    /// </summary>
+    public IReadOnlyCollection<string>? InheritanceDepthFrameworkPrefixes { get; init; }
 }
