@@ -8,7 +8,7 @@ alwaysApply: true
 Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `AiNetLinter` (.NET 10).
 
 > [!NOTE]
-> Die allgemeinen Code-Qualitätsmetriken, Grenzwerte und aktiven Linter-Regeln werden automatisch über die Regeldatei [AiNetLinter.mdc](file:///.cursor/rules/AiNetLinter.mdc) synchronisiert.
+> Die allgemeinen Code-Qualitätsmetriken, Grenzwerte und aktiven Linter-Regeln werden automatisch über die Regeldatei [AiNetLinter.mdc](AiNetLinter.mdc) synchronisiert.
 
 ## 1. Architektur-Verbote (Constraints)
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
@@ -18,5 +18,5 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 ## 2. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
-- **Architektur-Orientierung:** Unter [codegraph.md](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
+- **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
