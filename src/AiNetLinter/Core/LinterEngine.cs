@@ -93,7 +93,14 @@ public sealed class LinterEngine
         PostAnalysisChecks.Run(state, _config);
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("PostAnalysis");
 
-        cache?.SaveIfDirty();
+        if (catalog != null && catalog.HasLoadingErrors)
+        {
+            Console.Error.WriteLine("[WARN]: Linter-Analyse-Cache wird nicht aktualisiert, da beim Laden des Workspaces Fehler/Warnungen aufgetreten sind.");
+        }
+        else
+        {
+            cache?.SaveIfDirty();
+        }
 
         return state.Violations.ToArray();
     }

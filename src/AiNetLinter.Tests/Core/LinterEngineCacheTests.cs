@@ -160,4 +160,40 @@ public class MyUnsealedClass
         Assert.Single(violations3);
         Assert.Equal("EnforceSealedClasses", violations3.First().RuleName);
     }
+
+    [Fact]
+    public async Task Engine_DoesNotSaveCache_WhenWorkspaceHasLoadingErrors()
+    {
+        // 1. Create a class that violates EnforceSealedClasses (unsealed class)
+        const string source = @"
+namespace TestNamespace;
+public class MyUnsealedClass
+{
+    public void Run() {}
+}";
+        var fileName = "MyUnsealedClass.cs";
+        var solution = await CreateSolutionWithFileOnDiskAsync(fileName, source);
+        var config = CreateDefaultConfig();
+        var rulesJson = $"{{\"Global\": {{\"EnforceSealedClasses\": true}}, \"_testRun\": \"{_tempDir.Replace("\\", "\\\\")}\"}}";
+
+        // 2. Wrap solution in a catalog that has loading errors
+        var catalog = new SourceFileCatalog(solution, hasLoadingErrors: true);
+
+        // 3. Run engine - because it has loading errors, cache should not be saved
+        var engine = new LinterEngine(config, rulesJson);
+        var violations = await engine.RunAsync(catalog);
+
+        Assert.Single(violations);
+
+        // 4. Verify that cache file was NOT created or doesn't exist
+        var solutionPath = solution.FilePath ?? solution.Workspace.GetType().Name;
+        var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
+        var hashInput = solutionPath.ToLowerInvariant() + rulesJson;
+        var hashBytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(hashInput));
+        var hash8 = Convert.ToHexString(hashBytes)[..8].ToLowerInvariant();
+        var cacheFileName = $"{solutionName}-{hash8}.json";
+        var expectedCacheFilePath = Path.Combine(_exeDir, "cache", cacheFileName);
+
+        Assert.False(File.Exists(expectedCacheFilePath));
+    }
 }
