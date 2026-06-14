@@ -25,6 +25,7 @@ public sealed class PerformanceProfiler
 
     private bool _initialized;
     private bool _enabled = true;
+    private string? _arguments;
     
     private readonly Stopwatch _totalStopwatch = new();
     private readonly ConcurrentDictionary<string, Stopwatch> _phaseStopwatches = new(StringComparer.OrdinalIgnoreCase);
@@ -45,11 +46,32 @@ public sealed class PerformanceProfiler
     /// <summary>
     /// Initialisiert den Profiler. Startet die Gesamtlaufzeit-Messung, falls aktiviert.
     /// </summary>
-    public void Initialize(bool enabled)
+    public void Initialize(bool enabled, string[]? args = null)
     {
         if (_initialized) return;
         _enabled = enabled;
         _initialized = true;
+        
+        if (args != null)
+        {
+            _arguments = string.Join(" ", args);
+        }
+        else
+        {
+            try
+            {
+                var cmdArgs = Environment.GetCommandLineArgs();
+                if (cmdArgs.Length > 1)
+                {
+                    _arguments = string.Join(" ", cmdArgs.Skip(1));
+                }
+            }
+            catch (Exception ignored)
+            {
+                // Ignorieren falls keine CLI-Args geladen werden können
+            }
+        }
+
         if (_enabled)
         {
             _totalStopwatch.Start();
@@ -105,7 +127,7 @@ public sealed class PerformanceProfiler
     /// <summary>
     /// Generiert die Berichte im base-Verzeichnis unter measurements/ (wenn aktiviert).
     /// </summary>
-    public void WriteReport(string targetPath, string? solutionFilePath)
+    public void WriteReport(string targetPath, string? solutionFilePath, string? rulesFilePath = null)
     {
         if (!_enabled || !_initialized) return;
         _totalStopwatch.Stop();
@@ -147,11 +169,26 @@ public sealed class PerformanceProfiler
             var totalViolations = _documentEntries.Sum(d => d.ViolationsCount);
             var avgDocMs = documentCount > 0 ? _documentEntries.Average(d => d.DurationMs) : 0.0;
 
+            string? absoluteRulesPath = null;
+            if (!string.IsNullOrEmpty(rulesFilePath))
+            {
+                try
+                {
+                    absoluteRulesPath = Path.GetFullPath(rulesFilePath);
+                }
+                catch (Exception ignored)
+                {
+                    absoluteRulesPath = rulesFilePath;
+                }
+            }
+
             // 1. JSON Report schreiben
             var jsonReport = new ProfilerJsonReport
             {
                 SolutionName = solutionName,
                 SolutionPath = solutionFilePath ?? targetPath,
+                RulesPath = absoluteRulesPath,
+                Arguments = _arguments,
                 Timestamp = timestamp.ToString("o"),
                 Summary = new ProfilerSummary
                 {
@@ -184,6 +221,14 @@ public sealed class PerformanceProfiler
             if (!string.IsNullOrEmpty(solutionFilePath))
             {
                 writer.WriteLine($"Solution File: {solutionFilePath}");
+            }
+            if (!string.IsNullOrEmpty(absoluteRulesPath))
+            {
+                writer.WriteLine($"Rules File: {absoluteRulesPath}");
+            }
+            if (!string.IsNullOrEmpty(_arguments))
+            {
+                writer.WriteLine($"Arguments: {_arguments}");
             }
             writer.WriteLine();
 
@@ -255,6 +300,8 @@ public sealed record ProfilerJsonReport
 {
     public required string SolutionName { get; init; }
     public required string SolutionPath { get; init; }
+    public string? RulesPath { get; init; }
+    public string? Arguments { get; init; }
     public required string Timestamp { get; init; }
     public required ProfilerSummary Summary { get; init; }
     public required Dictionary<string, double> PostAnalysisSteps { get; init; }
