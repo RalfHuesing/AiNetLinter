@@ -25,7 +25,7 @@ Regeln: [`.cursor/rules/AiNetLinter.mdc`](../../../.cursor/rules/AiNetLinter.mdc
 | [05 (Erledigt)](05-P1-EnforceExplicitStateImmutability-Blazor-WPF.md) | **P1** | `EnforceExplicitStateImmutability` | `ImmutabilityExemptBaseTypes` + `ImmutabilityAllowPrivateBackingFields` |
 | [06 (Erledigt)](06-P2-Complexity-SwitchDispatcher-NearMiss.md) | **P2** | `MaxCyclomaticComplexity` / `MaxCognitiveComplexity` | `SwitchDispatcherDetector`-Klasse; `ComplexityNearMissTolerance` |
 | [07 (Erledigt)](07-P2-MaxConstructorDependencies-FrameworkTypes.md) | **P2** | `MaxConstructorDependencies` | `ConstructorDependencyIgnoreTypePrefixes` in MetricsConfig |
-| [08](08-P2-GeneratedCode-Dateiausschluss.md) | **P2** | Alle Regeln | Neues `FileFiltersConfig`-Record; `FileFilterEvaluator`; `ExcludeFilePatterns` |
+| [08 (Erledigt)](08-P2-GeneratedCode-Dateiausschluss.md) | **P2** | Alle Regeln | Neues `FileFiltersConfig`-Record; `FileFilterEvaluator`; `ExcludeFilePatterns` |
 | [09](09-P2-EnforceNamespaceDirectoryMapping-FeatureFolder.md) | **P2** | `EnforceNamespaceDirectoryMapping` | `NamespaceDirectoryMappingMode` + `IgnorePathSegments` + `RequiredTrailingSegments` |
 | [10](10-P3-StaticTestSentinel-ExemptSuffixes.md) | **P3** | `StaticTestSentinel` | `ExemptClassNameSuffixes` + `ExemptWhenInheritsFrom` + `ExemptStaticClasses` in TestSentinelConfig; `ClassInfo` um `IsStatic` + `BaseTypeNames` erweitern |
 | [11](11-P3-EnforceResultPattern-AllowThrowIn.md) | **P3** | `EnforceResultPatternOverExceptions` | `ResultPatternAllowThrowInNamespaceSuffixes` + `ResultPatternAllowCatchRethrow` |
