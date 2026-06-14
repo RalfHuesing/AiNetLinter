@@ -84,10 +84,18 @@ public sealed class RepoPlaybookGenerator
     /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
     /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
     /// <param name="config">Die globale Linter-Konfiguration.</param>
+    /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
+    /// <param name="precomputedViolations">Optional bereits berechnete Linter-Regelverstöße zur Vermeidung doppelter Analyse.</param>
     /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
-    public static async Task GenerateAsync(Solution solution, string outputPath, bool verbose, LinterConfig? config = null, string configPath = "rules.json")
+    public static async Task GenerateAsync(
+        Solution solution,
+        string outputPath,
+        bool verbose,
+        LinterConfig? config = null,
+        string configPath = "rules.json",
+        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
     {
-        var content = await BuildContentAsync(solution, verbose, config, configPath);
+        var content = await BuildContentAsync(solution, verbose, config, configPath, precomputedViolations);
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
@@ -118,16 +126,26 @@ public sealed class RepoPlaybookGenerator
     /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
     /// <param name="config">Die globale Linter-Konfiguration.</param>
     /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
+    /// <param name="precomputedViolations">Optional bereits berechnete Linter-Regelverstöße.</param>
     /// <returns>Der generierte Markdown-Inhalt.</returns>
-    public static async Task<string> BuildContentAsync(Solution solution, bool verbose, LinterConfig? config = null, string configPath = "rules.json")
+    public static async Task<string> BuildContentAsync(
+        Solution solution,
+        bool verbose,
+        LinterConfig? config = null,
+        string configPath = "rules.json",
+        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
     {
-        var stats = await ScanSolutionAsync(solution, config, configPath);
+        var stats = await ScanSolutionAsync(solution, config, configPath, precomputedViolations);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
         var version = typeof(RepoPlaybookGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         return BuildContent(stats, solutionDir, config, configPath, version);
     }
 
-    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config, string configPath)
+    private static async Task<PlaybookStats> ScanSolutionAsync(
+        Solution solution,
+        LinterConfig? config,
+        string configPath,
+        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
     {
         int totalResultMethods = 0;
         int totalThrows = 0;
@@ -155,14 +173,21 @@ public sealed class RepoPlaybookGenerator
         List<RuleViolation> violations = new();
         if (config != null)
         {
-            string? rulesJsonContent = null;
-            if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
+            if (precomputedViolations != null)
             {
-                rulesJsonContent = File.ReadAllText(configPath, Encoding.UTF8);
+                violations.AddRange(precomputedViolations);
             }
-            var engine = new LinterEngine(config, rulesJsonContent);
-            var results = await engine.RunAsync(solution);
-            violations.AddRange(results);
+            else
+            {
+                string? rulesJsonContent = null;
+                if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
+                {
+                    rulesJsonContent = File.ReadAllText(configPath, Encoding.UTF8);
+                }
+                var engine = new LinterEngine(config, rulesJsonContent);
+                var results = await engine.RunAsync(solution);
+                violations.AddRange(results);
+            }
         }
 
         return new PlaybookStats(totalResultMethods, totalThrows, suppressionCounts, docInfos, violations);

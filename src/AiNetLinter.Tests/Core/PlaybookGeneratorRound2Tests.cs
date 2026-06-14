@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Models;
 using Xunit;
 
 namespace AiNetLinter.Tests.Core;
@@ -145,5 +146,43 @@ public sealed class PlaybookGeneratorRound2Tests
         var content = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
 
         Assert.Contains("Result-Pattern-Nutzung:** 0", content);
+    }
+
+    [Fact]
+    public async Task BuildContentAsync_WithPrecomputedViolations_UsesThemDirectly()
+    {
+        const string source = """
+            namespace MyApp;
+            public class MyService
+            {
+                public void DoWork() { }
+            }
+            """;
+
+        var solution = BuildSolution(source, "MyApp", "MyService.cs");
+        var config = new LinterConfig { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+        
+        var violations = new[]
+        {
+            new RuleViolation
+            {
+                FilePath = "MyService.cs",
+                LineNumber = 10,
+                RuleName = "EnforceSealedClasses",
+                Details = "Class is not sealed",
+                Guidance = "Make it sealed"
+            }
+        };
+
+        var content = await RepoPlaybookGenerator.BuildContentAsync(
+            solution,
+            verbose: false,
+            config: config,
+            configPath: "rules.json",
+            precomputedViolations: violations);
+
+        // Verify that the playbook contains the precomputed violation in its Migrations-Status
+        Assert.Contains("EnforceSealedClasses", content);
+        Assert.Contains("Verstösse nur wave-ready (default rules):** 1", content);
     }
 }
