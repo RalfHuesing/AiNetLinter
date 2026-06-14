@@ -68,6 +68,7 @@ public sealed class PerformanceProfiler
             }
             catch (Exception ignored)
             {
+                _ = ignored;
                 // Ignorieren falls keine CLI-Args geladen werden können
             }
         }
@@ -178,6 +179,7 @@ public sealed class PerformanceProfiler
                 }
                 catch (Exception ignored)
                 {
+                    _ = ignored;
                     absoluteRulesPath = rulesFilePath;
                 }
             }
