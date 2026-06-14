@@ -207,6 +207,23 @@ public static class CursorRulesGenerator
             {
                 var intent = RuleMetadataRegistry.Resolve(rule.Name, config).Intent;
                 sb.AppendLine($"- **`{rule.Name}`** `[intent: {intent}]`: {rule.ActiveDesc}");
+                if (rule.Name == "EnforceNoMagicValues")
+                {
+                    var mv = config.MagicValues;
+                    sb.AppendLine($"  - *Konfiguration*: Modus: `{mv.Mode}` (MinStringLength: {mv.MinStringLength}), Collection-Initialisierer ignorieren: `{mv.IgnoreCollectionInitializers.ToString().ToLower()}`");
+                    if (mv.IgnoreStringPatterns != null && mv.IgnoreStringPatterns.Count > 0)
+                    {
+                        sb.AppendLine($"    - *Ignorierte String-Muster*: {string.Join(", ", mv.IgnoreStringPatterns.Select(p => $"`{p}`"))}");
+                    }
+                    if (mv.IgnoreNumericValues != null && mv.IgnoreNumericValues.Count > 0)
+                    {
+                        sb.AppendLine($"    - *Ignorierte Zahlen*: {string.Join(", ", mv.IgnoreNumericValues.Select(v => $"`{v}`"))}");
+                    }
+                    if (mv.IgnoreInvocationPrefixes != null && mv.IgnoreInvocationPrefixes.Count > 0)
+                    {
+                        sb.AppendLine($"    - *Ignorierte Aufruf-Präfixe*: {string.Join(", ", mv.IgnoreInvocationPrefixes.Select(p => $"`{p}`"))}");
+                    }
+                }
             }
         }
 
@@ -323,6 +340,38 @@ public static class CursorRulesGenerator
                             sb.AppendLine($"| `{metric.Name}` | {val.Value} | Geändert auf {val.Value}. |");
                         }
                     }
+                }
+            }
+
+            if (overrides.MagicValues != null)
+            {
+                var omv = overrides.MagicValues;
+                if (omv.Mode != null)
+                {
+                    sb.AppendLine($"| `MagicValues.Mode` | `{omv.Mode}` | Magic-Values Erkennungsmodus geändert auf `{omv.Mode}`. |");
+                }
+                if (omv.MinStringLength.HasValue)
+                {
+                    sb.AppendLine($"| `MagicValues.MinStringLength` | {omv.MinStringLength.Value} | Mindestlänge für Magic Strings geändert auf {omv.MinStringLength.Value}. |");
+                }
+                if (omv.IgnoreStringPatterns != null)
+                {
+                    var listStr = string.Join(", ", omv.IgnoreStringPatterns.Select(p => $"\"{p}\""));
+                    sb.AppendLine($"| `MagicValues.IgnoreStringPatterns` | `[{listStr}]` | Ignorierte String-Muster geändert. |");
+                }
+                if (omv.IgnoreNumericValues != null)
+                {
+                    var listStr = string.Join(", ", omv.IgnoreNumericValues);
+                    sb.AppendLine($"| `MagicValues.IgnoreNumericValues` | `[{listStr}]` | Ignorierte numerische Werte geändert. |");
+                }
+                if (omv.IgnoreInvocationPrefixes != null)
+                {
+                    var listStr = string.Join(", ", omv.IgnoreInvocationPrefixes.Select(p => $"\"{p}\""));
+                    sb.AppendLine($"| `MagicValues.IgnoreInvocationPrefixes` | `[{listStr}]` | Ignorierte Aufruf-Präfixe geändert. |");
+                }
+                if (omv.IgnoreCollectionInitializers.HasValue)
+                {
+                    sb.AppendLine($"| `MagicValues.IgnoreCollectionInitializers` | {omv.IgnoreCollectionInitializers.Value.ToString().ToLower()} | Ignorieren in Collection-Initialisierern geändert. |");
                 }
             }
             sb.AppendLine();
