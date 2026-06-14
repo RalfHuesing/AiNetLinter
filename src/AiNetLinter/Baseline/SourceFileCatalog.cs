@@ -11,15 +11,24 @@ namespace AiNetLinter.Baseline;
 /// </summary>
 public sealed class SourceFileCatalog : IDisposable
 {
-    private readonly MSBuildWorkspace _workspace;
+    private readonly MSBuildWorkspace? _workspace;
 
-    private SourceFileCatalog(MSBuildWorkspace workspace, Solution solution)
+    private SourceFileCatalog(MSBuildWorkspace? workspace, Solution solution, bool hasLoadingErrors)
     {
         _workspace = workspace;
         Solution = solution;
+        HasLoadingErrors = hasLoadingErrors;
+    }
+
+    internal SourceFileCatalog(Solution solution, bool hasLoadingErrors)
+    {
+        _workspace = null;
+        Solution = solution;
+        HasLoadingErrors = hasLoadingErrors;
     }
 
     public Solution Solution { get; }
+    public bool HasLoadingErrors { get; }
 
     /// <summary>
     /// Lädt die Solution aus dem angegebenen Pfad.
@@ -30,23 +39,22 @@ public sealed class SourceFileCatalog : IDisposable
         RegisterMSBuild();
 
         var workspace = MSBuildWorkspace.Create(LinterEngine.CreateWorkspaceProperties());
-        var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var diagnostics = new System.Collections.Concurrent.ConcurrentBag<string>();
         workspace.RegisterWorkspaceFailedHandler(e =>
         {
-            if (e.Diagnostic.Kind == Microsoft.CodeAnalysis.WorkspaceDiagnosticKind.Failure)
-            {
-                failures.Add(e.Diagnostic.Message);
-            }
+            diagnostics.Add(e.Diagnostic.Message);
         });
 
         var solution = await workspace.OpenSolutionAsync(slnPath);
 
-        foreach (var msg in failures.Distinct(StringComparer.Ordinal))
+        foreach (var msg in diagnostics.Distinct(StringComparer.Ordinal))
         {
             Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");
         }
 
-        return new SourceFileCatalog(workspace, solution);
+        var hasLoadingErrors = !diagnostics.IsEmpty;
+
+        return new SourceFileCatalog(workspace, solution, hasLoadingErrors);
     }
 
     /// <summary>
@@ -54,7 +62,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// </summary>
     internal SourceFileCatalog WithUpdatedSolution(Solution updatedSolution)
     {
-        return new SourceFileCatalog(_workspace, updatedSolution);
+        return new SourceFileCatalog(_workspace, updatedSolution, HasLoadingErrors);
     }
 
     /// <summary>
@@ -109,7 +117,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Gibt den MSBuild-Workspace frei.
     /// </summary>
-    public void Dispose() => _workspace.Dispose();
+    public void Dispose() => _workspace?.Dispose();
 
     internal static bool IsValidDocument(Document document, string? solutionDir)
     {
