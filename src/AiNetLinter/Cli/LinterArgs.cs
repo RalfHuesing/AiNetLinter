@@ -110,10 +110,20 @@ public sealed class LinterArgs
     public string? Footprint { get; init; }
 
     /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob die eingebettete README ausgegeben werden soll.
+    /// </summary>
+    public bool Readme { get; init; }
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
     {
+        if (!Readme && string.IsNullOrEmpty(TargetPath))
+        {
+            return "[ERROR]: --path ist erforderlich (außer bei --readme).";
+        }
+
         if (HasConflictingModeOptions())
         {
             return "[ERROR]: Wartungsmodi (--create-baseline, --add-disable-all, --remove-disable-all) sind untereinander und mit --baseline nicht kombinierbar.";

@@ -12,10 +12,9 @@ internal static class CliOptionFactory
         Description = "Pfad zur JSON-Konfigurationsdatei (rules.json)",
     };
 
-    internal static Option<string> CreatePathOption() => new("--path", "-p")
+    internal static Option<string?> CreatePathOption() => new Option<string?>("--path", "-p")
     {
-        Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis",
-        Required = true,
+        Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (nicht erforderlich bei --readme)",
     };
 
     internal static Option<string?> CreateGraphOption() => new("--graph", "-g")
@@ -109,4 +108,20 @@ internal static class CliOptionFactory
     {
         Description = "Zeigt den detaillierten AI-Context-Footprint fuer eine Klasse an",
     };
+
+    internal static Option<bool> CreateReadmeOption()
+    {
+        long byteCount = 0;
+        try
+        {
+            using var stream = typeof(CliOptionFactory).Assembly.GetManifestResourceStream("README.md");
+            if (stream != null) byteCount = stream.Length;
+        }
+        catch { /* Fallback: 0, kein Absturz */ } // ainetlinter-disable EnforceNoSilentCatch
+
+        return new Option<bool>("--readme")
+        {
+            Description = $"Gibt die integrierte README.md fuer KI-Agenten aus (Kontext-Footprint: ca. {byteCount} Bytes / ~{byteCount / 4} Tokens).",
+        };
+    }
 }
