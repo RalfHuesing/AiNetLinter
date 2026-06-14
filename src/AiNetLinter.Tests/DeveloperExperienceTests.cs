@@ -78,7 +78,8 @@ public sealed class DeveloperExperienceTests
                 RequireExplicitTruncationHandling = true,
                 EnforceNamespaceDirectoryMapping = true,
                 DetectAndBanPhantomDependencies = true,
-                ImmutabilityExemptSuffixes = new[] { "Dto" }
+                ImmutabilityExemptSuffixes = new[] { "Dto" },
+                SealedClassExemptSuffixes = new[] { "Base" }
             },
             Metrics = new MetricsConfig
             {
@@ -100,7 +101,8 @@ public sealed class DeveloperExperienceTests
                         RequireExplicitTruncationHandling = false,
                         EnforceNamespaceDirectoryMapping = false,
                         DetectAndBanPhantomDependencies = false,
-                        ImmutabilityExemptSuffixes = new[] { "TestDto" }
+                        ImmutabilityExemptSuffixes = new[] { "TestDto" },
+                        SealedClassExemptSuffixes = new[] { "Exempt" }
                     },
                     Metrics = new MetricsConfigOverride
                     {
@@ -127,7 +129,8 @@ public sealed class DeveloperExperienceTests
         Assert.False(resolved.Global.EnforceNamespaceDirectoryMapping);
         Assert.False(resolved.Global.DetectAndBanPhantomDependencies);
         Assert.Contains("TestDto", resolved.Global.ImmutabilityExemptSuffixes);
-
+        Assert.Contains("Exempt", resolved.Global.SealedClassExemptSuffixes);
+        
         // Verify Metrics
         Assert.Equal(8, resolved.Metrics.MaxDirectoryDepth);
     }
@@ -272,7 +275,8 @@ public sealed class DeveloperExperienceTests
         var json = """
             {
                 "global": {
-                    "enforceSealedClasses": true
+                    "enforceSealedClasses": true,
+                    "sealedClassExemptSuffixes": ["Base"]
                 },
                 "metrics": {
                     "maxLineCount": 500
@@ -285,6 +289,7 @@ public sealed class DeveloperExperienceTests
             var result = LinterConfigLoader.TryLoadConfig(tempPath, isRequired: false);
             Assert.NotNull(result);
             Assert.True(result.Global.EnforceSealedClasses);
+            Assert.Contains("Base", result.Global.SealedClassExemptSuffixes);
         }
         finally
         {

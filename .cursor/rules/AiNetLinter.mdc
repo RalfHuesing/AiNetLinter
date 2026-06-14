@@ -35,6 +35,7 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`EnforceNoSilentCatch`** `[intent: agent-resilience]`: Leere catch-Blöcke sind verboten. Benenne die Exception-Variable `ignored` oder wirf sie mit `throw;` weiter.
 - **`AllowCancellationShutdownCatch`** `[intent: general]`: Erlaubt das Abfangen von OperationCanceledException beim Shutdown.
 - **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).
+- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: `Base`, `Foundation`, `Host`.
 
 ## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)
 

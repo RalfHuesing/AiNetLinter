@@ -202,6 +202,101 @@ namespace TestNamespace
         var config = CreateDefaultConfig();
         var (tree, model) = GetSemanticContext(source);
         var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+    }
+
+    [Fact]
+    public void Analyze_WithUnsealedClass_HavingExemptSuffix_NoViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public class OrderHandlerBase
+    {
+        public void Handle() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with
+        {
+            Global = config.Global with
+            {
+                SealedClassExemptSuffixes = new[] { "Base", "Foundation", "Host" }
+            }
+        };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_WithUnsealedClass_HavingNoExemptSuffix_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public class OrderHandler
+    {
+        public void Handle() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with
+        {
+            Global = config.Global with
+            {
+                SealedClassExemptSuffixes = new[] { "Base", "Foundation", "Host" }
+            }
+        };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Contains(violations, v => v.RuleName == "EnforceSealedClasses");
+    }
+
+    [Fact]
+    public void Analyze_WithUnsealedClass_ExactMatchExemptSuffix_NoViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public class Base
+    {
+        public void Handle() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with
+        {
+            Global = config.Global with
+            {
+                SealedClassExemptSuffixes = new[] { "Base" }
+            }
+        };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Analyze_WithUnsealedClass_ExemptSuffixesEmpty_HasViolation()
+    {
+        const string source = @"
+namespace TestNamespace
+{
+    public class OrderHandlerBase
+    {
+        public void Handle() {}
+    }
+}";
+        var config = CreateDefaultConfig();
+        config = config with
+        {
+            Global = config.Global with
+            {
+                SealedClassExemptSuffixes = System.Array.Empty<string>()
+            }
+        };
+        var (tree, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
         Assert.Contains(violations, v => v.RuleName == "EnforceSealedClasses");
     }
 

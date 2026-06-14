@@ -252,6 +252,19 @@ public static class CursorRulesGenerator
                 sb.AppendLine($"- **`ImmutabilityExemptPatterns`**: Folgende Wildcard-Muster sind ausgenommen: {patternsStr}.");
             }
         }
+
+        if (g.SealedClassExemptSuffixes != null && g.SealedClassExemptSuffixes.Count > 0)
+        {
+            if (g.SealedClassExemptSuffixes.Count > 5)
+            {
+                sb.AppendLine("- **`SealedClassExemptSuffixes`**: Ausgenommene Klassenname-Suffixe (siehe `rules.json`).");
+            }
+            else
+            {
+                var suffixesStr = string.Join(", ", g.SealedClassExemptSuffixes.Select(s => $"`{s}`"));
+                sb.AppendLine($"- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: {suffixesStr}.");
+            }
+        }
         sb.AppendLine();
 
         sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");
@@ -323,6 +336,11 @@ public static class CursorRulesGenerator
                 {
                     var listStr = string.Join(", ", og.ImmutabilityExemptPatterns);
                     sb.AppendLine($"| `ImmutabilityExemptPatterns` | `[{listStr}]` | Ausgenommene Wildcard-Muster für dieses Projekt. |");
+                }
+                if (og.SealedClassExemptSuffixes != null)
+                {
+                    var listStr = string.Join(", ", og.SealedClassExemptSuffixes);
+                    sb.AppendLine($"| `SealedClassExemptSuffixes` | `[{listStr}]` | Ausgenommene Klassenname-Suffixe für dieses Projekt. |");
                 }
             }
 
