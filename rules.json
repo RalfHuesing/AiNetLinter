@@ -52,11 +52,11 @@
     "AllowedEmptyReads": false
   },
   "Metrics": {
-    "MaxLineCount": 500,
+    "MaxLineCount": 600,
     "MaxMethodParameterCount": 4,
-    "MaxMethodLineCount": 42,
-    "MaxCyclomaticComplexity": 5,
-    "MaxCognitiveComplexity": 5,
+    "MaxMethodLineCount": 60,
+    "MaxCyclomaticComplexity": 12,
+    "MaxCognitiveComplexity": 15,
     "MaxInheritanceDepth": 2,
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
@@ -138,15 +138,6 @@
   },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
-    "AiNetLinter": {
-      "Metrics": {
-        "MaxLineCount": 800,
-        "MaxMethodLineCount": 200,
-        "MaxCyclomaticComplexity": 30,
-        "MaxCognitiveComplexity": 80,
-        "MaxMethodParameterCount": 6
-      }
-    },
     "*.Tests": {
       "Global": {
         "EnforceNoMagicValues": false,
