@@ -105,6 +105,11 @@ public sealed class LinterArgs
     public bool Check { get; init; }
 
     /// <summary>
+    /// Deaktiviert den Analyse-Cache (erzwingt vollständige Neu-Analyse aller Dateien).
+    /// </summary>
+    public bool NoCache { get; init; }
+
+    /// <summary>
     /// Holt oder setzt den Namen der Klasse fuer eine detaillierte Footprint-Analyse.
     /// </summary>
     public string? Footprint { get; init; }

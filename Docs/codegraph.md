@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.27)
-Produktionscode · 117 Typen · 11 Namespaces
+Produktionscode · 126 Typen · 12 Namespaces
 
 ## AiNetLinter (1)
 - Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
@@ -17,6 +17,17 @@ Produktionscode · 117 Typen · 11 Namespaces
 - FileChecksumCalculator
 - SourceFileCatalog → SourceFileCatalog, SourceFileEntry
 - SourceFileEntry [record] → SourceFileEntry
+
+## AiNetLinter.Cache (9)
+- AnalysisCacheEntry [record] → AnalysisCacheEntry, TestSignalsDto
+- AnalysisCacheFile [record] → AnalysisCacheFile
+- AnalysisCacheManager → AnalysisCacheEntry, AnalysisCacheFile, AnalysisCacheManager
+- CacheEntryMapper → AnalysisCacheEntry, AnalysisState, ClassInfo, ClassInfoDto, LinterAnalyzer, PartialClassPart, PartialPartDto, RuleViolation, RuleViolationDto, TestSignalsDto
+- ClassInfoDto [record] → ClassInfoDto
+- FootprintDetailDto [record] → FootprintDetailDto
+- PartialPartDto [record] → PartialPartDto
+- RuleViolationDto [record] → RuleViolationDto
+- TestSignalsDto [record] → TestSignalsDto
 
 ## AiNetLinter.Cli (13)
 - BaselineOptions [record] → BaselineOptions
@@ -64,7 +75,7 @@ Produktionscode · 117 Typen · 11 Namespaces
 - FixContext [record] → FixContext
 - LinterAnalyzer [partial] → AnalyzerArgs, FieldReadonlyTracker, LinterConfig, MagicValuesConfig, NamespaceRule
 - LinterAutoFixer → FixContext
-- LinterEngine → AnalysisState, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex
+- LinterEngine → AnalysisCacheManager, AnalysisState, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
 - MetricDescriptor [record] → MetricDescriptor
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart

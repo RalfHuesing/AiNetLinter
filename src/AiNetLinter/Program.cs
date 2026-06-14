@@ -232,8 +232,14 @@ public static class Program
             return (catalog, false);
         }
 
-        var engine = new LinterEngine(config);
-        var initialViolations = await engine.RunAsync(catalog);
+        string? rulesJsonContent = null;
+        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
+        {
+            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
+        }
+
+        var engine = new LinterEngine(config, rulesJsonContent);
+        var initialViolations = await engine.RunAsync(catalog, args.NoCache);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
             catalog.Solution, initialViolations, args.Verbose, dryRun: args.Check);
 
@@ -365,8 +371,14 @@ public static class Program
         var currentChecksums = catalog.ComputeChecksums(outputRoot);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
-        var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(catalog);
+        string? rulesJsonContent = null;
+        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
+        {
+            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
+        }
+
+        var engine = new LinterEngine(config, rulesJsonContent);
+        var violations = await engine.RunAsync(catalog, args.NoCache);
         var filtered = BaselineViolationFilter.Filter(violations, comparison.ChangedFiles, outputRoot);
 
         if (comparison.HasAnyChange)
@@ -381,8 +393,14 @@ public static class Program
 
     private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
     {
-        var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(catalog);
+        string? rulesJsonContent = null;
+        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
+        {
+            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
+        }
+
+        var engine = new LinterEngine(config, rulesJsonContent);
+        var violations = await engine.RunAsync(catalog, args.NoCache);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
         return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);

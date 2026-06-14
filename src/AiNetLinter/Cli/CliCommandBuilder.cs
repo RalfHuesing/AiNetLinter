@@ -28,6 +28,7 @@ internal static class CliCommandBuilder
         Option<string?> Impact,
         Option<bool> SyncCursorRules,
         Option<bool> Check,
+        Option<bool> NoCache,
         Option<string?> Footprint,
         Option<bool> Readme);
 
@@ -68,6 +69,7 @@ internal static class CliCommandBuilder
         ImpactOptions Impact,
         bool SyncCursorRules,
         bool Check,
+        bool NoCache,
         string? Footprint,
         bool Readme);
 
@@ -79,7 +81,7 @@ internal static class CliCommandBuilder
             options.Config, options.Path, options.Graph, options.Playbook, options.Format, options.Verbose,
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
-            options.Fix, options.Impact, options.SyncCursorRules, options.Check, options.Footprint,
+            options.Fix, options.Impact, options.SyncCursorRules, options.Check, options.NoCache, options.Footprint,
             options.Readme,
         };
 
@@ -107,6 +109,7 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateImpactOption(),
             CliOptionFactory.CreateSyncCursorRulesOption(),
             CliOptionFactory.CreateCheckOption(),
+            CliOptionFactory.CreateNoCacheOption(),
             CliOptionFactory.CreateFootprintOption(),
             CliOptionFactory.CreateReadmeOption());
     }
@@ -138,6 +141,7 @@ internal static class CliCommandBuilder
                 ImpactRef: parseResult.GetValue(options.Impact)),
             SyncCursorRules: parseResult.GetValue(options.SyncCursorRules),
             Check: parseResult.GetValue(options.Check),
+            NoCache: parseResult.GetValue(options.NoCache),
             Footprint: parseResult.GetValue(options.Footprint),
             Readme: parseResult.GetValue(options.Readme));
     }

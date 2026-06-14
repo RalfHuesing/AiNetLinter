@@ -121,6 +121,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
 *   **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
 *   **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
+*   **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs drastisch. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 *   **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 
 
@@ -1053,4 +1054,42 @@ Das Feature ist standardmäßig aktiviert und kann über die Konfigurationsdatei
 "Global": {
   "EnablePerformanceProfiling": false
 }
+```
+
+---
+
+## 14. Analyse-Cache (Inkrementelle Laufzeitoptimierung)
+
+Um die Latenz im agentischen Entwicklungszyklus ("Agentic Feedback Loop") zu minimieren, besitzt `AiNetLinter` einen intelligenten, inkrementellen Analyse-Cache.
+
+### Funktionsweise
+
+Bei jedem Linter-Durchlauf berechnet `AiNetLinter` für jede C#-Datei einen SHA-256-Hash über deren Inhalt. Ist die Datei seit der letzten Prüfung unverändert, werden ihre gemeldeten Regelverstöße, deklarierten Klassen, `partial`-Teile sowie Testabdeckungssignale direkt aus dem Cache geladen. 
+Die zeitintensive semantische Roslyn-Analyse (`GetSemanticModelAsync()`) wird für diese Dateien vollständig übersprungen.
+
+### Cache-Ort & Benennung
+
+Der Cache wird im Unterordner `cache/` direkt neben der ausführbaren Datei (`AiNetLinter.exe`) abgelegen. Für jede Solution wird eine separate Cache-Datei angelegt:
+
+```
+[Ausführungsverzeichnis]/cache/
+  ├── MySolution-a1b2c3d4.json
+  └── OtherSolution-f9e7c123.json
+```
+
+Der 8-stellige Datei-Hash (`hash8`) basiert auf dem normalisierten absoluten Pfad der Solution-Datei und dem exakten Inhalt der verwendeten Konfigurationsdatei (`rules.json`). 
+
+### Cache-Invalidierung
+
+Die Cache-Validierung erfolgt vollautomatisch:
+- **Konfigurationsänderungen:** Eine Anpassung der Linter-Regeln in der `rules.json` ändert den Datei-Hash im Cache-Dateinamen. Es wird automatisch eine neue Cache-Datei erzeugt.
+- **Dateiveränderungen:** Geänderte Dateien besitzen einen neuen Inhalts-Hash und werden automatisch neu analysiert; ihr Cache-Eintrag wird aktualisiert.
+- **Tool-Updates:** Bei Schema-Änderungen des Linters wird der Cache über eine interne `SchemaVersion` automatisch vollständig invalidiert.
+
+### Deaktivierung über CLI
+
+Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse aller Dateien erzwungen werden soll, kann dies über das optionale CLI-Flag `--no-cache` gesteuert werden:
+
+```powershell
+AiNetLinter.exe --path . --config rules.json --no-cache
 ```
