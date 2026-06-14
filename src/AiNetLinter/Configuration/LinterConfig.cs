@@ -171,6 +171,21 @@ public sealed record MetricsConfig
     public int MaxAIContextFootprint { get; init; } = 5000;
 
     /// <summary>
+    /// Toleranzbereich über dem Komplexitätslimit für Warning statt Error.
+    /// </summary>
+    public int ComplexityNearMissTolerance { get; init; } = 0;
+
+    /// <summary>
+    /// Switch-Dispatcher-Methoden aus der Komplexitätsmessung ausnehmen.
+    /// </summary>
+    public bool ExcludeSwitchDispatcherCases { get; init; } = false;
+
+    /// <summary>
+    /// Max. Code-Zeilen pro Case/If-Zweig damit er als Dispatcher-Zweig gilt.
+    /// </summary>
+    public int SwitchDispatcherMaxCaseBodyLines { get; init; } = 3;
+
+    /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
@@ -191,6 +206,9 @@ public sealed record MetricsConfig
             MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
             MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
             InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
+            ComplexityNearMissTolerance = @override?.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
+            ExcludeSwitchDispatcherCases = @override?.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
+            SwitchDispatcherMaxCaseBodyLines = @override?.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
         };
     }
 }
@@ -423,6 +441,10 @@ public sealed record MetricsConfigOverride
     /// Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden.
     /// </summary>
     public IReadOnlyCollection<string>? InheritanceDepthFrameworkPrefixes { get; init; }
+
+    public int? ComplexityNearMissTolerance { get; init; }
+    public bool? ExcludeSwitchDispatcherCases { get; init; }
+    public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
 }
 
 /// <summary>
