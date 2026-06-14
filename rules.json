@@ -28,6 +28,16 @@
     "DetectAndBanPhantomDependencies": false,
     "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"],
     "ImmutabilityExemptPatterns": [],
+    "ImmutabilityExemptBaseTypes": [
+      "ComponentBase",
+      "LayoutComponentBase",
+      "ObservableObject",
+      "ObservableRecipient",
+      "BackgroundService",
+      "AuthenticationStateProvider",
+      "INotifyPropertyChanged"
+    ],
+    "ImmutabilityAllowPrivateBackingFields": true,
     "AllowedEmptyReads": false
   },
   "Metrics": {

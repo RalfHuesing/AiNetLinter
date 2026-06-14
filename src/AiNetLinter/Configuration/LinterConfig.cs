@@ -79,6 +79,8 @@ public sealed record GlobalConfig
     public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
     public bool AllowedEmptyReads { get; init; } = false;
     public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> ImmutabilityExemptBaseTypes { get; init; } = Array.Empty<string>();
+    public bool ImmutabilityAllowPrivateBackingFields { get; init; } = false;
 
     /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
@@ -132,6 +134,8 @@ public sealed record GlobalConfig
             ImmutabilityExemptPatterns = @override.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
             AllowedEmptyReads = @override.AllowedEmptyReads ?? AllowedEmptyReads,
             SealedClassExemptSuffixes = @override.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
+            ImmutabilityExemptBaseTypes = @override.ImmutabilityExemptBaseTypes ?? ImmutabilityExemptBaseTypes,
+            ImmutabilityAllowPrivateBackingFields = @override.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
         };
     }
 }
@@ -349,6 +353,8 @@ public sealed record GlobalConfigOverride
     public IReadOnlyCollection<string>? ImmutabilityExemptPatterns { get; init; }
     public bool? AllowedEmptyReads { get; init; }
     public IReadOnlyCollection<string>? SealedClassExemptSuffixes { get; init; }
+    public IReadOnlyCollection<string>? ImmutabilityExemptBaseTypes { get; init; }
+    public bool? ImmutabilityAllowPrivateBackingFields { get; init; }
 }
 
 /// <summary>

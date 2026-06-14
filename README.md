@@ -234,6 +234,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. |
 | `EnforceNoMagicValues` | Global | Verbietet Magic Numbers und Magic Strings direkt in Methodenkörpern außerhalb von Konstanten-Deklarationen (Ausnahmen: `0`, `1`, `""`). |
 | `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
+| `ImmutabilityExemptBaseTypes` | Global | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`). |
+| `ImmutabilityAllowPrivateBackingFields` | Global | Erlaubt private mutable Felder mit Unterstrich (`_`) Präfix (z. B. typische WPF MVVM Backing-Felder) (Standard: `false`). |
 | `EnforceStrictBoundaryForBusinessLogic` | Global | Zwingt reine Rechen- und Logikfunktionen in zustandslose `static` Methoden ohne I/O-Aufrufe. |
 | `PreventContextDependentOverloads` | Global | Verbietet Methodenüberladungen, die sich nur durch primitive Typen bei gleicher Parameteranzahl unterscheiden. |
 | `RequireExplicitTruncationHandling` | Global | Erzwingt unmittelbare Validierung (Länge/EOF-Check) nach I/O- und Stream-Leseoperationen. |
@@ -382,6 +384,39 @@ Empfohlene Konfiguration für WPF- und Blazor-Projekte:
     "System.Windows.",
     "Microsoft.AspNetCore.Components."
   ]
+}
+```
+
+### Ausnahmen für EnforceExplicitStateImmutability (WPF & Blazor)
+
+Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen (die keine DTOs oder Entities sind) zur Unveränderlichkeit. Da bei WPF-ViewModels (MVVM) und Blazor-Komponenten mutable Eigenschaften und private Backing-Felder unumgänglich sind, bietet der Linter hierfür dedizierte Ausnahmen:
+
+- **`ImmutabilityExemptBaseTypes`** (Array von Strings, Default: `[]`): Klassen, die von einer dieser Basisklassen oder Schnittstellen erben (transitiv über die gesamte Hierarchie), werden vollständig von der Immutability-Prüfung ausgenommen (z. B. `["ComponentBase", "ObservableObject", "INotifyPropertyChanged"]`).
+- **`ImmutabilityAllowPrivateBackingFields`** (Boolean, Default: `false`): Wenn `true`, werden private Felder, die mit einem Unterstrich (`_`) beginnen, nicht als Verstoß gemeldet. Dies erlaubt typische WPF-MVVM Backing-Felder.
+
+#### Empfohlene Konfiguration für WPF (MVVM):
+```json
+"Global": {
+  "EnforceExplicitStateImmutability": true,
+  "ImmutabilityExemptBaseTypes": [
+    "ObservableObject",
+    "ObservableRecipient",
+    "INotifyPropertyChanged"
+  ],
+  "ImmutabilityAllowPrivateBackingFields": true
+}
+```
+
+#### Empfohlene Konfiguration für Blazor-Projekte:
+```json
+"Global": {
+  "EnforceExplicitStateImmutability": true,
+  "ImmutabilityExemptBaseTypes": [
+    "ComponentBase",
+    "LayoutComponentBase",
+    "AuthenticationStateProvider"
+  ],
+  "ImmutabilityAllowPrivateBackingFields": false
 }
 ```
 

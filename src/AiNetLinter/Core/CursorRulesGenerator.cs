@@ -265,6 +265,24 @@ public static class CursorRulesGenerator
                 sb.AppendLine($"- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: {suffixesStr}.");
             }
         }
+
+        if (g.ImmutabilityExemptBaseTypes != null && g.ImmutabilityExemptBaseTypes.Count > 0)
+        {
+            if (g.ImmutabilityExemptBaseTypes.Count > 5)
+            {
+                sb.AppendLine("- **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).");
+            }
+            else
+            {
+                var baseTypesStr = string.Join(", ", g.ImmutabilityExemptBaseTypes.Select(s => $"`{s}`"));
+                sb.AppendLine($"- **`ImmutabilityExemptBaseTypes`**: Folgende Basistypen/Interfaces sind von der Immutability-Prüfung ausgenommen: {baseTypesStr}.");
+            }
+        }
+
+        if (g.ImmutabilityAllowPrivateBackingFields)
+        {
+            sb.AppendLine("- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.");
+        }
         sb.AppendLine();
 
         sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");
@@ -305,94 +323,114 @@ public static class CursorRulesGenerator
             var overrides = pair.Value;
             if (overrides.Global != null)
             {
-                var og = overrides.Global;
-                foreach (var rule in GlobalRules)
-                {
-                    // Wir versuchen die Eigenschaft per Reflection zu holen
-                    var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
-                    if (prop != null)
-                    {
-                        var val = prop.GetValue(og) as bool?;
-                        if (val.HasValue)
-                        {
-                            var valStr = val.Value ? "ein" : "aus";
-                            var desc = val.Value ? rule.ActiveDesc : rule.DeactiveDesc;
-                            sb.AppendLine($"| `{rule.Name}` | {valStr} | {desc} |");
-                        }
-                    }
-                }
-
-                if (og.AllowedExceptions != null)
-                {
-                    var listStr = string.Join(", ", og.AllowedExceptions);
-                    sb.AppendLine($"| `AllowedExceptions` | `[{listStr}]` | Ausgenommene Exception-Typen für dieses Projekt. |");
-                }
-                if (og.ImmutabilityExemptSuffixes != null)
-                {
-                    var listStr = string.Join(", ", og.ImmutabilityExemptSuffixes);
-                    sb.AppendLine($"| `ImmutabilityExemptSuffixes` | `[{listStr}]` | Ausgenommene Suffixe für dieses Projekt. |");
-                }
-                if (og.ImmutabilityExemptPatterns != null)
-                {
-                    var listStr = string.Join(", ", og.ImmutabilityExemptPatterns);
-                    sb.AppendLine($"| `ImmutabilityExemptPatterns` | `[{listStr}]` | Ausgenommene Wildcard-Muster für dieses Projekt. |");
-                }
-                if (og.SealedClassExemptSuffixes != null)
-                {
-                    var listStr = string.Join(", ", og.SealedClassExemptSuffixes);
-                    sb.AppendLine($"| `SealedClassExemptSuffixes` | `[{listStr}]` | Ausgenommene Klassenname-Suffixe für dieses Projekt. |");
-                }
+                AppendGlobalOverrides(sb, overrides.Global);
             }
 
             if (overrides.Metrics != null)
             {
-                var om = overrides.Metrics;
-                foreach (var metric in MetricsList)
-                {
-                    var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
-                    if (prop != null)
-                    {
-                        var val = prop.GetValue(om) as int?;
-                        if (val.HasValue)
-                        {
-                            sb.AppendLine($"| `{metric.Name}` | {val.Value} | Geändert auf {val.Value}. |");
-                        }
-                    }
-                }
+                AppendMetricOverrides(sb, overrides.Metrics);
             }
 
             if (overrides.MagicValues != null)
             {
-                var omv = overrides.MagicValues;
-                if (omv.Mode != null)
-                {
-                    sb.AppendLine($"| `MagicValues.Mode` | `{omv.Mode}` | Magic-Values Erkennungsmodus geändert auf `{omv.Mode}`. |");
-                }
-                if (omv.MinStringLength.HasValue)
-                {
-                    sb.AppendLine($"| `MagicValues.MinStringLength` | {omv.MinStringLength.Value} | Mindestlänge für Magic Strings geändert auf {omv.MinStringLength.Value}. |");
-                }
-                if (omv.IgnoreStringPatterns != null)
-                {
-                    var listStr = string.Join(", ", omv.IgnoreStringPatterns.Select(p => $"\"{p}\""));
-                    sb.AppendLine($"| `MagicValues.IgnoreStringPatterns` | `[{listStr}]` | Ignorierte String-Muster geändert. |");
-                }
-                if (omv.IgnoreNumericValues != null)
-                {
-                    var listStr = string.Join(", ", omv.IgnoreNumericValues);
-                    sb.AppendLine($"| `MagicValues.IgnoreNumericValues` | `[{listStr}]` | Ignorierte numerische Werte geändert. |");
-                }
-                if (omv.IgnoreInvocationPrefixes != null)
-                {
-                    var listStr = string.Join(", ", omv.IgnoreInvocationPrefixes.Select(p => $"\"{p}\""));
-                    sb.AppendLine($"| `MagicValues.IgnoreInvocationPrefixes` | `[{listStr}]` | Ignorierte Aufruf-Präfixe geändert. |");
-                }
-                if (omv.IgnoreCollectionInitializers.HasValue)
-                {
-                    sb.AppendLine($"| `MagicValues.IgnoreCollectionInitializers` | {omv.IgnoreCollectionInitializers.Value.ToString().ToLower()} | Ignorieren in Collection-Initialisierern geändert. |");
-                }
+                AppendMagicValuesOverrides(sb, overrides.MagicValues);
             }
             sb.AppendLine();
+        }
+    }
+
+    private static void AppendGlobalOverrides(StringBuilder sb, GlobalConfigOverride og)
+    {
+        foreach (var rule in GlobalRules)
+        {
+            var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
+            if (prop != null)
+            {
+                var val = prop.GetValue(og) as bool?;
+                if (val.HasValue)
+                {
+                    var valStr = val.Value ? "ein" : "aus";
+                    var desc = val.Value ? rule.ActiveDesc : rule.DeactiveDesc;
+                    sb.AppendLine($"| `{rule.Name}` | {valStr} | {desc} |");
+                }
+            }
+        }
+
+        if (og.AllowedExceptions != null)
+        {
+            var listStr = string.Join(", ", og.AllowedExceptions);
+            sb.AppendLine($"| `AllowedExceptions` | `[{listStr}]` | Ausgenommene Exception-Typen für dieses Projekt. |");
+        }
+        if (og.ImmutabilityExemptSuffixes != null)
+        {
+            var listStr = string.Join(", ", og.ImmutabilityExemptSuffixes);
+            sb.AppendLine($"| `ImmutabilityExemptSuffixes` | `[{listStr}]` | Ausgenommene Suffixe für dieses Projekt. |");
+        }
+        if (og.ImmutabilityExemptPatterns != null)
+        {
+            var listStr = string.Join(", ", og.ImmutabilityExemptPatterns);
+            sb.AppendLine($"| `ImmutabilityExemptPatterns` | `[{listStr}]` | Ausgenommene Wildcard-Muster für dieses Projekt. |");
+        }
+        if (og.SealedClassExemptSuffixes != null)
+        {
+            var listStr = string.Join(", ", og.SealedClassExemptSuffixes);
+            sb.AppendLine($"| `SealedClassExemptSuffixes` | `[{listStr}]` | Ausgenommene Klassenname-Suffixe für dieses Projekt. |");
+        }
+        if (og.ImmutabilityExemptBaseTypes != null)
+        {
+            var listStr = string.Join(", ", og.ImmutabilityExemptBaseTypes);
+            sb.AppendLine($"| `ImmutabilityExemptBaseTypes` | `[{listStr}]` | Ausgenommene Basistypen/Interfaces für dieses Projekt. |");
+        }
+        if (og.ImmutabilityAllowPrivateBackingFields.HasValue)
+        {
+            sb.AppendLine($"| `ImmutabilityAllowPrivateBackingFields` | {og.ImmutabilityAllowPrivateBackingFields.Value.ToString().ToLower()} | Private Backing-Felder Erlaubnis geändert. |");
+        }
+    }
+
+    private static void AppendMetricOverrides(StringBuilder sb, MetricsConfigOverride om)
+    {
+        foreach (var metric in MetricsList)
+        {
+            var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
+            if (prop != null)
+            {
+                var val = prop.GetValue(om) as int?;
+                if (val.HasValue)
+                {
+                    sb.AppendLine($"| `{metric.Name}` | {val.Value} | Geändert auf {val.Value}. |");
+                }
+            }
+        }
+    }
+
+    private static void AppendMagicValuesOverrides(StringBuilder sb, MagicValuesConfigOverride omv)
+    {
+        if (omv.Mode != null)
+        {
+            sb.AppendLine($"| `MagicValues.Mode` | `{omv.Mode}` | Magic-Values Erkennungsmodus geändert auf `{omv.Mode}`. |");
+        }
+        if (omv.MinStringLength.HasValue)
+        {
+            sb.AppendLine($"| `MagicValues.MinStringLength` | {omv.MinStringLength.Value} | Mindestlänge für Magic Strings geändert auf {omv.MinStringLength.Value}. |");
+        }
+        if (omv.IgnoreStringPatterns != null)
+        {
+            var listStr = string.Join(", ", omv.IgnoreStringPatterns.Select(p => $"\"{p}\""));
+            sb.AppendLine($"| `MagicValues.IgnoreStringPatterns` | `[{listStr}]` | Ignorierte String-Muster geändert. |");
+        }
+        if (omv.IgnoreNumericValues != null)
+        {
+            var listStr = string.Join(", ", omv.IgnoreNumericValues);
+            sb.AppendLine($"| `MagicValues.IgnoreNumericValues` | `[{listStr}]` | Ignorierte numerische Werte geändert. |");
+        }
+        if (omv.IgnoreInvocationPrefixes != null)
+        {
+            var listStr = string.Join(", ", omv.IgnoreInvocationPrefixes.Select(p => $"\"{p}\""));
+            sb.AppendLine($"| `MagicValues.IgnoreInvocationPrefixes` | `[{listStr}]` | Ignorierte Aufruf-Präfixe geändert. |");
+        }
+        if (omv.IgnoreCollectionInitializers.HasValue)
+        {
+            sb.AppendLine($"| `MagicValues.IgnoreCollectionInitializers` | {omv.IgnoreCollectionInitializers.Value.ToString().ToLower()} | Ignorieren in Collection-Initialisierern geändert. |");
         }
     }
 }
