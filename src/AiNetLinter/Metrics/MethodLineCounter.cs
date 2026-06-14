@@ -20,8 +20,16 @@ public static class MethodLineCounter
             return 0;
         }
 
+        return GetCodeLineCount((SyntaxNode)method);
+    }
+
+    /// <summary>
+    /// Ermittelt die Anzahl der Codezeilen eines beliebigen Syntax-Knotens (ohne Kommentare und Leerzeilen).
+    /// </summary>
+    public static int GetCodeLineCount(SyntaxNode node)
+    {
         var codeLines = new HashSet<int>();
-        foreach (var token in method.DescendantTokens(descendIntoTrivia: false))
+        foreach (var token in node.DescendantTokens(descendIntoTrivia: false))
         {
             if (token.IsKind(SyntaxKind.EndOfFileToken))
             {

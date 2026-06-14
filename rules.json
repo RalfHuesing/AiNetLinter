@@ -53,6 +53,9 @@
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
     "MaxAIContextFootprint": 5000,
+    "ComplexityNearMissTolerance": 1,
+    "ExcludeSwitchDispatcherCases": true,
+    "SwitchDispatcherMaxCaseBodyLines": 3,
     "InheritanceDepthFrameworkPrefixes": []
   },
   "TestSentinel": {

@@ -61,33 +61,59 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private void CheckMethodComplexities(MethodDeclarationSyntax node)
     {
-        var cyclomaticComplexity = ComplexityCalculator.GetCyclomaticComplexity(node);
-        if (cyclomaticComplexity > _config.Metrics.MaxCyclomaticComplexity)
-        {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Metrics.MaxCyclomaticComplexity),
-                Details = $"Die Methode '{node.Identifier.Text}' hat eine Zyklomatische Komplexitaet von {cyclomaticComplexity} (erlaubt sind maximal {_config.Metrics.MaxCyclomaticComplexity}).",
-                Guidance = "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten)."
-            });
-        }
+        var isDispatcher = _config.Metrics.ExcludeSwitchDispatcherCases
+            && SwitchDispatcherDetector.IsDispatcher(node, _config.Metrics.SwitchDispatcherMaxCaseBodyLines);
 
-        var cognitiveComplexity = ComplexityCalculator.GetCognitiveComplexity(node);
-        if (cognitiveComplexity > _config.Metrics.MaxCognitiveComplexity)
+        var cyclomaticComplexity = isDispatcher
+            ? SwitchDispatcherDetector.GetAdjustedCyclomaticComplexity(node)
+            : ComplexityCalculator.GetCyclomaticComplexity(node);
+
+        ReportComplexityIfViolation(
+            node,
+            cyclomaticComplexity,
+            _config.Metrics.MaxCyclomaticComplexity,
+            nameof(_config.Metrics.MaxCyclomaticComplexity),
+            "Zyklomatische Komplexitaet",
+            "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten).");
+
+        var cognitiveComplexity = isDispatcher
+            ? SwitchDispatcherDetector.GetAdjustedCognitiveComplexity(node)
+            : ComplexityCalculator.GetCognitiveComplexity(node);
+
+        ReportComplexityIfViolation(
+            node,
+            cognitiveComplexity,
+            _config.Metrics.MaxCognitiveComplexity,
+            nameof(_config.Metrics.MaxCognitiveComplexity),
+            "Kognitive Komplexitaet",
+            CognitiveComplexityGuidance.Build(
+                node,
+                cognitiveComplexity,
+                _config.Metrics.MaxCognitiveComplexity));
+    }
+
+    private void ReportComplexityIfViolation(
+        MethodDeclarationSyntax node,
+        int complexity,
+        int limit,
+        string ruleName,
+        string label,
+        string guidance)
+    {
+        if (complexity <= limit) return;
+
+        var tolerance = _config.Metrics.ComplexityNearMissTolerance;
+        var isNearMiss = tolerance > 0 && complexity <= limit + tolerance;
+        var nearMissHint = isNearMiss ? " [near-miss: knapp über Limit]" : "";
+
+        _violations.Add(new RuleViolation
         {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Metrics.MaxCognitiveComplexity),
-                Details = $"Die Methode '{node.Identifier.Text}' hat eine Kognitive Komplexitaet von {cognitiveComplexity} (erlaubt sind maximal {_config.Metrics.MaxCognitiveComplexity}).",
-                Guidance = CognitiveComplexityGuidance.Build(
-                    node,
-                    cognitiveComplexity,
-                    _config.Metrics.MaxCognitiveComplexity),
-            });
-        }
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(node),
+            RuleName = ruleName,
+            Details = $"Die Methode '{node.Identifier.Text}' hat eine {label} von {complexity} " +
+                      $"(erlaubt sind maximal {limit}).{nearMissHint}",
+            Guidance = guidance,
+        });
     }
 }
