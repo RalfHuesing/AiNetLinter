@@ -9,6 +9,7 @@ public sealed record LinterConfig
     public required MetricsConfig Metrics { get; init; }
     public TestSentinelConfig TestSentinel { get; init; } = new();
     public MagicValuesConfig MagicValues { get; init; } = new();
+    public FileFiltersConfig FileFilters { get; init; } = new();
     public IReadOnlyDictionary<string, RuleMetadataEntry> RuleMetadata { get; init; }
         = new Dictionary<string, RuleMetadataEntry>();
     public IReadOnlyCollection<NamespaceRule> ForbiddenNamespaceDependencies { get; init; } = Array.Empty<NamespaceRule>();
@@ -534,4 +535,28 @@ public sealed record MagicValuesConfigOverride
     public IReadOnlyCollection<double>? IgnoreNumericValues { get; init; }
     public IReadOnlyCollection<string>? IgnoreInvocationPrefixes { get; init; }
     public bool? IgnoreCollectionInitializers { get; init; }
+}
+
+/// <summary>
+/// Datei- und Verzeichnis-Ausschlüsse für die Linter-Analyse.
+/// </summary>
+public sealed record FileFiltersConfig
+{
+    /// <summary>
+    /// Glob-Muster die gegen den Dateinamen (ohne Pfad) geprüft werden.
+    /// Standard-Wildcards: * und ?
+    /// </summary>
+    public IReadOnlyCollection<string> ExcludeFilePatterns { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
+    /// Pfad-Segmente: Dateien die eines dieser Segmente im Pfad enthalten, werden übersprungen.
+    /// </summary>
+    public IReadOnlyCollection<string> ExcludeDirectoryPatterns { get; init; }
+        = ["obj/", "bin/"];
+
+    /// <summary>
+    /// Wenn true, werden Klassen/Records/Structs mit dem GeneratedCodeAttribute-Attribut übersprungen.
+    /// </summary>
+    public bool SkipGeneratedCodeAttribute { get; init; } = false;
 }

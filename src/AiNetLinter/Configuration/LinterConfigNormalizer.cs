@@ -21,11 +21,13 @@ public static class LinterConfigNormalizer
         var testSentinel = config.TestSentinel ?? new TestSentinelConfig();
         var patterns = NormalizeClassNamePatterns(testSentinel.ClassNamePatterns);
         var magicValues = config.MagicValues ?? new MagicValuesConfig();
+        var fileFilters = config.FileFilters ?? new FileFiltersConfig();
 
         return config with
         {
             TestSentinel = testSentinel with { ClassNamePatterns = patterns },
             MagicValues = magicValues,
+            FileFilters = fileFilters,
         };
     }
 

@@ -172,10 +172,15 @@ public sealed class LinterEngine
 
     private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state)
     {
+        var filePath = document.FilePath ?? document.Name;
+        if (FileFilterEvaluator.IsExcluded(filePath, _config.FileFilters))
+        {
+            return;
+        }
+
         var semanticModel = await document.GetSemanticModelAsync();
         if (semanticModel == null) return;
 
-        var filePath = document.FilePath ?? document.Name;
         var sourceText = await document.GetTextAsync();
         state.FileContents[filePath] = sourceText.ToString();
 

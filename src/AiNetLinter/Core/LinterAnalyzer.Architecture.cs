@@ -26,6 +26,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
+        if (_config.FileFilters.SkipGeneratedCodeAttribute && IsGeneratedCode(node))
+        {
+            return;
+        }
+
         CheckXmlDoc(node, node.Identifier.Text, "Klasse");
         CheckPascalCase(node.Identifier, "Klasse");
         CheckSealedClass(node);
@@ -58,6 +63,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
+        if (_config.FileFilters.SkipGeneratedCodeAttribute && IsGeneratedCode(node))
+        {
+            return;
+        }
+
         CheckXmlDoc(node, node.Identifier.Text, "Record");
         CheckPascalCase(node.Identifier, "Record");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: true);
@@ -68,6 +78,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
+        if (_config.FileFilters.SkipGeneratedCodeAttribute && IsGeneratedCode(node))
+        {
+            return;
+        }
+
         CheckXmlDoc(node, node.Identifier.Text, "Struct");
         CheckPascalCase(node.Identifier, "Struct");
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
@@ -418,5 +433,15 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             }
         }
         return false;
+    }
+
+    private bool IsGeneratedCode(TypeDeclarationSyntax node)
+    {
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol == null) return false;
+
+        return symbol.GetAttributes().Any(a =>
+            a.AttributeClass?.Name == "GeneratedCodeAttribute" ||
+            a.AttributeClass?.Name == "GeneratedCode");
     }
 }

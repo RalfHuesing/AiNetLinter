@@ -87,6 +87,20 @@
     "IgnoreInvocationPrefixes": [],
     "IgnoreCollectionInitializers": false
   },
+  "FileFilters": {
+    "ExcludeFilePatterns": [
+      "*.designer.cs",
+      "*.g.cs",
+      "*.generated.cs",
+      "AssemblyInfo.cs",
+      "*.AssemblyAttributes.cs"
+    ],
+    "ExcludeDirectoryPatterns": [
+      "obj/",
+      "bin/"
+    ],
+    "SkipGeneratedCodeAttribute": true
+  },
   "RuleMetadata": {
     "MaxLineCount": { "severity": "error", "intent": "agent-context" },
     "MaxCognitiveComplexity": { "severity": "error", "intent": "agent-context" },
