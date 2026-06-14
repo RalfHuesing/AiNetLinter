@@ -178,7 +178,7 @@ public static class Program
         try
         {
             var exitCode = await ExecuteAuditAsync(args, config, currentCatalog);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath);
+            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath, args.ConfigPath);
             return exitCode;
         }
         finally

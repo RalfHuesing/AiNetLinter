@@ -74,4 +74,58 @@ public sealed class PerformanceProfilerTests
 
         Assert.False(Directory.Exists(measurementsDir));
     }
+
+    [Fact]
+    public void PerformanceProfiler_Enabled_WritesReportWithRulesPathAndArguments()
+    {
+        var profiler = PerformanceProfiler.Instance;
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var measurementsDir = Path.Combine(baseDir, "measurements");
+        
+        if (Directory.Exists(measurementsDir))
+        {
+            Directory.Delete(measurementsDir, true);
+        }
+
+        var type = typeof(PerformanceProfiler);
+        var initializedField = type.GetField("_initialized", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        initializedField?.SetValue(profiler, false);
+        
+        var mockArgs = new[] { "--path", "testProj", "--config", "rules.json" };
+        profiler.Initialize(true, mockArgs);
+
+        profiler.StartPhase("TestPhase");
+        profiler.StopPhase("TestPhase");
+        profiler.RecordDocumentAnalysis("testFile.cs", 15.0, 2);
+        
+        profiler.WriteReport("testProj", "C:\\mock\\solution.sln", "C:\\mock\\rules.json");
+        
+        Assert.True(Directory.Exists(measurementsDir));
+        
+        var logFiles = Directory.GetFiles(measurementsDir, "performance.log", SearchOption.AllDirectories);
+        var jsonFiles = Directory.GetFiles(measurementsDir, "performance.json", SearchOption.AllDirectories);
+        
+        Assert.Single(logFiles);
+        Assert.Single(jsonFiles);
+        
+        var logContent = File.ReadAllText(logFiles[0]);
+        var jsonContent = File.ReadAllText(jsonFiles[0]);
+        
+        Assert.Contains("Solution File: C:\\mock\\solution.sln", logContent);
+        Assert.Contains("Rules File: C:\\mock\\rules.json", logContent);
+        Assert.Contains("Arguments: --path testProj --config rules.json", logContent);
+        
+        var report = JsonSerializer.Deserialize<ProfilerJsonReport>(jsonContent);
+        Assert.NotNull(report);
+        Assert.Equal("C:\\mock\\solution.sln", report.SolutionPath);
+        Assert.Equal("C:\\mock\\rules.json", report.RulesPath);
+        Assert.Equal("--path testProj --config rules.json", report.Arguments);
+        
+        // Clean up
+        Directory.Delete(measurementsDir, true);
+        
+        // Reset initialized state for subsequent runs
+        initializedField?.SetValue(profiler, false);
+    }
 }
