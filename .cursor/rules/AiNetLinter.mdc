@@ -39,6 +39,9 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).
 - **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.
 - **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: `ILogger`, `IOptions`, `IOptionsSnapshot`, `IOptionsMonitor`, `IHostEnvironment`, `IWebHostEnvironment`, `IConfiguration`, `IServiceProvider`, `IHttpContextAccessor`.
+- **`ExcludeFilePatterns`**: Folgende Glob-Muster für Dateinamen sind von der Analyse ausgeschlossen: `*.designer.cs`, `*.g.cs`, `*.generated.cs`, `AssemblyInfo.cs`, `*.AssemblyAttributes.cs`.
+- **`ExcludeDirectoryPatterns`**: Dateien in Verzeichnissen mit folgenden Segmenten sind ausgeschlossen: `obj/`, `bin/`.
+- **`SkipGeneratedCodeAttribute`**: Typen mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut werden von der Analyse übersprungen.
 
 ## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)
 

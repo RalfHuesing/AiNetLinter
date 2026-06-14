@@ -445,6 +445,34 @@ Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen
 }
 ```
 
+### Datei- und Verzeichnis-Ausschlüsse (FileFilters)
+
+Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.
+
+#### Einstellungsoptionen
+
+- **`ExcludeFilePatterns`** (Array von Strings, Default: `[]`): Glob-Muster, die gegen den Dateinamen (ohne Pfad) geprüft werden (z. B. `["*.designer.cs", "*.g.cs", "AssemblyInfo.cs"]`).
+- **`ExcludeDirectoryPatterns`** (Array von Strings, Default: `["obj/", "bin/"]`): Pfad-Segmente. Dateien in Verzeichnissen, die diese Segmente enthalten, werden übersprungen.
+- **`SkipGeneratedCodeAttribute`** (Boolean, Default: `false`): Wenn `true`, werden Klassen, Records und Structs, die mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut deklariert sind, vollständig von der Analyse übersprungen (inkl. ihrer Methoden und Member).
+
+#### Empfohlene Standardkonfiguration:
+```json
+"FileFilters": {
+  "ExcludeFilePatterns": [
+    "*.designer.cs",
+    "*.g.cs",
+    "*.generated.cs",
+    "AssemblyInfo.cs",
+    "*.AssemblyAttributes.cs"
+  ],
+  "ExcludeDirectoryPatterns": [
+    "obj/",
+    "bin/"
+  ],
+  "SkipGeneratedCodeAttribute": true
+}
+```
+
 ---
 
 ## 5. Kompilieren & Bereitstellen (Build & Deployment)

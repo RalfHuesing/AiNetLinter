@@ -1,5 +1,5 @@
 ﻿# Codegraph (auto-generated)
-Produktionscode · 110 Typen · 10 Namespaces
+Produktionscode · 112 Typen · 10 Namespaces
 
 ## AiNetLinter (1)
 - Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
@@ -33,10 +33,12 @@ Produktionscode · 110 Typen · 10 Namespaces
 - ParsedArgs [record] → BaselineOptions, ImpactOptions, MaintenanceOptions, OutputOptions, ParsedArgs, ScopeOptions
 - ScopeOptions [record] → ScopeOptions
 
-## AiNetLinter.Configuration (15)
+## AiNetLinter.Configuration (17)
+- FileFilterEvaluator → FileFiltersConfig
+- FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
 - GlobalConfigOverride [record] → GlobalConfigOverride
-- LinterConfig [record] → GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig
+- LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
 - MagicValuesConfig [record] → MagicValuesConfig, MagicValuesConfigOverride

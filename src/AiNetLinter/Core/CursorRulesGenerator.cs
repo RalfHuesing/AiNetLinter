@@ -288,6 +288,20 @@ public static class CursorRulesGenerator
             var prefixesStr = string.Join(", ", config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Select(p => $"`{p}`"));
             sb.AppendLine($"- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: {prefixesStr}.");
         }
+        if (config.FileFilters.ExcludeFilePatterns != null && config.FileFilters.ExcludeFilePatterns.Count > 0)
+        {
+            var patternsStr = string.Join(", ", config.FileFilters.ExcludeFilePatterns.Select(p => $"`{p}`"));
+            sb.AppendLine($"- **`ExcludeFilePatterns`**: Folgende Glob-Muster für Dateinamen sind von der Analyse ausgeschlossen: {patternsStr}.");
+        }
+        if (config.FileFilters.ExcludeDirectoryPatterns != null && config.FileFilters.ExcludeDirectoryPatterns.Count > 0)
+        {
+            var dirsStr = string.Join(", ", config.FileFilters.ExcludeDirectoryPatterns.Select(d => $"`{d}`"));
+            sb.AppendLine($"- **`ExcludeDirectoryPatterns`**: Dateien in Verzeichnissen mit folgenden Segmenten sind ausgeschlossen: {dirsStr}.");
+        }
+        if (config.FileFilters.SkipGeneratedCodeAttribute)
+        {
+            sb.AppendLine("- **`SkipGeneratedCodeAttribute`**: Typen mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut werden von der Analyse übersprungen.");
+        }
         sb.AppendLine();
 
         sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");
