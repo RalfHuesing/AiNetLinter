@@ -59,6 +59,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         {
             if (IsMutableField(fieldDecl))
             {
+                if (_config.Global.ImmutabilityAllowPrivateBackingFields && IsPrivateBackingField(fieldDecl))
+                {
+                    continue;
+                }
                 AddMutableFieldViolations(fieldDecl, className);
             }
         }
@@ -97,6 +101,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             return true;
         }
         if (IsConfigurationBindingOrJsonSerializable(node))
+        {
+            return true;
+        }
+        if (HasExemptBaseType(node))
         {
             return true;
         }
@@ -191,5 +199,53 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var name = attr.AttributeClass?.Name;
         if (name == null) return false;
         return name.Contains("Dto") || name.Contains("Entity");
+    }
+
+    private bool HasExemptBaseType(ClassDeclarationSyntax node)
+    {
+        var exemptTypes = _config.Global.ImmutabilityExemptBaseTypes;
+        if (exemptTypes == null || exemptTypes.Count == 0) return false;
+
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol == null) return false;
+
+        return IsSymbolExemptByBaseType(symbol, exemptTypes);
+    }
+
+    private static bool IsSymbolExemptByBaseType(
+        INamedTypeSymbol symbol,
+        IReadOnlyCollection<string> exemptTypes)
+    {
+        // Prüfe Basisklassen transitiv
+        var current = symbol.BaseType;
+        while (current != null && current.SpecialType != SpecialType.System_Object)
+        {
+            if (exemptTypes.Contains(current.Name, StringComparer.OrdinalIgnoreCase))
+                return true;
+            current = current.BaseType;
+        }
+
+        // Prüfe implementierte Interfaces
+        foreach (var iface in symbol.AllInterfaces)
+        {
+            if (exemptTypes.Contains(iface.Name, StringComparer.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsPrivateBackingField(FieldDeclarationSyntax fieldDecl)
+    {
+        var isPrivate = fieldDecl.Modifiers.Any(SyntaxKind.PrivateKeyword)
+            || !fieldDecl.Modifiers.Any(m =>
+                m.IsKind(SyntaxKind.PublicKeyword) ||
+                m.IsKind(SyntaxKind.ProtectedKeyword) ||
+                m.IsKind(SyntaxKind.InternalKeyword));
+
+        if (!isPrivate) return false;
+
+        return fieldDecl.Declaration.Variables
+            .All(v => v.Identifier.Text.StartsWith("_", StringComparison.Ordinal));
     }
 }

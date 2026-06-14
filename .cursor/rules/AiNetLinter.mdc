@@ -36,6 +36,8 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`AllowCancellationShutdownCatch`** `[intent: general]`: Erlaubt das Abfangen von OperationCanceledException beim Shutdown.
 - **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).
 - **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: `Base`, `Foundation`, `Host`.
+- **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).
+- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.
 
 ## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)
 
