@@ -1,6 +1,9 @@
 #nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Cache;
 
@@ -119,5 +122,50 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         var found = manager.TryGet(relativePath, "different_checksum", out var loadedEntry);
         Assert.False(found);
         Assert.Null(loadedEntry);
+    }
+
+    [Fact]
+    public void CacheManager_ConcurrentGetAndSet_DoesNotThrow()
+    {
+        var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
+        var rulesContent = "{ \"Global\": {} }";
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+
+        var exceptions = new ConcurrentBag<Exception>();
+        var tasks = Enumerable.Range(0, 200).Select(i => Task.Run(() =>
+        {
+            try
+            {
+                var path = $"src/File{i % 10}.cs";
+                var entry = new AnalysisCacheEntry { RelativePath = path, Checksum = $"hash{i}" };
+                manager.Set(path, entry);
+                manager.TryGet(path, $"hash{i}", out _);
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        }));
+
+        Task.WaitAll([.. tasks]);
+        Assert.Empty(exceptions);
+    }
+
+    [Fact]
+    public void CacheManager_OrdinalIgnoreCasePreservedAfterRoundtrip()
+    {
+        var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
+        var rulesContent = "{ \"Global\": {} }";
+
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var relativePath = "src/Auth/JwtService.cs";
+        var checksum = "abc123";
+        manager.Set(relativePath, new AnalysisCacheEntry { RelativePath = relativePath, Checksum = checksum });
+        manager.SaveIfDirty();
+
+        // Nach Deserialisierung muss der Lookup case-insensitiv funktionieren
+        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        Assert.True(manager2.TryGet("SRC/AUTH/JWTSERVICE.CS", checksum, out var entry));
+        Assert.NotNull(entry);
     }
 }

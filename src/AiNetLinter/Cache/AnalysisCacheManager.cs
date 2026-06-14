@@ -1,9 +1,11 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace AiNetLinter.Cache;
 
@@ -13,6 +15,7 @@ internal sealed class AnalysisCacheManager
 
     private readonly string _cachePath;
     private readonly AnalysisCacheFile _cache;
+    private readonly Lock _lock = new();
     private bool _dirty;
 
     private AnalysisCacheManager(string cachePath, AnalysisCacheFile cache)
@@ -35,17 +38,23 @@ internal sealed class AnalysisCacheManager
 
     public bool TryGet(string relativePath, string currentChecksum, out AnalysisCacheEntry? entry)
     {
-        entry = null;
-        if (!_cache.Files.TryGetValue(relativePath, out var cached)) return false;
-        if (cached.Checksum != currentChecksum) return false;
-        entry = cached;
-        return true;
+        lock (_lock)
+        {
+            entry = null;
+            if (!_cache.Files.TryGetValue(relativePath, out var cached)) return false;
+            if (cached.Checksum != currentChecksum) return false;
+            entry = cached;
+            return true;
+        }
     }
 
     public void Set(string relativePath, AnalysisCacheEntry entry)
     {
-        _cache.Files[relativePath] = entry;
-        _dirty = true;
+        lock (_lock)
+        {
+            _cache.Files[relativePath] = entry;
+            _dirty = true;
+        }
     }
 
     public void SaveIfDirty()
@@ -73,7 +82,13 @@ internal sealed class AnalysisCacheManager
             var json = File.ReadAllText(path, Encoding.UTF8);
             var file = JsonSerializer.Deserialize<AnalysisCacheFile>(json);
             if (file?.SchemaVersion != AnalysisCacheFile.CurrentSchemaVersion) return null;
-            return file;
+            // System.Text.Json erstellt ein neues Dictionary mit case-sensitivem Comparer.
+            // Den OrdinalIgnoreCase-Comparer explizit wiederherstellen.
+            return file with
+            {
+                Files = new Dictionary<string, AnalysisCacheEntry>(
+                    file.Files, StringComparer.OrdinalIgnoreCase)
+            };
         }
         catch (Exception ignored)
         {
