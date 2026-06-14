@@ -1,5 +1,5 @@
 ﻿# Codegraph (auto-generated)
-Produktionscode · 112 Typen · 10 Namespaces
+Produktionscode · 113 Typen · 10 Namespaces
 
 ## AiNetLinter (1)
 - Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
@@ -33,7 +33,7 @@ Produktionscode · 112 Typen · 10 Namespaces
 - ParsedArgs [record] → BaselineOptions, ImpactOptions, MaintenanceOptions, OutputOptions, ParsedArgs, ScopeOptions
 - ScopeOptions [record] → ScopeOptions
 
-## AiNetLinter.Configuration (17)
+## AiNetLinter.Configuration (18)
 - FileFilterEvaluator → FileFiltersConfig
 - FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
@@ -47,10 +47,11 @@ Produktionscode · 112 Typen · 10 Namespaces
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule
 - ProjectConfigResolver → LinterConfig, ProjectOverrideEntry
-- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry
+- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry, TestSentinelConfigOverride
 - RuleMetadataEntry [record] → RuleMetadataEntry
 - RuleMetadataRegistry → LinterConfig, RuleMetadataEntry
-- TestSentinelConfig [record] → TestSentinelConfig
+- TestSentinelConfig [record] → TestSentinelConfig, TestSentinelConfigOverride
+- TestSentinelConfigOverride [record] → TestSentinelConfigOverride
 
 ## AiNetLinter.Core (27)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
@@ -71,7 +72,7 @@ Produktionscode · 112 Typen · 10 Namespaces
 - PlaybookDocScanResult [record] → PlaybookDocScanResult
 - PlaybookStats [record] → PlaybookStats
 - PlaybookSyntaxWalker
-- PostAnalysisChecks → AnalysisState, ClassInfo, LinterConfig, TestSentinelContext
+- PostAnalysisChecks → AnalysisState, ClassInfo, LinterConfig, TestSentinelConfig, TestSentinelContext
 - RepoPlaybookGenerator → LinterConfig, PlaybookStats
 - RuleDefinition [record] → RuleDefinition
 - TestCoverageCollector [partial] → TestCoverageIndex, TestSentinelConfig

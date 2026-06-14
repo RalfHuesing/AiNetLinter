@@ -194,7 +194,10 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
   "TestSentinel": {
     "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
     "RecognizeTypeofReference": true,
-    "RecognizeCoversComment": true
+    "RecognizeCoversComment": true,
+    "ExemptClassNameSuffixes": ["Extensions", "Constants", "Converter", "Profile"],
+    "ExemptWhenInheritsFrom": ["ComponentBase", "IValueConverter", "Profile"],
+    "ExemptStaticClasses": true
   },
   "RuleMetadata": {
     "MaxLineCount": { "severity": "error", "intent": "agent-context" },
@@ -229,6 +232,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
 | `EnforceNoSilentCatch` | Global | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung. |
 | `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
+| `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
+| `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
 | `EnforceNoVariableShadowing` | Global | Verbietet das Verdecken von Feldern, Eigenschaften und äußeren Parametern durch lokale Variablen und Parameter. |
 | `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). |
 | `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. |
@@ -255,7 +260,12 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
-| `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
+| `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
+| `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
+| `TestSentinel.RecognizeCoversComment` | Config | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`. |
+| `TestSentinel.ExemptClassNameSuffixes` | Config | Klassen mit diesen Namens-Suffixen werden vom Sentinel ausgenommen (z. B. `["Extensions", "Constants", "Converter"]`). |
+| `TestSentinel.ExemptWhenInheritsFrom` | Config | Klassen die von diesen Typen erben oder diese Interfaces implementieren, werden ausgenommen (z. B. `["ComponentBase", "IValueConverter"]`). |
+| `TestSentinel.ExemptStaticClasses` | Config | Statische Klassen werden vom Sentinel ausgenommen wenn `true`. Standard: `false`. |
 | `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
@@ -514,6 +524,138 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
     "bin/"
   ],
   "SkipGeneratedCodeAttribute": true
+}
+```
+
+### StaticTestSentinel-Konfiguration
+
+Der `StaticTestSentinel` meldet Klassen als nicht abgedeckt, wenn ihre maximale kognitive Komplexität über `MinCognitiveComplexityForTest` liegt und keine Testabdeckung gefunden wurde. Für Klassen, bei denen Unit-Tests schwierig oder nicht sinnvoll sind, bietet die Sektion `"TestSentinel"` gezielte Exemptions.
+
+#### Testabdeckungs-Erkennung
+
+Der Sentinel erkennt Testabdeckung über drei Wege (alle konfigurierbar):
+
+1. **Testklassen-Name:** Eine Klasse `{Name}Tests` oder `{Name}*Tests` wurde gefunden.
+2. **`typeof`-Referenz:** Eine Testklasse enthält `typeof(MyClass)`.
+3. **`// @covers`-Kommentar:** Eine Datei enthält `// @covers MyClass`.
+
+#### Klassen-Exemptions
+
+- **`ExemptClassNameSuffixes`** (Array von Strings, Default: `[]`): Klassen deren Name mit einem dieser Suffixe endet, werden vollständig übersprungen. Empfehlung: `["Extensions", "Constants", "Converter", "Profile", "Seed", "Migration", "Startup", "Module"]`.
+- **`ExemptWhenInheritsFrom`** (Array von Strings, Default: `[]`): Klassen die von einem dieser Typen erben oder Interfaces implementieren, werden übersprungen. Nützlich für Blazor-Komponenten (`ComponentBase`), WPF-Konverter (`IValueConverter`) oder AutoMapper-Profile (`Profile`).
+- **`ExemptStaticClasses`** (Boolean, Default: `false`): Statische Klassen (z. B. `public static class StringExtensions`) werden übersprungen.
+
+#### Empfohlene Konfiguration für WPF-Projekte:
+```json
+"TestSentinel": {
+  "ExemptClassNameSuffixes": ["Extensions", "Constants", "Converter"],
+  "ExemptWhenInheritsFrom": ["IValueConverter"],
+  "ExemptStaticClasses": true
+}
+```
+
+#### Empfohlene Konfiguration für Blazor-Projekte:
+```json
+"TestSentinel": {
+  "ExemptWhenInheritsFrom": ["ComponentBase", "LayoutComponentBase"],
+  "ExemptClassNameSuffixes": ["Extensions", "Constants"],
+  "ExemptStaticClasses": true
+}
+```
+
+### EnforceResultPatternOverExceptions — Namespace-Allow-Liste
+
+Die Regel `EnforceResultPatternOverExceptions` ist standardmäßig **deaktiviert** (`false`). Wenn aktiviert, verbietet sie `throw` für fachlichen Kontrollfluss. Für Infrastruktur- und ASP.NET-Code — wo `throw` das übliche Idiom ist — stehen zwei neue Ausnahme-Mechanismen zur Verfügung:
+
+- **`ResultPatternAllowThrowInNamespaceSuffixes`** (Array von Strings, Default: `[]`): Alle `throw`-Statements in Namespaces, die mit einem dieser Segmente enden, werden ignoriert. Segment-basierter Match: `MyApp.Infrastructure` wird mit Suffix `"Infrastructure"` erkannt. Empfehlung: `["Infrastructure", "Endpoints", "Middleware", "Program"]`.
+- **`ResultPatternAllowCatchRethrow`** (Boolean, Default: `true`): Ein bloßes `throw;` ohne Expression (Rethrow in Catch) ist immer erlaubt. Das ist idomatisches C# für Log-and-Rethrow-Muster.
+
+#### Empfohlene Konfiguration (Strict-Profil mit Ausnahmen):
+```json
+"Global": {
+  "EnforceResultPatternOverExceptions": true,
+  "ResultPatternAllowThrowInNamespaceSuffixes": [
+    "Infrastructure",
+    "Endpoints",
+    "Middleware",
+    "Program"
+  ],
+  "ResultPatternAllowCatchRethrow": true
+}
+```
+
+> Fachliche Fehler → `Result<T>`; Infrastruktur/Unerwartetes → `throw` + Log. Die `AllowedExceptions`-Liste (z. B. `ArgumentNullException`) bleibt für typ-basierte Ausnahmen unverändert aktiv.
+
+### Profil-Vorlagen
+
+Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollständige `rules.json`-Datei zusammengestellt werden.
+
+#### WPF-Profil (`wpf.rules.json`)
+
+```json
+{
+  "Global": {
+    "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": true,
+    "SealedClassExemptSuffixes": ["Base", "ViewModel"],
+    "EnforceNoSilentCatch": true,
+    "AllowCancellationShutdownCatch": true,
+    "EnforceExplicitStateImmutability": true,
+    "ImmutabilityExemptBaseTypes": ["ObservableObject", "ObservableRecipient", "INotifyPropertyChanged"],
+    "ImmutabilityAllowPrivateBackingFields": true,
+    "EnforceResultPatternOverExceptions": false
+  },
+  "Metrics": {
+    "MaxInheritanceDepth": 2,
+    "InheritanceDepthFrameworkPrefixes": ["System.", "System.Windows.", "Microsoft.UI."],
+    "MaxConstructorDependencies": 5,
+    "ConstructorDependencyIgnoreTypePrefixes": ["ILogger", "IOptions", "IHostEnvironment"]
+  },
+  "FileFilters": {
+    "ExcludeFilePatterns": ["*.designer.cs", "*.g.cs"],
+    "ExcludeDirectoryPatterns": ["obj/", "bin/"],
+    "SkipGeneratedCodeAttribute": true
+  },
+  "TestSentinel": {
+    "ExemptClassNameSuffixes": ["Converter", "Extensions", "Constants"],
+    "ExemptWhenInheritsFrom": ["IValueConverter"],
+    "ExemptStaticClasses": true
+  }
+}
+```
+
+#### Blazor-Profil (`blazor.rules.json`)
+
+```json
+{
+  "Global": {
+    "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": true,
+    "EnforceExplicitStateImmutability": true,
+    "ImmutabilityExemptBaseTypes": [
+      "ComponentBase",
+      "LayoutComponentBase",
+      "AuthenticationStateProvider",
+      "BackgroundService"
+    ],
+    "ImmutabilityAllowPrivateBackingFields": false,
+    "EnforceResultPatternOverExceptions": false
+  },
+  "Metrics": {
+    "MaxInheritanceDepth": 2,
+    "InheritanceDepthFrameworkPrefixes": ["Microsoft.AspNetCore.", "Microsoft.Extensions."],
+    "ConstructorDependencyIgnoreTypePrefixes": ["ILogger", "IOptions", "IHttpContextAccessor"]
+  },
+  "FileFilters": {
+    "ExcludeFilePatterns": ["*.g.cs", "*.generated.cs"],
+    "ExcludeDirectoryPatterns": ["obj/", "bin/"],
+    "SkipGeneratedCodeAttribute": true
+  },
+  "TestSentinel": {
+    "ExemptWhenInheritsFrom": ["ComponentBase", "LayoutComponentBase"],
+    "ExemptClassNameSuffixes": ["Extensions", "Constants"],
+    "ExemptStaticClasses": true
+  }
 }
 ```
 
@@ -797,14 +939,67 @@ public sealed class ArchitectureTests
 
 ---
 
-## 9. Zukunfts-Roadmap (Ausblick)
+## 9. Integration durch LLM/Agent
+
+Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständig in seinen Arbeits-Loop integrieren kann.
+
+### Workflow für Agenten
+
+1. **Vor einer Änderung:** Kontext aus generierten Artefakten laden
+   ```
+   Docs/codegraph.md          — Abhängigkeitsgraph (auto-generiert)
+   Docs/playbook.md           — Architektur-Status, Top-Verstöße
+   .cursor/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
+   ```
+
+2. **Nach einer Änderung:** Linter ausführen
+   ```powershell
+   AiNetLinter.exe --path . --config rules.json
+   ```
+
+3. **Verstöße interpretieren** (anhand `RuleMetadata.intent`):
+   - `intent: agent-context` — Komplexitäts-/Größenverstoß → direkt beheben
+   - `intent: agent-resilience` — `EnforceNoSilentCatch` → Priorität hoch
+   - `intent: test-coverage` — `StaticTestSentinel` → Test hinzufügen oder Exemption prüfen
+   - `intent: architecture` — Namespace-/Vererbungsverstoß → nur mit Rücksprache beheben
+
+4. **Suppression bei unvermeidbaren Verstößen:**
+   ```csharp
+   // ainetlinter-disable EnforceNoSilentCatch
+   catch (Exception) { }
+   
+   catch (Exception ignored) { }  // Alternative: Variable "ignored" benennen
+   ```
+
+### Zwei-Stufen-Modell
+
+| Profil | Zweck | Wann aktivieren |
+|--------|-------|-----------------|
+| `platform-default` | Produktiv — Agenten beheben Verstöße direkt | Regulärer Entwicklungsbetrieb |
+| `platform-ai-strict` | Zielrichtung — zeigt was sein sollte | Code-Reviews, Architektur-Audits |
+
+### Cursor-Regeln synchronisieren
+
+Nach jeder `rules.json`-Änderung muss `.cursor/rules/AiNetLinter.mdc` neu generiert werden:
+```powershell
+AiNetLinter.exe --path . --config rules.json --sync-cursor-rules
+```
+
+Drift prüfen (Exit 1 bei Abweichungen, nützlich für CI):
+```powershell
+AiNetLinter.exe --path . --config rules.json --sync-cursor-rules --check
+```
+
+---
+
+## 11. Zukunfts-Roadmap (Ausblick)
 
 *   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
 *   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
 
 ---
 
-## 10. Consumer-Setup & Pragmatic Defaults
+## 12. Consumer-Setup & Pragmatic Defaults
 
 ### Consumer-Setup-Checkliste
 
