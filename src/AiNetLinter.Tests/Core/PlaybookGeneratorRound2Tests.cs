@@ -44,7 +44,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source);
-        var content = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
+        var content = await RepoPlaybookGenerator.BuildContentAsync(solution);
 
         Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
         Assert.Contains("Result-Pattern-Nutzung:", content);
@@ -63,8 +63,8 @@ public sealed class PlaybookGeneratorRound2Tests
         var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, verbose: false);
-            var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
+            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
+            var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution);
             var writtenContent = await File.ReadAllTextAsync(tempPath);
             Assert.Equal(generatedContent, writtenContent);
         }
@@ -83,7 +83,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "DriftProj");
-        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
+        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution);
 
         Assert.NotEqual("outdated content", generatedContent);
     }
@@ -101,7 +101,7 @@ public sealed class PlaybookGeneratorRound2Tests
         var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, verbose: false, config: config);
+            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
             var content = File.ReadAllText(tempPath);
             Assert.Contains("Architektur-Slices (nach Ordner)", content);
             Assert.DoesNotContain("Architektur-Slices (aus Namespace)", content);
@@ -126,7 +126,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "MyApp", "MyService.cs");
-        var content = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
+        var content = await RepoPlaybookGenerator.BuildContentAsync(solution);
 
         Assert.Contains("Result-Pattern-Nutzung:** 2", content);
     }
@@ -143,7 +143,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "ExternalProj", "MyService.cs");
-        var content = await RepoPlaybookGenerator.BuildContentAsync(solution, verbose: false);
+        var content = await RepoPlaybookGenerator.BuildContentAsync(solution);
 
         Assert.Contains("Result-Pattern-Nutzung:** 0", content);
     }
@@ -176,10 +176,7 @@ public sealed class PlaybookGeneratorRound2Tests
 
         var content = await RepoPlaybookGenerator.BuildContentAsync(
             solution,
-            verbose: false,
-            config: config,
-            configPath: "rules.json",
-            precomputedViolations: violations);
+            new PlaybookOptions(Config: config, ConfigPath: "rules.json", PrecomputedViolations: violations));
 
         // Verify that the playbook contains the precomputed violation in its Migrations-Status
         Assert.Contains("EnforceSealedClasses", content);
