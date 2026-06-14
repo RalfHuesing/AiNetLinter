@@ -111,6 +111,7 @@ public sealed record GlobalConfig
     public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = Array.Empty<string>();
     public IReadOnlyCollection<string> ImmutabilityExemptBaseTypes { get; init; } = Array.Empty<string>();
     public bool ImmutabilityAllowPrivateBackingFields { get; init; } = false;
+    public bool EnablePerformanceProfiling { get; init; } = true;
 
     /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
@@ -171,6 +172,7 @@ public sealed record GlobalConfig
             ImmutabilityAllowPrivateBackingFields = @override.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
             ResultPatternAllowThrowInNamespaceSuffixes = @override.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
             ResultPatternAllowCatchRethrow = @override.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
+            EnablePerformanceProfiling = @override.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
         };
     }
 }
@@ -458,6 +460,7 @@ public sealed record GlobalConfigOverride
     public bool? ImmutabilityAllowPrivateBackingFields { get; init; }
     public IReadOnlyCollection<string>? ResultPatternAllowThrowInNamespaceSuffixes { get; init; }
     public bool? ResultPatternAllowCatchRethrow { get; init; }
+    public bool? EnablePerformanceProfiling { get; init; }
 }
 
 /// <summary>

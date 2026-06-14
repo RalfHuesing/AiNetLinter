@@ -161,16 +161,25 @@ public static class Program
             return 1;
         }
 
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.Initialize(config.Global.EnablePerformanceProfiling);
         LinterLogger.LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
 
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("WorkspaceLoading");
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("WorkspaceLoading");
 
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
         await GenerateOptionalOutputsAsync(catalog.Solution, args, config);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OptionalOutputs");
 
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
         var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
         try
         {
-            return await ExecuteAuditAsync(args, config, currentCatalog);
+            var exitCode = await ExecuteAuditAsync(args, config, currentCatalog);
+            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath);
+            return exitCode;
         }
         finally
         {
@@ -405,25 +414,33 @@ public static class Program
         string outputRoot,
         LinterConfig config)
     {
-        if (violations.Count == 0)
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OutputWriting");
+        try
         {
-            if (format != "sarif") Console.WriteLine("OK");
-            else SarifWriter.Write(violations, outputRoot, config);
-            return 0;
+            if (violations.Count == 0)
+            {
+                if (format != "sarif") Console.WriteLine("OK");
+                else SarifWriter.Write(violations, outputRoot, config);
+                return 0;
+            }
+
+            var hasError = RuleMetadataRegistry.HasErrorSeverity(violations, config);
+
+            if (format == "sarif")
+            {
+                SarifWriter.Write(violations, outputRoot, config);
+            }
+            else
+            {
+                Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot, config));
+            }
+
+            return hasError ? 1 : 0;
         }
-
-        var hasError = RuleMetadataRegistry.HasErrorSeverity(violations, config);
-
-        if (format == "sarif")
+        finally
         {
-            SarifWriter.Write(violations, outputRoot, config);
+            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OutputWriting");
         }
-        else
-        {
-            Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot, config));
-        }
-
-        return hasError ? 1 : 0;
     }
 
     private static async Task<int> RunImpactAnalysisAsync(LinterArgs args)

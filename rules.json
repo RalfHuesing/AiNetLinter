@@ -23,6 +23,7 @@
       "Program"
     ],
     "ResultPatternAllowCatchRethrow": true,
+    "EnablePerformanceProfiling": true,
     "EnforceNoVariableShadowing": false,
     "EnforceReadonlyParameters": false,
     "EnforceReadonlyFields": false,
