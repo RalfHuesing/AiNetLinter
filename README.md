@@ -121,6 +121,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
 *   **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
 *   **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
+*   **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 
 
 ---
@@ -246,6 +247,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `RequireExplicitTruncationHandling` | Global | Erzwingt unmittelbare Validierung (Länge/EOF-Check) nach I/O- und Stream-Leseoperationen. |
 | `EnforceNamespaceDirectoryMapping` | Global | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen. |
 | `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
+| `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `true`). |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500), um "Lost in the Middle"-Effekte zu verhindern. |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
@@ -1026,3 +1028,29 @@ Bei größeren Migrations-Szenarien sollten viele Regeln schrittweise eingeführ
 | `EnforceNamespaceDirectoryMapping` | **off** | **on** | Bei Feature-Foldern oder älteren Namespace-Strukturen deaktivieren. |
 | `EnforceResultPatternOverExceptions` | **off** | **on** | Deaktivieren, falls im Altsystem noch weitreichend Exceptions geweworfen werden (z. B. zur Validierung). |
 | `MaxCyclomaticComplexity` | **8** | **5** | Ein pragmatischerer Wert (8) verhindert übermäßiges Aufsplittern bei komplexen Altrechner-Methoden. |
+
+---
+
+## 13. Performance-Profiling & Zeitmessung
+
+Um Performance-Flaschenhälse in großen C#-Solutions gezielt zu analysieren, besitzt `AiNetLinter` ein integriertes Profiling-System.
+
+### Funktionsweise
+
+Wenn das Profiling aktiv ist, misst der Linter automatisch die Ausführungszeit der verschiedenen Verarbeitungsphasen und schreibt detaillierte Reports in den `measurements/`-Ordner direkt neben der ausführbaren Datei:
+
+```
+[Ausführungsverzeichnis]/measurements/[ProjektName]/[yyyy-MM-dd]/[ProjektName]-[Zeitstempel]-[UUID]/
+  ├── performance.log   <-- Gut lesbarer Textbericht mit Phasenanalyse und den Top-20 langsamsten Dateien
+  └── performance.json  <-- Strukturierte JSON-Datei für automatische Auswertungen
+```
+
+### Konfiguration
+
+Das Feature ist standardmäßig aktiviert und kann über die Konfigurationsdatei `rules.json` deaktiviert werden:
+
+```json
+"Global": {
+  "EnablePerformanceProfiling": false
+}
+```

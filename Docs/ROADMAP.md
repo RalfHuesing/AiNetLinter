@@ -190,6 +190,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution zur optimalen Core-Auslastung.
 - [x] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
 - [x] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
+- [x] **Performance-Profiling & Zeitmessung:** Integriertes Profiling-System zur Erfassung der Ausführungszeiten von Linter-Phasen und Generierung von performance.log & performance.json unter `measurements/` zur Analyse von Flaschenhälsen.
 
 ---
 
