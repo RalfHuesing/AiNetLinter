@@ -166,6 +166,13 @@ public sealed record MetricsConfig
         = Array.Empty<string>();
 
     /// <summary>
+    /// Typ-Name-Präfixe von Framework-/Cross-Cutting-Abhängigkeiten, die nicht
+    /// zu MaxConstructorDependencies zählen.
+    /// </summary>
+    public IReadOnlyCollection<string> ConstructorDependencyIgnoreTypePrefixes { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
     /// </summary>
     public int MaxAIContextFootprint { get; init; } = 5000;
@@ -206,6 +213,7 @@ public sealed record MetricsConfig
             MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
             MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
             InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
+            ConstructorDependencyIgnoreTypePrefixes = @override?.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
             ComplexityNearMissTolerance = @override?.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
             ExcludeSwitchDispatcherCases = @override?.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
             SwitchDispatcherMaxCaseBodyLines = @override?.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
@@ -441,6 +449,12 @@ public sealed record MetricsConfigOverride
     /// Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden.
     /// </summary>
     public IReadOnlyCollection<string>? InheritanceDepthFrameworkPrefixes { get; init; }
+
+    /// <summary>
+    /// Typ-Name-Präfixe von Framework-/Cross-Cutting-Abhängigkeiten, die nicht
+    /// zu MaxConstructorDependencies zählen.
+    /// </summary>
+    public IReadOnlyCollection<string>? ConstructorDependencyIgnoreTypePrefixes { get; init; }
 
     public int? ComplexityNearMissTolerance { get; init; }
     public bool? ExcludeSwitchDispatcherCases { get; init; }

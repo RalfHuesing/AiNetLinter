@@ -38,6 +38,7 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: `Base`, `Foundation`, `Host`.
 - **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).
 - **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.
+- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: `ILogger`, `IOptions`, `IOptionsSnapshot`, `IOptionsMonitor`, `IHostEnvironment`, `IWebHostEnvironment`, `IConfiguration`, `IServiceProvider`, `IHttpContextAccessor`.
 
 ## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)
 

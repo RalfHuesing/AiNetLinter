@@ -116,7 +116,19 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node)
     {
         if (node.ParameterList == null) return;
-        var count = node.ParameterList.Parameters.Count;
+
+        var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
+        int count;
+
+        if (ignorePrefixes == null || ignorePrefixes.Count == 0)
+        {
+            count = node.ParameterList.Parameters.Count;
+        }
+        else
+        {
+            count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ignorePrefixes);
+        }
+
         if (count > _config.Metrics.MaxConstructorDependencies)
         {
             _violations.Add(new RuleViolation
@@ -124,7 +136,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = "MaxConstructorDependencies",
-                Details = $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}).",
+                Details = $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
                 Guidance = "Reduziere die Anzahl der Abhaengigkeiten, indem du den Typ in kleinere Klassen aufteilst."
             });
         }
@@ -132,7 +144,18 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private void CheckConstructorDependencies(ConstructorDeclarationSyntax node)
     {
-        var count = node.ParameterList.Parameters.Count;
+        var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
+        int count;
+
+        if (ignorePrefixes == null || ignorePrefixes.Count == 0)
+        {
+            count = node.ParameterList.Parameters.Count;
+        }
+        else
+        {
+            count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ignorePrefixes);
+        }
+
         if (count > _config.Metrics.MaxConstructorDependencies)
         {
             _violations.Add(new RuleViolation
@@ -140,10 +163,56 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = "MaxConstructorDependencies",
-                Details = $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}).",
+                Details = $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
                 Guidance = "Reduziere die Anzahl der Abhaengigkeiten (Constructor Injection), indem du die Klasse in kleinere Services aufteilst."
             });
         }
+    }
+
+    private int CountNonFrameworkDependencies(
+        SeparatedSyntaxList<ParameterSyntax> parameters,
+        IReadOnlyCollection<string> ignorePrefixes)
+    {
+        int count = 0;
+        foreach (var param in parameters)
+        {
+            if (!IsFrameworkDependency(param, ignorePrefixes))
+                count++;
+        }
+        return count;
+    }
+
+    private bool IsFrameworkDependency(
+        ParameterSyntax param,
+        IReadOnlyCollection<string> ignorePrefixes)
+    {
+        if (param.Type == null) return false;
+
+        var typeName = GetSimpleTypeName(param.Type);
+        if (typeName == null) return false;
+
+        foreach (var prefix in ignorePrefixes)
+        {
+            if (typeName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static string? GetSimpleTypeName(TypeSyntax type)
+    {
+        if (type is NullableTypeSyntax nullable)
+        {
+            type = nullable.ElementType;
+        }
+
+        return type switch
+        {
+            IdentifierNameSyntax id => id.Identifier.Text,
+            GenericNameSyntax generic => generic.Identifier.Text,
+            QualifiedNameSyntax q => q.Right.Identifier.Text,
+            _ => null
+        };
     }
 
     private void CheckParameterReassignment(ExpressionSyntax expression)
