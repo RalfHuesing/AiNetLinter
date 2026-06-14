@@ -178,6 +178,11 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
+    "InheritanceDepthFrameworkPrefixes": [
+      "System.",
+      "Microsoft.UI.",
+      "System.Windows."
+    ],
     "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
     "MaxMethodOverloads": 3,
@@ -238,6 +243,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
 | `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |
+| `InheritanceDepthFrameworkPrefixes` | Metrics | Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden (z. B. `["System.", "System.Windows."]`). |
 | `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
 | `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
@@ -268,6 +274,25 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 ### AI-Context-Footprint (Metrik)
 
 Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst plus aller transitiv im Quellcode referenzierten eigenen Klassen/Typen. Steigt diese Metrik über den konfigurierten Schwellenwert (`MaxAIContextFootprint`, standardmäßig `5000` Zeilen), wird ein Regelverstoß gemeldet. Dies hilft Entwicklern, hohe Kopplung zu vermeiden und die Token-Belastung für KIs gering zu halten.
+
+### Framework-Typen bei Vererbungstiefe ausschließen
+
+Die Regel `MaxInheritanceDepth` zählt standardmäßig alle Basisklassen bis zu `System.Object`. Bei UI-Frameworks wie WPF oder Blazor führt dies oft zu False-Positives, da Basisklassen wie `Window` oder `ComponentBase` bereits eine hohe Vererbungstiefe besitzen.
+
+Mit `InheritanceDepthFrameworkPrefixes` können Namespace-Präfixe definiert werden, deren Typen beim Zählen der Vererbungstiefe ignoriert werden. Die Tiefe der eigenen Klassen-Hierarchie wird weiterhin korrekt ermittelt.
+
+Empfohlene Konfiguration für WPF- und Blazor-Projekte:
+```json
+"Metrics": {
+  "MaxInheritanceDepth": 2,
+  "InheritanceDepthFrameworkPrefixes": [
+    "System.",
+    "Microsoft.UI.",
+    "System.Windows.",
+    "Microsoft.AspNetCore.Components."
+  ]
+}
+```
 
 ---
 

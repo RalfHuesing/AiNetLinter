@@ -41,7 +41,8 @@
     "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
-    "MaxAIContextFootprint": 5000
+    "MaxAIContextFootprint": 5000,
+    "InheritanceDepthFrameworkPrefixes": []
   },
   "TestSentinel": {
     "ClassNamePatterns": [

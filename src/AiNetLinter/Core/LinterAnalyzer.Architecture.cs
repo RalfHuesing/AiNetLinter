@@ -372,17 +372,40 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return typeInfo.Type?.TypeKind == TypeKind.Dynamic;
     }
 
-    private static int GetInheritanceDepth(INamedTypeSymbol symbol)
+    private int GetInheritanceDepth(INamedTypeSymbol symbol)
     {
         int depth = 0;
         var current = symbol.BaseType;
         while (current != null && current.SpecialType != SpecialType.System_Object)
         {
-            depth++;
+            if (!IsFrameworkBaseType(current))
+            {
+                depth++;
+            }
             if (depth > 20) return depth;
             current = current.BaseType;
         }
 
         return depth;
+    }
+
+    private bool IsFrameworkBaseType(INamedTypeSymbol symbol)
+    {
+        var prefixes = _config.Metrics.InheritanceDepthFrameworkPrefixes;
+        if (prefixes == null || prefixes.Count == 0) return false;
+
+        var ns = symbol.ContainingNamespace?.ToDisplayString();
+        if (string.IsNullOrEmpty(ns)) return false;
+
+        foreach (var prefix in prefixes)
+        {
+            var normalizedPrefix = prefix.EndsWith('.') ? prefix.Substring(0, prefix.Length - 1) : prefix;
+            if (ns.Equals(normalizedPrefix, StringComparison.OrdinalIgnoreCase) ||
+                ns.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

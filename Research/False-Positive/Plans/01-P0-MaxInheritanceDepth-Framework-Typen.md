@@ -1,4 +1,4 @@
-# Plan 01 — P0: MaxInheritanceDepth — Framework-Typen aus Tiefenzählung ausschließen
+# [x] Plan 01 — P0: MaxInheritanceDepth — Framework-Typen aus Tiefenzählung ausschließen (Erledigt)
 
 **Priorität:** P0 — Kritisch  
 **Regeln:** [`.cursor/rules/AiNetLinter.mdc`](../../../.cursor/rules/AiNetLinter.mdc), [`.cursor/rules/AiNetLinterRichtlinien.mdc`](../../../.cursor/rules/AiNetLinterRichtlinien.mdc)

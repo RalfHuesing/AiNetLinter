@@ -16,7 +16,7 @@ Regeln: [`.cursor/rules/AiNetLinter.mdc`](../../../.cursor/rules/AiNetLinter.mdc
 
 | Plan | Prio | Betroffene Regel(n) | Hauptänderung |
 |------|------|---------------------|---------------|
-| [01](01-P0-MaxInheritanceDepth-Framework-Typen.md) | **P0** | `MaxInheritanceDepth` | `InheritanceDepthFrameworkPrefixes` in MetricsConfig; `GetInheritanceDepth()` anpassen |
+| [01 (Erledigt)](01-P0-MaxInheritanceDepth-Framework-Typen.md) | **P0** | `MaxInheritanceDepth` | `InheritanceDepthFrameworkPrefixes` in MetricsConfig; `GetInheritanceDepth()` anpassen |
 | [02](02-P0-EnforceNoMagicValues-Profile.md) | **P0** | `EnforceNoMagicValues` | Neues `MagicValuesConfig`-Record; Mode + IgnorePatterns + IgnoreInvocationPrefixes |
 | [03](03-P1-EnforceSealedClasses-Partial-WPF.md) | **P1** | `EnforceSealedClasses` | `SealedClassExemptSuffixes` in GlobalConfig; `ShouldSkipSealedCheck()` |
 | [04](04-P1-EnforceNoSilentCatch-IsSwallowed-Fix.md) | **P1** | `EnforceNoSilentCatch` / `AllowCancellationShutdownCatch` | `IsSwallowed()` + `IsAllowedCancellationCatch()` Bug-Fix |
