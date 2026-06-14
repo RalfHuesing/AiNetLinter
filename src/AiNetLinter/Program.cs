@@ -86,6 +86,7 @@ public static class Program
             ImpactRef = parsed.Impact.ImpactRef,
             SyncCursorRules = parsed.SyncCursorRules,
             Check = parsed.Check,
+            NoCache = parsed.NoCache,
             Footprint = parsed.Footprint,
             Readme = parsed.Readme,
         };
@@ -180,7 +181,7 @@ public static class Program
             AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
             try
             {
-                var exitCode = await ExecuteAuditAsync(args, config, currentCatalog);
+                var exitCode = await AuditWithBaselineAsync(args, config, currentCatalog);
                 AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath, args.ConfigPath);
                 return exitCode;
             }
@@ -298,16 +299,6 @@ public static class Program
         }
 
         return (catalog, false);
-    }
-
-    private static async Task<int> ExecuteAuditAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
-    {
-        if (args.BaselinePath != null)
-        {
-            return await AuditWithBaselineAsync(args, config, catalog);
-        }
-
-        return await AuditWithoutBaselineAsync(args, config, catalog);
     }
 
     private static async Task TryGenerateCodegraphAsync(Solution solution, string graphPath, bool verbose)
@@ -442,21 +433,6 @@ public static class Program
         }
 
         var scoped = ApplyScopeFilters(filtered, args, outputRoot, comparison.ChangedFiles);
-        return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
-    }
-
-    private static async Task<int> AuditWithoutBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
-    {
-        string? rulesJsonContent = null;
-        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
-        {
-            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
-        }
-
-        var engine = new LinterEngine(config, rulesJsonContent);
-        var violations = await engine.RunAsync(catalog, args.NoCache);
-        var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
         return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
     }
 

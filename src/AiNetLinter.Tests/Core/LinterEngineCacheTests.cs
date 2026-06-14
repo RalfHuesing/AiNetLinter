@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
@@ -33,8 +34,7 @@ public sealed class LinterEngineCacheTests : IDisposable
             {
                 Directory.Delete(_tempDir, true);
             }
-            
-            // Clean up cache folder created in test bin
+
             var cacheDir = Path.Combine(_exeDir, "cache");
             if (Directory.Exists(cacheDir))
             {
@@ -117,47 +117,45 @@ public class MyUnsealedClass
 {
     public void Run() {}
 }";
-        var solution = await CreateSolutionWithFileOnDiskAsync("MyUnsealedClass.cs", source);
+        var fileName = "MyUnsealedClass.cs";
+        var solution = await CreateSolutionWithFileOnDiskAsync(fileName, source);
         var config = CreateDefaultConfig();
-        var rulesJson = "{ \"Global\": { \"EnforceSealedClasses\": true } }";
+        // _tempDir contains a unique GUID → unique cache-file name per test run.
+        // Without this, stale cache from a failed Dispose causes flakiness on re-runs.
+        var rulesJson = $"{{ \"Global\": {{ \"EnforceSealedClasses\": true }}, \"_testRun\": \"{_tempDir.Replace("\\", "\\\\")}\" }}";
 
-        // 2. Run engine first time
+        // 2. Run engine first time — cache miss → fresh analysis
         var engine = new LinterEngine(config, rulesJson);
         var violations1 = await engine.RunAsync(solution);
 
         Assert.Single(violations1);
         Assert.Equal("EnforceSealedClasses", violations1.First().RuleName);
 
-        // 3. Verify that cache file was created
-        var cacheDir = Path.Combine(_exeDir, "cache");
-        Assert.True(Directory.Exists(cacheDir));
-        var cacheFiles = Directory.GetFiles(cacheDir, "*.json");
-        Assert.Single(cacheFiles);
-        var cacheFilePath = cacheFiles[0];
-
-        // 4. Manually modify cache file to inject a fake violation
-        var cacheContent = await File.ReadAllTextAsync(cacheFilePath);
-        var cacheFileObj = System.Text.Json.JsonSerializer.Deserialize<AnalysisCacheFile>(cacheContent)!;
-        var relativePath = "MyUnsealedClass.cs";
-        var entry = cacheFileObj.Files[relativePath];
-        var modifiedEntry = entry with
+        // 3. Inject a fake violation directly via AnalysisCacheManager (avoids fragile file enumeration).
+        //    The engine uses solutionPath = solution.Workspace.GetType().Name = "AdhocWorkspace"
+        //    since solution.FilePath is null for in-memory solutions.
+        var filePath = Path.Combine(_tempDir, fileName);
+        var checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
+        var cacheManager = AnalysisCacheManager.Load(_exeDir, "AdhocWorkspace", rulesJson);
+        var fakeEntry = new AnalysisCacheEntry
         {
+            RelativePath = fileName,
+            Checksum = checksum,
             Violations = new[]
             {
                 new RuleViolationDto("fake_path.cs", 999, "FakeCacheRule", "Fake details", "Fake guidance")
             }
         };
-        cacheFileObj.Files[relativePath] = modifiedEntry;
-        var modifiedJson = System.Text.Json.JsonSerializer.Serialize(cacheFileObj);
-        await File.WriteAllTextAsync(cacheFilePath, modifiedJson);
+        cacheManager.Set(fileName, fakeEntry);
+        cacheManager.SaveIfDirty();
 
-        // 5. Run engine second time -> should hit cache and return fake violation
+        // 4. Run engine second time → should hit cache and return fake violation
         var violations2 = await engine.RunAsync(solution);
         Assert.Single(violations2);
         Assert.Equal("FakeCacheRule", violations2.First().RuleName);
         Assert.Equal(999, violations2.First().LineNumber);
 
-        // 6. Run engine with noCache = true -> should ignore cache and return original unsealed class violation
+        // 5. Run engine with noCache = true → should ignore cache and return the real violation
         var violations3 = await engine.RunAsync(solution, noCache: true);
         Assert.Single(violations3);
         Assert.Equal("EnforceSealedClasses", violations3.First().RuleName);
