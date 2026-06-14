@@ -50,12 +50,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
         var typeInfo = _semanticModel.GetTypeInfo(node.Declaration.Type);
         var typeName = typeInfo.Type?.ToDisplayString();
-        if (IsCancellationExceptionName(typeName) || IsCancellationExceptionName(node.Declaration.Type.ToString()))
-        {
-            return node.Filter != null;
-        }
 
-        return false;
+        return IsCancellationExceptionName(typeName)
+            || IsCancellationExceptionName(node.Declaration.Type.ToString());
     }
 
     private static bool IsCancellationExceptionName(string? name)
@@ -71,8 +68,22 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (node.Block.Statements.Count == 0) return true;
 
         var hasThrow = node.Block.DescendantNodes().OfType<ThrowStatementSyntax>().Any();
+        if (hasThrow) return false;
+
         var hasInvoke = node.Block.DescendantNodes().OfType<InvocationExpressionSyntax>().Any();
-        return !hasThrow && !hasInvoke;
+        if (hasInvoke) return false;
+
+        var hasReturn = node.Block.DescendantNodes()
+            .OfType<ReturnStatementSyntax>()
+            .Any(r => GetEnclosingContainer(r) == GetEnclosingContainer(node));
+        if (hasReturn) return false;
+
+        var hasAssignment = node.Block.DescendantNodes()
+            .OfType<AssignmentExpressionSyntax>()
+            .Any(a => GetEnclosingContainer(a) == GetEnclosingContainer(node));
+        if (hasAssignment) return false;
+
+        return true;
     }
 
     private static bool IsExplicitlyIgnored(CatchClauseSyntax node)

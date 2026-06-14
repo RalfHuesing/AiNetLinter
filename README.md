@@ -219,7 +219,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
 | `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
 | `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`-Methoden (Standard: `true`, idiomatisches C#). |
-| `AllowCancellationShutdownCatch` | Global | Erlaubt leere `catch (OperationCanceledException) when (...)` bei Host-Shutdown. |
+| `AllowCancellationShutdownCatch` | Global | Erlaubt stummes Abfangen von Cancellation-Exceptions (wie `OperationCanceledException` oder `TaskCanceledException`) bei Host-Shutdown (ohne Pflicht eines `when`-Filters). |
 | `EnforceMinimalApiAsParameters` | Global | Prüft Minimal-API-Endpunkte auf fehlendes `[AsParameters]` bei >4 Parametern (opt-in). |
 | `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
 | `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
@@ -227,7 +227,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Typ-Deklarationen (Klassen/Interfaces) (Standard: `false`). |
 | `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
-| `EnforceNoSilentCatch` | Global | Verbietet leere `catch`-Blöcke oder solche, die Fehler verschlucken ohne re-throw oder Logging. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), werden ignoriert. |
+| `EnforceNoSilentCatch` | Global | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung. |
 | `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
 | `EnforceNoVariableShadowing` | Global | Verbietet das Verdecken von Feldern, Eigenschaften und äußeren Parametern durch lokale Variablen und Parameter. |
 | `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). |
