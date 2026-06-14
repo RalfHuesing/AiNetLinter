@@ -19,6 +19,8 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
   *Bedeutung:* Zu viele Konstruktorabhaengigkeiten (max. 20).
 - **StaticTestSentinel:** 2 mal deaktiviert.
   *Bedeutung:* Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.
+- **EnforceNoSilentCatch:** 1 mal deaktiviert.
+  *Bedeutung:* Exceptions duerfen nicht stumm abgefangen werden (Ausnahme: Variable heisst 'ignored' oder 'expected').
 - **EnforceExplicitStateImmutability:** 1 mal deaktiviert.
   *Bedeutung:* Regel 'EnforceExplicitStateImmutability'.
 

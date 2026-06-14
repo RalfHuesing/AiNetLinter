@@ -11,7 +11,7 @@ internal static class CliCommandBuilder
     // Diese Records dienen als Behaelter fuer CLI-Optionen und haben keine logischen Abhaengigkeiten.
     internal sealed record Options(
         Option<string?> Config,
-        Option<string> Path,
+        Option<string?> Path,
         Option<string?> Graph,
         Option<string?> Playbook,
         Option<string> Format,
@@ -28,7 +28,8 @@ internal static class CliCommandBuilder
         Option<string?> Impact,
         Option<bool> SyncCursorRules,
         Option<bool> Check,
-        Option<string?> Footprint);
+        Option<string?> Footprint,
+        Option<bool> Readme);
 
     internal sealed record OutputOptions(
         string? GraphPath,
@@ -67,7 +68,8 @@ internal static class CliCommandBuilder
         ImpactOptions Impact,
         bool SyncCursorRules,
         bool Check,
-        string? Footprint);
+        string? Footprint,
+        bool Readme);
 
     internal static (RootCommand Root, Options Options) Build()
     {
@@ -78,6 +80,7 @@ internal static class CliCommandBuilder
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
             options.Fix, options.Impact, options.SyncCursorRules, options.Check, options.Footprint,
+            options.Readme,
         };
 
         return (root, options);
@@ -104,7 +107,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateImpactOption(),
             CliOptionFactory.CreateSyncCursorRulesOption(),
             CliOptionFactory.CreateCheckOption(),
-            CliOptionFactory.CreateFootprintOption());
+            CliOptionFactory.CreateFootprintOption(),
+            CliOptionFactory.CreateReadmeOption());
     }
 
     internal static ParsedArgs Parse(ParseResult parseResult, Options options)
@@ -134,6 +138,7 @@ internal static class CliCommandBuilder
                 ImpactRef: parseResult.GetValue(options.Impact)),
             SyncCursorRules: parseResult.GetValue(options.SyncCursorRules),
             Check: parseResult.GetValue(options.Check),
-            Footprint: parseResult.GetValue(options.Footprint));
+            Footprint: parseResult.GetValue(options.Footprint),
+            Readme: parseResult.GetValue(options.Readme));
     }
 }

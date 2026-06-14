@@ -46,7 +46,7 @@ public static class Program
             try
             {
                 var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
-                if (linterArgs.Format != "sarif")
+                if (!linterArgs.Readme && linterArgs.Format != "sarif")
                 {
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
@@ -87,11 +87,17 @@ public static class Program
             SyncCursorRules = parsed.SyncCursorRules,
             Check = parsed.Check,
             Footprint = parsed.Footprint,
+            Readme = parsed.Readme,
         };
     }
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args)
     {
+        if (args.Readme)
+        {
+            return RunPrintReadme();
+        }
+
         var validationError = ValidateArgs(args);
         if (validationError.HasValue)
         {
@@ -474,6 +480,20 @@ public static class Program
             Console.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
             return 0;
         }
+    }
+
+    private static int RunPrintReadme()
+    {
+        using var stream = typeof(Program).Assembly.GetManifestResourceStream("README.md");
+        if (stream == null)
+        {
+            Console.Error.WriteLine("[ERROR]: Die README.md wurde nicht als eingebettete Ressource gefunden.");
+            return 1;
+        }
+
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        Console.WriteLine(reader.ReadToEnd());
+        return 0;
     }
 
     private static string ResolveBaseDirectory(string targetPath)
