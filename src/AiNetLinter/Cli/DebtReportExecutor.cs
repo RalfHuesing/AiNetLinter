@@ -28,8 +28,13 @@ public static class DebtReportExecutor
             config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
             if (config != null)
             {
-                var engine = new LinterEngine(config);
-                violations = await engine.RunAsync(args.TargetPath);
+                string? rulesJsonContent = null;
+                if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
+                {
+                    rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
+                }
+                var engine = new LinterEngine(config, rulesJsonContent);
+                violations = await engine.RunAsync(args.TargetPath, args.NoCache);
             }
         }
 

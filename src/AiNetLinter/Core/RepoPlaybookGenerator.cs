@@ -121,13 +121,13 @@ public sealed class RepoPlaybookGenerator
     /// <returns>Der generierte Markdown-Inhalt.</returns>
     public static async Task<string> BuildContentAsync(Solution solution, bool verbose, LinterConfig? config = null, string configPath = "rules.json")
     {
-        var stats = await ScanSolutionAsync(solution, config);
+        var stats = await ScanSolutionAsync(solution, config, configPath);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
         var version = typeof(RepoPlaybookGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         return BuildContent(stats, solutionDir, config, configPath, version);
     }
 
-    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config)
+    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, LinterConfig? config, string configPath)
     {
         int totalResultMethods = 0;
         int totalThrows = 0;
@@ -155,7 +155,12 @@ public sealed class RepoPlaybookGenerator
         List<RuleViolation> violations = new();
         if (config != null)
         {
-            var engine = new LinterEngine(config);
+            string? rulesJsonContent = null;
+            if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
+            {
+                rulesJsonContent = File.ReadAllText(configPath, Encoding.UTF8);
+            }
+            var engine = new LinterEngine(config, rulesJsonContent);
             var results = await engine.RunAsync(solution);
             violations.AddRange(results);
         }

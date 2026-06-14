@@ -124,4 +124,9 @@ internal static class CliOptionFactory
             Description = $"Gibt die integrierte README.md fuer KI-Agenten aus (Kontext-Footprint: ca. {byteCount} Bytes / ~{byteCount / 4} Tokens).",
         };
     }
+
+    internal static Option<bool> CreateNoCacheOption() => new("--no-cache")
+    {
+        Description = "Cache deaktivieren — erzwingt vollständige Neu-Analyse aller Dateien.",
+    };
 }

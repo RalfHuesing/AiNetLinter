@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.27 aus `rules.json`.
+Auto-generiert durch AiNetLinter 1.0.27 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -15,7 +15,7 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
 Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
-- **MaxConstructorDependencies:** 3 mal deaktiviert.
+- **MaxConstructorDependencies:** 4 mal deaktiviert.
   *Bedeutung:* Zu viele Konstruktorabhaengigkeiten (max. 20).
 - **StaticTestSentinel:** 2 mal deaktiviert.
   *Bedeutung:* Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.
@@ -26,15 +26,15 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 116 / 130 (89 %)
+- **Wave-ready Dateien:** 123 / 137 (90 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 78 files, median Footprint 86 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 51 files, median Footprint 103 LOC, 8× disable-all
+- **src/AiNetLinter/**: 82 files, median Footprint 85 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 54 files, median Footprint 115 LOC, 8× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

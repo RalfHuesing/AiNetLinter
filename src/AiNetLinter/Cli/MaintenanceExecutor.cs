@@ -29,8 +29,13 @@ public static class MaintenanceExecutor
 
         LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath);
 
-        var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(args.TargetPath);
+        string? rulesJsonContent = null;
+        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
+        {
+            rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
+        }
+        var engine = new LinterEngine(config, rulesJsonContent);
+        var violations = await engine.RunAsync(args.TargetPath, args.NoCache);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var violatingPaths = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, outputRoot);
         var result = DisableAllCommentInjector.InjectIntoFiles(violatingPaths);
