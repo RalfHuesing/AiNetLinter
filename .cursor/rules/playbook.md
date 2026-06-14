@@ -33,7 +33,7 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 82 files, median Footprint 85 LOC, 6× disable-all
+- **src/AiNetLinter/**: 82 files, median Footprint 86 LOC, 6× disable-all
 - **src/AiNetLinter.Tests/**: 54 files, median Footprint 115 LOC, 8× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 

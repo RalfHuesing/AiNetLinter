@@ -210,9 +210,10 @@ public sealed class LinterEngine
 
         bool isTestFile = isTestProj || IsTestFile(filePath);
 
+        string? checksum = null;
         if (cache != null && File.Exists(filePath))
         {
-            var checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
+            checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
             if (cache.TryGet(relativePath, checksum, out var cached) && cached != null)
             {
                 CacheEntryMapper.RestoreToState(cached, state, isTestFile);
@@ -235,9 +236,8 @@ public sealed class LinterEngine
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 
-        if (cache != null && File.Exists(filePath))
+        if (cache != null && checksum != null)
         {
-            var checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
             var testSignals = BuildTestSignals(analyzer, semanticModel, effectiveConfig, isTestFile);
             var partialParts = analyzer.PartialClassParts;
             var entry = CacheEntryMapper.BuildEntry(relativePath, checksum, analyzer, partialParts, testSignals);
@@ -280,13 +280,6 @@ public sealed class LinterEngine
             ReferencedTypeNames = localIndex.ReferencedTypeNames.ToArray(),
             CoversComments = localIndex.CoversComments.ToArray()
         };
-    }
-
-    private void AnalyzeAndCollect(DocumentContext context, AnalysisState state)
-    {
-        var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);
-        analyzer.RunAnalysis();
-        CollectAnalyzerResults(analyzer, context, state);
     }
 
     private void CollectAnalyzerResults(
