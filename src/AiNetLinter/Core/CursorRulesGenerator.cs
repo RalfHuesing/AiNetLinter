@@ -283,6 +283,11 @@ public static class CursorRulesGenerator
         {
             sb.AppendLine("- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.");
         }
+        if (config.Metrics.ConstructorDependencyIgnoreTypePrefixes != null && config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Count > 0)
+        {
+            var prefixesStr = string.Join(", ", config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Select(p => $"`{p}`"));
+            sb.AppendLine($"- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: {prefixesStr}.");
+        }
         sb.AppendLine();
 
         sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");

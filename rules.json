@@ -56,7 +56,18 @@
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
     "SwitchDispatcherMaxCaseBodyLines": 3,
-    "InheritanceDepthFrameworkPrefixes": []
+    "InheritanceDepthFrameworkPrefixes": [],
+    "ConstructorDependencyIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IOptionsSnapshot",
+      "IOptionsMonitor",
+      "IHostEnvironment",
+      "IWebHostEnvironment",
+      "IConfiguration",
+      "IServiceProvider",
+      "IHttpContextAccessor"
+    ]
   },
   "TestSentinel": {
     "ClassNamePatterns": [

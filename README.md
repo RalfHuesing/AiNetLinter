@@ -252,6 +252,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
 | `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
 | `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). |
+| `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
 | `TestSentinel` | Config | Flexible Testabdeckung: Klassenname-Patterns, `typeof`-Referenz, `// @covers`-Kommentar. |
@@ -383,6 +384,30 @@ Empfohlene Konfiguration für WPF- und Blazor-Projekte:
     "Microsoft.UI.",
     "System.Windows.",
     "Microsoft.AspNetCore.Components."
+  ]
+}
+```
+
+### Framework-Typen bei Konstruktor-Abhängigkeiten ausschließen
+
+Die Regel `MaxConstructorDependencies` begrenzt standardmäßig die Anzahl der Parameter in Konstruktoren und Primärkonstruktoren (Standard: 5). Cross-Cutting-Concerns wie `ILogger<T>`, `IOptions<T>`, `IHostEnvironment` oder `IConfiguration` zählen hierbei mit, obwohl sie keine fachlichen Abhängigkeiten darstellen.
+
+Mit `ConstructorDependencyIgnoreTypePrefixes` können Typ-Name-Präfixe definiert werden, die beim Zählen der Konstruktor-Abhängigkeiten ignoriert werden. Dies erlaubt es, fachliche Abhängigkeiten sauber von Infrastruktur-Abhängigkeiten zu trennen. Auch die Primärkonstruktor-Syntax (.NET 8+) wird vollständig unterstützt.
+
+Empfohlene Konfiguration:
+```json
+"Metrics": {
+  "MaxConstructorDependencies": 5,
+  "ConstructorDependencyIgnoreTypePrefixes": [
+    "ILogger",
+    "IOptions",
+    "IOptionsSnapshot",
+    "IOptionsMonitor",
+    "IHostEnvironment",
+    "IWebHostEnvironment",
+    "IConfiguration",
+    "IServiceProvider",
+    "IHttpContextAccessor"
   ]
 }
 ```
