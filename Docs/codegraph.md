@@ -1,5 +1,5 @@
 ﻿# Codegraph (auto-generated)
-Produktionscode · 113 Typen · 10 Namespaces
+Produktionscode · 117 Typen · 11 Namespaces
 
 ## AiNetLinter (1)
 - Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
@@ -81,6 +81,12 @@ Produktionscode · 113 Typen · 10 Namespaces
 - TestProjectDetector
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
 - TypeInfo [record] → TypeInfo
+
+## AiNetLinter.Diagnostics (4)
+- DocumentPerformanceEntry [record] → DocumentPerformanceEntry
+- PerformanceProfiler → PerformanceProfiler
+- ProfilerJsonReport [record] → ProfilerJsonReport, ProfilerSummary
+- ProfilerSummary [record] → ProfilerSummary
 
 ## AiNetLinter.Metrics (7)
 - AIContextFootprintCalculator

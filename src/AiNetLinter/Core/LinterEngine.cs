@@ -66,9 +66,14 @@ public sealed class LinterEngine
     private async Task<IReadOnlyCollection<RuleViolation>> RunInternalAsync(Solution solution, SourceFileCatalog? catalog)
     {
         var state = CreateAnalysisState(solution);
+        
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("DocumentAnalysis");
         await AnalyzeSolutionAsync(state, catalog);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("DocumentAnalysis");
 
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("PostAnalysis");
         PostAnalysisChecks.Run(state, _config);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("PostAnalysis");
 
         return state.Violations.ToArray();
     }
@@ -178,6 +183,8 @@ public sealed class LinterEngine
             return;
         }
 
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         var semanticModel = await document.GetSemanticModelAsync();
         if (semanticModel == null) return;
 
@@ -189,7 +196,16 @@ public sealed class LinterEngine
         var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config);
         var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
 
-        AnalyzeAndCollect(context, state);
+        var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);
+        analyzer.RunAnalysis();
+        CollectAnalyzerResults(analyzer, context, state);
+
+        stopwatch.Stop();
+        var solutionDir = !string.IsNullOrEmpty(state.Solution.FilePath) ? Path.GetDirectoryName(state.Solution.FilePath) ?? "" : "";
+        var relativePath = !string.IsNullOrEmpty(solutionDir)
+            ? AiNetLinter.Output.PathNormalizer.ToRelative(solutionDir, filePath)
+            : Path.GetFileName(filePath);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordDocumentAnalysis(relativePath, stopwatch.Elapsed.TotalMilliseconds, analyzer.Violations.Count);
     }
 
     private void AnalyzeAndCollect(DocumentContext context, AnalysisState state)

@@ -23,10 +23,25 @@ internal static class PostAnalysisChecks
     /// <param name="config">Die globale Konfiguration.</param>
     public static void Run(AnalysisState state, LinterConfig config)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         RunTestSentinel(state, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("TestSentinel", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
         RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("InheritanceDepth", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
         RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("AIContextFootprint", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
         AddPartialClassViolations(state.PartialClassParts, state.Violations, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("PartialClassLineAggregation", sw.Elapsed.TotalMilliseconds);
     }
 
     private static void RunTestSentinel(AnalysisState state, LinterConfig config)
