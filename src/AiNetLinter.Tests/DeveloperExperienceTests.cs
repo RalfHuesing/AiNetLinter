@@ -192,7 +192,7 @@ public sealed class DeveloperExperienceTests
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, verbose: false);
+            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
 
             Assert.True(File.Exists(tempPath));
             var content = File.ReadAllText(tempPath);
@@ -245,7 +245,7 @@ public sealed class DeveloperExperienceTests
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, verbose: false, config: config);
+            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
 
             Assert.True(File.Exists(tempPath));
             var content = File.ReadAllText(tempPath);

@@ -119,9 +119,7 @@ public static class Program
         }
 
         if (args.Footprint != null)
-        {
-            return await RunFootprintAnalysisAsync(args);
-        }
+            return await FootprintExecutor.RunAsync(args);
 
         var maintenanceExitCode = await TryRunMaintenanceModeAsync(args);
         if (maintenanceExitCode.HasValue)
@@ -170,29 +168,7 @@ public static class Program
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("WorkspaceLoading");
 
         if (args.BaselinePath != null)
-        {
-            // Baseline-Pfad bleibt unverändert, um Regressionsrisiken zu vermeiden.
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
-            await GenerateOptionalOutputsAsync(catalog.Solution, args, config);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OptionalOutputs");
-
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
-            var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
-            try
-            {
-                var exitCode = await AuditWithBaselineAsync(args, config, currentCatalog);
-                AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath, args.ConfigPath);
-                return exitCode;
-            }
-            finally
-            {
-                if (needsDispose)
-                {
-                    currentCatalog.Dispose();
-                }
-            }
-        }
+            return await RunAuditWithBaselineAsync(args, config, catalog);
 
         // Optimierter Pfad ohne Baseline (Analyse läuft einmalig vor optionalen Ausgaben)
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
@@ -219,10 +195,29 @@ public static class Program
         }
         finally
         {
-            if (needsDispose2)
-            {
-                currentCatalog2.Dispose();
-            }
+            if (needsDispose2) currentCatalog2.Dispose();
+        }
+    }
+
+    private static async Task<int> RunAuditWithBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
+    {
+        // Baseline-Pfad bleibt unverändert, um Regressionsrisiken zu vermeiden.
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
+        await GenerateOptionalOutputsAsync(catalog.Solution, args, config);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OptionalOutputs");
+
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
+        var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
+        try
+        {
+            var exitCode = await AuditWithBaselineAsync(args, config, currentCatalog);
+            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath, args.ConfigPath);
+            return exitCode;
+        }
+        finally
+        {
+            if (needsDispose) currentCatalog.Dispose();
         }
     }
 
@@ -239,7 +234,7 @@ public static class Program
 
         if (args.PlaybookPath != null)
         {
-            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose, config, args.ConfigPath ?? "rules.json", violations);
+            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations));
         }
 
         if (args.SyncCursorRules)
@@ -324,18 +319,15 @@ public static class Program
     private static async Task TryGeneratePlaybookAsync(
         Solution solution,
         string playbookPath,
-        bool verbose,
-        LinterConfig config,
-        string configPath,
-        IReadOnlyCollection<Models.RuleViolation>? violations = null)
+        PlaybookOptions options)
     {
         try
         {
-            if (verbose)
+            if (options.Verbose)
             {
                 Console.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
             }
-            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose, config, configPath, violations);
+            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, options);
         }
         catch (Exception ex)
         {
@@ -359,7 +351,7 @@ public static class Program
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
-        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(catalog.Solution, args.Verbose, config, args.ConfigPath ?? "rules.json");
+        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(catalog.Solution, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json"));
 
         if (!File.Exists(args.PlaybookPath))
         {
@@ -491,11 +483,6 @@ public static class Program
         }
     }
 
-    private static async Task<int> RunImpactAnalysisAsync(LinterArgs args)
-    {
-        return await ImpactExecutor.RunImpactAnalysisAsync(args);
-    }
-
     private static int RunSyncCursorRules(LinterArgs args)
     {
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
@@ -574,62 +561,4 @@ public static class Program
         return targetPath;
     }
 
-    private static async Task<int> RunFootprintAnalysisAsync(LinterArgs args)
-    {
-        try
-        {
-            using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
-            var solution = catalog.Solution;
-            INamedTypeSymbol? targetSymbol = null;
-
-            foreach (var project in solution.Projects)
-            {
-                var compilation = await project.GetCompilationAsync();
-                if (compilation == null) continue;
-
-                foreach (var syntaxTree in compilation.SyntaxTrees)
-                {
-                    var semanticModel = compilation.GetSemanticModel(syntaxTree);
-                    var root = await syntaxTree.GetRootAsync();
-                    var classDecls = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
-                    foreach (var classDecl in classDecls)
-                    {
-                        var symbol = semanticModel.GetDeclaredSymbol(classDecl);
-                        if (symbol is INamedTypeSymbol namedSymbol && (
-                            string.Equals(namedSymbol.Name, args.Footprint, StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(namedSymbol.ToDisplayString(), args.Footprint, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            targetSymbol = namedSymbol;
-                            break;
-                        }
-                    }
-                    if (targetSymbol != null) break;
-                }
-                if (targetSymbol != null) break;
-            }
-
-            if (targetSymbol == null)
-            {
-                Console.Error.WriteLine($"[ERROR]: Klasse '{args.Footprint}' wurde in der Solution nicht gefunden.");
-                return 1;
-            }
-
-            var (totalLines, topDeps) = AIContextFootprintCalculator.CalculateDetailed(targetSymbol);
-
-            Console.WriteLine($"AI-Context-Footprint fuer Klasse '{targetSymbol.ToDisplayString()}':");
-            Console.WriteLine($"Gesamt transitive Zeilen: {totalLines}");
-            Console.WriteLine("Top-Abhängigkeiten:");
-            foreach (var dep in topDeps)
-            {
-                Console.WriteLine($"  + {dep.Name} ({dep.Lines} Zeilen)");
-            }
-
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ERROR]: Fehler bei der Footprint-Analyse: {ex.Message}");
-            return 2;
-        }
-    }
 }

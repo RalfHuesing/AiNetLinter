@@ -16,6 +16,15 @@ using AiNetLinter.Models;
 namespace AiNetLinter.Core;
 
 /// <summary>
+/// Optionen für die Playbook-Generierung.
+/// </summary>
+public sealed record PlaybookOptions(
+    bool Verbose = false,
+    LinterConfig? Config = null,
+    string ConfigPath = "rules.json",
+    IReadOnlyCollection<RuleViolation>? PrecomputedViolations = null);
+
+/// <summary>
 /// Generiert ein Repository-Playbook (.md) mit Suppression-Statistiken und Architekturmustern.
 /// </summary>
 public sealed class RepoPlaybookGenerator
@@ -77,25 +86,26 @@ public sealed class RepoPlaybookGenerator
         List<RuleViolation> Violations
     );
 
+    private sealed record PlaybookBuildContext(
+        PlaybookStats Stats,
+        string SolutionDir,
+        LinterConfig? Config,
+        string ConfigPath,
+        string Version);
+
     /// <summary>
     /// Generiert das Playbook und schreibt es in die angegebene Datei.
     /// </summary>
     /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
     /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
-    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <param name="config">Die globale Linter-Konfiguration.</param>
-    /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
-    /// <param name="precomputedViolations">Optional bereits berechnete Linter-Regelverstöße zur Vermeidung doppelter Analyse.</param>
+    /// <param name="options">Optionen für Verbosity, Konfiguration und Vorab-Violations.</param>
     /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
     public static async Task GenerateAsync(
         Solution solution,
         string outputPath,
-        bool verbose,
-        LinterConfig? config = null,
-        string configPath = "rules.json",
-        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
+        PlaybookOptions? options = null)
     {
-        var content = await BuildContentAsync(solution, verbose, config, configPath, precomputedViolations);
+        var content = await BuildContentAsync(solution, options);
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
@@ -104,7 +114,7 @@ public sealed class RepoPlaybookGenerator
 
         if (File.Exists(outputPath) && await File.ReadAllTextAsync(outputPath, Encoding.UTF8) == content)
         {
-            if (verbose)
+            if (options?.Verbose == true)
             {
                 Console.WriteLine($"[INFO]: Repo-Playbook ist bereits aktuell (kein Schreibzugriff): {outputPath}");
             }
@@ -112,7 +122,7 @@ public sealed class RepoPlaybookGenerator
         }
 
         await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
-        if (verbose)
+        if (options?.Verbose == true)
         {
             Console.WriteLine($"[INFO]: Repo-Playbook erfolgreich generiert unter: {outputPath}");
         }
@@ -123,29 +133,20 @@ public sealed class RepoPlaybookGenerator
     /// Für den --check-Modus und Tests.
     /// </summary>
     /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
-    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <param name="config">Die globale Linter-Konfiguration.</param>
-    /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
-    /// <param name="precomputedViolations">Optional bereits berechnete Linter-Regelverstöße.</param>
+    /// <param name="options">Optionen für Verbosity, Konfiguration und Vorab-Violations.</param>
     /// <returns>Der generierte Markdown-Inhalt.</returns>
     public static async Task<string> BuildContentAsync(
         Solution solution,
-        bool verbose,
-        LinterConfig? config = null,
-        string configPath = "rules.json",
-        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
+        PlaybookOptions? options = null)
     {
-        var stats = await ScanSolutionAsync(solution, config, configPath, precomputedViolations);
+        var opts = options ?? new PlaybookOptions();
+        var stats = await ScanSolutionAsync(solution, opts);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
         var version = typeof(RepoPlaybookGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-        return BuildContent(stats, solutionDir, config, configPath, version);
+        return BuildContent(new PlaybookBuildContext(stats, solutionDir, opts.Config, opts.ConfigPath, version));
     }
 
-    private static async Task<PlaybookStats> ScanSolutionAsync(
-        Solution solution,
-        LinterConfig? config,
-        string configPath,
-        IReadOnlyCollection<RuleViolation>? precomputedViolations = null)
+    private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, PlaybookOptions opts)
     {
         int totalResultMethods = 0;
         int totalThrows = 0;
@@ -156,10 +157,9 @@ public sealed class RepoPlaybookGenerator
         {
             foreach (var document in project.Documents)
             {
-                var docScan = await ScanDocumentAsync(document, suppressionCounts, config);
+                var docScan = await ScanDocumentAsync(document, suppressionCounts, opts.Config);
                 totalResultMethods += docScan.ResultMethods;
                 totalThrows += docScan.Throws;
-                
                 docInfos.Add(new PlaybookDocInfo(
                     document.FilePath ?? string.Empty,
                     project.Name,
@@ -171,22 +171,19 @@ public sealed class RepoPlaybookGenerator
         }
 
         List<RuleViolation> violations = new();
-        if (config != null)
+        if (opts.Config != null)
         {
-            if (precomputedViolations != null)
+            if (opts.PrecomputedViolations != null)
             {
-                violations.AddRange(precomputedViolations);
+                violations.AddRange(opts.PrecomputedViolations);
             }
             else
             {
                 string? rulesJsonContent = null;
-                if (!string.IsNullOrEmpty(configPath) && File.Exists(configPath))
-                {
-                    rulesJsonContent = File.ReadAllText(configPath, Encoding.UTF8);
-                }
-                var engine = new LinterEngine(config, rulesJsonContent);
-                var results = await engine.RunAsync(solution);
-                violations.AddRange(results);
+                if (!string.IsNullOrEmpty(opts.ConfigPath) && File.Exists(opts.ConfigPath))
+                    rulesJsonContent = File.ReadAllText(opts.ConfigPath, Encoding.UTF8);
+                var engine = new LinterEngine(opts.Config, rulesJsonContent);
+                violations.AddRange(await engine.RunAsync(solution));
             }
         }
 
@@ -273,131 +270,121 @@ public sealed class RepoPlaybookGenerator
         return rule.TrimEnd(',', ';', '.', '\'', '"');
     }
 
-    private static string BuildContent(PlaybookStats stats, string solutionDir, LinterConfig? config, string configPath, string version)
+    private static string BuildContent(PlaybookBuildContext ctx)
     {
         var sb = new StringBuilder();
+        AppendHeader(sb, ctx);
+        AppendSuppressionList(sb, ctx.Stats.SuppressionCounts);
+        sb.AppendLine();
+        if (ctx.Config == null) return sb.ToString();
+        var filesWithDisableAll = ctx.Stats.DocInfos
+            .Where(d => d.HasDisableAll).Select(d => d.FilePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var waveReadyViolations = ctx.Stats.Violations
+            .Where(v => !filesWithDisableAll.Contains(v.FilePath)).ToList();
+        AppendMigrationStatus(sb, ctx, waveReadyViolations);
+        AppendArchitectureSlices(sb, ctx);
+        AppendAgentPriority(sb, waveReadyViolations, ctx.Config);
+        return sb.ToString();
+    }
+
+    private static void AppendHeader(StringBuilder sb, PlaybookBuildContext ctx)
+    {
         sb.AppendLine("---");
         sb.AppendLine("description: Repo-Statistik, bei Architektur-Fragen lesen");
         sb.AppendLine("globs: ");
         sb.AppendLine("alwaysApply: false");
         sb.AppendLine("---");
         sb.AppendLine("# AI Repository Playbook (Auto-Generated)");
-        sb.AppendLine($"Auto-generiert durch AiNetLinter {version} aus `{configPath}`.");
+        sb.AppendLine($"Auto-generiert durch AiNetLinter {ctx.Version} aus `{ctx.ConfigPath}`.");
         sb.AppendLine("Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.");
         sb.AppendLine("Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.");
         sb.AppendLine();
         sb.AppendLine("## 1. Genutzte Architekturmuster");
-        sb.AppendLine($"- **Result-Pattern-Nutzung:** {stats.TotalResultMethods} Methoden liefern `Result` oder `Result<T>` zurueck.");
-        sb.AppendLine($"- **Kontrollfluss-Exceptions:** {stats.TotalThrows} `throw`-Anweisungen wurden im Code-Rumpf gefunden.");
+        sb.AppendLine($"- **Result-Pattern-Nutzung:** {ctx.Stats.TotalResultMethods} Methoden liefern `Result` oder `Result<T>` zurueck.");
+        sb.AppendLine($"- **Kontrollfluss-Exceptions:** {ctx.Stats.TotalThrows} `throw`-Anweisungen wurden im Code-Rumpf gefunden.");
         sb.AppendLine();
         sb.AppendLine("## 2. Abweichungen / Unterdrueckte Linter-Regeln");
+    }
 
-        AppendSuppressionList(sb, stats.SuppressionCounts);
+    private static void AppendMigrationStatus(StringBuilder sb, PlaybookBuildContext ctx, List<RuleViolation> waveReadyViolations)
+    {
+        sb.AppendLine("## 3. Migrations-Status");
         sb.AppendLine();
-
-        if (config != null)
+        int totalFiles = ctx.Stats.DocInfos.Count;
+        int waveReadyFiles = ctx.Stats.DocInfos.Count(d => !d.HasDisableAll);
+        double pct = totalFiles > 0 ? (double)waveReadyFiles / totalFiles * 100 : 0;
+        sb.AppendLine($"- **Wave-ready Dateien:** {waveReadyFiles} / {totalFiles} ({pct:F0} %)");
+        sb.AppendLine($"- **Verstösse nur wave-ready (default rules):** {waveReadyViolations.Count}");
+        sb.AppendLine($"- **Top-Ordner wave-ready-Verstöße:**");
+        var folderGroups = waveReadyViolations
+            .Select(v => GetViolationFolder(v, ctx.SolutionDir))
+            .GroupBy(d => d)
+            .Select(g => new { Folder = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count).Take(3).ToList();
+        if (folderGroups.Count == 0)
         {
-            sb.AppendLine("## 3. Migrations-Status");
-            sb.AppendLine();
-
-            int totalFiles = stats.DocInfos.Count;
-            int waveReadyFiles = stats.DocInfos.Count(d => !d.HasDisableAll);
-            double waveReadyPercentage = totalFiles > 0 ? (double)waveReadyFiles / totalFiles * 100 : 0;
-
-            sb.AppendLine($"- **Wave-ready Dateien:** {waveReadyFiles} / {totalFiles} ({waveReadyPercentage:F0} %)");
-
-            var filesWithDisableAll = stats.DocInfos.Where(d => d.HasDisableAll).Select(d => d.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var waveReadyViolations = stats.Violations.Where(v => !filesWithDisableAll.Contains(v.FilePath)).ToList();
-
-            sb.AppendLine($"- **Verstösse nur wave-ready (default rules):** {waveReadyViolations.Count}");
-            sb.AppendLine($"- **Top-Ordner wave-ready-Verstöße:**");
-
-            var folderGroups = waveReadyViolations
-                .Select(v =>
-                {
-                    if (string.IsNullOrEmpty(v.FilePath) || string.IsNullOrEmpty(solutionDir))
-                    {
-                        return "Root";
-                    }
-                    var rel = PathNormalizer.ToRelative(solutionDir, v.FilePath);
-                    var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/');
-                    return string.IsNullOrEmpty(dir) ? "Root" : dir;
-                })
-                .GroupBy(d => d)
-                .Select(g => new { Folder = g.Key, Count = g.Count() })
-                .OrderByDescending(x => x.Count)
-                .Take(3)
-                .ToList();
-
-            if (folderGroups.Count == 0)
-            {
-                sb.AppendLine("  - Keine offenen Verstöße in wave-ready Dateien.");
-            }
-            else
-            {
-                foreach (var folder in folderGroups)
-                {
-                    sb.AppendLine($"  - `{folder.Folder}/`: {folder.Count}");
-                }
-            }
-            sb.AppendLine();
-
-            sb.AppendLine("## 4. Architektur-Slices (nach Ordner)");
-            sb.AppendLine();
-
-            var sliceGroups = stats.DocInfos
-                .Select(d => new { Doc = d, Slice = GetFolderSlice(d.FilePath, solutionDir) })
-                .GroupBy(x => x.Slice)
-                .Select(g =>
-                {
-                    var docs = g.Select(x => x.Doc).ToList();
-                    var sortedLocs = docs.Select(d => d.LineCount).OrderBy(x => x).ToList();
-                    int medianLoc = sortedLocs.Count > 0 ? sortedLocs[sortedLocs.Count / 2] : 0;
-                    int disableAllCount = docs.Count(d => d.HasDisableAll);
-                    return new { Slice = g.Key, FileCount = docs.Count, MedianLoc = medianLoc, DisableAllCount = disableAllCount };
-                })
-                .OrderByDescending(x => x.FileCount)
-                .Take(5)
-                .ToList();
-
-            foreach (var slice in sliceGroups)
-            {
-                var disableAllStr = slice.DisableAllCount > 0 ? $", {slice.DisableAllCount}× disable-all" : "";
-                sb.AppendLine($"- **{slice.Slice}/**: {slice.FileCount} files, median Footprint {slice.MedianLoc} LOC{disableAllStr}");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine("## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)");
-            sb.AppendLine();
-            sb.AppendLine("| Intent | Offene Verstöße (wave-ready) | Regeln |");
-            sb.AppendLine("| :--- | ---: | :--- |");
-
-            var intentGroups = waveReadyViolations
-                .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
-                .Select(g => new
-                {
-                    Intent = g.Key,
-                    Count = g.Count(),
-                    Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct())
-                })
-                .OrderByDescending(x => x.Count)
-                .ToList();
-
-            if (intentGroups.Count == 0)
-            {
-                sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
-            }
-            else
-            {
-                foreach (var group in intentGroups)
-                {
-                    sb.AppendLine($"| {group.Intent} | {group.Count} | {group.Rules} |");
-                }
-            }
-            sb.AppendLine();
+            sb.AppendLine("  - Keine offenen Verstöße in wave-ready Dateien.");
         }
+        else
+        {
+            foreach (var folder in folderGroups)
+                sb.AppendLine($"  - `{folder.Folder}/`: {folder.Count}");
+        }
+        sb.AppendLine();
+    }
 
-        return sb.ToString();
+    private static string GetViolationFolder(RuleViolation v, string solutionDir)
+    {
+        if (string.IsNullOrEmpty(v.FilePath) || string.IsNullOrEmpty(solutionDir)) return "Root";
+        var rel = PathNormalizer.ToRelative(solutionDir, v.FilePath);
+        var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+        return string.IsNullOrEmpty(dir) ? "Root" : dir;
+    }
+
+    private static void AppendArchitectureSlices(StringBuilder sb, PlaybookBuildContext ctx)
+    {
+        sb.AppendLine("## 4. Architektur-Slices (nach Ordner)");
+        sb.AppendLine();
+        var sliceGroups = ctx.Stats.DocInfos
+            .Select(d => new { Doc = d, Slice = GetFolderSlice(d.FilePath, ctx.SolutionDir) })
+            .GroupBy(x => x.Slice)
+            .Select(g =>
+            {
+                var docs = g.Select(x => x.Doc).ToList();
+                var sortedLocs = docs.Select(d => d.LineCount).OrderBy(x => x).ToList();
+                int medianLoc = sortedLocs.Count > 0 ? sortedLocs[sortedLocs.Count / 2] : 0;
+                return new { Slice = g.Key, FileCount = docs.Count, MedianLoc = medianLoc, DisableAllCount = docs.Count(d => d.HasDisableAll) };
+            })
+            .OrderByDescending(x => x.FileCount).Take(5).ToList();
+        foreach (var slice in sliceGroups)
+        {
+            var disableAllStr = slice.DisableAllCount > 0 ? $", {slice.DisableAllCount}× disable-all" : "";
+            sb.AppendLine($"- **{slice.Slice}/**: {slice.FileCount} files, median Footprint {slice.MedianLoc} LOC{disableAllStr}");
+        }
+        sb.AppendLine();
+    }
+
+    private static void AppendAgentPriority(StringBuilder sb, List<RuleViolation> waveReadyViolations, LinterConfig config)
+    {
+        sb.AppendLine("## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)");
+        sb.AppendLine();
+        sb.AppendLine("| Intent | Offene Verstöße (wave-ready) | Regeln |");
+        sb.AppendLine("| :--- | ---: | :--- |");
+        var intentGroups = waveReadyViolations
+            .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
+            .Select(g => new { Intent = g.Key, Count = g.Count(), Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct()) })
+            .OrderByDescending(x => x.Count).ToList();
+        if (intentGroups.Count == 0)
+        {
+            sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
+        }
+        else
+        {
+            foreach (var group in intentGroups)
+                sb.AppendLine($"| {group.Intent} | {group.Count} | {group.Rules} |");
+        }
+        sb.AppendLine();
     }
 
     private static string GetFolderSlice(string filePath, string solutionDir)
