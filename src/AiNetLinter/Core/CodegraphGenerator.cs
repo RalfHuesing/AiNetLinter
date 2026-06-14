@@ -29,7 +29,8 @@ public sealed class CodegraphGenerator
     public static async Task GenerateAsync(Solution solution, string outputPath)
     {
         var typesByNamespace = await CollectProductionTypesAsync(solution);
-        var content = BuildContent(typesByNamespace);
+        var version = typeof(CodegraphGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        var content = BuildContent(typesByNamespace, version);
         await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
     }
 
@@ -182,12 +183,12 @@ public sealed class CodegraphGenerator
             deps.Add(rt.Name);
     }
 
-    private static string BuildContent(SortedDictionary<string, List<TypeInfo>> typesByNamespace)
+    private static string BuildContent(SortedDictionary<string, List<TypeInfo>> typesByNamespace, string version)
     {
         var totalTypes = typesByNamespace.Values.Sum(v => v.Count);
         var sb = new StringBuilder();
 
-        sb.AppendLine("# Codegraph (auto-generated)");
+        sb.AppendLine($"# Codegraph (Auto-generiert durch AiNetLinter {version})");
         sb.AppendLine($"Produktionscode · {totalTypes} Typen · {typesByNamespace.Count} Namespaces");
 
         foreach (var (ns, types) in typesByNamespace)

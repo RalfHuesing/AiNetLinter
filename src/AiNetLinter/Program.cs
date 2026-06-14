@@ -199,7 +199,7 @@ public static class Program
 
         if (args.PlaybookPath != null)
         {
-            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose, config);
+            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, args.Verbose, config, args.ConfigPath ?? "rules.json");
         }
 
         if (args.SyncCursorRules)
@@ -285,7 +285,7 @@ public static class Program
         }
     }
 
-    private static async Task TryGeneratePlaybookAsync(Solution solution, string playbookPath, bool verbose, LinterConfig config)
+    private static async Task TryGeneratePlaybookAsync(Solution solution, string playbookPath, bool verbose, LinterConfig config, string configPath)
     {
         try
         {
@@ -293,7 +293,7 @@ public static class Program
             {
                 Console.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
             }
-            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose, config);
+            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, verbose, config, configPath);
         }
         catch (Exception ex)
         {
@@ -308,7 +308,7 @@ public static class Program
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
-        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(catalog.Solution, args.Verbose, config);
+        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(catalog.Solution, args.Verbose, config, args.ConfigPath ?? "rules.json");
 
         if (!File.Exists(args.PlaybookPath))
         {
