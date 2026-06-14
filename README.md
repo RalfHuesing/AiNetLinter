@@ -1093,3 +1093,12 @@ Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse
 ```powershell
 AiNetLinter.exe --path . --config rules.json --no-cache
 ```
+
+### Kombinierter Lauf (Single Analysis)
+
+Um den Ressourcenverbrauch bei paralleler Generierung optionaler Ausgaben zu minimieren, verschmilzt `AiNetLinter` die Ausführung von:
+- **Lint-Lauf** (`--config rules.json --path ...`)
+- **Playbook-Generierung** (`--playbook ...`)
+- **Graph-Generierung** (`--graph ...`)
+
+Wenn diese Optionen kombiniert werden, wird die semantische Roslyn-Analyse aller Dokumente **genau einmal** ausgeführt. Die berechneten Regelverstöße werden direkt an den Playbook-Generator weitergegeben, anstatt eine zweite vollständige Analyse anzustoßen. Dies führt bei kombinierten Aufrufen zu einer Halbierung der Gesamtlaufzeit.
