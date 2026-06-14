@@ -272,4 +272,169 @@ public sealed class Test
         var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true));
         Assert.Empty(violations);
     }
+
+    private static LinterConfig CreateSilentCatchConfig(bool enabled, bool allowCancellationCatch)
+    {
+        return new LinterConfig
+        {
+            Global = new GlobalConfig
+            {
+                EnforceSealedClasses = false,
+                AllowDynamic = false,
+                AllowOutParameters = false,
+                EnforceValueObjectContracts = false,
+                EnforcePascalCase = false,
+                EnforceXmlDocumentation = false,
+                EnforceSemanticNaming = false,
+                EnforceNullableEnable = false,
+                EnforceNoSilentCatch = enabled,
+                AllowCancellationShutdownCatch = allowCancellationCatch,
+                EnforceResultPatternOverExceptions = false,
+                AllowedExceptions = System.Array.Empty<string>(),
+                EnforceExplicitStateImmutability = false,
+                EnforceStrictBoundaryForBusinessLogic = false,
+                PreventContextDependentOverloads = false,
+                RequireExplicitTruncationHandling = false,
+                EnforceNamespaceDirectoryMapping = false,
+                DetectAndBanPhantomDependencies = false
+            },
+            Metrics = new MetricsConfig
+            {
+                MaxLineCount = 100,
+                MaxMethodParameterCount = 4,
+                MaxCyclomaticComplexity = 5,
+                MaxCognitiveComplexity = 5
+            }
+        };
+    }
+
+    [Fact]
+    public void IsSwallowed_WithReturnOrAssignment_ReturnsNoViolation()
+    {
+        const string source = @"
+using System;
+public sealed class Test
+{
+    private string _lastError = """";
+    private bool _isAvailable = true;
+
+    public string? TryParseWithReturn(string input)
+    {
+        try
+        {
+            return input;
+        }
+        catch (FormatException)
+        {
+            return null; // Return-Statement -> Not swallowed
+        }
+    }
+
+    public bool TryParseWithAssignmentAndReturn(string input)
+    {
+        try
+        {
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            _lastError = ex.Message; // Assignment -> Not swallowed
+            return false;
+        }
+    }
+
+    public void CheckStatus()
+    {
+        try
+        {
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            _isAvailable = false; // Assignment only -> Not swallowed
+        }
+    }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateSilentCatchConfig(true, false));
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch)));
+    }
+
+    [Fact]
+    public void IsSwallowed_EmptyOrOnlyDeclaration_ReturnsViolation()
+    {
+        const string source = @"
+using System;
+public sealed class Test
+{
+    public void DoWork()
+    {
+        try {}
+        catch (Exception)
+        {
+            // Empty catch -> Swallowed!
+        }
+    }
+
+    public void DoOtherWork()
+    {
+        try {}
+        catch (Exception ex)
+        {
+            var _ = ex; // Only declaration -> Swallowed!
+        }
+    }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateSilentCatchConfig(true, false));
+        Assert.Equal(2, violations.Count(v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch)));
+    }
+
+    [Fact]
+    public void IsAllowedCancellationCatch_WithoutWhenFilter_ReturnsNoViolation()
+    {
+        const string source = @"
+using System;
+using System.Threading.Tasks;
+public sealed class Test
+{
+    public void DoWork()
+    {
+        try {}
+        catch (OperationCanceledException)
+        {
+            // Allowed even when empty if AllowCancellationShutdownCatch is true
+        }
+
+        try {}
+        catch (TaskCanceledException)
+        {
+            // Allowed
+        }
+    }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateSilentCatchConfig(true, true));
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch)));
+    }
+
+    [Fact]
+    public void IsAllowedCancellationCatch_OtherExceptions_ReturnsViolation()
+    {
+        const string source = @"
+using System;
+public sealed class Test
+{
+    public void DoWork()
+    {
+        try {}
+        catch (System.IO.IOException)
+        {
+            // Other exceptions still violated
+        }
+    }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateSilentCatchConfig(true, true));
+        Assert.Single(violations.Where(v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch)));
+    }
 }
