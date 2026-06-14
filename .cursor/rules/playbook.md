@@ -26,16 +26,14 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 123 / 137 (90 %)
-- **Verstösse nur wave-ready (default rules):** 23
+- **Wave-ready Dateien:** 125 / 139 (90 %)
+- **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
-  - `src/AiNetLinter/Configuration/`: 7
-  - `src/AiNetLinter/`: 5
-  - `src/AiNetLinter/Core/`: 5
+  - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 82 files, median Footprint 86 LOC, 6× disable-all
+- **src/AiNetLinter/**: 84 files, median Footprint 86 LOC, 6× disable-all
 - **src/AiNetLinter.Tests/**: 54 files, median Footprint 115 LOC, 8× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
@@ -43,6 +41,5 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| agent-context | 20 | MaxCognitiveComplexity, MaxCyclomaticComplexity, MaxMethodLineCount, MaxLineCount |
-| general | 3 | MaxMethodParameterCount |
+| - | 0 | Keine offenen Verstöße |
 
