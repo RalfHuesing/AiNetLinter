@@ -131,7 +131,7 @@ public sealed class PerformanceProfiler
             var dirName = $"{solutionName}-{timestamp:yyyy-MM-dd-HH-mm-ss-fff}-{Guid.NewGuid().ToString("N")[..8]}";
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var measurementsDir = Path.Combine(baseDir, "measurements");
-            var targetDir = Path.Combine(measurementsDir, dirName);
+            var targetDir = Path.Combine(measurementsDir, solutionName, timestamp.ToString("yyyy-MM-dd"), dirName);
 
             Directory.CreateDirectory(targetDir);
 
