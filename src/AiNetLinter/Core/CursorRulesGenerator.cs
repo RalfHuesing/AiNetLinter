@@ -17,115 +17,114 @@ public static class CursorRulesGenerator
     private sealed record RuleDefinition(
         string Name,
         Func<GlobalConfig, bool> IsEnabled,
-        string ActiveDesc,
-        string DeactiveDesc
+        string DeactiveDesc,
+        string CursorHint
     );
+
+    private sealed record MetricDescriptor(Func<MetricsConfig, int> GetVal, string Name, string Praxis);
+
+    private static readonly string[] IntentOrder =
+        ["agent-resilience", "agent-context", "architecture", "aspnet-binding", "test-coverage", "control-flow", "csharp-idiom", "general"];
 
     private static readonly RuleDefinition[] GlobalRules =
     [
         new("EnforceSealedClasses", g => g.EnforceSealedClasses,
-            "Konkrete Klassen müssen als `sealed` (oder `sealed partial`) deklariert sein.",
-            "aus — Migration, Ziel: sealed standard"),
+            "aus — Migration, Ziel: sealed standard",
+            "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`."),
         new("AllowUnsealedPartialClasses", g => g.AllowUnsealedPartialClasses,
-            "Erlaubt unversiegelte `partial` Klassen (z. B. für Blazor Komponenten).",
-            "aus — alle partial Klassen müssen ebenfalls sealed sein"),
+            "aus — alle partial Klassen müssen ebenfalls sealed sein",
+            "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten)."),
         new("AllowDynamic", g => g.AllowDynamic,
-            "Erlaubt die Verwendung von `dynamic`.",
-            "aus — Verwendung von `dynamic` ist verboten"),
+            "aus — Verwendung von `dynamic` ist verboten",
+            "`dynamic` ist verboten."),
         new("AllowOutParameters", g => g.AllowOutParameters,
-            "Erlaubt die Verwendung von `out` Parametern.",
-            "aus — Verwendung von `out` Parametern ist verboten"),
+            "aus — Verwendung von `out` Parametern ist verboten",
+            "`out` Parameter verboten; Ausnahme: `Try*`-Methoden."),
         new("AllowTryPatternOutParameters", g => g.AllowTryPatternOutParameters,
-            "Erlaubt `out` Parameter in `Try*` Methoden.",
-            "aus — `out` Parameter in `Try*` Methoden sind verboten"),
+            "aus — `out` Parameter in `Try*` Methoden sind verboten",
+            "`out` in `Try*`-Methoden erlaubt."),
         new("EnforceValueObjectContracts", g => g.EnforceValueObjectContracts,
-            "Klassen mit Suffix `ValueObject` müssen `record` oder `readonly struct` sein.",
-            "aus — keine Prüfung für ValueObjects"),
+            "aus — keine Prüfung für ValueObjects",
+            "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`."),
         new("EnableTestSentinel", g => g.EnableTestSentinel,
-            "Aktiviert den Static Test Sentinel (Prüfung auf Testabdeckung).",
-            "aus — keine Test-Sentinel-Prüfung"),
+            "aus — keine Test-Sentinel-Prüfung",
+            "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`."),
         new("EnforcePascalCase", g => g.EnforcePascalCase,
-            "Erzwingt PascalCase für öffentliche Typen/Methoden/Properties.",
-            "aus — keine Namenskonventionsprüfung"),
+            "aus — keine Namenskonventionsprüfung",
+            "Öffentliche Typen/Methoden/Properties: PascalCase."),
         new("EnforceXmlDocumentation", g => g.EnforceXmlDocumentation,
-            "Erzwingt XML-Dokumentation für öffentliche APIs.",
-            "aus — keine XML-Dokumentationsprüfung"),
+            "aus — keine XML-Dokumentationsprüfung",
+            "XML-Dokumentation für öffentliche APIs."),
         new("EnforceSemanticNaming", g => g.EnforceSemanticNaming,
-            "Keine generischen Namen (data, temp, obj) in öffentlichen Signaturen.",
-            "aus — keine semantische Namensprüfung"),
+            "aus — keine semantische Namensprüfung",
+            "Keine `data`/`temp`/`obj` in öffentlichen Signaturen."),
         new("EnforceNullableEnable", g => g.EnforceNullableEnable,
-            "Nutze `#nullable enable` am Dateianfang.",
-            "aus — keine Nullable-Prüfung"),
+            "aus — keine Nullable-Prüfung",
+            "`#nullable enable` am Dateianfang jeder `.cs`-Datei."),
         new("EnforceNoSilentCatch", g => g.EnforceNoSilentCatch,
-            "Leere catch-Blöcke sind verboten. Benenne die Exception-Variable `ignored` oder wirf sie mit `throw;` weiter.",
-            "aus — leere catch-Blöcke sind erlaubt"),
+            "aus — leere catch-Blöcke sind erlaubt",
+            "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer."),
         new("AllowCancellationShutdownCatch", g => g.AllowCancellationShutdownCatch,
-            "Erlaubt das Abfangen von OperationCanceledException beim Shutdown.",
-            "aus — kein stummes Abfangen von OperationCanceledException"),
+            "aus — kein stummes Abfangen von OperationCanceledException",
+            "`OperationCanceledException` beim Shutdown abfangen erlaubt."),
         new("EnforceMinimalApiAsParameters", g => g.EnforceMinimalApiAsParameters,
-            "Erzwingt `[AsParameters]` in Minimal-APIs bei mehr als 4 Parametern.",
-            "aus — keine AsParameters-Pflicht"),
+            "aus — keine AsParameters-Pflicht",
+            "Minimal-API: >4 Parameter → `[AsParameters]` + `record`."),
         new("EnforceResultPatternOverExceptions", g => g.EnforceResultPatternOverExceptions,
-            "Nutze für fachlichen Kontrollfluss das Result-Pattern (`Result<T>`) statt Exceptions (`throw`).",
-            "aus — 170 `throw` im Repo; Ziel: Result für Domänenfehler"),
+            "aus — 170 `throw` im Repo; Ziel: Result für Domänenfehler",
+            "`Result<T>` für Domänenfehler; `throw` nur für Infrastruktur-Fehler."),
         new("EnforceNoVariableShadowing", g => g.EnforceNoVariableShadowing,
-            "Verbietet das Verdecken von Feldern/Eigenschaften durch lokale Variablen.",
-            "aus — Variablenüberdeckung erlaubt"),
+            "aus — Variablenüberdeckung erlaubt",
+            "Keine lokale Variable gleich benannt wie Feld/Property/Parameter."),
         new("EnforceReadonlyParameters", g => g.EnforceReadonlyParameters,
-            "Parameter dürfen innerhalb der Methode nicht neu zugewiesen werden.",
-            "aus — Parameterzuweisungen erlaubt"),
+            "aus — Parameterzuweisungen erlaubt",
+            "Parameter nicht reassignen — neue lokale Variable nutzen."),
         new("EnforceReadonlyFields", g => g.EnforceReadonlyFields,
-            "Private Felder, die nur im Konstruktor zugewiesen werden, müssen `readonly` sein.",
-            "aus — keine readonly-Pflicht für Felder"),
+            "aus — keine readonly-Pflicht für Felder",
+            "Nur im Ctor gesetzte private Felder als `readonly` markieren."),
         new("EnforceNoMagicValues", g => g.EnforceNoMagicValues,
-            "Keine Magic Numbers/Strings (erlaubt: 0, 1, -1, \"\").",
-            "aus — Literale Werte in Ausdrücken sind erlaubt"),
+            "aus — Literale Werte in Ausdrücken sind erlaubt",
+            "Keine Magic Numbers/Strings — benannte Konstanten verwenden."),
         new("EnforceExplicitStateImmutability", g => g.EnforceExplicitStateImmutability,
-            "Erzwingt, dass Klassenfelder und -eigenschaften readonly/init-only sein müssen.",
-            "aus — Blazor/Handler-State; Zielbild: `platform-ai-strict`"),
+            "aus — Blazor/Handler-State; Zielbild: `platform-ai-strict`",
+            "Felder und Properties `readonly`/`init`-only."),
         new("EnforceStrictBoundaryForBusinessLogic", g => g.EnforceStrictBoundaryForBusinessLogic,
-            "Business-Logic-Klassen (z. B. Calculator, Rule) dürfen keine I/O-Operationen durchführen.",
-            "aus — I/O in Business-Logic erlaubt"),
+            "aus — I/O in Business-Logic erlaubt",
+            "Business-Logic-Klassen (Calculator, Rule) ohne I/O-Operationen."),
         new("PreventContextDependentOverloads", g => g.PreventContextDependentOverloads,
-            "Keine Methodenüberladungen mit identischer Parameteranzahl für primitive Typen.",
-            "aus — Überladungen erlaubt"),
+            "aus — Überladungen erlaubt",
+            "Keine Überladungen mit identischer Parameteranzahl für primitive Typen."),
         new("RequireExplicitTruncationHandling", g => g.RequireExplicitTruncationHandling,
-            "Zeichenketten-Abschneiden (Truncation) nach I/O- und Stream-Leseoperationen muss explizit behandelt werden.",
-            "aus — keine explizite Truncation-Pflicht"),
+            "aus — keine explizite Truncation-Pflicht",
+            "Nach Stream/Buffer-Lesen: Länge/EOF explizit prüfen, nicht still abschneiden."),
         new("EnforceNamespaceDirectoryMapping", g => g.EnforceNamespaceDirectoryMapping,
-            "Der Namespace der Datei muss dem Pfad im Dateisystem entsprechen.",
-            "aus — Namespaces können frei gewählt werden"),
+            "aus — Namespaces können frei gewählt werden",
+            "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`)."),
         new("DetectAndBanPhantomDependencies", g => g.DetectAndBanPhantomDependencies,
-            "Keine unauflösbaren `using`-Namespaces und kein `Type.GetType` / `Activator.CreateInstance` — nur statisch compilierbare Referenzen.",
-            "aus — Phantom-Abhängigkeiten erlaubt"),
+            "aus — Phantom-Abhängigkeiten erlaubt",
+            "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen."),
         new("AllowedEmptyReads", g => g.AllowedEmptyReads,
-            "Erlaubt I/O-Leseoperationen ohne unmittelbare Guards.",
-            "aus — leere Leseoperationen verboten")
+            "aus — leere Leseoperationen verboten",
+            "Leseoperationen immer mit unmittelbarem Guard versehen."),
     ];
-
-    private sealed record MetricDescriptor(Func<MetricsConfig, int> GetVal, string Name, string Desc);
 
     private static readonly MetricDescriptor[] MetricsList =
     [
-        new(m => m.MaxLineCount, "MaxLineCount", "Maximale Zeilenanzahl pro Datei."),
-        new(m => m.MaxMethodLineCount, "MaxMethodLineCount", "Codezeilen pro Methode (ohne Kommentare/Klammern)."),
-        new(m => m.MaxMethodParameterCount, "MaxMethodParameterCount", "Parameter pro Methode. Bei Überschreitung einen `record` (Parameter Object) nutzen."),
-        new(m => m.MaxCyclomaticComplexity, "MaxCyclomaticComplexity", "Maximale zyklomatische Komplexität (McCabe) pro Methode."),
-        new(m => m.MaxCognitiveComplexity, "MaxCognitiveComplexity", "Maximale kognitive Komplexität pro Methode."),
-        new(m => m.MaxInheritanceDepth, "MaxInheritanceDepth", "Maximale Vererbungstiefe."),
-        new(m => m.MaxMethodOverloads, "MaxMethodOverloads", "Maximale Anzahl an Methodenüberladungen pro Name in einer Klasse."),
-        new(m => m.MaxConstructorDependencies, "MaxConstructorDependencies", "Maximale Anzahl an Konstruktor-Abhängigkeiten."),
-        new(m => m.MaxDirectoryDepth, "MaxDirectoryDepth", "Maximale Ordnertiefe ab csproj-Ebene."),
-        new(m => m.MaxAIContextFootprint, "MaxAIContextFootprint", "Maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.")
+        new(m => m.MaxLineCount, "MaxLineCount", "Datei splitten wenn sie wächst."),
+        new(m => m.MaxMethodLineCount, "MaxMethodLineCount", "Eine Aufgabe pro Methode; Rest extrahieren."),
+        new(m => m.MaxMethodParameterCount, "MaxMethodParameterCount", "Ab Überschreitung: `record` als Parameter-Object."),
+        new(m => m.MaxCyclomaticComplexity, "MaxCyclomaticComplexity", "Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe)."),
+        new(m => m.MaxCognitiveComplexity, "MaxCognitiveComplexity", "Weniger Verschachtelung; Early Return bevorzugen (kognitiv)."),
+        new(m => m.MaxInheritanceDepth, "MaxInheritanceDepth", "Komposition vor Vererbung."),
+        new(m => m.MaxMethodOverloads, "MaxMethodOverloads", "Methoden mit eindeutigen Namen bevorzugen."),
+        new(m => m.MaxConstructorDependencies, "MaxConstructorDependencies", "Verantwortlichkeit aufteilen bei Überschreitung."),
+        new(m => m.MaxDirectoryDepth, "MaxDirectoryDepth", "Ordner nicht unnötig tief schachteln."),
+        new(m => m.MaxAIContextFootprint, "MaxAIContextFootprint", "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren."),
     ];
 
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach .cursor/rules/AiNetLinter.mdc relativ zum angegebenen Pfad.
     /// </summary>
-    /// <param name="targetPath">Der Pfad zum Zielverzeichnis oder der Solution.</param>
-    /// <param name="config">Die geladene Linter-Konfiguration.</param>
-    /// <param name="verbose">Gibt an, ob detaillierte Ausgaben protokolliert werden sollen.</param>
-    /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
     public static void Sync(string targetPath, LinterConfig config, bool verbose, string configPath = "rules.json")
     {
         string baseDir = ResolveBaseDirectory(targetPath);
@@ -174,8 +173,21 @@ public static class CursorRulesGenerator
     public static string GenerateContent(LinterConfig config, string configPath)
     {
         var sb = new StringBuilder();
-        var version = typeof(CursorRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.21";
+        var version = typeof(CursorRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
+        AppendFrontmatter(sb, version, configPath);
+        AppendKurzStil(sb, config);
+        AppendMetricsTable(sb, config);
+        AppendActiveRulesByIntent(sb, config);
+        AppendDisabledCompact(sb, config);
+        AppendProjectOverridesDelta(sb, config);
+        sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --readme`.");
+
+        return sb.ToString();
+    }
+
+    private static void AppendFrontmatter(StringBuilder sb, string version, string configPath)
+    {
         sb.AppendLine($"<!-- Auto-generated by AiNetLinter {version} | Quelle: {configPath} -->");
         sb.AppendLine("---");
         sb.AppendLine("description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)");
@@ -183,291 +195,140 @@ public static class CursorRulesGenerator
         sb.AppendLine("alwaysApply: true");
         sb.AppendLine("---");
         sb.AppendLine("# C#-Codequalität (AiNetLinter)");
+        sb.AppendLine($"Auto-generiert aus `{configPath}`. Neuen Produktionscode direkt konform schreiben.");
         sb.AppendLine();
-        sb.AppendLine("Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `AiNetLinter` geprüft. Schreibe neuen Code direkt konform zu diesen Regeln.");
-        sb.AppendLine();
+    }
 
-        sb.AppendLine("## 1. Aktive Metriken & Grenzwerte (Produktions-Code)");
+    private static void AppendKurzStil(StringBuilder sb, LinterConfig config)
+    {
+        var g = config.Global;
+        var m = config.Metrics;
+        sb.AppendLine("## Kurz-Stil");
+        if (g.EnforceSealedClasses)
+        {
+            var partialNote = g.AllowUnsealedPartialClasses ? " Blazor-`partial` ohne `sealed` OK." : "";
+            sb.AppendLine($"- `sealed` für konkrete Klassen.{partialNote}");
+        }
+        sb.AppendLine($"- Kurze, flache Methoden (≤{m.MaxMethodLineCount} Zeilen); ab {m.MaxMethodParameterCount + 1} Parametern ein Input-`record`.");
+        if (g.EnforceNullableEnable)
+            sb.AppendLine("- `#nullable enable` am Dateianfang.");
+        if (g.EnforceNoSilentCatch)
+            sb.AppendLine("- Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.");
+        if (!g.AllowDynamic || !g.AllowOutParameters)
+        {
+            var parts = new List<string>();
+            if (!g.AllowDynamic) parts.Add("kein `dynamic`");
+            if (!g.AllowOutParameters)
+                parts.Add(g.AllowTryPatternOutParameters ? "`out` nur in `Try*`-Methoden" : "kein `out`");
+            var joined = string.Join("; ", parts);
+            var bullet = joined.Length > 0 ? char.ToUpperInvariant(joined[0]) + joined[1..] : joined;
+            sb.AppendLine($"- {bullet}.");
+        }
+        sb.AppendLine($"- Klassen-Kopplung (Footprint) klein halten: max. {m.MaxAIContextFootprint} transitive Zeilen eigener Typen.");
         sb.AppendLine();
-        sb.AppendLine("| Regel | Limit | Beschreibung / Anweisung |");
+    }
+
+    private static void AppendMetricsTable(StringBuilder sb, LinterConfig config)
+    {
+        sb.AppendLine("## Grenzwerte (Produktion)");
+        sb.AppendLine("| Regel | Limit | Praxis |");
         sb.AppendLine("| :--- | :---: | :--- |");
         foreach (var metric in MetricsList)
         {
-            sb.AppendLine($"| `{metric.Name}` | **{metric.GetVal(config.Metrics)}** | {metric.Desc} |");
+            var val = metric.GetVal(config.Metrics);
+            sb.AppendLine($"| `{metric.Name}` | **{val}** | {metric.Praxis} |");
         }
         sb.AppendLine();
-
-        sb.AppendLine("## 2. Globale Qualitäts-Regeln (Aktiviert)");
-        sb.AppendLine();
-
-        var g = config.Global;
-        foreach (var rule in GlobalRules)
-        {
-            if (rule.IsEnabled(g))
-            {
-                var intent = RuleMetadataRegistry.Resolve(rule.Name, config).Intent;
-                sb.AppendLine($"- **`{rule.Name}`** `[intent: {intent}]`: {rule.ActiveDesc}");
-                AppendRuleDetails(sb, rule, config, g);
-            }
-        }
-
-        AppendExemptionsAndFilters(sb, config, g);
-        sb.AppendLine();
-
-        sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");
-        sb.AppendLine();
-        foreach (var rule in GlobalRules)
-        {
-            if (!rule.IsEnabled(g))
-            {
-                sb.AppendLine($"- **`{rule.Name}`**: {rule.DeactiveDesc}");
-            }
-        }
-        sb.AppendLine();
-
-        AppendProjectOverrides(sb, config);
-
-        return sb.ToString();
     }
 
-    private static void AppendProjectOverrides(StringBuilder sb, LinterConfig config)
+    private static void AppendActiveRulesByIntent(StringBuilder sb, LinterConfig config)
     {
-        if (config.ProjectOverrides == null || config.ProjectOverrides.Count == 0)
+        var g = config.Global;
+        var activeRules = GlobalRules
+            .Where(r => r.IsEnabled(g))
+            .Select(r => (Rule: r, Intent: RuleMetadataRegistry.Resolve(r.Name, config).Intent))
+            .ToList();
+
+        var groups = activeRules
+            .GroupBy(x => x.Intent)
+            .OrderBy(grp =>
+            {
+                var idx = Array.IndexOf(IntentOrder, grp.Key);
+                return idx >= 0 ? idx : IntentOrder.Length;
+            });
+
+        foreach (var group in groups)
         {
-            return;
+            if (group.Key == "agent-context") continue;
+            sb.AppendLine($"## {group.Key}");
+            foreach (var (rule, _) in group)
+                sb.AppendLine($"- **{rule.Name}** — {rule.CursorHint}");
+            sb.AppendLine();
         }
 
-        sb.AppendLine("## 4. Projekt-spezifische Abweichungen (Overrides)");
+        sb.AppendLine("Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.");
         sb.AppendLine();
-        sb.AppendLine("Der Linter erlaubt in bestimmten Projekten Abweichungen von den obigen Regeln:");
+    }
+
+    private static void AppendDisabledCompact(StringBuilder sb, LinterConfig config)
+    {
+        var g = config.Global;
+        var disabledNames = GlobalRules
+            .Where(r => !r.IsEnabled(g) && !r.Name.StartsWith("Allow", StringComparison.Ordinal))
+            .Select(r => $"`{r.Name}`")
+            .ToList();
+
+        sb.AppendLine("## Deaktiviert");
+        if (disabledNames.Count > 0)
+            sb.AppendLine($"Linter erzwingt nicht (trotzdem anstreben): {string.Join(", ", disabledNames)}.");
+
+        var forbidden = new List<string>();
+        if (!g.AllowDynamic) forbidden.Add("`dynamic`");
+        if (!g.AllowOutParameters)
+            forbidden.Add(g.AllowTryPatternOutParameters ? "`out` (außer in `Try*`)" : "`out`");
+
+        if (forbidden.Count > 0)
+            sb.AppendLine($"Trotzdem immer verboten: {string.Join("; ", forbidden)}.");
+        sb.AppendLine();
+    }
+
+    private static void AppendProjectOverridesDelta(StringBuilder sb, LinterConfig config)
+    {
+        if (config.ProjectOverrides == null || config.ProjectOverrides.Count == 0)
+            return;
+
+        sb.AppendLine("## Projekt-Overrides (nur Abweichungen)");
         sb.AppendLine();
 
         foreach (var pair in config.ProjectOverrides)
         {
-            sb.AppendLine($"### Bereich: `{pair.Key}`");
-            sb.AppendLine();
-            sb.AppendLine("| Regel | Wert | Beschreibung / Anweisung |");
-            sb.AppendLine("| :--- | :--- | :--- |");
-            
+            var parts = new List<string>();
             var overrides = pair.Value;
-            if (overrides.Global != null)
-            {
-                AppendGlobalOverrides(sb, overrides.Global);
-            }
 
             if (overrides.Metrics != null)
             {
-                AppendMetricOverrides(sb, overrides.Metrics);
-            }
-
-            if (overrides.MagicValues != null)
-            {
-                AppendMagicValuesOverrides(sb, overrides.MagicValues);
-            }
-            sb.AppendLine();
-        }
-    }
-
-    private static void AppendGlobalOverrides(StringBuilder sb, GlobalConfigOverride og)
-    {
-        foreach (var rule in GlobalRules)
-        {
-            var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
-            if (prop != null)
-            {
-                var val = prop.GetValue(og) as bool?;
-                if (val.HasValue)
+                foreach (var metric in MetricsList)
                 {
-                    var valStr = val.Value ? "ein" : "aus";
-                    var desc = val.Value ? rule.ActiveDesc : rule.DeactiveDesc;
-                    sb.AppendLine($"| `{rule.Name}` | {valStr} | {desc} |");
+                    var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
+                    if (prop?.GetValue(overrides.Metrics) is int val)
+                        parts.Add($"`{metric.Name}` **{val}**");
                 }
             }
-        }
 
-        if (og.AllowedExceptions != null)
-        {
-            var listStr = string.Join(", ", og.AllowedExceptions);
-            sb.AppendLine($"| `AllowedExceptions` | `[{listStr}]` | Ausgenommene Exception-Typen für dieses Projekt. |");
-        }
-        if (og.ImmutabilityExemptSuffixes != null)
-        {
-            var listStr = string.Join(", ", og.ImmutabilityExemptSuffixes);
-            sb.AppendLine($"| `ImmutabilityExemptSuffixes` | `[{listStr}]` | Ausgenommene Suffixe für dieses Projekt. |");
-        }
-        if (og.ImmutabilityExemptPatterns != null)
-        {
-            var listStr = string.Join(", ", og.ImmutabilityExemptPatterns);
-            sb.AppendLine($"| `ImmutabilityExemptPatterns` | `[{listStr}]` | Ausgenommene Wildcard-Muster für dieses Projekt. |");
-        }
-        if (og.SealedClassExemptSuffixes != null)
-        {
-            var listStr = string.Join(", ", og.SealedClassExemptSuffixes);
-            sb.AppendLine($"| `SealedClassExemptSuffixes` | `[{listStr}]` | Ausgenommene Klassenname-Suffixe für dieses Projekt. |");
-        }
-        if (og.ImmutabilityExemptBaseTypes != null)
-        {
-            var listStr = string.Join(", ", og.ImmutabilityExemptBaseTypes);
-            sb.AppendLine($"| `ImmutabilityExemptBaseTypes` | `[{listStr}]` | Ausgenommene Basistypen/Interfaces für dieses Projekt. |");
-        }
-        if (og.ImmutabilityAllowPrivateBackingFields.HasValue)
-        {
-            sb.AppendLine($"| `ImmutabilityAllowPrivateBackingFields` | {og.ImmutabilityAllowPrivateBackingFields.Value.ToString().ToLower()} | Private Backing-Felder Erlaubnis geändert. |");
-        }
-    }
-
-    private static void AppendMetricOverrides(StringBuilder sb, MetricsConfigOverride om)
-    {
-        foreach (var metric in MetricsList)
-        {
-            var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
-            if (prop != null)
+            if (overrides.Global != null)
             {
-                var val = prop.GetValue(om) as int?;
-                if (val.HasValue)
+                foreach (var rule in GlobalRules)
                 {
-                    sb.AppendLine($"| `{metric.Name}` | {val.Value} | Geändert auf {val.Value}. |");
+                    var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
+                    if (prop?.GetValue(overrides.Global) is bool val)
+                        parts.Add($"`{rule.Name}` {(val ? "ein" : "aus")}");
                 }
             }
-        }
-    }
 
-    private static void AppendRuleDetails(StringBuilder sb, RuleDefinition rule, LinterConfig config, GlobalConfig g)
-    {
-        if (rule.Name == "EnforceNoMagicValues")
-        {
-            var mv = config.MagicValues;
-            sb.AppendLine($"  - *Konfiguration*: Modus: `{mv.Mode}` (MinStringLength: {mv.MinStringLength}), Collection-Initialisierer ignorieren: `{mv.IgnoreCollectionInitializers.ToString().ToLower()}`");
-            if (mv.IgnoreStringPatterns != null && mv.IgnoreStringPatterns.Count > 0)
-            {
-                sb.AppendLine($"    - *Ignorierte String-Muster*: {string.Join(", ", mv.IgnoreStringPatterns.Select(p => $"`{p}`"))}");
-            }
-            if (mv.IgnoreNumericValues != null && mv.IgnoreNumericValues.Count > 0)
-            {
-                sb.AppendLine($"    - *Ignorierte Zahlen*: {string.Join(", ", mv.IgnoreNumericValues.Select(v => $"`{v}`"))}");
-            }
-            if (mv.IgnoreInvocationPrefixes != null && mv.IgnoreInvocationPrefixes.Count > 0)
-            {
-                sb.AppendLine($"    - *Ignorierte Aufruf-Präfixe*: {string.Join(", ", mv.IgnoreInvocationPrefixes.Select(p => $"`{p}`"))}");
-            }
-        }
-        if (rule.Name == "EnforceNamespaceDirectoryMapping")
-        {
-            sb.AppendLine($"  - *Konfiguration*: Modus: `{g.NamespaceDirectoryMappingMode}` (RequiredTrailingSegments: {g.NamespaceDirectoryMappingRequiredTrailingSegments})");
-            if (g.NamespaceDirectoryMappingIgnorePathSegments != null && g.NamespaceDirectoryMappingIgnorePathSegments.Count > 0)
-            {
-                sb.AppendLine($"    - *Ignorierte Pfad-Segmente*: {string.Join(", ", g.NamespaceDirectoryMappingIgnorePathSegments.Select(s => $"`{s}`"))}");
-            }
-        }
-    }
-
-    private static void AppendExemptionsAndFilters(StringBuilder sb, LinterConfig config, GlobalConfig g)
-    {
-        if (g.ImmutabilityExemptSuffixes != null && g.ImmutabilityExemptSuffixes.Count > 0)
-        {
-            if (g.ImmutabilityExemptSuffixes.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).");
-            }
-            else
-            {
-                var suffixesStr = string.Join(", ", g.ImmutabilityExemptSuffixes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptSuffixes`**: Folgende Typ-Suffixe sind von der Immutability-Prüfung ausgenommen: {suffixesStr}.");
-            }
+            if (parts.Count > 0)
+                sb.AppendLine($"**`{pair.Key}`:** {string.Join("; ", parts)}. Details: `rules.json`.");
         }
 
-        if (g.ImmutabilityExemptPatterns != null && g.ImmutabilityExemptPatterns.Count > 0)
-        {
-            if (g.ImmutabilityExemptPatterns.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptPatterns`**: Ausgenommene Wildcard-Muster (siehe `rules.json`).");
-            }
-            else
-            {
-                var patternsStr = string.Join(", ", g.ImmutabilityExemptPatterns.Select(p => $"`{p}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptPatterns`**: Folgende Wildcard-Muster sind ausgenommen: {patternsStr}.");
-            }
-        }
-
-        if (g.SealedClassExemptSuffixes != null && g.SealedClassExemptSuffixes.Count > 0)
-        {
-            if (g.SealedClassExemptSuffixes.Count > 5)
-            {
-                sb.AppendLine("- **`SealedClassExemptSuffixes`**: Ausgenommene Klassenname-Suffixe (siehe `rules.json`).");
-            }
-            else
-            {
-                var suffixesStr = string.Join(", ", g.SealedClassExemptSuffixes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: {suffixesStr}.");
-            }
-        }
-
-        if (g.ImmutabilityExemptBaseTypes != null && g.ImmutabilityExemptBaseTypes.Count > 0)
-        {
-            if (g.ImmutabilityExemptBaseTypes.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).");
-            }
-            else
-            {
-                var baseTypesStr = string.Join(", ", g.ImmutabilityExemptBaseTypes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptBaseTypes`**: Folgende Basistypen/Interfaces sind von der Immutability-Prüfung ausgenommen: {baseTypesStr}.");
-            }
-        }
-
-        if (g.ImmutabilityAllowPrivateBackingFields)
-        {
-            sb.AppendLine("- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.");
-        }
-        if (config.Metrics.ConstructorDependencyIgnoreTypePrefixes != null && config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Count > 0)
-        {
-            var prefixesStr = string.Join(", ", config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Select(p => $"`{p}`"));
-            sb.AppendLine($"- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: {prefixesStr}.");
-        }
-        if (config.FileFilters.ExcludeFilePatterns != null && config.FileFilters.ExcludeFilePatterns.Count > 0)
-        {
-            var patternsStr = string.Join(", ", config.FileFilters.ExcludeFilePatterns.Select(p => $"`{p}`"));
-            sb.AppendLine($"- **`ExcludeFilePatterns`**: Folgende Glob-Muster für Dateinamen sind von der Analyse ausgeschlossen: {patternsStr}.");
-        }
-        if (config.FileFilters.ExcludeDirectoryPatterns != null && config.FileFilters.ExcludeDirectoryPatterns.Count > 0)
-        {
-            var dirsStr = string.Join(", ", config.FileFilters.ExcludeDirectoryPatterns.Select(d => $"`{d}`"));
-            sb.AppendLine($"- **`ExcludeDirectoryPatterns`**: Dateien in Verzeichnissen mit folgenden Segmenten sind ausgeschlossen: {dirsStr}.");
-        }
-        if (config.FileFilters.SkipGeneratedCodeAttribute)
-        {
-            sb.AppendLine("- **`SkipGeneratedCodeAttribute`**: Typen mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut werden von der Analyse übersprungen.");
-        }
-    }
-
-    private static void AppendMagicValuesOverrides(StringBuilder sb, MagicValuesConfigOverride omv)
-    {
-        if (omv.Mode != null)
-        {
-            sb.AppendLine($"| `MagicValues.Mode` | `{omv.Mode}` | Magic-Values Erkennungsmodus geändert auf `{omv.Mode}`. |");
-        }
-        if (omv.MinStringLength.HasValue)
-        {
-            sb.AppendLine($"| `MagicValues.MinStringLength` | {omv.MinStringLength.Value} | Mindestlänge für Magic Strings geändert auf {omv.MinStringLength.Value}. |");
-        }
-        if (omv.IgnoreStringPatterns != null)
-        {
-            var listStr = string.Join(", ", omv.IgnoreStringPatterns.Select(p => $"\"{p}\""));
-            sb.AppendLine($"| `MagicValues.IgnoreStringPatterns` | `[{listStr}]` | Ignorierte String-Muster geändert. |");
-        }
-        if (omv.IgnoreNumericValues != null)
-        {
-            var listStr = string.Join(", ", omv.IgnoreNumericValues);
-            sb.AppendLine($"| `MagicValues.IgnoreNumericValues` | `[{listStr}]` | Ignorierte numerische Werte geändert. |");
-        }
-        if (omv.IgnoreInvocationPrefixes != null)
-        {
-            var listStr = string.Join(", ", omv.IgnoreInvocationPrefixes.Select(p => $"\"{p}\""));
-            sb.AppendLine($"| `MagicValues.IgnoreInvocationPrefixes` | `[{listStr}]` | Ignorierte Aufruf-Präfixe geändert. |");
-        }
-        if (omv.IgnoreCollectionInitializers.HasValue)
-        {
-            sb.AppendLine($"| `MagicValues.IgnoreCollectionInitializers` | {omv.IgnoreCollectionInitializers.Value.ToString().ToLower()} | Ignorieren in Collection-Initialisierern geändert. |");
-        }
+        sb.AppendLine();
     }
 }
