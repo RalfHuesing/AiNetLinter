@@ -37,44 +37,48 @@ internal static class SwitchDispatcherDetector
         int maxCaseBodyLines)
     {
         int branchCount = 0;
-
         foreach (var stmt in statements)
         {
-            if (stmt is IfStatementSyntax ifStmt)
-            {
-                if (!IsTrivialBranch(ifStmt.Statement, maxCaseBodyLines)) return false;
-                if (ifStmt.Else != null)
-                {
-                    if (!IsTrivialElseBranch(ifStmt.Else.Statement, maxCaseBodyLines, ref branchCount))
-                        return false;
-                }
-                branchCount++;
-            }
-            else if (stmt is SwitchStatementSyntax switchStmt)
-            {
-                foreach (var section in switchStmt.Sections)
-                {
-                    if (!IsTrivialSwitchSection(section, maxCaseBodyLines)) return false;
-                    branchCount++;
-                }
-            }
-            else if (stmt is ReturnStatementSyntax retStmt)
-            {
-                if (retStmt.Expression != null && !IsTrivialExpression(retStmt.Expression))
-                    return false;
-            }
-            else if (stmt is ThrowStatementSyntax throwStmt)
-            {
-                if (throwStmt.Expression != null && !IsTrivialExpression(throwStmt.Expression))
-                    return false;
-            }
-            else
-            {
-                return false; // Anderes Statement → kein reiner Dispatcher
-            }
+            if (!IsTrivialStatement(stmt, maxCaseBodyLines, ref branchCount))
+                return false;
         }
-
         return branchCount >= 3;
+    }
+
+    private static bool IsTrivialStatement(StatementSyntax stmt, int maxCaseBodyLines, ref int branchCount)
+    {
+        if (stmt is IfStatementSyntax ifStmt)
+            return IsTrivialIfStatement(ifStmt, maxCaseBodyLines, ref branchCount);
+
+        if (stmt is SwitchStatementSyntax switchStmt)
+            return IsTrivialSwitchStatement(switchStmt, maxCaseBodyLines, ref branchCount);
+
+        if (stmt is ReturnStatementSyntax retStmt)
+            return retStmt.Expression == null || IsTrivialExpression(retStmt.Expression);
+
+        if (stmt is ThrowStatementSyntax throwStmt)
+            return throwStmt.Expression == null || IsTrivialExpression(throwStmt.Expression);
+
+        return false;
+    }
+
+    private static bool IsTrivialIfStatement(IfStatementSyntax ifStmt, int maxCaseBodyLines, ref int branchCount)
+    {
+        if (!IsTrivialBranch(ifStmt.Statement, maxCaseBodyLines)) return false;
+        if (ifStmt.Else != null && !IsTrivialElseBranch(ifStmt.Else.Statement, maxCaseBodyLines, ref branchCount))
+            return false;
+        branchCount++;
+        return true;
+    }
+
+    private static bool IsTrivialSwitchStatement(SwitchStatementSyntax switchStmt, int maxCaseBodyLines, ref int branchCount)
+    {
+        foreach (var section in switchStmt.Sections)
+        {
+            if (!IsTrivialSwitchSection(section, maxCaseBodyLines)) return false;
+            branchCount++;
+        }
+        return true;
     }
 
     private static bool IsTrivialElseBranch(StatementSyntax stmt, int maxCaseBodyLines, ref int branchCount)

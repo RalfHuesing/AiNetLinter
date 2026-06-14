@@ -8,6 +8,8 @@ using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Core;
 
+sealed record ComplexityCheck(int Complexity, int Limit, string RuleName, string Label, string Guidance);
+
 /// <summary>
 /// Domain-specific partial class file handling code complexity rules such as cyclomatic and cognitive complexity metrics.
 /// </summary>
@@ -68,52 +70,41 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             ? SwitchDispatcherDetector.GetAdjustedCyclomaticComplexity(node)
             : ComplexityCalculator.GetCyclomaticComplexity(node);
 
-        ReportComplexityIfViolation(
-            node,
+        ReportComplexityIfViolation(node, new ComplexityCheck(
             cyclomaticComplexity,
             _config.Metrics.MaxCyclomaticComplexity,
             nameof(_config.Metrics.MaxCyclomaticComplexity),
             "Zyklomatische Komplexitaet",
-            "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten).");
+            "Teile die Methode in kleinere Hilfsmethoden auf und reduziere Verzweigungen (ifs, Schleifen, logische Ketten)."));
 
         var cognitiveComplexity = isDispatcher
             ? SwitchDispatcherDetector.GetAdjustedCognitiveComplexity(node)
             : ComplexityCalculator.GetCognitiveComplexity(node);
 
-        ReportComplexityIfViolation(
-            node,
+        ReportComplexityIfViolation(node, new ComplexityCheck(
             cognitiveComplexity,
             _config.Metrics.MaxCognitiveComplexity,
             nameof(_config.Metrics.MaxCognitiveComplexity),
             "Kognitive Komplexitaet",
-            CognitiveComplexityGuidance.Build(
-                node,
-                cognitiveComplexity,
-                _config.Metrics.MaxCognitiveComplexity));
+            CognitiveComplexityGuidance.Build(node, cognitiveComplexity, _config.Metrics.MaxCognitiveComplexity)));
     }
 
-    private void ReportComplexityIfViolation(
-        MethodDeclarationSyntax node,
-        int complexity,
-        int limit,
-        string ruleName,
-        string label,
-        string guidance)
+    private void ReportComplexityIfViolation(MethodDeclarationSyntax node, ComplexityCheck check)
     {
-        if (complexity <= limit) return;
+        if (check.Complexity <= check.Limit) return;
 
         var tolerance = _config.Metrics.ComplexityNearMissTolerance;
-        var isNearMiss = tolerance > 0 && complexity <= limit + tolerance;
+        var isNearMiss = tolerance > 0 && check.Complexity <= check.Limit + tolerance;
         var nearMissHint = isNearMiss ? " [near-miss: knapp über Limit]" : "";
 
         _violations.Add(new RuleViolation
         {
             FilePath = _filePath,
             LineNumber = GetLineNumber(node),
-            RuleName = ruleName,
-            Details = $"Die Methode '{node.Identifier.Text}' hat eine {label} von {complexity} " +
-                      $"(erlaubt sind maximal {limit}).{nearMissHint}",
-            Guidance = guidance,
+            RuleName = check.RuleName,
+            Details = $"Die Methode '{node.Identifier.Text}' hat eine {check.Label} von {check.Complexity} " +
+                      $"(erlaubt sind maximal {check.Limit}).{nearMissHint}",
+            Guidance = check.Guidance,
         });
     }
 }

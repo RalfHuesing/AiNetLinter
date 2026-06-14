@@ -213,18 +213,21 @@ public static class CursorRulesGenerator
             sb.AppendLine("- `#nullable enable` am Dateianfang.");
         if (g.EnforceNoSilentCatch)
             sb.AppendLine("- Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.");
-        if (!g.AllowDynamic || !g.AllowOutParameters)
-        {
-            var parts = new List<string>();
-            if (!g.AllowDynamic) parts.Add("kein `dynamic`");
-            if (!g.AllowOutParameters)
-                parts.Add(g.AllowTryPatternOutParameters ? "`out` nur in `Try*`-Methoden" : "kein `out`");
-            var joined = string.Join("; ", parts);
-            var bullet = joined.Length > 0 ? char.ToUpperInvariant(joined[0]) + joined[1..] : joined;
-            sb.AppendLine($"- {bullet}.");
-        }
+        AppendDynamicOutRestrictions(sb, g);
         sb.AppendLine($"- Klassen-Kopplung (Footprint) klein halten: max. {m.MaxAIContextFootprint} transitive Zeilen eigener Typen.");
         sb.AppendLine();
+    }
+
+    private static void AppendDynamicOutRestrictions(StringBuilder sb, GlobalConfig g)
+    {
+        if (g.AllowDynamic && g.AllowOutParameters) return;
+        var parts = new List<string>();
+        if (!g.AllowDynamic) parts.Add("kein `dynamic`");
+        if (!g.AllowOutParameters)
+            parts.Add(g.AllowTryPatternOutParameters ? "`out` nur in `Try*`-Methoden" : "kein `out`");
+        var joined = string.Join("; ", parts);
+        var bullet = joined.Length > 0 ? char.ToUpperInvariant(joined[0]) + joined[1..] : joined;
+        sb.AppendLine($"- {bullet}.");
     }
 
     private static void AppendMetricsTable(StringBuilder sb, LinterConfig config)
@@ -301,33 +304,41 @@ public static class CursorRulesGenerator
 
         foreach (var pair in config.ProjectOverrides)
         {
-            var parts = new List<string>();
-            var overrides = pair.Value;
-
-            if (overrides.Metrics != null)
-            {
-                foreach (var metric in MetricsList)
-                {
-                    var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
-                    if (prop?.GetValue(overrides.Metrics) is int val)
-                        parts.Add($"`{metric.Name}` **{val}**");
-                }
-            }
-
-            if (overrides.Global != null)
-            {
-                foreach (var rule in GlobalRules)
-                {
-                    var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
-                    if (prop?.GetValue(overrides.Global) is bool val)
-                        parts.Add($"`{rule.Name}` {(val ? "ein" : "aus")}");
-                }
-            }
-
+            var parts = CollectOverrideParts(pair.Value);
             if (parts.Count > 0)
                 sb.AppendLine($"**`{pair.Key}`:** {string.Join("; ", parts)}. Details: `rules.json`.");
         }
 
         sb.AppendLine();
+    }
+
+    private static List<string> CollectOverrideParts(ProjectOverrideEntry overrides)
+    {
+        var parts = new List<string>();
+        CollectMetricOverrideParts(overrides, parts);
+        CollectGlobalOverrideParts(overrides, parts);
+        return parts;
+    }
+
+    private static void CollectMetricOverrideParts(ProjectOverrideEntry overrides, List<string> parts)
+    {
+        if (overrides.Metrics == null) return;
+        foreach (var metric in MetricsList)
+        {
+            var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
+            if (prop?.GetValue(overrides.Metrics) is int val)
+                parts.Add($"`{metric.Name}` **{val}**");
+        }
+    }
+
+    private static void CollectGlobalOverrideParts(ProjectOverrideEntry overrides, List<string> parts)
+    {
+        if (overrides.Global == null) return;
+        foreach (var rule in GlobalRules)
+        {
+            var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
+            if (prop?.GetValue(overrides.Global) is bool val)
+                parts.Add($"`{rule.Name}` {(val ? "ein" : "aus")}");
+        }
     }
 }

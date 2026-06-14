@@ -23,34 +23,28 @@ internal static class FileFilterEvaluator
             if (MatchesGlob(fileName, pattern)) return true;
         }
 
-        // Normalisiere Pfad-Trennzeichen
         var normalizedPath = filePath.Replace('\\', '/');
         foreach (var dirPattern in filters.ExcludeDirectoryPatterns)
         {
             if (string.IsNullOrEmpty(dirPattern)) continue;
-
-            // Normalisiere das dirPattern ebenfalls
-            var normalizedDir = dirPattern.Replace('\\', '/');
-
-            // 1. Direkter Substring-Match (z.B. bei "obj/" oder "bin/")
-            if (normalizedPath.Contains(normalizedDir, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            // 2. Segment-basierter Match, um Fehlalarme bei Substrings zu vermeiden (z.B. "obj" darf nicht "object" matchen)
-            var cleanDir = normalizedDir.Trim('/');
-            if (cleanDir.Length > 0)
-            {
-                var dirRegex = "(?:^|/)" + Regex.Escape(cleanDir) + "(?:/|$)";
-                if (Regex.IsMatch(normalizedPath, dirRegex, RegexOptions.IgnoreCase))
-                {
-                    return true;
-                }
-            }
+            if (MatchesDirectoryPattern(normalizedPath, dirPattern)) return true;
         }
 
         return false;
+    }
+
+    private static bool MatchesDirectoryPattern(string normalizedPath, string dirPattern)
+    {
+        var normalizedDir = dirPattern.Replace('\\', '/');
+
+        if (normalizedPath.Contains(normalizedDir, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var cleanDir = normalizedDir.Trim('/');
+        if (cleanDir.Length == 0) return false;
+
+        var dirRegex = "(?:^|/)" + Regex.Escape(cleanDir) + "(?:/|$)";
+        return Regex.IsMatch(normalizedPath, dirRegex, RegexOptions.IgnoreCase);
     }
 
     private static bool MatchesGlob(string input, string pattern)

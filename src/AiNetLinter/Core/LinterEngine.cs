@@ -202,19 +202,21 @@ public sealed class LinterEngine
 
 
 
+    private static string GetSolutionDir(Solution solution) =>
+        string.IsNullOrEmpty(solution.FilePath) ? "" : Path.GetDirectoryName(solution.FilePath) ?? "";
+
+    private static string GetRelativePath(string solutionDir, string filePath) =>
+        string.IsNullOrEmpty(solutionDir)
+            ? Path.GetFileName(filePath)
+            : AiNetLinter.Output.PathNormalizer.ToRelative(solutionDir, filePath);
+
     private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state, AnalysisCacheManager? cache)
     {
         var filePath = document.FilePath ?? document.Name;
-        if (FileFilterEvaluator.IsExcluded(filePath, _config.FileFilters))
-        {
-            return;
-        }
+        if (FileFilterEvaluator.IsExcluded(filePath, _config.FileFilters)) return;
 
-        var solutionDir = !string.IsNullOrEmpty(state.Solution.FilePath) ? Path.GetDirectoryName(state.Solution.FilePath) ?? "" : "";
-        var relativePath = !string.IsNullOrEmpty(solutionDir)
-            ? AiNetLinter.Output.PathNormalizer.ToRelative(solutionDir, filePath)
-            : Path.GetFileName(filePath);
-
+        var solutionDir = GetSolutionDir(state.Solution);
+        var relativePath = GetRelativePath(solutionDir, filePath);
         bool isTestFile = isTestProj || IsTestFile(filePath);
 
         string? checksum = null;
@@ -243,16 +245,21 @@ public sealed class LinterEngine
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 
-        if (cache != null && checksum != null)
-        {
-            var testSignals = BuildTestSignals(analyzer, semanticModel, effectiveConfig, isTestFile);
-            var partialParts = analyzer.PartialClassParts;
-            var entry = CacheEntryMapper.BuildEntry(relativePath, checksum, analyzer, partialParts, testSignals);
-            cache.Set(relativePath, entry);
-        }
+        SaveToCache(new CacheDestination(cache, checksum, relativePath), analyzer, context);
 
         stopwatch.Stop();
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordDocumentAnalysis(relativePath, stopwatch.Elapsed.TotalMilliseconds, analyzer.Violations.Count);
+    }
+
+    private sealed record CacheDestination(AnalysisCacheManager? Manager, string? Checksum, string RelativePath);
+
+    private static void SaveToCache(CacheDestination dest, LinterAnalyzer analyzer, DocumentContext context)
+    {
+        if (dest.Manager == null || dest.Checksum == null) return;
+        var testSignals = BuildTestSignals(analyzer, context.SemanticModel, context.EffectiveConfig, context.IsTestFile);
+        var entry = CacheEntryMapper.BuildEntry(new BuildEntryParams(
+            dest.RelativePath, dest.Checksum, analyzer, analyzer.PartialClassParts, testSignals));
+        dest.Manager.Set(dest.RelativePath, entry);
     }
 
     private static TestSignalsDto BuildTestSignals(
