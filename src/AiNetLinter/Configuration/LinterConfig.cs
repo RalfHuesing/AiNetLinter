@@ -78,6 +78,7 @@ public sealed record GlobalConfig
     };
     public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
     public bool AllowedEmptyReads { get; init; } = false;
+    public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
@@ -85,37 +86,52 @@ public sealed record GlobalConfig
     /// </summary>
     public GlobalConfig Apply(GlobalConfigOverride? @override)
     {
+        if (@override == null) return this;
+        var result = ApplyCore1(@override);
+        return result.ApplyCore2(@override);
+    }
+
+    private GlobalConfig ApplyCore1(GlobalConfigOverride @override)
+    {
         return this with
         {
-            EnforceSealedClasses = @override?.EnforceSealedClasses ?? EnforceSealedClasses,
-            AllowUnsealedPartialClasses = @override?.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
-            AllowDynamic = @override?.AllowDynamic ?? AllowDynamic,
-            AllowOutParameters = @override?.AllowOutParameters ?? AllowOutParameters,
-            EnforceValueObjectContracts = @override?.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
-            EnableTestSentinel = @override?.EnableTestSentinel ?? EnableTestSentinel,
-            EnforcePascalCase = @override?.EnforcePascalCase ?? EnforcePascalCase,
-            EnforceXmlDocumentation = @override?.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
-            EnforceSemanticNaming = @override?.EnforceSemanticNaming ?? EnforceSemanticNaming,
-            EnforceNullableEnable = @override?.EnforceNullableEnable ?? EnforceNullableEnable,
-            EnforceNoSilentCatch = @override?.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
-            AllowTryPatternOutParameters = @override?.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
-            AllowCancellationShutdownCatch = @override?.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
-            EnforceMinimalApiAsParameters = @override?.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
-            EnforceResultPatternOverExceptions = @override?.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
-            EnforceNoVariableShadowing = @override?.EnforceNoVariableShadowing ?? EnforceNoVariableShadowing,
-            EnforceReadonlyParameters = @override?.EnforceReadonlyParameters ?? EnforceReadonlyParameters,
-            EnforceReadonlyFields = @override?.EnforceReadonlyFields ?? EnforceReadonlyFields,
-            EnforceNoMagicValues = @override?.EnforceNoMagicValues ?? EnforceNoMagicValues,
-            EnforceExplicitStateImmutability = @override?.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
-            AllowedExceptions = @override?.AllowedExceptions ?? AllowedExceptions,
-            EnforceStrictBoundaryForBusinessLogic = @override?.EnforceStrictBoundaryForBusinessLogic ?? EnforceStrictBoundaryForBusinessLogic,
-            PreventContextDependentOverloads = @override?.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
-            RequireExplicitTruncationHandling = @override?.RequireExplicitTruncationHandling ?? RequireExplicitTruncationHandling,
-            EnforceNamespaceDirectoryMapping = @override?.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
-            DetectAndBanPhantomDependencies = @override?.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
-            ImmutabilityExemptSuffixes = @override?.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
-            ImmutabilityExemptPatterns = @override?.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
-            AllowedEmptyReads = @override?.AllowedEmptyReads ?? AllowedEmptyReads,
+            EnforceSealedClasses = @override.EnforceSealedClasses ?? EnforceSealedClasses,
+            AllowUnsealedPartialClasses = @override.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
+            AllowDynamic = @override.AllowDynamic ?? AllowDynamic,
+            AllowOutParameters = @override.AllowOutParameters ?? AllowOutParameters,
+            EnforceValueObjectContracts = @override.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
+            EnableTestSentinel = @override.EnableTestSentinel ?? EnableTestSentinel,
+            EnforcePascalCase = @override.EnforcePascalCase ?? EnforcePascalCase,
+            EnforceXmlDocumentation = @override.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
+            EnforceSemanticNaming = @override.EnforceSemanticNaming ?? EnforceSemanticNaming,
+            EnforceNullableEnable = @override.EnforceNullableEnable ?? EnforceNullableEnable,
+            EnforceNoSilentCatch = @override.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
+            AllowTryPatternOutParameters = @override.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
+            AllowCancellationShutdownCatch = @override.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
+            EnforceMinimalApiAsParameters = @override.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
+            EnforceResultPatternOverExceptions = @override.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
+        };
+    }
+
+    private GlobalConfig ApplyCore2(GlobalConfigOverride @override)
+    {
+        return this with
+        {
+            EnforceNoVariableShadowing = @override.EnforceNoVariableShadowing ?? EnforceNoVariableShadowing,
+            EnforceReadonlyParameters = @override.EnforceReadonlyParameters ?? EnforceReadonlyParameters,
+            EnforceReadonlyFields = @override.EnforceReadonlyFields ?? EnforceReadonlyFields,
+            EnforceNoMagicValues = @override.EnforceNoMagicValues ?? EnforceNoMagicValues,
+            EnforceExplicitStateImmutability = @override.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
+            AllowedExceptions = @override.AllowedExceptions ?? AllowedExceptions,
+            EnforceStrictBoundaryForBusinessLogic = @override.EnforceStrictBoundaryForBusinessLogic ?? EnforceStrictBoundaryForBusinessLogic,
+            PreventContextDependentOverloads = @override.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
+            RequireExplicitTruncationHandling = @override.RequireExplicitTruncationHandling ?? RequireExplicitTruncationHandling,
+            EnforceNamespaceDirectoryMapping = @override.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
+            DetectAndBanPhantomDependencies = @override.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
+            ImmutabilityExemptSuffixes = @override.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
+            ImmutabilityExemptPatterns = @override.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
+            AllowedEmptyReads = @override.AllowedEmptyReads ?? AllowedEmptyReads,
+            SealedClassExemptSuffixes = @override.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
         };
     }
 }
@@ -332,6 +348,7 @@ public sealed record GlobalConfigOverride
     public IReadOnlyCollection<string>? ImmutabilityExemptSuffixes { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptPatterns { get; init; }
     public bool? AllowedEmptyReads { get; init; }
+    public IReadOnlyCollection<string>? SealedClassExemptSuffixes { get; init; }
 }
 
 /// <summary>

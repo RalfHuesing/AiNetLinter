@@ -96,7 +96,18 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (IsSealedOrStaticOrAbstract(node)) return true;
 
         bool isPartial = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
-        return isPartial && _config.Global.AllowUnsealedPartialClasses;
+        if (isPartial && _config.Global.AllowUnsealedPartialClasses) return true;
+
+        if (HasExemptSuffix(node.Identifier.Text)) return true;
+
+        return false;
+    }
+
+    private bool HasExemptSuffix(string className)
+    {
+        var suffixes = _config.Global.SealedClassExemptSuffixes;
+        if (suffixes == null || suffixes.Count == 0) return false;
+        return suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
     }
 
     private void CheckValueObjectContract(TypeDeclarationSyntax node, string name, bool isRecord)

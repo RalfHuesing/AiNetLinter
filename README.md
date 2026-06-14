@@ -134,6 +134,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
   "Global": {
     "EnforceSealedClasses": true,
     "AllowUnsealedPartialClasses": false,
+    "SealedClassExemptSuffixes": ["Base", "Foundation", "Host"],
     "AllowDynamic": false,
     "AllowOutParameters": false,
     "EnforceValueObjectContracts": true,
@@ -213,7 +214,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | Regel | Bereich | Beschreibung |
 | :--- | :--- | :--- |
 | `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden. |
-| `AllowUnsealedPartialClasses` | Global | Erlaubt es, `partial` Klassen unsealed zu lassen (Standard: `false`, nützlich z. B. bei Blazor Page-Components). |
+| `AllowUnsealedPartialClasses` | Global | Erlaubt es, `partial` Klassen unsealed zu lassen (Standard: `false`, nützlich z. B. bei WPF Code-Behind oder Blazor Page-Components). |
+| `SealedClassExemptSuffixes` | Global | Liste von Klassenname-Suffixen, die von der `EnforceSealedClasses`-Prüfung ausgenommen sind (z. B. `["Base", "Foundation", "Host"]`). |
 | `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
 | `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
 | `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`-Methoden (Standard: `true`, idiomatisches C#). |
@@ -337,6 +339,32 @@ Der Bool-Schalter `EnforceNoMagicValues` in der `Global`-Sektion ist weiterhin d
 ### AI-Context-Footprint (Metrik)
 
 Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst plus aller transitiv im Quellcode referenzierten eigenen Klassen/Typen. Steigt diese Metrik über den konfigurierten Schwellenwert (`MaxAIContextFootprint`, standardmäßig `5000` Zeilen), wird ein Regelverstoß gemeldet. Dies hilft Entwicklern, hohe Kopplung zu vermeiden und die Token-Belastung für KIs gering zu halten.
+
+### Ausnahmen für EnforceSealedClasses (WPF & Basisklassen)
+
+Die Regel `EnforceSealedClasses` zwingt standardmäßig alle konkreten Klassen dazu, als `sealed` deklariert zu werden. In bestimmten Szenarien (z. B. WPF oder bei dedizierten Basisklassen) führt dies jedoch zu False-Positives:
+
+1. **WPF Partial-Klassen:** Der XAML-Compiler generiert für Code-Behind-Dateien partial Klassen, die standardmäßig nicht `sealed` deklariert sind. 
+2. **Designte Basisklassen:** Klassen, die als Basisklassen für Vererbung gedacht sind (z. B. `OrderHandlerBase`), sollten nicht versiegelt werden.
+
+Hierfür stehen folgende Konfigurationsoptionen zur Verfügung:
+
+- **`AllowUnsealedPartialClasses`** (Boolean, Default: `false`): Erlaubt es, `partial` Klassen unsealed zu lassen (z. B. `public partial class MainWindow : Window`). Klassen, die explizit `sealed partial` deklariert sind, werden weiterhin korrekt erkannt und führen zu keinem Verstoß.
+- **`SealedClassExemptSuffixes`** (Array von Strings, Default: `[]`): Klassen, deren Name mit einem dieser Suffixe endet (z. B. `"Base"`, `"Foundation"`, `"Host"`), werden von der Prüfung ausgenommen.
+
+#### Empfohlene Konfiguration für WPF- und UI-Projekte:
+
+Da WPF-Templates standardmäßig unsealed partial Klassen generieren, empfiehlt sich ein Projekt-Override in der `rules.json`:
+
+```json
+"ProjectOverrides": {
+  "*.Wpf": {
+    "Global": {
+      "AllowUnsealedPartialClasses": true
+    }
+  }
+}
+```
 
 ### Framework-Typen bei Vererbungstiefe ausschließen
 
