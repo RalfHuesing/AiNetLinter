@@ -27,9 +27,9 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 ## 3. Migrations-Status
 
 - **Wave-ready Dateien:** 116 / 130 (89 %)
-- **Verstösse nur wave-ready (default rules):** 1
+- **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
-  - `src/AiNetLinter/Diagnostics/`: 1
+  - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
@@ -41,5 +41,5 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| agent-resilience | 1 | EnforceNoSilentCatch |
+| - | 0 | Keine offenen Verstöße |
 
