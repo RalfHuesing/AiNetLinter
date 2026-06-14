@@ -207,101 +207,11 @@ public static class CursorRulesGenerator
             {
                 var intent = RuleMetadataRegistry.Resolve(rule.Name, config).Intent;
                 sb.AppendLine($"- **`{rule.Name}`** `[intent: {intent}]`: {rule.ActiveDesc}");
-                if (rule.Name == "EnforceNoMagicValues")
-                {
-                    var mv = config.MagicValues;
-                    sb.AppendLine($"  - *Konfiguration*: Modus: `{mv.Mode}` (MinStringLength: {mv.MinStringLength}), Collection-Initialisierer ignorieren: `{mv.IgnoreCollectionInitializers.ToString().ToLower()}`");
-                    if (mv.IgnoreStringPatterns != null && mv.IgnoreStringPatterns.Count > 0)
-                    {
-                        sb.AppendLine($"    - *Ignorierte String-Muster*: {string.Join(", ", mv.IgnoreStringPatterns.Select(p => $"`{p}`"))}");
-                    }
-                    if (mv.IgnoreNumericValues != null && mv.IgnoreNumericValues.Count > 0)
-                    {
-                        sb.AppendLine($"    - *Ignorierte Zahlen*: {string.Join(", ", mv.IgnoreNumericValues.Select(v => $"`{v}`"))}");
-                    }
-                    if (mv.IgnoreInvocationPrefixes != null && mv.IgnoreInvocationPrefixes.Count > 0)
-                    {
-                        sb.AppendLine($"    - *Ignorierte Aufruf-Präfixe*: {string.Join(", ", mv.IgnoreInvocationPrefixes.Select(p => $"`{p}`"))}");
-                    }
-                }
+                AppendRuleDetails(sb, rule, config, g);
             }
         }
 
-        if (g.ImmutabilityExemptSuffixes != null && g.ImmutabilityExemptSuffixes.Count > 0)
-        {
-            if (g.ImmutabilityExemptSuffixes.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).");
-            }
-            else
-            {
-                var suffixesStr = string.Join(", ", g.ImmutabilityExemptSuffixes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptSuffixes`**: Folgende Typ-Suffixe sind von der Immutability-Prüfung ausgenommen: {suffixesStr}.");
-            }
-        }
-
-        if (g.ImmutabilityExemptPatterns != null && g.ImmutabilityExemptPatterns.Count > 0)
-        {
-            if (g.ImmutabilityExemptPatterns.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptPatterns`**: Ausgenommene Wildcard-Muster (siehe `rules.json`).");
-            }
-            else
-            {
-                var patternsStr = string.Join(", ", g.ImmutabilityExemptPatterns.Select(p => $"`{p}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptPatterns`**: Folgende Wildcard-Muster sind ausgenommen: {patternsStr}.");
-            }
-        }
-
-        if (g.SealedClassExemptSuffixes != null && g.SealedClassExemptSuffixes.Count > 0)
-        {
-            if (g.SealedClassExemptSuffixes.Count > 5)
-            {
-                sb.AppendLine("- **`SealedClassExemptSuffixes`**: Ausgenommene Klassenname-Suffixe (siehe `rules.json`).");
-            }
-            else
-            {
-                var suffixesStr = string.Join(", ", g.SealedClassExemptSuffixes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: {suffixesStr}.");
-            }
-        }
-
-        if (g.ImmutabilityExemptBaseTypes != null && g.ImmutabilityExemptBaseTypes.Count > 0)
-        {
-            if (g.ImmutabilityExemptBaseTypes.Count > 5)
-            {
-                sb.AppendLine("- **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).");
-            }
-            else
-            {
-                var baseTypesStr = string.Join(", ", g.ImmutabilityExemptBaseTypes.Select(s => $"`{s}`"));
-                sb.AppendLine($"- **`ImmutabilityExemptBaseTypes`**: Folgende Basistypen/Interfaces sind von der Immutability-Prüfung ausgenommen: {baseTypesStr}.");
-            }
-        }
-
-        if (g.ImmutabilityAllowPrivateBackingFields)
-        {
-            sb.AppendLine("- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.");
-        }
-        if (config.Metrics.ConstructorDependencyIgnoreTypePrefixes != null && config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Count > 0)
-        {
-            var prefixesStr = string.Join(", ", config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Select(p => $"`{p}`"));
-            sb.AppendLine($"- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: {prefixesStr}.");
-        }
-        if (config.FileFilters.ExcludeFilePatterns != null && config.FileFilters.ExcludeFilePatterns.Count > 0)
-        {
-            var patternsStr = string.Join(", ", config.FileFilters.ExcludeFilePatterns.Select(p => $"`{p}`"));
-            sb.AppendLine($"- **`ExcludeFilePatterns`**: Folgende Glob-Muster für Dateinamen sind von der Analyse ausgeschlossen: {patternsStr}.");
-        }
-        if (config.FileFilters.ExcludeDirectoryPatterns != null && config.FileFilters.ExcludeDirectoryPatterns.Count > 0)
-        {
-            var dirsStr = string.Join(", ", config.FileFilters.ExcludeDirectoryPatterns.Select(d => $"`{d}`"));
-            sb.AppendLine($"- **`ExcludeDirectoryPatterns`**: Dateien in Verzeichnissen mit folgenden Segmenten sind ausgeschlossen: {dirsStr}.");
-        }
-        if (config.FileFilters.SkipGeneratedCodeAttribute)
-        {
-            sb.AppendLine("- **`SkipGeneratedCodeAttribute`**: Typen mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut werden von der Analyse übersprungen.");
-        }
+        AppendExemptionsAndFilters(sb, config, g);
         sb.AppendLine();
 
         sb.AppendLine("## 3. Deaktiviert (bewusst — nicht in neuem Code nachahmen)");
@@ -419,6 +329,114 @@ public static class CursorRulesGenerator
                     sb.AppendLine($"| `{metric.Name}` | {val.Value} | Geändert auf {val.Value}. |");
                 }
             }
+        }
+    }
+
+    private static void AppendRuleDetails(StringBuilder sb, RuleDefinition rule, LinterConfig config, GlobalConfig g)
+    {
+        if (rule.Name == "EnforceNoMagicValues")
+        {
+            var mv = config.MagicValues;
+            sb.AppendLine($"  - *Konfiguration*: Modus: `{mv.Mode}` (MinStringLength: {mv.MinStringLength}), Collection-Initialisierer ignorieren: `{mv.IgnoreCollectionInitializers.ToString().ToLower()}`");
+            if (mv.IgnoreStringPatterns != null && mv.IgnoreStringPatterns.Count > 0)
+            {
+                sb.AppendLine($"    - *Ignorierte String-Muster*: {string.Join(", ", mv.IgnoreStringPatterns.Select(p => $"`{p}`"))}");
+            }
+            if (mv.IgnoreNumericValues != null && mv.IgnoreNumericValues.Count > 0)
+            {
+                sb.AppendLine($"    - *Ignorierte Zahlen*: {string.Join(", ", mv.IgnoreNumericValues.Select(v => $"`{v}`"))}");
+            }
+            if (mv.IgnoreInvocationPrefixes != null && mv.IgnoreInvocationPrefixes.Count > 0)
+            {
+                sb.AppendLine($"    - *Ignorierte Aufruf-Präfixe*: {string.Join(", ", mv.IgnoreInvocationPrefixes.Select(p => $"`{p}`"))}");
+            }
+        }
+        if (rule.Name == "EnforceNamespaceDirectoryMapping")
+        {
+            sb.AppendLine($"  - *Konfiguration*: Modus: `{g.NamespaceDirectoryMappingMode}` (RequiredTrailingSegments: {g.NamespaceDirectoryMappingRequiredTrailingSegments})");
+            if (g.NamespaceDirectoryMappingIgnorePathSegments != null && g.NamespaceDirectoryMappingIgnorePathSegments.Count > 0)
+            {
+                sb.AppendLine($"    - *Ignorierte Pfad-Segmente*: {string.Join(", ", g.NamespaceDirectoryMappingIgnorePathSegments.Select(s => $"`{s}`"))}");
+            }
+        }
+    }
+
+    private static void AppendExemptionsAndFilters(StringBuilder sb, LinterConfig config, GlobalConfig g)
+    {
+        if (g.ImmutabilityExemptSuffixes != null && g.ImmutabilityExemptSuffixes.Count > 0)
+        {
+            if (g.ImmutabilityExemptSuffixes.Count > 5)
+            {
+                sb.AppendLine("- **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).");
+            }
+            else
+            {
+                var suffixesStr = string.Join(", ", g.ImmutabilityExemptSuffixes.Select(s => $"`{s}`"));
+                sb.AppendLine($"- **`ImmutabilityExemptSuffixes`**: Folgende Typ-Suffixe sind von der Immutability-Prüfung ausgenommen: {suffixesStr}.");
+            }
+        }
+
+        if (g.ImmutabilityExemptPatterns != null && g.ImmutabilityExemptPatterns.Count > 0)
+        {
+            if (g.ImmutabilityExemptPatterns.Count > 5)
+            {
+                sb.AppendLine("- **`ImmutabilityExemptPatterns`**: Ausgenommene Wildcard-Muster (siehe `rules.json`).");
+            }
+            else
+            {
+                var patternsStr = string.Join(", ", g.ImmutabilityExemptPatterns.Select(p => $"`{p}`"));
+                sb.AppendLine($"- **`ImmutabilityExemptPatterns`**: Folgende Wildcard-Muster sind ausgenommen: {patternsStr}.");
+            }
+        }
+
+        if (g.SealedClassExemptSuffixes != null && g.SealedClassExemptSuffixes.Count > 0)
+        {
+            if (g.SealedClassExemptSuffixes.Count > 5)
+            {
+                sb.AppendLine("- **`SealedClassExemptSuffixes`**: Ausgenommene Klassenname-Suffixe (siehe `rules.json`).");
+            }
+            else
+            {
+                var suffixesStr = string.Join(", ", g.SealedClassExemptSuffixes.Select(s => $"`{s}`"));
+                sb.AppendLine($"- **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: {suffixesStr}.");
+            }
+        }
+
+        if (g.ImmutabilityExemptBaseTypes != null && g.ImmutabilityExemptBaseTypes.Count > 0)
+        {
+            if (g.ImmutabilityExemptBaseTypes.Count > 5)
+            {
+                sb.AppendLine("- **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).");
+            }
+            else
+            {
+                var baseTypesStr = string.Join(", ", g.ImmutabilityExemptBaseTypes.Select(s => $"`{s}`"));
+                sb.AppendLine($"- **`ImmutabilityExemptBaseTypes`**: Folgende Basistypen/Interfaces sind von der Immutability-Prüfung ausgenommen: {baseTypesStr}.");
+            }
+        }
+
+        if (g.ImmutabilityAllowPrivateBackingFields)
+        {
+            sb.AppendLine("- **`ImmutabilityAllowPrivateBackingFields`**: Private Felder mit Unterstrich-Präfix (`_`) sind von der Immutability-Prüfung ausgenommen.");
+        }
+        if (config.Metrics.ConstructorDependencyIgnoreTypePrefixes != null && config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Count > 0)
+        {
+            var prefixesStr = string.Join(", ", config.Metrics.ConstructorDependencyIgnoreTypePrefixes.Select(p => $"`{p}`"));
+            sb.AppendLine($"- **`ConstructorDependencyIgnoreTypePrefixes`**: Folgende Typ-Name-Präfixe werden bei `MaxConstructorDependencies` nicht mitgezählt: {prefixesStr}.");
+        }
+        if (config.FileFilters.ExcludeFilePatterns != null && config.FileFilters.ExcludeFilePatterns.Count > 0)
+        {
+            var patternsStr = string.Join(", ", config.FileFilters.ExcludeFilePatterns.Select(p => $"`{p}`"));
+            sb.AppendLine($"- **`ExcludeFilePatterns`**: Folgende Glob-Muster für Dateinamen sind von der Analyse ausgeschlossen: {patternsStr}.");
+        }
+        if (config.FileFilters.ExcludeDirectoryPatterns != null && config.FileFilters.ExcludeDirectoryPatterns.Count > 0)
+        {
+            var dirsStr = string.Join(", ", config.FileFilters.ExcludeDirectoryPatterns.Select(d => $"`{d}`"));
+            sb.AppendLine($"- **`ExcludeDirectoryPatterns`**: Dateien in Verzeichnissen mit folgenden Segmenten sind ausgeschlossen: {dirsStr}.");
+        }
+        if (config.FileFilters.SkipGeneratedCodeAttribute)
+        {
+            sb.AppendLine("- **`SkipGeneratedCodeAttribute`**: Typen mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut werden von der Analyse übersprungen.");
         }
     }
 
