@@ -1,4 +1,4 @@
-﻿# Codegraph (auto-generated)
+﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.27)
 Produktionscode · 117 Typen · 11 Namespaces
 
 ## AiNetLinter (1)
