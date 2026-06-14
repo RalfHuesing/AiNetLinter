@@ -7,6 +7,13 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Cache;
 
+internal sealed record BuildEntryParams(
+    string RelativePath,
+    string Checksum,
+    LinterAnalyzer Analyzer,
+    IEnumerable<PartialClassPart> PartialParts,
+    TestSignalsDto TestSignals);
+
 internal static class CacheEntryMapper
 {
     public static RuleViolation ToViolation(RuleViolationDto dto) => new()
@@ -76,28 +83,23 @@ internal static class CacheEntryMapper
         }
     }
 
-    public static AnalysisCacheEntry BuildEntry(
-        string relativePath,
-        string checksum,
-        LinterAnalyzer analyzer,
-        IEnumerable<PartialClassPart> partialParts,
-        TestSignalsDto testSignals)
+    public static AnalysisCacheEntry BuildEntry(BuildEntryParams p)
     {
         return new AnalysisCacheEntry
         {
-            RelativePath = relativePath,
-            Checksum = checksum,
-            Violations = analyzer.Violations.Select(v => new RuleViolationDto(
+            RelativePath = p.RelativePath,
+            Checksum = p.Checksum,
+            Violations = p.Analyzer.Violations.Select(v => new RuleViolationDto(
                 v.FilePath, v.LineNumber, v.RuleName, v.Details, v.Guidance)).ToArray(),
-            Classes = analyzer.Classes.Select(c => new ClassInfoDto(
+            Classes = p.Analyzer.Classes.Select(c => new ClassInfoDto(
                 c.Name, c.FilePath, c.LineNumber,
                 c.MaxCognitiveComplexity, c.InheritanceDepth, c.AIContextFootprint,
                 c.AIContextFootprintDetails.Select(d => new FootprintDetailDto(d.Name, d.Lines)).ToArray(),
                 c.HasTestMethods, c.IsPartial, c.IsStatic,
                 c.BaseTypeNames.ToArray(), c.ProjectName)).ToArray(),
-            PartialParts = partialParts.Select(p =>
-                new PartialPartDto(p.TypeName, p.FilePath, p.LineNumber, p.FileLineCount)).ToArray(),
-            TestSignals = testSignals,
+            PartialParts = p.PartialParts.Select(part =>
+                new PartialPartDto(part.TypeName, part.FilePath, part.LineNumber, part.FileLineCount)).ToArray(),
+            TestSignals = p.TestSignals,
         };
     }
 }

@@ -153,36 +153,38 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol == null) return false;
 
-        foreach (var attr in symbol.GetAttributes())
-        {
-            var attrName = attr.AttributeClass?.Name;
-            if (attrName != null && (
-                attrName.Contains("JsonSerializable") || 
-                attrName.Contains("Configure") || 
-                attrName.Contains("Options")))
-            {
-                return true;
-            }
-        }
+        if (HasBindingOrSerializableAttribute(symbol)) return true;
 
         foreach (var iface in symbol.AllInterfaces)
         {
             if (iface.Name.Contains("IOptions") || iface.Name.Contains("IConfiguration"))
-            {
                 return true;
-            }
         }
 
         var currentBase = symbol.BaseType;
         while (currentBase != null)
         {
             if (currentBase.Name.Contains("IOptions") || currentBase.Name.Contains("IConfiguration"))
-            {
                 return true;
-            }
             currentBase = currentBase.BaseType;
         }
 
+        return false;
+    }
+
+    private static bool HasBindingOrSerializableAttribute(INamedTypeSymbol symbol)
+    {
+        foreach (var attr in symbol.GetAttributes())
+        {
+            var attrName = attr.AttributeClass?.Name;
+            if (attrName != null && (
+                attrName.Contains("JsonSerializable") ||
+                attrName.Contains("Configure") ||
+                attrName.Contains("Options")))
+            {
+                return true;
+            }
+        }
         return false;
     }
 
