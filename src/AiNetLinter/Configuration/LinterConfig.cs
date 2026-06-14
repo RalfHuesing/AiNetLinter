@@ -50,6 +50,18 @@ public sealed record GlobalConfig
     public bool AllowCancellationShutdownCatch { get; init; } = true;
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
     public bool EnforceResultPatternOverExceptions { get; init; } = true;
+
+    /// <summary>
+    /// Namespace-Suffixe für die throw erlaubt ist (z. B. "Infrastructure", "Middleware").
+    /// Segment-basierter Match: "MyApp.Infrastructure" endet mit ".Infrastructure".
+    /// </summary>
+    public IReadOnlyCollection<string> ResultPatternAllowThrowInNamespaceSuffixes { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
+    /// Bare "throw;" (Rethrow in Catch-Block) ist immer erlaubt wenn true.
+    /// </summary>
+    public bool ResultPatternAllowCatchRethrow { get; init; } = true;
     public bool EnforceNoVariableShadowing { get; init; } = true;
     public bool EnforceReadonlyParameters { get; init; } = true;
     public bool EnforceReadonlyFields { get; init; } = true;
@@ -157,6 +169,8 @@ public sealed record GlobalConfig
             SealedClassExemptSuffixes = @override.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
             ImmutabilityExemptBaseTypes = @override.ImmutabilityExemptBaseTypes ?? ImmutabilityExemptBaseTypes,
             ImmutabilityAllowPrivateBackingFields = @override.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
+            ResultPatternAllowThrowInNamespaceSuffixes = @override.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
+            ResultPatternAllowCatchRethrow = @override.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
         };
     }
 }
@@ -257,6 +271,38 @@ public sealed record TestSentinelConfig
 
     public bool RecognizeTypeofReference { get; init; } = true;
     public bool RecognizeCoversComment { get; init; } = true;
+
+    /// <summary>
+    /// Klassen deren Name mit einem dieser Suffixe endet, werden vom StaticTestSentinel ausgenommen.
+    /// Beispiel: ["Extensions", "Constants", "Converter"]
+    /// </summary>
+    public IReadOnlyCollection<string> ExemptClassNameSuffixes { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Klassen die von einem dieser Typen erben oder diese Interfaces implementieren,
+    /// werden vom StaticTestSentinel ausgenommen.
+    /// Beispiel: ["ComponentBase", "IValueConverter", "Profile"]
+    /// </summary>
+    public IReadOnlyCollection<string> ExemptWhenInheritsFrom { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Statische Klassen werden vom StaticTestSentinel ausgenommen wenn true.
+    /// </summary>
+    public bool ExemptStaticClasses { get; init; } = false;
+
+    /// <summary>
+    /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
+    /// </summary>
+    public TestSentinelConfig Apply(TestSentinelConfigOverride? @override)
+    {
+        if (@override == null) return this;
+        return this with
+        {
+            ExemptClassNameSuffixes = @override.ExemptClassNameSuffixes ?? ExemptClassNameSuffixes,
+            ExemptWhenInheritsFrom = @override.ExemptWhenInheritsFrom ?? ExemptWhenInheritsFrom,
+            ExemptStaticClasses = @override.ExemptStaticClasses ?? ExemptStaticClasses,
+        };
+    }
 }
 
 /// <summary>
@@ -287,6 +333,11 @@ public sealed record ProjectOverrideEntry
     /// Überschreibungen der Magic-Value-Erkennung.
     /// </summary>
     public MagicValuesConfigOverride? MagicValues { get; init; }
+
+    /// <summary>
+    /// Überschreibungen der TestSentinel-Konfiguration (Ausnahmen vom Testpflicht-Check).
+    /// </summary>
+    public TestSentinelConfigOverride? TestSentinel { get; init; }
 }
 
 /// <summary>
@@ -405,6 +456,8 @@ public sealed record GlobalConfigOverride
     public IReadOnlyCollection<string>? SealedClassExemptSuffixes { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptBaseTypes { get; init; }
     public bool? ImmutabilityAllowPrivateBackingFields { get; init; }
+    public IReadOnlyCollection<string>? ResultPatternAllowThrowInNamespaceSuffixes { get; init; }
+    public bool? ResultPatternAllowCatchRethrow { get; init; }
 }
 
 /// <summary>
@@ -483,6 +536,27 @@ public sealed record MetricsConfigOverride
     public int? ComplexityNearMissTolerance { get; init; }
     public bool? ExcludeSwitchDispatcherCases { get; init; }
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
+}
+
+/// <summary>
+/// Optionale Überschreibungen für die TestSentinel-Konfiguration (pro Projekt).
+/// </summary>
+public sealed record TestSentinelConfigOverride
+{
+    /// <summary>
+    /// Klassen-Name-Suffixe, die vom StaticTestSentinel ausgenommen werden.
+    /// </summary>
+    public IReadOnlyCollection<string>? ExemptClassNameSuffixes { get; init; }
+
+    /// <summary>
+    /// Basistypen oder Interfaces: Klassen die davon erben/implementieren werden ausgenommen.
+    /// </summary>
+    public IReadOnlyCollection<string>? ExemptWhenInheritsFrom { get; init; }
+
+    /// <summary>
+    /// Statische Klassen ausgenommen wenn true.
+    /// </summary>
+    public bool? ExemptStaticClasses { get; init; }
 }
 
 /// <summary>

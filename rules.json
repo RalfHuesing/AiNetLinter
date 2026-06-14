@@ -16,6 +16,13 @@
     "AllowCancellationShutdownCatch": true,
     "EnforceMinimalApiAsParameters": false,
     "EnforceResultPatternOverExceptions": false,
+    "ResultPatternAllowThrowInNamespaceSuffixes": [
+      "Infrastructure",
+      "Endpoints",
+      "Middleware",
+      "Program"
+    ],
+    "ResultPatternAllowCatchRethrow": true,
     "EnforceNoVariableShadowing": false,
     "EnforceReadonlyParameters": false,
     "EnforceReadonlyFields": false,
@@ -80,7 +87,23 @@
       "{Name}*Tests"
     ],
     "RecognizeTypeofReference": true,
-    "RecognizeCoversComment": true
+    "RecognizeCoversComment": true,
+    "ExemptClassNameSuffixes": [
+      "Extensions",
+      "Constants",
+      "Converter",
+      "Profile",
+      "Seed",
+      "Migration",
+      "Startup",
+      "Module"
+    ],
+    "ExemptWhenInheritsFrom": [
+      "ComponentBase",
+      "IValueConverter",
+      "Profile"
+    ],
+    "ExemptStaticClasses": true
   },
   "MagicValues": {
     "Mode": "all",

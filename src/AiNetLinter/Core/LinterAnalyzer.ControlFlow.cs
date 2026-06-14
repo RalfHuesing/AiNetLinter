@@ -111,6 +111,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.EnforceResultPatternOverExceptions) return;
 
         if (IsAllowedFatalExceptionThrow(node)) return;
+        if (IsInAllowedNamespace()) return;
+        if (IsAllowedCatchRethrow(node)) return;
 
         if (!IsThrowAllowed(node))
         {
@@ -123,6 +125,34 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = "Verwende fuer fachliche Fehlerzustaende das Result-Pattern (Result<T>) statt Exceptions, um den Kontrollfluss fuer KI-Agenten explizit zu machen. 'throw' ist nur in Konstruktoren oder Validierungs-Guards (Methoden mit Suffix 'Guard' oder 'Validate') erlaubt."
             });
         }
+    }
+
+    private bool IsInAllowedNamespace()
+    {
+        var allowed = _config.Global.ResultPatternAllowThrowInNamespaceSuffixes;
+        if (allowed == null || allowed.Count == 0) return false;
+        if (string.IsNullOrEmpty(_currentNamespace)) return false;
+
+        foreach (var suffix in allowed)
+        {
+            if (_currentNamespace.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase)
+                || _currentNamespace.Equals(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsAllowedCatchRethrow(SyntaxNode node)
+    {
+        if (!_config.Global.ResultPatternAllowCatchRethrow) return false;
+
+        if (node is ThrowStatementSyntax throwStmt && throwStmt.Expression == null)
+        {
+            return node.Ancestors().OfType<CatchClauseSyntax>().Any();
+        }
+        return false;
     }
 
     private bool IsAllowedFatalExceptionThrow(SyntaxNode node)
