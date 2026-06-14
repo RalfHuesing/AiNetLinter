@@ -8,7 +8,7 @@ Auto-generiert durch AiNetLinter 1.0.27 aus `rules.json`. Neuen Produktionscode 
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
-- Kurze, flache Methoden (≤42 Zeilen); ab 5 Parametern ein Input-`record`.
+- Kurze, flache Methoden (≤60 Zeilen); ab 5 Parametern ein Input-`record`.
 - `#nullable enable` am Dateianfang.
 - Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.
 - Kein `dynamic`; `out` nur in `Try*`-Methoden.
@@ -17,11 +17,11 @@ Auto-generiert durch AiNetLinter 1.0.27 aus `rules.json`. Neuen Produktionscode 
 ## Grenzwerte (Produktion)
 | Regel | Limit | Praxis |
 | :--- | :---: | :--- |
-| `MaxLineCount` | **500** | Datei splitten wenn sie wächst. |
-| `MaxMethodLineCount` | **42** | Eine Aufgabe pro Methode; Rest extrahieren. |
+| `MaxLineCount` | **600** | Datei splitten wenn sie wächst. |
+| `MaxMethodLineCount` | **60** | Eine Aufgabe pro Methode; Rest extrahieren. |
 | `MaxMethodParameterCount` | **4** | Ab Überschreitung: `record` als Parameter-Object. |
-| `MaxCyclomaticComplexity` | **5** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |
-| `MaxCognitiveComplexity` | **5** | Weniger Verschachtelung; Early Return bevorzugen (kognitiv). |
+| `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |
+| `MaxCognitiveComplexity` | **15** | Weniger Verschachtelung; Early Return bevorzugen (kognitiv). |
 | `MaxInheritanceDepth` | **2** | Komposition vor Vererbung. |
 | `MaxMethodOverloads` | **3** | Methoden mit eindeutigen Namen bevorzugen. |
 | `MaxConstructorDependencies` | **5** | Verantwortlichkeit aufteilen bei Überschreitung. |
@@ -52,7 +52,6 @@ Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)
 
-**`AiNetLinter`:** `MaxLineCount` **800**; `MaxMethodLineCount` **200**; `MaxMethodParameterCount` **6**; `MaxCyclomaticComplexity` **30**; `MaxCognitiveComplexity` **80**. Details: `rules.json`.
 **`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus; `EnforceNoMagicValues` aus. Details: `rules.json`.
 
 Details: `rules.json`, `AiNetLinter.exe --readme`.

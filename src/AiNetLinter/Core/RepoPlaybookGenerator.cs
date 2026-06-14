@@ -248,10 +248,7 @@ public sealed class RepoPlaybookGenerator
         var suffix = commentText.Substring(idx + DisableMarker.Length).Trim();
         var rule = GetRuleNameFromSuffix(suffix);
 
-        lock (suppressionCounts)
-        {
-            suppressionCounts[rule] = suppressionCounts.TryGetValue(rule, out var currentCount) ? currentCount + 1 : 1;
-        }
+        suppressionCounts[rule] = suppressionCounts.TryGetValue(rule, out var currentCount) ? currentCount + 1 : 1;
     }
 
     private static string GetRuleNameFromSuffix(string suffix)
