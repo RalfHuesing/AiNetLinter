@@ -1,8 +1,9 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.27)
-Produktionscode · 126 Typen · 12 Namespaces
+Produktionscode · 134 Typen · 12 Namespaces
 
-## AiNetLinter (1)
-- Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
+## AiNetLinter (2)
+- FootprintExecutor → LinterArgs
+- Program → LinterArgs, LinterConfig, ParsedArgs, PlaybookOptions, SourceFileCatalog
 
 ## AiNetLinter.Baseline (12)
 - BaselineComparer → BaselineComparisonResult, BaselineFile
@@ -18,11 +19,12 @@ Produktionscode · 126 Typen · 12 Namespaces
 - SourceFileCatalog → SourceFileCatalog, SourceFileEntry
 - SourceFileEntry [record] → SourceFileEntry
 
-## AiNetLinter.Cache (9)
+## AiNetLinter.Cache (10)
 - AnalysisCacheEntry [record] → AnalysisCacheEntry, TestSignalsDto
 - AnalysisCacheFile [record] → AnalysisCacheFile
 - AnalysisCacheManager → AnalysisCacheEntry, AnalysisCacheFile, AnalysisCacheManager
-- CacheEntryMapper → AnalysisCacheEntry, AnalysisState, ClassInfo, ClassInfoDto, LinterAnalyzer, PartialClassPart, PartialPartDto, RuleViolation, RuleViolationDto, TestSignalsDto
+- BuildEntryParams [record] → BuildEntryParams, LinterAnalyzer, TestSignalsDto
+- CacheEntryMapper → AnalysisCacheEntry, AnalysisState, BuildEntryParams, ClassInfo, ClassInfoDto, PartialClassPart, PartialPartDto, RuleViolation, RuleViolationDto
 - ClassInfoDto [record] → ClassInfoDto
 - FootprintDetailDto [record] → FootprintDetailDto
 - PartialPartDto [record] → PartialPartDto
@@ -64,27 +66,31 @@ Produktionscode · 126 Typen · 12 Namespaces
 - TestSentinelConfig [record] → TestSentinelConfig, TestSentinelConfigOverride
 - TestSentinelConfigOverride [record] → TestSentinelConfigOverride
 
-## AiNetLinter.Core (27)
+## AiNetLinter.Core (31)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
+- CacheDestination [record] → AnalysisCacheManager, CacheDestination
 - CodegraphGenerator → TypeInfo
-- CursorRulesGenerator → LinterConfig
+- ComplexityCheck [record] → ComplexityCheck
+- CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
 - FieldReadonlyTracker → RuleViolation
 - FixContext [record] → FixContext
-- LinterAnalyzer [partial] → AnalyzerArgs, FieldReadonlyTracker, LinterConfig, MagicValuesConfig, NamespaceRule
+- LinterAnalyzer [partial] → AnalyzerArgs, ComplexityCheck, FieldReadonlyTracker, LinterConfig, MagicValuesConfig, NamespaceRule
 - LinterAutoFixer → FixContext
-- LinterEngine → AnalysisCacheManager, AnalysisState, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
+- LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
 - MetricDescriptor [record] → MetricDescriptor
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart
+- PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
 - PlaybookDocInfo [record] → PlaybookDocInfo
 - PlaybookDocScanResult [record] → PlaybookDocScanResult
+- PlaybookOptions [record] → LinterConfig, PlaybookOptions
 - PlaybookStats [record] → PlaybookStats
 - PlaybookSyntaxWalker
 - PostAnalysisChecks → AnalysisState, ClassInfo, LinterConfig, TestSentinelConfig, TestSentinelContext
-- RepoPlaybookGenerator → LinterConfig, PlaybookStats
+- RepoPlaybookGenerator → LinterConfig, PlaybookBuildContext, PlaybookOptions, RuleViolation
 - RuleDefinition [record] → RuleDefinition
 - TestCoverageCollector [partial] → TestCoverageIndex, TestSentinelConfig
 - TestCoverageIndex
@@ -93,9 +99,11 @@ Produktionscode · 126 Typen · 12 Namespaces
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
 - TypeInfo [record] → TypeInfo
 
-## AiNetLinter.Diagnostics (4)
+## AiNetLinter.Diagnostics (6)
 - DocumentPerformanceEntry [record] → DocumentPerformanceEntry
-- PerformanceProfiler → PerformanceProfiler
+- PerformanceProfiler → PerformanceProfiler, PhaseDurationSnapshot, ProfilerContext, ProfilerJsonReport
+- PhaseDurationSnapshot [record] → PhaseDurationSnapshot
+- ProfilerContext [record] → ProfilerContext
 - ProfilerJsonReport [record] → ProfilerJsonReport, ProfilerSummary
 - ProfilerSummary [record] → ProfilerSummary
 
