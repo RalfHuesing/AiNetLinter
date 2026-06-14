@@ -6,6 +6,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;
+using AiNetLinter.Configuration;
+
+using System.Collections.Generic;
 
 namespace AiNetLinter.Core;
 
@@ -14,6 +17,28 @@ namespace AiNetLinter.Core;
 /// </summary>
 public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MagicValuesConfig, IReadOnlyList<System.Text.RegularExpressions.Regex>> RegexCache = new();
+
+    private static IReadOnlyList<System.Text.RegularExpressions.Regex> GetCompiledRegexes(MagicValuesConfig config)
+    {
+        return RegexCache.GetValue(config, cfg =>
+        {
+            var list = new List<System.Text.RegularExpressions.Regex>();
+            foreach (var pattern in cfg.IgnoreStringPatterns)
+            {
+                try
+                {
+                    list.Add(new System.Text.RegularExpressions.Regex(pattern, System.Text.RegularExpressions.RegexOptions.Compiled));
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.Error.WriteLine($"[WARNING]: Ungueltiges Regex-Muster '{pattern}' unter IgnoreStringPatterns wird ignoriert: {ex.Message}");
+                }
+            }
+            return list;
+        });
+    }
+
     public override void VisitLiteralExpression(LiteralExpressionSyntax node)
     {
         CheckMagicValue(node);
@@ -42,7 +67,15 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (IsExceptionValue(node)) return false;
         if (IsConstDeclaration(node)) return false;
         if (IsAttributeArgument(node)) return false;
-        return IsInsideBody(node);
+        if (!IsInsideBody(node)) return false;
+
+        // Neue Checks:
+        if (IsIgnoredByMode(node)) return false;
+        if (IsIgnoredByStringPattern(node)) return false;
+        if (IsIgnoredByInvocationContext(node)) return false;
+        if (IsIgnoredByCollectionInitializer(node)) return false;
+
+        return true;
     }
 
     private static bool IsTargetLiteral(LiteralExpressionSyntax node)
@@ -51,7 +84,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return kind == SyntaxKind.NumericLiteralExpression || kind == SyntaxKind.StringLiteralExpression;
     }
 
-    private static bool IsExceptionValue(LiteralExpressionSyntax node)
+    private bool IsExceptionValue(LiteralExpressionSyntax node)
     {
         var kind = node.Kind();
         if (kind == SyntaxKind.StringLiteralExpression) return node.Token.ValueText == "";
@@ -59,9 +92,26 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return false;
     }
 
-    private static bool IsExceptionNumeric(object? value)
+    private bool IsExceptionNumeric(object? value)
     {
         if (value == null) return false;
+
+        // Neue: konfigurierbare Werte-Whitelist
+        var extras = _config.MagicValues.IgnoreNumericValues;
+        if (extras != null && extras.Count > 0)
+        {
+            try
+            {
+                var d = Convert.ToDouble(value);
+                if (extras.Contains(d)) return true;
+            }
+            catch (Exception ignored)
+            {
+                // Ignorieren bei Konvertierungsfehlern
+                _ = ignored;
+            }
+        }
+
         var type = value.GetType();
         if (type == typeof(decimal))
         {
@@ -78,6 +128,79 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         }
         var d = Convert.ToDouble(value);
         return d is 0.0 or 1.0 or -1.0;
+    }
+
+    private bool IsIgnoredByMode(LiteralExpressionSyntax node)
+    {
+        var mode = _config.MagicValues.Mode;
+        if (string.Equals(mode, "numeric-only", StringComparison.OrdinalIgnoreCase))
+        {
+            // Im numeric-only Mode: Strings sind nie magic
+            return node.IsKind(SyntaxKind.StringLiteralExpression);
+        }
+        if (string.Equals(mode, "numeric-and-short-string", StringComparison.OrdinalIgnoreCase))
+        {
+            if (node.IsKind(SyntaxKind.StringLiteralExpression))
+            {
+                var text = node.Token.ValueText;
+                var minLen = _config.MagicValues.MinStringLength;
+                return text.Length < minLen;
+            }
+        }
+        return false;
+    }
+
+    private bool IsIgnoredByStringPattern(LiteralExpressionSyntax node)
+    {
+        if (!node.IsKind(SyntaxKind.StringLiteralExpression)) return false;
+        var regexes = GetCompiledRegexes(_config.MagicValues);
+        if (regexes.Count == 0) return false;
+
+        var value = node.Token.ValueText;
+        foreach (var regex in regexes)
+        {
+            if (regex.IsMatch(value))
+                return true;
+        }
+        return false;
+    }
+
+    private bool IsIgnoredByInvocationContext(LiteralExpressionSyntax node)
+    {
+        var prefixes = _config.MagicValues.IgnoreInvocationPrefixes;
+        if (prefixes == null || prefixes.Count == 0) return false;
+
+        // Prüfe ob das Literal direkt als Argument einer bestimmten Methode übergeben wird
+        if (node.Parent is not ArgumentSyntax arg) return false;
+        if (arg.Parent is not ArgumentListSyntax argList) return false;
+        if (argList.Parent is not InvocationExpressionSyntax invocation) return false;
+
+        var methodName = GetInvocationMethodName(invocation);
+        if (methodName == null) return false;
+
+        foreach (var prefix in prefixes)
+        {
+            if (methodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static string? GetInvocationMethodName(InvocationExpressionSyntax invocation)
+    {
+        return invocation.Expression switch
+        {
+            MemberAccessExpressionSyntax m => m.Name.Identifier.Text,
+            IdentifierNameSyntax id => id.Identifier.Text,
+            MemberBindingExpressionSyntax mb => mb.Name.Identifier.Text,
+            _ => null
+        };
+    }
+
+    private bool IsIgnoredByCollectionInitializer(LiteralExpressionSyntax node)
+    {
+        if (!_config.MagicValues.IgnoreCollectionInitializers) return false;
+        return node.Ancestors().OfType<InitializerExpressionSyntax>().Any();
     }
 
     private static bool IsAttributeArgument(SyntaxNode node)

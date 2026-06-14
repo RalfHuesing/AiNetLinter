@@ -1,5 +1,5 @@
 ﻿# Codegraph (auto-generated)
-Produktionscode · 107 Typen · 10 Namespaces
+Produktionscode · 109 Typen · 10 Namespaces
 
 ## AiNetLinter (1)
 - Program → LinterArgs, LinterConfig, ParsedArgs, SourceFileCatalog
@@ -33,17 +33,19 @@ Produktionscode · 107 Typen · 10 Namespaces
 - ParsedArgs [record] → BaselineOptions, ImpactOptions, MaintenanceOptions, OutputOptions, ParsedArgs, ScopeOptions
 - ScopeOptions [record] → ScopeOptions
 
-## AiNetLinter.Configuration (13)
+## AiNetLinter.Configuration (15)
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
 - GlobalConfigOverride [record] → GlobalConfigOverride
-- LinterConfig [record] → GlobalConfig, LinterConfig, MetricsConfig, TestSentinelConfig
+- LinterConfig [record] → GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
+- MagicValuesConfig [record] → MagicValuesConfig, MagicValuesConfigOverride
+- MagicValuesConfigOverride [record] → MagicValuesConfigOverride
 - MetricsConfig [record] → MetricsConfig, MetricsConfigOverride
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule
 - ProjectConfigResolver → LinterConfig, ProjectOverrideEntry
-- ProjectOverrideEntry [record] → GlobalConfigOverride, MetricsConfigOverride, ProjectOverrideEntry
+- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry
 - RuleMetadataEntry [record] → RuleMetadataEntry
 - RuleMetadataRegistry → LinterConfig, RuleMetadataEntry
 - TestSentinelConfig [record] → TestSentinelConfig
@@ -57,7 +59,7 @@ Produktionscode · 107 Typen · 10 Namespaces
 - DocumentContext [record] → DocumentContext, LinterConfig
 - FieldReadonlyTracker → RuleViolation
 - FixContext [record] → FixContext
-- LinterAnalyzer [partial] → AnalyzerArgs, FieldReadonlyTracker, LinterConfig, NamespaceRule
+- LinterAnalyzer [partial] → AnalyzerArgs, FieldReadonlyTracker, LinterConfig, MagicValuesConfig, NamespaceRule
 - LinterAutoFixer → FixContext
 - LinterEngine → AnalysisState, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex
 - MetricDescriptor [record] → MetricDescriptor

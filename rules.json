@@ -54,6 +54,14 @@
     "RecognizeTypeofReference": true,
     "RecognizeCoversComment": true
   },
+  "MagicValues": {
+    "Mode": "all",
+    "MinStringLength": 0,
+    "IgnoreStringPatterns": [],
+    "IgnoreNumericValues": [],
+    "IgnoreInvocationPrefixes": [],
+    "IgnoreCollectionInitializers": false
+  },
   "RuleMetadata": {
     "MaxLineCount": { "severity": "error", "intent": "agent-context" },
     "MaxCognitiveComplexity": { "severity": "error", "intent": "agent-context" },
