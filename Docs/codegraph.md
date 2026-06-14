@@ -56,7 +56,7 @@ Produktionscode · 112 Typen · 10 Namespaces
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CodegraphGenerator → TypeInfo
-- CursorRulesGenerator → GlobalConfigOverride, LinterConfig, MagicValuesConfigOverride, MetricsConfigOverride
+- CursorRulesGenerator → GlobalConfig, GlobalConfigOverride, LinterConfig, MagicValuesConfigOverride, MetricsConfigOverride, RuleDefinition
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
 - FieldReadonlyTracker → RuleViolation

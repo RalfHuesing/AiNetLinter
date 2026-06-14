@@ -445,6 +445,50 @@ Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen
 }
 ```
 
+### Namespace-Verzeichnis-Abgleich (EnforceNamespaceDirectoryMapping)
+
+Die Regel `EnforceNamespaceDirectoryMapping` stellt sicher, dass der Namespace einer Datei ihrer physischen Ordnerstruktur im Dateisystem entspricht. In modernen Feature-Folder-Architekturen (Vertical Slices) weichen Namespaces jedoch oft bewusst ab. Hierfür stehen folgende Anpassungsmöglichkeiten zur Verfügung:
+
+#### Einstellungsoptionen
+
+- **`NamespaceDirectoryMappingMode`** (String, Default: `"exact"`):
+  - `"exact"`: Der Namespace muss exakt auf den vollständigen physischen Ordnerpfad ab `.csproj` enden (bisheriges Standardverhalten).
+  - `"suffix-match"`: Der Namespace muss auf die letzten N Segmente des Pfades enden. N wird über `NamespaceDirectoryMappingRequiredTrailingSegments` konfiguriert.
+  - `"contains-all"`: Alle relevanten Pfad-Segmente müssen im deklarierten Namespace enthalten sein (Reihenfolge egal).
+- **`NamespaceDirectoryMappingIgnorePathSegments`** (Array von Strings, Default: `[]`): Pfad-Segmente, die beim Abgleich ignoriert werden (z. B. `["src", "Source", "Domains"]`).
+- **`NamespaceDirectoryMappingRequiredTrailingSegments`** (Integer, Default: `2`): Im Modus `"suffix-match"` gibt dies an, wie viele der letzten Ordner-Segmente im Namespace als Suffix übereinstimmen müssen.
+
+#### Beispiele
+
+##### 1. Modus `"exact"`
+- **Pfad:** `Features/Admin/Users/`
+- **Namespace:** `MyApp.Features.Admin.Users` (Kein Verstoß)
+- **Namespace:** `MyApp.Features.Users` (Verstoß, da `Admin` fehlt)
+
+##### 2. Modus `"suffix-match"` (RequiredTrailingSegments: 2, IgnorePathSegments: `["Domains"]`)
+- **Pfad:** `Handlers/Domains/Kalender/`
+- **Relevante Segmente:** `["Handlers", "Kalender"]` (da `"Domains"` ignoriert wird)
+- **Erwarteter Suffix (die letzten 2):** `"Handlers.Kalender"`
+- **Namespace:** `MyApp.Handlers.Kalender` (Kein Verstoß)
+
+##### 3. Modus `"contains-all"`
+- **Pfad:** `Features/Admin/Users/`
+- **Namespace:** `MyApp.Features.Users.Admin` (Kein Verstoß, da `Features`, `Admin` und `Users` alle im Namespace vorkommen)
+
+#### Empfohlene Konfiguration für Feature-Folder-Architektur (Vertical Slice):
+
+```json
+"Global": {
+  "EnforceNamespaceDirectoryMapping": true,
+  "NamespaceDirectoryMappingMode": "suffix-match",
+  "NamespaceDirectoryMappingIgnorePathSegments": ["src", "Source", "Domains", "Handlers"],
+  "NamespaceDirectoryMappingRequiredTrailingSegments": 2
+}
+```
+
+> [!NOTE]
+> Diese Regel ist standardmäßig deaktiviert und sollte nur in strikten Profilen oder bei klar definierten Projektarchitekturen aktiviert werden.
+
 ### Datei- und Verzeichnis-Ausschlüsse (FileFilters)
 
 Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.

@@ -282,20 +282,61 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
         if (namespaceDeclaration == null) return;
 
-        var expectedSuffix = string.Join(".", pathParts);
         var declaredNamespace = namespaceDeclaration.Name.ToString();
-        
-        if (!declaredNamespace.EndsWith(expectedSuffix, StringComparison.OrdinalIgnoreCase))
+
+        // Relevante Pfad-Teile bestimmen (ignorierte Segmente entfernen)
+        var ignoredSegments = _config.Global.NamespaceDirectoryMappingIgnorePathSegments
+            ?? Array.Empty<string>();
+        var relevantParts = pathParts
+            .Where(p => !ignoredSegments.Contains(p, StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (relevantParts.Length == 0) return; // Edge Case: Alle Segmente werden ignoriert -> kein Verstoß
+
+        bool matches = _config.Global.NamespaceDirectoryMappingMode switch
         {
+            "suffix-match" => MatchesSuffix(declaredNamespace, relevantParts,
+                _config.Global.NamespaceDirectoryMappingRequiredTrailingSegments),
+            "contains-all" => MatchesContainsAll(declaredNamespace, relevantParts),
+            _ => MatchesExact(declaredNamespace, relevantParts) // "exact" (Default)
+        };
+
+        if (!matches)
+        {
+            var expectedSuffix = string.Join(".", relevantParts);
             _violations.Add(new RuleViolation
             {
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(namespaceDeclaration),
                 RuleName = "EnforceNamespaceDirectoryMapping",
-                Details = $"Der Namespace '{declaredNamespace}' stimmt nicht mit dem physischen Ordnerpfad '{relativePath}' ueberein.",
-                Guidance = $"Passe den Namespace an, sodass er auf '.{expectedSuffix}' endet, oder verschiebe die Datei."
+                Details = $"Der Namespace '{declaredNamespace}' stimmt nicht mit dem " +
+                          $"physischen Ordnerpfad '{relativePath}' ueberein " +
+                          $"(Modus: {_config.Global.NamespaceDirectoryMappingMode}).",
+                Guidance = $"Passe den Namespace an, sodass er '.{expectedSuffix}' enthaelt, " +
+                           $"oder verschiebe die Datei."
             });
         }
+    }
+
+    private static bool MatchesExact(string ns, string[] parts)
+    {
+        var suffix = string.Join(".", parts);
+        return ns.Equals(suffix, StringComparison.OrdinalIgnoreCase) || 
+               ns.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesSuffix(string ns, string[] parts, int requiredTrailing)
+    {
+        if (parts.Length == 0) return true;
+        var trailing = parts.TakeLast(Math.Min(requiredTrailing, parts.Length)).ToArray();
+        var suffix = string.Join(".", trailing);
+        return ns.Equals(suffix, StringComparison.OrdinalIgnoreCase) || 
+               ns.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesContainsAll(string ns, string[] parts)
+    {
+        return parts.All(p => ns.Contains(p, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string FindProjectDirectory(string startDir)

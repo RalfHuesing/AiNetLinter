@@ -72,6 +72,23 @@ public sealed record GlobalConfig
     public bool PreventContextDependentOverloads { get; init; } = true;
     public bool RequireExplicitTruncationHandling { get; init; } = true;
     public bool EnforceNamespaceDirectoryMapping { get; init; } = true;
+
+    /// <summary>
+    /// Der Modus fuer den Namespace-Ordner-Abgleich: "exact" | "suffix-match" | "contains-all"
+    /// </summary>
+    public string NamespaceDirectoryMappingMode { get; init; } = "exact";
+
+    /// <summary>
+    /// Pfad-Segmente, die beim Namespace-Vergleich ignoriert werden.
+    /// </summary>
+    public IReadOnlyCollection<string> NamespaceDirectoryMappingIgnorePathSegments { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
+    /// Im Suffix-Match-Modus: Anzahl der letzten Ordner-Segmente, die im Namespace enthalten sein muessen.
+    /// </summary>
+    public int NamespaceDirectoryMappingRequiredTrailingSegments { get; init; } = 2;
+
     public bool DetectAndBanPhantomDependencies { get; init; } = true;
     public IReadOnlyCollection<string> ImmutabilityExemptSuffixes { get; init; } = new[]
     {
@@ -130,6 +147,9 @@ public sealed record GlobalConfig
             PreventContextDependentOverloads = @override.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
             RequireExplicitTruncationHandling = @override.RequireExplicitTruncationHandling ?? RequireExplicitTruncationHandling,
             EnforceNamespaceDirectoryMapping = @override.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
+            NamespaceDirectoryMappingMode = @override.NamespaceDirectoryMappingMode ?? NamespaceDirectoryMappingMode,
+            NamespaceDirectoryMappingIgnorePathSegments = @override.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,
+            NamespaceDirectoryMappingRequiredTrailingSegments = @override.NamespaceDirectoryMappingRequiredTrailingSegments ?? NamespaceDirectoryMappingRequiredTrailingSegments,
             DetectAndBanPhantomDependencies = @override.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
             ImmutabilityExemptSuffixes = @override.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
             ImmutabilityExemptPatterns = @override.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
@@ -375,6 +395,9 @@ public sealed record GlobalConfigOverride
     public bool? PreventContextDependentOverloads { get; init; }
     public bool? RequireExplicitTruncationHandling { get; init; }
     public bool? EnforceNamespaceDirectoryMapping { get; init; }
+    public string? NamespaceDirectoryMappingMode { get; init; }
+    public IReadOnlyCollection<string>? NamespaceDirectoryMappingIgnorePathSegments { get; init; }
+    public int? NamespaceDirectoryMappingRequiredTrailingSegments { get; init; }
     public bool? DetectAndBanPhantomDependencies { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptSuffixes { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptPatterns { get; init; }

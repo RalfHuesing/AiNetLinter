@@ -34,6 +34,9 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`EnforceNullableEnable`** `[intent: general]`: Nutze `#nullable enable` am Dateianfang.
 - **`EnforceNoSilentCatch`** `[intent: agent-resilience]`: Leere catch-Blöcke sind verboten. Benenne die Exception-Variable `ignored` oder wirf sie mit `throw;` weiter.
 - **`AllowCancellationShutdownCatch`** `[intent: general]`: Erlaubt das Abfangen von OperationCanceledException beim Shutdown.
+- **`EnforceNamespaceDirectoryMapping`** `[intent: architecture]`: Der Namespace der Datei muss dem Pfad im Dateisystem entsprechen.
+  - *Konfiguration*: Modus: `suffix-match` (RequiredTrailingSegments: 2)
+    - *Ignorierte Pfad-Segmente*: `src`, `Source`, `Domains`, `Handlers`
 - **`ImmutabilityExemptSuffixes`**: Ausgenommene Suffixe (siehe `rules.json`).
 - **`SealedClassExemptSuffixes`**: Folgende Klassenname-Suffixe sind von der Versiegelungs-Prüfung ausgenommen: `Base`, `Foundation`, `Host`.
 - **`ImmutabilityExemptBaseTypes`**: Ausgenommene Basistypen (siehe `rules.json`).
@@ -59,7 +62,6 @@ Diese Regeln werden automatisch aus der `rules.json` generiert und durch den `Ai
 - **`EnforceStrictBoundaryForBusinessLogic`**: aus — I/O in Business-Logic erlaubt
 - **`PreventContextDependentOverloads`**: aus — Überladungen erlaubt
 - **`RequireExplicitTruncationHandling`**: aus — keine explizite Truncation-Pflicht
-- **`EnforceNamespaceDirectoryMapping`**: aus — Namespaces können frei gewählt werden
 - **`DetectAndBanPhantomDependencies`**: aus — Phantom-Abhängigkeiten erlaubt
 - **`AllowedEmptyReads`**: aus — leere Leseoperationen verboten
 
