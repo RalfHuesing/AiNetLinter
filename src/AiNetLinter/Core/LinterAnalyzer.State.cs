@@ -122,6 +122,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (node is RecordDeclarationSyntax or StructDeclarationSyntax)
             return;
 
+        if (IsExemptByClassSuffix(node.Identifier.Text))
+            return;
+
         var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
         int count;
 
@@ -149,6 +152,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private void CheckConstructorDependencies(ConstructorDeclarationSyntax node)
     {
+        if (node.Parent is TypeDeclarationSyntax parentType && IsExemptByClassSuffix(parentType.Identifier.Text))
+            return;
+
         var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
         int count;
 
@@ -172,6 +178,19 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 Guidance = $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility."
             });
         }
+    }
+
+    private bool IsExemptByClassSuffix(string className)
+    {
+        var exemptSuffixes = _config.Metrics.ConstructorDependencyExemptClassSuffixes;
+        if (exemptSuffixes == null || exemptSuffixes.Count == 0) return false;
+
+        foreach (var suffix in exemptSuffixes)
+        {
+            if (className.EndsWith(suffix, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
     }
 
     private int CountNonFrameworkDependencies(

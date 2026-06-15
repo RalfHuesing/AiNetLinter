@@ -222,6 +222,13 @@ public sealed record MetricsConfig
         = Array.Empty<string>();
 
     /// <summary>
+    /// Klassen-Name-Suffixe, für die MaxConstructorDependencies nicht geprüft wird.
+    /// Typisch: ["Exception"] — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten.
+    /// </summary>
+    public IReadOnlyCollection<string> ConstructorDependencyExemptClassSuffixes { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
     /// </summary>
     public int MaxAIContextFootprint { get; init; } = 5000;
@@ -268,6 +275,7 @@ public sealed record MetricsConfig
         MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
         InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
         ConstructorDependencyIgnoreTypePrefixes = @override?.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
+        ConstructorDependencyExemptClassSuffixes = @override?.ConstructorDependencyExemptClassSuffixes ?? ConstructorDependencyExemptClassSuffixes,
         ComplexityNearMissTolerance = @override?.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
         ExcludeSwitchDispatcherCases = @override?.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
         SwitchDispatcherMaxCaseBodyLines = @override?.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
