@@ -73,7 +73,7 @@ public static class ViolationTextFormatter
         sb.Append("Konfigurationsoptionen erkunden:\n");
 
         var exePath = Environment.ProcessPath ?? "ainetlinter";
-        sb.Append($"  `{exePath} --readme <RuleName>`\n");
+        sb.Append($"  `{exePath} --readme`\n");
 
         sb.Append("Bei vermutetem False-Positive: Nutzer explizit informieren, Optionen mit Empfehlung nennen, Einverständnis einholen — BEVOR du etwas änderst.\n");
 
