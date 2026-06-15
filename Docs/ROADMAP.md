@@ -247,6 +247,15 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Repo-Playbook-Generator Erweiterung:** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
 - [x] **SARIF Intent-Tags:** Export von `RuleMetadata.Intent` in `properties.tags` für CI-Dashboards.
 
+---
+
+## Epic 22: UI-Datei-Trennung (Blazor & WPF)
+- [x] **Regel: BlazorRequireCodeBehind** – Jede `.razor`-Datei muss eine `.razor.cs`-Begleitdatei (Code-Behind-Partial-Class) haben. Dateisystem-basierter Check (Roslyn sieht `.razor` nicht).
+- [x] **Regel: BlazorRequireCssIsolation** – Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei (CSS-Isolation) haben.
+- [x] **Regel: WpfRequireMinimalCodeBehind** – WPF Code-Behind-Klassen (`partial class : Window/UserControl/...`) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten (Roslyn-Check).
+- [x] **Suppression:** Razor-Kommentar-Syntax `@* ainetlinter-disable RuleName *@`, Klassen-Ausschlusslisten per Config.
+- [x] **Konfigurations-Sektion `UiSeparation`** mit WPF/Blazor-getrennten Optionen, Ausschluss-Listen und Projekt-Override-Support.
+
 
 
 

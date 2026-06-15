@@ -9,9 +9,6 @@ namespace AiNetLinter.Output;
 /// </summary>
 public static class ViolationTextFormatter
 {
-    private const string InstructionLine =
-        "Behebe nur die gelisteten Verstoesse. Minimaler Diff - kein Refactoring ausserhalb betroffener Stellen/Zeilen.";
-
     /// <summary>
     /// Erzeugt die vollständige Textausgabe inklusive LLM-Anweisungsheader und sortierter Verstoßliste.
     /// </summary>
@@ -35,8 +32,7 @@ public static class ViolationTextFormatter
 
         var output = new StringBuilder();
         output.Append($"# AiNetLinter - {violations.Count} violations\n");
-        output.Append(InstructionLine);
-        output.Append('\n');
+        output.Append(BuildInstructionBlock(outputRoot));
 
         var uniqueRuleNames = violations
             .Select(v => v.RuleName)
@@ -56,6 +52,36 @@ public static class ViolationTextFormatter
         output.Append("\n\n## Violations\n");
         output.Append(string.Join('\n', detailLines));
         return output.ToString();
+    }
+
+    private static string BuildInstructionBlock(string projectRoot)
+    {
+        var sb = new StringBuilder();
+        sb.Append("\n## Handlungsanweisung\n\n");
+        sb.Append("Analysiere die Violations im Kontext der Architektur und Coding-Richtlinien dieses Projekts.\n");
+
+        var cursorRulesPath = Path.Combine(projectRoot, ".cursor", "rules");
+        var claudeMdPath = Path.Combine(projectRoot, "CLAUDE.md");
+
+        if (Directory.Exists(cursorRulesPath))
+            sb.Append("Projektkonfiguration erkannt: `.cursor/rules` — Architektur-Constraints und Regeln dort beachten.\n");
+        if (File.Exists(claudeMdPath))
+            sb.Append("Projektkonfiguration erkannt: `CLAUDE.md` — Architektur-Constraints dort beachten.\n");
+
+        sb.Append("\n**Schritt 1 — False-Positive-Prüfung (PFLICHT vor jeder Änderung)**\n");
+        sb.Append("Prüfe für jede Violation: Ist das ein echter Verstoß oder ein False-Positive, der durch die Architektur des Projekts gerechtfertigt ist?\n");
+        sb.Append("Konfigurationsoptionen erkunden:\n");
+
+        var exePath = Environment.ProcessPath ?? "ainetlinter";
+        sb.Append($"  `{exePath} --readme <RuleName>`\n");
+
+        sb.Append("Bei vermutetem False-Positive: Nutzer explizit informieren, Optionen mit Empfehlung nennen, Einverständnis einholen — BEVOR du etwas änderst.\n");
+
+        sb.Append("\n**Schritt 2 — Behebung echter Violations**\n");
+        sb.Append("Minimal und präzise. Kein Refactoring außerhalb betroffener Zeilen.\n");
+        sb.Append("Reihenfolge: Code-Fix → Konfigurationsanpassung → Suppression-Kommentar (letztes Mittel, nur nach Nutzer-Freigabe).\n\n");
+
+        return sb.ToString();
     }
 
     private static string FormatFileSummary(IReadOnlyList<FileViolationCount> byFile)

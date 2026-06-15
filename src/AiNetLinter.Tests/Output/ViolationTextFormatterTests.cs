@@ -26,7 +26,8 @@ public sealed class ViolationTextFormatterTests
         var result = ViolationTextFormatter.Format(violations, OutputRoot);
 
         Assert.StartsWith("# AiNetLinter - 1 violations", result);
-        Assert.Contains("Minimaler Diff", result);
+        Assert.Contains("## Handlungsanweisung", result);
+        Assert.Contains("False-Positive-Prüfung", result);
     }
 
     [Fact]
