@@ -169,6 +169,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
 | `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). Records und Structs, bei denen **alle** Parameter Default-Werte haben, werden automatisch ausgenommen (Options/Config-Objects). |
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
+| `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
 | `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |

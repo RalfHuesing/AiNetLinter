@@ -78,7 +78,8 @@
       "IConfiguration",
       "IServiceProvider",
       "IHttpContextAccessor"
-    ]
+    ],
+    "ConstructorDependencyExemptClassSuffixes": ["Exception"]
   },
   "TestSentinel": {
     "ClassNamePatterns": [

@@ -194,6 +194,11 @@ public sealed record MetricsConfigOverride
     /// </summary>
     public IReadOnlyCollection<string>? ConstructorDependencyIgnoreTypePrefixes { get; init; }
 
+    /// <summary>
+    /// Klassen-Name-Suffixe, für die MaxConstructorDependencies nicht geprüft wird.
+    /// </summary>
+    public IReadOnlyCollection<string>? ConstructorDependencyExemptClassSuffixes { get; init; }
+
     public int? ComplexityNearMissTolerance { get; init; }
     public bool? ExcludeSwitchDispatcherCases { get; init; }
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }

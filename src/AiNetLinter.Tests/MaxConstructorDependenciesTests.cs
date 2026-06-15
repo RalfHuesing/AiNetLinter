@@ -12,7 +12,7 @@ namespace AiNetLinter.Tests;
 
 public sealed class MaxConstructorDependenciesTests
 {
-    private static LinterConfig CreateConfig(int maxDeps, string[]? ignorePrefixes = null)
+    private static LinterConfig CreateConfig(int maxDeps, string[]? ignorePrefixes = null, string[]? exemptSuffixes = null)
     {
         return new LinterConfig
         {
@@ -36,7 +36,8 @@ public sealed class MaxConstructorDependenciesTests
             Metrics = new MetricsConfig
             {
                 MaxConstructorDependencies = maxDeps,
-                ConstructorDependencyIgnoreTypePrefixes = ignorePrefixes ?? System.Array.Empty<string>()
+                ConstructorDependencyIgnoreTypePrefixes = ignorePrefixes ?? System.Array.Empty<string>(),
+                ConstructorDependencyExemptClassSuffixes = exemptSuffixes ?? System.Array.Empty<string>()
             }
         };
     }
@@ -274,6 +275,87 @@ public sealed class MyHandler(
 
         var ctorViolations = violations.Where(v => v.RuleName == "MaxConstructorDependencies").ToList();
         Assert.Single(ctorViolations);
+    }
+
+    // --- Exception-Klassen-Exemption ---
+
+    [Fact]
+    public async Task Analyze_ExceptionClass_PrimaryConstructor_DoesNotReportViolation()
+    {
+        // Exception-Klassen haben Payload-Parameter (string, Exception?), keine DI-Abhängigkeiten.
+        // ConstructorDependencyExemptClassSuffixes: ["Exception"] verhindert False Positives.
+        const string sourceCode = @"
+namespace Test;
+public sealed class SiteMetadataValidationException(
+    string code,
+    string message,
+    string? componentId = null,
+    string? pageRoute = null,
+    string? suggestion = null,
+    System.Exception? innerException = null) : System.Exception(message, innerException)
+{ }
+";
+        var config = CreateConfig(5, exemptSuffixes: new[] { "Exception" });
+        var solution = CreateAdhocSolution(("SiteMetadataValidationException.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_ExceptionClass_ClassicConstructor_DoesNotReportViolation()
+    {
+        const string sourceCode = @"
+namespace Test;
+public sealed class DomainException : System.Exception
+{
+    public DomainException(
+        string code,
+        string message,
+        string? componentId = null,
+        string? pageRoute = null,
+        string? suggestion = null,
+        System.Exception? innerException = null) : base(message, innerException)
+    { }
+}
+";
+        var config = CreateConfig(5, exemptSuffixes: new[] { "Exception" });
+        var solution = CreateAdhocSolution(("DomainException.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_NonExemptClass_ExceedingLimit_ReportsViolation()
+    {
+        // Stellt sicher, dass die Exemption NUR für konfigurierte Suffixe greift.
+        const string sourceCode = @"
+namespace Test;
+public class ServiceA {}
+public class ServiceB {}
+public class ServiceC {}
+public class ServiceD {}
+public class ServiceE {}
+public class ServiceF {}
+
+public sealed class MyHandler(
+    ServiceA a,
+    ServiceB b,
+    ServiceC c,
+    ServiceD d,
+    ServiceE e,
+    ServiceF f)
+{ }
+";
+        var config = CreateConfig(5, exemptSuffixes: new[] { "Exception" });
+        var solution = CreateAdhocSolution(("MyHandler.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Single(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
     }
 
     // --- Options/Config-Record Exemption ---
