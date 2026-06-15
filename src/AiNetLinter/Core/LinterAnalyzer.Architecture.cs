@@ -38,6 +38,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckMethodOverloads(node);
         CheckPrimaryConstructorDependencies(node);
         CheckClassImmutability(node);
+        CheckWpfCodeBehind(node);
 
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)

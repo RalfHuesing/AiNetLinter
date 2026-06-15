@@ -42,6 +42,11 @@ internal static class PostAnalysisChecks
         AddPartialClassViolations(state.PartialClassParts, state.Violations, config);
         sw.Stop();
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("PartialClassLineAggregation", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
+        UiFileSeparationChecker.Run(state, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("UiFileSeparation", sw.Elapsed.TotalMilliseconds);
     }
 
     private static void RunTestSentinel(AnalysisState state, LinterConfig config)

@@ -137,6 +137,14 @@
     "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
     "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" }
   },
+  "UiSeparation": {
+    "BlazorRequireCodeBehind": true,
+    "BlazorRequireCssIsolation": true,
+    "WpfRequireMinimalCodeBehind": true,
+    "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
+    "BlazorExcludeFileNames": ["_Imports.razor"],
+    "WpfExcludeClassNames": []
+  },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
     "*.Tests": {

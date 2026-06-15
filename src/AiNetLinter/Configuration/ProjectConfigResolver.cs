@@ -59,6 +59,7 @@ public static class ProjectConfigResolver
             Metrics = global.Metrics.Apply(overrides.Metrics),
             MagicValues = global.MagicValues.Apply(overrides.MagicValues),
             TestSentinel = global.TestSentinel.Apply(overrides.TestSentinel),
+            UiSeparation = global.UiSeparation.Apply(overrides.UiSeparation),
         };
     }
 }
