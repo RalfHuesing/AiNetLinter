@@ -140,6 +140,7 @@
   "UiSeparation": {
     "BlazorRequireCodeBehind": true,
     "BlazorRequireCssIsolation": true,
+    "BlazorCssIsolationOnlyWhenStylesNeeded": true,
     "WpfRequireMinimalCodeBehind": true,
     "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
     "BlazorExcludeFileNames": ["_Imports.razor"],

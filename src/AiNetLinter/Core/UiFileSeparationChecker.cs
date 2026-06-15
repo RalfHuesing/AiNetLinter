@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 using Microsoft.CodeAnalysis;
@@ -66,15 +67,17 @@ internal static class UiFileSeparationChecker
         if (config.BlazorRequireCssIsolation)
         {
             var cssPath = razorFile + ".css";
-            if (!File.Exists(cssPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCssIsolation"))
+            var needsCss = !config.BlazorCssIsolationOnlyWhenStylesNeeded || RazorNeedsCss(fileContent);
+            if (needsCss && !File.Exists(cssPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCssIsolation"))
             {
                 violations.Add(CreateViolation(
                     razorFile,
                     "BlazorRequireCssIsolation",
-                    $"Die Razor-Komponente '{Path.GetFileName(razorFile)}' hat keine '{Path.GetFileName(cssPath)}'-CSS-Isolationsdatei.",
+                    $"Die Razor-Komponente '{Path.GetFileName(razorFile)}' enthaelt native HTML-Elemente oder class=/style=-Attribute, aber keine '{Path.GetFileName(cssPath)}'-CSS-Isolationsdatei.",
                     "Erstelle eine separate '.razor.css'-Datei fuer komponentenspezifische Styles (Blazor CSS-Isolation). " +
                     "Verschiebe alle '<style>'-Bloecke aus der '.razor'-Datei dorthin. " +
-                    "Blazor scoped diese Styles automatisch auf die Komponente." +
+                    "Blazor scoped diese Styles automatisch auf die Komponente. " +
+                    "Reine Komponenten-Komposition (nur PascalCase-Tags wie <MudButton>) benoetigt keine CSS-Datei." +
                     " Suppression moeglich mit: @* ainetlinter-disable BlazorRequireCssIsolation *@"));
             }
         }
@@ -102,6 +105,32 @@ internal static class UiFileSeparationChecker
         return fileContent.Contains($"ainetlinter-disable {ruleName}", StringComparison.OrdinalIgnoreCase)
             || fileContent.Contains("ainetlinter-disable all", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Erkennt ob eine Razor-Datei tatsächlich CSS-Isolation benötigt.
+    /// Kriterien: native HTML-Elemente (lowercase Tags wie &lt;div&gt;, &lt;span&gt;)
+    /// oder class=/style=-Attribute (lowercase = HTML, PascalCase = Blazor-Props).
+    /// Reine Komponenten-Komposition (nur PascalCase-Tags) braucht keine CSS-Datei.
+    /// </summary>
+    internal static bool RazorNeedsCss(string fileContent)
+    {
+        if (string.IsNullOrEmpty(fileContent)) return false;
+
+        // HTML class/style-Attribute (lowercase = native HTML, nicht Blazor-Component-Props wie Class= oder Style=)
+        if (fileContent.Contains("class=\"", StringComparison.Ordinal)) return true;
+        if (fileContent.Contains("class='", StringComparison.Ordinal)) return true;
+        if (fileContent.Contains("class=@", StringComparison.Ordinal)) return true;
+        if (fileContent.Contains("style=\"", StringComparison.Ordinal)) return true;
+        if (fileContent.Contains("style='", StringComparison.Ordinal)) return true;
+        if (fileContent.Contains("style=@", StringComparison.Ordinal)) return true;
+
+        // Native HTML-Elemente: <tagname  wo tagname mit Kleinbuchstaben beginnt
+        return NativeHtmlTagPattern.IsMatch(fileContent);
+    }
+
+    // Matcht <div, <span, <p, <h1, <input etc. — aber nicht <MudButton, <Component etc.
+    private static readonly Regex NativeHtmlTagPattern =
+        new Regex(@"<[a-z][a-zA-Z0-9]*[\s>/]", RegexOptions.Compiled);
 
     private static bool IsInExcludedDirectory(string filePath)
     {

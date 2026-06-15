@@ -30,6 +30,7 @@ public sealed class UiFileSeparationCheckerTests : IDisposable
     {
         BlazorRequireCodeBehind = true,
         BlazorRequireCssIsolation = true,
+        BlazorCssIsolationOnlyWhenStylesNeeded = true,
         WpfRequireMinimalCodeBehind = true,
         WpfCodeBehindBaseTypes = new[] { "Window", "UserControl", "Page", "NavigationWindow" },
         BlazorExcludeFileNames = new[] { "_Imports.razor" },
@@ -185,5 +186,105 @@ public sealed class UiFileSeparationCheckerTests : IDisposable
         var ex = Record.Exception(() =>
             UiFileSeparationChecker.ScanDirectory(Path.Combine(_tempDir, "doesnotexist"), violations, AllEnabled()));
         Assert.Null(ex);
+    }
+
+    // ── RazorNeedsCss ─────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("<div class=\"foo\">")]
+    [InlineData("<span>Text</span>")]
+    [InlineData("<p>Paragraph</p>")]
+    [InlineData("<input type=\"text\" />")]
+    [InlineData("<h1>Title</h1>")]
+    [InlineData("<ul><li>Item</li></ul>")]
+    [InlineData("class=\"my-class\"")]
+    [InlineData("class='my-class'")]
+    [InlineData("class=@myClass")]
+    [InlineData("style=\"color: red\"")]
+    [InlineData("style='color: red'")]
+    [InlineData("style=@myStyle")]
+    public void RazorNeedsCss_WithHtmlOrStyleContent_ReturnsTrue(string content)
+    {
+        Assert.True(UiFileSeparationChecker.RazorNeedsCss(content));
+    }
+
+    [Theory]
+    [InlineData("<MudDialog>")]
+    [InlineData("<MudButton Color=\"Color.Primary\">Click</MudButton>")]
+    [InlineData("<DynamicFormFieldEditor Host=\"@Host\" />")]
+    [InlineData("@namespace MyApp.Components")]
+    [InlineData("@using System")]
+    [InlineData("@* Razor comment *@")]
+    [InlineData("<TitleContent><MudText>Title</MudText></TitleContent>")]
+    [InlineData("")]
+    public void RazorNeedsCss_WithPureBlazoOrDirectives_ReturnsFalse(string content)
+    {
+        Assert.False(UiFileSeparationChecker.RazorNeedsCss(content));
+    }
+
+    [Fact]
+    public void RazorNeedsCss_ExampleFromBugReport_ReturnsFalse()
+    {
+        const string content = """
+            @namespace San.smart.Planner.Platform.Components.UI.Form
+            @using San.smart.Planner.Platform.Handlers
+
+            <MudDialog>
+                <TitleContent>
+                    <MudText Typo="Typo.h6">@Title</MudText>
+                </TitleContent>
+                <DialogContent>
+                    <DynamicFormFieldEditor Host="@Host"
+                                            Fields="@Fields"
+                                            Context="@Values" />
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Cancel">Abbrechen</MudButton>
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" OnClick="Save">Übernehmen</MudButton>
+                </DialogActions>
+            </MudDialog>
+            """;
+
+        Assert.False(UiFileSeparationChecker.RazorNeedsCss(content));
+    }
+
+    [Fact]
+    public void ScanDirectory_PureComponentComposition_NoCssViolation()
+    {
+        const string content = "<MudDialog><MudButton>Click</MudButton></MudDialog>";
+        File.WriteAllText(Path.Combine(_tempDir, "MyDialog.razor"), content);
+        File.WriteAllText(Path.Combine(_tempDir, "MyDialog.razor.cs"), "public partial class MyDialog {}");
+
+        var violations = new ConcurrentBag<RuleViolation>();
+        UiFileSeparationChecker.ScanDirectory(_tempDir, violations, AllEnabled());
+
+        Assert.DoesNotContain(violations, v => v.RuleName == "BlazorRequireCssIsolation");
+    }
+
+    [Fact]
+    public void ScanDirectory_WithHtmlElements_CssViolationReported()
+    {
+        const string content = "<div class=\"container\"><MudButton>Click</MudButton></div>";
+        File.WriteAllText(Path.Combine(_tempDir, "MyPage.razor"), content);
+        File.WriteAllText(Path.Combine(_tempDir, "MyPage.razor.cs"), "public partial class MyPage {}");
+
+        var violations = new ConcurrentBag<RuleViolation>();
+        UiFileSeparationChecker.ScanDirectory(_tempDir, violations, AllEnabled());
+
+        Assert.Contains(violations, v => v.RuleName == "BlazorRequireCssIsolation");
+    }
+
+    [Fact]
+    public void ScanDirectory_WhenOnlyWhenNeededFalse_AlwaysReportsCssViolation()
+    {
+        const string content = "<MudDialog><MudButton>Click</MudButton></MudDialog>";
+        File.WriteAllText(Path.Combine(_tempDir, "MyDialog.razor"), content);
+        File.WriteAllText(Path.Combine(_tempDir, "MyDialog.razor.cs"), "public partial class MyDialog {}");
+
+        var config = AllEnabled() with { BlazorCssIsolationOnlyWhenStylesNeeded = false };
+        var violations = new ConcurrentBag<RuleViolation>();
+        UiFileSeparationChecker.ScanDirectory(_tempDir, violations, config);
+
+        Assert.Contains(violations, v => v.RuleName == "BlazorRequireCssIsolation");
     }
 }
