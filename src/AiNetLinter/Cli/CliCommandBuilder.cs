@@ -7,8 +7,6 @@ namespace AiNetLinter.Cli;
 /// </summary>
 internal static class CliCommandBuilder
 {
-    // ainetlinter-disable MaxConstructorDependencies
-    // Diese Records dienen als Behaelter fuer CLI-Optionen und haben keine logischen Abhaengigkeiten.
     internal sealed record Options(
         Option<string?> Config,
         Option<string?> Path,
@@ -56,8 +54,6 @@ internal static class CliCommandBuilder
         bool HasImpact,
         string? ImpactRef);
 
-    // ainetlinter-disable MaxConstructorDependencies
-    // Dieser Record ist ein CLI-Parsing-DTO und hat keine logischen Abhaengigkeiten.
     internal sealed record ParsedArgs(
         string? ConfigPath,
         string TargetPath,

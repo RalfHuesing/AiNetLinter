@@ -20,8 +20,6 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly SemanticModel _semanticModel;
     private readonly LinterConfig _config;
     private readonly List<RuleViolation> _violations = new();
-    // ainetlinter-disable EnforceExplicitStateImmutability
-    // Dieser veraenderliche Zustand ist fuer den CSharpSyntaxWalker erforderlich (Visitor-Pattern).
     private string _currentNamespace = "";
     private readonly bool _isTestFile;
     private readonly string? _projectName;

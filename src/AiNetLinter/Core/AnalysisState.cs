@@ -11,8 +11,6 @@ namespace AiNetLinter.Core;
 /// <summary>
 /// Hält den aktuellen Zustand während der parallelen Dateianalyse.
 /// </summary>
-// ainetlinter-disable MaxConstructorDependencies
-// Dieser Record dient als Parameter-Objekt zur Kapselung des Analyse-Zustands.
 internal sealed record AnalysisState(
     Solution Solution,
     ConcurrentBag<RuleViolation> Violations,

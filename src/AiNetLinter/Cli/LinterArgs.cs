@@ -2,8 +2,6 @@
 
 namespace AiNetLinter.Cli;
 
-// ainetlinter-disable StaticTestSentinel
-// Validation logic ist einfache Constraint-Prüfung ohne komplexe Domänenlogik; durch CliIntegrationTests abgedeckt.
 /// <summary>
 /// Argumente fuer die Ausfuehrung des Linters, die aus den CLI-Optionen geparst werden.
 /// </summary>
