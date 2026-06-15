@@ -536,15 +536,18 @@ public static class Program
 
     private static int RunPrintReadme()
     {
-        using var stream = typeof(Program).Assembly.GetManifestResourceStream("README.md");
-        if (stream == null)
+        string[] parts = ["README.md", "docs/configuration.md"];
+        foreach (var name in parts)
         {
-            Console.Error.WriteLine("[ERROR]: Die README.md wurde nicht als eingebettete Ressource gefunden.");
-            return 1;
+            using var stream = typeof(Program).Assembly.GetManifestResourceStream(name);
+            if (stream == null)
+            {
+                Console.Error.WriteLine($"[ERROR]: '{name}' wurde nicht als eingebettete Ressource gefunden.");
+                return 1;
+            }
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            Console.WriteLine(reader.ReadToEnd());
         }
-
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        Console.WriteLine(reader.ReadToEnd());
         return 0;
     }
 
