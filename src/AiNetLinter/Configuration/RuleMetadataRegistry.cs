@@ -34,6 +34,9 @@ public static class RuleMetadataRegistry
             ["EnforceNamespaceDirectoryMapping"] = new() { Severity = "error", Intent = "architecture" },
             ["MaxDirectoryDepth"] = new() { Severity = "warning", Intent = "agent-context" },
             ["DetectAndBanPhantomDependencies"] = new() { Severity = "error", Intent = "architecture" },
+            ["BlazorRequireCodeBehind"] = new() { Severity = "error", Intent = "architecture" },
+            ["BlazorRequireCssIsolation"] = new() { Severity = "warning", Intent = "architecture" },
+            ["WpfRequireMinimalCodeBehind"] = new() { Severity = "error", Intent = "architecture" },
         };
 
     /// <summary>

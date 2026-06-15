@@ -9,6 +9,7 @@ public sealed record LinterConfig
     public required MetricsConfig Metrics { get; init; }
     public TestSentinelConfig TestSentinel { get; init; } = new();
     public MagicValuesConfig MagicValues { get; init; } = new();
+    public UiSeparationConfig UiSeparation { get; init; } = new();
     public FileFiltersConfig FileFilters { get; init; } = new();
     public IReadOnlyDictionary<string, RuleMetadataEntry> RuleMetadata { get; init; }
         = new Dictionary<string, RuleMetadataEntry>();
@@ -364,6 +365,11 @@ public sealed record ProjectOverrideEntry
     /// Überschreibungen der TestSentinel-Konfiguration (Ausnahmen vom Testpflicht-Check).
     /// </summary>
     public TestSentinelConfigOverride? TestSentinel { get; init; }
+
+    /// <summary>
+    /// Überschreibungen der UI-Trennungsregeln (Blazor/WPF).
+    /// </summary>
+    public UiSeparationConfigOverride? UiSeparation { get; init; }
 }
 
 
