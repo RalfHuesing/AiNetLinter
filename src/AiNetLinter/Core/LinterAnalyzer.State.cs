@@ -117,11 +117,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (node.ParameterList == null) return;
 
-        // Records und Structs, bei denen alle Parameter Default-Werte haben, sind Options/Config-Objects
-        // (z. B. `record RunOptions(bool Verbose = false, string? Path = null)`).
-        // MaxConstructorDependencies zielt auf DI-Kopplung — Datenbreite ist kein Kopplungsproblem.
-        if (node is RecordDeclarationSyntax or StructDeclarationSyntax &&
-            node.ParameterList.Parameters.All(p => p.Default != null))
+        // Records und Structs definieren über ihren Primärkonstruktor Datenfelder, keine DI-Abhängigkeiten.
+        // MaxConstructorDependencies zielt auf Kopplungs-Smell in Service-Klassen — nicht auf Datenbreite.
+        if (node is RecordDeclarationSyntax or StructDeclarationSyntax)
             return;
 
         var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
