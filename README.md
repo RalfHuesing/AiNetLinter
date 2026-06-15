@@ -28,6 +28,18 @@ ainetlinter --readme
 
 ---
 
+## Top 5 — von ca. 35 konfigurierbaren Einstellungen
+
+| Feature | Kurzbeschreibung |
+| :--- | :--- |
+| **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Macht den Linter in Legacy-Projekten mit tausenden Altlasten sofort einsetzbar. |
+| **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
+| **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs — verhindert die häufigste Halluzinations-Fehlerquelle in KI-generiertem Code. |
+| **Komplexitätsgrenzen** (`MaxCyclomaticComplexity`, `MaxCognitiveComplexity`) | Jahrzehntelange Forschung (McCabe 1976, SonarSource) belegt Komplexität als stärksten Einzel-Prädiktor für Fehlerdichte und schlechte Analysierbarkeit durch KI. |
+| **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen praxistaugliche Konfigurationen ohne eine Einheitslösung für alle Projekttypen. |
+
+---
+
 ## Features
 
 - **Roslyn-basierte semantische Analyse** — echte Semantik, kein textbasiertes Heuristik-Grep
