@@ -32,7 +32,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxMethodParameterCount),
                 Details = $"Die Methode '{node.Identifier.Text}' hat {paramCount} Parameter (erlaubt sind maximal {_config.Metrics.MaxMethodParameterCount}).",
-                Guidance = "Kapsle die Parameter in einen C# record (Parameter Object)."
+                Guidance = $"Erstelle 'sealed record {node.Identifier.Text}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern)."
             });
         }
 
