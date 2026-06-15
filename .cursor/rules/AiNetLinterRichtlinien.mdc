@@ -17,6 +17,6 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 
 ## 2. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
-- **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `ROADMAP.md`, `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
+- **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
