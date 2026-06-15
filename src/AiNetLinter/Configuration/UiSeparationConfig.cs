@@ -52,6 +52,13 @@ public sealed record UiSeparationConfig
     public IReadOnlyCollection<string> WpfExcludeClassNames { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Wenn true (Default), wird BlazorRequireCssIsolation nur ausgelöst wenn die .razor-Datei
+    /// tatsächlich native HTML-Elemente (&lt;div&gt;, &lt;span&gt; etc.) oder class=/style=-Attribute enthält.
+    /// Reine Komponenten-Komposition (nur PascalCase-Tags wie &lt;MudButton&gt;) wird nicht beanstandet.
+    /// </summary>
+    public bool BlazorCssIsolationOnlyWhenStylesNeeded { get; init; } = true;
+
+    /// <summary>
     /// Wendet Projekt-Overrides an.
     /// </summary>
     public UiSeparationConfig Apply(UiSeparationConfigOverride? @override)
@@ -65,6 +72,7 @@ public sealed record UiSeparationConfig
             WpfCodeBehindBaseTypes = @override.WpfCodeBehindBaseTypes ?? WpfCodeBehindBaseTypes,
             BlazorExcludeFileNames = @override.BlazorExcludeFileNames ?? BlazorExcludeFileNames,
             WpfExcludeClassNames = @override.WpfExcludeClassNames ?? WpfExcludeClassNames,
+            BlazorCssIsolationOnlyWhenStylesNeeded = @override.BlazorCssIsolationOnlyWhenStylesNeeded ?? BlazorCssIsolationOnlyWhenStylesNeeded,
         };
     }
 }
@@ -80,4 +88,5 @@ public sealed record UiSeparationConfigOverride
     public IReadOnlyCollection<string>? WpfCodeBehindBaseTypes { get; init; }
     public IReadOnlyCollection<string>? BlazorExcludeFileNames { get; init; }
     public IReadOnlyCollection<string>? WpfExcludeClassNames { get; init; }
+    public bool? BlazorCssIsolationOnlyWhenStylesNeeded { get; init; }
 }
