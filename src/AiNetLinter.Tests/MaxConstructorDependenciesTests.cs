@@ -309,9 +309,11 @@ public sealed record RunOptions(
     }
 
     [Fact]
-    public async Task Analyze_DiRecord_NoDefaultValues_ReportsViolation()
+    public async Task Analyze_Record_NoDefaultValues_DoesNotReportViolation()
     {
-        // Records ohne Default-Werte können echte DI-Records sein — weiterhin prüfen.
+        // Records definieren Datenfelder über ihren Primärkonstruktor — keine DI-Abhängigkeiten.
+        // Ein "DI-Record" (Record als Service-Target) ist ein theoretisches Konstrukt das in der
+        // Praxis nicht vorkommt; alle realen Fälle sind Daten-Records (false positive).
         const string sourceCode = @"
 namespace Test;
 public class ServiceA {}
@@ -321,7 +323,7 @@ public class ServiceD {}
 public class ServiceE {}
 public class ServiceF {}
 
-public sealed record MyHandler(
+public sealed record MyDataRecord(
     ServiceA A,
     ServiceB B,
     ServiceC C,
@@ -330,18 +332,17 @@ public sealed record MyHandler(
     ServiceF F);
 ";
         var config = CreateConfig(5);
-        var solution = CreateAdhocSolution(("MyHandler.cs", sourceCode));
+        var solution = CreateAdhocSolution(("MyDataRecord.cs", sourceCode));
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(solution);
 
-        Assert.Single(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
     }
 
     [Fact]
-    public async Task Analyze_MixedRecord_SomeDefaults_ReportsViolation()
+    public async Task Analyze_Record_MixedDefaults_DoesNotReportViolation()
     {
-        // Records mit gemischten Parametern (manche Required, manche Default) sind potenziell
-        // DI-Records — weiterhin prüfen, da Required-Parameter auf Kopplung hinweisen können.
+        // Auch Records mit gemischten Parametern (Required + Optional) sind Daten-Records.
         const string sourceCode = @"
 namespace Test;
 public class ServiceA {}
@@ -351,7 +352,7 @@ public class ServiceD {}
 public class ServiceE {}
 public class ServiceF {}
 
-public sealed record MyHandler(
+public sealed record MyDataRecord(
     ServiceA A,
     ServiceB B,
     ServiceC C,
@@ -361,11 +362,35 @@ public sealed record MyHandler(
     bool IsEnabled = false);
 ";
         var config = CreateConfig(5);
-        var solution = CreateAdhocSolution(("MyHandler.cs", sourceCode));
+        var solution = CreateAdhocSolution(("MyDataRecord.cs", sourceCode));
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(solution);
 
-        Assert.Single(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_DataRecord_PositionalFields_DoesNotReportViolation()
+    {
+        // Reproduziert den realen False-Positive: Domain-Daten-Record mit vielen Pflichtfeldern.
+        const string sourceCode = @"
+namespace Test;
+public sealed record WochenModell(
+    int ModellId,
+    int ModellIDTagMontag,
+    int ModellIDTagDienstag,
+    int ModellIDTagMittwoch,
+    int ModellIDTagDonnerstag,
+    int ModellIDTagFreitag,
+    int ModellIDTagSamstag,
+    int ModellIDTagSonntag);
+";
+        var config = CreateConfig(5);
+        var solution = CreateAdhocSolution(("WochenModell.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
     }
 
     [Fact]
