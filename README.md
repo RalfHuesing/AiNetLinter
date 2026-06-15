@@ -23,8 +23,8 @@ ainetlinter --readme
 
 | Dokument | Inhalt |
 | :--- | :--- |
-| [docs/configuration.md](docs/configuration.md) | Vollständige Konfigurationsreferenz, CLI-Parameter, Workflows |
-| [docs/rationale.md](docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
+| [Docs/configuration.md](Docs/configuration.md) | Vollständige Konfigurationsreferenz, CLI-Parameter, Workflows |
+| [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
 
 ---
 
