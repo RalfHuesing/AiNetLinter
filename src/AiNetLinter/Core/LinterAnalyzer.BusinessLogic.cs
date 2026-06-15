@@ -89,7 +89,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             LineNumber = GetLineNumber(invocation),
             RuleName = "EnforceStrictBoundaryForBusinessLogic",
             Details = $"Unerlaubter I/O-Aufruf von '{symbol.ToDisplayString()}' innerhalb der zustandslosen Logik-Methode.",
-            Guidance = "Kapsle Berechnungen so, dass sie keine Datenbanken, APIs oder Dateisysteme direkt aufrufen."
+            Guidance = $"Verschiebe den I/O-Aufruf '{symbol.Name}' aus der Logik-Methode heraus: Deklariere ein Interface (z. B. 'I{containingType}') und injiziere es per Konstruktor. Die Logik-Methode selbst darf keine Side-Effects haben — nur Berechnung und Rueckgabe."
         });
     }
 

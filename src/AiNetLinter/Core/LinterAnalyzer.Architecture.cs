@@ -139,7 +139,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Global.EnforceValueObjectContracts),
                 Details = $"Das Value Object '{name}' ist als 'class' deklariert.",
-                Guidance = "Value Objects muessen als 'record' oder 'readonly struct' deklariert werden, um Unveraenderlichkeit zu garantieren."
+                Guidance = $"Ersetze 'class' durch 'record' (z. B. 'public sealed record {name}(string Value)') oder 'readonly struct'. Records erzwingen Wert-Semantik und sind ohne zusaetzlichen Code unveraenderlich."
             });
         }
 

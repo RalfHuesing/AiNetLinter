@@ -143,7 +143,7 @@ internal static class PostAnalysisChecks
                 LineNumber = cls.LineNumber,
                 RuleName = nameof(effectiveConfig.Metrics.MaxInheritanceDepth),
                 Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {effectiveConfig.Metrics.MaxInheritanceDepth}).",
-                Guidance = "Halte Vererbungshierarchien flach (max. 2 Ebenen) oder nutze Komposition statt Vererbung."
+                Guidance = "Ersetze tiefe Vererbung durch Komposition: Deklariere Instanzen der Basisklassen als private Felder und delegiere Methoden-Aufrufe explizit (z. B. 'private readonly BaseService _base; void DoX() => _base.DoX()'). Extrahiere gemeinsames Verhalten alternativ in einen eigenen Service, der von allen Beteiligten genutzt wird."
             });
         }
     }
@@ -197,7 +197,7 @@ internal static class PostAnalysisChecks
                 LineNumber = cls.LineNumber,
                 RuleName = "AIContextFootprint",
                 Details = detailsBuilder.ToString().TrimEnd('\r', '\n'),
-                Guidance = "Reduziere die Kopplung der Klasse zu anderen Klassen oder lagere Abhaengigkeiten aus, um Attention Dilution fuer KIs zu minimieren."
+                Guidance = "Fuehre fuer die groessten Abhaengigkeiten (s. Details oben) ein schlankes Interface ein, das nur die tatsaechlich genutzten Methoden deklariert, und injiziere dieses statt der konkreten Klasse. Alternativ: Splitte diese Klasse, sodass jede Haelfte nur die Abhaengigkeiten benoetigt, die sie wirklich nutzt."
             });
         }
     }
