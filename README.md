@@ -32,6 +32,7 @@ ainetlinter --readme
 
 - **Roslyn-basierte semantische Analyse** — echte Semantik, kein textbasiertes Heuristik-Grep
 - **Feingranulares Regelwerk** — Klassendesign, Komplexität, Immutabilität, Namensgebung
+- **UI-Trennungsregeln** — Blazor CSS-Isolation & Code-Behind-Pflicht, WPF minimales Code-Behind (MVVM)
 - **Auto-Fixer (`--fix`)** — `sealed`, `readonly`, `#nullable enable` automatisch korrigieren
 - **Baseline/Ratchet (`--baseline`)** — inkrementelle Migration bestehender Codebases
 - **Playbook-Generator (`--playbook`)** — Repo-Übersicht als Kontext für AI-Agenten

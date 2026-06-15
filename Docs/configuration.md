@@ -452,6 +452,51 @@ Die Regel `EnforceNamespaceDirectoryMapping` stellt sicher, dass der Namespace e
 > [!NOTE]
 > Diese Regel ist standardmäßig deaktiviert und sollte nur in strikten Profilen oder bei klar definierten Projektarchitekturen aktiviert werden.
 
+### UI-Datei-Trennung (UiSeparation)
+
+Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine Business-Logik oder Styles direkt in Markup-Dateien.
+
+#### Einstellungsoptionen
+
+| Option | Typ | Default | Beschreibung |
+| :--- | :---: | :---: | :--- |
+| `BlazorRequireCodeBehind` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Verhindert `@code {}`-Blöcke inline. |
+| `BlazorRequireCssIsolation` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei haben (CSS-Isolation). Verhindert `<style>`-Blöcke inline. |
+| `WpfRequireMinimalCodeBehind` | Boolean | `true` | WPF Code-Behind-Klassen (partial classes mit WPF-Basistyp) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten. |
+| `WpfCodeBehindBaseTypes` | String-Array | `["Window", "UserControl", "Page", "NavigationWindow"]` | Basis-Typnamen, die eine Klasse als WPF Code-Behind identifizieren. |
+| `BlazorExcludeFileNames` | String-Array | `["_Imports.razor"]` | Razor-Dateinamen, die von den Blazor-Checks ausgeschlossen werden. |
+| `WpfExcludeClassNames` | String-Array | `[]` | Klassen-Namen, die vom WPF Code-Behind-Check ausgeschlossen werden. |
+
+#### Suppression
+
+- **Blazor**: `@* ainetlinter-disable BlazorRequireCodeBehind *@` oder `@* ainetlinter-disable BlazorRequireCssIsolation *@` am Anfang der `.razor`-Datei.
+- **WPF**: `// ainetlinter-disable WpfRequireMinimalCodeBehind` in der `.xaml.cs`-Datei (Standard-Suppressions-Syntax).
+
+#### Empfohlene Konfiguration (Vollständige Trennung):
+
+```json
+"UiSeparation": {
+  "BlazorRequireCodeBehind": true,
+  "BlazorRequireCssIsolation": true,
+  "WpfRequireMinimalCodeBehind": true,
+  "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
+  "BlazorExcludeFileNames": ["_Imports.razor", "App.razor"],
+  "WpfExcludeClassNames": []
+}
+```
+
+#### Empfohlene Konfiguration (Nur Blazor, WPF-Check aus):
+
+```json
+"UiSeparation": {
+  "BlazorRequireCodeBehind": true,
+  "BlazorRequireCssIsolation": false,
+  "WpfRequireMinimalCodeBehind": false
+}
+```
+
+---
+
 ### Datei- und Verzeichnis-Ausschlüsse (FileFilters)
 
 Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.
@@ -573,6 +618,12 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
     "ExemptClassNameSuffixes": ["Converter", "Extensions", "Constants"],
     "ExemptWhenInheritsFrom": ["IValueConverter"],
     "ExemptStaticClasses": true
+  },
+  "UiSeparation": {
+    "WpfRequireMinimalCodeBehind": true,
+    "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
+    "BlazorRequireCodeBehind": false,
+    "BlazorRequireCssIsolation": false
   }
 }
 ```
@@ -608,6 +659,12 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
     "ExemptWhenInheritsFrom": ["ComponentBase", "LayoutComponentBase"],
     "ExemptClassNameSuffixes": ["Extensions", "Constants"],
     "ExemptStaticClasses": true
+  },
+  "UiSeparation": {
+    "BlazorRequireCodeBehind": true,
+    "BlazorRequireCssIsolation": true,
+    "WpfRequireMinimalCodeBehind": false,
+    "BlazorExcludeFileNames": ["_Imports.razor", "App.razor", "Routes.razor"]
   }
 }
 ```
