@@ -117,6 +117,13 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (node.ParameterList == null) return;
 
+        // Records und Structs, bei denen alle Parameter Default-Werte haben, sind Options/Config-Objects
+        // (z. B. `record RunOptions(bool Verbose = false, string? Path = null)`).
+        // MaxConstructorDependencies zielt auf DI-Kopplung — Datenbreite ist kein Kopplungsproblem.
+        if (node is RecordDeclarationSyntax or StructDeclarationSyntax &&
+            node.ParameterList.Parameters.All(p => p.Default != null))
+            return;
+
         var ignorePrefixes = _config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
         int count;
 
@@ -137,7 +144,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = "MaxConstructorDependencies",
                 Details = $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                Guidance = "Reduziere die Anzahl der Abhaengigkeiten, indem du den Typ in kleinere Klassen aufteilst."
+                Guidance = $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen."
             });
         }
     }
@@ -164,7 +171,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 LineNumber = GetLineNumber(node),
                 RuleName = "MaxConstructorDependencies",
                 Details = $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {_config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                Guidance = "Reduziere die Anzahl der Abhaengigkeiten (Constructor Injection), indem du die Klasse in kleinere Services aufteilst."
+                Guidance = $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility."
             });
         }
     }
