@@ -16,8 +16,6 @@ internal sealed record AnalysisCacheEntry
 internal sealed record RuleViolationDto(
     string FilePath, int LineNumber, string RuleName, string Details, string Guidance);
 
-// ainetlinter-disable MaxConstructorDependencies
-// Dieses Record dient als Datentransfer-Klasse (DTO) fuer Klassen-Metadaten und hat keine logischen Abhaengigkeiten.
 internal sealed record ClassInfoDto(
     string Name, string FilePath, int LineNumber,
     int MaxCognitiveComplexity, int InheritanceDepth, int AiContextFootprint,

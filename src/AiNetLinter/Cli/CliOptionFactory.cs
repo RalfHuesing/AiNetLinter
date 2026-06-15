@@ -117,7 +117,7 @@ internal static class CliOptionFactory
             using var stream = typeof(CliOptionFactory).Assembly.GetManifestResourceStream("README.md");
             if (stream != null) byteCount = stream.Length;
         }
-        catch { /* Fallback: 0, kein Absturz */ } // ainetlinter-disable EnforceNoSilentCatch
+        catch (Exception ignored) { _ = ignored; }
 
         return new Option<bool>("--readme")
         {

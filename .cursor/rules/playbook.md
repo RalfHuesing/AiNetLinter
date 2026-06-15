@@ -13,16 +13,7 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 - **Kontrollfluss-Exceptions:** 22 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
 
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
-Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
-
-- **MaxConstructorDependencies:** 4 mal deaktiviert.
-  *Bedeutung:* Zu viele Konstruktorabhaengigkeiten (max. 20).
-- **StaticTestSentinel:** 2 mal deaktiviert.
-  *Bedeutung:* Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.
-- **EnforceNoSilentCatch:** 1 mal deaktiviert.
-  *Bedeutung:* Exceptions duerfen nicht stumm abgefangen werden (Ausnahme: Variable heisst 'ignored' oder 'expected').
-- **EnforceExplicitStateImmutability:** 1 mal deaktiviert.
-  *Bedeutung:* Regel 'EnforceExplicitStateImmutability'.
+In dieser Codebase sind aktuell keine Linter-Regeln unterdrueckt.
 
 ## 3. Migrations-Status
 

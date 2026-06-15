@@ -2,8 +2,6 @@ using System.Collections.Generic;
 
 namespace AiNetLinter.Configuration;
 
-// ainetlinter-disable StaticTestSentinel
-// RuleMetadataRegistry ist ein statisches Lookup-Dictionary; die Logik wird durch bestehende Integrationstests abgedeckt.
 /// <summary>
 /// Liefert Standard-Metadaten für bekannte Regeln und merged benutzerdefinierte Einträge.
 /// </summary>
