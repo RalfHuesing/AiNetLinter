@@ -87,6 +87,7 @@ public static class Program
             SyncCursorRules = parsed.SyncCursorRules,
             Check = parsed.Check,
             NoCache = parsed.NoCache,
+            CacheTtlMinutes = parsed.CacheTtlMinutes,
             Footprint = parsed.Footprint,
             Readme = parsed.Readme,
         };
@@ -179,7 +180,7 @@ public static class Program
             AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("DocumentAnalysis");
             string? rulesJsonContent = LoadRulesJsonContent(args.ConfigPath);
             var engine = new LinterEngine(config, rulesJsonContent);
-            var violations = await engine.RunAsync(currentCatalog2, args.NoCache);
+            var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes);
             AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("DocumentAnalysis");
 
             AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
@@ -274,7 +275,7 @@ public static class Program
         }
 
         var engine = new LinterEngine(config, rulesJsonContent);
-        var initialViolations = await engine.RunAsync(catalog, args.NoCache);
+        var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
             catalog.Solution, initialViolations, args.Verbose, dryRun: args.Check);
 
@@ -415,7 +416,7 @@ public static class Program
         }
 
         var engine = new LinterEngine(config, rulesJsonContent);
-        var violations = await engine.RunAsync(catalog, args.NoCache);
+        var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes);
         var filtered = BaselineViolationFilter.Filter(violations, comparison.ChangedFiles, outputRoot);
 
         if (comparison.HasAnyChange)

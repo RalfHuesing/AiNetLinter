@@ -136,7 +136,7 @@ public class MyUnsealedClass
         //    since solution.FilePath is null for in-memory solutions.
         var filePath = Path.Combine(_tempDir, fileName);
         var checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
-        var cacheManager = AnalysisCacheManager.Load(_exeDir, "AdhocWorkspace", rulesJson);
+        var cacheManager = AnalysisCacheManager.Load(_exeDir, "AdhocWorkspace", rulesJson, TimeSpan.FromMinutes(60));
         var fakeEntry = new AnalysisCacheEntry
         {
             RelativePath = fileName,

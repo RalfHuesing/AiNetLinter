@@ -32,31 +32,31 @@ public sealed class LinterEngine
     /// <summary>
     /// Führt die Analyse auf dem angegebenen Pfad aus und liefert alle Regelverstöße.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, bool noCache = false)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, bool noCache = false, int cacheTtlMinutes = 60)
     {
         using var catalog = await SourceFileCatalog.LoadAsync(path);
-        return await RunAsync(catalog, noCache);
+        return await RunAsync(catalog, noCache, cacheTtlMinutes);
     }
 
     /// <summary>
     /// Führt die Analyse auf einer geladenen Solution aus.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, bool noCache = false)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, bool noCache = false, int cacheTtlMinutes = 60)
     {
-        var cache = noCache ? null : BuildCache(catalog, catalog.Solution.FilePath ?? catalog.Solution.Workspace.GetType().Name);
+        var cache = noCache ? null : BuildCache(catalog, catalog.Solution.FilePath ?? catalog.Solution.Workspace.GetType().Name, cacheTtlMinutes);
         return await RunInternalAsync(catalog.Solution, catalog, cache);
     }
 
     /// <summary>
     /// Führt die Analyse auf einer bestehenden Solution im Speicher aus.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false, int cacheTtlMinutes = 60)
     {
-        var cache = noCache ? null : BuildCache(null, solution.FilePath ?? solution.Workspace.GetType().Name);
+        var cache = noCache ? null : BuildCache(null, solution.FilePath ?? solution.Workspace.GetType().Name, cacheTtlMinutes);
         return await RunInternalAsync(solution, catalog: null, cache);
     }
 
-    private AnalysisCacheManager? BuildCache(SourceFileCatalog? catalog, string path)
+    private AnalysisCacheManager? BuildCache(SourceFileCatalog? catalog, string path, int cacheTtlMinutes)
     {
         if (string.IsNullOrEmpty(_rulesJsonContent))
         {
@@ -65,7 +65,8 @@ public sealed class LinterEngine
         var exeDir = Path.GetDirectoryName(
             System.Reflection.Assembly.GetExecutingAssembly().Location)!;
         var solutionPath = catalog?.Solution?.FilePath ?? path;
-        return AnalysisCacheManager.Load(exeDir, solutionPath, _rulesJsonContent);
+        var ttl = cacheTtlMinutes > 0 ? TimeSpan.FromMinutes(cacheTtlMinutes) : TimeSpan.Zero;
+        return AnalysisCacheManager.Load(exeDir, solutionPath, _rulesJsonContent, ttl);
     }
 
     /// <summary>

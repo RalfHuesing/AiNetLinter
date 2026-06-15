@@ -25,10 +25,12 @@ internal sealed class AnalysisCacheManager
         _cache = cache;
     }
 
-    public static AnalysisCacheManager Load(string exeDir, string solutionPath, string rulesJsonContent)
+    public static AnalysisCacheManager Load(string exeDir, string solutionPath, string rulesJsonContent, TimeSpan cacheTtl)
     {
         var cacheDir = Path.Combine(exeDir, "cache");
         Directory.CreateDirectory(cacheDir);
+
+        PurgeStale(cacheDir, cacheTtl);
 
         var prefix = BuildCacheFilePrefix(solutionPath, rulesJsonContent);
         var fileName = $"{prefix}-{GetBuildTimestamp()}.json";
@@ -38,6 +40,22 @@ internal sealed class AnalysisCacheManager
 
         var cache = TryReadCache(cachePath) ?? new AnalysisCacheFile();
         return new AnalysisCacheManager(cachePath, cache);
+    }
+
+    private static void PurgeStale(string cacheDir, TimeSpan ttl)
+    {
+        if (ttl == TimeSpan.Zero) return;
+
+        var cutoff = DateTime.UtcNow - ttl;
+        foreach (var file in Directory.EnumerateFiles(cacheDir, "*.json"))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(file) < cutoff)
+                    File.Delete(file);
+            }
+            catch (Exception ignored) { _ = ignored; }
+        }
     }
 
     public bool TryGet(string relativePath, string currentChecksum, out AnalysisCacheEntry? entry)

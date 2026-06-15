@@ -129,4 +129,10 @@ internal static class CliOptionFactory
     {
         Description = "Cache deaktivieren — erzwingt vollständige Neu-Analyse aller Dateien.",
     };
+
+    internal static Option<int> CreateCacheTtlOption() => new("--cache-ttl")
+    {
+        Description = "Cache-Lebensdauer in Minuten (0 = unbegrenzt). Standard: 60.",
+        DefaultValueFactory = _ => 60,
+    };
 }
