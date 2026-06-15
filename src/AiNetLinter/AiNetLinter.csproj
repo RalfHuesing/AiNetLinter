@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\README.md" LogicalName="README.md" />
-    <EmbeddedResource Include="..\..\docs\configuration.md" LogicalName="docs/configuration.md" />
+    <EmbeddedResource Include="..\..\Docs\configuration.md" LogicalName="Docs/configuration.md" />
   </ItemGroup>
 
   <ItemGroup>
