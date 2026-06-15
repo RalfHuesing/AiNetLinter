@@ -5,6 +5,7 @@ namespace AiNetLinter.Core;
 /// </summary>
 public sealed class TestCoverageIndex
 {
+    private readonly Lock _lock = new();
     private readonly HashSet<string> _testClassNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _referencedTypeNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _coversComments = new(StringComparer.Ordinal);
@@ -19,7 +20,7 @@ public sealed class TestCoverageIndex
             return;
         }
 
-        _testClassNames.Add(className);
+        lock (_lock) { _testClassNames.Add(className); }
     }
 
     /// <summary>
@@ -32,7 +33,7 @@ public sealed class TestCoverageIndex
             return;
         }
 
-        _referencedTypeNames.Add(typeName);
+        lock (_lock) { _referencedTypeNames.Add(typeName); }
     }
 
     /// <summary>
@@ -45,10 +46,10 @@ public sealed class TestCoverageIndex
             return;
         }
 
-        _coversComments.Add(coveredTypeName);
+        lock (_lock) { _coversComments.Add(coveredTypeName); }
     }
 
-    internal IReadOnlyCollection<string> TestClassNames => _testClassNames;
-    internal IReadOnlyCollection<string> ReferencedTypeNames => _referencedTypeNames;
-    internal IReadOnlyCollection<string> CoversComments => _coversComments;
+    internal IReadOnlyCollection<string> TestClassNames { get { lock (_lock) { return [.. _testClassNames]; } } }
+    internal IReadOnlyCollection<string> ReferencedTypeNames { get { lock (_lock) { return [.. _referencedTypeNames]; } } }
+    internal IReadOnlyCollection<string> CoversComments { get { lock (_lock) { return [.. _coversComments]; } } }
 }
