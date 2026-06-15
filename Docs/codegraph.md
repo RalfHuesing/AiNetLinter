@@ -1,5 +1,5 @@
-﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.31)
-Produktionscode · 134 Typen · 12 Namespaces
+﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.32)
+Produktionscode · 137 Typen · 12 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -46,12 +46,12 @@ Produktionscode · 134 Typen · 12 Namespaces
 - ParsedArgs [record] → BaselineOptions, ImpactOptions, MaintenanceOptions, OutputOptions, ParsedArgs, ScopeOptions
 - ScopeOptions [record] → ScopeOptions
 
-## AiNetLinter.Configuration (18)
+## AiNetLinter.Configuration (20)
 - FileFilterEvaluator → FileFiltersConfig
 - FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
 - GlobalConfigOverride [record] → GlobalConfigOverride
-- LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig
+- LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig, UiSeparationConfig
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
 - MagicValuesConfig [record] → MagicValuesConfig, MagicValuesConfigOverride
@@ -60,13 +60,15 @@ Produktionscode · 134 Typen · 12 Namespaces
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule
 - ProjectConfigResolver → LinterConfig, ProjectOverrideEntry
-- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry, TestSentinelConfigOverride
+- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry, TestSentinelConfigOverride, UiSeparationConfigOverride
 - RuleMetadataEntry [record] → RuleMetadataEntry
 - RuleMetadataRegistry → LinterConfig, RuleMetadataEntry
 - TestSentinelConfig [record] → TestSentinelConfig, TestSentinelConfigOverride
 - TestSentinelConfigOverride [record] → TestSentinelConfigOverride
+- UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
+- UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (31)
+## AiNetLinter.Core (32)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
@@ -98,6 +100,7 @@ Produktionscode · 134 Typen · 12 Namespaces
 - TestProjectDetector
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
 - TypeInfo [record] → TypeInfo
+- UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
 ## AiNetLinter.Diagnostics (6)
 - DocumentPerformanceEntry [record] → DocumentPerformanceEntry
