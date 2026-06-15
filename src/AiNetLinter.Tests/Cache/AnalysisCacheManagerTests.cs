@@ -40,7 +40,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
         var rulesContent = "{ \"Global\": {} }";
 
-        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         Assert.NotNull(manager);
 
         var relativePath = "src/Test.cs";
@@ -59,7 +59,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         manager.SaveIfDirty();
 
         // Load again
-        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var found = manager2.TryGet(relativePath, checksum, out var loadedEntry);
         Assert.True(found);
         Assert.NotNull(loadedEntry);
@@ -75,7 +75,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
         var rulesContent = "{ \"Global\": {} }";
 
-        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var relativePath = "src/Test.cs";
         var checksum = "abcde12345";
         var entry = new AnalysisCacheEntry
@@ -97,7 +97,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         File.WriteAllText(cacheFilePath, modifiedContent);
 
         // Load again with mismatched schema version -> should return new (empty) cache
-        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var found = manager2.TryGet(relativePath, checksum, out var loadedEntry);
         Assert.False(found);
         Assert.Null(loadedEntry);
@@ -109,7 +109,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
         var rulesContent = "{ \"Global\": {} }";
 
-        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var relativePath = "src/Test.cs";
         var checksum = "abcde12345";
         var entry = new AnalysisCacheEntry
@@ -129,7 +129,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
     {
         var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
         var rulesContent = "{ \"Global\": {} }";
-        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
 
         var exceptions = new ConcurrentBag<Exception>();
         var tasks = Enumerable.Range(0, 200).Select(i => Task.Run(() =>
@@ -157,15 +157,49 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         var solutionPath = Path.Combine(_tempDir, "TestSolution.sln");
         var rulesContent = "{ \"Global\": {} }";
 
-        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var relativePath = "src/Auth/JwtService.cs";
         var checksum = "abc123";
         manager.Set(relativePath, new AnalysisCacheEntry { RelativePath = relativePath, Checksum = checksum });
         manager.SaveIfDirty();
 
         // Nach Deserialisierung muss der Lookup case-insensitiv funktionieren
-        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent);
+        var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         Assert.True(manager2.TryGet("SRC/AUTH/JWTSERVICE.CS", checksum, out var entry));
         Assert.NotNull(entry);
+    }
+
+    [Fact]
+    public void PurgeStale_DeletesFilesOlderThanTtl()
+    {
+        var cacheDir = Path.Combine(_tempDir, "cache");
+        Directory.CreateDirectory(cacheDir);
+
+        var oldFile = Path.Combine(cacheDir, "old-cache.json");
+        File.WriteAllText(oldFile, "{}");
+        File.SetLastWriteTimeUtc(oldFile, DateTime.UtcNow.AddMinutes(-90));
+
+        var freshFile = Path.Combine(cacheDir, "fresh-cache.json");
+        File.WriteAllText(freshFile, "{}");
+
+        AnalysisCacheManager.Load(_tempDir, "Dummy.sln", "{}", TimeSpan.FromMinutes(60));
+
+        Assert.False(File.Exists(oldFile));
+        Assert.True(File.Exists(freshFile));
+    }
+
+    [Fact]
+    public void PurgeStale_WithZeroTtl_DeletesNothing()
+    {
+        var cacheDir = Path.Combine(_tempDir, "cache");
+        Directory.CreateDirectory(cacheDir);
+
+        var oldFile = Path.Combine(cacheDir, "old.json");
+        File.WriteAllText(oldFile, "{}");
+        File.SetLastWriteTimeUtc(oldFile, DateTime.UtcNow.AddDays(-7));
+
+        AnalysisCacheManager.Load(_tempDir, "Dummy.sln", "{}", TimeSpan.Zero);
+
+        Assert.True(File.Exists(oldFile));
     }
 }

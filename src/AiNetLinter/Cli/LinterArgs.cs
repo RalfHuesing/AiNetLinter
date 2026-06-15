@@ -110,6 +110,11 @@ public sealed class LinterArgs
     public bool NoCache { get; init; }
 
     /// <summary>
+    /// Cache-Lebensdauer in Minuten. 0 = unbegrenzt. Standard: 60.
+    /// </summary>
+    public int CacheTtlMinutes { get; init; } = 60;
+
+    /// <summary>
     /// Holt oder setzt den Namen der Klasse fuer eine detaillierte Footprint-Analyse.
     /// </summary>
     public string? Footprint { get; init; }

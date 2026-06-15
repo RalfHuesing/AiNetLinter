@@ -34,7 +34,7 @@ public static class DebtReportExecutor
                     rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
                 }
                 var engine = new LinterEngine(config, rulesJsonContent);
-                violations = await engine.RunAsync(args.TargetPath, args.NoCache);
+                violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes);
             }
         }
 

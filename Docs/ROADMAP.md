@@ -191,6 +191,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
 - [x] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
 - [x] **Performance-Profiling & Zeitmessung:** Integriertes Profiling-System zur Erfassung der Ausführungszeiten von Linter-Phasen und Generierung von performance.log & performance.json unter `measurements/` zur Analyse von Flaschenhälsen.
+- [x] **TTL-basierte Cache-Bereinigung (`--cache-ttl`):** Globale Bereinigung veralteter Cache-Dateien beim Programmstart anhand von `LastWriteTimeUtc`. Standard: 60 Minuten. Verhindert das stille Akkumulieren von Leichen aus alten Solutions- oder Rules-Kombinationen. `0` = unbegrenzt.
 
 ---
 

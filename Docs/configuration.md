@@ -665,6 +665,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
 *   `--readme` (Flag): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
 *   `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
+*   `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
 
 ### Wellen-Workflow (Agent-Migration)
 
@@ -1035,6 +1036,29 @@ Die Cache-Validierung erfolgt vollautomatisch:
 - **Konfigurationsänderungen:** Eine Anpassung der Linter-Regeln in der `rules.json` ändert den Datei-Hash im Cache-Dateinamen. Es wird automatisch eine neue Cache-Datei erzeugt.
 - **Dateiveränderungen:** Geänderte Dateien besitzen einen neuen Inhalts-Hash und werden automatisch neu analysiert; ihr Cache-Eintrag wird aktualisiert.
 - **Tool-Updates:** Bei Schema-Änderungen des Linters wird der Cache über eine interne `SchemaVersion` automatisch vollständig invalidiert.
+
+### TTL-basierte Bereinigung (`--cache-ttl`)
+
+Beim Start jedes Analyse-Runs bereinigt `AiNetLinter` automatisch alle Cache-Dateien im `cache/`-Verzeichnis, deren letzte Schreibzeit (`LastWriteTimeUtc`) älter als der konfigurierte Schwellenwert ist. Die Bereinigung ist global — sie erfasst Leichen aus allen bisherigen Solutions und Rules-Kombinationen.
+
+```powershell
+# Standardlauf: Cache-Dateien älter als 60 Minuten werden gelöscht
+AiNetLinter.exe --config rules.json --path .
+
+# Längere Lebensdauer für CI/CD oder manuelle Nutzung
+AiNetLinter.exe --config rules.json --path . --cache-ttl 240
+
+# Kein automatisches Löschen
+AiNetLinter.exe --config rules.json --path . --cache-ttl 0
+```
+
+| `--cache-ttl` | Verhalten |
+| :--- | :--- |
+| `60` (Standard) | Cache-Dateien > 60 Min alt werden beim Start gelöscht |
+| `0` | Keine Bereinigung — Cache lebt unbegrenzt |
+| `> 0` | Bereinigung nach dem angegebenen Minutenwert |
+
+**Warum `LastWriteTimeUtc` statt Filename-Timestamp?** Der Filename-Timestamp kodiert *wann der Linter gebaut wurde*. `SaveIfDirty()` setzt `LastWriteTimeUtc` auf "jetzt" — das ist die korrekte Uhr für "wie frisch sind die Analyseergebnisse".
 
 ### Deaktivierung über CLI
 

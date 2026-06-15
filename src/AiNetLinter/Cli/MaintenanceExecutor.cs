@@ -35,7 +35,7 @@ public static class MaintenanceExecutor
             rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
         }
         var engine = new LinterEngine(config, rulesJsonContent);
-        var violations = await engine.RunAsync(args.TargetPath, args.NoCache);
+        var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var violatingPaths = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, outputRoot);
         var result = DisableAllCommentInjector.InjectIntoFiles(violatingPaths);
