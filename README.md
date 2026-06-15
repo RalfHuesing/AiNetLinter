@@ -259,7 +259,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
 | `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
-| `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). |
+| `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). Records und Structs, bei denen **alle** Parameter Default-Werte haben, werden automatisch ausgenommen (Options/Config-Objects). |
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
@@ -406,6 +406,47 @@ Empfohlene Konfiguration für WPF- und Blazor-Projekte:
 Die Regel `MaxConstructorDependencies` begrenzt standardmäßig die Anzahl der Parameter in Konstruktoren und Primärkonstruktoren (Standard: 5). Cross-Cutting-Concerns wie `ILogger<T>`, `IOptions<T>`, `IHostEnvironment` oder `IConfiguration` zählen hierbei mit, obwohl sie keine fachlichen Abhängigkeiten darstellen.
 
 Mit `ConstructorDependencyIgnoreTypePrefixes` können Typ-Name-Präfixe definiert werden, die beim Zählen der Konstruktor-Abhängigkeiten ignoriert werden. Dies erlaubt es, fachliche Abhängigkeiten sauber von Infrastruktur-Abhängigkeiten zu trennen. Auch die Primärkonstruktor-Syntax (.NET 8+) wird vollständig unterstützt.
+
+#### Automatische Ausnahme: Options/Config-Records und -Structs
+
+`MaxConstructorDependencies` zielt auf **DI-Kopplung** — viele injizierte Services in einer Klasse sind ein Code-Smell (zu viele Verantwortlichkeiten). Records und Structs, bei denen **alle** Primärkonstruktor-Parameter einen Default-Wert haben, fallen nicht in dieses Muster: Sie sind Options/Config-Objects (z. B. CLI-Optionen, Render-Einstellungen), keine Service-Klassen.
+
+Der Linter erkennt dieses Muster automatisch und meldet keine Verletzung:
+
+```csharp
+// Kein False-Positive — alle Parameter haben Defaults → Options-Object
+public sealed record RunOptions(
+    bool Verbose = false,
+    bool DryRun = false,
+    string? OutputPath = null,
+    string? BaselinePath = null,
+    string? PlaybookPath = null,
+    string OutputFormat = "text")
+{
+    public static RunOptions Default { get; } = new();
+}
+```
+
+Records mit gemischten Parametern (mindestens ein Required-Parameter ohne Default) werden weiterhin geprüft, da Required-Parameter auf echte Abhängigkeiten hinweisen können:
+
+```csharp
+// Wird geprüft — ServiceA hat keinen Default-Wert
+public sealed record MyHandler(
+    ServiceA ServiceA,   // required: kein Default
+    ServiceB ServiceB,
+    ServiceC ServiceC,
+    ServiceD ServiceD,
+    ServiceE ServiceE,
+    ServiceF ServiceF,
+    bool IsEnabled = false);
+```
+
+Wer einen Options-Record in Ausnahmefällen trotzdem prüfen möchte, entfernt einfach die Default-Werte oder nutzt die Suppression:
+
+```csharp
+// ainetlinter-disable MaxConstructorDependencies
+public sealed record SpecialOptions(bool A = false, bool B = false, ...);
+```
 
 Empfohlene Konfiguration:
 ```json

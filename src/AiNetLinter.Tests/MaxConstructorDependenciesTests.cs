@@ -275,4 +275,118 @@ public sealed class MyHandler(
         var ctorViolations = violations.Where(v => v.RuleName == "MaxConstructorDependencies").ToList();
         Assert.Single(ctorViolations);
     }
+
+    // --- Options/Config-Record Exemption ---
+
+    [Fact]
+    public async Task Analyze_OptionsRecord_AllDefaultValues_DoesNotReportViolation()
+    {
+        // Reproduziert den False-Positive aus Research/False-Positives/Record.md:
+        // Records mit ausschließlich Default-Werten sind Options/Config-Objects, keine DI-Klassen.
+        const string sourceCode = @"
+namespace Test;
+public sealed record RunOptions(
+    bool Verbose = false,
+    bool DryRun = false,
+    bool OnlyChanged = false,
+    bool CheckOnly = false,
+    bool ReadmeOnly = false,
+    string? GitSince = null,
+    string? BaselinePath = null,
+    string? PlaybookPath = null,
+    string? GraphPath = null,
+    string OutputFormat = ""text"")
+{
+    public static RunOptions Default { get; } = new();
+}
+";
+        var config = CreateConfig(5);
+        var solution = CreateAdhocSolution(("RunOptions.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_DiRecord_NoDefaultValues_ReportsViolation()
+    {
+        // Records ohne Default-Werte können echte DI-Records sein — weiterhin prüfen.
+        const string sourceCode = @"
+namespace Test;
+public class ServiceA {}
+public class ServiceB {}
+public class ServiceC {}
+public class ServiceD {}
+public class ServiceE {}
+public class ServiceF {}
+
+public sealed record MyHandler(
+    ServiceA A,
+    ServiceB B,
+    ServiceC C,
+    ServiceD D,
+    ServiceE E,
+    ServiceF F);
+";
+        var config = CreateConfig(5);
+        var solution = CreateAdhocSolution(("MyHandler.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Single(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_MixedRecord_SomeDefaults_ReportsViolation()
+    {
+        // Records mit gemischten Parametern (manche Required, manche Default) sind potenziell
+        // DI-Records — weiterhin prüfen, da Required-Parameter auf Kopplung hinweisen können.
+        const string sourceCode = @"
+namespace Test;
+public class ServiceA {}
+public class ServiceB {}
+public class ServiceC {}
+public class ServiceD {}
+public class ServiceE {}
+public class ServiceF {}
+
+public sealed record MyHandler(
+    ServiceA A,
+    ServiceB B,
+    ServiceC C,
+    ServiceD D,
+    ServiceE E,
+    ServiceF F,
+    bool IsEnabled = false);
+";
+        var config = CreateConfig(5);
+        var solution = CreateAdhocSolution(("MyHandler.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Single(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
+
+    [Fact]
+    public async Task Analyze_OptionsStruct_AllDefaultValues_DoesNotReportViolation()
+    {
+        // Structs mit ausschließlich Default-Werten sind Value/Config-Objects — analog zu Records.
+        const string sourceCode = @"
+namespace Test;
+public readonly struct RenderOptions(
+    int Width = 1920,
+    int Height = 1080,
+    int Dpi = 96,
+    bool Antialias = true,
+    bool Transparent = false,
+    float Scale = 1.0f);
+";
+        var config = CreateConfig(5);
+        var solution = CreateAdhocSolution(("RenderOptions.cs", sourceCode));
+        var engine = new LinterEngine(config);
+        var violations = await engine.RunAsync(solution);
+
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxConstructorDependencies"));
+    }
 }
