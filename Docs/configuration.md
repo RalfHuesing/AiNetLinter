@@ -160,6 +160,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `true`). |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500). |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
+| `MaxMethodParameterCountInTestFiles` | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind. |
+| `MethodParameterCountIgnoreTypeNames` | Metrics | Typ-Namen (einfacher Name, kein Namespace), die beim Zählen der Parameter nicht berücksichtigt werden. Standard: `[]`. Empfehlung für .NET-Projekte: `["CancellationToken"]`. |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
@@ -172,7 +174,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
-| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). |
+| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. |
 | `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
 | `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
 | `TestSentinel.RecognizeCoversComment` | Config | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`. |

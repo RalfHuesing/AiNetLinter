@@ -55,6 +55,8 @@
   "Metrics": {
     "MaxLineCount": 600,
     "MaxMethodParameterCount": 4,
+    "MaxMethodParameterCountInTestFiles": 6,
+    "MethodParameterCountIgnoreTypeNames": ["CancellationToken"],
     "MaxMethodLineCount": 60,
     "MaxCyclomaticComplexity": 12,
     "MaxCognitiveComplexity": 15,

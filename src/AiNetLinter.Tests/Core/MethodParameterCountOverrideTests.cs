@@ -143,4 +143,92 @@ public class MyService
         var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
         Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
     }
+
+    [Fact]
+    public void IgnoredType_CancellationToken_NotCountedTowardLimit()
+    {
+        const string source = @"
+using System.Threading;
+public sealed class AsyncService
+{
+    public async System.Threading.Tasks.Task DoAsync(string a, string b, string c, string d, CancellationToken ct) { }
+}";
+        var config = CreateConfig(maxParams: 4) with
+        {
+            Metrics = CreateConfig(maxParams: 4).Metrics with
+            {
+                MethodParameterCountIgnoreTypeNames = ["CancellationToken"]
+            }
+        };
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void IgnoredType_WithoutConfig_StillCounted()
+    {
+        const string source = @"
+using System.Threading;
+public sealed class AsyncService
+{
+    public async System.Threading.Tasks.Task DoAsync(string a, string b, string c, string d, CancellationToken ct) { }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void TestFile_UsesTestLimit_WhenConfigured()
+    {
+        const string source = @"
+public sealed class MyServiceTests
+{
+    public void ArrangeScenario(string a, string b, string c, string d, string e) { }
+}";
+        var config = CreateConfig(maxParams: 4) with
+        {
+            Metrics = CreateConfig(maxParams: 4).Metrics with
+            {
+                MaxMethodParameterCountInTestFiles = 6
+            }
+        };
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("MyServiceTests.cs", model, config, isTestFile: true);
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void TestFile_WithoutTestLimit_UsesDefaultLimit()
+    {
+        const string source = @"
+public sealed class MyServiceTests
+{
+    public void ArrangeScenario(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("MyServiceTests.cs", model, CreateConfig(maxParams: 4), isTestFile: true);
+        Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void ProductionFile_TestLimitIgnored_UsesDefaultLimit()
+    {
+        const string source = @"
+public sealed class MyService
+{
+    public void DoWork(string a, string b, string c, string d, string e) { }
+}";
+        var config = CreateConfig(maxParams: 4) with
+        {
+            Metrics = CreateConfig(maxParams: 4).Metrics with
+            {
+                MaxMethodParameterCountInTestFiles = 10
+            }
+        };
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config, isTestFile: false);
+        Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
 }

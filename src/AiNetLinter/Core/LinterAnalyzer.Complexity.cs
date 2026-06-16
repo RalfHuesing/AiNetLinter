@@ -23,8 +23,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         bool isPublicMethod = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
         CheckSemanticNaming(node.ParameterList, isPublicMethod);
 
-        var paramCount = node.ParameterList.Parameters.Count;
-        if (paramCount > _config.Metrics.MaxMethodParameterCount
+        var effectiveLimit = GetEffectiveParamLimit();
+        var paramCount = CountEffectiveParameters(node.ParameterList.Parameters);
+        if (paramCount > effectiveLimit
             && !IsOverrideOrInterfaceImplementation(node))
         {
             _violations.Add(new RuleViolation
@@ -32,7 +33,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxMethodParameterCount),
-                Details = $"Die Methode '{node.Identifier.Text}' hat {paramCount} Parameter (erlaubt sind maximal {_config.Metrics.MaxMethodParameterCount}).",
+                Details = $"Die Methode '{node.Identifier.Text}' hat {paramCount} Parameter (erlaubt sind maximal {effectiveLimit}).",
                 Guidance = $"Erstelle 'sealed record {node.Identifier.Text}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern)."
             });
         }
@@ -88,6 +89,29 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             nameof(_config.Metrics.MaxCognitiveComplexity),
             "Kognitive Komplexitaet",
             CognitiveComplexityGuidance.Build(node, cognitiveComplexity, _config.Metrics.MaxCognitiveComplexity)));
+    }
+
+    private int GetEffectiveParamLimit()
+    {
+        var testLimit = _config.Metrics.MaxMethodParameterCountInTestFiles;
+        if (_isTestFile && testLimit > 0)
+            return testLimit;
+        return _config.Metrics.MaxMethodParameterCount;
+    }
+
+    private int CountEffectiveParameters(SeparatedSyntaxList<ParameterSyntax> parameters)
+    {
+        var ignoreTypes = _config.Metrics.MethodParameterCountIgnoreTypeNames;
+        if (ignoreTypes == null || ignoreTypes.Count == 0)
+            return parameters.Count;
+        return parameters.Count(p => !IsIgnoredParamType(p, ignoreTypes));
+    }
+
+    private static bool IsIgnoredParamType(ParameterSyntax param, IReadOnlyCollection<string> ignoreTypes)
+    {
+        if (param.Type == null) return false;
+        var name = GetSimpleTypeName(param.Type);
+        return name != null && ignoreTypes.Contains(name, StringComparer.Ordinal);
     }
 
     private bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax node)
