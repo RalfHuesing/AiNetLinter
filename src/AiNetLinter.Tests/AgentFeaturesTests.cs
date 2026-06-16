@@ -145,7 +145,7 @@ public sealed class AgentFeaturesTests
     }
 
     [Fact]
-    public void Format_IncludesGuidanceInDetailLine()
+    public void Format_GuidanceInHeaderNotInDetailLine()
     {
         var violations = new[]
         {
@@ -161,7 +161,11 @@ public sealed class AgentFeaturesTests
 
         var result = ViolationTextFormatter.Format(violations, @"C:\repo", CreateConfig());
 
-        Assert.Contains("-> Vereinfache verschachtelte Kontrollstrukturen.", result);
+        // Rule instruction appears in the Handlungsanweisung header (deduped), not per-violation
+        Assert.Contains("-> MaxCognitiveComplexity:", result);
+        // Violation line contains only path:line rule | details — no guidance
+        Assert.Contains("src/Foo.cs:15 MaxCognitiveComplexity | 12 > 7", result);
+        Assert.DoesNotContain("src/Foo.cs:15 MaxCognitiveComplexity | 12 > 7 ->", result);
     }
 
     [Fact]
