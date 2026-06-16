@@ -71,6 +71,11 @@ public sealed record GlobalConfigOverride
     public bool? AllowCancellationShutdownCatch { get; init; }
 
     /// <summary>
+    /// Exception-Typen, die lautlos abgefangen werden dürfen (Analogon zu AllowCancellationShutdownCatch).
+    /// </summary>
+    public IReadOnlyList<string>? AllowedSilentCatchExceptionTypes { get; init; }
+
+    /// <summary>
     /// Erzwingt [AsParameters] in Minimal-APIs.
     /// </summary>
     public bool? EnforceMinimalApiAsParameters { get; init; }

@@ -49,6 +49,13 @@ public sealed record GlobalConfig
     public bool EnforceNoSilentCatch { get; init; } = true;
     public bool AllowTryPatternOutParameters { get; init; } = true;
     public bool AllowCancellationShutdownCatch { get; init; } = true;
+
+    /// <summary>
+    /// Exception-Typen, die lautlos abgefangen werden dürfen (leerer catch-Block ohne Variable).
+    /// Analogon zu AllowCancellationShutdownCatch für projektspezifische Exception-Typen.
+    /// Nur der einfache Typname, kein Namespace (z.B. "JSDisconnectedException").
+    /// </summary>
+    public IReadOnlyList<string> AllowedSilentCatchExceptionTypes { get; init; } = [];
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
     public bool EnforceResultPatternOverExceptions { get; init; } = true;
 
@@ -147,6 +154,7 @@ public sealed record GlobalConfig
         EnforceNoSilentCatch = @override.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
         AllowTryPatternOutParameters = @override.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
         AllowCancellationShutdownCatch = @override.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
+        AllowedSilentCatchExceptionTypes = @override.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
         EnforceMinimalApiAsParameters = @override.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
         EnforceResultPatternOverExceptions = @override.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
     };

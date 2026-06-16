@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -24,6 +25,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private readonly bool _isTestFile;
     private readonly string? _projectName;
     private readonly FieldReadonlyTracker _fieldTracker = new();
+    private ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>? _sharedFieldTrackers;
 
     public List<ClassInfo> Classes { get; } = new();
     public List<PartialClassPart> PartialClassParts { get; } = new();
@@ -37,6 +39,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         _config = config;
         _isTestFile = isTestFile;
         _projectName = projectName;
+    }
+
+    internal void UseSharedFieldTrackers(ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker> trackers)
+    {
+        _sharedFieldTrackers = trackers;
     }
 
     /// <summary>
@@ -83,9 +90,20 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckLineCount();
         CheckNullableEnable();
         CheckNamespaceDirectoryMapping();
+        PreRegisterPrivateFields();
         Visit(_tree.GetRoot());
         CheckReadonlyFields();
         FilterSuppressedViolations();
+    }
+
+    private void PreRegisterPrivateFields()
+    {
+        if (!_config.Global.EnforceReadonlyFields) return;
+
+        foreach (var field in _tree.GetRoot().DescendantNodes().OfType<FieldDeclarationSyntax>())
+        {
+            AnalyzePrivateFields(field);
+        }
     }
 
     private void CheckLineCount()

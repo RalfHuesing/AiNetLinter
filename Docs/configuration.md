@@ -131,8 +131,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `SealedClassExemptSuffixes` | Global | Liste von Klassenname-Suffixen, die von der `EnforceSealedClasses`-Prüfung ausgenommen sind (z. B. `["Base", "Foundation", "Host"]`). |
 | `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
 | `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
-| `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`-Methoden (Standard: `true`, idiomatisches C#). |
+| `AllowTryPatternOutParameters` | Global | Erlaubt `out` in `bool Try*`- und `bool Is*`-Methoden (Standard: `true`, idiomatisches C#). |
 | `AllowCancellationShutdownCatch` | Global | Erlaubt stummes Abfangen von Cancellation-Exceptions (wie `OperationCanceledException` oder `TaskCanceledException`) bei Host-Shutdown (ohne Pflicht eines `when`-Filters). |
+| `AllowedSilentCatchExceptionTypes` | Global | Liste von Exception-Typen (einfacher Name, kein Namespace), die lautlos abgefangen werden dürfen — z. B. `["JSDisconnectedException"]` für Blazor-Dispose-Methoden. Analogon zu `AllowCancellationShutdownCatch` für projektspezifische Typen. Standard: `[]` (leer). |
 | `EnforceMinimalApiAsParameters` | Global | Prüft Minimal-API-Endpunkte auf fehlendes `[AsParameters]` bei >4 Parametern (opt-in). |
 | `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
 | `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
@@ -158,7 +159,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
 | `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `true`). |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500). |
-| `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). |
+| `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |

@@ -164,10 +164,15 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 17: Agent-Workflow Features (SAN-Refactoring)
-- [x] **Try*-Ausnahme für out-Parameter:** `AllowTryPatternOutParameters` erlaubt `out` in `bool Try*`-Methoden (idiomatisches C#)
+- [x] **Try*/Is*-Ausnahme für out-Parameter:** `AllowTryPatternOutParameters` erlaubt `out` in `bool Try*`- und `bool Is*`-Methoden (idiomatisches C#)
 - [x] **Guidance im Text-Output:** Detail-Zeilen mit `→ {Guidance}` für LLM-Refactor-Hints
 - [x] **Smarter Static Test Sentinel:** Flexible Klassenname-Patterns, `typeof`/`nameof`-Referenzen und `// @covers`-Kommentare
 - [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter
+- [x] **Erweiterbare Silent-Catch-Allowlist:** `AllowedSilentCatchExceptionTypes` für projektspezifische Exception-Typen (z. B. Blazor `JSDisconnectedException`)
+- [x] **MaxMethodParameterCount Override-Exemption:** `override`- und Interface-Implementierungen ausgenommen (Signatur nicht änderbar)
+- [x] **Discard `_` Shadowing-Exemption:** `EnforceNoVariableShadowing` meldet keine Violations für den C#-Discard-Identifier `_`
+- [x] **Cross-Partial-Class ReadonlyFields:** Schreibzugriffe auf Felder in anderen Partial-Class-Dateien werden korrekt erkannt (kein False-Positive)
+- [x] **Declaration-after-Write Fix:** Pre-Registration-Pass stellt sicher, dass Felder vor dem Walker-Walk bekannt sind (kein False-Positive bei umgekehrter Deklarationsreihenfolge)
 - [x] **Tech-Debt-Report (`--debt-report`):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
 - [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`), `--git-since`
 - [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in rules.json, Intent-Spalte in Summary, SARIF level

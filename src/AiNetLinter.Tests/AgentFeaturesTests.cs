@@ -74,6 +74,28 @@ public sealed class AgentFeaturesTests
     }
 
     [Fact]
+    public void Analyze_IsPatternOutParameter_NoViolationWhenTryPatternEnabled()
+    {
+        const string source = """
+            namespace Test;
+            public sealed class CommandParser
+            {
+                public bool IsZoomCommand(string? command, out string presetId)
+                {
+                    presetId = command ?? "";
+                    return command != null && command.StartsWith("zoom");
+                }
+            }
+            """;
+
+        var config = CreateConfig(g => g with { AllowTryPatternOutParameters = true });
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Parser.cs", model, config);
+
+        Assert.DoesNotContain(violations, v => v.RuleName == nameof(GlobalConfig.AllowOutParameters));
+    }
+
+    [Fact]
     public void Analyze_VoidMethodWithOut_ReturnsViolation()
     {
         const string source = """

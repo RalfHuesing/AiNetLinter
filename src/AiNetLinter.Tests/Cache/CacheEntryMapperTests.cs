@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using Xunit;
 using AiNetLinter.Cache;
 using AiNetLinter.Core;
@@ -82,7 +83,8 @@ public sealed class CacheEntryMapperTests
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>()
+            new ConcurrentDictionary<string, string>(),
+            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default)
         );
 
         var entry = new AnalysisCacheEntry
@@ -124,7 +126,8 @@ public sealed class CacheEntryMapperTests
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>()
+            new ConcurrentDictionary<string, string>(),
+            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default)
         );
 
         CacheEntryMapper.RestoreToState(entry, state2, isTestFile: true);

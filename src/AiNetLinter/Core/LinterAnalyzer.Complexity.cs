@@ -24,7 +24,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckSemanticNaming(node.ParameterList, isPublicMethod);
 
         var paramCount = node.ParameterList.Parameters.Count;
-        if (paramCount > _config.Metrics.MaxMethodParameterCount)
+        if (paramCount > _config.Metrics.MaxMethodParameterCount
+            && !IsOverrideOrInterfaceImplementation(node))
         {
             _violations.Add(new RuleViolation
             {
@@ -87,6 +88,33 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             nameof(_config.Metrics.MaxCognitiveComplexity),
             "Kognitive Komplexitaet",
             CognitiveComplexityGuidance.Build(node, cognitiveComplexity, _config.Metrics.MaxCognitiveComplexity)));
+    }
+
+    private bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax node)
+    {
+        if (node.Modifiers.Any(SyntaxKind.OverrideKeyword)) return true;
+        if (node.ExplicitInterfaceSpecifier != null) return true;
+
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol == null) return false;
+
+        if (symbol.ExplicitInterfaceImplementations.Length > 0) return true;
+        return IsImplicitInterfaceImplementation(symbol);
+    }
+
+    private static bool IsImplicitInterfaceImplementation(IMethodSymbol symbol)
+    {
+        var type = symbol.ContainingType;
+        foreach (var iface in type.AllInterfaces)
+        {
+            foreach (var member in iface.GetMembers().OfType<IMethodSymbol>())
+            {
+                var impl = type.FindImplementationForInterfaceMember(member);
+                if (impl != null && SymbolEqualityComparer.Default.Equals(impl, symbol))
+                    return true;
+            }
+        }
+        return false;
     }
 
     private void ReportComplexityIfViolation(MethodDeclarationSyntax node, ComplexityCheck check)

@@ -52,6 +52,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.EnforceNoVariableShadowing) return;
         var name = identifier.Text;
         if (string.IsNullOrEmpty(name)) return;
+        if (name == "_") return;
 
         var selfSymbol = _semanticModel.GetDeclaredSymbol(node);
         var symbols = _semanticModel.LookupSymbols(node.SpanStart, name: name);
