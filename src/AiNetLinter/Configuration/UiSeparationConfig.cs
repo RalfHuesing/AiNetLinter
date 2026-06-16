@@ -10,8 +10,8 @@ namespace AiNetLinter.Configuration;
 public sealed record UiSeparationConfig
 {
     /// <summary>
-    /// Wenn true, muss jede .razor-Datei eine .razor.cs-Begleitdatei haben.
-    /// Erzwingt das "Code-Behind"-Muster für Blazor (kein @code{} inline).
+    /// Wenn true, müssen .razor-Dateien mit @code{}- oder @functions{}-Blöcken eine .razor.cs-Begleitdatei haben.
+    /// Erzwingt das "Code-Behind"-Muster für Blazor. Reine Template-Dateien ohne Inline-Code werden nicht beanstandet.
     /// </summary>
     public bool BlazorRequireCodeBehind { get; init; } = true;
 

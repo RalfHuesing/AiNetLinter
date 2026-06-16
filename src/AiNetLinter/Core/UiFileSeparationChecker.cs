@@ -51,7 +51,7 @@ internal static class UiFileSeparationChecker
         if (config.BlazorRequireCodeBehind)
         {
             var codeBehindPath = razorFile + ".cs";
-            if (!File.Exists(codeBehindPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCodeBehind"))
+            if (RazorHasInlineCode(fileContent) && !File.Exists(codeBehindPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCodeBehind"))
             {
                 violations.Add(CreateViolation(
                     razorFile,
@@ -126,6 +126,18 @@ internal static class UiFileSeparationChecker
 
         // Native HTML-Elemente: <tagname  wo tagname mit Kleinbuchstaben beginnt
         return NativeHtmlTagPattern.IsMatch(fileContent);
+    }
+
+    /// <summary>
+    /// Erkennt ob eine Razor-Datei inline C#-Code enthält (@code-Block oder @functions-Block).
+    /// Nur wenn Inline-Code vorhanden ist, wird BlazorRequireCodeBehind geprüft.
+    /// Reine Template-Dateien (nur Markup, keine Logik) lösen keine Verletzung aus.
+    /// </summary>
+    internal static bool RazorHasInlineCode(string fileContent)
+    {
+        if (string.IsNullOrEmpty(fileContent)) return false;
+        return fileContent.Contains("@code", StringComparison.Ordinal)
+            || fileContent.Contains("@functions", StringComparison.Ordinal);
     }
 
     // Matcht <div, <span, <p, <h1, <input etc. — aber nicht <MudButton, <Component etc.
