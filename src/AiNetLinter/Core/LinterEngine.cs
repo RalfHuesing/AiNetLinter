@@ -144,7 +144,8 @@ public sealed class LinterEngine
     private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache)
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
-        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir);
+        var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
+        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
             AnalyzeWorkItemAsync(item, state, cache));
@@ -153,21 +154,23 @@ public sealed class LinterEngine
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> ResolveWorkItemsAsync(
         Solution solution,
         SourceFileCatalog? catalog,
-        string? solutionDir)
+        string? solutionDir,
+        IReadOnlyList<string> testSuffixes)
     {
         if (catalog != null)
         {
             return await catalog.CollectDocumentWorkItemsAsync();
         }
 
-        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir);
+        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes);
     }
 
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsFromSolutionAsync(
         Solution solution,
-        string? solutionDir)
+        string? solutionDir,
+        IReadOnlyList<string> testSuffixes)
     {
-        var tasks = solution.Projects.Select(project => CollectProjectDocumentsAsync(project, solutionDir));
+        var tasks = solution.Projects.Select(project => CollectProjectDocumentsAsync(project, solutionDir, testSuffixes));
         var results = await Task.WhenAll(tasks);
 
         var workItems = new List<CatalogDocumentWorkItem>();
@@ -181,14 +184,15 @@ public sealed class LinterEngine
 
     private static Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectProjectDocumentsAsync(
         Project project,
-        string? solutionDir)
+        string? solutionDir,
+        IReadOnlyList<string> testSuffixes)
     {
         if (!project.SupportsCompilation)
         {
             return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>([]);
         }
 
-        var isTestProject = TestProjectDetector.IsTestProject(project);
+        var isTestProject = TestProjectDetector.IsTestProject(project, testSuffixes);
         return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>(
             CollectValidDocuments(project, solutionDir, isTestProject));
     }
@@ -256,7 +260,7 @@ public sealed class LinterEngine
         var sourceText = await document.GetTextAsync();
         state.FileContents[filePath] = sourceText.ToString();
 
-        var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config);
+        var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config, solutionDir);
         var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
 
         var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);

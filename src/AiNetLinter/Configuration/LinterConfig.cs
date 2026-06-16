@@ -20,6 +20,20 @@ public sealed record LinterConfig
     /// </summary>
     public IReadOnlyDictionary<string, ProjectOverrideEntry> ProjectOverrides { get; init; }
         = new Dictionary<string, ProjectOverrideEntry>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Pfadbasierte Konfigurations-Überschreibungen. Der Key ist ein Glob-Muster
+    /// (z. B. "src/MyApp/Handlers/**") gegen den relativen Dateipfad ab Solution-Root.
+    /// Wird NACH ProjectOverrides angewendet; gewinnt bei Konflikt.
+    /// </summary>
+    public IReadOnlyDictionary<string, ProjectOverrideEntry> PathOverrides { get; init; }
+        = new Dictionary<string, ProjectOverrideEntry>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Basis-Pfad der Solution (für relative Pfadberechnung bei PathOverrides).
+    /// Wird vom LinterEngine beim Laden gesetzt.
+    /// </summary>
+    public string? SolutionBasePath { get; init; }
 }
 
 /// <summary>
@@ -220,6 +234,14 @@ public sealed record MetricsConfig
     public IReadOnlyCollection<string> MethodParameterCountIgnoreTypeNames { get; init; }
         = Array.Empty<string>();
 
+    /// <summary>
+    /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden.
+    /// Ermöglicht z. B. "ILogger" um ILogger&lt;T&gt; auszuschließen.
+    /// Standard: [].
+    /// </summary>
+    public IReadOnlyCollection<string> MethodParameterCountIgnoreTypePrefixes { get; init; }
+        = Array.Empty<string>();
+
     public int MaxMethodLineCount { get; init; } = 42;
     public int MaxCyclomaticComplexity { get; init; } = 5;
     public int MaxCognitiveComplexity { get; init; } = 5;
@@ -256,6 +278,15 @@ public sealed record MetricsConfig
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
     /// </summary>
     public int MaxAIContextFootprint { get; init; } = 5000;
+
+    /// <summary>
+    /// Namespace-Präfixe von Typen, die beim Footprint nicht mitgezählt werden.
+    /// Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt.
+    /// Framework-Typen ohne Quellcode (MudBlazor NuGet, System.*) werden immer automatisch ausgeschlossen.
+    /// Standard: [].
+    /// </summary>
+    public IReadOnlyCollection<string> FootprintIgnoreNamespacePrefixes { get; init; }
+        = Array.Empty<string>();
 
     /// <summary>
     /// Toleranzbereich über dem Komplexitätslimit für Warning statt Error.
@@ -298,6 +329,8 @@ public sealed record MetricsConfig
     {
         MaxConstructorDependencies = @override?.MaxConstructorDependencies ?? MaxConstructorDependencies,
         MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
+        FootprintIgnoreNamespacePrefixes = @override?.FootprintIgnoreNamespacePrefixes ?? FootprintIgnoreNamespacePrefixes,
+        MethodParameterCountIgnoreTypePrefixes = @override?.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
         MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
         InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
         ConstructorDependencyIgnoreTypePrefixes = @override?.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
@@ -343,6 +376,14 @@ public sealed record TestSentinelConfig
     public bool ExemptStaticClasses { get; init; } = false;
 
     /// <summary>
+    /// Projekt-Name-Suffixe, die ein Projekt als Testprojekt kennzeichnen,
+    /// wenn keine bekannten Testrahmenbibliotheken in den Metadaten gefunden wurden.
+    /// Standard: ["Tests", "Test", "IntegrationTests", "Specs", "Spec"].
+    /// </summary>
+    public IReadOnlyList<string> TestProjectNameSuffixes { get; init; }
+        = ["Tests", "Test", "IntegrationTests", "Specs", "Spec"];
+
+    /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// </summary>
     public TestSentinelConfig Apply(TestSentinelConfigOverride? @override)
@@ -353,6 +394,7 @@ public sealed record TestSentinelConfig
             ExemptClassNameSuffixes = @override.ExemptClassNameSuffixes ?? ExemptClassNameSuffixes,
             ExemptWhenInheritsFrom = @override.ExemptWhenInheritsFrom ?? ExemptWhenInheritsFrom,
             ExemptStaticClasses = @override.ExemptStaticClasses ?? ExemptStaticClasses,
+            TestProjectNameSuffixes = @override.TestProjectNameSuffixes ?? TestProjectNameSuffixes,
         };
     }
 }

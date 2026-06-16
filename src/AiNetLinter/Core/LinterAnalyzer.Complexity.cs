@@ -103,11 +103,16 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private string BuildParamCountDetails(string methodName, int total, int effective, int limit)
     {
         var ignoreTypes = _config.Metrics.MethodParameterCountIgnoreTypeNames;
-        var hasIgnored = ignoreTypes != null && ignoreTypes.Count > 0;
+        var ignorePrefixes = _config.Metrics.MethodParameterCountIgnoreTypePrefixes;
+        var hasIgnoredNames = ignoreTypes != null && ignoreTypes.Count > 0;
+        var hasIgnoredPrefixes = ignorePrefixes != null && ignorePrefixes.Count > 0;
 
-        if (hasIgnored)
+        if (hasIgnoredNames || hasIgnoredPrefixes)
         {
-            var ignored = string.Join(", ", ignoreTypes!);
+            var parts = new System.Collections.Generic.List<string>();
+            if (hasIgnoredNames) parts.AddRange(ignoreTypes!);
+            if (hasIgnoredPrefixes) parts.AddRange(ignorePrefixes!.Select(p => p + "*"));
+            var ignored = string.Join(", ", parts);
             return $"Die Methode '{methodName}' hat {total} Parameter, davon {effective} gewertet (erlaubt sind maximal {limit}); nicht mitgezählt: {ignored}.";
         }
 
@@ -117,16 +122,38 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private int CountEffectiveParameters(SeparatedSyntaxList<ParameterSyntax> parameters)
     {
         var ignoreTypes = _config.Metrics.MethodParameterCountIgnoreTypeNames;
-        if (ignoreTypes == null || ignoreTypes.Count == 0)
+        var ignorePrefixes = _config.Metrics.MethodParameterCountIgnoreTypePrefixes;
+        var hasNames = ignoreTypes != null && ignoreTypes.Count > 0;
+        var hasPrefixes = ignorePrefixes != null && ignorePrefixes.Count > 0;
+
+        if (!hasNames && !hasPrefixes)
             return parameters.Count;
-        return parameters.Count(p => !IsIgnoredParamType(p, ignoreTypes));
+
+        return parameters.Count(p => !IsIgnoredParamType(p, ignoreTypes, ignorePrefixes));
     }
 
-    private static bool IsIgnoredParamType(ParameterSyntax param, IReadOnlyCollection<string> ignoreTypes)
+    private static bool IsIgnoredParamType(
+        ParameterSyntax param,
+        IReadOnlyCollection<string>? ignoreTypes,
+        IReadOnlyCollection<string>? ignorePrefixes)
     {
         if (param.Type == null) return false;
         var name = GetSimpleTypeName(param.Type);
-        return name != null && ignoreTypes.Contains(name, StringComparer.Ordinal);
+        if (name == null) return false;
+
+        if (ignoreTypes != null && ignoreTypes.Count > 0 && ignoreTypes.Contains(name, StringComparer.Ordinal))
+            return true;
+
+        if (ignorePrefixes != null && ignorePrefixes.Count > 0)
+        {
+            foreach (var prefix in ignorePrefixes)
+            {
+                if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax node)

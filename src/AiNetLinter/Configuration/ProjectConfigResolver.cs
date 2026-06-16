@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
@@ -12,13 +13,63 @@ public static class ProjectConfigResolver
 {
     /// <summary>
     /// Löst die effektive Linter-Konfiguration für ein bestimmtes Roslyn-Dokument auf.
+    /// Erst ProjectOverrides, dann PathOverrides (höhere Priorität).
     /// </summary>
     /// <param name="document">Das zu analysierende Roslyn-Dokument.</param>
     /// <param name="globalConfig">Die globale Linter-Konfiguration.</param>
+    /// <param name="solutionBasePath">Basis-Pfad der Solution für relative Pfadberechnung.</param>
     /// <returns>Die für das Dokument effektive Linter-Konfiguration.</returns>
-    public static LinterConfig ResolveForDocument(Document document, LinterConfig globalConfig)
+    public static LinterConfig ResolveForDocument(Document document, LinterConfig globalConfig, string? solutionBasePath = null)
     {
-        return ResolveForProject(document.Project.Name, globalConfig);
+        var config = ResolveForProject(document.Project.Name, globalConfig);
+
+        if (document.FilePath != null && globalConfig.PathOverrides.Count > 0)
+        {
+            config = ResolveForPath(document.FilePath, solutionBasePath, config, globalConfig.PathOverrides);
+        }
+
+        return config;
+    }
+
+    private static LinterConfig ResolveForPath(
+        string filePath,
+        string? solutionBasePath,
+        LinterConfig config,
+        IReadOnlyDictionary<string, ProjectOverrideEntry> pathOverrides)
+    {
+        var relativePath = ResolveRelativePath(filePath, solutionBasePath);
+
+        foreach (var pair in pathOverrides)
+        {
+            if (MatchesGlobPath(relativePath, pair.Key))
+            {
+                return MergeConfig(config, pair.Value);
+            }
+        }
+
+        return config;
+    }
+
+    internal static string ResolveRelativePath(string filePath, string? solutionBasePath)
+    {
+        if (string.IsNullOrEmpty(solutionBasePath))
+            return filePath.Replace('\\', '/');
+
+        if (filePath.StartsWith(solutionBasePath, StringComparison.OrdinalIgnoreCase))
+            return filePath[solutionBasePath.Length..].TrimStart('/', '\\').Replace('\\', '/');
+
+        return filePath.Replace('\\', '/');
+    }
+
+    internal static bool MatchesGlobPath(string relativePath, string pattern)
+    {
+        var normalizedPattern = pattern.Replace('\\', '/');
+        var regexPattern = "^" +
+            Regex.Escape(normalizedPattern)
+                 .Replace("\\*\\*", ".*")
+                 .Replace("\\*", "[^/]*")
+            + "$";
+        return Regex.IsMatch(relativePath, regexPattern, RegexOptions.IgnoreCase);
     }
 
     /// <summary>

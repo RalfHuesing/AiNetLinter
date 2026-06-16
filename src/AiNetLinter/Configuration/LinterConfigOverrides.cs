@@ -152,6 +152,11 @@ public sealed record MetricsConfigOverride
     public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypeNames { get; init; }
 
     /// <summary>
+    /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden (z. B. "ILogger" deckt ILogger&lt;T&gt; ab).
+    /// </summary>
+    public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypePrefixes { get; init; }
+
+    /// <summary>
     /// Maximale Zeilenanzahl pro Methode.
     /// </summary>
     public int? MaxMethodLineCount { get; init; }
@@ -217,6 +222,11 @@ public sealed record MetricsConfigOverride
     public int? ComplexityNearMissTolerance { get; init; }
     public bool? ExcludeSwitchDispatcherCases { get; init; }
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
+
+    /// <summary>
+    /// Namespace-Präfixe von Typen, die beim Footprint-Check ignoriert werden.
+    /// </summary>
+    public IReadOnlyCollection<string>? FootprintIgnoreNamespacePrefixes { get; init; }
 }
 
 /// <summary>
@@ -238,6 +248,11 @@ public sealed record TestSentinelConfigOverride
     /// Statische Klassen ausgenommen wenn true.
     /// </summary>
     public bool? ExemptStaticClasses { get; init; }
+
+    /// <summary>
+    /// Projekt-Name-Suffixe, die ein Projekt als Testprojekt markieren.
+    /// </summary>
+    public IReadOnlyList<string>? TestProjectNameSuffixes { get; init; }
 }
 
 /// <summary>

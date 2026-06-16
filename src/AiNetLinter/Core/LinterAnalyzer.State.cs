@@ -244,7 +244,8 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.EnforceReadonlyParameters) return;
 
         var symbol = _semanticModel.GetSymbolInfo(expression).Symbol;
-        if (symbol is IParameterSymbol parameter && parameter.RefKind != RefKind.Out)
+        if (symbol is IParameterSymbol parameter
+            && parameter.RefKind is not (RefKind.Out or RefKind.Ref or RefKind.In))
         {
             _violations.Add(new RuleViolation
             {
