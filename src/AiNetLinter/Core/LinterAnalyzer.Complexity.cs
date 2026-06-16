@@ -24,8 +24,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckSemanticNaming(node.ParameterList, isPublicMethod);
 
         var effectiveLimit = GetEffectiveParamLimit();
-        var paramCount = CountEffectiveParameters(node.ParameterList.Parameters);
-        if (paramCount > effectiveLimit
+        var totalParamCount = node.ParameterList.Parameters.Count;
+        var effectiveParamCount = CountEffectiveParameters(node.ParameterList.Parameters);
+        if (effectiveParamCount > effectiveLimit
             && !IsOverrideOrInterfaceImplementation(node))
         {
             _violations.Add(new RuleViolation
@@ -33,7 +34,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
                 FilePath = _filePath,
                 LineNumber = GetLineNumber(node),
                 RuleName = nameof(_config.Metrics.MaxMethodParameterCount),
-                Details = $"Die Methode '{node.Identifier.Text}' hat {paramCount} Parameter (erlaubt sind maximal {effectiveLimit}).",
+                Details = BuildParamCountDetails(node.Identifier.Text, totalParamCount, effectiveParamCount, effectiveLimit),
                 Guidance = $"Erstelle 'sealed record {node.Identifier.Text}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern)."
             });
         }
@@ -97,6 +98,20 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (_isTestFile && testLimit > 0)
             return testLimit;
         return _config.Metrics.MaxMethodParameterCount;
+    }
+
+    private string BuildParamCountDetails(string methodName, int total, int effective, int limit)
+    {
+        var ignoreTypes = _config.Metrics.MethodParameterCountIgnoreTypeNames;
+        var hasIgnored = ignoreTypes != null && ignoreTypes.Count > 0;
+
+        if (hasIgnored)
+        {
+            var ignored = string.Join(", ", ignoreTypes!);
+            return $"Die Methode '{methodName}' hat {total} Parameter, davon {effective} gewertet (erlaubt sind maximal {limit}); nicht mitgezählt: {ignored}.";
+        }
+
+        return $"Die Methode '{methodName}' hat {total} Parameter (erlaubt sind maximal {limit}).";
     }
 
     private int CountEffectiveParameters(SeparatedSyntaxList<ParameterSyntax> parameters)

@@ -166,6 +166,42 @@ public sealed class AsyncService
     }
 
     [Fact]
+    public void IgnoredType_ViolationDetailsContainsIgnoreHint()
+    {
+        const string source = @"
+using System.Threading;
+public sealed class AsyncService
+{
+    public async System.Threading.Tasks.Task DoAsync(string a, string b, string c, string d, string e, CancellationToken ct) { }
+}";
+        var config = CreateConfig(maxParams: 4) with
+        {
+            Metrics = CreateConfig(maxParams: 4).Metrics with
+            {
+                MethodParameterCountIgnoreTypeNames = ["CancellationToken"]
+            }
+        };
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
+        var v = Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+        Assert.Contains("nicht mitgezählt: CancellationToken", v.Details);
+    }
+
+    [Fact]
+    public void IgnoredType_WithoutConfig_DetailsHasNoIgnoreHint()
+    {
+        const string source = @"
+public sealed class MyService
+{
+    public void DoWork(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        var v = Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+        Assert.DoesNotContain("nicht mitgezählt", v.Details);
+    }
+
+    [Fact]
     public void IgnoredType_WithoutConfig_StillCounted()
     {
         const string source = @"
