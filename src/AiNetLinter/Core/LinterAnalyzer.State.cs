@@ -105,12 +105,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             return false;
         }
 
-        if (!method.Identifier.Text.StartsWith("Try", StringComparison.Ordinal))
-        {
-            return false;
-        }
+        var returnsBool = method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+        if (!returnsBool) return false;
 
-        return method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+        var methodName = method.Identifier.Text;
+        return methodName.StartsWith("Try", StringComparison.Ordinal)
+            || methodName.StartsWith("Is", StringComparison.Ordinal);
     }
 
     private void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node)
@@ -262,13 +262,27 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.EnforceReadonlyFields) return;
 
         var symbol = _semanticModel.GetSymbolInfo(expression).Symbol as IFieldSymbol;
-        if (symbol == null || !_fieldTracker.IsCandidate(symbol)) return;
+        if (symbol == null) return;
 
+        if (_sharedFieldTrackers != null && IsPartialType(symbol.ContainingType))
+        {
+            if (!IsInsideConstructorOfDeclaringType(expression, symbol.ContainingType))
+            {
+                var sharedTracker = _sharedFieldTrackers.GetOrAdd(symbol.ContainingType, _ => new FieldReadonlyTracker());
+                sharedTracker.MarkModifiedOutsideConstructor(symbol);
+            }
+            return;
+        }
+
+        if (!_fieldTracker.IsCandidate(symbol)) return;
         if (!IsInsideConstructorOfDeclaringType(expression, symbol.ContainingType))
         {
             _fieldTracker.MarkModifiedOutsideConstructor(symbol);
         }
     }
+
+    private static bool IsPartialType(INamedTypeSymbol? type) =>
+        type != null && type.DeclaringSyntaxReferences.Length > 1;
 
     private bool IsInsideConstructorOfDeclaringType(SyntaxNode node, INamedTypeSymbol declaringType)
     {
@@ -304,6 +318,14 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     {
         var symbol = _semanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
         if (symbol == null || symbol.IsReadOnly || symbol.IsConst) return;
+        if (symbol.Type.Name == "ElementReference") return;
+
+        if (_sharedFieldTrackers != null && IsPartialType(symbol.ContainingType))
+        {
+            var sharedTracker = _sharedFieldTrackers.GetOrAdd(symbol.ContainingType, _ => new FieldReadonlyTracker());
+            sharedTracker.RegisterCandidate(symbol);
+            return;
+        }
 
         _fieldTracker.RegisterCandidate(symbol);
     }

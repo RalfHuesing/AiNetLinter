@@ -1,0 +1,146 @@
+using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Xunit;
+using AiNetLinter.Configuration;
+using AiNetLinter.Core;
+
+namespace AiNetLinter.Tests.Core;
+
+public sealed class MethodParameterCountOverrideTests
+{
+    private static LinterConfig CreateConfig(int maxParams = 4) => new()
+    {
+        Global = new GlobalConfig
+        {
+            EnforceSealedClasses = false,
+            AllowDynamic = false,
+            AllowOutParameters = true,
+            EnforceValueObjectContracts = false,
+            EnforcePascalCase = false,
+            EnforceXmlDocumentation = false,
+            EnforceSemanticNaming = false,
+            EnforceNullableEnable = false,
+            EnforceNoSilentCatch = false,
+            EnforceNoVariableShadowing = false,
+            EnforceReadonlyParameters = false,
+            EnforceReadonlyFields = false,
+            EnforceNoMagicValues = false,
+            EnforceExplicitStateImmutability = false,
+            EnforceStrictBoundaryForBusinessLogic = false,
+            PreventContextDependentOverloads = false,
+            RequireExplicitTruncationHandling = false,
+            EnforceNamespaceDirectoryMapping = false,
+            DetectAndBanPhantomDependencies = false
+        },
+        Metrics = new MetricsConfig
+        {
+            MaxLineCount = 500,
+            MaxMethodParameterCount = maxParams,
+            MaxCyclomaticComplexity = 20,
+            MaxCognitiveComplexity = 20
+        }
+    };
+
+    private static SemanticModel GetSemanticModel(string source, params string[] additionalSources)
+    {
+        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        var trees = new[] { CSharpSyntaxTree.ParseText(source, path: "Test.cs") }
+            .Concat(additionalSources.Select((s, i) => CSharpSyntaxTree.ParseText(s, path: $"Dep{i}.cs")))
+            .ToArray();
+
+        var compilation = CSharpCompilation.Create("TestAssembly")
+            .AddSyntaxTrees(trees)
+            .AddReferences(mscorlib)
+            .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var errors = compilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+
+        if (errors.Count > 0)
+            throw new System.Exception("Compilation errors:\n" + string.Join("\n", errors));
+
+        return compilation.GetSemanticModel(trees[0]);
+    }
+
+    [Fact]
+    public void OverrideMethod_WithTooManyParams_NoViolation()
+    {
+        const string baseSource = @"
+public abstract class BaseService
+{
+    public abstract void Process(string a, string b, string c, string d, string e);
+}";
+        const string source = @"
+public sealed class ConcreteService : BaseService
+{
+    public override void Process(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source, baseSource);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void ExplicitInterfaceImplementation_WithTooManyParams_NoViolation()
+    {
+        const string ifaceSource = @"
+public interface ILogger
+{
+    void Log(int level, int eventId, string state, System.Exception ex, string formatter);
+}";
+        const string source = @"
+public sealed class MyLogger : ILogger
+{
+    void ILogger.Log(int level, int eventId, string state, System.Exception ex, string formatter) { }
+}";
+        var model = GetSemanticModel(source, ifaceSource);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void ImplicitInterfaceImplementation_WithTooManyParams_NoViolation()
+    {
+        const string ifaceSource = @"
+public interface ILoader
+{
+    void Load(string a, string b, string c, string d, string e);
+}";
+        const string source = @"
+public sealed class MyLoader : ILoader
+{
+    public void Load(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source, ifaceSource);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void NormalMethod_WithTooManyParams_Violation()
+    {
+        const string source = @"
+public sealed class MyService
+{
+    public void DoWork(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+
+    [Fact]
+    public void VirtualMethod_WithTooManyParams_Violation()
+    {
+        const string source = @"
+public class MyService
+{
+    public virtual void DoWork(string a, string b, string c, string d, string e) { }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxParams: 4));
+        Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
+    }
+}

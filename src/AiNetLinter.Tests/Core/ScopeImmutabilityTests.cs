@@ -228,6 +228,36 @@ public sealed class Logger
         Assert.Empty(violations);
     }
 
+    [Fact]
+    public void Shadowing_DiscardIdentifier_IsAllowed()
+    {
+        // Method parameter '_' shadows field '_' — discards should never be flagged
+        const string source = @"
+public sealed class Processor
+{
+    private int _ = 0;
+    public void Process(int _) { }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
+        Assert.Empty(violations.Where(v => v.RuleName == "EnforceNoVariableShadowing"));
+    }
+
+    [Fact]
+    public void Shadowing_RegularParameter_IsDisallowed()
+    {
+        // Method parameter 'value' shadows field 'value' — regular names must still be flagged
+        const string source = @"
+public sealed class Processor
+{
+    private int value = 0;
+    public void Process(int value) { }
+}";
+        var model = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
+        Assert.Single(violations.Where(v => v.RuleName == "EnforceNoVariableShadowing"));
+    }
+
     private static LinterConfig CreateImmutabilityTestConfig(
         bool allowPrivateBackingFields = false,
         string[]? exemptBaseTypes = null)

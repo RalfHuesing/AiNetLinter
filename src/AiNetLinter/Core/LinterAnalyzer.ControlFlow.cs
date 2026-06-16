@@ -40,7 +40,22 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (_isTestFile) return true;
         if (!IsSwallowed(node)) return true;
         if (IsAllowedCancellationCatch(node)) return true;
+        if (IsAllowedSilentCatchByConfig(node)) return true;
         return IsExplicitlyIgnored(node);
+    }
+
+    private bool IsAllowedSilentCatchByConfig(CatchClauseSyntax node)
+    {
+        var allowedTypes = _config.Global.AllowedSilentCatchExceptionTypes;
+        if (allowedTypes == null || allowedTypes.Count == 0) return false;
+        if (node.Declaration?.Type == null) return false;
+        if (node.Declaration.Identifier.Text != "") return false;
+
+        var typeInfo = _semanticModel.GetTypeInfo(node.Declaration.Type);
+        var typeName = typeInfo.Type?.Name
+            ?? node.Declaration.Type.ToString().Split('.').Last();
+
+        return allowedTypes.Contains(typeName, StringComparer.Ordinal);
     }
 
     private bool IsAllowedCancellationCatch(CatchClauseSyntax node)

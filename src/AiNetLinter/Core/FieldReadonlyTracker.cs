@@ -1,34 +1,44 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Core;
 
 /// <summary>
-/// Kapselt den mutablen Zustand für die EnforceReadonlyFields-Analyse
-/// und verhindert so shared-state-Kopplung über Partial-Klassen-Grenzen.
+/// Kapselt den mutablen Zustand für die EnforceReadonlyFields-Analyse.
+/// Thread-sicher für gemeinsame Nutzung über Partial-Class-Dateien hinweg.
 /// </summary>
 internal sealed class FieldReadonlyTracker
 {
+    private readonly object _lock = new();
     private readonly HashSet<IFieldSymbol> _candidates = new(SymbolEqualityComparer.Default);
     private readonly HashSet<IFieldSymbol> _modifiedOutsideConstructor = new(SymbolEqualityComparer.Default);
 
-    internal void RegisterCandidate(IFieldSymbol field) => _candidates.Add(field);
-
-    internal void MarkModifiedOutsideConstructor(IFieldSymbol field) => _modifiedOutsideConstructor.Add(field);
-
-    internal bool IsCandidate(IFieldSymbol field) => _candidates.Contains(field);
-
-    internal IEnumerable<IFieldSymbol> GetReadonlyCandidates()
+    internal void RegisterCandidate(IFieldSymbol field)
     {
-        foreach (var field in _candidates)
+        lock (_lock) _candidates.Add(field);
+    }
+
+    internal void MarkModifiedOutsideConstructor(IFieldSymbol field)
+    {
+        lock (_lock) _modifiedOutsideConstructor.Add(field);
+    }
+
+    internal bool IsCandidate(IFieldSymbol field)
+    {
+        lock (_lock) return _candidates.Contains(field);
+    }
+
+    internal IReadOnlyList<IFieldSymbol> GetReadonlyCandidates()
+    {
+        lock (_lock)
         {
-            if (!_modifiedOutsideConstructor.Contains(field))
-            {
-                yield return field;
-            }
+            return _candidates
+                .Where(f => !_modifiedOutsideConstructor.Contains(f))
+                .ToList();
         }
     }
 

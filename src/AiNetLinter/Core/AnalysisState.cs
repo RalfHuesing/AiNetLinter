@@ -17,5 +17,6 @@ internal sealed record AnalysisState(
     TestCoverageIndex TestCoverage,
     ConcurrentBag<ClassInfo> SourceClasses,
     ConcurrentBag<PartialClassPart> PartialClassParts,
-    ConcurrentDictionary<string, string> FileContents
+    ConcurrentDictionary<string, string> FileContents,
+    ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker> SharedFieldTrackers
 );
