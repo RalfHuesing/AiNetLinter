@@ -22,7 +22,6 @@ public static class ViolationTextFormatter
             return string.Empty;
         }
 
-        var byFile = ViolationSummaryBuilder.BuildByFile(violations, outputRoot);
         var byRule = ViolationSummaryBuilder.BuildByRule(violations, config);
         var detailLines = violations
             .OrderBy(v => PathNormalizer.ToRelative(outputRoot, v.FilePath), StringComparer.OrdinalIgnoreCase)
@@ -45,9 +44,7 @@ public static class ViolationTextFormatter
             output.Append(GetRuleInstruction(ruleName!)).Append('\n');
         }
 
-        output.Append("\n## Summary - by file\n");
-        output.Append(FormatFileSummary(byFile));
-        output.Append("\n\n## Summary - by rule\n");
+        output.Append("\n## Summary - by rule\n");
         output.Append(FormatRuleSummary(byRule));
         output.Append("\n\n## Violations\n");
         output.Append(string.Join('\n', detailLines));
@@ -84,11 +81,6 @@ public static class ViolationTextFormatter
         return sb.ToString();
     }
 
-    private static string FormatFileSummary(IReadOnlyList<FileViolationCount> byFile)
-    {
-        return string.Join('\n', byFile.Select(x => $"{x.Count} {x.RelativePath}"));
-    }
-
     private static string FormatRuleSummary(IReadOnlyList<RuleViolationCount> byRule)
     {
         var hasIntent = byRule.Any(x => !string.IsNullOrEmpty(x.Intent));
@@ -107,13 +99,7 @@ public static class ViolationTextFormatter
     private static string FormatViolationLine(RuleViolation violation, string outputRoot)
     {
         var relativePath = PathNormalizer.ToRelative(outputRoot, violation.FilePath);
-        var line = $"{relativePath}:{violation.LineNumber} {violation.RuleName} | {violation.Details}";
-        if (!string.IsNullOrWhiteSpace(violation.Guidance))
-        {
-            line += $" -> {violation.Guidance}";
-        }
-
-        return line;
+        return $"{relativePath}:{violation.LineNumber} {violation.RuleName} | {violation.Details}";
     }
 
     private static readonly Dictionary<string, string> RuleInstructions = new(StringComparer.OrdinalIgnoreCase)
@@ -145,7 +131,10 @@ public static class ViolationTextFormatter
         ["EnforceReadonlyFields"] = "-> EnforceReadonlyFields: Private Felder, die nur im Konstruktor zugewiesen werden, muessen als 'readonly' deklariert sein.",
         ["MaxDirectoryDepth"] = "-> MaxDirectoryDepth: Die Verzeichnistiefe des Projekts ueberschreitet das erlaubte Maximum.",
         ["MaxInheritanceDepth"] = "-> MaxInheritanceDepth: Zu tiefe Vererbungshierarchie. Bevorzuge Komposition statt Vererbung.",
+        ["AIContextFootprint"] = "-> AIContextFootprint: Zu grosser transitiver Code-Footprint (s. Details). Fuehre schlanke Interfaces fuer die groessten Abhaengigkeiten ein oder splitte die Klasse.",
         ["MaxAIContextFootprint"] = "-> MaxAIContextFootprint: Der transitive Code-Footprint fuer KI-Agenten ist zu gross. Reduziere Kopplung und Abhaengigkeiten.",
+        ["BlazorRequireCssIsolation"] = "-> BlazorRequireCssIsolation: Erstelle eine '.razor.css'-Datei fuer komponentenspezifische Styles. Verschiebe alle '<style>'-Bloecke dorthin. Suppression: @* ainetlinter-disable BlazorRequireCssIsolation *@",
+        ["BlazorRequireCodeBehind"] = "-> BlazorRequireCodeBehind: Erstelle eine '.razor.cs' partial class fuer die Komponenten-Logik, verschiebe alle '@code { }' Bloecke dorthin. Suppression: @* ainetlinter-disable BlazorRequireCodeBehind *@",
         ["MaxMethodOverloads"] = "-> MaxMethodOverloads: Zu viele Methodenueberladungen. Verwende verschiedene Methodennamen oder optionale Parameter.",
         ["MaxConstructorDependencies"] = "-> MaxConstructorDependencies: Zu viele Konstruktor-Abhaengigkeiten. Teile die Klasse auf oder nutze ein Parameter-Objekt."
     };
