@@ -537,7 +537,7 @@ public static class Program
 
     private static int RunPrintReadme()
     {
-        string[] parts = ["README.md", "docs/configuration.md"];
+        string[] parts = ["README.md", "Docs/configuration.md"];
         foreach (var name in parts)
         {
             using var stream = typeof(Program).Assembly.GetManifestResourceStream(name);
