@@ -219,6 +219,62 @@ public sealed class Counter
     }
 
     [Fact]
+    public void SingleFile_BlazorComponentRefField_NoViolation()
+    {
+        const string source = @"
+public interface IComponent { }
+public class ComponentBase : IComponent { }
+public class ErrorBoundary : ComponentBase { }
+
+public sealed class MainLayout
+{
+    private ErrorBoundary? _bodyErrorBoundary;
+
+    public ErrorBoundary? GetBoundary() => _bodyErrorBoundary;
+}";
+        var model = CreateSingleFileCompilation(source);
+        var violations = LinterAnalyzer.Analyze("MainLayout.razor.cs", model, CreateConfig());
+        Assert.Empty(violations.Where(v => v.RuleName == "EnforceReadonlyFields"));
+    }
+
+    [Fact]
+    public void SingleFile_BlazorGenericComponentRefField_NoViolation()
+    {
+        const string source = @"
+public interface IComponent { }
+public class ComponentBase : IComponent { }
+public class MudDataGrid<T> : ComponentBase { }
+public record MyRow(int Id);
+
+public sealed class DataTable
+{
+    private MudDataGrid<MyRow>? _mudTable;
+
+    public MudDataGrid<MyRow>? GetGrid() => _mudTable;
+}";
+        var model = CreateSingleFileCompilation(source);
+        var violations = LinterAnalyzer.Analyze("DataTable.razor.cs", model, CreateConfig());
+        Assert.Empty(violations.Where(v => v.RuleName == "EnforceReadonlyFields"));
+    }
+
+    [Fact]
+    public void SingleFile_NonComponentField_Violation()
+    {
+        const string source = @"
+public sealed class SomeService { }
+
+public sealed class MyComponent
+{
+    private SomeService? _service;
+
+    public SomeService? GetService() => _service;
+}";
+        var model = CreateSingleFileCompilation(source);
+        var violations = LinterAnalyzer.Analyze("MyComponent.cs", model, CreateConfig());
+        Assert.Single(violations.Where(v => v.RuleName == "EnforceReadonlyFields"));
+    }
+
+    [Fact]
     public void SingleFile_FieldNeverWrittenOutsideConstructor_Violation()
     {
         const string source = @"

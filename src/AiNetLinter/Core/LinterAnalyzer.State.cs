@@ -284,6 +284,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private static bool IsPartialType(INamedTypeSymbol? type) =>
         type != null && type.DeclaringSyntaxReferences.Length > 1;
 
+    private static bool IsBlazorComponentType(ITypeSymbol type) =>
+        type.AllInterfaces.Any(static i => i.Name == "IComponent");
+
     private bool IsInsideConstructorOfDeclaringType(SyntaxNode node, INamedTypeSymbol declaringType)
     {
         var current = node.Parent;
@@ -319,6 +322,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
         if (symbol == null || symbol.IsReadOnly || symbol.IsConst) return;
         if (symbol.Type.Name == "ElementReference") return;
+        // Blazor @ref-Felder auf Komponenten werden in der generierten .razor.g.cs zugewiesen,
+        // die AiNetLinter auslässt. IComponent-Implementierungen sind daher kein gültiger readonly-Kandidat.
+        if (IsBlazorComponentType(symbol.Type)) return;
 
         if (_sharedFieldTrackers != null && IsPartialType(symbol.ContainingType))
         {
