@@ -205,6 +205,21 @@ public sealed record MetricsConfig
 {
     public int MaxLineCount { get; init; } = 500;
     public int MaxMethodParameterCount { get; init; } = 4;
+
+    /// <summary>
+    /// Maximale Parameteranzahl pro Methode in Testdateien.
+    /// 0 = gleicher Grenzwert wie <see cref="MaxMethodParameterCount"/>.
+    /// Empfehlung: 6–8, da Test-Hilfsmethoden (Arrange-Helfer, Browser-Asserts) naturgemäß breiter sind.
+    /// </summary>
+    public int MaxMethodParameterCountInTestFiles { get; init; } = 0;
+
+    /// <summary>
+    /// Typ-Namen (einfacher Name, kein Namespace), die bei <see cref="MaxMethodParameterCount"/> nicht mitgezählt werden.
+    /// Standard: [] (alle Parameter zählen). Empfehlung für .NET-Projekte: ["CancellationToken"].
+    /// </summary>
+    public IReadOnlyCollection<string> MethodParameterCountIgnoreTypeNames { get; init; }
+        = Array.Empty<string>();
+
     public int MaxMethodLineCount { get; init; } = 42;
     public int MaxCyclomaticComplexity { get; init; } = 5;
     public int MaxCognitiveComplexity { get; init; } = 5;
@@ -268,6 +283,8 @@ public sealed record MetricsConfig
     {
         MaxLineCount = @override?.MaxLineCount ?? MaxLineCount,
         MaxMethodParameterCount = @override?.MaxMethodParameterCount ?? MaxMethodParameterCount,
+        MaxMethodParameterCountInTestFiles = @override?.MaxMethodParameterCountInTestFiles ?? MaxMethodParameterCountInTestFiles,
+        MethodParameterCountIgnoreTypeNames = @override?.MethodParameterCountIgnoreTypeNames ?? MethodParameterCountIgnoreTypeNames,
         MaxMethodLineCount = @override?.MaxMethodLineCount ?? MaxMethodLineCount,
         MaxCyclomaticComplexity = @override?.MaxCyclomaticComplexity ?? MaxCyclomaticComplexity,
         MaxCognitiveComplexity = @override?.MaxCognitiveComplexity ?? MaxCognitiveComplexity,

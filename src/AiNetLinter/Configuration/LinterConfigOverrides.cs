@@ -142,6 +142,16 @@ public sealed record MetricsConfigOverride
     public int? MaxMethodParameterCount { get; init; }
 
     /// <summary>
+    /// Maximale Parameteranzahl pro Methode in Testdateien. 0 = gleicher Grenzwert wie MaxMethodParameterCount.
+    /// </summary>
+    public int? MaxMethodParameterCountInTestFiles { get; init; }
+
+    /// <summary>
+    /// Typ-Namen, die beim Zählen der Parameter-Anzahl ignoriert werden (z. B. "CancellationToken").
+    /// </summary>
+    public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypeNames { get; init; }
+
+    /// <summary>
     /// Maximale Zeilenanzahl pro Methode.
     /// </summary>
     public int? MaxMethodLineCount { get; init; }

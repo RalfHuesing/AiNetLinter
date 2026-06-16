@@ -159,10 +159,25 @@ internal static class PostAnalysisChecks
         ConcurrentDictionary<string, string> fileContents,
         LinterConfig config)
     {
-        foreach (var cls in sourceClasses)
+        foreach (var cls in DeduplicatePartialClasses(sourceClasses))
         {
             CheckClassAIContextFootprint(cls, violations, fileContents, config);
         }
+    }
+
+    /// <summary>
+    /// Gibt jede logische Klasse genau einmal zurück.
+    /// Partial-Klassen erzeugen einen <see cref="ClassInfo"/> pro Datei, haben aber denselben
+    /// transitiven Footprint (gleicher Roslyn-Symbol). Ohne Dedup würden sie mehrfach gemeldet.
+    /// </summary>
+    internal static IEnumerable<ClassInfo> DeduplicatePartialClasses(IEnumerable<ClassInfo> sourceClasses)
+    {
+        var nonPartial = sourceClasses.Where(static c => !c.IsPartial);
+        var partialDistinct = sourceClasses
+            .Where(static c => c.IsPartial)
+            .GroupBy(static c => (c.Name, c.ProjectName))
+            .Select(static g => g.OrderBy(static c => c.FilePath, StringComparer.OrdinalIgnoreCase).First());
+        return nonPartial.Concat(partialDistinct);
     }
 
     private static void CheckClassAIContextFootprint(
