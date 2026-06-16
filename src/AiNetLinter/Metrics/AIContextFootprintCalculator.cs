@@ -16,19 +16,22 @@ public static class AIContextFootprintCalculator
     /// Berechnet den transitiven AI-Context-Footprint für ein bestimmtes Typ-Symbol.
     /// </summary>
     /// <param name="classSymbol">Das Typ-Symbol der Klasse, deren Footprint berechnet werden soll.</param>
+    /// <param name="ignoreNamespacePrefixes">Namespace-Präfixe von Typen, die nicht mitgezählt werden.</param>
     /// <returns>Die Gesamtzahl transitiv referenzierter Codezeilen.</returns>
-    public static int Calculate(INamedTypeSymbol classSymbol)
+    public static int Calculate(INamedTypeSymbol classSymbol, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
-        return CalculateDetailed(classSymbol).TotalLines;
+        return CalculateDetailed(classSymbol, ignoreNamespacePrefixes).TotalLines;
     }
 
     /// <summary>
     /// Berechnet den transitiven AI-Context-Footprint und ermittelt die Top-Abhängigkeiten.
     /// </summary>
-    public static (int TotalLines, List<(string Name, int Lines)> TopDependencies) CalculateDetailed(INamedTypeSymbol classSymbol)
+    public static (int TotalLines, List<(string Name, int Lines)> TopDependencies) CalculateDetailed(
+        INamedTypeSymbol classSymbol,
+        IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
         var visited = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        QueueSymbols(classSymbol, visited);
+        QueueSymbols(classSymbol, visited, ignoreNamespacePrefixes);
 
         int totalLines = 0;
         var visitedTrees = new HashSet<SyntaxTree>();
@@ -74,7 +77,7 @@ public static class AIContextFootprintCalculator
         return lines;
     }
 
-    private static void QueueSymbols(ITypeSymbol? typeSymbol, HashSet<INamedTypeSymbol> visited)
+    private static void QueueSymbols(ITypeSymbol? typeSymbol, HashSet<INamedTypeSymbol> visited, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
         if (typeSymbol == null)
         {
@@ -83,22 +86,32 @@ public static class AIContextFootprintCalculator
 
         if (typeSymbol is IArrayTypeSymbol arrayType)
         {
-            QueueSymbols(arrayType.ElementType, visited);
+            QueueSymbols(arrayType.ElementType, visited, ignoreNamespacePrefixes);
             return;
         }
 
         if (typeSymbol is INamedTypeSymbol namedType)
         {
-            QueueNamedSymbol(namedType, visited);
+            QueueNamedSymbol(namedType, visited, ignoreNamespacePrefixes);
         }
     }
 
-    private static void QueueNamedSymbol(INamedTypeSymbol namedType, HashSet<INamedTypeSymbol> visited)
+    private static void QueueNamedSymbol(INamedTypeSymbol namedType, HashSet<INamedTypeSymbol> visited, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
         var originalSymbol = namedType.OriginalDefinition;
         if (originalSymbol.DeclaringSyntaxReferences.Length == 0)
         {
             return;
+        }
+
+        if (ignoreNamespacePrefixes != null && ignoreNamespacePrefixes.Count > 0)
+        {
+            var ns = originalSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+            foreach (var prefix in ignoreNamespacePrefixes)
+            {
+                if (ns.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
         }
 
         if (!visited.Add(originalSymbol))
@@ -108,45 +121,45 @@ public static class AIContextFootprintCalculator
 
         foreach (var member in originalSymbol.GetMembers())
         {
-            QueueMemberSymbols(member, visited);
+            QueueMemberSymbols(member, visited, ignoreNamespacePrefixes);
         }
 
         if (originalSymbol.IsGenericType)
         {
-            QueueGenericArguments(originalSymbol, visited);
+            QueueGenericArguments(originalSymbol, visited, ignoreNamespacePrefixes);
         }
     }
 
-    private static void QueueMemberSymbols(ISymbol member, HashSet<INamedTypeSymbol> visited)
+    private static void QueueMemberSymbols(ISymbol member, HashSet<INamedTypeSymbol> visited, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
         if (member is IFieldSymbol field)
         {
-            QueueSymbols(field.Type, visited);
+            QueueSymbols(field.Type, visited, ignoreNamespacePrefixes);
         }
         else if (member is IPropertySymbol prop)
         {
-            QueueSymbols(prop.Type, visited);
+            QueueSymbols(prop.Type, visited, ignoreNamespacePrefixes);
         }
         else if (member is IMethodSymbol method)
         {
-            QueueMethodSymbols(method, visited);
+            QueueMethodSymbols(method, visited, ignoreNamespacePrefixes);
         }
     }
 
-    private static void QueueMethodSymbols(IMethodSymbol method, HashSet<INamedTypeSymbol> visited)
+    private static void QueueMethodSymbols(IMethodSymbol method, HashSet<INamedTypeSymbol> visited, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
-        QueueSymbols(method.ReturnType, visited);
+        QueueSymbols(method.ReturnType, visited, ignoreNamespacePrefixes);
         foreach (var param in method.Parameters)
         {
-            QueueSymbols(param.Type, visited);
+            QueueSymbols(param.Type, visited, ignoreNamespacePrefixes);
         }
     }
 
-    private static void QueueGenericArguments(INamedTypeSymbol originalSymbol, HashSet<INamedTypeSymbol> visited)
+    private static void QueueGenericArguments(INamedTypeSymbol originalSymbol, HashSet<INamedTypeSymbol> visited, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null)
     {
         foreach (var typeArg in originalSymbol.TypeArguments)
         {
-            QueueSymbols(typeArg, visited);
+            QueueSymbols(typeArg, visited, ignoreNamespacePrefixes);
         }
     }
 }

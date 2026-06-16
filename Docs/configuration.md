@@ -146,7 +146,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
 | `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
 | `EnforceNoVariableShadowing` | Global | Verbietet das Verdecken von Feldern, Eigenschaften und äußeren Parametern durch lokale Variablen und Parameter. |
-| `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). |
+| `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). Ausgenommen: `ref`-, `out`- und `in`-Parameter. |
 | `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. Felder vom Typ `ElementReference` sowie Felder, deren Typ `IComponent` implementiert (Blazor `@ref`-Felder auf Komponenten), sind automatisch ausgenommen, da deren Zuweisung in der vom Compiler generierten `.razor.g.cs` erfolgt. |
 | `EnforceNoMagicValues` | Global | Verbietet Magic Numbers und Magic Strings direkt in Methodenkörpern außerhalb von Konstanten-Deklarationen (Ausnahmen: `0`, `1`, `""`). |
 | `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
@@ -162,6 +162,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
 | `MaxMethodParameterCountInTestFiles` | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind. |
 | `MethodParameterCountIgnoreTypeNames` | Metrics | Typ-Namen (einfacher Name, kein Namespace), die beim Zählen der Parameter nicht berücksichtigt werden. Standard: `[]`. Empfehlung für .NET-Projekte: `["CancellationToken"]`. |
+| `MethodParameterCountIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden. Ermöglicht z. B. `["ILogger"]` um `ILogger<T>` auszuschließen. Standard: `[]`. |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
@@ -174,13 +175,15 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
-| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. |
+| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. Bei Blazor-Komponenten aus mehreren `partial`-Dateien (`.razor.cs` + weitere partials) werden alle Teile als eine logische Einheit behandelt. |
+| `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
 | `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
 | `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
 | `TestSentinel.RecognizeCoversComment` | Config | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`. |
 | `TestSentinel.ExemptClassNameSuffixes` | Config | Klassen mit diesen Namens-Suffixen werden vom Sentinel ausgenommen (z. B. `["Extensions", "Constants", "Converter"]`). |
 | `TestSentinel.ExemptWhenInheritsFrom` | Config | Klassen die von einem dieser Typen erben oder Interfaces implementieren, werden ausgenommen (z. B. `["ComponentBase", "IValueConverter"]`). |
 | `TestSentinel.ExemptStaticClasses` | Config | Statische Klassen werden vom Sentinel ausgenommen wenn `true`. Standard: `false`. |
+| `TestSentinel.TestProjectNameSuffixes` | Config | Projekt-Name-Suffixe, die ein Projekt als Testprojekt markieren, wenn keine Testrahmenbibliothek in den Metadaten erkannt wird (Fallback). Standard: `["Tests", "Test", "IntegrationTests", "Specs", "Spec"]`. Deckt reine Integration-Test-Projekte ohne direkten xunit-Verweis ab. |
 | `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
@@ -200,6 +203,37 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
     }
   }
 ```
+
+### Pfadbasierte Konfigurations-Overrides (PathOverrides)
+
+`PathOverrides` erlaubt es, Regeln gezielt für bestimmte **Ordner** innerhalb einer Solution zu überschreiben — unabhängig vom Projektnamen. Der Key ist ein Glob-Muster gegen den relativen Dateipfad ab Solution-Root. `PathOverrides` werden **NACH** `ProjectOverrides` angewendet und gewinnen bei Konflikten.
+
+```json
+"PathOverrides": {
+  "src/MyApp/Handlers/**": {
+    "Metrics": {
+      "MaxMethodLineCount": 80
+    }
+  },
+  "src/MyApp/Components/**": {
+    "Global": {
+      "EnforceSealedClasses": false
+    }
+  },
+  "src/MyApp/Migrations/**": {
+    "Global": {
+      "EnforceNoMagicValues": false,
+      "EnforceNullableEnable": false
+    }
+  }
+}
+```
+
+**Glob-Syntax:**
+
+- `**` — matcht beliebig viele Pfadsegmente (inkl. Unterverzeichnisse)
+- `*` — matcht ein einzelnes Pfadsegment (kein Slash)
+- Pfade werden mit Forward-Slashes verglichen (auch auf Windows)
 
 ### MagicValues-Konfiguration
 
@@ -465,6 +499,7 @@ Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine
 | :--- | :---: | :---: | :--- |
 | `BlazorRequireCodeBehind` | Boolean | `true` | `.razor`-Dateien mit `@code {}`- oder `@functions {}`-Blöcken müssen eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Reine Template-Dateien ohne Inline-Code lösen keine Verletzung aus. |
 | `BlazorRequireCssIsolation` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei haben (CSS-Isolation). Verhindert `<style>`-Blöcke inline. |
+| `BlazorCssIsolationOnlyWhenStylesNeeded` | Boolean | `true` | Wenn `true`, wird `BlazorRequireCssIsolation` nur ausgelöst, wenn die `.razor`-Datei native HTML-Elemente (`<div>`, `<span>` etc.) oder explizite `class=`/`style=`-Attribute enthält. Reine Komponenten-Komposition mit PascalCase-Tags (`<MudButton>`) löst keine Verletzung aus. Empfohlen für MudBlazor-Projekte. |
 | `WpfRequireMinimalCodeBehind` | Boolean | `true` | WPF Code-Behind-Klassen (partial classes mit WPF-Basistyp) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten. |
 | `WpfCodeBehindBaseTypes` | String-Array | `["Window", "UserControl", "Page", "NavigationWindow"]` | Basis-Typnamen, die eine Klasse als WPF Code-Behind identifizieren. |
 | `BlazorExcludeFileNames` | String-Array | `["_Imports.razor"]` | Razor-Dateinamen, die von den Blazor-Checks ausgeschlossen werden. |
@@ -539,6 +574,12 @@ Der Sentinel erkennt Testabdeckung über drei Wege (alle konfigurierbar):
 1. **Testklassen-Name:** Eine Klasse `{Name}Tests` oder `{Name}*Tests` wurde gefunden.
 2. **`typeof`-Referenz:** Eine Testklasse enthält `typeof(MyClass)`.
 3. **`// @covers`-Kommentar:** Eine Datei enthält `// @covers MyClass`.
+
+#### Testprojekt-Erkennung
+
+Der Sentinel erkennt Testprojekte primär über Metadatenreferenzen (xunit, nunit, testplatform, unittesting). Als Fallback gilt der Projektname: Projekte deren Name mit einem der konfigurierten Suffixe endet, werden als Testprojekte behandelt.
+
+- **`TestProjectNameSuffixes`** (Array von Strings, Default: `["Tests", "Test", "IntegrationTests", "Specs", "Spec"]`): Projekt-Name-Suffixe als Fallback wenn keine Testrahmenbibliothek in den Metadaten erkannt wird. Deckt reine Integration-Test-Projekte ab, die nur über `Microsoft.AspNetCore.Mvc.Testing` referenzieren.
 
 #### Klassen-Exemptions
 
