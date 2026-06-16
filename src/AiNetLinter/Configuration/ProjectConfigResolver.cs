@@ -73,6 +73,25 @@ public static class ProjectConfigResolver
     }
 
     /// <summary>
+    /// Löst die effektive Linter-Konfiguration anhand von Projektname und absolutem Dateipfad auf.
+    /// Wird für post-analytische Checks verwendet, bei denen kein Roslyn-Document verfügbar ist.
+    /// Erst ProjectOverrides, dann PathOverrides (höhere Priorität).
+    /// </summary>
+    public static LinterConfig ResolveForFile(string? filePath, string? projectName, LinterConfig globalConfig)
+    {
+        var config = projectName != null
+            ? ResolveForProject(projectName, globalConfig)
+            : globalConfig;
+
+        if (filePath != null && globalConfig.PathOverrides.Count > 0)
+        {
+            config = ResolveForPath(filePath, globalConfig.SolutionBasePath, config, globalConfig.PathOverrides);
+        }
+
+        return config;
+    }
+
+    /// <summary>
     /// Löst die effektive Linter-Konfiguration für einen Projektnamen auf.
     /// </summary>
     /// <param name="projectName">Der Name des Roslyn-Projekts.</param>
