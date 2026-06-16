@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using Xunit;
 using AiNetLinter.Configuration;
@@ -100,5 +101,89 @@ public sealed class PathOverridesTests
         // After PathOverride: 80 (wins)
         var afterPath = afterProject.Apply(global.PathOverrides["src/MyApp/Handlers/**"].Metrics);
         Assert.Equal(80, afterPath.MaxMethodLineCount);
+    }
+
+    // --- ResolveForFile ---
+
+    [Fact]
+    public void ResolveForFile_MatchingPath_AppliesMetricsOverride()
+    {
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig { EnforceSealedClasses = false },
+            Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },
+            SolutionBasePath = @"C:\Solution",
+            PathOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["Components/Pages/Test/**"] = new ProjectOverrideEntry
+                {
+                    Metrics = new MetricsConfigOverride { MaxAIContextFootprint = 12000 }
+                }
+            }
+        };
+
+        var effective = ProjectConfigResolver.ResolveForFile(
+            @"C:\Solution\Components\Pages\Test\HarnessPage.cs",
+            projectName: null,
+            config);
+
+        Assert.Equal(12000, effective.Metrics.MaxAIContextFootprint);
+    }
+
+    [Fact]
+    public void ResolveForFile_NonMatchingPath_KeepsGlobalValue()
+    {
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig { EnforceSealedClasses = false },
+            Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },
+            SolutionBasePath = @"C:\Solution",
+            PathOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["Components/Pages/Test/**"] = new ProjectOverrideEntry
+                {
+                    Metrics = new MetricsConfigOverride { MaxAIContextFootprint = 12000 }
+                }
+            }
+        };
+
+        var effective = ProjectConfigResolver.ResolveForFile(
+            @"C:\Solution\Components\Pages\Other\SomePage.cs",
+            projectName: null,
+            config);
+
+        Assert.Equal(5000, effective.Metrics.MaxAIContextFootprint);
+    }
+
+    [Fact]
+    public void ResolveForFile_ProjectAndPathOverrides_PathWins()
+    {
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig { EnforceSealedClasses = false },
+            Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },
+            SolutionBasePath = @"C:\Solution",
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["MyApp"] = new ProjectOverrideEntry
+                {
+                    Metrics = new MetricsConfigOverride { MaxAIContextFootprint = 8000 }
+                }
+            },
+            PathOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["Components/Pages/Test/**"] = new ProjectOverrideEntry
+                {
+                    Metrics = new MetricsConfigOverride { MaxAIContextFootprint = 12000 }
+                }
+            }
+        };
+
+        var effective = ProjectConfigResolver.ResolveForFile(
+            @"C:\Solution\Components\Pages\Test\HarnessPage.cs",
+            projectName: "MyApp",
+            config);
+
+        Assert.Equal(12000, effective.Metrics.MaxAIContextFootprint);
     }
 }

@@ -134,9 +134,7 @@ internal static class PostAnalysisChecks
         ConcurrentDictionary<string, string> fileContents,
         LinterConfig config)
     {
-        var effectiveConfig = cls.ProjectName != null
-            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, config)
-            : config;
+        var effectiveConfig = ProjectConfigResolver.ResolveForFile(cls.FilePath, cls.ProjectName, config);
 
         var depth = cls.InheritanceDepth;
         if (depth > effectiveConfig.Metrics.MaxInheritanceDepth &&
@@ -186,9 +184,7 @@ internal static class PostAnalysisChecks
         ConcurrentDictionary<string, string> fileContents,
         LinterConfig config)
     {
-        var effectiveConfig = cls.ProjectName != null
-            ? ProjectConfigResolver.ResolveForProject(cls.ProjectName, config)
-            : config;
+        var effectiveConfig = ProjectConfigResolver.ResolveForFile(cls.FilePath, cls.ProjectName, config);
 
         if (effectiveConfig.Metrics.MaxAIContextFootprint <= 0)
         {

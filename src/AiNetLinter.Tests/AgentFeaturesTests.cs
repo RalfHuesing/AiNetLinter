@@ -382,6 +382,156 @@ public sealed class AgentFeaturesTests
         Assert.DoesNotContain(violations, v => v.RuleName == nameof(GlobalConfig.EnforceNoSilentCatch));
     }
 
+    // --- AllowTryPatternOutParametersReturnTypes ---
+
+    [Fact]
+    public void Analyze_NullableStringTryOut_WithStringInReturnTypes_NoViolation()
+    {
+        const string source = """
+            namespace Test;
+            public sealed class Patches
+            {
+                public static string? TryRemovePage(string route, out string normalizedRoute)
+                {
+                    normalizedRoute = route.ToLower();
+                    return null;
+                }
+            }
+            """;
+
+        var config = CreateConfig(g => g with
+        {
+            AllowOutParameters = false,
+            AllowTryPatternOutParameters = true,
+            AllowTryPatternOutParametersReturnTypes = ["bool", "string"],
+        });
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Patches.cs", model, config);
+
+        Assert.DoesNotContain(violations, v => v.RuleName == nameof(GlobalConfig.AllowOutParameters));
+    }
+
+    [Fact]
+    public void Analyze_NullableStringTryOut_WithOnlyBoolInReturnTypes_ReturnsViolation()
+    {
+        const string source = """
+            namespace Test;
+            public sealed class Patches
+            {
+                public static string? TryRemovePage(string route, out string normalizedRoute)
+                {
+                    normalizedRoute = route.ToLower();
+                    return null;
+                }
+            }
+            """;
+
+        var config = CreateConfig(g => g with
+        {
+            AllowOutParameters = false,
+            AllowTryPatternOutParameters = true,
+            AllowTryPatternOutParametersReturnTypes = ["bool"],
+        });
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Patches.cs", model, config);
+
+        Assert.Contains(violations, v => v.RuleName == nameof(GlobalConfig.AllowOutParameters));
+    }
+
+    // --- ComplexityNearMissMode ---
+
+    private static LinterConfig CreateComplexityConfig(int limit, int tolerance, string nearMissMode) => new()
+    {
+        Global = new GlobalConfig
+        {
+            EnforceSealedClasses = false,
+            EnforcePascalCase = false,
+            EnforceXmlDocumentation = false,
+            EnforceSemanticNaming = false,
+            EnforceNullableEnable = false,
+            EnforceNoSilentCatch = false,
+        },
+        Metrics = new MetricsConfig
+        {
+            MaxCyclomaticComplexity = limit,
+            MaxCognitiveComplexity = 99,
+            ComplexityNearMissTolerance = tolerance,
+            ComplexityNearMissMode = nearMissMode,
+        },
+    };
+
+    // Methode mit Cyclomatic = 3 (Basis 1 + 2 ifs): limit+1 bei limit=2, tolerance=1
+    private const string NearMissSource = """
+        namespace Test;
+        public sealed class Calc
+        {
+            public int Compute(int a, int b)
+            {
+                if (a > 0) return 1;
+                if (b > 0) return 2;
+                return 0;
+            }
+        }
+        """;
+
+    [Fact]
+    public void Complexity_NearMissMode_Tag_StillReportsViolation()
+    {
+        var config = CreateComplexityConfig(limit: 2, tolerance: 1, nearMissMode: "tag");
+        var (_, model) = GetSemanticContext(NearMissSource);
+        var violations = LinterAnalyzer.Analyze("Calc.cs", model, config);
+
+        var v = Assert.Single(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity));
+        Assert.Contains("near-miss", v.Details);
+    }
+
+    [Fact]
+    public void Complexity_NearMissMode_Suppress_NoViolation()
+    {
+        var config = CreateComplexityConfig(limit: 2, tolerance: 1, nearMissMode: "suppress");
+        var (_, model) = GetSemanticContext(NearMissSource);
+        var violations = LinterAnalyzer.Analyze("Calc.cs", model, config);
+
+        Assert.DoesNotContain(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity));
+    }
+
+    [Fact]
+    public void Complexity_NearMissMode_Warn_ReportsWithWarnHint()
+    {
+        var config = CreateComplexityConfig(limit: 2, tolerance: 1, nearMissMode: "warn");
+        var (_, model) = GetSemanticContext(NearMissSource);
+        var violations = LinterAnalyzer.Analyze("Calc.cs", model, config);
+
+        var v = Assert.Single(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity));
+        Assert.Contains("nur Warnung", v.Details);
+    }
+
+    [Fact]
+    public void Complexity_ExceedsToleranceBand_AlwaysReportedRegardlessOfMode()
+    {
+        // complexity = 4 (Basis 1 + 3 ifs), limit = 2, tolerance = 1 → 4 > 3, not near-miss
+        const string source = """
+            namespace Test;
+            public sealed class Calc
+            {
+                public int Compute(int a, int b, int c)
+                {
+                    if (a > 0) return 1;
+                    if (b > 0) return 2;
+                    if (c > 0) return 3;
+                    return 0;
+                }
+            }
+            """;
+
+        var config = CreateComplexityConfig(limit: 2, tolerance: 1, nearMissMode: "suppress");
+        var (_, model) = GetSemanticContext(source);
+        var violations = LinterAnalyzer.Analyze("Calc.cs", model, config);
+
+        Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity)
+                                        && !v.Details.Contains("near-miss"));
+    }
+
     private static Solution CreateSolutionWithXunit(params (string content, string fileName)[] files)
     {
         var workspace = new AdhocWorkspace();

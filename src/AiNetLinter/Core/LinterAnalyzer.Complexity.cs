@@ -189,7 +189,19 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
         var tolerance = _config.Metrics.ComplexityNearMissTolerance;
         var isNearMiss = tolerance > 0 && check.Complexity <= check.Limit + tolerance;
-        var nearMissHint = isNearMiss ? " [near-miss: knapp über Limit]" : "";
+
+        if (isNearMiss)
+        {
+            var mode = _config.Metrics.ComplexityNearMissMode;
+            if (string.Equals(mode, "suppress", StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+
+        var nearMissHint = isNearMiss
+            ? (_config.Metrics.ComplexityNearMissMode.Equals("warn", StringComparison.OrdinalIgnoreCase)
+                ? " [near-miss: nur Warnung]"
+                : " [near-miss: knapp über Limit]")
+            : "";
 
         _violations.Add(new RuleViolation
         {

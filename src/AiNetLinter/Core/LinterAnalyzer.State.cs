@@ -96,21 +96,36 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     private bool IsAllowedTryPatternOut(ParameterSyntax node)
     {
         if (!_config.Global.AllowTryPatternOutParameters)
-        {
             return false;
-        }
 
         if (node.Parent?.Parent is not MethodDeclarationSyntax method)
-        {
             return false;
-        }
 
-        var returnsBool = method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
-        if (!returnsBool) return false;
+        if (!IsReturnTypeAllowedForTryPattern(method.ReturnType))
+            return false;
 
         var methodName = method.Identifier.Text;
         return methodName.StartsWith("Try", StringComparison.Ordinal)
             || methodName.StartsWith("Is", StringComparison.Ordinal);
+    }
+
+    private bool IsReturnTypeAllowedForTryPattern(TypeSyntax returnType)
+    {
+        var allowedTypes = _config.Global.AllowTryPatternOutParametersReturnTypes;
+        if (allowedTypes == null || allowedTypes.Count == 0)
+            return false;
+
+        // Nullable-Wrapper entfalten: string? → string, int? → int
+        var baseType = returnType is NullableTypeSyntax nullable ? nullable.ElementType : returnType;
+
+        var typeName = baseType switch
+        {
+            PredefinedTypeSyntax predefined => predefined.Keyword.ValueText,
+            IdentifierNameSyntax id => id.Identifier.Text,
+            _ => null
+        };
+
+        return typeName != null && allowedTypes.Contains(typeName, StringComparer.OrdinalIgnoreCase);
     }
 
     private void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node)

@@ -66,6 +66,11 @@ public sealed record GlobalConfigOverride
     public bool? AllowTryPatternOutParameters { get; init; }
 
     /// <summary>
+    /// Rückgabetypen, für die AllowTryPatternOutParameters gilt (z. B. ["bool", "string"]).
+    /// </summary>
+    public IReadOnlyCollection<string>? AllowTryPatternOutParametersReturnTypes { get; init; }
+
+    /// <summary>
     /// Erlaubt das Abfangen von OperationCanceledException beim Shutdown.
     /// </summary>
     public bool? AllowCancellationShutdownCatch { get; init; }
@@ -220,6 +225,12 @@ public sealed record MetricsConfigOverride
     public IReadOnlyCollection<string>? ConstructorDependencyExemptClassSuffixes { get; init; }
 
     public int? ComplexityNearMissTolerance { get; init; }
+
+    /// <summary>
+    /// Verhalten bei Near-Miss-Verstößen: "tag" | "suppress" | "warn".
+    /// </summary>
+    public string? ComplexityNearMissMode { get; init; }
+
     public bool? ExcludeSwitchDispatcherCases { get; init; }
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
 
