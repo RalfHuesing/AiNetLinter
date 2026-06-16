@@ -463,7 +463,7 @@ Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine
 
 | Option | Typ | Default | Beschreibung |
 | :--- | :---: | :---: | :--- |
-| `BlazorRequireCodeBehind` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Verhindert `@code {}`-Blöcke inline. |
+| `BlazorRequireCodeBehind` | Boolean | `true` | `.razor`-Dateien mit `@code {}`- oder `@functions {}`-Blöcken müssen eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Reine Template-Dateien ohne Inline-Code lösen keine Verletzung aus. |
 | `BlazorRequireCssIsolation` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei haben (CSS-Isolation). Verhindert `<style>`-Blöcke inline. |
 | `WpfRequireMinimalCodeBehind` | Boolean | `true` | WPF Code-Behind-Klassen (partial classes mit WPF-Basistyp) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten. |
 | `WpfCodeBehindBaseTypes` | String-Array | `["Window", "UserControl", "Page", "NavigationWindow"]` | Basis-Typnamen, die eine Klasse als WPF Code-Behind identifizieren. |

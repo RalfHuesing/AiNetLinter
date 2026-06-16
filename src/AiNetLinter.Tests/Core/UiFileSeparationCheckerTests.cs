@@ -76,14 +76,26 @@ public sealed class UiFileSeparationCheckerTests : IDisposable
     // ── ScanDirectory — BlazorRequireCodeBehind ───────────────────────────────
 
     [Fact]
-    public void ScanDirectory_RazorWithoutCodeBehind_ReportsViolation()
+    public void ScanDirectory_RazorWithInlineCodeButNoCodeBehind_ReportsViolation()
     {
-        File.WriteAllText(Path.Combine(_tempDir, "MyComponent.razor"), "<h1>Hello</h1>");
+        const string content = "<h1>Hello</h1>\n@code { private int _count = 0; }";
+        File.WriteAllText(Path.Combine(_tempDir, "MyComponent.razor"), content);
 
         var violations = new ConcurrentBag<RuleViolation>();
         UiFileSeparationChecker.ScanDirectory(_tempDir, violations, AllEnabled());
 
         Assert.Contains(violations, v => v.RuleName == "BlazorRequireCodeBehind" && v.Details.Contains("MyComponent.razor"));
+    }
+
+    [Fact]
+    public void ScanDirectory_RazorWithoutInlineCodeAndWithoutCodeBehind_NoViolation()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "MyComponent.razor"), "<MudButton>Click</MudButton>");
+
+        var violations = new ConcurrentBag<RuleViolation>();
+        UiFileSeparationChecker.ScanDirectory(_tempDir, violations, AllEnabled());
+
+        Assert.DoesNotContain(violations, v => v.RuleName == "BlazorRequireCodeBehind");
     }
 
     [Fact]
@@ -156,7 +168,7 @@ public sealed class UiFileSeparationCheckerTests : IDisposable
     [Fact]
     public void ScanDirectory_WithCodeBehindSuppression_NoCodeBehindViolation()
     {
-        const string content = "@* ainetlinter-disable BlazorRequireCodeBehind *@\n<h1>Hello</h1>";
+        const string content = "@* ainetlinter-disable BlazorRequireCodeBehind *@\n<h1>Hello</h1>\n@code { private int _x = 0; }";
         File.WriteAllText(Path.Combine(_tempDir, "MyComponent.razor"), content);
 
         var violations = new ConcurrentBag<RuleViolation>();
@@ -272,6 +284,27 @@ public sealed class UiFileSeparationCheckerTests : IDisposable
         UiFileSeparationChecker.ScanDirectory(_tempDir, violations, AllEnabled());
 
         Assert.Contains(violations, v => v.RuleName == "BlazorRequireCssIsolation");
+    }
+
+    // ── RazorHasInlineCode ────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("@code { private int _x = 0; }")]
+    [InlineData("<h1>Hello</h1>\n@code\n{\n    private void Foo() {}\n}")]
+    [InlineData("@functions { private string Bar() => string.Empty; }")]
+    public void RazorHasInlineCode_WithCodeBlock_ReturnsTrue(string content)
+    {
+        Assert.True(UiFileSeparationChecker.RazorHasInlineCode(content));
+    }
+
+    [Theory]
+    [InlineData("<MudButton>Click</MudButton>")]
+    [InlineData("<h1>Hello</h1>")]
+    [InlineData("@namespace MyApp\n@using System\n<MudDialog />")]
+    [InlineData("")]
+    public void RazorHasInlineCode_WithoutCodeBlock_ReturnsFalse(string content)
+    {
+        Assert.False(UiFileSeparationChecker.RazorHasInlineCode(content));
     }
 
     [Fact]
