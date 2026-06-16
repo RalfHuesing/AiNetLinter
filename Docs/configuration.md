@@ -147,7 +147,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
 | `EnforceNoVariableShadowing` | Global | Verbietet das Verdecken von Feldern, Eigenschaften und äußeren Parametern durch lokale Variablen und Parameter. |
 | `EnforceReadonlyParameters` | Global | Verbietet das Überschreiben von Methodenschnittstellen-Parametern (Verbot von Parameter-Reassignment). |
-| `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. |
+| `EnforceReadonlyFields` | Global | Prüft, ob private Felder, die nur im Konstruktor/Initialisierer zugewiesen werden, als `readonly` deklariert sind. Felder vom Typ `ElementReference` sowie Felder, deren Typ `IComponent` implementiert (Blazor `@ref`-Felder auf Komponenten), sind automatisch ausgenommen, da deren Zuweisung in der vom Compiler generierten `.razor.g.cs` erfolgt. |
 | `EnforceNoMagicValues` | Global | Verbietet Magic Numbers und Magic Strings direkt in Methodenkörpern außerhalb von Konstanten-Deklarationen (Ausnahmen: `0`, `1`, `""`). |
 | `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
 | `ImmutabilityExemptBaseTypes` | Global | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`). |
