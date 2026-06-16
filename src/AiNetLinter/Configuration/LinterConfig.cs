@@ -62,16 +62,6 @@ public sealed record GlobalConfig
     public bool EnforceNullableEnable { get; init; } = true;
     public bool EnforceNoSilentCatch { get; init; } = true;
     public bool AllowTryPatternOutParameters { get; init; } = true;
-
-    /// <summary>
-    /// Rückgabetypen, für die <see cref="AllowTryPatternOutParameters"/> gilt.
-    /// Standard: ["bool"] — klassisches Try*-Pattern.
-    /// Erweiterung auf ["bool","string"] deckt das Result-Message-Pattern (string? Try*) ab.
-    /// Nur der einfache Typname, kein Namespace, ohne '?' (Nullable wird automatisch entfaltet).
-    /// </summary>
-    public IReadOnlyCollection<string> AllowTryPatternOutParametersReturnTypes { get; init; }
-        = ["bool"];
-
     public bool AllowCancellationShutdownCatch { get; init; } = true;
 
     /// <summary>
@@ -177,7 +167,6 @@ public sealed record GlobalConfig
         EnforceNullableEnable = @override.EnforceNullableEnable ?? EnforceNullableEnable,
         EnforceNoSilentCatch = @override.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
         AllowTryPatternOutParameters = @override.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
-        AllowTryPatternOutParametersReturnTypes = @override.AllowTryPatternOutParametersReturnTypes ?? AllowTryPatternOutParametersReturnTypes,
         AllowCancellationShutdownCatch = @override.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
         AllowedSilentCatchExceptionTypes = @override.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
         EnforceMinimalApiAsParameters = @override.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
@@ -300,18 +289,9 @@ public sealed record MetricsConfig
         = Array.Empty<string>();
 
     /// <summary>
-    /// Toleranzbereich über dem Komplexitätslimit.
+    /// Toleranzbereich über dem Komplexitätslimit für Warning statt Error.
     /// </summary>
     public int ComplexityNearMissTolerance { get; init; } = 0;
-
-    /// <summary>
-    /// Verhalten bei Near-Miss-Verstößen (Komplexität exakt im Toleranzbereich über dem Limit).
-    /// "tag"      — Verstoß wird mit [near-miss]-Hinweis gemeldet (Standard; bisheriges Verhalten).
-    /// "suppress" — Near-Miss-Verstöße werden vollständig unterdrückt (kein Eintrag, kein Exit-Code-Beitrag).
-    /// "warn"     — Near-Miss-Verstöße werden mit [near-miss: nur Warnung]-Hinweis gemeldet,
-    ///              aber in der Zusammenfassung als Warnungen statt Fehler geführt.
-    /// </summary>
-    public string ComplexityNearMissMode { get; init; } = "tag";
 
     /// <summary>
     /// Switch-Dispatcher-Methoden aus der Komplexitätsmessung ausnehmen.
@@ -360,7 +340,6 @@ public sealed record MetricsConfig
         ConstructorDependencyIgnoreTypePrefixes = @override?.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
         ConstructorDependencyExemptClassSuffixes = @override?.ConstructorDependencyExemptClassSuffixes ?? ConstructorDependencyExemptClassSuffixes,
         ComplexityNearMissTolerance = @override?.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
-        ComplexityNearMissMode = @override?.ComplexityNearMissMode ?? ComplexityNearMissMode,
         ExcludeSwitchDispatcherCases = @override?.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
         SwitchDispatcherMaxCaseBodyLines = @override?.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
     };
