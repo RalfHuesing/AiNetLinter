@@ -1,332 +1,325 @@
 # AI-Readability-Erweiterungen für AiNetLinter
 
-> **Ausgangsfrage:** Welche weiteren Dinge könnten wir mit anderen Tools implementieren,
-> um "guten" (für LLMs verständlichen) Code zu erzwingen?
-> Das Tool soll lokal und deterministisch laufen.
-> Aktuell verwenden wir Roslyn mit statistischen Analysen.
+> **Ausgangsfrage:** Welche weiteren Dinge könnten wir implementieren,
+> um für LLMs verständlichen Code zu erzwingen?
+> Constraint: lokal, deterministisch, Roslyn-basiert.
 
 ---
 
-## Kontext: Was haben wir bereits?
+## Was haben wir bereits?
 
 | Implementiert | Regel / Metrik |
 | :--- | :--- |
 | ✅ | `MaxAIContextFootprint` (max. 5.000 transitive Zeilen eigener Typen) |
 | ✅ | `MaxCyclomaticComplexity`, `MaxCognitiveComplexity` |
-| ✅ | `MaxLineCount`, `MaxMethodLineCount` |
-| ✅ | `MaxConstructorDependencies` |
-| ✅ | `EnforceSealedClasses`, `EnforceNullableEnable` |
-| ✅ | `EnforceSemanticNaming` (verbietet `data`, `temp`, `obj`) |
-| ✅ | `EnforceNoSilentCatch` |
-| ✅ | `EnableTestSentinel` |
-| ⚠️ deaktiviert | `DetectAndBanPhantomDependencies`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, `EnforceStrictBoundaryForBusinessLogic`, `RequireExplicitTruncationHandling` |
+| ✅ | `MaxLineCount`, `MaxMethodLineCount`, `MaxConstructorDependencies` |
+| ✅ | `EnforceSealedClasses`, `EnforceNullableEnable`, `EnforceSemanticNaming` |
+| ✅ | `EnforceNoSilentCatch`, `EnableTestSentinel` |
+| ⚠️ deaktiviert | `DetectAndBanPhantomDependencies`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, u.a. |
+
+---
+
+## Bewertungsrahmen für jeden Vorschlag
+
+Jede Idee wird entlang von vier Praxis-Dimensionen bewertet:
+
+- **Wartungsaufwand** — Muss jemand etwas pflegen, oder läuft es vollautomatisch?
+- **False-Positive-Risiko** — Wie viele unberechtigte Violations entstehen in echten Projekten?
+- **Adoptionsbarriere** — Wie leicht ist die erste Nutzung?
+- **Realitätsurteil** — ✅ Praktikabel / ⚠️ Bedingt / ❌ Nicht empfohlen
 
 ---
 
 ## Validierte Ideen (ursprüngliche Analyse)
 
-Wenn wir uns anschauen, wie LLMs technisch funktionieren (Tokenisierung, Attention-Mechanismen, begrenztes Kontextfenster), gibt es deterministische, lokal messbare Aspekte, die man mit Roslyn oder einfachen Ergänzungstools implementieren könnte.
-
 ---
 
 ### 1. "Context Fan-Out" Metrik
 
-**Status: ✅ Bereits implementiert als `MaxAIContextFootprint`**
-**Impact: War hoch — ist abgedeckt**
+**Impact: War hoch — ✅ bereits implementiert als `MaxAIContextFootprint`**
 
-Zähle die Anzahl einzigartiger, projekteigener Typen die transitiv in eine Datei hineingezogen werden. Existiert als `MaxAIContextFootprint: 5000` (transitive Zeilen eigener Typen). Die Idee ist vollständig implementiert.
+Zählt transitive Abhängigkeiten zu eigenen Typen. Vollständig abgedeckt.
 
 ---
 
-### 2. Typo- & Wording-Checks (Tokenisierungs-Optimierung)
+### 2. Typo- & Wording-Checks (Tokenisierung)
 
-**Status: ⚠️ Teilweise — Ubiquitous Language fehlt noch**
-**Impact: Hoch** (besonders der Vokabular-Konsistenz-Teil)
+LLMs lesen Tokens, keine Buchstaben. Abkürzungen und Tippfehler zerstören die semantische
+Leistungsfähigkeit des Modells.
 
-LLMs lesen keine Buchstaben, sondern Tokens. Ein Tippfehler oder schlechte Abkürzung wie `CstmrDta` zerfällt in bedeutungslose Sub-Tokens und zerstört die semantische Leistungsfähigkeit des Modells massiv.
+**Teilaspekt A — CSpell (externes Tool)**
 
-**Teilaspekt A — Spell-Checking:**
-- Tool: **CSpell** (lokal, deterministisch)
-- Scope: außerhalb von AiNetLinter, als separater CI-Schritt
-- Umsetzbarkeit: Hoch
-
-**Teilaspekt B — Ubiquitous Language → siehe neue Idee #A unten**
+> **Praxis-Check**
+>
+> - Wartungsaufwand: Niedrig — CSpell bringt eigene englische Wörterbücher mit. Eine
+>   projektspezifische `cspell.json` mit Domain-Begriffen muss initial angelegt werden,
+>   wächst aber organisch.
+> - False-Positive-Risiko: Mittel — Domain-Abkürzungen (`MRP`, `BOM`, `PPS`) müssen
+>   als erlaubt markiert werden. Einmalaufwand.
+> - Adoptionsbarriere: Niedrig — `npx cspell "**/*.cs"` im CI, fertig.
+> - **Realitätsurteil: ✅ Praktikabel** — der einzige externe Vorschlag der wirklich
+>   wartungsarm funktioniert.
 
 ---
 
 ### 3. Lack of Cohesion of Methods (LCOM4)
 
-**Status: ❌ Nicht implementiert**
-**Impact: Mittel-Hoch | Implementierungsaufwand: Hoch**
+Prüft ob Methoden in einer Klasse dieselben Felder nutzen. LCOM4 > 1 → Klasse sollte aufgeteilt werden.
 
-LCOM4 prüft ob Methoden in einer Klasse dieselben Felder/Properties nutzen. Wenn Methode A/B nur Feld X nutzen und Methode C/D nur Feld Y, ist LCOM4 > 1 → die Klasse sollte aufgeteilt werden. Selbst eine 200-Zeilen-Klasse kann zwei völlig unabhängige Dinge tun und damit LLMs überfordern.
-
-**Ehrliche Einschätzung:** Der Algorithmus erfordert Graphanalyse über den Roslyn-AST (Datenfluss von Feldzugriffen zu Methoden). Hoher Implementierungsaufwand. Praktische Alternative: `MaxPublicMembersPerType` (neue Idee #B) liefert ähnliche Garantien mit deutlich weniger Aufwand.
+> **Praxis-Check**
+>
+> - Wartungsaufwand: Keiner (rein metrisch).
+> - False-Positive-Risiko: **Hoch.** Builder-Pattern, Command-Objekte, Visitor-Pattern —
+>   alles würde fälschlich flagged. LCOM4 kennt keine Absicht, nur Feldzugriffe.
+>   Selbst gut designte Klassen können hohe LCOM4-Werte haben.
+> - Adoptionsbarriere: Hoch — Implementierung erfordert Graphanalyse über den Roslyn-AST
+>   (Datenfluss von Feldzugriffen zu Methoden). Deutlich komplexer als alle anderen Regeln.
+> - **Realitätsurteil: ⚠️ Bedingt.** Der Implementierungsaufwand ist hoch, das
+>   False-Positive-Risiko ist hoch. `MaxPublicMembersPerType` (→ neue Idee B) liefert
+>   in der Praxis ähnliche Garantien mit einem Bruchteil des Aufwands.
 
 ---
 
 ### 4. Deterministische "Purity"-Erzwingung
 
-**Status: ⚠️ Teilweise — `DetectAndBanPhantomDependencies` deaktiviert, externer Ansatz ungenutzt**
-**Impact: Hoch**
+Verbietet `DateTime.Now`, `Guid.NewGuid()`, `Environment.GetEnvironmentVariable()` in Domain-Schichten.
 
-LLMs sind exzellent bei puren Funktionen (Input → Output). Versteckter State und Nebeneffekte führen zu Halluzinationen.
-
-**Externer Ansatz (empfohlen, unabhängig von AiNetLinter):**
-- `Microsoft.CodeAnalysis.BannedApiAnalyzers` (offizielles MS-Paket)
-- Konfigurierbar über `BannedSymbols.txt`: verbiete `DateTime.Now`, `Guid.NewGuid()`, `Environment.GetEnvironmentVariable()`, `Task.Run` in Domain-Schichten
-- Deterministisch, lokal, gut gepflegt
-- Zwingt den Code, Zeit und Zufall als injizierte Parameter zu empfangen
-
-Diese Regel intern nachzubauen lohnt sich nicht — das MS-Paket macht es besser.
+> **Praxis-Check**
+>
+> - Wartungsaufwand: Initial eine `BannedSymbols.txt` anlegen, danach wartungsfrei.
+> - False-Positive-Risiko: Niedrig — die verbotenen APIs sind klar definiert.
+> - Adoptionsbarriere: Niedrig — `Microsoft.CodeAnalysis.BannedApiAnalyzers` (offizielles
+>   MS-NuGet-Paket) erledigt das vollständig. In AiNetLinter selbst nachbauen lohnt sich
+>   nicht.
+> - **Realitätsurteil: ✅ Praktikabel** — aber als externes NuGet, nicht in AiNetLinter.
 
 ---
 
 ### 5. Layout- & Syntax-Normalisierung
 
-**Status: ⚠️ `dotnet format` Standard, Member-Reihenfolge nicht erzwungen**
-**Impact: Mittel**
+Strikte Member-Reihenfolge (Konstanten → Felder → Ctor → Properties → Public Methods → Private Methods).
 
-Konsistente Dateistruktur reduziert die Entropie im Prompt massiv. LLMs sagen das nächste Token voraus — je vorhersagbarer der Aufbau, desto weniger Syntaxfehler.
-
-- `dotnet format` / StyleCop.Analyzers: als CI-Pflicht empfohlen
-- Strikte Member-Reihenfolge: 1. Konstanten, 2. Felder, 3. Konstruktoren, 4. Public Properties, 5. Public Methods, 6. Private Methods
-
----
-
-## Neue Ideen (ergänzt 2026-06-17)
-
-Die folgenden Ideen sind noch **nicht** in AiNetLinter implementiert und auch nicht in den
-bestehenden Forschungsdokumenten enthalten. Sie adressieren spezifische LLM-Failure-Patterns
-die in aktueller Forschung (DAPLab Columbia, SWE-Bench, Karpathy-Analysen) dokumentiert sind.
+> **Praxis-Check**
+>
+> - Wartungsaufwand: Keiner — einmalig StyleCop.Analyzers konfigurieren.
+> - False-Positive-Risiko: Mittel — legacy Codebasen haben Zehntausende Verstöße beim
+>   ersten Durchlauf. Nicht als Fehler einführen, nur als Warnung sinnvoll.
+> - Adoptionsbarriere: Niedrig für Greenfield, hoch für Brownfield.
+> - **Realitätsurteil: ✅ Praktikabel via `dotnet format` und StyleCop** — nicht in
+>   AiNetLinter nachzubauen, schon erledigt durch Standard-Tools.
 
 ---
 
-### A. Ubiquitous Language — Vokabular-Konsistenz-Erzwingung
+## Neue Ideen
 
-**Impact: 🔴 Hoch**
-**Roslyn-Umsetzung: Mittel (Identifier-Scan)**
+---
 
-`EnforceSemanticNaming` verbietet generische Begriffe (`data`, `temp`, `obj`). Das hier ist
-etwas fundamental anderes: **Synonyme für denselben Domain-Begriff** zerstören die semantische
-Kohärenz eines LLM-Prompts noch stärker.
+### A. Ubiquitous Language — Vokabular-Konsistenz
 
-**Das Problem:**
+**Theoretischer Impact: Hoch | Praktischer Impact: Fraglich**
 
-Wenn eine Codebasis sowohl `Customer` als auch `Client` und `Account` für dasselbe Domain-Konzept
-verwendet, baut das LLM drei separate Konzept-Repräsentationen auf. Prompt: "Erstelle eine Methode
-die Kundendaten liest" → das LLM kann mit `Customer`, `Client`, oder `Account` antworten — und
-*alle drei* sind potentiell "richtig" laut Training. Das führt zu inkonsistentem generierten Code.
+Die Idee: Ein konfigurierbares Glossar in `rules.json` verhindert, dass `Customer` und `Client`
+für dasselbe Domain-Konzept verwendet werden. LLMs bauen pro Begriff eigene
+Konzept-Repräsentationen — Synonyme erzeugen Ambiguität bei der Code-Generierung.
 
-**Technisches LLM-Argument:**
-
-Sprachmodelle sind in ihrer Trainingsdaten hochsensibel auf semantische Co-Occurrence. `Customer`
-und `Client` teilen ähnliche Token-Kontexte aus dem Training, aber innerhalb einer spezifischen
-Codebasis können sie sehr unterschiedliche Konzepte sein. Wenn ein Agent `Customer.Update()` und
-`ClientRepository.Save()` in derselben Codebasis sieht, entstehen ambige Embeddings.
-
-**Umsetzung:**
-
-Neue Konfigurierbare Struktur in `rules.json`:
-```json
-"UbiquitousLanguage": {
-  "BannedSynonyms": {
-    "Customer": ["Client", "Account", "User"],
-    "Order": ["Purchase", "Transaction", "Cart"],
-    "Product": ["Item", "Good", "Article"]
-  }
-}
-```
-
-Roslyn-Scan über: Typ-Namen, Property-Namen, Methoden-Namen.
-Flag: "Verwende stets `Customer` statt `Client`."
-
-**Unterschied zu CSpell:** CSpell prüft Rechtschreibung. Dies prüft Domain-Konsistenz.
-**Unterschied zu EnforceSemanticNaming:** Das verbietet generische Namen. Dies verbietet Synonyme für project-spezifische Konzepte.
+> **Praxis-Check — und hier ist der Haken:**
+>
+> **Wer pflegt das Glossar?**
+>
+> Das ist die Kernfrage — und sie hat keine gute Antwort.
+>
+> - Manuell durch Entwickler → wird in der Praxis nicht gemacht. Kein Team pflegt aktiv
+>   ein Synonym-Wörterbuch neben dem Code. Besonders bei tausenden Codezeilen und
+>   wachsenden Projekten ist das nicht realistisch.
+> - Vom LLM generiert (Audit-Task) → verletzt das Constraint "lokal und deterministisch".
+>   Außerdem: Welches LLM entscheidet, ob `Auftrag` und `Bestellung` Synonyme sind oder
+>   bewusst unterschiedliche Domain-Konzepte?
+>
+> **Das Domain-Problem:**
+>
+> Die jeweilige Domäne ist nicht vorhersagbar. PPS, MES, RM, Fertigmeldung, Rückmeldung,
+> ERP, FM — jedes Projekt hat sein eigenes Vokabular. Ein generischer Linter kann keinen
+> Brockhaus mitliefern. Und die Frage "Sind `Auftrag` und `FertigungsAuftrag` Synonyme oder
+> bewusst unterschiedliche Konzepte?" lässt sich nur domain-spezifisch beantworten.
+>
+> **Was tatsächlich deterministisch funktionieren würde:**
+>
+> Eine abgeschwächte Variante: Der Linter meldet, wenn ein *bereits existierender* Typname
+> als Substring in einem anderen Typnamen vorkommt, der aber einen anderen Namespace hat.
+> `CustomerService` und `ClientService` in derselben Solution → automatisch erkennbar ohne
+> Glossar, weil beide Typen im AST stehen.
+>
+> Das ist aber ein sehr spezieller Fall und würde viele False Positives produzieren
+> (z.B. `OrderService` und `SalesOrderService` — bewusst unterschiedlich).
+>
+> - Wartungsaufwand: **Sehr hoch** (manuelles Glossar für jedes Projekt)
+> - False-Positive-Risiko: **Sehr hoch** ohne perfektes Glossar
+> - Adoptionsbarriere: **Sehr hoch** — leere Config bringt nichts, befüllte Config ist Arbeit
+> - **Realitätsurteil: ❌ Nicht empfohlen** für allgemeine Projekte.
+>   Nur sinnvoll für Teams die bereits DDD mit expliziter Bounded-Context-Disziplin betreiben
+>   und ihr Ubiquitous-Language-Glossar *sowieso bereits pflegen*. Dann wäre AiNetLinter
+>   nur der Enforcement-Mechanismus — aber der Aufwand liegt woanders.
+>
+> **Fazit zum "Customer"-Beispiel:** Dein Einwand trifft genau den Kern.
+> Die Idee ist theoretisch solide, aber in der Praxis nicht wartbar.
+> Die Idee wird **gestrichen**.
 
 ---
 
 ### B. MaxPublicMembersPerType — API-Oberflächen-Limiter
 
-**Impact: 🔴 Hoch**
-**Roslyn-Umsetzung: Einfach**
+**Impact: 🔴 Hoch | Wartungsaufwand: Null**
 
-`MaxLineCount` limitiert die Dateigröße. `MaxMethodLineCount` limitiert die Methodenlänge.
-Aber eine 600-Zeilen-Klasse mit 5 fokussierten Methoden ist fundamental anders als eine
-600-Zeilen-Klasse mit 25 kleinen public Methoden.
+Eine Klasse mit 25 public Methoden zwingt ein LLM, alle 25 simultaneously zu berücksichtigen wenn es
+eine Änderung generiert. SWE-Bench-Daten zeigen: Agenten "reimplementieren etablierte Hilfsmethoden
+neu" wenn die API-Oberfläche zu breit ist — sie sehen 20+ Methoden und *übersehen* die relevante.
 
-**Das Problem:**
+`MaxLineCount` limitiert die Dateigröße. `MaxPublicMembersPerType` limitiert die semantische "Breite".
+Eine 600-Zeilen-Klasse mit 5 Methoden ist fundamental anders als eine mit 25 kleinen Methoden.
 
-Wenn ein LLM eine Klasse mit 25 public Methoden und 8 public Properties sieht (33 öffentliche
-Members), muss sein Attention-Mechanismus alle 33 Members gleichzeitig berücksichtigen wenn es
-eine Änderung durchführt. Die cognitive load explodiert quadratisch mit der Anzahl der Members.
+> **Praxis-Check**
+>
+> - Wartungsaufwand: **Keiner** — rein zählend, keine Domain-Kenntnisse nötig.
+> - False-Positive-Risiko: **Mittel.**
+>   Extension-Method-Klassen, Mapper-Klassen, Utility-Klassen haben oft viele öffentliche
+>   Methoden by design. Benötigt `MaxPublicMembersExemptSuffixes: ["Extensions", "Mapper"]`
+>   oder Anpassung über `rules.json`-Overrides.
+> - Adoptionsbarriere: **Niedrig** — ein Zahlenwert, kein Konzeptwissen nötig.
+> - **Realitätsurteil: ✅ Praktikabel.** Die Ausnahmeliste für Mapper/Extensions ist
+>   überschaubar. In Brownfield-Projekten initial als Warnung einführen.
 
-SWE-Bench-Daten (2026): Agenten "reimplementieren etablierte Hilfsmethoden neu" wenn die
-API-Oberfläche zu breit ist. Sie sehen 20+ Methoden und *verpassen* die relevante.
-
-**Umsetzung:**
-
-```json
-"MaxPublicMembersPerType": 12
-```
-
-Roslyn: zähle öffentliche Methoden + öffentliche Properties per Typ-Deklaration.
-Exklusion: Properties mit nur einem Getter (reine Value-Objects können mehr haben).
-
-**Ergänzend zu LCOM4:** LCOM4 misst interne Kohäsion (teilen Methoden dieselben Felder?).
-`MaxPublicMembersPerType` limitiert die extern-sichtbare "Breite" unabhängig davon.
+**Implementierungsnotiz:** Roslyn: `PublicMemberDeclaration.Count` (Methoden + Properties) per
+Typ-Deklaration. Empfohlenes Limit: 12–15. Konfigurierbar über `rules.json`.
 
 ---
 
 ### C. Bool-Parameter-Limit (MaxBoolParameterCount)
 
-**Impact: 🔴 Hoch**
-**Roslyn-Umsetzung: Sehr einfach**
+**Impact: 🔴 Hoch | Wartungsaufwand: Null**
 
-Bool-Parameter sind die LLM-feindlichsten Parameter-Typen. Das Problem ist nicht die
-Methodendefinition, sondern der **Aufruf-Site**:
+Bool-Parameter sind die LLM-feindlichsten Parameter-Typen. Das Problem liegt nicht in der
+Methodendefinition sondern im Aufruf:
 
 ```csharp
 // Definition (lesbar):
 void SendEmail(bool includeAttachments, bool isHtml, bool requireReadReceipt)
 
-// Aufruf (völlig opak für LLM und Mensch):
+// Call site (für LLM völlig opak):
 SendEmail(true, false, true)
 ```
 
-**LLM-Forschungs-Backing:**
-
 DAPLab Columbia: "Data Management Errors" (Failure Category 4) — Argument-Reihenfolgen-Halluzination
-tritt massiv auf wenn primitive Typen ohne semantischen Unterschied in der Signatur auftauchen.
-Bool-Parameter sind der Extremfall: `true` und `false` sind semantisch völlig leer.
+tritt besonders bei gleichartigen primitiven Typen auf. Bei drei Bool-Parametern tippt das Modell
+faktisch `true/false` nach Gefühl.
 
-Andrej Karpathy (2026): Bool-Flags in Methoden sind ein Signal für "fehlende Abstraktion" — das
-LLM wählt beim Aufruf zufällig zwischen `true/false` wenn es den Kontext nicht vollständig erfasst.
-
-**Lösung durch den Linter:**
-
-```json
-"MaxBoolParameterCount": 1
-```
-
-Erzwingt die Verwendung von Enums oder Parameter-Records statt mehrerer Bool-Flags:
+Erzwungene Alternative via Parameter-Record:
 ```csharp
-// Stattdessen:
-void SendEmail(EmailOptions options)
-record EmailOptions(bool IncludeAttachments, bool IsHtml, bool RequireReadReceipt);
+SendEmail(new EmailOptions(IncludeAttachments: true, IsHtml: false, RequireReadReceipt: true))
 ```
 
-Das `record` macht den Call-Site-Code semantisch explizit:
-`SendEmail(new EmailOptions(IncludeAttachments: true, IsHtml: false, RequireReadReceipt: true))`
+> **Praxis-Check**
+>
+> - Wartungsaufwand: **Keiner.**
+> - False-Positive-Risiko: **Mittel** bei Limit = 1, **Niedrig** bei Limit = 2.
+>   Framework-Callbacks, Event-Handler, Override-Methoden haben manchmal bool-Parameter
+>   durch Konvention. Benötigt Ausnahme für private Methoden (bereits abgedeckt durch
+>   ähnliche Mechanismen in anderen Regeln).
+>   Limit 1 ist streng aber vertretbar für public APIs; Limit 2 ist konservativer Einstieg.
+> - Adoptionsbarriere: **Sehr niedrig** — unmittelbar verständliche Regel.
+> - **Realitätsurteil: ✅ Praktikabel.** Einer der wenigen Vorschläge wo der
+>   Implementierungsaufwand minimal und der LLM-Impact messbar hoch ist.
 
-**Umsetzung:** Roslyn: zähle `bool`-typed Parameter (und `bool?`) pro Methoden-Signatur.
-Exklusion: private Methoden, Test-Files (optional).
+**Implementierungsnotiz:** Roslyn: zähle `bool`- und `bool?`-typed Parameter per
+Methoden-Signatur. Empfohlenes Limit: `MaxBoolParameterCount: 1` für public, Ausnahme für private.
 
 ---
 
 ### D. Nested Type Prohibition (BanNestedTypes)
 
-**Impact: 🟡 Mittel-Hoch**
-**Roslyn-Umsetzung: Einfach**
+**Impact: 🟡 Mittel-Hoch | Wartungsaufwand: Null**
 
-Verschachtelte Klassen, Enums, und Records sind für Agenten-Harnesses unsichtbar.
+Verschachtelte Klassen sind für Agent-Harness-Navigation unsichtbar. Wenn ein Agent `grep -n "PaymentStatus"`
+ausführt und `PaymentStatus` ein nested enum in `PaymentProcessor.cs` ist, findet er die *Datei*,
+muss sie aber komplett lesen — Context-Overhead, den kleine Dateien verhindern sollen.
 
-**Das konkrete Problem:**
-
-Ein Agent führt `grep -rn "PaymentStatus"` aus oder nutzt das File-Search-Tool. Wenn
-`PaymentStatus` ein nested enum innerhalb von `PaymentProcessor.cs` ist, findet der Agent
-die *Datei*, aber muss sie komplett lesen um den Typen zu finden. Das:
-1. lädt unnötig großen Kontext
-2. versteckt Abhängigkeiten (ist `PaymentStatus` in `PaymentProcessor.cs` oder woanders?)
-3. durchbricht die 1-Typ-pro-Datei-Intuition die Agenten bevorzugen
-
-**Warum das in Agentic Workflows schlimmer ist als für Menschen:**
-
-Menschen kennen die Codebasis und erinnern sich an nested types. LLM-Agenten müssen jedes Mal
-neu navigieren und verlassen sich auf file-system-basierte Discovery-Tools.
-
-**Umsetzung:**
-
-```json
-"BanNestedTypes": true,
-"NestedTypeExemptKinds": ["record"]  // Parameter-Object-Records erlaubt
-```
-
-Roslyn: Prüfe ob `TypeDeclarationSyntax` innerhalb einer anderen `TypeDeclarationSyntax` sitzt.
-Ausnahme: private nested records die als lokale Parameter-Objekte dienen (kurz, no own methods).
+> **Praxis-Check**
+>
+> - Wartungsaufwand: **Keiner.**
+> - False-Positive-Risiko: **Mittel.**
+>   Builder-Pattern (`Builder` ist oft nested), State-Machine-Enums die eng an die Klasse
+>   gebunden sind, private Hilfsklassen die nur intern existieren. Hier ist eine
+>   Ausnahmeliste oder Einschränkung auf public nested types sinnvoller als ein Totalverbot.
+>   Pragmatisch: Regel nur für `public` und `internal` nested types, private dürfen bleiben.
+> - Adoptionsbarriere: **Niedrig** für Greenfield, **Mittel** für Brownfield
+>   (nested enums sind weit verbreitet).
+> - **Realitätsurteil: ⚠️ Bedingt.** Als `BanPublicNestedTypes` (nur öffentlich sichtbare)
+>   statt Totalverbot deutlich praktikabler.
 
 ---
 
 ### E. MaxGenericTypeParameters
 
-**Impact: 🟡 Mittel**
-**Roslyn-Umsetzung: Sehr einfach**
+**Impact: 🟡 Mittel | Wartungsaufwand: Null**
 
-Generische Typ-Parameter sind "unbenannte Typ-Argumente auf Klassen-Ebene". Mit jedem weiteren
-generischen Parameter multipliziert sich die Reasoning-Komplexität für das LLM.
+Generische Typen mit vielen Typ-Parametern (`Repository<TEntity, TKey, TContext, TFilter>`)
+erhöhen die Reasoning-Komplexität pro Typ-Parameter. Das .NET BCL-Standard: max 2 generische
+Typ-Parameter für Kerntypen (`Dictionary<TKey, TValue>`, `KeyValuePair<TKey, TValue>`).
 
-```csharp
-// 2 Type-Parameter: klar, BCL-Standard (Dictionary<TKey, TValue>)
-Repository<TEntity, TKey>
-
-// 4 Type-Parameter: das LLM muss 4 Typ-Variablen gleichzeitig tracken
-Repository<TEntity, TKey, TContext, TFilter>
-```
-
-**Forschungs-Backing:**
-
-Das .NET BCL verwendet standardmäßig max. 2 generische Typ-Parameter für seine Kerntypen
-(`Func<>` ist eine Ausnahme für spezifische FP-Patterns). Models trained on idiomatic C# have
-strongly weighted priors on 1-2 generic parameters.
-
-**Umsetzung:**
-
-```json
-"MaxGenericTypeParameters": 2
-```
-
-Roslyn: Prüfe `TypeParameterListSyntax.Parameters.Count` bei Klassen und Methoden.
+> **Praxis-Check**
+>
+> - Wartungsaufwand: **Keiner.**
+> - False-Positive-Risiko: **Niedrig** bei Limit = 3, **Sehr niedrig** bei Limit = 4.
+>   Im eigenen Code braucht man selten 3+ generische Parameter. Ausnahmen sind meist
+>   Framework-Typen (die man eh nicht schreibt) oder spezifische Result/Either-Typen.
+> - Adoptionsbarriere: **Sehr niedrig.**
+> - **Realitätsurteil: ✅ Praktikabel** — aber Impact ist geringer als B und C.
+>   Nice-to-have, kein Must-have.
 
 ---
 
-## Gesamteinschätzung: Was hat wirklich Impact?
+## Gesamtbewertung nach Praxis-Realismus
 
-| Idee | Impact | Aufwand | Priorität |
-| :--- | :---: | :---: | :---: |
-| A. Ubiquitous Language / Synonym-Verbot | 🔴 Hoch | Mittel | 1 |
-| C. Bool-Parameter-Limit | 🔴 Hoch | Niedrig | 1 |
-| B. MaxPublicMembersPerType | 🔴 Hoch | Niedrig | 2 |
-| D. Nested Type Prohibition | 🟡 Mittel-Hoch | Niedrig | 2 |
-| 3. LCOM4 | 🟡 Mittel-Hoch | Hoch | 3 |
-| E. MaxGenericTypeParameters | 🟡 Mittel | Niedrig | 3 |
-| 2. CSpell (extern) | 🟡 Mittel | Niedrig (extern) | 2 |
-| 4. BannedApiAnalyzers (extern) | 🔴 Hoch | Niedrig (extern) | 1 |
-| 5. dotnet format / Member-Reihenfolge | 🟢 Mittel | Niedrig | 3 |
+| Idee | Theor. Impact | Praxis-Tauglichkeit | Empfehlung |
+| :--- | :---: | :---: | :--- |
+| C. Bool-Parameter-Limit | 🔴 Hoch | ✅ Praktikabel | **Implementieren** |
+| B. MaxPublicMembersPerType | 🔴 Hoch | ✅ Praktikabel | **Implementieren** |
+| 4. BannedApiAnalyzers (extern) | 🔴 Hoch | ✅ Praktikabel | **Als NuGet nutzen** |
+| 2. CSpell (extern) | 🟡 Mittel | ✅ Praktikabel | **Als CI-Schritt nutzen** |
+| D. BanPublicNestedTypes | 🟡 Mittel | ⚠️ Bedingt | Nur public, nicht private |
+| E. MaxGenericTypeParameters | 🟡 Mittel | ✅ Praktikabel | Niedrige Prio |
+| 3. LCOM4 | 🟡 Mittel | ⚠️ Bedingt | Aufwand > Nutzen |
+| 5. dotnet format / StyleCop | 🟡 Mittel | ✅ Praktikabel | **Extern, nicht in AiNetLinter** |
+| A. Ubiquitous Language | 🔴 Theor. | ❌ Nicht empfohlen | **Gestrichen** |
 
 ---
 
-## Fazit
+## Ehrliches Fazit
 
-Die ursprüngliche Einschätzung "ihr habt 80-90% erreicht" gilt weiterhin für die Roslyn-Seite.
-Die größten noch offenen Gewinne sind:
+Die ursprüngliche Einschätzung "ihr habt 80–90 % erreicht" gilt weiterhin.
 
-1. **Bool-Parameter-Limit** (MaxBoolParameterCount ≤ 1): Sofort umsetzbar, hoher Impact.
-   Der Call-Site-Code wird für LLMs drastisch lesbarer.
+**Was wirklich umsetzbar ist und Impact hat:**
 
-2. **Ubiquitous Language** (BannedSynonyms in rules.json): Hoher Domain-spezifischer Impact,
-   erfordert projekt-individuell gefüllte Konfiguration. Der Linter liefert den Mechanismus,
-   das Projekt liefert den Glossar.
+1. **Bool-Parameter-Limit** — sofort implementierbar in AiNetLinter, kein Pflegeaufwand,
+   messbarer LLM-Impact. `MaxBoolParameterCount: 1` für public Methoden.
 
-3. **BannedApiAnalyzers** (extern, nicht in AiNetLinter): Das MS-Paket gibt es bereits.
-   `DateTime.Now`, `Guid.NewGuid()`, `Environment.GetEnvironmentVariable()` in Domain-Schichten
-   zu verbieten erzwingt deterministischen, testbaren Code — ideal für LLM-generierte Logik.
+2. **MaxPublicMembersPerType** — rein metrisch, kein Domain-Wissen nötig, adressiert das
+   "API surface too wide"-Problem aus SWE-Bench-Daten.
 
-4. **MaxPublicMembersPerType**: Ergänzt MaxLineCount sinnvoll für die "Breite" eines Typs.
+3. **BannedApiAnalyzers (MS NuGet)** — `DateTime.Now`, `Guid.NewGuid()` in Domain-Schichten
+   verbieten. Nicht in AiNetLinter nachbauen — das MS-Paket ist fertig und gut.
+
+**Was gestrichen wird:**
+
+- **Ubiquitous Language** — gute Theorie, in der Praxis nicht wartbar. Der Einwand
+  "wer pflegt das für ein PPS/MES/ERP-Projekt mit unbekannter Domain?" ist berechtigt
+  und hat keine gute Antwort. Der Mechanismus wäre implementierbar, aber er würde leer
+  bleiben oder falsch befüllt werden.
 
 **Was man nicht tun sollte:**
-- KI-basierte Linter (LLM-Reviewer im CI) einbauen — langsam, teuer, nicht deterministisch
-- LCOM4 jetzt implementieren — hoher Aufwand, andere Regeln decken ähnliches ab
-- LanguageExt oder Heavy FP-Libraries — flutet den Context mit unbekannten Monaden-Mustern
 
-> Weiterführende Tiefenanalyse mit Quellenangaben:
+- KI-basierte Linter (LLM-Reviewer im CI) — langsam, teuer, nicht deterministisch
+- LanguageExt — flutet den Context mit Monaden-Mustern die das Modell nicht aus dem
+  eigenen Code-Kontext kennt
+
+> Tiefenanalyse mit wissenschaftlichen Quellen:
 > `Research/DeepResearch/20260613/AiNetLinter_ LLM-Code-Optimierung und Agenten-Workflows.md`
