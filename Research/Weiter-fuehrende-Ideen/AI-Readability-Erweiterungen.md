@@ -277,10 +277,93 @@ Typ-Parameter für Kerntypen (`Dictionary<TKey, TValue>`, `KeyValuePair<TKey, TV
 
 ---
 
+### F. Namespace-/Ordnerstruktur-Hygiene
+
+**Impact: 🔴 Hoch | Wartungsaufwand: Null**
+
+Die Frage "Stört eine unstrukturierte Ordner- und Namespace-Struktur ein LLM?" ist klar mit
+**Ja** zu beantworten — und zwar aus zwei unabhängigen Gründen:
+
+**Grund 1 — Pfad-Semantik ("Semantic Scent")**
+
+LLM-Agenten navigieren Codebasen nicht durch vollständiges Lesen, sondern durch Tool-Aufrufe
+(`list_directory`, `grep`, `find_file`). Dateipfade sind dabei ein primäres Navigationssignal.
+Ein Agent der eine Rechnungs-Logik ändern soll, sucht gezielt nach `/Features/Invoices/` oder
+`/Services/Billing/`. Liegen alle Dateien flach in einem Ordner, ist der Pfad semantisch leer —
+der Agent muss teure Volltext-Suchläufe über das gesamte Projekt starten.
+
+LLMs wurden mit Milliarden Zeilen GitHub-Code trainiert. In C# ist **Ordnerstruktur = Namespace**
+eine der stärksten Konventionen überhaupt. Wenn diese Erwartung enttäuscht wird, beginnt das
+Modell zu halluzinieren, weil seine trainierten Heuristiken falsche Treffer liefern.
+
+**Grund 2 — Token-Bloat beim Directory-Listing**
+
+Wenn ein Agent `list_directory` auf einen Ordner mit 100 `.cs`-Dateien aufruft, bekommt er
+eine Liste von 100 Namen zurück — die direkt Token im Kontextfenster belegen. Das Modell muss
+alle 100 Namen gleichzeitig im "Working Memory" halten um die relevante Datei zu identifizieren.
+Studien zu Agent-Harness-Performance zeigen: ab ca. 15–20 Einträgen pro Verzeichnis-Listing
+sinkt die "First-Shot"-Trefferrate des Agenten messbar. Bei 100 Einträgen ist sie katastrophal.
+
+> **Was ist davon bereits implementiert?**
+>
+> **`EnforceNamespaceDirectoryMapping` → ✅ vollständig implementiert und ausgereift**
+>
+> Diese Regel existiert bereits mit drei konfigurierbaren Matching-Modes (`exact`,
+> `suffix-match`, `contains-all`) und flexibler Ausnahmeliste für Pfad-Segmente
+> (`NamespaceDirectoryMappingIgnorePathSegments`). Gut dokumentiert in `Docs/configuration.md`.
+> Kein Handlungsbedarf.
+>
+> **`MaxDirectoryDepth: 4` → ✅ implementiert**
+>
+> Verhindert zu tiefe Ordnerverschachtelung. Ebenfalls vorhanden.
+>
+> **`MaxFilesPerFolder` → ❌ noch nicht implementiert — das ist die Lücke.**
+
+**Die fehlende Regel: `MaxFilesPerFolder`**
+
+`MaxDirectoryDepth` limitiert die vertikale Tiefe. Die horizontale Breite — wie viele Dateien
+in einem einzelnen Ordner liegen — ist noch nicht begrenzt.
+
+```json
+"MaxFilesPerFolder": 20
+```
+
+Roslyn/Dateisystem: Zähle `.cs`-Dateien pro Verzeichnis (nicht rekursiv). Wenn ein Ordner
+mehr als $N$ Dateien enthält → Violation. Erzwingt Aufteilung in Sub-Ordner/Sub-Domains.
+
+Statt 100 Dateien in `/Models/` entstehen:
+```
+Models/
+  Invoices/     ← 12 Dateien
+  Customers/    ← 8 Dateien
+  Products/     ← 11 Dateien
+```
+
+Für den Agenten bedeutet das: `list_directory("Models/")` liefert 3 prägnante Ordnernamen
+statt 100 kryptische Dateinamen. Der Kontext-Overhead sinkt, die Navigationsqualität steigt.
+
+> **Praxis-Check**
+>
+> - Wartungsaufwand: **Keiner** — rein zählend, kein Domain-Wissen.
+> - False-Positive-Risiko: **Niedrig.** In echten Projekten gibt es selten legitime Gründe
+>   für 20+ Dateien in einem Ordner. Ausnahme: generierte Dateien, Migrations-Ordner.
+>   Dafür könnte eine Ausnahmeliste `MaxFilesPerFolderExemptPaths: ["Migrations", "Generated"]`
+>   genügen.
+> - Adoptionsbarriere: **Niedrig** für Greenfield. Für Brownfield initial als Warnung
+>   einführen (wie `MaxAIContextFootprint`).
+> - Implementierungsaufwand: **Sehr niedrig** — reiner Dateisystem-Zähler, kein Roslyn-AST
+>   nötig.
+> - **Realitätsurteil: ✅ Praktikabel.** Wartungsfrei, deterministisch, kein
+>   Domain-Wissen erforderlich. Direktes Pendant zu `MaxDirectoryDepth` auf horizontaler Ebene.
+
+---
+
 ## Gesamtbewertung nach Praxis-Realismus
 
 | Idee | Theor. Impact | Praxis-Tauglichkeit | Empfehlung |
 | :--- | :---: | :---: | :--- |
+| F1. EnforceNamespaceDirectoryMapping | 🔴 Hoch | ✅ Bereits implementiert | — |
+| F2. MaxFilesPerFolder | 🔴 Hoch | ✅ Praktikabel | **Implementieren** |
 | C. Bool-Parameter-Limit | 🔴 Hoch | ✅ Praktikabel | **Implementieren** |
 | B. MaxPublicMembersPerType | 🔴 Hoch | ✅ Praktikabel | **Implementieren** |
 | 4. BannedApiAnalyzers (extern) | 🔴 Hoch | ✅ Praktikabel | **Als NuGet nutzen** |
@@ -299,21 +382,22 @@ Die ursprüngliche Einschätzung "ihr habt 80–90 % erreicht" gilt weiterhin.
 
 **Was wirklich umsetzbar ist und Impact hat:**
 
-1. **Bool-Parameter-Limit** — sofort implementierbar in AiNetLinter, kein Pflegeaufwand,
+1. **MaxFilesPerFolder** — fehlende Ergänzung zu `MaxDirectoryDepth`. Rein metrisch,
+   wartungsfrei, direkter Impact auf Agent-Navigation.
+
+2. **Bool-Parameter-Limit** — sofort implementierbar in AiNetLinter, kein Pflegeaufwand,
    messbarer LLM-Impact. `MaxBoolParameterCount: 1` für public Methoden.
 
-2. **MaxPublicMembersPerType** — rein metrisch, kein Domain-Wissen nötig, adressiert das
+3. **MaxPublicMembersPerType** — rein metrisch, kein Domain-Wissen nötig, adressiert das
    "API surface too wide"-Problem aus SWE-Bench-Daten.
 
-3. **BannedApiAnalyzers (MS NuGet)** — `DateTime.Now`, `Guid.NewGuid()` in Domain-Schichten
+4. **BannedApiAnalyzers (MS NuGet)** — `DateTime.Now`, `Guid.NewGuid()` in Domain-Schichten
    verbieten. Nicht in AiNetLinter nachbauen — das MS-Paket ist fertig und gut.
 
 **Was gestrichen wird:**
 
-- **Ubiquitous Language** — gute Theorie, in der Praxis nicht wartbar. Der Einwand
-  "wer pflegt das für ein PPS/MES/ERP-Projekt mit unbekannter Domain?" ist berechtigt
-  und hat keine gute Antwort. Der Mechanismus wäre implementierbar, aber er würde leer
-  bleiben oder falsch befüllt werden.
+- **Ubiquitous Language** — gute Theorie, in der Praxis nicht wartbar. Wer pflegt ein
+  Synonym-Wörterbuch für ein PPS/MES/ERP-Projekt mit unbekannter Domain?
 
 **Was man nicht tun sollte:**
 
