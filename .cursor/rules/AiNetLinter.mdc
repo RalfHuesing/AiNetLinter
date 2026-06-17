@@ -4,14 +4,14 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.45 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.46 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
 - Kurze, flache Methoden (≤60 Zeilen); ab 5 Parametern ein Input-`record`.
 - `#nullable enable` am Dateianfang.
 - Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.
-- Kein `dynamic`; `out` nur in `Try*`-Methoden.
+- Kein `dynamic`; `out` nur in `Try*`-Methoden (private Methoden ausgenommen).
 - Klassen-Kopplung (Footprint) klein halten: max. 5000 transitive Zeilen eigener Typen.
 
 ## Grenzwerte (Produktion)
