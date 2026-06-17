@@ -85,7 +85,25 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (IsAllowedTryPatternOut(node)) return false;
         if (IsOutParamInInterfaceImplementationOrOverride(node)) return false;
         if (IsOutParamInContractDefinition(node)) return false;
+        if (_config.Global.AllowOutParametersInPrivateMethods && IsPrivateMethod(node)) return false;
         return true;
+    }
+
+    private static bool IsPrivateMethod(ParameterSyntax node)
+    {
+        var method = node.Ancestors()
+            .OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault();
+        if (method is null) return false;
+
+        if (method.Modifiers.Any(SyntaxKind.PrivateKeyword)) return true;
+
+        var hasAccessibility = method.Modifiers.Any(m =>
+            m.IsKind(SyntaxKind.PublicKeyword)
+            || m.IsKind(SyntaxKind.ProtectedKeyword)
+            || m.IsKind(SyntaxKind.InternalKeyword));
+
+        return !hasAccessibility;
     }
 
     // Interface-Methoden und abstract-Methoden definieren Verträge — Implementierer

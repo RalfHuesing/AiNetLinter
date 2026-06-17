@@ -43,7 +43,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
         {
-            var footprintResult = AIContextFootprintCalculator.CalculateDetailed(symbol, _config.Metrics.FootprintIgnoreNamespacePrefixes);
+            var footprintResult = AIContextFootprintCalculator.CalculateDetailed(symbol, _config.Metrics.FootprintIgnoreNamespacePrefixes, _config.Metrics.FootprintIgnoreTypeNames);
             Classes.Add(new ClassInfo
             {
                 Name = ResolveClassName(symbol, node.Identifier.Text),

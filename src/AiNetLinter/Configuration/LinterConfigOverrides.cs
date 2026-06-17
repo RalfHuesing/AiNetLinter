@@ -124,6 +124,9 @@ public sealed record GlobalConfigOverride
     public IReadOnlyCollection<string>? ResultPatternAllowThrowInNamespaceSuffixes { get; init; }
     public bool? ResultPatternAllowCatchRethrow { get; init; }
     public bool? EnablePerformanceProfiling { get; init; }
+    public bool? AllowOutParametersInPrivateMethods { get; init; }
+    public IReadOnlyCollection<string>? SemanticNamingExemptMethodNames { get; init; }
+    public bool? SemanticNamingAllowSubstringOfMethodName { get; init; }
 }
 
 /// <summary>
@@ -227,6 +230,11 @@ public sealed record MetricsConfigOverride
     /// Namespace-Präfixe von Typen, die beim Footprint-Check ignoriert werden.
     /// </summary>
     public IReadOnlyCollection<string>? FootprintIgnoreNamespacePrefixes { get; init; }
+
+    /// <summary>
+    /// Einfache Typ-Namen (kein Namespace), die beim AIContextFootprint nicht mitgezählt werden.
+    /// </summary>
+    public IReadOnlyCollection<string>? FootprintIgnoreTypeNames { get; init; }
 }
 
 /// <summary>

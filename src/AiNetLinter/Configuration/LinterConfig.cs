@@ -65,6 +65,31 @@ public sealed record GlobalConfig
     public bool AllowCancellationShutdownCatch { get; init; } = true;
 
     /// <summary>
+    /// Wenn true: <c>out</c>-Parameter in privaten Methoden werden nicht gemeldet.
+    /// Nützlich wenn private Hilfsmethoden intern das <c>out</c>-Idiom nutzen,
+    /// die öffentliche API aber trotzdem sauber gehalten werden soll.
+    /// Standard: false (Regel gilt für alle Sichtbarkeiten).
+    /// </summary>
+    public bool AllowOutParametersInPrivateMethods { get; init; } = false;
+
+    /// <summary>
+    /// Methoden-Namen, für die <c>EnforceSemanticNaming</c> nicht geprüft wird.
+    /// Nützlich für Standard-C#-Overrides wie <c>Equals(object? obj)</c> oder
+    /// <c>CompareTo(object? obj)</c>, bei denen der Parametername konventionell ist.
+    /// Standard: ["Equals", "CompareTo", "GetHashCode"] (BCL-Overrides).
+    /// </summary>
+    public IReadOnlyCollection<string> SemanticNamingExemptMethodNames { get; init; }
+        = ["Equals", "CompareTo", "GetHashCode"];
+
+    /// <summary>
+    /// Wenn true: Ein Parameter-Name wird von <c>EnforceSemanticNaming</c> nicht gemeldet,
+    /// wenn er als Teilstring (case-insensitiv) im Methoden-Namen vorkommt.
+    /// Beispiel: Parameter "item" in Methode "AppendTimelineItemAsync" → nicht flaggen.
+    /// Standard: false (konservativ, kein Behavior-Change).
+    /// </summary>
+    public bool SemanticNamingAllowSubstringOfMethodName { get; init; } = false;
+
+    /// <summary>
     /// Exception-Typen, die lautlos abgefangen werden dürfen (leerer catch-Block ohne Variable).
     /// Analogon zu AllowCancellationShutdownCatch für projektspezifische Exception-Typen.
     /// Nur der einfache Typname, kein Namespace (z.B. "JSDisconnectedException").
@@ -171,6 +196,8 @@ public sealed record GlobalConfig
         AllowedSilentCatchExceptionTypes = @override.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
         EnforceMinimalApiAsParameters = @override.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
         EnforceResultPatternOverExceptions = @override.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
+        AllowOutParametersInPrivateMethods = @override.AllowOutParametersInPrivateMethods ?? AllowOutParametersInPrivateMethods,
+        SemanticNamingExemptMethodNames = @override.SemanticNamingExemptMethodNames ?? SemanticNamingExemptMethodNames,
     };
 
     private GlobalConfig ApplyCore2(GlobalConfigOverride @override) =>
@@ -209,6 +236,7 @@ public sealed record GlobalConfig
         ResultPatternAllowThrowInNamespaceSuffixes = @override.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
         ResultPatternAllowCatchRethrow = @override.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
         EnablePerformanceProfiling = @override.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
+        SemanticNamingAllowSubstringOfMethodName = @override.SemanticNamingAllowSubstringOfMethodName ?? SemanticNamingAllowSubstringOfMethodName,
     };
 }
 
@@ -289,6 +317,16 @@ public sealed record MetricsConfig
         = Array.Empty<string>();
 
     /// <summary>
+    /// Einfache Typ-Namen (kein Namespace), die bei <see cref="MaxAIContextFootprint"/> nicht mitgezählt werden.
+    /// Nützlich für Infrastruktur-Omnipräsenz-Typen, die praktisch überall transitiv vorhanden
+    /// sind und das Footprint-Budget strukturell immer ausschöpfen.
+    /// Nur einfacher Name (kein Namespace), z. B. "SqlExecutor" nicht "MyApp.Infra.SqlExecutor".
+    /// Standard: [] (alle Typen zählen).
+    /// </summary>
+    public IReadOnlyCollection<string> FootprintIgnoreTypeNames { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
     /// Toleranzbereich über dem Komplexitätslimit für Warning statt Error.
     /// </summary>
     public int ComplexityNearMissTolerance { get; init; } = 0;
@@ -330,6 +368,7 @@ public sealed record MetricsConfig
         MaxConstructorDependencies = @override?.MaxConstructorDependencies ?? MaxConstructorDependencies,
         MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
         FootprintIgnoreNamespacePrefixes = @override?.FootprintIgnoreNamespacePrefixes ?? FootprintIgnoreNamespacePrefixes,
+        FootprintIgnoreTypeNames = @override?.FootprintIgnoreTypeNames ?? FootprintIgnoreTypeNames,
         MethodParameterCountIgnoreTypePrefixes = @override?.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
         MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
         InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,

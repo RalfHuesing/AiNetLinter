@@ -224,7 +224,12 @@ public static class CursorRulesGenerator
         var parts = new List<string>();
         if (!g.AllowDynamic) parts.Add("kein `dynamic`");
         if (!g.AllowOutParameters)
-            parts.Add(g.AllowTryPatternOutParameters ? "`out` nur in `Try*`-Methoden" : "kein `out`");
+        {
+            var outText = g.AllowTryPatternOutParameters ? "`out` nur in `Try*`-Methoden" : "kein `out`";
+            if (g.AllowOutParametersInPrivateMethods)
+                outText += " (private Methoden ausgenommen)";
+            parts.Add(outText);
+        }
         var joined = string.Join("; ", parts);
         var bullet = joined.Length > 0 ? char.ToUpperInvariant(joined[0]) + joined[1..] : joined;
         sb.AppendLine($"- {bullet}.");
