@@ -80,37 +80,58 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private bool ShouldReportOutParameter(ParameterSyntax node)
     {
-        if (_config.Global.AllowOutParameters)
-        {
-            return false;
-        }
+        if (_config.Global.AllowOutParameters) return false;
+        if (!node.Modifiers.Any(SyntaxKind.OutKeyword)) return false;
+        if (IsAllowedTryPatternOut(node)) return false;
+        if (IsOutParamInInterfaceImplementationOrOverride(node)) return false;
+        if (IsOutParamInContractDefinition(node)) return false;
+        return true;
+    }
 
-        if (!node.Modifiers.Any(SyntaxKind.OutKeyword))
-        {
-            return false;
-        }
-
-        return !IsAllowedTryPatternOut(node);
+    // Interface-Methoden und abstract-Methoden definieren Verträge — Implementierer
+    // sind an deren Signatur gebunden und dürfen nicht flagged werden.
+    private static bool IsOutParamInContractDefinition(ParameterSyntax node)
+    {
+        if (node.Parent?.Parent is not MethodDeclarationSyntax method) return false;
+        if (method.Modifiers.Any(SyntaxKind.AbstractKeyword)) return true;
+        return method.Parent is InterfaceDeclarationSyntax;
     }
 
     private bool IsAllowedTryPatternOut(ParameterSyntax node)
     {
-        if (!_config.Global.AllowTryPatternOutParameters)
+        if (!_config.Global.AllowTryPatternOutParameters) return false;
+
+        string? methodName;
+        bool returnsBool;
+
+        if (node.Parent?.Parent is MethodDeclarationSyntax method)
+        {
+            methodName = method.Identifier.Text;
+            returnsBool = method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+        }
+        else if (node.Parent?.Parent is LocalFunctionStatementSyntax localFunc)
+        {
+            methodName = localFunc.Identifier.Text;
+            returnsBool = localFunc.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+        }
+        else
         {
             return false;
         }
 
-        if (node.Parent?.Parent is not MethodDeclarationSyntax method)
-        {
-            return false;
-        }
+        // Deconstruct ist ein C#-Sprachmuster und muss out-Parameter verwenden
+        if (methodName == "Deconstruct") return true;
 
-        var returnsBool = method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
         if (!returnsBool) return false;
 
-        var methodName = method.Identifier.Text;
         return methodName.StartsWith("Try", StringComparison.Ordinal)
             || methodName.StartsWith("Is", StringComparison.Ordinal);
+    }
+
+    private bool IsOutParamInInterfaceImplementationOrOverride(ParameterSyntax node)
+    {
+        if (node.Parent?.Parent is not MethodDeclarationSyntax method) return false;
+        return IsOverrideOrInterfaceImplementation(method);
     }
 
     private void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node)
