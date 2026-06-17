@@ -93,7 +93,7 @@ public sealed class LinterEngine
         EmitPartialClassReadonlyFieldViolations(state);
 
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("PostAnalysis");
-        PostAnalysisChecks.Run(state, _config);
+        PostAnalysisChecks.Run(state, ResolvePostAnalysisConfig(solution));
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("PostAnalysis");
 
         if (catalog != null && catalog.HasLoadingErrors)
@@ -223,6 +223,14 @@ public sealed class LinterEngine
     }
 
 
+
+    private LinterConfig ResolvePostAnalysisConfig(Solution solution)
+    {
+        if (_config.SolutionBasePath != null)
+            return _config;
+        var dir = GetSolutionDir(solution);
+        return string.IsNullOrEmpty(dir) ? _config : _config with { SolutionBasePath = dir };
+    }
 
     private static string GetSolutionDir(Solution solution) =>
         string.IsNullOrEmpty(solution.FilePath) ? "" : Path.GetDirectoryName(solution.FilePath) ?? "";
