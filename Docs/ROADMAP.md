@@ -165,6 +165,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## Epic 17: Agent-Workflow Features (SAN-Refactoring)
 - [x] **Try*/Is*-Ausnahme für out-Parameter:** `AllowTryPatternOutParameters` erlaubt `out` in `bool Try*`- und `bool Is*`-Methoden (idiomatisches C#)
+- [x] **Error-String-Try*-Muster für out-Parameter:** `string? TryXxx(out T)` (null = Erfolg, non-null = Fehlermeldung) wird von `AllowTryPatternOutParameters` als gleichwertiges Try*-Muster erkannt und nicht als Violation gemeldet
 - [x] **Guidance im Text-Output:** Detail-Zeilen mit `→ {Guidance}` für LLM-Refactor-Hints
 - [x] **Smarter Static Test Sentinel:** Flexible Klassenname-Patterns, `typeof`/`nameof`-Referenzen und `// @covers`-Kommentare
 - [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter

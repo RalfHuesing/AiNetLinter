@@ -102,17 +102,17 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         if (!_config.Global.AllowTryPatternOutParameters) return false;
 
         string? methodName;
-        bool returnsBool;
+        bool returnsAllowedType;
 
         if (node.Parent?.Parent is MethodDeclarationSyntax method)
         {
             methodName = method.Identifier.Text;
-            returnsBool = method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+            returnsAllowedType = IsAllowedTryPatternReturnType(method.ReturnType);
         }
         else if (node.Parent?.Parent is LocalFunctionStatementSyntax localFunc)
         {
             methodName = localFunc.Identifier.Text;
-            returnsBool = localFunc.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword };
+            returnsAllowedType = IsAllowedTryPatternReturnType(localFunc.ReturnType);
         }
         else
         {
@@ -122,11 +122,20 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         // Deconstruct ist ein C#-Sprachmuster und muss out-Parameter verwenden
         if (methodName == "Deconstruct") return true;
 
-        if (!returnsBool) return false;
+        if (!returnsAllowedType) return false;
 
         return methodName.StartsWith("Try", StringComparison.Ordinal)
             || methodName.StartsWith("Is", StringComparison.Ordinal);
     }
+
+    // bool TryXxx(out T) — BCL-Klassiker
+    // string? TryXxx(out T) — Error-String-Muster: null = Erfolg, non-null = Fehlermeldung
+    private static bool IsAllowedTryPatternReturnType(TypeSyntax returnType) =>
+        returnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.BoolKeyword }
+        || returnType is NullableTypeSyntax
+        {
+            ElementType: PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.StringKeyword }
+        };
 
     private bool IsOutParamInInterfaceImplementationOrOverride(ParameterSyntax node)
     {

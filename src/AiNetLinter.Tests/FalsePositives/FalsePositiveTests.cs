@@ -324,7 +324,92 @@ public sealed class StatusMapper
         Assert.DoesNotContain(violations, v => v.RuleName == "MaxCognitiveComplexity");
     }
 
-    // ─── FP #6: CancellationToken als 5. Parameter ───────────────────────────
+    // ─── FP #6: string? TryXxx(out T) — Error-String-Try*-Muster ────────────
+    // null = Erfolg, non-null = Fehlermeldung. Variante des BCL-Try*-Musters mit
+    // string? statt bool als Rückgabetyp. out-Parameter ist erlaubt.
+
+    [Fact]
+    public void FP_StringNullable_TryPattern_OutSideData_ShouldNotViolate()
+    {
+        const string source = @"
+public sealed class SiteMetadata { public string Title { get; set; } = """"; }
+
+public static class MetadataPatches
+{
+    public static string? TryRemovePage(
+        SiteMetadata metadata,
+        string pageRoute,
+        out string normalizedRoute)
+    {
+        normalizedRoute = pageRoute.Trim();
+        if (normalizedRoute.Length == 0)
+            return ""Route darf nicht leer sein."";
+
+        metadata.Title = normalizedRoute;
+        return null;
+    }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("MetadataPatches.cs", model, CreateConfig(allowOut: false, allowTryPatternOut: true));
+        Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
+    }
+
+    [Fact]
+    public void FP_StringNullable_TryPattern_MultipleOutParams_ShouldNotViolate()
+    {
+        const string source = @"
+public static class RouteParser
+{
+    public static string? TryNormalizePath(
+        string raw,
+        out string normalized,
+        out string segment)
+    {
+        normalized = raw.Trim().ToLowerInvariant();
+        segment = normalized.Split('/')[0];
+        return normalized.Length == 0 ? ""Leer"" : null;
+    }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("RouteParser.cs", model, CreateConfig(allowOut: false, allowTryPatternOut: true));
+        Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
+    }
+
+    [Fact]
+    public void FP_StringNullable_TryPattern_Disabled_ShouldViolate()
+    {
+        const string source = @"
+public static class Patches
+{
+    public static string? TryUpdate(string input, out string result)
+    {
+        result = input.Trim();
+        return null;
+    }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Patches.cs", model, CreateConfig(allowOut: false, allowTryPatternOut: false));
+        Assert.Contains(violations, v => v.RuleName == "AllowOutParameters");
+    }
+
+    [Fact]
+    public void FP_StringNullable_NonTryPrefix_ShouldViolate()
+    {
+        const string source = @"
+public static class Converter
+{
+    public static string? ConvertAndReport(string input, out string result)
+    {
+        result = input.Trim();
+        return null;
+    }
+}";
+        var model = GetSemanticModel(source);
+        var violations = LinterAnalyzer.Analyze("Converter.cs", model, CreateConfig(allowOut: false, allowTryPatternOut: true));
+        Assert.Contains(violations, v => v.RuleName == "AllowOutParameters");
+    }
+
+    // ─── FP #7: CancellationToken als 5. Parameter ───────────────────────────
     // CancellationToken ist per rules.json in MethodParameterCountIgnoreTypeNames.
     // Dieser Test dokumentiert, dass die Config korrekt greift.
 
@@ -351,7 +436,7 @@ public sealed class OrderService
         Assert.DoesNotContain(violations, v => v.RuleName == "MaxMethodParameterCount");
     }
 
-    // ─── FP #7: Record mit with-Expression (funktionale Mutation) ────────────
+    // ─── FP #8: Record mit with-Expression (funktionale Mutation) ────────────
     // `record with { ... }` erzeugt eine neue Instanz — kein Zustandsmutation.
     // EnforceExplicitStateImmutability darf hier nicht feuern.
 
