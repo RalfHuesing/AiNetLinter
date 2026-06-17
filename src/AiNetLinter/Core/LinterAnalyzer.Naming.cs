@@ -52,22 +52,27 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return _isTestFile;
     }
 
-    private void CheckSemanticNaming(ParameterListSyntax parameterList, bool isPublicMethod)
+    private void CheckSemanticNaming(ParameterListSyntax parameterList, bool isPublicMethod, string? methodName = null)
     {
-        if (ShouldSkipSemanticNaming(isPublicMethod)) return;
+        if (ShouldSkipSemanticNaming(isPublicMethod, methodName)) return;
 
         var genericNames = ForbiddenNames;
         foreach (var param in parameterList.Parameters)
         {
-            CheckParameterSemantic(param, genericNames);
+            CheckParameterSemantic(param, genericNames, methodName);
         }
     }
 
-    private bool ShouldSkipSemanticNaming(bool isPublicMethod)
+    private bool ShouldSkipSemanticNaming(bool isPublicMethod, string? methodName)
     {
         if (!_config.Global.EnforceSemanticNaming) return true;
         if (!isPublicMethod) return true;
-        return _isTestFile;
+        if (_isTestFile) return true;
+        if (methodName is not null
+            && _config.Global.SemanticNamingExemptMethodNames.Contains(
+                   methodName, StringComparer.OrdinalIgnoreCase))
+            return true;
+        return false;
     }
 
     private static readonly HashSet<string> ForbiddenNames = new(StringComparer.OrdinalIgnoreCase)
@@ -75,20 +80,24 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         "data", "temp", "obj", "val", "tmp", "item", "param"
     };
 
-    private void CheckParameterSemantic(ParameterSyntax param, HashSet<string> genericNames)
+    private void CheckParameterSemantic(ParameterSyntax param, HashSet<string> genericNames, string? methodName)
     {
         var name = param.Identifier.Text;
-        if (genericNames.Contains(name))
+        if (!genericNames.Contains(name)) return;
+
+        if (_config.Global.SemanticNamingAllowSubstringOfMethodName
+            && methodName is not null
+            && methodName.Contains(name, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _violations.Add(new RuleViolation
         {
-            _violations.Add(new RuleViolation
-            {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(param),
-                RuleName = nameof(_config.Global.EnforceSemanticNaming),
-                Details = $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
-                Guidance = "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
-            });
-        }
+            FilePath = _filePath,
+            LineNumber = GetLineNumber(param),
+            RuleName = nameof(_config.Global.EnforceSemanticNaming),
+            Details = $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
+            Guidance = "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
+        });
     }
 
     private void CheckXmlDoc(SyntaxNode node, string name, string kind)

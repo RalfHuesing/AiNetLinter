@@ -21,7 +21,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckPascalCase(node.Identifier, "Methode");
         
         bool isPublicMethod = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
-        CheckSemanticNaming(node.ParameterList, isPublicMethod);
+        CheckSemanticNaming(node.ParameterList, isPublicMethod, node.Identifier.Text);
 
         var effectiveLimit = GetEffectiveParamLimit();
         var totalParamCount = node.ParameterList.Parameters.Count;
