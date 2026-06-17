@@ -226,6 +226,11 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
       "EnforceNoMagicValues": false,
       "EnforceNullableEnable": false
     }
+  },
+  "MyApp/Components/Pages/Test/**": {
+    "Metrics": {
+      "MaxAIContextFootprint": 12000
+    }
   }
 }
 ```
@@ -235,6 +240,8 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 - `**` — matcht beliebig viele Pfadsegmente (inkl. Unterverzeichnisse)
 - `*` — matcht ein einzelnes Pfadsegment (kein Slash)
 - Pfade werden mit Forward-Slashes verglichen (auch auf Windows)
+
+**Hinweis zu typ-zentrischen Metriken (`MaxAIContextFootprint`, `MaxInheritanceDepth`):** Diese Metriken werden pro logischer Klasse (nicht pro Datei) berechnet und an der repräsentativen Partial-Datei gemeldet. Der PathOverride wird anhand des Dateipfads dieser repräsentativen Datei aufgelöst — das Muster muss also zu dieser Datei passen. Bei Blazor-Komponenten ist die repräsentative Datei in der Regel die `.razor.cs`-Datei im Quellordner.
 
 ### MagicValues-Konfiguration
 
