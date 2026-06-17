@@ -68,9 +68,9 @@ public sealed record GlobalConfig
     /// Wenn true: <c>out</c>-Parameter in privaten Methoden werden nicht gemeldet.
     /// Nützlich wenn private Hilfsmethoden intern das <c>out</c>-Idiom nutzen,
     /// die öffentliche API aber trotzdem sauber gehalten werden soll.
-    /// Standard: false (Regel gilt für alle Sichtbarkeiten).
+    /// Standard: true (private Methoden sind Implementierungsdetails).
     /// </summary>
-    public bool AllowOutParametersInPrivateMethods { get; init; } = false;
+    public bool AllowOutParametersInPrivateMethods { get; init; } = true;
 
     /// <summary>
     /// Methoden-Namen, für die <c>EnforceSemanticNaming</c> nicht geprüft wird.
@@ -85,9 +85,9 @@ public sealed record GlobalConfig
     /// Wenn true: Ein Parameter-Name wird von <c>EnforceSemanticNaming</c> nicht gemeldet,
     /// wenn er als Teilstring (case-insensitiv) im Methoden-Namen vorkommt.
     /// Beispiel: Parameter "item" in Methode "AppendTimelineItemAsync" → nicht flaggen.
-    /// Standard: false (konservativ, kein Behavior-Change).
+    /// Standard: true (semantisch korrekt wenn der Kontext im Methodennamen steckt).
     /// </summary>
-    public bool SemanticNamingAllowSubstringOfMethodName { get; init; } = false;
+    public bool SemanticNamingAllowSubstringOfMethodName { get; init; } = true;
 
     /// <summary>
     /// Exception-Typen, die lautlos abgefangen werden dürfen (leerer catch-Block ohne Variable).
