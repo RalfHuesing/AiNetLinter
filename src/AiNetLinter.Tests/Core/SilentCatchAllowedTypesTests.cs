@@ -23,8 +23,7 @@ public sealed class SilentCatchAllowedTypesTests
             EnforceNullableEnable = false,
             EnforceNoSilentCatch = true,
             AllowCancellationShutdownCatch = false,
-            AllowedSilentCatchExceptionTypes = allowedTypes ?? [],            EnforceNoMagicValues = false,
-            EnforceExplicitStateImmutability = false,            PreventContextDependentOverloads = false,            EnforceNamespaceDirectoryMapping = false,
+            AllowedSilentCatchExceptionTypes = allowedTypes ?? [],            EnforceExplicitStateImmutability = false,            PreventContextDependentOverloads = false,            EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false,
             EnforceResultPatternOverExceptions = false
         },

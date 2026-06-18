@@ -8,7 +8,6 @@ public sealed record LinterConfig
     public required GlobalConfig Global { get; init; }
     public required MetricsConfig Metrics { get; init; }
     public TestSentinelConfig TestSentinel { get; init; } = new();
-    public MagicValuesConfig MagicValues { get; init; } = new();
     public UiSeparationConfig UiSeparation { get; init; } = new();
     public FileFiltersConfig FileFilters { get; init; } = new();
     public IReadOnlyDictionary<string, RuleMetadataEntry> RuleMetadata { get; init; }
@@ -109,7 +108,6 @@ public sealed record GlobalConfig
     /// Bare "throw;" (Rethrow in Catch-Block) ist immer erlaubt wenn true.
     /// </summary>
     public bool ResultPatternAllowCatchRethrow { get; init; } = true;
-    public bool EnforceNoMagicValues { get; init; } = true;
     public bool EnforceExplicitStateImmutability { get; init; } = true;
     public IReadOnlyCollection<string> AllowedExceptions { get; init; } = new[]
     {
@@ -216,7 +214,6 @@ public sealed record GlobalConfig
 
     private GlobalConfig ApplyCore2a(GlobalConfigOverride @override) => this with
     {
-        EnforceNoMagicValues = @override.EnforceNoMagicValues ?? EnforceNoMagicValues,
         EnforceExplicitStateImmutability = @override.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
         AllowedExceptions = @override.AllowedExceptions ?? AllowedExceptions,
         PreventContextDependentOverloads = @override.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
@@ -541,11 +538,6 @@ public sealed record ProjectOverrideEntry
     /// Überschreibungen der Metrik-Grenzwerte.
     /// </summary>
     public MetricsConfigOverride? Metrics { get; init; }
-
-    /// <summary>
-    /// Überschreibungen der Magic-Value-Erkennung.
-    /// </summary>
-    public MagicValuesConfigOverride? MagicValues { get; init; }
 
     /// <summary>
     /// Überschreibungen der TestSentinel-Konfiguration (Ausnahmen vom Testpflicht-Check).

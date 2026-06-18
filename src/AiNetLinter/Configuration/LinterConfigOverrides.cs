@@ -85,11 +85,6 @@ public sealed record GlobalConfigOverride
     /// </summary>
     public bool? EnforceResultPatternOverExceptions { get; init; }
 
-    /// <summary>
-    /// Verbietet magische Literale.
-    /// </summary>
-    public bool? EnforceNoMagicValues { get; init; }
-
     public bool? EnforceExplicitStateImmutability { get; init; }
     public IReadOnlyCollection<string>? AllowedExceptions { get; init; }
     public bool? PreventContextDependentOverloads { get; init; }
@@ -269,15 +264,3 @@ public sealed record TestSentinelConfigOverride
     public IReadOnlyList<string>? TestProjectNameSuffixes { get; init; }
 }
 
-/// <summary>
-/// Optionale Überschreibungen für die Magic-Value-Konfiguration.
-/// </summary>
-public sealed record MagicValuesConfigOverride
-{
-    public string? Mode { get; init; }
-    public int? MinStringLength { get; init; }
-    public IReadOnlyCollection<string>? IgnoreStringPatterns { get; init; }
-    public IReadOnlyCollection<double>? IgnoreNumericValues { get; init; }
-    public IReadOnlyCollection<string>? IgnoreInvocationPrefixes { get; init; }
-    public bool? IgnoreCollectionInitializers { get; init; }
-}

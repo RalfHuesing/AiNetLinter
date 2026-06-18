@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.47)
-Produktionscode · 152 Typen · 13 Namespaces
+Produktionscode · 149 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -46,21 +46,19 @@ Produktionscode · 152 Typen · 13 Namespaces
 - LinterArgs
 - MaintenanceExecutor → LinterArgs
 
-## AiNetLinter.Configuration (20)
+## AiNetLinter.Configuration (18)
 - FileFilterEvaluator → FileFiltersConfig
 - FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
 - GlobalConfigOverride [record] → GlobalConfigOverride
-- LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MagicValuesConfig, MetricsConfig, TestSentinelConfig, UiSeparationConfig
+- LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MetricsConfig, TestSentinelConfig, UiSeparationConfig
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
-- MagicValuesConfig [record] → MagicValuesConfig, MagicValuesConfigOverride
-- MagicValuesConfigOverride [record] → MagicValuesConfigOverride
 - MetricsConfig [record] → MetricsConfig, MetricsConfigOverride
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule
 - ProjectConfigResolver → LinterConfig, ProjectOverrideEntry
-- ProjectOverrideEntry [record] → GlobalConfigOverride, MagicValuesConfigOverride, MetricsConfigOverride, ProjectOverrideEntry, TestSentinelConfigOverride, UiSeparationConfigOverride
+- ProjectOverrideEntry [record] → GlobalConfigOverride, MetricsConfigOverride, ProjectOverrideEntry, TestSentinelConfigOverride, UiSeparationConfigOverride
 - RuleMetadataEntry [record] → RuleMetadataEntry
 - RuleMetadataRegistry → LinterConfig, RuleMetadataEntry
 - TestSentinelConfig [record] → TestSentinelConfig, TestSentinelConfigOverride
@@ -101,7 +99,7 @@ Produktionscode · 152 Typen · 13 Namespaces
 - TypeInfo [record] → TypeInfo
 - UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
-## AiNetLinter.Core.Checkers (16)
+## AiNetLinter.Core.Checkers (15)
 - ArchitectureChecker → CheckerContext
 - BoolParameterChecker → CheckerContext
 - CheckerContext → LinterConfig, RuleViolation
@@ -109,7 +107,6 @@ Produktionscode · 152 Typen · 13 Namespaces
 - ComplexityChecker → CheckerContext, ComplexityCheck
 - ControlFlowChecker → CheckerContext
 - ImmutabilityChecker → CheckerContext
-- MagicValuesChecker → CheckerContext, MagicValuesConfig
 - MinimalApiChecker → CheckerContext
 - NamingChecker → CheckerContext
 - NestedTypesChecker → CheckerContext

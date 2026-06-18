@@ -28,7 +28,7 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
     * *Campbell, G. D. (2018). "Cognitive Complexity: A new way of measuring misdirection". SonarSource Whitepaper.*
     * *Bubeck, S. et al. (2023). "Sparks of Artificial General Intelligence: Early experiments with GPT-4". arXiv:2303.12712.*
 
-#### 3. Semantische Verankerung (`EnforceSemanticNaming` / `EnforceNoMagicValues`)
+#### 3. Semantische Verankerung (`EnforceSemanticNaming`)
 *   **Wissenschaftlicher Hintergrund:** LLMs verstehen Programmcode über zwei parallele Kanäle: den *strukturellen Kanal* (Syntaxbaum) und den *linguistischen Kanal* (Semantik der Namen). Studien zeigen, dass der linguistische Kanal die stärkste Rolle beim logischen Verstehen spielt. Generische Bezeichner (z. B. `data`, `temp`, `obj`) oder namenlose Magic Literale besitzen im Vektorraum der KI keine semantische Einbettung, was die Vorhersagequalität mindert (Radford et al., 2019).
 *   **Konsequenz:** Alle Werte und Parameter müssen sprechend benannt sein, um eine korrekte Vektor-Einbettung (Embedding) und damit fehlerfreie Code-Generierung zu ermöglichen.
 *   **Referenz:** *Radford, A. et al. (2019). "Language Models are Unsupervised Multitask Learners". OpenAI Blog.*

@@ -169,7 +169,6 @@ public class NormalClass
             Global = config.Global with
             {
                 EnforceSealedClasses = true,
-                EnforceNoMagicValues = true,
                 EnforceXmlDocumentation = false
             },
             Metrics = config.Metrics with
