@@ -45,6 +45,7 @@ ainetlinter --readme
 - **Roslyn-basierte semantische Analyse** — echte Semantik, kein textbasiertes Heuristik-Grep
 - **Feingranulares Regelwerk** — Klassendesign, Komplexität, Immutabilität, Namensgebung
 - **Strukturmetriken** — `MaxBoolParameterCount`, `MaxPartialClassFiles`, `MaxPublicMembersPerType`, `MaxDirectoryChildren` begrenzen API-Surface und Typ-Fragmentierung
+- **BanPublicNestedTypes** — Verbietet `public`/`internal` nested Typen; verbessert Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen
 - **UI-Trennungsregeln** — Blazor CSS-Isolation & Code-Behind-Pflicht, WPF minimales Code-Behind (MVVM)
 - **Auto-Fixer (`--fix`)** — `sealed`, `readonly`, `#nullable enable` automatisch korrigieren
 - **Baseline/Ratchet (`--baseline`)** — inkrementelle Migration bestehender Codebases

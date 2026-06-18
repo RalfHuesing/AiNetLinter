@@ -127,6 +127,16 @@ public sealed record GlobalConfigOverride
     public bool? AllowOutParametersInPrivateMethods { get; init; }
     public IReadOnlyCollection<string>? SemanticNamingExemptMethodNames { get; init; }
     public bool? SemanticNamingAllowSubstringOfMethodName { get; init; }
+
+    /// <summary>
+    /// Verbietet public/internal nested Typen (Override fuer Global.BanPublicNestedTypes).
+    /// </summary>
+    public bool? BanPublicNestedTypes { get; init; }
+
+    /// <summary>
+    /// Erlaubt private nested Typen weiterhin (Override fuer Global.BanPublicNestedTypesAllowPrivate).
+    /// </summary>
+    public bool? BanPublicNestedTypesAllowPrivate { get; init; }
 }
 
 /// <summary>
@@ -155,7 +165,7 @@ public sealed record MetricsConfigOverride
     public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypeNames { get; init; }
 
     /// <summary>
-    /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden (z. B. "ILogger" deckt ILogger&lt;T&gt; ab).
+    /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden (z. B. "ILogger" deckt ILogger<T> ab).
     /// </summary>
     public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypePrefixes { get; init; }
 

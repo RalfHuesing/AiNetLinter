@@ -1,9 +1,9 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.46)
-Produktionscode · 154 Typen · 13 Namespaces
+Produktionscode · 155 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
-- Program → LinterArgs, LinterConfig, ParsedArgs, PlaybookOptions, SourceFileCatalog
+- Program → CliParsedArgs, LinterArgs, LinterConfig, PlaybookOptions, SourceFileCatalog
 
 ## AiNetLinter.Baseline (12)
 - BaselineComparer → BaselineComparisonResult, BaselineFile
@@ -32,19 +32,19 @@ Produktionscode · 154 Typen · 13 Namespaces
 - TestSignalsDto [record] → TestSignalsDto
 
 ## AiNetLinter.Cli (13)
-- BaselineOptions [record] → BaselineOptions
-- CliCommandBuilder → Options, ParsedArgs
+- CliBaselineOptions [record] → CliBaselineOptions
+- CliCommandBuilder → CliOptions, CliParsedArgs
+- CliImpactOptions [record] → CliImpactOptions
+- CliMaintenanceOptions [record] → CliMaintenanceOptions
 - CliOptionFactory
+- CliOptions [record] → CliOptions
+- CliOutputOptions [record] → CliOutputOptions
+- CliParsedArgs [record] → CliBaselineOptions, CliImpactOptions, CliMaintenanceOptions, CliOutputOptions, CliParsedArgs, CliScopeOptions
+- CliScopeOptions [record] → CliScopeOptions
 - DebtReportExecutor → LinterArgs
 - ImpactExecutor → LinterArgs
-- ImpactOptions [record] → ImpactOptions
 - LinterArgs
 - MaintenanceExecutor → LinterArgs
-- MaintenanceOptions [record] → MaintenanceOptions
-- Options [record] → Options
-- OutputOptions [record] → OutputOptions
-- ParsedArgs [record] → BaselineOptions, ImpactOptions, MaintenanceOptions, OutputOptions, ParsedArgs, ScopeOptions
-- ScopeOptions [record] → ScopeOptions
 
 ## AiNetLinter.Configuration (20)
 - FileFilterEvaluator → FileFiltersConfig
@@ -102,7 +102,7 @@ Produktionscode · 154 Typen · 13 Namespaces
 - TypeInfo [record] → TypeInfo
 - UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
-## AiNetLinter.Core.Checkers (17)
+## AiNetLinter.Core.Checkers (18)
 - ArchitectureChecker → CheckerContext
 - BoolParameterChecker → CheckerContext
 - BusinessLogicChecker → CheckerContext
@@ -114,6 +114,7 @@ Produktionscode · 154 Typen · 13 Namespaces
 - MagicValuesChecker → CheckerContext, MagicValuesConfig
 - MinimalApiChecker → CheckerContext
 - NamingChecker → CheckerContext
+- NestedTypesChecker → CheckerContext
 - PublicMembersChecker → CheckerContext
 - ScopeChecker → CheckerContext
 - StateChecker → CheckerContext
@@ -172,10 +173,10 @@ Produktionscode · 154 Typen · 13 Namespaces
 - ViolationScopeOptions [record] → ViolationScopeOptions
 
 ## AiNetLinter.Suppression (8)
-- DisableAllCommentInjector → InjectResult
-- DisableAllCommentRemover [partial] → RemoveResult
-- InjectResult [record] → InjectResult
-- RemoveResult [record] → RemoveResult
+- DisableAllCommentInjector → DisableAllInjectResult
+- DisableAllCommentRemover [partial] → DisableAllRemoveResult
+- DisableAllInjectResult [record] → DisableAllInjectResult
+- DisableAllRemoveResult [record] → DisableAllRemoveResult
 - SuppressionCommentParser
 - SuppressionEvaluator
 - SuppressionSourceFileResolver

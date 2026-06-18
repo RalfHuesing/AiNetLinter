@@ -7,71 +7,7 @@ namespace AiNetLinter.Cli;
 /// </summary>
 internal static class CliCommandBuilder
 {
-    internal sealed record Options(
-        Option<string?> Config,
-        Option<string?> Path,
-        Option<string?> Graph,
-        Option<string?> Playbook,
-        Option<string> Format,
-        Option<bool> Verbose,
-        Option<string?> CreateBaseline,
-        Option<string?> Baseline,
-        Option<bool> AddDisableAll,
-        Option<bool> RemoveDisableAll,
-        Option<bool> DebtReport,
-        Option<bool> WaveReady,
-        Option<bool> OnlyChanged,
-        Option<string?> GitSince,
-        Option<bool> Fix,
-        Option<string?> Impact,
-        Option<bool> SyncCursorRules,
-        Option<bool> Check,
-        Option<bool> NoCache,
-        Option<int> CacheTtl,
-        Option<string?> Footprint,
-        Option<bool> Readme);
-
-    internal sealed record OutputOptions(
-        string? GraphPath,
-        string? PlaybookPath,
-        string Format,
-        bool Verbose);
-
-    internal sealed record BaselineOptions(
-        string? CreateBaselinePath,
-        string? BaselinePath,
-        bool OnlyChanged);
-
-    internal sealed record MaintenanceOptions(
-        bool AddDisableAll,
-        bool RemoveDisableAll);
-
-    internal sealed record ScopeOptions(
-        bool WaveReady,
-        string? GitSince);
-
-    internal sealed record ImpactOptions(
-        bool HasImpact,
-        string? ImpactRef);
-
-    internal sealed record ParsedArgs(
-        string? ConfigPath,
-        string TargetPath,
-        OutputOptions Output,
-        BaselineOptions Baseline,
-        MaintenanceOptions Maintenance,
-        ScopeOptions Scope,
-        bool DebtReport,
-        bool Fix,
-        ImpactOptions Impact,
-        bool SyncCursorRules,
-        bool Check,
-        bool NoCache,
-        int CacheTtlMinutes,
-        string? Footprint,
-        bool Readme);
-
-    internal static (RootCommand Root, Options Options) Build()
+    internal static (RootCommand Root, CliOptions Options) Build()
     {
         var options = CreateOptions();
         var root = new RootCommand("AiNetLinter - CLI-Linter für AI-optimierten .NET Code")
@@ -86,9 +22,9 @@ internal static class CliCommandBuilder
         return (root, options);
     }
 
-    private static Options CreateOptions()
+    private static CliOptions CreateOptions()
     {
-        return new Options(
+        return new CliOptions(
             CliOptionFactory.CreateConfigOption(),
             CliOptionFactory.CreatePathOption(),
             CliOptionFactory.CreateGraphOption(),
@@ -113,30 +49,30 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateReadmeOption());
     }
 
-    internal static ParsedArgs Parse(ParseResult parseResult, Options options)
+    internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
     {
-        return new ParsedArgs(
+        return new CliParsedArgs(
             ConfigPath: parseResult.GetValue(options.Config),
             TargetPath: parseResult.GetValue(options.Path) ?? "",
-            Output: new OutputOptions(
+            Output: new CliOutputOptions(
                 GraphPath: parseResult.GetValue(options.Graph),
                 PlaybookPath: parseResult.GetValue(options.Playbook),
                 Format: parseResult.GetValue(options.Format) ?? "text",
                 Verbose: parseResult.GetValue(options.Verbose)),
-            Baseline: new BaselineOptions(
+            Baseline: new CliBaselineOptions(
                 CreateBaselinePath: parseResult.GetValue(options.CreateBaseline),
                 BaselinePath: parseResult.GetValue(options.Baseline),
                 OnlyChanged: parseResult.GetValue(options.OnlyChanged)),
-            Maintenance: new MaintenanceOptions(
+            Maintenance: new CliMaintenanceOptions(
                 AddDisableAll: parseResult.GetValue(options.AddDisableAll),
                 RemoveDisableAll: parseResult.GetValue(options.RemoveDisableAll)),
-            Scope: new ScopeOptions(
+            Scope: new CliScopeOptions(
                 WaveReady: parseResult.GetValue(options.WaveReady),
                 GitSince: parseResult.GetValue(options.GitSince)),
             DebtReport: parseResult.GetValue(options.DebtReport),
             Fix: parseResult.GetValue(options.Fix),
-            Impact: new ImpactOptions(
-                HasImpact: parseResult.GetResult(options.Impact) is not null,
+            Impact: new CliImpactOptions(
+                HasImpact: parseResult.GetValue(options.Impact) is not null,
                 ImpactRef: parseResult.GetValue(options.Impact)),
             SyncCursorRules: parseResult.GetValue(options.SyncCursorRules),
             Check: parseResult.GetValue(options.Check),
