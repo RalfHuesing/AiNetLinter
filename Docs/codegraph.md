@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.47)
-Produktionscode · 149 Typen · 13 Namespaces
+Produktionscode · 150 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -46,7 +46,7 @@ Produktionscode · 149 Typen · 13 Namespaces
 - LinterArgs
 - MaintenanceExecutor → LinterArgs
 
-## AiNetLinter.Configuration (18)
+## AiNetLinter.Configuration (19)
 - FileFilterEvaluator → FileFiltersConfig
 - FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
@@ -54,6 +54,7 @@ Produktionscode · 149 Typen · 13 Namespaces
 - LinterConfig [record] → FileFiltersConfig, GlobalConfig, LinterConfig, MetricsConfig, TestSentinelConfig, UiSeparationConfig
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
+- LinterConfigSyncer → LinterConfig
 - MetricsConfig [record] → MetricsConfig, MetricsConfigOverride
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule

@@ -38,8 +38,10 @@ public static class LinterConfigLoader
         if (config == null)
         {
             Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
+            return null;
         }
 
+        LinterConfigSyncer.SyncIfNeeded(configPath, config);
         return config;
     }
 
