@@ -78,7 +78,7 @@
     "MaxBoolParameterCountAllowPrivate": true,
     "MaxBoolParameterCountExemptMethodPrefixes": ["Try"],
     "MaxPartialClassFiles": 2,
-    "MaxPartialClassFilesExemptTypes": ["AiNetLinter.Core.LinterAnalyzer"],
+    "MaxPartialClassFilesExemptTypes": [],
     "MaxPublicMembersPerType": 15,
     "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"],
     "MaxAIContextFootprint": 5000,

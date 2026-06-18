@@ -64,3 +64,6 @@ Thumbs.db
 ## Local config files (if any)
 appsettings.Development.json
 appsettings.Local.json
+
+## Diagnostic test output (written by DiagnosticDump_SelfLintOutput test)
+test-output/

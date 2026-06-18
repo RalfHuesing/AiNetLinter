@@ -1,25 +1,22 @@
 #nullable enable
 
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Checkers;
 
-/// <summary>
-/// Prüft MaxPublicMembersPerType: zu viele öffentliche Member in einem Typ.
-/// </summary>
-public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
+internal static class PublicMembersChecker
 {
-    internal void CheckPublicMembersPerType(TypeDeclarationSyntax node, string typeName)
+    internal static void Check(TypeDeclarationSyntax node, string typeName, CheckerContext ctx)
     {
-        var limit = _config.Metrics.MaxPublicMembersPerType;
+        var limit = ctx.Config.Metrics.MaxPublicMembersPerType;
         if (limit <= 0) return;
 
-        var exemptSuffixes = _config.Metrics.MaxPublicMembersPerTypeExemptSuffixes;
-        foreach (var suffix in exemptSuffixes)
+        foreach (var suffix in ctx.Config.Metrics.MaxPublicMembersPerTypeExemptSuffixes)
         {
             if (typeName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 return;
@@ -28,11 +25,11 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var count = CountPublicMembers(node);
         if (count > limit)
         {
-            _violations.Add(new RuleViolation
+            ctx.AddViolation(new RuleViolation
             {
-                FilePath = _filePath,
-                LineNumber = GetLineNumber(node),
-                RuleName = nameof(_config.Metrics.MaxPublicMembersPerType),
+                FilePath = ctx.FilePath,
+                LineNumber = SyntaxHelper.LineOf(node),
+                RuleName = nameof(ctx.Config.Metrics.MaxPublicMembersPerType),
                 Details = $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
                 Guidance = "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können."
             });
@@ -46,8 +43,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         {
             if (!IsPublicMember(member)) continue;
             if (IsOverrideOrExplicitImpl(member)) continue;
-
-            count += member is PropertyDeclarationSyntax ? 1 : 1;
+            count++;
         }
         return count;
     }

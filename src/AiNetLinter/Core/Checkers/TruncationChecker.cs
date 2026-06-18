@@ -1,51 +1,41 @@
 #nullable enable
 
-using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Checkers;
 
-/// <summary>
-/// Domain-specific partial class file handling safety rules such as truncation checks for I/O operations.
-/// </summary>
-public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
+internal static class TruncationChecker
 {
-    private void CheckTruncationHandling(InvocationExpressionSyntax node)
+    internal static void Check(InvocationExpressionSyntax node, CheckerContext ctx)
     {
-        if (!_config.Global.RequireExplicitTruncationHandling) return;
-        if (_config.Global.AllowedEmptyReads) return;
-        if (_isTestFile) return;
+        if (!ctx.Config.Global.RequireExplicitTruncationHandling) return;
+        if (ctx.Config.Global.AllowedEmptyReads) return;
+        if (ctx.IsTestFile) return;
 
-        var symbol = _semanticModel.GetSymbolInfo(node).Symbol;
+        var symbol = ctx.SemanticModel.GetSymbolInfo(node).Symbol;
         if (symbol == null) return;
 
-        CheckTruncationSymbol(node, symbol);
-    }
-
-    private void CheckTruncationSymbol(InvocationExpressionSyntax node, ISymbol symbol)
-    {
         var containingType = symbol.ContainingType;
         var typeName = containingType != null ? containingType.Name : "";
         var methodName = symbol.Name;
 
         if (IsReadOperation(typeName, methodName))
         {
-            CheckTruncationGuard(node, methodName, typeName);
+            CheckTruncationGuard(node, methodName, typeName, ctx);
         }
     }
 
-    private void CheckTruncationGuard(InvocationExpressionSyntax node, string methodName, string typeName)
+    private static void CheckTruncationGuard(InvocationExpressionSyntax node, string methodName, string typeName, CheckerContext ctx)
     {
         if (IsGuardOrCheckPresentForInvocation(node)) return;
 
-        _violations.Add(new RuleViolation
+        ctx.AddViolation(new RuleViolation
         {
-            FilePath = _filePath,
-            LineNumber = GetLineNumber(node),
+            FilePath = ctx.FilePath,
+            LineNumber = SyntaxHelper.LineOf(node),
             RuleName = "RequireExplicitTruncationHandling",
             Details = $"Der I/O-Leseaufruf '{methodName}' von '{typeName}' besitzt keine unmittelbare Validierung der Laenge oder Vollstaendigkeit (Truncation-Schutz).",
             Guidance = "Prüfe die Anzahl gelesener Bytes/Zeichen (z.B. '> 0' oder 'Length') oder ob die Rückgabe leer ist (z.B. string.IsNullOrEmpty). Beispiel:\n" +
@@ -59,15 +49,9 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
 
     private static bool IsReadOperation(string typeName, string methodName)
     {
-        if (typeName == "File")
-            return IsFileReadMethod(methodName);
-
-        if (typeName == "HttpClient")
-            return IsHttpClientReadMethod(methodName);
-
-        if (IsStreamOrReader(typeName))
-            return IsStreamReadMethod(methodName);
-
+        if (typeName == "File") return IsFileReadMethod(methodName);
+        if (typeName == "HttpClient") return IsHttpClientReadMethod(methodName);
+        if (IsStreamOrReader(typeName)) return IsStreamReadMethod(methodName);
         return false;
     }
 
@@ -81,10 +65,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         methodName.StartsWith("Read") || methodName == "CopyToAsync" || methodName == "ReadLine";
 
     private static bool IsStreamOrReader(string typeName) =>
-        typeName.Contains("Stream")
-        || typeName == "HttpContent"
-        || typeName == "TextReader"
-        || typeName == "BinaryReader";
+        typeName.Contains("Stream") || typeName == "HttpContent" || typeName == "TextReader" || typeName == "BinaryReader";
 
     private static bool IsGuardOrCheckPresentForInvocation(InvocationExpressionSyntax invocation)
     {
@@ -129,11 +110,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         return false;
     }
 
-    private static bool IsConditionNode(SyntaxNode node)
-    {
-        return node is IfStatementSyntax || 
-               node is BinaryExpressionSyntax || 
-               node is ConditionalExpressionSyntax ||
-               node is SwitchStatementSyntax;
-    }
+    private static bool IsConditionNode(SyntaxNode node) =>
+        node is IfStatementSyntax || node is BinaryExpressionSyntax ||
+        node is ConditionalExpressionSyntax || node is SwitchStatementSyntax;
 }

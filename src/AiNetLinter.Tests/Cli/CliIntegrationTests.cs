@@ -213,6 +213,39 @@ public sealed class CliIntegrationTests
         Assert.Contains("[ERROR]", error);
     }
 
+    /// <summary>
+    /// Kein Assert — schreibt Linter-Output nach test-output/self-lint.txt (.gitignore'd).
+    /// Für Claude Code: nach dotnet test die Datei lesen statt erneut zu testen.
+    /// </summary>
+    [Fact]
+    public void DiagnosticDump_SelfLintOutput_WritesToFile()
+    {
+        var rootDir = FindSolutionRoot();
+        var linterDllPath = FindLinterDll(rootDir);
+        var configPath = Path.Combine(rootDir, "rules.json");
+        var outputDir = Path.Combine(rootDir, "test-output");
+        var outputFile = Path.Combine(outputDir, "self-lint.txt");
+
+        Directory.CreateDirectory(outputDir);
+
+        var processInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(processInfo)!;
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        File.WriteAllText(outputFile, $"ExitCode: {process.ExitCode}\n\n{output}\n---STDERR---\n{error}");
+    }
+
     private static string FindSolutionRoot()
     {
         var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
