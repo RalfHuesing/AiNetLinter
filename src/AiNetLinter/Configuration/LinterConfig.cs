@@ -56,7 +56,7 @@ public sealed record GlobalConfig
     public bool EnforceValueObjectContracts { get; init; } = true;
     public bool EnableTestSentinel { get; init; } = true;
     public bool EnforcePascalCase { get; init; } = true;
-    public bool EnforceXmlDocumentation { get; init; } = true;
+    public bool EnforceXmlDocumentation { get; init; } = false;
     public bool EnforceSemanticNaming { get; init; } = true;
     public bool EnforceNullableEnable { get; init; } = true;
     public bool EnforceNoSilentCatch { get; init; } = true;
@@ -95,7 +95,7 @@ public sealed record GlobalConfig
     /// </summary>
     public IReadOnlyList<string> AllowedSilentCatchExceptionTypes { get; init; } = [];
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
-    public bool EnforceResultPatternOverExceptions { get; init; } = true;
+    public bool EnforceResultPatternOverExceptions { get; init; } = false;
 
     /// <summary>
     /// Namespace-Suffixe für die throw erlaubt ist (z. B. "Infrastructure", "Middleware").
@@ -122,7 +122,7 @@ public sealed record GlobalConfig
         "ObjectDisposedException",
         "NotImplementedException"
     };
-    public bool PreventContextDependentOverloads { get; init; } = true;
+    public bool PreventContextDependentOverloads { get; init; } = false;
     public bool EnforceNamespaceDirectoryMapping { get; init; } = true;
 
     /// <summary>
@@ -141,7 +141,7 @@ public sealed record GlobalConfig
     /// </summary>
     public int NamespaceDirectoryMappingRequiredTrailingSegments { get; init; } = 2;
 
-    public bool DetectAndBanPhantomDependencies { get; init; } = true;
+    public bool DetectAndBanPhantomDependencies { get; init; } = false;
 
     /// <summary>
     /// Verbietet oeffentliche (public/internal) nested Typen innerhalb von Klassen, Records und Structs.
@@ -164,9 +164,18 @@ public sealed record GlobalConfig
     };
     public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
     public bool AllowedEmptyReads { get; init; } = false;
-    public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = Array.Empty<string>();
-    public IReadOnlyCollection<string> ImmutabilityExemptBaseTypes { get; init; } = Array.Empty<string>();
-    public bool ImmutabilityAllowPrivateBackingFields { get; init; } = false;
+    public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = ["Base", "Foundation", "Host"];
+    public IReadOnlyCollection<string> ImmutabilityExemptBaseTypes { get; init; } =
+    [
+        "ComponentBase",
+        "LayoutComponentBase",
+        "ObservableObject",
+        "ObservableRecipient",
+        "BackgroundService",
+        "AuthenticationStateProvider",
+        "INotifyPropertyChanged"
+    ];
+    public bool ImmutabilityAllowPrivateBackingFields { get; init; } = true;
     public bool EnablePerformanceProfiling { get; init; } = true;
 
     /// <summary>
@@ -250,7 +259,7 @@ public sealed record GlobalConfig
 /// </summary>
 public sealed record MetricsConfig
 {
-    public int MaxLineCount { get; init; } = 500;
+    public int MaxLineCount { get; init; } = 700;
     public int MaxMethodParameterCount { get; init; } = 4;
 
     /// <summary>
@@ -265,7 +274,7 @@ public sealed record MetricsConfig
     /// Standard: [] (alle Parameter zählen). Empfehlung für .NET-Projekte: ["CancellationToken"].
     /// </summary>
     public IReadOnlyCollection<string> MethodParameterCountIgnoreTypeNames { get; init; }
-        = Array.Empty<string>();
+        = ["CancellationToken"];
 
     /// <summary>
     /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden.
@@ -275,9 +284,9 @@ public sealed record MetricsConfig
     public IReadOnlyCollection<string> MethodParameterCountIgnoreTypePrefixes { get; init; }
         = Array.Empty<string>();
 
-    public int MaxMethodLineCount { get; init; } = 42;
-    public int MaxCyclomaticComplexity { get; init; } = 5;
-    public int MaxCognitiveComplexity { get; init; } = 5;
+    public int MaxMethodLineCount { get; init; } = 60;
+    public int MaxCyclomaticComplexity { get; init; } = 10;
+    public int MaxCognitiveComplexity { get; init; } = 15;
     public int MaxInheritanceDepth { get; init; } = 2;
     public int MinCognitiveComplexityForTest { get; init; } = 3;
     public bool AggregatePartialClassLineCount { get; init; } = false;
@@ -298,7 +307,17 @@ public sealed record MetricsConfig
     /// zu MaxConstructorDependencies zählen.
     /// </summary>
     public IReadOnlyCollection<string> ConstructorDependencyIgnoreTypePrefixes { get; init; }
-        = Array.Empty<string>();
+        = [
+            "ILogger",
+            "IOptions",
+            "IOptionsSnapshot",
+            "IOptionsMonitor",
+            "IHostEnvironment",
+            "IWebHostEnvironment",
+            "IConfiguration",
+            "IServiceProvider",
+            "IHttpContextAccessor"
+        ];
 
     /// <summary>
     /// Klassen-Name-Suffixe, für die MaxConstructorDependencies nicht geprüft wird.
@@ -334,12 +353,12 @@ public sealed record MetricsConfig
     /// <summary>
     /// Toleranzbereich über dem Komplexitätslimit für Warning statt Error.
     /// </summary>
-    public int ComplexityNearMissTolerance { get; init; } = 0;
+    public int ComplexityNearMissTolerance { get; init; } = 1;
 
     /// <summary>
     /// Switch-Dispatcher-Methoden aus der Komplexitätsmessung ausnehmen.
     /// </summary>
-    public bool ExcludeSwitchDispatcherCases { get; init; } = false;
+    public bool ExcludeSwitchDispatcherCases { get; init; } = true;
 
     /// <summary>
     /// Max. Code-Zeilen pro Case/If-Zweig damit er als Dispatcher-Zweig gilt.

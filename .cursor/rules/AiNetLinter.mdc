@@ -17,7 +17,7 @@ Auto-generiert durch AiNetLinter 1.0.47 aus `rules.json`. Neuen Produktionscode 
 ## Grenzwerte (Produktion)
 | Regel | Limit | Praxis |
 | :--- | :---: | :--- |
-| `MaxLineCount` | **600** | Datei splitten wenn sie wächst. |
+| `MaxLineCount` | **700** | Datei splitten wenn sie wächst. |
 | `MaxMethodLineCount` | **60** | Eine Aufgabe pro Methode; Rest extrahieren. |
 | `MaxMethodParameterCount` | **4** | Ab Überschreitung: `record` als Parameter-Object. |
 | `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |

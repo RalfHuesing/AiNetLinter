@@ -29,7 +29,8 @@ public sealed class MethodParameterCountOverrideTests
             MaxLineCount = 500,
             MaxMethodParameterCount = maxParams,
             MaxCyclomaticComplexity = 20,
-            MaxCognitiveComplexity = 20
+            MaxCognitiveComplexity = 20,
+            MethodParameterCountIgnoreTypeNames = []
         }
     };
 
