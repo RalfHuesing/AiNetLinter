@@ -22,11 +22,7 @@ public sealed class LinterAnalyzerTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,
-                EnforceNoVariableShadowing = false,
-                EnforceReadonlyParameters = false,
-                EnforceReadonlyFields = false,
-                EnforceNoMagicValues = false,
+                EnforceNoSilentCatch = false,                EnforceNoMagicValues = false,
                 EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },

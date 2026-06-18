@@ -31,8 +31,7 @@ public sealed class PostAnalysisChecksPathOverrideTests
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(classes),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>(),
-            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default));
+            new ConcurrentDictionary<string, string>());
     }
 
     private static ClassInfo MakeClass(string name, string filePath, int footprint, string? project = null) =>

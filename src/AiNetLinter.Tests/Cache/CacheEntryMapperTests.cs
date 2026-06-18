@@ -83,8 +83,7 @@ public sealed class CacheEntryMapperTests
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>(),
-            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default)
+            new ConcurrentDictionary<string, string>()
         );
 
         var entry = new AnalysisCacheEntry
@@ -126,8 +125,7 @@ public sealed class CacheEntryMapperTests
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>(),
-            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default)
+            new ConcurrentDictionary<string, string>()
         );
 
         CacheEntryMapper.RestoreToState(entry, state2, isTestFile: true);

@@ -10,22 +10,22 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 
 ## 1. Genutzte Architekturmuster
 - **Result-Pattern-Nutzung:** 5 Methoden liefern `Result` oder `Result<T>` zurueck.
-- **Kontrollfluss-Exceptions:** 30 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
+- **Kontrollfluss-Exceptions:** 27 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
 
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
 In dieser Codebase sind aktuell keine Linter-Regeln unterdrueckt.
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 150 / 166 (90 %)
+- **Wave-ready Dateien:** 147 / 163 (90 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 93 files, median Footprint 84 LOC, 7× disable-all
-- **src/AiNetLinter.Tests/**: 72 files, median Footprint 152 LOC, 9× disable-all
+- **src/AiNetLinter/**: 92 files, median Footprint 84 LOC, 7× disable-all
+- **src/AiNetLinter.Tests/**: 70 files, median Footprint 148 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

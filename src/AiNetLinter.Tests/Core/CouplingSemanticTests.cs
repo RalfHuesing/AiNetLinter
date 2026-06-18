@@ -23,11 +23,7 @@ public sealed class CouplingSemanticTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,
-                EnforceNoVariableShadowing = false,
-                EnforceReadonlyParameters = false,
-                EnforceReadonlyFields = false,
-                EnforceNoMagicValues = magicValues
+                EnforceNoSilentCatch = false,                EnforceNoMagicValues = magicValues
             },
             Metrics = new MetricsConfig
             {

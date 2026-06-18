@@ -23,11 +23,7 @@ public sealed class SilentCatchAllowedTypesTests
             EnforceNullableEnable = false,
             EnforceNoSilentCatch = true,
             AllowCancellationShutdownCatch = false,
-            AllowedSilentCatchExceptionTypes = allowedTypes ?? [],
-            EnforceNoVariableShadowing = false,
-            EnforceReadonlyParameters = false,
-            EnforceReadonlyFields = false,
-            EnforceNoMagicValues = false,
+            AllowedSilentCatchExceptionTypes = allowedTypes ?? [],            EnforceNoMagicValues = false,
             EnforceExplicitStateImmutability = false,            PreventContextDependentOverloads = false,            EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false,
             EnforceResultPatternOverExceptions = false
