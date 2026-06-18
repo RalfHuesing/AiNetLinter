@@ -72,6 +72,15 @@
     "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
+    "MaxDirectoryChildren": 0,
+    "MaxDirectoryChildrenExemptNames": ["Migrations", "Generated", "wwwroot", "obj", "bin", ".git"],
+    "MaxBoolParameterCount": 1,
+    "MaxBoolParameterCountAllowPrivate": true,
+    "MaxBoolParameterCountExemptMethodPrefixes": ["Try"],
+    "MaxPartialClassFiles": 2,
+    "MaxPartialClassFilesExemptTypes": ["AiNetLinter.Core.LinterAnalyzer"],
+    "MaxPublicMembersPerType": 15,
+    "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"],
     "MaxAIContextFootprint": 5000,
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
@@ -164,7 +173,8 @@
         "EnforceSealedClasses": false
       },
       "Metrics": {
-        "MaxMethodLineCount": 100
+        "MaxMethodLineCount": 100,
+        "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args", "Tests", "Test", "Specs"]
       }
     }
   }

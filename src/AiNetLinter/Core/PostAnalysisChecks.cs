@@ -47,6 +47,16 @@ internal static class PostAnalysisChecks
         UiFileSeparationChecker.Run(state, config);
         sw.Stop();
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("UiFileSeparation", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
+        RunMaxPartialClassFilesCheck(state.PartialClassParts, state.Violations, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("MaxPartialClassFiles", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
+        RunMaxDirectoryChildrenCheck(state.Violations, config);
+        sw.Stop();
+        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("MaxDirectoryChildren", sw.Elapsed.TotalMilliseconds);
     }
 
     private static void RunTestSentinel(AnalysisState state, LinterConfig config)
@@ -227,6 +237,99 @@ internal static class PostAnalysisChecks
         {
             violations.Add(violation);
         }
+    }
+
+    private static void RunMaxPartialClassFilesCheck(
+        ConcurrentBag<PartialClassPart> parts,
+        ConcurrentBag<RuleViolation> violations,
+        LinterConfig config)
+    {
+        var limit = config.Metrics.MaxPartialClassFiles;
+        if (limit <= 0) return;
+
+        var exemptTypes = config.Metrics.MaxPartialClassFilesExemptTypes;
+
+        foreach (var group in parts.GroupBy(p => p.TypeName, StringComparer.Ordinal))
+        {
+            if (IsExemptType(group.Key, exemptTypes)) continue;
+
+            var distinctFiles = group.Select(p => p.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (distinctFiles.Length <= limit) continue;
+
+            var representative = group.OrderBy(p => p.FilePath, StringComparer.OrdinalIgnoreCase).First();
+            violations.Add(new RuleViolation
+            {
+                FilePath = representative.FilePath,
+                LineNumber = representative.LineNumber,
+                RuleName = nameof(config.Metrics.MaxPartialClassFiles),
+                Details = $"Der partial-Typ '{group.Key}' ist auf {distinctFiles.Length} Dateien verteilt (erlaubt: {limit}). Agenten sehen nur die aktuelle Datei und übersehen Invarianten aus den anderen Dateien.",
+                Guidance = "Fasse die partial-Deklarationen in einer einzigen Datei zusammen, oder lagere Zuständigkeiten in eigene Typen aus (z. B. 'OrderValidator', 'OrderEventPublisher')."
+            });
+        }
+    }
+
+    private static bool IsExemptType(string typeName, IReadOnlyCollection<string> exemptTypes)
+    {
+        if (exemptTypes.Count == 0) return false;
+        var simpleName = typeName.Contains('.') ? typeName.Substring(typeName.LastIndexOf('.') + 1) : typeName;
+        return exemptTypes.Contains(typeName, StringComparer.Ordinal)
+            || exemptTypes.Contains(simpleName, StringComparer.Ordinal);
+    }
+
+    internal static void RunMaxDirectoryChildrenCheck(
+        ConcurrentBag<RuleViolation> violations,
+        LinterConfig config)
+    {
+        var limit = config.Metrics.MaxDirectoryChildren;
+        if (limit <= 0) return;
+
+        var solutionBase = config.SolutionBasePath;
+        if (string.IsNullOrEmpty(solutionBase) || !Directory.Exists(solutionBase)) return;
+
+        RunMaxDirectoryChildrenRecursive(solutionBase, solutionBase, violations, config);
+    }
+
+    private static void RunMaxDirectoryChildrenRecursive(
+        string directory,
+        string solutionBase,
+        ConcurrentBag<RuleViolation> violations,
+        LinterConfig config)
+    {
+        var dirName = Path.GetFileName(directory);
+        if (IsExemptDirectory(dirName, config.Metrics.MaxDirectoryChildrenExemptNames)) return;
+
+        try
+        {
+            var entries = Directory.EnumerateFileSystemEntries(directory)
+                .Where(e => !IsExemptDirectory(Path.GetFileName(e), config.Metrics.MaxDirectoryChildrenExemptNames))
+                .ToArray();
+
+            if (entries.Length > config.Metrics.MaxDirectoryChildren)
+            {
+                var relativePath = Path.GetRelativePath(solutionBase, directory);
+                violations.Add(new RuleViolation
+                {
+                    FilePath = Path.Combine(directory, "."),
+                    LineNumber = 0,
+                    RuleName = nameof(config.Metrics.MaxDirectoryChildren),
+                    Details = $"Ordner '{relativePath}' enthält {entries.Length} Einträge (erlaubt: {config.Metrics.MaxDirectoryChildren}). Viele Einträge erhöhen den Token-Verbrauch bei 'list_directory'-Aufrufen und reduzieren die Agent-Trefferrate.",
+                    Guidance = "Gruppiere verwandte Dateien in Unterordner (z. B. nach Feature oder Typ), sodass kein Ordner mehr als das konfigurierte Limit an Einträgen hat."
+                });
+            }
+
+            foreach (var subDir in Directory.EnumerateDirectories(directory))
+            {
+                RunMaxDirectoryChildrenRecursive(subDir, solutionBase, violations, config);
+            }
+        }
+        catch (UnauthorizedAccessException ignored) { _ = ignored; }
+        catch (IOException ignored) { _ = ignored; }
+    }
+
+    private static bool IsExemptDirectory(string dirName, IReadOnlyCollection<string> exemptNames)
+    {
+        if (string.IsNullOrEmpty(dirName)) return false;
+        return exemptNames.Any(e => dirName.Equals(e, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsSuppressedViolation(

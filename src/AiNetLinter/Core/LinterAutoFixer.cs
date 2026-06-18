@@ -25,19 +25,13 @@ public sealed class LinterAutoFixer
     /// <summary>
     /// Fuehrt die automatische Korrektur fuer unterstuetzte Regeln auf der Solution aus.
     /// </summary>
-    /// <param name="solution">Die zu korrigierende Roslyn-Solution.</param>
-    /// <param name="violations">Die Liste der aktuell erkannten Linter-Verstoesse.</param>
-    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <param name="dryRun">Wenn true, werden Aenderungen nur angezeigt, aber nicht auf Disk geschrieben.</param>
-    /// <returns>Die Anzahl der behobenen (oder im DryRun: behebaren) Verstoesse sowie die aktualisierte Solution.</returns>
     public static async Task<(int FixedCount, Solution UpdatedSolution)> FixAsync(
         Solution solution,
         IReadOnlyCollection<RuleViolation> violations,
-        bool verbose,
-        bool dryRun = false)
+        FixOptions options)
     {
         var baseTypes = await CollectBaseTypesAsync(solution);
-        var context = new FixContext(baseTypes, verbose, dryRun);
+        var context = new FixContext(baseTypes, options.Verbose, options.DryRun);
         var currentSolution = solution;
         int fixedCount = 0;
 
@@ -321,3 +315,8 @@ public sealed class LinterAutoFixer
         bool Verbose,
         bool DryRun);
 }
+
+/// <summary>
+/// Optionen für <see cref="LinterAutoFixer.FixAsync"/>.
+/// </summary>
+public sealed record FixOptions(bool Verbose, bool DryRun = false);

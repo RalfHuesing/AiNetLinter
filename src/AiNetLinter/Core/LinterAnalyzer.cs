@@ -111,9 +111,15 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         var text = _tree.GetText();
         var lineCount = text.Lines.Count;
 
-        if (_config.Metrics.AggregatePartialClassLineCount && HasPartialRootDeclarations())
+        bool hasPartials = HasPartialRootDeclarations();
+
+        if (hasPartials)
         {
             RecordPartialClassParts(lineCount);
+        }
+
+        if (hasPartials && _config.Metrics.AggregatePartialClassLineCount)
+        {
             return;
         }
 

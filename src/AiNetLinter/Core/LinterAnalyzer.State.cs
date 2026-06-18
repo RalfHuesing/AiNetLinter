@@ -17,6 +17,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
     {
         CheckConstructorDependencies(node);
+        CheckBoolParameterCountForConstructor(node);
         base.VisitConstructorDeclaration(node);
     }
 

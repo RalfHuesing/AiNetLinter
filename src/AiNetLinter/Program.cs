@@ -277,7 +277,7 @@ public static class Program
         var engine = new LinterEngine(config, rulesJsonContent);
         var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
-            catalog.Solution, initialViolations, args.Verbose, dryRun: args.Check);
+            catalog.Solution, initialViolations, new FixOptions(args.Verbose, args.Check));
 
         if (args.Check)
         {

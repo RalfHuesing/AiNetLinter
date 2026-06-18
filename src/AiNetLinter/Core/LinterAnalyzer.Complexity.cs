@@ -42,6 +42,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckMethodComplexities(node);
         CheckMethodLineCount(node);
         CheckBusinessLogicBoundary(node);
+        CheckBoolParameterCountForMethod(node);
 
         base.VisitMethodDeclaration(node);
     }
