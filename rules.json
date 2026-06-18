@@ -2,22 +2,27 @@
   "Global": {
     "EnforceSealedClasses": true,
     "AllowUnsealedPartialClasses": false,
-    "SealedClassExemptSuffixes": ["Base", "Foundation", "Host"],
     "AllowDynamic": false,
     "AllowOutParameters": false,
-    "AllowTryPatternOutParameters": true,
-    "AllowOutParametersInPrivateMethods": true,
     "EnforceValueObjectContracts": true,
     "EnableTestSentinel": true,
     "EnforcePascalCase": true,
     "EnforceXmlDocumentation": false,
     "EnforceSemanticNaming": true,
-    "SemanticNamingExemptMethodNames": ["Equals", "CompareTo", "GetHashCode"],
-    "SemanticNamingAllowSubstringOfMethodName": true,
     "EnforceNullableEnable": true,
     "EnforceNoSilentCatch": true,
+    "AllowTryPatternOutParameters": true,
     "AllowCancellationShutdownCatch": true,
-    "AllowedSilentCatchExceptionTypes": ["ObjectDisposedException"],
+    "AllowOutParametersInPrivateMethods": true,
+    "SemanticNamingExemptMethodNames": [
+      "Equals",
+      "CompareTo",
+      "GetHashCode"
+    ],
+    "SemanticNamingAllowSubstringOfMethodName": true,
+    "AllowedSilentCatchExceptionTypes": [
+      "ObjectDisposedException"
+    ],
     "EnforceMinimalApiAsParameters": false,
     "EnforceResultPatternOverExceptions": false,
     "ResultPatternAllowThrowInNamespaceSuffixes": [
@@ -27,18 +32,47 @@
       "Program"
     ],
     "ResultPatternAllowCatchRethrow": true,
-    "EnablePerformanceProfiling": true,
     "EnforceExplicitStateImmutability": false,
+    "AllowedExceptions": [
+      "ArgumentException",
+      "ArgumentNullException",
+      "ArgumentOutOfRangeException",
+      "InvalidOperationException",
+      "NotSupportedException",
+      "KeyNotFoundException",
+      "IndexOutOfRangeException",
+      "TimeoutException",
+      "ObjectDisposedException",
+      "NotImplementedException"
+    ],
     "PreventContextDependentOverloads": false,
     "EnforceNamespaceDirectoryMapping": true,
     "NamespaceDirectoryMappingMode": "suffix-match",
-    "NamespaceDirectoryMappingIgnorePathSegments": ["src", "Source", "Domains", "Handlers"],
+    "NamespaceDirectoryMappingIgnorePathSegments": [
+      "src",
+      "Source",
+      "Domains",
+      "Handlers"
+    ],
     "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
     "DetectAndBanPhantomDependencies": false,
     "BanPublicNestedTypes": true,
     "BanPublicNestedTypesAllowPrivate": true,
-    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"],
+    "ImmutabilityExemptSuffixes": [
+      "Dto",
+      "Entity",
+      "Model",
+      "Request",
+      "Response",
+      "Command"
+    ],
     "ImmutabilityExemptPatterns": [],
+    "AllowedEmptyReads": false,
+    "SealedClassExemptSuffixes": [
+      "Base",
+      "Foundation",
+      "Host"
+    ],
     "ImmutabilityExemptBaseTypes": [
       "ComponentBase",
       "LayoutComponentBase",
@@ -49,16 +83,16 @@
       "INotifyPropertyChanged"
     ],
     "ImmutabilityAllowPrivateBackingFields": true,
-    "AllowedEmptyReads": false
+    "EnablePerformanceProfiling": true
   },
   "Metrics": {
     "MaxLineCount": 700,
     "MaxMethodParameterCount": 4,
     "MaxMethodParameterCountInTestFiles": 6,
-    "MethodParameterCountIgnoreTypeNames": ["CancellationToken"],
+    "MethodParameterCountIgnoreTypeNames": [
+      "CancellationToken"
+    ],
     "MethodParameterCountIgnoreTypePrefixes": [],
-    "FootprintIgnoreNamespacePrefixes": [],
-    "FootprintIgnoreTypeNames": [],
     "MaxMethodLineCount": 60,
     "MaxCyclomaticComplexity": 12,
     "MaxCognitiveComplexity": 15,
@@ -68,19 +102,6 @@
     "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
-    "MaxDirectoryChildren": 0,
-    "MaxDirectoryChildrenExemptNames": ["Migrations", "Generated", "wwwroot", "obj", "bin", ".git"],
-    "MaxBoolParameterCount": 1,
-    "MaxBoolParameterCountAllowPrivate": true,
-    "MaxBoolParameterCountExemptMethodPrefixes": ["Try"],
-    "MaxPartialClassFiles": 2,
-    "MaxPartialClassFilesExemptTypes": [],
-    "MaxPublicMembersPerType": 15,
-    "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"],
-    "MaxAIContextFootprint": 5000,
-    "ComplexityNearMissTolerance": 1,
-    "ExcludeSwitchDispatcherCases": true,
-    "SwitchDispatcherMaxCaseBodyLines": 3,
     "InheritanceDepthFrameworkPrefixes": [],
     "ConstructorDependencyIgnoreTypePrefixes": [
       "ILogger",
@@ -93,7 +114,40 @@
       "IServiceProvider",
       "IHttpContextAccessor"
     ],
-    "ConstructorDependencyExemptClassSuffixes": ["Exception"]
+    "ConstructorDependencyExemptClassSuffixes": [
+      "Exception"
+    ],
+    "MaxAIContextFootprint": 5000,
+    "FootprintIgnoreNamespacePrefixes": [],
+    "FootprintIgnoreTypeNames": [],
+    "ComplexityNearMissTolerance": 1,
+    "ExcludeSwitchDispatcherCases": true,
+    "SwitchDispatcherMaxCaseBodyLines": 3,
+    "MaxBoolParameterCount": 1,
+    "MaxBoolParameterCountAllowPrivate": true,
+    "MaxBoolParameterCountExemptMethodPrefixes": [
+      "Try"
+    ],
+    "MaxDirectoryChildren": 0,
+    "MaxDirectoryChildrenExemptNames": [
+      "Migrations",
+      "Generated",
+      "wwwroot",
+      "obj",
+      "bin",
+      ".git"
+    ],
+    "MaxPartialClassFiles": 2,
+    "MaxPartialClassFilesExemptTypes": [],
+    "MaxPublicMembersPerType": 15,
+    "MaxPublicMembersPerTypeExemptSuffixes": [
+      "Extensions",
+      "Mapper",
+      "Constants",
+      "Config",
+      "ConfigOverride",
+      "Args"
+    ]
   },
   "TestSentinel": {
     "ClassNamePatterns": [
@@ -120,7 +174,29 @@
       "Profile"
     ],
     "ExemptStaticClasses": true,
-    "TestProjectNameSuffixes": ["Tests", "Test", "IntegrationTests", "Specs", "Spec"]
+    "TestProjectNameSuffixes": [
+      "Tests",
+      "Test",
+      "IntegrationTests",
+      "Specs",
+      "Spec"
+    ]
+  },
+  "UiSeparation": {
+    "BlazorRequireCodeBehind": true,
+    "BlazorRequireCssIsolation": true,
+    "WpfRequireMinimalCodeBehind": true,
+    "WpfCodeBehindBaseTypes": [
+      "Window",
+      "UserControl",
+      "Page",
+      "NavigationWindow"
+    ],
+    "BlazorExcludeFileNames": [
+      "_Imports.razor"
+    ],
+    "WpfExcludeClassNames": [],
+    "BlazorCssIsolationOnlyWhenStylesNeeded": true
   },
   "FileFilters": {
     "ExcludeFilePatterns": [
@@ -137,22 +213,34 @@
     "SkipGeneratedCodeAttribute": true
   },
   "RuleMetadata": {
-    "MaxLineCount": { "severity": "error", "intent": "agent-context" },
-    "MaxCognitiveComplexity": { "severity": "error", "intent": "agent-context" },
-    "AllowOutParameters": { "severity": "warning", "intent": "csharp-idiom" },
-    "StaticTestSentinel": { "severity": "warning", "intent": "test-coverage" },
-    "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
-    "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" },
-    "BanPublicNestedTypes": { "severity": "error", "intent": "agent-context" }
-  },
-  "UiSeparation": {
-    "BlazorRequireCodeBehind": true,
-    "BlazorRequireCssIsolation": true,
-    "BlazorCssIsolationOnlyWhenStylesNeeded": true,
-    "WpfRequireMinimalCodeBehind": true,
-    "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
-    "BlazorExcludeFileNames": ["_Imports.razor"],
-    "WpfExcludeClassNames": []
+    "MaxLineCount": {
+      "Severity": "error",
+      "Intent": "agent-context"
+    },
+    "MaxCognitiveComplexity": {
+      "Severity": "error",
+      "Intent": "agent-context"
+    },
+    "AllowOutParameters": {
+      "Severity": "warning",
+      "Intent": "csharp-idiom"
+    },
+    "StaticTestSentinel": {
+      "Severity": "warning",
+      "Intent": "test-coverage"
+    },
+    "EnforceMinimalApiAsParameters": {
+      "Severity": "error",
+      "Intent": "aspnet-binding"
+    },
+    "EnforceNoSilentCatch": {
+      "Severity": "error",
+      "Intent": "agent-resilience"
+    },
+    "BanPublicNestedTypes": {
+      "Severity": "error",
+      "Intent": "agent-context"
+    }
   },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
@@ -162,8 +250,19 @@
       },
       "Metrics": {
         "MaxMethodLineCount": 100,
-        "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args", "Tests", "Test", "Specs"]
+        "MaxPublicMembersPerTypeExemptSuffixes": [
+          "Extensions",
+          "Mapper",
+          "Constants",
+          "Config",
+          "ConfigOverride",
+          "Args",
+          "Tests",
+          "Test",
+          "Specs"
+        ]
       }
     }
-  }
+  },
+  "PathOverrides": {}
 }

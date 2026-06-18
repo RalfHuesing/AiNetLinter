@@ -1,6 +1,7 @@
 {
   "Global": {
     "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": false,
     "AllowDynamic": false,
     "AllowOutParameters": false,
     "EnforceValueObjectContracts": false,
@@ -9,16 +10,172 @@
     "EnforceXmlDocumentation": false,
     "EnforceSemanticNaming": false,
     "EnforceNullableEnable": false,
-    "EnforceNoSilentCatch": false
+    "EnforceNoSilentCatch": false,
+    "AllowTryPatternOutParameters": true,
+    "AllowCancellationShutdownCatch": true,
+    "AllowOutParametersInPrivateMethods": true,
+    "SemanticNamingExemptMethodNames": [
+      "Equals",
+      "CompareTo",
+      "GetHashCode"
+    ],
+    "SemanticNamingAllowSubstringOfMethodName": true,
+    "AllowedSilentCatchExceptionTypes": [],
+    "EnforceMinimalApiAsParameters": false,
+    "EnforceResultPatternOverExceptions": false,
+    "ResultPatternAllowThrowInNamespaceSuffixes": [],
+    "ResultPatternAllowCatchRethrow": true,
+    "EnforceExplicitStateImmutability": true,
+    "AllowedExceptions": [
+      "ArgumentException",
+      "ArgumentNullException",
+      "ArgumentOutOfRangeException",
+      "InvalidOperationException",
+      "NotSupportedException",
+      "KeyNotFoundException",
+      "IndexOutOfRangeException",
+      "TimeoutException",
+      "ObjectDisposedException",
+      "NotImplementedException"
+    ],
+    "PreventContextDependentOverloads": false,
+    "EnforceNamespaceDirectoryMapping": true,
+    "NamespaceDirectoryMappingMode": "exact",
+    "NamespaceDirectoryMappingIgnorePathSegments": [],
+    "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
+    "DetectAndBanPhantomDependencies": false,
+    "BanPublicNestedTypes": true,
+    "BanPublicNestedTypesAllowPrivate": true,
+    "ImmutabilityExemptSuffixes": [
+      "Dto",
+      "Entity",
+      "Model",
+      "Request",
+      "Response",
+      "Command"
+    ],
+    "ImmutabilityExemptPatterns": [],
+    "AllowedEmptyReads": false,
+    "SealedClassExemptSuffixes": [
+      "Base",
+      "Foundation",
+      "Host"
+    ],
+    "ImmutabilityExemptBaseTypes": [
+      "ComponentBase",
+      "LayoutComponentBase",
+      "ObservableObject",
+      "ObservableRecipient",
+      "BackgroundService",
+      "AuthenticationStateProvider",
+      "INotifyPropertyChanged"
+    ],
+    "ImmutabilityAllowPrivateBackingFields": true,
+    "EnablePerformanceProfiling": true
   },
   "Metrics": {
     "MaxLineCount": 500,
     "MaxMethodParameterCount": 4,
+    "MaxMethodParameterCountInTestFiles": 0,
+    "MethodParameterCountIgnoreTypeNames": [
+      "CancellationToken"
+    ],
+    "MethodParameterCountIgnoreTypePrefixes": [],
     "MaxMethodLineCount": 42,
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
     "MaxInheritanceDepth": 2,
-    "MinCognitiveComplexityForTest": 3
+    "MinCognitiveComplexityForTest": 3,
+    "AggregatePartialClassLineCount": false,
+    "MaxMethodOverloads": 3,
+    "MaxConstructorDependencies": 5,
+    "MaxDirectoryDepth": 4,
+    "InheritanceDepthFrameworkPrefixes": [],
+    "ConstructorDependencyIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IOptionsSnapshot",
+      "IOptionsMonitor",
+      "IHostEnvironment",
+      "IWebHostEnvironment",
+      "IConfiguration",
+      "IServiceProvider",
+      "IHttpContextAccessor"
+    ],
+    "ConstructorDependencyExemptClassSuffixes": [],
+    "MaxAIContextFootprint": 5000,
+    "FootprintIgnoreNamespacePrefixes": [],
+    "FootprintIgnoreTypeNames": [],
+    "ComplexityNearMissTolerance": 1,
+    "ExcludeSwitchDispatcherCases": true,
+    "SwitchDispatcherMaxCaseBodyLines": 3,
+    "MaxBoolParameterCount": 0,
+    "MaxBoolParameterCountAllowPrivate": true,
+    "MaxBoolParameterCountExemptMethodPrefixes": [],
+    "MaxDirectoryChildren": 0,
+    "MaxDirectoryChildrenExemptNames": [
+      "Migrations",
+      "Generated",
+      "wwwroot",
+      "obj",
+      "bin",
+      ".git"
+    ],
+    "MaxPartialClassFiles": 0,
+    "MaxPartialClassFilesExemptTypes": [],
+    "MaxPublicMembersPerType": 0,
+    "MaxPublicMembersPerTypeExemptSuffixes": [
+      "Extensions",
+      "Mapper",
+      "Constants"
+    ]
   },
-  "ForbiddenNamespaceDependencies": []
+  "TestSentinel": {
+    "ClassNamePatterns": [
+      "{Name}Tests",
+      "{Name}Test",
+      "{Name}IntegrationTests",
+      "{Name}*Tests"
+    ],
+    "RecognizeTypeofReference": true,
+    "RecognizeCoversComment": true,
+    "ExemptClassNameSuffixes": [],
+    "ExemptWhenInheritsFrom": [],
+    "ExemptStaticClasses": false,
+    "TestProjectNameSuffixes": [
+      "Tests",
+      "Test",
+      "IntegrationTests",
+      "Specs",
+      "Spec"
+    ]
+  },
+  "UiSeparation": {
+    "BlazorRequireCodeBehind": true,
+    "BlazorRequireCssIsolation": true,
+    "WpfRequireMinimalCodeBehind": true,
+    "WpfCodeBehindBaseTypes": [
+      "Window",
+      "UserControl",
+      "Page",
+      "NavigationWindow"
+    ],
+    "BlazorExcludeFileNames": [
+      "_Imports.razor"
+    ],
+    "WpfExcludeClassNames": [],
+    "BlazorCssIsolationOnlyWhenStylesNeeded": true
+  },
+  "FileFilters": {
+    "ExcludeFilePatterns": [],
+    "ExcludeDirectoryPatterns": [
+      "obj/",
+      "bin/"
+    ],
+    "SkipGeneratedCodeAttribute": false
+  },
+  "RuleMetadata": {},
+  "ForbiddenNamespaceDependencies": [],
+  "ProjectOverrides": {},
+  "PathOverrides": {}
 }

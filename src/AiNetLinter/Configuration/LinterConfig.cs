@@ -185,72 +185,69 @@ public sealed record GlobalConfig
     public GlobalConfig Apply(GlobalConfigOverride? @override)
     {
         if (@override == null) return this;
-        var result = ApplyCore1(@override);
-        return result.ApplyCore2(@override);
+        return ApplyStructuralRules(@override)
+            .ApplyNamingAndStyleRules(@override)
+            .ApplyCatchRules(@override)
+            .ApplyImmutabilityRules(@override)
+            .ApplyNamespaceAndAnalysisRules(@override);
     }
 
-    private GlobalConfig ApplyCore1(GlobalConfigOverride @override) =>
-        ApplyCore1a(@override).ApplyCore1b(@override);
-
-    private GlobalConfig ApplyCore1a(GlobalConfigOverride @override) => this with
+    private GlobalConfig ApplyStructuralRules(GlobalConfigOverride o) => this with
     {
-        EnforceSealedClasses = @override.EnforceSealedClasses ?? EnforceSealedClasses,
-        AllowUnsealedPartialClasses = @override.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
-        AllowDynamic = @override.AllowDynamic ?? AllowDynamic,
-        AllowOutParameters = @override.AllowOutParameters ?? AllowOutParameters,
-        EnforceValueObjectContracts = @override.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
-        EnableTestSentinel = @override.EnableTestSentinel ?? EnableTestSentinel,
-        EnforcePascalCase = @override.EnforcePascalCase ?? EnforcePascalCase,
+        EnforceSealedClasses = o.EnforceSealedClasses ?? EnforceSealedClasses,
+        AllowUnsealedPartialClasses = o.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
+        AllowDynamic = o.AllowDynamic ?? AllowDynamic,
+        AllowOutParameters = o.AllowOutParameters ?? AllowOutParameters,
+        AllowTryPatternOutParameters = o.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
+        AllowOutParametersInPrivateMethods = o.AllowOutParametersInPrivateMethods ?? AllowOutParametersInPrivateMethods,
+        SealedClassExemptSuffixes = o.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
     };
 
-    private GlobalConfig ApplyCore1b(GlobalConfigOverride @override) => this with
+    private GlobalConfig ApplyNamingAndStyleRules(GlobalConfigOverride o) => this with
     {
-        EnforceXmlDocumentation = @override.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
-        EnforceSemanticNaming = @override.EnforceSemanticNaming ?? EnforceSemanticNaming,
-        EnforceNullableEnable = @override.EnforceNullableEnable ?? EnforceNullableEnable,
-        EnforceNoSilentCatch = @override.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
-        AllowTryPatternOutParameters = @override.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
-        AllowCancellationShutdownCatch = @override.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
-        AllowedSilentCatchExceptionTypes = @override.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
-        EnforceMinimalApiAsParameters = @override.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
-        EnforceResultPatternOverExceptions = @override.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
-        AllowOutParametersInPrivateMethods = @override.AllowOutParametersInPrivateMethods ?? AllowOutParametersInPrivateMethods,
-        SemanticNamingExemptMethodNames = @override.SemanticNamingExemptMethodNames ?? SemanticNamingExemptMethodNames,
+        EnforcePascalCase = o.EnforcePascalCase ?? EnforcePascalCase,
+        EnforceSemanticNaming = o.EnforceSemanticNaming ?? EnforceSemanticNaming,
+        SemanticNamingExemptMethodNames = o.SemanticNamingExemptMethodNames ?? SemanticNamingExemptMethodNames,
+        SemanticNamingAllowSubstringOfMethodName = o.SemanticNamingAllowSubstringOfMethodName ?? SemanticNamingAllowSubstringOfMethodName,
+        EnforceNullableEnable = o.EnforceNullableEnable ?? EnforceNullableEnable,
+        EnforceXmlDocumentation = o.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
+        EnforceMinimalApiAsParameters = o.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
+        EnableTestSentinel = o.EnableTestSentinel ?? EnableTestSentinel,
     };
 
-    private GlobalConfig ApplyCore2(GlobalConfigOverride @override) =>
-        ApplyCore2a(@override).ApplyCore2b(@override).ApplyCore2c(@override);
-
-    private GlobalConfig ApplyCore2a(GlobalConfigOverride @override) => this with
+    private GlobalConfig ApplyCatchRules(GlobalConfigOverride o) => this with
     {
-        EnforceExplicitStateImmutability = @override.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
-        AllowedExceptions = @override.AllowedExceptions ?? AllowedExceptions,
-        PreventContextDependentOverloads = @override.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
+        EnforceNoSilentCatch = o.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
+        AllowCancellationShutdownCatch = o.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
+        AllowedSilentCatchExceptionTypes = o.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
+        EnforceResultPatternOverExceptions = o.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
+        ResultPatternAllowThrowInNamespaceSuffixes = o.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
+        ResultPatternAllowCatchRethrow = o.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
+        AllowedExceptions = o.AllowedExceptions ?? AllowedExceptions,
     };
 
-    private GlobalConfig ApplyCore2b(GlobalConfigOverride @override) => this with
+    private GlobalConfig ApplyImmutabilityRules(GlobalConfigOverride o) => this with
     {
-        EnforceNamespaceDirectoryMapping = @override.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
-        NamespaceDirectoryMappingMode = @override.NamespaceDirectoryMappingMode ?? NamespaceDirectoryMappingMode,
-        NamespaceDirectoryMappingIgnorePathSegments = @override.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,
-        NamespaceDirectoryMappingRequiredTrailingSegments = @override.NamespaceDirectoryMappingRequiredTrailingSegments ?? NamespaceDirectoryMappingRequiredTrailingSegments,
-        DetectAndBanPhantomDependencies = @override.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
-        ImmutabilityExemptSuffixes = @override.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
-        ImmutabilityExemptPatterns = @override.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
+        EnforceValueObjectContracts = o.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
+        EnforceExplicitStateImmutability = o.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
+        ImmutabilityExemptSuffixes = o.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
+        ImmutabilityExemptPatterns = o.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
+        ImmutabilityExemptBaseTypes = o.ImmutabilityExemptBaseTypes ?? ImmutabilityExemptBaseTypes,
+        ImmutabilityAllowPrivateBackingFields = o.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
+        AllowedEmptyReads = o.AllowedEmptyReads ?? AllowedEmptyReads,
     };
 
-    private GlobalConfig ApplyCore2c(GlobalConfigOverride @override) => this with
+    private GlobalConfig ApplyNamespaceAndAnalysisRules(GlobalConfigOverride o) => this with
     {
-        AllowedEmptyReads = @override.AllowedEmptyReads ?? AllowedEmptyReads,
-        SealedClassExemptSuffixes = @override.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
-        ImmutabilityExemptBaseTypes = @override.ImmutabilityExemptBaseTypes ?? ImmutabilityExemptBaseTypes,
-        ImmutabilityAllowPrivateBackingFields = @override.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
-        ResultPatternAllowThrowInNamespaceSuffixes = @override.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
-        ResultPatternAllowCatchRethrow = @override.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
-        EnablePerformanceProfiling = @override.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
-        SemanticNamingAllowSubstringOfMethodName = @override.SemanticNamingAllowSubstringOfMethodName ?? SemanticNamingAllowSubstringOfMethodName,
-        BanPublicNestedTypes = @override.BanPublicNestedTypes ?? BanPublicNestedTypes,
-        BanPublicNestedTypesAllowPrivate = @override.BanPublicNestedTypesAllowPrivate ?? BanPublicNestedTypesAllowPrivate,
+        EnforceNamespaceDirectoryMapping = o.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
+        NamespaceDirectoryMappingMode = o.NamespaceDirectoryMappingMode ?? NamespaceDirectoryMappingMode,
+        NamespaceDirectoryMappingIgnorePathSegments = o.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,
+        NamespaceDirectoryMappingRequiredTrailingSegments = o.NamespaceDirectoryMappingRequiredTrailingSegments ?? NamespaceDirectoryMappingRequiredTrailingSegments,
+        DetectAndBanPhantomDependencies = o.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
+        PreventContextDependentOverloads = o.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
+        BanPublicNestedTypes = o.BanPublicNestedTypes ?? BanPublicNestedTypes,
+        BanPublicNestedTypesAllowPrivate = o.BanPublicNestedTypesAllowPrivate ?? BanPublicNestedTypesAllowPrivate,
+        EnablePerformanceProfiling = o.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
     };
 }
 
@@ -424,55 +421,61 @@ public sealed record MetricsConfig
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
-    public MetricsConfig Apply(MetricsConfigOverride? @override) =>
-        ApplyPart1(@override).ApplyPart2a(@override).ApplyPart2b(@override).ApplyPart3(@override);
-
-    private MetricsConfig ApplyPart1(MetricsConfigOverride? @override) => this with
+    public MetricsConfig Apply(MetricsConfigOverride? @override)
     {
-        MaxLineCount = @override?.MaxLineCount ?? MaxLineCount,
-        MaxMethodParameterCount = @override?.MaxMethodParameterCount ?? MaxMethodParameterCount,
-        MaxMethodParameterCountInTestFiles = @override?.MaxMethodParameterCountInTestFiles ?? MaxMethodParameterCountInTestFiles,
-        MethodParameterCountIgnoreTypeNames = @override?.MethodParameterCountIgnoreTypeNames ?? MethodParameterCountIgnoreTypeNames,
-        MaxMethodLineCount = @override?.MaxMethodLineCount ?? MaxMethodLineCount,
-        MaxCyclomaticComplexity = @override?.MaxCyclomaticComplexity ?? MaxCyclomaticComplexity,
-        MaxCognitiveComplexity = @override?.MaxCognitiveComplexity ?? MaxCognitiveComplexity,
-        MaxInheritanceDepth = @override?.MaxInheritanceDepth ?? MaxInheritanceDepth,
-        MinCognitiveComplexityForTest = @override?.MinCognitiveComplexityForTest ?? MinCognitiveComplexityForTest,
-        AggregatePartialClassLineCount = @override?.AggregatePartialClassLineCount ?? AggregatePartialClassLineCount,
-        MaxMethodOverloads = @override?.MaxMethodOverloads ?? MaxMethodOverloads,
+        if (@override == null) return this;
+        return ApplyLineLimits(@override)
+            .ApplyComplexityLimits(@override)
+            .ApplyDependencyLimits(@override)
+            .ApplyDirectoryAndMemberLimits(@override);
+    }
+
+    private MetricsConfig ApplyLineLimits(MetricsConfigOverride o) => this with
+    {
+        MaxLineCount = o.MaxLineCount ?? MaxLineCount,
+        MaxMethodLineCount = o.MaxMethodLineCount ?? MaxMethodLineCount,
+        MaxMethodParameterCount = o.MaxMethodParameterCount ?? MaxMethodParameterCount,
+        MaxMethodParameterCountInTestFiles = o.MaxMethodParameterCountInTestFiles ?? MaxMethodParameterCountInTestFiles,
+        MethodParameterCountIgnoreTypeNames = o.MethodParameterCountIgnoreTypeNames ?? MethodParameterCountIgnoreTypeNames,
+        MethodParameterCountIgnoreTypePrefixes = o.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
+        MaxMethodOverloads = o.MaxMethodOverloads ?? MaxMethodOverloads,
     };
 
-    private MetricsConfig ApplyPart2a(MetricsConfigOverride? @override) => this with
+    private MetricsConfig ApplyComplexityLimits(MetricsConfigOverride o) => this with
     {
-        MaxConstructorDependencies = @override?.MaxConstructorDependencies ?? MaxConstructorDependencies,
-        MaxAIContextFootprint = @override?.MaxAIContextFootprint ?? MaxAIContextFootprint,
-        FootprintIgnoreNamespacePrefixes = @override?.FootprintIgnoreNamespacePrefixes ?? FootprintIgnoreNamespacePrefixes,
-        FootprintIgnoreTypeNames = @override?.FootprintIgnoreTypeNames ?? FootprintIgnoreTypeNames,
-        MethodParameterCountIgnoreTypePrefixes = @override?.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
-        MaxDirectoryDepth = @override?.MaxDirectoryDepth ?? MaxDirectoryDepth,
-        InheritanceDepthFrameworkPrefixes = @override?.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
+        MaxCyclomaticComplexity = o.MaxCyclomaticComplexity ?? MaxCyclomaticComplexity,
+        MaxCognitiveComplexity = o.MaxCognitiveComplexity ?? MaxCognitiveComplexity,
+        MinCognitiveComplexityForTest = o.MinCognitiveComplexityForTest ?? MinCognitiveComplexityForTest,
+        AggregatePartialClassLineCount = o.AggregatePartialClassLineCount ?? AggregatePartialClassLineCount,
+        ComplexityNearMissTolerance = o.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
+        ExcludeSwitchDispatcherCases = o.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
+        SwitchDispatcherMaxCaseBodyLines = o.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
     };
 
-    private MetricsConfig ApplyPart2b(MetricsConfigOverride? @override) => this with
+    private MetricsConfig ApplyDependencyLimits(MetricsConfigOverride o) => this with
     {
-        ConstructorDependencyIgnoreTypePrefixes = @override?.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
-        ConstructorDependencyExemptClassSuffixes = @override?.ConstructorDependencyExemptClassSuffixes ?? ConstructorDependencyExemptClassSuffixes,
-        ComplexityNearMissTolerance = @override?.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
-        ExcludeSwitchDispatcherCases = @override?.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
-        SwitchDispatcherMaxCaseBodyLines = @override?.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
+        MaxConstructorDependencies = o.MaxConstructorDependencies ?? MaxConstructorDependencies,
+        ConstructorDependencyIgnoreTypePrefixes = o.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
+        ConstructorDependencyExemptClassSuffixes = o.ConstructorDependencyExemptClassSuffixes ?? ConstructorDependencyExemptClassSuffixes,
+        MaxInheritanceDepth = o.MaxInheritanceDepth ?? MaxInheritanceDepth,
+        InheritanceDepthFrameworkPrefixes = o.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
+        MaxAIContextFootprint = o.MaxAIContextFootprint ?? MaxAIContextFootprint,
+        FootprintIgnoreNamespacePrefixes = o.FootprintIgnoreNamespacePrefixes ?? FootprintIgnoreNamespacePrefixes,
+        FootprintIgnoreTypeNames = o.FootprintIgnoreTypeNames ?? FootprintIgnoreTypeNames,
     };
 
-    private MetricsConfig ApplyPart3(MetricsConfigOverride? @override) => this with
+    private MetricsConfig ApplyDirectoryAndMemberLimits(MetricsConfigOverride o) => this with
     {
-        MaxBoolParameterCount = @override?.MaxBoolParameterCount ?? MaxBoolParameterCount,
-        MaxBoolParameterCountAllowPrivate = @override?.MaxBoolParameterCountAllowPrivate ?? MaxBoolParameterCountAllowPrivate,
-        MaxBoolParameterCountExemptMethodPrefixes = @override?.MaxBoolParameterCountExemptMethodPrefixes ?? MaxBoolParameterCountExemptMethodPrefixes,
-        MaxDirectoryChildren = @override?.MaxDirectoryChildren ?? MaxDirectoryChildren,
-        MaxDirectoryChildrenExemptNames = @override?.MaxDirectoryChildrenExemptNames ?? MaxDirectoryChildrenExemptNames,
-        MaxPartialClassFiles = @override?.MaxPartialClassFiles ?? MaxPartialClassFiles,
-        MaxPartialClassFilesExemptTypes = @override?.MaxPartialClassFilesExemptTypes ?? MaxPartialClassFilesExemptTypes,
-        MaxPublicMembersPerType = @override?.MaxPublicMembersPerType ?? MaxPublicMembersPerType,
-        MaxPublicMembersPerTypeExemptSuffixes = @override?.MaxPublicMembersPerTypeExemptSuffixes ?? MaxPublicMembersPerTypeExemptSuffixes,
+        MaxDirectoryDepth = o.MaxDirectoryDepth ?? MaxDirectoryDepth,
+        MaxDirectoryChildren = o.MaxDirectoryChildren ?? MaxDirectoryChildren,
+        MaxDirectoryChildrenExemptNames = o.MaxDirectoryChildrenExemptNames ?? MaxDirectoryChildrenExemptNames,
+        MaxBoolParameterCount = o.MaxBoolParameterCount ?? MaxBoolParameterCount,
+        MaxBoolParameterCountAllowPrivate = o.MaxBoolParameterCountAllowPrivate ?? MaxBoolParameterCountAllowPrivate,
+        MaxBoolParameterCountExemptMethodPrefixes = o.MaxBoolParameterCountExemptMethodPrefixes ?? MaxBoolParameterCountExemptMethodPrefixes,
+        MaxPartialClassFiles = o.MaxPartialClassFiles ?? MaxPartialClassFiles,
+        MaxPartialClassFilesExemptTypes = o.MaxPartialClassFilesExemptTypes ?? MaxPartialClassFilesExemptTypes,
+        MaxPublicMembersPerType = o.MaxPublicMembersPerType ?? MaxPublicMembersPerType,
+        MaxPublicMembersPerTypeExemptSuffixes = o.MaxPublicMembersPerTypeExemptSuffixes ?? MaxPublicMembersPerTypeExemptSuffixes,
     };
 }
 
