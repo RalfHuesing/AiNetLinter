@@ -262,6 +262,14 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Suppression:** Razor-Kommentar-Syntax `@* ainetlinter-disable RuleName *@`, Klassen-Ausschlusslisten per Config.
 - [x] **Konfigurations-Sektion `UiSeparation`** mit WPF/Blazor-getrennten Optionen, Ausschluss-Listen und Projekt-Override-Support.
 
+---
+
+## Epic 23: Strukturmetriken & API-Surface-Kontrolle
+- [x] **Regel: MaxBoolParameterCount** – Maximale Anzahl von `bool`-Parametern pro Methode/Konstruktor (Standard: 1). Bool-Parameter sind an der Call-Site opak (`DoWork(true, false)`); ab Überschreitung: Parameter-Object-Pattern. `MaxBoolParameterCountAllowPrivate` (Standard: `true`) und `MaxBoolParameterCountExemptMethodPrefixes` für projektspezifische Ausnahmen.
+- [x] **Regel: MaxDirectoryChildren** – Maximale Anzahl von Einträgen in einem Verzeichnis (Standard: 0 = deaktiviert). Verhindert Flat-Folder-Antipattern (zu viele Dateien auf einer Ebene); Empfehlung: 20–30 für Mittelklasse-Projekte. `MaxDirectoryChildrenExemptNames` für bekannte Ausnahmen wie `Migrations`, `Generated`.
+- [x] **Regel: MaxPartialClassFiles** – Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 2). Mehr als 2 `partial`-Dateien signalisieren eine zu breite Klasse; Guidance: Unter-Logik in eigenständige `XyzChecker`/`XyzValidator`-Klassen auslagern. `MaxPartialClassFilesExemptTypes` für unvermeidliche Ausnahmen.
+- [x] **Regel: MaxPublicMembersPerType** – Maximale Anzahl öffentlicher Member pro Typ (Standard: 15). Begrenzt die API-Surface und reduziert den KI-Kontextaufwand beim Verstehen eines Typs. `MaxPublicMembersPerTypeExemptSuffixes` für Typen mit strukturell großer API-Surface (z. B. `Extensions`, `Mapper`).
+
 
 
 

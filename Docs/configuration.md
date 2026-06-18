@@ -99,6 +99,15 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
+    "MaxDirectoryChildren": 0,
+    "MaxDirectoryChildrenExemptNames": ["Migrations", "Generated", "wwwroot", "obj", "bin"],
+    "MaxBoolParameterCount": 1,
+    "MaxBoolParameterCountAllowPrivate": true,
+    "MaxBoolParameterCountExemptMethodPrefixes": ["Try"],
+    "MaxPartialClassFiles": 2,
+    "MaxPartialClassFilesExemptTypes": [],
+    "MaxPublicMembersPerType": 15,
+    "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "Args"],
     "MaxAIContextFootprint": 5000
   },
   "TestSentinel": {
@@ -178,6 +187,10 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
 | `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
+| `MaxDirectoryChildren` | Metrics | Maximale Anzahl von Einträgen (Dateien + Unterordner) in einem Verzeichnis (Standard: 0 = deaktiviert). `MaxDirectoryChildrenExemptNames`: Ordnernamen, die ausgenommen werden (Standard: `["Migrations", "Generated", "wwwroot", "obj", "bin"]`). |
+| `MaxBoolParameterCount` | Metrics | Maximale Anzahl von `bool`-Parametern pro Methode oder Konstruktor (Standard: 0 = deaktiviert). `MaxBoolParameterCountAllowPrivate`: Wenn `true`, werden `private`/`protected` Methoden ausgenommen (Standard: `true`). `MaxBoolParameterCountExemptMethodPrefixes`: Methoden-Präfixe, die ausgenommen werden (Standard: `["Try"]`). |
+| `MaxPartialClassFiles` | Metrics | Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 0 = deaktiviert). Empfehlung: 2 — eine Deklarations- und eine Erweiterungsdatei. Guidance: Unter-Logik in eigenständige Klassen (z. B. `XyzChecker`) auslagern. `MaxPartialClassFilesExemptTypes`: vollqualifizierte oder einfache Typnamen, die ausgenommen werden (Standard: `[]`). |
+| `MaxPublicMembersPerType` | Metrics | Maximale Anzahl öffentlicher Member (Methoden, Properties, Felder, Events) pro Typ (Standard: 0 = deaktiviert). `MaxPublicMembersPerTypeExemptSuffixes`: Klassenname-Suffixe, für die die Prüfung übersprungen wird (Standard: `["Extensions", "Mapper", "Constants", "Config", "Args"]`). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. Bei Blazor-Komponenten aus mehreren `partial`-Dateien (`.razor.cs` + weitere partials) werden alle Teile als eine logische Einheit behandelt. |
 | `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
 | `FootprintIgnoreTypeNames` | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`. |

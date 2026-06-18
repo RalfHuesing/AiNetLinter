@@ -119,6 +119,10 @@ public static class CursorRulesGenerator
         new(m => m.MaxMethodOverloads, "MaxMethodOverloads", "Methoden mit eindeutigen Namen bevorzugen."),
         new(m => m.MaxConstructorDependencies, "MaxConstructorDependencies", "Verantwortlichkeit aufteilen bei Überschreitung."),
         new(m => m.MaxDirectoryDepth, "MaxDirectoryDepth", "Ordner nicht unnötig tief schachteln."),
+        new(m => m.MaxDirectoryChildren, "MaxDirectoryChildren", "0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen."),
+        new(m => m.MaxBoolParameterCount, "MaxBoolParameterCount", "0 = deaktiviert; bool-Parameter in Parameter-Object bündeln."),
+        new(m => m.MaxPartialClassFiles, "MaxPartialClassFiles", "0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker)."),
+        new(m => m.MaxPublicMembersPerType, "MaxPublicMembersPerType", "0 = deaktiviert; Typ aufteilen oder Member kapseln."),
         new(m => m.MaxAIContextFootprint, "MaxAIContextFootprint", "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren."),
     ];
 
