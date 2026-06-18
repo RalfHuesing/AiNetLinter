@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.46 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.47 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -51,7 +51,7 @@ Auto-generiert durch AiNetLinter 1.0.46 aus `rules.json`. Neuen Produktionscode 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 
 ## Deaktiviert
-Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `EnforceNoVariableShadowing`, `EnforceReadonlyParameters`, `EnforceReadonlyFields`, `EnforceNoMagicValues`, `EnforceExplicitStateImmutability`, `EnforceStrictBoundaryForBusinessLogic`, `PreventContextDependentOverloads`, `RequireExplicitTruncationHandling`, `DetectAndBanPhantomDependencies`.
+Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `EnforceNoVariableShadowing`, `EnforceReadonlyParameters`, `EnforceReadonlyFields`, `EnforceNoMagicValues`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, `DetectAndBanPhantomDependencies`.
 Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)

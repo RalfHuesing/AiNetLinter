@@ -1,5 +1,5 @@
-﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.46)
-Produktionscode · 155 Typen · 13 Namespaces
+﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.47)
+Produktionscode · 153 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -102,10 +102,9 @@ Produktionscode · 155 Typen · 13 Namespaces
 - TypeInfo [record] → TypeInfo
 - UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
-## AiNetLinter.Core.Checkers (18)
+## AiNetLinter.Core.Checkers (16)
 - ArchitectureChecker → CheckerContext
 - BoolParameterChecker → CheckerContext
-- BusinessLogicChecker → CheckerContext
 - CheckerContext → FieldReadonlyTracker, LinterConfig, RuleViolation
 - ComplexityCheck [record] → ComplexityCheck
 - ComplexityChecker → CheckerContext, ComplexityCheck
@@ -119,7 +118,6 @@ Produktionscode · 155 Typen · 13 Namespaces
 - ScopeChecker → CheckerContext
 - StateChecker → CheckerContext
 - SyntaxHelper
-- TruncationChecker → CheckerContext
 - WpfSeparationChecker → CheckerContext
 
 ## AiNetLinter.Diagnostics (6)

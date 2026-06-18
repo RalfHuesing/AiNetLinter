@@ -257,9 +257,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Regel: EnforceExplicitStateImmutability** – Zwingt Klassen (außer DTOs/Entities) zur Unveränderlichkeit (init Properties, readonly private fields).
 - [x] **Fehlerbehandlung: Refine Exception Control Flow** – Erlaubt das Werfen von fatalen/technischen Standard-Exceptions für Fail-Fast-Muster.
 - [x] **Token-Hygiene: Refine XML Documentation** – Reduziert XML-Dokumentationspflichten auf Typ-Deklarationen zur Token-Einsparung.
-- [x] **Regel: EnforceStrictBoundaryForBusinessLogic** – Isoliert reine Geschäftslogik-Berechnungen in statischen, I/O-freien Methoden.
 - [x] **Regel: PreventContextDependentOverloads** – Limitierung auf max. 3 Methodenüberladungen und Verbot primitiver Überladungskonflikte.
-- [x] **Regel: RequireExplicitTruncationHandling** – Erzwingt unmittelbare Validierung nach I/O- oder Stream-Leseoperationen.
 - [x] **Regel: EnforceNamespaceDirectoryMapping** – Erzwingt exakte Namespace-Ordner-Konformität und begrenzt die Ordnertiefe (MaxDirectoryDepth).
 - [x] **Regel: DetectAndBanPhantomDependencies** – Verhindert nicht-referenzierte using-Imports und dynamische Reflection-Lade-APIs.
 

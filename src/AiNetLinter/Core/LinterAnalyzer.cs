@@ -143,7 +143,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         var isPublic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
         NamingChecker.CheckSemanticNaming(node.ParameterList, isPublic, _ctx, node.Identifier.Text);
         ComplexityChecker.CheckMethod(node, _ctx);
-        BusinessLogicChecker.Check(node, _ctx);
         BoolParameterChecker.CheckMethod(node, _ctx);
         base.VisitMethodDeclaration(node);
     }
@@ -240,7 +239,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         MinimalApiChecker.Check(node, _ctx);
         ArchitectureChecker.CheckPhantomReflection(node, _ctx);
-        TruncationChecker.Check(node, _ctx);
         base.VisitInvocationExpression(node);
     }
 

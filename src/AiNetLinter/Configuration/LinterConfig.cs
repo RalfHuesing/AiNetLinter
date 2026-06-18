@@ -127,9 +127,7 @@ public sealed record GlobalConfig
         "ObjectDisposedException",
         "NotImplementedException"
     };
-    public bool EnforceStrictBoundaryForBusinessLogic { get; init; } = true;
     public bool PreventContextDependentOverloads { get; init; } = true;
-    public bool RequireExplicitTruncationHandling { get; init; } = true;
     public bool EnforceNamespaceDirectoryMapping { get; init; } = true;
 
     /// <summary>
@@ -227,13 +225,11 @@ public sealed record GlobalConfig
         EnforceNoMagicValues = @override.EnforceNoMagicValues ?? EnforceNoMagicValues,
         EnforceExplicitStateImmutability = @override.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
         AllowedExceptions = @override.AllowedExceptions ?? AllowedExceptions,
-        EnforceStrictBoundaryForBusinessLogic = @override.EnforceStrictBoundaryForBusinessLogic ?? EnforceStrictBoundaryForBusinessLogic,
         PreventContextDependentOverloads = @override.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
     };
 
     private GlobalConfig ApplyCore2b(GlobalConfigOverride @override) => this with
     {
-        RequireExplicitTruncationHandling = @override.RequireExplicitTruncationHandling ?? RequireExplicitTruncationHandling,
         EnforceNamespaceDirectoryMapping = @override.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
         NamespaceDirectoryMappingMode = @override.NamespaceDirectoryMappingMode ?? NamespaceDirectoryMappingMode,
         NamespaceDirectoryMappingIgnorePathSegments = @override.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,

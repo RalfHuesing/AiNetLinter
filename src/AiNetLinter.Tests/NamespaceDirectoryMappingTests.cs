@@ -42,11 +42,7 @@ public sealed class NamespaceDirectoryMappingTests
                 EnforceReadonlyParameters = false,
                 EnforceReadonlyFields = false,
                 EnforceNoMagicValues = false,
-                EnforceExplicitStateImmutability = false,
-                EnforceStrictBoundaryForBusinessLogic = false,
-                PreventContextDependentOverloads = false,
-                RequireExplicitTruncationHandling = false,
-                EnforceNamespaceDirectoryMapping = false,
+                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig()

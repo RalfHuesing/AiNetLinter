@@ -72,11 +72,7 @@ public sealed class DeveloperExperienceTests
                 EnforceNoMagicValues = true,
                 EnforceSealedClasses = true,
                 EnforceExplicitStateImmutability = true,
-                AllowedExceptions = new[] { "Exception" },
-                EnforceStrictBoundaryForBusinessLogic = true,
-                PreventContextDependentOverloads = true,
-                RequireExplicitTruncationHandling = true,
-                EnforceNamespaceDirectoryMapping = true,
+                AllowedExceptions = new[] { "Exception" },                PreventContextDependentOverloads = true,                EnforceNamespaceDirectoryMapping = true,
                 DetectAndBanPhantomDependencies = true,
                 ImmutabilityExemptSuffixes = new[] { "Dto" },
                 SealedClassExemptSuffixes = new[] { "Base" }
@@ -95,11 +91,7 @@ public sealed class DeveloperExperienceTests
                     {
                         EnforceNoMagicValues = false,
                         EnforceExplicitStateImmutability = false,
-                        AllowedExceptions = new[] { "CustomException" },
-                        EnforceStrictBoundaryForBusinessLogic = false,
-                        PreventContextDependentOverloads = false,
-                        RequireExplicitTruncationHandling = false,
-                        EnforceNamespaceDirectoryMapping = false,
+                        AllowedExceptions = new[] { "CustomException" },                        PreventContextDependentOverloads = false,                        EnforceNamespaceDirectoryMapping = false,
                         DetectAndBanPhantomDependencies = false,
                         ImmutabilityExemptSuffixes = new[] { "TestDto" },
                         SealedClassExemptSuffixes = new[] { "Exempt" }
@@ -123,9 +115,7 @@ public sealed class DeveloperExperienceTests
         // Verify Epic 20 rules
         Assert.False(resolved.Global.EnforceExplicitStateImmutability);
         Assert.Contains("CustomException", resolved.Global.AllowedExceptions);
-        Assert.False(resolved.Global.EnforceStrictBoundaryForBusinessLogic);
         Assert.False(resolved.Global.PreventContextDependentOverloads);
-        Assert.False(resolved.Global.RequireExplicitTruncationHandling);
         Assert.False(resolved.Global.EnforceNamespaceDirectoryMapping);
         Assert.False(resolved.Global.DetectAndBanPhantomDependencies);
         Assert.Contains("TestDto", resolved.Global.ImmutabilityExemptSuffixes);

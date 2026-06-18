@@ -27,9 +27,7 @@ public sealed class ControlFlowResilienceTests
                 EnforceResultPatternOverExceptions = enabled,
                 AllowedExceptions = System.Array.Empty<string>(),
                 EnforceExplicitStateImmutability = false,
-                EnforceStrictBoundaryForBusinessLogic = false,
                 PreventContextDependentOverloads = false,
-                RequireExplicitTruncationHandling = false,
                 EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
@@ -292,9 +290,7 @@ public sealed class Test
                 EnforceResultPatternOverExceptions = false,
                 AllowedExceptions = System.Array.Empty<string>(),
                 EnforceExplicitStateImmutability = false,
-                EnforceStrictBoundaryForBusinessLogic = false,
                 PreventContextDependentOverloads = false,
-                RequireExplicitTruncationHandling = false,
                 EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
