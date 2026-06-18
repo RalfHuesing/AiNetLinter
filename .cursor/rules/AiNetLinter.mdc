@@ -26,6 +26,10 @@ Auto-generiert durch AiNetLinter 1.0.46 aus `rules.json`. Neuen Produktionscode 
 | `MaxMethodOverloads` | **3** | Methoden mit eindeutigen Namen bevorzugen. |
 | `MaxConstructorDependencies` | **5** | Verantwortlichkeit aufteilen bei Überschreitung. |
 | `MaxDirectoryDepth` | **4** | Ordner nicht unnötig tief schachteln. |
+| `MaxDirectoryChildren` | **0** | 0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen. |
+| `MaxBoolParameterCount` | **1** | 0 = deaktiviert; bool-Parameter in Parameter-Object bündeln. |
+| `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
+| `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
 | `MaxAIContextFootprint` | **5000** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 
 ## agent-resilience
