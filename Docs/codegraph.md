@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.46)
-Produktionscode · 137 Typen · 12 Namespaces
+Produktionscode · 154 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -73,14 +73,14 @@ Produktionscode · 137 Typen · 12 Namespaces
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
 - CodegraphGenerator → TypeInfo
-- ComplexityCheck [record] → ComplexityCheck
 - CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
 - FieldReadonlyTracker → RuleViolation
 - FixContext [record] → FixContext
-- LinterAnalyzer [partial] → AnalyzerArgs, ComplexityCheck, FieldReadonlyTracker, LinterConfig, MagicValuesConfig, NamespaceRule
-- LinterAutoFixer → FixContext
+- FixOptions [record] → FixOptions
+- LinterAnalyzer → AnalyzerArgs, CheckerContext, LinterConfig
+- LinterAutoFixer → FixContext, FixOptions
 - LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
 - MetricDescriptor [record] → MetricDescriptor
 - PartialClassLineAggregator → LinterConfig, RuleViolation
@@ -101,6 +101,25 @@ Produktionscode · 137 Typen · 12 Namespaces
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
 - TypeInfo [record] → TypeInfo
 - UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
+
+## AiNetLinter.Core.Checkers (17)
+- ArchitectureChecker → CheckerContext
+- BoolParameterChecker → CheckerContext
+- BusinessLogicChecker → CheckerContext
+- CheckerContext → FieldReadonlyTracker, LinterConfig, RuleViolation
+- ComplexityCheck [record] → ComplexityCheck
+- ComplexityChecker → CheckerContext, ComplexityCheck
+- ControlFlowChecker → CheckerContext
+- ImmutabilityChecker → CheckerContext
+- MagicValuesChecker → CheckerContext, MagicValuesConfig
+- MinimalApiChecker → CheckerContext
+- NamingChecker → CheckerContext
+- PublicMembersChecker → CheckerContext
+- ScopeChecker → CheckerContext
+- StateChecker → CheckerContext
+- SyntaxHelper
+- TruncationChecker → CheckerContext
+- WpfSeparationChecker → CheckerContext
 
 ## AiNetLinter.Diagnostics (6)
 - DocumentPerformanceEntry [record] → DocumentPerformanceEntry

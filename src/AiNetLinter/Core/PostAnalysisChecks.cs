@@ -263,7 +263,7 @@ internal static class PostAnalysisChecks
                 LineNumber = representative.LineNumber,
                 RuleName = nameof(config.Metrics.MaxPartialClassFiles),
                 Details = $"Der partial-Typ '{group.Key}' ist auf {distinctFiles.Length} Dateien verteilt (erlaubt: {limit}). Agenten sehen nur die aktuelle Datei und übersehen Invarianten aus den anderen Dateien.",
-                Guidance = "Fasse die partial-Deklarationen in einer einzigen Datei zusammen, oder lagere Zuständigkeiten in eigene Typen aus (z. B. 'OrderValidator', 'OrderEventPublisher')."
+                Guidance = "Extrahiere Unter-Logik in eigenständige Klassen (z. B. 'XyzChecker', 'XyzValidator') und rufe diese aus einem schlanken Typ auf — so bleiben beide Klassen je in 1–2 Dateien vollständig lesbar. Alternativ: fasse alle partial-Deklarationen in einer einzigen Datei zusammen."
             });
         }
     }

@@ -1,26 +1,25 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Checkers;
 
-/// <summary>
-/// Prüft WPF Code-Behind-Klassen auf minimalistische Implementierung (MVVM-Pattern).
-/// </summary>
-public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
+internal static class WpfSeparationChecker
 {
-    internal void CheckWpfCodeBehind(ClassDeclarationSyntax node)
+    internal static void Check(ClassDeclarationSyntax node, CheckerContext ctx)
     {
-        if (_isTestFile) return;
-        if (!_config.UiSeparation.WpfRequireMinimalCodeBehind) return;
-        if (!IsWpfCodeBehindClass(node)) return;
+        if (ctx.IsTestFile) return;
+        if (!ctx.Config.UiSeparation.WpfRequireMinimalCodeBehind) return;
+        if (!IsWpfCodeBehindClass(node, ctx)) return;
 
         var className = node.Identifier.Text;
-        if (_config.UiSeparation.WpfExcludeClassNames.Contains(className, System.StringComparer.OrdinalIgnoreCase))
+        if (ctx.Config.UiSeparation.WpfExcludeClassNames.Contains(className, StringComparer.OrdinalIgnoreCase))
             return;
 
         var extraMembers = node.Members
@@ -35,10 +34,10 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             .Take(3)
             .ToList();
 
-        _violations.Add(new RuleViolation
+        ctx.AddViolation(new RuleViolation
         {
-            FilePath = _filePath,
-            LineNumber = GetLineNumber(extraMembers[0]),
+            FilePath = ctx.FilePath,
+            LineNumber = SyntaxHelper.LineOf(extraMembers[0]),
             RuleName = "WpfRequireMinimalCodeBehind",
             Details = $"Die WPF Code-Behind-Klasse '{className}' enthaelt {extraMembers.Count} zusaetzliche Member " +
                       $"({string.Join(", ", extraNames)}). " +
@@ -51,7 +50,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         });
     }
 
-    private bool IsWpfCodeBehindClass(ClassDeclarationSyntax node)
+    private static bool IsWpfCodeBehindClass(ClassDeclarationSyntax node, CheckerContext ctx)
     {
         if (!node.Modifiers.Any(static m => m.IsKind(SyntaxKind.PartialKeyword)))
             return false;
@@ -60,12 +59,12 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
             return false;
 
         var baseTypeNames = ExtractBaseTypeSimpleNames(node.BaseList);
-        var wpfBaseTypes = _config.UiSeparation.WpfCodeBehindBaseTypes;
+        var wpfBaseTypes = ctx.Config.UiSeparation.WpfCodeBehindBaseTypes;
 
-        return baseTypeNames.Any(name => wpfBaseTypes.Contains(name, System.StringComparer.OrdinalIgnoreCase));
+        return baseTypeNames.Any(name => wpfBaseTypes.Contains(name, StringComparer.OrdinalIgnoreCase));
     }
 
-    private static System.Collections.Generic.IEnumerable<string> ExtractBaseTypeSimpleNames(BaseListSyntax baseList)
+    private static IEnumerable<string> ExtractBaseTypeSimpleNames(BaseListSyntax baseList)
     {
         foreach (var baseType in baseList.Types)
         {
