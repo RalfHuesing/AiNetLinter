@@ -38,9 +38,7 @@ public sealed class FalsePositiveTests
             EnforceReadonlyFields = false,
             EnforceNoMagicValues = false,
             EnforceExplicitStateImmutability = false,
-            EnforceStrictBoundaryForBusinessLogic = false,
             PreventContextDependentOverloads = false,
-            RequireExplicitTruncationHandling = false,
             EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false
         },

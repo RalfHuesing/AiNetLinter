@@ -66,29 +66,19 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 *   **Konsequenz:** Klassen, die nicht explizit als DTOs/Entities deklariert sind, müssen als `readonly struct` oder `record` aufgebaut sein bzw. dürfen nur get-only/`init`-Properties und `readonly`-Felder besitzen.
 *   **Referenz:** *DAPLab (2026). "9 Critical Failure Patterns of Coding Agents". Columbia University.*
 
-#### 10. Isolierung zustandsloser Berechnungen (`EnforceStrictBoundaryForBusinessLogic`)
-*   **Wissenschaftlicher Hintergrund:** Wenn KI-Agenten komplexe Berechnungsregeln mit asynchronem I/O (Datenbank- oder API-Aufrufe) vermischen, kommt es häufig zu logischen Inkonsistenzen und unvollständigen Tests (*Business Logic Mismatch*). Reine zustandslose Berechnungen lassen sich lokal in Millisekunden per Unit-Test validieren.
-*   **Konsequenz:** Komplexe Geschäftslogik und Rechenoperationen müssen in als `static` deklarierten, zustandslosen Methoden ohne I/O-Typen gekapselt sein.
-*   **Referenz:** *Tian, P. (2026). "Agentic Coding in Production: What SWE-bench Scores Don't Tell You".*
-
-#### 11. Eindeutige Aufruf-Signaturen (`PreventContextDependentOverloads`)
+#### 10. Eindeutige Aufruf-Signaturen (`PreventContextDependentOverloads`)
 *   **Wissenschaftlicher Hintergrund:** LLMs verwechseln im Vektorraum sehr leicht überladene Methoden mit identischem Namen, die sich nur durch primitive Typen (wie `Process(int)` vs. `Process(long)`) unterscheiden. Dies führt zu Vertauschungen von Argument-Reihenfolgen bei der Code-Generierung (*Parameter Hallucinations*).
 *   **Konsequenz:** Methoden-Überladungen sind auf maximal 3 beschränkt. Überladungen, die sich nur in primitiven Typen bei gleicher Parameteranzahl unterscheiden, sind verboten (fordern explizite Methodennamen).
 *   **Referenz:** *DAPLab (2026). "9 Critical Failure Patterns of Coding Agents" (Category 4: Data Management).*
 
-#### 12. Puffer- und Stream-Abschneideschutz (`RequireExplicitTruncationHandling`)
-*   **Wissenschaftlicher Hintergrund:** Wenn KI-Agenten Daten über unvollständige Eingaben, Streams oder abgeschnittene Ausgaben verarbeiten, neigen sie dazu, fiktiven "Phantom-Code" (wie nicht-existente Basisklassen) zu erfinden, um die Lücke zu erklären (*Spiraling Hallucination Loops*). Das Erzwingen expliziter Längenguards stoppt diese Spiralen.
-*   **Konsequenz:** Alle Dateilese- und Stream-Leseoperationen müssen unmittelbare Längen- oder Vollständigkeits-Checks im Rumpf aufweisen.
-*   **Referenz:** *Surge AI (2026). "When Coding Agents Spiral Into 693 Lines of Hallucinations".*
-
-#### 13. Navigations-Hygiene & Feature-Ordner (`EnforceNamespaceDirectoryMapping` / `MaxDirectoryDepth`)
+#### 11. Navigations-Hygiene & Feature-Ordner (`EnforceNamespaceDirectoryMapping` / `MaxDirectoryDepth`)
 *   **Wissenschaftlicher Hintergrund:** Das passive Durchsuchen großer, verstreuter Klassenstrukturen flutet das Kontextfenster mit irrelevanten Informationen (*Context Rot*). Zudem treiben tiefe Ordnerpfade die Anzahl und Latenz von Agenten-Navigationsbefehlen (`cd`, `ls`) in die Höhe.
 *   **Konsequenz:** Der Namespace muss exakt der physischen Ordnerstruktur (Feature Folder) entsprechen; die Ordnertiefe ab csproj wird auf maximal 4 begrenzt.
 *   **Referenz:** 
     * *Chroma Research (2025). "Context Rot: How Increasing Input Tokens Impacts LLM Performance".*
     * *Arize AI (2026). "Context management in agent harnesses".*
 
-#### 14. Referenz-Grounding (`DetectAndBanPhantomDependencies`)
+#### 12. Referenz-Grounding (`DetectAndBanPhantomDependencies`)
 *   **Wissenschaftlicher Hintergrund:** LLMs neigen dazu, Paket-Abhängigkeiten oder Klassen zu halluzinieren, die in der realen Codebasis nicht existieren. Bannen von ungelösten Namespace-using-Statements und dynamischer Reflection zwingt die KI zur Compile-Zeit-Verifizierung und verhindert "Phantom-Logik".
 *   **Konsequenz:** Der Import von Namespaces, die Roslyn im Kompilierungskontext nicht auflösen kann, sowie String-basierte Reflection (`Type.GetType`) sind verboten.
 *   **Referenz:** *Scale AI (2026). "SWE Atlas: Measuring Coding Agents".*

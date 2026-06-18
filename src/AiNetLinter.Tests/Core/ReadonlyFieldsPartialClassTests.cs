@@ -27,11 +27,7 @@ public sealed class ReadonlyFieldsPartialClassTests
             EnforceReadonlyParameters = false,
             EnforceReadonlyFields = true,
             EnforceNoMagicValues = false,
-            EnforceExplicitStateImmutability = false,
-            EnforceStrictBoundaryForBusinessLogic = false,
-            PreventContextDependentOverloads = false,
-            RequireExplicitTruncationHandling = false,
-            EnforceNamespaceDirectoryMapping = false,
+            EnforceExplicitStateImmutability = false,            PreventContextDependentOverloads = false,            EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false
         },
         Metrics = new MetricsConfig

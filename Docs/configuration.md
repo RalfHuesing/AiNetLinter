@@ -166,9 +166,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
 | `ImmutabilityExemptBaseTypes` | Global | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`). |
 | `ImmutabilityAllowPrivateBackingFields` | Global | Erlaubt private mutable Felder mit Unterstrich (`_`) Präfix (z. B. typische WPF MVVM Backing-Felder) (Standard: `false`). |
-| `EnforceStrictBoundaryForBusinessLogic` | Global | Zwingt reine Rechen- und Logikfunktionen in zustandslose `static` Methoden ohne I/O-Aufrufe. |
 | `PreventContextDependentOverloads` | Global | Verbietet Methodenüberladungen, die sich nur durch primitive Typen bei gleicher Parameteranzahl unterscheiden. |
-| `RequireExplicitTruncationHandling` | Global | Erzwingt unmittelbare Validierung (Länge/EOF-Check) nach I/O- und Stream-Leseoperationen. |
 | `EnforceNamespaceDirectoryMapping` | Global | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen. |
 | `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
 | `BanPublicNestedTypes` | Global | Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Standard: `true`. Severity: `error`, Intent: `agent-context`. |

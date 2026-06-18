@@ -107,9 +107,7 @@ public sealed record GlobalConfigOverride
 
     public bool? EnforceExplicitStateImmutability { get; init; }
     public IReadOnlyCollection<string>? AllowedExceptions { get; init; }
-    public bool? EnforceStrictBoundaryForBusinessLogic { get; init; }
     public bool? PreventContextDependentOverloads { get; init; }
-    public bool? RequireExplicitTruncationHandling { get; init; }
     public bool? EnforceNamespaceDirectoryMapping { get; init; }
     public string? NamespaceDirectoryMappingMode { get; init; }
     public IReadOnlyCollection<string>? NamespaceDirectoryMappingIgnorePathSegments { get; init; }
