@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Models;
@@ -17,6 +16,5 @@ internal sealed record AnalysisState(
     TestCoverageIndex TestCoverage,
     ConcurrentBag<ClassInfo> SourceClasses,
     ConcurrentBag<PartialClassPart> PartialClassParts,
-    ConcurrentDictionary<string, string> FileContents,
-    ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker> SharedFieldTrackers
+    ConcurrentDictionary<string, string> FileContents
 );

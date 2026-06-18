@@ -18,8 +18,7 @@ public sealed class FalsePositiveTests
     private static LinterConfig CreateConfig(
         bool allowOut = false,
         bool allowTryPatternOut = true,
-        int maxParams = 4,
-        bool readonlyParams = false) => new()
+        int maxParams = 4) => new()
     {
         Global = new GlobalConfig
         {
@@ -33,9 +32,6 @@ public sealed class FalsePositiveTests
             EnforceSemanticNaming = false,
             EnforceNullableEnable = false,
             EnforceNoSilentCatch = false,
-            EnforceNoVariableShadowing = false,
-            EnforceReadonlyParameters = readonlyParams,
-            EnforceReadonlyFields = false,
             EnforceNoMagicValues = false,
             EnforceExplicitStateImmutability = false,
             PreventContextDependentOverloads = false,
@@ -223,56 +219,7 @@ public sealed class ConcreteProvider : ProviderBase
         Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
     }
 
-    // ─── FP #4: Closure modifiziert lokale Variable (nicht Parameter) ─────────
-    // totalProcessed ist eine lokale Variable, kein Parameter.
-    // EnforceReadonlyParameters darf hier nicht feuern.
-
-    [Fact]
-    public void FP_LocalVariable_ClosureModification_ShouldNotViolate()
-    {
-        const string source = @"
-public sealed class InventoryProcessor
-{
-    public int ProcessStock(string[] items)
-    {
-        int totalProcessed = 0;
-
-        void Aggregate(string item)
-        {
-            if (item.Length > 0)
-                totalProcessed++;
-        }
-
-        foreach (var item in items)
-            Aggregate(item);
-
-        return totalProcessed;
-    }
-}";
-        var model = GetSemanticModel(source);
-        var violations = LinterAnalyzer.Analyze("InventoryProcessor.cs", model, CreateConfig(readonlyParams: true));
-        Assert.DoesNotContain(violations, v => v.RuleName == "EnforceReadonlyParameters");
-    }
-
-    [Fact]
-    public void FP_LambdaCapture_LocalCounter_ShouldNotViolate()
-    {
-        const string source = @"
-public sealed class Aggregator
-{
-    public int Sum(int[] values)
-    {
-        int total = 0;
-        System.Array.ForEach(values, v => total += v);
-        return total;
-    }
-}";
-        var model = GetSemanticModel(source);
-        var violations = LinterAnalyzer.Analyze("Aggregator.cs", model, CreateConfig(readonlyParams: true));
-        Assert.DoesNotContain(violations, v => v.RuleName == "EnforceReadonlyParameters");
-    }
-
-    // ─── FP #5: Switch-Expression Komplexität ─────────────────────────────────
+    // ─── FP #4: Switch-Expression Komplexität ─────────────────────────────────
     // Eine switch-expression mit 5 Arms hat McCabe-Komplexität 6 (weit unter 12).
     // Kognitiv zählt die gesamte switch-expression als +1, nicht als N Arms.
 

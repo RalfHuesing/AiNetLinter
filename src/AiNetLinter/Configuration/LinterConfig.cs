@@ -109,9 +109,6 @@ public sealed record GlobalConfig
     /// Bare "throw;" (Rethrow in Catch-Block) ist immer erlaubt wenn true.
     /// </summary>
     public bool ResultPatternAllowCatchRethrow { get; init; } = true;
-    public bool EnforceNoVariableShadowing { get; init; } = true;
-    public bool EnforceReadonlyParameters { get; init; } = true;
-    public bool EnforceReadonlyFields { get; init; } = true;
     public bool EnforceNoMagicValues { get; init; } = true;
     public bool EnforceExplicitStateImmutability { get; init; } = true;
     public IReadOnlyCollection<string> AllowedExceptions { get; init; } = new[]
@@ -219,9 +216,6 @@ public sealed record GlobalConfig
 
     private GlobalConfig ApplyCore2a(GlobalConfigOverride @override) => this with
     {
-        EnforceNoVariableShadowing = @override.EnforceNoVariableShadowing ?? EnforceNoVariableShadowing,
-        EnforceReadonlyParameters = @override.EnforceReadonlyParameters ?? EnforceReadonlyParameters,
-        EnforceReadonlyFields = @override.EnforceReadonlyFields ?? EnforceReadonlyFields,
         EnforceNoMagicValues = @override.EnforceNoMagicValues ?? EnforceNoMagicValues,
         EnforceExplicitStateImmutability = @override.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
         AllowedExceptions = @override.AllowedExceptions ?? AllowedExceptions,

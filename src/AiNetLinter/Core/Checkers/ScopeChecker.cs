@@ -26,29 +26,6 @@ internal static class ScopeChecker
         SpecialType.System_Decimal, SpecialType.System_Char, SpecialType.System_Byte
     };
 
-    internal static void CheckVariableShadowing(SyntaxToken identifier, SyntaxNode node, CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceNoVariableShadowing) return;
-        var name = identifier.Text;
-        if (string.IsNullOrEmpty(name) || name == "_") return;
-
-        var selfSymbol = ctx.SemanticModel.GetDeclaredSymbol(node);
-        var symbols = ctx.SemanticModel.LookupSymbols(node.SpanStart, name: name);
-        var shadowed = symbols.FirstOrDefault(s => !SymbolEqualityComparer.Default.Equals(s, selfSymbol) && IsShadowedSymbol(s));
-
-        if (shadowed != null)
-        {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = "EnforceNoVariableShadowing",
-                Details = $"Die Variable oder der Parameter '{name}' verdeckt ein Feld, eine Eigenschaft oder einen aeusseren Parameter '{shadowed.ToDisplayString()}'.",
-                Guidance = "Benenne die Variable oder den Parameter um, um Namenskonflikte und Verwirrung bei KI-Agenten zu vermeiden."
-            });
-        }
-    }
-
     internal static void CheckMethodOverloads(TypeDeclarationSyntax node, CheckerContext ctx)
     {
         if (ctx.IsTestFile) return;
@@ -71,9 +48,6 @@ internal static class ScopeChecker
         CheckDirectoryDepth(pathParts, ctx);
         CheckNamespaceMappingRule(pathParts, relativePath, ctx);
     }
-
-    private static bool IsShadowedSymbol(ISymbol symbol) =>
-        symbol is IFieldSymbol or IPropertySymbol or IParameterSymbol or ILocalSymbol;
 
     private static void CheckMethodGroup(TypeDeclarationSyntax node, string methodName, List<MethodDeclarationSyntax> groupMethods, CheckerContext ctx)
     {

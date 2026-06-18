@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Configuration;
@@ -22,9 +21,6 @@ internal sealed class CheckerContext
     internal bool IsTestFile { get; }
     internal string? ProjectName { get; }
     internal string CurrentNamespace { get; set; } = "";
-
-    internal FieldReadonlyTracker FieldTracker { get; } = new();
-    internal ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>? SharedFieldTrackers { get; set; }
 
     internal List<ClassInfo> Classes { get; } = new();
     internal List<PartialClassPart> PartialClassParts { get; } = new();

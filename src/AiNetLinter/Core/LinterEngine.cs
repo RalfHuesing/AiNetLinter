@@ -90,8 +90,6 @@ public sealed class LinterEngine
         await AnalyzeSolutionAsync(state, catalog, cache);
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("DocumentAnalysis");
 
-        EmitPartialClassReadonlyFieldViolations(state);
-
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("PostAnalysis");
         PostAnalysisChecks.Run(state, ResolvePostAnalysisConfig(solution));
         AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("PostAnalysis");
@@ -116,30 +114,13 @@ public sealed class LinterEngine
             new TestCoverageIndex(),
             new ConcurrentBag<ClassInfo>(),
             new ConcurrentBag<PartialClassPart>(),
-            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase),
-            new ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker>(SymbolEqualityComparer.Default));
+            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
     }
 
     private static ParallelOptions CreateParallelOptions() => new()
     {
         MaxDegreeOfParallelism = Environment.ProcessorCount
     };
-
-    private static void EmitPartialClassReadonlyFieldViolations(AnalysisState state)
-    {
-        foreach (var (_, tracker) in state.SharedFieldTrackers)
-        {
-            foreach (var field in tracker.GetReadonlyCandidates())
-            {
-                var declaringFilePath = field.DeclaringSyntaxReferences.Length > 0
-                    ? field.DeclaringSyntaxReferences[0].SyntaxTree.FilePath
-                    : "";
-                state.Violations.Add(FieldReadonlyTracker.BuildViolation(field, declaringFilePath));
-            }
-        }
-    }
-
-
 
     private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache)
     {
@@ -272,7 +253,6 @@ public sealed class LinterEngine
         var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
 
         var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);
-        analyzer.UseSharedFieldTrackers(state.SharedFieldTrackers);
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 

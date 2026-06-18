@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -28,11 +27,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         _tree = semanticModel.SyntaxTree;
     }
 
-    internal void UseSharedFieldTrackers(ConcurrentDictionary<INamedTypeSymbol, FieldReadonlyTracker> trackers)
-    {
-        _ctx.SharedFieldTrackers = trackers;
-    }
-
     public static IReadOnlyCollection<RuleViolation> Analyze(AnalyzerArgs args)
     {
         var analyzer = new LinterAnalyzer(args.FilePath, args.SemanticModel, args.Config, args.IsTestFile, args.ProjectName);
@@ -53,9 +47,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         CheckLineCount();
         CheckNullableEnable();
         ScopeChecker.CheckNamespaceDirectoryMapping(_ctx);
-        PreRegisterPrivateFields();
         Visit(_tree.GetRoot());
-        StateChecker.CheckReadonlyFields(_ctx);
         FilterSuppressedViolations();
     }
 
@@ -163,76 +155,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitParameter(ParameterSyntax node)
     {
         StateChecker.CheckOutParameter(node, _ctx);
-        ScopeChecker.CheckVariableShadowing(node.Identifier, node, _ctx);
         base.VisitParameter(node);
-    }
-
-    public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
-    {
-        StateChecker.AnalyzePrivateField(node, _ctx);
-        base.VisitFieldDeclaration(node);
-    }
-
-    public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
-    {
-        StateChecker.CheckParameterReassignment(node.Left, _ctx);
-        StateChecker.RegisterFieldWrite(node.Left, _ctx);
-        base.VisitAssignmentExpression(node);
-    }
-
-    public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
-    {
-        if (node.IsKind(SyntaxKind.PostIncrementExpression) || node.IsKind(SyntaxKind.PostDecrementExpression))
-        {
-            StateChecker.CheckParameterReassignment(node.Operand, _ctx);
-            StateChecker.RegisterFieldWrite(node.Operand, _ctx);
-        }
-        base.VisitPostfixUnaryExpression(node);
-    }
-
-    public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
-    {
-        if (node.IsKind(SyntaxKind.PreIncrementExpression) || node.IsKind(SyntaxKind.PreDecrementExpression))
-        {
-            StateChecker.CheckParameterReassignment(node.Operand, _ctx);
-            StateChecker.RegisterFieldWrite(node.Operand, _ctx);
-        }
-        base.VisitPrefixUnaryExpression(node);
-    }
-
-    public override void VisitArgument(ArgumentSyntax node)
-    {
-        if (node.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword) || node.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
-        {
-            StateChecker.CheckParameterReassignment(node.Expression, _ctx);
-            StateChecker.RegisterFieldWrite(node.Expression, _ctx);
-        }
-        base.VisitArgument(node);
-    }
-
-    public override void VisitVariableDeclarator(VariableDeclaratorSyntax node)
-    {
-        if (IsLocalVariable(node))
-            ScopeChecker.CheckVariableShadowing(node.Identifier, node, _ctx);
-        base.VisitVariableDeclarator(node);
-    }
-
-    public override void VisitForEachStatement(ForEachStatementSyntax node)
-    {
-        ScopeChecker.CheckVariableShadowing(node.Identifier, node, _ctx);
-        base.VisitForEachStatement(node);
-    }
-
-    public override void VisitCatchDeclaration(CatchDeclarationSyntax node)
-    {
-        ScopeChecker.CheckVariableShadowing(node.Identifier, node, _ctx);
-        base.VisitCatchDeclaration(node);
-    }
-
-    public override void VisitSingleVariableDesignation(SingleVariableDesignationSyntax node)
-    {
-        ScopeChecker.CheckVariableShadowing(node.Identifier, node, _ctx);
-        base.VisitSingleVariableDesignation(node);
     }
 
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -278,13 +201,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     }
 
     // --- Private helpers ---
-
-    private void PreRegisterPrivateFields()
-    {
-        if (!_ctx.Config.Global.EnforceReadonlyFields) return;
-        foreach (var field in _tree.GetRoot().DescendantNodes().OfType<FieldDeclarationSyntax>())
-            StateChecker.AnalyzePrivateField(field, _ctx);
-    }
 
     private void CheckLineCount()
     {
@@ -349,12 +265,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
             .Where(v => !SuppressionEvaluator.IsSuppressed(fileContent, v.RuleName ?? "", v.LineNumber))
             .ToList();
         _ctx.ReplaceViolations(active);
-    }
-
-    private static bool IsLocalVariable(VariableDeclaratorSyntax node)
-    {
-        var grandparent = node.Parent?.Parent;
-        return grandparent is not FieldDeclarationSyntax && grandparent is not EventFieldDeclarationSyntax;
     }
 }
 

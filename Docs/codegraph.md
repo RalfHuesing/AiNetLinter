@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.47)
-Produktionscode · 153 Typen · 13 Namespaces
+Produktionscode · 152 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -68,7 +68,7 @@ Produktionscode · 153 Typen · 13 Namespaces
 - UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
 - UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (32)
+## AiNetLinter.Core (31)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
@@ -76,7 +76,6 @@ Produktionscode · 153 Typen · 13 Namespaces
 - CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
-- FieldReadonlyTracker → RuleViolation
 - FixContext [record] → FixContext
 - FixOptions [record] → FixOptions
 - LinterAnalyzer → AnalyzerArgs, CheckerContext, LinterConfig
@@ -105,7 +104,7 @@ Produktionscode · 153 Typen · 13 Namespaces
 ## AiNetLinter.Core.Checkers (16)
 - ArchitectureChecker → CheckerContext
 - BoolParameterChecker → CheckerContext
-- CheckerContext → FieldReadonlyTracker, LinterConfig, RuleViolation
+- CheckerContext → LinterConfig, RuleViolation
 - ComplexityCheck [record] → ComplexityCheck
 - ComplexityChecker → CheckerContext, ComplexityCheck
 - ControlFlowChecker → CheckerContext

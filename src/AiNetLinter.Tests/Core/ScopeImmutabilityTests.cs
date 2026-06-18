@@ -9,11 +9,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class ScopeImmutabilityTests
 {
-    private static LinterConfig CreateConfig(
-        bool shadowing,
-        bool readonlyParams,
-        bool readonlyFields,
-        int maxOverloads)
+    private static LinterConfig CreateConfig(int maxOverloads = 2)
     {
         return new LinterConfig
         {
@@ -28,9 +24,6 @@ public sealed class ScopeImmutabilityTests
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
-                EnforceNoVariableShadowing = shadowing,
-                EnforceReadonlyParameters = readonlyParams,
-                EnforceReadonlyFields = readonlyFields,
                 EnforceNoMagicValues = false,
                 EnforceExplicitStateImmutability = false,
                 PreventContextDependentOverloads = false,
@@ -70,43 +63,6 @@ public sealed class ScopeImmutabilityTests
     }
 
     [Fact]
-    public void Shadowing_ParameterShadowsField_IsDisallowed()
-    {
-        const string source = @"
-public sealed class Person
-{
-    private string name;
-    public void SetName(string name)
-    {
-        this.name = name;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
-        Assert.Single(violations);
-        Assert.Equal("EnforceNoVariableShadowing", violations.First().RuleName);
-    }
-
-    [Fact]
-    public void Shadowing_LocalFunctionParameterShadowsOuterParameter_IsDisallowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    public void Process(int value)
-    {
-        void Inner(int value)
-        {
-        }
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
-        Assert.Single(violations);
-        Assert.Equal("EnforceNoVariableShadowing", violations.First().RuleName);
-    }
-
-    [Fact]
     public void Overloads_CountExceeded_IsDisallowed()
     {
         const string source = @"
@@ -117,143 +73,10 @@ public sealed class Calc
     public void Compute(string s) {}
 }";
         var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, false, false, maxOverloads: 2));
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxOverloads: 2));
         Assert.Single(violations);
         Assert.Equal("MaxMethodOverloads", violations.First().RuleName);
         Assert.Contains("deklariert 3 Ueberladungen fuer die Methode 'Compute'", violations.First().Details);
-    }
-
-    [Fact]
-    public void ParameterReassignment_NormalAssignment_IsDisallowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    public void Scale(int factor)
-    {
-        factor = factor * 2;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, readonlyParams: true, false, 2));
-        Assert.Single(violations);
-        Assert.Equal("EnforceReadonlyParameters", violations.First().RuleName);
-    }
-
-    [Fact]
-    public void ParameterReassignment_OutParameter_IsAllowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    public void GetValue(out int value)
-    {
-        value = 42;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, readonlyParams: true, false, 2));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void ParameterReassignment_PropertyModification_IsAllowed()
-    {
-        const string source = @"
-public class Data { public int Age { get; set; } }
-public sealed class Test
-{
-    public void Update(Data data)
-    {
-        data.Age = 10;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, readonlyParams: true, false, 2));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void ReadonlyFields_PrivateFieldUnmodifiedOutsideConstructor_IsDisallowed()
-    {
-        const string source = @"
-public sealed class Logger
-{
-    private string prefix;
-    public Logger(string prefix)
-    {
-        this.prefix = prefix;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, false, readonlyFields: true, 2));
-        Assert.Single(violations);
-        Assert.Equal("EnforceReadonlyFields", violations.First().RuleName);
-        Assert.Contains("wird nur im Konstruktor oder Initialisierer zugewiesen", violations.First().Details);
-    }
-
-    [Fact]
-    public void ReadonlyFields_PrivateFieldModifiedOutsideConstructor_IsAllowed()
-    {
-        const string source = @"
-public sealed class Counter
-{
-    private int count;
-    public void Increment()
-    {
-        count++;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, false, readonlyFields: true, 2));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void ReadonlyFields_ReadonlyFieldUnmodifiedOutsideConstructor_IsAllowed()
-    {
-        const string source = @"
-public sealed class Logger
-{
-    private readonly string prefix;
-    public Logger(string prefix)
-    {
-        this.prefix = prefix;
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, false, readonlyFields: true, 2));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void Shadowing_DiscardIdentifier_IsAllowed()
-    {
-        // Method parameter '_' shadows field '_' — discards should never be flagged
-        const string source = @"
-public sealed class Processor
-{
-    private int _ = 0;
-    public void Process(int _) { }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
-        Assert.Empty(violations.Where(v => v.RuleName == "EnforceNoVariableShadowing"));
-    }
-
-    [Fact]
-    public void Shadowing_RegularParameter_IsDisallowed()
-    {
-        // Method parameter 'value' shadows field 'value' — regular names must still be flagged
-        const string source = @"
-public sealed class Processor
-{
-    private int value = 0;
-    public void Process(int value) { }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(shadowing: true, false, false, 2));
-        Assert.Single(violations.Where(v => v.RuleName == "EnforceNoVariableShadowing"));
     }
 
     private static LinterConfig CreateImmutabilityTestConfig(
@@ -273,9 +96,6 @@ public sealed class Processor
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
-                EnforceNoVariableShadowing = false,
-                EnforceReadonlyParameters = false,
-                EnforceReadonlyFields = false,
                 EnforceNoMagicValues = false,
                 EnforceExplicitStateImmutability = true,
                 PreventContextDependentOverloads = false,

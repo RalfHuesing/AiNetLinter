@@ -86,21 +86,6 @@ public sealed record GlobalConfigOverride
     public bool? EnforceResultPatternOverExceptions { get; init; }
 
     /// <summary>
-    /// Verbietet Shadowing von Variablen/Parametern.
-    /// </summary>
-    public bool? EnforceNoVariableShadowing { get; init; }
-
-    /// <summary>
-    /// Verbietet Zuweisungen an Parameter.
-    /// </summary>
-    public bool? EnforceReadonlyParameters { get; init; }
-
-    /// <summary>
-    /// Erzwingt readonly private Felder, falls nur im Ctor zugewiesen.
-    /// </summary>
-    public bool? EnforceReadonlyFields { get; init; }
-
-    /// <summary>
     /// Verbietet magische Literale.
     /// </summary>
     public bool? EnforceNoMagicValues { get; init; }

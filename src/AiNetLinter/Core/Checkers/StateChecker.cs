@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -64,81 +63,6 @@ internal static class StateChecker
             Details = $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schluesselwort.",
             Guidance = "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte."
         });
-    }
-
-    internal static void CheckParameterReassignment(ExpressionSyntax expression, CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceReadonlyParameters) return;
-
-        var symbol = ctx.SemanticModel.GetSymbolInfo(expression).Symbol;
-        if (symbol is IParameterSymbol parameter
-            && parameter.RefKind is not (RefKind.Out or RefKind.Ref or RefKind.In))
-        {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(expression),
-                RuleName = "EnforceReadonlyParameters",
-                Details = $"Der Parameter '{parameter.Name}' wird innerhalb der Methode neu zugewiesen.",
-                Guidance = "Behandle Parameter als readonly. Nutze stattdessen eine lokale Variable, um den geaenderten Wert zu speichern."
-            });
-        }
-    }
-
-    internal static void RegisterFieldWrite(ExpressionSyntax expression, CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceReadonlyFields) return;
-
-        var symbol = ctx.SemanticModel.GetSymbolInfo(expression).Symbol as IFieldSymbol;
-        if (symbol == null) return;
-
-        if (ctx.SharedFieldTrackers != null && IsPartialType(symbol.ContainingType))
-        {
-            if (!IsInsideConstructorOfDeclaringType(expression, symbol.ContainingType, ctx))
-            {
-                var sharedTracker = ctx.SharedFieldTrackers.GetOrAdd(symbol.ContainingType, _ => new FieldReadonlyTracker());
-                sharedTracker.MarkModifiedOutsideConstructor(symbol);
-            }
-            return;
-        }
-
-        if (!ctx.FieldTracker.IsCandidate(symbol)) return;
-        if (!IsInsideConstructorOfDeclaringType(expression, symbol.ContainingType, ctx))
-            ctx.FieldTracker.MarkModifiedOutsideConstructor(symbol);
-    }
-
-    internal static void AnalyzePrivateField(FieldDeclarationSyntax node, CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceReadonlyFields) return;
-        if (!node.Modifiers.Any(SyntaxKind.PrivateKeyword)) return;
-
-        foreach (var variable in node.Declaration.Variables)
-            RegisterPrivateFieldSymbol(variable, ctx);
-    }
-
-    internal static void CheckReadonlyFields(CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceReadonlyFields) return;
-
-        foreach (var field in ctx.FieldTracker.GetReadonlyCandidates())
-            ctx.AddViolation(FieldReadonlyTracker.BuildViolation(field, ctx.FilePath));
-    }
-
-    private static void RegisterPrivateFieldSymbol(VariableDeclaratorSyntax variable, CheckerContext ctx)
-    {
-        var symbol = ctx.SemanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
-        if (symbol == null || symbol.IsReadOnly || symbol.IsConst) return;
-        if (symbol.Type.Name == "ElementReference") return;
-        if (IsBlazorComponentType(symbol.Type)) return;
-
-        if (ctx.SharedFieldTrackers != null && IsPartialType(symbol.ContainingType))
-        {
-            var sharedTracker = ctx.SharedFieldTrackers.GetOrAdd(symbol.ContainingType, _ => new FieldReadonlyTracker());
-            sharedTracker.RegisterCandidate(symbol);
-            return;
-        }
-
-        ctx.FieldTracker.RegisterCandidate(symbol);
     }
 
     private static bool ShouldReportOutParameter(ParameterSyntax node, CheckerContext ctx)
@@ -230,28 +154,4 @@ internal static class StateChecker
         return false;
     }
 
-    private static bool IsPartialType(INamedTypeSymbol? type) =>
-        type != null && type.DeclaringSyntaxReferences.Length > 1;
-
-    private static bool IsBlazorComponentType(ITypeSymbol type) =>
-        type.AllInterfaces.Any(static i => i.Name == "IComponent");
-
-    private static bool IsInsideConstructorOfDeclaringType(SyntaxNode node, INamedTypeSymbol declaringType, CheckerContext ctx)
-    {
-        var current = node.Parent;
-        while (current != null)
-        {
-            if (IsConstructorOf(current, declaringType, ctx)) return true;
-            if (current is TypeDeclarationSyntax or NamespaceDeclarationSyntax or CompilationUnitSyntax) return false;
-            current = current.Parent;
-        }
-        return false;
-    }
-
-    private static bool IsConstructorOf(SyntaxNode node, INamedTypeSymbol declaringType, CheckerContext ctx)
-    {
-        if (node is not ConstructorDeclarationSyntax constructorDecl) return false;
-        var symbol = ctx.SemanticModel.GetDeclaredSymbol(constructorDecl);
-        return symbol != null && SymbolEqualityComparer.Default.Equals(symbol.ContainingType, declaringType);
-    }
 }
