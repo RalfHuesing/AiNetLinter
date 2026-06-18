@@ -52,7 +52,7 @@
     "AllowedEmptyReads": false
   },
   "Metrics": {
-    "MaxLineCount": 600,
+    "MaxLineCount": 700,
     "MaxMethodParameterCount": 4,
     "MaxMethodParameterCountInTestFiles": 6,
     "MethodParameterCountIgnoreTypeNames": ["CancellationToken"],

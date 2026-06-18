@@ -30,7 +30,9 @@ public sealed class ArchitectureTests
                 MaxLineCount = 10,
                 MaxMethodParameterCount = 2,
                 MaxCyclomaticComplexity = 5,
-                MaxCognitiveComplexity = 5
+                MaxCognitiveComplexity = 5,
+                ComplexityNearMissTolerance = 0,
+                ExcludeSwitchDispatcherCases = false
             }
         };
     }
