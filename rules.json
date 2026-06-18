@@ -28,7 +28,6 @@
     ],
     "ResultPatternAllowCatchRethrow": true,
     "EnablePerformanceProfiling": true,
-    "EnforceNoMagicValues": false,
     "EnforceExplicitStateImmutability": false,
     "PreventContextDependentOverloads": false,
     "EnforceNamespaceDirectoryMapping": true,
@@ -123,14 +122,6 @@
     "ExemptStaticClasses": true,
     "TestProjectNameSuffixes": ["Tests", "Test", "IntegrationTests", "Specs", "Spec"]
   },
-  "MagicValues": {
-    "Mode": "all",
-    "MinStringLength": 0,
-    "IgnoreStringPatterns": [],
-    "IgnoreNumericValues": [],
-    "IgnoreInvocationPrefixes": [],
-    "IgnoreCollectionInitializers": false
-  },
   "FileFilters": {
     "ExcludeFilePatterns": [
       "*.designer.cs",
@@ -167,7 +158,6 @@
   "ProjectOverrides": {
     "*.Tests": {
       "Global": {
-        "EnforceNoMagicValues": false,
         "EnforceSealedClasses": false
       },
       "Metrics": {

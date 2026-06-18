@@ -31,9 +31,7 @@ public sealed class FalsePositiveTests
             EnforceXmlDocumentation = false,
             EnforceSemanticNaming = false,
             EnforceNullableEnable = false,
-            EnforceNoSilentCatch = false,
-            EnforceNoMagicValues = false,
-            EnforceExplicitStateImmutability = false,
+            EnforceNoSilentCatch = false,            EnforceExplicitStateImmutability = false,
             PreventContextDependentOverloads = false,
             EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false

@@ -58,10 +58,6 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "AllowCancellationShutdownCatch": true,
     "EnforceMinimalApiAsParameters": false,
     "EnforceResultPatternOverExceptions": true,
-    "EnforceNoVariableShadowing": true,
-    "EnforceReadonlyParameters": true,
-    "EnforceReadonlyFields": true,
-    "EnforceNoMagicValues": true,
     "EnforceExplicitStateImmutability": true,
     "AllowedExceptions": [
       "ArgumentException",
@@ -159,7 +155,6 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
 | `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
 | `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
-| `EnforceNoMagicValues` | Global | Verbietet Magic Numbers und Magic Strings direkt in Methodenkörpern außerhalb von Konstanten-Deklarationen (Ausnahmen: `0`, `1`, `""`). |
 | `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
 | `ImmutabilityExemptBaseTypes` | Global | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`). |
 | `ImmutabilityAllowPrivateBackingFields` | Global | Erlaubt private mutable Felder mit Unterstrich (`_`) Präfix (z. B. typische WPF MVVM Backing-Felder) (Standard: `false`). |
@@ -205,13 +200,12 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
 
-In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. In Testprojekten sind beispielsweise literale Werte (Magic Values) in Assertions erwünscht. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
+In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
 
 ```json
   "ProjectOverrides": {
     "*.Tests": {
       "Global": {
-        "EnforceNoMagicValues": false,
         "EnforceSealedClasses": false
       },
       "Metrics": {
@@ -239,7 +233,6 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
   },
   "src/MyApp/Migrations/**": {
     "Global": {
-      "EnforceNoMagicValues": false,
       "EnforceNullableEnable": false
     }
   },
@@ -258,69 +251,6 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 - Pfade werden mit Forward-Slashes verglichen (auch auf Windows)
 
 **Hinweis zu typ-zentrischen Metriken (`MaxAIContextFootprint`, `MaxInheritanceDepth`):** Diese Metriken werden pro logischer Klasse (nicht pro Datei) berechnet und an der repräsentativen Partial-Datei gemeldet. Der PathOverride wird anhand des Dateipfads dieser repräsentativen Datei aufgelöst — das Muster muss also zu dieser Datei passen. Bei Blazor-Komponenten ist die repräsentative Datei in der Regel die `.razor.cs`-Datei im Quellordner.
-
-### MagicValues-Konfiguration
-
-Der Bool-Schalter `EnforceNoMagicValues` in der `Global`-Sektion ist weiterhin der Haupt-Switch, um die Magic-Value-Erkennung zu aktivieren oder zu deaktivieren. Wenn diese Regel aktiv ist, kann über die Sektion `"MagicValues"` das Erkennungsverhalten detailliert konfiguriert werden.
-
-#### Einstellungsoptionen
-
-- **`Mode`** (String, Default: `"all"`):
-  - `"all"`: Alle String- und numerischen Literale im Rumpf von Methoden werden als Magic Values gewertet (bisheriges Verhalten).
-  - `"numeric-only"`: Nur numerische Literale (außer `0`, `1`, `-1` und in `IgnoreNumericValues` konfigurierte Werte) werden gemeldet. Strings werden komplett ignoriert.
-  - `"numeric-and-short-string"`: Numerische Literale sowie String-Literale mit einer Länge kleiner als `MinStringLength` werden gemeldet.
-- **`MinStringLength`** (Integer, Default: `0`): Mindestlänge für einen String, um als magic gewertet zu werden (nur aktiv im Modus `"numeric-and-short-string"`).
-- **`IgnoreStringPatterns`** (Array von Strings, Default: `[]`): Regex-Muster für String-Literale, die ignoriert werden sollen (z. B. Routen-Muster like `^/[\w/{}\-]*$`).
-- **`IgnoreNumericValues`** (Array von Numbers, Default: `[]`): Zusätzliche numerische Werte, die ignoriert werden (z. B. Timeout- oder Batch-Größen wie `404` oder `1000`).
-- **`IgnoreInvocationPrefixes`** (Array von Strings, Default: `[]`): String-Literale, die direkt als Argumente an Methoden übergeben werden, deren Name mit einem dieser Präfixe beginnt (z. B. `"Log"`, `"MapGet"`), werden ignoriert.
-- **`IgnoreCollectionInitializers`** (Boolean, Default: `false`): Wenn `true`, werden Literale innerhalb von Collection-, Array- oder Dictionary-Initialisierern ignoriert.
-
-#### Vorgefertigte Konfigurations-Profile
-
-##### 1. Default-Profil (Bisheriges Standardverhalten)
-```json
-"Global": {
-  "EnforceNoMagicValues": true
-},
-"MagicValues": {
-  "Mode": "all",
-  "MinStringLength": 0,
-  "IgnoreStringPatterns": [],
-  "IgnoreNumericValues": [],
-  "IgnoreInvocationPrefixes": [],
-  "IgnoreCollectionInitializers": false
-}
-```
-
-##### 2. Pragmatic-Profil (Sinnvolle Standardregelung mit Fokus auf Zahlen)
-```json
-"Global": {
-  "EnforceNoMagicValues": true
-},
-"MagicValues": {
-  "Mode": "numeric-only"
-}
-```
-
-##### 3. Metadata-Aware-Profil (Für moderne APIs und Metadaten-lastige Apps)
-```json
-"Global": {
-  "EnforceNoMagicValues": true
-},
-"MagicValues": {
-  "Mode": "numeric-only",
-  "IgnoreStringPatterns": [
-    "^/[\\w/{}\\-]*$",
-    "^[a-z][a-zA-Z0-9_]*$"
-  ],
-  "IgnoreInvocationPrefixes": [
-    "Log", "MapGet", "MapPost", "MapPut", "MapDelete", "MapGroup",
-    "GetSection", "GetValue", "GetRequiredSection",
-    "TypedResults.Problem", "Results.Problem"
-  ],
-  "IgnoreCollectionInitializers": true
-}
-```
 
 ### AI-Context-Footprint (Metrik)
 

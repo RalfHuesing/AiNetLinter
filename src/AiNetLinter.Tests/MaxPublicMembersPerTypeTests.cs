@@ -22,8 +22,7 @@ public sealed class MaxPublicMembersPerTypeTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,                EnforceNoMagicValues = false,
-                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceNoSilentCatch = false,                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig

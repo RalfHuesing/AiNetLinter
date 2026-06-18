@@ -51,11 +51,11 @@ Auto-generiert durch AiNetLinter 1.0.47 aus `rules.json`. Neuen Produktionscode 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 
 ## Deaktiviert
-Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `EnforceNoMagicValues`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, `DetectAndBanPhantomDependencies`.
+Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, `DetectAndBanPhantomDependencies`.
 Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)
 
-**`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus; `EnforceNoMagicValues` aus. Details: `rules.json`.
+**`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
 
 Details: `rules.json`, `AiNetLinter.exe --readme`.

@@ -52,13 +52,13 @@ public sealed class DeveloperExperienceTests
     {
         var globalConfig = new LinterConfig
         {
-            Global = new GlobalConfig { EnforceNoMagicValues = true },
+            Global = new GlobalConfig { EnforceSemanticNaming = true },
             Metrics = new MetricsConfig { MaxLineCount = 100 }
         };
 
         var resolved = ProjectConfigResolver.ResolveForProject("SomeProj", globalConfig);
 
-        Assert.True(resolved.Global.EnforceNoMagicValues);
+        Assert.True(resolved.Global.EnforceSemanticNaming);
         Assert.Equal(100, resolved.Metrics.MaxLineCount);
     }
 
@@ -69,7 +69,6 @@ public sealed class DeveloperExperienceTests
         {
             Global = new GlobalConfig
             {
-                EnforceNoMagicValues = true,
                 EnforceSealedClasses = true,
                 EnforceExplicitStateImmutability = true,
                 AllowedExceptions = new[] { "Exception" },                PreventContextDependentOverloads = true,                EnforceNamespaceDirectoryMapping = true,
@@ -88,9 +87,7 @@ public sealed class DeveloperExperienceTests
                 ["*.Tests"] = new()
                 {
                     Global = new GlobalConfigOverride
-                    {
-                        EnforceNoMagicValues = false,
-                        EnforceExplicitStateImmutability = false,
+                    {                        EnforceExplicitStateImmutability = false,
                         AllowedExceptions = new[] { "CustomException" },                        PreventContextDependentOverloads = false,                        EnforceNamespaceDirectoryMapping = false,
                         DetectAndBanPhantomDependencies = false,
                         ImmutabilityExemptSuffixes = new[] { "TestDto" },
@@ -107,7 +104,6 @@ public sealed class DeveloperExperienceTests
 
         var resolved = ProjectConfigResolver.ResolveForProject("MyLibrary.Tests", globalConfig);
 
-        Assert.False(resolved.Global.EnforceNoMagicValues); // Overridden
         Assert.True(resolved.Global.EnforceSealedClasses);   // Kept from global
         Assert.Equal(100, resolved.Metrics.MaxLineCount);   // Kept from global
         Assert.Equal(50, resolved.Metrics.MaxMethodLineCount); // Overridden
@@ -158,7 +154,7 @@ public sealed class DeveloperExperienceTests
     public async Task RepoPlaybookGenerator_ScansAndGeneratesMarkdown()
     {
         const string source = """
-            // ainetlinter-disable EnforceNoMagicValues
+            // ainetlinter-disable EnforceSemanticNaming
             namespace TestNamespace;
             public class WorkClass
             {
@@ -187,7 +183,7 @@ public sealed class DeveloperExperienceTests
             Assert.True(File.Exists(tempPath));
             var content = File.ReadAllText(tempPath);
             Assert.Contains("AI Repository Playbook", content);
-            Assert.Contains("EnforceNoMagicValues:** 1 mal deaktiviert.", content);
+            Assert.Contains("EnforceSemanticNaming:** 1 mal deaktiviert.", content);
             Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
         }
         finally
@@ -315,7 +311,7 @@ public sealed class DeveloperExperienceTests
                 {
                     Global = new GlobalConfigOverride
                     {
-                        EnforceNoMagicValues = false
+                        EnforceExplicitStateImmutability = false
                     }
                 }
             }

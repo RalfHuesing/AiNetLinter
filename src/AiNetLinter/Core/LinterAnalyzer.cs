@@ -194,12 +194,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         base.VisitThrowExpression(node);
     }
 
-    public override void VisitLiteralExpression(LiteralExpressionSyntax node)
-    {
-        MagicValuesChecker.Check(node, _ctx);
-        base.VisitLiteralExpression(node);
-    }
-
     // --- Private helpers ---
 
     private void CheckLineCount()

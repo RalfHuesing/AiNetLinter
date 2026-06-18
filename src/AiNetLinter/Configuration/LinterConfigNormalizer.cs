@@ -20,7 +20,6 @@ public static class LinterConfigNormalizer
     {
         var testSentinel = config.TestSentinel ?? new TestSentinelConfig();
         var patterns = NormalizeClassNamePatterns(testSentinel.ClassNamePatterns);
-        var magicValues = config.MagicValues ?? new MagicValuesConfig();
         var fileFilters = config.FileFilters ?? new FileFiltersConfig();
 
         return config with
@@ -31,7 +30,6 @@ public static class LinterConfigNormalizer
                 ExemptClassNameSuffixes = testSentinel.ExemptClassNameSuffixes ?? Array.Empty<string>(),
                 ExemptWhenInheritsFrom = testSentinel.ExemptWhenInheritsFrom ?? Array.Empty<string>(),
             },
-            MagicValues = magicValues,
             FileFilters = fileFilters,
         };
     }

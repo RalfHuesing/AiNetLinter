@@ -243,8 +243,8 @@ _Hinweis: Konfigurierbar über die `rules.json`._
   - _LLM-Impact:_ Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
   - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
 - [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
-  - _Beschreibung:_ Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceNoMagicValues` für Testprojekte).
-  - _LLM-Impact:_ Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
+  - _Beschreibung:_ Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
+  - _LLM-Impact:_ Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode pragmatisch konfiguriert werden kann.
   - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
 
 ---

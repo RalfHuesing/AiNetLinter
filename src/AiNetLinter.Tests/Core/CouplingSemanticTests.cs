@@ -9,7 +9,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class CouplingSemanticTests
 {
-    private static LinterConfig CreateConfig(bool magicValues, int maxConstructorDeps)
+    private static LinterConfig CreateConfig(int maxConstructorDeps)
     {
         return new LinterConfig
         {
@@ -23,7 +23,7 @@ public sealed class CouplingSemanticTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,                EnforceNoMagicValues = magicValues
+                EnforceNoSilentCatch = false
             },
             Metrics = new MetricsConfig
             {
@@ -66,7 +66,7 @@ public sealed class ComplexService
     public ComplexService(int a, int b, int c, int d) {}
 }";
         var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, maxConstructorDeps: 3));
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxConstructorDeps: 3));
         Assert.Single(violations);
         Assert.Equal("MaxConstructorDependencies", violations.First().RuleName);
     }
@@ -79,77 +79,10 @@ public sealed class ComplexRecord(int a, int b, int c, int d)
 {
 }";
         var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(false, maxConstructorDeps: 3));
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(maxConstructorDeps: 3));
         Assert.Single(violations);
         Assert.Equal("MaxConstructorDependencies", violations.First().RuleName);
         Assert.Contains("Primaerkonstruktor", violations.First().Details);
     }
 
-    [Fact]
-    public void MagicValues_IntAndStringInMethodBody_IsDisallowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    public void Run()
-    {
-        int x = 42;
-        string role = ""Admin"";
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true, 5));
-        Assert.Equal(2, violations.Count);
-        Assert.All(violations, v => Assert.Equal("EnforceNoMagicValues", v.RuleName));
-    }
-
-    [Fact]
-    public void MagicValues_Exceptions_AreAllowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    public void Run()
-    {
-        int a = 0;
-        int b = 1;
-        int c = -1;
-        string s = """";
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true, 5));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void MagicValues_ConstDeclarations_AreAllowed()
-    {
-        const string source = @"
-public sealed class Test
-{
-    private const int MaxLimit = 100;
-    public void Run()
-    {
-        const string DefaultRole = ""User"";
-    }
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true, 5));
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void MagicValues_AttributeArguments_AreAllowed()
-    {
-        const string source = @"
-using System;
-[Obsolete(""Use new method instead"")]
-public sealed class Test
-{
-}";
-        var model = GetSemanticContext(source);
-        var violations = LinterAnalyzer.Analyze("Test.cs", model, CreateConfig(true, 5));
-        Assert.Empty(violations);
-    }
 }

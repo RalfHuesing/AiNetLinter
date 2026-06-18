@@ -123,7 +123,6 @@ public static class ViolationTextFormatter
         ["PreventContextDependentOverloads"] = "-> PreventContextDependentOverloads: Zu viele Methodenueberladungen mit identischer Parameteranzahl, die sich nur durch primitive Typen unterscheiden. Verwende explizite Methodennamen.",
         ["EnforceNamespaceDirectoryMapping"] = "-> EnforceNamespaceDirectoryMapping: Der Namespace der Datei muss dem Pfad im Dateisystem entsprechen.",
         ["DetectAndBanPhantomDependencies"] = "-> DetectAndBanPhantomDependencies: Banned dependencies detected (Phantom-Abhaengigkeiten). Nutze nur explizit erlaubte Namespace-Pfade.",
-        ["EnforceNoMagicValues"] = "-> EnforceNoMagicValues: Vermeide magische Literale. Deklariere Konstanten ('const' oder 'static readonly') oder benutze Enums.",
         ["MaxDirectoryDepth"] = "-> MaxDirectoryDepth: Die Verzeichnistiefe des Projekts ueberschreitet das erlaubte Maximum.",
         ["MaxInheritanceDepth"] = "-> MaxInheritanceDepth: Zu tiefe Vererbungshierarchie. Bevorzuge Komposition statt Vererbung.",
         ["AIContextFootprint"] = "-> AIContextFootprint: Zu grosser transitiver Code-Footprint (s. Details). Fuehre schlanke Interfaces fuer die groessten Abhaengigkeiten ein oder splitte die Klasse.",
