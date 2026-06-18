@@ -16,6 +16,7 @@ Konzept-Repräsentationen — Synonyme erzeugen Ambiguität bei der Code-Generie
 **Das fundamentale Problem:**
 
 Wer pflegt das Glossar? Diese Frage hat keine gute Antwort:
+
 - Manuell durch Entwickler → wird in der Praxis nicht gemacht. Kein Team pflegt aktiv
   ein Synonym-Wörterbuch neben dem Code.
 - Vom LLM generiert → verletzt das Constraint "lokal und deterministisch". Außerdem:
@@ -118,3 +119,40 @@ konstruieren, dann Graphkomponenten zählen. Deutlich komplexer als alle anderen
 mit einem Bruchteil des Aufwands — Klassen mit zu breiter API sind oft auch inkohärent.
 
 **Fazit:** Aufwand > Nutzen. `MaxPublicMembersPerType` ist der pragmatische Ersatz.
+
+---
+
+## B. Purity via BannedApiAnalyzers / IClock
+
+**Warum verworfen:** LLM-Impact nicht belegt; löst Test-Engineering-Problem ohne klaren LLM-Mehrwert.
+
+**Die Idee:** Nicht-deterministische APIs (`DateTime.Now`, `Guid.NewGuid()`) in Domain-Schichten per NuGet `Microsoft.CodeAnalysis.BannedApiAnalyzers` + `IClock`/`IGuidGenerator`-Pattern verbieten. Forschungsdoku argumentierte mit „LLM-feindlichem Code", „Reasoning-Ambiguität" und „Seiteneffekt-Unsichtbarkeit".
+
+**Das fundamentale Problem — die LLM-Begründung hält nicht stand:**
+
+1. **`DateTime.Now` ist allgegenwärtiges C#-Idiom** — in Millionen Trainingsbeispielen der LLMs. Es ist kein versteckter Side-Effect, sondern explizite API-Semantik. Jeder LLM erkennt es und verhält sich korrekt.
+
+2. **LLMs behandeln `Guid.NewGuid()` korrekt als nicht-deterministisch.** Niemand versucht, Guid-Returns zu assertieren — das ist semantisch offensichtlich. Kein LLM-Paper identifiziert Guid-Generierung als Fehlerquelle.
+
+3. **`IClock` fügt Indirektion hinzu, die das LLM erst mental tracen muss.** Ein simpler `DateTime.Now`-Aufruf ist für ein LLM leichter zu verstehen als `IClock.UtcNow` + DI + Clock-Mock. Die Idee macht Code für LLMs also eher schwerer, nicht einfacher.
+
+**Was die Idee tatsächlich löst — und wo der Aufwand wirklich hingehört:**
+
+Echtes Engineering-Argument ist Testbarkeit (zeitabhängigen Code deterministisch testen). Das ist aber **Test-Engineering**, nicht LLM-Readability. Die moderne Lösung dafür ist seit .NET 8 der `TimeProvider` — eigene `IClock`-Interfaces zu erfinden ist 2010er-Stil.
+
+**AiNetLinter-Codebase-Audit ergab:**
+
+- Genau **2 `DateTime.Now`-Aufrufe** in Production (`Program.cs` Header-Timestamp, `PerformanceProfiler.cs` Messungs-Timestamp) — beide rein als Format-String verwendet, keine fachliche Zeitabhängigkeit
+- `Guid.NewGuid()` einmal in Production (Performance-Messungs-IDs) und ~40× in Tests (Tempfile-Naming) — Test-Idiom, soll bleiben
+- Keine `Thread.Sleep`, `Random`, `Environment.GetEnvironmentVariable`, `Environment.MachineName`
+
+**Was bereits abgedeckt ist:**
+
+AiNetLinter hat keine eigene Purity-Regel und braucht keine. `IClock`/`TimeProvider`/Purity ist eine **Architekturentscheidung** des End-Users für seine Domain-Schicht — nicht etwas, das der Linter global erzwingen sollte. End-User mit echtem Purity-Bedarf installieren `Microsoft.CodeAnalysis.BannedApiAnalyzers` direkt in ihrer Solution und schreiben ihre eigene `BannedSymbols.txt`. Das Forschungsdokument selbst empfahl bereits: „Umsetzung als NuGet-Paket, nicht in AiNetLinter".
+
+**Aufwand-Nutzen:**
+
+- Aufwand: 5–8 Dateien (Refactoring + Tests + Doku + NuGet-Setup + .editorconfig), ~3–4 Stunden
+- Nutzen: 0 messbare Verbesserung (kein LLM-Problem gelöst, kein echter Code-Smell beseitigt)
+
+**Fazit:** Echtes Engineering-Argument, falsche Zielgruppe adressiert. Die Idee ist als **Best-Practice-Hinweis für User** in deren eigenen Projekten sinnvoll — nicht als AiNetLinter-Feature. Wer Purity in seiner Domain will: NuGet-Paket + TimeProvider. Nicht unser Problem.
