@@ -5,6 +5,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 1: Bootstrapping & Infrastruktur
+
 - [x] Initialisierung der Projektstruktur mit `.slnx` (Solution) und `.csproj`
 - [x] Einrichtung der globalen AI-Richtlinien (`.cursor/rules/AiNetLinterRichtlinien.mdc`)
 - [x] Definition der Konfigurationsstruktur (`LinterConfig.cs`)
@@ -15,6 +16,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 2: Core Roslyn Rules Implementation
+
 - [x] **Regel: EnforceSealedClasses** – Zwingt konkrete Klassen zu `sealed`
 - [x] **Regel: AllowDynamic** – Verbietet `dynamic` Typisierung
 - [x] **Regel: AllowOutParameters** – Verbietet `out`-Parameter
@@ -27,6 +29,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 3: Project & Solution Parsing
+
 - [x] Parse moderne `.slnx`-Dateien (XML-basiert), um enthaltene Projekte zu extrahieren
 - [x] Parse klassische `.sln`-Dateien, falls vorhanden
 - [x] Parse `.csproj`-Dateien, um alle kompilierten `.cs`-Quelldateien zu identifizieren
@@ -35,14 +38,16 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 4: CLI Interface & AI-Actionable Output
+
 - [x] Ausgangs-Exit-Codes definieren (0 = Erfolg, 1 = Regelbrüche, >1 = Fatale Fehler)
 - [x] Strukturierte, maschinenlesbare AI-Fehlermeldungen auf `stdout` ausgeben
-- [x] Unterstützung von Verbose-Logging (`--verbose` oder `-v`)
+- [x] Unterstützung für Verbose-Logging (`--verbose` oder `-v`)
 - [x] Datum + Zeit im Header von jeglichem Text-Output zur Nachverfolgbarkeit
 
 ---
 
 ## Epic 5: Self-Testing CLI Integration (Dogfooding)
+
 - [x] Erstellung einer zentralen `rules.json` für den Eigenlauf des Tools
 - [x] Implementierung von Integrationstests, die den kompilierten Linter (`AiNetLinter.dll` / `.exe`) auf die eigene Codebase loslassen
 - [x] Automatisches Einbinden des Linters in den `dotnet test` Build-Prozess (Integrationstest führt CLI auf gesamtem src/ Ordner aus)
@@ -50,14 +55,16 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 6: Future Capabilities (Roadmap)
+
 - [x] **Namespace-Kopplung (Vertical Slices):** Verbot von unerlaubten slice-übergreifenden Abhängigkeiten (mittels ForbiddenNamespaceDependencies)
-- [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von *ValueObject Suffix)
+- [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von \*ValueObject Suffix)
 - [x] **Traceability-Graphen:** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
 - [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
 
 ---
 
 ## Epic 7: Tokenizer- & Semantik-Optimierung (BPE & LSP)
+
 - [x] **PascalCase-Validierung:** Statische Typprüfung, dass alle Klassen, Structs, Records, Interfaces, Methoden und Properties strikt in PascalCase geschrieben sind (optimiert die Token-Zerlegung von Byte-Pair-Encoding Tokenizern).
 - [x] **XML-Doc-Obligatorium für Public APIs:** Zwingende Präsenz von `/// <summary>` Dokumentationen an allen öffentlichen Klassen und Methoden (damit AI-Agenten die Absicht über Language Server Protocol / LSP direkt im Kontext verstehen).
 - [x] **Erkennung generischer Bezeichner:** Erkennung und Flagging von nicht-semantischen Parameternamen (z. B. `data`, `temp`, `obj`, `val`) in öffentlichen Methodenschnittstellen.
@@ -65,6 +72,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 8: Agent-Resilienz & Fehleranalyse (Compiler-Leitplanken)
+
 - [x] **Nullable-Präsenzprüfung:** Überprüfung, ob `#nullable enable` in jeder Datei deklariert ist oder global erzwungen wird, um LLM-bedingte NullReferenceExceptions zu minimieren.
 - [x] **Vermeidung stummer Catch-Blöcke (Silent Swallowing):** Warnung bei leeren `catch`-Blöcken oder bei Blocks, die Exceptions ohne Logging/Rethrow verschlucken (dies bricht die Fehlerkorrektur des agentischen Loops).
 - [x] **Limitierung der Vererbungstiefe (MaxInheritanceDepth):** Begrenzung der Vererbungshierarchie (z. B. max. Tiefe von 2), um "Context Dispersion" zu verhindern (LLMs müssen nicht über mehrere Quelldateien hinweg vererbte Member rekonstruieren).
@@ -72,6 +80,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 9: Architektur-Bereinigung & Fehlerbehebung (Critical Architecture Updates)
+
 - [x] **ClassMap Namespace-Awareness:** Erweitere die Klassen- und Vererbungserkennung so, dass Klassen anhand ihres vollqualifizierten Namens (Namespace + Klassenname) eindeutig identifiziert werden. Löst den Absturz-Bug (`Duplicate Key Exception` im `ToDictionary`) bei gleichnamigen Klassen in unterschiedlichen Namespaces auf.
 - [x] **Konfigurierbarer Sentinel-Schwellenwert:** Mache den Kognitiven Komplexitäts-Schwellenwert (bisher hartcodiert auf `3`) in der `MetricsConfig` (z. B. `MinCognitiveComplexityForTest`) konfigurierbar, statt ihn fest im Code zu verankern.
 - [x] **Robuste globale Nullable-Erkennung:** Erweitere die Erkennung globaler Nullable-Einstellungen so, dass sie rekursiv nach oben in `Directory.Build.props` und `.csproj` Dateien sucht und nicht beim ersten Fund einer leeren csproj die Suche abbricht.
@@ -80,6 +89,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 10: Erweiterte Analyse & CI/CD-Integration (Extensions & Best Practices)
+
 - [x] **Syntaktische Typ-Analyse für verbotene Namespace-Kopplungen:** Durchsuche den Quellcode nach der Verwendung von vollqualifizierten Typnamen (in `QualifiedNameSyntax` und `MemberAccessExpressionSyntax`), die gegen die konfigurierten Namespace-Kopplungen verstoßen (auch wenn kein `using`-Statement verwendet wird).
 - [x] **Sicherer Test Sentinel:** Stelle sicher, dass gefundene Testklassen tatsächliche Testmethoden (mit `[Fact]`, `[Theory]`, `[Test]` oder `[TestMethod]` Attributen) enthalten, um zu verhindern, dass leere Testdateien den Sentinel austricksen.
 - [x] **SARIF CLI-Ausgabeformat:** Füge die Option `--format sarif` hinzu, um die Regelverstöße im standardisierten SARIF-Format (Static Analysis Results Interchange Format) auf `stdout` auszugeben, zur direkten Integration in GitHub Actions/GitLab CI.
@@ -87,16 +97,18 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 11: Roslyn Workspace & Semantische Analyse (Roslyn Workspace Refactoring)
+
 - [x] **Integration von MSBuildWorkspace & MSBuildLocator:** Binde die benötigten NuGet-Pakete ein und initialisiere den MSBuildWorkspace zur vollständigen Evaluierung der Solution-Struktur (.sln / .slnx).
 - [x] **Umstellung auf Solution-weites Laden:** Ersetze das textbasierte Parsen einzelner Dateien durch das Laden der Solution in den Speicher und das Abfragen der `Compilation` und des `SemanticModel` pro Dokument.
 - [x] **Semantische Vererbungstiefen-Prüfung:** Nutze `INamedTypeSymbol.BaseType` des semantischen Modells, um die exakte Vererbungshierarchie über Projektgrenzen hinweg ohne textbasierte Heuristiken zu ermitteln.
-- [x] **Semantische Nullable-Prüfung:** Nutze `compilation.Options.NullableContextOptions`, um die Nullability-Einstellungen direkt vom Compiler auswerten zu lassen (inkl. Directory.Build.props und konditionaler Flags).
+- [x] **Semantische Nullable-Prüfung:** Nutze `compilation.Options.NullableContextOptions`, um die Nullability-Einstellungen direkt vom Compiler auszuwerten (inkl. Directory.Build.props und konditionaler Flags).
 - [x] **Semantische Namespace-Kopplungs-Prüfung:** Analysiere Symbol-Referenzen über `SemanticModel.GetSymbolInfo`, um unerlaubte Namespace-Abhängigkeiten zuverlässig auf Typ- und Member-Ebene zu erkennen.
 - [x] **Bereinigung von veraltetem Code:** Entferne obsolete textbasierte Heuristiken (manuelles Csproj-Parsing, manuelle Dateisuchen und String-basierte Namespace-Suchen).
 
 ---
 
 ## Epic 12: Audit Remediation & CLI Robustness
+
 - [x] **Semantische Testerkennung:** Nutze `SemanticModel.GetSymbolInfo(attr).Symbol` in `LinterAnalyzer.cs`, um echten Namespace/Typ von Test-Attributen (`Xunit`, `NUnit`, `Microsoft.VisualStudio.TestTools.UnitTesting`) zu prüfen statt unzuverlässiger Textsuche.
 - [x] **Consolidated Syntax Walk (Performance):** Führe `ClassCollector` und `LinterAnalyzer` zusammen, um Klasseninfos direkt beim ersten Syntax-Walk zu erheben und redundantes Syntax-Walking zu verhindern. Lösche die obsolete Klasse `ClassCollector.cs`.
 - [x] **System.CommandLine Integration:** Ersetze das fragile manuelle CLI-Argument-Parsing durch die offizielle `System.CommandLine`-Bibliothek zur robusten Parameter- und Flag-Validierung.
@@ -113,6 +125,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## GitHub Release
+
 - [x] **Release-Infrastruktur & ZIP-Archive reparieren:**
   - **Ziel:** Nur noch 3 saubere Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `rules.json` daneben.
   - **Problem:** Die aktuellen ZIP-Archive sind unvollständig; es fehlen die notwendigen MSBuild-BuildHost-DLLs in den Unterordnern `BuildHost-netcore` and `BuildHost-net472`, weshalb der Linter mit einem Fatal Error bezüglich fehlender BuildHost-DLLs abbricht.
@@ -122,7 +135,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 13: Scope-Verwirrung & Immutability (Scope- & Zustands-Leitplanken)
-*Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte).*
+
+_Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte)._
+
 - [x] **Variable Shadowing (Verdeckung) verbieten:**
   - Statische Prüfung (über `SemanticModel` / `SyntaxTree`), ob lokale Variablen oder Parameter Felder/Eigenschaften der Klasse oder Parameter äußerer Methoden verdecken (`Shadowing`).
   - Fehlermeldung bei Verstößen, da Shadowing die Variablenverfolgung bei LLMs stört.
@@ -142,7 +157,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 14: Topologische Kopplung & Magic Values (Kopplung & Semantik)
-*Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein.*
+
+_Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
+
 - [x] **Efferent Coupling limitieren (Constructor Dependencies):**
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
   - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster massiv.
@@ -156,6 +173,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 16: Baseline Ratchet (Inkrementelle Migration)
+
 - [x] **Checksum-basierte Baseline:** `--create-baseline` erzeugt JSON mit SHA-256-Checksummen aller analysierbaren `.cs`-Dateien
 - [x] **Baseline-Filter im Audit:** `--baseline` unterdrückt Verstöße in unveränderten Dateien (Checksum-Vergleich)
 - [x] **Automatisches Baseline-Update:** Bei erkannter Checksum-Abweichung wird die gesamte Baseline-Datei neu geschrieben (weicher Ratchet)
@@ -164,8 +182,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 17: Agent-Workflow Features (SAN-Refactoring)
+
 - [x] **Try*/Is*-Ausnahme für out-Parameter:** `AllowTryPatternOutParameters` erlaubt `out` in `bool Try*`- und `bool Is*`-Methoden (idiomatisches C#)
-- [x] **Error-String-Try*-Muster für out-Parameter:** `string? TryXxx(out T)` (null = Erfolg, non-null = Fehlermeldung) wird von `AllowTryPatternOutParameters` als gleichwertiges Try*-Muster erkannt und nicht als Violation gemeldet
+- [x] **Error-String-Try\*-Muster für out-Parameter:** `string? TryXxx(out T)` (null = Erfolg, non-null = Fehlermeldung) wird von `AllowTryPatternOutParameters` als gleichwertiges Try\*-Muster erkannt und nicht als Violation gemeldet
 - [x] **Guidance im Text-Output:** Detail-Zeilen mit `→ {Guidance}` für LLM-Refactor-Hints
 - [x] **Smarter Static Test Sentinel:** Flexible Klassenname-Patterns, `typeof`/`nameof`-Referenzen und `// @covers`-Kommentare
 - [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter
@@ -184,7 +203,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
-*Hinweis: Konfigurierbar über die `rules.json`.*
+
+_Hinweis: Konfigurierbar über die `rules.json`._
+
 - [x] **Exceptions for Control Flow verbieten:**
   - Warnung bei der Verwendung von `throw` in Methoden, die keine Konstruktoren oder explizite Validierungs-Guards (z. B. Methoden mit Suffix `Guard` oder `Validate`) sind.
   - Erzwinge das Result-Pattern (`Result<T>`) für fachliche Fehlerzustände, da KI-Agenten Kontrollflussbrüche durch Exceptions schwer statisch verfolgen können.
@@ -193,6 +214,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 18: Performance-Optimierungen (Parallelisierung & Caching)
+
 - [x] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution zur optimalen Core-Auslastung.
 - [x] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
 - [x] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
@@ -202,34 +224,36 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 19: AI-Developer Experience (AI-DX) & Tooling
+
 - [x] **AI-Context-Footprint (Metrik):**
-  - *Beschreibung:* Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten, um die Token-Belastung für KIs zu messen.
-  - *LLM-Impact:* Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
-  - *Machbarkeit:* 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
+  - _Beschreibung:_ Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten, um die Token-Belastung für KIs zu messen.
+  - _LLM-Impact:_ Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
+  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
 - [x] **Automatisch generiertes Repo-Playbook:**
-  - *Beschreibung:* Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
-  - *LLM-Impact:* Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
-  - *Machbarkeit:* 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
+  - _Beschreibung:_ Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
+  - _LLM-Impact:_ Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
+  - _Machbarkeit:_ 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
 - [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
-  - *Beschreibung:* Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI.
-  - *LLM-Impact:* Extrem hoch. Spart der KI zeit- und tokenaufwendige Edit-Zyklen für triviale syntaktische Anpassungen.
-  - *Machbarkeit:* 100% machbar. Roslyn bietet über `CodeFixProvider` standardisierte Transformations-APIs. Die CLI kann diese über `Workspace.TryApplyChanges` direkt anwenden.
+  - _Beschreibung:_ Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI.
+  - _LLM-Impact:_ Extrem hoch. Spart der KI zeit- und tokenaufwendige Edit-Zyklen für triviale syntaktische Anpassungen.
+  - _Machbarkeit:_ 100% machbar. Roslyn bietet über `CodeFixProvider` standardisierte Transformations-APIs. Die CLI kann diese über `Workspace.TryApplyChanges` direkt anwenden.
 - [x] **Semantische Diff-Impact-Analyse:**
-  - *Beschreibung:* Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
-  - *LLM-Impact:* Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
-  - *Machbarkeit:* 100% machbar. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.
+  - _Beschreibung:_ Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
+  - _LLM-Impact:_ Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
+  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.
 - [x] **Dynamischer, LLM-orientierter Codegraph:**
-  - *Beschreibung:* Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
-  - *LLM-Impact:* Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
-  - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
+  - _Beschreibung:_ Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
+  - _LLM-Impact:_ Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
+  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
 - [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
-  - *Beschreibung:* Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceNoMagicValues` für Testprojekte).
-  - *LLM-Impact:* Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
-  - *Machbarkeit:* 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
+  - _Beschreibung:_ Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceNoMagicValues` für Testprojekte).
+  - _LLM-Impact:_ Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode lesbar und pragmatisch flach gehalten werden kann, ohne künstliche Schein-Konstanten zu erzeugen.
+  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
 
 ---
 
 ## Epic 20: AI-Readability & Agentic Resilience Upgrades
+
 - [x] **Regel: EnforceExplicitStateImmutability** – Zwingt Klassen (außer DTOs/Entities) zur Unveränderlichkeit (init Properties, readonly private fields).
 - [x] **Fehlerbehandlung: Refine Exception Control Flow** – Erlaubt das Werfen von fatalen/technischen Standard-Exceptions für Fail-Fast-Muster.
 - [x] **Token-Hygiene: Refine XML Documentation** – Reduziert XML-Dokumentationspflichten auf Typ-Deklarationen zur Token-Einsparung.
@@ -242,6 +266,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 21: Consumer Integration & DX Refinements
+
 - [x] **Konfigurations-Erweiterungen:** Support für `ImmutabilityExemptPatterns` (Wildcards) und `AllowedEmptyReads` in `LinterConfig`.
 - [x] **Immutability Heuristiken:** Roslyn-basierte Erkennung von `IConfiguration`/`IOptions` Bindings und `[JsonSerializable]`.
 - [x] **Truncation & Test-Ausnahme:** Guidance-Update mit C#-Beispiel, Berücksichtigung von `AllowedEmptyReads` und Ausnehmen von Test-Fakes (Fake, Mock, Test).
@@ -256,6 +281,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 22: UI-Datei-Trennung (Blazor & WPF)
+
 - [x] **Regel: BlazorRequireCodeBehind** – Jede `.razor`-Datei muss eine `.razor.cs`-Begleitdatei (Code-Behind-Partial-Class) haben. Dateisystem-basierter Check (Roslyn sieht `.razor` nicht).
 - [x] **Regel: BlazorRequireCssIsolation** – Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei (CSS-Isolation) haben.
 - [x] **Regel: WpfRequireMinimalCodeBehind** – WPF Code-Behind-Klassen (`partial class : Window/UserControl/...`) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten (Roslyn-Check).
@@ -265,13 +291,16 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ---
 
 ## Epic 23: Strukturmetriken & API-Surface-Kontrolle
+
 - [x] **Regel: MaxBoolParameterCount** – Maximale Anzahl von `bool`-Parametern pro Methode/Konstruktor (Standard: 1). Bool-Parameter sind an der Call-Site opak (`DoWork(true, false)`); ab Überschreitung: Parameter-Object-Pattern. `MaxBoolParameterCountAllowPrivate` (Standard: `true`) und `MaxBoolParameterCountExemptMethodPrefixes` für projektspezifische Ausnahmen.
 - [x] **Regel: MaxDirectoryChildren** – Maximale Anzahl von Einträgen in einem Verzeichnis (Standard: 0 = deaktiviert). Verhindert Flat-Folder-Antipattern (zu viele Dateien auf einer Ebene); Empfehlung: 20–30 für Mittelklasse-Projekte. `MaxDirectoryChildrenExemptNames` für bekannte Ausnahmen wie `Migrations`, `Generated`.
 - [x] **Regel: MaxPartialClassFiles** – Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 2). Mehr als 2 `partial`-Dateien signalisieren eine zu breite Klasse; Guidance: Unter-Logik in eigenständige `XyzChecker`/`XyzValidator`-Klassen auslagern. `MaxPartialClassFilesExemptTypes` für unvermeidliche Ausnahmen.
 - [x] **Regel: MaxPublicMembersPerType** – Maximale Anzahl öffentlicher Member pro Typ (Standard: 15). Begrenzt die API-Surface und reduziert den KI-Kontextaufwand beim Verstehen eines Typs. `MaxPublicMembersPerTypeExemptSuffixes` für Typen mit strukturell großer API-Surface (z. B. `Extensions`, `Mapper`).
 
+---
 
+## Epic 24: Agent-Readability — Strukturelle Top-Level-Pflicht
 
+_Hinweis: Konfigurierbar über die `rules.json`._
 
-
-
+- [x] **Regel: BanPublicNestedTypes** – Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Private nested Typen bleiben standardmäßig erlaubt (Implementierungsdetail). Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Konfigurierbar unter `Global.BanPublicNestedTypes` (Default `true`) und `Global.BanPublicNestedTypesAllowPrivate` (Default `true`). Severity: `error`, Intent: `agent-context`.

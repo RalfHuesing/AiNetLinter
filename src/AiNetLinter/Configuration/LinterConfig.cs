@@ -149,6 +149,22 @@ public sealed record GlobalConfig
     public int NamespaceDirectoryMappingRequiredTrailingSegments { get; init; } = 2;
 
     public bool DetectAndBanPhantomDependencies { get; init; } = true;
+
+    /// <summary>
+    /// Verbietet oeffentliche (public/internal) nested Typen innerhalb von Klassen, Records und Structs.
+    /// Verbessert die Grep-/File-Listing-Navigation fuer KI-Agenten und verhindert FQN-Halluzinationen
+    /// (z. B. <c>PaymentStatus</c> statt <c>PaymentProcessor.PaymentStatus</c>).
+    /// Standard: <c>true</c>. Private nested Typen bleiben erlaubt (Implementierungsdetail).
+    /// </summary>
+    public bool BanPublicNestedTypes { get; init; } = true;
+
+    /// <summary>
+    /// Wenn <c>true</c> (Standard): <c>private</c> nested Typen bleiben erlaubt, weil sie kein
+    /// externes Grep-Target fuer Agenten darstellen. Auf <c>false</c> setzen, um auch private
+    /// nested Typen zu melden (strikter Greenfield-Modus).
+    /// </summary>
+    public bool BanPublicNestedTypesAllowPrivate { get; init; } = true;
+
     public IReadOnlyCollection<string> ImmutabilityExemptSuffixes { get; init; } = new[]
     {
         "Dto", "Entity", "Model", "Request", "Response", "Command"
@@ -237,6 +253,8 @@ public sealed record GlobalConfig
         ResultPatternAllowCatchRethrow = @override.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
         EnablePerformanceProfiling = @override.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
         SemanticNamingAllowSubstringOfMethodName = @override.SemanticNamingAllowSubstringOfMethodName ?? SemanticNamingAllowSubstringOfMethodName,
+        BanPublicNestedTypes = @override.BanPublicNestedTypes ?? BanPublicNestedTypes,
+        BanPublicNestedTypesAllowPrivate = @override.BanPublicNestedTypesAllowPrivate ?? BanPublicNestedTypesAllowPrivate,
     };
 }
 
@@ -264,7 +282,7 @@ public sealed record MetricsConfig
 
     /// <summary>
     /// Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden.
-    /// Ermöglicht z. B. "ILogger" um ILogger&lt;T&gt; auszuschließen.
+    /// Ermöglicht z. B. "ILogger" um ILogger<T> auszuschließen.
     /// Standard: [].
     /// </summary>
     public IReadOnlyCollection<string> MethodParameterCountIgnoreTypePrefixes { get; init; }

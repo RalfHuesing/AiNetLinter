@@ -8,14 +8,9 @@ namespace AiNetLinter.Suppression;
 public static partial class DisableAllCommentRemover
 {
     /// <summary>
-    /// Ergebnis eines Remove-Laufs.
-    /// </summary>
-    public sealed record RemoveResult(int ScannedFiles, int ModifiedFiles);
-
-    /// <summary>
     /// Entfernt exakte Disable-all-Zeilen aus allen analysierbaren .cs-Dateien unter path.
     /// </summary>
-    public static async Task<RemoveResult> RemoveAsync(string path)
+    public static async Task<DisableAllRemoveResult> RemoveAsync(string path)
     {
         var absolutePaths = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(path);
         return RemoveFromFiles(absolutePaths);
@@ -42,7 +37,7 @@ public static partial class DisableAllCommentRemover
         return DisableAllLinePattern().Replace(content, string.Empty);
     }
 
-    private static RemoveResult RemoveFromFiles(IReadOnlyList<string> absolutePaths)
+    private static DisableAllRemoveResult RemoveFromFiles(IReadOnlyList<string> absolutePaths)
     {
         int modified = 0;
 
@@ -54,7 +49,7 @@ public static partial class DisableAllCommentRemover
             }
         }
 
-        return new RemoveResult(absolutePaths.Count, modified);
+        return new DisableAllRemoveResult(absolutePaths.Count, modified);
     }
 
     [GeneratedRegex(@"^// ainetlinter-disable all(?:\r?\n|$)", RegexOptions.Multiline | RegexOptions.CultureInvariant)]

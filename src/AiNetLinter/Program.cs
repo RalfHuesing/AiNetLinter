@@ -63,7 +63,7 @@ public static class Program
         return await root.Parse(args).InvokeAsync();
     }
 
-    private static LinterArgs ToLinterArgs(CliCommandBuilder.ParsedArgs parsed)
+    private static LinterArgs ToLinterArgs(CliParsedArgs parsed)
     {
         return new LinterArgs
         {

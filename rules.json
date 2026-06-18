@@ -41,6 +41,8 @@
     "NamespaceDirectoryMappingIgnorePathSegments": ["src", "Source", "Domains", "Handlers"],
     "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
     "DetectAndBanPhantomDependencies": false,
+    "BanPublicNestedTypes": true,
+    "BanPublicNestedTypesAllowPrivate": true,
     "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"],
     "ImmutabilityExemptPatterns": [],
     "ImmutabilityExemptBaseTypes": [
@@ -154,7 +156,8 @@
     "AllowOutParameters": { "severity": "warning", "intent": "csharp-idiom" },
     "StaticTestSentinel": { "severity": "warning", "intent": "test-coverage" },
     "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
-    "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" }
+    "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" },
+    "BanPublicNestedTypes": { "severity": "error", "intent": "agent-context" }
   },
   "UiSeparation": {
     "BlazorRequireCodeBehind": true,

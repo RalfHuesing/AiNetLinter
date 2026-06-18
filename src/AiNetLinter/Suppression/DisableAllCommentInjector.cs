@@ -6,14 +6,9 @@ namespace AiNetLinter.Suppression;
 public static class DisableAllCommentInjector
 {
     /// <summary>
-    /// Ergebnis eines Inject-Laufs.
-    /// </summary>
-    public sealed record InjectResult(int CandidateFiles, int ModifiedFiles, int SkippedFiles);
-
-    /// <summary>
     /// Fügt den Disable-all-Kommentar oben in die angegebenen Dateien ein.
     /// </summary>
-    public static InjectResult InjectIntoFiles(IReadOnlyList<string> absolutePaths)
+    public static DisableAllInjectResult InjectIntoFiles(IReadOnlyList<string> absolutePaths)
     {
         int modified = 0;
         int skipped = 0;
@@ -30,7 +25,7 @@ public static class DisableAllCommentInjector
             }
         }
 
-        return new InjectResult(absolutePaths.Count, modified, skipped);
+        return new DisableAllInjectResult(absolutePaths.Count, modified, skipped);
     }
 
     /// <summary>

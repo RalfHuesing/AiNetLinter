@@ -95,6 +95,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
         ImmutabilityChecker.CheckClass(node, _ctx);
         WpfSeparationChecker.Check(node, _ctx);
+        NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
         ArchitectureChecker.CollectClassInfo(node, _ctx);
         base.VisitClassDeclaration(node);
@@ -109,6 +110,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: true, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
+        NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
         base.VisitRecordDeclaration(node);
     }
@@ -122,6 +124,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: false, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
+        NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
         base.VisitStructDeclaration(node);
     }

@@ -80,6 +80,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "RequireExplicitTruncationHandling": true,
     "EnforceNamespaceDirectoryMapping": true,
     "DetectAndBanPhantomDependencies": true,
+    "BanPublicNestedTypes": true,
+    "BanPublicNestedTypesAllowPrivate": true,
     "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"]
   },
   "Metrics": {
@@ -169,6 +171,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `RequireExplicitTruncationHandling` | Global | Erzwingt unmittelbare Validierung (Länge/EOF-Check) nach I/O- und Stream-Leseoperationen. |
 | `EnforceNamespaceDirectoryMapping` | Global | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen. |
 | `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
+| `BanPublicNestedTypes` | Global | Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Standard: `true`. Severity: `error`, Intent: `agent-context`. |
+| `BanPublicNestedTypesAllowPrivate` | Global | Wenn `true` (Standard): `private` nested Typen bleiben erlaubt, da sie kein externes Grep-Target für Agenten darstellen. Auf `false` setzen, um auch private nested Typen zu melden (strikter Greenfield-Modus). |
 | `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `true`). |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500). |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
