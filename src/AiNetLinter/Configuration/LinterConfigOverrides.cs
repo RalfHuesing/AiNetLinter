@@ -235,6 +235,19 @@ public sealed record MetricsConfigOverride
     /// Einfache Typ-Namen (kein Namespace), die beim AIContextFootprint nicht mitgezählt werden.
     /// </summary>
     public IReadOnlyCollection<string>? FootprintIgnoreTypeNames { get; init; }
+
+    public int? MaxBoolParameterCount { get; init; }
+    public bool? MaxBoolParameterCountAllowPrivate { get; init; }
+    public IReadOnlyCollection<string>? MaxBoolParameterCountExemptMethodPrefixes { get; init; }
+
+    public int? MaxDirectoryChildren { get; init; }
+    public IReadOnlyCollection<string>? MaxDirectoryChildrenExemptNames { get; init; }
+
+    public int? MaxPartialClassFiles { get; init; }
+    public IReadOnlyCollection<string>? MaxPartialClassFilesExemptTypes { get; init; }
+
+    public int? MaxPublicMembersPerType { get; init; }
+    public IReadOnlyCollection<string>? MaxPublicMembersPerTypeExemptSuffixes { get; init; }
 }
 
 /// <summary>

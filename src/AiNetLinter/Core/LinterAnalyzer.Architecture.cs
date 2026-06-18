@@ -39,6 +39,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckPrimaryConstructorDependencies(node);
         CheckClassImmutability(node);
         CheckWpfCodeBehind(node);
+        CheckPublicMembersPerType(node, node.Identifier.Text);
 
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
@@ -76,6 +77,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: true);
         CheckMethodOverloads(node);
         CheckPrimaryConstructorDependencies(node);
+        CheckPublicMembersPerType(node, node.Identifier.Text);
         base.VisitRecordDeclaration(node);
     }
 
@@ -91,6 +93,7 @@ public sealed partial class LinterAnalyzer : CSharpSyntaxWalker
         CheckValueObjectContract(node, node.Identifier.Text, isRecord: false);
         CheckMethodOverloads(node);
         CheckPrimaryConstructorDependencies(node);
+        CheckPublicMembersPerType(node, node.Identifier.Text);
         base.VisitStructDeclaration(node);
     }
 
