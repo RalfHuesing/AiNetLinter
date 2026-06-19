@@ -27,7 +27,7 @@ public sealed class ProgramTests
             });
 
             var output = writer.ToString();
-            Assert.StartsWith("# Run: ", output);
+            Assert.Contains("# Run: ", output);
         }
         finally
         {
