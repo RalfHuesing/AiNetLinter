@@ -9,7 +9,6 @@
 
 ## Inhaltsverzeichnis
 
-- [R3 — `Program.cs` in statische Command-Klassen aufteilen](#r3--programcs-in-statische-command-klassen-aufteilen)
 - [R4 — `PerformanceProfiler` entkoppeln + optional machen](#r4--performanceprofiler-entkoppeln--optional-machen)
 - [R5 — `CancellationToken` durch die Pipeline](#r5--cancellationtoken-durch-die-pipeline)
 - [R6 — `Apply`-Refactoring: ein `with`-Block](#r6--apply-refactoring-ein-with-block)
@@ -19,81 +18,12 @@
 - [R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren](#r11--quick-win-repoplaybookgeneratorruledescriptions-reparieren)
 - [Roadmap: Gesamtreihenfolge](#roadmap-gesamtreihenfolge)
 
----
-
-
-
-
-
-## R3 — `Program.cs` in statische Command-Klassen aufteilen
-
-**Löst:** F3, A2, C1.2  
-**Aufwand:** M (1–3 Tage)  
-**Nutzen:** ★★★★
-
-### Problem
-
-`Program.cs` hat 568 LOC weil die Implementierungslogik aller 8 Sub-Befehle direkt dort liegt. Die if-Kaskade selbst ist kein Problem — sie ist der richtige explizite Router. Das Problem: die eigentlichen Methoden (`RunAuditAsync`, `RunSyncCursorRules`, etc.) belegen hunderte Zeilen in derselben Datei.
-
-### Lösungsansatz
-
-**Kein Interface, keine Discovery.** Die if-Kaskade in `ExecuteLinterAsync` bleibt identisch. Jeder Zweig ruft statt einer lokalen Methode eine externe Command-Klasse auf.
-
-**Neue Dateistruktur:** `src/AiNetLinter/Commands/`
-
-```
-Commands/
-  AuditCommand.cs
-  DebtReportCommand.cs
-  FootprintCommand.cs
-  ImpactCommand.cs
-  MaintenanceCommand.cs
-  PlaybookCheckCommand.cs
-  ReadmeCommand.cs
-  SyncCursorRulesCommand.cs
-```
-
-Jede Klasse:
-
-```csharp
-// Commands/AuditCommand.cs
-namespace AiNetLinter.Commands;
-
-internal static class AuditCommand
-{
-    internal static async Task<int> RunAsync(LinterArgs args, ILintConsole console)
-    {
-        // Logik aus RunAuditAsync + RunAuditWithBaselineAsync + AuditWithBaselineAsync
-    }
-}
-```
-
-### Program.cs nach Refactoring
-
-```csharp
-private static async Task<int> ExecuteLinterAsync(LinterArgs args, ILintConsole console)
-{
-    if (args.Readme) return ReadmeCommand.Run(console);
-    var validationError = ValidateArgs(args);
-    if (validationError.HasValue) return validationError.Value;
-    if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, console);
-    if (args.SyncCursorRules && args.PlaybookPath == null) return SyncCursorRulesCommand.Run(args, console);
-    if (args.Footprint != null) return await FootprintCommand.RunAsync(args, console);
-    var maintenanceResult = await MaintenanceCommand.TryRunAsync(args, console);
-    if (maintenanceResult.HasValue) return maintenanceResult.Value;
-    if (args.DebtReport) return await DebtReportCommand.RunAsync(args, console);
-    if (args.HasImpact) return await ImpactCommand.RunAsync(args, console);
-    return await AuditCommand.RunAsync(args, console);
-}
-```
-
-`Program.cs` schrumpft auf ~60 LOC: nur `Main`, `ExecuteLinterAsync`, `ToLinterArgs`, `ValidateArgs`.
-
-### Testbarkeit
-
-Jede Command-Klasse kann direkt getestet werden, mit einem `TestLintConsole` (→ R7) statt Console.SetOut-Mocking.
+> **✅ R3 (— `Program.cs` in statische Command-Klassen aufteilen) wurde abgeschlossen.**
+> `Program.cs` hat jetzt ~80 LOC. Alle 8 Sub-Befehle befinden sich in `src/AiNetLinter/Commands/`.
 
 ---
+
+
 
 ## R4 — `PerformanceProfiler` entkoppeln + optional machen
 
@@ -481,7 +411,8 @@ private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig con
 
 | **1**   | R11 (Bug), R8 (RuleIds), R5 (Cancellation), R6 (Apply)             | Quick Wins |
 | **2**   | R4 (Profiler), R7 (ILintConsole), R9 (Helper)                     | Fundament  |
-| **3**   | R3 (Command-Klassen)                                              | Struktur   |
+
+> **✅ R3 (— Command-Klassen) wurde abgeschlossen.** `Program.cs` reduziert auf ~80 LOC; 8 Command-Klassen in `src/AiNetLinter/Commands/`.
 
 ### Erwartete Resultate
 

@@ -3,14 +3,15 @@
 using System;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Cli;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Cli;
+namespace AiNetLinter.Commands;
 
 /// <summary>
 /// Führt die semantische Diff-Impact-Analyse ab einer Git-Referenz aus.
 /// </summary>
-public static class ImpactExecutor
+internal static class ImpactCommand
 {
     private const string NoImpactCallSitesMessage = "Keine betroffenen Aufrufstellen gefunden.";
     private const string ImpactHeaderMessage = "# Semantische Diff-Impact-Analyse";
@@ -19,7 +20,7 @@ public static class ImpactExecutor
     /// <summary>
     /// Führt die Impact-Analyse für die Solution aus.
     /// </summary>
-    public static async Task<int> RunImpactAnalysisAsync(LinterArgs args)
+    internal static async Task<int> RunAsync(LinterArgs args)
     {
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
         var callSites = await DiffImpactAnalyzer.AnalyzeAsync(catalog.Solution, args.TargetPath, args.ImpactRef, args.Verbose);

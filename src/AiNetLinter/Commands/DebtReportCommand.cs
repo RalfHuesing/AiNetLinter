@@ -2,23 +2,25 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
+using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 
-namespace AiNetLinter.Cli;
+namespace AiNetLinter.Commands;
 
 /// <summary>
 /// Führt den Technical Debt Report des Linters aus.
 /// </summary>
-public static class DebtReportExecutor
+internal static class DebtReportCommand
 {
     /// <summary>
     /// Führt die Audit-Erfassung und den Tech-Debt-Berichtsaufbau aus.
     /// </summary>
-    public static async Task<int> RunDebtReportAsync(LinterArgs args)
+    internal static async Task<int> RunAsync(LinterArgs args)
     {
         LinterConfig? config = null;
         IReadOnlyCollection<RuleViolation>? violations = null;

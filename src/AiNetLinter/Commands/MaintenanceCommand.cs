@@ -4,22 +4,46 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
 using AiNetLinter.Suppression;
 
-namespace AiNetLinter.Cli;
+namespace AiNetLinter.Commands;
 
 /// <summary>
 /// Führt Wartungsaktionen wie das Verwalten von Baselines und das Injizieren/Entfernen von Deaktivierungskommentaren aus.
 /// </summary>
-public static class MaintenanceExecutor
+internal static class MaintenanceCommand
 {
+    /// <summary>
+    /// Versucht einen Wartungsmodus auszuführen. Gibt <c>null</c> zurück, wenn kein Wartungsmodus aktiv ist.
+    /// </summary>
+    internal static async Task<int?> TryRunAsync(LinterArgs args)
+    {
+        if (args.CreateBaselinePath != null)
+        {
+            return await CreateBaselineAsync(args);
+        }
+
+        if (args.AddDisableAll)
+        {
+            return await AddDisableAllAsync(args);
+        }
+
+        if (args.RemoveDisableAll)
+        {
+            return await RemoveDisableAllAsync(args);
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Fügt allen Dateien mit Regelverstößen einen Deaktivierungskommentar hinzu.
     /// </summary>
-    public static async Task<int> AddDisableAllAsync(LinterArgs args)
+    private static async Task<int> AddDisableAllAsync(LinterArgs args)
     {
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
@@ -55,7 +79,7 @@ public static class MaintenanceExecutor
     /// <summary>
     /// Entfernt alle dateiweiten Deaktivierungskommentare aus Quellcodedateien.
     /// </summary>
-    public static async Task<int> RemoveDisableAllAsync(LinterArgs args)
+    private static async Task<int> RemoveDisableAllAsync(LinterArgs args)
     {
         LinterLogger.LogDisableAllRemove(args.Verbose, args.TargetPath);
 
@@ -74,7 +98,7 @@ public static class MaintenanceExecutor
     /// <summary>
     /// Erzeugt eine Baseline-Sicherungsdatei für inkrementelle Prüfungen.
     /// </summary>
-    public static async Task<int> CreateBaselineAsync(LinterArgs args)
+    private static async Task<int> CreateBaselineAsync(LinterArgs args)
     {
         LinterLogger.LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!);
 

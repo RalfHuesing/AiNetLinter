@@ -27,6 +27,7 @@
 - **Top-Problem:** Performance-Singleton
 - **1 aktiver Bug:** 7 falsche Playbook-Werte
 - **Empfohlene Investition:** 3 Wochen Refactoring-Initiative
+- **✅ Erledigt:** F3 (Program.cs auf 80 LOC, 8 Command-Klassen)
 
 ## Bindende Constraints (immer beachten)
 
@@ -54,7 +55,7 @@ Die folgenden Vorschläge aus dem ursprünglichen Audit wurden nach Bewertung ve
 
 - **Auditierte Dateien:** ~30 Hauptdateien + 100+ Test-Klassen
 - **Befunde insgesamt:** 27 (A2-A13 Architektur, C1-C12 Code, R3-R11 Refactoring, L3-L4/L8-L12 LLM)
-- **Davon kritisch (🔴):** 2 (F3, F9 als Bug)
+- **Davon kritisch (🔴):** 1 (F9 als Bug) — F3 ✅ erledigt
 - **Davon Quick Wins (< 1 Tag):** 4 (F9, F8, F5, F6)
 
 ## Nächste Schritte

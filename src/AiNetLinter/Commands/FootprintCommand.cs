@@ -9,10 +9,16 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter;
+namespace AiNetLinter.Commands;
 
-internal static class FootprintExecutor
+/// <summary>
+/// Führt die AI-Context-Footprint-Analyse für eine einzelne Klasse aus.
+/// </summary>
+internal static class FootprintCommand
 {
+    /// <summary>
+    /// Sucht die Klasse in der Solution und gibt die Footprint-Details aus.
+    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args)
     {
         try
