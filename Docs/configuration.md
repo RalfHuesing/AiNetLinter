@@ -723,6 +723,24 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
 *   `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
 
+### Automatischer rules.json-Sync
+
+Beim Laden einer `rules.json` via `--config` gleicht der Linter die Datei **automatisch** mit dem aktuellen Schema ab:
+
+- **Fehlende Optionen** werden mit ihren C#-Standardwerten ergänzt.
+- **Entfernte/umbenannte Optionen** (nicht mehr im Schema) werden kommentarlos gelöscht.
+- **Nutzer-Werte und `ProjectOverrides`** bleiben unverändert erhalten.
+- **Kein Schreiben**, wenn die Datei bereits vollständig aktuell ist.
+
+Wenn eine Aktualisierung stattfand, erscheint im Output:
+```
+[INFO]: rules.json synchronisiert (neue/entfernte Optionen): path/to/rules.json
+```
+
+Dieser Mechanismus stellt sicher, dass nach einem AiNetLinter-Update alle neuen Konfigurationsoptionen sofort in der Nutzerdatei sichtbar sind, ohne manuelle Pflege.
+
+---
+
 ### Wellen-Workflow (Agent-Migration)
 
 Für schrittweise Freischaltung von Legacy-Code (z. B. 5 Dateien pro Welle):
@@ -1016,7 +1034,7 @@ AiNetLinter.exe --path . --config rules.json --sync-cursor-rules --check
 
 Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt empfiehlt sich folgendes Vorgehen:
 
-1. **Explizite Konfiguration:** Erstelle eine `rules.json` mit **allen** verfügbaren Konfigurations-Keys explizit eingetragen. Dies zwingt Entwickler zur bewussten Aktivierung/Deaktivierung neuer Regeln bei Updates.
+1. **Konfiguration anlegen:** Erstelle eine `rules.json` mit den gewünschten Abweichungen von den Standardwerten. Fehlende Keys werden beim nächsten Lauf automatisch mit Standardwerten ergänzt (Auto-Sync, s. u.). Entfernte oder umbenannte Keys werden ebenfalls automatisch bereinigt.
 2. **Projekt-Overrides für Tests:** Definiere unter `ProjectOverrides` (z. B. für `*.Tests`) pragmatischere Schwellenwerte. So dürfen im Testcode Literale (Magic Values) verwendet werden und das Sealing konkreter Klassen kann deaktiviert werden.
 3. **Synchronisation der MDC-Dateien:** Nutze `--sync-cursor-rules` im Pre-Commit- oder CI-Schritt, um die `.cursor/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.cursor/rules/CodeQualitaet.mdc` verwaltet werden.
 4. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 7). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
