@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.IO;
 using System.Text;
 using AiNetLinter.Cli;
@@ -18,8 +17,9 @@ internal static class SyncCursorRulesCommand
     /// <summary>
     /// Führt die Cursor-Regeln-Synchronisation oder Drift-Prüfung aus.
     /// </summary>
-    internal static int Run(LinterArgs args)
+    internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
+        var c = console ?? ConsoleLintConsole.Instance;
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
@@ -34,32 +34,32 @@ internal static class SyncCursorRulesCommand
 
         if (args.Check)
         {
-            return RunCheck(mdcPath, content);
+            return RunCheck(mdcPath, content, c);
         }
 
-        return RunWrite(cursorRulesDir, mdcPath, content);
+        return RunWrite(cursorRulesDir, mdcPath, content, c);
     }
 
-    private static int RunCheck(string mdcPath, string content)
+    private static int RunCheck(string mdcPath, string content, ILintConsole c)
     {
         if (!File.Exists(mdcPath))
         {
-            Console.Error.WriteLine($"[ERROR]: Die Datei '{mdcPath}' existiert nicht.");
+            c.WriteError($"[ERROR]: Die Datei '{mdcPath}' existiert nicht.");
             return 1;
         }
 
         var existing = File.ReadAllText(mdcPath, Encoding.UTF8);
         if (existing != content)
         {
-            Console.Error.WriteLine("[ERROR]: Drift erkannt! Die generierten Cursor-Regeln stimmen nicht mit der Datei auf der Festplatte überein.");
+            c.WriteError("[ERROR]: Drift erkannt! Die generierten Cursor-Regeln stimmen nicht mit der Datei auf der Festplatte überein.");
             return 1;
         }
 
-        Console.WriteLine("[OK]: Cursor-Regeln sind aktuell.");
+        c.WriteLine("[OK]: Cursor-Regeln sind aktuell.");
         return 0;
     }
 
-    private static int RunWrite(string cursorRulesDir, string mdcPath, string content)
+    private static int RunWrite(string cursorRulesDir, string mdcPath, string content, ILintConsole c)
     {
         if (!Directory.Exists(cursorRulesDir))
         {
@@ -68,12 +68,12 @@ internal static class SyncCursorRulesCommand
 
         if (File.Exists(mdcPath) && File.ReadAllText(mdcPath, Encoding.UTF8) == content)
         {
-            Console.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
+            c.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
             return 0;
         }
 
         File.WriteAllText(mdcPath, content, Encoding.UTF8);
-        Console.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
+        c.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
         return 0;
     }
 

@@ -5,7 +5,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -18,14 +17,10 @@ internal static class SealedClassChecker
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) && ctx.Config.Global.AllowUnsealedPartialClasses) return;
         if (HasExemptSuffix(node.Identifier.Text, ctx)) return;
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = nameof(ctx.Config.Global.EnforceSealedClasses),
-            Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-            Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."
-        });
+        ctx.ReportViolation(node,
+            nameof(ctx.Config.Global.EnforceSealedClasses),
+            $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
+            "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern.");
     }
 
     internal static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node) =>

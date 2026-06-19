@@ -1,6 +1,5 @@
 #nullable enable
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,28 +9,30 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Models;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Core;
 
 /// <summary>
 /// Behebt einfache Linter-Verstoesse automatisiert ueber Roslyn Syntax-Transformationen.
 /// </summary>
-public sealed class LinterAutoFixer
+internal sealed class LinterAutoFixer
 {
-    private const string SealedRule = "EnforceSealedClasses";
-    private const string ReadonlyRule = "EnforceReadonlyFields";
-    private const string NullableRule = "EnforceNullableEnable";
+    private const string SealedRule   = LinterRuleIds.EnforceSealedClasses;
+    private const string ReadonlyRule  = "EnforceReadonlyFields";
+    private const string NullableRule  = LinterRuleIds.EnforceNullableEnable;
 
     /// <summary>
     /// Fuehrt die automatische Korrektur fuer unterstuetzte Regeln auf der Solution aus.
     /// </summary>
-    public static async Task<(int FixedCount, Solution UpdatedSolution)> FixAsync(
+    internal static async Task<(int FixedCount, Solution UpdatedSolution)> FixAsync(
         Solution solution,
         IReadOnlyCollection<RuleViolation> violations,
-        FixOptions options)
+        FixOptions options,
+        ILintConsole? console = null)
     {
         var baseTypes = await CollectBaseTypesAsync(solution);
-        var context = new FixContext(baseTypes, options.Verbose, options.DryRun);
+        var context = new FixContext(baseTypes, options.Verbose, options.DryRun, console ?? ConsoleLintConsole.Instance);
         var currentSolution = solution;
         int fixedCount = 0;
 
@@ -116,21 +117,21 @@ public sealed class LinterAutoFixer
 
         if (context.DryRun)
         {
-            Console.WriteLine($"[DRY-RUN]: Würde {fixedCount} Fix(es) anwenden auf: {document.Name}");
+            context.Console.WriteLine($"[DRY-RUN]: Würde {fixedCount} Fix(es) anwenden auf: {document.Name}");
             return (solution, fixedCount);
         }
 
         await File.WriteAllTextAsync(document.FilePath, newText.ToString(), newText.Encoding ?? Encoding.UTF8);
-        LogFixApplied(document.Name, context.Verbose);
+        LogFixApplied(document.Name, context.Verbose, context.Console);
 
         return (updatedDoc.Project.Solution, fixedCount);
     }
 
-    private static void LogFixApplied(string docName, bool verbose)
+    private static void LogFixApplied(string docName, bool verbose, ILintConsole console)
     {
         if (verbose)
         {
-            Console.WriteLine($"[INFO]: Automatischer Fix angewendet auf: {docName}");
+            console.WriteLine($"[INFO]: Automatischer Fix angewendet auf: {docName}");
         }
     }
 
@@ -313,10 +314,11 @@ public sealed class LinterAutoFixer
     private sealed record FixContext(
         HashSet<INamedTypeSymbol> BaseTypes,
         bool Verbose,
-        bool DryRun);
+        bool DryRun,
+        ILintConsole Console);
 }
 
 /// <summary>
 /// Optionen für <see cref="LinterAutoFixer.FixAsync"/>.
 /// </summary>
-public sealed record FixOptions(bool Verbose, bool DryRun = false);
+internal sealed record FixOptions(bool Verbose, bool DryRun = false);

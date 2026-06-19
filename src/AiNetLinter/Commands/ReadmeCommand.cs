@@ -1,8 +1,8 @@
 #nullable enable
 
-using System;
 using System.IO;
 using System.Text;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
@@ -14,19 +14,20 @@ internal static class ReadmeCommand
     /// <summary>
     /// Gibt die eingebetteten Markdown-Dateien (README.md, configuration.md) aus.
     /// </summary>
-    internal static int Run()
+    internal static int Run(ILintConsole? console = null)
     {
+        var c = console ?? ConsoleLintConsole.Instance;
         string[] parts = ["README.md", "Docs/configuration.md"];
         foreach (var name in parts)
         {
             using var stream = typeof(ReadmeCommand).Assembly.GetManifestResourceStream(name);
             if (stream == null)
             {
-                Console.Error.WriteLine($"[ERROR]: '{name}' wurde nicht als eingebettete Ressource gefunden.");
+                c.WriteError($"[ERROR]: '{name}' wurde nicht als eingebettete Ressource gefunden.");
                 return 1;
             }
             using var reader = new StreamReader(stream, Encoding.UTF8);
-            Console.WriteLine(reader.ReadToEnd());
+            c.WriteLine(reader.ReadToEnd());
         }
         return 0;
     }

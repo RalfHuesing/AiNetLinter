@@ -1,7 +1,7 @@
 #nullable enable
 
-using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
@@ -20,30 +20,29 @@ internal static class MaintenanceCommand
     /// <summary>
     /// Versucht einen Wartungsmodus auszuführen. Gibt <c>null</c> zurück, wenn kein Wartungsmodus aktiv ist.
     /// </summary>
-    internal static async Task<int?> TryRunAsync(LinterArgs args)
+    internal static async Task<int?> TryRunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
+        var c = console ?? ConsoleLintConsole.Instance;
+
         if (args.CreateBaselinePath != null)
         {
-            return await CreateBaselineAsync(args);
+            return await CreateBaselineAsync(args, ct, c);
         }
 
         if (args.AddDisableAll)
         {
-            return await AddDisableAllAsync(args);
+            return await AddDisableAllAsync(args, ct, c);
         }
 
         if (args.RemoveDisableAll)
         {
-            return await RemoveDisableAllAsync(args);
+            return await RemoveDisableAllAsync(args, c);
         }
 
         return null;
     }
 
-    /// <summary>
-    /// Fügt allen Dateien mit Regelverstößen einen Deaktivierungskommentar hinzu.
-    /// </summary>
-    private static async Task<int> AddDisableAllAsync(LinterArgs args)
+    private static async Task<int> AddDisableAllAsync(LinterArgs args, CancellationToken ct, ILintConsole c)
     {
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
@@ -51,7 +50,7 @@ internal static class MaintenanceCommand
             return 1;
         }
 
-        LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath);
+        LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath, c);
 
         string? rulesJsonContent = null;
         if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
@@ -59,50 +58,41 @@ internal static class MaintenanceCommand
             rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
         }
         var engine = new LinterEngine(config, rulesJsonContent);
-        var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes);
+        var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var violatingPaths = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, outputRoot);
         var result = DisableAllCommentInjector.InjectIntoFiles(violatingPaths);
 
         if (args.Verbose)
         {
-            Console.WriteLine(
-                $"[INFO]: Audit fand {violations.Count} Verstoesse in {result.CandidateFiles} Dateien.");
-            Console.WriteLine(
-                $"[INFO]: {result.ModifiedFiles} Dateien geaendert, {result.SkippedFiles} uebersprungen.");
+            c.WriteLine($"[INFO]: Audit fand {violations.Count} Verstoesse in {result.CandidateFiles} Dateien.");
+            c.WriteLine($"[INFO]: {result.ModifiedFiles} Dateien geaendert, {result.SkippedFiles} uebersprungen.");
         }
 
-        Console.WriteLine("OK");
+        c.WriteLine("OK");
         return 0;
     }
 
-    /// <summary>
-    /// Entfernt alle dateiweiten Deaktivierungskommentare aus Quellcodedateien.
-    /// </summary>
-    private static async Task<int> RemoveDisableAllAsync(LinterArgs args)
+    private static async Task<int> RemoveDisableAllAsync(LinterArgs args, ILintConsole c)
     {
-        LinterLogger.LogDisableAllRemove(args.Verbose, args.TargetPath);
+        LinterLogger.LogDisableAllRemove(args.Verbose, args.TargetPath, c);
 
         var result = await DisableAllCommentRemover.RemoveAsync(args.TargetPath);
 
         if (args.Verbose)
         {
-            Console.WriteLine(
-                $"[INFO]: {result.ModifiedFiles} von {result.ScannedFiles} Dateien bereinigt.");
+            c.WriteLine($"[INFO]: {result.ModifiedFiles} von {result.ScannedFiles} Dateien bereinigt.");
         }
 
-        Console.WriteLine("OK");
+        c.WriteLine("OK");
         return 0;
     }
 
-    /// <summary>
-    /// Erzeugt eine Baseline-Sicherungsdatei für inkrementelle Prüfungen.
-    /// </summary>
-    private static async Task<int> CreateBaselineAsync(LinterArgs args)
+    private static async Task<int> CreateBaselineAsync(LinterArgs args, CancellationToken ct, ILintConsole c)
     {
-        LinterLogger.LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!);
+        LinterLogger.LogBaselineCreate(args.Verbose, args.TargetPath, args.CreateBaselinePath!, c);
 
-        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var checksums = catalog.ComputeChecksums(outputRoot);
 
@@ -110,10 +100,10 @@ internal static class MaintenanceCommand
 
         if (args.Verbose)
         {
-            Console.WriteLine($"[INFO]: Baseline mit {checksums.Count} Dateien geschrieben.");
+            c.WriteLine($"[INFO]: Baseline mit {checksums.Count} Dateien geschrieben.");
         }
 
-        Console.WriteLine("OK");
+        c.WriteLine("OK");
         return 0;
     }
 }

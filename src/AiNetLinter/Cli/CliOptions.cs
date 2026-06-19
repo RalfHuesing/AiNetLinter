@@ -26,7 +26,10 @@ internal sealed record CliOptions(
     Option<bool> NoCache,
     Option<int> CacheTtl,
     Option<string?> Footprint,
-    Option<bool> Readme);
+    Option<bool> Readme,
+    Option<bool> ListRules,
+    Option<string?> DescribeRule,
+    Option<string?> SearchRules);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Graph, Playbook, Format, Verbose).
@@ -83,4 +86,7 @@ internal sealed record CliParsedArgs(
     bool NoCache,
     int CacheTtlMinutes,
     string? Footprint,
-    bool Readme);
+    bool Readme,
+    bool ListRules,
+    string? DescribeRule,
+    string? SearchRules);

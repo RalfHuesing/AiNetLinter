@@ -114,6 +114,21 @@ internal static class CliOptionFactory
         };
     }
 
+    internal static Option<bool> CreateListRulesOption() => new("--list-rules")
+    {
+        Description = "Alle bekannten Regeln als Tabelle ausgeben",
+    };
+
+    internal static Option<string?> CreateDescribeRuleOption() => new("--describe-rule")
+    {
+        Description = "Vollstaendige Beschreibung einer Regel ausgeben (z. B. --describe-rule EnforceNullableEnable)",
+    };
+
+    internal static Option<string?> CreateSearchRulesOption() => new("--search-rules")
+    {
+        Description = "Regeln nach Stichwort durchsuchen (RuleId, Bezeichnung, Warum, Intent)",
+    };
+
     internal static Option<bool> CreateNoCacheOption() => new("--no-cache")
     {
         Description = "Cache deaktivieren — erzwingt vollständige Neu-Analyse aller Dateien.",

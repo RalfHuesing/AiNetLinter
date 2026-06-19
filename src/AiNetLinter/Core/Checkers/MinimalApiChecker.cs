@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -40,17 +39,11 @@ internal static class MinimalApiChecker
         }
     }
 
-    private static void AddViolation(ParameterSyntax parameter, int parameterCount, CheckerContext ctx)
-    {
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(parameter),
-            RuleName = nameof(ctx.Config.Global.EnforceMinimalApiAsParameters),
-            Details = $"Minimal-API-Endpunkt mit {parameterCount} Parametern: Composite-Typ '{parameter.Type}' benoetigt [AsParameters].",
-            Guidance = "Fuege [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl."
-        });
-    }
+    private static void AddViolation(ParameterSyntax parameter, int parameterCount, CheckerContext ctx) =>
+        ctx.ReportViolation(parameter,
+            nameof(ctx.Config.Global.EnforceMinimalApiAsParameters),
+            $"Minimal-API-Endpunkt mit {parameterCount} Parametern: Composite-Typ '{parameter.Type}' benoetigt [AsParameters].",
+            "Fuege [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl.");
 
     private static IReadOnlyList<ParameterSyntax> GetLambdaParameters(ExpressionSyntax expression) =>
         expression switch

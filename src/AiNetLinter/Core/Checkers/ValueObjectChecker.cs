@@ -5,7 +5,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -18,28 +17,20 @@ internal static class ValueObjectChecker
 
         if (!isRecord && !IsStructOrReadOnly(node))
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = nameof(ctx.Config.Global.EnforceValueObjectContracts),
-                Details = $"Das Value Object '{name}' ist als 'class' deklariert.",
-                Guidance = $"Ersetze 'class' durch 'record' (z. B. 'public sealed record {name}(string Value)') oder 'readonly struct'. Records erzwingen Wert-Semantik und sind ohne zusaetzlichen Code unveraenderlich."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Global.EnforceValueObjectContracts),
+                $"Das Value Object '{name}' ist als 'class' deklariert.",
+                $"Ersetze 'class' durch 'record' (z. B. 'public sealed record {name}(string Value)') oder 'readonly struct'. Records erzwingen Wert-Semantik und sind ohne zusaetzlichen Code unveraenderlich.");
         }
 
         foreach (var prop in node.Members.OfType<PropertyDeclarationSyntax>())
         {
             if (prop.AccessorList != null && prop.AccessorList.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)))
             {
-                ctx.AddViolation(new RuleViolation
-                {
-                    FilePath = ctx.FilePath,
-                    LineNumber = SyntaxHelper.LineOf(prop),
-                    RuleName = nameof(ctx.Config.Global.EnforceValueObjectContracts),
-                    Details = $"Das Value Object '{name}' enthaelt eine veraenderbare Eigenschaft '{prop.Identifier.Text}' (hat einen 'set'-Accessor).",
-                    Guidance = "Entferne den 'set'-Accessor und benutze get-only oder 'init' fuer Eigenschaften in Value Objects."
-                });
+                ctx.ReportViolation(prop,
+                    nameof(ctx.Config.Global.EnforceValueObjectContracts),
+                    $"Das Value Object '{name}' enthaelt eine veraenderbare Eigenschaft '{prop.Identifier.Text}' (hat einen 'set'-Accessor).",
+                    "Entferne den 'set'-Accessor und benutze get-only oder 'init' fuer Eigenschaften in Value Objects.");
             }
         }
     }

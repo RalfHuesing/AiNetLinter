@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Metrics;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -20,14 +19,10 @@ internal static class StateChecker
         var count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ctx);
         if (count > ctx.Config.Metrics.MaxConstructorDependencies)
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = "MaxConstructorDependencies",
-                Details = $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                Guidance = $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Metrics.MaxConstructorDependencies),
+                $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
+                $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility.");
         }
     }
 
@@ -40,14 +35,10 @@ internal static class StateChecker
         var count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ctx);
         if (count > ctx.Config.Metrics.MaxConstructorDependencies)
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = "MaxConstructorDependencies",
-                Details = $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                Guidance = $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Metrics.MaxConstructorDependencies),
+                $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
+                $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen.");
         }
     }
 
@@ -55,14 +46,10 @@ internal static class StateChecker
     {
         if (!ShouldReportOutParameter(node, ctx)) return;
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = nameof(ctx.Config.Global.AllowOutParameters),
-            Details = $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schluesselwort.",
-            Guidance = "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte."
-        });
+        ctx.ReportViolation(node,
+            nameof(ctx.Config.Global.AllowOutParameters),
+            $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schluesselwort.",
+            "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte.");
     }
 
     private static bool ShouldReportOutParameter(ParameterSyntax node, CheckerContext ctx)

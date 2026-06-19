@@ -6,7 +6,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -26,14 +25,10 @@ internal static class NamingChecker
         if (string.IsNullOrEmpty(name)) return;
         if (!char.IsUpper(name[0]))
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = identifier.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-                RuleName = nameof(ctx.Config.Global.EnforcePascalCase),
-                Details = $"Der Name '{name}' ({kind}) ist nicht in PascalCase geschrieben.",
-                Guidance = "Aendere den ersten Buchstaben des Namens in einen Grossbuchstaben."
-            });
+            ctx.ReportViolation(identifier,
+                nameof(ctx.Config.Global.EnforcePascalCase),
+                $"Der Name '{name}' ({kind}) ist nicht in PascalCase geschrieben.",
+                "Aendere den ersten Buchstaben des Namens in einen Grossbuchstaben.");
         }
     }
 
@@ -56,14 +51,10 @@ internal static class NamingChecker
                 && methodName.Contains(name, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(param),
-                RuleName = nameof(ctx.Config.Global.EnforceSemanticNaming),
-                Details = $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
-                Guidance = "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."
-            });
+            ctx.ReportViolation(param,
+                nameof(ctx.Config.Global.EnforceSemanticNaming),
+                $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
+                "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt.");
         }
     }
 
@@ -77,14 +68,10 @@ internal static class NamingChecker
 
         if (!HasXmlDocumentation(node))
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = nameof(ctx.Config.Global.EnforceXmlDocumentation),
-                Details = $"Das oeffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
-                Guidance = "Fuege ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Global.EnforceXmlDocumentation),
+                $"Das oeffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
+                "Fuege ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben.");
         }
     }
 
