@@ -84,11 +84,4 @@ public static class RuleMetadataRegistry
         return false;
     }
 
-    /// <summary>
-    /// Mappt eine Severity-Zeichenkette auf SARIF level.
-    /// </summary>
-    public static string ToSarifLevel(string severity) =>
-        severity.Equals("warning", StringComparison.OrdinalIgnoreCase) ? "warning"
-        : severity.Equals("info", StringComparison.OrdinalIgnoreCase) ? "note"
-        : "error";
 }

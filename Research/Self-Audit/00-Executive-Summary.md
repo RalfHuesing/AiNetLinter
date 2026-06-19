@@ -9,7 +9,7 @@
 
 ## 🎯 TL;DR
 
-AiNetLinter ist ein ambitioniertes, gut durchdachtes Roslyn-basiertes Linter-Projekt mit ~30 Regeln für AI-optimierten C#-Code. Die **funktionale Substanz** ist solide (Sol-Linter mit echtem Semantikmodell, parallele Verarbeitung, inkrementeller Cache, Baseline-Ratchet, SARIF-Export, Playbook-Generator). Die **architektonische Reife** hinkt dem Feature-Umfang jedoch deutlich hinterher:
+AiNetLinter ist ein ambitioniertes, gut durchdachtes Roslyn-basiertes Linter-Projekt mit ~30 Regeln für AI-optimierten C#-Code. Die **funktionale Substanz** ist solide (Sol-Linter mit echtem Semantikmodell, parallele Verarbeitung, inkrementeller Cache, Baseline-Ratchet, Playbook-Generator). Die **architektonische Reife** hinkt dem Feature-Umfang jedoch deutlich hinterher:
 
 1. **Monolithische Checker-Pipeline** statt komponierbarem Plugin-System → Open/Closed-Prinzip verletzt
 2. **Rule-Definitionen 3-fach dupliziert** über `CursorRulesGenerator`, `ViolationTextFormatter`, `RepoPlaybookGenerator`
@@ -81,7 +81,7 @@ niedrig  │  F5 (Cancellation)    │  F10 (Playbook fix)           │
 
 | Dimension                   | Score | Bemerkung                                                                        |
 | --------------------------- | ----- | -------------------------------------------------------------------------------- |
-| **Feature-Umfang**          | ★★★★★ | 30+ Regeln, Baseline, Playbook, SARIF, Impact, Footprint                         |
+| **Feature-Umfang**          | ★★★★★ | 30+ Regeln, Baseline, Playbook, Impact, Footprint                         |
 | **Funktionale Korrektheit** | ★★★★  | Keine offensichtlichen Bugs, gute Tests vorhanden                                |
 | **Performance**             | ★★★★  | Parallelisiert, gecached, profiler verfügbar                                     |
 | **LLM/Agent-Optimierung**   | ★★★   | Gute Textausgabe, aber keine JSON-API, Rule-Lookup mühsam                        |

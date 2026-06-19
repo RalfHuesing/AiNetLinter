@@ -46,7 +46,7 @@ public static class Program
             try
             {
                 var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
-                if (!linterArgs.Readme && linterArgs.Format != "sarif")
+                if (!linterArgs.Readme)
                 {
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
@@ -69,7 +69,6 @@ public static class Program
         {
             ConfigPath = parsed.ConfigPath,
             TargetPath = parsed.TargetPath,
-            Format = parsed.Output.Format,
             Verbose = parsed.Output.Verbose,
             GraphPath = parsed.Output.GraphPath,
             PlaybookPath = parsed.Output.PlaybookPath,
@@ -189,7 +188,7 @@ public static class Program
 
             var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
             var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
-            var exitCode = WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
+            var exitCode = WriteViolationsAndExit(scoped, outputRoot, config);
 
             AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog2.Solution.FilePath, args.ConfigPath);
             return exitCode;
@@ -426,7 +425,7 @@ public static class Program
         }
 
         var scoped = ApplyScopeFilters(filtered, args, outputRoot, comparison.ChangedFiles);
-        return WriteViolationsAndExit(scoped, args.Format, outputRoot, config);
+        return WriteViolationsAndExit(scoped, outputRoot, config);
     }
 
     private static IReadOnlyCollection<Models.RuleViolation> ApplyScopeFilters(
@@ -451,7 +450,6 @@ public static class Program
 
     private static int WriteViolationsAndExit(
         IReadOnlyCollection<Models.RuleViolation> violations,
-        string format,
         string outputRoot,
         LinterConfig config)
     {
@@ -460,22 +458,12 @@ public static class Program
         {
             if (violations.Count == 0)
             {
-                if (format != "sarif") Console.WriteLine("OK");
-                else SarifWriter.Write(violations, outputRoot, config);
+                Console.WriteLine("OK");
                 return 0;
             }
 
             var hasError = RuleMetadataRegistry.HasErrorSeverity(violations, config);
-
-            if (format == "sarif")
-            {
-                SarifWriter.Write(violations, outputRoot, config);
-            }
-            else
-            {
-                Console.WriteLine(ViolationTextFormatter.Format(violations, outputRoot, config));
-            }
-
+            Console.WriteLine(ViolationMarkdownFormatter.Format(violations, outputRoot, config));
             return hasError ? 1 : 0;
         }
         finally

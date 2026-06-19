@@ -9,10 +9,10 @@ using AiNetLinter.Models;
 namespace AiNetLinter.Output;
 
 /// <summary>
-/// Formatiert Regelverstöße als token-effiziente, LLM-optimierte Textausgabe.
+/// Formatiert Regelverstöße als token-effiziente, LLM-optimierte Markdown-Ausgabe.
 /// Struktur: Handlungsanweisung → Regellegende → Strukturelle Verstöße → Violations nach Datei.
 /// </summary>
-public static class ViolationTextFormatter
+public static class ViolationMarkdownFormatter
 {
     private static readonly HashSet<string> StructuralRules = new(StringComparer.OrdinalIgnoreCase)
     {

@@ -52,5 +52,5 @@ ainetlinter --readme
 - **Playbook-Generator (`--playbook`)** — Repo-Übersicht als Kontext für AI-Agenten
 - **Cursor-Regeln-Sync (`--sync-cursor-rules`)** — `.cursor/rules/AiNetLinter.mdc` aus `rules.json` generieren
 - **Impact-Analyse (`--impact`)** — betroffene Call-Sites bei Signaturänderungen ermitteln
-- **SARIF-Export (`--format sarif`)** — für CI/CD-Integration
+- **Markdown-Report** — standardmäßige, token-effiziente und gut lesbare Ausgabe für AI-Agenten
 - **Analyse-Cache** — inkrementelle Laufzeitoptimierung für den Agentic Loop

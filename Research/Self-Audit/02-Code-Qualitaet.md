@@ -19,7 +19,6 @@
 - [C10 — `SourceFileCatalog.cs` (235 LOC)](#c10--sourcefilecatalogcs-235-loc)
 - [C11 — `ArchitectureChecker.cs` (303 LOC)](#c11--architecturecheckercs-303-loc)
 - [C12 — `Checkers/*` — wiederkehrende Anti-Patterns](#c12--checkers----wiederkehrende-anti-patterns)
-- [C13 — `Output/SarifWriter.cs` und Verwandte](#c13--outputsarifwritercs-und-verwandte)
 - [C14 — `Configuration/*` — Overrides](#c14--configuration----overrides)
 - [C15 — Tests (`src/AiNetLinter.Tests`)](#c15--tests-srcainetlintertests)
 
@@ -39,7 +38,6 @@ private static LinterArgs ToLinterArgs(CliParsedArgs parsed)
     {
         ConfigPath = parsed.ConfigPath,
         TargetPath = parsed.TargetPath,
-        Format = parsed.Output.Format,
         // ... 22 weitere Felder
     };
 }
@@ -697,17 +695,6 @@ private static string FindProjectDirectory(string startDir)
 ```
 
 **Befund:** Dateisystem-Walk nach oben pro Datei → langsam bei tiefen Verzeichnissen. **Außerdem:** macht das für JEDE Datei.
-
----
-
-## C13 — `Output/SarifWriter.cs` und Verwandte
-
-**Datei:** `src/AiNetLinter/Output/SarifWriter.cs` (nicht gelesen, aber im Codegraph erkennbar)
-
-**Befund:**
-
-- 13 Typen für SARIF-Output (`SarifWriter`, `SarifRun`, `SarifResult`, `SarifMessage`, `SarifLocation`, `SarifPhysicalLocation`, `SarifArtifactLocation`, `SarifRegion`, `SarifTool`, `SarifDriver`, `SarifDocument`, `SarifProperties`).
-- Sehr viele kleine Records → könnte einfacher mit `JsonSerializer` direkt gehen.
 
 ---
 

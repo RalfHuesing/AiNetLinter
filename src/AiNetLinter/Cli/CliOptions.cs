@@ -10,7 +10,6 @@ internal sealed record CliOptions(
     Option<string?> Path,
     Option<string?> Graph,
     Option<string?> Playbook,
-    Option<string> Format,
     Option<bool> Verbose,
     Option<string?> CreateBaseline,
     Option<string?> Baseline,
@@ -35,7 +34,6 @@ internal sealed record CliOptions(
 internal sealed record CliOutputOptions(
     string? GraphPath,
     string? PlaybookPath,
-    string Format,
     bool Verbose);
 
 /// <summary>

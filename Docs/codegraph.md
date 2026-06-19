@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
-Produktionscode · 152 Typen · 13 Namespaces
+Produktionscode · 140 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -138,7 +138,7 @@ Produktionscode · 152 Typen · 13 Namespaces
 - ClassInfo [record] → ClassInfo
 - RuleViolation [record] → RuleViolation
 
-## AiNetLinter.Output (23)
+## AiNetLinter.Output (11)
 - DebtReportBuilder
 - FileViolationCount [record] → FileViolationCount
 - FolderCount [record] → FolderCount
@@ -148,20 +148,8 @@ Produktionscode · 152 Typen · 13 Namespaces
 - RuleLegendEntry [record] → RuleLegendEntry
 - RuleLegendRegistry → RuleLegendEntry
 - RuleViolationCount [record] → RuleViolationCount
-- SarifArtifactLocation
-- SarifDocument
-- SarifDriver
-- SarifLocation → SarifPhysicalLocation
-- SarifMessage
-- SarifPhysicalLocation → SarifArtifactLocation, SarifRegion
-- SarifProperties
-- SarifRegion
-- SarifResult → SarifMessage, SarifProperties
-- SarifRun → SarifTool
-- SarifTool → SarifDriver
-- SarifWriter → LinterConfig
+- ViolationMarkdownFormatter → LinterConfig, RuleViolation
 - ViolationSummaryBuilder → LinterConfig
-- ViolationTextFormatter → LinterConfig, RuleViolation
 
 ## AiNetLinter.Scope (4)
 - DisableAllDetector [partial]

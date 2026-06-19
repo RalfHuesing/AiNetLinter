@@ -17,15 +17,15 @@ In dieser Codebase sind aktuell keine Linter-Regeln unterdrueckt.
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 150 / 165 (91 %)
+- **Wave-ready Dateien:** 148 / 163 (91 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 93 files, median Footprint 81 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 71 files, median Footprint 147 LOC, 9× disable-all
+- **src/AiNetLinter/**: 92 files, median Footprint 81 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 70 files, median Footprint 147 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

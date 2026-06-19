@@ -159,7 +159,7 @@ public sealed class AgentFeaturesTests
             },
         };
 
-        var result = ViolationTextFormatter.Format(violations, @"C:\repo", CreateConfig());
+        var result = ViolationMarkdownFormatter.Format(violations, @"C:\repo", CreateConfig());
 
         // Rule legend appears in Regellegende section (not duplicated per violation line)
         Assert.Contains("### MaxCognitiveComplexity", result);
