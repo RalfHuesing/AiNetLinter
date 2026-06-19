@@ -15,7 +15,49 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 - **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
 - **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
 
-## 2. Updates & Tests
+## 2. Windows-Umgebung & Tool-Regeln
+
+Diese Entwicklungsumgebung läuft **ausschließlich unter Windows**. Alle Shell-Befehle und Tool-Aufrufe müssen Windows-kompatibel sein.
+
+### Shell
+- **Shell:** PowerShell 7 (`pwsh`) — kein Bash, kein `sh`, kein WSL.
+- Pfad-Trenner: Backslash `\` (oder forward slash `/` in .NET/git-Kontexten).
+- Keine Linux-Befehle wie `ls`, `cat`, `touch`, `find`, `grep` (als eigenständige Befehle), `rm -rf` etc.
+
+### Verfügbare Tools
+| Tool | Befehl | Hinweis |
+|:-----|:-------|:--------|
+| PowerShell 7 | `pwsh` | Primäre Shell |
+| Git | `git` | Immer mit `--no-pager` ausführen (siehe unten) |
+| Ripgrep | `rg` | Datei-Suche bevorzugt statt `grep` |
+| Python | `python` oder `py` | Für Hilfsskripte |
+| .NET SDK | `dotnet` | Funktioniert ohne Pfadangabe |
+| Node.js / npm | `node`, `npm` | Verfügbar |
+| GitHub CLI | `gh` | Für GitHub-Operationen |
+| curl | `curl` | HTTP-Anfragen |
+
+### Git: Immer ohne Pager
+Git muss **immer** mit `--no-pager` aufgerufen werden, sonst hängt die Shell:
+```powershell
+git --no-pager log --oneline -10
+git --no-pager diff
+git --no-pager show HEAD
+```
+Alternativ als globale Session-Variable setzen: `$env:GIT_PAGER = ''`
+
+### Datei-Bearbeitung
+- **Kein `sed -i` / `awk` für Inline-Edits** — verursacht unter Windows Zeilenende-Probleme (CRLF vs LF).
+- Dateien entweder über das **Edit-Tool** des Agenten bearbeiten oder via PowerShell (`(Get-Content ...) -replace ... | Set-Content ...`).
+- Bei neuen Dateien: `New-Item -ItemType File` oder direkt schreiben — kein `touch`.
+
+### Build & Test
+```powershell
+dotnet build          # Kompilieren
+dotnet test           # Tests ausführen
+dotnet run            # Starten
+```
+
+## 3. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
