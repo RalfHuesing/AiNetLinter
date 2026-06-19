@@ -168,6 +168,48 @@ public sealed class ViolationMarkdownFormatterTests
         Assert.True(fooInByFile >= 0, "Structural violation must also appear in Violations nach Datei");
     }
 
+    [Fact]
+    public void Format_MarksAutoFixableViolationsWithTag()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 1, "EnforceNullableEnable", "Nullable fehlt"),
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxLineCount", "Zu lang")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("EnforceNullableEnable [auto-fix]", result);
+        Assert.DoesNotContain("MaxLineCount [auto-fix]", result);
+    }
+
+    [Fact]
+    public void Format_ShowsAutoFixHintInInstructionBlockWhenApplicable()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 1, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("Auto-Fix verfuegbar", result);
+        Assert.Contains("--fix", result);
+    }
+
+    [Fact]
+    public void Format_OmitsAutoFixHintWhenNoAutoFixableViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxLineCount", "Zu lang")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.DoesNotContain("Auto-Fix verfuegbar", result);
+    }
+
     private static RuleViolation CreateViolation(string filePath, int line, string rule, string details) =>
         new()
         {
