@@ -93,7 +93,7 @@ public sealed record GlobalConfig
     /// Analogon zu AllowCancellationShutdownCatch für projektspezifische Exception-Typen.
     /// Nur der einfache Typname, kein Namespace (z.B. "JSDisconnectedException").
     /// </summary>
-    public IReadOnlyList<string> AllowedSilentCatchExceptionTypes { get; init; } = [];
+    public IReadOnlyList<string> AllowedSilentCatchExceptionTypes { get; init; } = ["ObjectDisposedException"];
     public bool EnforceMinimalApiAsParameters { get; init; } = false;
     public bool EnforceResultPatternOverExceptions { get; init; } = false;
 
@@ -102,13 +102,13 @@ public sealed record GlobalConfig
     /// Segment-basierter Match: "MyApp.Infrastructure" endet mit ".Infrastructure".
     /// </summary>
     public IReadOnlyCollection<string> ResultPatternAllowThrowInNamespaceSuffixes { get; init; }
-        = Array.Empty<string>();
+        = ["Infrastructure", "Endpoints", "Middleware", "Program"];
 
     /// <summary>
     /// Bare "throw;" (Rethrow in Catch-Block) ist immer erlaubt wenn true.
     /// </summary>
     public bool ResultPatternAllowCatchRethrow { get; init; } = true;
-    public bool EnforceExplicitStateImmutability { get; init; } = true;
+    public bool EnforceExplicitStateImmutability { get; init; } = false;
     public IReadOnlyCollection<string> AllowedExceptions { get; init; } = new[]
     {
         "ArgumentException",
@@ -128,13 +128,13 @@ public sealed record GlobalConfig
     /// <summary>
     /// Der Modus fuer den Namespace-Ordner-Abgleich: "exact" | "suffix-match" | "contains-all"
     /// </summary>
-    public string NamespaceDirectoryMappingMode { get; init; } = "exact";
+    public string NamespaceDirectoryMappingMode { get; init; } = "suffix-match";
 
     /// <summary>
     /// Pfad-Segmente, die beim Namespace-Vergleich ignoriert werden.
     /// </summary>
     public IReadOnlyCollection<string> NamespaceDirectoryMappingIgnorePathSegments { get; init; }
-        = Array.Empty<string>();
+        = ["src", "Source", "Domains", "Handlers"];
 
     /// <summary>
     /// Im Suffix-Match-Modus: Anzahl der letzten Ordner-Segmente, die im Namespace enthalten sein muessen.
@@ -282,7 +282,7 @@ public sealed record MetricsConfig
         = Array.Empty<string>();
 
     public int MaxMethodLineCount { get; init; } = 60;
-    public int MaxCyclomaticComplexity { get; init; } = 10;
+    public int MaxCyclomaticComplexity { get; init; } = 12;
     public int MaxCognitiveComplexity { get; init; } = 15;
     public int MaxInheritanceDepth { get; init; } = 2;
     public int MinCognitiveComplexityForTest { get; init; } = 3;
@@ -321,7 +321,7 @@ public sealed record MetricsConfig
     /// Typisch: ["Exception"] — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten.
     /// </summary>
     public IReadOnlyCollection<string> ConstructorDependencyExemptClassSuffixes { get; init; }
-        = Array.Empty<string>();
+        = ["Exception"];
 
     /// <summary>
     /// Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten.
@@ -366,7 +366,7 @@ public sealed record MetricsConfig
     /// Maximale Anzahl bool-Parameter in einer öffentlichen Methode/Konstruktor.
     /// 0 = deaktiviert. Private Methoden werden mit <see cref="MaxBoolParameterCountAllowPrivate"/> gesteuert.
     /// </summary>
-    public int MaxBoolParameterCount { get; init; } = 0;
+    public int MaxBoolParameterCount { get; init; } = 1;
 
     /// <summary>
     /// Wenn true werden private/protected Methoden vom Bool-Parameter-Check ausgenommen.
@@ -377,7 +377,7 @@ public sealed record MetricsConfig
     /// Methoden-Name-Präfixe, für die MaxBoolParameterCount nicht geprüft wird (z. B. "TryParse").
     /// </summary>
     public IReadOnlyCollection<string> MaxBoolParameterCountExemptMethodPrefixes { get; init; }
-        = Array.Empty<string>();
+        = ["Try"];
 
     /// <summary>
     /// Maximale Anzahl direkter Kind-Einträge (Dateien + Unterordner) in einem Verzeichnis.
@@ -396,7 +396,7 @@ public sealed record MetricsConfig
     /// Maximale Anzahl Dateien, in denen ein partial-Typ deklariert sein darf.
     /// 0 = deaktiviert. 2 erlaubt das gängige *.g.cs / *.designer.cs Pattern.
     /// </summary>
-    public int MaxPartialClassFiles { get; init; } = 0;
+    public int MaxPartialClassFiles { get; init; } = 2;
 
     /// <summary>
     /// Typ-Namen (vollqualifiziert oder einfacher Name), die vom MaxPartialClassFiles-Check ausgenommen werden.
@@ -408,14 +408,14 @@ public sealed record MetricsConfig
     /// Maximale Anzahl öffentlicher Member (Methoden + Properties + Events + Felder) pro Typ.
     /// 0 = deaktiviert. Override/Interface-Implementierungen sowie Konstruktoren werden nicht gezählt.
     /// </summary>
-    public int MaxPublicMembersPerType { get; init; } = 0;
+    public int MaxPublicMembersPerType { get; init; } = 15;
 
     /// <summary>
     /// Klassen-Name-Suffixe, für die MaxPublicMembersPerType nicht geprüft wird.
     /// Standard: Extensions/Mapper/Constants sind by Design breit.
     /// </summary>
     public IReadOnlyCollection<string> MaxPublicMembersPerTypeExemptSuffixes { get; init; }
-        = ["Extensions", "Mapper", "Constants"];
+        = ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"];
 
     /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
@@ -499,19 +499,21 @@ public sealed record TestSentinelConfig
     /// Klassen deren Name mit einem dieser Suffixe endet, werden vom StaticTestSentinel ausgenommen.
     /// Beispiel: ["Extensions", "Constants", "Converter"]
     /// </summary>
-    public IReadOnlyCollection<string> ExemptClassNameSuffixes { get; init; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> ExemptClassNameSuffixes { get; init; }
+        = ["Extensions", "Constants", "Converter", "Profile", "Seed", "Migration", "Startup", "Module"];
 
     /// <summary>
     /// Klassen die von einem dieser Typen erben oder diese Interfaces implementieren,
     /// werden vom StaticTestSentinel ausgenommen.
     /// Beispiel: ["ComponentBase", "IValueConverter", "Profile"]
     /// </summary>
-    public IReadOnlyCollection<string> ExemptWhenInheritsFrom { get; init; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> ExemptWhenInheritsFrom { get; init; }
+        = ["ComponentBase", "IValueConverter", "Profile"];
 
     /// <summary>
     /// Statische Klassen werden vom StaticTestSentinel ausgenommen wenn true.
     /// </summary>
-    public bool ExemptStaticClasses { get; init; } = false;
+    public bool ExemptStaticClasses { get; init; } = true;
 
     /// <summary>
     /// Projekt-Name-Suffixe, die ein Projekt als Testprojekt kennzeichnen,
