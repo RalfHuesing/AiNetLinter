@@ -277,7 +277,7 @@ Beispiele:
 
 - Für Tests: schwer prüfbar (muss `Console.SetOut` mocken)
 - Für Agenten: keine strukturierte Trennung zwischen Info/Warn/Error
-- Für Multi-Output (Text + SARIF): nicht differenzierbar
+- Für Multi-Output (z. B. CLI vs. Log-Dateien): nicht differenzierbar
 - Übersetzungs-Strings im Code → keine i18n
 
 ### Klassifikation

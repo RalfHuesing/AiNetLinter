@@ -93,7 +93,6 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 - [x] **Syntaktische Typ-Analyse für verbotene Namespace-Kopplungen:** Durchsuche den Quellcode nach der Verwendung von vollqualifizierten Typnamen (in `QualifiedNameSyntax` und `MemberAccessExpressionSyntax`), die gegen die konfigurierten Namespace-Kopplungen verstoßen (auch wenn kein `using`-Statement verwendet wird).
 - [x] **Sicherer Test Sentinel:** Stelle sicher, dass gefundene Testklassen tatsächliche Testmethoden (mit `[Fact]`, `[Theory]`, `[Test]` oder `[TestMethod]` Attributen) enthalten, um zu verhindern, dass leere Testdateien den Sentinel austricksen.
-- [x] **SARIF CLI-Ausgabeformat:** Füge die Option `--format sarif` hinzu, um die Regelverstöße im standardisierten SARIF-Format (Static Analysis Results Interchange Format) auf `stdout` auszugeben, zur direkten Integration in GitHub Actions/GitLab CI.
 
 ---
 
@@ -272,7 +271,6 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Schnellerer Rules-Sync & CLI `--check`:** Direkter Konfigurations-Check und Drift-Erkennung ohne Laden der Solution (Exit 1 bei Abweichung).
 - [x] **Detaillierter Footprint & Debug-CLI:** `--footprint <Klassenname>` mit Auswertung der Top-3 Abhängigkeiten zur RAG-Optimierung.
 - [x] **Repo-Playbook-Generator Erweiterung:** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
-- [x] **SARIF Intent-Tags:** Export von `RuleMetadata.Intent` in `properties.tags` für CI-Dashboards.
 
 ---
 

@@ -23,7 +23,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 *   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
 *   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
 *   **Gezielte Bulk-Suppression (`--add-disable-all` / `--remove-disable-all`):** Audit-basiertes Einfügen des Disable-all-Kommentars nur in Dateien mit Verstößen sowie sicheres Entfernen exakter Disable-all-Zeilen.
-*   **SARIF- & Dependency-Graph-Export:** Generierung strukturierter SARIF-Fehlerberichte für CI/CD sowie automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
+*   **Dependency-Graph-Export:** Automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
 *   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
 *   **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Flexibles Überschreiben oder Deaktivieren von Linter-Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) in der Konfiguration.
 *   **AI-Context-Footprint (Metrik):** Berechnet die Summe aller Codezeilen einer Klasse inklusive aller transitiv referenzierten eigenen Typen, um hohe Kopplung und große Kontext-Footprints für KIs zu vermeiden.
@@ -708,7 +708,6 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
 *   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
-*   `-f`, `--format` (Format): Ausgabeformat: `text` (Standard) oder `sarif` (Optional).
 *   `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 *   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
 *   `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
@@ -826,39 +825,14 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rul
 
 Alle Dateipfade in der Ausgabe sind **relativ zum `--path`-Argument** (Verzeichnis bzw. übergeordnetes Verzeichnis bei `.sln`/`.slnx`), mit Forward-Slashes.
 
-#### Text (Standard, LLM-optimiert)
+Der Linter erzeugt standardmäßig einen detaillierten **Markdown-Report**.
 
-Token-effiziente Ausgabe für AI-Agenten. Jeder Text-Lauf gibt zuerst einen `# Run: [Datum und Uhrzeit]` Header aus. Bei Erfolg folgt `OK`. Bei Verstößen: kompakter Header mit Handlungsanweisung, parsebare Summary-Segmente (nach Datei und Regel) und sortierte Detail-Einzeiler.
-
-```
-# Run: 2026-06-13 09:06:13
-# AiNetLinter · 2 violations
-Behebe nur die gelisteten Verstöße. Minimaler Diff — kein Refactoring ausserhalb betroffener Stellen/Zeilen.
-
-## Summary · by file
-1 src/AiNetLinter/Core/LinterAnalyzer.cs
-1 src/AiNetLinter/Models/RuleViolation.cs
-
-## Summary · by rule
-| Rule | Count | Intent |
-|------|------:|--------|
-| EnforceSealedClasses | 1 | general |
-| MaxLineCount | 1 | agent-context |
-
-## Violations
-src/AiNetLinter/Core/LinterAnalyzer.cs:77 EnforceSealedClasses | Klasse 'Foo' nicht sealed -> Füge den 'sealed' Modifikator hinzu.
-src/AiNetLinter/Models/RuleViolation.cs:6 MaxLineCount | Datei hat 520 Zeilen (max 500) -> Teile die Datei in kleinere Klassen auf.
-```
-
-**Summary-Formate:**
-- Datei: `{anzahl} {relativerPfad}` — absteigend nach Anzahl
-- Regel: Markdown-Tabelle `| Rule | Count | Intent |` — absteigend nach Anzahl
-
-**Detail-Zeilenformat:** `{relativerPfad}:{zeile} {RegelName} | {Details} -> {Guidance}` (Guidance nur wenn vorhanden)
-
-#### SARIF (`--format sarif`)
-
-Strukturiertes JSON für CI/CD-Integration. `artifactLocation.uri` enthält relative Pfade (Basis: `--path`).
+Bei Erfolg wird lediglich `OK` ausgegeben. Bei Regelverstößen enthält der Report:
+- **Titel**: Anzahl der Regelverstöße (`# AiNetLinter - <X> violations`).
+- **Handlungsanweisung**: Vorgehensweise zur Behebung und False-Positive-Prüfung.
+- **Regellegende**: Erklärungen, warum eine Regel existiert und wie sie behoben wird.
+- **Strukturelle Verstöße**: Warnungen für architektonische Probleme (z. B. AI-Context-Footprint).
+- **Violations nach Datei**: Auflistung aller Verstöße gruppiert und sortiert nach Datei und Zeile.
 
 ---
 

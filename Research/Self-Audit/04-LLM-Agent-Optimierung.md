@@ -24,118 +24,7 @@ Nach Diskussion mit dem Projekt-Owner wurde folgender **primärer Use-Case** ide
 
 **Konsequenz für die Output-Strategie:**
 
-→ **Markdown ist das einzige benötigte Output-Format.** JSON, NDJSON, Text und SARIF sind für diesen Use-Case **Overkill** und sollten gestrichen werden. Siehe **L1 (revidiert)** für Details.
-
----
-
-## L1 (revidiert) — Output auf Markdown reduzieren
-
-### Befund (vorher)
-
-Aktuell unterstützte Output-Formate:
-
-- `text` (default) — gut für LLM-Sicht, aber im Grunde Markdown-light
-- `sarif` — für CI-Integration, aber nicht für deinen Agent-Workflow
-
-**Nicht vorhanden:** `json`, `markdown`.
-
-### Bewertung für den aktuellen Use-Case
-
-| Format     | Use-Case-Fit                                          | Empfehlung                               |
-| ---------- | ----------------------------------------------------- | ---------------------------------------- |
-| `text`     | ⚠️ Redundant zu Markdown                              | ❌ **Streichen**                         |
-| `markdown` | ✅ Token-sparsam, LLMs parsen nativ, GitHub-renderbar | ✅ **Default + einziges Format**         |
-| `json`     | ❌ Overhead, kein Consumer                            | ❌ **Streichen** (R1 + Agent-API reicht) |
-| `sarif`    | ⚠️ Nur für klassisches CI/CD ohne Agent               | ❌ **Streichen** (Agent-Workflow reicht) |
-
-**These (bestätigt durch Diskussion):** Für deinen Use-Case reicht **ein einziges Format: Markdown**.
-
-### Revidierte Empfehlung
-
-**1. `--format`-Option entfernen** oder auf nur `markdown` reduzieren:
-
-```bash
-ainetlinter --path ./MyApp.slnx --config rules.json
-# Output ist immer Markdown
-```
-
-**2. `ViolationTextFormatter` → `ViolationMarkdownFormatter` umbenennen** + alle anderen Formatter-Implementierungen löschen.
-
-**3. `SarifWriter` und SARIF-Records löschen** (`SarifRun`, `SarifResult`, `SarifMessage`, etc. — 13 Typen aus dem Codegraph).
-
-**Geschätzte Einsparung:**
-
-- ~500–800 LOC (SARIF-Typen, Output-Format-Logik, Tests)
-- 13 SARIF-Klassen → 0
-- `ViolationTextFormatter` → 1 fokussierter `MarkdownFormatter`
-
-### Warum das richtig ist
-
-- **Token-Sparsamkeit:** Markdown ist kompakter als JSON (~30–40% weniger Zeichen bei gleicher Info)
-- **LLM-Nativ:** Claude, GPT, Cursor verarbeiten Markdown ohne Spezial-Parser
-- **Direkt lesbar:** Mensch kann Output direkt in PR-Comments oder Editor-View sehen
-- **Wartbarkeit:** 1 Format = 1 Code-Pfad = weniger Bugs
-- **YAGNI-Prinzip:** Kein Code für Formate, die aktuell niemand konsumiert
-
-### Skelett (Markdown als Default)
-
-**Aufruf** (kein `--format`-Flag mehr nötig):
-
-```bash
-ainetlinter --path ./MyApp.slnx --config rules.json > output.md
-```
-
-**Output-Skelett (Markdown):**
-
-````markdown
-# AiNetLinter Report (12 violations, 5 files)
-
-> **Generated:** 2026-06-19 13:45:00 | **Project:** MyApp | **Config:** rules.json
-
-## Summary by Rule
-
-| Rule                   | Count | Severity | Intent        |
-| ---------------------- | ----: | -------- | ------------- |
-| `EnforceSealedClasses` |     3 | 🔴 error | agent-context |
-| `MaxLineCount`         |     1 | 🔴 error | agent-context |
-
-## Violations
-
-### `EnforceSealedClasses` × 3
-
-#### `src/MyApp/Services/UserService.cs:12`
-
-> Die Klasse 'UserService' ist nicht als 'sealed' deklariert.
-
-**Guidance:** Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern.
-
-**Fix:**
-
-```csharp
-public sealed class UserService  // <- sealed hinzufuegen
-```
-````
-
-**Suppression (letztes Mittel):**
-
-```csharp
-public class UserService  // ainetlinter-disable EnforceSealedClasses
-```
-
-// ... weitere Violations
-
-`````
-
-**Aufwand:** S (1 Tag Refactor: Format-Switches entfernen, `ViolationTextFormatter` zu `ViolationMarkdownFormatter` umbenennen, SARIF-Records löschen)
-**Nutzen:** ★★★★★ (Use-Case-Optimierung + ~500 LOC weniger)
-
----
-
-## L2 (gestrichen) — `--format markdown` als separates Format
-
-**Status:** ❌ **Gestrichen** — durch L1 (Markdown only) abgedeckt.
-
-Die ursprüngliche Idee, Markdown als *eines von mehreren Formaten* einzuführen, ist obsolet, da dein Use-Case nur **ein einziges Format** braucht. Wenn Markdown der einzige Output ist, braucht es keinen `--format markdown`-Switch.
+→ **Markdown ist das einzige Output-Format.** JSON, NDJSON, Text und SARIF wurden gestrichen.
 
 ---
 
@@ -726,26 +615,23 @@ ainetlinter --help
 
 | Vorschlag                      | Aufwand | Nutzen | Abhängig von |
 | ------------------------------ | ------- | ------ | ------------ |
-| L1 — JSON-Output               | M       | ★★★★   | —            |
-| L2 — Markdown-Output           | S       | ★★★★   | —            |
 | L3 — `--list-rules` API        | S       | ★★★★★  | R1           |
 | L4 — Bessere LLM-Output        | S       | ★★★★★  | R1           |
 | L5 — MCP-Server                | L       | ★★★★★  | R1, R3       |
-| L6 — Watch-Modus               | M       | ★★★★   | L1           |
+| L6 — Watch-Modus               | M       | ★★★★   | —            |
 | L7 — Token-Budget              | S       | ★★★    | —            |
 | L8 — Semantische Suche         | S       | ★★★    | R1           |
-| L9 — Strukturiertes Error      | M       | ★★★    | —            |
+| L9 —- Strukturiertes Error     | M       | ★★★    | —            |
 | L10 — Inline-Auto-Fix-Snippets | L       | ★★★★★  | R2, R4       |
 | L11 — Snapshot-Tests           | S       | ★★★    | —            |
 | L12 — Doc-Updates              | S       | ★★★    | —            |
 
 ### Empfohlene Reihenfolge
 
-1. **L1 + L2** (Output-Formate) — Quick Win, sofort verfügbar
-2. **R1 + L3 + L4** (RuleRegistry + Discovery) — Fundament
-3. **L8** (Suche) — auf R1 aufbauend
-4. **L5** (MCP-Server) — langfristige Strategie
-5. **L6, L7, L9, L10, L11, L12** — Polish
+1. **R1 + L3 + L4** (RuleRegistry + Discovery) — Fundament
+2. **L8** (Suche) — auf R1 aufbauend
+3. **L5** (MCP-Server) — langfristige Strategie
+4. **L6, L7, L9, L10, L11, L12** — Polish
 
 ---
 
@@ -753,36 +639,12 @@ ainetlinter --help
 
 **Die Zukunft von AiNetLinter ist agent-zentriert**, nicht CLI-zentriert. Aktuell ist es ein gutes CLI-Tool mit LLM-Output. Die zukunftssichere Variante ist ein **MCP-Server mit CLI-Front-End**.
 
-Drei kritische Investitionen, um dies zu erreichen:
+Zwei kritische Investitionen, um dies zu erreichen:
 
 1. **R1 — `IRuleRegistry`** als Fundament (3 Tage)
-2. **L1 + L2 — Strukturierte Outputs** für direkten Agent-Konsum (2 Tage)
-3. **L5 — MCP-Server** für native Integration (4–5 Tage)
+2. **L5 — MCP-Server** für native Integration (4–5 Tage)
 
-→ **Total: 2 Wochen für eine vollständige Agent-Integration**.
+→ **Total: 1,5 Wochen für eine vollständige Agent-Integration**.
 
 → Damit wird AiNetLinter nicht nur ein **Linter** für AI-generierten Code, sondern ein **erstklassiger Agent-Service** in der AI-Tool-Landschaft.
-
----
-
-## 🎯 Zusammenfassung der Revision
-
-**Stand 19.06.2026 — nach Diskussion mit dem Projekt-Owner:**
-
-| Ursprüngliche Empfehlung | Revidierte Empfehlung | Begründung |
-|---|---|---|
-| **L1** JSON-Output (M, ★★★★) | ❌ **Gestrichen** | Kein Tooling-Consumer im Use-Case |
-| **L2** Markdown-Format (S, ★★★★) | ✅ **Integriert in L1** | Markdown = einziges Format |
-| **L7** Token-Budget (S, ★★★) | ⚠️ **Optional** | Im Markdown als Tabelle möglich |
-| **L9** JSON-Error-Mode (M, ★★★) | ⚠️ **Auf Markdown-Format anpassen** | `[ERROR]: code: msg / context: ... / hint: ...` reicht |
-| **L12** Doc-Updates (S, ★★★) | ✅ **Bleibt** | Jetzt nur Markdown-Beispiele statt multipler Formate |
-
-**Verbleibend hoher Wert (★★★★★):**
-- **L3** `--list-rules` / `--describe-rule` (Agent-Discovery)
-- **L4** Bessere LLM-Output-Qualität (Inline-Code-Beispiele)
-- **L5** MCP-Server (langfristig)
-- **L10** Inline-Auto-Fix-Snippets (großer LLM-Wert)
-
-**Neu hinzugekommen:**
-- **L1 revidiert** — ~500 LOC weniger durch SARIF/JSON-Streichung
 `````

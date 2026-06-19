@@ -5,14 +5,14 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
-public sealed class ViolationTextFormatterTests
+public sealed class ViolationMarkdownFormatterTests
 {
     private static readonly string OutputRoot = Path.GetFullPath(@"C:\Projects\MyApp");
 
     [Fact]
     public void Format_ReturnsEmptyForNoViolations()
     {
-        var result = ViolationTextFormatter.Format([], OutputRoot);
+        var result = ViolationMarkdownFormatter.Format([], OutputRoot);
 
         Assert.Equal(string.Empty, result);
     }
@@ -25,7 +25,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Klasse 'Bar' nicht sealed")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.StartsWith("# AiNetLinter - 1 violations", result);
         Assert.Contains("## Handlungsanweisung", result);
@@ -40,7 +40,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Auf 3 Dateien verteilt")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.Contains("Frage den Nutzer VOR der Umsetzung", result);
     }
@@ -54,7 +54,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 10, "MaxLineCount", "Zu lang")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         var legendeIdx = result.IndexOf("## Regellegende", StringComparison.Ordinal);
         var violationsIdx = result.IndexOf("## Violations nach Datei", StringComparison.Ordinal);
@@ -79,7 +79,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         var fooIdx = result.IndexOf("### src/Foo.cs", StringComparison.OrdinalIgnoreCase);
         var zooIdx = result.IndexOf("### src/Zoo.cs", StringComparison.OrdinalIgnoreCase);
@@ -101,7 +101,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Core\Bar.cs", 12, "MaxMethodParameterCount", "6 Parameter")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.Contains("### src/Core/Bar.cs", result);
         Assert.Contains("Z.12 MaxMethodParameterCount", result);
@@ -116,7 +116,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 9, "MaxPartialClassFiles", "Auf 5 Dateien verteilt")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.Contains("## Strukturelle Verstöße", result);
         Assert.Contains("Nutzer VOR Beginn fragen", result);
@@ -131,7 +131,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\BigClass.cs", 1, "AIContextFootprint", "BigClass (6000 > 5000)")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.Contains("## Strukturelle Verstöße", result);
         Assert.Contains("### AIContextFootprint", result);
@@ -145,7 +145,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         Assert.DoesNotContain("## Strukturelle Verstöße", result);
     }
@@ -158,7 +158,7 @@ public sealed class ViolationTextFormatterTests
             CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 9, "MaxPartialClassFiles", "Auf 5 Dateien verteilt")
         };
 
-        var result = ViolationTextFormatter.Format(violations, OutputRoot);
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
         var structuralIdx = result.IndexOf("## Strukturelle Verstöße", StringComparison.Ordinal);
         var byFileIdx = result.IndexOf("## Violations nach Datei", StringComparison.Ordinal);

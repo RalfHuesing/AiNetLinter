@@ -18,11 +18,6 @@ public sealed class LinterArgs
     public required string TargetPath { get; init; }
 
     /// <summary>
-    /// Holt oder setzt das Ausgabeformat (z. B. "text" oder "sarif").
-    /// </summary>
-    public required string Format { get; init; }
-
-    /// <summary>
     /// Holt oder setzt einen Wert, der angibt, ob detaillierte Ausgaben (Verbose) protokolliert werden sollen.
     /// </summary>
     public required bool Verbose { get; init; }
