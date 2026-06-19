@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.50 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.51 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -60,4 +60,4 @@ Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 **`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
 
-Details: `rules.json`, `AiNetLinter.exe --readme`.
+Details: `rules.json`, `AiNetLinter.exe --docs <name>`.

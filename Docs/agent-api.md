@@ -24,8 +24,8 @@ ainetlinter --search-rules "komplexitaet"
 ainetlinter --search-rules "sealed"
 ainetlinter --search-rules "agent"
 
-# Vollständige Hilfe als Markdown (README):
-ainetlinter --readme
+# Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
+ainetlinter --docs configuration
 ```
 
 ---
@@ -81,7 +81,7 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--readme` | bool | Vollständige Hilfe als Markdown ausgeben |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation als Markdown ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap) |
 | `--playbook <pfad>` | string | Repo-Playbook generieren |
 | `--sync-cursor-rules` | bool | `.cursor/rules/AiNetLinter.mdc` aktualisieren |
 | `--impact <typ>` | string | Impact-Analyse für einen Typ |

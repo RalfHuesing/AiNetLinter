@@ -1,4 +1,4 @@
-﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
+﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.51)
 Produktionscode · 161 Typen · 14 Namespaces
 
 ## AiNetLinter (1)
@@ -46,12 +46,12 @@ Produktionscode · 161 Typen · 14 Namespaces
 - AuditCommand → AuditRunContext, ILintConsole, LinterArgs, PlaybookOptions, SourceFileCatalog
 - AuditRunContext [record] → AuditRunContext, ILintConsole, IPerformanceProfiler, LinterArgs, LinterConfig
 - DebtReportCommand → ILintConsole, LinterArgs
+- DocsCommand → ILintConsole
 - FootprintCommand → ILintConsole, LinterArgs
 - ImpactCommand → ILintConsole, LinterArgs
 - ListRulesCommand → ILintConsole
 - MaintenanceCommand → ILintConsole, LinterArgs
 - PlaybookCheckCommand → ILintConsole, LinterArgs
-- ReadmeCommand → ILintConsole
 - SyncCursorRulesCommand → ILintConsole, LinterArgs
 
 ## AiNetLinter.Configuration (19)

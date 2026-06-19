@@ -37,7 +37,7 @@ public static class Program
             try
             {
                 var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
-                if (!linterArgs.Readme)
+                if (linterArgs.Docs == null)
                 {
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
@@ -84,7 +84,7 @@ public static class Program
             NoCache = parsed.NoCache,
             CacheTtlMinutes = parsed.CacheTtlMinutes,
             Footprint = parsed.Footprint,
-            Readme = parsed.Readme,
+            Docs = parsed.Docs,
             ListRules = parsed.ListRules,
             DescribeRule = parsed.DescribeRule,
             SearchRules = parsed.SearchRules,
@@ -120,7 +120,7 @@ public static class Program
 
     private static int? TryRunStandaloneCommand(LinterArgs args)
     {
-        if (args.Readme) return ReadmeCommand.Run();
+        if (args.Docs != null) return DocsCommand.Run(args.Docs);
         if (args.ListRules) return ListRulesCommand.ListAll();
         if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);
         if (args.SearchRules != null) return ListRulesCommand.Search(args.SearchRules);
