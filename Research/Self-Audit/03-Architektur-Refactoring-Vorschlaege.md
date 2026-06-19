@@ -2,72 +2,47 @@
 
 > Konkrete Refactoring-Pläne mit Code-Skeletten, basierend auf den Befunden in
 > [`01-Architektur-Befunde.md`](01-Architektur-Befunde.md) und [`02-Code-Qualitaet.md`](02-Code-Qualitaet.md).
+>
+> **Bindende Constraints:** Kein Plugin-System (Verdrahtung bleibt explizit), kein DI-Container (Konstruktor-Parameter statt Framework), statische Kompilierung, monolithisches CLI-Tool.
 
 ---
 
 ## Inhaltsverzeichnis
 
-- [03 — Architektur-Refactoring-Vorschläge](#03--architektur-refactoring-vorschläge)
-  - [Inhaltsverzeichnis](#inhaltsverzeichnis)
-  - [R1 — Zentrale `IRuleRegistry` einführen](#r1--zentrale-iruleregistry-einführen)
-    - [Ziel](#ziel)
-    - [Skelett](#skelett)
-    - [Definitions-Skelett](#definitions-skelett)
-    - [Migration der 3 Duplikate](#migration-der-3-duplikate)
-    - [Testbarkeit](#testbarkeit)
-  - [R2 — Plugin-Pipeline statt Visitor-Dispatcher](#r2--plugin-pipeline-statt-visitor-dispatcher)
-    - [Ziel](#ziel-1)
-    - [Skelett](#skelett-1)
-    - [Beispiel-Refactor](#beispiel-refactor)
-    - [LinterEngine-Refactor](#linterengine-refactor)
-    - [Discovery via Reflection](#discovery-via-reflection)
-    - [Behebt C2.2](#behebt-c22)
-  - [R3 — `Program.cs` → Executor-Pattern](#r3--programcs--executor-pattern)
-    - [Ziel](#ziel-2)
-    - [Skelett](#skelett-2)
-    - [Implementierungen](#implementierungen)
-    - [Program.cs nach Refactor](#programcs-nach-refactor)
-  - [R4 — `PerformanceProfiler` entkoppeln + optional machen](#r4--performanceprofiler-entkoppeln--optional-machen)
-    - [Skelett](#skelett-3)
-    - [LinterEngine-Refactor](#linterengine-refactor-1)
-  - [R5 — `CancellationToken` durch die Pipeline](#r5--cancellationtoken-durch-die-pipeline)
-    - [Refactor-Skelett](#refactor-skelett)
-    - [Program.cs](#programcs)
-  - [R6 — `Apply`-Refactoring: Extension-Method-Pattern](#r6--apply-refactoring-extension-method-pattern)
-    - [Skelett](#skelett-4)
-  - [R7 — Strukturiertes `ILogger`-Interface](#r7--strukturiertes-ilogger-interface)
-    - [Skelett](#skelett-5)
-    - [Verwendung](#verwendung)
-  - [R8 — Rule-Namen als Const-Klasse (`LinterRuleIds`)](#r8--rule-namen-als-const-klasse-linterruleids)
-    - [Skelett](#skelett-6)
-    - [Verwendung](#verwendung-1)
-  - [R9 — `ArchitectureChecker` aufteilen](#r9--architecturechecker-aufteilen)
-    - [Vorschlag](#vorschlag)
-  - [R10 — Bug-Fix: `VisitRecordDeclaration` ohne `CollectClassInfo`](#r10--bug-fix-visitrecorddeclaration-ohne-collectclassinfo)
-    - [Fix](#fix)
-  - [R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren](#r11--quick-win-repoplaybookgeneratorruledescriptions-reparieren)
-    - [Fix](#fix-1)
-  - [R12 — Lösung der Test-Pfad-Inkonsistenz](#r12--lösung-der-test-pfad-inkonsistenz)
-    - [Vorgehen](#vorgehen)
-  - [R13 — Optional: Mini-DI für Testbarkeit](#r13--optional-mini-di-für-testbarkeit)
-    - [Vorschlag (kein DI-Container, sondern "Constructor Injection Lite")](#vorschlag-kein-di-container-sondern-constructor-injection-lite)
-  - [Roadmap: Gesamtreihenfolge](#roadmap-gesamtreihenfolge)
-    - [Erwartete Resultate](#erwartete-resultate)
-  - [🎯 Fazit](#-fazit)
+- [R1 — Statische `RuleRegistry`-Klasse einführen](#r1--statische-ruleregistry-klasse-einführen)
+- [R2 — Checker-God-Klassen aufteilen (statisch, explizit)](#r2--checker-god-klassen-aufteilen-statisch-explizit)
+- [R3 — `Program.cs` in statische Command-Klassen aufteilen](#r3--programcs-in-statische-command-klassen-aufteilen)
+- [R4 — `PerformanceProfiler` entkoppeln + optional machen](#r4--performanceprofiler-entkoppeln--optional-machen)
+- [R5 — `CancellationToken` durch die Pipeline](#r5--cancellationtoken-durch-die-pipeline)
+- [R6 — `Apply`-Refactoring: ein `with`-Block](#r6--apply-refactoring-ein-with-block)
+- [R7 — `ILintConsole`-Interface statt `Console.WriteLine`](#r7--ilintconsole-interface-statt-consolewriteline)
+- [R8 — Rule-Namen als Const-Klasse (`LinterRuleIds`)](#r8--rule-namen-als-const-klasse-linterruleids)
+- [R9 — `ctx.ReportViolation`-Helper](#r9--ctxreportviolation-helper)
+- [R10 — Bug-Fix: `VisitRecordDeclaration` ohne `CollectClassInfo`](#r10--bug-fix-visitrecorddeclaration-ohne-collectclassinfo)
+- [R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren](#r11--quick-win-repoplaybookgeneratorruledescriptions-reparieren)
+- [Roadmap: Gesamtreihenfolge](#roadmap-gesamtreihenfolge)
 
 ---
 
-## R1 — Zentrale `IRuleRegistry` einführen
+## R1 — Statische `RuleRegistry`-Klasse einführen
 
-**Löst:** F1, A3, C6.1, C9.1, C7.1, C7.3, C11.3
-**Aufwand:** M (2–3 Tage)
+**Löst:** F1, A3, C7.1, C7.2, C9.1, C11.3  
+**Aufwand:** M (2–3 Tage)  
 **Nutzen:** ★★★★★
 
-### Ziel
+### Problem
 
-Alle Regel-Metadaten (Name, Severity, Intent, Description, Cursor-Hint, Default-Wert, Exempt-Suffixes, Fix-Strategy) werden an **einem einzigen Ort** definiert. CursorRulesGenerator, ViolationTextFormatter und RepoPlaybookGenerator lesen aus dieser Registry.
+Regel-Metadaten (Name, Beschreibung, Intent, Guidance, Grenzwerte) sind an **drei Stellen** definiert, jeweils leicht unterschiedlich und teils mit **falschen Werten**:
 
-### Skelett
+- `CursorRulesGenerator.GlobalRules[]` — für `.mdc`-Dateigenerierung
+- `ViolationTextFormatter.RuleInstructions` — für LLM-Output
+- `RepoPlaybookGenerator.RuleDescriptions` — für Playbook-Markdown
+
+Wenn eine Regel neu hinzukommt oder sich ändert, müssen alle drei Stellen manuell aktualisiert werden — und das passiert offensichtlich nicht zuverlässig (7 falsche Werte, → F9).
+
+### Lösungsansatz
+
+Eine statische Klasse `RuleRegistry` als Single-Source-of-Truth. Kein Interface (nicht nötig ohne DI-Container), keine Reflection-Discovery — einfach eine statische readonly Liste.
 
 **Neue Datei:** `src/AiNetLinter/Core/RuleRegistry.cs`
 
@@ -75,51 +50,31 @@ Alle Regel-Metadaten (Name, Severity, Intent, Description, Cursor-Hint, Default-
 namespace AiNetLinter.Core;
 
 public sealed record RuleMetadata(
-    string RuleId,                       // "EnforceSealedClasses"
-    string DisplayName,                  // "Konkrete Klassen muessen 'sealed' sein"
-    string ShortDescription,             // 1-Satz-LLM-Output
-    string DetailedGuidance,             // mehrteilige Anweisung
-    string Intent,                       // "agent-context" | "agent-resilience" | ...
-    string Severity,                     // "error" | "warning" | "info"
-    string CursorHint,                   // Textbaustein fuer .mdc-Datei
-    bool HasAutoFix,                     // wird durch LinterAutoFixer unterstuetzt
-    IReadOnlyList<string> ExemptSuffixes // ImmutabilityExemptSuffixes / SealedClassExemptSuffixes / etc.
+    string RuleId,              // "EnforceSealedClasses"
+    string DisplayName,         // "Konkrete Klassen muessen 'sealed' sein"
+    string ShortDescription,    // 1-Satz für Playbook
+    string DetailedGuidance,    // mehrteilige LLM-Anweisung
+    string Intent,              // "agent-context" | "agent-resilience" | ...
+    string Severity,            // "error" | "warning" | "info"
+    string CursorHint,          // Textbaustein fuer .mdc-Datei
+    bool HasAutoFix
 );
 
-public sealed class RuleRegistry
+internal static class RuleRegistry
 {
-    private readonly Dictionary<string, RuleMetadata> _rules;
+    public static readonly IReadOnlyList<RuleMetadata> All = BuildAll();
 
-    public RuleRegistry(IEnumerable<RuleMetadata> rules)
-    {
-        _rules = rules.ToDictionary(r => r.RuleId, StringComparer.OrdinalIgnoreCase);
-    }
+    public static RuleMetadata Resolve(string ruleId) =>
+        TryResolve(ruleId) ?? throw new KeyNotFoundException($"Unknown rule: {ruleId}");
 
-    public IReadOnlyCollection<RuleMetadata> All => _rules.Values;
-    public RuleMetadata Resolve(string ruleId) =>
-        _rules.TryGetValue(ruleId, out var r)
-            ? r
-            : throw new KeyNotFoundException($"Unknown rule: {ruleId}");
+    public static RuleMetadata? TryResolve(string ruleId) =>
+        All.FirstOrDefault(r => r.RuleId.Equals(ruleId, StringComparison.OrdinalIgnoreCase));
 
-    public RuleMetadata? TryResolve(string ruleId) =>
-        _rules.GetValueOrDefault(ruleId);
+    public static IEnumerable<RuleMetadata> ByIntent(string intent) =>
+        All.Where(r => r.Intent == intent);
 
-    public IEnumerable<RuleMetadata> ByIntent(string intent) =>
-        _rules.Values.Where(r => r.Intent == intent);
-}
-```
-
-### Definitions-Skelett
-
-**Neue Datei:** `src/AiNetLinter/Core/BuiltInRules.cs`
-
-```csharp
-namespace AiNetLinter.Core;
-
-internal static class BuiltInRules
-{
-    public static readonly IReadOnlyList<RuleMetadata> All = new RuleMetadata[]
-    {
+    private static IReadOnlyList<RuleMetadata> BuildAll() =>
+    [
         new(
             RuleId: nameof(GlobalConfig.EnforceSealedClasses),
             DisplayName: "Konkrete Klassen muessen 'sealed' sein",
@@ -128,291 +83,257 @@ internal static class BuiltInRules
             Intent: "agent-context",
             Severity: "error",
             CursorHint: "`sealed` fuer konkrete Klassen; Ausnahmen: Suffixe in `rules.json`.",
-            HasAutoFix: true,
-            ExemptSuffixes: ["Base", "Foundation", "Host"]
+            HasAutoFix: true
         ),
-        // ... 29 weitere Eintraege
-    };
+        // ... alle weiteren Regeln
+    ];
 }
 ```
 
 ### Migration der 3 Duplikate
 
-| Vorher (Quelle)                           | Nachher                                          |
-| ----------------------------------------- | ------------------------------------------------ |
-| `CursorRulesGenerator.GlobalRules[]`      | `RuleRegistry.All.Where(r => r.Intent != "...")` |
-| `ViolationTextFormatter.RuleInstructions` | `RuleRegistry.Resolve(ruleId).DetailedGuidance`  |
-| `RepoPlaybookGenerator.RuleDescriptions`  | `RuleRegistry.Resolve(ruleId).ShortDescription`  |
+| Vorher (Quelle)                           | Nachher                                         |
+| ----------------------------------------- | ----------------------------------------------- |
+| `CursorRulesGenerator.GlobalRules[]`      | `RuleRegistry.All` (gefiltert nach Intent)      |
+| `ViolationTextFormatter.RuleInstructions` | `RuleRegistry.Resolve(ruleId).DetailedGuidance` |
+| `RepoPlaybookGenerator.RuleDescriptions`  | `RuleRegistry.Resolve(ruleId).ShortDescription` |
 
-→ Jede dieser 3 Klassen verliert ihre statische Liste und liest aus der Registry.
+Jede der drei Klassen verliert ihre statische Liste und liest aus der Registry.
+
+### Grenzwerte: konfigurationsbasiert
+
+Für Beschreibungen mit Grenzwerten (MaxLineCount, MaxCyclomaticComplexity etc.) wird die aktuelle `LinterConfig` übergeben:
+
+```csharp
+// RepoPlaybookGenerator.cs nach Refactoring:
+private static string FormatRuleDescription(RuleMetadata rule, LinterConfig config)
+{
+    // Statische Beschreibung aus Registry, Grenzwert dynamisch aus Config:
+    return rule.RuleId switch
+    {
+        nameof(MetricsConfig.MaxLineCount) =>
+            $"Dateizeilenlimit (max. {config.Metrics.MaxLineCount} Zeilen) ueberschritten.",
+        nameof(MetricsConfig.MaxCyclomaticComplexity) =>
+            $"Zu hohe zyklomatische Komplexitaet (max. {config.Metrics.MaxCyclomaticComplexity}).",
+        _ => rule.ShortDescription
+    };
+}
+```
 
 ### Testbarkeit
 
 ```csharp
 [Fact]
-public void EnforceSealedClasses_HasAutoFix_True()
+public void AllRules_HaveNonEmptyGuidance()
 {
-    var registry = new RuleRegistry(BuiltInRules.All);
-    var rule = registry.Resolve(nameof(GlobalConfig.EnforceSealedClasses));
-    Assert.True(rule.HasAutoFix);
-    Assert.Equal("agent-context", rule.Intent);
+    foreach (var rule in RuleRegistry.All)
+    {
+        Assert.NotEmpty(rule.DetailedGuidance);
+        Assert.NotEmpty(rule.ShortDescription);
+    }
 }
 ```
 
 ---
 
-## R2 — Plugin-Pipeline statt Visitor-Dispatcher
+## R2 — Checker-God-Klassen aufteilen (statisch, explizit)
 
-**Löst:** F2, A1, C2.1, C2.2, C2.3, C11
-**Aufwand:** M (2–3 Tage, mit Tests)
+**Löst:** F2, A1, C2.1, C11.1, C12.1  
+**Aufwand:** M (2–3 Tage, inkl. Tests)  
 **Nutzen:** ★★★★★
 
-### Ziel
+### Problem
 
-Checker sind **Instanzen** einer Klasse, die ein Interface implementieren. Sie werden beim Engine-Start aus einer `IReadOnlyList<ICheckRule>` aggregiert. Neue Regeln = neue Klasse, keine Änderung am Dispatcher.
+`ArchitectureChecker.cs` (303 LOC, 18 Methoden) sammelt völlig unzusammenhängende Prüfungen in einer Klasse. Tests für `CheckSealedClass` müssen den gesamten `LinterAnalyzer` hochfahren, statt die Methode direkt aufzurufen. Das gleiche gilt für andere große Checker-Klassen.
 
-### Skelett
+**Zusatzbug:** `VisitRecordDeclaration` ruft kein `CollectClassInfo` auf — ein direktes Symptom der unstrukturierten Verdrahtung in `LinterAnalyzer`.
 
-**Neue Datei:** `src/AiNetLinter/Core/ICheckRule.cs`
+### Lösungsansatz
 
-```csharp
-public interface IClassRule
-{
-    string RuleId { get; }
-    bool IsEnabled(LinterConfig config);
-    void CheckClass(ClassDeclarationSyntax node, CheckerContext ctx);
-    void CheckRecord(RecordDeclarationSyntax node, CheckerContext ctx) { } // default no-op
-    void CheckStruct(StructDeclarationSyntax node, CheckerContext ctx) { } // default no-op
-}
+**Kein Plugin-System, keine Reflection.** Die Verdrahtung in `LinterAnalyzer` bleibt vollständig explizit — neue Checker müssen dort manuell eingetragen werden. Das Ziel ist ausschließlich: jede Checker-Klasse hat eine klare Verantwortlichkeit und ist direkt testbar.
 
-public interface IMethodRule
-{
-    string RuleId { get; }
-    bool IsEnabled(LinterConfig config);
-    void CheckMethod(MethodDeclarationSyntax node, CheckerContext ctx);
-}
+**Neue Struktur:**
 
-public interface IInvocationRule
-{
-    string RuleId { get; }
-    bool IsEnabled(LinterConfig config);
-    void CheckInvocation(InvocationExpressionSyntax node, CheckerContext ctx);
-}
+| Neue Datei                           | Methoden aus `ArchitectureChecker`                             |
+| ------------------------------------ | -------------------------------------------------------------- |
+| `Checkers/SealedClassChecker.cs`     | `CheckSealedClass`, `IsSealedOrStaticOrAbstract`, `HasExemptSuffix` |
+| `Checkers/ValueObjectChecker.cs`     | `CheckValueObjectContract`, `IsStructOrReadOnly`               |
+| `Checkers/NamespaceCouplingChecker.cs` | `CheckForbiddenNamespace`, `CheckForbiddenSymbolNamespace`, `NamespaceMatches` |
+| `Checkers/PhantomDependencyChecker.cs` | `CheckPhantomNamespace`, `CheckPhantomReflection`, `IsForbiddenReflectionCall` |
+| `Checkers/DynamicTypeChecker.cs`     | `CheckDynamic`                                                  |
+| `Checkers/ClassInfoCollector.cs`     | `CollectClassInfo`, `GetBaseTypeNames`                         |
+| `Checkers/GeneratedCodeDetector.cs`  | `IsGeneratedCode`                                               |
+| `Checkers/InheritanceDepthChecker.cs`| `GetInheritanceDepth`, `IsFrameworkBaseType`                   |
+| `Checkers/TestAttributeDetector.cs`  | `CheckForTestMethods`, `IsTestAttribute`                       |
 
-public interface IFileLevelRule
-{
-    string RuleId { get; }
-    bool IsEnabled(LinterConfig config);
-    void CheckFile(SyntaxTree tree, CheckerContext ctx);
-}
-```
+Alle bleiben `internal static class` — konsistent mit dem bestehenden Pattern.
 
-### Beispiel-Refactor
-
-**Vorher:** `ArchitectureChecker.CheckSealedClass` (statisch, in Checker.cs)
-
-**Nachher:**
+### Beispiel: SealedClassChecker.cs
 
 ```csharp
-internal sealed class EnforceSealedClassesRule : IClassRule
+// src/AiNetLinter/Core/Checkers/SealedClassChecker.cs
+namespace AiNetLinter.Core.Checkers;
+
+internal static class SealedClassChecker
 {
-    public string RuleId => nameof(GlobalConfig.EnforceSealedClasses);
-
-    public bool IsEnabled(LinterConfig config) =>
-        config.Global.EnforceSealedClasses;
-
-    public void CheckClass(ClassDeclarationSyntax node, CheckerContext ctx)
+    internal static void Check(ClassDeclarationSyntax node, CheckerContext ctx)
     {
+        if (!ctx.Config.Global.EnforceSealedClasses) return;
         if (IsSealedOrStaticOrAbstract(node)) return;
-        if (IsExempt(node.Identifier.Text, ctx)) return;
+        if (HasExemptSuffix(node.Identifier.Text, ctx.Config.Global.SealedClassExemptSuffixes)) return;
 
-        ctx.ReportViolation(this, node,
-            $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-            "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, ..."
-        );
+        ctx.AddViolation(new RuleViolation
+        {
+            FilePath = ctx.FilePath,
+            LineNumber = SyntaxHelper.LineOf(node),
+            RuleName = nameof(ctx.Config.Global.EnforceSealedClasses),
+            Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
+            Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu."
+        });
     }
 
     private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node) =>
-        node.Modifiers.Any(m => m.IsKind(SyntaxKind.SealedKeyword) ||
-                               m.IsKind(SyntaxKind.StaticKeyword) ||
-                               m.IsKind(SyntaxKind.AbstractKeyword));
+        node.Modifiers.Any(m =>
+            m.IsKind(SyntaxKind.SealedKeyword) ||
+            m.IsKind(SyntaxKind.StaticKeyword) ||
+            m.IsKind(SyntaxKind.AbstractKeyword));
 
-    private static bool IsExempt(string className, CheckerContext ctx)
-    {
-        var suffixes = ctx.Config.Global.SealedClassExemptSuffixes;
-        return suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
-    }
+    private static bool HasExemptSuffix(string name, IReadOnlyList<string> suffixes) =>
+        suffixes.Any(s => name.EndsWith(s, StringComparison.OrdinalIgnoreCase));
 }
 ```
 
-### LinterEngine-Refactor
+### LinterAnalyzer nach Refactoring
+
+Die `VisitClassDeclaration`-Methode ändert sich kaum — nur die Klassen-Namen der Aufrufe werden spezifischer:
 
 ```csharp
-public sealed class LinterEngine
+public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 {
-    private readonly IReadOnlyList<IClassRule> _classRules;
-    private readonly IReadOnlyList<IMethodRule> _methodRules;
-    private readonly IReadOnlyList<IInvocationRule> _invocationRules;
-    private readonly IReadOnlyList<IFileLevelRule> _fileRules;
-
-    public LinterEngine(
-        LinterConfig config,
-        IEnumerable<IClassRule> classRules,
-        IEnumerable<IMethodRule> methodRules,
-        IEnumerable<IInvocationRule> invocationRules,
-        IEnumerable<IFileLevelRule> fileRules,
-        string? rulesJsonContent = null)
-    {
-        // ...
-        _classRules = classRules.ToList();
-        _methodRules = methodRules.ToList();
-        _invocationRules = invocationRules.ToList();
-        _fileRules = fileRules.ToList();
-    }
-
-    private async Task AnalyzeDocumentAsync(...)
-    {
-        // File-Level-Regeln
-        foreach (var rule in _fileRules.Where(r => r.IsEnabled(config)))
-            rule.CheckFile(tree, ctx);
-
-        var walker = new RuleDispatchingWalker(
-            ctx,
-            _classRules.Where(r => r.IsEnabled(config)),
-            _methodRules.Where(r => r.IsEnabled(config)),
-            _invocationRules.Where(r => r.IsEnabled(config))
-        );
-        walker.Visit(tree.GetRoot());
-    }
+    if (GeneratedCodeDetector.IsGenerated(node, _ctx)) return;
+    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Klasse", _ctx);
+    NamingChecker.CheckPascalCase(node.Identifier, "Klasse", _ctx);
+    SealedClassChecker.Check(node, _ctx);          // war: ArchitectureChecker.CheckSealedClass
+    ValueObjectChecker.Check(node, _ctx);           // war: ArchitectureChecker.CheckValueObjectContract
+    ScopeChecker.CheckMethodOverloads(node, _ctx);
+    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
+    ImmutabilityChecker.CheckClass(node, _ctx);
+    WpfSeparationChecker.Check(node, _ctx);
+    NestedTypesChecker.Check(node, _ctx);
+    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
+    ClassInfoCollector.Collect(node, _ctx);         // war: ArchitectureChecker.CollectClassInfo
+    base.VisitClassDeclaration(node);
 }
 ```
 
-### Discovery via Reflection
+Der `LinterAnalyzer` bleibt der **explizite Dispatcher** — jede neue Regel muss dort händisch eingetragen werden.
+
+### Testbarkeit nach Refactoring
 
 ```csharp
-public static class LinterRules
+[Fact]
+public void SealedClassChecker_Reports_NonSealedConcreteClass()
 {
-    public static IReadOnlyList<T> Discover<T>(Assembly assembly) where T : class
-    {
-        return assembly.GetTypes()
-            .Where(t => typeof(T).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
-            .Select(Activator.CreateInstance)
-            .Cast<T>()
-            .ToList();
-    }
-}
+    var (tree, model) = TestHelper.ParseCode("public class Foo { }");
+    var ctx = TestHelper.CreateContext(enableSealedClasses: true);
+    var node = tree.GetRoot().DescendantsOfType<ClassDeclarationSyntax>().First();
 
-// Verwendung:
-var classRules = LinterRules.Discover<IClassRule>(typeof(Program).Assembly);
-```
+    SealedClassChecker.Check(node, ctx);
 
-→ **Neue Regeln hinzufügen = 1 Datei erstellen**. Kein Anfassen des Dispatchers mehr.
-
-### Behebt C2.2
-
-`VisitRecordDeclaration` ruft `CollectClassInfo` nicht auf → **Bug**. Mit Plugin-System registriert man einfach zwei Regeln:
-
-```csharp
-public sealed class CollectClassInfoRule : IClassRule
-{
-    public void CheckClass(ClassDeclarationSyntax node, CheckerContext ctx) { /* ... */ }
-    public void CheckRecord(RecordDeclarationSyntax node, CheckerContext ctx) { /* ... */ }
-    public void CheckStruct(StructDeclarationSyntax node, CheckerContext ctx) { /* ... */ }
+    Assert.Single(ctx.Violations);
 }
 ```
 
-→ **Bug behoben + zukunftssicher**.
+Kein Hochfahren des gesamten Analyzers nötig.
 
 ---
 
-## R3 — `Program.cs` → Executor-Pattern
+## R3 — `Program.cs` in statische Command-Klassen aufteilen
 
-**Löst:** F3, A2, C1
-**Aufwand:** M (1–3 Tage)
+**Löst:** F3, A2, C1.2  
+**Aufwand:** M (1–3 Tage)  
 **Nutzen:** ★★★★
 
-### Ziel
+### Problem
 
-Jeder CLI-Modus (Audit, Sync-Cursor, Debt-Report, Impact, etc.) wird ein `ICommandExecutor`. `ExecuteLinterAsync` wird zu einer einfachen Pipeline.
+`Program.cs` hat 568 LOC weil die Implementierungslogik aller 8 Sub-Befehle direkt dort liegt. Die if-Kaskade selbst ist kein Problem — sie ist der richtige explizite Router. Das Problem: die eigentlichen Methoden (`RunAuditAsync`, `RunSyncCursorRules`, etc.) belegen hunderte Zeilen in derselben Datei.
 
-### Skelett
+### Lösungsansatz
 
-**Neue Datei:** `src/AiNetLinter/Cli/Commands/ICommandExecutor.cs`
+**Kein Interface, keine Discovery.** Die if-Kaskade in `ExecuteLinterAsync` bleibt identisch. Jeder Zweig ruft statt einer lokalen Methode eine externe Command-Klasse auf.
 
-```csharp
-public interface ICommandExecutor
-{
-    string Name { get; }                              // "audit" | "debt-report" | ...
-    int Priority { get; }                             // 100 = hoch, 0 = default
-    bool CanHandle(LinterArgs args);
-    Task<int> ExecuteAsync(LinterArgs args, CancellationToken ct);
-}
+**Neue Dateistruktur:** `src/AiNetLinter/Commands/`
+
+```
+Commands/
+  AuditCommand.cs
+  DebtReportCommand.cs
+  FootprintCommand.cs
+  ImpactCommand.cs
+  MaintenanceCommand.cs
+  PlaybookCheckCommand.cs
+  ReadmeCommand.cs
+  SyncCursorRulesCommand.cs
 ```
 
-### Implementierungen
+Jede Klasse:
 
 ```csharp
-public sealed class AuditExecutor : ICommandExecutor
+// Commands/AuditCommand.cs
+namespace AiNetLinter.Commands;
+
+internal static class AuditCommand
 {
-    public string Name => "audit";
-    public int Priority => 0;
-    public bool CanHandle(LinterArgs args) =>
-        !args.Readme && args.CreateBaselinePath == null && !args.AddDisableAll &&
-        !args.RemoveDisableAll && !args.DebtReport && !args.HasImpact &&
-        !args.SyncCursorRules && args.Footprint == null;
-    public async Task<int> ExecuteAsync(LinterArgs args, CancellationToken ct) { /* ... */ }
-}
-
-public sealed class ReadmeExecutor : ICommandExecutor { /* --readme */ }
-public sealed class CreateBaselineExecutor : ICommandExecutor { /* --create-baseline */ }
-public sealed class AddDisableAllExecutor : ICommandExecutor { /* --add-disable-all */ }
-public sealed class DebtReportExecutor : ICommandExecutor { /* --debt-report */ }
-public sealed class ImpactExecutor : ICommandExecutor { /* --impact */ }
-public sealed class SyncCursorRulesExecutor : ICommandExecutor { /* --sync-cursor-rules */ }
-public sealed class FootprintExecutor : ICommandExecutor { /* --footprint */ }
-```
-
-### Program.cs nach Refactor
-
-```csharp
-public static class Program
-{
-    public static async Task<int> Main(string[] args)
+    internal static async Task<int> RunAsync(LinterArgs args, ILintConsole console)
     {
-        Console.OutputEncoding = Encoding.UTF8;
-        var (root, options) = CliCommandBuilder.Build();
-        var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(root.Parse(args), options));
-
-        var executors = ServiceFactory.CreateExecutors(linterArgs); // DI-Lite
-        var matched = executors
-            .Where(e => e.CanHandle(linterArgs))
-            .OrderByDescending(e => e.Priority)
-            .ToList();
-
-        if (matched.Count == 0)
-        {
-            Console.Error.WriteLine("[ERROR]: Kein Modus ausgewaehlt.");
-            return 1;
-        }
-
-        return await matched[0].ExecuteAsync(linterArgs, CancellationToken.None);
+        // Logik aus RunAuditAsync + RunAuditWithBaselineAsync + AuditWithBaselineAsync
     }
 }
 ```
 
-→ **Testbar**: jeder Executor einzeln testbar via `ICommandExecutor` Mock.
+### Program.cs nach Refactoring
+
+```csharp
+private static async Task<int> ExecuteLinterAsync(LinterArgs args, ILintConsole console)
+{
+    if (args.Readme) return ReadmeCommand.Run(console);
+    var validationError = ValidateArgs(args);
+    if (validationError.HasValue) return validationError.Value;
+    if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, console);
+    if (args.SyncCursorRules && args.PlaybookPath == null) return SyncCursorRulesCommand.Run(args, console);
+    if (args.Footprint != null) return await FootprintCommand.RunAsync(args, console);
+    var maintenanceResult = await MaintenanceCommand.TryRunAsync(args, console);
+    if (maintenanceResult.HasValue) return maintenanceResult.Value;
+    if (args.DebtReport) return await DebtReportCommand.RunAsync(args, console);
+    if (args.HasImpact) return await ImpactCommand.RunAsync(args, console);
+    return await AuditCommand.RunAsync(args, console);
+}
+```
+
+`Program.cs` schrumpft auf ~60 LOC: nur `Main`, `ExecuteLinterAsync`, `ToLinterArgs`, `ValidateArgs`.
+
+### Testbarkeit
+
+Jede Command-Klasse kann direkt getestet werden, mit einem `TestLintConsole` (→ R7) statt Console.SetOut-Mocking.
 
 ---
 
 ## R4 — `PerformanceProfiler` entkoppeln + optional machen
 
-**Löst:** F4, A4, C5
-**Aufwand:** S
+**Löst:** F4, A4, C5.1, C5.2, C5.3  
+**Aufwand:** S (< 1 Tag)  
 **Nutzen:** ★★★★
 
-### Skelett
+### Problem
+
+`PerformanceProfiler.Instance` ist ein globaler Singleton, der in `LinterEngine.AnalyzeDocumentAsync` direkt aufgerufen wird. Tests können ihn nicht ersetzen → ungewollte Disk-IO in jedem Test-Run, wenn Profiling aktiv ist.
+
+### Lösungsansatz
+
+Interface + Null-Implementierung, übergeben via Konstruktor-Parameter (kein DI-Container — explizite Verdrahtung in `Program.cs`).
 
 ```csharp
+// src/AiNetLinter/Diagnostics/IPerformanceProfiler.cs
 public interface IPerformanceProfiler
 {
     bool IsEnabled { get; }
@@ -421,64 +342,82 @@ public interface IPerformanceProfiler
     void WriteReport(string targetPath, string? solutionFilePath);
 }
 
+// NullPerformanceProfiler — für Tests und den normalen Lauf ohne --profile
 public sealed class NullPerformanceProfiler : IPerformanceProfiler
 {
     public bool IsEnabled => false;
-    public IDisposable BeginPhase(string phaseName) => new NoOpDisposable();
+    public IDisposable BeginPhase(string phaseName) => NoOpDisposable.Instance;
     public void RecordDocumentAnalysis(string filePath, double durationMs, int violationsCount) { }
     public void WriteReport(string targetPath, string? solutionFilePath) { }
-    private sealed class NoOpDisposable : IDisposable { public void Dispose() { } }
+
+    private sealed class NoOpDisposable : IDisposable
+    {
+        internal static readonly NoOpDisposable Instance = new();
+        public void Dispose() { }
+    }
 }
 
+// PerformanceProfiler — bestehende Implementierung, Singleton entfernt, Konstruktor bleibt
 public sealed class PerformanceProfiler : IPerformanceProfiler
 {
-    // bestehende Implementierung, refactored:
-    // - Konstruktor statt Singleton
-    // - Output-Pfad konfigurierbar
-    // - Limits für _documentEntries (z.B. Top-N)
+    public PerformanceProfiler() { }
+    // ... bestehende Implementierung, _initialized thread-safe per lock { }
 }
 ```
 
-### LinterEngine-Refactor
+### LinterEngine nach Refactoring
 
 ```csharp
 public sealed class LinterEngine
 {
     private readonly IPerformanceProfiler _profiler;
 
-    public LinterEngine(
-        LinterConfig config,
-        IPerformanceProfiler profiler,
-        string? rulesJsonContent = null)
+    public LinterEngine(LinterConfig config, IPerformanceProfiler profiler, string? rulesJsonContent = null)
     {
         _config = config;
         _profiler = profiler;
-        _rulesJsonContent = rulesJsonContent;
     }
 
     private async Task AnalyzeDocumentAsync(...)
     {
         using (_profiler.BeginPhase("DocumentAnalysis"))
         {
-            // ...
+            // ... Analyse
+            _profiler.RecordDocumentAnalysis(relativePath, elapsed, violations.Count);
         }
     }
 }
 ```
 
-→ Tests nutzen `NullPerformanceProfiler`, Produktion den `PerformanceProfiler`.
+### Verdrahtung in Program.cs
+
+```csharp
+// Program.cs — explizit, kein Framework:
+IPerformanceProfiler profiler = args.Profile
+    ? new PerformanceProfiler()
+    : new NullPerformanceProfiler();
+
+var engine = new LinterEngine(config, profiler, rulesJsonContent);
+```
 
 ---
 
 ## R5 — `CancellationToken` durch die Pipeline
 
-**Löst:** F5, A7, C1.4
-**Aufwand:** N
+**Löst:** F5, A7, C1.4  
+**Aufwand:** S (Routine-Refactoring)  
 **Nutzen:** ★★★★
 
-### Refactor-Skelett
+### Problem
+
+Keine `async`-Methode in der Pipeline akzeptiert ein `CancellationToken`. Ctrl+C wird nicht kooperativ behandelt — der Lint-Run läuft bis zum natürlichen Ende durch.
+
+### Lösungsansatz
+
+`CancellationToken ct = default` als letzten Parameter zu allen async-Methoden hinzufügen. Konsistenz: `ct` immer weiterreichen, nie ignorieren.
 
 ```csharp
+// LinterEngine.cs
 public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(
     SourceFileCatalog catalog,
     bool noCache = false,
@@ -486,22 +425,25 @@ public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(
     CancellationToken cancellationToken = default)
 {
     cancellationToken.ThrowIfCancellationRequested();
-    var cache = noCache ? null : BuildCache(catalog, ...);
+    // ...
     return await RunInternalAsync(catalog.Solution, catalog, cache, cancellationToken);
 }
 
 private async Task AnalyzeSolutionAsync(AnalysisState state, CancellationToken ct)
 {
-    var workItems = await ResolveWorkItemsAsync(state.Solution, ..., ct);
     await Parallel.ForEachAsync(
         workItems,
-        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = ct },
+        new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            CancellationToken = ct
+        },
         async (item, token) => await AnalyzeWorkItemAsync(item, state, cache, token)
     );
 }
 ```
 
-### Program.cs
+### Main.cs
 
 ```csharp
 public static async Task<int> Main(string[] args)
@@ -512,84 +454,90 @@ public static async Task<int> Main(string[] args)
         e.Cancel = true;
         cts.Cancel();
     };
-
-    return await root.Parse(args).InvokeAsync(cts.Token);
+    return await ExecuteLinterAsync(ToLinterArgs(parsed), cts.Token);
 }
 ```
 
 ---
 
-## R6 — `Apply`-Refactoring: Extension-Method-Pattern
+## R6 — `Apply`-Refactoring: ein `with`-Block
 
-**Löst:** F6, A6, C4.2
-**Aufwand:** N
+**Löst:** F6, A6, C4.2  
+**Aufwand:** S (< 1 Tag)  
 **Nutzen:** ★★★
 
-### Skelett
+### Problem
+
+`GlobalConfig.Apply()` erzeugt 5 Zwischen-Records durch 5 verkettete `with`-Klauseln. Lesbarkeit als Begründung, aber 5 Heap-Allokationen pro Override-Anwendung sind unnötig.
+
+### Lösungsansatz
+
+Alle Properties in **einem einzigen `with { }` Block** zusammenfassen. Lesbarkeits-Strukturierung über Zeilengruppen mit Leerzeilen statt Methoden:
 
 ```csharp
-// Vorher: 5 with-Klonings pro Aufruf
 public GlobalConfig Apply(GlobalConfigOverride? o)
 {
-    return ApplyStructuralRules(o)
-        .ApplyNamingAndStyleRules(o)
-        .ApplyCatchRules(o)
-        .ApplyImmutabilityRules(o)
-        .ApplyNamespaceAndAnalysisRules(o);
-}
-
-// Nachher: 1 with-Kloning + Helper-Methoden
-public static class GlobalConfigExtensions
-{
-    public static GlobalConfig WithOverrides(this GlobalConfig self, GlobalConfigOverride? o)
+    if (o == null) return this;
+    return this with
     {
-        if (o == null) return self;
-        return self with
-        {
-            EnforceSealedClasses = o.EnforceSealedClasses ?? self.EnforceSealedClasses,
-            AllowUnsealedPartialClasses = o.AllowUnsealedPartialClasses ?? self.AllowUnsealedPartialClasses,
-            // ... alle 30 Felder in EINER with-Klausel
-        };
-    }
+        // Strukturregeln
+        EnforceSealedClasses          = o.EnforceSealedClasses          ?? EnforceSealedClasses,
+        AllowUnsealedPartialClasses   = o.AllowUnsealedPartialClasses   ?? AllowUnsealedPartialClasses,
+        BanPublicNestedTypes          = o.BanPublicNestedTypes          ?? BanPublicNestedTypes,
+
+        // Naming und Stil
+        EnforcePascalCaseNames        = o.EnforcePascalCaseNames        ?? EnforcePascalCaseNames,
+        EnforceXmlDocumentation       = o.EnforceXmlDocumentation       ?? EnforceXmlDocumentation,
+
+        // Catch-Regeln
+        EnforceNoSilentCatch          = o.EnforceNoSilentCatch          ?? EnforceNoSilentCatch,
+        // ... alle weiteren Properties in einer with-Klausel
+    };
 }
 ```
 
-→ **1 Kloning** statt 5, klarer Code.
+**1 Kloning** statt 5. Gleiches Muster für `MetricsConfig.Apply`.
 
 ---
 
-## R7 — Strukturiertes `ILogger`-Interface
+## R7 — `ILintConsole`-Interface statt `Console.WriteLine`
 
-**Löst:** F7, A8, C1.3, C9.3, C10.3
-**Aufwand:** M
+**Löst:** F7, A8, C1.3, C9.3, C10.2  
+**Aufwand:** M (1–2 Tage, alle 25+ Stellen anpassen)  
 **Nutzen:** ★★★★
+
+### Problem
+
+25+ `Console.WriteLine`/`Console.Error.WriteLine`-Aufrufe in Produktionsklassen. Tests müssen `Console.SetOut` mocken — aufwändig und fragil. `ConsoleTestCollector.cs` im Test-Projekt ist ein direktes Symptom.
+
+**Wichtig:** Das Interface heißt **`ILintConsole`** (nicht `ILogger`) — `Microsoft.Extensions.Logging.ILogger` ist bereits ein bekanntes Framework-Interface, ein gleichnamiges eigenes Interface wäre verwirrend.
 
 ### Skelett
 
 ```csharp
-public interface ILogger
+// src/AiNetLinter/Output/ILintConsole.cs
+public interface ILintConsole
 {
     void Info(string message);
     void Warn(string message);
     void Error(string message);
-    void Info(string format, params object[] args);
 }
 
-public sealed class ConsoleLogger : ILogger
+// Produktion:
+public sealed class ConsoleLintConsole : ILintConsole
 {
-    public void Info(string message) => Console.WriteLine($"[INFO]: {message}");
-    public void Warn(string message) => Console.Error.WriteLine($"[WARN]: {message}");
+    public void Info(string message)  => Console.WriteLine($"[INFO]: {message}");
+    public void Warn(string message)  => Console.Error.WriteLine($"[WARN]: {message}");
     public void Error(string message) => Console.Error.WriteLine($"[ERROR]: {message}");
-    public void Info(string format, params object[] args) => Console.WriteLine($"[INFO]: {string.Format(format, args)}");
 }
 
-public sealed class TestLogger : ILogger
+// Tests:
+public sealed class TestLintConsole : ILintConsole
 {
     public List<(string Level, string Message)> Entries { get; } = new();
-    public void Info(string message) => Entries.Add(("INFO", message));
-    public void Warn(string message) => Entries.Add(("WARN", message));
+    public void Info(string message)  => Entries.Add(("INFO", message));
+    public void Warn(string message)  => Entries.Add(("WARN", message));
     public void Error(string message) => Entries.Add(("ERROR", message));
-    public void Info(string format, params object[] args) => Entries.Add(("INFO", string.Format(format, args)));
 }
 ```
 
@@ -600,29 +548,50 @@ public sealed class TestLogger : ILogger
 Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");
 
 // Nachher:
-_logger.Warn($"Workspace-Diagnose: {msg}");
+_console.Warn($"Workspace-Diagnose: {msg}");
 ```
 
-→ Tests können Logger-Inhalt prüfen statt `Console.SetOut` zu mocken.
+### Verdrahtung (kein DI-Container)
+
+```csharp
+// Program.cs:
+ILintConsole console = new ConsoleLintConsole();
+var engine = new LinterEngine(config, profiler, console, rulesJsonContent);
+```
+
+Tests übergeben `new TestLintConsole()` direkt im Konstruktoraufruf.
 
 ---
 
 ## R8 — Rule-Namen als Const-Klasse (`LinterRuleIds`)
 
-**Löst:** F8, A10, C9.2
-**Aufwand:** N
+**Löst:** F8, A10, C9.2  
+**Aufwand:** S (< 1 Tag)  
 **Nutzen:** ★★★
+
+### Problem
+
+In `CursorRulesGenerator` und `ViolationTextFormatter` stehen String-Literale wie `"EnforceSealedClasses"`. Wird die Config-Property umbenannt, bricht der String-Lookup zur Laufzeit — kein Compile-Fehler.
 
 ### Skelett
 
 ```csharp
+// src/AiNetLinter/Core/LinterRuleIds.cs
 public static class LinterRuleIds
 {
-    public const string EnforceSealedClasses = nameof(GlobalConfig.EnforceSealedClasses);
-    public const string EnforceNoSilentCatch = nameof(GlobalConfig.EnforceNoSilentCatch);
-    public const string MaxLineCount = nameof(MetricsConfig.MaxLineCount);
-    public const string MaxMethodParameterCount = nameof(MetricsConfig.MaxMethodParameterCount);
-    // ... alle Regel-Namen
+    // GlobalConfig
+    public const string EnforceSealedClasses        = nameof(GlobalConfig.EnforceSealedClasses);
+    public const string AllowUnsealedPartialClasses  = nameof(GlobalConfig.AllowUnsealedPartialClasses);
+    public const string EnforceNoSilentCatch         = nameof(GlobalConfig.EnforceNoSilentCatch);
+    public const string BanPublicNestedTypes         = nameof(GlobalConfig.BanPublicNestedTypes);
+    // ... alle weiteren GlobalConfig-Regeln
+
+    // MetricsConfig
+    public const string MaxLineCount                 = nameof(MetricsConfig.MaxLineCount);
+    public const string MaxMethodParameterCount      = nameof(MetricsConfig.MaxMethodParameterCount);
+    public const string MaxCyclomaticComplexity      = nameof(MetricsConfig.MaxCyclomaticComplexity);
+    public const string MaxCognitiveComplexity       = nameof(MetricsConfig.MaxCognitiveComplexity);
+    // ... alle weiteren MetricsConfig-Regeln
 }
 ```
 
@@ -630,196 +599,178 @@ public static class LinterRuleIds
 
 ```csharp
 // Vorher:
-RuleName = nameof(ctx.Config.Global.EnforceSealedClasses)
-RuleName = "EnforceSealedClasses"  // inkonsistent
+new("EnforceSealedClasses", g => g.EnforceSealedClasses, ...)
 
 // Nachher:
-RuleName = LinterRuleIds.EnforceSealedClasses
+new(LinterRuleIds.EnforceSealedClasses, g => g.EnforceSealedClasses, ...)
 ```
 
-→ Compile-Time-Sicherheit; Refactoring von Property-Namen propagiert automatisch.
+Compile-Time-Sicherheit; Refactoring einer Property propagiert automatisch über `nameof`.
 
 ---
 
-## R9 — `ArchitectureChecker` aufteilen
+## R9 — `ctx.ReportViolation`-Helper
 
-**Löst:** C11.1
-**Aufwand:** S
+**Löst:** C12.3  
+**Aufwand:** S  
 **Nutzen:** ★★★
 
-### Vorschlag
+### Problem
 
-`ArchitectureChecker` (303 LOC, 18 Methoden) sollte aufgeteilt werden in:
+Die Violation-Erstellung wiederholt sich 30+ Mal:
 
-| Neue Klasse                  | Verantwortlichkeiten                                                           | LOC ca. |
-| ---------------------------- | ------------------------------------------------------------------------------ | ------- |
-| `SealedClassRule`            | `CheckSealedClass`, `IsSealedOrStaticOrAbstract`, `HasExemptSuffix`            | 50      |
-| `ValueObjectRule`            | `CheckValueObjectContract`, `IsStructOrReadOnly`                               | 40      |
-| `NamespaceCouplingRule`      | `CheckForbiddenNamespace`, `CheckForbiddenSymbolNamespace`, `NamespaceMatches` | 80      |
-| `PhantomDependencyRule`      | `CheckPhantomNamespace`, `CheckPhantomReflection`, `IsForbiddenReflectionCall` | 60      |
-| `DynamicTypeRule`            | `CheckDynamic`                                                                 | 20      |
-| `GeneratedCodeDetector`      | `IsGeneratedCode`                                                              | 15      |
-| `InheritanceDepthCalculator` | `GetInheritanceDepth`, `IsFrameworkBaseType`                                   | 40      |
-| `TestAttributeDetector`      | `CheckForTestMethods`, `IsTestAttribute`                                       | 25      |
-| `ClassInfoCollector`         | `CollectClassInfo`, `GetBaseTypeNames`                                         | 60      |
+```csharp
+ctx.AddViolation(new RuleViolation
+{
+    FilePath   = ctx.FilePath,
+    LineNumber = SyntaxHelper.LineOf(node),
+    RuleName   = nameof(ctx.Config.Global.EnforceSealedClasses),
+    Details    = "...",
+    Guidance   = "..."
+});
+```
 
-→ Wenn zusätzlich R2 (Plugin-Pipeline) umgesetzt ist, sind das direkte Implementierungen von `IClassRule` etc.
+`FilePath` ist dabei immer `ctx.FilePath`.
+
+### Skelett
+
+```csharp
+// In CheckerContext:
+public void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance)
+{
+    AddViolation(new RuleViolation
+    {
+        FilePath   = FilePath,
+        LineNumber = SyntaxHelper.LineOf(node),
+        RuleName   = ruleName,
+        Details    = details,
+        Guidance   = guidance
+    });
+}
+```
+
+### Verwendung
+
+```csharp
+// Vorher: 6 Zeilen
+// Nachher:
+ctx.ReportViolation(node, LinterRuleIds.EnforceSealedClasses,
+    $"Die Klasse '{name}' ist nicht 'sealed'.",
+    "Fuege den 'sealed' Modifikator hinzu.");
+```
 
 ---
 
 ## R10 — Bug-Fix: `VisitRecordDeclaration` ohne `CollectClassInfo`
 
-**Löst:** C2.2
-**Aufwand:** XS (< 1 Stunde)
+**Löst:** F11, C2.2  
+**Aufwand:** XS (< 1 Stunde)  
 **Nutzen:** ★★★ (Bug-Fix)
+
+### Problem
+
+`VisitRecordDeclaration` ruft `ArchitectureChecker.CollectClassInfo` nicht auf. Records fehlen dadurch in `ClassInfo`-Statistiken, die vom Playbook-Generator und `--footprint` genutzt werden. Gleiches gilt für `VisitStructDeclaration`.
 
 ### Fix
 
 ```csharp
-// LinterAnalyzer.cs, Zeile 96 ff.
+// LinterAnalyzer.cs — VisitRecordDeclaration
 public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
 {
-    // ... bestehende Checks ...
-
-    // BUG-FIX: CollectClassInfo fehlt(e) fuer Records
-    ArchitectureChecker.CollectClassInfo(node, _ctx);
-
+    if (GeneratedCodeDetector.IsGenerated(node, _ctx)) return;
+    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Record", _ctx);
+    NamingChecker.CheckPascalCase(node.Identifier, "Record", _ctx);
+    ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: true, _ctx);
+    ScopeChecker.CheckMethodOverloads(node, _ctx);
+    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
+    NestedTypesChecker.Check(node, _ctx);
+    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
+    ArchitectureChecker.CollectClassInfo(node, _ctx);  // ← BUG-FIX
     base.VisitRecordDeclaration(node);
+}
+
+// LinterAnalyzer.cs — VisitStructDeclaration
+public override void VisitStructDeclaration(StructDeclarationSyntax node)
+{
+    // ... bestehende Checks ...
+    ArchitectureChecker.CollectClassInfo(node, _ctx);  // ← BUG-FIX
+    base.VisitStructDeclaration(node);
 }
 ```
 
-Und gleichermaßen für `VisitStructDeclaration` (Z. 110).
-
-Wenn R2 umgesetzt ist, ist dieser Bug **automatisch behoben**, weil die Rule für ClassInfo via `CheckRecord`/`CheckStruct` registriert wird.
+Nach R2 (Checker aufteilen) werden diese Aufrufe automatisch zu `ClassInfoCollector.Collect(node, _ctx)`.
 
 ---
 
 ## R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren
 
-**Löst:** F10, C6.1
-**Aufwand:** XS
-**Nutzen:** ★★★
+**Löst:** F9, C6.1  
+**Aufwand:** XS (< 1 Stunde)  
+**Nutzen:** ★★★ (Bug-Fix)
 
-### Fix
+### Problem
 
-**Vorher:** `RepoPlaybookGenerator.cs:43-45`
+7 hardcoded Werte in `RepoPlaybookGenerator.RuleDescriptions` sind falsch — sie wurden einmal definiert und nie aktualisiert, als sich die Defaults änderten.
 
-```csharp
-["MaxMethodLineCount"] = "Methode hat zu viele Codezeilen (max. 42 Zeilen).",
-["MaxCyclomaticComplexity"] = "Zu hohe zyklomatische Komplexitaet (max. 5).",
-["MaxCognitiveComplexity"] = "Zu hohe kognitive Komplexitaet (max. 5).",
-```
+### Sofort-Fix (bis R1 fertig ist)
 
-**Nachher:**
+Statt statischer Strings: Werte direkt aus der übergebenen `LinterConfig` lesen.
 
 ```csharp
-private static string FormatLimitDescription(LinterConfig config, string prefix)
+// RepoPlaybookGenerator.cs — RuleDescriptions durch Methode ersetzen
+private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig config) => new()
 {
-    return prefix switch
-    {
-        "MaxLineCount" => $"Dateizeilenlimit (max. {config.Metrics.MaxLineCount} Zeilen) ueberschritten.",
-        "MaxMethodLineCount" => $"Methode hat zu viele Codezeilen (max. {config.Metrics.MaxMethodLineCount}).",
-        "MaxCyclomaticComplexity" => $"Zu hohe zyklomatische Komplexitaet (max. {config.Metrics.MaxCyclomaticComplexity}).",
-        "MaxCognitiveComplexity" => $"Zu hohe kognitive Komplexitaet (max. {config.Metrics.MaxCognitiveComplexity}).",
-        "MaxMethodOverloads" => $"Zu viele Methodenueberladungen (max. {config.Metrics.MaxMethodOverloads}).",
-        "MaxConstructorDependencies" => $"Zu viele Konstruktorabhaengigkeiten (max. {config.Metrics.MaxConstructorDependencies}).",
-        _ => $"Regel '{prefix}'."
-    };
-}
+    ["EnforceSealedClasses"]      = "Konkrete Klassen muessen 'sealed' sein (oder 'sealed partial').",
+    ["BanPublicNestedTypes"]      = "Verbot oeffentlicher nested Typen.",
+    ["EnforceNoSilentCatch"]      = "Keine stummen catch-Bloecke.",
+    // Metriken mit echten Config-Werten:
+    ["MaxLineCount"]              = $"Dateizeilenlimit (max. {config.Metrics.MaxLineCount} Zeilen) ueberschritten.",
+    ["MaxMethodLineCount"]        = $"Methode hat zu viele Codezeilen (max. {config.Metrics.MaxMethodLineCount}).",
+    ["MaxCyclomaticComplexity"]   = $"Zu hohe zyklomatische Komplexitaet (max. {config.Metrics.MaxCyclomaticComplexity}).",
+    ["MaxCognitiveComplexity"]    = $"Zu hohe kognitive Komplexitaet (max. {config.Metrics.MaxCognitiveComplexity}).",
+    ["MaxMethodParameterCount"]   = $"Zu viele Methodenparameter (max. {config.Metrics.MaxMethodParameterCount}).",
+    ["MaxMethodOverloads"]        = $"Zu viele Methodenueberladungen (max. {config.Metrics.MaxMethodOverloads}).",
+    ["MaxConstructorDependencies"]= $"Zu viele Konstruktorabhaengigkeiten (max. {config.Metrics.MaxConstructorDependencies}).",
+    // ... alle weiteren Regeln
+};
 ```
 
-**Oder besser (mit R1):** komplett aus `RuleRegistry` lesen.
-
----
-
-## R12 — Lösung der Test-Pfad-Inkonsistenz
-
-**Löst:** A11, F9
-**Aufwand:** XS
-**Nutzen:** ★★
-
-### Vorgehen
-
-1. Verschiebe `src/AiNetLinter.Tests/*` → `tests/AiNetLinter.Tests/*`
-2. Aktualisiere `.slnx`:
-   ```xml
-   <Project Path="tests/AiNetLinter.Tests/AiNetLinter.Tests.csproj" />
-   ```
-3. Aktualisiere CI-Skripte
-4. Aktualisiere `Docs/ROADMAP.md` (Pfad-Erwähnungen)
-
----
-
-## R13 — Optional: Mini-DI für Testbarkeit
-
-**Löst:** Test-Isolation-Probleme in F4, F7
-**Aufwand:** M
-**Nutzen:** ★★★
-
-### Vorschlag (kein DI-Container, sondern "Constructor Injection Lite")
-
-```csharp
-public static class LinterServices
-{
-    public static (LinterEngine Engine, IPerformanceProfiler Profiler, ILogger Logger) Create(
-        LinterConfig config,
-        string? rulesJsonContent = null,
-        ILogger? logger = null,
-        IPerformanceProfiler? profiler = null)
-    {
-        logger ??= new ConsoleLogger();
-        profiler ??= new NullPerformanceProfiler();
-
-        var ruleRegistry = new RuleRegistry(BuiltInRules.All);
-        var classRules = LinterRules.Discover<IClassRule>(typeof(Program).Assembly);
-        // ...
-
-        var engine = new LinterEngine(
-            config, ruleRegistry, classRules, methodRules,
-            invocationRules, fileRules, profiler, logger, rulesJsonContent);
-
-        return (engine, profiler, logger);
-    }
-}
-```
-
-**Kein DI-Container** — explizite Konstruktor-Injektion wie im bestehenden `LinterEngine`-Pattern (das bereits 2 Konstruktor-Parameter hat).
-
-→ **Bleibt konsistent** mit der bestehenden Architektur (statisch, ohne Container).
+**Langfristig** (nach R1): komplett aus `RuleRegistry.Resolve(ruleId).ShortDescription` lesen.
 
 ---
 
 ## Roadmap: Gesamtreihenfolge
 
-| Woche | Tasks                                                            | Zustand       |
-| ----- | ---------------------------------------------------------------- | ------------- |
-| **1** | R10 (Bug-Fix), R11 (Quick-Win), R8 (Rule-IDs), R12 (Test-Pfad)   | Quick Wins    |
-| **2** | R1 (RuleRegistry) — Fundament für alles weitere                  |               |
-| **3** | R2 (Plugin-Pipeline) — größte Hebelwirkung; C2.2-Fix inklusive   |               |
-| **4** | R3 (Executor-Pattern), R5 (Cancellation), R4 (Profiler raus)     |               |
-| **5** | R7 (ILogger), R6 (Apply-Ext), R9 (ArchitectureChecker aufteilen) |               |
-| **6** | R13 (Mini-DI), Coverage-Setup, Dogfooding-Tests                  | Finalisierung |
+| Woche   | Tasks                                                              | Zustand    |
+| ------- | ------------------------------------------------------------------ | ---------- |
+| **1**   | R10 (Bug), R11 (Bug), R8 (RuleIds), R5 (Cancellation), R6 (Apply) | Quick Wins |
+| **2**   | R4 (Profiler), R1 (RuleRegistry), R7 (ILintConsole), R9 (Helper) | Fundament  |
+| **3**   | R2 (Checker aufteilen), R3 (Command-Klassen), R10 in R2 aufgehend | Struktur   |
 
 ### Erwartete Resultate
 
-| Metrik                         | Vor Refactoring        | Nach Refactoring                        |
-| ------------------------------ | ---------------------- | --------------------------------------- |
-| Zeit für neue Regel hinzufügen | 2–4 Stunden            | **30 Min** (neue Klasse + Registration) |
-| `LinterAnalyzer.cs` LOC        | 271                    | ~30 (nur Walker-Orchestrierung)         |
-| `Program.cs` LOC               | 568                    | ~30 (nur `Main` + ServiceFactory)       |
-| `Console.WriteLine`-Vorkommen  | 25+                    | 0 (in Produktion)                       |
-| Test-Isolation                 | ❌ Singleton blockiert | ✅ NullPerformanceProfiler              |
-| Agenten-Lookup von Regeln      | ❌ 3 Stellen           | ✅ Eine Registry                        |
-| Coverage-Reporting             | ❌                     | ✅ coverlet + Threshold                 |
+| Metrik                              | Vor Refactoring      | Nach Refactoring                           |
+| ----------------------------------- | -------------------- | ------------------------------------------ |
+| Zeit für neuen Checker hinzufügen   | 2–4 Stunden          | **30 Min** (neue Datei + Eintrag in LinterAnalyzer) |
+| `ArchitectureChecker.cs` LOC        | 303 (18 Methoden)    | ~9 Dateien à ~30–80 LOC                    |
+| `Program.cs` LOC                    | 568                  | ~60 (Main + Router + ToLinterArgs)         |
+| `Console.WriteLine` in Produktion   | 25+                  | 0                                          |
+| Test-Isolation für Checker          | ❌ ganzer Analyzer   | ✅ direkte Methode                          |
+| Playbook-Grenzwerte korrekt         | ❌ 7 falsche Werte   | ✅ aus LinterConfig                        |
 
 ---
 
-## 🎯 Fazit
+## Fazit
 
-**AiNetLinter ist ein solides Werkzeug**, aber die Architektur muss mit dem Feature-Umfang mitwachsen. Die vorgeschlagenen Refactorings sind:
+**AiNetLinter ist ein solides Werkzeug**, aber die Architektur muss mit dem Feature-Umfang mitwachsen. Die Refactorings folgen dem bestehenden Architektur-Stil:
 
-1. **R1 + R2** sind die **Hauptinvestition** (je 2–3 Tage, größter Hebel)
-2. **R3, R4, R5, R7** sind **Architektur-Politur** (je 0.5–2 Tage, hoher Qualitätsgewinn)
-3. **R6, R8, R9, R10, R11, R12** sind **Quick Wins** (je < 1h, akkumulierter Wert hoch)
+- Alles explizit verdrahtet (kein Plugin-System, keine Reflection-Discovery)
+- Kein DI-Container (Konstruktor-Parameter wie bisher)
+- Statische Kompilierung (kein dynamisches Laden)
+- Monolithisches CLI (kein Server-Modus)
 
-→ Nach 4–6 Wochen konsequenter Refactoring-Arbeit ist das Projekt bereit für **Epic 25+** und die nächste Stufe der Agent-Integration (MCP-Server, IDE-Plugins).
+1. **R10 + R11** — sofortige Bug-Fixes, kein Risiko
+2. **R1 + R4 + R7** — Fundament für saubere Testbarkeit
+3. **R2 + R3** — größte strukturelle Hebelwirkung
+
+→ Nach 3 Wochen konsequenter Refactoring-Arbeit sind neue Regeln sicher hinzufügbar und Checker direkt testbar.
