@@ -19,10 +19,39 @@ ainetlinter --readme
 
 ---
 
+## Agent-Integration
+
+AiNetLinter ist als MCP-fähiges Tool für AI-Agenten (Claude Code, Cursor, GitHub Copilot) ausgelegt.
+
+```bash
+# Alle verfuegbaren Regeln auflisten:
+ainetlinter --list-rules
+
+# Eine Regel im Detail:
+ainetlinter --describe-rule EnforceSealedClasses
+
+# Regeln nach Stichwort suchen:
+ainetlinter --search-rules "komplexitaet"
+
+# Lint-Lauf:
+ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
+
+# Auto-Fix (sealed, nullable, PascalCase):
+ainetlinter --config rules.json --path ./src/ --fix
+
+# Fix im Dry-Run pruefen:
+ainetlinter --config rules.json --path ./src/ --fix --dry-run
+```
+
+Vollstaendige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/agent-api.md](Docs/agent-api.md)
+
+---
+
 ## Dokumentation
 
 | Dokument | Inhalt |
 | :--- | :--- |
+| [Docs/agent-api.md](Docs/agent-api.md) | Agent-API: alle CLI-Flags, Workflows, Error-Format, Discovery-Commands |
 | [Docs/configuration.md](Docs/configuration.md) | Vollständige Konfigurationsreferenz, CLI-Parameter, Workflows |
 | [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
 
