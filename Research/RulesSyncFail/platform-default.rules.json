@@ -1,0 +1,374 @@
+{
+  "Global": {
+    "EnforceSealedClasses": true,
+    "AllowUnsealedPartialClasses": true,
+    "SealedClassExemptSuffixes": [
+      "Base",
+      "Foundation",
+      "Host"
+    ],
+    "AllowDynamic": false,
+    "AllowOutParameters": false,
+    "AllowOutParametersInPrivateMethods": true,
+    "AllowTryPatternOutParameters": true,
+    "AllowCancellationShutdownCatch": true,
+    "EnforceValueObjectContracts": true,
+    "EnableTestSentinel": true,
+    "EnforcePascalCase": true,
+    "EnforceXmlDocumentation": false,
+    "EnforceSemanticNaming": true,
+    "SemanticNamingExemptMethodNames": [
+      "Equals",
+      "CompareTo",
+      "GetHashCode"
+    ],
+    "SemanticNamingAllowSubstringOfMethodName": true,
+    "EnforceNullableEnable": true,
+    "EnforceNoSilentCatch": true,
+    "EnforceMinimalApiAsParameters": true,
+    "EnforceNoVariableShadowing": true,
+    "EnforceReadonlyParameters": true,
+    "EnforceReadonlyFields": true,
+    "EnforceNoMagicValues": false,
+    "EnforceResultPatternOverExceptions": false,
+    "ResultPatternAllowThrowInNamespaceSuffixes": [
+      "Infrastructure",
+      "Handlers",
+      "Api",
+      "Auth",
+      "Middleware",
+      "Program"
+    ],
+    "ResultPatternAllowCatchRethrow": true,
+    "EnforceExplicitStateImmutability": false,
+    "AllowedExceptions": [
+      "ArgumentException",
+      "ArgumentNullException",
+      "ArgumentOutOfRangeException",
+      "InvalidOperationException",
+      "NotSupportedException",
+      "KeyNotFoundException",
+      "IndexOutOfRangeException",
+      "TimeoutException",
+      "ObjectDisposedException",
+      "NotImplementedException"
+    ],
+    "EnforceStrictBoundaryForBusinessLogic": false,
+    "PreventContextDependentOverloads": false,
+    "RequireExplicitTruncationHandling": false,
+    "EnforceNamespaceDirectoryMapping": false,
+    "NamespaceDirectoryMappingMode": "suffix-match",
+    "NamespaceDirectoryMappingIgnorePathSegments": [
+      "Components",
+      "Domains",
+      "Handlers",
+      "Pages",
+      "Source",
+      "src"
+    ],
+    "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
+    "DetectAndBanPhantomDependencies": true,
+    "AllowedEmptyReads": false,
+    "ImmutabilityExemptSuffixes": [
+      "Dto",
+      "Entity",
+      "Model",
+      "Request",
+      "Response",
+      "Command",
+      "Record",
+      "Result",
+      "Violation"
+    ],
+    "ImmutabilityExemptPatterns": [
+      "*Options",
+      "*Json",
+      "*State",
+      "*Payload",
+      "*Input",
+      "*Settings",
+      "*Row",
+      "*Entry",
+      "*Notice",
+      "*Patch",
+      "*Config",
+      "*Parameters",
+      "*Cache",
+      "*Context",
+      "*Hub",
+      "*Gate",
+      "*Binder",
+      "*Tracker",
+      "*Store",
+      "*Mapper",
+      "*Converter",
+      "*Resolver",
+      "*Builder",
+      "*Formatter",
+      "*Catalog",
+      "*Coordinator",
+      "*Collector",
+      "*Sandbox",
+      "*Probe",
+      "*Hasher",
+      "*Material",
+      "*Complete",
+      "*Snapshot",
+      "*Archive",
+      "*Session",
+      "*Turn",
+      "*Message",
+      "*Interop",
+      "*Stack",
+      "*Layout",
+      "*Pane",
+      "*Tree",
+      "*Chrome",
+      "*Preferences"
+    ],
+    "ImmutabilityExemptBaseTypes": [
+      "ComponentBase",
+      "LayoutComponentBase",
+      "AuthenticationStateProvider",
+      "BackgroundService"
+    ],
+    "ImmutabilityAllowPrivateBackingFields": false,
+    "AllowedSilentCatchExceptionTypes": [
+        "JSDisconnectedException",
+        "JSException",
+        "ObjectDisposedException"
+      ],
+    "EnablePerformanceProfiling": true
+  },
+  "Metrics": {
+    "MaxLineCount": 600,
+    "MaxMethodParameterCount": 6,
+    "MethodParameterCountIgnoreTypeNames": [
+      "CancellationToken"
+    ],
+    "MethodParameterCountIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IOptionsSnapshot",
+      "IOptionsMonitor",
+      "IHostEnvironment",
+      "IWebHostEnvironment",
+      "IConfiguration",
+      "IServiceProvider",
+      "IHttpContextAccessor",
+      "HttpContext",
+      "TimeProvider",
+      "LinkGenerator",
+      "ProblemDetailsService"
+    ],
+    "MaxMethodLineCount": 60,
+    "MaxCyclomaticComplexity": 12,
+    "MaxCognitiveComplexity": 15,
+    "MaxInheritanceDepth": 2,
+    "InheritanceDepthFrameworkPrefixes": [
+      "Microsoft.AspNetCore.",
+      "Microsoft.AspNetCore.Components.",
+      "Microsoft.Extensions.",
+      "MudBlazor.",
+      "System."
+    ],
+    "MinCognitiveComplexityForTest": 3,
+    "AggregatePartialClassLineCount": false,
+    "MaxMethodOverloads": 3,
+    "MaxConstructorDependencies": 5,
+    "ConstructorDependencyIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IOptionsSnapshot",
+      "IOptionsMonitor",
+      "IHostEnvironment",
+      "IWebHostEnvironment",
+      "IConfiguration",
+      "IServiceProvider",
+      "IHttpContextAccessor"
+    ],
+    "MaxDirectoryDepth": 7,
+    "MaxAIContextFootprint": 5000,
+    "FootprintIgnoreNamespacePrefixes": [],
+    "FootprintIgnoreTypeNames": [
+      "SqlExecutor",
+      "DataTableDragDropSettings"
+    ],
+    "ComplexityNearMissTolerance": 1,
+    "ExcludeSwitchDispatcherCases": true,
+    "SwitchDispatcherMaxCaseBodyLines": 3,
+    "ConstructorDependencyExemptClassSuffixes": ["Exception"]
+  },
+  "TestSentinel": {
+    "ClassNamePatterns": [
+      "{Name}Tests",
+      "{Name}Test",
+      "{Name}IntegrationTests",
+      "{Name}*Tests"
+    ],
+    "RecognizeTypeofReference": true,
+    "RecognizeCoversComment": true,
+    "ExemptClassNameSuffixes": [
+      "Extensions",
+      "Constants",
+      "Converter",
+      "Profile",
+      "Seed",
+      "Migration",
+      "Startup",
+      "Module",
+      "Coordinator"
+    ],
+    "ExemptWhenInheritsFrom": [
+      "ComponentBase",
+      "LayoutComponentBase",
+      "IValueConverter",
+      "Profile"
+    ],
+    "ExemptStaticClasses": true,
+    "TestProjectNameSuffixes": [
+      "Tests",
+      "Test",
+      "IntegrationTests",
+      "Specs",
+      "Spec"
+    ]
+  },
+  "MagicValues": {
+    "Mode": "numeric-only",
+    "MinStringLength": 0,
+    "IgnoreStringPatterns": [
+      "^/[\\w/{}\\-]*$",
+      "^[a-z][a-zA-Z0-9_]*$"
+    ],
+    "IgnoreNumericValues": [],
+    "IgnoreInvocationPrefixes": [
+      "Log",
+      "MapGet",
+      "MapPost",
+      "MapPut",
+      "MapDelete",
+      "MapGroup",
+      "GetSection",
+      "GetValue",
+      "GetRequiredSection",
+      "TypedResults.Problem",
+      "Results.Problem"
+    ],
+    "IgnoreCollectionInitializers": true
+  },
+  "FileFilters": {
+    "ExcludeFilePatterns": [
+      "*.designer.cs",
+      "*.g.cs",
+      "*.generated.cs",
+      "AssemblyInfo.cs",
+      "*.AssemblyAttributes.cs"
+    ],
+    "ExcludeDirectoryPatterns": [
+      "obj/",
+      "bin/"
+    ],
+    "SkipGeneratedCodeAttribute": true
+  },
+  "RuleMetadata": {
+    "MaxLineCount": { "severity": "error", "intent": "agent-context" },
+    "MaxMethodLineCount": { "severity": "error", "intent": "agent-context" },
+    "MaxCognitiveComplexity": { "severity": "error", "intent": "agent-context" },
+    "MaxCyclomaticComplexity": { "severity": "error", "intent": "agent-context" },
+    "AllowOutParameters": { "severity": "warning", "intent": "csharp-idiom" },
+    "StaticTestSentinel": { "severity": "warning", "intent": "test-coverage" },
+    "EnforceMinimalApiAsParameters": { "severity": "error", "intent": "aspnet-binding" },
+    "EnforceNoSilentCatch": { "severity": "error", "intent": "agent-resilience" },
+    "EnforceNoVariableShadowing": { "severity": "error", "intent": "agent-resilience" },
+    "EnforceReadonlyParameters": { "severity": "error", "intent": "agent-resilience" },
+    "EnforceReadonlyFields": { "severity": "error", "intent": "agent-resilience" },
+    "EnforceNoMagicValues": { "severity": "warning", "intent": "semantic-naming" },
+    "EnforceResultPatternOverExceptions": { "severity": "error", "intent": "control-flow" },
+    "MaxConstructorDependencies": { "severity": "error", "intent": "coupling" },
+    "MaxMethodOverloads": { "severity": "error", "intent": "api-surface" },
+    "AIContextFootprint": { "severity": "warning", "intent": "agent-context" },
+    "EnforceExplicitStateImmutability": { "severity": "error", "intent": "agent-resilience" },
+    "EnforceStrictBoundaryForBusinessLogic": { "severity": "error", "intent": "architecture" },
+    "PreventContextDependentOverloads": { "severity": "error", "intent": "agent-context" },
+    "RequireExplicitTruncationHandling": { "severity": "warning", "intent": "agent-resilience" },
+    "EnforceNamespaceDirectoryMapping": { "severity": "error", "intent": "architecture" },
+    "MaxDirectoryDepth": { "severity": "warning", "intent": "agent-context" },
+    "DetectAndBanPhantomDependencies": { "severity": "error", "intent": "architecture" }
+  },
+  "UiSeparation": {
+    "BlazorRequireCodeBehind": true,
+    "BlazorRequireCssIsolation": false,
+    "BlazorCssIsolationOnlyWhenStylesNeeded": true,
+    "WpfRequireMinimalCodeBehind": true,
+    "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
+    "BlazorExcludeFileNames": ["_Imports.razor"],
+    "WpfExcludeClassNames": []
+  },  
+  "ForbiddenNamespaceDependencies": [],
+  "PathOverrides": {
+    "San.smart.Planner.Platform/Components/Pages/Test/**": {
+      "Metrics": {
+        "MaxAIContextFootprint": 10000
+      }
+    },
+    "San.smart.Planner.Platform/Handlers/Admin/Ai/Patches/**": {
+      "Metrics": {
+        "MaxMethodParameterCount": 8
+      }
+    },
+    "San.smart.Planner.Platform/Handlers/Admin/Ai/Plugin/**": {
+      "Metrics": {
+        "MaxMethodParameterCount": 10
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/Ai/Exploration/**": {
+      "Metrics": {
+        "MaxCognitiveComplexity": 30,
+        "MaxCyclomaticComplexity": 28,
+        "MaxMethodLineCount": 160
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Configuration/CodeGraphDriftTests.cs": {
+      "Metrics": {
+        "MaxCognitiveComplexity": 22,
+        "MaxCyclomaticComplexity": 18
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/AdminBackendHandlerIntegrationTests.cs": {
+      "Metrics": {
+        "MaxMethodLineCount": 130
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/Ai/AiChatRollbackIntegrationTests.cs": {
+      "Metrics": {
+        "MaxMethodLineCount": 120
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/TimelineViewLabSchedulerHandlerTests.cs": {
+      "Metrics": {
+        "MaxCognitiveComplexity": 18,
+        "MaxCyclomaticComplexity": 14
+      }
+    }
+  },
+  "ProjectOverrides": {
+    "*.Tests": {
+      "Global": {
+        "EnforceNoMagicValues": false,
+        "EnforceSealedClasses": false,
+        "EnforceExplicitStateImmutability": false,
+        "EnforceStrictBoundaryForBusinessLogic": false,
+        "RequireExplicitTruncationHandling": false,
+        "DetectAndBanPhantomDependencies": false,
+        "EnforceReadonlyParameters": false
+      },
+      "Metrics": {
+        "MaxMethodLineCount": 100,
+        "MaxDirectoryDepth": 12,
+        "MaxAIContextFootprint": 8000,
+        "MaxMethodParameterCountInTestFiles": 10
+      }
+    }
+  }
+}
