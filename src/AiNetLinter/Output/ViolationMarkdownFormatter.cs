@@ -21,6 +21,10 @@ public static class ViolationMarkdownFormatter
         LinterRuleIds.AIContextFootprint,
     };
 
+    private static readonly HashSet<string> AutoFixableRules = new(
+        RuleRegistry.All.Where(r => r.HasAutoFix).Select(r => r.RuleId),
+        StringComparer.OrdinalIgnoreCase);
+
     public static string Format(
         IReadOnlyCollection<RuleViolation> violations,
         string outputRoot,
@@ -30,10 +34,11 @@ public static class ViolationMarkdownFormatter
             return string.Empty;
 
         var byRule = ViolationSummaryBuilder.BuildByRule(violations, config);
+        var hasAutoFix = violations.Any(v => AutoFixableRules.Contains(v.RuleName ?? string.Empty));
         var output = new StringBuilder();
 
         output.Append($"# AiNetLinter - {violations.Count} violations\n");
-        output.Append(BuildInstructionBlock(outputRoot));
+        output.Append(BuildInstructionBlock(outputRoot, hasAutoFix));
         output.Append(BuildRegellegende(byRule));
 
         var structural = violations
@@ -46,7 +51,7 @@ public static class ViolationMarkdownFormatter
         return output.ToString();
     }
 
-    private static string BuildInstructionBlock(string projectRoot)
+    private static string BuildInstructionBlock(string projectRoot, bool hasAutoFix)
     {
         var sb = new StringBuilder();
         sb.Append("\n## Handlungsanweisung\n\n");
@@ -69,6 +74,13 @@ public static class ViolationMarkdownFormatter
 
         sb.Append("\n**Schritt 2 — Behebung echter Violations**\n");
         sb.Append("Reihenfolge: Code-Fix → Konfigurationsanpassung → Suppression-Kommentar (letztes Mittel, nur nach Nutzer-Freigabe).\n");
+
+        if (hasAutoFix)
+        {
+            sb.Append("\n**Auto-Fix verfuegbar** fuer markierte Violations [auto-fix]:\n");
+            sb.Append($"  `{exePath} --path <pfad> --fix`\n");
+            sb.Append("Pruefe den Fix im Dry-Run zuerst: `--fix --dry-run`\n");
+        }
 
         sb.Append("\n> ⚠ **Strukturelle Regeln** (MaxPartialClassFiles, AIContextFootprint, MaxPublicMembersPerType) erfordern ");
         sb.Append("oft tiefgreifende Architektureingriffe. **Frage den Nutzer VOR der Umsetzung** — nicht eigenständig beginnen.\n\n");
@@ -140,7 +152,10 @@ public static class ViolationMarkdownFormatter
         {
             sb.Append($"\n### {fileGroup.Key}\n");
             foreach (var v in fileGroup.OrderBy(x => x.LineNumber))
-                sb.Append($"- Z.{v.LineNumber} {v.RuleName} — {v.Details}\n");
+            {
+                var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
+                sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag} — {v.Details}\n");
+            }
         }
 
         return sb.ToString();
