@@ -1,114 +1,137 @@
 # Code Audit — Executive Summary
 
-> **Audit-Datum:** 2026-06-19
-> **Analyst:** Automatisierter Code-Audit (Cursor Agent)
-> **Codebasis:** AiNetLinter 1.0.50 (.NET 10, 150+ Typen, 13 Namespaces, ~12.000 LOC Produktionscode)
+> **Audit-Datum:** 2026-06-19  
+> **Überarbeitet:** 2026-06-19 (nach kritischer Bewertung durch Claude Code)  
+> **Analyst:** Automatisierter Code-Audit (Cursor Agent) + Manuelle Bewertung  
+> **Codebasis:** AiNetLinter 1.0.50 (.NET 10, 150+ Typen, 13 Namespaces, ~12.000 LOC Produktionscode)  
 > **Scope:** Architektur, Code-Qualität, LLM/Agent-Optimierung, Test-Coverage, Konfigurationsmanagement
 
 ---
 
-## 🎯 TL;DR
+## TL;DR
 
 AiNetLinter ist ein ambitioniertes, gut durchdachtes Roslyn-basiertes Linter-Projekt mit ~30 Regeln für AI-optimierten C#-Code. Die **funktionale Substanz** ist solide (Sol-Linter mit echtem Semantikmodell, parallele Verarbeitung, inkrementeller Cache, Baseline-Ratchet, Playbook-Generator). Die **architektonische Reife** hinkt dem Feature-Umfang jedoch deutlich hinterher:
 
-1. **Monolithische Checker-Pipeline** statt komponierbarem Plugin-System → Open/Closed-Prinzip verletzt
-2. **Rule-Definitionen 3-fach dupliziert** über `CursorRulesGenerator`, `ViolationTextFormatter`, `RepoPlaybookGenerator`
-3. **PerformanceProfiler als globaler Singleton** in Produktionscode → Test-Isolation unmöglich
-4. **`Program.cs` mit 568 LOC** als CLI-Mono-Router für 8+ Sub-Befehle → schwer testbar, schwer erweiterbar
-5. **Keine zentrale `IRuleRegistry`** → Agenten können Regeln nicht programmatisch nachschlagen
+1. **Rule-Definitionen 3-fach dupliziert** über `CursorRulesGenerator`, `ViolationTextFormatter`, `RepoPlaybookGenerator`
+2. **Checker-God-Klassen** (`ArchitectureChecker` mit 18 Methoden, 303 LOC) — schwer isoliert testbar
+3. **`PerformanceProfiler` als globaler Singleton** in Produktionscode → Test-Isolation unmöglich
+4. **`Program.cs` mit 568 LOC** mischt 8 Sub-Befehle mit Orchestrierungslogik
+5. **Zwei aktive Bugs** (Playbook-Werte falsch, Records fehlen in Statistiken)
 
-**Empfehlung:** Vor dem nächsten Feature-Schub (Epic 25+) **4–6 Wochen Refactoring-Initiative** starten (siehe `03-Architektur-Refactoring-Vorschlaege.md`). Danach sind neue Regeln 5× schneller hinzufügbar, und Agent-Integration (z. B. via MCP-Server) wird zur Pflichtübung.
+**Empfehlung:** Vor dem nächsten Feature-Schub (Epic 25+) **2–3 Wochen Refactoring-Initiative** starten (siehe `03-Architektur-Refactoring-Vorschlaege.md`). Danach sind neue Checker in 30 Min statt 2–4 Stunden hinzufügbar.
 
 ---
 
-## 📊 Top-12 Befunde nach Priorität
+## Top-11 Befunde nach Priorität
 
-| #       | Befund                                                                       | Prio       | Aufwand | Nutzen | Datei                                                                              |
-| ------- | ---------------------------------------------------------------------------- | ---------- | ------- | ------ | ---------------------------------------------------------------------------------- |
-| **F1**  | Rule-Metadaten 3-fach dupliziert → `IRuleRegistry` einführen                 | 🔴 Hoch    | M       | ★★★★★  | `CursorRulesGenerator.cs`, `ViolationTextFormatter.cs`, `RepoPlaybookGenerator.cs` |
-| **F2**  | `LinterAnalyzer` als monolithischer SyntaxWalker → Plugin-Pipeline           | 🔴 Hoch    | M       | ★★★★★  | `Core/LinterAnalyzer.cs`                                                           |
-| **F3**  | `Program.cs` (568 LOC) als Mono-CLI-Router → Executor-Pattern                | 🔴 Hoch    | M       | ★★★★   | `Program.cs`                                                                       |
-| **F4**  | `PerformanceProfiler` als globaler Singleton + IO in Produktion              | 🟠 Mittel  | N       | ★★★★   | `Diagnostics/PerformanceProfiler.cs`                                               |
-| **F5**  | Kein `CancellationToken` durch Pipeline → Ctrl+C unsicher                    | 🟠 Mittel  | N       | ★★★★   | `LinterEngine.cs`, `LinterAnalyzer.cs`                                             |
-| **F6**  | Triple-Layer `Apply` mit 5 `with`-Klonings → Extension-Method-Pattern        | 🟠 Mittel  | N       | ★★★    | `Configuration/LinterConfig.cs`                                                    |
-| **F7**  | `Console.WriteLine` als Logging → strukturiertes `ILogger`-Interface         | 🟠 Mittel  | M       | ★★★★   | alle (15+ Stellen)                                                                 |
-| **F8**  | Rule-Namen als String-Literale → `LinterRule.RuleId` Enum oder Const-Klasse  | 🟡 Niedrig | N       | ★★★    | alle Checker                                                                       |
-| **F9**  | Tests unter `src/AiNetLinter.Tests/` statt `tests/` (inkonsistent)           | 🟡 Niedrig | XS      | ★★     | Solution-Layout                                                                    |
-| **F10** | `RepoPlaybookGenerator.RuleDescriptions` hardcoded + veraltet (Werte falsch) | 🔴 Hoch    | XS      | ★★★    | `Core/RepoPlaybookGenerator.cs` (Zeile 36–59)                                      |
-| **F11** | `LinterEngine` hat 3× `RunAsync`-Overloads → Strategy-Pattern                | 🟠 Mittel  | S       | ★★★    | `Core/LinterEngine.cs` (Zeile 35–57)                                               |
-| **F12** | Kein `dotnet test`-Friendly Test-Setup (custom Integration-Runner)           | 🟡 Niedrig | S       | ★★     | Tests-Projekt                                                                      |
+| #       | Befund                                                                                                          | Prio       | Aufwand | Nutzen |
+| ------- | --------------------------------------------------------------------------------------------------------------- | ---------- | ------- | ------ |
+| **F1**  | Rule-Metadaten 3-fach dupliziert → statische `RuleRegistry`-Klasse einführen                                    | 🔴 Hoch    | M       | ★★★★★  |
+| **F2**  | Checker-God-Klassen → in fokussierte statische Klassen aufteilen                                                | 🔴 Hoch    | M       | ★★★★★  |
+| **F3**  | `Program.cs` (568 LOC) als Mono-CLI-Router → statische Command-Klassen                                         | 🔴 Hoch    | M       | ★★★★   |
+| **F4**  | `PerformanceProfiler` als globaler Singleton + IO in Produktion → Konstruktor-Parameter                         | 🟠 Mittel  | S       | ★★★★   |
+| **F5**  | Kein `CancellationToken` durch Pipeline → Ctrl+C bricht nicht sauber ab                                        | 🟠 Mittel  | S       | ★★★★   |
+| **F6**  | `Apply`-Methode mit 5 unnötigen `with`-Klonings → ein `with`                                                   | 🟠 Mittel  | S       | ★★★    |
+| **F7**  | `Console.WriteLine` als Logging (25+ Stellen) → `ILintConsole`-Interface                                       | 🟠 Mittel  | M       | ★★★★   |
+| **F8**  | Rule-Namen als String-Literale → `LinterRuleIds` Const-Klasse                                                   | 🟡 Niedrig | S       | ★★★    |
+| **F9**  | **Bug:** `RepoPlaybookGenerator.RuleDescriptions` hardcoded + veraltet (7 falsche Werte)                        | 🔴 Hoch    | XS      | ★★★    |
+| **F10** | `LinterEngine` hat 3× nahezu identische `RunAsync`-Overloads → konsolidieren                                   | 🟠 Mittel  | S       | ★★★    |
+| **F11** | **Bug:** `VisitRecordDeclaration` ohne `CollectClassInfo` → Records fehlen in Playbook/Footprint-Statistiken    | 🔴 Hoch    | XS      | ★★★    |
 
 **Legende:**
 
 - 🔴 Hoch — Sofort angehen (blockiert weitere Entwicklung oder verursacht aktive Bugs)
 - 🟠 Mittel — Sollte in nächster Initiative adressiert werden
 - 🟡 Niedrig — Nice-to-have, kann später erfolgen
-- Aufwand: XS = <1h, S = <1 Tag, M = 1–3 Tage, L = >3 Tage
+- Aufwand: XS = <1h, S = <1 Tag, M = 1–3 Tage
 - Nutzen: ★ = gering, ★★★★★ = transformativ
 
 ---
 
-## 🏆 Quick Wins (< 1 Tag, hoher Nutzen)
+## Quick Wins (< 1 Tag, hoher Nutzen)
 
 Diese Befunde können **ohne Architektur-Refactoring** sofort umgesetzt werden:
 
-1. **`RepoPlaybookGenerator.RuleDescriptions` reparieren** (XS) — Werte sind veraltet: `"max. 500 Zeilen"` aber Default ist 700, `"max. 5 Komplexität"` aber Default ist 12/15.
-2. **Konstante `LinterRuleIds` einführen** (S) — alle Magic Strings wie `"EnforceSealedClasses"` durch typisierte Konstanten ersetzen → Compile-Time-Sicherheit für neue Checker.
-3. **`CancellationToken` durchreichen** (S) — alle async-Methoden (`LinterEngine.RunAsync`, `AnalyzeDocumentAsync`, etc.) bekommen `CancellationToken`-Parameter; `Ctrl+C` bricht sauber ab.
-4. **Strukturierte `IRuleRegistry`** (M) — neue Klasse `Core/RuleRegistry.cs` mit `IReadOnlyList<RuleMetadata>` als Single-Source-of-Truth. Ersetzt die 3 Duplikate.
-5. **Dogfooding-Pipeline im `dotnet test`** (S) — Tests rufen `dotnet run -- --config rules.json --path src/` aus. Aktuell ist das ein Custom-Integration-Test-Skript.
+1. **F11 — Bug: `VisitRecordDeclaration`** (XS) — `CollectClassInfo` fehlt für Records und Structs → zwei Zeilen in `LinterAnalyzer.cs`.
+2. **F9 — Playbook-Werte reparieren** (XS) — 7 hardcoded Werte sind falsch (z. B. `"max. 5 Komplexität"` statt korrektem Default 12); Werte aus `LinterConfig` lesen.
+3. **F8 — `LinterRuleIds` Const-Klasse** (S) — alle Magic Strings wie `"EnforceSealedClasses"` durch typisierte Konstanten ersetzen → Compile-Time-Sicherheit.
+4. **F5 — `CancellationToken` durchreichen** (S) — alle async-Methoden bekommen `CancellationToken`-Parameter; `Ctrl+C` bricht sauber ab.
+5. **F6 — `Apply` mit einem `with`** (S) — 5 verkettete `with`-Klauseln in einer einzigen zusammenfassen.
 
 ---
 
-## 🧭 Aufwand-vs-Nutzen-Matrix
+## Aufwand-vs-Nutzen-Matrix
 
 ```
-                NUTZEN
-         gering ─────────────────────────► hoch
-   hoch  │  F8 (Rule-IDs)        │  F2 (Plugin-Pipeline)         │
-   │     │  F9 (Test-Pfad)       │  F1 (RuleRegistry)            │
-   │     │                       │  F3 (Executor-Pattern)        │
-   │     │                       │                               │
-AUFWAND  │───────────────────────┼───────────────────────────────│
-   │     │  F11 (Strategy)       │  F7 (ILogger)                 │
-   │     │  F6 (Apply-Ext)       │  F4 (Profiler raus)           │
-niedrig  │  F5 (Cancellation)    │  F10 (Playbook fix)           │
+              NUTZEN
+       gering ─────────────────────────► hoch
+ hoch  │                       │  F2 (Checker aufteilen)       │
+ │     │                       │  F1 (RuleRegistry)            │
+ │     │                       │  F3 (Command-Klassen)         │
+ │     │                       │                               │
+AUFWAND│───────────────────────┼───────────────────────────────│
+ │     │  F10 (RunAsync)       │  F7 (ILintConsole)            │
+ │     │  F6 (Apply)           │  F4 (Profiler)                │
+ niedrig│  F8 (Rule-IDs)       │  F5 (Cancellation)            │
+        │                      │  F9 + F11 (Bugs)              │
 ```
 
 ---
 
-## 🧬 Architektur-Scorecard
+## Architektur-Scorecard
 
 | Dimension                   | Score | Bemerkung                                                                        |
 | --------------------------- | ----- | -------------------------------------------------------------------------------- |
-| **Feature-Umfang**          | ★★★★★ | 30+ Regeln, Baseline, Playbook, Impact, Footprint                         |
-| **Funktionale Korrektheit** | ★★★★  | Keine offensichtlichen Bugs, gute Tests vorhanden                                |
-| **Performance**             | ★★★★  | Parallelisiert, gecached, profiler verfügbar                                     |
-| **LLM/Agent-Optimierung**   | ★★★   | Gute Textausgabe, aber keine JSON-API, Rule-Lookup mühsam                        |
-| **Code-Struktur**           | ★★    | God-Classes, fehlende Plugin-Architektur, Singleton-Anti-Pattern                 |
-| **Testbarkeit**             | ★★    | Performance-Singleton blockiert Isolationstests, statische Helper schwer mockbar |
-| **Wartbarkeit**             | ★★    | Hohe Komplexität pro Datei, viele Cross-Cutting-Konzerne                         |
-| **Dokumentation**           | ★★★★  | README, rationale.md, ROADMAP, codegraph.md sind vorbildlich                     |
+| **Feature-Umfang**          | ★★★★★ | 30+ Regeln, Baseline, Playbook, Impact, Footprint                                |
+| **Funktionale Korrektheit** | ★★★★  | Wenige Bugs, gute Tests — aber Records in Statistiken lückenhaft                 |
+| **Performance**             | ★★★★  | Parallelisiert, gecached, Profiler verfügbar                                     |
+| **LLM/Agent-Optimierung**   | ★★★   | Gute Textausgabe, aber keine Discovery-API                                       |
+| **Code-Struktur**           | ★★    | God-Klassen, fehlende Trennung, Singleton-Anti-Pattern                           |
+| **Testbarkeit**             | ★★    | Performance-Singleton blockiert Isolationstests, Checker schwer isoliert testbar |
+| **Wartbarkeit**             | ★★    | Hohe Komplexität pro Datei, viele Cross-Cutting-Concerns                         |
+| **Dokumentation**           | ★★★★  | README, rationale.md, ROADMAP, codegraph.md sind vorbildlich                    |
 | **Konfigurierbarkeit**      | ★★★★★ | Regeln einzeln aktivierbar, ProjectOverrides, PathOverrides                      |
 
 **Gesamt-Score:** 3.4 / 5 — produktionsreif, aber **vor dem nächsten Feature-Schub refactoring-bedürftig**.
 
 ---
 
-## 🚦 Empfohlene Reihenfolge
+## Empfohlene Reihenfolge (3 Wochen)
 
-1. **Woche 1:** Quick Wins + F10 (Playbook fix)
-2. **Woche 2:** F1 (RuleRegistry) als Fundament
-3. **Woche 3:** F2 (Plugin-Pipeline) → größte Hebelwirkung
-4. **Woche 4:** F3 (Executor-Pattern) + F4 (Profiler raus) + F5 (Cancellation)
-5. **Woche 5:** F7 (ILogger) als Vorbereitung für MCP-Server
-6. **Woche 6:** Dogfooding, Coverage-Report, finale Tests
+| Woche   | Tasks                                                                   | Zustand    |
+| ------- | ----------------------------------------------------------------------- | ---------- |
+| **1**   | F11 (Bug), F9 (Bug), F8 (RuleIds), F5 (Cancellation), F6 (Apply)       | Quick Wins |
+| **2**   | F4 (Profiler raus), F1 (RuleRegistry), F7 (ILintConsole)               | Fundament  |
+| **3**   | F2 (Checker aufteilen), F3 (Command-Klassen), F10 (RunAsync)           | Struktur   |
+
+### Erwartete Resultate
+
+| Metrik                              | Vor Refactoring    | Nach Refactoring                           |
+| ----------------------------------- | ------------------ | ------------------------------------------ |
+| Zeit für neuen Checker hinzufügen   | 2–4 Stunden        | **30 Min** (eine neue Datei)               |
+| `ArchitectureChecker.cs` LOC        | 303 (18 Methoden)  | ~50 pro fokussierter Klasse                |
+| `Program.cs` LOC                    | 568                | ~60 (nur Routing + Main)                   |
+| `Console.WriteLine` in Produktion   | 25+                | 0 (durch ILintConsole ersetzt)             |
+| Test-Isolation für einzelnen Checker| ❌ nicht möglich   | ✅ direkt testbar                           |
+| Agenten-Lookup von Regeln           | ❌ 3 Stellen       | ✅ Eine `RuleRegistry`                     |
+| Bugs im Playbook-Output             | ❌ 7 falsche Werte | ✅ konfigurationsbasiert                   |
 
 ---
 
-## 📂 Weitere Audit-Dateien
+## Architektur-Constraints (nicht verhandelbar)
 
-- [`01-Architektur-Befunde.md`](01-Architektur-Befunde.md) — Detaillierte architektonische Schwachstellen
-- [`02-Code-Qualitaet.md`](02-Code-Qualitaet.md) — Konkrete Code-Befunde mit Zeilennummern
-- [`03-Architektur-Refactoring-Vorschlaege.md`](03-Architektur-Refactoring-Vorschlaege.md) — Konkrete Refactoring-Pläne mit Code-Skeletten
-- [`04-LLM-Agent-Optimierung.md`](04-LLM-Agent-Optimierung.md) — Optimierungen für Agent-Integration
+Die folgenden Constraints aus den Projektrichtlinien sind bei allen Refactorings bindend:
+
+- **Kein Plugin-System** — Checker werden nicht per Reflection entdeckt; die Verdrahtung in `LinterAnalyzer` bleibt **explizit**
+- **Kein DI-Container** — Abhängigkeiten werden per Konstruktor-Parameter übergeben, aber ohne Container-Framework
+- **Statische Kompilierung** — kein `AssemblyLoadContext`, kein dynamisches Laden
+- **Monolithisches CLI-Tool** — kein eigenständiger Server-Modus, kein Watch-Daemon
+
+---
+
+## Weitere Audit-Dateien
+
+- [`01-Architektur-Befunde.md`](01-Architektur-Befunde.md) — Detaillierte architektonische Schwachstellen (A1–A13)
+- [`02-Code-Qualitaet.md`](02-Code-Qualitaet.md) — Konkrete Code-Befunde mit Zeilennummern (C1–C12)
+- [`03-Architektur-Refactoring-Vorschlaege.md`](03-Architektur-Refactoring-Vorschlaege.md) — Konkrete Refactoring-Pläne mit Code-Skeletten (R1–R11)
+- [`04-LLM-Agent-Optimierung.md`](04-LLM-Agent-Optimierung.md) — Optimierungen für Agent-Integration (L3–L4, L8–L12)

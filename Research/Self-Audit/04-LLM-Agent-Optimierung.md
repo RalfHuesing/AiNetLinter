@@ -1,396 +1,186 @@
 # 04 — LLM/Agent-Optimierung
 
-> Spezifische Befunde und Vorschläge zur Optimierung der **Agent-Integration** und **LLM-Consumption**.
-> Aufbauend auf [`01-Architektur-Befunde.md`](01-Architektur-Befunde.md), [`02-Code-Qualitaet.md`](02-Code-Qualitaet.md) und [`03-Architektur-Refactoring-Vorschlaege.md`](03-Architektur-Refactoring-Vorschlaege.md).
+> Befunde und Vorschläge zur Optimierung der **Agent-Integration** und **LLM-Consumption**.  
+> Aufbauend auf [`03-Architektur-Refactoring-Vorschlaege.md`](03-Architektur-Refactoring-Vorschlaege.md).
 
 ---
 
-## 🎯 Zielsetzung
+## Zielsetzung
 
-AiNetLinter richtet sich explizit an **AI-Agent-Workflows** (Cursor, Claude Code, GitHub Copilot, MCP-Server). Die Frage des Audits: **Wie gut ist der Code strukturiert für LLM-Consumption?**
+AiNetLinter richtet sich explizit an **AI-Agent-Workflows** (Cursor, Claude Code, GitHub Copilot). Der dokumentierte primäre Use-Case:
 
-### Antwort in einem Satz
-
-Der Linter **produziert** gute LLM-Ausgabe, aber seine **Struktur** ist nicht LLM-/Agent-freundlich: Regel-Lookup erfordert 3 Datei-Suchen, neue Regeln erfordern Modifikation an 5+ Stellen, und es gibt keine programmatische Discovery-Schnittstelle für Agenten.
-
-### 🎯 **Use-Case-Klärung (Stand 19.06.2026)**
-
-Nach Diskussion mit dem Projekt-Owner wurde folgender **primärer Use-Case** identifiziert:
-
-- AiNetLinter wird als **UnitTest im Projekt** integriert
-- Output wird in eine **Datei** umgeleitet (`> output.foo`)
+- AiNetLinter wird als Unit-Test-Hook oder direkt im Agent-Loop aufgerufen
+- Output wird in eine **Datei** umgeleitet (`> output.md`) oder direkt gelesen
 - **Agent liest die Datei** und behebt die Violations direkt
-- **Keine maschinelle Weiterverarbeitung** des Outputs in der Tooling-Kette
+- **Markdown ist das einzige Output-Format** — JSON, NDJSON und SARIF wurden gestrichen
 
-**Konsequenz für die Output-Strategie:**
+### Aktueller Stand
 
-→ **Markdown ist das einzige Output-Format.** JSON, NDJSON, Text und SARIF wurden gestrichen.
+Der Linter **produziert** gute LLM-Ausgabe. Aber seine **Struktur** macht Agent-Integration unnötig aufwändig:
+
+- Regel-Lookup erfordert 3 Datei-Suchen (3 Duplikate — → R1)
+- Keine Discovery-Schnittstelle für Agenten (welche Regeln gibt es überhaupt?)
+- Fallback-Guidance für neue Regeln ist generisch ("Bitte behebe diesen Verstoss")
+- Fehler-Output ist nicht strukturiert genug für automatisches Parsing
 
 ---
 
-## L3 — `IRuleRegistry` als Agent-Discovery-API
+## L3 — Rule-Discovery via CLI (`--list-rules`, `--describe-rule`)
 
-### Befund
+**Abhängig von:** R1 (RuleRegistry)  
+**Aufwand:** S (1 Tag, basierend auf R1)  
+**Nutzen:** ★★★★★
 
-Agenten haben aktuell **keine** programmatische Möglichkeit, alle verfügbaren Regeln aufzulisten. Sie müssten 3 Generator-Dateien lesen + parsen.
+### Problem
 
-### Empfehlung
+Agenten haben keine programmatische Möglichkeit, alle verfügbaren Regeln aufzulisten. Sie müssten drei Generator-Dateien lesen und parsen — oder kennen die Regel-Namen schon aus dem Linter-Output.
 
-**Mit R1 (`IRuleRegistry`)** automatisch verfügbar:
+### Lösungsansatz
+
+**`--list-rules`:** Gibt alle Regeln mit Intent-Gruppierung aus.
 
 ```bash
 ainetlinter --list-rules
-ainetlinter --list-rules --intent agent-context
-ainetlinter --describe-rule EnforceSealedClasses
-````
-
-**`--list-rules` Output (text):**
-
-```
-Available Rules (30 total)
-
-By Intent: agent-context
-  EnforceSealedClasses          [error]  Konkrete Klassen muessen 'sealed' sein
-  BanPublicNestedTypes          [error]  Verbot oeffentlicher nested Typen
-  MaxLineCount                  [error]  Maximale Dateilaenge
-  ...
-
-By Intent: agent-resilience
-  EnforceNoSilentCatch          [error]  Keine stummen catch-Bloecke
-  ...
-
-By Intent: control-flow
-  EnforceResultPatternOverExceptions [warning]  Result-Pattern statt throw
-  ...
 ```
 
-**`--describe-rule EnforceSealedClasses` Output (text):**
-
 ```
-Rule: EnforceSealedClasses
-Severity: error
+Verfügbare Regeln (30 gesamt)
+
 Intent: agent-context
-HasAutoFix: true
-ExemptSuffixes: ["Base", "Foundation", "Host"]
+  EnforceSealedClasses          [error]   Konkrete Klassen muessen 'sealed' sein
+  BanPublicNestedTypes          [error]   Verbot oeffentlicher nested Typen
+  MaxLineCount                  [error]   Maximale Dateilaenge
 
-Description:
+Intent: agent-resilience
+  EnforceNoSilentCatch          [error]   Keine stummen catch-Bloecke
+  ...
+```
+
+**`--describe-rule <RuleId>`:** Gibt vollständige Metadaten einer Regel aus.
+
+```bash
+ainetlinter --describe-rule EnforceSealedClasses
+```
+
+```
+Regel: EnforceSealedClasses
+Severity:      error
+Intent:        agent-context
+Auto-Fix:      ja (--fix)
+ExemptSuffixes: Base, Foundation, Host
+
+Beschreibung:
   Konkrete Klasse ist nicht 'sealed'.
 
-Guidance:
-  Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um
-  unkontrollierte Vererbung zu verhindern.
+Anleitung:
+  Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu ...
 
-Default-Value:  true (aus GlobalConfig.cs)
-Override-Path:  Global.EnforceSealedClasses
+Konfiguration:
+  Override-Pfad: Global.EnforceSealedClasses
+  Default:       true
 ```
 
-**JSON-Output:**
-
-```json
-{
-  "ruleId": "EnforceSealedClasses",
-  "severity": "error",
-  "intent": "agent-context",
-  "hasAutoFix": true,
-  "exemptSuffixes": ["Base", "Foundation", "Host"],
-  "description": "Konkrete Klasse ist nicht 'sealed'.",
-  "guidance": "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu ...",
-  "defaultValue": true,
-  "overridePath": "Global.EnforceSealedClasses"
-}
-```
+**Implementierung:** Beide Commands lesen aus `RuleRegistry.All` (→ R1). Command-Klassen in R3-Struktur (`ListRulesCommand`, `DescribeRuleCommand`).
 
 **Nutzen für Agenten:**
-
-- Agent kann **vor** Edit-Calls prüfen, welche Regeln aktiv sind
-- Agent kann gezielt nach Regel-Details fragen
-- Agent kann auto-fixes gezielt einsetzen
-- Konsumiert von MCP-Server (siehe L5)
-
-**Aufwand:** S (1 Tag, basierend auf R1)
-**Nutzen:** ★★★★★
+- Agent kann vor Edit-Calls prüfen, welche Regeln aktiv sind
+- Agent kann gezielt Regel-Details abfragen statt aus dem Output zu erraten
+- Hilft beim Schreiben von Suppression-Kommentaren (`// ainetlinter:disable EnforceSealedClasses`)
 
 ---
 
 ## L4 — Verbesserte LLM-Output-Qualität
 
-### Befund
+**Abhängig von:** R1 (RuleRegistry)  
+**Aufwand:** S (mit R1 als Fundament)  
+**Nutzen:** ★★★★★
 
-Aktueller Text-Output (`ViolationTextFormatter.cs`) hat:
+### Problem
 
-- 26+ Regeln in `RuleInstructions` (Z. 105–134) — manuell gepflegt, nicht aus `LinterConfig` abgeleitet
-- Generischer Fallback `"-> {ruleName}: Bitte behebe diesen Verstoss gemaess den Richtlinien."` (Z. 142) für unbekannte Regeln
-- LLM erhält keine **strukturierten Anweisungen** in welcher Reihenfolge zu beheben ist
+`ViolationTextFormatter.RuleInstructions` (26 Einträge, manuell gepflegt) hat einen generischen Fallback für neue Regeln:
 
-### Empfehlung
+```
+-> {ruleName}: Bitte behebe diesen Verstoss gemaess den Richtlinien.
+```
 
-Mit R1 + R3 wird die Instruction-Generierung **konfigurierbar** und **vollständig**.
+Ein LLM bekommt mit diesem Fallback keine klare Anleitung und muss raten.
 
-**Neue Felder in `RuleMetadata`:**
+### Lösungsansatz
+
+Nach R1 liest `ViolationTextFormatter.GetRuleInstruction(ruleName)` direkt aus `RuleRegistry.Resolve(ruleName).DetailedGuidance`. Kein manuell gepflegtes Dict mehr, kein Fallback.
+
+Neue Felder in `RuleMetadata` (→ R1) für reichere LLM-Anleitung:
 
 ```csharp
 public sealed record RuleMetadata(
-    string RuleId,
-    string DisplayName,
-    string ShortDescription,
-    string DetailedGuidance,
-    string Intent,
-    string Severity,
-    string CursorHint,
-    bool HasAutoFix,
-    IReadOnlyList<string> ExemptSuffixes,
-    string? ExampleFix = null,        // NEU
-    string? ExampleViolation = null,  // NEU
-    int SortPriority = 100            // NEU: Reihenfolge fuer LLM
+    // ... bestehende Felder
+    string? ExampleViolation = null,  // Code-Snippet der Verletzung
+    string? ExampleFix = null,        // Code-Snippet der Lösung
+    int SortPriority = 100            // Reihenfolge für LLM-Priorisierung
 );
 ```
 
-**Beispiel für `EnforceSealedClasses`:**
+**Ausgabe pro Violation (verbessert):**
 
+```markdown
+### EnforceSealedClasses × 1 — src/Services/UserService.cs:12
+
+**Problem:** Konkrete Klasse ist nicht 'sealed'.
+
+**Anleitung:**
+Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu.
+Ausnahmen: Klassen mit Suffixen Base, Foundation, Host.
+
+**Beispiel-Fix:**
 ```csharp
-new(
-    RuleId: "EnforceSealedClasses",
-    ...
-    ExampleViolation: "public class UserService { }",
-    ExampleFix: "public sealed class UserService { }",
-    SortPriority: 10  // hoechste Prio: sealed ist einfachster Fix
-)
+// Vorher:
+public class UserService { }
+
+// Nachher:
+public sealed class UserService { }
 ```
 
-**Output-Generierung:**
-
-````csharp
-private static string FormatGuidance(RuleMetadata rule, RuleViolation violation)
-{
-    var sb = new StringBuilder();
-    sb.AppendLine($"-> {rule.RuleId}: {rule.ShortDescription}");
-    sb.AppendLine($"   Severity: {rule.Severity} | Intent: {rule.Intent}");
-    sb.AppendLine();
-    sb.AppendLine($"   Guidance: {rule.DetailedGuidance}");
-
-    if (rule.ExampleViolation != null)
-    {
-        sb.AppendLine();
-        sb.AppendLine("   Violation:");
-        sb.AppendLine($"   ```csharp");
-        sb.AppendLine($"   {rule.ExampleViolation}");
-        sb.AppendLine($"   ```");
-    }
-
-    if (rule.ExampleFix != null)
-    {
-        sb.AppendLine();
-        sb.AppendLine("   Fix:");
-        sb.AppendLine($"   ```csharp");
-        sb.AppendLine($"   {rule.ExampleFix}");
-        sb.AppendLine($"   ```");
-    }
-
-    if (rule.HasAutoFix)
-    {
-        sb.AppendLine();
-        sb.AppendLine("   Auto-Fix: `ainetlinter --fix` (siehe Violation-Kontext)");
-    }
-
-    return sb.ToString();
-}
-````
-
-**Nutzen für Agenten:**
-
-- Inline-Code-Beispiele direkt im Output
-- Klar markierte Auto-Fix-Verfügbarkeit
-- Sortierbare Prio für gestaffelte Bearbeitung
-
-**Aufwand:** S (mit R1)
-**Nutzen:** ★★★★★
-
----
-
-## L5 — MCP-Server-Modus für Native Agent-Integration
-
-### Befund
-
-Aktuell ist AiNetLinter ein **CLI-Tool**. Agenten wie Cursor/Claude Code können es über Shell-Befehle aufrufen, aber es gibt keine **standardisierte Agent-Schnittstelle**.
-
-### Empfehlung
-
-**Neuer Modus `--mcp-server`:** startet einen MCP-konformen JSON-RPC-Server über stdio.
-
-```bash
-ainetlinter --mcp-server
-```
-
-**Unterstützte MCP-Methoden:**
-
-```typescript
-// 1. Liste alle Regeln
-{ "method": "tools/call", "params": { "name": "list_rules", "arguments": { "intent": "agent-context" }}}
-  -> { "rules": [ { "ruleId": "EnforceSealedClasses", "severity": "error", ... }, ... ] }
-
-// 2. Lint eine Datei
-{ "method": "tools/call", "params": { "name": "lint_file", "arguments": { "path": "src/MyApp/Services/UserService.cs" }}}
-  -> { "violations": [ ... ] }
-
-// 3. Auto-Fix anwenden
-{ "method": "tools/call", "params": { "name": "apply_fix", "arguments": { "path": "...", "ruleId": "EnforceSealedClasses" }}}
-  -> { "fixed": 3, "errors": [] }
-
-// 4. Regel-Beschreibung
-{ "method": "tools/call", "params": { "name": "describe_rule", "arguments": { "ruleId": "EnforceSealedClasses" }}}
-  -> { "ruleId": "...", "guidance": "...", "exampleFix": "..." }
-```
-
-**Skelett:**
-
-```csharp
-public static class McpServer
-{
-    public static async Task RunAsync(CancellationToken ct)
-    {
-        var rules = BuiltInRules.All;
-        var ruleRegistry = new RuleRegistry(rules);
-
-        // JSON-RPC Server auf stdio
-        while (!ct.IsCancellationRequested)
-        {
-            var request = await JsonRpcReader.ReadAsync(Console.In, ct);
-            var response = request.Method switch
-            {
-                "tools/call" => HandleToolCall(request, ruleRegistry),
-                "tools/list" => ListTools(),
-                _ => JsonRpcResponse.Error(request.Id, "Unknown method")
-            };
-            await JsonRpcWriter.WriteAsync(Console.Out, response, ct);
-        }
-    }
-}
-```
-
-**Nutzen:**
-
-- Native Integration in Claude Code, Cursor, GitHub Copilot via MCP-Protokoll
-- Agenten können Lint-Operationen ohne Shell-Aufrufe durchführen
-- Streaming für große Lint-Runs
-- Standardisierte Schema-Validierung
-
-**Aufwand:** L (3–5 Tage, inkl. MCP-Protokoll-Implementation)
-**Nutzen:** ★★★★★
-
----
-
-## L6 — Cache-aware "Pre-Lint-Check" für Agent-Loops
-
-### Befund
-
-Agent-Loops editieren oft **dieselbe Datei mehrfach**. Aktuell wird der Linter pro Aufruf komplett gestartet (MSBuildWorkspace.OpenSolutionAsync ist teuer). Der `AnalysisCacheManager` ist da, aber nicht optimal.
-
-### Empfehlung
-
-**Neuer Modus `--watch`** für inkrementelle Lint-Loops:
-
-```bash
-ainetlinter --watch --path ./MyApp.slnx
-# Output:
-# Watching src/ for changes...
-# [13:45:01] src/Foo.cs: 2 violations (EnforceSealedClasses, MaxCognitiveComplexity)
-# [13:45:15] src/Bar.cs: clean
-# [13:47:32] src/Baz.cs: 1 violation
-```
-
-**ODER:** `--lint-file <path>` für Single-File-Operationen (kein ganzer Solution-Walk nötig).
-
-```bash
-ainetlinter --lint-file src/MyApp/Services/UserService.cs --config rules.json
-```
-
-**Nutzen für Agent-Loops:**
-
-- Schnelle Feedback-Schleife (1 Datei = 100ms)
-- Kein MSBuild-Workspace-Reload
-- Agent kann nach jedem Edit sofort re-lint-en
-
-**Aufwand:** M (2 Tage; benötigt L1 für JSON-Output)
-**Nutzen:** ★★★★
-
----
-
-## L7 — Per-Datei-Token-Budget-Hinweise
-
-### Befund
-
-AiNetLinter gibt **keine Token-Budget-Schätzungen** aus. Für LLMs ist es schwer einzuschätzen, wie viel Kontext eine Korrektur kosten wird.
-
-### Empfehlung
-
-**Im Violation-Output** (JSON und text) ein Feld `estimatedTokenCost`:
-
-```json
-{
-  "rule": "EnforceSealedClasses",
-  "file": "src/MyApp/Services/UserService.cs",
-  "line": 12,
-  "details": "...",
-  "estimatedTokenCost": 25, // ~5 Zeilen Code, ~25 Tokens
-  "autoFixAvailable": true
-}
-```
-
-**Berechnung:**
-
-```csharp
-private static int EstimateTokenCost(SyntaxNode node)
-{
-    // 1 Zeile ≈ 5 Tokens (grobe Schätzung)
-    var lineCount = node.GetLocation().GetLineSpan().EndLinePosition.Line -
-                    node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-    return lineCount * 5;
-}
+**Auto-Fix verfügbar:** `ainetlinter --fix`
 ```
 
 **Nutzen für Agenten:**
+- Inline-Code-Beispiele direkt im Output → weniger Kontext-Recherche nötig
+- `SortPriority` ermöglicht gestaffelte Bearbeitung (einfache Fixes zuerst)
+- Kein generischer Fallback mehr — alle Regeln vollständig beschrieben
 
-- Agent kann Low-Cost-Fixes bevorzugen
-- Bei hohem `estimatedTokenCost` ist vielleicht ein Refactor sinnvoller
-- Bessere Triage bei vielen Violations
+---
 
-**Aufwand:** S
+## L8 — Semantische Suche über Rule-Metadaten (`--search-rules`)
+
+**Abhängig von:** R1 (RuleRegistry)  
+**Aufwand:** S  
 **Nutzen:** ★★★
 
----
+### Problem
 
-## L8 — Semantische Suche über Rule-Metadaten
+Ein Agent muss den exakten `RuleId` kennen um eine Regel zu finden. Konzeptionelle Suche ("Was prüft das Tool zu Vererbung?") ist nicht möglich.
 
-### Befund
-
-Aktuell muss ein Agent wissen, dass `EnforceSealedClasses` die richtige Regel ist. Es gibt keine **Suche** über Beschreibung/Intent.
-
-### Empfehlung
-
-**Neuer Modus `--search-rules "<query>"`:**
+### Lösungsansatz
 
 ```bash
 ainetlinter --search-rules "vererbung"
 # Output:
-# EnforceSealedClasses [agent-context, error]
-#   Verhindert unkontrollierte Vererbung
-# MaxInheritanceDepth [agent-context, error]
-#   Verbot tiefer Vererbungshierarchien
+# EnforceSealedClasses    [agent-context, error]  Verhindert unkontrollierte Vererbung
+# MaxInheritanceDepth     [agent-context, error]  Verbot tiefer Vererbungshierarchien
 
 ainetlinter --search-rules "komplexität"
 # Output:
 # MaxCyclomaticComplexity [agent-context, error]
-# MaxCognitiveComplexity [agent-context, error]
-# MaxMethodOverloads [agent-context, error]
+# MaxCognitiveComplexity  [agent-context, error]
 ```
 
-**Skelett:**
+**Implementierung:**
 
 ```csharp
-public static IReadOnlyList<RuleMetadata> SearchRules(string query, RuleRegistry registry)
+public static IReadOnlyList<RuleMetadata> SearchRules(string query)
 {
     var q = query.ToLowerInvariant();
-    return registry.All
+    return RuleRegistry.All
         .Where(r =>
             r.RuleId.ToLowerInvariant().Contains(q) ||
             r.DisplayName.ToLowerInvariant().Contains(q) ||
@@ -400,162 +190,140 @@ public static IReadOnlyList<RuleMetadata> SearchRules(string query, RuleRegistry
 }
 ```
 
-**Nutzen für Agenten:**
-
-- Agent kann **konzeptionell** suchen: "Was prüft das Tool zu Vererbung?"
-- Natürlichsprachige Suche statt nur `RuleId`
-- Bessere Discovery-Erfahrung
-
-**Aufwand:** S
-**Nutzen:** ★★★
-
 ---
 
 ## L9 — Strukturiertes Error-Reporting für Failures
 
-### Befund
+**Abhängig von:** nichts  
+**Aufwand:** M (1–2 Tage)  
+**Nutzen:** ★★★
 
-Wenn der Linter scheitert (MSBuild-Fehler, Config-Fehler), wird einfach `Console.Error.WriteLine(...)` aufgerufen. Für Agenten schwer zu parsen.
+### Problem
 
-### Empfehlung
+Wenn der Linter scheitert (MSBuild-Fehler, Config-Fehler), wird einfach `Console.Error.WriteLine(...)` aufgerufen. Für Agenten schwer zu parsen und zu klassifizieren.
 
-**Strikt definiertes Error-Schema** (auch im Text-Output):
+### Lösungsansatz
+
+Definiertes Error-Schema für alle Fehlermeldungen:
 
 ```
 [ERROR]: <error_code>: <short_message>
   context: <file or step>
-  hint: <actionable_suggestion>
-  docs: <url_or_doc_path>
+  hint:    <actionable_suggestion>
 ```
 
 **Beispiel:**
 
 ```
 [ERROR]: CONFIG_INVALID: rules.json enthaelt unbekannte Option "MaxFoo"
-  context: rules.json (line 23)
-  hint: Entferne die Option oder aktualisiere auf AiNetLinter 1.0.50
-  docs: ainetlinter --readme
+  context: rules.json (Zeile 23)
+  hint:    Entferne die Option oder aktualisiere auf AiNetLinter 1.0.51+
 ```
 
-**ODER im JSON-Modus:**
+**Error-Codes definieren** (Konstanten-Klasse `LinterErrorCodes`):
 
-```json
+```csharp
+public static class LinterErrorCodes
 {
-  "error": {
-    "code": "CONFIG_INVALID",
-    "message": "rules.json enthaelt unbekannte Option 'MaxFoo'",
-    "context": "rules.json:23",
-    "hint": "Entferne die Option oder aktualisiere auf AiNetLinter 1.0.50",
-    "docs": "ainetlinter --readme"
-  }
+    public const string ConfigInvalid        = "CONFIG_INVALID";
+    public const string SolutionNotFound     = "SOLUTION_NOT_FOUND";
+    public const string WorkspaceDiagnostic  = "WORKSPACE_DIAGNOSTIC";
+    public const string AnalysisFailed       = "ANALYSIS_FAILED";
+    public const string BaselineNotFound     = "BASELINE_NOT_FOUND";
 }
 ```
 
 **Nutzen für Agenten:**
-
-- Agent kann Fehler programmatisch klassifizieren
-- `hint` ist direkt actionable für den Agent
-- `error_code` ermöglicht Decision-Trees
-
-**Aufwand:** M (1–2 Tage)
-**Nutzen:** ★★★
+- Agent kann Fehler anhand des Codes klassifizieren
+- `hint` ist direkt actionable
+- Konsistentes Format ermöglicht einfaches String-Matching
 
 ---
 
-## L10 — Inline-Auto-Fix in Violation-Output
+## L10 — Inline-Fix-Snippets im Violation-Output
 
-### Befund
+**Abhängig von:** R1 (RuleRegistry), R2 (Checker aufteilen für ExampleFix)  
+**Aufwand:** M (L4 ist Voraussetzung)  
+**Nutzen:** ★★★★★
 
-Aktuell: `--fix` ist ein separater Modus. Agent muss zweimal aufrufen: erst lint, dann fix.
+### Problem
 
-### Empfehlung
+Aktuell: `--fix` ist ein separater Modus. Agent muss zweimal aufrufen (erst lint, dann fix) und weiß nicht im Voraus, ob ein Auto-Fix verfügbar ist.
 
-**Im LLM-Output (text/markdown/json) pro Violation:**
+### Lösungsansatz
 
-````
+Im Markdown-Output jede auto-fixbare Violation mit konkretem Fix-Snippet kennzeichnen:
+
+```markdown
 ### EnforceSealedClasses × 1 — src/UserService.cs:12
 
-**Violation:**
+**Auto-fixable** — run `ainetlinter --fix` oder direkt anwenden:
+
 ```csharp
+// Ersetze:
 public class UserService
-{
-    // ...
-}
-````
 
-**Suggested Fix:**
-
-```csharp
-public sealed class UserService  // <- sealed Modifikator
-{
-    // ...
-}
+// Mit:
+public sealed class UserService
+```
 ```
 
-**Auto-fixable:** yes (run `ainetlinter --fix`)
-
-````
-
-**ODER als strukturierte JSON-Property:**
-
-```json
-{
-  "rule": "EnforceSealedClasses",
-  "line": 12,
-  "beforeSnippet": "public class UserService",
-  "afterSnippet": "public sealed class UserService",
-  "autoFixable": true
-}
-````
-
-**Nutzen für Agenten:**
-
-- Agent kann Auto-Fix direkt anwenden ohne LLM-Code-Edit
-- Inline-Snippets geben dem LLM klaren Kontext
-- `autoFixable`-Flag ermöglicht Bulk-Operationen
-
-**Aufwand:** L (mit R2/R4 Refactoring)
-**Nutzen:** ★★★★★
+Das `ExampleFix`-Feld aus `RuleMetadata` (→ L4) liefert den generischen Hinweis; für eine **datei-spezifische** Vorschau müsste der Linter den tatsächlichen Quelltext parsen (Aufwand-Anstieg auf L). Als erster Schritt reicht der generische Hinweis aus `RuleMetadata.ExampleFix`.
 
 ---
 
 ## L11 — Bessere Test-Coverage für LLM-Use-Cases
 
-### Befund
+**Abhängig von:** R1 (RuleRegistry)  
+**Aufwand:** S  
+**Nutzen:** ★★★
 
-Tests prüfen aktuell **funktionale Korrektheit** (Regel feuert bei X, Regel feuert nicht bei Y). Sie prüfen nicht **LLM-Output-Qualität**.
+### Problem
 
-### Empfehlung
+Tests prüfen funktionale Korrektheit (Regel feuert bei X). Sie prüfen nicht, ob der **LLM-Output** vollständig und korrekt ist.
 
-**Snapshot-Tests für LLM-Output:**
+### Lösungsansatz
+
+**Snapshot-Tests für LLM-Output** (z. B. mit `Verify`-Bibliothek):
 
 ```csharp
 [Fact]
-public void Lint_ProducesLLMReadableOutput()
+public async Task Lint_ProducesLLMReadableOutput()
 {
     var violations = /* ... */;
     var output = ViolationTextFormatter.Format(violations, outputRoot, config);
-    Approvals.Verify(output);  // ApprovalTests / Verify
-}
-
-[Theory]
-[InlineData("EnforceSealedClasses")]
-[InlineData("MaxMethodParameterCount")]
-public void Rule_ProducesCompleteGuidance(string ruleId)
-{
-    var registry = new RuleRegistry(BuiltInRules.All);
-    var rule = registry.Resolve(ruleId);
-    Assert.NotNull(rule.DetailedGuidance);
-    Assert.NotEmpty(rule.ExampleFix);
-    Assert.NotEmpty(rule.ExampleViolation);
+    await Verify(output);  // Snapshot-Test
 }
 ```
 
-**LLM-Integration-Tests** (mit echtem LLM oder Mock):
+**Vollständigkeitstests für RuleRegistry:**
 
 ```csharp
 [Fact]
-public async Task Violation_HasAllFieldsForLLM()
+public void AllRules_HaveCompleteGuidance()
+{
+    foreach (var rule in RuleRegistry.All)
+    {
+        Assert.NotEmpty(rule.DetailedGuidance);
+        Assert.NotEmpty(rule.ShortDescription);
+        Assert.NotEmpty(rule.Intent);
+    }
+}
+
+[Theory]
+[MemberData(nameof(GetAllRuleIds))]
+public void AllViolations_HaveNonEmptyGuidance(string ruleId)
+{
+    var rule = RuleRegistry.Resolve(ruleId);
+    Assert.NotEmpty(rule.DetailedGuidance);
+}
+```
+
+**Integration-Test für vollständige Violation-Struktur:**
+
+```csharp
+[Fact]
+public async Task AllViolations_HaveRequiredFields()
 {
     var violations = await LintAsync(fixture);
     foreach (var v in violations)
@@ -564,87 +332,86 @@ public async Task Violation_HasAllFieldsForLLM()
         Assert.NotEmpty(v.Details);
         Assert.NotEmpty(v.Guidance);
         Assert.True(v.LineNumber > 0);
+        Assert.NotEmpty(v.FilePath);
     }
 }
 ```
-
-**Aufwand:** S
-**Nutzen:** ★★★
 
 ---
 
 ## L12 — Doc-Updates für Agent-Workflows
 
-### Befund
+**Abhängig von:** L3, L4 (Discovery-Commands müssen existieren)  
+**Aufwand:** S  
+**Nutzen:** ★★★
 
-Aktuelle `README.md` und `Docs/configuration.md` sind **menschen-orientiert**. Agenten brauchen:
+### Problem
 
-- Strukturiertes `--help`-Output
-- API-Referenz für alle Optionen
-- Beispiele für häufige Workflows
+`README.md` und `Docs/configuration.md` sind menschen-orientiert. Für Agenten fehlt ein kompakter Referenz-Block.
 
-### Empfehlung
+### Lösungsansatz
 
-**1. Strukturiertes `--help`:**
+**1. Neuer Abschnitt in README.md: "Agent-Integration"**
 
-```bash
-ainetlinter --help
-# Output: Markdown-formatted, mit Beispielen
+```markdown
+## Agent-Integration
+
+# Alle verfügbaren Regeln anzeigen:
+ainetlinter --list-rules
+
+# Eine Regel im Detail:
+ainetlinter --describe-rule EnforceSealedClasses
+
+# Regeln nach Stichwort suchen:
+ainetlinter --search-rules "vererbung"
+
+# Lint + Auto-Fix:
+ainetlinter --config rules.json --path ./src/
+ainetlinter --fix --config rules.json --path ./src/
 ```
 
 **2. Neue Datei `Docs/agent-api.md`:**
 
-- Liste aller `--format`-Optionen mit Schema
-- Liste aller `--list-rules` / `--describe-rule` / `--search-rules` Optionen
-- JSON-Beispiele für alle Modi
-- Auto-Fix-Workflow
-- MCP-Server-Setup
+- Alle CLI-Flags mit kurzem Schema
+- Workflow: "Lint → Fix"
+- Workflow: "Baseline anlegen → ratchet"
+- Fehlerformat (→ L9)
+- Vollständige `--list-rules`-Ausgabe als Referenz
 
-**3. Cursor-/Claude-Snippets** in `.cursor/rules/`:
+**3. Cursor/Claude-Snippet in `.cursor/rules/`:**
 
-- Workflow: "Code schreiben → lint → fix"
-- Workflow: "Tiefenanalyse einzelner Regel"
-- Workflow: "Baseline-Pflege"
-
-**Aufwand:** S
-**Nutzen:** ★★★
+Workflow-Vorlage für den Agent: welche Reihenfolge bei Lint-Fix-Loop, wie mit Baseline umgehen, welche Auto-Fixes verfügbar sind.
 
 ---
 
-## 📊 Zusammenfassung LLM-Optimierung
+## Zusammenfassung LLM-Optimierung
 
 | Vorschlag                      | Aufwand | Nutzen | Abhängig von |
 | ------------------------------ | ------- | ------ | ------------ |
-| L3 — `--list-rules` API        | S       | ★★★★★  | R1           |
+| L3 — Rule-Discovery CLI        | S       | ★★★★★  | R1           |
 | L4 — Bessere LLM-Output        | S       | ★★★★★  | R1           |
-| L5 — MCP-Server                | L       | ★★★★★  | R1, R3       |
-| L6 — Watch-Modus               | M       | ★★★★   | —            |
-| L7 — Token-Budget              | S       | ★★★    | —            |
 | L8 — Semantische Suche         | S       | ★★★    | R1           |
-| L9 —- Strukturiertes Error     | M       | ★★★    | —            |
-| L10 — Inline-Auto-Fix-Snippets | L       | ★★★★★  | R2, R4       |
-| L11 — Snapshot-Tests           | S       | ★★★    | —            |
-| L12 — Doc-Updates              | S       | ★★★    | —            |
+| L9 — Strukturiertes Error      | M       | ★★★    | —            |
+| L10 — Inline-Fix-Snippets      | M       | ★★★★★  | R1, L4       |
+| L11 — Snapshot-Tests           | S       | ★★★    | R1           |
+| L12 — Doc-Updates              | S       | ★★★    | L3, L4       |
 
 ### Empfohlene Reihenfolge
 
-1. **R1 + L3 + L4** (RuleRegistry + Discovery) — Fundament
-2. **L8** (Suche) — auf R1 aufbauend
-3. **L5** (MCP-Server) — langfristige Strategie
-4. **L6, L7, L9, L10, L11, L12** — Polish
+1. **R1 + L3 + L4** — Fundament: RuleRegistry + Discovery + vollständige Guidance
+2. **L8** — Suche, auf R1 aufbauend, kleiner Aufwand
+3. **L9** — Error-Reporting, unabhängig, verbesserter Diagnosis-Output
+4. **L10, L11, L12** — Polish, nach den Kernrefactorings
 
 ---
 
-## 🎯 Strategische Empfehlung
+## Strategische Perspektive
 
-**Die Zukunft von AiNetLinter ist agent-zentriert**, nicht CLI-zentriert. Aktuell ist es ein gutes CLI-Tool mit LLM-Output. Die zukunftssichere Variante ist ein **MCP-Server mit CLI-Front-End**.
+AiNetLinter ist heute ein **gutes CLI-Tool mit LLM-Output**. Nach den empfohlenen Refactorings (R1–R11) und den Agent-Optimierungen (L3–L12) wird es ein **vollständig agent-freundliches Werkzeug**:
 
-Zwei kritische Investitionen, um dies zu erreichen:
+- Agenten können Regeln selbst entdecken (`--list-rules`, `--describe-rule`)
+- Violations enthalten vollständige, regelspezifische Anleitungen statt Fallback-Texte
+- Fehler sind strukturiert und programmatisch auswertbar
+- Auto-Fix-Verfügbarkeit ist direkt im Output erkennbar
 
-1. **R1 — `IRuleRegistry`** als Fundament (3 Tage)
-2. **L5 — MCP-Server** für native Integration (4–5 Tage)
-
-→ **Total: 1,5 Wochen für eine vollständige Agent-Integration**.
-
-→ Damit wird AiNetLinter nicht nur ein **Linter** für AI-generierten Code, sondern ein **erstklassiger Agent-Service** in der AI-Tool-Landschaft.
-`````
+Der Betrieb bleibt dabei explizit als **CLI-Tool** — ohne Server-Modus, ohne Daemon, ohne externe Protokoll-Abhängigkeiten. Agenten rufen das Tool auf und lesen den Datei-Output — dieser Use-Case ist mit den vorgeschlagenen Optimierungen optimal bedient.

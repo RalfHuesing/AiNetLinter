@@ -1,11 +1,11 @@
 # 01 — Architektur-Befunde
 
-> Detaillierte Analyse der architektonischen Schwachstellen mit Code-Referenzen.
+> Detaillierte Analyse der architektonischen Schwachstellen mit Code-Referenzen.  
 > Empfehlungen siehe [`03-Architektur-Refactoring-Vorschlaege.md`](03-Architektur-Refactoring-Vorschlaege.md).
 
 ---
 
-## A1 — `LinterAnalyzer` ist eine monolithische Visitor-Klasse
+## A1 — `LinterAnalyzer` ruft zu viele Checker zentral auf
 
 **Datei:** `src/AiNetLinter/Core/LinterAnalyzer.cs` (271 LOC)
 
@@ -36,16 +36,20 @@ public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 
 **Konsequenzen:**
 
-- **Open/Closed-Prinzip verletzt** — neue Regeln erfordern Modifikation der Basisklasse
-- **Reihenfolge der Checker ist hartkodiert** — z. B. `NamingChecker.CheckXmlDoc` läuft vor `ArchitectureChecker.CollectClassInfo`, aber bei Records fehlt `CollectClassInfo` → ClassInfo-Datensätze unvollständig für Records
-- **Schwer testbar isoliert** — ein Checker-Test muss immer den ganzen `LinterAnalyzer` hochfahren
-- **Hohe kognitive Last** — 271 LOC für eine einzige Klasse mit über 12 Verantwortlichkeiten
+- **Schwer testbar isoliert** — ein Test für `CheckSealedClass` muss immer den ganzen `LinterAnalyzer` hochfahren
+- **`ArchitectureChecker` sammelt 18 Methoden** (303 LOC), die nichts miteinander zu tun haben
+- **Bug:** Bei Records fehlt `CollectClassInfo` → Records erscheinen nicht in Playbook/Footprint-Statistiken (→ F11)
+- **Hohe kognitive Last** — 271 LOC für eine Klasse mit 12+ Verantwortlichkeiten
+
+### Lösungsansatz
+
+Checker-God-Klassen in fokussierte statische Klassen aufteilen (siehe R2). Der `LinterAnalyzer` bleibt der **explizite Dispatcher** — keine Reflection, keine Interface-Discovery. Die Verdrahtung bleibt sichtbar in `LinterAnalyzer.cs`, aber die eigentliche Logik zieht in kleine, fokussierte Dateien um.
 
 ### Klassifikation
 
 - **Prio:** 🔴 Hoch
-- **Aufwand:** M (1–3 Tage für Plugin-Pipeline-Refactoring)
-- **Nutzen:** ★★★★★ — neuer Checker hinzufügen wird 5× schneller
+- **Aufwand:** M (2–3 Tage für alle Checker)
+- **Nutzen:** ★★★★★ — neuer Checker hinzufügen wird 5× schneller, direkte Test-Isolation
 
 ---
 
@@ -72,15 +76,19 @@ public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 **Probleme:**
 
 - `ToLinterArgs` (Zeile 66–94) ist ein **25-Felder-1:1-Mapper** ohne Validierung
-- Verschachtelte Try-Ketten (`RunAuditAsync` → `RunAuditWithBaselineAsync` → `AuditWithBaselineAsync`) → schwer nachvollziehbar
-- Keine Trennung zwischen "was ausführen" und "wie ausgeben" → Program.cs mischt Orchestrierung und IO
-- Direkter Zugriff auf `PerformanceProfiler.Instance.StartPhase(...)` an 6 Stellen (Zeilen 164, 167, 175, 177, 180, 184, 186, 188)
+- Verschachtelte Call-Ketten (`RunAuditAsync` → `RunAuditWithBaselineAsync` → `AuditWithBaselineAsync`) → schwer nachvollziehbar
+- Keine Trennung zwischen "was ausführen" und "wie ausgeben"
+- Direkter Zugriff auf `PerformanceProfiler.Instance.StartPhase(...)` an 6+ Stellen
+
+### Lösungsansatz
+
+Jeden Command in eine eigene `internal static class` auslagern (z. B. `AuditCommand`, `DebtReportCommand`, `SyncCursorRulesCommand`). `Program.cs` bleibt der **explizite Router** mit derselben if-Kaskade — aber jetzt nur ~60 LOC, weil die eigentliche Logik in den Command-Klassen liegt. Keine Interfaces, keine Discovery (siehe R3).
 
 ### Klassifikation
 
 - **Prio:** 🔴 Hoch
-- **Aufwand:** M
-- **Nutzen:** ★★★★ — Testbarkeit + Erweiterbarkeit für neue Modi
+- **Aufwand:** M (1–3 Tage)
+- **Nutzen:** ★★★★ — Testbarkeit, klare Verantwortlichkeiten
 
 ---
 
@@ -92,29 +100,32 @@ public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 
 Die gleichen Regel-Beschreibungen existieren **dreimal** im Code, jeweils mit unterschiedlichem Inhalt und teils **falschen Werten**:
 
-| Datei                       | Speicherort                                             | Zweck                          | Beispiele                                                                                                                                     |
-| --------------------------- | ------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CursorRulesGenerator.cs`   | `GlobalRules[]` (Z. 30–91), `MetricsList[]` (Z. 93–109) | `.mdc` für Cursor generieren   | `"EnforceSealedClasses"` → `"Konkrete Klassen muessen 'sealed' sein"`                                                                         |
-| `ViolationTextFormatter.cs` | `RuleInstructions` Dict (Z. 105–134)                    | LLM-Output für jedes Violation | `"EnforceSealedClasses"` → `"-> EnforceSealedClasses: Konkrete Klassen muessen 'sealed' sein. Bei partial Klassen nutze 'sealed partial'..."` |
-| `RepoPlaybookGenerator.cs`  | `RuleDescriptions` Dict (Z. 36–59)                      | Playbook-Markdown              | `"EnforceSealedClasses"` → `"Konkrete Klassen muessen 'sealed' sein (oder 'sealed partial')."`                                                |
+| Datei                       | Speicherort                                              | Zweck                        |
+| --------------------------- | -------------------------------------------------------- | ---------------------------- |
+| `CursorRulesGenerator.cs`   | `GlobalRules[]` (Z. 30–91), `MetricsList[]` (Z. 93–109) | `.mdc` für Cursor generieren |
+| `ViolationTextFormatter.cs` | `RuleInstructions` Dict (Z. 105–134)                     | LLM-Output je Violation      |
+| `RepoPlaybookGenerator.cs`  | `RuleDescriptions` Dict (Z. 36–59)                       | Playbook-Markdown             |
 
-**Konkrete Inkonsistenz / Bug:**
+**Konkrete Bugs in `RepoPlaybookGenerator.cs`:**
 
-- `RepoPlaybookGenerator.cs:42` → `"max. 4 Parameter"` → korrekt (Default ist 4)
-- `RepoPlaybookGenerator.cs:43` → `"max. 42 Zeilen"` → **falsch** (Default ist 60)
-- `RepoPlaybookGenerator.cs:44` → `"max. 5 Zyklomatisch"` → **falsch** (Default ist 12)
-- `RepoPlaybookGenerator.cs:45` → `"max. 5 Kognitiv"` → **falsch** (Default ist 15)
-- `RepoPlaybookGenerator.cs:40` → `"Dateizeilenlimit (max. 500 Zeilen)"` → **falsch** (Default ist 700)
-- `RepoPlaybookGenerator.cs:55` → `"max. 10 Methodenueberladungen"` → **falsch** (Default ist 3)
-- `RepoPlaybookGenerator.cs:56` → `"max. 20 Konstruktorabhaengigkeiten"` → **falsch** (Default ist 5)
+| Zeile | Hardcoded Wert     | Tatsächlicher Default |
+| ----- | ------------------ | --------------------- |
+| 40    | `"max. 500 Zeilen"`| 700                   |
+| 43    | `"max. 42 Zeilen"` | 60                    |
+| 44    | `"max. 5 Zyklom."` | 12                    |
+| 45    | `"max. 5 Kogn."`   | 15                    |
+| 55    | `"max. 10 Overl."` | 3                     |
+| 56    | `"max. 20 Deps."`  | 5                     |
 
-→ **F10 (Quick Win)** — diese Werte ziehen direkt aus der `LinterConfig`, sind aber hardcoded.
+### Lösungsansatz
+
+Zentrale statische `RuleRegistry`-Klasse (kein Interface nötig ohne DI-Container) mit einem `RuleMetadata`-Record als Single-Source-of-Truth. Alle drei Generatoren lesen aus dieser Klasse. Grenzwerte werden direkt aus `LinterConfig` befüllt, nicht hardcoded (siehe R1 und R11 für Quick-Win-Fix bis dahin).
 
 ### Klassifikation
 
 - **Prio:** 🔴 Hoch
-- **Aufwand:** M (zentrale `IRuleRegistry`)
-- **Nutzen:** ★★★★★ — Bugfix + Single-Source-of-Truth für alle Regel-Metadaten
+- **Aufwand:** M (statische RuleRegistry) + XS (Playbook-Sofortfix)
+- **Nutzen:** ★★★★★ — Bugfix + Single-Source-of-Truth
 
 ---
 
@@ -132,27 +143,28 @@ public static PerformanceProfiler Instance => LazyInstance.Value;
 
 **Probleme:**
 
-- **Singletons in Produktionscode** sind ein klassisches Anti-Pattern (Versteckt Abhängigkeiten, schlecht testbar)
-- Schreibt in `measurements/<Solution>-<Timestamp>-<Guid>/performance.json` (Zeile 196) **bei jedem Lauf** wenn aktiviert → ungewollte Disk-IO in Produktion
-- `RecordDocumentAnalysis` (Zeile 108) sammelt **alle Datei-Pfade ungefiltert** → Speicher wächst linear mit Solution-Größe
-- `_initialized`-Flag (Zeile 26) ist **nicht thread-safe** — bei parallelen Tests potentiell Race-Conditions
-- `Console.WriteLine($"[INFO]: Performance-Messdaten erzeugt unter: {targetDir}")` (Zeile 164) → Profil-Output gelangt in LLM-Sicht
+- **Singletons in Produktionscode** verstecken Abhängigkeiten und blockieren Test-Isolation
+- Schreibt in `measurements/<Solution>-<Timestamp>-<Guid>/performance.json` **bei jedem Lauf** wenn aktiviert → ungewollte Disk-IO in Tests
+- `RecordDocumentAnalysis` sammelt **alle Datei-Pfade ungefiltert** → Speicher wächst linear mit Solution-Größe
+- `_initialized`-Flag ist **nicht thread-safe** — Race-Condition bei parallelen Tests möglich
 
-**Bessere Alternative:**
+### Lösungsansatz
 
-- Dependency-Injection von `IPerformanceProfiler` (oder `IProfiler`) in `LinterEngine`
-- Profiling nur unter `--profile`-Flag, nie implizit
-- Output immer in `obj/`, nie im Zielverzeichnis
+`PerformanceProfiler.Instance` aus dem Produktionscode entfernen. Stattdessen `IPerformanceProfiler`-Interface mit zwei Implementierungen (siehe R4):
+- `NullPerformanceProfiler` — Tests nutzen diesen, kein Disk-IO, kein Speicherwachstum
+- `PerformanceProfiler` — Konstruktor statt Singleton, nur aktiv wenn `--profile`-Flag gesetzt
+
+Übergabe via Konstruktor-Parameter in `LinterEngine` (kein DI-Container — explizite Verdrahtung in `Program.cs`).
 
 ### Klassifikation
 
 - **Prio:** 🟠 Mittel
-- **Aufwand:** S
-- **Nutzen:** ★★★★ — Testbarkeit + Performance-Klarheit
+- **Aufwand:** S (< 1 Tag)
+- **Nutzen:** ★★★★ — Test-Isolation, Performance-Klarheit
 
 ---
 
-## A5 — `LinterEngine` hat 3× `RunAsync`-Overloads mit ähnlicher Cache-Logik
+## A5 — `LinterEngine` hat 3× nahezu identische `RunAsync`-Overloads
 
 **Datei:** `src/AiNetLinter/Core/LinterEngine.cs` (Zeilen 35–57)
 
@@ -164,35 +176,27 @@ public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog
 public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false, int cacheTtlMinutes = 60) { ... }
 ```
 
-Jeder dieser Overloads:
+Jeder Overload unterscheidet sich nur in der **Eingabe-Extraktion**, nicht im Verhalten. Der Cache-Schlüssel wird dabei leicht unterschiedlich berechnet → inkonsistente Cache-Misses möglich.
 
-1. Ruft `BuildCache(...)` mit unterschiedlichen `path`-Argumenten auf
-2. Delegiert an `RunInternalAsync(solution, catalog, cache)`
+### Lösungsansatz
 
-→ Die 3 Methoden unterscheiden sich nur in der **Eingabe-Extraktion**, nicht im eigentlichen Verhalten.
-
-**Konsequenzen:**
-
-- Cache-Schlüssel wird 3× leicht unterschiedlich berechnet (`catalog?.Solution?.FilePath ?? path` vs. `solution.FilePath ?? solution.Workspace.GetType().Name`) → Cache-Misses möglich
-- `BuildCache` (Zeile 59–70) hat ein `solutionPath`-Argument, das nicht eindeutig die Cache-Identität ist
-- `cacheTtlMinutes` ist ein Default mit Magic-Number 60
+Einen primären `RunAsync(SourceFileCatalog catalog, ...)` behalten; die anderen zwei als dünne Wrapper, die zunächst ein Catalog-Objekt aufbauen und dann delegieren (siehe R10).
 
 ### Klassifikation
 
 - **Prio:** 🟠 Mittel
-- **Aufwand:** S (Strategy-Pattern oder Eingabe-Pipeline)
-- **Nutzen:** ★★★ — Korrektheit + Konsistenz
+- **Aufwand:** S (< 1 Tag)
+- **Nutzen:** ★★★ — Konsistenz, weniger Duplikation
 
 ---
 
-## A6 — Triple-Layer `Apply` mit 5 unnötigen Klonings
+## A6 — `Apply`-Methode mit 5 unnötigen Klonings
 
-**Datei:** `src/AiNetLinter/Configuration/LinterConfig.cs` (Zeilen 195–252, 433–480)
+**Datei:** `src/AiNetLinter/Configuration/LinterConfig.cs` (Zeilen 195–252)
 
 ### Befund
 
 ```csharp
-// GlobalConfig.cs, Zeilen 185–252
 public GlobalConfig Apply(GlobalConfigOverride? @override)
 {
     if (@override == null) return this;
@@ -202,23 +206,19 @@ public GlobalConfig Apply(GlobalConfigOverride? @override)
         .ApplyImmutabilityRules(@override)
         .ApplyNamespaceAndAnalysisRules(@override);
 }
-
-private GlobalConfig ApplyStructuralRules(GlobalConfigOverride o) => this with { ... };
-private GlobalConfig ApplyNamingAndStyleRules(GlobalConfigOverride o) => this with { ... };
-// ... 3 weitere Methoden
+// Jede der 5 Methoden macht: this with { ... }
 ```
 
-**Probleme:**
+5 verkettete `with`-Aufrufe erzeugen 5 Zwischen-Records. Bei 100 Dateien × 5 Overrides = 500 unnötige Heap-Allokationen.
 
-- 5 separate `this with { ... }`-Aufrufe → **5 unnötige Klonings** pro Override-Anwendung
-- Bei einem Projekt mit 100 Dateien und 5 Overrides → 500 Klonings statt 1
-- Methodenaufteilung dient nur der Lesbarkeit, nicht der Korrektheit
-- Gleiches Pattern in `MetricsConfig.Apply` (Zeilen 424–480)
+### Lösungsansatz
+
+Alle Properties in **einem einzigen `with { }` Block** zusammenfassen (siehe R6). Die Lesbarkeitsteilung in 5 Methoden kann durch Kommentare im einzelnen `with`-Block erreicht werden.
 
 ### Klassifikation
 
 - **Prio:** 🟠 Mittel
-- **Aufwand:** N (Extension-Method-Pattern)
+- **Aufwand:** S (< 1 Tag)
 - **Nutzen:** ★★★ — Performance + Lesbarkeit
 
 ---
@@ -232,27 +232,22 @@ private GlobalConfig ApplyNamingAndStyleRules(GlobalConfigOverride o) => this wi
 Keine einzige `async`-Methode akzeptiert ein `CancellationToken`-Argument:
 
 ```csharp
-// LinterEngine.cs, Zeilen 35, 44, 53
-public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, ...) { ... }
-public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, ...) { ... }
-public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, ...) { ... }
-
 // LinterEngine.cs, Zeile 131
 await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
     AnalyzeWorkItemAsync(item, state, cache));
-//                                  ^ CancellationToken nicht weitergereicht
+//                                  ^ CancellationToken wird ignoriert
 ```
 
-**Konsequenzen:**
+Bei `Ctrl+C` läuft die gesamte Pipeline (inkl. MSBuildWorkspace und alle Parallel-Threads) weiter bis zum nächsten IO-Punkt.
 
-- Bei `Ctrl+C` während eines Lint-Runs läuft die Pipeline weiter bis zum nächsten IO-Punkt
-- `MSBuildWorkspace.OpenSolutionAsync` ohne Token → unkontrolliertes Warten
-- `Parallel.ForEachAsync` mit `_` als Token-Parameter → keine kooperative Stornierung
+### Lösungsansatz
+
+`CancellationToken ct = default` als letzten Parameter zu allen async-Methoden hinzufügen. `Main()` registriert `Console.CancelKeyPress` und übergibt das Token. `Parallel.ForEachAsync` bekommt den Token via `ParallelOptions` (siehe R5).
 
 ### Klassifikation
 
 - **Prio:** 🟠 Mittel
-- **Aufwand:** N (Standard-Refactoring)
+- **Aufwand:** S (Routine-Refactoring, kein Architekturbruch)
 - **Nutzen:** ★★★★ — UX + Robustheit
 
 ---
@@ -263,61 +258,45 @@ await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
 
 ### Befund
 
-Beispiele:
-
-- `Program.cs:51` → `Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");`
-- `Program.cs:286` → `Console.WriteLine($"[DRY-RUN]: {fixedCount} ...");`
-- `Program.cs:528` → `Console.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell ...");`
-- `LinterAutoFixer.cs:119` → `Console.WriteLine($"[DRY-RUN]: Würde {fixedCount} Fix(es) anwenden auf: {document.Name}");`
-- `LinterAutoFixer.cs:133` → `Console.WriteLine($"[INFO]: Automatischer Fix angewendet auf: {docName}");`
-- `SourceFileCatalog.cs:52` → `Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");`
-- `CursorRulesGenerator.cs:130, 139` → `Console.WriteLine("[INFO]: ...")`
+Direktes `Console.WriteLine` / `Console.Error.WriteLine` in Produktionsklassen wie `Program.cs`, `LinterAutoFixer.cs`, `SourceFileCatalog.cs`, `CursorRulesGenerator.cs`.
 
 **Konsequenzen:**
 
-- Für Tests: schwer prüfbar (muss `Console.SetOut` mocken)
+- Tests müssen `Console.SetOut` mocken — aufwändig und fragil
 - Für Agenten: keine strukturierte Trennung zwischen Info/Warn/Error
-- Für Multi-Output (z. B. CLI vs. Log-Dateien): nicht differenzierbar
-- Übersetzungs-Strings im Code → keine i18n
+- `ConsoleTestCollector.cs` existiert im Testprojekt als Workaround
+
+### Lösungsansatz
+
+`ILintConsole`-Interface (nicht `ILogger` — das würde mit `Microsoft.Extensions.Logging.ILogger` kollidieren) mit zwei Implementierungen: `ConsoleLintConsole` für Produktion und `TestLintConsole` für Tests. Übergabe via Konstruktor-Parameter (kein DI-Container). Alle `Console.WriteLine`-Aufrufe in Produktionsklassen durch `_console.Info(...)` ersetzen (siehe R7).
 
 ### Klassifikation
 
 - **Prio:** 🟠 Mittel
-- **Aufwand:** M (zentrale `ILogger`-Abstraktion)
-- **Nutzen:** ★★★★ — Testbarkeit + Agent-Integration
+- **Aufwand:** M (1–2 Tage, alle Stellen anpassen)
+- **Nutzen:** ★★★★ — Test-Isolation, saubere Ausgabe-Kontrolle
 
 ---
 
-## A9 — `SourceFileCatalog` ist IDisposable mit mutierbarem internen Workspace
+## A9 — `SourceFileCatalog` Lifecycle-Unklarheiten
 
 **Datei:** `src/AiNetLinter/Baseline/SourceFileCatalog.cs`
 
 ### Befund
 
-```csharp
-// SourceFileCatalog.cs, Zeilen 14–21
-private readonly MSBuildWorkspace? _workspace;
+- `MSBuildWorkspace` ist `IDisposable`, wird aber nicht explizit durch `LinterEngine` verwaltet
+- `WithUpdatedSolution` erstellt neue Instanz mit **demselben Workspace** → Workspace kann während AutoFix wiederverwendet werden, ohne dass `LinterEngine` den Lifecycle kennt
+- Zwei Konstruktoren mit leicht unterschiedlichen Feld-Initialisierungen
 
-private SourceFileCatalog(MSBuildWorkspace? workspace, Solution solution, bool hasLoadingErrors)
-{
-    _workspace = workspace;
-    Solution = solution;
-    HasLoadingErrors = hasLoadingErrors;
-}
-```
+### Lösungsansatz
 
-**Probleme:**
-
-- `MSBuildWorkspace` ist `IDisposable` (Zeile 120) → muss explizit disposed werden
-- `WithUpdatedSolution` (Zeile 63–66) erstellt neue Instanz mit **demselben Workspace** → Workspace kann während AutoFix wiederverwendet werden
-- Aber: `LinterEngine` verwendet `catalog.Solution` direkt (Zeile 47) und kennt nicht den Lifecycle des Workspace → potenzielle `ObjectDisposedException` möglich
-- `internal SourceFileCatalog(Solution solution, bool hasLoadingErrors)` (Zeile 23) → zwei Konstruktoren, zwei Felder-Initialisierungen → Verletzung von DRY
+`SolutionBasePath` bereits in `SourceFileCatalog.LoadAsync` setzen, statt es später in `LinterEngine.ResolvePostAnalysisConfig` per `with { SolutionBasePath = dir }` nachzupflegen. Lifecycle von `MSBuildWorkspace` über `using`-Block in dem Code steuern, der das Catalog erstellt.
 
 ### Klassifikation
 
 - **Prio:** 🟡 Niedrig
 - **Aufwand:** S
-- **Nutzen:** ★★★ — Lifecycle-Klarheit
+- **Nutzen:** ★★★ — Lifecycle-Klarheit, Code-Hygiene
 
 ---
 
@@ -327,136 +306,88 @@ private SourceFileCatalog(MSBuildWorkspace? workspace, Solution solution, bool h
 
 ### Befund
 
+In Checkern wird `nameof(ctx.Config.Global.EnforceSealedClasses)` konsequent verwendet — gut. Aber in `CursorRulesGenerator` und `ViolationTextFormatter` stehen String-Literale:
+
 ```csharp
-// ArchitectureChecker.cs, Zeile 50–57
-ctx.AddViolation(new RuleViolation
-{
-    ...
-    RuleName = nameof(ctx.Config.Global.EnforceSealedClasses),  // OK, via nameof
-    ...
-});
-
-// CursorRulesGenerator.cs, Zeile 31
-new("EnforceSealedClasses", g => g.EnforceSealedClasses, ...)
-//                                ^ String-Literal statt nameof
-
-// ViolationTextFormatter.cs, Zeile 107
-["EnforceSealedClasses"] = "-> EnforceSealedClasses: Konkrete Klassen muessen 'sealed' sein..."
-//  ^ String-Literal
+new("EnforceSealedClasses", g => g.EnforceSealedClasses, ...)   // CursorRulesGenerator
+["EnforceSealedClasses"] = "-> EnforceSealedClasses: ..."        // ViolationTextFormatter
 ```
 
-**Probleme:**
+→ Umbenennen einer Config-Property bricht diese Stellen ohne Compile-Fehler.
 
-- `nameof(ctx.Config.Global.EnforceSealedClasses)` ist konsequent genutzt in Checkern → **gut**
-- Aber `CursorRulesGenerator` und `ViolationTextFormatter` verwenden String-Literale → Refactoring einer Property bricht sie
-- `RuleViolation.RuleName` ist ein String → keine Compile-Time-Validierung der Regel-Schlüssel in `RuleInstructions`, `RuleDescriptions`, `GlobalRules`
+### Lösungsansatz
+
+Statische `LinterRuleIds`-Const-Klasse mit `public const string EnforceSealedClasses = nameof(GlobalConfig.EnforceSealedClasses);` für alle Regel-Namen (siehe R8). Compile-Time-Sicherheit; Refactoring propagiert automatisch.
 
 ### Klassifikation
 
 - **Prio:** 🟡 Niedrig
-- **Aufwand:** N (Const-Klasse `LinterRuleIds`)
+- **Aufwand:** S (< 1 Tag)
 - **Nutzen:** ★★★ — Refactoring-Sicherheit
 
 ---
 
-## A11 — Tests liegen unter `src/AiNetLinter.Tests/`, nicht `tests/AiNetLinter.Tests/`
-
-**Befund:** `src/AiNetLinter.Tests/` enthält 100+ Test-Klassen, aber `tests/` enthält nur Fixtures (und leere Verzeichnisse). Die `.slnx`-Datei referenziert `src/AiNetLinter.Tests`. Pfad-Inkonsistenz → verwirrend für Mitwirkende.
-
-### Klassifikation
-
-- **Prio:** 🟡 Niedrig
-- **Aufwand:** XS (Move + .slnx anpassen)
-- **Nutzen:** ★★ — Onboarding-Klarheit
-
----
-
-## A12 — `Cache` und `SolutionBasePath`-Lifecycle koppelt MSBuildWorkspace an Analyse
-
-**Datei:** `src/AiNetLinter/Core/LinterEngine.cs` (Zeilen 207–217)
-
-### Befund
-
-```csharp
-// LinterEngine.cs, Zeile 207
-private LinterConfig ResolvePostAnalysisConfig(Solution solution)
-{
-    if (_config.SolutionBasePath != null)
-        return _config;
-    var dir = GetSolutionDir(solution);
-    return string.IsNullOrEmpty(dir) ? _config : _config with { SolutionBasePath = dir };
-}
-```
-
-**Problem:** Lösung mutiert die Konfiguration zur Laufzeit über `with { SolutionBasePath = dir }` → das ist **eine Workaround-Lösung**, die nicht sauber durch die Architektur geführt wird. Die Konfiguration sollte **bereits beim Laden** den SolutionBasePath kennen.
-
-### Klassifikation
-
-- **Prio:** 🟡 Niedrig
-- **Aufwand:** XS (in `SourceFileCatalog.LoadAsync` verschieben)
-- **Nutzen:** ★★★ — Klarheit
-
----
-
-## A13 — `SuppressionEvaluator.IsSuppressed` ist O(N×M)
+## A11 — `SuppressionEvaluator.IsSuppressed` ist O(N×M)
 
 **Datei:** `src/AiNetLinter/Suppression/SuppressionEvaluator.cs`
 
 ### Befund
 
 ```csharp
-// SuppressionEvaluator.cs, Zeilen 18–36
 public static bool IsSuppressed(string fileContent, string ruleName, int lineNumber)
 {
     var lines = fileContent.Split('\n');
-    foreach (var line in lines)
-    {
-        if (SuppressionCommentParser.MatchesRule(line, ruleName))
-        {
-            return true;
-        }
-    }
-    ...
+    foreach (var line in lines) { ... }
 }
 ```
 
-**Problem:** Bei jeder Violation wird der gesamte File-Content erneut gesplittet → bei 100 Violations × 500 Zeilen × O(MatchesRule) → quadratische Komplexität pro Datei.
+Bei jeder Violation wird `fileContent.Split('\n')` erneut ausgeführt. Bei 100 Violations × 500 Zeilen → quadratische Komplexität pro Datei.
+
+### Lösungsansatz
+
+Unterdrückungsindex einmalig pro Datei aufbauen (z. B. `Dictionary<int, HashSet<string>> suppressedByLine`) und im `CheckerContext` zwischenspeichern.
 
 ### Klassifikation
 
 - **Prio:** 🟡 Niedrig
-- **Aufwand:** N (Index beim ersten Aufbau)
-- **Nutzen:** ★★★ — Performance bei großen Dateien
+- **Aufwand:** S
+- **Nutzen:** ★★★ — Performance bei Dateien mit vielen Violations
 
 ---
 
-## A14 — `LinterConfigNormalizer` nicht inspiziert, aber existiert
+## A12 — Keine Code-Coverage-Statistik verfügbar
 
-**Datei:** `src/AiNetLinter/Configuration/LinterConfigNormalizer.cs` (nicht gelesen, aber im Codegraph referenziert)
+### Befund
 
-→ Im Audit-Bericht nicht detailliert betrachtet; möglicherweise Quelle für Drift-Probleme (TODO: separat prüfen).
+Kein Coverage-Reporting im Repo. Test-Fixtures sind minimal (16 Dateien in `tests/Fixtures/BaselineMini/`). Es ist nicht klar, welche Checker getestet sind und welche nicht.
 
----
+### Lösungsansatz
 
-## A15 — Keine Code-Coverage-Statistik verfügbar
-
-**Befund:** Es gibt keine Coverage-Statistik im Repo. Tests-Fixtures (`tests/Fixtures/BaselineMini/`) sind minimal (16 Dateien). Es ist nicht klar, welche Checker getestet sind und welche nicht.
+`coverlet` als NuGet-Paket im Test-Projekt; `dotnet test --collect:"XPlat Code Coverage"` in CI; optionaler Coverage-Threshold (z. B. 60 %) als Pflicht-Gate.
 
 ### Klassifikation
 
 - **Prio:** 🟡 Niedrig
-- **Aufwand:** S (coverlet + Coverage-Threshold in CI)
+- **Aufwand:** S
 - **Nutzen:** ★★★ — Vertrauen in Refactorings
 
 ---
 
-## 🎯 Zusammenfassung Architektur-Befunde
+## A13 — `LinterConfigNormalizer` nicht vollständig auditiert
+
+**Datei:** `src/AiNetLinter/Configuration/LinterConfigNormalizer.cs` (im Codegraph referenziert, aber nicht detailliert betrachtet)
+
+→ Möglicherweise Quelle für Drift-Probleme zwischen Default-Werten und normalisierten Werten. Separat prüfen.
+
+---
+
+## Zusammenfassung Architektur-Befunde
 
 **Hauptproblem:** Der Code wuchs **rule-orientiert** (jeder Epic brachte neue Checker hinzu), aber nicht **architektur-orientiert**. Das Resultat ist ein hochfunktionales, aber strukturell fragiles System:
 
-- 14 Checker sind statisch in `LinterAnalyzer` verdrahtet (A1)
-- Regel-Beschreibungen sind 3-fach dupliziert (A3)
+- Checker-Logik in God-Klassen versteckt (A1)
+- Regel-Beschreibungen 3-fach dupliziert mit falschen Werten (A3)
 - Singleton-Anti-Pattern in `PerformanceProfiler` (A4)
-- CLI-Routing vermischt mit Orchestrierung (A2)
+- CLI-Routing mit Orchestrierung vermischt (A2)
 
 → Die folgenden Refactorings (siehe `03-Architektur-Refactoring-Vorschlaege.md`) sind **Voraussetzung** für die nächsten 5+ Epics ohne weiteres Architektur-Drift.
