@@ -44,14 +44,20 @@ internal static class SyncCursorRulesCommand
     {
         if (!File.Exists(mdcPath))
         {
-            c.WriteError($"[ERROR]: Die Datei '{mdcPath}' existiert nicht.");
+            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ResourceNotFound,
+                "Cursor-Regeldatei existiert nicht.",
+                context: mdcPath,
+                hint: "Cursor-Regeln mit --sync-cursor-rules (ohne --check) erzeugen."));
             return 1;
         }
 
         var existing = File.ReadAllText(mdcPath, Encoding.UTF8);
         if (existing != content)
         {
-            c.WriteError("[ERROR]: Drift erkannt! Die generierten Cursor-Regeln stimmen nicht mit der Datei auf der Festplatte überein.");
+            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.DriftDetected,
+                "Cursor-Regeln stimmen nicht mit der gespeicherten Datei ueberein.",
+                context: mdcPath,
+                hint: "Cursor-Regeln mit --sync-cursor-rules (ohne --check) aktualisieren."));
             return 1;
         }
 

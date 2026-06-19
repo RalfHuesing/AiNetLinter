@@ -115,7 +115,10 @@ internal static class AuditCommand
         }
         catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException)
         {
-            c.WriteError($"[ERROR]: {ex.Message}");
+            var code = ex is FileNotFoundException ? LinterErrorCodes.BaselineNotFound : LinterErrorCodes.BaselineInvalid;
+            c.WriteError(LinterErrorFormatter.Format(code, ex.Message,
+                context: args.BaselinePath,
+                hint: "Baseline-Datei mit --create-baseline neu erzeugen."));
             return 1;
         }
 

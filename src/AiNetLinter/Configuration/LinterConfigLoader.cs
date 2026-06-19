@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Configuration;
 
@@ -14,30 +15,37 @@ public static class LinterConfigLoader
     /// <summary>
     /// Versucht, die Konfiguration aus der angegebenen Datei zu laden.
     /// </summary>
-    /// <param name="configPath">Der Pfad zur Konfigurationsdatei.</param>
-    /// <param name="isRequired">Gibt an, ob das Fehlen der Datei als Fehler gewertet werden soll.</param>
-    /// <returns>Die geladene Konfiguration oder null bei Fehlern.</returns>
     public static LinterConfig? TryLoadConfig(string? configPath, bool isRequired)
     {
         if (string.IsNullOrWhiteSpace(configPath))
         {
             if (isRequired)
             {
-                Console.Error.WriteLine("[ERROR]: --config ist erforderlich fuer den Audit-Lauf.");
+                Console.Error.WriteLine(LinterErrorFormatter.Format(
+                    LinterErrorCodes.ConfigRequired,
+                    "--config ist erforderlich fuer den Audit-Lauf.",
+                    hint: "Nutze --config <pfad> um rules.json anzugeben."));
             }
             return null;
         }
 
         if (!File.Exists(configPath))
         {
-            Console.Error.WriteLine($"[ERROR]: Die Konfigurationsdatei wurde nicht gefunden: {configPath}");
+            Console.Error.WriteLine(LinterErrorFormatter.Format(
+                LinterErrorCodes.ConfigNotFound,
+                "Konfigurationsdatei nicht gefunden.",
+                context: configPath,
+                hint: "Pfad pruefen oder rules.json anlegen."));
             return null;
         }
 
         var config = LoadConfig(configPath);
         if (config == null)
         {
-            Console.Error.WriteLine("[ERROR]: Die Konfigurationsdatei konnte nicht deserialisiert werden.");
+            Console.Error.WriteLine(LinterErrorFormatter.Format(
+                LinterErrorCodes.ConfigInvalid,
+                "Konfigurationsdatei konnte nicht deserialisiert werden.",
+                context: configPath));
             return null;
         }
 
@@ -54,13 +62,20 @@ public static class LinterConfigLoader
             var config = JsonSerializer.Deserialize<LinterConfig>(content, options);
             if (config?.Global?.ImmutabilityExemptSuffixes != null && config.Global.ImmutabilityExemptSuffixes.Count > 30)
             {
-                Console.Error.WriteLine("[WARNING]: Config-Smell — zu breite Ausnahme (mehr als 30 ImmutabilityExemptSuffixes). Erwäge Wildcard-Muster zu nutzen.");
+                Console.Error.WriteLine(LinterErrorFormatter.Format(
+                    LinterErrorCodes.ConfigSmell,
+                    "Zu breite Ausnahme: mehr als 30 ImmutabilityExemptSuffixes.",
+                    context: configPath,
+                    hint: "Erwaege Wildcard-Muster zu nutzen."));
             }
             return config is null ? null : LinterConfigNormalizer.Normalize(config);
         }
         catch (InvalidOperationException ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Ungueltige Konfiguration in '{configPath}': {ex.Message}");
+            Console.Error.WriteLine(LinterErrorFormatter.Format(
+                LinterErrorCodes.ConfigInvalid,
+                ex.Message,
+                context: configPath));
             return null;
         }
         catch (Exception ex)
