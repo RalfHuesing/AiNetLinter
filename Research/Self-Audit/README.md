@@ -7,10 +7,10 @@
 
 | #   | Datei                                                                                      | Inhalt                                                              | Lesedauer |
 | --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | --------- |
-| 1   | [**00-Executive-Summary.md**](00-Executive-Summary.md)                                     | Top-11 Befunde, Quick Wins, Aufwand/Nutzen-Matrix, Scorecard        | 5 min     |
-| 2   | [**01-Architektur-Befunde.md**](01-Architektur-Befunde.md)                                 | 13 architektonische Schwachstellen (A1–A13) mit Code-Referenzen     | 15 min    |
+| 1   | [**00-Executive-Summary.md**](00-Executive-Summary.md)                                     | Top-10 Befunde, Quick Wins, Aufwand/Nutzen-Matrix, Scorecard        | 5 min     |
+| 2   | [**01-Architektur-Befunde.md**](01-Architektur-Befunde.md)                                 | 12 architektonische Schwachstellen (A1–A13, ohne A3) mit Code-Referenzen | 15 min    |
 | 3   | [**02-Code-Qualitaet.md**](02-Code-Qualitaet.md)                                           | Detaillierte Code-Befunde pro Datei (C1–C15) mit Zeilennummern      | 20 min    |
-| 4   | [**03-Architektur-Refactoring-Vorschlaege.md**](03-Architektur-Refactoring-Vorschlaege.md) | 11 Refactoring-Pläne (R1–R11) mit Code-Skeletten + 3-Wochen-Roadmap| 25 min    |
+| 4   | [**03-Architektur-Refactoring-Vorschlaege.md**](03-Architektur-Refactoring-Vorschlaege.md) | 10 Refactoring-Pläne (R2–R11) mit Code-Skeletten + 3-Wochen-Roadmap | 25 min    |
 | 5   | [**04-LLM-Agent-Optimierung.md**](04-LLM-Agent-Optimierung.md)                             | 7 LLM/Agent-Optimierungen (L3–L4, L8–L12)                          | 15 min    |
 
 ## Empfohlene Lesereihenfolge
@@ -24,7 +24,7 @@
 ## Kernergebnisse
 
 - **Score: 3.4/5** — produktionsreif, aber vor Epic 25+ refactoring-bedürftig
-- **Top-3-Probleme:** Rule-Duplikation (3-fach), Checker-God-Klassen, Performance-Singleton
+- **Top-2-Probleme:** Checker-God-Klassen, Performance-Singleton
 - **2 aktive Bugs:** `VisitRecordDeclaration` ohne `CollectClassInfo` + 7 falsche Playbook-Werte
 - **Empfohlene Investition:** 3 Wochen Refactoring-Initiative
 
@@ -53,8 +53,8 @@ Die folgenden Vorschläge aus dem ursprünglichen Audit wurden nach Bewertung ve
 ## Statistiken
 
 - **Auditierte Dateien:** ~30 Hauptdateien + 100+ Test-Klassen
-- **Befunde insgesamt:** 31 (A1–A13 Architektur, C1–C12 Code, R1–R11 Refactoring, L3–L4/L8–L12 LLM)
-- **Davon kritisch (🔴):** 4 (F1, F2, F3, F9+F11 als Bugs)
+- **Befunde insgesamt:** 29 (A1–A13 Architektur ohne A3, C1–C12 Code, R2–R11 Refactoring, L3–L4/L8–L12 LLM)
+- **Davon kritisch (🔴):** 3 (F2, F3, F9+F11 als Bugs)
 - **Davon Quick Wins (< 1 Tag):** 5 (F11, F9, F8, F5, F6)
 
 ## Nächste Schritte

@@ -92,42 +92,6 @@ Jeden Command in eine eigene `internal static class` auslagern (z. B. `AuditComm
 
 ---
 
-## A3 — Rule-Definitionen sind 3-fach dupliziert
-
-**Dateien:** `CursorRulesGenerator.cs`, `ViolationTextFormatter.cs`, `RepoPlaybookGenerator.cs`
-
-### Befund
-
-Die gleichen Regel-Beschreibungen existieren **dreimal** im Code, jeweils mit unterschiedlichem Inhalt und teils **falschen Werten**:
-
-| Datei                       | Speicherort                                              | Zweck                        |
-| --------------------------- | -------------------------------------------------------- | ---------------------------- |
-| `CursorRulesGenerator.cs`   | `GlobalRules[]` (Z. 30–91), `MetricsList[]` (Z. 93–109) | `.mdc` für Cursor generieren |
-| `ViolationTextFormatter.cs` | `RuleInstructions` Dict (Z. 105–134)                     | LLM-Output je Violation      |
-| `RepoPlaybookGenerator.cs`  | `RuleDescriptions` Dict (Z. 36–59)                       | Playbook-Markdown             |
-
-**Konkrete Bugs in `RepoPlaybookGenerator.cs`:**
-
-| Zeile | Hardcoded Wert     | Tatsächlicher Default |
-| ----- | ------------------ | --------------------- |
-| 40    | `"max. 500 Zeilen"`| 700                   |
-| 43    | `"max. 42 Zeilen"` | 60                    |
-| 44    | `"max. 5 Zyklom."` | 12                    |
-| 45    | `"max. 5 Kogn."`   | 15                    |
-| 55    | `"max. 10 Overl."` | 3                     |
-| 56    | `"max. 20 Deps."`  | 5                     |
-
-### Lösungsansatz
-
-Zentrale statische `RuleRegistry`-Klasse (kein Interface nötig ohne DI-Container) mit einem `RuleMetadata`-Record als Single-Source-of-Truth. Alle drei Generatoren lesen aus dieser Klasse. Grenzwerte werden direkt aus `LinterConfig` befüllt, nicht hardcoded (siehe R1 und R11 für Quick-Win-Fix bis dahin).
-
-### Klassifikation
-
-- **Prio:** 🔴 Hoch
-- **Aufwand:** M (statische RuleRegistry) + XS (Playbook-Sofortfix)
-- **Nutzen:** ★★★★★ — Bugfix + Single-Source-of-Truth
-
----
 
 ## A4 — `PerformanceProfiler` als globaler Singleton
 

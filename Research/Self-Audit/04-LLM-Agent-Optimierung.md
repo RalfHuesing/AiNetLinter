@@ -18,7 +18,6 @@ AiNetLinter richtet sich explizit an **AI-Agent-Workflows** (Cursor, Claude Code
 
 Der Linter **produziert** gute LLM-Ausgabe. Aber seine **Struktur** macht Agent-Integration unnötig aufwändig:
 
-- Regel-Lookup erfordert 3 Datei-Suchen (3 Duplikate — → R1)
 - Keine Discovery-Schnittstelle für Agenten (welche Regeln gibt es überhaupt?)
 - Fallback-Guidance für neue Regeln ist generisch ("Bitte behebe diesen Verstoss")
 - Fehler-Output ist nicht strukturiert genug für automatisches Parsing
@@ -27,8 +26,8 @@ Der Linter **produziert** gute LLM-Ausgabe. Aber seine **Struktur** macht Agent-
 
 ## L3 — Rule-Discovery via CLI (`--list-rules`, `--describe-rule`)
 
-**Abhängig von:** R1 (RuleRegistry)  
-**Aufwand:** S (1 Tag, basierend auf R1)  
+**Abhängig von:** RuleRegistry (bereits umgesetzt)  
+**Aufwand:** S (1 Tag)  
 **Nutzen:** ★★★★★
 
 ### Problem
@@ -80,7 +79,7 @@ Konfiguration:
   Default:       true
 ```
 
-**Implementierung:** Beide Commands lesen aus `RuleRegistry.All` (→ R1). Command-Klassen in R3-Struktur (`ListRulesCommand`, `DescribeRuleCommand`).
+**Implementierung:** Beide Commands lesen aus `RuleRegistry.All`. Command-Klassen in R3-Struktur (`ListRulesCommand`, `DescribeRuleCommand`).
 
 **Nutzen für Agenten:**
 - Agent kann vor Edit-Calls prüfen, welche Regeln aktiv sind
@@ -91,8 +90,8 @@ Konfiguration:
 
 ## L4 — Verbesserte LLM-Output-Qualität
 
-**Abhängig von:** R1 (RuleRegistry)  
-**Aufwand:** S (mit R1 als Fundament)  
+**Abhängig von:** RuleRegistry (bereits umgesetzt)  
+**Aufwand:** S (mit RuleRegistry als Fundament)  
 **Nutzen:** ★★★★★
 
 ### Problem
@@ -107,9 +106,9 @@ Ein LLM bekommt mit diesem Fallback keine klare Anleitung und muss raten.
 
 ### Lösungsansatz
 
-Nach R1 liest `ViolationTextFormatter.GetRuleInstruction(ruleName)` direkt aus `RuleRegistry.Resolve(ruleName).DetailedGuidance`. Kein manuell gepflegtes Dict mehr, kein Fallback.
+Da `RuleRegistry` eingeführt wurde, liest `ViolationTextFormatter.GetRuleInstruction(ruleName)` direkt aus `RuleRegistry.Resolve(ruleName).DetailedGuidance`. Kein manuell gepflegtes Dict mehr, kein Fallback.
 
-Neue Felder in `RuleMetadata` (→ R1) für reichere LLM-Anleitung:
+Neue Felder in `RuleMetadata` für reichere LLM-Anleitung:
 
 ```csharp
 public sealed record RuleMetadata(
@@ -152,7 +151,7 @@ public sealed class UserService { }
 
 ## L8 — Semantische Suche über Rule-Metadaten (`--search-rules`)
 
-**Abhängig von:** R1 (RuleRegistry)  
+**Abhängig von:** RuleRegistry (bereits umgesetzt)  
 **Aufwand:** S  
 **Nutzen:** ★★★
 
@@ -242,7 +241,7 @@ public static class LinterErrorCodes
 
 ## L10 — Inline-Fix-Snippets im Violation-Output
 
-**Abhängig von:** R1 (RuleRegistry), R2 (Checker aufteilen für ExampleFix)  
+**Abhängig von:** RuleRegistry (bereits umgesetzt), R2 (Checker aufteilen für ExampleFix)  
 **Aufwand:** M (L4 ist Voraussetzung)  
 **Nutzen:** ★★★★★
 
@@ -274,7 +273,7 @@ Das `ExampleFix`-Feld aus `RuleMetadata` (→ L4) liefert den generischen Hinwei
 
 ## L11 — Bessere Test-Coverage für LLM-Use-Cases
 
-**Abhängig von:** R1 (RuleRegistry)  
+**Abhängig von:** RuleRegistry (bereits umgesetzt)  
 **Aufwand:** S  
 **Nutzen:** ★★★
 
@@ -386,20 +385,18 @@ Workflow-Vorlage für den Agent: welche Reihenfolge bei Lint-Fix-Loop, wie mit B
 
 ## Zusammenfassung LLM-Optimierung
 
-| Vorschlag                      | Aufwand | Nutzen | Abhängig von |
-| ------------------------------ | ------- | ------ | ------------ |
-| L3 — Rule-Discovery CLI        | S       | ★★★★★  | R1           |
-| L4 — Bessere LLM-Output        | S       | ★★★★★  | R1           |
-| L8 — Semantische Suche         | S       | ★★★    | R1           |
+| L3 — Rule-Discovery CLI        | S       | ★★★★★  | RuleRegistry (erledigt) |
+| L4 — Bessere LLM-Output        | S       | ★★★★★  | RuleRegistry (erledigt) |
+| L8 — Semantische Suche         | S       | ★★★    | RuleRegistry (erledigt) |
 | L9 — Strukturiertes Error      | M       | ★★★    | —            |
-| L10 — Inline-Fix-Snippets      | M       | ★★★★★  | R1, L4       |
-| L11 — Snapshot-Tests           | S       | ★★★    | R1           |
+| L10 — Inline-Fix-Snippets      | M       | ★★★★★  | RuleRegistry (erledigt), L4 |
+| L11 — Snapshot-Tests           | S       | ★★★    | RuleRegistry (erledigt) |
 | L12 — Doc-Updates              | S       | ★★★    | L3, L4       |
 
 ### Empfohlene Reihenfolge
 
-1. **R1 + L3 + L4** — Fundament: RuleRegistry + Discovery + vollständige Guidance
-2. **L8** — Suche, auf R1 aufbauend, kleiner Aufwand
+1. **L3 + L4** — Discovery + vollständige Guidance (aufbauend auf RuleRegistry)
+2. **L8** — Suche, auf RuleRegistry aufbauend, kleiner Aufwand
 3. **L9** — Error-Reporting, unabhängig, verbesserter Diagnosis-Output
 4. **L10, L11, L12** — Polish, nach den Kernrefactorings
 
@@ -407,7 +404,7 @@ Workflow-Vorlage für den Agent: welche Reihenfolge bei Lint-Fix-Loop, wie mit B
 
 ## Strategische Perspektive
 
-AiNetLinter ist heute ein **gutes CLI-Tool mit LLM-Output**. Nach den empfohlenen Refactorings (R1–R11) und den Agent-Optimierungen (L3–L12) wird es ein **vollständig agent-freundliches Werkzeug**:
+AiNetLinter ist heute ein **gutes CLI-Tool mit LLM-Output**. Nach den empfohlenen Refactorings (R2–R11) und den Agent-Optimierungen (L3–L12) wird es ein **vollständig agent-freundliches Werkzeug**:
 
 - Agenten können Regeln selbst entdecken (`--list-rules`, `--describe-rule`)
 - Violations enthalten vollständige, regelspezifische Anleitungen statt Fallback-Texte

@@ -291,13 +291,7 @@ foreach (var project in solution.Projects)
 
 **Datei:** `src/AiNetLinter/Core/CursorRulesGenerator.cs`
 
-### C7.1 — `GlobalRules[]` ist eine 20+ Eintrag-Inline-Liste
 
-(Duplikat der Regel-Metadaten — → R1 für zentrale RuleRegistry)
-
-### C7.2 — `RuleDefinition` ist `private sealed record`
-
-**Befund:** Wegen `private` nicht von anderen Generatoren wiederverwendbar. Sollte in ein gemeinsames `RuleMetadata`-Modell (→ R1).
 
 ### C7.3 — Reflection-Hack in `AppendProjectOverridesDelta`
 
@@ -349,9 +343,7 @@ return violations.Any(v => v.LineNumber == GetLineNumber(variable) && v.Details.
 
 **Datei:** `src/AiNetLinter/Output/ViolationTextFormatter.cs`
 
-### C9.1 — `RuleInstructions` Dict mit 26 Einträgen (Duplikat)
 
-(→ Duplikat der Regel-Metadaten — wird durch R1 RuleRegistry gelöst)
 
 ### C9.2 — Fallback-Instruction für unbekannte Regeln
 
@@ -454,9 +446,7 @@ return ns.StartsWith("Xunit", ...) || ns.StartsWith("NUnit", ...) || ...;
 
 `xUnit.v3` (`Xunit.v3.*`) fehlt. Konfigurierbare Liste wäre robuster.
 
-### C11.3 — `IsForbiddenReflectionCall` mit hardcoded Strings
-
-Nicht erweiterbar ohne Code-Änderung. Nach R1 (RuleRegistry) könnte diese Liste konfigurierbar werden.
+Nicht erweiterbar ohne Code-Änderung. Über die `RuleRegistry` könnte diese Liste konfigurierbar werden.
 
 ---
 

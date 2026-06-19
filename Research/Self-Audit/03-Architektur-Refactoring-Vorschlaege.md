@@ -9,7 +9,6 @@
 
 ## Inhaltsverzeichnis
 
-- [R1 — Statische `RuleRegistry`-Klasse einführen](#r1--statische-ruleregistry-klasse-einführen)
 - [R2 — Checker-God-Klassen aufteilen (statisch, explizit)](#r2--checker-god-klassen-aufteilen-statisch-explizit)
 - [R3 — `Program.cs` in statische Command-Klassen aufteilen](#r3--programcs-in-statische-command-klassen-aufteilen)
 - [R4 — `PerformanceProfiler` entkoppeln + optional machen](#r4--performanceprofiler-entkoppeln--optional-machen)
@@ -24,117 +23,7 @@
 
 ---
 
-## R1 — Statische `RuleRegistry`-Klasse einführen
 
-**Löst:** F1, A3, C7.1, C7.2, C9.1, C11.3  
-**Aufwand:** M (2–3 Tage)  
-**Nutzen:** ★★★★★
-
-### Problem
-
-Regel-Metadaten (Name, Beschreibung, Intent, Guidance, Grenzwerte) sind an **drei Stellen** definiert, jeweils leicht unterschiedlich und teils mit **falschen Werten**:
-
-- `CursorRulesGenerator.GlobalRules[]` — für `.mdc`-Dateigenerierung
-- `ViolationTextFormatter.RuleInstructions` — für LLM-Output
-- `RepoPlaybookGenerator.RuleDescriptions` — für Playbook-Markdown
-
-Wenn eine Regel neu hinzukommt oder sich ändert, müssen alle drei Stellen manuell aktualisiert werden — und das passiert offensichtlich nicht zuverlässig (7 falsche Werte, → F9).
-
-### Lösungsansatz
-
-Eine statische Klasse `RuleRegistry` als Single-Source-of-Truth. Kein Interface (nicht nötig ohne DI-Container), keine Reflection-Discovery — einfach eine statische readonly Liste.
-
-**Neue Datei:** `src/AiNetLinter/Core/RuleRegistry.cs`
-
-```csharp
-namespace AiNetLinter.Core;
-
-public sealed record RuleMetadata(
-    string RuleId,              // "EnforceSealedClasses"
-    string DisplayName,         // "Konkrete Klassen muessen 'sealed' sein"
-    string ShortDescription,    // 1-Satz für Playbook
-    string DetailedGuidance,    // mehrteilige LLM-Anweisung
-    string Intent,              // "agent-context" | "agent-resilience" | ...
-    string Severity,            // "error" | "warning" | "info"
-    string CursorHint,          // Textbaustein fuer .mdc-Datei
-    bool HasAutoFix
-);
-
-internal static class RuleRegistry
-{
-    public static readonly IReadOnlyList<RuleMetadata> All = BuildAll();
-
-    public static RuleMetadata Resolve(string ruleId) =>
-        TryResolve(ruleId) ?? throw new KeyNotFoundException($"Unknown rule: {ruleId}");
-
-    public static RuleMetadata? TryResolve(string ruleId) =>
-        All.FirstOrDefault(r => r.RuleId.Equals(ruleId, StringComparison.OrdinalIgnoreCase));
-
-    public static IEnumerable<RuleMetadata> ByIntent(string intent) =>
-        All.Where(r => r.Intent == intent);
-
-    private static IReadOnlyList<RuleMetadata> BuildAll() =>
-    [
-        new(
-            RuleId: nameof(GlobalConfig.EnforceSealedClasses),
-            DisplayName: "Konkrete Klassen muessen 'sealed' sein",
-            ShortDescription: "Konkrete Klasse ist nicht 'sealed'.",
-            DetailedGuidance: "Fuege 'sealed' zur Klassendeklaration hinzu ...",
-            Intent: "agent-context",
-            Severity: "error",
-            CursorHint: "`sealed` fuer konkrete Klassen; Ausnahmen: Suffixe in `rules.json`.",
-            HasAutoFix: true
-        ),
-        // ... alle weiteren Regeln
-    ];
-}
-```
-
-### Migration der 3 Duplikate
-
-| Vorher (Quelle)                           | Nachher                                         |
-| ----------------------------------------- | ----------------------------------------------- |
-| `CursorRulesGenerator.GlobalRules[]`      | `RuleRegistry.All` (gefiltert nach Intent)      |
-| `ViolationTextFormatter.RuleInstructions` | `RuleRegistry.Resolve(ruleId).DetailedGuidance` |
-| `RepoPlaybookGenerator.RuleDescriptions`  | `RuleRegistry.Resolve(ruleId).ShortDescription` |
-
-Jede der drei Klassen verliert ihre statische Liste und liest aus der Registry.
-
-### Grenzwerte: konfigurationsbasiert
-
-Für Beschreibungen mit Grenzwerten (MaxLineCount, MaxCyclomaticComplexity etc.) wird die aktuelle `LinterConfig` übergeben:
-
-```csharp
-// RepoPlaybookGenerator.cs nach Refactoring:
-private static string FormatRuleDescription(RuleMetadata rule, LinterConfig config)
-{
-    // Statische Beschreibung aus Registry, Grenzwert dynamisch aus Config:
-    return rule.RuleId switch
-    {
-        nameof(MetricsConfig.MaxLineCount) =>
-            $"Dateizeilenlimit (max. {config.Metrics.MaxLineCount} Zeilen) ueberschritten.",
-        nameof(MetricsConfig.MaxCyclomaticComplexity) =>
-            $"Zu hohe zyklomatische Komplexitaet (max. {config.Metrics.MaxCyclomaticComplexity}).",
-        _ => rule.ShortDescription
-    };
-}
-```
-
-### Testbarkeit
-
-```csharp
-[Fact]
-public void AllRules_HaveNonEmptyGuidance()
-{
-    foreach (var rule in RuleRegistry.All)
-    {
-        Assert.NotEmpty(rule.DetailedGuidance);
-        Assert.NotEmpty(rule.ShortDescription);
-    }
-}
-```
-
----
 
 ## R2 — Checker-God-Klassen aufteilen (statisch, explizit)
 
@@ -741,10 +630,8 @@ private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig con
 
 ## Roadmap: Gesamtreihenfolge
 
-| Woche   | Tasks                                                              | Zustand    |
-| ------- | ------------------------------------------------------------------ | ---------- |
 | **1**   | R10 (Bug), R11 (Bug), R8 (RuleIds), R5 (Cancellation), R6 (Apply) | Quick Wins |
-| **2**   | R4 (Profiler), R1 (RuleRegistry), R7 (ILintConsole), R9 (Helper) | Fundament  |
+| **2**   | R4 (Profiler), R7 (ILintConsole), R9 (Helper)                     | Fundament  |
 | **3**   | R2 (Checker aufteilen), R3 (Command-Klassen), R10 in R2 aufgehend | Struktur   |
 
 ### Erwartete Resultate
@@ -770,7 +657,7 @@ private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig con
 - Monolithisches CLI (kein Server-Modus)
 
 1. **R10 + R11** — sofortige Bug-Fixes, kein Risiko
-2. **R1 + R4 + R7** — Fundament für saubere Testbarkeit
+2. **R4 + R7** — Fundament für saubere Testbarkeit
 3. **R2 + R3** — größte strukturelle Hebelwirkung
 
 → Nach 3 Wochen konsequenter Refactoring-Arbeit sind neue Regeln sicher hinzufügbar und Checker direkt testbar.
