@@ -20,11 +20,6 @@ public static class LinterConfigSyncer
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private static readonly JsonSerializerOptions ReadOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>
     /// Vergleicht den Dateiinhalt mit der serialisierten Form der geladenen Konfiguration.
     /// Schreibt zurück wenn Abweichungen bestehen (neue/entfernte Optionen).
