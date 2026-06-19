@@ -9,6 +9,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] Initialisierung der Projektstruktur mit `.slnx` (Solution) und `.csproj`
 - [x] Einrichtung der globalen AI-Richtlinien (`.cursor/rules/AiNetLinterRichtlinien.mdc`)
 - [x] Definition der Konfigurationsstruktur (`LinterConfig.cs`)
+- [x] **Automatischer rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`LinterConfigSyncer`)
 - [x] Definition der Fehlermodelle (`RuleViolation.cs`)
 - [x] Implementierung des CLI-Einstiegspunkts (`Program.cs`) mit Argument-Parsing
 - [x] Setup des xUnit v3 Testprojekts (`AiNetLinter.Tests`) und Integration in die Solution
