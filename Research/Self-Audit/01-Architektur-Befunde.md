@@ -5,53 +5,6 @@
 
 ---
 
-## A1 — `LinterAnalyzer` ruft zu viele Checker zentral auf
-
-**Datei:** `src/AiNetLinter/Core/LinterAnalyzer.cs` (271 LOC)
-
-### Befund
-
-`LinterAnalyzer` ist ein einzelner `CSharpSyntaxWalker`, der **14 Checker direkt aufruft** über starre `VisitXxx`-Methoden. Jede neue Regel erfordert eine Änderung der Klasse selbst:
-
-```csharp
-// LinterAnalyzer.cs, Zeilen 79–94
-public override void VisitClassDeclaration(ClassDeclarationSyntax node)
-{
-    if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && ArchitectureChecker.IsGeneratedCode(node, _ctx))
-        return;
-    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Klasse", _ctx);
-    NamingChecker.CheckPascalCase(node.Identifier, "Klasse", _ctx);
-    ArchitectureChecker.CheckSealedClass(node, _ctx);
-    ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: false, _ctx);
-    ScopeChecker.CheckMethodOverloads(node, _ctx);
-    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
-    ImmutabilityChecker.CheckClass(node, _ctx);
-    WpfSeparationChecker.Check(node, _ctx);
-    NestedTypesChecker.Check(node, _ctx);
-    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
-    ArchitectureChecker.CollectClassInfo(node, _ctx);
-    base.VisitClassDeclaration(node);
-}
-```
-
-**Konsequenzen:**
-
-- **Schwer testbar isoliert** — ein Test für `CheckSealedClass` muss immer den ganzen `LinterAnalyzer` hochfahren
-- **`ArchitectureChecker` sammelt 18 Methoden** (303 LOC), die nichts miteinander zu tun haben
-- **Bug:** Bei Records fehlt `CollectClassInfo` → Records erscheinen nicht in Playbook/Footprint-Statistiken (→ F11)
-- **Hohe kognitive Last** — 271 LOC für eine Klasse mit 12+ Verantwortlichkeiten
-
-### Lösungsansatz
-
-Checker-God-Klassen in fokussierte statische Klassen aufteilen (siehe R2). Der `LinterAnalyzer` bleibt der **explizite Dispatcher** — keine Reflection, keine Interface-Discovery. Die Verdrahtung bleibt sichtbar in `LinterAnalyzer.cs`, aber die eigentliche Logik zieht in kleine, fokussierte Dateien um.
-
-### Klassifikation
-
-- **Prio:** 🔴 Hoch
-- **Aufwand:** M (2–3 Tage für alle Checker)
-- **Nutzen:** ★★★★★ — neuer Checker hinzufügen wird 5× schneller, direkte Test-Isolation
-
----
 
 ## A2 — `Program.cs` als CLI-Mono-Router (568 LOC)
 
@@ -349,7 +302,6 @@ Kein Coverage-Reporting im Repo. Test-Fixtures sind minimal (16 Dateien in `test
 
 **Hauptproblem:** Der Code wuchs **rule-orientiert** (jeder Epic brachte neue Checker hinzu), aber nicht **architektur-orientiert**. Das Resultat ist ein hochfunktionales, aber strukturell fragiles System:
 
-- Checker-Logik in God-Klassen versteckt (A1)
 - Regel-Beschreibungen 3-fach dupliziert mit falschen Werten (A3)
 - Singleton-Anti-Pattern in `PerformanceProfiler` (A4)
 - CLI-Routing mit Orchestrierung vermischt (A2)

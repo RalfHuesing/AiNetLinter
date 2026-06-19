@@ -4,11 +4,19 @@ namespace AiNetLinter.Tests.Configuration;
 
 public sealed class LinterConfigNormalizerTests
 {
-    private static LinterConfig CreateBaseConfig() => new()
+    private static LinterConfig CreateBaseConfig()
     {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
+        _ = typeof(GlobalConfig);
+        _ = typeof(MetricsConfig);
+        _ = typeof(TestSentinelConfig);
+        _ = typeof(UiSeparationConfig);
+
+        return new()
+        {
+            Global = new GlobalConfig(),
+            Metrics = new MetricsConfig(),
+        };
+    }
 
     [Fact]
     public void Normalize_RestoresDefaultPatterns_WhenClassNamePatternsIsNull()

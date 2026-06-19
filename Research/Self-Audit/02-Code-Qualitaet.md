@@ -17,7 +17,6 @@
 - [C8 — `LinterAutoFixer.cs` (322 LOC)](#c8--linterautofixercs-322-loc)
 - [C9 — `ViolationTextFormatter.cs` (144 LOC)](#c9--violationtextformattercs-144-loc)
 - [C10 — `SourceFileCatalog.cs` (235 LOC)](#c10--sourcefilecatalogcs-235-loc)
-- [C11 — `ArchitectureChecker.cs` (303 LOC)](#c11--architecturecheckercs-303-loc)
 - [C12 — `Checkers/*` — wiederkehrende Anti-Patterns](#c12--checkers----wiederkehrende-anti-patterns)
 - [C14 — `Configuration/*` — Overrides](#c14--configuration----overrides)
 - [C15 — Tests](#c15--tests)
@@ -95,35 +94,9 @@ return await root.Parse(args).InvokeAsync();
 
 ### C2.1 — Starrer Visitor-Dispatcher
 
-(siehe A1)
+Starrer Aufruf von mehreren Checkern in LinterAnalyzer.cs. Nach dem Aufteilen der God-Klassen (R2) rufen wir die fokussierten statischen Klassen auf.
 
-### C2.2 — **Bug:** `VisitRecordDeclaration` ohne `CollectClassInfo`
 
-```csharp
-// LinterAnalyzer.cs, Zeilen 96–108
-public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
-{
-    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Record", _ctx);
-    NamingChecker.CheckPascalCase(node.Identifier, "Record", _ctx);
-    ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: true, _ctx);
-    ScopeChecker.CheckMethodOverloads(node, _ctx);
-    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
-    NestedTypesChecker.Check(node, _ctx);
-    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
-    // FEHLT: ArchitectureChecker.CollectClassInfo(node, _ctx)  ← im Gegensatz zu ClassDeclaration!
-    base.VisitRecordDeclaration(node);
-}
-```
-
-**Befund:** Records erscheinen nicht in `ClassInfo`-Statistiken (Playbook, Footprint). Gleiches Problem in `VisitStructDeclaration`.
-
-| Methode                           | CollectClassInfo? |
-| --------------------------------- | ----------------- |
-| `VisitClassDeclaration` (Z. 79)   | ✅ Ja             |
-| `VisitRecordDeclaration` (Z. 96)  | ❌ **Fehlt**      |
-| `VisitStructDeclaration` (Z. 110) | ❌ Fehlt          |
-
-**Fix:** `ArchitectureChecker.CollectClassInfo(node, _ctx)` zu `VisitRecordDeclaration` und `VisitStructDeclaration` hinzufügen (→ R10 — XS-Aufwand).
 
 ### C2.3 — `CheckLineCount` führt Syntax-Walk durch, der später wiederholt wird
 
@@ -393,62 +366,7 @@ Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");
 
 ---
 
-## C11 — `ArchitectureChecker.cs` (303 LOC)
 
-**Datei:** `src/AiNetLinter/Core/Checkers/ArchitectureChecker.cs`
-
-### C11.1 — Sammelt 18 unzusammenhängende Methoden
-
-`ArchitectureChecker` enthält:
-
-- `CollectClassInfo` (Z. 16) — Statistik
-- `CheckSealedClass` (Z. 43) — Sealed-Regel
-- `CheckValueObjectContract` (Z. 60) — Value-Objects
-- `CheckForbiddenNamespace` (Z. 93) — Namespace-Verbote
-- `CheckPhantomNamespace` (Z. 115) — Phantom-Dependencies
-- `CheckDynamic` (Z. 135) — dynamic-Verbot
-- `CheckForbiddenSymbolNamespace` (Z. 150) — Symbol-Namespaces
-- `CheckPhantomReflection` (Z. 173) — Reflection-Verbote
-- `IsGeneratedCode` (Z. 196) — Helper
-- `IsSealedOrStaticOrAbstract` (Z. 212) — Helper
-- `HasExemptSuffix` (Z. 215) — Helper
-- `IsStructOrReadOnly` (Z. 222) — Helper
-- `NamespaceMatches` (Z. 228) — Helper
-- `GetInheritanceDepth` (Z. 239) — Tiefe-Berechnung
-- `IsFrameworkBaseType` (Z. 252) — Helper
-- `CheckForTestMethods` (Z. 268) — Test-Erkennung
-- `IsTestAttribute` (Z. 274) — Helper
-- `GetBaseTypeNames` (Z. 286) — Helper
-
-→ **18 Methoden** für völlig unterschiedliche Domänen — das ist keine kohärente Klasse.
-
-**Empfehlung:** Aufteilen in fokussierte statische Klassen (→ R2):
-
-| Neue Klasse              | Methoden aus ArchitectureChecker               |
-| ------------------------ | ---------------------------------------------- |
-| `SealedClassChecker`     | `CheckSealedClass`, `IsSealedOrStaticOrAbstract`, `HasExemptSuffix` |
-| `ValueObjectChecker`     | `CheckValueObjectContract`, `IsStructOrReadOnly`|
-| `NamespaceCouplingChecker`| `CheckForbiddenNamespace`, `CheckForbiddenSymbolNamespace`, `NamespaceMatches` |
-| `PhantomDependencyChecker`| `CheckPhantomNamespace`, `CheckPhantomReflection`, `IsForbiddenReflectionCall` |
-| `DynamicTypeChecker`     | `CheckDynamic`                                  |
-| `ClassInfoCollector`     | `CollectClassInfo`, `GetBaseTypeNames`          |
-| `GeneratedCodeDetector`  | `IsGeneratedCode`                               |
-| `InheritanceDepthChecker`| `GetInheritanceDepth`, `IsFrameworkBaseType`    |
-| `TestAttributeDetector`  | `CheckForTestMethods`, `IsTestAttribute`        |
-
-Alle bleiben `internal static class`. `LinterAnalyzer` verdrahtet sie explizit.
-
-### C11.2 — `IsTestAttribute` kennt nicht alle Frameworks
-
-```csharp
-return ns.StartsWith("Xunit", ...) || ns.StartsWith("NUnit", ...) || ...;
-```
-
-`xUnit.v3` (`Xunit.v3.*`) fehlt. Konfigurierbare Liste wäre robuster.
-
-Nicht erweiterbar ohne Code-Änderung. Über die `RuleRegistry` könnte diese Liste konfigurierbar werden.
-
----
 
 ## C12 — `Checkers/*` — wiederkehrende Anti-Patterns
 
@@ -561,7 +479,6 @@ Die Code-Basis ist **funktional korrekt**, aber **strukturell gewachsen** ohne R
 | `PerformanceProfiler.cs`   | 349 | Singleton + IO + Globals                   | Hoch   |
 | `CursorRulesGenerator.cs`  | 335 | Regel-Liste + Reflection + MDC-Template   | Mittel |
 | `LinterAutoFixer.cs`       | 322 | 3 Fix-Typen + BaseType-Scan + IO           | Mittel |
-| `ArchitectureChecker.cs`   | 303 | **18** unzusammenhängende Methoden         | Hoch   |
 | `LinterAnalyzer.cs`        | 271 | Visitor + 14 Checker-Aufrufe              | Hoch   |
 
 → Diese Top-9-Dateien machen ~3.500 LOC aus = **30 %** des Produktions-Codes. Konkrete Lösungsansätze in `03-Architektur-Refactoring-Vorschlaege.md`.

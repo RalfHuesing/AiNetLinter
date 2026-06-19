@@ -66,7 +66,7 @@ internal static class ComplexityChecker
         return IsImplicitInterfaceImplementation(symbol);
     }
 
-    internal static int GetMaxMethodComplexity(ClassDeclarationSyntax node)
+    internal static int GetMaxMethodComplexity(TypeDeclarationSyntax node)
     {
         var max = 0;
         foreach (var method in node.Members.OfType<MethodDeclarationSyntax>())

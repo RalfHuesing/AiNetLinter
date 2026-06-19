@@ -70,54 +70,56 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitUsingDirective(UsingDirectiveSyntax node)
     {
         if (node.Name != null)
-            ArchitectureChecker.CheckForbiddenNamespace(node.Name.ToString(), node, _ctx);
-        ArchitectureChecker.CheckPhantomNamespace(node, _ctx);
+            NamespaceCouplingChecker.CheckForbiddenNamespace(node.Name.ToString(), node, _ctx);
+        PhantomDependencyChecker.CheckPhantomNamespace(node, _ctx);
         base.VisitUsingDirective(node);
     }
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
-        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && ArchitectureChecker.IsGeneratedCode(node, _ctx))
+        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Klasse", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Klasse", _ctx);
-        ArchitectureChecker.CheckSealedClass(node, _ctx);
-        ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: false, _ctx);
+        SealedClassChecker.Check(node, _ctx);
+        ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: false, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
         ImmutabilityChecker.CheckClass(node, _ctx);
         WpfSeparationChecker.Check(node, _ctx);
         NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
-        ArchitectureChecker.CollectClassInfo(node, _ctx);
+        ClassInfoCollector.Collect(node, _ctx);
         base.VisitClassDeclaration(node);
     }
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
-        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && ArchitectureChecker.IsGeneratedCode(node, _ctx))
+        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Record", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Record", _ctx);
-        ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: true, _ctx);
+        ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: true, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
         NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
+        ClassInfoCollector.Collect(node, _ctx);
         base.VisitRecordDeclaration(node);
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
-        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && ArchitectureChecker.IsGeneratedCode(node, _ctx))
+        if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Struct", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Struct", _ctx);
-        ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: false, _ctx);
+        ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: false, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
         NestedTypesChecker.Check(node, _ctx);
         PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
+        ClassInfoCollector.Collect(node, _ctx);
         base.VisitStructDeclaration(node);
     }
 
@@ -161,7 +163,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)
     {
         MinimalApiChecker.Check(node, _ctx);
-        ArchitectureChecker.CheckPhantomReflection(node, _ctx);
+        PhantomDependencyChecker.CheckPhantomReflection(node, _ctx);
         base.VisitInvocationExpression(node);
     }
 
@@ -170,9 +172,9 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         bool hasNsRules = _ctx.Config.ForbiddenNamespaceDependencies?.Count > 0;
         bool hasDynamicCheck = !_ctx.Config.Global.AllowDynamic;
         if (hasDynamicCheck)
-            ArchitectureChecker.CheckDynamic(node, _ctx);
+            DynamicTypeChecker.Check(node, _ctx);
         if (hasNsRules)
-            ArchitectureChecker.CheckForbiddenSymbolNamespace(node, _ctx);
+            NamespaceCouplingChecker.CheckForbiddenSymbolNamespace(node, _ctx);
         base.VisitIdentifierName(node);
     }
 
