@@ -103,7 +103,9 @@ public sealed class LinterEngine
 
         if (catalog != null && catalog.HasLoadingErrors)
         {
-            _console.WriteError("[WARN]: Linter-Analyse-Cache wird nicht aktualisiert, da beim Laden des Workspaces Fehler/Warnungen aufgetreten sind.");
+            _console.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.WorkspaceDiagnostic,
+                "Cache wird nicht aktualisiert — Workspace-Ladefehler aufgetreten.",
+                hint: "Baue die Solution und pruefe MSBuild-Ausgabe auf Fehler."));
         }
         else
         {

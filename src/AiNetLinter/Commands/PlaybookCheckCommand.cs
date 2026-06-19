@@ -32,7 +32,10 @@ internal static class PlaybookCheckCommand
 
         if (!File.Exists(args.PlaybookPath))
         {
-            c.WriteError($"[ERROR]: Die Playbook-Datei '{args.PlaybookPath}' existiert nicht.");
+            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ResourceNotFound,
+                "Die Playbook-Datei existiert nicht.",
+                context: args.PlaybookPath,
+                hint: "Playbook mit --playbook <pfad> erzeugen (ohne --check)."));
             return 1;
         }
 
@@ -43,7 +46,10 @@ internal static class PlaybookCheckCommand
             return 0;
         }
 
-        c.WriteError("[ERROR]: Drift erkannt! Das generierte Playbook stimmt nicht mit der Datei auf der Festplatte überein.");
+        c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.DriftDetected,
+            "Das generierte Playbook stimmt nicht mit der gespeicherten Datei ueberein.",
+            context: args.PlaybookPath,
+            hint: "Playbook mit --playbook <pfad> (ohne --check) neu generieren."));
         return 1;
     }
 }
