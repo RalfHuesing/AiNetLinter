@@ -1,9 +1,8 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
-Produktionscode · 148 Typen · 13 Namespaces
+Produktionscode · 152 Typen · 14 Namespaces
 
-## AiNetLinter (2)
-- FootprintExecutor → LinterArgs
-- Program → CliParsedArgs, LinterArgs, LinterConfig, PlaybookOptions, SourceFileCatalog
+## AiNetLinter (1)
+- Program → CliParsedArgs, LinterArgs
 
 ## AiNetLinter.Baseline (12)
 - BaselineComparer → BaselineComparisonResult, BaselineFile
@@ -31,7 +30,7 @@ Produktionscode · 148 Typen · 13 Namespaces
 - RuleViolationDto [record] → RuleViolationDto
 - TestSignalsDto [record] → TestSignalsDto
 
-## AiNetLinter.Cli (13)
+## AiNetLinter.Cli (10)
 - CliBaselineOptions [record] → CliBaselineOptions
 - CliCommandBuilder → CliOptions, CliParsedArgs
 - CliImpactOptions [record] → CliImpactOptions
@@ -41,10 +40,17 @@ Produktionscode · 148 Typen · 13 Namespaces
 - CliOutputOptions [record] → CliOutputOptions
 - CliParsedArgs [record] → CliBaselineOptions, CliImpactOptions, CliMaintenanceOptions, CliOutputOptions, CliParsedArgs, CliScopeOptions
 - CliScopeOptions [record] → CliScopeOptions
-- DebtReportExecutor → LinterArgs
-- ImpactExecutor → LinterArgs
 - LinterArgs
-- MaintenanceExecutor → LinterArgs
+
+## AiNetLinter.Commands (8)
+- AuditCommand → LinterArgs, LinterConfig, PlaybookOptions, SourceFileCatalog
+- DebtReportCommand → LinterArgs
+- FootprintCommand → LinterArgs
+- ImpactCommand → LinterArgs
+- MaintenanceCommand → LinterArgs
+- PlaybookCheckCommand → LinterArgs
+- ReadmeCommand
+- SyncCursorRulesCommand → LinterArgs
 
 ## AiNetLinter.Configuration (19)
 - FileFilterEvaluator → FileFiltersConfig

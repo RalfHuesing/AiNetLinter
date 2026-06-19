@@ -6,46 +6,6 @@
 ---
 
 
-## A2 — `Program.cs` als CLI-Mono-Router (568 LOC)
-
-**Datei:** `src/AiNetLinter/Program.cs`
-
-### Befund
-
-`Program.cs` enthält **alle 8 Sub-Befehle** in einer einzigen Klasse:
-
-| Methode                      | Zeile | Zweck                                                   |
-| ---------------------------- | ----- | ------------------------------------------------------- |
-| `RunAuditAsync`              | 156   | Standard-Lint-Run                                       |
-| `RunAuditWithBaselineAsync`  | 203   | Audit mit Baseline-Filter                               |
-| `RunSyncCursorRules`         | 487   | Cursor-Regel-Sync                                       |
-| `RunPrintReadme`             | 539   | Eingebettete README ausgeben                            |
-| `RunPlaybookCheckAsync`      | 350   | Playbook-Drift-Check                                    |
-| `TryRunMaintenanceModeAsync` | 374   | Maintenance-Modi (CreateBaseline, Add/RemoveDisableAll) |
-| `AuditWithBaselineAsync`     | 395   | Baseline-Workflow                                       |
-| `ToLinterArgs`               | 66    | CLI → Domain-Mapping                                    |
-| `ApplyAutoFixIfNeededAsync`  | 263   | Auto-Fix-Wrapper                                        |
-
-**Probleme:**
-
-- `ToLinterArgs` (Zeile 66–94) ist ein **25-Felder-1:1-Mapper** ohne Validierung
-- Verschachtelte Call-Ketten (`RunAuditAsync` → `RunAuditWithBaselineAsync` → `AuditWithBaselineAsync`) → schwer nachvollziehbar
-- Keine Trennung zwischen "was ausführen" und "wie ausgeben"
-- Direkter Zugriff auf `PerformanceProfiler.Instance.StartPhase(...)` an 6+ Stellen
-
-### Lösungsansatz
-
-Jeden Command in eine eigene `internal static class` auslagern (z. B. `AuditCommand`, `DebtReportCommand`, `SyncCursorRulesCommand`). `Program.cs` bleibt der **explizite Router** mit derselben if-Kaskade — aber jetzt nur ~60 LOC, weil die eigentliche Logik in den Command-Klassen liegt. Keine Interfaces, keine Discovery (siehe R3).
-
-### Klassifikation
-
-- **Prio:** 🔴 Hoch
-- **Aufwand:** M (1–3 Tage)
-- **Nutzen:** ★★★★ — Testbarkeit, klare Verantwortlichkeiten
-
----
-
-
 ## A4 — `PerformanceProfiler` als globaler Singleton
 
 **Datei:** `src/AiNetLinter/Diagnostics/PerformanceProfiler.cs` (349 LOC)
@@ -304,6 +264,6 @@ Kein Coverage-Reporting im Repo. Test-Fixtures sind minimal (16 Dateien in `test
 
 - Regel-Beschreibungen 3-fach dupliziert mit falschen Werten (A3)
 - Singleton-Anti-Pattern in `PerformanceProfiler` (A4)
-- CLI-Routing mit Orchestrierung vermischt (A2)
+- ~~CLI-Routing mit Orchestrierung vermischt (A2)~~ → ✅ Erledigt: `Program.cs` auf 80 LOC reduziert, 8 Command-Klassen in `Commands/`
 
 → Die folgenden Refactorings (siehe `03-Architektur-Refactoring-Vorschlaege.md`) sind **Voraussetzung** für die nächsten 5+ Epics ohne weiteres Architektur-Drift.
