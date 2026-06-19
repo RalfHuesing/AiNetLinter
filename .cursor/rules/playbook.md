@@ -13,19 +13,24 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 - **Kontrollfluss-Exceptions:** 27 `throw`-Anweisungen wurden im Code-Rumpf gefunden.
 
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
-In dieser Codebase sind aktuell keine Linter-Regeln unterdrueckt.
+Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
+
+- **MaxLineCount:** 1 mal deaktiviert.
+  *Bedeutung:* Dateizeilenlimit (max. 700 Zeilen) ueberschritten.
+- **MaxMethodLineCount:** 1 mal deaktiviert.
+  *Bedeutung:* Methode hat zu viele Codezeilen (max. 60 Zeilen).
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 148 / 163 (91 %)
+- **Wave-ready Dateien:** 150 / 165 (91 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 92 files, median Footprint 81 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 70 files, median Footprint 147 LOC, 9× disable-all
+- **src/AiNetLinter/**: 93 files, median Footprint 79 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 71 files, median Footprint 147 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

@@ -30,7 +30,7 @@ Auto-generiert durch AiNetLinter 1.0.50 aus `rules.json`. Neuen Produktionscode 
 | `MaxBoolParameterCount` | **1** | 0 = deaktiviert; bool-Parameter in Parameter-Object bündeln. |
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
-| `MaxAIContextFootprint` | **5000** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
+| `AIContextFootprint` | **5000** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 
 ## agent-resilience
 - **EnforceNoSilentCatch** — `catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.
@@ -38,20 +38,22 @@ Auto-generiert durch AiNetLinter 1.0.50 aus `rules.json`. Neuen Produktionscode 
 ## architecture
 - **EnforceNamespaceDirectoryMapping** — Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).
 
+## test-coverage
+- **EnableTestSentinel** — Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.
+
 ## general
 - **EnforceSealedClasses** — `sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.
-- **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
-- **EnforceValueObjectContracts** — Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.
-- **EnableTestSentinel** — Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.
 - **EnforcePascalCase** — Öffentliche Typen/Methoden/Properties: PascalCase.
 - **EnforceSemanticNaming** — Keine `data`/`temp`/`obj` in öffentlichen Signaturen.
 - **EnforceNullableEnable** — `#nullable enable` am Dateianfang jeder `.cs`-Datei.
+- **EnforceValueObjectContracts** — Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.
+- **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
 - **AllowCancellationShutdownCatch** — `OperationCanceledException` beim Shutdown abfangen erlaubt.
 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 
 ## Deaktiviert
-Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `EnforceExplicitStateImmutability`, `PreventContextDependentOverloads`, `DetectAndBanPhantomDependencies`.
+Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceExplicitStateImmutability`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `DetectAndBanPhantomDependencies`, `PreventContextDependentOverloads`.
 Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)

@@ -80,7 +80,6 @@ Produktionscode · 140 Typen · 13 Namespaces
 - LinterAnalyzer → AnalyzerArgs, CheckerContext, LinterConfig
 - LinterAutoFixer → FixContext, FixOptions
 - LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
-- MetricDescriptor [record] → MetricDescriptor
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart
 - PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
@@ -91,7 +90,8 @@ Produktionscode · 140 Typen · 13 Namespaces
 - PlaybookSyntaxWalker
 - PostAnalysisChecks → AnalysisState, ClassInfo, LinterConfig, TestSentinelConfig, TestSentinelContext
 - RepoPlaybookGenerator → LinterConfig, PlaybookBuildContext, PlaybookOptions, RuleViolation
-- RuleDefinition [record] → RuleDefinition
+- RuleMetadata [record] → RuleMetadata
+- RuleRegistry → RuleMetadata
 - TestCoverageCollector [partial] → TestCoverageIndex, TestSentinelConfig
 - TestCoverageIndex
 - TestCoverageResolver → TestCoverageIndex, TestSentinelConfig
