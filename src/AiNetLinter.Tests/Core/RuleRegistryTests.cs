@@ -1,9 +1,11 @@
 #nullable enable
 
-using System;
+using System.Collections.Generic;
 using System.Linq;
+using AiNetLinter.Commands;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Tests.Output;
 using Xunit;
 
 namespace AiNetLinter.Tests.Core;
@@ -38,6 +40,59 @@ public sealed class RuleRegistryTests
                 Assert.True(limit >= 0, $"Metric limit should be >= 0 for {rule.RuleId}.");
             }
         }
+    }
+
+    [Fact]
+    public void AllRules_HaveNonEmptyWarumAndCursorHint()
+    {
+        foreach (var rule in RuleRegistry.All)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(rule.Warum),
+                $"Warum darf nicht leer sein fuer {rule.RuleId}.");
+            Assert.False(string.IsNullOrWhiteSpace(rule.CursorHint),
+                $"CursorHint darf nicht leer sein fuer {rule.RuleId}.");
+            Assert.NotEmpty(rule.Alternativen);
+        }
+    }
+
+    [Fact]
+    public void AllRules_HaveUniqueRuleIds()
+    {
+        var ids = RuleRegistry.All.Select(r => r.RuleId).ToList();
+        var distinct = ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(distinct.Count, ids.Count);
+    }
+
+    [Fact]
+    public void AllRules_SeverityIsKnownValue()
+    {
+        var valid = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "error", "warning", "info" };
+        foreach (var rule in RuleRegistry.All)
+            Assert.True(valid.Contains(rule.Severity), $"{rule.RuleId} hat unbekannte Severity '{rule.Severity}'.");
+    }
+
+    [Fact]
+    public void ListRulesCommand_OutputContainsAllRuleIds()
+    {
+        var console = new TestLintConsole();
+        var result = ListRulesCommand.ListAll(console);
+
+        Assert.Equal(0, result);
+        var output = string.Join("\n", console.Output);
+        foreach (var rule in RuleRegistry.All)
+            Assert.Contains(rule.RuleId, output);
+    }
+
+    [Fact]
+    public void ListRulesCommand_DescribeOne_ContainsWarumAndAlternativen()
+    {
+        var console = new TestLintConsole();
+        var result = ListRulesCommand.DescribeOne("EnforceSealedClasses", console);
+
+        Assert.Equal(0, result);
+        var output = string.Join("\n", console.Output);
+        Assert.Contains("Warum", output);
+        Assert.Contains("Alternativen", output);
     }
 
     [Fact]
