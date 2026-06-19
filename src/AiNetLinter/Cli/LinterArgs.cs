@@ -113,9 +113,9 @@ public sealed class LinterArgs
     public string? Footprint { get; init; }
 
     /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob die eingebettete README ausgegeben werden soll.
+    /// Holt oder setzt den Namen des auszugebenden eingebetteten Dokuments.
     /// </summary>
-    public bool Readme { get; init; }
+    public string? Docs { get; init; }
 
     /// <summary>
     /// Gibt an, ob alle bekannten Regeln als Tabelle ausgegeben werden sollen.
@@ -137,9 +137,9 @@ public sealed class LinterArgs
     /// </summary>
     public string? Validate()
     {
-        if (!Readme && !ListRules && DescribeRule == null && SearchRules == null && string.IsNullOrEmpty(TargetPath))
+        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && string.IsNullOrEmpty(TargetPath))
         {
-            return "[ERROR]: --path ist erforderlich (außer bei --readme, --list-rules, --describe-rule, --search-rules).";
+            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules).";
         }
 
         if (HasConflictingModeOptions())

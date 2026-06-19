@@ -14,7 +14,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreatePathOption() => new Option<string?>("--path", "-p")
     {
-        Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (nicht erforderlich bei --readme)",
+        Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (nicht erforderlich bei --docs)",
     };
 
     internal static Option<string?> CreateGraphOption() => new("--graph", "-g")
@@ -98,21 +98,10 @@ internal static class CliOptionFactory
         Description = "Zeigt den detaillierten AI-Context-Footprint fuer eine Klasse an",
     };
 
-    internal static Option<bool> CreateReadmeOption()
+    internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        long byteCount = 0;
-        try
-        {
-            using var stream = typeof(CliOptionFactory).Assembly.GetManifestResourceStream("README.md");
-            if (stream != null) byteCount = stream.Length;
-        }
-        catch (Exception ignored) { _ = ignored; }
-
-        return new Option<bool>("--readme")
-        {
-            Description = $"Gibt die integrierte README.md fuer KI-Agenten aus (Kontext-Footprint: ca. {byteCount} Bytes / ~{byteCount / 4} Tokens).",
-        };
-    }
+        Description = "Gibt eine integrierte Markdown-Dokumentationsdatei fuer KI-Agenten aus (Optionen: readme, agent-api, configuration, rationale, roadmap; case-insensitive).",
+    };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")
     {

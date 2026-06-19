@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.50 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
+Auto-generiert durch AiNetLinter 1.0.51 aus `rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -33,7 +33,7 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 113 files, median Footprint 63 LOC, 6× disable-all
+- **src/AiNetLinter/**: 113 files, median Footprint 65 LOC, 6× disable-all
 - **src/AiNetLinter.Tests/**: 85 files, median Footprint 115 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 

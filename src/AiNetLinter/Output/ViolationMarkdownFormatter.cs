@@ -69,7 +69,7 @@ public static class ViolationMarkdownFormatter
         sb.Append("Prüfe für jede Violation: Ist das ein echter Verstoß oder ein False-Positive, der durch die Architektur des Projekts gerechtfertigt ist?\n");
         sb.Append("Konfigurationsoptionen erkunden:\n");
         var exePath = Environment.ProcessPath ?? "ainetlinter";
-        sb.Append($"  `{exePath} --readme`\n");
+        sb.Append($"  `{exePath} --docs configuration`\n");
         sb.Append("Bei vermutetem False-Positive: Nutzer explizit informieren, Optionen mit Empfehlung nennen, Einverständnis einholen — BEVOR du etwas änderst.\n");
 
         sb.Append("\n**Schritt 2 — Behebung echter Violations**\n");

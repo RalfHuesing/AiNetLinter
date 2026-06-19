@@ -718,7 +718,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
 *   `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-cursor-rules`: Prüft `.cursor/rules/AiNetLinter.mdc`. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
 *   `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
-*   `--readme` (Flag): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
+*   `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
 *   `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
 *   `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
 

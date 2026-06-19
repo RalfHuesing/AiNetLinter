@@ -12,9 +12,10 @@ Die wissenschaftlichen Grundlagen der Regelauswahl sind in der [Design-Rationale
 ainetlinter --config rules.json --path ./MeinProjekt.slnx
 ```
 
-Für AI-Agenten — vollständige Dokumentation auf stdout:
+Für AI-Agenten — integrierte Dokumentation auf stdout ausgeben:
 ```bash
-ainetlinter --readme
+# Zeigt z. B. die Konfigurationsdokumentation an (weitere Optionen: readme, agent-api, rationale, roadmap):
+ainetlinter --docs configuration
 ```
 
 ---

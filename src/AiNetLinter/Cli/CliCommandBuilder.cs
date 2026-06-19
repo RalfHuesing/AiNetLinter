@@ -16,7 +16,7 @@ internal static class CliCommandBuilder
             options.CreateBaseline, options.Baseline, options.AddDisableAll, options.RemoveDisableAll,
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
             options.Fix, options.Impact, options.SyncCursorRules, options.Check, options.NoCache, options.CacheTtl,
-            options.Footprint, options.Readme,
+            options.Footprint, options.Docs,
             options.ListRules, options.DescribeRule, options.SearchRules,
         };
 
@@ -46,7 +46,7 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateNoCacheOption(),
             CliOptionFactory.CreateCacheTtlOption(),
             CliOptionFactory.CreateFootprintOption(),
-            CliOptionFactory.CreateReadmeOption(),
+            CliOptionFactory.CreateDocsOption(),
             CliOptionFactory.CreateListRulesOption(),
             CliOptionFactory.CreateDescribeRuleOption(),
             CliOptionFactory.CreateSearchRulesOption());
@@ -81,7 +81,7 @@ internal static class CliCommandBuilder
             NoCache: parseResult.GetValue(options.NoCache),
             CacheTtlMinutes: parseResult.GetValue(options.CacheTtl),
             Footprint: parseResult.GetValue(options.Footprint),
-            Readme: parseResult.GetValue(options.Readme),
+            Docs: parseResult.GetValue(options.Docs),
             ListRules: parseResult.GetValue(options.ListRules),
             DescribeRule: parseResult.GetValue(options.DescribeRule),
             SearchRules: parseResult.GetValue(options.SearchRules));

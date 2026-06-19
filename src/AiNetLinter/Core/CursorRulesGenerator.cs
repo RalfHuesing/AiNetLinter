@@ -75,7 +75,7 @@ public static class CursorRulesGenerator
         AppendActiveRulesByIntent(sb, config);
         AppendDisabledCompact(sb, config);
         AppendProjectOverridesDelta(sb, config);
-        sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --readme`.");
+        sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --docs <name>`.");
 
         return sb.ToString();
     }
