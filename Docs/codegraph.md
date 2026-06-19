@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
-Produktionscode · 159 Typen · 14 Namespaces
+Produktionscode · 161 Typen · 14 Namespaces
 
 ## AiNetLinter (1)
 - Program → CliParsedArgs, LinterArgs
@@ -157,12 +157,14 @@ Produktionscode · 159 Typen · 14 Namespaces
 - ClassInfo [record] → ClassInfo
 - RuleViolation [record] → RuleViolation
 
-## AiNetLinter.Output (13)
+## AiNetLinter.Output (15)
 - ConsoleLintConsole impl ILintConsole → ConsoleLintConsole
 - DebtReportBuilder
 - FileViolationCount [record] → FileViolationCount
 - FolderCount [record] → FolderCount
 - ILintConsole [interface]
+- LinterErrorCodes
+- LinterErrorFormatter
 - LinterLogger → BaselineComparisonResult, ILintConsole
 - OutputRootResolver
 - PathNormalizer
