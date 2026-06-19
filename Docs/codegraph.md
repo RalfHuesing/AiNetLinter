@@ -1,5 +1,5 @@
-﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.49)
-Produktionscode · 150 Typen · 13 Namespaces
+﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
+Produktionscode · 152 Typen · 13 Namespaces
 
 ## AiNetLinter (2)
 - FootprintExecutor → LinterArgs
@@ -138,13 +138,15 @@ Produktionscode · 150 Typen · 13 Namespaces
 - ClassInfo [record] → ClassInfo
 - RuleViolation [record] → RuleViolation
 
-## AiNetLinter.Output (21)
+## AiNetLinter.Output (23)
 - DebtReportBuilder
 - FileViolationCount [record] → FileViolationCount
 - FolderCount [record] → FolderCount
 - LinterLogger → BaselineComparisonResult
 - OutputRootResolver
 - PathNormalizer
+- RuleLegendEntry [record] → RuleLegendEntry
+- RuleLegendRegistry → RuleLegendEntry
 - RuleViolationCount [record] → RuleViolationCount
 - SarifArtifactLocation
 - SarifDocument
