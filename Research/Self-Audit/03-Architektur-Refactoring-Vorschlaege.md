@@ -9,7 +9,6 @@
 
 ## Inhaltsverzeichnis
 
-- [R2 — Checker-God-Klassen aufteilen (statisch, explizit)](#r2--checker-god-klassen-aufteilen-statisch-explizit)
 - [R3 — `Program.cs` in statische Command-Klassen aufteilen](#r3--programcs-in-statische-command-klassen-aufteilen)
 - [R4 — `PerformanceProfiler` entkoppeln + optional machen](#r4--performanceprofiler-entkoppeln--optional-machen)
 - [R5 — `CancellationToken` durch die Pipeline](#r5--cancellationtoken-durch-die-pipeline)
@@ -17,7 +16,6 @@
 - [R7 — `ILintConsole`-Interface statt `Console.WriteLine`](#r7--ilintconsole-interface-statt-consolewriteline)
 - [R8 — Rule-Namen als Const-Klasse (`LinterRuleIds`)](#r8--rule-namen-als-const-klasse-linterruleids)
 - [R9 — `ctx.ReportViolation`-Helper](#r9--ctxreportviolation-helper)
-- [R10 — Bug-Fix: `VisitRecordDeclaration` ohne `CollectClassInfo`](#r10--bug-fix-visitrecorddeclaration-ohne-collectclassinfo)
 - [R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren](#r11--quick-win-repoplaybookgeneratorruledescriptions-reparieren)
 - [Roadmap: Gesamtreihenfolge](#roadmap-gesamtreihenfolge)
 
@@ -25,117 +23,7 @@
 
 
 
-## R2 — Checker-God-Klassen aufteilen (statisch, explizit)
 
-**Löst:** F2, A1, C2.1, C11.1, C12.1  
-**Aufwand:** M (2–3 Tage, inkl. Tests)  
-**Nutzen:** ★★★★★
-
-### Problem
-
-`ArchitectureChecker.cs` (303 LOC, 18 Methoden) sammelt völlig unzusammenhängende Prüfungen in einer Klasse. Tests für `CheckSealedClass` müssen den gesamten `LinterAnalyzer` hochfahren, statt die Methode direkt aufzurufen. Das gleiche gilt für andere große Checker-Klassen.
-
-**Zusatzbug:** `VisitRecordDeclaration` ruft kein `CollectClassInfo` auf — ein direktes Symptom der unstrukturierten Verdrahtung in `LinterAnalyzer`.
-
-### Lösungsansatz
-
-**Kein Plugin-System, keine Reflection.** Die Verdrahtung in `LinterAnalyzer` bleibt vollständig explizit — neue Checker müssen dort manuell eingetragen werden. Das Ziel ist ausschließlich: jede Checker-Klasse hat eine klare Verantwortlichkeit und ist direkt testbar.
-
-**Neue Struktur:**
-
-| Neue Datei                           | Methoden aus `ArchitectureChecker`                             |
-| ------------------------------------ | -------------------------------------------------------------- |
-| `Checkers/SealedClassChecker.cs`     | `CheckSealedClass`, `IsSealedOrStaticOrAbstract`, `HasExemptSuffix` |
-| `Checkers/ValueObjectChecker.cs`     | `CheckValueObjectContract`, `IsStructOrReadOnly`               |
-| `Checkers/NamespaceCouplingChecker.cs` | `CheckForbiddenNamespace`, `CheckForbiddenSymbolNamespace`, `NamespaceMatches` |
-| `Checkers/PhantomDependencyChecker.cs` | `CheckPhantomNamespace`, `CheckPhantomReflection`, `IsForbiddenReflectionCall` |
-| `Checkers/DynamicTypeChecker.cs`     | `CheckDynamic`                                                  |
-| `Checkers/ClassInfoCollector.cs`     | `CollectClassInfo`, `GetBaseTypeNames`                         |
-| `Checkers/GeneratedCodeDetector.cs`  | `IsGeneratedCode`                                               |
-| `Checkers/InheritanceDepthChecker.cs`| `GetInheritanceDepth`, `IsFrameworkBaseType`                   |
-| `Checkers/TestAttributeDetector.cs`  | `CheckForTestMethods`, `IsTestAttribute`                       |
-
-Alle bleiben `internal static class` — konsistent mit dem bestehenden Pattern.
-
-### Beispiel: SealedClassChecker.cs
-
-```csharp
-// src/AiNetLinter/Core/Checkers/SealedClassChecker.cs
-namespace AiNetLinter.Core.Checkers;
-
-internal static class SealedClassChecker
-{
-    internal static void Check(ClassDeclarationSyntax node, CheckerContext ctx)
-    {
-        if (!ctx.Config.Global.EnforceSealedClasses) return;
-        if (IsSealedOrStaticOrAbstract(node)) return;
-        if (HasExemptSuffix(node.Identifier.Text, ctx.Config.Global.SealedClassExemptSuffixes)) return;
-
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = nameof(ctx.Config.Global.EnforceSealedClasses),
-            Details = $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-            Guidance = "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu."
-        });
-    }
-
-    private static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node) =>
-        node.Modifiers.Any(m =>
-            m.IsKind(SyntaxKind.SealedKeyword) ||
-            m.IsKind(SyntaxKind.StaticKeyword) ||
-            m.IsKind(SyntaxKind.AbstractKeyword));
-
-    private static bool HasExemptSuffix(string name, IReadOnlyList<string> suffixes) =>
-        suffixes.Any(s => name.EndsWith(s, StringComparison.OrdinalIgnoreCase));
-}
-```
-
-### LinterAnalyzer nach Refactoring
-
-Die `VisitClassDeclaration`-Methode ändert sich kaum — nur die Klassen-Namen der Aufrufe werden spezifischer:
-
-```csharp
-public override void VisitClassDeclaration(ClassDeclarationSyntax node)
-{
-    if (GeneratedCodeDetector.IsGenerated(node, _ctx)) return;
-    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Klasse", _ctx);
-    NamingChecker.CheckPascalCase(node.Identifier, "Klasse", _ctx);
-    SealedClassChecker.Check(node, _ctx);          // war: ArchitectureChecker.CheckSealedClass
-    ValueObjectChecker.Check(node, _ctx);           // war: ArchitectureChecker.CheckValueObjectContract
-    ScopeChecker.CheckMethodOverloads(node, _ctx);
-    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
-    ImmutabilityChecker.CheckClass(node, _ctx);
-    WpfSeparationChecker.Check(node, _ctx);
-    NestedTypesChecker.Check(node, _ctx);
-    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
-    ClassInfoCollector.Collect(node, _ctx);         // war: ArchitectureChecker.CollectClassInfo
-    base.VisitClassDeclaration(node);
-}
-```
-
-Der `LinterAnalyzer` bleibt der **explizite Dispatcher** — jede neue Regel muss dort händisch eingetragen werden.
-
-### Testbarkeit nach Refactoring
-
-```csharp
-[Fact]
-public void SealedClassChecker_Reports_NonSealedConcreteClass()
-{
-    var (tree, model) = TestHelper.ParseCode("public class Foo { }");
-    var ctx = TestHelper.CreateContext(enableSealedClasses: true);
-    var node = tree.GetRoot().DescendantsOfType<ClassDeclarationSyntax>().First();
-
-    SealedClassChecker.Check(node, ctx);
-
-    Assert.Single(ctx.Violations);
-}
-```
-
-Kein Hochfahren des gesamten Analyzers nötig.
-
----
 
 ## R3 — `Program.cs` in statische Command-Klassen aufteilen
 
@@ -550,46 +438,7 @@ ctx.ReportViolation(node, LinterRuleIds.EnforceSealedClasses,
 
 ---
 
-## R10 — Bug-Fix: `VisitRecordDeclaration` ohne `CollectClassInfo`
 
-**Löst:** F11, C2.2  
-**Aufwand:** XS (< 1 Stunde)  
-**Nutzen:** ★★★ (Bug-Fix)
-
-### Problem
-
-`VisitRecordDeclaration` ruft `ArchitectureChecker.CollectClassInfo` nicht auf. Records fehlen dadurch in `ClassInfo`-Statistiken, die vom Playbook-Generator und `--footprint` genutzt werden. Gleiches gilt für `VisitStructDeclaration`.
-
-### Fix
-
-```csharp
-// LinterAnalyzer.cs — VisitRecordDeclaration
-public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
-{
-    if (GeneratedCodeDetector.IsGenerated(node, _ctx)) return;
-    NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Record", _ctx);
-    NamingChecker.CheckPascalCase(node.Identifier, "Record", _ctx);
-    ArchitectureChecker.CheckValueObjectContract(node, node.Identifier.Text, isRecord: true, _ctx);
-    ScopeChecker.CheckMethodOverloads(node, _ctx);
-    StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
-    NestedTypesChecker.Check(node, _ctx);
-    PublicMembersChecker.Check(node, node.Identifier.Text, _ctx);
-    ArchitectureChecker.CollectClassInfo(node, _ctx);  // ← BUG-FIX
-    base.VisitRecordDeclaration(node);
-}
-
-// LinterAnalyzer.cs — VisitStructDeclaration
-public override void VisitStructDeclaration(StructDeclarationSyntax node)
-{
-    // ... bestehende Checks ...
-    ArchitectureChecker.CollectClassInfo(node, _ctx);  // ← BUG-FIX
-    base.VisitStructDeclaration(node);
-}
-```
-
-Nach R2 (Checker aufteilen) werden diese Aufrufe automatisch zu `ClassInfoCollector.Collect(node, _ctx)`.
-
----
 
 ## R11 — Quick-Win: `RepoPlaybookGenerator.RuleDescriptions` reparieren
 
@@ -630,16 +479,15 @@ private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig con
 
 ## Roadmap: Gesamtreihenfolge
 
-| **1**   | R10 (Bug), R11 (Bug), R8 (RuleIds), R5 (Cancellation), R6 (Apply) | Quick Wins |
+| **1**   | R11 (Bug), R8 (RuleIds), R5 (Cancellation), R6 (Apply)             | Quick Wins |
 | **2**   | R4 (Profiler), R7 (ILintConsole), R9 (Helper)                     | Fundament  |
-| **3**   | R2 (Checker aufteilen), R3 (Command-Klassen), R10 in R2 aufgehend | Struktur   |
+| **3**   | R3 (Command-Klassen)                                              | Struktur   |
 
 ### Erwartete Resultate
 
 | Metrik                              | Vor Refactoring      | Nach Refactoring                           |
 | ----------------------------------- | -------------------- | ------------------------------------------ |
 | Zeit für neuen Checker hinzufügen   | 2–4 Stunden          | **30 Min** (neue Datei + Eintrag in LinterAnalyzer) |
-| `ArchitectureChecker.cs` LOC        | 303 (18 Methoden)    | ~9 Dateien à ~30–80 LOC                    |
 | `Program.cs` LOC                    | 568                  | ~60 (Main + Router + ToLinterArgs)         |
 | `Console.WriteLine` in Produktion   | 25+                  | 0                                          |
 | Test-Isolation für Checker          | ❌ ganzer Analyzer   | ✅ direkte Methode                          |
@@ -656,8 +504,8 @@ private static Dictionary<string, string> BuildRuleDescriptions(LinterConfig con
 - Statische Kompilierung (kein dynamisches Laden)
 - Monolithisches CLI (kein Server-Modus)
 
-1. **R10 + R11** — sofortige Bug-Fixes, kein Risiko
+1. **R11** — sofortige Bug-Fixes, kein Risiko
 2. **R4 + R7** — Fundament für saubere Testbarkeit
-3. **R2 + R3** — größte strukturelle Hebelwirkung
+3. **R3** — größte strukturelle Hebelwirkung
 
-→ Nach 3 Wochen konsequenter Refactoring-Arbeit sind neue Regeln sicher hinzufügbar und Checker direkt testbar.
+→ Nach konsequenter Refactoring-Arbeit sind neue Regeln sicher hinzufügbar und Checker direkt testbar.

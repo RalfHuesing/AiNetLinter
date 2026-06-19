@@ -24,8 +24,8 @@
 ## Kernergebnisse
 
 - **Score: 3.4/5** — produktionsreif, aber vor Epic 25+ refactoring-bedürftig
-- **Top-2-Probleme:** Checker-God-Klassen, Performance-Singleton
-- **2 aktive Bugs:** `VisitRecordDeclaration` ohne `CollectClassInfo` + 7 falsche Playbook-Werte
+- **Top-Problem:** Performance-Singleton
+- **1 aktiver Bug:** 7 falsche Playbook-Werte
 - **Empfohlene Investition:** 3 Wochen Refactoring-Initiative
 
 ## Bindende Constraints (immer beachten)
@@ -53,9 +53,9 @@ Die folgenden Vorschläge aus dem ursprünglichen Audit wurden nach Bewertung ve
 ## Statistiken
 
 - **Auditierte Dateien:** ~30 Hauptdateien + 100+ Test-Klassen
-- **Befunde insgesamt:** 29 (A1–A13 Architektur ohne A3, C1–C12 Code, R2–R11 Refactoring, L3–L4/L8–L12 LLM)
-- **Davon kritisch (🔴):** 3 (F2, F3, F9+F11 als Bugs)
-- **Davon Quick Wins (< 1 Tag):** 5 (F11, F9, F8, F5, F6)
+- **Befunde insgesamt:** 27 (A2-A13 Architektur, C1-C12 Code, R3-R11 Refactoring, L3-L4/L8-L12 LLM)
+- **Davon kritisch (🔴):** 2 (F3, F9 als Bug)
+- **Davon Quick Wins (< 1 Tag):** 4 (F9, F8, F5, F6)
 
 ## Nächste Schritte
 
