@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Metrics;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -44,14 +43,10 @@ internal static class ComplexityChecker
         {
             details = $"Die Methode '{node.Identifier.Text}' hat {total} Parameter (erlaubt sind maximal {effectiveLimit}).";
         }
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = nameof(ctx.Config.Metrics.MaxMethodParameterCount),
-            Details = details,
-            Guidance = $"Erstelle 'sealed record {node.Identifier.Text}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern)."
-        });
+        ctx.ReportViolation(node,
+            nameof(ctx.Config.Metrics.MaxMethodParameterCount),
+            details,
+            $"Erstelle 'sealed record {node.Identifier.Text}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern).");
     }
 
     internal static bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax node, CheckerContext ctx)
@@ -81,14 +76,10 @@ internal static class ComplexityChecker
 
         if (codeLineCount > ctx.Config.Metrics.MaxMethodLineCount)
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = nameof(ctx.Config.Metrics.MaxMethodLineCount),
-                Details = $"Die Methode '{node.Identifier.Text}' hat {codeLineCount} Codezeilen (erlaubt sind maximal {ctx.Config.Metrics.MaxMethodLineCount}, ohne Kommentare und Leerzeilen).",
-                Guidance = "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code für KI-Agenten besser editierbar zu halten."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Metrics.MaxMethodLineCount),
+                $"Die Methode '{node.Identifier.Text}' hat {codeLineCount} Codezeilen (erlaubt sind maximal {ctx.Config.Metrics.MaxMethodLineCount}, ohne Kommentare und Leerzeilen).",
+                "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code für KI-Agenten besser editierbar zu halten.");
         }
     }
 
@@ -164,14 +155,10 @@ internal static class ComplexityChecker
         var isNearMiss = tolerance > 0 && check.Complexity <= check.Limit + tolerance;
         var nearMissHint = isNearMiss ? " [near-miss: knapp über Limit]" : "";
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = check.RuleName,
-            Details = $"Die Methode '{node.Identifier.Text}' hat eine {check.Label} von {check.Complexity} (erlaubt sind maximal {check.Limit}).{nearMissHint}",
-            Guidance = check.Guidance
-        });
+        ctx.ReportViolation(node,
+            check.RuleName,
+            $"Die Methode '{node.Identifier.Text}' hat eine {check.Label} von {check.Complexity} (erlaubt sind maximal {check.Limit}).{nearMissHint}",
+            check.Guidance);
     }
 
     private static bool IsImplicitInterfaceImplementation(IMethodSymbol symbol)

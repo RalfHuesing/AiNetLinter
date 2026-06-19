@@ -3,7 +3,6 @@
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -42,14 +41,10 @@ internal static class NestedTypesChecker
     {
         var accessibility = DescribeAccessibility(nested);
         var kindLabel = nested is EnumDeclarationSyntax ? "enum" : "Typ";
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(nested),
-            RuleName = nameof(ctx.Config.Global.BanPublicNestedTypes),
-            Details = $"Der {kindLabel} '{outerName}.{nested.Identifier.Text}' ist ein {accessibility} nested Type.",
-            Guidance = "Extrahiere den Typ in eine eigene Datei (Namespace-Ebene), damit er per Datei-Listing/Grep fuer LLMs sichtbar ist."
-        });
+        ctx.ReportViolation(nested,
+            nameof(ctx.Config.Global.BanPublicNestedTypes),
+            $"Der {kindLabel} '{outerName}.{nested.Identifier.Text}' ist ein {accessibility} nested Type.",
+            "Extrahiere den Typ in eine eigene Datei (Namespace-Ebene), damit er per Datei-Listing/Grep fuer LLMs sichtbar ist.");
     }
 
     private static string DescribeAccessibility(BaseTypeDeclarationSyntax nested)

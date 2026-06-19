@@ -3,10 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -34,20 +33,16 @@ internal static class WpfSeparationChecker
             .Take(3)
             .ToList();
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(extraMembers[0]),
-            RuleName = "WpfRequireMinimalCodeBehind",
-            Details = $"Die WPF Code-Behind-Klasse '{className}' enthaelt {extraMembers.Count} zusaetzliche Member " +
-                      $"({string.Join(", ", extraNames)}). " +
-                      "Code-Behind soll nur den Konstruktor mit InitializeComponent() enthalten.",
-            Guidance = "Verschiebe alle Event-Handler und Logik in ein ViewModel (MVVM-Pattern). " +
-                       "Verwende Commands (ICommand/RelayCommand) statt Event-Handler. " +
-                       "Setze den DataContext im XAML (StaticResource) oder im Konstruktor: 'DataContext = new MyViewModel();'. " +
-                       "Im Code-Behind soll nur verbleiben: 'public MyWindow() { InitializeComponent(); }'. " +
-                       "Suppression moeglich mit: // ainetlinter-disable WpfRequireMinimalCodeBehind"
-        });
+        ctx.ReportViolation(extraMembers[0],
+            "WpfRequireMinimalCodeBehind",
+            $"Die WPF Code-Behind-Klasse '{className}' enthaelt {extraMembers.Count} zusaetzliche Member " +
+            $"({string.Join(", ", extraNames)}). " +
+            "Code-Behind soll nur den Konstruktor mit InitializeComponent() enthalten.",
+            "Verschiebe alle Event-Handler und Logik in ein ViewModel (MVVM-Pattern). " +
+            "Verwende Commands (ICommand/RelayCommand) statt Event-Handler. " +
+            "Setze den DataContext im XAML (StaticResource) oder im Konstruktor: 'DataContext = new MyViewModel();'. " +
+            "Im Code-Behind soll nur verbleiben: 'public MyWindow() { InitializeComponent(); }'. " +
+            "Suppression moeglich mit: // ainetlinter-disable WpfRequireMinimalCodeBehind");
     }
 
     private static bool IsWpfCodeBehindClass(ClassDeclarationSyntax node, CheckerContext ctx)

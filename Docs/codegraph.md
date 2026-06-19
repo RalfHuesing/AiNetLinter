@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.50)
-Produktionscode · 152 Typen · 14 Namespaces
+Produktionscode · 159 Typen · 14 Namespaces
 
 ## AiNetLinter (1)
 - Program → CliParsedArgs, LinterArgs
@@ -42,15 +42,17 @@ Produktionscode · 152 Typen · 14 Namespaces
 - CliScopeOptions [record] → CliScopeOptions
 - LinterArgs
 
-## AiNetLinter.Commands (8)
-- AuditCommand → LinterArgs, LinterConfig, PlaybookOptions, SourceFileCatalog
-- DebtReportCommand → LinterArgs
-- FootprintCommand → LinterArgs
-- ImpactCommand → LinterArgs
-- MaintenanceCommand → LinterArgs
-- PlaybookCheckCommand → LinterArgs
-- ReadmeCommand
-- SyncCursorRulesCommand → LinterArgs
+## AiNetLinter.Commands (10)
+- AuditCommand → AuditRunContext, ILintConsole, LinterArgs, PlaybookOptions, SourceFileCatalog
+- AuditRunContext [record] → AuditRunContext, ILintConsole, IPerformanceProfiler, LinterArgs, LinterConfig
+- DebtReportCommand → ILintConsole, LinterArgs
+- FootprintCommand → ILintConsole, LinterArgs
+- ImpactCommand → ILintConsole, LinterArgs
+- ListRulesCommand → ILintConsole
+- MaintenanceCommand → ILintConsole, LinterArgs
+- PlaybookCheckCommand → ILintConsole, LinterArgs
+- ReadmeCommand → ILintConsole
+- SyncCursorRulesCommand → ILintConsole, LinterArgs
 
 ## AiNetLinter.Configuration (19)
 - FileFilterEvaluator → FileFiltersConfig
@@ -73,7 +75,7 @@ Produktionscode · 152 Typen · 14 Namespaces
 - UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
 - UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (31)
+## AiNetLinter.Core (32)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
@@ -81,11 +83,12 @@ Produktionscode · 152 Typen · 14 Namespaces
 - CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
-- FixContext [record] → FixContext
+- FixContext [record] → FixContext, ILintConsole
 - FixOptions [record] → FixOptions
 - LinterAnalyzer → AnalyzerArgs, CheckerContext, LinterConfig
-- LinterAutoFixer → FixContext, FixOptions
-- LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
+- LinterAutoFixer → FixContext, FixOptions, ILintConsole
+- LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, ILintConsole, IPerformanceProfiler, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
+- LinterRuleIds
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart
 - PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
@@ -94,7 +97,7 @@ Produktionscode · 152 Typen · 14 Namespaces
 - PlaybookOptions [record] → LinterConfig, PlaybookOptions
 - PlaybookStats [record] → PlaybookStats
 - PlaybookSyntaxWalker
-- PostAnalysisChecks → AnalysisState, ClassInfo, LinterConfig, TestSentinelConfig, TestSentinelContext
+- PostAnalysisChecks → AnalysisState, ClassInfo, IPerformanceProfiler, LinterConfig, TestSentinelConfig, TestSentinelContext
 - RepoPlaybookGenerator → LinterConfig, PlaybookBuildContext, PlaybookOptions, RuleViolation
 - RuleMetadata [record] → RuleMetadata
 - RuleRegistry → RuleMetadata
@@ -131,9 +134,11 @@ Produktionscode · 152 Typen · 14 Namespaces
 - ValueObjectChecker → CheckerContext
 - WpfSeparationChecker → CheckerContext
 
-## AiNetLinter.Diagnostics (6)
+## AiNetLinter.Diagnostics (8)
 - DocumentPerformanceEntry [record] → DocumentPerformanceEntry
-- PerformanceProfiler → PerformanceProfiler, PhaseDurationSnapshot, ProfilerContext, ProfilerJsonReport
+- IPerformanceProfiler [interface]
+- NullPerformanceProfiler impl IPerformanceProfiler → NullPerformanceProfiler
+- PerformanceProfiler impl IPerformanceProfiler → PhaseDurationSnapshot, ProfilerContext, ProfilerJsonReport
 - PhaseDurationSnapshot [record] → PhaseDurationSnapshot
 - ProfilerContext [record] → ProfilerContext
 - ProfilerJsonReport [record] → ProfilerJsonReport, ProfilerSummary
@@ -152,11 +157,13 @@ Produktionscode · 152 Typen · 14 Namespaces
 - ClassInfo [record] → ClassInfo
 - RuleViolation [record] → RuleViolation
 
-## AiNetLinter.Output (11)
+## AiNetLinter.Output (13)
+- ConsoleLintConsole impl ILintConsole → ConsoleLintConsole
 - DebtReportBuilder
 - FileViolationCount [record] → FileViolationCount
 - FolderCount [record] → FolderCount
-- LinterLogger → BaselineComparisonResult
+- ILintConsole [interface]
+- LinterLogger → BaselineComparisonResult, ILintConsole
 - OutputRootResolver
 - PathNormalizer
 - RuleLegendEntry [record] → RuleLegendEntry

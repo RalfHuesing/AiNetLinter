@@ -7,7 +7,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -54,14 +53,10 @@ internal static class ScopeChecker
         var count = groupMethods.Count;
         if (count > ctx.Config.Metrics.MaxMethodOverloads)
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(groupMethods[0]),
-                RuleName = "MaxMethodOverloads",
-                Details = $"Der Typ '{node.Identifier.Text}' deklariert {count} Ueberladungen fuer die Methode '{methodName}' (erlaubt sind maximal {ctx.Config.Metrics.MaxMethodOverloads}).",
-                Guidance = "Reduziere die Anzahl der Ueberladungen, indem du unterschiedliche, sprechende Methodennamen waehlst."
-            });
+            ctx.ReportViolation(groupMethods[0],
+                nameof(ctx.Config.Metrics.MaxMethodOverloads),
+                $"Der Typ '{node.Identifier.Text}' deklariert {count} Ueberladungen fuer die Methode '{methodName}' (erlaubt sind maximal {ctx.Config.Metrics.MaxMethodOverloads}).",
+                "Reduziere die Anzahl der Ueberladungen, indem du unterschiedliche, sprechende Methodennamen waehlst.");
         }
 
         if (ctx.Config.Global.PreventContextDependentOverloads && count > 1)
@@ -76,14 +71,10 @@ internal static class ScopeChecker
             {
                 if (ArePrimitiveOverloadConflicts(methodGroup[i], methodGroup[j], ctx))
                 {
-                    ctx.AddViolation(new RuleViolation
-                    {
-                        FilePath = ctx.FilePath,
-                        LineNumber = SyntaxHelper.LineOf(methodGroup[j]),
-                        RuleName = "PreventContextDependentOverloads",
-                        Details = $"Die Methode '{methodGroup[j].Identifier.Text}' steht im Konflikt mit einer Überladung in Zeile {SyntaxHelper.LineOf(methodGroup[i])}. Beide unterscheiden sich nur in primitiven Typen.",
-                        Guidance = "Verwende explizite Methodennamen (z.B. 'ProcessInt' statt 'Process'), um Mehrdeutigkeiten für KI-Agenten zu vermeiden."
-                    });
+                    ctx.ReportViolation(methodGroup[j],
+                        nameof(ctx.Config.Global.PreventContextDependentOverloads),
+                        $"Die Methode '{methodGroup[j].Identifier.Text}' steht im Konflikt mit einer Überladung in Zeile {SyntaxHelper.LineOf(methodGroup[i])}. Beide unterscheiden sich nur in primitiven Typen.",
+                        "Verwende explizite Methodennamen (z.B. 'ProcessInt' statt 'Process'), um Mehrdeutigkeiten für KI-Agenten zu vermeiden.");
                 }
             }
         }
@@ -124,14 +115,10 @@ internal static class ScopeChecker
     {
         if (pathParts.Length <= ctx.Config.Metrics.MaxDirectoryDepth) return;
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = 1,
-            RuleName = "MaxDirectoryDepth",
-            Details = $"Die Dateitiefe betraegt {pathParts.Length} Ordner (erlaubt sind maximal {ctx.Config.Metrics.MaxDirectoryDepth} ab csproj).",
-            Guidance = "Verflache die Projektstruktur und nutze Feature-Ordner statt tiefer Hierarchien, um KIs die Navigation zu erleichtern."
-        });
+        ctx.ReportViolationAtLine(1,
+            nameof(ctx.Config.Metrics.MaxDirectoryDepth),
+            $"Die Dateitiefe betraegt {pathParts.Length} Ordner (erlaubt sind maximal {ctx.Config.Metrics.MaxDirectoryDepth} ab csproj).",
+            "Verflache die Projektstruktur und nutze Feature-Ordner statt tiefer Hierarchien, um KIs die Navigation zu erleichtern.");
     }
 
     private static void CheckNamespaceMappingRule(string[] pathParts, string relativePath, CheckerContext ctx)
@@ -162,14 +149,10 @@ internal static class ScopeChecker
         if (!matches)
         {
             var expectedSuffix = string.Join(".", relevantParts);
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(namespaceDeclaration),
-                RuleName = "EnforceNamespaceDirectoryMapping",
-                Details = $"Der Namespace '{declaredNamespace}' stimmt nicht mit dem physischen Ordnerpfad '{relativePath}' ueberein (Modus: {ctx.Config.Global.NamespaceDirectoryMappingMode}).",
-                Guidance = $"Passe den Namespace an, sodass er '.{expectedSuffix}' enthaelt, oder verschiebe die Datei."
-            });
+            ctx.ReportViolation(namespaceDeclaration,
+                nameof(ctx.Config.Global.EnforceNamespaceDirectoryMapping),
+                $"Der Namespace '{declaredNamespace}' stimmt nicht mit dem physischen Ordnerpfad '{relativePath}' ueberein (Modus: {ctx.Config.Global.NamespaceDirectoryMappingMode}).",
+                $"Passe den Namespace an, sodass er '.{expectedSuffix}' enthaelt, oder verschiebe die Datei.");
         }
     }
 

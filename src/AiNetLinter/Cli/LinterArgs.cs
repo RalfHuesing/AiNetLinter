@@ -118,13 +118,28 @@ public sealed class LinterArgs
     public bool Readme { get; init; }
 
     /// <summary>
+    /// Gibt an, ob alle bekannten Regeln als Tabelle ausgegeben werden sollen.
+    /// </summary>
+    public bool ListRules { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt die Regel-ID, fuer die eine Beschreibung ausgegeben werden soll.
+    /// </summary>
+    public string? DescribeRule { get; init; }
+
+    /// <summary>
+    /// Holt oder setzt den Suchbegriff fuer die Regelsuche.
+    /// </summary>
+    public string? SearchRules { get; init; }
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
     {
-        if (!Readme && string.IsNullOrEmpty(TargetPath))
+        if (!Readme && !ListRules && DescribeRule == null && SearchRules == null && string.IsNullOrEmpty(TargetPath))
         {
-            return "[ERROR]: --path ist erforderlich (außer bei --readme).";
+            return "[ERROR]: --path ist erforderlich (außer bei --readme, --list-rules, --describe-rule, --search-rules).";
         }
 
         if (HasConflictingModeOptions())

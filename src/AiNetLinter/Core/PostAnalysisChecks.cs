@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Configuration;
+using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
 using AiNetLinter.Metrics;
 using AiNetLinter.Suppression;
@@ -21,42 +22,43 @@ internal static class PostAnalysisChecks
     /// </summary>
     /// <param name="state">Der aktuelle Zustand der Analyse.</param>
     /// <param name="config">Die globale Konfiguration.</param>
-    public static void Run(AnalysisState state, LinterConfig config)
+    public static void Run(AnalysisState state, LinterConfig config, IPerformanceProfiler? profiler = null)
     {
+        var p = profiler ?? NullPerformanceProfiler.Instance;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         RunTestSentinel(state, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("TestSentinel", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("TestSentinel", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         RunInheritanceDepthCheck(state.SourceClasses, state.Violations, state.FileContents, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("InheritanceDepth", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("InheritanceDepth", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("AIContextFootprint", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("AIContextFootprint", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         AddPartialClassViolations(state.PartialClassParts, state.Violations, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("PartialClassLineAggregation", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("PartialClassLineAggregation", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         UiFileSeparationChecker.Run(state, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("UiFileSeparation", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("UiFileSeparation", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         RunMaxPartialClassFilesCheck(state.PartialClassParts, state.Violations, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("MaxPartialClassFiles", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("MaxPartialClassFiles", sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         RunMaxDirectoryChildrenCheck(state.Violations, config);
         sw.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordPostAnalysisStep("MaxDirectoryChildren", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep("MaxDirectoryChildren", sw.Elapsed.TotalMilliseconds);
     }
 
     private static void RunTestSentinel(AnalysisState state, LinterConfig config)

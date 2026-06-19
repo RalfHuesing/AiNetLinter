@@ -182,73 +182,63 @@ public sealed record GlobalConfig
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
+    // ainetlinter-disable MaxCyclomaticComplexity
+    // ainetlinter-disable MaxCognitiveComplexity
     public GlobalConfig Apply(GlobalConfigOverride? @override)
     {
         if (@override == null) return this;
-        return ApplyStructuralRules(@override)
-            .ApplyNamingAndStyleRules(@override)
-            .ApplyCatchRules(@override)
-            .ApplyImmutabilityRules(@override)
-            .ApplyNamespaceAndAnalysisRules(@override);
+        var o = @override;
+        return this with
+        {
+            // Strukturregeln
+            EnforceSealedClasses                        = o.EnforceSealedClasses                        ?? EnforceSealedClasses,
+            AllowUnsealedPartialClasses                 = o.AllowUnsealedPartialClasses                 ?? AllowUnsealedPartialClasses,
+            AllowDynamic                                = o.AllowDynamic                                ?? AllowDynamic,
+            AllowOutParameters                          = o.AllowOutParameters                          ?? AllowOutParameters,
+            AllowTryPatternOutParameters                = o.AllowTryPatternOutParameters                ?? AllowTryPatternOutParameters,
+            AllowOutParametersInPrivateMethods          = o.AllowOutParametersInPrivateMethods          ?? AllowOutParametersInPrivateMethods,
+            SealedClassExemptSuffixes                   = o.SealedClassExemptSuffixes                   ?? SealedClassExemptSuffixes,
+
+            // Naming und Stil
+            EnforcePascalCase                           = o.EnforcePascalCase                           ?? EnforcePascalCase,
+            EnforceSemanticNaming                       = o.EnforceSemanticNaming                       ?? EnforceSemanticNaming,
+            SemanticNamingExemptMethodNames             = o.SemanticNamingExemptMethodNames             ?? SemanticNamingExemptMethodNames,
+            SemanticNamingAllowSubstringOfMethodName    = o.SemanticNamingAllowSubstringOfMethodName    ?? SemanticNamingAllowSubstringOfMethodName,
+            EnforceNullableEnable                       = o.EnforceNullableEnable                       ?? EnforceNullableEnable,
+            EnforceXmlDocumentation                     = o.EnforceXmlDocumentation                     ?? EnforceXmlDocumentation,
+            EnforceMinimalApiAsParameters               = o.EnforceMinimalApiAsParameters               ?? EnforceMinimalApiAsParameters,
+            EnableTestSentinel                          = o.EnableTestSentinel                          ?? EnableTestSentinel,
+
+            // Catch-Regeln
+            EnforceNoSilentCatch                        = o.EnforceNoSilentCatch                        ?? EnforceNoSilentCatch,
+            AllowCancellationShutdownCatch              = o.AllowCancellationShutdownCatch              ?? AllowCancellationShutdownCatch,
+            AllowedSilentCatchExceptionTypes            = o.AllowedSilentCatchExceptionTypes            ?? AllowedSilentCatchExceptionTypes,
+            EnforceResultPatternOverExceptions          = o.EnforceResultPatternOverExceptions          ?? EnforceResultPatternOverExceptions,
+            ResultPatternAllowThrowInNamespaceSuffixes  = o.ResultPatternAllowThrowInNamespaceSuffixes  ?? ResultPatternAllowThrowInNamespaceSuffixes,
+            ResultPatternAllowCatchRethrow              = o.ResultPatternAllowCatchRethrow              ?? ResultPatternAllowCatchRethrow,
+            AllowedExceptions                           = o.AllowedExceptions                           ?? AllowedExceptions,
+
+            // Immutabilität
+            EnforceValueObjectContracts                 = o.EnforceValueObjectContracts                 ?? EnforceValueObjectContracts,
+            EnforceExplicitStateImmutability            = o.EnforceExplicitStateImmutability            ?? EnforceExplicitStateImmutability,
+            ImmutabilityExemptSuffixes                  = o.ImmutabilityExemptSuffixes                  ?? ImmutabilityExemptSuffixes,
+            ImmutabilityExemptPatterns                  = o.ImmutabilityExemptPatterns                  ?? ImmutabilityExemptPatterns,
+            ImmutabilityExemptBaseTypes                 = o.ImmutabilityExemptBaseTypes                 ?? ImmutabilityExemptBaseTypes,
+            ImmutabilityAllowPrivateBackingFields       = o.ImmutabilityAllowPrivateBackingFields       ?? ImmutabilityAllowPrivateBackingFields,
+            AllowedEmptyReads                           = o.AllowedEmptyReads                           ?? AllowedEmptyReads,
+
+            // Namespace- und Analyse-Regeln
+            EnforceNamespaceDirectoryMapping            = o.EnforceNamespaceDirectoryMapping            ?? EnforceNamespaceDirectoryMapping,
+            NamespaceDirectoryMappingMode               = o.NamespaceDirectoryMappingMode               ?? NamespaceDirectoryMappingMode,
+            NamespaceDirectoryMappingIgnorePathSegments = o.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,
+            NamespaceDirectoryMappingRequiredTrailingSegments = o.NamespaceDirectoryMappingRequiredTrailingSegments ?? NamespaceDirectoryMappingRequiredTrailingSegments,
+            DetectAndBanPhantomDependencies             = o.DetectAndBanPhantomDependencies             ?? DetectAndBanPhantomDependencies,
+            PreventContextDependentOverloads            = o.PreventContextDependentOverloads            ?? PreventContextDependentOverloads,
+            BanPublicNestedTypes                        = o.BanPublicNestedTypes                        ?? BanPublicNestedTypes,
+            BanPublicNestedTypesAllowPrivate            = o.BanPublicNestedTypesAllowPrivate            ?? BanPublicNestedTypesAllowPrivate,
+            EnablePerformanceProfiling                  = o.EnablePerformanceProfiling                  ?? EnablePerformanceProfiling,
+        };
     }
-
-    private GlobalConfig ApplyStructuralRules(GlobalConfigOverride o) => this with
-    {
-        EnforceSealedClasses = o.EnforceSealedClasses ?? EnforceSealedClasses,
-        AllowUnsealedPartialClasses = o.AllowUnsealedPartialClasses ?? AllowUnsealedPartialClasses,
-        AllowDynamic = o.AllowDynamic ?? AllowDynamic,
-        AllowOutParameters = o.AllowOutParameters ?? AllowOutParameters,
-        AllowTryPatternOutParameters = o.AllowTryPatternOutParameters ?? AllowTryPatternOutParameters,
-        AllowOutParametersInPrivateMethods = o.AllowOutParametersInPrivateMethods ?? AllowOutParametersInPrivateMethods,
-        SealedClassExemptSuffixes = o.SealedClassExemptSuffixes ?? SealedClassExemptSuffixes,
-    };
-
-    private GlobalConfig ApplyNamingAndStyleRules(GlobalConfigOverride o) => this with
-    {
-        EnforcePascalCase = o.EnforcePascalCase ?? EnforcePascalCase,
-        EnforceSemanticNaming = o.EnforceSemanticNaming ?? EnforceSemanticNaming,
-        SemanticNamingExemptMethodNames = o.SemanticNamingExemptMethodNames ?? SemanticNamingExemptMethodNames,
-        SemanticNamingAllowSubstringOfMethodName = o.SemanticNamingAllowSubstringOfMethodName ?? SemanticNamingAllowSubstringOfMethodName,
-        EnforceNullableEnable = o.EnforceNullableEnable ?? EnforceNullableEnable,
-        EnforceXmlDocumentation = o.EnforceXmlDocumentation ?? EnforceXmlDocumentation,
-        EnforceMinimalApiAsParameters = o.EnforceMinimalApiAsParameters ?? EnforceMinimalApiAsParameters,
-        EnableTestSentinel = o.EnableTestSentinel ?? EnableTestSentinel,
-    };
-
-    private GlobalConfig ApplyCatchRules(GlobalConfigOverride o) => this with
-    {
-        EnforceNoSilentCatch = o.EnforceNoSilentCatch ?? EnforceNoSilentCatch,
-        AllowCancellationShutdownCatch = o.AllowCancellationShutdownCatch ?? AllowCancellationShutdownCatch,
-        AllowedSilentCatchExceptionTypes = o.AllowedSilentCatchExceptionTypes ?? AllowedSilentCatchExceptionTypes,
-        EnforceResultPatternOverExceptions = o.EnforceResultPatternOverExceptions ?? EnforceResultPatternOverExceptions,
-        ResultPatternAllowThrowInNamespaceSuffixes = o.ResultPatternAllowThrowInNamespaceSuffixes ?? ResultPatternAllowThrowInNamespaceSuffixes,
-        ResultPatternAllowCatchRethrow = o.ResultPatternAllowCatchRethrow ?? ResultPatternAllowCatchRethrow,
-        AllowedExceptions = o.AllowedExceptions ?? AllowedExceptions,
-    };
-
-    private GlobalConfig ApplyImmutabilityRules(GlobalConfigOverride o) => this with
-    {
-        EnforceValueObjectContracts = o.EnforceValueObjectContracts ?? EnforceValueObjectContracts,
-        EnforceExplicitStateImmutability = o.EnforceExplicitStateImmutability ?? EnforceExplicitStateImmutability,
-        ImmutabilityExemptSuffixes = o.ImmutabilityExemptSuffixes ?? ImmutabilityExemptSuffixes,
-        ImmutabilityExemptPatterns = o.ImmutabilityExemptPatterns ?? ImmutabilityExemptPatterns,
-        ImmutabilityExemptBaseTypes = o.ImmutabilityExemptBaseTypes ?? ImmutabilityExemptBaseTypes,
-        ImmutabilityAllowPrivateBackingFields = o.ImmutabilityAllowPrivateBackingFields ?? ImmutabilityAllowPrivateBackingFields,
-        AllowedEmptyReads = o.AllowedEmptyReads ?? AllowedEmptyReads,
-    };
-
-    private GlobalConfig ApplyNamespaceAndAnalysisRules(GlobalConfigOverride o) => this with
-    {
-        EnforceNamespaceDirectoryMapping = o.EnforceNamespaceDirectoryMapping ?? EnforceNamespaceDirectoryMapping,
-        NamespaceDirectoryMappingMode = o.NamespaceDirectoryMappingMode ?? NamespaceDirectoryMappingMode,
-        NamespaceDirectoryMappingIgnorePathSegments = o.NamespaceDirectoryMappingIgnorePathSegments ?? NamespaceDirectoryMappingIgnorePathSegments,
-        NamespaceDirectoryMappingRequiredTrailingSegments = o.NamespaceDirectoryMappingRequiredTrailingSegments ?? NamespaceDirectoryMappingRequiredTrailingSegments,
-        DetectAndBanPhantomDependencies = o.DetectAndBanPhantomDependencies ?? DetectAndBanPhantomDependencies,
-        PreventContextDependentOverloads = o.PreventContextDependentOverloads ?? PreventContextDependentOverloads,
-        BanPublicNestedTypes = o.BanPublicNestedTypes ?? BanPublicNestedTypes,
-        BanPublicNestedTypesAllowPrivate = o.BanPublicNestedTypesAllowPrivate ?? BanPublicNestedTypesAllowPrivate,
-        EnablePerformanceProfiling = o.EnablePerformanceProfiling ?? EnablePerformanceProfiling,
-    };
 }
 
 /// <summary>

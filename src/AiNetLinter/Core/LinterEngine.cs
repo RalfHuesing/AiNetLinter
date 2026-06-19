@@ -2,11 +2,14 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
+using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
+using AiNetLinter.Output;
 using AiNetLinter.Suppression;
 using AiNetLinter.Metrics;
 using AiNetLinter.Cache;
@@ -22,38 +25,42 @@ public sealed class LinterEngine
 {
     private readonly LinterConfig _config;
     private readonly string? _rulesJsonContent;
+    private readonly IPerformanceProfiler _profiler;
+    private readonly ILintConsole _console;
 
-    public LinterEngine(LinterConfig config, string? rulesJsonContent = null)
+    internal LinterEngine(LinterConfig config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
     {
         _config = config;
         _rulesJsonContent = rulesJsonContent;
+        _profiler = profiler ?? NullPerformanceProfiler.Instance;
+        _console = console ?? ConsoleLintConsole.Instance;
     }
 
     /// <summary>
     /// Führt die Analyse auf dem angegebenen Pfad aus und liefert alle Regelverstöße.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, bool noCache = false, int cacheTtlMinutes = 60)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
-        using var catalog = await SourceFileCatalog.LoadAsync(path);
-        return await RunAsync(catalog, noCache, cacheTtlMinutes);
+        using var catalog = await SourceFileCatalog.LoadAsync(path, ct);
+        return await RunAsync(catalog, noCache, cacheTtlMinutes, ct);
     }
 
     /// <summary>
     /// Führt die Analyse auf einer geladenen Solution aus.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, bool noCache = false, int cacheTtlMinutes = 60)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
         var cache = noCache ? null : BuildCache(catalog, catalog.Solution.FilePath ?? catalog.Solution.Workspace.GetType().Name, cacheTtlMinutes);
-        return await RunInternalAsync(catalog.Solution, catalog, cache);
+        return await RunInternalAsync(catalog.Solution, catalog, cache, ct);
     }
 
     /// <summary>
     /// Führt die Analyse auf einer bestehenden Solution im Speicher aus.
     /// </summary>
-    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false, int cacheTtlMinutes = 60)
+    public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
         var cache = noCache ? null : BuildCache(null, solution.FilePath ?? solution.Workspace.GetType().Name, cacheTtlMinutes);
-        return await RunInternalAsync(solution, catalog: null, cache);
+        return await RunInternalAsync(solution, catalog: null, cache, ct);
     }
 
     private AnalysisCacheManager? BuildCache(SourceFileCatalog? catalog, string path, int cacheTtlMinutes)
@@ -82,21 +89,21 @@ public sealed class LinterEngine
     };
 
     private async Task<IReadOnlyCollection<RuleViolation>> RunInternalAsync(
-        Solution solution, SourceFileCatalog? catalog, AnalysisCacheManager? cache)
+        Solution solution, SourceFileCatalog? catalog, AnalysisCacheManager? cache, CancellationToken ct = default)
     {
         var state = CreateAnalysisState(solution);
 
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("DocumentAnalysis");
-        await AnalyzeSolutionAsync(state, catalog, cache);
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("DocumentAnalysis");
+        _profiler.StartPhase("DocumentAnalysis");
+        await AnalyzeSolutionAsync(state, catalog, cache, ct);
+        _profiler.StopPhase("DocumentAnalysis");
 
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("PostAnalysis");
-        PostAnalysisChecks.Run(state, ResolvePostAnalysisConfig(solution));
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("PostAnalysis");
+        _profiler.StartPhase("PostAnalysis");
+        PostAnalysisChecks.Run(state, ResolvePostAnalysisConfig(solution), _profiler);
+        _profiler.StopPhase("PostAnalysis");
 
         if (catalog != null && catalog.HasLoadingErrors)
         {
-            Console.Error.WriteLine("[WARN]: Linter-Analyse-Cache wird nicht aktualisiert, da beim Laden des Workspaces Fehler/Warnungen aufgetreten sind.");
+            _console.WriteError("[WARN]: Linter-Analyse-Cache wird nicht aktualisiert, da beim Laden des Workspaces Fehler/Warnungen aufgetreten sind.");
         }
         else
         {
@@ -117,19 +124,20 @@ public sealed class LinterEngine
             new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
     }
 
-    private static ParallelOptions CreateParallelOptions() => new()
+    private static ParallelOptions CreateParallelOptions(CancellationToken ct) => new()
     {
-        MaxDegreeOfParallelism = Environment.ProcessorCount
+        MaxDegreeOfParallelism = Environment.ProcessorCount,
+        CancellationToken = ct,
     };
 
-    private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache)
+    private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache, CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
         var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
         var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes);
 
-        await Parallel.ForEachAsync(workItems, CreateParallelOptions(), (item, _) =>
-            AnalyzeWorkItemAsync(item, state, cache));
+        await Parallel.ForEachAsync(workItems, CreateParallelOptions(ct), (item, token) =>
+            AnalyzeWorkItemAsync(item, state, cache, token));
     }
 
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> ResolveWorkItemsAsync(
@@ -198,9 +206,9 @@ public sealed class LinterEngine
         return workItems;
     }
 
-    private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state, AnalysisCacheManager? cache)
+    private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state, AnalysisCacheManager? cache, CancellationToken ct)
     {
-        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state, cache);
+        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state, cache, ct);
     }
 
 
@@ -221,7 +229,7 @@ public sealed class LinterEngine
             ? Path.GetFileName(filePath)
             : AiNetLinter.Output.PathNormalizer.ToRelative(solutionDir, filePath);
 
-    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state, AnalysisCacheManager? cache)
+    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state, AnalysisCacheManager? cache, CancellationToken ct)
     {
         var filePath = document.FilePath ?? document.Name;
         if (FileFilterEvaluator.IsExcluded(filePath, _config.FileFilters)) return;
@@ -243,10 +251,10 @@ public sealed class LinterEngine
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var semanticModel = await document.GetSemanticModelAsync();
+        var semanticModel = await document.GetSemanticModelAsync(ct);
         if (semanticModel == null) return;
 
-        var sourceText = await document.GetTextAsync();
+        var sourceText = await document.GetTextAsync(ct);
         state.FileContents[filePath] = sourceText.ToString();
 
         var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config, solutionDir);
@@ -259,7 +267,7 @@ public sealed class LinterEngine
         SaveToCache(new CacheDestination(cache, checksum, relativePath), analyzer, context);
 
         stopwatch.Stop();
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.RecordDocumentAnalysis(relativePath, stopwatch.Elapsed.TotalMilliseconds, analyzer.Violations.Count);
+        _profiler.RecordDocumentAnalysis(relativePath, stopwatch.Elapsed.TotalMilliseconds, analyzer.Violations.Count);
     }
 
     private sealed record CacheDestination(AnalysisCacheManager? Manager, string? Checksum, string RelativePath);

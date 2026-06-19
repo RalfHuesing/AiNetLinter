@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
@@ -35,6 +36,39 @@ internal sealed class CheckerContext
     }
 
     internal void AddViolation(RuleViolation violation) => _violations.Add(violation);
+
+    /// <summary>
+    /// Kurzform für AddViolation — FilePath und LineNumber werden automatisch gesetzt.
+    /// </summary>
+    internal void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance) =>
+        AddViolation(new RuleViolation
+        {
+            FilePath   = FilePath,
+            LineNumber = SyntaxHelper.LineOf(node),
+            RuleName   = ruleName,
+            Details    = details,
+            Guidance   = guidance,
+        });
+
+    internal void ReportViolation(SyntaxToken token, string ruleName, string details, string guidance) =>
+        AddViolation(new RuleViolation
+        {
+            FilePath   = FilePath,
+            LineNumber = token.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
+            RuleName   = ruleName,
+            Details    = details,
+            Guidance   = guidance,
+        });
+
+    internal void ReportViolationAtLine(int lineNumber, string ruleName, string details, string guidance) =>
+        AddViolation(new RuleViolation
+        {
+            FilePath   = FilePath,
+            LineNumber = lineNumber,
+            RuleName   = ruleName,
+            Details    = details,
+            Guidance   = guidance,
+        });
 
     internal IReadOnlyList<RuleViolation> Violations => _violations;
 

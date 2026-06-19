@@ -4,7 +4,6 @@ using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -20,14 +19,10 @@ internal static class NamespaceCouplingChecker
             if (!NamespaceMatches(ctx.CurrentNamespace, rule.SourceNamespace)) continue;
             if (!NamespaceMatches(referencedNamespace, rule.TargetNamespace)) continue;
 
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = "ForbiddenNamespaceDependency",
-                Details = $"Der Namespace '{ctx.CurrentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhaengen (Referenz gefunden: '{node}').",
-                Guidance = "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung."
-            });
+            ctx.ReportViolation(node,
+                "ForbiddenNamespaceDependency",
+                $"Der Namespace '{ctx.CurrentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhaengen (Referenz gefunden: '{node}').",
+                "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung.");
         }
     }
 

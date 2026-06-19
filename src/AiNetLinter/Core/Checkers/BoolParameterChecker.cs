@@ -4,7 +4,6 @@ using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -36,14 +35,10 @@ internal static class BoolParameterChecker
         var boolCount = CountBoolParameters(paramList, ctx);
         if (boolCount > limit)
         {
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(node),
-                RuleName = nameof(ctx.Config.Metrics.MaxBoolParameterCount),
-                Details = $"'{memberName}' hat {boolCount} bool-Parameter (erlaubt: {limit}). Bool-Parameter sind an der Call-Site opak: 'DoWork(true, false)' trägt keine semantische Information.",
-                Guidance = "Fasse die bool-Parameter in ein Parameter-Object zusammen: 'sealed record WorkOptions(bool EnableX, bool EnableY)' — damit werden Call-Sites selbsterklärend."
-            });
+            ctx.ReportViolation(node,
+                nameof(ctx.Config.Metrics.MaxBoolParameterCount),
+                $"'{memberName}' hat {boolCount} bool-Parameter (erlaubt: {limit}). Bool-Parameter sind an der Call-Site opak: 'DoWork(true, false)' trägt keine semantische Information.",
+                "Fasse die bool-Parameter in ein Parameter-Object zusammen: 'sealed record WorkOptions(bool EnableX, bool EnableY)' — damit werden Call-Sites selbsterklärend.");
         }
     }
 

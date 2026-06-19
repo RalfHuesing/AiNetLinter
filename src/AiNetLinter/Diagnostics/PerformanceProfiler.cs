@@ -14,44 +14,22 @@ namespace AiNetLinter.Diagnostics;
 /// <summary>
 /// Verwaltet Zeitmessungen für verschiedene Linter-Phasen und generiert Protokollberichte.
 /// </summary>
-public sealed class PerformanceProfiler
+public sealed class PerformanceProfiler : IPerformanceProfiler
 {
-    private static readonly Lazy<PerformanceProfiler> LazyInstance = new(() => new PerformanceProfiler());
-    
-    /// <summary>
-    /// Singleton-Instanz des Profilers.
-    /// </summary>
-    public static PerformanceProfiler Instance => LazyInstance.Value;
+    private readonly bool _enabled;
+    private readonly string? _arguments;
 
-    private bool _initialized;
-    private bool _enabled = true;
-    private string? _arguments;
-    
     private readonly Stopwatch _totalStopwatch = new();
     private readonly ConcurrentDictionary<string, Stopwatch> _phaseStopwatches = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, double> _phaseDurations = new(StringComparer.OrdinalIgnoreCase);
-    
+
     private readonly ConcurrentBag<DocumentPerformanceEntry> _documentEntries = new();
     private readonly ConcurrentDictionary<string, double> _postAnalysisStepDurations = new(StringComparer.OrdinalIgnoreCase);
 
-    private PerformanceProfiler()
+    internal PerformanceProfiler(bool enabled, string[]? args = null)
     {
-    }
-
-    /// <summary>
-    /// Gibt an, ob Profiling aktiviert ist.
-    /// </summary>
-    public bool IsEnabled => _enabled;
-
-    /// <summary>
-    /// Initialisiert den Profiler. Startet die Gesamtlaufzeit-Messung, falls aktiviert.
-    /// </summary>
-    public void Initialize(bool enabled, string[]? args = null)
-    {
-        if (_initialized) return;
         _enabled = enabled;
-        _initialized = true;
-        
+
         if (args != null)
         {
             _arguments = string.Join(" ", args);
@@ -69,7 +47,6 @@ public sealed class PerformanceProfiler
             catch (Exception ignored)
             {
                 _ = ignored;
-                // Ignorieren falls keine CLI-Args geladen werden können
             }
         }
 
@@ -147,7 +124,7 @@ public sealed class PerformanceProfiler
     /// </summary>
     public void WriteReport(string targetPath, string? solutionFilePath, string? rulesFilePath = null)
     {
-        if (!_enabled || !_initialized) return;
+        if (!_enabled) return;
         _totalStopwatch.Stop();
         try
         {

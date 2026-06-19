@@ -5,7 +5,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -34,14 +33,10 @@ internal static class ImmutabilityChecker
             if (setAccessor == null) continue;
             if (setAccessor.Modifiers.Any(SyntaxKind.InitKeyword)) continue;
 
-            ctx.AddViolation(new RuleViolation
-            {
-                FilePath = ctx.FilePath,
-                LineNumber = SyntaxHelper.LineOf(prop),
-                RuleName = "EnforceExplicitStateImmutability",
-                Details = $"Die Eigenschaft '{prop.Identifier.Text}' der Klasse '{className}' hat einen veränderbaren 'set'-Accessor.",
-                Guidance = "Verwende 'init' oder mache die Eigenschaft get-only, um Immutability zu garantieren."
-            });
+            ctx.ReportViolation(prop,
+                nameof(ctx.Config.Global.EnforceExplicitStateImmutability),
+                $"Die Eigenschaft '{prop.Identifier.Text}' der Klasse '{className}' hat einen veränderbaren 'set'-Accessor.",
+                "Verwende 'init' oder mache die Eigenschaft get-only, um Immutability zu garantieren.");
         }
     }
 
@@ -54,14 +49,10 @@ internal static class ImmutabilityChecker
 
             foreach (var variable in fieldDecl.Declaration.Variables)
             {
-                ctx.AddViolation(new RuleViolation
-                {
-                    FilePath = ctx.FilePath,
-                    LineNumber = SyntaxHelper.LineOf(variable),
-                    RuleName = "EnforceExplicitStateImmutability",
-                    Details = $"Das Feld '{variable.Identifier.Text}' in der Klasse '{className}' ist nicht als 'readonly' deklariert.",
-                    Guidance = "Füge den Modifikator 'readonly' hinzu."
-                });
+                ctx.ReportViolation(variable,
+                    nameof(ctx.Config.Global.EnforceExplicitStateImmutability),
+                    $"Das Feld '{variable.Identifier.Text}' in der Klasse '{className}' ist nicht als 'readonly' deklariert.",
+                    "Füge den Modifikator 'readonly' hinzu.");
             }
         }
     }

@@ -1,10 +1,11 @@
 #nullable enable
 
-using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Core;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
@@ -20,22 +21,23 @@ internal static class ImpactCommand
     /// <summary>
     /// Führt die Impact-Analyse für die Solution aus.
     /// </summary>
-    internal static async Task<int> RunAsync(LinterArgs args)
+    internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+        var c = console ?? ConsoleLintConsole.Instance;
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
         var callSites = await DiffImpactAnalyzer.AnalyzeAsync(catalog.Solution, args.TargetPath, args.ImpactRef, args.Verbose);
 
         if (callSites.Count == 0)
         {
-            Console.WriteLine(NoImpactCallSitesMessage);
+            c.WriteLine(NoImpactCallSitesMessage);
         }
         else
         {
-            Console.WriteLine(ImpactHeaderMessage);
-            Console.WriteLine(CallSitesFoundMessage);
+            c.WriteLine(ImpactHeaderMessage);
+            c.WriteLine(CallSitesFoundMessage);
             foreach (var callSite in callSites)
             {
-                Console.WriteLine(callSite);
+                c.WriteLine(callSite);
             }
         }
 

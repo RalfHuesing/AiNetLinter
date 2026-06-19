@@ -224,14 +224,10 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
         if (lineCount > _ctx.Config.Metrics.MaxLineCount)
         {
-            _ctx.AddViolation(new RuleViolation
-            {
-                FilePath = _ctx.FilePath,
-                LineNumber = 1,
-                RuleName = nameof(_ctx.Config.Metrics.MaxLineCount),
-                Details = $"Die Datei hat {lineCount} Zeilen (erlaubt sind maximal {_ctx.Config.Metrics.MaxLineCount}).",
-                Guidance = "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf."
-            });
+            _ctx.ReportViolationAtLine(1,
+                nameof(_ctx.Config.Metrics.MaxLineCount),
+                $"Die Datei hat {lineCount} Zeilen (erlaubt sind maximal {_ctx.Config.Metrics.MaxLineCount}).",
+                "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf.");
         }
     }
 
@@ -243,14 +239,10 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         var nullableContext = _ctx.SemanticModel.GetNullableContext(0);
         if (!nullableContext.HasFlag(NullableContext.Enabled))
         {
-            _ctx.AddViolation(new RuleViolation
-            {
-                FilePath = _ctx.FilePath,
-                LineNumber = 1,
-                RuleName = nameof(_ctx.Config.Global.EnforceNullableEnable),
-                Details = "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Pruefungen.",
-                Guidance = "Fuege '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."
-            });
+            _ctx.ReportViolationAtLine(1,
+                nameof(_ctx.Config.Global.EnforceNullableEnable),
+                "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Pruefungen.",
+                "Fuege '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props.");
         }
     }
 

@@ -2,12 +2,14 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Metrics;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
@@ -19,28 +21,29 @@ internal static class FootprintCommand
     /// <summary>
     /// Sucht die Klasse in der Solution und gibt die Footprint-Details aus.
     /// </summary>
-    internal static async Task<int> RunAsync(LinterArgs args)
+    internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
+        var c = console ?? ConsoleLintConsole.Instance;
         try
         {
-            using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
+            using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
             var targetSymbol = await FindTypeSymbolAsync(catalog.Solution, args.Footprint!);
             if (targetSymbol == null)
             {
-                Console.Error.WriteLine($"[ERROR]: Klasse '{args.Footprint}' wurde in der Solution nicht gefunden.");
+                c.WriteError($"[ERROR]: Klasse '{args.Footprint}' wurde in der Solution nicht gefunden.");
                 return 1;
             }
             var (totalLines, topDeps) = AIContextFootprintCalculator.CalculateDetailed(targetSymbol);
-            Console.WriteLine($"AI-Context-Footprint fuer Klasse '{targetSymbol.ToDisplayString()}':");
-            Console.WriteLine($"Gesamt transitive Zeilen: {totalLines}");
-            Console.WriteLine("Top-Abhängigkeiten:");
+            c.WriteLine($"AI-Context-Footprint fuer Klasse '{targetSymbol.ToDisplayString()}':");
+            c.WriteLine($"Gesamt transitive Zeilen: {totalLines}");
+            c.WriteLine("Top-Abhängigkeiten:");
             foreach (var dep in topDeps)
-                Console.WriteLine($"  + {dep.Name} ({dep.Lines} Zeilen)");
+                c.WriteLine($"  + {dep.Name} ({dep.Lines} Zeilen)");
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Fehler bei der Footprint-Analyse: {ex.Message}");
+            c.WriteError($"[ERROR]: Fehler bei der Footprint-Analyse: {ex.Message}");
             return 2;
         }
     }

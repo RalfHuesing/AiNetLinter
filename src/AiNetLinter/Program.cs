@@ -2,6 +2,7 @@
 
 using System;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
@@ -21,6 +22,14 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
         var (root, options) = CliCommandBuilder.Build();
 
         root.SetAction(async parseResult =>
@@ -32,7 +41,12 @@ public static class Program
                 {
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
-                return await ExecuteLinterAsync(linterArgs);
+                return await ExecuteLinterAsync(linterArgs, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                Console.Error.WriteLine("[INFO]: Abgebrochen.");
+                return 2;
             }
             catch (Exception ex)
             {
@@ -71,33 +85,46 @@ public static class Program
             CacheTtlMinutes = parsed.CacheTtlMinutes,
             Footprint = parsed.Footprint,
             Readme = parsed.Readme,
+            ListRules = parsed.ListRules,
+            DescribeRule = parsed.DescribeRule,
+            SearchRules = parsed.SearchRules,
         };
     }
 
-    private static async Task<int> ExecuteLinterAsync(LinterArgs args)
+    private static async Task<int> ExecuteLinterAsync(LinterArgs args, CancellationToken ct)
     {
-        if (args.Readme) return ReadmeCommand.Run();
+        var standaloneResult = TryRunStandaloneCommand(args);
+        if (standaloneResult.HasValue) return standaloneResult.Value;
 
         var validationError = ValidateArgs(args);
         if (validationError.HasValue) return validationError.Value;
 
-        if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args);
+        if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, ct);
 
         // Schneller Pfad: --sync-cursor-rules ohne --playbook.
         // Wenn --playbook ebenfalls gesetzt ist, fällt der Aufruf durch zu AuditCommand,
         // das beide Ausgaben via GenerateOptionalOutputsAsync erzeugt.
         if (args.SyncCursorRules && args.PlaybookPath == null) return SyncCursorRulesCommand.Run(args);
 
-        if (args.Footprint != null) return await FootprintCommand.RunAsync(args);
+        if (args.Footprint != null) return await FootprintCommand.RunAsync(args, ct);
 
-        var maintenanceResult = await MaintenanceCommand.TryRunAsync(args);
+        var maintenanceResult = await MaintenanceCommand.TryRunAsync(args, ct);
         if (maintenanceResult.HasValue) return maintenanceResult.Value;
 
-        if (args.DebtReport) return await DebtReportCommand.RunAsync(args);
+        if (args.DebtReport) return await DebtReportCommand.RunAsync(args, ct);
 
-        if (args.HasImpact) return await ImpactCommand.RunAsync(args);
+        if (args.HasImpact) return await ImpactCommand.RunAsync(args, ct);
 
-        return await AuditCommand.RunAsync(args);
+        return await AuditCommand.RunAsync(args, ct);
+    }
+
+    private static int? TryRunStandaloneCommand(LinterArgs args)
+    {
+        if (args.Readme) return ReadmeCommand.Run();
+        if (args.ListRules) return ListRulesCommand.ListAll();
+        if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);
+        if (args.SearchRules != null) return ListRulesCommand.Search(args.SearchRules);
+        return null;
     }
 
     private static int? ValidateArgs(LinterArgs args)

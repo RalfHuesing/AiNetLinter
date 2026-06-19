@@ -5,7 +5,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
@@ -20,14 +19,10 @@ internal static class ControlFlowChecker
         if (IsAllowedSilentCatchByConfig(node, ctx)) return;
         if (IsExplicitlyIgnored(node)) return;
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = nameof(ctx.Config.Global.EnforceNoSilentCatch),
-            Details = "Stummes Abfangen (Silent Swallowing) einer Exception erkannt.",
-            Guidance = "Wirf die Exception erneut (throw;) oder protokolliere sie, um Fehler im agentischen Loop sichtbar zu machen. Falls das Abfangen bewusst geschieht, benenne die Exception-Variable 'ignored' oder nutze die Inline-Unterdrueckung '// ainetlinter-disable EnforceNoSilentCatch' an der catch-Zeile."
-        });
+        ctx.ReportViolation(node,
+            nameof(ctx.Config.Global.EnforceNoSilentCatch),
+            "Stummes Abfangen (Silent Swallowing) einer Exception erkannt.",
+            "Wirf die Exception erneut (throw;) oder protokolliere sie, um Fehler im agentischen Loop sichtbar zu machen. Falls das Abfangen bewusst geschieht, benenne die Exception-Variable 'ignored' oder nutze die Inline-Unterdrueckung '// ainetlinter-disable EnforceNoSilentCatch' an der catch-Zeile.");
     }
 
     internal static void CheckThrow(SyntaxNode node, CheckerContext ctx)
@@ -38,14 +33,10 @@ internal static class ControlFlowChecker
         if (IsAllowedCatchRethrow(node, ctx)) return;
         if (IsThrowAllowed(node)) return;
 
-        ctx.AddViolation(new RuleViolation
-        {
-            FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName = "EnforceResultPatternOverExceptions",
-            Details = "Verwendung von 'throw' fuer Kontrollfluss erkannt.",
-            Guidance = "Verwende fuer fachliche Fehlerzustaende das Result-Pattern (Result<T>) statt Exceptions, um den Kontrollfluss fuer KI-Agenten explizit zu machen. 'throw' ist nur in Konstruktoren oder Validierungs-Guards (Methoden mit Suffix 'Guard' oder 'Validate') erlaubt."
-        });
+        ctx.ReportViolation(node,
+            nameof(ctx.Config.Global.EnforceResultPatternOverExceptions),
+            "Verwendung von 'throw' fuer Kontrollfluss erkannt.",
+            "Verwende fuer fachliche Fehlerzustaende das Result-Pattern (Result<T>) statt Exceptions, um den Kontrollfluss fuer KI-Agenten explizit zu machen. 'throw' ist nur in Konstruktoren oder Validierungs-Guards (Methoden mit Suffix 'Guard' oder 'Validate') erlaubt.");
     }
 
     private static bool IsAllowedSilentCatchByConfig(CatchClauseSyntax node, CheckerContext ctx)

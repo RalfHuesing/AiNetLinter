@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Output;
@@ -16,8 +17,8 @@ public static class ViolationMarkdownFormatter
 {
     private static readonly HashSet<string> StructuralRules = new(StringComparer.OrdinalIgnoreCase)
     {
-        "MaxPartialClassFiles",
-        "AIContextFootprint",
+        LinterRuleIds.MaxPartialClassFiles,
+        LinterRuleIds.AIContextFootprint,
     };
 
     public static string Format(

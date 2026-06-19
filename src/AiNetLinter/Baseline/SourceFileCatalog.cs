@@ -33,7 +33,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Lädt die Solution aus dem angegebenen Pfad.
     /// </summary>
-    public static async Task<SourceFileCatalog> LoadAsync(string path)
+    public static async Task<SourceFileCatalog> LoadAsync(string path, System.Threading.CancellationToken ct = default)
     {
         var slnPath = FindSolutionFile(path);
         RegisterMSBuild();
@@ -45,7 +45,7 @@ public sealed class SourceFileCatalog : IDisposable
             diagnostics.Add(e.Diagnostic.Message);
         });
 
-        var solution = await workspace.OpenSolutionAsync(slnPath);
+        var solution = await workspace.OpenSolutionAsync(slnPath, cancellationToken: ct);
 
         foreach (var msg in diagnostics.Distinct(StringComparer.Ordinal))
         {

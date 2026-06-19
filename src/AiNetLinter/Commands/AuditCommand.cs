@@ -4,12 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using AiNetLinter.Scope;
@@ -24,48 +26,53 @@ internal static class AuditCommand
 {
     private const string FixedCountMessageFormat = "[INFO]: {0} einfache Regelverstoesse wurden automatisch behoben.";
 
+    // Bündelt gemeinsame Parameter für private Audit-Methoden.
+    private sealed record AuditRunContext(LinterArgs Args, LinterConfig Config, IPerformanceProfiler Profiler, ILintConsole Console);
+
     /// <summary>
     /// Einstiegspunkt für den Audit-Befehl.
     /// </summary>
-    internal static async Task<int> RunAsync(LinterArgs args)
+    internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
+        var c = console ?? ConsoleLintConsole.Instance;
         var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
-        if (config == null)
-        {
-            return 1;
-        }
+        if (config == null) return 1;
 
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.Initialize(config.Global.EnablePerformanceProfiling);
-        LinterLogger.LogStart(args.Verbose, args.ConfigPath!, args.TargetPath);
+        IPerformanceProfiler profiler = config.Global.EnablePerformanceProfiling
+            ? new PerformanceProfiler(true)
+            : NullPerformanceProfiler.Instance;
 
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("WorkspaceLoading");
-        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath);
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("WorkspaceLoading");
+        var ctx = new AuditRunContext(args, config, profiler, c);
+        LinterLogger.LogStart(args.Verbose, args.ConfigPath!, args.TargetPath, c);
+
+        profiler.StartPhase("WorkspaceLoading");
+        using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
+        profiler.StopPhase("WorkspaceLoading");
 
         if (args.BaselinePath != null)
-            return await RunAuditWithBaselineAsync(args, config, catalog);
+            return await RunAuditWithBaselineAsync(ctx, catalog, ct);
 
         // Optimierter Pfad ohne Baseline (Analyse läuft einmalig vor optionalen Ausgaben)
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
-        var (currentCatalog2, needsDispose2) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
+        profiler.StartPhase("AutoFix");
+        var (currentCatalog2, needsDispose2) = await ApplyAutoFixIfNeededAsync(catalog, ctx, ct);
+        profiler.StopPhase("AutoFix");
         try
         {
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("DocumentAnalysis");
+            profiler.StartPhase("DocumentAnalysis");
             string? rulesJsonContent = LoadRulesJsonContent(args.ConfigPath);
-            var engine = new LinterEngine(config, rulesJsonContent);
-            var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("DocumentAnalysis");
+            var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+            var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes, ct);
+            profiler.StopPhase("DocumentAnalysis");
 
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
-            await GenerateOptionalOutputsAsync(currentCatalog2.Solution, args, config, violations);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OptionalOutputs");
+            profiler.StartPhase("OptionalOutputs");
+            await GenerateOptionalOutputsAsync(currentCatalog2.Solution, ctx, violations);
+            profiler.StopPhase("OptionalOutputs");
 
             var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
             var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
-            var exitCode = WriteViolationsAndExit(scoped, outputRoot, config);
+            var exitCode = WriteViolationsAndExit(scoped, outputRoot, ctx);
 
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog2.Solution.FilePath, args.ConfigPath);
+            profiler.WriteReport(args.TargetPath, currentCatalog2.Solution.FilePath, args.ConfigPath);
             return exitCode;
         }
         finally
@@ -74,20 +81,21 @@ internal static class AuditCommand
         }
     }
 
-    private static async Task<int> RunAuditWithBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
+    private static async Task<int> RunAuditWithBaselineAsync(AuditRunContext ctx, SourceFileCatalog catalog, CancellationToken ct)
     {
+        var profiler = ctx.Profiler;
         // Baseline-Pfad bleibt unverändert, um Regressionsrisiken zu vermeiden.
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OptionalOutputs");
-        await GenerateOptionalOutputsAsync(catalog.Solution, args, config);
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OptionalOutputs");
+        profiler.StartPhase("OptionalOutputs");
+        await GenerateOptionalOutputsAsync(catalog.Solution, ctx);
+        profiler.StopPhase("OptionalOutputs");
 
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("AutoFix");
-        var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, config, args);
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("AutoFix");
+        profiler.StartPhase("AutoFix");
+        var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, ctx, ct);
+        profiler.StopPhase("AutoFix");
         try
         {
-            var exitCode = await AuditWithBaselineAsync(args, config, currentCatalog);
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.WriteReport(args.TargetPath, currentCatalog.Solution.FilePath, args.ConfigPath);
+            var exitCode = await AuditWithBaselineAsync(ctx, currentCatalog, ct);
+            profiler.WriteReport(ctx.Args.TargetPath, currentCatalog.Solution.FilePath, ctx.Args.ConfigPath);
             return exitCode;
         }
         finally
@@ -96,8 +104,10 @@ internal static class AuditCommand
         }
     }
 
-    private static async Task<int> AuditWithBaselineAsync(LinterArgs args, LinterConfig config, SourceFileCatalog catalog)
+    private static async Task<int> AuditWithBaselineAsync(AuditRunContext ctx, SourceFileCatalog catalog, CancellationToken ct)
     {
+        var (args, config, profiler, c) = ctx;
+
         BaselineFile storedBaseline;
         try
         {
@@ -105,7 +115,7 @@ internal static class AuditCommand
         }
         catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException)
         {
-            Console.Error.WriteLine($"[ERROR]: {ex.Message}");
+            c.WriteError($"[ERROR]: {ex.Message}");
             return 1;
         }
 
@@ -119,65 +129,66 @@ internal static class AuditCommand
             rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
         }
 
-        var engine = new LinterEngine(config, rulesJsonContent);
-        var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes);
+        var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+        var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
         var filtered = BaselineViolationFilter.Filter(violations, comparison.ChangedFiles, outputRoot);
 
         if (comparison.HasAnyChange)
         {
             BaselineWriter.Write(args.BaselinePath!, currentChecksums);
-            LinterLogger.LogBaselineUpdate(args.Verbose, comparison);
+            LinterLogger.LogBaselineUpdate(args.Verbose, comparison, c);
         }
 
         var scoped = ApplyScopeFilters(filtered, args, outputRoot, comparison.ChangedFiles);
-        return WriteViolationsAndExit(scoped, outputRoot, config);
+        return WriteViolationsAndExit(scoped, outputRoot, ctx);
     }
 
-    internal static async Task GenerateOptionalOutputsAsync(
+    private static async Task GenerateOptionalOutputsAsync(
         Solution solution,
-        LinterArgs args,
-        LinterConfig config,
+        AuditRunContext ctx,
         IReadOnlyCollection<RuleViolation>? violations = null)
     {
+        var (args, config, _, c) = ctx;
+
         if (args.GraphPath != null)
         {
-            await TryGenerateCodegraphAsync(solution, args.GraphPath, args.Verbose);
+            await TryGenerateCodegraphAsync(solution, args.GraphPath, args.Verbose, c);
         }
 
         if (args.PlaybookPath != null)
         {
-            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations));
+            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations), c);
         }
 
         if (args.SyncCursorRules)
         {
-            TrySyncCursorRules(args.TargetPath, config, args.Verbose);
+            TrySyncCursorRules(ctx);
         }
     }
 
-    private static void TrySyncCursorRules(string targetPath, LinterConfig config, bool verbose)
+    private static void TrySyncCursorRules(AuditRunContext ctx)
     {
+        var (args, config, _, c) = ctx;
         try
         {
-            if (verbose)
+            if (args.Verbose)
             {
-                Console.WriteLine("[INFO]: Synchronisiere Cursor-Regeln (.mdc)...");
+                c.WriteLine("[INFO]: Synchronisiere Cursor-Regeln (.mdc)...");
             }
-            CursorRulesGenerator.Sync(targetPath, config, verbose);
+            CursorRulesGenerator.Sync(args.TargetPath, config, args.Verbose);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
+            c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
         }
     }
 
     private static async Task<(SourceFileCatalog Catalog, bool NeedsDispose)> ApplyAutoFixIfNeededAsync(
-        SourceFileCatalog catalog, LinterConfig config, LinterArgs args)
+        SourceFileCatalog catalog, AuditRunContext ctx, CancellationToken ct)
     {
-        if (!args.Fix)
-        {
-            return (catalog, false);
-        }
+        var (args, config, profiler, c) = ctx;
+
+        if (!args.Fix) return (catalog, false);
 
         string? rulesJsonContent = null;
         if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
@@ -185,65 +196,66 @@ internal static class AuditCommand
             rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
         }
 
-        var engine = new LinterEngine(config, rulesJsonContent);
-        var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes);
+        var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+        var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
-            catalog.Solution, initialViolations, new FixOptions(args.Verbose, args.Check));
+            catalog.Solution, initialViolations, new FixOptions(args.Verbose, args.Check), c);
 
         if (args.Check)
         {
             if (fixedCount > 0)
             {
-                Console.WriteLine($"[DRY-RUN]: {fixedCount} einfache Regelverstoesse wuerden automatisch behoben.");
+                c.WriteLine($"[DRY-RUN]: {fixedCount} einfache Regelverstoesse wuerden automatisch behoben.");
             }
             return (catalog, false);
         }
 
         if (fixedCount > 0)
         {
-            Console.WriteLine(FixedCountMessageFormat, fixedCount);
+            c.WriteLine(string.Format(FixedCountMessageFormat, fixedCount));
             return (catalog.WithUpdatedSolution(updatedSolution), true);
         }
 
         return (catalog, false);
     }
 
-    private static async Task TryGenerateCodegraphAsync(Solution solution, string graphPath, bool verbose)
+    private static async Task TryGenerateCodegraphAsync(Solution solution, string graphPath, bool verbose, ILintConsole c)
     {
         try
         {
             if (verbose)
             {
-                Console.WriteLine($"[INFO]: Generiere Codegraph unter: {graphPath}");
+                c.WriteLine($"[INFO]: Generiere Codegraph unter: {graphPath}");
             }
             await CodegraphGenerator.GenerateAsync(solution, graphPath);
             if (verbose)
             {
-                Console.WriteLine("[INFO]: Codegraph erfolgreich generiert.");
+                c.WriteLine("[INFO]: Codegraph erfolgreich generiert.");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Fehler beim Generieren des Codegraphen: {ex.Message}");
+            c.WriteError($"[ERROR]: Fehler beim Generieren des Codegraphen: {ex.Message}");
         }
     }
 
     private static async Task TryGeneratePlaybookAsync(
         Solution solution,
         string playbookPath,
-        PlaybookOptions options)
+        PlaybookOptions options,
+        ILintConsole c)
     {
         try
         {
             if (options.Verbose)
             {
-                Console.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
+                c.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
             }
             await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, options);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ERROR]: Fehler beim Generieren des Repo-Playbooks: {ex.Message}");
+            c.WriteError($"[ERROR]: Fehler beim Generieren des Repo-Playbooks: {ex.Message}");
         }
     }
 
@@ -279,24 +291,25 @@ internal static class AuditCommand
     private static int WriteViolationsAndExit(
         IReadOnlyCollection<RuleViolation> violations,
         string outputRoot,
-        LinterConfig config)
+        AuditRunContext ctx)
     {
-        AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StartPhase("OutputWriting");
+        var (_, config, profiler, c) = ctx;
+        profiler.StartPhase("OutputWriting");
         try
         {
             if (violations.Count == 0)
             {
-                Console.WriteLine("OK");
+                c.WriteLine("OK");
                 return 0;
             }
 
             var hasError = RuleMetadataRegistry.HasErrorSeverity(violations, config);
-            Console.WriteLine(ViolationMarkdownFormatter.Format(violations, outputRoot, config));
+            c.WriteLine(ViolationMarkdownFormatter.Format(violations, outputRoot, config));
             return hasError ? 1 : 0;
         }
         finally
         {
-            AiNetLinter.Diagnostics.PerformanceProfiler.Instance.StopPhase("OutputWriting");
+            profiler.StopPhase("OutputWriting");
         }
     }
 }
