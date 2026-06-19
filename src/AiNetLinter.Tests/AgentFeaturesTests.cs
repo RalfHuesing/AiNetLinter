@@ -161,11 +161,14 @@ public sealed class AgentFeaturesTests
 
         var result = ViolationTextFormatter.Format(violations, @"C:\repo", CreateConfig());
 
-        // Rule instruction appears in the Handlungsanweisung header (deduped), not per-violation
-        Assert.Contains("-> MaxCognitiveComplexity:", result);
-        // Violation line contains only path:line rule | details — no guidance
-        Assert.Contains("src/Foo.cs:15 MaxCognitiveComplexity | 12 > 7", result);
-        Assert.DoesNotContain("src/Foo.cs:15 MaxCognitiveComplexity | 12 > 7 ->", result);
+        // Rule legend appears in Regellegende section (not duplicated per violation line)
+        Assert.Contains("### MaxCognitiveComplexity", result);
+        Assert.Contains("**Warum:**", result);
+        // Violation appears compactly in file section
+        Assert.Contains("Z.15 MaxCognitiveComplexity", result);
+        Assert.Contains("12 > 7", result);
+        // Guidance text is NOT duplicated in the violation line itself
+        Assert.DoesNotContain("Vereinfache verschachtelte", result.Substring(result.IndexOf("## Violations nach Datei", StringComparison.Ordinal)));
     }
 
     [Fact]
