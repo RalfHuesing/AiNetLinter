@@ -33,30 +33,7 @@ public sealed class RepoPlaybookGenerator
     private const string AllKeyword = "all";
     private const string MultiLineCommentEnd = "*/";
 
-    private static readonly IReadOnlyDictionary<string, string> RuleDescriptions =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["EnforceSealedClasses"] = "Konkrete Klassen muessen 'sealed' sein (oder 'sealed partial').",
-            ["EnforceNoSilentCatch"] = "Exceptions duerfen nicht stumm abgefangen werden (Ausnahme: Variable heisst 'ignored' oder 'expected').",
-            ["MaxLineCount"] = "Dateizeilenlimit (max. 500 Zeilen) ueberschritten.",
-            ["MaxMethodParameterCount"] = "Methode hat zu viele Parameter (max. 4). Kapselung in einen 'record' erforderlich.",
-            ["MaxMethodLineCount"] = "Methode hat zu viele Codezeilen (max. 42 Zeilen).",
-            ["MaxCyclomaticComplexity"] = "Zu hohe zyklomatische Komplexitaet (max. 5).",
-            ["MaxCognitiveComplexity"] = "Zu hohe kognitive Komplexitaet (max. 5).",
-            ["ForbiddenNamespaceDependency"] = "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
-            ["EnforcePascalCase"] = "PascalCase fuer oeffentliche Bezeichner erforderlich.",
-            ["EnforceXmlDocumentation"] = "Fehlende XML-Dokumentation fuer oeffentliche Schnittstellen.",
-            ["EnforceSemanticNaming"] = "Generische Namen (data, temp, obj) sind in oeffentlichen Signaturen verboten.",
-            ["EnforceNullableEnable"] = "#nullable enable fehlt am Dateianfang.",
-            ["AllowDynamic"] = "'dynamic' ist verboten. Nutze statische Typen.",
-            ["AllowOutParameters"] = "'out'-Parameter sind verboten. Benutze Tuples oder Records.",
-            ["StaticTestSentinel"] = "Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.",
-            ["EnforceResultPatternOverExceptions"] = "Fachlicher Kontrollfluss muss Result-Pattern statt Exceptions (throw) nutzen.",
-            ["MaxMethodOverloads"] = "Zu viele Methodenueberladungen (max. 10).",
-            ["MaxConstructorDependencies"] = "Zu viele Konstruktorabhaengigkeiten (max. 20).",
-            ["AIContextFootprint"] = "AI-Context-Footprint (transitive Codezeilen aller Abhaengigkeiten) ueberschreitet Limit (max. 5000).",
-            ["all"] = "Alle Linter-Regeln deaktiviert fuer diese Datei oder diesen Bereich."
-        };
+
 
     private sealed record PlaybookDocInfo(
         string FilePath,
@@ -270,7 +247,7 @@ public sealed class RepoPlaybookGenerator
     {
         var sb = new StringBuilder();
         AppendHeader(sb, ctx);
-        AppendSuppressionList(sb, ctx.Stats.SuppressionCounts);
+        AppendSuppressionList(sb, ctx.Stats.SuppressionCounts, ctx.Config);
         sb.AppendLine();
         if (ctx.Config == null) return sb.ToString();
         var filesWithDisableAll = ctx.Stats.DocInfos
@@ -395,7 +372,7 @@ public sealed class RepoPlaybookGenerator
         return parts.Length == 1 ? parts[0] : "Root";
     }
 
-    private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts)
+    private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts, LinterConfig? config)
     {
         if (suppressionCounts.Count == 0)
         {
@@ -409,7 +386,20 @@ public sealed class RepoPlaybookGenerator
         {
             var rule = item.Key;
             var count = item.Value;
-            var description = RuleDescriptions.TryGetValue(rule, out var desc) ? desc : $"Regel '{rule}'.";
+            string description;
+            if (rule.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                description = "Alle Linter-Regeln deaktiviert fuer diese Datei oder diesen Bereich.";
+            }
+            else
+            {
+                var meta = RuleRegistry.TryResolve(rule);
+                description = meta != null && config != null
+                    ? meta.GetShortDescription(config)
+                    : meta != null
+                        ? meta.GetShortDescription(new LinterConfig { Global = new(), Metrics = new() })
+                        : $"Regel '{rule}'.";
+            }
             sb.AppendLine($"- **{rule}:** {count} mal deaktiviert.");
             sb.AppendLine($"  *Bedeutung:* {description}");
         }

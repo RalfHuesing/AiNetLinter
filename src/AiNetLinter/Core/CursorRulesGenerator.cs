@@ -14,99 +14,7 @@ namespace AiNetLinter.Core;
 /// </summary>
 public static class CursorRulesGenerator
 {
-    private sealed record RuleDefinition(
-        string Name,
-        Func<GlobalConfig, bool> IsEnabled,
-        string DeactiveDesc,
-        string CursorHint
-    );
 
-    private sealed record MetricDescriptor(Func<MetricsConfig, int> GetVal, string Name, string Praxis);
-
-    private static readonly string[] IntentOrder =
-        ["agent-resilience", "agent-context", "architecture", "aspnet-binding", "test-coverage", "control-flow", "csharp-idiom", "general"];
-
-    private static readonly RuleDefinition[] GlobalRules =
-    [
-        new("EnforceSealedClasses", g => g.EnforceSealedClasses,
-            "aus — Migration, Ziel: sealed standard",
-            "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`."),
-        new("AllowUnsealedPartialClasses", g => g.AllowUnsealedPartialClasses,
-            "aus — alle partial Klassen müssen ebenfalls sealed sein",
-            "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten)."),
-        new("AllowDynamic", g => g.AllowDynamic,
-            "aus — Verwendung von `dynamic` ist verboten",
-            "`dynamic` ist verboten."),
-        new("AllowOutParameters", g => g.AllowOutParameters,
-            "aus — Verwendung von `out` Parametern ist verboten",
-            "`out` Parameter verboten; Ausnahme: `Try*`-Methoden."),
-        new("AllowTryPatternOutParameters", g => g.AllowTryPatternOutParameters,
-            "aus — `out` Parameter in `Try*` Methoden sind verboten",
-            "`out` in `Try*`-Methoden erlaubt."),
-        new("EnforceValueObjectContracts", g => g.EnforceValueObjectContracts,
-            "aus — keine Prüfung für ValueObjects",
-            "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`."),
-        new("EnableTestSentinel", g => g.EnableTestSentinel,
-            "aus — keine Test-Sentinel-Prüfung",
-            "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`."),
-        new("EnforcePascalCase", g => g.EnforcePascalCase,
-            "aus — keine Namenskonventionsprüfung",
-            "Öffentliche Typen/Methoden/Properties: PascalCase."),
-        new("EnforceXmlDocumentation", g => g.EnforceXmlDocumentation,
-            "aus — keine XML-Dokumentationsprüfung",
-            "XML-Dokumentation für öffentliche APIs."),
-        new("EnforceSemanticNaming", g => g.EnforceSemanticNaming,
-            "aus — keine semantische Namensprüfung",
-            "Keine `data`/`temp`/`obj` in öffentlichen Signaturen."),
-        new("EnforceNullableEnable", g => g.EnforceNullableEnable,
-            "aus — keine Nullable-Prüfung",
-            "`#nullable enable` am Dateianfang jeder `.cs`-Datei."),
-        new("EnforceNoSilentCatch", g => g.EnforceNoSilentCatch,
-            "aus — leere catch-Blöcke sind erlaubt",
-            "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer."),
-        new("AllowCancellationShutdownCatch", g => g.AllowCancellationShutdownCatch,
-            "aus — kein stummes Abfangen von OperationCanceledException",
-            "`OperationCanceledException` beim Shutdown abfangen erlaubt."),
-        new("EnforceMinimalApiAsParameters", g => g.EnforceMinimalApiAsParameters,
-            "aus — keine AsParameters-Pflicht",
-            "Minimal-API: >4 Parameter → `[AsParameters]` + `record`."),
-        new("EnforceResultPatternOverExceptions", g => g.EnforceResultPatternOverExceptions,
-            "aus — 170 `throw` im Repo; Ziel: Result für Domänenfehler",
-            "`Result<T>` für Domänenfehler; `throw` nur für Infrastruktur-Fehler."),
-        new("EnforceExplicitStateImmutability", g => g.EnforceExplicitStateImmutability,
-            "aus — Blazor/Handler-State; Zielbild: `platform-ai-strict`",
-            "Felder und Properties `readonly`/`init`-only."),
-        new("PreventContextDependentOverloads", g => g.PreventContextDependentOverloads,
-            "aus — Überladungen erlaubt",
-            "Keine Überladungen mit identischer Parameteranzahl für primitive Typen."),
-        new("EnforceNamespaceDirectoryMapping", g => g.EnforceNamespaceDirectoryMapping,
-            "aus — Namespaces können frei gewählt werden",
-            "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`)."),
-        new("DetectAndBanPhantomDependencies", g => g.DetectAndBanPhantomDependencies,
-            "aus — Phantom-Abhängigkeiten erlaubt",
-            "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen."),
-        new("AllowedEmptyReads", g => g.AllowedEmptyReads,
-            "aus — leere Leseoperationen verboten",
-            "Leseoperationen immer mit unmittelbarem Guard versehen."),
-    ];
-
-    private static readonly MetricDescriptor[] MetricsList =
-    [
-        new(m => m.MaxLineCount, "MaxLineCount", "Datei splitten wenn sie wächst."),
-        new(m => m.MaxMethodLineCount, "MaxMethodLineCount", "Eine Aufgabe pro Methode; Rest extrahieren."),
-        new(m => m.MaxMethodParameterCount, "MaxMethodParameterCount", "Ab Überschreitung: `record` als Parameter-Object."),
-        new(m => m.MaxCyclomaticComplexity, "MaxCyclomaticComplexity", "Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe)."),
-        new(m => m.MaxCognitiveComplexity, "MaxCognitiveComplexity", "Weniger Verschachtelung; Early Return bevorzugen (kognitiv)."),
-        new(m => m.MaxInheritanceDepth, "MaxInheritanceDepth", "Komposition vor Vererbung."),
-        new(m => m.MaxMethodOverloads, "MaxMethodOverloads", "Methoden mit eindeutigen Namen bevorzugen."),
-        new(m => m.MaxConstructorDependencies, "MaxConstructorDependencies", "Verantwortlichkeit aufteilen bei Überschreitung."),
-        new(m => m.MaxDirectoryDepth, "MaxDirectoryDepth", "Ordner nicht unnötig tief schachteln."),
-        new(m => m.MaxDirectoryChildren, "MaxDirectoryChildren", "0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen."),
-        new(m => m.MaxBoolParameterCount, "MaxBoolParameterCount", "0 = deaktiviert; bool-Parameter in Parameter-Object bündeln."),
-        new(m => m.MaxPartialClassFiles, "MaxPartialClassFiles", "0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker)."),
-        new(m => m.MaxPublicMembersPerType, "MaxPublicMembersPerType", "0 = deaktiviert; Typ aufteilen oder Member kapseln."),
-        new(m => m.MaxAIContextFootprint, "MaxAIContextFootprint", "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren."),
-    ];
 
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach .cursor/rules/AiNetLinter.mdc relativ zum angegebenen Pfad.
@@ -221,25 +129,27 @@ public static class CursorRulesGenerator
         sb.AppendLine($"- {bullet}.");
     }
 
+    private static readonly string[] IntentOrder =
+        ["agent-resilience", "agent-context", "architecture", "aspnet-binding", "test-coverage", "control-flow", "csharp-idiom", "general"];
+
     private static void AppendMetricsTable(StringBuilder sb, LinterConfig config)
     {
         sb.AppendLine("## Grenzwerte (Produktion)");
         sb.AppendLine("| Regel | Limit | Praxis |");
         sb.AppendLine("| :--- | :---: | :--- |");
-        foreach (var metric in MetricsList)
+        foreach (var metric in RuleRegistry.All.Where(r => r.IsMetric))
         {
-            var val = metric.GetVal(config.Metrics);
-            sb.AppendLine($"| `{metric.Name}` | **{val}** | {metric.Praxis} |");
+            var val = metric.GetMetricLimit != null ? metric.GetMetricLimit(config) : 0;
+            sb.AppendLine($"| `{metric.RuleId}` | **{val}** | {metric.CursorHint} |");
         }
         sb.AppendLine();
     }
 
     private static void AppendActiveRulesByIntent(StringBuilder sb, LinterConfig config)
     {
-        var g = config.Global;
-        var activeRules = GlobalRules
-            .Where(r => r.IsEnabled(g))
-            .Select(r => (Rule: r, Intent: RuleMetadataRegistry.Resolve(r.Name, config).Intent))
+        var activeRules = RuleRegistry.All
+            .Where(r => r.IncludeInCursorRules && !r.IsMetric && r.IsEnabled(config))
+            .Select(r => (Rule: r, Intent: RuleMetadataRegistry.Resolve(r.RuleId, config).Intent))
             .ToList();
 
         var groups = activeRules
@@ -255,7 +165,10 @@ public static class CursorRulesGenerator
             if (group.Key == "agent-context") continue;
             sb.AppendLine($"## {group.Key}");
             foreach (var (rule, _) in group)
-                sb.AppendLine($"- **{rule.Name}** — {rule.CursorHint}");
+            {
+                var displayName = rule.RuleId == "StaticTestSentinel" ? "EnableTestSentinel" : rule.RuleId;
+                sb.AppendLine($"- **{displayName}** — {rule.CursorHint}");
+            }
             sb.AppendLine();
         }
 
@@ -266,9 +179,9 @@ public static class CursorRulesGenerator
     private static void AppendDisabledCompact(StringBuilder sb, LinterConfig config)
     {
         var g = config.Global;
-        var disabledNames = GlobalRules
-            .Where(r => !r.IsEnabled(g) && !r.Name.StartsWith("Allow", StringComparison.Ordinal))
-            .Select(r => $"`{r.Name}`")
+        var disabledNames = RuleRegistry.All
+            .Where(r => r.IncludeInCursorRules && !r.IsMetric && !r.IsEnabled(config) && !r.RuleId.StartsWith("Allow", StringComparison.Ordinal))
+            .Select(r => r.RuleId == "StaticTestSentinel" ? "`EnableTestSentinel`" : $"`{r.RuleId}`")
             .ToList();
 
         sb.AppendLine("## Deaktiviert");
@@ -314,22 +227,23 @@ public static class CursorRulesGenerator
     private static void CollectMetricOverrideParts(ProjectOverrideEntry overrides, List<string> parts)
     {
         if (overrides.Metrics == null) return;
-        foreach (var metric in MetricsList)
+        foreach (var metric in RuleRegistry.All.Where(r => r.IsMetric))
         {
-            var prop = typeof(MetricsConfigOverride).GetProperty(metric.Name);
+            var prop = typeof(MetricsConfigOverride).GetProperty(metric.RuleId);
             if (prop?.GetValue(overrides.Metrics) is int val)
-                parts.Add($"`{metric.Name}` **{val}**");
+                parts.Add($"`{metric.RuleId}` **{val}**");
         }
     }
 
     private static void CollectGlobalOverrideParts(ProjectOverrideEntry overrides, List<string> parts)
     {
         if (overrides.Global == null) return;
-        foreach (var rule in GlobalRules)
+        foreach (var rule in RuleRegistry.All.Where(r => r.IncludeInCursorRules && !r.IsMetric))
         {
-            var prop = typeof(GlobalConfigOverride).GetProperty(rule.Name);
+            var propName = rule.RuleId == "StaticTestSentinel" ? "EnableTestSentinel" : rule.RuleId;
+            var prop = typeof(GlobalConfigOverride).GetProperty(propName);
             if (prop?.GetValue(overrides.Global) is bool val)
-                parts.Add($"`{rule.Name}` {(val ? "ein" : "aus")}");
+                parts.Add($"`{rule.RuleId}` {(val ? "ein" : "aus")}");
         }
     }
 }
