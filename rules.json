@@ -147,6 +147,23 @@
       "Config",
       "ConfigOverride",
       "Args"
+    ],
+    "CompoundSuppressions": [
+      {
+        "TargetRule": "MaxMethodLineCount",
+        "WhenAllOf": [
+          {
+            "Metric": "CyclomaticComplexity",
+            "AtMost": 3
+          },
+          {
+            "Metric": "CognitiveComplexity",
+            "AtMost": 5
+          }
+        ],
+        "RelaxedLimit": 150,
+        "Reason": "Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC\u22643 ist nicht mit Fehleranf\u00E4lligkeit korreliert (Palomba et al., 2018)."
+      }
     ]
   },
   "TestSentinel": {

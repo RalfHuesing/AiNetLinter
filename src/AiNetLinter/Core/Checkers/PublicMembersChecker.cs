@@ -22,16 +22,58 @@ internal static class PublicMembersChecker
         }
 
         var count = CountPublicMembers(node);
-        if (count > limit)
+        var constructorDeps = StateChecker.GetConstructorDependencies(node, ctx);
+
+        var metrics = new Dictionary<string, int>
         {
+            [MetricNames.PublicMemberCount]       = count,
+            [MetricNames.ConstructorDependencies] = constructorDeps,
+        };
+
+        var suppressions = ctx.Config.Metrics.CompoundSuppressions;
+        var effectiveLimit = CompoundSuppressionEvaluator.Evaluate(
+            LinterRuleIds.MaxPublicMembersPerType, suppressions, metrics);
+
+        if (effectiveLimit == 0) return; // vollständig supprimiert
+
+        var configured = CompoundSuppressionEvaluator.FindConfigured(
+            LinterRuleIds.MaxPublicMembersPerType, suppressions);
+
+        var activeLimit = effectiveLimit > 0 ? effectiveLimit : limit;
+
+        if (count <= activeLimit) return;
+
+        if (effectiveLimit > 0)
+        {
+            // Scenario A: Suppression active, but RelaxedLimit exceeded
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
             ctx.ReportViolation(node,
-                nameof(ctx.Config.Metrics.MaxPublicMembersPerType),
-                $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
-                "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können.");
+                LinterRuleIds.MaxPublicMembersPerType,
+                $"'{typeName}' hat {count} öffentliche Member (Compound-Limit: {effectiveLimit}; Standard: {limit} · {condSummary}).",
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {effectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+            return;
         }
+
+        if (configured != null)
+        {
+            // Scenario B: Suppression configured, but not active
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
+            var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
+            ctx.ReportViolation(node,
+                LinterRuleIds.MaxPublicMembersPerType,
+                $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit} · Compound-Suppression inaktiv: {condSummary}).",
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Teile den Typ nach Single-Responsibility auf.");
+            return;
+        }
+
+        // Scenario C: Classic
+        ctx.ReportViolation(node,
+            LinterRuleIds.MaxPublicMembersPerType,
+            $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
+            "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können.");
     }
 
-    private static int CountPublicMembers(TypeDeclarationSyntax node)
+    internal static int CountPublicMembers(TypeDeclarationSyntax node)
     {
         var count = 0;
         foreach (var member in node.Members)

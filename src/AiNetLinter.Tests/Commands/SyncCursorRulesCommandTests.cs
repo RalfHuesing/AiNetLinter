@@ -13,6 +13,7 @@ namespace AiNetLinter.Tests.Commands;
 /// <summary>
 /// Tests für <see cref="SyncCursorRulesCommand"/>.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 public sealed class SyncCursorRulesCommandTests
 {
     [Fact]

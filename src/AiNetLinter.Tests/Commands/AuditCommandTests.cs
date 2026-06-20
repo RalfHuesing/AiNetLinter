@@ -13,6 +13,7 @@ namespace AiNetLinter.Tests.Commands;
 /// <summary>
 /// Tests für <see cref="AuditCommand"/>.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 public sealed class AuditCommandTests
 {
     [Fact]

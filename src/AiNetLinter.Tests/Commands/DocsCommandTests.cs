@@ -11,6 +11,7 @@ namespace AiNetLinter.Tests.Commands;
 /// <summary>
 /// Tests für <see cref="DocsCommand"/>.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 public sealed class DocsCommandTests
 {
     [Theory]

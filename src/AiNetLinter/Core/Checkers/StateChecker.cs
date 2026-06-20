@@ -13,17 +13,61 @@ internal static class StateChecker
 {
     internal static void CheckConstructorDependencies(ConstructorDeclarationSyntax node, CheckerContext ctx)
     {
-        if (node.Parent is TypeDeclarationSyntax parentType && IsExemptByClassSuffix(parentType.Identifier.Text, ctx))
+        if (node.Parent is not TypeDeclarationSyntax parentType || IsExemptByClassSuffix(parentType.Identifier.Text, ctx))
             return;
 
         var count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ctx);
-        if (count > ctx.Config.Metrics.MaxConstructorDependencies)
+        var publicMemberCount = PublicMembersChecker.CountPublicMembers(parentType);
+
+        var metrics = new Dictionary<string, int>
         {
+            [MetricNames.ConstructorDependencies] = count,
+            [MetricNames.PublicMemberCount]       = publicMemberCount,
+        };
+
+        var baseLimit = ctx.Config.Metrics.MaxConstructorDependencies;
+        var suppressions = ctx.Config.Metrics.CompoundSuppressions;
+
+        var effectiveLimit = CompoundSuppressionEvaluator.Evaluate(
+            LinterRuleIds.MaxConstructorDependencies, suppressions, metrics);
+
+        if (effectiveLimit == 0) return; // vollständig supprimiert
+
+        var configured = CompoundSuppressionEvaluator.FindConfigured(
+            LinterRuleIds.MaxConstructorDependencies, suppressions);
+
+        var activeLimit = effectiveLimit > 0 ? effectiveLimit : baseLimit;
+
+        if (count <= activeLimit) return;
+
+        if (effectiveLimit > 0)
+        {
+            // Scenario A: Suppression active, but RelaxedLimit exceeded
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
             ctx.ReportViolation(node,
-                nameof(ctx.Config.Metrics.MaxConstructorDependencies),
-                $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility.");
+                LinterRuleIds.MaxConstructorDependencies,
+                $"Der Konstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+            return;
         }
+
+        if (configured != null)
+        {
+            // Scenario B: Suppression configured, but not active
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
+            var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
+            ctx.ReportViolation(node,
+                LinterRuleIds.MaxConstructorDependencies,
+                $"Der Konstruktor hat {count} Parameter (erlaubt: {baseLimit} · Compound-Suppression inaktiv: {condSummary}).",
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus.");
+            return;
+        }
+
+        // Scenario C: Classic
+        ctx.ReportViolation(node,
+            LinterRuleIds.MaxConstructorDependencies,
+            $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",
+            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility.");
     }
 
     internal static void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node, CheckerContext ctx)
@@ -33,13 +77,57 @@ internal static class StateChecker
         if (IsExemptByClassSuffix(node.Identifier.Text, ctx)) return;
 
         var count = CountNonFrameworkDependencies(node.ParameterList.Parameters, ctx);
-        if (count > ctx.Config.Metrics.MaxConstructorDependencies)
+        var publicMemberCount = PublicMembersChecker.CountPublicMembers(node);
+
+        var metrics = new Dictionary<string, int>
         {
+            [MetricNames.ConstructorDependencies] = count,
+            [MetricNames.PublicMemberCount]       = publicMemberCount,
+        };
+
+        var baseLimit = ctx.Config.Metrics.MaxConstructorDependencies;
+        var suppressions = ctx.Config.Metrics.CompoundSuppressions;
+
+        var effectiveLimit = CompoundSuppressionEvaluator.Evaluate(
+            LinterRuleIds.MaxConstructorDependencies, suppressions, metrics);
+
+        if (effectiveLimit == 0) return; // vollständig supprimiert
+
+        var configured = CompoundSuppressionEvaluator.FindConfigured(
+            LinterRuleIds.MaxConstructorDependencies, suppressions);
+
+        var activeLimit = effectiveLimit > 0 ? effectiveLimit : baseLimit;
+
+        if (count <= activeLimit) return;
+
+        if (effectiveLimit > 0)
+        {
+            // Scenario A: Suppression active, but RelaxedLimit exceeded
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
             ctx.ReportViolation(node,
-                nameof(ctx.Config.Metrics.MaxConstructorDependencies),
-                $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {ctx.Config.Metrics.MaxConstructorDependencies}, Framework-Typen nicht gezaehlt).",
-                $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen.");
+                LinterRuleIds.MaxConstructorDependencies,
+                $"Der Primaerkonstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+            return;
         }
+
+        if (configured != null)
+        {
+            // Scenario B: Suppression configured, but not active
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
+            var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
+            ctx.ReportViolation(node,
+                LinterRuleIds.MaxConstructorDependencies,
+                $"Der Primaerkonstruktor hat {count} Parameter (erlaubt: {baseLimit} · Compound-Suppression inaktiv: {condSummary}).",
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus.");
+            return;
+        }
+
+        // Scenario C: Classic
+        ctx.ReportViolation(node,
+            LinterRuleIds.MaxConstructorDependencies,
+            $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",
+            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen.");
     }
 
     internal static void CheckOutParameter(ParameterSyntax node, CheckerContext ctx)
@@ -116,7 +204,7 @@ internal static class StateChecker
         return ComplexityChecker.IsOverrideOrInterfaceImplementation(method, ctx);
     }
 
-    private static int CountNonFrameworkDependencies(SeparatedSyntaxList<ParameterSyntax> parameters, CheckerContext ctx)
+    internal static int CountNonFrameworkDependencies(SeparatedSyntaxList<ParameterSyntax> parameters, CheckerContext ctx)
     {
         var ignorePrefixes = ctx.Config.Metrics.ConstructorDependencyIgnoreTypePrefixes;
         if (ignorePrefixes == null || ignorePrefixes.Count == 0) return parameters.Count;
@@ -139,6 +227,25 @@ internal static class StateChecker
         foreach (var suffix in exemptSuffixes)
             if (className.EndsWith(suffix, StringComparison.Ordinal)) return true;
         return false;
+    }
+
+    internal static int GetConstructorDependencies(TypeDeclarationSyntax node, CheckerContext ctx)
+    {
+        if (IsExemptByClassSuffix(node.Identifier.Text, ctx)) return 0;
+
+        if (node.ParameterList != null)
+        {
+            if (node is RecordDeclarationSyntax or StructDeclarationSyntax) return 0;
+            return CountNonFrameworkDependencies(node.ParameterList.Parameters, ctx);
+        }
+
+        var max = 0;
+        foreach (var ctor in node.Members.OfType<ConstructorDeclarationSyntax>())
+        {
+            var count = CountNonFrameworkDependencies(ctor.ParameterList.Parameters, ctx);
+            max = Math.Max(max, count);
+        }
+        return max;
     }
 
 }
