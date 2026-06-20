@@ -38,6 +38,7 @@ public static class ViolationMarkdownFormatter
         var output = new StringBuilder();
 
         output.Append($"# AiNetLinter - {violations.Count} violations\n");
+        output.Append(BuildSummaryTable(violations, byRule, outputRoot));
         output.Append(BuildInstructionBlock(outputRoot, hasAutoFix));
         output.Append(BuildRegellegende(byRule));
 
@@ -49,6 +50,61 @@ public static class ViolationMarkdownFormatter
 
         output.Append(BuildViolationsByFile(violations, outputRoot));
         return output.ToString();
+    }
+
+    private static string BuildSummaryTable(
+        IReadOnlyCollection<RuleViolation> violations,
+        IReadOnlyList<RuleViolationCount> byRule,
+        string outputRoot)
+    {
+        var hasStructural = byRule.Any(r => StructuralRules.Contains(r.RuleName));
+        var sb = new StringBuilder();
+        sb.Append('\n');
+        if (hasStructural)
+        {
+            sb.Append("| Regel | Gesamt | Prod | Tests | Struktur |\n");
+            sb.Append("|---|---:|---:|---:|:---:|\n");
+        }
+        else
+        {
+            sb.Append("| Regel | Gesamt | Prod | Tests |\n");
+            sb.Append("|---|---:|---:|---:|\n");
+        }
+
+        foreach (var r in byRule)
+        {
+            var ruleViolations = violations
+                .Where(v => string.Equals(v.RuleName, r.RuleName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var prodCount = 0;
+            var testCount = 0;
+            foreach (var v in ruleViolations)
+            {
+                var relPath = PathNormalizer.ToRelative(outputRoot, v.FilePath ?? string.Empty);
+                if (PathNormalizer.IsTestFile(relPath))
+                {
+                    testCount++;
+                }
+                else
+                {
+                    prodCount++;
+                }
+            }
+
+            var structMarker = StructuralRules.Contains(r.RuleName) ? "⚠" : string.Empty;
+
+            if (hasStructural)
+            {
+                sb.Append($"| {r.RuleName} | {r.Count} | {prodCount} | {testCount} | {structMarker} |\n");
+            }
+            else
+            {
+                sb.Append($"| {r.RuleName} | {r.Count} | {prodCount} | {testCount} |\n");
+            }
+        }
+
+        return sb.ToString();
     }
 
     private static string BuildInstructionBlock(string projectRoot, bool hasAutoFix)
@@ -68,8 +124,8 @@ public static class ViolationMarkdownFormatter
         sb.Append("\n**Schritt 1 — False-Positive-Prüfung (PFLICHT vor jeder Änderung)**\n");
         sb.Append("Prüfe für jede Violation: Ist das ein echter Verstoß oder ein False-Positive, der durch die Architektur des Projekts gerechtfertigt ist?\n");
         sb.Append("Konfigurationsoptionen erkunden:\n");
-        var exePath = Environment.ProcessPath ?? "ainetlinter";
-        sb.Append($"  `{exePath} --docs configuration`\n");
+        var exeName = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "ainetlinter";
+        sb.Append($"  `{exeName} --docs configuration`\n");
         sb.Append("Bei vermutetem False-Positive: Nutzer explizit informieren, Optionen mit Empfehlung nennen, Einverständnis einholen — BEVOR du etwas änderst.\n");
 
         sb.Append("\n**Schritt 2 — Behebung echter Violations**\n");
@@ -78,7 +134,7 @@ public static class ViolationMarkdownFormatter
         if (hasAutoFix)
         {
             sb.Append("\n**Auto-Fix verfuegbar** fuer markierte Violations [auto-fix]:\n");
-            sb.Append($"  `{exePath} --path <pfad> --fix`\n");
+            sb.Append($"  `{exeName} --path <pfad> --fix`\n");
             sb.Append("Pruefe den Fix im Dry-Run zuerst: `--fix --dry-run`\n");
         }
 
@@ -146,18 +202,47 @@ public static class ViolationMarkdownFormatter
 
         var byFile = violations
             .GroupBy(v => PathNormalizer.ToRelative(outputRoot, v.FilePath), StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        foreach (var fileGroup in byFile)
+        var prodGroups = byFile.Where(g => !PathNormalizer.IsTestFile(g.Key)).ToList();
+        var testGroups = byFile.Where(g => PathNormalizer.IsTestFile(g.Key)).ToList();
+
+        if (prodGroups.Count > 0)
         {
-            sb.Append($"\n### {fileGroup.Key}\n");
-            foreach (var v in fileGroup.OrderBy(x => x.LineNumber))
+            var countWord = prodGroups.Count == 1 ? "Datei" : "Dateien";
+            sb.Append($"\n### Produktion ({prodGroups.Count} {countWord})\n");
+            foreach (var fileGroup in prodGroups)
             {
-                var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
-                sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag} — {v.Details}\n");
+                AppendFileGroup(sb, fileGroup, outputRoot);
+            }
+        }
+
+        if (testGroups.Count > 0)
+        {
+            var countWord = testGroups.Count == 1 ? "Datei" : "Dateien";
+            sb.Append($"\n### Tests ({testGroups.Count} {countWord})\n");
+            foreach (var fileGroup in testGroups)
+            {
+                AppendFileGroup(sb, fileGroup, outputRoot);
             }
         }
 
         return sb.ToString();
+    }
+
+    private static void AppendFileGroup(
+        StringBuilder sb,
+        IGrouping<string, RuleViolation> fileGroup,
+        string outputRoot)
+    {
+        sb.Append($"\n#### {fileGroup.Key}\n");
+        foreach (var v in fileGroup.OrderBy(x => x.LineNumber))
+        {
+            var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
+            var structTag = StructuralRules.Contains(v.RuleName ?? string.Empty) ? " [→ strukturell]" : string.Empty;
+            var detail = (v.Details ?? string.Empty).Split('\n')[0].TrimEnd();
+            sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag} — {detail}\n");
+        }
     }
 }

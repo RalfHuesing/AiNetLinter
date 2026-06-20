@@ -45,6 +45,9 @@ public static class RuleLegendRegistry
         foreach (var alt in entry.Alternativen)
             sb.Append($"- {alt}\n");
 
+        if (entry.ConfigKeyHint != null)
+            sb.Append($"\n**Konfiguration:** `{entry.ConfigKeyHint}`\n");
+
         if (entry.SicherheitsHinweis != null)
             sb.Append($"\n> ⚠ {entry.SicherheitsHinweis}\n");
 

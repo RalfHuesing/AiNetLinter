@@ -49,4 +49,18 @@ public sealed class RuleLegendRegistryTests
         Assert.Contains("**Warum:**", rendered, StringComparison.Ordinal);
         Assert.Contains("**Fix-Alternativen:**", rendered, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Render_IncludesConfigKeyHintWhenPresent()
+    {
+        var rendered = RuleLegendRegistry.Render("MaxPartialClassFiles", 1, "agent-context");
+        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxPartialClassFiles", rendered);
+    }
+
+    [Fact]
+    public void Render_OmitsConfigKeyHintWhenAbsent()
+    {
+        var rendered = RuleLegendRegistry.Render("MaxLineCount", 1, "agent-context");
+        Assert.DoesNotContain("**Konfiguration:**", rendered);
+    }
 }

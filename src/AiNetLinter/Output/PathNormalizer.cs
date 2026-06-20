@@ -27,4 +27,11 @@ public static class PathNormalizer
         var relative = Path.GetRelativePath(normalizedRoot, normalizedFile);
         return relative.Replace('\\', '/');
     }
+
+    /// <summary>
+    /// Prüft, ob ein relativer Dateipfad eine Testdatei darstellt.
+    /// </summary>
+    public static bool IsTestFile(string relativePath) =>
+        relativePath.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) ||
+        relativePath.Contains(".Tests\\", StringComparison.OrdinalIgnoreCase);
 }

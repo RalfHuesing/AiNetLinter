@@ -23,7 +23,8 @@ public sealed record RuleMetadata(
     Func<LinterConfig, bool> IsEnabled,
     bool IsMetric,
     bool IncludeInCursorRules,
-    Func<LinterConfig, int>? GetMetricLimit = null
+    Func<LinterConfig, int>? GetMetricLimit = null,
+    string? ConfigKeyHint = null
 );
 
 internal static class RuleRegistry
@@ -288,7 +289,8 @@ internal static class RuleRegistry
             IsEnabled: c => c.Metrics.MaxPartialClassFiles > 0,
             IsMetric: true,
             IncludeInCursorRules: true,
-            GetMetricLimit: c => c.Metrics.MaxPartialClassFiles
+            GetMetricLimit: c => c.Metrics.MaxPartialClassFiles,
+            ConfigKeyHint: "rules.json → Metrics.MaxPartialClassFiles | Ausnahmen via PathOverrides"
         ),
         new(
             RuleId: "MaxPublicMembersPerType",
@@ -310,7 +312,8 @@ internal static class RuleRegistry
             IsEnabled: c => c.Metrics.MaxPublicMembersPerType > 0,
             IsMetric: true,
             IncludeInCursorRules: true,
-            GetMetricLimit: c => c.Metrics.MaxPublicMembersPerType
+            GetMetricLimit: c => c.Metrics.MaxPublicMembersPerType,
+            ConfigKeyHint: "rules.json → Metrics.MaxPublicMembersPerType | Ausnahmen via PathOverrides"
         ),
         new(
             RuleId: "AIContextFootprint",
@@ -331,7 +334,8 @@ internal static class RuleRegistry
             IsEnabled: c => c.Metrics.MaxAIContextFootprint > 0,
             IsMetric: true,
             IncludeInCursorRules: true,
-            GetMetricLimit: c => c.Metrics.MaxAIContextFootprint
+            GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
+            ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
         ),
 
         // --- Global Config Rules (Not Metrics) ---
@@ -373,7 +377,8 @@ internal static class RuleRegistry
             HasAutoFix: false,
             IsEnabled: c => c.Global.BanPublicNestedTypes,
             IsMetric: false,
-            IncludeInCursorRules: false
+            IncludeInCursorRules: false,
+            ConfigKeyHint: "rules.json → Global.NestedTypeExemptSuffixes"
         ),
         new(
             RuleId: "EnforceNoSilentCatch",

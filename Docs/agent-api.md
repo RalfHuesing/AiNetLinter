@@ -136,6 +136,11 @@ Fehlermeldungen sind maschinenlesbar:
 ```markdown
 # AiNetLinter - 3 violations
 
+| Regel | Gesamt | Prod | Tests | Struktur |
+|---|---:|---:|---:|:---:|
+| EnforceSealedClasses | 2 | 2 | 0 | |
+| MaxPartialClassFiles | 1 | 1 | 0 | ⚠ |
+
 ## Handlungsanweisung
 ...
 **Auto-Fix verfuegbar** fuer markierte Violations [auto-fix]:
@@ -148,14 +153,17 @@ Fehlermeldungen sind maschinenlesbar:
 
 ## Violations nach Datei
 
-### src/MyClass.cs
+### Produktion (1 Datei)
+
+#### src/MyClass.cs
 - Z.5 EnforceSealedClasses [auto-fix] — Klasse 'Foo' ist nicht sealed.
-- Z.10 MaxCyclomaticComplexity — Methode 'Bar' hat Komplexitaet 14 (> 12).
+- Z.10 MaxPartialClassFiles [→ strukturell] — Auf 5 Dateien verteilt.
 ```
 
 - `[auto-fix]` = automatisch mit `--fix` behebbar
-- Violations nach Datei sortiert (alphabetisch), innerhalb nach Zeilennummer
-- Strukturelle Violations (MaxPartialClassFiles, AIContextFootprint) erscheinen zusätzlich im Abschnitt "Strukturelle Verstösse"
+- `[→ strukturell]` = struktureller Verstoß, Details im Abschnitt "Strukturelle Verstöße" gekürzt
+- Violations nach Datei sortiert (alphabetisch), innerhalb nach Zeilennummer, aufgeteilt in Produktion und Tests
+- Strukturelle Violations (MaxPartialClassFiles, AIContextFootprint) erscheinen zusätzlich im Abschnitt "Strukturelle Verstösse" mit mehrzeiligen Details
 
 ---
 
