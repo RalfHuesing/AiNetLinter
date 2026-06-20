@@ -100,7 +100,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        Description = "Gibt eine integrierte Markdown-Dokumentationsdatei fuer KI-Agenten aus (Optionen: readme, agent-api, configuration, rationale, roadmap; case-insensitive).",
+        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive).",
     };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")
