@@ -1,8 +1,8 @@
 # AiNetLinter Feature Audit — Aufgaben-Checklist
 
 **Gestartet:** 2026-06-20  
-**Abgeschlossen:** —  
-**Offene Items:** 3
+**Abgeschlossen:** 2026-06-20  
+**Offene Items:** 0
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -87,7 +87,7 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 
 ## Phase 5 — Gesamtindex erstellen
 
-- [ ] `Result\index.md` — Zusammenfassungsmatrix aller 46 Bewertungen + Top-Empfehlungen
+- [x] `Result\index.md` — Zusammenfassungsmatrix aller 46 Bewertungen + Top-Empfehlungen
 
 ---
 
@@ -95,5 +95,5 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 
 Erst starten wenn Phase 5 abgeschlossen ist. Synthetisierende Recherche: Welche C#-Muster fehlen in AiNetLinter, sind aber empirisch belegt als Problem für LLM-Agenten?
 
-- [ ] N00 — Gesamtrecherche + Proposals-Übersicht → `Result\new-features\proposals.md`
-- [ ] Individuelle Vorschläge mit starker Evidenz (Agent entscheidet Anzahl, je Vorschlag eine Datei) → `Result\new-features\N[XX]-[Name].md`
+- [x] N00 — Gesamtrecherche + Proposals-Übersicht → `Result\new-features\proposals.md`
+- [x] Individuelle Vorschläge mit starker Evidenz (Agent entscheidet Anzahl, je Vorschlag eine Datei) → `Result\new-features\N[XX]-[Name].md`
