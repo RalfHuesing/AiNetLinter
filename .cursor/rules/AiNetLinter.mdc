@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.52 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.50 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -37,6 +37,7 @@ Auto-generiert durch AiNetLinter 1.0.52 aus `rules.json`. Neuen Produktionscode 
 
 ## architecture
 - **EnforceNamespaceDirectoryMapping** — Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).
+- **DetectAndBanPhantomDependencies** — Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.
 
 ## test-coverage
 - **EnableTestSentinel** — Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.
@@ -53,11 +54,11 @@ Auto-generiert durch AiNetLinter 1.0.52 aus `rules.json`. Neuen Produktionscode 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 
 ## Deaktiviert
-Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceExplicitStateImmutability`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `DetectAndBanPhantomDependencies`, `PreventContextDependentOverloads`.
+Linter erzwingt nicht (trotzdem anstreben): `EnforceXmlDocumentation`, `EnforceExplicitStateImmutability`, `EnforceMinimalApiAsParameters`, `EnforceResultPatternOverExceptions`, `PreventContextDependentOverloads`.
 Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)
 
 **`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
 
-Details: `rules.json`, `AiNetLinter.exe --docs <name>`.
+Details: `rules.json`, `AiNetLinter.exe --readme`.

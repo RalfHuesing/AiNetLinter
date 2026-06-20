@@ -55,7 +55,7 @@
       "Handlers"
     ],
     "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
-    "DetectAndBanPhantomDependencies": false,
+    "DetectAndBanPhantomDependencies": true,
     "BanPublicNestedTypes": true,
     "BanPublicNestedTypesAllowPrivate": true,
     "ImmutabilityExemptSuffixes": [
