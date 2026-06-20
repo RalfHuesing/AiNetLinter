@@ -298,6 +298,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Regel: MaxDirectoryChildren** – Maximale Anzahl von Einträgen in einem Verzeichnis (Standard: 0 = deaktiviert). Verhindert Flat-Folder-Antipattern (zu viele Dateien auf einer Ebene); Empfehlung: 20–30 für Mittelklasse-Projekte. `MaxDirectoryChildrenExemptNames` für bekannte Ausnahmen wie `Migrations`, `Generated`.
 - [x] **Regel: MaxPartialClassFiles** – Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 2). Mehr als 2 `partial`-Dateien signalisieren eine zu breite Klasse; Guidance: Unter-Logik in eigenständige `XyzChecker`/`XyzValidator`-Klassen auslagern. `MaxPartialClassFilesExemptTypes` für unvermeidliche Ausnahmen.
 - [x] **Regel: MaxPublicMembersPerType** – Maximale Anzahl öffentlicher Member pro Typ (Standard: 15). Begrenzt die API-Surface und reduziert den KI-Kontextaufwand beim Verstehen eines Typs. `MaxPublicMembersPerTypeExemptSuffixes` für Typen mit strukturell großer API-Surface (z. B. `Extensions`, `Mapper`).
+- [x] **Regel: MaxSwitchArms** – Maximale Anzahl Arms in einem Switch-Expression bzw. Labels in einem Switch-Statement pro Methode (Standard: 10). Schützt Agenten vor überlangen Entscheidungsstrukturen.
 
 ---
 

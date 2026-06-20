@@ -106,7 +106,10 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxPartialClassFilesExemptTypes": [],
     "MaxPublicMembersPerType": 15,
     "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "Args"],
-    "MaxAIContextFootprint": 5000
+    "MaxAIContextFootprint": 5000,
+    "MaxSwitchArms": 10,
+    "MaxSwitchArmsExcludeDispatcher": true,
+    "MaxSwitchArmsExemptTypes": []
   },
   "TestSentinel": {
     "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
@@ -186,6 +189,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxPartialClassFiles` | Metrics | Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 0 = deaktiviert). Empfehlung: 2 — eine Deklarations- und eine Erweiterungsdatei. Guidance: Unter-Logik in eigenständige Klassen (z. B. `XyzChecker`) auslagern. `MaxPartialClassFilesExemptTypes`: vollqualifizierte oder einfache Typnamen, die ausgenommen werden (Standard: `[]`). |
 | `MaxPublicMembersPerType` | Metrics | Maximale Anzahl öffentlicher Member (Methoden, Properties, Felder, Events) pro Typ (Standard: 0 = deaktiviert). `MaxPublicMembersPerTypeExemptSuffixes`: Klassenname-Suffixe, für die die Prüfung übersprungen wird (Standard: `["Extensions", "Mapper", "Constants", "Config", "Args"]`). |
 | `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. Bei Blazor-Komponenten aus mehreren `partial`-Dateien (`.razor.cs` + weitere partials) werden alle Teile als eine logische Einheit behandelt. |
+| `MaxSwitchArms` | Metrics | Maximale Anzahl Arms in einem Switch-Expression bzw. Labels in einem Switch-Statement pro Methode. `0` = deaktiviert. Empfehlung: `10`. Dispatcher-Methoden (reine Routing-Tabellen) können per `MaxSwitchArmsExcludeDispatcher` ausgenommen werden. |
+| `MaxSwitchArmsExcludeDispatcher` | Metrics | Wenn `true` (Standard): Methoden die als Switch-Dispatcher klassifiziert werden (alle Cases sind triviale Einzeiler-Aufrufe), werden von `MaxSwitchArms` ausgenommen. Deckt den Hauptanwendungsfall "Routing-Tabelle mit 15+ Arms" ab. |
+| `MaxSwitchArmsExemptTypes` | Metrics | Einfache Typnamen (kein Namespace), deren Methoden von `MaxSwitchArms` komplett ausgenommen werden. Nützlich für State-Machine-Klassen mit vielen legitimen Zuständen (z. B. `["OrderStateMachine"]`). Standard: `[]`. |
 | `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
 | `FootprintIgnoreTypeNames` | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`. |
 | `ComplexityNearMissTolerance` | Metrics | Toleranzbereich über dem Komplexitätslimit. Verstöße im Bereich `(Limit, Limit + Toleranz]` werden mit dem Hinweis `[near-miss: knapp über Limit]` markiert, zählen aber weiterhin als Verstöße und beeinflussen den Exit-Code. Standard: `0` (deaktiviert). |

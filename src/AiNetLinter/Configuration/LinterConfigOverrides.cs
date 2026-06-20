@@ -215,6 +215,21 @@ public sealed record MetricsConfigOverride
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
 
     /// <summary>
+    /// Maximale Anzahl Arms/Labels pro Switch. 0 = deaktiviert. Override für MaxSwitchArms.
+    /// </summary>
+    public int? MaxSwitchArms { get; init; }
+
+    /// <summary>
+    /// Override für MaxSwitchArmsExcludeDispatcher.
+    /// </summary>
+    public bool? MaxSwitchArmsExcludeDispatcher { get; init; }
+
+    /// <summary>
+    /// Override für MaxSwitchArmsExemptTypes (Typnamen, deren Methoden ausgenommen werden).
+    /// </summary>
+    public IReadOnlyCollection<string>? MaxSwitchArmsExemptTypes { get; init; }
+
+    /// <summary>
     /// Namespace-Präfixe von Typen, die beim Footprint-Check ignoriert werden.
     /// </summary>
     public IReadOnlyCollection<string>? FootprintIgnoreNamespacePrefixes { get; init; }

@@ -32,6 +32,7 @@ internal static class ComplexityChecker
         CheckParamCount(node, ctx, cc, cogC);
         CheckMethodComplexities(node, ctx, cc, cogC);
         CheckMethodLineCount(node, ctx, cc, cogC);
+        CheckSwitchArms(node, ctx);
     }
 
     private static (int cc, int cogC) ComputeComplexities(MethodDeclarationSyntax node, CheckerContext ctx)
@@ -305,5 +306,48 @@ internal static class ComplexityChecker
             }
         }
         return false;
+    }
+
+    private static void CheckSwitchArms(MethodDeclarationSyntax node, CheckerContext ctx)
+    {
+        var limit = ctx.Config.Metrics.MaxSwitchArms;
+        if (limit <= 0) return;
+
+        // Dispatcher-Exemption: gesamte Methode ausschließen wenn sie als Dispatcher gilt
+        if (ctx.Config.Metrics.MaxSwitchArmsExcludeDispatcher
+            && SwitchDispatcherDetector.IsDispatcher(node, ctx.Config.Metrics.SwitchDispatcherMaxCaseBodyLines))
+            return;
+
+        // Typ-Exemption: Methoden in bestimmten Klassen/Records ausschließen
+        var exemptTypes = ctx.Config.Metrics.MaxSwitchArmsExemptTypes;
+        if (exemptTypes != null && exemptTypes.Count > 0)
+        {
+            var typeName = node.Ancestors()
+                .OfType<TypeDeclarationSyntax>()
+                .Select(t => t.Identifier.Text)
+                .FirstOrDefault() ?? string.Empty;
+
+            if (exemptTypes.Contains(typeName, StringComparer.Ordinal)) return;
+        }
+
+        // Switch-Expressions: Arms.Count direkt
+        foreach (var switchExpr in node.DescendantNodes().OfType<SwitchExpressionSyntax>())
+        {
+            var count = switchExpr.Arms.Count;
+            if (count > limit)
+                ctx.ReportViolation(switchExpr, LinterRuleIds.MaxSwitchArms,
+                    $"Switch-Expression hat {count} Arms (erlaubt: {limit}).",
+                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen.");
+        }
+
+        // Switch-Statements: Labels zaehlen (nicht Sections — eine Section kann mehrere Labels haben)
+        foreach (var switchStmt in node.DescendantNodes().OfType<SwitchStatementSyntax>())
+        {
+            var count = switchStmt.Sections.SelectMany(s => s.Labels).Count();
+            if (count > limit)
+                ctx.ReportViolation(switchStmt, LinterRuleIds.MaxSwitchArms,
+                    $"Switch-Statement hat {count} Labels (erlaubt: {limit}).",
+                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen.");
+        }
     }
 }

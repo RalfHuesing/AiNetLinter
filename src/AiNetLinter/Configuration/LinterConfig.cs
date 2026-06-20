@@ -353,6 +353,28 @@ public sealed record MetricsConfig
     public int SwitchDispatcherMaxCaseBodyLines { get; init; } = 3;
 
     /// <summary>
+    /// Maximale Anzahl Arms in einem Switch-Expression oder Labels in einem Switch-Statement.
+    /// 0 = deaktiviert. Empfehlung: 10.
+    /// Dispatcher-Methoden können mit <see cref="MaxSwitchArmsExcludeDispatcher"/> ausgenommen werden.
+    /// </summary>
+    public int MaxSwitchArms { get; init; } = 10;
+
+    /// <summary>
+    /// Wenn true: Methoden, die als Switch-Dispatcher klassifiziert werden
+    /// (<see cref="SwitchDispatcherMaxCaseBodyLines"/>), werden von MaxSwitchArms ausgenommen.
+    /// Standard: true.
+    /// </summary>
+    public bool MaxSwitchArmsExcludeDispatcher { get; init; } = true;
+
+    /// <summary>
+    /// Einfache Typnamen (kein Namespace), deren Methoden von MaxSwitchArms ausgenommen werden.
+    /// Nützlich für State-Machine-Klassen mit vielen legitimen States.
+    /// Standard: [] (keine Ausnahmen).
+    /// </summary>
+    public IReadOnlyCollection<string> MaxSwitchArmsExemptTypes { get; init; }
+        = Array.Empty<string>();
+
+    /// <summary>
     /// Maximale Anzahl bool-Parameter in einer öffentlichen Methode/Konstruktor.
     /// 0 = deaktiviert. Private Methoden werden mit <see cref="MaxBoolParameterCountAllowPrivate"/> gesteuert.
     /// </summary>
@@ -461,6 +483,9 @@ public sealed record MetricsConfig
         ComplexityNearMissTolerance = o.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
         ExcludeSwitchDispatcherCases = o.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
         SwitchDispatcherMaxCaseBodyLines = o.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
+        MaxSwitchArms = o.MaxSwitchArms ?? MaxSwitchArms,
+        MaxSwitchArmsExcludeDispatcher = o.MaxSwitchArmsExcludeDispatcher ?? MaxSwitchArmsExcludeDispatcher,
+        MaxSwitchArmsExemptTypes = o.MaxSwitchArmsExemptTypes ?? MaxSwitchArmsExemptTypes,
     };
 
     private MetricsConfig ApplyDependencyLimits(MetricsConfigOverride o) => this with
