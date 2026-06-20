@@ -1,8 +1,8 @@
 # AiNetLinter Feature Audit — Aufgaben-Checklist
 
-**Gestartet:** —  
+**Gestartet:** 2026-06-20  
 **Abgeschlossen:** —  
-**Offene Items:** 57
+**Offene Items:** 53
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -13,10 +13,10 @@
 
 Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase 2–4) startet. Papers werden nur einmal gesucht und dann in Phase 2–4 referenziert.
 
-- [ ] **papers-A** — Komplexitätsmetriken (McCabe, Halstead, Cognitive Complexity) → `temp\papers\papers-A-komplexitaet.md`
-- [ ] **papers-B** — Datei- und Methodengrößen, Fragmentierung, "Lost in the Middle" → `temp\papers\papers-B-groessen.md`
-- [ ] **papers-C** — LLM-Agenten & Code-Qualität 2023–2026 (SWE-bench, Anthropic, OpenAI, Microsoft) → `temp\papers\papers-C-llm-agenten.md`
-- [ ] **papers-D** — C#-Idiome, .NET Design Guidelines, Microsoft Docs → `temp\papers\papers-D-csharp.md`
+- [x] **papers-A** — Komplexitätsmetriken (McCabe, Halstead, Cognitive Complexity) → `temp\papers\papers-A-komplexitaet.md`
+- [x] **papers-B** — Datei- und Methodengrößen, Fragmentierung, "Lost in the Middle" → `temp\papers\papers-B-groessen.md`
+- [x] **papers-C** — LLM-Agenten & Code-Qualität 2023–2026 (SWE-bench, Anthropic, OpenAI, Microsoft) → `temp\papers\papers-C-llm-agenten.md`
+- [x] **papers-D** — C#-Idiome, .NET Design Guidelines, Microsoft Docs → `temp\papers\papers-D-csharp.md`
 - [ ] **papers-E** — Architekturmetriken (Kopplung, Kohäsion, DIT, CBO) → `temp\papers\papers-E-architektur.md`
 - [ ] **papers-F** — Code Smells & Fehleranfälligkeit (Palomba, Yamashita, Fowler) → `temp\papers\papers-F-smells.md`
 - [ ] **papers-G** — Test-Coverage & Testbarkeit → `temp\papers\papers-G-tests.md`
