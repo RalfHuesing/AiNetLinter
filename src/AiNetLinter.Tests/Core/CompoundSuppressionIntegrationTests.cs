@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Core;
 
@@ -315,5 +316,123 @@ public sealed class CompoundSuppressionIntegrationTests
 
         var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
         Assert.NotEmpty(violations.Where(v => v.RuleName == "MaxPublicMembersPerType"));
+    }
+
+    [Fact]
+    public void ScenarioI_SeverityOverride_WhenRelaxedLimitExceeded_ViolationIsWarning()
+    {
+        // 160 lines, CC=1. RelaxedLimit=150, SeverityOverride="warning"
+        var code = GenerateMethodCode(160, 2, 1);
+        var (_, model) = TestHelper.ParseCode(code);
+
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            Metrics = new MetricsConfig
+            {
+                MaxMethodLineCount = 60,
+                CompoundSuppressions = new List<CompoundSuppression>
+                {
+                    new()
+                    {
+                        TargetRule = "MaxMethodLineCount",
+                        WhenAllOf = new List<MetricCondition>
+                        {
+                            new() { Metric = "CyclomaticComplexity", AtMost = 3 }
+                        },
+                        RelaxedLimit = 150,
+                        SeverityOverride = "warning"
+                    }
+                }
+            }
+        };
+
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
+        var violation = violations.FirstOrDefault(v => v.RuleName == "MaxMethodLineCount");
+
+        Assert.NotNull(violation);
+        Assert.Equal("warning", violation.EffectiveSeverity);
+        Assert.Contains("Severity auf 'warning' herabgestuft", violation.Guidance);
+    }
+
+    [Fact]
+    public void ScenarioJ_SeverityOverride_WhenRelaxedLimitMet_NoViolation()
+    {
+        // 80 lines, CC=1. RelaxedLimit=150, SeverityOverride="warning" — unter Limit → kein Verstoß
+        var code = GenerateMethodCode(80, 2, 1);
+        var (_, model) = TestHelper.ParseCode(code);
+
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            Metrics = new MetricsConfig
+            {
+                MaxMethodLineCount = 60,
+                CompoundSuppressions = new List<CompoundSuppression>
+                {
+                    new()
+                    {
+                        TargetRule = "MaxMethodLineCount",
+                        WhenAllOf = new List<MetricCondition>
+                        {
+                            new() { Metric = "CyclomaticComplexity", AtMost = 3 }
+                        },
+                        RelaxedLimit = 150,
+                        SeverityOverride = "warning"
+                    }
+                }
+            }
+        };
+
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
+        Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodLineCount"));
+    }
+
+    [Fact]
+    public void ScenarioK_SeverityOverride_ConditionsNotMet_ViolationIsError()
+    {
+        // 80 lines, CC=5 (> 3). RelaxedLimit=150, SeverityOverride="warning"
+        // Bedingungen nicht erfüllt → normale error-Violation
+        var code = GenerateMethodCode(80, 2, 5);
+        var (_, model) = TestHelper.ParseCode(code);
+
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            Metrics = new MetricsConfig
+            {
+                MaxMethodLineCount = 60,
+                CompoundSuppressions = new List<CompoundSuppression>
+                {
+                    new()
+                    {
+                        TargetRule = "MaxMethodLineCount",
+                        WhenAllOf = new List<MetricCondition>
+                        {
+                            new() { Metric = "CyclomaticComplexity", AtMost = 3 }
+                        },
+                        RelaxedLimit = 150,
+                        SeverityOverride = "warning"
+                    }
+                }
+            }
+        };
+
+        var violations = LinterAnalyzer.Analyze("Test.cs", model, config);
+        var violation = violations.FirstOrDefault(v => v.RuleName == "MaxMethodLineCount");
+
+        Assert.NotNull(violation);
+        Assert.Null(violation.EffectiveSeverity); // keine Override → default error
+    }
+
+    [Fact]
+    public void ScenarioL_SeverityOverride_OnlyWarnViolations_ExitCodeZero()
+    {
+        // Alle Violations sind warnings → HasErrorSeverity == false
+        var violation = new RuleViolation
+        {
+            FilePath = "X.cs", LineNumber = 1,
+            RuleName = "MaxMethodLineCount", Details = "...", Guidance = "...",
+            EffectiveSeverity = "warning"
+        };
+        var config = TestHelper.CreateDefaultConfig();
+        Assert.False(RuleMetadataRegistry.HasErrorSeverity(new[] { violation }, config));
     }
 }

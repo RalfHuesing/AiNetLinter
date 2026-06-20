@@ -47,10 +47,16 @@ internal static class PublicMembersChecker
         {
             // Scenario A: Suppression active, but RelaxedLimit exceeded
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
+            var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+                LinterRuleIds.MaxPublicMembersPerType, suppressions, metrics);
+            var severityHint = severityOverride == "warning"
+                ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
+                : string.Empty;
             ctx.ReportViolation(node,
                 LinterRuleIds.MaxPublicMembersPerType,
                 $"'{typeName}' hat {count} öffentliche Member (Compound-Limit: {effectiveLimit}; Standard: {limit} · {condSummary}).",
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {effectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {effectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
+                effectiveSeverity: severityOverride);
             return;
         }
 

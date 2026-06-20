@@ -40,6 +40,7 @@ internal sealed class CheckerContext
     /// <summary>
     /// Kurzform für AddViolation — FilePath und LineNumber werden automatisch gesetzt.
     /// </summary>
+    // ainetlinter-disable MaxMethodParameterCount
     internal void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
@@ -51,6 +52,7 @@ internal sealed class CheckerContext
             EffectiveSeverity = effectiveSeverity,
         });
 
+    // ainetlinter-disable MaxMethodParameterCount
     internal void ReportViolation(SyntaxToken token, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
@@ -62,6 +64,7 @@ internal sealed class CheckerContext
             EffectiveSeverity = effectiveSeverity,
         });
 
+    // ainetlinter-disable MaxMethodParameterCount
     internal void ReportViolationAtLine(int lineNumber, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
