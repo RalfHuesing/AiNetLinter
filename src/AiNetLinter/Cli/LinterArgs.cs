@@ -23,11 +23,6 @@ public sealed class LinterArgs
     public required bool Verbose { get; init; }
 
     /// <summary>
-    /// Holt oder setzt den Pfad, unter dem der Mermaid-Abhaengigkeitsgraph generiert werden soll.
-    /// </summary>
-    public string? GraphPath { get; init; }
-
-    /// <summary>
     /// Holt oder setzt den Pfad, unter dem das AI-Playbook generiert werden soll.
     /// </summary>
     public string? PlaybookPath { get; init; }

@@ -150,11 +150,6 @@ internal static class AuditCommand
     {
         var (args, config, _, c) = ctx;
 
-        if (args.GraphPath != null)
-        {
-            await TryGenerateCodegraphAsync(solution, args.GraphPath, args.Verbose, c);
-        }
-
         if (args.PlaybookPath != null)
         {
             await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations), c);
@@ -213,26 +208,6 @@ internal static class AuditCommand
         }
 
         return (catalog, false);
-    }
-
-    private static async Task TryGenerateCodegraphAsync(Solution solution, string graphPath, bool verbose, ILintConsole c)
-    {
-        try
-        {
-            if (verbose)
-            {
-                c.WriteLine($"[INFO]: Generiere Codegraph unter: {graphPath}");
-            }
-            await CodegraphGenerator.GenerateAsync(solution, graphPath);
-            if (verbose)
-            {
-                c.WriteLine("[INFO]: Codegraph erfolgreich generiert.");
-            }
-        }
-        catch (Exception ex)
-        {
-            c.WriteError($"[ERROR]: Fehler beim Generieren des Codegraphen: {ex.Message}");
-        }
     }
 
     private static async Task TryGeneratePlaybookAsync(

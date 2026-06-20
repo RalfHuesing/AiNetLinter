@@ -762,7 +762,6 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 *   `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
 *   `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 *   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
-*   `-g`, `--graph` (Pfad): Pfad für das zu generierende Mermaid-Abhängigkeitsdiagramm `.md` (Optional).
 *   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
 *   `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 *   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
@@ -1006,7 +1005,6 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
 1. **Vor einer Änderung:** Kontext aus generierten Artefakten laden
    ```
-   Docs/codegraph.md          — Abhängigkeitsgraph (auto-generiert)
    Docs/playbook.md           — Architektur-Status, Top-Verstöße
    .cursor/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
    ```
@@ -1174,9 +1172,4 @@ AiNetLinter.exe --path . --config rules.json --no-cache
 
 ### Kombinierter Lauf (Single Analysis)
 
-Um den Ressourcenverbrauch bei paralleler Generierung optionaler Ausgaben zu minimieren, verschmilzt `AiNetLinter` die Ausführung von:
-- **Lint-Lauf** (`--config rules.json --path ...`)
-- **Playbook-Generierung** (`--playbook ...`)
-- **Graph-Generierung** (`--graph ...`)
-
-Wenn diese Optionen kombiniert werden, wird die semantische Roslyn-Analyse aller Dokumente **genau einmal** ausgeführt. Die berechneten Regelverstöße werden direkt an den Playbook-Generator weitergegeben, anstatt eine zweite vollständige Analyse anzustoßen. Dies führt bei kombinierten Aufrufen zu einer Halbierung der Gesamtlaufzeit.
+Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `AiNetLinter` die Ausführung des Lint-Laufs mit der Generierung des Playbooks. Wenn `--config` und `--playbook` im selben Aufruf verwendet werden, wird die semantische Roslyn-Analyse aller Dokumente **genau einmal** ausgeführt. Die berechneten Regelverstöße werden direkt an den Playbook-Generator weitergegeben, anstatt eine zweite vollständige Analyse anzustoßen.

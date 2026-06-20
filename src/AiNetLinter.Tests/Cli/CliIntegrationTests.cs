@@ -21,12 +21,10 @@ public sealed class CliIntegrationTests
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
         Assert.True(Directory.Exists(targetPath), $"Zielverzeichnis nicht gefunden unter: {targetPath}");
 
-        var graphFile = Path.Combine(rootDir, "Docs", "codegraph.md");
-
         var processInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{targetPath}\" --graph \"{graphFile}\"",
+            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{targetPath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -45,7 +43,6 @@ public sealed class CliIntegrationTests
         Assert.Null(error == "" ? null : error);
         Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
         Assert.Contains("OK", output);
-        Assert.True(File.Exists(graphFile), $"Codegraph-Datei wurde nicht erzeugt unter: {graphFile}");
     }
 
     [Fact]
