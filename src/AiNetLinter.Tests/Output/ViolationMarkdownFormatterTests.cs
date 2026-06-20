@@ -81,13 +81,13 @@ public sealed class ViolationMarkdownFormatterTests
 
         var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
-        var fooIdx = result.IndexOf("### src/Foo.cs", StringComparison.OrdinalIgnoreCase);
-        var zooIdx = result.IndexOf("### src/Zoo.cs", StringComparison.OrdinalIgnoreCase);
+        var fooIdx = result.IndexOf("#### src/Foo.cs", StringComparison.OrdinalIgnoreCase);
+        var zooIdx = result.IndexOf("#### src/Zoo.cs", StringComparison.OrdinalIgnoreCase);
         var line5Idx = result.IndexOf("Z.5 EnforceSealedClasses", StringComparison.OrdinalIgnoreCase);
         var line20Idx = result.IndexOf("Z.20 EnforceSealedClasses", StringComparison.OrdinalIgnoreCase);
 
-        Assert.True(fooIdx >= 0, "### src/Foo.cs not found");
-        Assert.True(zooIdx >= 0, "### src/Zoo.cs not found");
+        Assert.True(fooIdx >= 0, "#### src/Foo.cs not found");
+        Assert.True(zooIdx >= 0, "#### src/Zoo.cs not found");
         Assert.True(fooIdx < zooIdx, "Foo.cs must come before Zoo.cs (alphabetical)");
         Assert.True(line5Idx < line20Idx, "Line 5 must appear before line 20 within file section");
         Assert.True(line5Idx > fooIdx, "Z.5 must be inside the Foo.cs section");
@@ -103,7 +103,7 @@ public sealed class ViolationMarkdownFormatterTests
 
         var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
-        Assert.Contains("### src/Core/Bar.cs", result);
+        Assert.Contains("#### src/Core/Bar.cs", result);
         Assert.Contains("Z.12 MaxMethodParameterCount", result);
         Assert.Contains("6 Parameter", result);
     }
@@ -162,10 +162,11 @@ public sealed class ViolationMarkdownFormatterTests
 
         var structuralIdx = result.IndexOf("## Strukturelle Verstöße", StringComparison.Ordinal);
         var byFileIdx = result.IndexOf("## Violations nach Datei", StringComparison.Ordinal);
-        var fooInByFile = result.IndexOf("### src/Foo.cs", byFileIdx, StringComparison.OrdinalIgnoreCase);
+        var fooInByFile = result.IndexOf("#### src/Foo.cs", byFileIdx, StringComparison.OrdinalIgnoreCase);
 
         Assert.True(structuralIdx < byFileIdx);
         Assert.True(fooInByFile >= 0, "Structural violation must also appear in Violations nach Datei");
+        Assert.Contains("MaxPartialClassFiles [→ strukturell]", result);
     }
 
     [Fact]
@@ -219,4 +220,200 @@ public sealed class ViolationMarkdownFormatterTests
             Details = details,
             Guidance = "Guidance text"
         };
+
+    [Fact]
+    public void Format_ShowsSummaryTableAfterHeaderAndBeforeHandlungsanweisung()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        var headerIdx = result.IndexOf("# AiNetLinter - 1 violations", StringComparison.Ordinal);
+        var tableIdx = result.IndexOf("| Regel | Gesamt | Prod | Tests |", StringComparison.Ordinal);
+        var handlungsIdx = result.IndexOf("## Handlungsanweisung", StringComparison.Ordinal);
+
+        Assert.True(headerIdx >= 0);
+        Assert.True(tableIdx > headerIdx);
+        Assert.True(handlungsIdx > tableIdx);
+    }
+
+    [Fact]
+    public void Format_SummaryTable_CountsProdAndTestsSeparately()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed"),
+            CreateViolation(@"C:\Projects\MyApp\src\MyApp.Tests\FooTests.cs", 10, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("| EnforceSealedClasses | 2 | 1 | 1 |", result);
+    }
+
+    [Fact]
+    public void Format_SummaryTable_MarksStructuralRulesWithWarning()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Detail"),
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Detail")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("| Regel | Gesamt | Prod | Tests | Struktur |", result);
+        Assert.Contains("| MaxPartialClassFiles | 1 | 1 | 0 | ⚠ |", result);
+        Assert.Contains("| EnforceSealedClasses | 1 | 1 | 0 |  |", result);
+    }
+
+    [Fact]
+    public void Format_SummaryTable_OmitsStructureColumnWhenNoStructuralViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Detail")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("| Regel | Gesamt | Prod | Tests |\n", result);
+        Assert.DoesNotContain("| Struktur |", result);
+    }
+
+    [Fact]
+    public void Format_SplitsProdBeforeTestsInViolationsByFile()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\MyApp.Tests\FooTests.cs", 10, "EnforceSealedClasses", "Nicht sealed"),
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        var prodIdx = result.IndexOf("### Produktion", StringComparison.Ordinal);
+        var testsIdx = result.IndexOf("### Tests", StringComparison.Ordinal);
+
+        Assert.True(prodIdx >= 0);
+        Assert.True(testsIdx > prodIdx);
+    }
+
+    [Fact]
+    public void Format_OmitsTestSectionWhenNoTestViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("### Produktion", result);
+        Assert.DoesNotContain("### Tests", result);
+    }
+
+    [Fact]
+    public void Format_OmitsProdSectionWhenOnlyTestViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\MyApp.Tests\FooTests.cs", 10, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.DoesNotContain("### Produktion", result);
+        Assert.Contains("### Tests", result);
+    }
+
+    [Fact]
+    public void Format_FilesInSectionUseH4Headers()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("#### src/Foo.cs", result);
+        Assert.DoesNotContain("\n### src/Foo.cs\n", result);
+    }
+
+    [Fact]
+    public void Format_StructuralViolationInByFileUsesMarkerTag()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Detail")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("MaxPartialClassFiles [→ strukturell] — Detail", result);
+    }
+
+    [Fact]
+    public void Format_StructuralViolationInByFileShowsOnlyFirstDetailLine()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Zeile 1\nZeile 2\nZeile 3")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("MaxPartialClassFiles [→ strukturell] — Zeile 1", result);
+        Assert.DoesNotContain("Zeile 2", result.Substring(result.IndexOf("## Violations nach Datei")));
+    }
+
+    [Fact]
+    public void Format_InstructionBlock_UsesShortExeName()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "EnforceSealedClasses", "Nicht sealed")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        var docsIndex = result.IndexOf(" --docs configuration`", StringComparison.Ordinal);
+        Assert.True(docsIndex >= 0, "docs configuration command not found");
+        var lineStart = result.LastIndexOf('`', docsIndex);
+        Assert.True(lineStart >= 0);
+        var exeName = result.Substring(lineStart + 1, docsIndex - lineStart - 1);
+        Assert.DoesNotContain("\\", exeName);
+        Assert.DoesNotContain("/", exeName);
+        Assert.DoesNotContain(":", exeName);
+    }
+
+    [Fact]
+    public void Format_RuleLegend_ShowsConfigKeyHintForMaxPartialClassFiles()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Detail")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxPartialClassFiles", result);
+    }
+
+    [Fact]
+    public void Format_RuleLegend_ShowsConfigKeyHintForAiContextFootprint()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "AIContextFootprint", "Detail")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxAIContextFootprint", result);
+    }
 }

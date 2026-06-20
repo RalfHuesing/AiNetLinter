@@ -61,6 +61,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von \*ValueObject Suffix)
 - [x] **Traceability-Graphen:** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
 - [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
+- [ ] **Suppressions-Status im Report (Vorschlag 7):** Einbindung von Suppressions-Daten im Report (z. B. welche Dateien ainetlinter-disable verwenden), so dass der Report eine vollständige Übersicht über aktive Ausnahmen gibt.
 
 ---
 

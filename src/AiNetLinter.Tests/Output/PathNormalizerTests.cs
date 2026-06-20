@@ -33,4 +33,15 @@ public sealed class PathNormalizerTests
 
         Assert.Equal(string.Empty, PathNormalizer.ToRelative(root, ""));
     }
+
+    [Theory]
+    [InlineData("src/AiNetLinter.Tests/Foo.cs", true)]
+    [InlineData("src\\AiNetLinter.Tests\\Foo.cs", true)]
+    [InlineData("src/AiNetLinter.tests/Foo.cs", true)]
+    [InlineData("src/AiNetLinter/Foo.cs", false)]
+    [InlineData("src/AiNetLinter.TestsOther/Foo.cs", false)]
+    public void IsTestFile_IdentifiesTestFilesCorrectly(string path, bool expected)
+    {
+        Assert.Equal(expected, PathNormalizer.IsTestFile(path));
+    }
 }
