@@ -71,7 +71,7 @@
       "INotifyPropertyChanged"
     ],
     "ImmutabilityAllowPrivateBackingFields": true,
-    "EnablePerformanceProfiling": true,
+    "EnablePerformanceProfiling": false,
     "BanAsyncVoid": true,
     "AsyncVoidAllowEventHandlers": true,
     "BanBlockingTaskAccess": true,
