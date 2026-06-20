@@ -66,7 +66,6 @@ public static class Program
             ConfigPath = parsed.ConfigPath,
             TargetPath = parsed.TargetPath,
             Verbose = parsed.Output.Verbose,
-            GraphPath = parsed.Output.GraphPath,
             PlaybookPath = parsed.Output.PlaybookPath,
             CreateBaselinePath = parsed.Baseline.CreateBaselinePath,
             BaselinePath = parsed.Baseline.BaselinePath,

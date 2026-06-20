@@ -250,7 +250,7 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         WritePhaseLine(writer, "Auto-Fix Execution", phases.AutoFixMs, totalMs);
         WritePhaseLine(writer, "Document Analysis (overall)", phases.DocumentAnalysisMs, totalMs);
         WritePhaseLine(writer, "Post-Analysis Checks (overall)", phases.PostAnalysisMs, totalMs);
-        WritePhaseLine(writer, "Optional Outputs (Playbook/Graph)", phases.OptionalOutputsMs, totalMs);
+        WritePhaseLine(writer, "Optional Outputs (Playbook)", phases.OptionalOutputsMs, totalMs);
         WritePhaseLine(writer, "Output Writing", phases.OutputWritingMs, totalMs);
         writer.WriteLine();
         if (_postAnalysisStepDurations.Count > 0)

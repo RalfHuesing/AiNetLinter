@@ -8,7 +8,6 @@ namespace AiNetLinter.Cli;
 internal sealed record CliOptions(
     Option<string?> Config,
     Option<string?> Path,
-    Option<string?> Graph,
     Option<string?> Playbook,
     Option<bool> Verbose,
     Option<string?> CreateBaseline,
@@ -32,10 +31,9 @@ internal sealed record CliOptions(
     Option<string?> SearchRules);
 
 /// <summary>
-/// Aufgeloeste Output-Optionen (Graph, Playbook, Format, Verbose).
+/// Aufgeloeste Output-Optionen (Playbook, Verbose).
 /// </summary>
 internal sealed record CliOutputOptions(
-    string? GraphPath,
     string? PlaybookPath,
     bool Verbose);
 

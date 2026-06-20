@@ -17,11 +17,6 @@ internal static class CliOptionFactory
         Description = "Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (nicht erforderlich bei --docs)",
     };
 
-    internal static Option<string?> CreateGraphOption() => new("--graph", "-g")
-    {
-        Description = "Pfad fuer das zu generierende Mermaid-Abhaengigkeitsdiagramm (.md)",
-    };
-
     internal static Option<string?> CreatePlaybookOption() => new("--playbook", "-pb")
     {
         Description = "Pfad fuer das zu generierende AI Repository-Playbook (.md)",
