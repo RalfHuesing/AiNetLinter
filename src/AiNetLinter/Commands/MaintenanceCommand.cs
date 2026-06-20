@@ -52,11 +52,7 @@ internal static class MaintenanceCommand
 
         LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath, c);
 
-        string? rulesJsonContent = null;
-        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
-        {
-            rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
-        }
+        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
         var engine = new LinterEngine(config, rulesJsonContent);
         var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);

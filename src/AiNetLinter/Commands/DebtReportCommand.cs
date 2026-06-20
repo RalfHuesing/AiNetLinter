@@ -31,11 +31,7 @@ internal static class DebtReportCommand
             config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
             if (config != null)
             {
-                string? rulesJsonContent = null;
-                if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
-                {
-                    rulesJsonContent = File.ReadAllText(args.ConfigPath, System.Text.Encoding.UTF8);
-                }
+                string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
                 var engine = new LinterEngine(config, rulesJsonContent);
                 violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
             }
