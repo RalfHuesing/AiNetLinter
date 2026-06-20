@@ -6,45 +6,63 @@ Die wissenschaftlichen Grundlagen der Regelauswahl sind in der [Design-Rationale
 
 ---
 
-## Schnellstart
+## Wann einsetzen?
 
-```bash
-ainetlinter --config rules.json --path ./MeinProjekt.slnx
+AiNetLinter ist **kein Ersatz für Compiler oder Tests** — es setzt dort an, wo Build und Tests bereits grün sind:
+
+```
+dotnet build  ✓
+dotnet test   ✓
+ainetlinter   ← hier
 ```
 
-Für AI-Agenten — integrierte Dokumentation auf stdout ausgeben:
-```bash
-# Zeigt z. B. die Konfigurationsdokumentation an (weitere Optionen: readme, agent-api, rationale, roadmap):
-ainetlinter --docs configuration
-```
+Der Linter prüft keine Syntaxfehler oder Laufzeitverhalten, sondern Designqualität: Komplexität, KI-taugliche Codestruktur, Architektur-Constraints. Er macht den Code besser analysierbar — für Menschen und für AI-Agenten.
 
 ---
 
-## Agent-Integration
-
-AiNetLinter ist als MCP-fähiges Tool für AI-Agenten (Claude Code, Cursor, GitHub Copilot) ausgelegt.
+## Schnellstart
 
 ```bash
-# Alle verfuegbaren Regeln auflisten:
+ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
+```
+
+Der Linter gibt einen Markdown-Report auf stdout aus und beendet sich mit Exit-Code `0` (keine neuen Verstöße) oder `1` (Verstöße gefunden — CI-tauglich).
+
+---
+
+## Agentische Integration
+
+AiNetLinter ist selbst-erklärend: Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explorativ zu verstehen und eigenständig in ein Projekt zu integrieren — ohne Vorab-Konfiguration durch den Entwickler.
+
+```bash
+# Tool erkunden (kein --path nötig):
 ainetlinter --list-rules
-
-# Eine Regel im Detail:
 ainetlinter --describe-rule EnforceSealedClasses
-
-# Regeln nach Stichwort suchen:
-ainetlinter --search-rules "komplexitaet"
+ainetlinter --docs configuration
 
 # Lint-Lauf:
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
-# Auto-Fix (sealed, nullable, PascalCase):
-ainetlinter --config rules.json --path ./src/ --fix
-
-# Fix im Dry-Run pruefen:
+# Auto-Fix für triviale Verstöße (sealed, nullable, PascalCase):
 ainetlinter --config rules.json --path ./src/ --fix --dry-run
+ainetlinter --config rules.json --path ./src/ --fix
 ```
 
-Vollstaendige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/agent-api.md](Docs/agent-api.md)
+**Typischer Einstieg:** `AiNetLinter` in ein eigenes Verzeichnis außerhalb des Projekts installieren (z. B. `C:\Tools\AiNetLinter\`). Das Tool bringt mehrere Dateien mit, lässt sich so von mehreren Projekten gleichzeitig nutzen, und Updates sind an einer einzigen Stelle erledigt. Den Pfad zur Exe einem Agenten im Projektkontext übergeben — dieser exploriert das Tool über die Discovery-Commands und integriert es eigenständig, z. B. als Schritt in einem Test- oder CI-Skript.
+
+Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/agent-api.md](Docs/agent-api.md)
+
+---
+
+## Ausgewählte Regeln — aus ca. 35 konfigurierbaren Einstellungen
+
+| Regel | Warum relevant |
+| :--- | :--- |
+| **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Macht den Linter in Legacy-Projekten mit tausenden Altlasten sofort einsetzbar. |
+| **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
+| **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs — verhindert die häufigste Halluzinations-Fehlerquelle in KI-generiertem Code. |
+| **Komplexitätsgrenzen** (`MaxCyclomaticComplexity`, `MaxCognitiveComplexity`) | Jahrzehntelange Forschung (McCabe 1976, SonarSource) belegt Komplexität als stärksten Einzel-Prädiktor für Fehlerdichte und schlechte Analysierbarkeit durch KI. |
+| **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen praxistaugliche Konfigurationen ohne eine Einheitslösung für alle Projekttypen. |
 
 ---
 
@@ -55,32 +73,3 @@ Vollstaendige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 | [Docs/agent-api.md](Docs/agent-api.md) | Agent-API: alle CLI-Flags, Workflows, Error-Format, Discovery-Commands |
 | [Docs/configuration.md](Docs/configuration.md) | Vollständige Konfigurationsreferenz, CLI-Parameter, Workflows |
 | [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
-
----
-
-## Top 5 — von ca. 35 konfigurierbaren Einstellungen
-
-| Feature | Kurzbeschreibung |
-| :--- | :--- |
-| **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Macht den Linter in Legacy-Projekten mit tausenden Altlasten sofort einsetzbar. |
-| **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
-| **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs — verhindert die häufigste Halluzinations-Fehlerquelle in KI-generiertem Code. |
-| **Komplexitätsgrenzen** (`MaxCyclomaticComplexity`, `MaxCognitiveComplexity`) | Jahrzehntelange Forschung (McCabe 1976, SonarSource) belegt Komplexität als stärksten Einzel-Prädiktor für Fehlerdichte und schlechte Analysierbarkeit durch KI. |
-| **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen praxistaugliche Konfigurationen ohne eine Einheitslösung für alle Projekttypen. |
-
----
-
-## Features
-
-- **Roslyn-basierte semantische Analyse** — echte Semantik, kein textbasiertes Heuristik-Grep
-- **Feingranulares Regelwerk** — Klassendesign, Komplexität, Immutabilität, Namensgebung
-- **Strukturmetriken** — `MaxBoolParameterCount`, `MaxPartialClassFiles`, `MaxPublicMembersPerType`, `MaxDirectoryChildren` begrenzen API-Surface und Typ-Fragmentierung
-- **BanPublicNestedTypes** — Verbietet `public`/`internal` nested Typen; verbessert Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen
-- **UI-Trennungsregeln** — Blazor CSS-Isolation & Code-Behind-Pflicht, WPF minimales Code-Behind (MVVM)
-- **Auto-Fixer (`--fix`)** — `sealed`, `readonly`, `#nullable enable` automatisch korrigieren
-- **Baseline/Ratchet (`--baseline`)** — inkrementelle Migration bestehender Codebases
-- **Playbook-Generator (`--playbook`)** — Repo-Übersicht als Kontext für AI-Agenten
-- **Cursor-Regeln-Sync (`--sync-cursor-rules`)** — `.cursor/rules/AiNetLinter.mdc` aus `rules.json` generieren
-- **Impact-Analyse (`--impact`)** — betroffene Call-Sites bei Signaturänderungen ermitteln
-- **Markdown-Report** — standardmäßige, token-effiziente und gut lesbare Ausgabe für AI-Agenten
-- **Analyse-Cache** — inkrementelle Laufzeitoptimierung für den Agentic Loop
