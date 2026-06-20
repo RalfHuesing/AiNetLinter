@@ -381,7 +381,7 @@ public sealed class DeveloperExperienceTests
         var content = CursorRulesGenerator.GenerateContent(config, "rules.json");
 
         Assert.Contains("## Compound Suppressions (kontextabhängige Limiten)", content);
-        Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | Test reason here |", content);
+        Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | — | Test reason here |", content);
     }
 
     [Fact]

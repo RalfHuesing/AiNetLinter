@@ -162,7 +162,8 @@
           }
         ],
         "RelaxedLimit": 150,
-        "Reason": "Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC\u22643 ist nicht mit Fehleranf\u00E4lligkeit korreliert (Palomba et al., 2018)."
+        "SeverityOverride": "warning",
+        "Reason": "Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC\u22643 ist nicht mit Fehleranf\u00E4lligkeit korreliert (Palomba et al., 2018). \u00DCber 150 Zeilen: sichtbar als warning, kein Build-Fehler."
       }
     ]
   },

@@ -35,9 +35,9 @@ Auto-generiert durch AiNetLinter 1.0.53 aus `rules.json`. Neuen Produktionscode 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:
 
-| Regel | Bedingung | Effektives Limit | Grund |
-|:--|:--|:--|:--|
-| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 AND CognitiveComplexity ≤ 5 | **150** | Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC≤3 ist nicht mit Fehleranfälligkeit korreliert (Palomba et al., 2018). |
+| Regel | Bedingung | Effektives Limit | Severity | Grund |
+|:--|:--|:--|:--|:--|
+| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 AND CognitiveComplexity ≤ 5 | **150** | `warning` | Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC≤3 ist nicht mit Fehleranfälligkeit korreliert (Palomba et al., 2018). Über 150 Zeilen: sichtbar als warning, kein Build-Fehler. |
 
 ## agent-resilience
 - **EnforceNoSilentCatch** — `catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.
