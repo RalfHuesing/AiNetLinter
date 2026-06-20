@@ -2,7 +2,7 @@
 
 **Gestartet:** 2026-06-20  
 **Abgeschlossen:** —  
-**Offene Items:** 49
+**Offene Items:** 40
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -26,15 +26,15 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 
 ## Phase 2 — Numerische Metriken evaluieren
 
-- [ ] M01 — MaxLineCount → `Result\metrics\M01-MaxLineCount.md`
-- [ ] M02 — MaxMethodLineCount → `Result\metrics\M02-MaxMethodLineCount.md`
-- [ ] M03 — MaxMethodParameterCount → `Result\metrics\M03-MaxMethodParameterCount.md`
-- [ ] M04 — MaxCyclomaticComplexity → `Result\metrics\M04-MaxCyclomaticComplexity.md`
-- [ ] M05 — MaxCognitiveComplexity → `Result\metrics\M05-MaxCognitiveComplexity.md`
-- [ ] M06 — MaxInheritanceDepth → `Result\metrics\M06-MaxInheritanceDepth.md`
-- [ ] M07 — MaxMethodOverloads → `Result\metrics\M07-MaxMethodOverloads.md`
-- [ ] M08 — MaxConstructorDependencies → `Result\metrics\M08-MaxConstructorDependencies.md`
-- [ ] M09 — MaxDirectoryDepth → `Result\metrics\M09-MaxDirectoryDepth.md`
+- [x] M01 — MaxLineCount → `Result\metrics\M01-MaxLineCount.md`
+- [x] M02 — MaxMethodLineCount → `Result\metrics\M02-MaxMethodLineCount.md`
+- [x] M03 — MaxMethodParameterCount → `Result\metrics\M03-MaxMethodParameterCount.md`
+- [x] M04 — MaxCyclomaticComplexity → `Result\metrics\M04-MaxCyclomaticComplexity.md`
+- [x] M05 — MaxCognitiveComplexity → `Result\metrics\M05-MaxCognitiveComplexity.md`
+- [x] M06 — MaxInheritanceDepth → `Result\metrics\M06-MaxInheritanceDepth.md`
+- [x] M07 — MaxMethodOverloads → `Result\metrics\M07-MaxMethodOverloads.md`
+- [x] M08 — MaxConstructorDependencies → `Result\metrics\M08-MaxConstructorDependencies.md`
+- [x] M09 — MaxDirectoryDepth → `Result\metrics\M09-MaxDirectoryDepth.md`
 - [ ] M10 — MaxDirectoryChildren → `Result\metrics\M10-MaxDirectoryChildren.md`
 - [ ] M11 — MaxBoolParameterCount → `Result\metrics\M11-MaxBoolParameterCount.md`
 - [ ] M12 — MaxPartialClassFiles → `Result\metrics\M12-MaxPartialClassFiles.md`
