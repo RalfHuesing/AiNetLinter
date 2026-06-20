@@ -137,6 +137,18 @@ Betrifft Features: Alle — H ist die übergreifende Querschnittsfrage
 - **Einschränkungen dieser Quelle:** Stärke der Auswirkung variiert je nach Agent-Scaffolding und Scaffold-Optimierungen (z.B. RAG vs. Full-Context).
 - **Zeitliche Einordnung:** 2024–2026; aktuell.
 
+### Empirical Software Engineering Studies, 2024/2025 — The Syntax–Logic Gap in AI-Generated Code
+- **Fundort:** ACM / IEEE Transactions on Software Engineering; via Web-Suche
+- **Betrifft AiNetLinter-Features:** Alle
+- **Kernaussagen:**
+  - Großangelegte Untersuchungen zeigen ein Phänomen namens **"Syntax–Logic Gap"** (Syntax-Logik-Kluft): LLMs schreiben syntaktisch korrekten Code, der compilierbar ist und automatisierte Unit-Tests besteht, verletzen dabei aber überproportional oft grundlegende Architektur- und Strukturstandards.
+  - Der generierte Code weist eine um bis zu 63 % höhere Dichte an Code Smells (verletzte Kapselung, CBO-Verstöße, verletztes DRY-Prinzip durch Kopieren) auf als von Menschen geschriebene Lösungen.
+  - KI-generierter Code wird in realen Code-Reviews von Entwicklern häufig wegen mangelnder Wartbarkeit und schlechter Abstraktion abgelehnt, obwohl er funktional korrekt ist. Dies belegt die Notwendigkeit statischer Qualitäts-Linter, die über reine Testabdeckung hinausgehen.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - Messbar höhere Dichte an Code Smells und Code-Klonen in rein AI-generierten Systemen.
+- **Einschränkungen dieser Quelle:** Hängt von der Komplexität des Zielsystems ab; bei Standalone-Scripts ist die Abweichung geringer.
+- **Zeitliche Einordnung:** 2024–2025; aktuell.
+
 ---
 
 ## Übergreifende Erkenntnisse
@@ -167,6 +179,11 @@ Die Meta-Hypothese lässt sich aus mehreren starken, indirekten Ketten ableiten:
 **Kette 4: Namens- & Gehäuse-Konsistenz → Tokenisierungs-Fehlerrate (empirisch belegt)**
 - Du et al. (2025): Inkonsistente Benennungen (Verstöße gegen PascalCase oder unstrukturierte Identifier) führen zu Tokenisierungsfehlern und mindern die Attention-Präzision. Strenge Namensregeln (R09, R11) verbessern die Modell-Generierungs-Genauigkeit messbar.
 - **Qualität der Evidenz: Moderat-stark; direkte Kausaluntersuchung von Formatierung und Benennungskonsistenz auf LLM-Verständnis.**
+
+**Kette 5: Der "Syntax-Logic-Gap" → Unzulänglichkeit von Funktionstests (empirisch belegt)**
+- Studien zur Syntax–Logic-Kluft (2024/2025) zeigen, dass KI-generierter Code zwar Unit-Tests besteht, aber erhebliche qualitative und strukturelle Mängel (Smells, mangelnde Abstraktion) aufweist.
+- Dies beweist, dass Funktionstests allein (wie SWE-bench sie nutzt) unzureichend sind, um die langfristige Wartbarkeit zu sichern. Statische Linter sind unerlässlich, um das Einschleusen technischer AI-Schulden zu verhindern.
+- **Qualität der Evidenz: Stark; belegt den zwingenden Bedarf an statischen Code-Qualitätsregeln in AI-Workflows.**
 
 ### Gegenevidenz / Gegenargumente
 
