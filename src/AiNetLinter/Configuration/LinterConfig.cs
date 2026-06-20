@@ -603,6 +603,12 @@ public sealed record CompoundSuppression
     public int? RelaxedLimit { get; init; }
 
     /// <summary>
+    /// Optionale Severity-Herabstufung wenn Bedingungen erfüllt aber RelaxedLimit überschritten.
+    /// Erlaubte Werte: "warning", "error". Wirkt nur in Kombination mit RelaxedLimit.
+    /// </summary>
+    public string? SeverityOverride { get; init; }
+
+    /// <summary>
     /// Optionaler Freitext-Grund. Wird in .mdc-Output und Violation-Guidance wiedergegeben.
     /// </summary>
     public string? Reason { get; init; }
