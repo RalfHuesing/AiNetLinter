@@ -44,10 +44,16 @@ internal static class StateChecker
         {
             // Scenario A: Suppression active, but RelaxedLimit exceeded
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
+            var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+                LinterRuleIds.MaxConstructorDependencies, suppressions, metrics);
+            var severityHint = severityOverride == "warning"
+                ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
+                : string.Empty;
             ctx.ReportViolation(node,
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Konstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
+                effectiveSeverity: severityOverride);
             return;
         }
 
@@ -104,10 +110,16 @@ internal static class StateChecker
         {
             // Scenario A: Suppression active, but RelaxedLimit exceeded
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
+            var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+                LinterRuleIds.MaxConstructorDependencies, suppressions, metrics);
+            var severityHint = severityOverride == "warning"
+                ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
+                : string.Empty;
             ctx.ReportViolation(node,
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Primaerkonstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
+                effectiveSeverity: severityOverride);
             return;
         }
 

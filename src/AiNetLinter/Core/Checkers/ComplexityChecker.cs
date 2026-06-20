@@ -20,7 +20,8 @@ internal sealed record ParamViolationArgs(
     CompoundSuppression? Configured,
     int BaseLimit,
     int EffectiveParamCount,
-    Dictionary<string, int> Metrics
+    Dictionary<string, int> Metrics,
+    string? SeverityOverride = null
 );
 
 internal static class ComplexityChecker
@@ -77,7 +78,10 @@ internal static class ComplexityChecker
 
         if (effectiveParamCount <= activeLimit || IsOverrideOrInterfaceImplementation(node, ctx)) return;
 
-        ReportParamViolation(new ParamViolationArgs(node, ctx, effectiveLimit, configured, baseLimit, effectiveParamCount, metrics));
+        var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            LinterRuleIds.MaxMethodParameterCount, suppressions, metrics);
+
+        ReportParamViolation(new ParamViolationArgs(node, ctx, effectiveLimit, configured, baseLimit, effectiveParamCount, metrics, severityOverride));
     }
 
     private static void ReportParamViolation(ParamViolationArgs args)
@@ -94,10 +98,14 @@ internal static class ComplexityChecker
             // Scenario A: Suppression active, but RelaxedLimit exceeded
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(args.Configured!.WhenAllOf, args.Metrics);
             details = $"Die Methode '{methodName}' hat {total} Parameter, davon {args.EffectiveParamCount} gewertet (Compound-Limit: {args.EffectiveLimit}; Standard: {args.BaseLimit} · {condSummary}).";
+            var severityHint = args.SeverityOverride == "warning"
+                ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
+                : string.Empty;
             args.Ctx.ReportViolation(args.Node,
                 LinterRuleIds.MaxMethodParameterCount,
                 details,
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Erstelle ein Parameter-Object für die Parameter. Ziel: ≤ {args.EffectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)}.");
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Erstelle ein Parameter-Object für die Parameter. Ziel: ≤ {args.EffectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)}.{severityHint}",
+                effectiveSeverity: args.SeverityOverride);
             return;
         }
 
@@ -183,10 +191,16 @@ internal static class ComplexityChecker
         {
             // Szenario A: Suppression aktiv, aber RelaxedLimit überschritten
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
+            var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+                LinterRuleIds.MaxMethodLineCount, suppressions, metrics);
+            var severityHint = severityOverride == "warning"
+                ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
+                : string.Empty;
             ctx.ReportViolation(node,
                 LinterRuleIds.MaxMethodLineCount,
                 $"Die Methode '{methodName}' hat {codeLineCount} Codezeilen (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere weitere Abschnitte aus. Ziel: ≤ {effectiveLimit} Zeilen bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.");
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere weitere Abschnitte aus. Ziel: ≤ {effectiveLimit} Zeilen bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
+                effectiveSeverity: severityOverride);
             return;
         }
 
