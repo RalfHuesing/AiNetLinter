@@ -77,7 +77,7 @@ Produktionscode · 166 Typen · 14 Namespaces
 - UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
 - UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (34)
+## AiNetLinter.Core (33)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
@@ -111,9 +111,8 @@ Produktionscode · 166 Typen · 14 Namespaces
 - TestProjectDetector
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
 - TypeInfo [record] → TypeInfo
-- UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
-## AiNetLinter.Core.Checkers (24)
+## AiNetLinter.Core.Checkers (25)
 - BoolParameterChecker → CheckerContext
 - CheckerContext → LinterConfig, RuleViolation
 - ClassInfoCollector → CheckerContext
@@ -136,6 +135,7 @@ Produktionscode · 166 Typen · 14 Namespaces
 - StateChecker → CheckerContext
 - SyntaxHelper
 - TestAttributeDetector → CheckerContext
+- UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 - ValueObjectChecker → CheckerContext
 - WpfSeparationChecker → CheckerContext
 

@@ -9,7 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Checkers;
 
 /// <summary>
 /// Prüft Blazor-Komponenten (.razor) auf erforderliche Begleitdateien (.razor.cs und .razor.css).
