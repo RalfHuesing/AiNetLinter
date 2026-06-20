@@ -25,12 +25,12 @@ Auto-generiert durch AiNetLinter 1.0.55 aus `rules.json`. Neuen Produktionscode 
 | `MaxInheritanceDepth` | **3** | Komposition vor Vererbung. |
 | `MaxMethodOverloads` | **5** | Methoden mit eindeutigen Namen bevorzugen. |
 | `MaxConstructorDependencies` | **5** | Verantwortlichkeit aufteilen bei Überschreitung. |
+| `AIContextFootprint` | **2500** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 | `MaxDirectoryDepth` | **4** | Ordner nicht unnötig tief schachteln. |
 | `MaxDirectoryChildren` | **0** | 0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen. |
 | `MaxBoolParameterCount` | **1** | 0 = deaktiviert; bool-Parameter in Parameter-Object bündeln. |
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
-| `AIContextFootprint` | **2500** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 | `MaxLinqChainLength` | **0** | 0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
@@ -57,9 +57,9 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 - **EnforcePascalCase** — Öffentliche Typen/Methoden/Properties: PascalCase.
 - **EnforceSemanticNaming** — Keine `data`/`temp`/`obj` in öffentlichen Signaturen.
 - **EnforceNullableEnable** — `#nullable enable` am Dateianfang jeder `.cs`-Datei.
-- **EnforceValueObjectContracts** — Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.
 - **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
 - **AllowCancellationShutdownCatch** — `OperationCanceledException` beim Shutdown abfangen erlaubt.
+- **EnforceValueObjectContracts** — Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.
 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 

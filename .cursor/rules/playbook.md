@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.55 aus `rules.json`.
+Auto-generiert durch AiNetLinter 1.0.55 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -17,17 +17,13 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 - **MaxMethodParameterCount:** 3 mal deaktiviert.
   *Bedeutung:* Zu viele Methodenparameter (max. 4).
-- **MaxLineCount:** 1 mal deaktiviert.
-  *Bedeutung:* Dateizeilenlimit (max. 500 Zeilen) ueberschritten.
-- **MaxMethodLineCount:** 1 mal deaktiviert.
-  *Bedeutung:* Methode hat zu viele Codezeilen (max. 60 Zeilen).
 
 ## 3. Migrations-Status
 
 - **Wave-ready Dateien:** 205 / 219 (94 %)
-- **Verstösse nur wave-ready (default rules):** 0
+- **Verstösse nur wave-ready (default rules):** 1
 - **Top-Ordner wave-ready-Verstöße:**
-  - Keine offenen Verstöße in wave-ready Dateien.
+  - `src/AiNetLinter/Core/`: 1
 
 ## 4. Architektur-Slices (nach Ordner)
 
@@ -39,5 +35,5 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| - | 0 | Keine offenen Verstöße |
+| agent-context | 1 | MaxLineCount |
 

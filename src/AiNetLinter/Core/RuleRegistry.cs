@@ -1,5 +1,4 @@
 // ainetlinter-disable MaxLineCount
-// ainetlinter-disable MaxMethodLineCount
 #nullable enable
 
 using System;
@@ -40,9 +39,21 @@ internal static class RuleRegistry
     public static IEnumerable<RuleMetadata> ByIntent(string intent) =>
         All.Where(r => r.Intent.Equals(intent, StringComparison.OrdinalIgnoreCase));
 
+    // Delegiert an Intent-Gruppen — jede Methode ≤ 60 Zeilen (MaxMethodLineCount).
     private static IReadOnlyList<RuleMetadata> BuildAll() =>
     [
-        // --- Metrics Config Rules (14 Rules) ---
+        ..BuildMetricsSizeRules(),       // MaxLineCount, MaxMethodLineCount, MaxMethodParameterCount (3)
+        ..BuildMetricsComplexityRules(), // MaxCyclomaticComplexity, MaxCognitiveComplexity, MaxInheritanceDepth, MaxMethodOverloads (4)
+        ..BuildMetricsDependencyRules(), // MaxConstructorDependencies, AIContextFootprint (2)
+        ..BuildMetricsStructureRules(),  // MaxDirectoryDepth/Children, MaxBoolParameter, MaxPartialClass, MaxPublicMembers, MaxLinqChain (6)
+        ..BuildAgentResilientRules(),    // EnforceNoSilentCatch, BanAsyncVoid, BanBlockingTaskAccess (3)
+        ..BuildArchitectureRules(),      // EnforceNamespaceDirectoryMapping, DetectAndBanPhantomDependencies (2)
+        ..BuildTestCoverageRules(),      // StaticTestSentinel (1)
+        ..BuildGeneralRules(),           // Sealed, PascalCase, Naming, Nullable, Allow-Rules, Advanced, UI-Separation (20+)
+    ];
+
+    private static RuleMetadata[] BuildMetricsSizeRules() =>
+    [
         new(
             RuleId: "MaxLineCount",
             DisplayName: "Maximale Dateilaenge",
@@ -106,6 +117,10 @@ internal static class RuleRegistry
             IncludeInCursorRules: true,
             GetMetricLimit: c => c.Metrics.MaxMethodParameterCount
         ),
+    ];
+
+    private static RuleMetadata[] BuildMetricsComplexityRules() =>
+    [
         new(
             RuleId: "MaxCyclomaticComplexity",
             DisplayName: "Zyklomatische Komplexitaet",
@@ -188,6 +203,10 @@ internal static class RuleRegistry
             IncludeInCursorRules: true,
             GetMetricLimit: c => c.Metrics.MaxMethodOverloads
         ),
+    ];
+
+    private static RuleMetadata[] BuildMetricsDependencyRules() =>
+    [
         new(
             RuleId: "MaxConstructorDependencies",
             DisplayName: "Konstruktorabhaengigkeiten",
@@ -208,6 +227,32 @@ internal static class RuleRegistry
             IncludeInCursorRules: true,
             GetMetricLimit: c => c.Metrics.MaxConstructorDependencies
         ),
+        new(
+            RuleId: "AIContextFootprint",
+            DisplayName: "AI Context Footprint",
+            GetShortDescription: c => $"AI-Context-Footprint (transitive Codezeilen aller Abhaengigkeiten) ueberschreitet Limit (max. {c.Metrics.MaxAIContextFootprint}).",
+            Warum: "Ein zu großer transitiver Code-Footprint bedeutet: der Agent braucht das volle Kontextbudget für eine einzige Klasse. Er sieht nie den vollständigen Kontext und übersieht Invarianten.",
+            Alternativen:
+            [
+                "**Schlankes Interface einführen**: Die größten Abhängigkeiten (s. Details) hinter einem minimalen Interface verstecken — reduziert den transitiven Footprint direkt.",
+                "**Klasse aufteilen**: Klasse nach Verantwortlichkeiten teilen und die Teile separat halten — jeder Teil hat kleineren Footprint.",
+                "**Abhängigkeit kapseln**: Statt direkter Abhängigkeit eine Facade oder ein Data-Transfer-Objekt übergeben."
+            ],
+            SicherheitsHinweis: "Interfaces einführen kann Architekturentscheidungen ändern. Nutzer fragen ob Interfaces im Projekt erlaubt sind.",
+            Intent: "agent-context",
+            Severity: "warning",
+            CursorHint: "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Metrics.MaxAIContextFootprint > 0,
+            IsMetric: true,
+            IncludeInCursorRules: true,
+            GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
+            ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
+        ),
+    ];
+
+    private static RuleMetadata[] BuildMetricsStructureRules() =>
+    [
         new(
             RuleId: "MaxDirectoryDepth",
             DisplayName: "Verzeichnistiefe",
@@ -316,28 +361,6 @@ internal static class RuleRegistry
             ConfigKeyHint: "rules.json → Metrics.MaxPublicMembersPerType | Ausnahmen via PathOverrides"
         ),
         new(
-            RuleId: "AIContextFootprint",
-            DisplayName: "AI Context Footprint",
-            GetShortDescription: c => $"AI-Context-Footprint (transitive Codezeilen aller Abhaengigkeiten) ueberschreitet Limit (max. {c.Metrics.MaxAIContextFootprint}).",
-            Warum: "Ein zu großer transitiver Code-Footprint bedeutet: der Agent braucht das volle Kontextbudget für eine einzige Klasse. Er sieht nie den vollständigen Kontext und übersieht Invarianten.",
-            Alternativen:
-            [
-                "**Schlankes Interface einführen**: Die größten Abhängigkeiten (s. Details) hinter einem minimalen Interface verstecken — reduziert den transitiven Footprint direkt.",
-                "**Klasse aufteilen**: Klasse nach Verantwortlichkeiten teilen und die Teile separat halten — jeder Teil hat kleineren Footprint.",
-                "**Abhängigkeit kapseln**: Statt direkter Abhängigkeit eine Facade oder ein Data-Transfer-Objekt übergeben."
-            ],
-            SicherheitsHinweis: "Interfaces einführen kann Architekturentscheidungen ändern. Nutzer fragen ob Interfaces im Projekt erlaubt sind.",
-            Intent: "agent-context",
-            Severity: "warning",
-            CursorHint: "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Metrics.MaxAIContextFootprint > 0,
-            IsMetric: true,
-            IncludeInCursorRules: true,
-            GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
-            ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
-        ),
-        new(
             RuleId: LinterRuleIds.MaxLinqChainLength,
             DisplayName: "Maximale LINQ-Kettenlaenge",
             GetShortDescription: c => $"LINQ-Kette ueberschreitet das Limit (max. {c.Metrics.MaxLinqChainLength} Methoden).",
@@ -362,8 +385,177 @@ internal static class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxLinqChainLength,
             ConfigKeyHint: "rules.json → Metrics.MaxLinqChainLength | Metrics.LinqMethodNames"
         ),
+    ];
 
-        // --- Global Config Rules (Not Metrics) ---
+    private static RuleMetadata[] BuildAgentResilientRules() =>
+    [
+        new(
+            RuleId: "EnforceNoSilentCatch",
+            DisplayName: "Keine leeren catch Bloecke",
+            GetShortDescription: c => "Keine stummen catch-Bloecke.",
+            Warum: "Leere catch-Blöcke verbergen Fehler. Agenten können nicht erkennen ob ein Fehler normal oder kritisch ist — führt zu Silent Data Loss.",
+            Alternativen:
+            [
+                "**Logging + Rethrow**: `catch (Exception ex) { _logger.LogError(ex, \"...\"); throw; }`",
+                "**Gezieltes Abfangen**: Nur die erwartete Exception-Type abfangen und spezifisch behandeln oder in ein Ergebnisobjekt umwandeln.",
+                "**Exception-Variable `ignored`**: `catch (SomeException ignored)` — der Linter erkennt den Variablennamen als explizit gewolltes Ignorieren.",
+                "**Suppression** (letztes Mittel, nur nach Freigabe): `// ainetlinter-disable EnforceNoSilentCatch` an der catch-Zeile."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-resilience",
+            Severity: "error",
+            CursorHint: "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.EnforceNoSilentCatch,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: LinterRuleIds.BanAsyncVoid,
+            DisplayName: "Kein async void",
+            GetShortDescription: c => "'async void' ist verboten (ausser Event-Handler).",
+            Warum: "'async void' schleudert Exceptions in den SynchronizationContext — sie werden von keinem aufrufenden 'try/catch' gefangen. " +
+                   "Agenten produzieren dieses Muster systematisch wenn sie void-Methoden zu async umwandeln.",
+            Alternativen:
+            [
+                "**'async Task' statt 'async void'**: Minimale Aenderung — Rückgabetyp ersetzen, Aufrufer await ergaenzen.",
+                "**Event-Handler-Ausnahme**: Signaturen mit '(object sender, EventArgs e)' bleiben erlaubt.",
+                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' fuer Legacy-Code."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-resilience",
+            Severity: "error",
+            CursorHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.BanAsyncVoid,
+            IsMetric: false,
+            IncludeInCursorRules: true,
+            ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
+        ),
+        new(
+            RuleId: LinterRuleIds.BanBlockingTaskAccess,
+            DisplayName: "Kein blockierender Task-Zugriff",
+            GetShortDescription: c => "'.Wait()', '.Result' und '.GetAwaiter().GetResult()' auf Tasks sind verboten.",
+            Warum: "Blockierende Task-Zugriffe blockieren ThreadPool-Threads und sind in SynchronizationContext-Umgebungen " +
+                   "(ASP.NET Classic, WPF) deadlock-anfaellig. Agenten produzieren dieses Muster systematisch " +
+                   "wenn sie synchrone Methoden mit async-APIs verbinden.",
+            Alternativen:
+            [
+                "**'await task'**: Methode zu 'async Task' umwandeln und await verwenden — loest das Problem vollstaendig.",
+                "**Aufrufkette async machen**: Von der blockierenden Methode nach oben migrieren bis alle Aufrufer async sind.",
+                "**'BanBlockingTaskAccessAllowInMain: true'**: Fuer Programm-Einstiegspunkte die kein async Main haben.",
+                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanBlockingTaskAccess' fuer unvermeidliche Stellen."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-resilience",
+            Severity: "error",
+            CursorHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.BanBlockingTaskAccess,
+            IsMetric: false,
+            IncludeInCursorRules: true,
+            ConfigKeyHint: "rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
+        ),
+    ];
+
+    private static RuleMetadata[] BuildArchitectureRules() =>
+    [
+        new(
+            RuleId: "ForbiddenNamespaceDependency",
+            DisplayName: "Namespace Abhaengigkeiten",
+            GetShortDescription: c => "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
+            Warum: "Architektur-Slices sollen entkoppelt sein. Direkte Abhängigkeiten zwischen verbotenen Namespaces erzeugen Zyklen, die Agenten nicht erkennen und weiterverstärken.",
+            Alternativen:
+            [
+                "**Interface/Abstraktion**: Die Abhängigkeit hinter einem Interface im erlaubten Namespace verstecken.",
+                "**Events/Messages**: Kommunikation über Events statt direkten Aufruf (Inversion of Control).",
+                "**Shared-Kernel**: Gemeinsam genutzte Typen in einen neutral erlaubten Namespace verschieben."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "architecture",
+            Severity: "error",
+            CursorHint: "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
+            HasAutoFix: false,
+            IsEnabled: c => c.ForbiddenNamespaceDependencies.Any(),
+            IsMetric: false,
+            IncludeInCursorRules: false
+        ),
+        new(
+            RuleId: "EnforceNamespaceDirectoryMapping",
+            DisplayName: "Namespace Pfadmapping",
+            GetShortDescription: c => "Namespace entspricht nicht dem Verzeichnis-Pfad.",
+            Warum: "Wenn Namespace und Dateipfad nicht übereinstimmen, können Agenten Dateien nicht über den Namespace lokalisieren und erzeugen fehlerhafte `using`-Direktiven.",
+            Alternativen:
+            [
+                "**Namespace anpassen**: Namespace an den Verzeichnispfad angleichen.",
+                "**Datei verschieben**: Datei in das zum Namespace passende Verzeichnis verschieben."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "architecture",
+            Severity: "error",
+            CursorHint: "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.EnforceNamespaceDirectoryMapping,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: "DetectAndBanPhantomDependencies",
+            DisplayName: "Keine Phantom Dependencies",
+            GetShortDescription: c => "Phantom-Abhaengigkeiten (unaufloesbare Namespaces oder Reflection-Laden) verboten.",
+            Warum: "Nicht-auflösbare Namespaces und Reflection-Lade-APIs sind die häufigste Halluzinations-Quelle in KI-generiertem Code — der Compiler sieht sie nicht, das Programm scheitert erst zur Laufzeit.",
+            Alternativen:
+            [
+                "**Korrekte `using`-Direktiven**: Nur explizit referenzierte NuGet-Pakete und Projekt-Namespaces verwenden.",
+                "**NuGet-Referenzen prüfen**: Ob das benötigte Paket in der `.csproj` steht.",
+                "**Reflection-Load ersetzen**: `Assembly.LoadFrom` / `Activator.CreateInstance` durch statische Registrierung."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "architecture",
+            Severity: "error",
+            CursorHint: "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.DetectAndBanPhantomDependencies,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+    ];
+
+    private static RuleMetadata[] BuildTestCoverageRules() =>
+    [
+        new(
+            RuleId: "StaticTestSentinel",
+            DisplayName: "Testabdeckung Sentinel",
+            GetShortDescription: c => "Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.",
+            Warum: "Komplexe Typen ohne Testabdeckung sind für Agenten eine Black Box — sie können keine Regression bei Änderungen erkennen.",
+            Alternativen:
+            [
+                "**Testklasse anlegen**: `{Name}Tests.cs` im entsprechenden Test-Projekt.",
+                "**`typeof(T)`-Referenz**: `typeof(FooClass)` in einer Testklasse — `EnableTestSentinel` erkennt das als Sentinel.",
+                "**`// @covers T`-Kommentar**: In einer bestehenden Testklasse ergänzen."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "test-coverage",
+            Severity: "warning",
+            CursorHint: "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.EnableTestSentinel,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+    ];
+
+    // Delegiert an Unter-Gruppen — zu viele Regeln für eine einzelne Methode.
+    private static RuleMetadata[] BuildGeneralRules() =>
+    [
+        ..BuildGeneralCoreRules(),
+        ..BuildGeneralAllowRules(),
+        ..BuildGeneralAdvancedRules(),
+        ..BuildUiSeparationRules(),
+    ];
+
+    private static RuleMetadata[] BuildGeneralCoreRules() =>
+    [
         new(
             RuleId: "EnforceSealedClasses",
             DisplayName: "Sealed Classes Pflicht",
@@ -406,27 +598,6 @@ internal static class RuleRegistry
             ConfigKeyHint: "rules.json → Global.NestedTypeExemptSuffixes"
         ),
         new(
-            RuleId: "EnforceNoSilentCatch",
-            DisplayName: "Keine leeren catch Bloecke",
-            GetShortDescription: c => "Keine stummen catch-Bloecke.",
-            Warum: "Leere catch-Blöcke verbergen Fehler. Agenten können nicht erkennen ob ein Fehler normal oder kritisch ist — führt zu Silent Data Loss.",
-            Alternativen:
-            [
-                "**Logging + Rethrow**: `catch (Exception ex) { _logger.LogError(ex, \"...\"); throw; }`",
-                "**Gezieltes Abfangen**: Nur die erwartete Exception-Type abfangen und spezifisch behandeln oder in ein Ergebnisobjekt umwandeln.",
-                "**Exception-Variable `ignored`**: `catch (SomeException ignored)` — der Linter erkennt den Variablennamen als explizit gewolltes Ignorieren.",
-                "**Suppression** (letztes Mittel, nur nach Freigabe): `// ainetlinter-disable EnforceNoSilentCatch` an der catch-Zeile."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "agent-resilience",
-            Severity: "error",
-            CursorHint: "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.EnforceNoSilentCatch,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
             RuleId: "EnforcePascalCase",
             DisplayName: "PascalCase Bezeichner",
             GetShortDescription: c => "PascalCase fuer oeffentliche Bezeichner erforderlich.",
@@ -441,25 +612,6 @@ internal static class RuleRegistry
             CursorHint: "Öffentliche Typen/Methoden/Properties: PascalCase.",
             HasAutoFix: true,
             IsEnabled: c => c.Global.EnforcePascalCase,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: "EnforceXmlDocumentation",
-            DisplayName: "XML API Dokumentation",
-            GetShortDescription: c => "Fehlende XML-Dokumentation fuer oeffentliche Schnittstellen.",
-            Warum: "Fehlende XML-Dokumentation für öffentliche APIs zwingt Agenten, den Zweck aus dem Code zu inferieren — erhöht Fehlerrate bei komplexen Parametern.",
-            Alternativen:
-            [
-                "**Summary ergänzen**: `/// <summary>Beschreibung des Zwecks.</summary>` vor dem public Member.",
-                "**Parameter dokumentieren**: `/// <param name=\"x\">Bedeutung von x.</param>` für nicht-selbsterklärende Parameter."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "warning",
-            CursorHint: "XML-Dokumentation für öffentliche APIs.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.EnforceXmlDocumentation,
             IsMetric: false,
             IncludeInCursorRules: true
         ),
@@ -500,6 +652,10 @@ internal static class RuleRegistry
             IsMetric: false,
             IncludeInCursorRules: true
         ),
+    ];
+
+    private static RuleMetadata[] BuildGeneralAllowRules() =>
+    [
         new(
             RuleId: "AllowDynamic",
             DisplayName: "Verbot Dynamic Typen",
@@ -541,22 +697,85 @@ internal static class RuleRegistry
             IncludeInCursorRules: true
         ),
         new(
-            RuleId: "StaticTestSentinel",
-            DisplayName: "Testabdeckung Sentinel",
-            GetShortDescription: c => "Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.",
-            Warum: "Komplexe Typen ohne Testabdeckung sind für Agenten eine Black Box — sie können keine Regression bei Änderungen erkennen.",
+            RuleId: "AllowUnsealedPartialClasses",
+            DisplayName: "Allow Unsealed Partial Classes",
+            GetShortDescription: c => "Unversiegelte partial Klassen erlaubt (z. B. Blazor-Komponenten).",
+            Warum: "Blazor-Komponenten und generierte Code-Klassen benoetigen unversiegelte partial Klassen. Diese Option deaktiviert die EnforceSealedClasses-Pruefung fuer solche Typen.",
+            Alternativen: ["**Standard**: `AllowUnsealedPartialClasses: false` — alle partial Klassen muessen sealed sein."],
+            SicherheitsHinweis: null,
+            Intent: "general",
+            Severity: "error",
+            CursorHint: "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten).",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.AllowUnsealedPartialClasses,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: "AllowTryPatternOutParameters",
+            DisplayName: "Allow Try Pattern Out Parameters",
+            GetShortDescription: c => "out-Parameter in Try*-Methoden erlaubt.",
+            Warum: "Das Try*-Pattern (TryParse, TryGet) benoetigt out-Parameter. Diese Option deaktiviert die Pruefung auf out-Parameter fuer Methoden mit 'Try'-Praefix.",
+            Alternativen: ["**Ohne out**: Gib Tuple<bool, T> oder Result<T> zurueck statt out-Parameter."],
+            SicherheitsHinweis: null,
+            Intent: "general",
+            Severity: "error",
+            CursorHint: "`out` in `Try*`-Methoden erlaubt.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.AllowTryPatternOutParameters,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: "AllowCancellationShutdownCatch",
+            DisplayName: "Allow Cancellation Shutdown Catch",
+            GetShortDescription: c => "OperationCanceledException beim Shutdown abfangen erlaubt.",
+            Warum: "Graceful-Shutdown-Logik muss OperationCanceledException abfangen koennen. Diese Option erlaubt den Catch in Shutdown-Methoden, die sonst durch die Pruefung blockiert waeren.",
+            Alternativen: ["**Ohne Catch**: CancellationToken weiterpropagieren und kein Catch auf oberster Ebene."],
+            SicherheitsHinweis: null,
+            Intent: "general",
+            Severity: "error",
+            CursorHint: "`OperationCanceledException` beim Shutdown abfangen erlaubt.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.AllowCancellationShutdownCatch,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: "AllowedEmptyReads",
+            DisplayName: "Allowed Empty Reads",
+            GetShortDescription: c => "Leseoperationen ohne unmittelbaren Guard verboten.",
+            Warum: "Leseoperationen ohne unmittelbaren Null-Guard sind eine haeufige Fehlerquelle. Diese Option erlaubt spezifische Ausnahmen, z. B. fuer Properties mit garantiertem Wert nach Initialisierung.",
+            Alternativen: ["**Mit Guard**: Null-Check direkt nach der Leseoperation."],
+            SicherheitsHinweis: null,
+            Intent: "general",
+            Severity: "error",
+            CursorHint: "Leseoperationen immer mit unmittelbarem Guard versehen.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.AllowedEmptyReads,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+    ];
+
+    private static RuleMetadata[] BuildGeneralAdvancedRules() =>
+    [
+        new(
+            RuleId: "EnforceXmlDocumentation",
+            DisplayName: "XML API Dokumentation",
+            GetShortDescription: c => "Fehlende XML-Dokumentation fuer oeffentliche Schnittstellen.",
+            Warum: "Fehlende XML-Dokumentation für öffentliche APIs zwingt Agenten, den Zweck aus dem Code zu inferieren — erhöht Fehlerrate bei komplexen Parametern.",
             Alternativen:
             [
-                "**Testklasse anlegen**: `{Name}Tests.cs` im entsprechenden Test-Projekt.",
-                "**`typeof(T)`-Referenz**: `typeof(FooClass)` in einer Testklasse — `EnableTestSentinel` erkennt das als Sentinel.",
-                "**`// @covers T`-Kommentar**: In einer bestehenden Testklasse ergänzen."
+                "**Summary ergänzen**: `/// <summary>Beschreibung des Zwecks.</summary>` vor dem public Member.",
+                "**Parameter dokumentieren**: `/// <param name=\"x\">Bedeutung von x.</param>` für nicht-selbsterklärende Parameter."
             ],
             SicherheitsHinweis: null,
-            Intent: "test-coverage",
+            Intent: "general",
             Severity: "warning",
-            CursorHint: "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.",
+            CursorHint: "XML-Dokumentation für öffentliche APIs.",
             HasAutoFix: false,
-            IsEnabled: c => c.Global.EnableTestSentinel,
+            IsEnabled: c => c.Global.EnforceXmlDocumentation,
             IsMetric: false,
             IncludeInCursorRules: true
         ),
@@ -618,64 +837,47 @@ internal static class RuleRegistry
             IncludeInCursorRules: true
         ),
         new(
-            RuleId: "ForbiddenNamespaceDependency",
-            DisplayName: "Namespace Abhaengigkeiten",
-            GetShortDescription: c => "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
-            Warum: "Architektur-Slices sollen entkoppelt sein. Direkte Abhängigkeiten zwischen verbotenen Namespaces erzeugen Zyklen, die Agenten nicht erkennen und weiterverstärken.",
+            RuleId: "EnforceValueObjectContracts",
+            DisplayName: "ValueObject Immutability",
+            GetShortDescription: c => "ValueObject-Klassen muessen record oder readonly struct sein.",
+            Warum: "Klassen mit `*ValueObject`-Suffix sollten strukturell unveränderlich sein. Agenten fügen sonst mutierbare Properties hinzu und brechen das Invariant.",
             Alternativen:
             [
-                "**Interface/Abstraktion**: Die Abhängigkeit hinter einem Interface im erlaubten Namespace verstecken.",
-                "**Events/Messages**: Kommunikation über Events statt direkten Aufruf (Inversion of Control).",
-                "**Shared-Kernel**: Gemeinsam genutzte Typen in einen neutral erlaubten Namespace verschieben."
+                "**`record`**: `public sealed record PriceValueObject(decimal Amount, string Currency)` — primäres Konstrukt für Value Objects.",
+                "**`readonly struct`**: Für kleine, häufig kopierte Value Objects ohne Vererbungsbedarf."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: "general",
             Severity: "error",
-            CursorHint: "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
+            CursorHint: "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.",
             HasAutoFix: false,
-            IsEnabled: c => c.ForbiddenNamespaceDependencies.Any(),
-            IsMetric: false,
-            IncludeInCursorRules: false
-        ),
-        new(
-            RuleId: "EnforceNamespaceDirectoryMapping",
-            DisplayName: "Namespace Pfadmapping",
-            GetShortDescription: c => "Namespace entspricht nicht dem Verzeichnis-Pfad.",
-            Warum: "Wenn Namespace und Dateipfad nicht übereinstimmen, können Agenten Dateien nicht über den Namespace lokalisieren und erzeugen fehlerhafte `using`-Direktiven.",
-            Alternativen:
-            [
-                "**Namespace anpassen**: Namespace an den Verzeichnispfad angleichen.",
-                "**Datei verschieben**: Datei in das zum Namespace passende Verzeichnis verschieben."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "architecture",
-            Severity: "error",
-            CursorHint: "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.EnforceNamespaceDirectoryMapping,
+            IsEnabled: c => c.Global.EnforceValueObjectContracts,
             IsMetric: false,
             IncludeInCursorRules: true
         ),
         new(
-            RuleId: "DetectAndBanPhantomDependencies",
-            DisplayName: "Keine Phantom Dependencies",
-            GetShortDescription: c => "Phantom-Abhaengigkeiten (unaufloesbare Namespaces oder Reflection-Laden) verboten.",
-            Warum: "Nicht-auflösbare Namespaces und Reflection-Lade-APIs sind die häufigste Halluzinations-Quelle in KI-generiertem Code — der Compiler sieht sie nicht, das Programm scheitert erst zur Laufzeit.",
+            RuleId: "PreventContextDependentOverloads",
+            DisplayName: "Keine primitives-only Ueberladungen",
+            GetShortDescription: c => "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
+            Warum: "Überladungen mit identischer Parameteranzahl, die sich nur durch primitive Typen unterscheiden, sind für Agenten nicht disambiguierbar — falscher Aufruf bleibt kompilierbar.",
             Alternativen:
             [
-                "**Korrekte `using`-Direktiven**: Nur explizit referenzierte NuGet-Pakete und Projekt-Namespaces verwenden.",
-                "**NuGet-Referenzen prüfen**: Ob das benötigte Paket in der `.csproj` steht.",
-                "**Reflection-Load ersetzen**: `Assembly.LoadFrom` / `Activator.CreateInstance` durch statische Registrierung."
+                "**Explizite Methodennamen**: `ParseFromString(string)` + `ParseFromInt(int)` statt `Parse(string)` + `Parse(int)`.",
+                "**Named-Constructor-Pattern**: Statische Factory-Methoden mit klaren Namen statt Überladungen."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.",
+            CursorHint: "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
             HasAutoFix: false,
-            IsEnabled: c => c.Global.DetectAndBanPhantomDependencies,
+            IsEnabled: c => c.Global.PreventContextDependentOverloads,
             IsMetric: false,
             IncludeInCursorRules: true
         ),
+    ];
+
+    private static RuleMetadata[] BuildUiSeparationRules() =>
+    [
         new(
             RuleId: "BlazorRequireCodeBehind",
             DisplayName: "Blazor Code Behind",
@@ -733,151 +935,5 @@ internal static class RuleRegistry
             IsMetric: false,
             IncludeInCursorRules: false
         ),
-        new(
-            RuleId: "EnforceValueObjectContracts",
-            DisplayName: "ValueObject Immutability",
-            GetShortDescription: c => "ValueObject-Klassen muessen record oder readonly struct sein.",
-            Warum: "Klassen mit `*ValueObject`-Suffix sollten strukturell unveränderlich sein. Agenten fügen sonst mutierbare Properties hinzu und brechen das Invariant.",
-            Alternativen:
-            [
-                "**`record`**: `public sealed record PriceValueObject(decimal Amount, string Currency)` — primäres Konstrukt für Value Objects.",
-                "**`readonly struct`**: Für kleine, häufig kopierte Value Objects ohne Vererbungsbedarf."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "error",
-            CursorHint: "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.EnforceValueObjectContracts,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: "PreventContextDependentOverloads",
-            DisplayName: "Keine primitives-only Ueberladungen",
-            GetShortDescription: c => "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
-            Warum: "Überladungen mit identischer Parameteranzahl, die sich nur durch primitive Typen unterscheiden, sind für Agenten nicht disambiguierbar — falscher Aufruf bleibt kompilierbar.",
-            Alternativen:
-            [
-                "**Explizite Methodennamen**: `ParseFromString(string)` + `ParseFromInt(int)` statt `Parse(string)` + `Parse(int)`.",
-                "**Named-Constructor-Pattern**: Statische Factory-Methoden mit klaren Namen statt Überladungen."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "agent-context",
-            Severity: "error",
-            CursorHint: "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.PreventContextDependentOverloads,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-
-        // --- Modifiers & Allow Rules (Included in Cursor Rules for MDC table but no custom legends) ---
-        new(
-            RuleId: "AllowUnsealedPartialClasses",
-            DisplayName: "Allow Unsealed Partial Classes",
-            GetShortDescription: c => "Unversiegelte partial Klassen erlaubt (z. B. Blazor-Komponenten).",
-            Warum: "Blazor-Komponenten und generierte Code-Klassen benoetigen unversiegelte partial Klassen. Diese Option deaktiviert die EnforceSealedClasses-Pruefung fuer solche Typen.",
-            Alternativen: ["**Standard**: `AllowUnsealedPartialClasses: false` — alle partial Klassen muessen sealed sein."],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "error",
-            CursorHint: "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten).",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.AllowUnsealedPartialClasses,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: "AllowTryPatternOutParameters",
-            DisplayName: "Allow Try Pattern Out Parameters",
-            GetShortDescription: c => "out-Parameter in Try*-Methoden erlaubt.",
-            Warum: "Das Try*-Pattern (TryParse, TryGet) benoetigt out-Parameter. Diese Option deaktiviert die Pruefung auf out-Parameter fuer Methoden mit 'Try'-Praefix.",
-            Alternativen: ["**Ohne out**: Gib Tuple<bool, T> oder Result<T> zurueck statt out-Parameter."],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "error",
-            CursorHint: "`out` in `Try*`-Methoden erlaubt.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.AllowTryPatternOutParameters,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: "AllowCancellationShutdownCatch",
-            DisplayName: "Allow Cancellation Shutdown Catch",
-            GetShortDescription: c => "OperationCanceledException beim Shutdown abfangen erlaubt.",
-            Warum: "Graceful-Shutdown-Logik muss OperationCanceledException abfangen koennen. Diese Option erlaubt den Catch in Shutdown-Methoden, die sonst durch die Pruefung blockiert waeren.",
-            Alternativen: ["**Ohne Catch**: CancellationToken weiterpropagieren und kein Catch auf oberster Ebene."],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "error",
-            CursorHint: "`OperationCanceledException` beim Shutdown abfangen erlaubt.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.AllowCancellationShutdownCatch,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: "AllowedEmptyReads",
-            DisplayName: "Allowed Empty Reads",
-            GetShortDescription: c => "Leseoperationen ohne unmittelbaren Guard verboten.",
-            Warum: "Leseoperationen ohne unmittelbaren Null-Guard sind eine haeufige Fehlerquelle. Diese Option erlaubt spezifische Ausnahmen, z. B. fuer Properties mit garantiertem Wert nach Initialisierung.",
-            Alternativen: ["**Mit Guard**: Null-Check direkt nach der Leseoperation."],
-            SicherheitsHinweis: null,
-            Intent: "general",
-            Severity: "error",
-            CursorHint: "Leseoperationen immer mit unmittelbarem Guard versehen.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.AllowedEmptyReads,
-            IsMetric: false,
-            IncludeInCursorRules: true
-        ),
-        new(
-            RuleId: LinterRuleIds.BanAsyncVoid,
-            DisplayName: "Kein async void",
-            GetShortDescription: c => "'async void' ist verboten (ausser Event-Handler).",
-            Warum: "'async void' schleudert Exceptions in den SynchronizationContext — sie werden von keinem aufrufenden 'try/catch' gefangen. " +
-                   "Agenten produzieren dieses Muster systematisch wenn sie void-Methoden zu async umwandeln.",
-            Alternativen:
-            [
-                "**'async Task' statt 'async void'**: Minimale Aenderung — Rückgabetyp ersetzen, Aufrufer await ergaenzen.",
-                "**Event-Handler-Ausnahme**: Signaturen mit '(object sender, EventArgs e)' bleiben erlaubt.",
-                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' fuer Legacy-Code."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "agent-resilience",
-            Severity: "error",
-            CursorHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.BanAsyncVoid,
-            IsMetric: false,
-            IncludeInCursorRules: true,
-            ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
-        ),
-        new(
-            RuleId: LinterRuleIds.BanBlockingTaskAccess,
-            DisplayName: "Kein blockierender Task-Zugriff",
-            GetShortDescription: c => "'.Wait()', '.Result' und '.GetAwaiter().GetResult()' auf Tasks sind verboten.",
-            Warum: "Blockierende Task-Zugriffe blockieren ThreadPool-Threads und sind in SynchronizationContext-Umgebungen " +
-                   "(ASP.NET Classic, WPF) deadlock-anfaellig. Agenten produzieren dieses Muster systematisch " +
-                   "wenn sie synchrone Methoden mit async-APIs verbinden.",
-            Alternativen:
-            [
-                "**'await task'**: Methode zu 'async Task' umwandeln und await verwenden — loest das Problem vollstaendig.",
-                "**Aufrufkette async machen**: Von der blockierenden Methode nach oben migrieren bis alle Aufrufer async sind.",
-                "**'BanBlockingTaskAccessAllowInMain: true'**: Fuer Programm-Einstiegspunkte die kein async Main haben.",
-                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanBlockingTaskAccess' fuer unvermeidliche Stellen."
-            ],
-            SicherheitsHinweis: null,
-            Intent: "agent-resilience",
-            Severity: "error",
-            CursorHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
-            HasAutoFix: false,
-            IsEnabled: c => c.Global.BanBlockingTaskAccess,
-            IsMetric: false,
-            IncludeInCursorRules: true,
-            ConfigKeyHint: "rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
-        )
     ];
 }
