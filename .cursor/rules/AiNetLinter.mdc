@@ -32,6 +32,13 @@ Auto-generiert durch AiNetLinter 1.0.53 aus `rules.json`. Neuen Produktionscode 
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
 | `AIContextFootprint` | **5000** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 
+## Compound Suppressions (kontextabhängige Limiten)
+Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:
+
+| Regel | Bedingung | Effektives Limit | Grund |
+|:--|:--|:--|:--|
+| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 AND CognitiveComplexity ≤ 5 | **150** | Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC≤3 ist nicht mit Fehleranfälligkeit korreliert (Palomba et al., 2018). |
+
 ## agent-resilience
 - **EnforceNoSilentCatch** — `catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.
 

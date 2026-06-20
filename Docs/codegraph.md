@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.53)
-Produktionscode · 161 Typen · 14 Namespaces
+Produktionscode · 166 Typen · 14 Namespaces
 
 ## AiNetLinter (1)
 - Program → CliParsedArgs, LinterArgs
@@ -54,7 +54,8 @@ Produktionscode · 161 Typen · 14 Namespaces
 - PlaybookCheckCommand → ILintConsole, LinterArgs
 - SyncCursorRulesCommand → ILintConsole, LinterArgs
 
-## AiNetLinter.Configuration (19)
+## AiNetLinter.Configuration (21)
+- CompoundSuppression [record] → CompoundSuppression
 - FileFilterEvaluator → FileFiltersConfig
 - FileFiltersConfig [record] → FileFiltersConfig
 - GlobalConfig [record] → GlobalConfig, GlobalConfigOverride
@@ -63,6 +64,7 @@ Produktionscode · 161 Typen · 14 Namespaces
 - LinterConfigLoader → LinterConfig
 - LinterConfigNormalizer → LinterConfig
 - LinterConfigSyncer → LinterConfig
+- MetricCondition [record] → MetricCondition
 - MetricsConfig [record] → MetricsConfig, MetricsConfigOverride
 - MetricsConfigOverride [record] → MetricsConfigOverride
 - NamespaceRule [record] → NamespaceRule
@@ -75,11 +77,12 @@ Produktionscode · 161 Typen · 14 Namespaces
 - UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
 - UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (32)
+## AiNetLinter.Core (34)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
 - CodegraphGenerator → TypeInfo
+- CompoundSuppressionEvaluator → CompoundSuppression
 - CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
@@ -89,6 +92,7 @@ Produktionscode · 161 Typen · 14 Namespaces
 - LinterAutoFixer → FixContext, FixOptions, ILintConsole
 - LinterEngine → AnalysisCacheManager, AnalysisState, CacheDestination, CatalogDocumentWorkItem, DocumentContext, ILintConsole, IPerformanceProfiler, LinterAnalyzer, LinterConfig, SourceFileCatalog, TestCoverageIndex, TestSignalsDto
 - LinterRuleIds
+- MetricNames
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart
 - PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
@@ -109,12 +113,12 @@ Produktionscode · 161 Typen · 14 Namespaces
 - TypeInfo [record] → TypeInfo
 - UiFileSeparationChecker → AnalysisState, LinterConfig, RuleViolation, UiSeparationConfig
 
-## AiNetLinter.Core.Checkers (23)
+## AiNetLinter.Core.Checkers (24)
 - BoolParameterChecker → CheckerContext
 - CheckerContext → LinterConfig, RuleViolation
 - ClassInfoCollector → CheckerContext
 - ComplexityCheck [record] → ComplexityCheck
-- ComplexityChecker → CheckerContext, ComplexityCheck
+- ComplexityChecker → CheckerContext, ComplexityCheck, ParamViolationArgs
 - ControlFlowChecker → CheckerContext
 - DynamicTypeChecker → CheckerContext
 - GeneratedCodeDetector → CheckerContext
@@ -124,6 +128,7 @@ Produktionscode · 161 Typen · 14 Namespaces
 - NamespaceCouplingChecker → CheckerContext
 - NamingChecker → CheckerContext
 - NestedTypesChecker → CheckerContext
+- ParamViolationArgs [record] → CheckerContext, CompoundSuppression, ParamViolationArgs
 - PhantomDependencyChecker → CheckerContext
 - PublicMembersChecker → CheckerContext
 - ScopeChecker → CheckerContext

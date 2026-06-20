@@ -667,6 +667,54 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
 }
 ```
 
+## CompoundSuppressions
+
+Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig sind.
+
+```json
+"Metrics": {
+  "CompoundSuppressions": [
+    {
+      "TargetRule": "MaxMethodLineCount",
+      "WhenAllOf": [
+        { "Metric": "CyclomaticComplexity", "AtMost": 3 },
+        { "Metric": "CognitiveComplexity",  "AtMost": 5 }
+      ],
+      "RelaxedLimit": 150,
+      "Reason": "Init-Methoden sind semantisch flach."
+    }
+  ]
+}
+```
+
+### Felder
+
+| Feld | Beschreibung |
+|:--|:--|
+| `TargetRule` | Rule-ID (z.B. `MaxMethodLineCount`) |
+| `WhenAllOf[].Metric` | Metric-Name (siehe unten) |
+| `WhenAllOf[].AtMost` | Bedingung: Metrik ≤ Wert |
+| `WhenAllOf[].AtLeast` | Bedingung: Metrik ≥ Wert |
+| `RelaxedLimit` | Relaxiertes Limit wenn aktiv. Fehlt = vollständig supprimieren |
+| `Reason` | Freitext, erscheint in `.mdc` und Violation-Guidance |
+
+### Unterstützte Metric-Namen
+
+**Methoden-Ebene:** `CyclomaticComplexity`, `CognitiveComplexity`, `ParameterCount`, `LineCount`  
+**Klassen-Ebene:** `ConstructorDependencies`, `PublicMemberCount`
+
+### Klassen-Ebene: Beispiel Interface-Adapter
+
+```json
+{
+  "TargetRule": "MaxPublicMembersPerType",
+  "WhenAllOf": [
+    { "Metric": "ConstructorDependencies", "AtMost": 2 }
+  ],
+  "Reason": "Interface-Adapter mit wenigen Deps sind trotz breiter API schwach gekoppelt."
+}
+```
+
 ---
 
 ## 4. Kompilieren & Bereitstellen (Build & Deployment)

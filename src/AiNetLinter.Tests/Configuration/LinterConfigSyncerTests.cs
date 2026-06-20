@@ -189,4 +189,108 @@ public sealed class LinterConfigSyncerTests
         }
         finally { File.Delete(path); }
     }
+
+    // --- CompoundSuppressions Sync ---
+
+    [Fact]
+    public void SyncerA_ConfigWithoutCompoundSuppressionsKey_GetsPopulatedWithDefault()
+    {
+        const string oldJson = """
+            {
+              "Global": { "EnforceSealedClasses": true },
+              "Metrics": { "MaxLineCount": 700 }
+            }
+            """;
+        var path = WriteTempJson(oldJson);
+        try
+        {
+            var config = DefaultConfig();
+            var updated = LinterConfigSyncer.SyncIfNeeded(path, config);
+
+            Assert.True(updated);
+            var written = File.ReadAllText(path);
+            Assert.Contains("CompoundSuppressions", written);
+            Assert.Contains("MaxMethodLineCount", written);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void SyncerB_ConfigWithExistingCompoundSuppressions_Preserved()
+    {
+        const string userJson = """
+            {
+              "Global": {},
+              "Metrics": {
+                "CompoundSuppressions": [
+                  {
+                    "TargetRule": "MaxMethodLineCount",
+                    "WhenAllOf": [
+                      { "Metric": "CyclomaticComplexity", "AtMost": 2 }
+                    ],
+                    "RelaxedLimit": 100,
+                    "Reason": "User override"
+                  }
+                ]
+              }
+            }
+            """;
+        var path = WriteTempJson(userJson);
+        try
+        {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var loaded = JsonSerializer.Deserialize<LinterConfig>(userJson, options)!;
+
+            LinterConfigSyncer.SyncIfNeeded(path, loaded);
+
+            var written = File.ReadAllText(path);
+            var reloaded = JsonSerializer.Deserialize<LinterConfig>(written, ReadOptions)!;
+
+            Assert.Single(reloaded.Metrics.CompoundSuppressions);
+            var suppression = reloaded.Metrics.CompoundSuppressions[0];
+            Assert.Equal(2, suppression.WhenAllOf[0].AtMost);
+            Assert.Equal("User override", suppression.Reason);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void SyncerC_MetricsConfigOverride_CompoundSuppressions_Applied()
+    {
+        var globalConfig = new LinterConfig
+        {
+            Global = new GlobalConfig(),
+            Metrics = new MetricsConfig
+            {
+                CompoundSuppressions = new List<CompoundSuppression>()
+            },
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["*.Tests"] = new()
+                {
+                    Metrics = new MetricsConfigOverride
+                    {
+                        CompoundSuppressions = new List<CompoundSuppression>
+                        {
+                            new()
+                            {
+                                TargetRule = "MaxMethodLineCount",
+                                WhenAllOf = new List<MetricCondition>
+                                {
+                                    new() { Metric = "CyclomaticComplexity", AtMost = 2 }
+                                },
+                                RelaxedLimit = 100
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var resolved = ProjectConfigResolver.ResolveForProject("MyLibrary.Tests", globalConfig);
+
+        Assert.Single(resolved.Metrics.CompoundSuppressions);
+        Assert.Equal(2, resolved.Metrics.CompoundSuppressions[0].WhenAllOf[0].AtMost);
+        Assert.Equal(100, resolved.Metrics.CompoundSuppressions[0].RelaxedLimit);
+    }
 }

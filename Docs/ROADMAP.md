@@ -299,3 +299,16 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 _Hinweis: Konfigurierbar über die `rules.json`._
 
 - [x] **Regel: BanPublicNestedTypes** – Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Private nested Typen bleiben standardmäßig erlaubt (Implementierungsdetail). Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Konfigurierbar unter `Global.BanPublicNestedTypes` (Default `true`) und `Global.BanPublicNestedTypesAllowPrivate` (Default `true`). Severity: `error`, Intent: `agent-context`.
+
+---
+
+## Epic 25: Compound Suppressions (Kontextabhängige Metrik-Gewichtung)
+
+- [x] **Datenmodell:** Records `MetricCondition` und `CompoundSuppression` in `LinterConfig.cs`
+- [x] **`MetricsConfig.CompoundSuppressions`:** Property mit 1 aktivem Default für `MaxMethodLineCount`
+- [x] **`CompoundSuppressionEvaluator`:** Isolierter Helper mit `Evaluate/FindConfigured/IsActive`
+- [x] **Phase 1 — Methoden-Ebene:** `MaxMethodLineCount` und `MaxMethodParameterCount` unterstützen Compound-Suppression mit 3-Szenarien-Guidance
+- [x] **Phase 2 — Klassen-Ebene:** `MaxPublicMembersPerType` und `MaxConstructorDependencies` unterstützen Compound-Suppression
+- [x] **CursorRules-Generator:** Abschnitt `Compound Suppressions` in `.mdc`-Output
+- [x] **Docs:** `rationale.md` Abschnitt 11, vollständiger `configuration.md`-Abschnitt
+- [x] **Tests:** Unit (Evaluator), Integration (3 Szenarien), Guidance-Text, Config-Sync

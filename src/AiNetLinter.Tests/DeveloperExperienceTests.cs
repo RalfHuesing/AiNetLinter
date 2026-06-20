@@ -353,6 +353,53 @@ public sealed class DeveloperExperienceTests
         Assert.True(File.Exists(mdcPath));
     }
 
+    [Fact]
+    public void GuidanceD_CursorRulesContainsCompoundSuppressionsTable()
+    {
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig(),
+            Metrics = new MetricsConfig
+            {
+                CompoundSuppressions = new List<CompoundSuppression>
+                {
+                    new()
+                    {
+                        TargetRule = "MaxMethodLineCount",
+                        WhenAllOf = new List<MetricCondition>
+                        {
+                            new() { Metric = "CyclomaticComplexity", AtMost = 3 }
+                        },
+                        RelaxedLimit = 150,
+                        Reason = "Test reason here"
+                    }
+                }
+            }
+        };
+
+        var content = CursorRulesGenerator.GenerateContent(config, "rules.json");
+
+        Assert.Contains("## Compound Suppressions (kontextabhängige Limiten)", content);
+        Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | Test reason here |", content);
+    }
+
+    [Fact]
+    public void GuidanceE_CursorRulesContainsNoCompoundSuppressionsTable()
+    {
+        var config = new LinterConfig
+        {
+            Global = new GlobalConfig(),
+            Metrics = new MetricsConfig
+            {
+                CompoundSuppressions = new List<CompoundSuppression>()
+            }
+        };
+
+        var content = CursorRulesGenerator.GenerateContent(config, "rules.json");
+
+        Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
+    }
+
     private static string FindProjectRoot()
     {
         var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);

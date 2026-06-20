@@ -72,3 +72,10 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 *   **Wissenschaftlicher Hintergrund:** LLMs neigen dazu, Paket-Abhängigkeiten oder Klassen zu halluzinieren, die in der realen Codebasis nicht existieren. Bannen von ungelösten Namespace-using-Statements und dynamischer Reflection zwingt die KI zur Compile-Zeit-Verifizierung und verhindert "Phantom-Logik".
 *   **Konsequenz:** Der Import von Namespaces, die Roslyn im Kompilierungskontext nicht auflösen kann, sowie String-basierte Reflection (`Type.GetType`) sind verboten.
 *   **Referenz:** *Scale AI (2026). "SWE Atlas: Measuring Coding Agents".*
+
+#### 11. Kontextabhängige Metrik-Gewichtung (`CompoundSuppressions`)
+*   **Wissenschaftlicher Hintergrund:** Palomba et al. (2018) zeigen, dass der „Long Method"-Smell in Isolation schwache Vorhersagekraft für Fehleranfälligkeit hat — erst in Kombination mit hoher Komplexität steigt die Fault-Density signifikant. NDepend löst dies seit Jahren über CQL (Code Query Language), indem LOC-Schwellenwerte nur dann gelten wenn CC ebenfalls kritisch ist.
+*   **Konsequenz für AI-Readability:** Lange, semantisch flache Methoden (DI-Setup, Builder-Chains, Enum-zu-String-Tabellen) sind für LLMs trivial erfassbar — das „Lost in the Middle"-Problem entsteht erst bei verschachtelter Komplexität. False Positives aus `MaxMethodLineCount` erzwingen künstliches Refactoring, das den Code schlechter lesbar macht.
+*   **Referenz:**
+    * *Palomba, F. et al. (2018). "Revisiting the Impact of Code Smells on Software Maintainability". EMSE.*
+    * *Gyimothy, T. et al. (2005). "Empirical Validation of Object-Oriented Metrics on Open Source Software". TSE.*

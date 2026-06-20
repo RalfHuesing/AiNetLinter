@@ -3,6 +3,7 @@ using AiNetLinter;
 
 namespace AiNetLinter.Tests;
 
+[Collection("ConsoleTestCollection")]
 public sealed class ProgramTests
 {
     [Fact]

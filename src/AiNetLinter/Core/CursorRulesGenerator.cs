@@ -61,9 +61,6 @@ public static class CursorRulesGenerator
         return targetPath;
     }
 
-    /// <summary>
-    /// Generiert den Inhalt für die MDC-Regeldatei.
-    /// </summary>
     public static string GenerateContent(LinterConfig config, string configPath)
     {
         var sb = new StringBuilder();
@@ -72,12 +69,35 @@ public static class CursorRulesGenerator
         AppendFrontmatter(sb, version, configPath);
         AppendKurzStil(sb, config);
         AppendMetricsTable(sb, config);
+        AppendCompoundSuppressions(sb, config);
         AppendActiveRulesByIntent(sb, config);
         AppendDisabledCompact(sb, config);
         AppendProjectOverridesDelta(sb, config);
         sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --docs <name>`.");
 
         return sb.ToString();
+    }
+
+    private static void AppendCompoundSuppressions(StringBuilder sb, LinterConfig config)
+    {
+        var suppressions = config.Metrics.CompoundSuppressions;
+        if (suppressions == null || suppressions.Count == 0) return;
+
+        sb.AppendLine("## Compound Suppressions (kontextabhängige Limiten)");
+        sb.AppendLine("Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:\n");
+        sb.AppendLine("| Regel | Bedingung | Effektives Limit | Grund |");
+        sb.AppendLine("|:--|:--|:--|:--|");
+
+        foreach (var s in suppressions)
+        {
+            var condParts = s.WhenAllOf.Select(c =>
+                c.AtMost.HasValue ? $"{c.Metric} ≤ {c.AtMost}" : $"{c.Metric} ≥ {c.AtLeast}");
+            var conditions = string.Join(" AND ", condParts);
+            var limit = s.RelaxedLimit.HasValue ? $"**{s.RelaxedLimit}**" : "supprimiert";
+            var reason = s.Reason ?? "—";
+            sb.AppendLine($"| `{s.TargetRule}` | {conditions} | {limit} | {reason} |");
+        }
+        sb.AppendLine();
     }
 
     private static void AppendFrontmatter(StringBuilder sb, string version, string configPath)

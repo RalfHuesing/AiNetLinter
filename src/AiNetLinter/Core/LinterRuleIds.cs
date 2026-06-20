@@ -62,3 +62,14 @@ internal static class LinterRuleIds
     internal const string BlazorRequireCssIsolation         = "BlazorRequireCssIsolation";
     internal const string WpfRequireMinimalCodeBehind       = "WpfRequireMinimalCodeBehind";
 }
+
+// --- Metric-Namen für CompoundSuppressions.WhenAllOf ---
+internal static class MetricNames
+{
+    internal const string CyclomaticComplexity    = "CyclomaticComplexity";
+    internal const string CognitiveComplexity     = "CognitiveComplexity";
+    internal const string ParameterCount          = "ParameterCount";
+    internal const string LineCount               = "LineCount";
+    internal const string ConstructorDependencies = "ConstructorDependencies";
+    internal const string PublicMemberCount       = "PublicMemberCount";
+}

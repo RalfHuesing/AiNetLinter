@@ -111,7 +111,8 @@ public sealed class Sample
             Metrics = new MetricsConfig
             {
                 MaxLineCount = 500,
-                MaxMethodLineCount = 42
+                MaxMethodLineCount = 42,
+                CompoundSuppressions = Array.Empty<CompoundSuppression>()
             }
         };
 
