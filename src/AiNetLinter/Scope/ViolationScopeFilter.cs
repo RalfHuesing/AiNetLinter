@@ -1,5 +1,6 @@
 using AiNetLinter.Models;
 using AiNetLinter.Output;
+using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Scope;
 

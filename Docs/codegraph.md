@@ -174,15 +174,15 @@ Produktionscode · 161 Typen · 14 Namespaces
 - ViolationMarkdownFormatter → LinterConfig, RuleViolation
 - ViolationSummaryBuilder → LinterConfig
 
-## AiNetLinter.Scope (4)
-- DisableAllDetector [partial]
+## AiNetLinter.Scope (3)
 - GitChangedFilesResolver
 - ViolationScopeFilter → ViolationScopeOptions
 - ViolationScopeOptions [record] → ViolationScopeOptions
 
-## AiNetLinter.Suppression (8)
+## AiNetLinter.Suppression (9)
 - DisableAllCommentInjector → DisableAllInjectResult
-- DisableAllCommentRemover [partial] → DisableAllRemoveResult
+- DisableAllCommentRemover → DisableAllRemoveResult
+- DisableAllDetector [partial]
 - DisableAllInjectResult [record] → DisableAllInjectResult
 - DisableAllRemoveResult [record] → DisableAllRemoveResult
 - SuppressionCommentParser
