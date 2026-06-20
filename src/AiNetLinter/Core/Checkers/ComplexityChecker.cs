@@ -224,8 +224,6 @@ internal static class ComplexityChecker
             CognitiveComplexityGuidance.Build(node, cogC, ctx.Config.Metrics.MaxCognitiveComplexity)), ctx);
     }
 
-
-
     private static int GetEffectiveParamLimit(CheckerContext ctx)
     {
         var testLimit = ctx.Config.Metrics.MaxMethodParameterCountInTestFiles;

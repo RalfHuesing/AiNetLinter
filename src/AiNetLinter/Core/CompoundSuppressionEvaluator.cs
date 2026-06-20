@@ -48,12 +48,6 @@ internal static class CompoundSuppressionEvaluator
         return null;
     }
 
-    internal static bool IsActive(
-        string ruleName,
-        IReadOnlyList<CompoundSuppression>? suppressions,
-        IReadOnlyDictionary<string, int> metrics)
-        => Evaluate(ruleName, suppressions, metrics) != NoSuppressionSentinel;
-
     private static bool AllConditionsMet(
         IReadOnlyList<MetricCondition> conditions,
         IReadOnlyDictionary<string, int> metrics)
