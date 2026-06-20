@@ -59,7 +59,7 @@ internal static class AuditCommand
         try
         {
             profiler.StartPhase("DocumentAnalysis");
-            string? rulesJsonContent = LoadRulesJsonContent(args.ConfigPath);
+            string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
             var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
             var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes, ct);
             profiler.StopPhase("DocumentAnalysis");
@@ -126,11 +126,7 @@ internal static class AuditCommand
         var currentChecksums = catalog.ComputeChecksums(outputRoot);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
-        string? rulesJsonContent = null;
-        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
-        {
-            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
-        }
+        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
         var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
         var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
@@ -193,11 +189,7 @@ internal static class AuditCommand
 
         if (!args.Fix) return (catalog, false);
 
-        string? rulesJsonContent = null;
-        if (!string.IsNullOrEmpty(args.ConfigPath) && File.Exists(args.ConfigPath))
-        {
-            rulesJsonContent = await File.ReadAllTextAsync(args.ConfigPath, Encoding.UTF8);
-        }
+        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
         var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
         var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
@@ -260,15 +252,6 @@ internal static class AuditCommand
         {
             c.WriteError($"[ERROR]: Fehler beim Generieren des Repo-Playbooks: {ex.Message}");
         }
-    }
-
-    internal static string? LoadRulesJsonContent(string? configPath)
-    {
-        if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
-        {
-            return null;
-        }
-        return File.ReadAllText(configPath, Encoding.UTF8);
     }
 
     private static IReadOnlyCollection<RuleViolation> ApplyScopeFilters(

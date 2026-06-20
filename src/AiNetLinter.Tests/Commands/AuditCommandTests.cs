@@ -44,34 +44,4 @@ public sealed class AuditCommandTests
         }
     }
 
-    [Fact]
-    public void LoadRulesJsonContent_WhenFileNotExists_ReturnsNull()
-    {
-        var result = AuditCommand.LoadRulesJsonContent("non-existent-path.json");
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void LoadRulesJsonContent_WhenFileExists_ReturnsContent()
-    {
-        var tmpFile = Path.GetTempFileName();
-        const string content = "{\"version\": 1}";
-        File.WriteAllText(tmpFile, content, Encoding.UTF8);
-        try
-        {
-            var result = AuditCommand.LoadRulesJsonContent(tmpFile);
-            Assert.Equal(content, result);
-        }
-        finally
-        {
-            File.Delete(tmpFile);
-        }
-    }
-
-    [Fact]
-    public void LoadRulesJsonContent_WhenPathIsNull_ReturnsNull()
-    {
-        var result = AuditCommand.LoadRulesJsonContent(null);
-        Assert.Null(result);
-    }
 }

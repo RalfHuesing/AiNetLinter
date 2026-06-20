@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using AiNetLinter.Output;
 
@@ -83,5 +84,17 @@ public static class LinterConfigLoader
             System.Diagnostics.Debug.WriteLine($"Failed to load config: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Liest den Inhalt der Config-Datei für die Cache-Invalidierung.
+    /// Gibt null zurück wenn der Pfad leer oder die Datei nicht vorhanden ist.
+    /// </summary>
+    public static string? LoadRulesJsonContent(string? configPath)
+    {
+        if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
+            return null;
+
+        return File.ReadAllText(configPath, Encoding.UTF8);
     }
 }
