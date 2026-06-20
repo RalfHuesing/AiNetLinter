@@ -33,8 +33,8 @@ ainetlinter --docs configuration
 ## Lint-Workflows
 
 ### Schritt 1: Startkonfiguration holen
-```sh
-ainl --docs rules-json > rules.json
+```bash
+ainetlinter --docs rules-json > rules.json
 ```
 Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
 
