@@ -404,4 +404,72 @@ public static class GroupOperations
         var violations = LinterAnalyzer.Analyze("GroupOperations.cs", model, config);
         Assert.DoesNotContain(violations, v => v.RuleName == "EnforceExplicitStateImmutability");
     }
+
+    // ─── FP #9: Guard-Clause / Early-Return-Linearisierung ──────────────────
+    // Flat geschriebener Code (Early Returns) hat dieselbe McCabe-CC wie
+    // tief verschachtelter äquivalenter Code — aber deutlich niedrigere
+    // kognitive Komplexität (CogCC Flat=3, Nested=8 bei 3 Bedingungen).
+    // MaxCognitiveComplexity muss Guard-Clause-Muster klar bevorzugen;
+    // MaxCyclomaticComplexity behandelt beide korrekt gleich.
+
+    [Fact]
+    public void FP_GuardClausePattern_FlatCode_NotFlaggedWhereNestedEquivalentWouldBe()
+    {
+        // Variante B — Guard Clauses: CogCC = 3, CC = 4
+        const string flatSource = @"
+public sealed class UserStatusResolver
+{
+    public string Resolve(object? user, bool isActive, bool isAdmin)
+    {
+        if (user == null) return ""Unknown"";
+        if (!isActive) return ""Inactive"";
+        if (isAdmin) return ""Admin"";
+        return ""Active User"";
+    }
+}";
+
+        // Variante A — Nesting (logisch äquivalent): CogCC = 8, CC = 4
+        const string nestedSource = @"
+public sealed class UserStatusResolver
+{
+    public string Resolve(object? user, bool isActive, bool isAdmin)
+    {
+        if (user != null)
+        {
+            if (isActive)
+            {
+                if (isAdmin)
+                {
+                    return ""Admin"";
+                }
+                else
+                {
+                    return ""Active User"";
+                }
+            }
+            else
+            {
+                return ""Inactive"";
+            }
+        }
+        return ""Unknown"";
+    }
+}";
+
+        // Enges CogCC-Limit (5): flat-Code unauffällig, Nesting-Code verletzt
+        var strictConfig = CreateConfig() with
+        {
+            Metrics = CreateConfig().Metrics with { MaxCognitiveComplexity = 5 }
+        };
+
+        var flatViolations = LinterAnalyzer.Analyze("UserStatusResolver.cs", GetSemanticModel(flatSource), strictConfig);
+        var nestedViolations = LinterAnalyzer.Analyze("UserStatusResolver.cs", GetSemanticModel(nestedSource), strictConfig);
+
+        Assert.DoesNotContain(flatViolations, v => v.RuleName == "MaxCognitiveComplexity");
+        Assert.Contains(nestedViolations, v => v.RuleName == "MaxCognitiveComplexity");
+
+        // McCabe-CC ist für beide gleich (Pfadanzahl identisch) — kein false positive
+        Assert.DoesNotContain(flatViolations, v => v.RuleName == "MaxCyclomaticComplexity");
+        Assert.DoesNotContain(nestedViolations, v => v.RuleName == "MaxCyclomaticComplexity");
+    }
 }
