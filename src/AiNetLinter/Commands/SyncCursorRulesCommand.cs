@@ -5,6 +5,7 @@ using System.Text;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Generators;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;

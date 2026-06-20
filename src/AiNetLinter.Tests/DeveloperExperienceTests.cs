@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Generators;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using Xunit;

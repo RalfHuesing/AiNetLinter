@@ -8,21 +8,15 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using AiNetLinter.Core;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Generators;
 
 /// <summary>
 /// Analysiert eine Solution und generiert einen kompakten Abhängigkeitsgraphen (nur Produktionscode).
 /// </summary>
 public sealed class CodegraphGenerator
 {
-    private sealed record TypeInfo(
-        string Name,
-        string Modifiers,
-        string? BaseType,
-        IReadOnlyList<string> Interfaces,
-        IReadOnlyList<string> Dependencies);
-
     /// <summary>
     /// Generiert den Abhängigkeitsgraphen und schreibt ihn in die angegebene Datei.
     /// </summary>

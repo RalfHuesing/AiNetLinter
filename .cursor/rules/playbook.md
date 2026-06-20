@@ -26,14 +26,14 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 189 / 203 (93 %)
+- **Wave-ready Dateien:** 192 / 206 (93 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 114 files, median Footprint 69 LOC, 5× disable-all
+- **src/AiNetLinter/**: 117 files, median Footprint 66 LOC, 5× disable-all
 - **src/AiNetLinter.Tests/**: 88 files, median Footprint 117 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 

@@ -12,17 +12,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using AiNetLinter.Models;
+using AiNetLinter.Core;
 
-namespace AiNetLinter.Core;
-
-/// <summary>
-/// Optionen für die Playbook-Generierung.
-/// </summary>
-public sealed record PlaybookOptions(
-    bool Verbose = false,
-    LinterConfig? Config = null,
-    string ConfigPath = "rules.json",
-    IReadOnlyCollection<RuleViolation>? PrecomputedViolations = null);
+namespace AiNetLinter.Generators;
 
 /// <summary>
 /// Generiert ein Repository-Playbook (.md) mit Suppression-Statistiken und Architekturmustern.
@@ -32,39 +24,6 @@ public sealed class RepoPlaybookGenerator
     private const string DisableMarker = "ainetlinter-disable";
     private const string AllKeyword = "all";
     private const string MultiLineCommentEnd = "*/";
-
-
-
-    private sealed record PlaybookDocInfo(
-        string FilePath,
-        string ProjectName,
-        bool HasDisableAll,
-        int LineCount,
-        List<string> Namespaces
-    );
-
-    private sealed record PlaybookDocScanResult(
-        int ResultMethods,
-        int Throws,
-        bool HasDisableAll,
-        int LineCount,
-        List<string> Namespaces
-    );
-
-    private sealed record PlaybookStats(
-        int TotalResultMethods,
-        int TotalThrows,
-        Dictionary<string, int> SuppressionCounts,
-        List<PlaybookDocInfo> DocInfos,
-        List<RuleViolation> Violations
-    );
-
-    private sealed record PlaybookBuildContext(
-        PlaybookStats Stats,
-        string SolutionDir,
-        LinterConfig? Config,
-        string ConfigPath,
-        string Version);
 
     /// <summary>
     /// Generiert das Playbook und schreibt es in die angegebene Datei.
@@ -402,103 +361,6 @@ public sealed class RepoPlaybookGenerator
             }
             sb.AppendLine($"- **{rule}:** {count} mal deaktiviert.");
             sb.AppendLine($"  *Bedeutung:* {description}");
-        }
-    }
-
-    private sealed class PlaybookSyntaxWalker : CSharpSyntaxWalker
-    {
-        private readonly SemanticModel _semanticModel;
-        private readonly IReadOnlyCollection<string>? _allowedExceptions;
-
-        public int ResultPatternCount { get; private set; }
-        public int ThrowCount { get; private set; }
-
-        public PlaybookSyntaxWalker(SemanticModel semanticModel, IReadOnlyCollection<string>? allowedExceptions) : base(SyntaxWalkerDepth.Node)
-        {
-            _semanticModel = semanticModel;
-            _allowedExceptions = allowedExceptions;
-        }
-
-        public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
-        {
-            var symbol = _semanticModel.GetDeclaredSymbol(node);
-            if (symbol != null && IsOrContainsResult(symbol.ReturnType))
-            {
-                ResultPatternCount++;
-            }
-            base.VisitMethodDeclaration(node);
-        }
-
-        private bool IsProjectInternal(ITypeSymbol typeSymbol)
-        {
-            return SymbolEqualityComparer.Default.Equals(
-                typeSymbol.ContainingAssembly,
-                _semanticModel.Compilation.Assembly);
-        }
-
-        public override void VisitThrowStatement(ThrowStatementSyntax node)
-        {
-            if (!IsAllowedException(node.Expression))
-            {
-                ThrowCount++;
-            }
-            base.VisitThrowStatement(node);
-        }
-
-        public override void VisitThrowExpression(ThrowExpressionSyntax node)
-        {
-            if (!IsAllowedException(node.Expression))
-            {
-                ThrowCount++;
-            }
-            base.VisitThrowExpression(node);
-        }
-
-        private bool IsAllowedException(ExpressionSyntax? expression)
-        {
-            if (expression is not ObjectCreationExpressionSyntax creation) return false;
-            if (_allowedExceptions == null) return false;
-
-            var typeSymbol = _semanticModel.GetTypeInfo(creation).Type;
-            if (typeSymbol == null) return false;
-
-            return _allowedExceptions.Contains(typeSymbol.Name);
-        }
-
-        private bool IsOrContainsResult(ITypeSymbol typeSymbol)
-        {
-            if (typeSymbol.Name == "Result")
-            {
-                return true;
-            }
-
-            if (IsProjectInternal(typeSymbol) && typeSymbol.Name.EndsWith("Result", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (typeSymbol is INamedTypeSymbol namedType)
-            {
-                return IsGenericResultWrapper(namedType);
-            }
-
-            return false;
-        }
-
-        private bool IsGenericResultWrapper(INamedTypeSymbol namedType)
-        {
-            if (!namedType.IsGenericType)
-            {
-                return false;
-            }
-
-            if (namedType.Name != "Task" && namedType.Name != "ValueTask")
-            {
-                return false;
-            }
-
-            var innerType = namedType.TypeArguments.FirstOrDefault();
-            return innerType != null && IsOrContainsResult(innerType);
         }
     }
 }
