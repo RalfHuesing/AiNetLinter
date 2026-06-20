@@ -157,6 +157,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `EnforceNoSilentCatch` | Global | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung. |
 | `BanAsyncVoid` | Global | Verbietet `async void`-Methoden und lokale Funktionen. |
 | `AsyncVoidAllowEventHandlers` | Global | Ermöglicht die Ausnahme von Event-Handlern mit Signatur `(object sender, EventArgs e)` von der `BanAsyncVoid`-Regel. |
+| `BanBlockingTaskAccess` | Global | Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). |
+| `BanBlockingTaskAccessAllowInMain` | Global | Erlaubt blockierende Task-Zugriffe in statischen `Main` Methoden. |
+| `BanBlockingTaskAccessAllowInTests` | Global | Erlaubt blockierende Task-Zugriffe in Test-Projekten. |
 | `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
 | `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
 | `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
@@ -270,6 +273,18 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert Exceptions direkt in den `SynchronizationContext`, wodurch sie für aufrufende `try/catch`-Blöcke unsichtbar werden und zum App-Absturz oder stillschweigendem Fehlerverfall führen können.
 
 **Ausnahme:** Event-Handler mit der Signatur `(object sender, <Name>EventArgs e)` (bzw. abgeleitete Klassen von `EventArgs`) bleiben erlaubt, wenn `AsyncVoidAllowEventHandlers: true` gesetzt ist.
+
+### BanBlockingTaskAccess
+
+| Schlüssel | Typ | Standard |
+|---|---|---|
+| `BanBlockingTaskAccess` | `bool` | `true` |
+| `BanBlockingTaskAccessAllowInMain` | `bool` | `true` |
+| `BanBlockingTaskAccessAllowInTests` | `bool` | `false` |
+
+Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). Diese Muster blockieren ThreadPool-Threads und können in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF) zu Deadlocks führen.
+
+**Ausnahme:** Blockierende Zugriffe in `static void Main` Methoden sind erlaubt wenn `BanBlockingTaskAccessAllowInMain: true` gesetzt ist. In Testdateien sind sie erlaubt wenn `BanBlockingTaskAccessAllowInTests: true` gesetzt ist (standardmäßig falsch, da Tests async sein sollten).
 
 ### AI-Context-Footprint (Metrik)
 

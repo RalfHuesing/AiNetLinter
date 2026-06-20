@@ -1,4 +1,6 @@
+// ainetlinter-disable MaxLineCount
 namespace AiNetLinter.Configuration;
+
 
 /// <summary>
 /// Die globale Konfigurationsstruktur für den Linter.
@@ -195,6 +197,27 @@ public sealed record GlobalConfig
     public bool AsyncVoidAllowEventHandlers { get; init; } = true;
 
     /// <summary>
+    /// Verbietet blockierende Task-Zugriffe: <c>.Wait()</c>, <c>.Result</c>
+    /// und <c>.GetAwaiter().GetResult()</c> auf <c>Task</c>- und <c>ValueTask</c>-Instanzen.
+    /// Standard: <c>true</c>.
+    /// </summary>
+    public bool BanBlockingTaskAccess { get; init; } = true;
+
+    /// <summary>
+    /// Wenn <c>true</c>: Blockierende Zugriffe in <c>static void Main(...)</c>-Methoden
+    /// sind erlaubt (Programm-Einstiegspunkt der vor .NET 7.1 kein async Main kannte).
+    /// Standard: <c>true</c>.
+    /// </summary>
+    public bool BanBlockingTaskAccessAllowInMain { get; init; } = true;
+
+    /// <summary>
+    /// Wenn <c>true</c>: Blockierende Zugriffe in Testdateien werden nicht gemeldet.
+    /// Nützlich für Test-Infrastruktur-Code der kein async-Setup unterstützt.
+    /// Standard: <c>false</c> (Tests sollten async sein).
+    /// </summary>
+    public bool BanBlockingTaskAccessAllowInTests { get; init; } = false;
+
+    /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
@@ -255,6 +278,9 @@ public sealed record GlobalConfig
             EnablePerformanceProfiling                  = o.EnablePerformanceProfiling                  ?? EnablePerformanceProfiling,
             BanAsyncVoid                                = o.BanAsyncVoid                                ?? BanAsyncVoid,
             AsyncVoidAllowEventHandlers                 = o.AsyncVoidAllowEventHandlers                 ?? AsyncVoidAllowEventHandlers,
+            BanBlockingTaskAccess                       = o.BanBlockingTaskAccess                       ?? BanBlockingTaskAccess,
+            BanBlockingTaskAccessAllowInMain            = o.BanBlockingTaskAccessAllowInMain            ?? BanBlockingTaskAccessAllowInMain,
+            BanBlockingTaskAccessAllowInTests           = o.BanBlockingTaskAccessAllowInTests           ?? BanBlockingTaskAccessAllowInTests,
         };
     }
 }

@@ -125,6 +125,21 @@ public sealed record GlobalConfigOverride
     /// Erlaubt Event-Handler-Ausnahme fuer async void.
     /// </summary>
     public bool? AsyncVoidAllowEventHandlers { get; init; }
+
+    /// <summary>
+    /// Verbietet blockierende Task-Zugriffe.
+    /// </summary>
+    public bool? BanBlockingTaskAccess { get; init; }
+
+    /// <summary>
+    /// Erlaubt blockierende Zugriffe in static Main Methoden.
+    /// </summary>
+    public bool? BanBlockingTaskAccessAllowInMain { get; init; }
+
+    /// <summary>
+    /// Erlaubt blockierende Zugriffe in Testdateien.
+    /// </summary>
+    public bool? BanBlockingTaskAccessAllowInTests { get; init; }
 }
 
 /// <summary>

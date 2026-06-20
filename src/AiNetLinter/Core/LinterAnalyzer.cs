@@ -171,7 +171,14 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         MinimalApiChecker.Check(node, _ctx);
         PhantomDependencyChecker.CheckPhantomReflection(node, _ctx);
+        BlockingTaskChecker.CheckInvocation(node, _ctx);
         base.VisitInvocationExpression(node);
+    }
+
+    public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+    {
+        BlockingTaskChecker.CheckMemberAccess(node, _ctx);
+        base.VisitMemberAccessExpression(node);
     }
 
     public override void VisitIdentifierName(IdentifierNameSyntax node)
