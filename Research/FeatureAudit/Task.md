@@ -2,7 +2,7 @@
 
 **Gestartet:** 2026-06-20  
 **Abgeschlossen:** —  
-**Offene Items:** 40
+**Offene Items:** 12
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -35,39 +35,39 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 - [x] M07 — MaxMethodOverloads → `Result\metrics\M07-MaxMethodOverloads.md`
 - [x] M08 — MaxConstructorDependencies → `Result\metrics\M08-MaxConstructorDependencies.md`
 - [x] M09 — MaxDirectoryDepth → `Result\metrics\M09-MaxDirectoryDepth.md`
-- [ ] M10 — MaxDirectoryChildren → `Result\metrics\M10-MaxDirectoryChildren.md`
-- [ ] M11 — MaxBoolParameterCount → `Result\metrics\M11-MaxBoolParameterCount.md`
-- [ ] M12 — MaxPartialClassFiles → `Result\metrics\M12-MaxPartialClassFiles.md`
-- [ ] M13 — MaxPublicMembersPerType → `Result\metrics\M13-MaxPublicMembersPerType.md`
-- [ ] M14 — MaxAIContextFootprint → `Result\metrics\M14-MaxAIContextFootprint.md`
-- [ ] M15 — MaxSwitchArms → `Result\metrics\M15-MaxSwitchArms.md`
-- [ ] M16 — MinCognitiveComplexityForTest → `Result\metrics\M16-MinCognitiveComplexityForTest.md`
-- [ ] M17 — CompoundSuppressions (Mechanismus) → `Result\metrics\M17-CompoundSuppressions.md`
+- [x] M10 — MaxDirectoryChildren → `Result\metrics\M10-MaxDirectoryChildren.md`
+- [x] M11 — MaxBoolParameterCount → `Result\metrics\M11-MaxBoolParameterCount.md`
+- [x] M12 — MaxPartialClassFiles → `Result\metrics\M12-MaxPartialClassFiles.md`
+- [x] M13 — MaxPublicMembersPerType → `Result\metrics\M13-MaxPublicMembersPerType.md`
+- [x] M14 — MaxAIContextFootprint → `Result\metrics\M14-MaxAIContextFootprint.md`
+- [x] M15 — MaxSwitchArms → `Result\metrics\M15-MaxSwitchArms.md`
+- [x] M16 — MinCognitiveComplexityForTest → `Result\metrics\M16-MinCognitiveComplexityForTest.md`
+- [x] M17 — CompoundSuppressions (Mechanismus) → `Result\metrics\M17-CompoundSuppressions.md`
 
 ---
 
 ## Phase 3 — Boolean-Regeln evaluieren
 
-- [ ] R01 — EnforceSealedClasses → `Result\bool-rules\R01-EnforceSealedClasses.md`
-- [ ] R02 — AllowDynamic (Verbot) → `Result\bool-rules\R02-AllowDynamic.md`
-- [ ] R03 — AllowOutParameters (Verbot) → `Result\bool-rules\R03-AllowOutParameters.md`
-- [ ] R04 — AllowTryPatternOutParameters (Ausnahme) → `Result\bool-rules\R04-AllowTryPatternOutParameters.md`
-- [ ] R05 — AllowCancellationShutdownCatch (Ausnahme) → `Result\bool-rules\R05-AllowCancellationShutdownCatch.md`
-- [ ] R06 — AllowOutParametersInPrivateMethods (Ausnahme) → `Result\bool-rules\R06-AllowOutParametersInPrivateMethods.md`
-- [ ] R07 — EnforceValueObjectContracts → `Result\bool-rules\R07-EnforceValueObjectContracts.md`
-- [ ] R08 — EnableTestSentinel → `Result\bool-rules\R08-EnableTestSentinel.md`
-- [ ] R09 — EnforcePascalCase → `Result\bool-rules\R09-EnforcePascalCase.md`
-- [ ] R10 — EnforceXmlDocumentation (deaktiviert) → `Result\bool-rules\R10-EnforceXmlDocumentation.md`
-- [ ] R11 — EnforceSemanticNaming → `Result\bool-rules\R11-EnforceSemanticNaming.md`
-- [ ] R12 — EnforceNullableEnable → `Result\bool-rules\R12-EnforceNullableEnable.md`
-- [ ] R13 — EnforceNoSilentCatch → `Result\bool-rules\R13-EnforceNoSilentCatch.md`
-- [ ] R14 — EnforceMinimalApiAsParameters (deaktiviert) → `Result\bool-rules\R14-EnforceMinimalApiAsParameters.md`
-- [ ] R15 — EnforceResultPatternOverExceptions (deaktiviert) → `Result\bool-rules\R15-EnforceResultPatternOverExceptions.md`
-- [ ] R16 — EnforceExplicitStateImmutability (deaktiviert) → `Result\bool-rules\R16-EnforceExplicitStateImmutability.md`
-- [ ] R17 — PreventContextDependentOverloads (deaktiviert) → `Result\bool-rules\R17-PreventContextDependentOverloads.md`
-- [ ] R18 — EnforceNamespaceDirectoryMapping → `Result\bool-rules\R18-EnforceNamespaceDirectoryMapping.md`
-- [ ] R19 — DetectAndBanPhantomDependencies → `Result\bool-rules\R19-DetectAndBanPhantomDependencies.md`
-- [ ] R20 — BanPublicNestedTypes → `Result\bool-rules\R20-BanPublicNestedTypes.md`
+- [x] R01 — EnforceSealedClasses → `Result\bool-rules\R01-EnforceSealedClasses.md`
+- [x] R02 — AllowDynamic (Verbot) → `Result\bool-rules\R02-AllowDynamic.md`
+- [x] R03 — AllowOutParameters (Verbot) → `Result\bool-rules\R03-AllowOutParameters.md`
+- [x] R04 — AllowTryPatternOutParameters (Ausnahme) → `Result\bool-rules\R04-AllowTryPatternOutParameters.md`
+- [x] R05 — AllowCancellationShutdownCatch (Ausnahme) → `Result\bool-rules\R05-AllowCancellationShutdownCatch.md`
+- [x] R06 — AllowOutParametersInPrivateMethods (Ausnahme) → `Result\bool-rules\R06-AllowOutParametersInPrivateMethods.md`
+- [x] R07 — EnforceValueObjectContracts → `Result\bool-rules\R07-EnforceValueObjectContracts.md`
+- [x] R08 — EnableTestSentinel → `Result\bool-rules\R08-EnableTestSentinel.md`
+- [x] R09 — EnforcePascalCase → `Result\bool-rules\R09-EnforcePascalCase.md`
+- [x] R10 — EnforceXmlDocumentation (deaktiviert) → `Result\bool-rules\R10-EnforceXmlDocumentation.md`
+- [x] R11 — EnforceSemanticNaming → `Result\bool-rules\R11-EnforceSemanticNaming.md`
+- [x] R12 — EnforceNullableEnable → `Result\bool-rules\R12-EnforceNullableEnable.md`
+- [x] R13 — EnforceNoSilentCatch → `Result\bool-rules\R13-EnforceNoSilentCatch.md`
+- [x] R14 — EnforceMinimalApiAsParameters (deaktiviert) → `Result\bool-rules\R14-EnforceMinimalApiAsParameters.md`
+- [x] R15 — EnforceResultPatternOverExceptions (deaktiviert) → `Result\bool-rules\R15-EnforceResultPatternOverExceptions.md`
+- [x] R16 — EnforceExplicitStateImmutability (deaktiviert) → `Result\bool-rules\R16-EnforceExplicitStateImmutability.md`
+- [x] R17 — PreventContextDependentOverloads (deaktiviert) → `Result\bool-rules\R17-PreventContextDependentOverloads.md`
+- [x] R18 — EnforceNamespaceDirectoryMapping → `Result\bool-rules\R18-EnforceNamespaceDirectoryMapping.md`
+- [x] R19 — DetectAndBanPhantomDependencies → `Result\bool-rules\R19-DetectAndBanPhantomDependencies.md`
+- [x] R20 — BanPublicNestedTypes → `Result\bool-rules\R20-BanPublicNestedTypes.md`
 
 ---
 
