@@ -40,34 +40,37 @@ internal sealed class CheckerContext
     /// <summary>
     /// Kurzform für AddViolation — FilePath und LineNumber werden automatisch gesetzt.
     /// </summary>
-    internal void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance) =>
+    internal void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
-            FilePath   = FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
-            RuleName   = ruleName,
-            Details    = details,
-            Guidance   = guidance,
+            FilePath          = FilePath,
+            LineNumber        = SyntaxHelper.LineOf(node),
+            RuleName          = ruleName,
+            Details           = details,
+            Guidance          = guidance,
+            EffectiveSeverity = effectiveSeverity,
         });
 
-    internal void ReportViolation(SyntaxToken token, string ruleName, string details, string guidance) =>
+    internal void ReportViolation(SyntaxToken token, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
-            FilePath   = FilePath,
-            LineNumber = token.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-            RuleName   = ruleName,
-            Details    = details,
-            Guidance   = guidance,
+            FilePath          = FilePath,
+            LineNumber        = token.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
+            RuleName          = ruleName,
+            Details           = details,
+            Guidance          = guidance,
+            EffectiveSeverity = effectiveSeverity,
         });
 
-    internal void ReportViolationAtLine(int lineNumber, string ruleName, string details, string guidance) =>
+    internal void ReportViolationAtLine(int lineNumber, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
         AddViolation(new RuleViolation
         {
-            FilePath   = FilePath,
-            LineNumber = lineNumber,
-            RuleName   = ruleName,
-            Details    = details,
-            Guidance   = guidance,
+            FilePath          = FilePath,
+            LineNumber        = lineNumber,
+            RuleName          = ruleName,
+            Details           = details,
+            Guidance          = guidance,
+            EffectiveSeverity = effectiveSeverity,
         });
 
     internal IReadOnlyList<RuleViolation> Violations => _violations;
