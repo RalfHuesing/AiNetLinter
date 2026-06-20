@@ -119,4 +119,35 @@ public sealed class RuleRegistryTests
         Assert.NotEmpty(generalRules);
         Assert.All(generalRules, r => Assert.Equal("general", r.Intent, ignoreCase: true));
     }
+
+    [Fact]
+    public void BuildAll_ContainsAllExpectedRuleIds()
+    {
+        var ids = RuleRegistry.All.Select(r => r.RuleId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("MaxLineCount", ids);
+        Assert.Contains("MaxMethodLineCount", ids);
+        Assert.Contains("MaxMethodParameterCount", ids);
+        Assert.Contains("MaxCyclomaticComplexity", ids);
+        Assert.Contains("MaxCognitiveComplexity", ids);
+        Assert.Contains("MaxInheritanceDepth", ids);
+        Assert.Contains("MaxMethodOverloads", ids);
+        Assert.Contains("MaxConstructorDependencies", ids);
+        Assert.Contains("AIContextFootprint", ids);
+        Assert.Contains("MaxDirectoryDepth", ids);
+        Assert.Contains("MaxDirectoryChildren", ids);
+        Assert.Contains("MaxBoolParameterCount", ids);
+        Assert.Contains("MaxPartialClassFiles", ids);
+        Assert.Contains("MaxPublicMembersPerType", ids);
+        Assert.Contains("EnforceNoSilentCatch", ids);
+        Assert.Contains("BanAsyncVoid", ids);
+        Assert.Contains("BanBlockingTaskAccess", ids);
+        Assert.Contains("EnforceNamespaceDirectoryMapping", ids);
+        Assert.Contains("DetectAndBanPhantomDependencies", ids);
+        Assert.Contains("StaticTestSentinel", ids);
+        Assert.Contains("EnforceSealedClasses", ids);
+        Assert.Contains("EnforcePascalCase", ids);
+        Assert.Contains("EnforceNullableEnable", ids);
+        Assert.Contains("EnforceSemanticNaming", ids);
+        Assert.Contains("EnforceValueObjectContracts", ids);
+    }
 }
