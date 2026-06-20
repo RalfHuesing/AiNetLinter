@@ -44,6 +44,7 @@ internal static class LinterRuleIds
     internal const string AllowTryPatternOutParameters      = nameof(GlobalConfig.AllowTryPatternOutParameters);
     internal const string AllowCancellationShutdownCatch    = nameof(GlobalConfig.AllowCancellationShutdownCatch);
     internal const string AllowedEmptyReads                 = nameof(GlobalConfig.AllowedEmptyReads);
+    internal const string BanAsyncVoid                      = nameof(GlobalConfig.BanAsyncVoid);
     internal const string EnforceMinimalApiAsParameters     = nameof(GlobalConfig.EnforceMinimalApiAsParameters);
     internal const string EnforceResultPatternOverExceptions = nameof(GlobalConfig.EnforceResultPatternOverExceptions);
     internal const string EnforceNamespaceDirectoryMapping  = nameof(GlobalConfig.EnforceNamespaceDirectoryMapping);

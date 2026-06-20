@@ -138,7 +138,14 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         NamingChecker.CheckSemanticNaming(node.ParameterList, isPublic, _ctx, node.Identifier.Text);
         ComplexityChecker.CheckMethod(node, _ctx);
         BoolParameterChecker.CheckMethod(node, _ctx);
+        AsyncVoidChecker.CheckMethod(node, _ctx);
         base.VisitMethodDeclaration(node);
+    }
+
+    public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
+    {
+        AsyncVoidChecker.CheckLocalFunction(node, _ctx);
+        base.VisitLocalFunctionStatement(node);
     }
 
     public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)

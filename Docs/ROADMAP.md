@@ -321,3 +321,11 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Docs:** `rationale.md` Abschnitt 11/12, vollständiger `configuration.md`-Abschnitt
 - [x] **Tests:** Unit (Evaluator), Integration (Szenarien A–L), Guidance-Text, Config-Sync
 - [x] **`SeverityOverride`:** `CompoundSuppression.SeverityOverride` und `RuleViolation.EffectiveSeverity` — Violations in Szenario A (RelaxedLimit überschritten, Bedingungen erfüllt) können auf `"warning"` herabgestuft werden; `HasErrorSeverity` berücksichtigt `EffectiveSeverity`; Formatter zeigt `[warn]`-Tag
+
+---
+
+## Epic 26: Async/Await-Sicherheit
+
+- [x] **Regel: BanAsyncVoid** — Verbietet `async void` Methoden und lokale Funktionen (außer Event-Handler).
+- [ ] **Regel: BanBlockingTaskAccess** — Verbietet `.Wait()`, `.Result` und `.GetAwaiter().GetResult()` auf Tasks.
+

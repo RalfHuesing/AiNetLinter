@@ -115,6 +115,16 @@ public sealed record GlobalConfigOverride
     /// Erlaubt private nested Typen weiterhin (Override fuer Global.BanPublicNestedTypesAllowPrivate).
     /// </summary>
     public bool? BanPublicNestedTypesAllowPrivate { get; init; }
+
+    /// <summary>
+    /// Verbietet async void Methoden und lokale Funktionen.
+    /// </summary>
+    public bool? BanAsyncVoid { get; init; }
+
+    /// <summary>
+    /// Erlaubt Event-Handler-Ausnahme fuer async void.
+    /// </summary>
+    public bool? AsyncVoidAllowEventHandlers { get; init; }
 }
 
 /// <summary>

@@ -71,7 +71,9 @@
       "INotifyPropertyChanged"
     ],
     "ImmutabilityAllowPrivateBackingFields": true,
-    "EnablePerformanceProfiling": true
+    "EnablePerformanceProfiling": true,
+    "BanAsyncVoid": true,
+    "AsyncVoidAllowEventHandlers": true
   },
   "Metrics": {
     "MaxLineCount": 500,

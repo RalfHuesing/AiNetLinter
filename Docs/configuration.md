@@ -155,6 +155,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `SemanticNamingAllowSubstringOfMethodName` | Global | Wenn `true`: Ein Parameter-Name wird nicht gemeldet, wenn er als Teilstring (case-insensitiv) im Methoden-Namen vorkommt. Beispiel: Parameter `item` in Methode `AppendTimelineItemAsync` → nicht flaggen. Standard: `true`. |
 | `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
 | `EnforceNoSilentCatch` | Global | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung. |
+| `BanAsyncVoid` | Global | Verbietet `async void`-Methoden und lokale Funktionen. |
+| `AsyncVoidAllowEventHandlers` | Global | Ermöglicht die Ausnahme von Event-Handlern mit Signatur `(object sender, EventArgs e)` von der `BanAsyncVoid`-Regel. |
 | `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
 | `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
 | `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
@@ -257,6 +259,17 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 - Pfade werden mit Forward-Slashes verglichen (auch auf Windows)
 
 **Hinweis zu typ-zentrischen Metriken (`MaxAIContextFootprint`, `MaxInheritanceDepth`):** Diese Metriken werden pro logischer Klasse (nicht pro Datei) berechnet und an der repräsentativen Partial-Datei gemeldet. Der PathOverride wird anhand des Dateipfads dieser repräsentativen Datei aufgelöst — das Muster muss also zu dieser Datei passen. Bei Blazor-Komponenten ist die repräsentative Datei in der Regel die `.razor.cs`-Datei im Quellordner.
+
+### BanAsyncVoid
+
+| Schlüssel | Typ | Standard |
+|---|---|---|
+| `BanAsyncVoid` | `bool` | `true` |
+| `AsyncVoidAllowEventHandlers` | `bool` | `true` |
+
+Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert Exceptions direkt in den `SynchronizationContext`, wodurch sie für aufrufende `try/catch`-Blöcke unsichtbar werden und zum App-Absturz oder stillschweigendem Fehlerverfall führen können.
+
+**Ausnahme:** Event-Handler mit der Signatur `(object sender, <Name>EventArgs e)` (bzw. abgeleitete Klassen von `EventArgs`) bleiben erlaubt, wenn `AsyncVoidAllowEventHandlers: true` gesetzt ist.
 
 ### AI-Context-Footprint (Metrik)
 
