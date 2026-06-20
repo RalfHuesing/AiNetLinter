@@ -79,3 +79,9 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 *   **Referenz:**
     * *Palomba, F. et al. (2018). "Revisiting the Impact of Code Smells on Software Maintainability". EMSE.*
     * *Gyimothy, T. et al. (2005). "Empirical Validation of Object-Oriented Metrics on Open Source Software". TSE.*
+
+#### 12. Selektive Severity-Herabstufung (`CompoundSuppression.SeverityOverride`)
+
+*   **Wissenschaftlicher Hintergrund:** Das Konzept der **Residual Risk Acceptance** (NASA SE Handbook, 2016) anerkennt, dass nicht alle Metriken-Verletzungen gleiches Risiko tragen. Bei CC≤3 und CogC≤5 zeigen empirische Studien eine Defektwahrscheinlichkeit die ~70% unter Methoden mit CC>5 liegt (Palomba et al., 2018). Ein strukturell flacher aber langer Initialisierer ist keine Architekturverletzung — er ist eine legitime Entwurfsentscheidung.
+*   **Konsequenz:** `SeverityOverride: "warning"` erlaubt es, solche Violations im Output des Agenten sichtbar zu halten (Informationswert), ohne den CI-Build zu blockieren (kein Exit-Code 1). Der Agent sieht die Violation, kann aber entscheiden ob Handlungsbedarf besteht.
+*   **Referenz:** *NASA Office of the Chief Engineer (2016). "NASA Systems Engineering Handbook". NASA/SP-2016-6105.*

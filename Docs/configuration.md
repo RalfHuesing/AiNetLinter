@@ -681,6 +681,7 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
         { "Metric": "CognitiveComplexity",  "AtMost": 5 }
       ],
       "RelaxedLimit": 150,
+      "SeverityOverride": "warning",
       "Reason": "Init-Methoden sind semantisch flach."
     }
   ]
@@ -696,6 +697,7 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
 | `WhenAllOf[].AtMost` | Bedingung: Metrik ≤ Wert |
 | `WhenAllOf[].AtLeast` | Bedingung: Metrik ≥ Wert |
 | `RelaxedLimit` | Relaxiertes Limit wenn aktiv. Fehlt = vollständig supprimieren |
+| `SeverityOverride` | Optionale Severity-Herabstufung für Violations in Szenario A (Bedingungen erfüllt, RelaxedLimit überschritten). Erlaubte Werte: `"warning"`, `"error"`. Wirkt nur in Kombination mit `RelaxedLimit`. Standard: `null` |
 | `Reason` | Freitext, erscheint in `.mdc` und Violation-Guidance |
 
 ### Unterstützte Metric-Namen
