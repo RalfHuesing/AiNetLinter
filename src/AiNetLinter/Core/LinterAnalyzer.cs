@@ -227,8 +227,27 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
             _ctx.ReportViolationAtLine(1,
                 nameof(_ctx.Config.Metrics.MaxLineCount),
                 $"Die Datei hat {lineCount} Zeilen (erlaubt sind maximal {_ctx.Config.Metrics.MaxLineCount}).",
-                "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf.");
+                BuildFileLineLimitGuidance());
         }
+    }
+
+    private string BuildFileLineLimitGuidance()
+    {
+        var methods = _tree.GetRoot().DescendantNodes()
+            .OfType<MethodDeclarationSyntax>().ToList();
+
+        if (methods.Count == 0)
+            return "Teile die Datei in kleinere, logisch in sich geschlossene Klassen oder Vertical Slices auf.";
+
+        var totalCc = methods.Sum(m => ComplexityCalculator.GetCyclomaticComplexity(m));
+        var avgCc = (double)totalCc / methods.Count;
+
+        if (avgCc <= 2.0)
+            return $"Die Datei ist strukturell flach (Ø CC={avgCc:F1} über {methods.Count} Methoden) — wahrscheinlich Konstanten, Mappings oder Builder-Code. " +
+                   "Extrahiere thematisch zusammengehörende Gruppen in eigene Klassen (z. B. XyzMappings, XyzConstants).";
+
+        return $"Die Datei ist lang UND komplex (Ø CC={avgCc:F1} über {methods.Count} Methoden). " +
+               "Teile sie nach Single-Responsibility in kleinere, fokussierte Klassen auf.";
     }
 
     private void CheckNullableEnable()
