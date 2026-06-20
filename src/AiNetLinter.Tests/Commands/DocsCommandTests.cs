@@ -19,6 +19,7 @@ public sealed class DocsCommandTests
     [InlineData("configuration")]
     [InlineData("rationale")]
     [InlineData("roadmap")]
+    [InlineData("rules-json")]
     [InlineData("Readme")]
     [InlineData("AGENT-API")]
     [InlineData("Configuration")]
@@ -87,6 +88,7 @@ public sealed class DocsCommandTests
             Assert.Contains("- configuration", output);
             Assert.Contains("- rationale", output);
             Assert.Contains("- roadmap", output);
+            Assert.Contains("- rules-json", output);
         }
         finally
         {

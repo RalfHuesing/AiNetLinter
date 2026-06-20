@@ -32,6 +32,12 @@ ainetlinter --docs configuration
 
 ## Lint-Workflows
 
+### Schritt 1: Startkonfiguration holen
+```sh
+ainl --docs rules-json > rules.json
+```
+Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
+
 ### Workflow 1 — Lint + Fix
 
 ```bash
@@ -81,7 +87,7 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation als Markdown ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive) |
 | `--playbook <pfad>` | string | Repo-Playbook generieren |
 | `--sync-cursor-rules` | bool | `.cursor/rules/AiNetLinter.mdc` aktualisieren |
 | `--impact <typ>` | string | Impact-Analyse für einen Typ |

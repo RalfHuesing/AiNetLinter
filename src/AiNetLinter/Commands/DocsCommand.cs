@@ -19,7 +19,8 @@ internal static class DocsCommand
         { "agent-api", "Docs/agent-api.md" },
         { "configuration", "Docs/configuration.md" },
         { "rationale", "Docs/rationale.md" },
-        { "roadmap", "Docs/ROADMAP.md" }
+        { "roadmap", "Docs/ROADMAP.md" },
+        { "rules-json", "rules.json" }
     };
 
     /// <summary>

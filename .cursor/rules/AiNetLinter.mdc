@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.51 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.52 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.

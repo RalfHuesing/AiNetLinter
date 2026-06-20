@@ -22,6 +22,7 @@
     <EmbeddedResource Include="..\..\Docs\configuration.md" LogicalName="Docs/configuration.md" />
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
     <EmbeddedResource Include="..\..\Docs\ROADMAP.md" LogicalName="Docs/ROADMAP.md" />
+    <EmbeddedResource Include="..\..\rules.json" LogicalName="rules.json" />
   </ItemGroup>
 
   <ItemGroup>
