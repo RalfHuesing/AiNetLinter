@@ -43,6 +43,11 @@ Empirisch zeigen API-Komplexitätsstudien (arXiv:2601.00268, 2025): Jede zusätz
 
 (Ableitung: Die direkte Kausalverknüpfung CC-Wert → LLM-Fehlerrate in C# ist nicht direkt gemessen; sie folgt aus der „branching-induced divergence"-Theorie.)
 
+### Bekannte False Positives / Ausnahmen
+
+- **Null-Coalescing-Initializer:** Methoden mit `return this with { A = o.A ?? A, … }` oder `return new T { A = o.A ?? A, … }` erzeugen einen hohen McCabe-Wert, sind aber semantisch trivial (flacher Kontrollfluss). Mit `ExcludeNullCoalescingInitializerComplexity: true` (Standard) werden solche Methoden ausgenommen.
+
+
 ## Zeitliche Einordnung
 
 **Grundlagenstabilität:** Zeitlos

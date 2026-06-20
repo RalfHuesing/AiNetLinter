@@ -19,24 +19,20 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
   *Bedeutung:* Zu viele Methodenparameter (max. 4).
 - **MaxLineCount:** 2 mal deaktiviert.
   *Bedeutung:* Dateizeilenlimit (max. 500 Zeilen) ueberschritten.
-- **MaxCyclomaticComplexity:** 1 mal deaktiviert.
-  *Bedeutung:* Zu hohe zyklomatische Komplexitaet (max. 12).
-- **MaxCognitiveComplexity:** 1 mal deaktiviert.
-  *Bedeutung:* Zu hohe kognitive Komplexitaet (max. 15).
 - **MaxMethodLineCount:** 1 mal deaktiviert.
   *Bedeutung:* Methode hat zu viele Codezeilen (max. 60 Zeilen).
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 199 / 213 (93 %)
+- **Wave-ready Dateien:** 201 / 215 (93 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 118 files, median Footprint 69 LOC, 5× disable-all
-- **src/AiNetLinter.Tests/**: 94 files, median Footprint 121 LOC, 9× disable-all
+- **src/AiNetLinter/**: 119 files, median Footprint 69 LOC, 5× disable-all
+- **src/AiNetLinter.Tests/**: 95 files, median Footprint 121 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

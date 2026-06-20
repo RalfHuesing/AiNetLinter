@@ -238,6 +238,8 @@ public sealed record MetricsConfigOverride
     public int? ComplexityNearMissTolerance { get; init; }
     public bool? ExcludeSwitchDispatcherCases { get; init; }
     public int? SwitchDispatcherMaxCaseBodyLines { get; init; }
+    public bool? ExcludeNullCoalescingInitializerComplexity { get; init; }
+    public double? NullCoalescingInitializerMaxNonCoalescingRatio { get; init; }
 
     /// <summary>
     /// Maximale Anzahl Arms/Labels pro Switch. 0 = deaktiviert. Override für MaxSwitchArms.

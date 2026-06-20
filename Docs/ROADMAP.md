@@ -321,6 +321,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Docs:** `rationale.md` Abschnitt 11/12, vollständiger `configuration.md`-Abschnitt
 - [x] **Tests:** Unit (Evaluator), Integration (Szenarien A–L), Guidance-Text, Config-Sync
 - [x] **`SeverityOverride`:** `CompoundSuppression.SeverityOverride` und `RuleViolation.EffectiveSeverity` — Violations in Szenario A (RelaxedLimit überschritten, Bedingungen erfüllt) können auf `"warning"` herabgestuft werden; `HasErrorSeverity` berücksichtigt `EffectiveSeverity`; Formatter zeigt `[warn]`-Tag
+- [x] **NullCoalescingInitializer-Classifier:** Optionale Komplexitätsausnahme (`MaxCyclomaticComplexity` / `MaxCognitiveComplexity`) für triviale Initialisierungs- und Merge-Methoden (Null-Coalescing-Initializer).
 
 ---
 
