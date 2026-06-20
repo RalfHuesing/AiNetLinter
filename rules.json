@@ -123,6 +123,9 @@
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
     "SwitchDispatcherMaxCaseBodyLines": 3,
+    "MaxSwitchArms": 10,
+    "MaxSwitchArmsExcludeDispatcher": true,
+    "MaxSwitchArmsExemptTypes": [],
     "MaxBoolParameterCount": 1,
     "MaxBoolParameterCountAllowPrivate": true,
     "MaxBoolParameterCountExemptMethodPrefixes": [
