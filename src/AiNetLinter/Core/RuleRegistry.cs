@@ -829,6 +829,30 @@ internal static class RuleRegistry
             IsMetric: false,
             IncludeInCursorRules: true,
             ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
+        ),
+        new(
+            RuleId: LinterRuleIds.BanBlockingTaskAccess,
+            DisplayName: "Kein blockierender Task-Zugriff",
+            GetShortDescription: c => "'.Wait()', '.Result' und '.GetAwaiter().GetResult()' auf Tasks sind verboten.",
+            Warum: "Blockierende Task-Zugriffe blockieren ThreadPool-Threads und sind in SynchronizationContext-Umgebungen " +
+                   "(ASP.NET Classic, WPF) deadlock-anfaellig. Agenten produzieren dieses Muster systematisch " +
+                   "wenn sie synchrone Methoden mit async-APIs verbinden.",
+            Alternativen:
+            [
+                "**'await task'**: Methode zu 'async Task' umwandeln und await verwenden — loest das Problem vollstaendig.",
+                "**Aufrufkette async machen**: Von der blockierenden Methode nach oben migrieren bis alle Aufrufer async sind.",
+                "**'BanBlockingTaskAccessAllowInMain: true'**: Fuer Programm-Einstiegspunkte die kein async Main haben.",
+                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanBlockingTaskAccess' fuer unvermeidliche Stellen."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-resilience",
+            Severity: "error",
+            CursorHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.BanBlockingTaskAccess,
+            IsMetric: false,
+            IncludeInCursorRules: true,
+            ConfigKeyHint: "rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
         )
     ];
 }

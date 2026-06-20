@@ -327,5 +327,5 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 ## Epic 26: Async/Await-Sicherheit
 
 - [x] **Regel: BanAsyncVoid** — Verbietet `async void` Methoden und lokale Funktionen (außer Event-Handler).
-- [ ] **Regel: BanBlockingTaskAccess** — Verbietet `.Wait()`, `.Result` und `.GetAwaiter().GetResult()` auf Tasks.
+- [x] **Regel: BanBlockingTaskAccess** — Verbietet `.Wait()`, `.Result` und `.GetAwaiter().GetResult()` auf Tasks.
 

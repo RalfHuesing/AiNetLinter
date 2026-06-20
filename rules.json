@@ -85,7 +85,10 @@
     "ImmutabilityAllowPrivateBackingFields": true,
     "EnablePerformanceProfiling": true,
     "BanAsyncVoid": true,
-    "AsyncVoidAllowEventHandlers": true
+    "AsyncVoidAllowEventHandlers": true,
+    "BanBlockingTaskAccess": true,
+    "BanBlockingTaskAccessAllowInMain": true,
+    "BanBlockingTaskAccessAllowInTests": false
   },
   "Metrics": {
     "MaxLineCount": 700,

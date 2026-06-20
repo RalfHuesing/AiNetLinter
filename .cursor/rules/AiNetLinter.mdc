@@ -42,6 +42,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 ## agent-resilience
 - **EnforceNoSilentCatch** — `catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.
 - **BanAsyncVoid** — 'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.
+- **BanBlockingTaskAccess** — '.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.
 
 ## architecture
 - **EnforceNamespaceDirectoryMapping** — Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).
