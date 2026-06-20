@@ -276,6 +276,8 @@ public sealed record MetricsConfigOverride
 
     public int? MaxPublicMembersPerType { get; init; }
     public IReadOnlyCollection<string>? MaxPublicMembersPerTypeExemptSuffixes { get; init; }
+    public int? MaxLinqChainLength { get; init; }
+    public IReadOnlyCollection<string>? LinqMethodNames { get; init; }
     public IReadOnlyList<CompoundSuppression>? CompoundSuppressions { get; init; }
 }
 

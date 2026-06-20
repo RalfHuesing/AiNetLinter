@@ -31,6 +31,7 @@ Auto-generiert durch AiNetLinter 1.0.55 aus `rules.json`. Neuen Produktionscode 
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
 | `AIContextFootprint` | **2500** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
+| `MaxLinqChainLength` | **0** | 0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

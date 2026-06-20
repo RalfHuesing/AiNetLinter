@@ -337,6 +337,31 @@ internal static class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
             ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
         ),
+        new(
+            RuleId: LinterRuleIds.MaxLinqChainLength,
+            DisplayName: "Maximale LINQ-Kettenlaenge",
+            GetShortDescription: c => $"LINQ-Kette ueberschreitet das Limit (max. {c.Metrics.MaxLinqChainLength} Methoden).",
+            Warum: "Lange LINQ-Ketten erzeugen sequenzielle kognitive Last, die weder zyklomatische noch kognitive " +
+                   "Komplexitaet messen. Ein LLM-Agent der eine 8-gliedrige Kette erweitern soll, macht haeufig " +
+                   "Typfehler an der Einschnittstelle. (Evidenz: moderat — 0 = deaktiviert per Default.)",
+            Alternativen:
+            [
+                "**Kette aufteilen**: Zwischenergebnis in benannte Variable extrahieren ('var activeOrders = orders.Where(...);').",
+                "**Private Hilfsmethoden**: Teilketten in benannte Methoden auslagern ('FilterActiveOrders()', 'RankByRevenue()').",
+                "**Query-Syntax**: Fuer mehrstufige Abfragen kann 'from x in ... where ... select ...' lesbarer sein.",
+                "**Suppression**: '// ainetlinter-disable MaxLinqChainLength' fuer legitime komplexe Datentransformationen."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-context",
+            Severity: "warning",
+            CursorHint: "0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Metrics.MaxLinqChainLength > 0,
+            IsMetric: true,
+            IncludeInCursorRules: true,
+            GetMetricLimit: c => c.Metrics.MaxLinqChainLength,
+            ConfigKeyHint: "rules.json → Metrics.MaxLinqChainLength | Metrics.LinqMethodNames"
+        ),
 
         // --- Global Config Rules (Not Metrics) ---
         new(
