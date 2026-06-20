@@ -102,11 +102,11 @@ internal static class ComplexityChecker
             var severityHint = args.SeverityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            args.Ctx.ReportViolation(args.Node,
+            args.Ctx.ReportViolation(args.Node, new ViolationDescription(
                 LinterRuleIds.MaxMethodParameterCount,
                 details,
                 $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Erstelle ein Parameter-Object für die Parameter. Ziel: ≤ {args.EffectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)}.{severityHint}",
-                effectiveSeverity: args.SeverityOverride);
+                EffectiveSeverity: args.SeverityOverride));
             return;
         }
 
@@ -116,10 +116,10 @@ internal static class ComplexityChecker
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(args.Configured.WhenAllOf, args.Metrics);
             var relaxedLimit = args.Configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {args.Configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
             details = $"Die Methode '{methodName}' hat {total} Parameter, davon {args.EffectiveParamCount} gewertet (erlaubt: {args.BaseLimit} · Compound-Suppression inaktiv: {condSummary}).";
-            args.Ctx.ReportViolation(args.Node,
+            args.Ctx.ReportViolation(args.Node, new ViolationDescription(
                 LinterRuleIds.MaxMethodParameterCount,
                 details,
-                $"Optionen: (1) Komplexität/Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)} → {relaxedLimit} (2) Erstelle ein Parameter-Object für die Parameter.");
+                $"Optionen: (1) Komplexität/Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)} → {relaxedLimit} (2) Erstelle ein Parameter-Object für die Parameter."));
             return;
         }
 
@@ -135,10 +135,10 @@ internal static class ComplexityChecker
         {
             details = $"Die Methode '{methodName}' hat {total} Parameter (erlaubt sind maximal {args.BaseLimit}).";
         }
-        args.Ctx.ReportViolation(args.Node,
+        args.Ctx.ReportViolation(args.Node, new ViolationDescription(
             LinterRuleIds.MaxMethodParameterCount,
             details,
-            $"Erstelle 'sealed record {methodName}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern).");
+            $"Erstelle 'sealed record {methodName}Parameters(...)' mit den bisherigen Parametern als Properties und ersetze die Parameterliste der Methode durch diesen einen Record-Parameter (Parameter-Object-Pattern)."));
     }
 
     internal static bool IsOverrideOrInterfaceImplementation(MethodDeclarationSyntax node, CheckerContext ctx)
@@ -197,11 +197,11 @@ internal static class ComplexityChecker
             var severityHint = severityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxMethodLineCount,
                 $"Die Methode '{methodName}' hat {codeLineCount} Codezeilen (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
                 $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere weitere Abschnitte aus. Ziel: ≤ {effectiveLimit} Zeilen bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
-                effectiveSeverity: severityOverride);
+                EffectiveSeverity: severityOverride));
             return;
         }
 
@@ -212,10 +212,10 @@ internal static class ComplexityChecker
             // Szenario B: Suppression konfiguriert, aber nicht aktiv
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
             var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxMethodLineCount,
                 $"Die Methode '{methodName}' hat {codeLineCount} Codezeilen (erlaubt: {baseLimit} · Compound-Suppression inaktiv: {condSummary}).",
-                $"Optionen: (1) Komplexität senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Methode auf ≤ {baseLimit} Zeilen kürzen.");
+                $"Optionen: (1) Komplexität senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Methode auf ≤ {baseLimit} Zeilen kürzen."));
             return;
         }
 
@@ -223,10 +223,10 @@ internal static class ComplexityChecker
         var scenarioCGuidance = codeLineCount > baseLimit * 2
             ? $"Die Methode ist mehr als doppelt so lang wie erlaubt — prüfe ob ein vollständiges Refactoring sinnvoll ist: Zerlege in Handler, Steps oder Strategies (jede Einheit ≤ {baseLimit} Zeilen, eine Aufgabe pro Methode). Extract Method allein reicht hier wahrscheinlich nicht."
             : "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code fuer KI-Agenten besser editierbar zu halten.";
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxMethodLineCount,
             $"Die Methode '{methodName}' hat {codeLineCount} Codezeilen (erlaubt sind maximal {baseLimit}, ohne Kommentare und Leerzeilen).",
-            scenarioCGuidance);
+            scenarioCGuidance));
     }
 
     private static void CheckMethodComplexities(MethodDeclarationSyntax node, CheckerContext ctx, int cc, int cogC)
@@ -296,10 +296,10 @@ internal static class ComplexityChecker
         var isNearMiss = tolerance > 0 && check.Complexity <= check.Limit + tolerance;
         var nearMissHint = isNearMiss ? " [near-miss: knapp über Limit]" : "";
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             check.RuleName,
             $"Die Methode '{node.Identifier.Text}' hat eine {check.Label} von {check.Complexity} (erlaubt sind maximal {check.Limit}).{nearMissHint}",
-            check.Guidance);
+            check.Guidance));
     }
 
     private static bool IsImplicitInterfaceImplementation(IMethodSymbol symbol)
@@ -344,9 +344,10 @@ internal static class ComplexityChecker
         {
             var count = switchExpr.Arms.Count;
             if (count > limit)
-                ctx.ReportViolation(switchExpr, LinterRuleIds.MaxSwitchArms,
+                ctx.ReportViolation(switchExpr, new ViolationDescription(
+                    LinterRuleIds.MaxSwitchArms,
                     $"Switch-Expression hat {count} Arms (erlaubt: {limit}).",
-                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen.");
+                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen."));
         }
 
         // Switch-Statements: Labels zaehlen (nicht Sections — eine Section kann mehrere Labels haben)
@@ -354,9 +355,10 @@ internal static class ComplexityChecker
         {
             var count = switchStmt.Sections.SelectMany(s => s.Labels).Count();
             if (count > limit)
-                ctx.ReportViolation(switchStmt, LinterRuleIds.MaxSwitchArms,
+                ctx.ReportViolation(switchStmt, new ViolationDescription(
+                    LinterRuleIds.MaxSwitchArms,
                     $"Switch-Statement hat {count} Labels (erlaubt: {limit}).",
-                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen.");
+                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen."));
         }
     }
 }

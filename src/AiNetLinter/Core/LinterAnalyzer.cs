@@ -239,10 +239,10 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
         if (lineCount > _ctx.Config.Metrics.MaxLineCount)
         {
-            _ctx.ReportViolationAtLine(1,
+            _ctx.ReportViolationAtLine(1, new ViolationDescription(
                 nameof(_ctx.Config.Metrics.MaxLineCount),
                 $"Die Datei hat {lineCount} Zeilen (erlaubt sind maximal {_ctx.Config.Metrics.MaxLineCount}).",
-                BuildFileLineLimitGuidance());
+                BuildFileLineLimitGuidance()));
         }
     }
 
@@ -273,10 +273,10 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         var nullableContext = _ctx.SemanticModel.GetNullableContext(0);
         if (!nullableContext.HasFlag(NullableContext.Enabled))
         {
-            _ctx.ReportViolationAtLine(1,
+            _ctx.ReportViolationAtLine(1, new ViolationDescription(
                 nameof(_ctx.Config.Global.EnforceNullableEnable),
                 "Die Datei deklariert kein '#nullable enable' und hat keine global aktivierten Nullable-Pruefungen.",
-                "Fuege '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props.");
+                "Fuege '#nullable enable' am Anfang der Datei hinzu, oder aktiviere Nullable global in der csproj/Directory.Build.props."));
         }
     }
 

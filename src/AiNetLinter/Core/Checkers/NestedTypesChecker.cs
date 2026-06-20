@@ -41,10 +41,10 @@ internal static class NestedTypesChecker
     {
         var accessibility = DescribeAccessibility(nested);
         var kindLabel = nested is EnumDeclarationSyntax ? "enum" : "Typ";
-        ctx.ReportViolation(nested,
+        ctx.ReportViolation(nested, new ViolationDescription(
             nameof(ctx.Config.Global.BanPublicNestedTypes),
             $"Der {kindLabel} '{outerName}.{nested.Identifier.Text}' ist ein {accessibility} nested Type.",
-            "Extrahiere den Typ in eine eigene Datei (Namespace-Ebene), damit er per Datei-Listing/Grep fuer LLMs sichtbar ist.");
+            "Extrahiere den Typ in eine eigene Datei (Namespace-Ebene), damit er per Datei-Listing/Grep fuer LLMs sichtbar ist."));
     }
 
     private static string DescribeAccessibility(BaseTypeDeclarationSyntax nested)

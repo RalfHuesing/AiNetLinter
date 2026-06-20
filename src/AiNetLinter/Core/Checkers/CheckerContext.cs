@@ -40,40 +40,37 @@ internal sealed class CheckerContext
     /// <summary>
     /// Kurzform für AddViolation — FilePath und LineNumber werden automatisch gesetzt.
     /// </summary>
-    // ainetlinter-disable MaxMethodParameterCount
-    internal void ReportViolation(SyntaxNode node, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
+    internal void ReportViolation(SyntaxNode node, ViolationDescription desc) =>
         AddViolation(new RuleViolation
         {
             FilePath          = FilePath,
             LineNumber        = SyntaxHelper.LineOf(node),
-            RuleName          = ruleName,
-            Details           = details,
-            Guidance          = guidance,
-            EffectiveSeverity = effectiveSeverity,
+            RuleName          = desc.RuleName,
+            Details           = desc.Details,
+            Guidance          = desc.Guidance,
+            EffectiveSeverity = desc.EffectiveSeverity,
         });
 
-    // ainetlinter-disable MaxMethodParameterCount
-    internal void ReportViolation(SyntaxToken token, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
+    internal void ReportViolation(SyntaxToken token, ViolationDescription desc) =>
         AddViolation(new RuleViolation
         {
             FilePath          = FilePath,
             LineNumber        = token.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-            RuleName          = ruleName,
-            Details           = details,
-            Guidance          = guidance,
-            EffectiveSeverity = effectiveSeverity,
+            RuleName          = desc.RuleName,
+            Details           = desc.Details,
+            Guidance          = desc.Guidance,
+            EffectiveSeverity = desc.EffectiveSeverity,
         });
 
-    // ainetlinter-disable MaxMethodParameterCount
-    internal void ReportViolationAtLine(int lineNumber, string ruleName, string details, string guidance, string? effectiveSeverity = null) =>
+    internal void ReportViolationAtLine(int lineNumber, ViolationDescription desc) =>
         AddViolation(new RuleViolation
         {
             FilePath          = FilePath,
             LineNumber        = lineNumber,
-            RuleName          = ruleName,
-            Details           = details,
-            Guidance          = guidance,
-            EffectiveSeverity = effectiveSeverity,
+            RuleName          = desc.RuleName,
+            Details           = desc.Details,
+            Guidance          = desc.Guidance,
+            EffectiveSeverity = desc.EffectiveSeverity,
         });
 
     internal IReadOnlyList<RuleViolation> Violations => _violations;
@@ -84,3 +81,14 @@ internal sealed class CheckerContext
         _violations.AddRange(active);
     }
 }
+
+/// <summary>
+/// Beschreibt einen Regelverstoß (Regel-ID, Nachricht, Leitfaden, Severity).
+/// Wird an ReportViolation-Overloads übergeben.
+/// </summary>
+internal sealed record ViolationDescription(
+    string RuleName,
+    string Details,
+    string Guidance,
+    string? EffectiveSeverity = null);
+

@@ -49,11 +49,11 @@ internal static class StateChecker
             var severityHint = severityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Konstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
                 $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
-                effectiveSeverity: severityOverride);
+                EffectiveSeverity: severityOverride));
             return;
         }
 
@@ -62,18 +62,18 @@ internal static class StateChecker
             // Scenario B: Suppression configured, but not active
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
             var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Konstruktor hat {count} Parameter (erlaubt: {baseLimit} · Compound-Suppression inaktiv: {condSummary}).",
-                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus.");
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus."));
             return;
         }
 
         // Scenario C: Classic
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxConstructorDependencies,
             $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",
-            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility.");
+            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Fuehre einen Facade-Service ein, der zusammengehoerende Services buendelt (z. B. 'OrderContext(IRepository, IEventBus)'), und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility."));
     }
 
     internal static void CheckPrimaryConstructorDependencies(TypeDeclarationSyntax node, CheckerContext ctx)
@@ -115,11 +115,11 @@ internal static class StateChecker
             var severityHint = severityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Primaerkonstruktor hat {count} Parameter (Compound-Limit: {effectiveLimit}; Standard: {baseLimit} · {condSummary}).",
                 $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Lagere Abhaengigkeiten aus. Ziel: ≤ {effectiveLimit} Parameter bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
-                effectiveSeverity: severityOverride);
+                EffectiveSeverity: severityOverride));
             return;
         }
 
@@ -128,28 +128,28 @@ internal static class StateChecker
             // Scenario B: Suppression configured, but not active
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
             var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxConstructorDependencies,
                 $"Der Primaerkonstruktor hat {count} Parameter (erlaubt: {baseLimit} · Compound-Suppression inaktiv: {condSummary}).",
-                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus.");
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Lagere Abhaengigkeiten aus."));
             return;
         }
 
         // Scenario C: Classic
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxConstructorDependencies,
             $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",
-            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen.");
+            $"Zu viele Abhaengigkeiten in '{node.Identifier.Text}': Gruppiere thematisch zusammengehoerende Services in einen Facade-Service (z. B. 'XyzContext') und injiziere nur diesen — oder splitte die Klasse nach Single-Responsibility in zwei eigenstaendige Typen."));
     }
 
     internal static void CheckOutParameter(ParameterSyntax node, CheckerContext ctx)
     {
         if (!ShouldReportOutParameter(node, ctx)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             nameof(ctx.Config.Global.AllowOutParameters),
             $"Der Parameter '{node.Identifier.Text}' verwendet das verbotene 'out'-Schluesselwort.",
-            "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte.");
+            "Verwende C#-Tuples oder Records fuer mehrere Rueckgabewerte."));
     }
 
     private static bool ShouldReportOutParameter(ParameterSyntax node, CheckerContext ctx)

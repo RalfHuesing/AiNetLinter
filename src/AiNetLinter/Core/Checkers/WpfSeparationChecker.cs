@@ -33,7 +33,7 @@ internal static class WpfSeparationChecker
             .Take(3)
             .ToList();
 
-        ctx.ReportViolation(extraMembers[0],
+        ctx.ReportViolation(extraMembers[0], new ViolationDescription(
             "WpfRequireMinimalCodeBehind",
             $"Die WPF Code-Behind-Klasse '{className}' enthaelt {extraMembers.Count} zusaetzliche Member " +
             $"({string.Join(", ", extraNames)}). " +
@@ -42,7 +42,7 @@ internal static class WpfSeparationChecker
             "Verwende Commands (ICommand/RelayCommand) statt Event-Handler. " +
             "Setze den DataContext im XAML (StaticResource) oder im Konstruktor: 'DataContext = new MyViewModel();'. " +
             "Im Code-Behind soll nur verbleiben: 'public MyWindow() { InitializeComponent(); }'. " +
-            "Suppression moeglich mit: // ainetlinter-disable WpfRequireMinimalCodeBehind");
+            "Suppression moeglich mit: // ainetlinter-disable WpfRequireMinimalCodeBehind"));
     }
 
     private static bool IsWpfCodeBehindClass(ClassDeclarationSyntax node, CheckerContext ctx)

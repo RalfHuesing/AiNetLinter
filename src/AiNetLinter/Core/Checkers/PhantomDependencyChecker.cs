@@ -18,10 +18,10 @@ internal static class PhantomDependencyChecker
         var symbolInfo = ctx.SemanticModel.GetSymbolInfo(node.Name);
         if (symbolInfo.Symbol == null)
         {
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 nameof(ctx.Config.Global.DetectAndBanPhantomDependencies),
                 $"Der importierte Namespace '{node.Name}' kann nicht aufgeloest werden. Ist die NuGet-Abhaengigkeit in der csproj deklariert?",
-                "Entferne das using-Statement oder fuege die entsprechende Projektreferenz/.csproj-Abhaengigkeit hinzu.");
+                "Entferne das using-Statement oder fuege die entsprechende Projektreferenz/.csproj-Abhaengigkeit hinzu."));
         }
     }
 
@@ -38,10 +38,10 @@ internal static class PhantomDependencyChecker
 
         if (!IsForbiddenReflectionCall(containingType, methodName)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             nameof(ctx.Config.Global.DetectAndBanPhantomDependencies),
             $"Die Verwendung von dynamischer Reflection '{containingType}.{methodName}' ist fuer KI-Lesbarkeit nicht gestattet.",
-            "Verwende statische Typ-Ausdruecke wie 'typeof(MyClass)' oder Generics, um die Compile-Zeit-Sicherheit zu wahren.");
+            "Verwende statische Typ-Ausdruecke wie 'typeof(MyClass)' oder Generics, um die Compile-Zeit-Sicherheit zu wahren."));
     }
 
     private static bool IsForbiddenReflectionCall(string containingType, string methodName)

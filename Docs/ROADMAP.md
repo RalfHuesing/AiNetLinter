@@ -94,6 +94,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Namespace-Konsistenz:** `DisableAllDetector` nach `AiNetLinter.Suppression` verschoben (Plan 02)
 - [x] **Namespace-Konsistenz:** `UiFileSeparationChecker` nach `AiNetLinter.Core.Checkers` (Plan 03)
 - [x] **Core-Entschlackung:** `AiNetLinter.Generators`-Namespace extrahiert (Plan 04)
+- [x] **ViolationDescription-Record:** `ReportViolation`-Overloads mit `ViolationDescription` vereinfacht (Plan R04)
 
 ---
 

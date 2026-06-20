@@ -35,10 +35,10 @@ internal static class BoolParameterChecker
         var boolCount = CountBoolParameters(paramList, ctx);
         if (boolCount > limit)
         {
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 nameof(ctx.Config.Metrics.MaxBoolParameterCount),
                 $"'{memberName}' hat {boolCount} bool-Parameter (erlaubt: {limit}). Bool-Parameter sind an der Call-Site opak: 'DoWork(true, false)' trägt keine semantische Information.",
-                "Fasse die bool-Parameter in ein Parameter-Object zusammen: 'sealed record WorkOptions(bool EnableX, bool EnableY)' — damit werden Call-Sites selbsterklärend.");
+                "Fasse die bool-Parameter in ein Parameter-Object zusammen: 'sealed record WorkOptions(bool EnableX, bool EnableY)' — damit werden Call-Sites selbsterklärend."));
         }
     }
 

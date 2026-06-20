@@ -52,11 +52,11 @@ internal static class PublicMembersChecker
             var severityHint = severityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxPublicMembersPerType,
                 $"'{typeName}' hat {count} öffentliche Member (Compound-Limit: {effectiveLimit}; Standard: {limit} · {condSummary}).",
                 $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {effectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
-                effectiveSeverity: severityOverride);
+                EffectiveSeverity: severityOverride));
             return;
         }
 
@@ -65,18 +65,18 @@ internal static class PublicMembersChecker
             // Scenario B: Suppression configured, but not active
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
             var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.MaxPublicMembersPerType,
                 $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit} · Compound-Suppression inaktiv: {condSummary}).",
-                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Teile den Typ nach Single-Responsibility auf.");
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Teile den Typ nach Single-Responsibility auf."));
             return;
         }
 
         // Scenario C: Classic
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxPublicMembersPerType,
             $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
-            "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können.");
+            "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können."));
     }
 
     internal static int CountPublicMembers(TypeDeclarationSyntax node)

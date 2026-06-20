@@ -14,9 +14,9 @@ internal static class DynamicTypeChecker
         var typeInfo = ctx.SemanticModel.GetTypeInfo(node);
         if (typeInfo.Type?.TypeKind != TypeKind.Dynamic) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             nameof(ctx.Config.Global.AllowDynamic),
             "Die Verwendung des Typs 'dynamic' ist nicht gestattet.",
-            "Verwende stattdessen stark typisierte Schnittstellen, Klassen oder generische Typen.");
+            "Verwende stattdessen stark typisierte Schnittstellen, Klassen oder generische Typen."));
     }
 }

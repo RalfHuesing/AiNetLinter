@@ -40,10 +40,10 @@ internal static class MinimalApiChecker
     }
 
     private static void AddViolation(ParameterSyntax parameter, int parameterCount, CheckerContext ctx) =>
-        ctx.ReportViolation(parameter,
+        ctx.ReportViolation(parameter, new ViolationDescription(
             nameof(ctx.Config.Global.EnforceMinimalApiAsParameters),
             $"Minimal-API-Endpunkt mit {parameterCount} Parametern: Composite-Typ '{parameter.Type}' benoetigt [AsParameters].",
-            "Fuege [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl.");
+            "Fuege [AsParameters] zum Composite-Parameter hinzu oder reduziere die Parameteranzahl."));
 
     private static IReadOnlyList<ParameterSyntax> GetLambdaParameters(ExpressionSyntax expression) =>
         expression switch

@@ -17,10 +17,10 @@ internal static class SealedClassChecker
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) && ctx.Config.Global.AllowUnsealedPartialClasses) return;
         if (HasExemptSuffix(node.Identifier.Text, ctx)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             nameof(ctx.Config.Global.EnforceSealedClasses),
             $"Die Klasse '{node.Identifier.Text}' ist nicht als 'sealed' deklariert.",
-            "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern.");
+            "Fuege den 'sealed' Modifikator zur Klassendeklaration hinzu, um unkontrollierte Vererbung zu verhindern."));
     }
 
     internal static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node) =>

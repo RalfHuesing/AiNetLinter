@@ -15,10 +15,10 @@ internal static class AsyncVoidChecker
         if (!IsAsyncVoid(node.Modifiers, node.ReturnType)) return;
         if (IsEventHandlerSignature(node.ParameterList, ctx)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.BanAsyncVoid,
             $"Methode '{node.Identifier.Text}' ist als 'async void' deklariert.",
-            "Verwende 'async Task' als Rueckgabetyp. 'async void' ist das haeufigste async-Anti-Pattern in LLM-generiertem Code: Exceptions werden unkontrolliert in den SynchronizationContext geschleudert und sind fuer aufrufende try/catch-Bloecke unsichtbar. Ausnahme: Event-Handler mit Signatur '(object sender, EventArgs e)' bleiben erlaubt wenn 'AsyncVoidAllowEventHandlers: true' gesetzt ist.");
+            "Verwende 'async Task' als Rueckgabetyp. 'async void' ist das haeufigste async-Anti-Pattern in LLM-generiertem Code: Exceptions werden unkontrolliert in den SynchronizationContext geschleudert und sind fuer aufrufende try/catch-Bloecke unsichtbar. Ausnahme: Event-Handler mit Signatur '(object sender, EventArgs e)' bleiben erlaubt wenn 'AsyncVoidAllowEventHandlers: true' gesetzt ist."));
     }
 
     internal static void CheckLocalFunction(LocalFunctionStatementSyntax node, CheckerContext ctx)
@@ -26,10 +26,10 @@ internal static class AsyncVoidChecker
         if (!ctx.Config.Global.BanAsyncVoid) return;
         if (!IsAsyncVoid(node.Modifiers, node.ReturnType)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.BanAsyncVoid,
             $"Lokale Funktion '{node.Identifier.Text}' ist als 'async void' deklariert.",
-            "Verwende 'async Task' als Rueckgabetyp. Lokale 'async void'-Funktionen sind nie als Event-Handler gedacht, erzeugen unkontrollierbare Exception-Propagation und werden von LLM-Agenten haeufig in verschachtelten async-Aufrufen generiert.");
+            "Verwende 'async Task' als Rueckgabetyp. Lokale 'async void'-Funktionen sind nie als Event-Handler gedacht, erzeugen unkontrollierbare Exception-Propagation und werden von LLM-Agenten haeufig in verschachtelten async-Aufrufen generiert."));
     }
 
     private static bool IsAsyncVoid(SyntaxTokenList modifiers, TypeSyntax returnType) =>
