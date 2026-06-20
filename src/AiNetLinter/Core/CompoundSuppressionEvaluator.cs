@@ -48,6 +48,29 @@ internal static class CompoundSuppressionEvaluator
         return null;
     }
 
+    /// <summary>
+    /// Gibt den SeverityOverride zurück wenn Compound-Bedingungen erfüllt sind
+    /// und die konfigurierte Suppression einen SeverityOverride enthält.
+    /// Gibt null zurück wenn: keine Suppression, kein SeverityOverride,
+    /// oder Bedingungen nicht erfüllt.
+    /// Wirkt nur in Szenario A (RelaxedLimit vorhanden und überschritten).
+    /// </summary>
+    internal static string? GetActiveSeverityOverride(
+        string ruleName,
+        IReadOnlyList<CompoundSuppression>? suppressions,
+        IReadOnlyDictionary<string, int> metrics)
+    {
+        if (suppressions == null || suppressions.Count == 0) return null;
+        foreach (var s in suppressions)
+        {
+            if (s.TargetRule != ruleName) continue;
+            if (s.SeverityOverride == null) continue;
+            if (!AllConditionsMet(s.WhenAllOf, metrics)) return null;
+            return s.SeverityOverride;
+        }
+        return null;
+    }
+
     private static bool AllConditionsMet(
         IReadOnlyList<MetricCondition> conditions,
         IReadOnlyDictionary<string, int> metrics)
