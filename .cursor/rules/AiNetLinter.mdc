@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.54 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.55 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -41,6 +41,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 
 ## agent-resilience
 - **EnforceNoSilentCatch** — `catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.
+- **BanAsyncVoid** — 'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.
 
 ## architecture
 - **EnforceNamespaceDirectoryMapping** — Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).

@@ -179,6 +179,22 @@ public sealed record GlobalConfig
     public bool EnablePerformanceProfiling { get; init; } = true;
 
     /// <summary>
+    /// Verbietet <c>async void</c>-Methoden und lokale Funktionen.
+    /// Das einzige legitime Einsatzszenario — Event-Handler mit der Signatur
+    /// <c>(object sender, EventArgs e)</c> — wird via <see cref="AsyncVoidAllowEventHandlers"/> gesteuert.
+    /// Standard: <c>true</c>.
+    /// </summary>
+    public bool BanAsyncVoid { get; init; } = true;
+
+    /// <summary>
+    /// Wenn <c>true</c>: <c>async void</c>-Methoden, deren Parameter-Liste exakt
+    /// <c>(object sender, EventArgs e)</c> entspricht (oder eine EventArgs-Unterklasse enthält),
+    /// werden nicht gemeldet.
+    /// Standard: <c>true</c> (idiomatische Event-Handler bleiben erlaubt).
+    /// </summary>
+    public bool AsyncVoidAllowEventHandlers { get; init; } = true;
+
+    /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
@@ -237,6 +253,8 @@ public sealed record GlobalConfig
             BanPublicNestedTypes                        = o.BanPublicNestedTypes                        ?? BanPublicNestedTypes,
             BanPublicNestedTypesAllowPrivate            = o.BanPublicNestedTypesAllowPrivate            ?? BanPublicNestedTypesAllowPrivate,
             EnablePerformanceProfiling                  = o.EnablePerformanceProfiling                  ?? EnablePerformanceProfiling,
+            BanAsyncVoid                                = o.BanAsyncVoid                                ?? BanAsyncVoid,
+            AsyncVoidAllowEventHandlers                 = o.AsyncVoidAllowEventHandlers                 ?? AsyncVoidAllowEventHandlers,
         };
     }
 }

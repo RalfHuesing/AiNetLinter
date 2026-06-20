@@ -807,6 +807,28 @@ internal static class RuleRegistry
             IsEnabled: c => c.Global.AllowedEmptyReads,
             IsMetric: false,
             IncludeInCursorRules: true
+        ),
+        new(
+            RuleId: LinterRuleIds.BanAsyncVoid,
+            DisplayName: "Kein async void",
+            GetShortDescription: c => "'async void' ist verboten (ausser Event-Handler).",
+            Warum: "'async void' schleudert Exceptions in den SynchronizationContext — sie werden von keinem aufrufenden 'try/catch' gefangen. " +
+                   "Agenten produzieren dieses Muster systematisch wenn sie void-Methoden zu async umwandeln.",
+            Alternativen:
+            [
+                "**'async Task' statt 'async void'**: Minimale Aenderung — Rückgabetyp ersetzen, Aufrufer await ergaenzen.",
+                "**Event-Handler-Ausnahme**: Signaturen mit '(object sender, EventArgs e)' bleiben erlaubt.",
+                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' fuer Legacy-Code."
+            ],
+            SicherheitsHinweis: null,
+            Intent: "agent-resilience",
+            Severity: "error",
+            CursorHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.BanAsyncVoid,
+            IsMetric: false,
+            IncludeInCursorRules: true,
+            ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
         )
     ];
 }
