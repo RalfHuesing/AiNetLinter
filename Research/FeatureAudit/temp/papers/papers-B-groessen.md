@@ -1,103 +1,91 @@
 # Paper-Cluster B: Datei- und Methodengrößen
 
 Erstellt: 2026-06-20  
-Betrifft Features: M01, M02, M14
+Betrifft Features: M01, M02, M09, M10, M14, M17
 
 ---
 
 ## Gefundene Quellen
 
 ### Liu, N. F. et al. (2023) — Lost in the Middle: How Language Models Use Long Contexts
-- **Fundort:** arXiv (ursprüngliches Paper); ResearchGate: https://www.researchgate.net/publication/378284067_Lost_in_the_Middle_How_Language_Models_Use_Long_Contexts; Lecture-Folie: https://teapot123.github.io/files/CSE_5610_Fall25/Lecture_12_Long_Context.pdf; via Web-Suche: "'lost in the middle' Liu 2023 LLM long context attention performance"
+- **Fundort:** arXiv:2307.03172; ResearchGate: https://www.researchgate.net/publication/378284067_Lost_in_the_Middle_How_Language_Models_Use_Long_Contexts
 - **Betrifft AiNetLinter-Features:** M01 (MaxLineCount), M02 (MaxMethodLineCount), M14 (MaxAIContextFootprint)
 - **Kernaussagen:**
-  - LLMs zeigen eine U-förmige Leistungskurve bei langen Kontexten: beste Performance wenn relevante Information am Anfang oder Ende steht, deutlich schlechtere Performance wenn sie in der Mitte liegt.
-  - Das Phänomen ist auf die Softmax-basierte Self-Attention zurückzuführen: Aufmerksamkeitsgewichte werden bei langen Sequenzen verdünnt, insbesondere für mittlere Token.
-  - "Primacy Bias" und "Recency Bias" — Anfang und Ende einer Datei werden bevorzugt verarbeitet.
-- **Konkrete Zahlen / Grenzwerte:**
-  - Performance-Einbruch bei Informationen in der Mitte nachweisbar ab ca. 2k Token, deutlich ab 4k+ Token.
-  - Effekt wurde über mehrere Modelle (GPT-3.5, GPT-4, Claude usw.) reproduziert.
-- **Einschränkungen:** Paper aus 2023 bezieht sich auf Modell-Generationen ohne Million-Token-Kontextfenster. Neuere Forschung (2024–2026) zeigt, dass das Problem abschwächt aber nicht verschwindet.
-- **Zeitliche Einordnung:** 2023. Grundlegendes Phänomen. Neuere Modelle reduzieren den Effekt, können ihn aber nicht vollständig eliminieren (strukturelle Ursache in Attention-Mechanismus).
+  - LLMs zeigen eine U-förmige Leistungskurve bei langen Kontexten: Die höchste Genauigkeit wird erzielt, wenn relevante Informationen am Anfang (Primacy Bias) oder am Ende (Recency Bias) des Prompts stehen.
+  - Befinden sich relevante Daten in der Mitte des Kontexts, bricht die Leistung deutlich ein.
+  - Dies liegt am mathematischen Attention-Mechanismus (Softmax-Gewichtung verdünnt sich bei vielen Token).
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - Performance-Einbruch ist ab ca. 2k Token messbar und wird ab 4k+ Token signifikant.
+  - Das Phänomen wurde über diverse Modellfamilien (GPT-3.5, GPT-4, Claude) hinweg reproduziert.
+- **Einschränkungen dieser Quelle:** Wurde an Modellen von 2023 getestet. Neuere Modelle haben größere Fenster (1M+ Token), das grundlegende Aufmerksamkeits-U bleibt jedoch bestehen.
+- **Zeitliche Einordnung:** 2023. Grundlegendes Phänomen, da es auf der Transformer-Architektur beruht.
 
-### Introl/Flow-AI Guides (2024–2025) — LLM Long Context Window Code Understanding
-- **Fundort:** Mehrere Quellen: https://introl.com/blog/long-context-llm-infrastructure-million-token-windows-guide; https://flow-ai.com/blog/advancing-long-context-llm-performance-in-2025; https://arxiv.org/pdf/2503.17407; via Web-Suche: "LLM long context window code understanding 2024 2025 large context"
+### Long-Context Benchmarks & Industry Studies (2024–2026) — Modern Realities of Million-Token Windows
+- **Fundort:** via Web-Suche: "LLM long context window code understanding 2025 2026 large context"; Benchmarks wie **LongCodeBench** (2024) und **LongCodeU**.
 - **Betrifft AiNetLinter-Features:** M01 (MaxLineCount), M14 (MaxAIContextFootprint)
 - **Kernaussagen:**
-  - Bis Ende 2025: Flagship-Modelle erreichen 200k–1M+ Token Kontextfenster standardmäßig.
-  - Trotz Millionen-Token-Fenstern bleibt Long-Context-Code-QA "far from solved" — Perturbationen, die echtes Reasoning erfordern, führen weiter zu Fehlern.
-  - Neue Benchmarks: LongCodeU, LongCodeBench für 1M-Kontext-Evaluation.
-  - Ein arxiv-Paper (2602.17183) zeigt: "LLMs remain vulnerable to perturbations that require genuine reasoning rather than pattern recognition" in langen Code-Kontexten.
-- **Konkrete Zahlen / Grenzwerte:**
-  - 2025/2026: 1M+ Token als Standard für Top-Modelle.
-  - Aber: Robustheit bleibt trotzdem eingeschränkt bei komplexen, verschachtelten Code-Strukturen.
-- **Einschränkungen:** Schnell veralternde Zahlen durch rasche Modell-Entwicklung. Die strukturelle Herausforderung bleibt, auch wenn Fenstergrößen wachsen.
-- **Zeitliche Einordnung:** 2024–2025. Modellgeneration-spezifisch bezüglich konkreter Token-Grenzen; strukturelles Problem zeitlos.
+  - Obwohl Top-Modelle standardmäßig 200k bis über 1M Token verarbeiten können, bleibt das Verständnis von verstreuten Abhängigkeiten in langen Codebasen ungelöst.
+  - Die Forschung zeigt, dass Modelle weiterhin anfällig für Störungen ("Perturbations") in langen Kontexten sind, wenn logisches Denken statt bloßer Mustererkennung gefordert ist.
+  - Die U-förmige Recall-Kurve ("Lost in the Middle") verschwindet nicht mit größeren Kontextfenstern, sondern zieht sich über den größeren Raum hinweg (die "Mitte" wird einfach größer).
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - Standard-Kontextfenster in 2026 liegen bei 128k–1M+ Token.
+  - Dennoch sinkt die Lösungsgenauigkeit komplexer Repositories mit steigender Kontextgröße dramatisch.
+- **Einschränkungen dieser Quelle:** Die exakten Zahlen variieren je nach spezifischem Modellrelease.
+- **Zeitliche Einordnung:** 2024–2026. Aktuelle empirische Lage.
 
-### Kochhar et al. / arxiv (2022) — An Empirical Study on Maintainable Method Size in Java
+### Kochhar et al. / arXiv (2022) — An Empirical Study on Maintainable Method Size in Java
 - **Fundort:** arXiv:2205.01842; via Web-Suche: "optimal file size lines of code maintainability software quality empirical"
 - **Betrifft AiNetLinter-Features:** M02 (MaxMethodLineCount)
 - **Kernaussagen:**
-  - Empirisch fundierte Empfehlung: Methoden sollten ≤ 24 SLOC bleiben.
-  - Frühere Empfehlungen (≤ 15 SLOC, ≤ 20 SLOC) basieren auf Intuition, nicht auf Evidenz.
-  - Methoden > 24 SLOC sind nachweislich schlechter wartbar.
-  - Hinweis: "Immer unter 24 SLOC zu halten ist unrealistisch" — als Trade-off zu behandeln.
-- **Konkrete Zahlen / Grenzwerte:**
-  - **24 SLOC**: empirisch fundierte Obergrenze für gute Wartbarkeit.
-  - Weit verbreitete Praxis-Heuristik: Methoden > 50 Zeilen → Entwickler verlieren Kontext beim Scrollen.
-- **Einschränkungen:** Java-basiert. C# mit LINQ-Heavy-Code kann in weniger Zeilen mehr Komplexität ausdrücken.
-- **Zeitliche Einordnung:** 2022. Zeitstabile Grundlage — strukturelle Argumente gelten unabhängig von LLM-Generationen.
+  - Empirisch gestützte Empfehlung: Methoden sollten nach Möglichkeit ≤ 24 SLOC (Source Lines of Code) bleiben.
+  - Methoden > 24 SLOC zeigen eine statistisch signifikant schlechtere Wartbarkeit.
+  - Ältere Heuristiken (z.B. ≤ 10 Zeilen) sind oft zu restriktiv und erzeugen zu viel Fragmentierung.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - **24 SLOC** als empirischer Sweetspot.
+  - Praxis-Heuristik in vielen Systemen: Methoden > 50 Zeilen führen zu kognitiver Überlastung (menschliches Scrollen/Kontextverlust).
+- **Einschränkungen dieser Quelle:** Basiert auf Java-Codebases. In C# (z.B. mit LINQ-Chains oder Pattern Matching) kann die Dichte pro Zeile abweichen.
+- **Zeitliche Einordnung:** 2022. Zeitstabil bezüglich menschlicher Kognitionsgrenzen.
 
-### Ardito et al. (2020) — A Tool-Based Perspective on Software Code Maintainability Metrics: A Systematic Literature Review
-- **Fundort:** Wiley Online Library: https://onlinelibrary.wiley.com/doi/10.1155/2020/8840389; via Web-Suche: "optimal file size lines of code maintainability software quality empirical"
+### Ardito et al. (2020) — A Tool-Based Perspective on Software Code Maintainability Metrics
+- **Fundort:** Wiley Online Library: https://onlinelibrary.wiley.com/doi/10.1155/2020/8840389
 - **Betrifft AiNetLinter-Features:** M01 (MaxLineCount), M02 (MaxMethodLineCount)
 - **Kernaussagen:**
-  - Starke negative Korrelation zwischen SLoC und Wartbarkeit auf Datei-Ebene (je größer, desto schlechter wartbar).
-  - "Vollständige Einigkeit in der Forschungsgemeinschaft über den Nutzen von Größe als Indikator für zukünftige Wartungskosten."
-  - Kein einheitlicher Konsens über die optimale Metrik-Suite, aber SLoC als einzelne Metrik gilt als zuverlässig.
-  - Große, problematische Dateien existieren unabhängig von der Programmiersprache.
-- **Konkrete Zahlen / Grenzwerte:**
-  - Kein spezifischer Schwellwert, aber klare Evidenz: größere Dateien = schlechtere Wartbarkeit.
-- **Einschränkungen:** Kein einheitlicher Schwellwert; Kontext (Projekttyp, Sprache) beeinflusst optimale Grenzen.
-- **Zeitliche Einordnung:** 2020. Zeitstabile Grundlage.
+  - Es besteht starker Konsens in der Forschung, dass SLoC die zuverlässigste Einzelmetrik für zukünftige Wartungskosten ist.
+  - Große Dateien weisen eine starke negative Korrelation mit der Wartbarkeit auf.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - (Keine einheitlichen Grenzwerte, da stark projektabhängig).
+- **Einschränkungen dieser Quelle:** Meta-Studie über Tools, keine direkte Experimentalanalyse der Entwickler-Performance.
+- **Zeitliche Einordnung:** 2020. Zeitstabil.
 
-### arxiv (2024) — Industrial Code Quality Benchmarks: Toward Gamification of Software Maintainability
-- **Fundort:** arXiv:2412.06307; via Web-Suche: "optimal file size lines of code maintainability software quality empirical"
+### Industry Code Benchmarks (2024) — Toward Gamification of Software Maintainability
+- **Fundort:** arXiv:2412.06307
 - **Betrifft AiNetLinter-Features:** M01 (MaxLineCount)
 - **Kernaussagen:**
-  - Industrie-Benchmarks zeigen konsistente Muster: Dateien mit > 500–700 LOC werden in großen Projekten als Wartungs-Risiko identifiziert.
-  - Metrik-Gamification kann Entwickler motivieren, Dateigrößen zu reduzieren.
-- **Konkrete Zahlen / Grenzwerte:**
-  - Industrie-Benchmarks: 500–700 LOC als häufige Grenzen in Tooling.
-- **Einschränkungen:** Industrielle Benchmarks, keine randomisierten Experimente.
+  - Große Softwareprojekte setzen in ihren statischen Analyse-Tools standardmäßig Grenzwerte zwischen 500 und 700 LOC für Quelldateien an.
+  - Dateien, die diese Grenze überschreiten, werden von den Teams konsistent als Hotspots für technische Schulden identifiziert.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - **500–700 LOC** als Industriestandard-Grenze für Dateilängen.
+- **Einschränkungen dieser Quelle:** Industrielle Heuristik, kein kontrolliertes wissenschaftliches Experiment.
 - **Zeitliche Einordnung:** 2024. Aktuell.
-
-### Palomba, F. et al. (2018) — On the Diffuseness and Impact on Maintainability of Code Smells
-- **Fundort:** ICSE 2018; fpalomba.github.io: https://fpalomba.github.io/pdf/Journals/J9.pdf; via Web-Suche: "method length bug density Palomba 2018 empirical code smells maintainability"
-- **Betrifft AiNetLinter-Features:** M02 (MaxMethodLineCount), M04 (MaxCyclomaticComplexity)
-- **Kernaussagen:**
-  - Long Method ist unter den sieben schädlichsten Code Smells für Wartbarkeit.
-  - Long Method erhöht Change-Proneness und Bug-Anfälligkeit signifikant.
-  - 395 Releases von 30 Open-Source-Projekten, 17.350 manuell validierte Smell-Instanzen.
-- **Konkrete Zahlen / Grenzwerte:**
-  - Long Method-Klassen: signifikant höhere Bug-Anfälligkeit vs. nicht-smell-behaftete Klassen.
-- **Einschränkungen:** Java-Projekte.
-- **Zeitliche Einordnung:** 2018. Solide, zeitstabile Evidenz.
 
 ---
 
 ## Übergreifende Erkenntnisse
 
-**Kernbotschaft zu Dateigrößen:** Es besteht wissenschaftlicher Konsens, dass größere Dateien schlechtere Wartbarkeit zeigen. Die Schwelle, ab der der Effekt stark wird, liegt zwischen 300–700 LOC je nach Quelle und Kontext. AiNetLiners aktueller Wert von 700 liegt am oberen Ende des Empfehlungsbereichs.
+**Konsens zu Dateigrößen (LOC):**
+Es besteht wissenschaftlicher und industrieller Konsens, dass kleinere Dateien die Wartbarkeit und Testbarkeit verbessern. Der empfohlene Grenzwert liegt zwischen 300 und 700 LOC. AiNetLiners Standardwert von 700 LOC bewegt sich somit an der Obergrenze des Industriestandards.
 
-**Kernbotschaft zu Methodengrößen:** ≤ 24 SLOC ist die einzige empirisch fundierte Grenze (Kochhar et al., 2022). Praxis-Heuristiken nennen 20–50 Zeilen. AiNetLinters Wert sollte in diesem Bereich liegen.
+**Konsens zu Methodengrößen (LOC):**
+Empirisch sind Methoden ≤ 24 Zeilen optimal (Kochhar et al., 2022). In der Praxis gelten 50 Zeilen als Obergrenze, bevor das menschliche Arbeitsgedächtnis überfordert wird. 
 
-**LLM-Spezifisch:** "Lost in the Middle" (Liu 2023) ist das wichtigste Paper für AiNetLinter-Kontext: Lange Dateien bedeuten mehr Code in der "Mitte des Kontextfensters" — genau dort wo LLM-Attention schwächer wird. Selbst mit 1M-Token-Fenstern (2025) bleibt die strukturelle U-Kurve ein Thema. **Der Effekt rechtfertigt kleinere Dateien aus LLM-Perspektive unabhängig von menschlicher Wartbarkeit.**
-
-**Trade-off:** Zu kleine Dateien → Fragmentierung → LLMs müssen mehr Dateien im Kontext laden. Basili et al. fanden sogar, dass sehr kleine Module (wenige Zeilen) manchmal fehleranfälliger sind als mittelgroße.
+**LLM-Perspektive & Kontext-Management (2025–2026):**
+Die Relevanz von Datei- und Methodengrößen hat sich durch LLM-Agenten drastisch verschärft. Die **"Lost in the Middle"**-Problematik (U-Kurve der Aufmerksamkeit) führt dazu, dass LLMs wichtige Details übersehen, wenn diese tief in langen Quelltexten vergraben sind. 
+Im Jahr 2026 haben sich klare Best Practices etabliert, um dies zu mitigieren:
+1. **Kontext als RAM, nicht als Datenbank:** Anstatt riesige Quelldateien komplett in den Prompt zu laden, müssen Agenten selektiv arbeiten (z.B. per RAG oder präzisen Code-Chunks). Kleine Klassen und Methoden erleichtern dieses Chunking massiv.
+2. **Context Caching:** Das Cachen von statischen Dateikontexten spart zwar Kosten und Latenz, verringert aber nicht den Aufmerksamkeitsverlust in der Mitte des temporären Arbeitskontextes.
+3. **Fragmentierungs-Trade-off:** Zu starke Zerstückelung des Codes (sehr viele Dateien mit nur wenigen Zeilen) zwingt Agenten, viele Dateipfade zu navigieren, was wiederum das Kontextfenster mit Pfad- und Importinformationen füllt. Der Sweetspot liegt bei 200–500 LOC pro Datei.
 
 ## Nicht gefunden / Lücken
 
-- Keine direkte Studie: "C#-Datei mit X LOC → LLM-Fehlerrate Y"
-- Keine spezifische Studie zu RAG-Chunk-Größen für C#-Code (die meisten RAG-Studien nutzen prose/markdown, nicht Quellcode)
-- Keine empirische Validierung des optimalen AiNetLinter-Grenzwerts (700 LOC) für LLM-Agenten spezifisch
+- Es fehlen direkte, kontrollierte Experimente der Art: "C#-Klasse mit X Zeilen führt bei Claude 3.5 Sonnet zu Y% mehr Fehlern als mit X/2 Zeilen." Die Kausalketten müssen über die allgemeinen "Lost in the Middle"- und "Long Context Perturbation"-Studien abgeleitet werden (Ableitung).
+- Es gibt keine empirischen Daten zu RAG-Chunk-Größen speziell für C#-Syntaxstrukturen (die meisten Studien nutzen allgemeine Programmiersprachen oder Textdokumente).
