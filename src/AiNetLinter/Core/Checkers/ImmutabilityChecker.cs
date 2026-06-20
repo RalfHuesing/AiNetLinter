@@ -33,10 +33,10 @@ internal static class ImmutabilityChecker
             if (setAccessor == null) continue;
             if (setAccessor.Modifiers.Any(SyntaxKind.InitKeyword)) continue;
 
-            ctx.ReportViolation(prop,
+            ctx.ReportViolation(prop, new ViolationDescription(
                 nameof(ctx.Config.Global.EnforceExplicitStateImmutability),
                 $"Die Eigenschaft '{prop.Identifier.Text}' der Klasse '{className}' hat einen veränderbaren 'set'-Accessor.",
-                "Verwende 'init' oder mache die Eigenschaft get-only, um Immutability zu garantieren.");
+                "Verwende 'init' oder mache die Eigenschaft get-only, um Immutability zu garantieren."));
         }
     }
 
@@ -49,10 +49,10 @@ internal static class ImmutabilityChecker
 
             foreach (var variable in fieldDecl.Declaration.Variables)
             {
-                ctx.ReportViolation(variable,
+                ctx.ReportViolation(variable, new ViolationDescription(
                     nameof(ctx.Config.Global.EnforceExplicitStateImmutability),
                     $"Das Feld '{variable.Identifier.Text}' in der Klasse '{className}' ist nicht als 'readonly' deklariert.",
-                    "Füge den Modifikator 'readonly' hinzu.");
+                    "Füge den Modifikator 'readonly' hinzu."));
             }
         }
     }

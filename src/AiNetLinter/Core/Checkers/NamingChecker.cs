@@ -25,10 +25,10 @@ internal static class NamingChecker
         if (string.IsNullOrEmpty(name)) return;
         if (!char.IsUpper(name[0]))
         {
-            ctx.ReportViolation(identifier,
+            ctx.ReportViolation(identifier, new ViolationDescription(
                 nameof(ctx.Config.Global.EnforcePascalCase),
                 $"Der Name '{name}' ({kind}) ist nicht in PascalCase geschrieben.",
-                "Aendere den ersten Buchstaben des Namens in einen Grossbuchstaben.");
+                "Aendere den ersten Buchstaben des Namens in einen Grossbuchstaben."));
         }
     }
 
@@ -51,10 +51,10 @@ internal static class NamingChecker
                 && methodName.Contains(name, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            ctx.ReportViolation(param,
+            ctx.ReportViolation(param, new ViolationDescription(
                 nameof(ctx.Config.Global.EnforceSemanticNaming),
                 $"Der Parameter '{name}' in einer oeffentlichen Methode hat einen generischen, nicht-semantischen Namen.",
-                "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt.");
+                "Verwende einen aussagekraeftigen Parameternamen, der die Absicht und den Typ des Parameters beschreibt."));
         }
     }
 
@@ -68,10 +68,10 @@ internal static class NamingChecker
 
         if (!HasXmlDocumentation(node))
         {
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 nameof(ctx.Config.Global.EnforceXmlDocumentation),
                 $"Das oeffentliche Element '{name}' ({kind}) hat keine XML-Dokumentation (/// <summary>).",
-                "Fuege ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben.");
+                "Fuege ein XML-Dokumentationskommentar hinzu, um die Absicht des Elements zu beschreiben."));
         }
     }
 

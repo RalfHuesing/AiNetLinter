@@ -19,10 +19,10 @@ internal static class NamespaceCouplingChecker
             if (!NamespaceMatches(ctx.CurrentNamespace, rule.SourceNamespace)) continue;
             if (!NamespaceMatches(referencedNamespace, rule.TargetNamespace)) continue;
 
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 "ForbiddenNamespaceDependency",
                 $"Der Namespace '{ctx.CurrentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhaengen (Referenz gefunden: '{node}').",
-                "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung.");
+                "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung."));
         }
     }
 

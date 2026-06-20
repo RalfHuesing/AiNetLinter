@@ -21,10 +21,10 @@ internal static class LinqChainLengthChecker
         var chainLength = CountLinqChain(node, ctx.Config.Metrics.LinqMethodNames);
         if (chainLength <= limit) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxLinqChainLength,
             $"LINQ-Kette hat {chainLength} Methoden (erlaubt: {limit}).",
-            BuildGuidance(chainLength, limit));
+            BuildGuidance(chainLength, limit)));
     }
 
     /// <summary>

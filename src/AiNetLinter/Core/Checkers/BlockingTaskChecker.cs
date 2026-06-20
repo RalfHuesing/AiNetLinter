@@ -30,10 +30,10 @@ internal static class BlockingTaskChecker
             && IsTaskReceiver(waitAccess.Expression, ctx))
         {
             if (IsInMainMethod(node)) return;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.BanBlockingTaskAccess,
                 "Blockierender Task-Zugriff '.Wait()' erkannt.",
-                BuildGuidance(".Wait()", "await task;"));
+                BuildGuidance(".Wait()", "await task;")));
         }
     }
 
@@ -48,10 +48,10 @@ internal static class BlockingTaskChecker
             && IsTaskReceiver(getAwaiterAccess.Expression, ctx))
         {
             if (IsInMainMethod(node)) return;
-            ctx.ReportViolation(node,
+            ctx.ReportViolation(node, new ViolationDescription(
                 LinterRuleIds.BanBlockingTaskAccess,
                 "Blockierender Task-Zugriff '.GetAwaiter().GetResult()' erkannt.",
-                BuildGuidance(".GetAwaiter().GetResult()", "await task;"));
+                BuildGuidance(".GetAwaiter().GetResult()", "await task;")));
         }
     }
 
@@ -67,10 +67,10 @@ internal static class BlockingTaskChecker
         if (!IsTaskReceiver(node.Expression, ctx)) return;
         if (IsInMainMethod(node)) return;
 
-        ctx.ReportViolation(node,
+        ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.BanBlockingTaskAccess,
             "Blockierender Task-Zugriff '.Result' erkannt.",
-            BuildGuidance(".Result", "await task;"));
+            BuildGuidance(".Result", "await task;")));
     }
 
     private static bool IsTaskReceiver(ExpressionSyntax expression, CheckerContext ctx)
