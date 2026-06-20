@@ -12,25 +12,25 @@ Auto-generiert durch AiNetLinter 1.0.55 aus `rules.json`. Neuen Produktionscode 
 - `#nullable enable` am Dateianfang.
 - Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.
 - Kein `dynamic`; `out` nur in `Try*`-Methoden (private Methoden ausgenommen).
-- Klassen-Kopplung (Footprint) klein halten: max. 5000 transitive Zeilen eigener Typen.
+- Klassen-Kopplung (Footprint) klein halten: max. 2500 transitive Zeilen eigener Typen.
 
 ## Grenzwerte (Produktion)
 | Regel | Limit | Praxis |
 | :--- | :---: | :--- |
-| `MaxLineCount` | **700** | Datei splitten wenn sie wächst. |
+| `MaxLineCount` | **500** | Datei splitten wenn sie wächst. |
 | `MaxMethodLineCount` | **60** | Eine Aufgabe pro Methode; Rest extrahieren. |
 | `MaxMethodParameterCount` | **4** | Ab Überschreitung: `record` als Parameter-Object. |
 | `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |
 | `MaxCognitiveComplexity` | **15** | Weniger Verschachtelung; Early Return bevorzugen (kognitiv). |
-| `MaxInheritanceDepth` | **2** | Komposition vor Vererbung. |
-| `MaxMethodOverloads` | **3** | Methoden mit eindeutigen Namen bevorzugen. |
+| `MaxInheritanceDepth` | **3** | Komposition vor Vererbung. |
+| `MaxMethodOverloads` | **5** | Methoden mit eindeutigen Namen bevorzugen. |
 | `MaxConstructorDependencies` | **5** | Verantwortlichkeit aufteilen bei Überschreitung. |
 | `MaxDirectoryDepth` | **4** | Ordner nicht unnötig tief schachteln. |
 | `MaxDirectoryChildren` | **0** | 0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen. |
 | `MaxBoolParameterCount` | **1** | 0 = deaktiviert; bool-Parameter in Parameter-Object bündeln. |
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
-| `AIContextFootprint` | **5000** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
+| `AIContextFootprint` | **2500** | Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

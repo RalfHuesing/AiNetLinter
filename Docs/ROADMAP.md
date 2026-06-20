@@ -329,3 +329,17 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Regel: BanAsyncVoid** — Verbietet `async void` Methoden und lokale Funktionen (außer Event-Handler).
 - [x] **Regel: BanBlockingTaskAccess** — Verbietet `.Wait()`, `.Result` und `.GetAwaiter().GetResult()` auf Tasks.
 
+---
+
+## Epic 27: Feature-Audit 2026-06 — Default-Kalibrierung
+
+Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026).
+
+- [x] **M01 — MaxLineCount: 700 → 500** — Industriestandard-Mitte (Ardito et al. 2020); „Lost in the Middle"-Sweetspot bei 200–500 LOC.
+- [x] **M06 — MaxInheritanceDepth: 2 → 3** — Wert 2 erzeugt False Positives für ASP.NET-Controller, EF-Entities, xUnit-Testklassen ohne korrekte `InheritanceDepthFrameworkPrefixes`.
+- [x] **M07 — MaxMethodOverloads: 3 → 5** — Standard-.NET-Async-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress`) erzeugen regulär 3–5 Overloads.
+- [x] **M14 — MaxAIContextFootprint: 5000 → 2500** — Empirisch belegter Aufmerksamkeitsabfall bei LLMs ab ~2.000–3.000 transitiven Zeilen (Liu et al. 2023, „Lost in the Middle").
+- [x] **M16 — MinCognitiveComplexityForTest: 3 → 5** — Wert 3 erzeugt Warnungs-Flut für triviale Methoden; 5 trifft tatsächlich risikorelevante Komplexität.
+- [x] **F09 — EnablePerformanceProfiling: true → false** — Profiling ist eine Entwickler-Debug-Funktion; dauerhaft aktiv erzeugt es `measurements/`-Artefakte im Projektverzeichnis (störend für LLM-Agenten und CI).
+- [x] **Guidance-Updates** — Fehlermeldungen für `BanAsyncVoid`, `BanBlockingTaskAccess`, `MaxInheritanceDepth`, `AIContextFootprint`, `MaxMethodLineCount` und `MaxMethodOverloads` mit Audit-Erkenntnissen ergänzt.
+
