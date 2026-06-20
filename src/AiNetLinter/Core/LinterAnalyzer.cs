@@ -172,6 +172,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         MinimalApiChecker.Check(node, _ctx);
         PhantomDependencyChecker.CheckPhantomReflection(node, _ctx);
         BlockingTaskChecker.CheckInvocation(node, _ctx);
+        LinqChainLengthChecker.Check(node, _ctx);
         base.VisitInvocationExpression(node);
     }
 

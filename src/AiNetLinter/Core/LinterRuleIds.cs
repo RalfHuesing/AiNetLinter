@@ -26,6 +26,7 @@ internal static class LinterRuleIds
     internal const string MaxPartialClassFiles      = nameof(MetricsConfig.MaxPartialClassFiles);
     internal const string MaxPublicMembersPerType   = nameof(MetricsConfig.MaxPublicMembersPerType);
     internal const string MaxSwitchArms             = nameof(MetricsConfig.MaxSwitchArms);
+    internal const string MaxLinqChainLength        = nameof(MetricsConfig.MaxLinqChainLength);
 
     // RuleId weicht vom Property-Namen ab (MaxAIContextFootprint → AIContextFootprint)
     internal const string AIContextFootprint        = "AIContextFootprint";

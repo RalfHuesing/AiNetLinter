@@ -474,6 +474,35 @@ public sealed record MetricsConfig
         = ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"];
 
     /// <summary>
+    /// Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette.
+    /// 0 = deaktiviert. Empfehlung: 5 (ab 6 Methoden: warning).
+    /// Nur Methoden aus <see cref="LinqMethodNames"/> zählen.
+    /// </summary>
+    public int MaxLinqChainLength { get; init; } = 0;
+
+    /// <summary>
+    /// LINQ-Methoden-Namen, die als Teil einer LINQ-Kette gewertet werden.
+    /// Nicht-LINQ-Chains (z. B. Builder-Chains) werden damit von der Prüfung ausgeschlossen.
+    /// Konfigurierbar für projektspezifische LINQ-ähnliche APIs (z. B. EF Core Fluent API).
+    /// </summary>
+    public IReadOnlyCollection<string> LinqMethodNames { get; init; } =
+    [
+        "Where", "Select", "SelectMany",
+        "GroupBy", "GroupJoin", "Join",
+        "OrderBy", "OrderByDescending", "ThenBy", "ThenByDescending",
+        "Take", "TakeWhile", "Skip", "SkipWhile",
+        "First", "FirstOrDefault", "Last", "LastOrDefault",
+        "Single", "SingleOrDefault",
+        "Count", "LongCount", "Any", "All",
+        "Distinct", "DistinctBy", "Union", "UnionBy",
+        "Intersect", "IntersectBy", "Except", "ExceptBy",
+        "Aggregate", "Sum", "Min", "Max", "Average", "MinBy", "MaxBy",
+        "ToList", "ToArray", "ToDictionary", "ToHashSet", "ToLookup",
+        "Cast", "OfType", "Append", "Prepend", "Reverse",
+        "Zip", "Chunk", "Flatten"
+    ];
+
+    /// <summary>
     /// Kontextabhängige Suppression von Regeln wenn koinzidente Metriken niedrig sind.
     /// Reduziert False Positives bei strukturell langen aber semantisch einfachen Methoden/Klassen.
     /// Standard: eine Suppression für MaxMethodLineCount bei CC ≤ 3 und CogC ≤ 5.
@@ -516,6 +545,8 @@ public sealed record MetricsConfig
         MethodParameterCountIgnoreTypePrefixes = o.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
         MaxMethodOverloads = o.MaxMethodOverloads ?? MaxMethodOverloads,
         CompoundSuppressions = o.CompoundSuppressions ?? CompoundSuppressions,
+        MaxLinqChainLength = o.MaxLinqChainLength ?? MaxLinqChainLength,
+        LinqMethodNames = o.LinqMethodNames ?? LinqMethodNames,
     };
 
     private MetricsConfig ApplyComplexityLimits(MetricsConfigOverride o) => this with

@@ -341,5 +341,10 @@ Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, 
 - [x] **M14 — MaxAIContextFootprint: 5000 → 2500** — Empirisch belegter Aufmerksamkeitsabfall bei LLMs ab ~2.000–3.000 transitiven Zeilen (Liu et al. 2023, „Lost in the Middle").
 - [x] **M16 — MinCognitiveComplexityForTest: 3 → 5** — Wert 3 erzeugt Warnungs-Flut für triviale Methoden; 5 trifft tatsächlich risikorelevante Komplexität.
 - [x] **F09 — EnablePerformanceProfiling: true → false** — Profiling ist eine Entwickler-Debug-Funktion; dauerhaft aktiv erzeugt es `measurements/`-Artefakte im Projektverzeichnis (störend für LLM-Agenten und CI).
-- [x] **Guidance-Updates** — Fehlermeldungen für `BanAsyncVoid`, `BanBlockingTaskAccess`, `MaxInheritanceDepth`, `AIContextFootprint`, `MaxMethodLineCount` und `MaxMethodOverloads` mit Audit-Erkenntnissen ergänzt.
+- [x] Guidance-Updates — Fehlermeldungen für `BanAsyncVoid`, `BanBlockingTaskAccess`, `MaxInheritanceDepth`, `AIContextFootprint`, `MaxMethodLineCount` und `MaxMethodOverloads` mit Audit-Erkenntnissen ergänzt.
 
+---
+
+## Epic 28: LINQ-Komplexitäts-Kontrolle
+
+- [x] **Regel: MaxLinqChainLength** — Begrenzt die Anzahl verketteter LINQ-Methoden pro Ausdruckskette (Standard: 0 = deaktiviert).

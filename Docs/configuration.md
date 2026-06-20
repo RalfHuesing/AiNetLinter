@@ -200,6 +200,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
 | `FootprintIgnoreTypeNames` | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`. |
 | `ComplexityNearMissTolerance` | Metrics | Toleranzbereich über dem Komplexitätslimit. Verstöße im Bereich `(Limit, Limit + Toleranz]` werden mit dem Hinweis `[near-miss: knapp über Limit]` markiert, zählen aber weiterhin als Verstöße und beeinflussen den Exit-Code. Standard: `0` (deaktiviert). |
+| `MaxLinqChainLength` | Metrics | Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette (Standard: 0 = deaktiviert). `LinqMethodNames` enthält die erlaubten Methodennamen, um Builder-Ketten von der Prüfung auszuschließen. |
 | `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
 | `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
 | `TestSentinel.RecognizeCoversComment` | Config | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`. |
@@ -285,6 +286,34 @@ Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert E
 Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). Diese Muster blockieren ThreadPool-Threads und können in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF) zu Deadlocks führen.
 
 **Ausnahme:** Blockierende Zugriffe in `static void Main` Methoden sind erlaubt wenn `BanBlockingTaskAccessAllowInMain: true` gesetzt ist. In Testdateien sind sie erlaubt wenn `BanBlockingTaskAccessAllowInTests: true` gesetzt ist (standardmäßig falsch, da Tests async sein sollten).
+
+### MaxLinqChainLength
+
+| Schlüssel | Typ | Standard |
+|---|---|---|
+| `MaxLinqChainLength` | `int` | `0` (deaktiviert) |
+| `LinqMethodNames` | `string[]` | Standard-LINQ-Methodennamen |
+
+Begrenzt die Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette. Eine Kette mit mehr Methoden als der Schwellenwert erzeugt eine `warning` (kein `error`).
+
+**Empfohlener Schwellenwert:** 5 (ab 6 Methoden Warnung).
+
+**Konfigurationsbeispiel:**
+```json
+"Metrics": {
+  "MaxLinqChainLength": 5
+}
+```
+
+**Erweiterung der Whitelist** für projektspezifische LINQ-ähnliche APIs (z. B. EF Core Fluent API):
+```json
+"Metrics": {
+  "LinqMethodNames": ["Where", "Select", "Include", "ThenInclude"]
+}
+```
+
+> Evidenz: moderat (keine dedizierte Studie zu LINQ-Kettenlänge und LLM-Fehlerrate).
+> Deshalb Standard-deaktiviert — bewusstes Opt-in via `rules.json`.
 
 ### AI-Context-Footprint (Metrik)
 
