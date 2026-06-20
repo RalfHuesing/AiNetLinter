@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Checkers;
 using AiNetLinter.Models;
 using Xunit;
 

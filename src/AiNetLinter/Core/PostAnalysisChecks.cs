@@ -9,6 +9,7 @@ using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
 using AiNetLinter.Metrics;
 using AiNetLinter.Suppression;
+using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Core;
 
