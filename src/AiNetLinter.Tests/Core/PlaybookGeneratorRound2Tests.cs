@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Generators;
 using AiNetLinter.Models;
 using Xunit;
 

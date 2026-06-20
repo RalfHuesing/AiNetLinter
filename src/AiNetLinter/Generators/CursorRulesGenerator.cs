@@ -6,16 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Generators;
 
 /// <summary>
 /// Generiert eine Cursor-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
 /// </summary>
 public static class CursorRulesGenerator
 {
-
-
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach .cursor/rules/AiNetLinter.mdc relativ zum angegebenen Pfad.
     /// </summary>

@@ -88,6 +88,13 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Robuste globale Nullable-Erkennung:** Erweitere die Erkennung globaler Nullable-Einstellungen so, dass sie rekursiv nach oben in `Directory.Build.props` und `.csproj` Dateien sucht und nicht beim ersten Fund einer leeren csproj die Suche abbricht.
 - [x] **Laufzeit-Fehlerbehandlung für Dateizugriffe:** Reiche IO-Exceptions beim Lesen von Quellcodedateien als fatalen CLI-Fehler nach oben (Exit-Code `2` / stderr) anstatt sie als Regelverstöße im Ergebnisbericht unterzubringen.
 
+### Architektur-Pflege (Code-Audit 2026-06)
+
+- [x] **DRY-Fix:** `LoadRulesJsonContent` in `LinterConfigLoader` zentralisiert (Plan 01)
+- [x] **Namespace-Konsistenz:** `DisableAllDetector` nach `AiNetLinter.Suppression` verschoben (Plan 02)
+- [x] **Namespace-Konsistenz:** `UiFileSeparationChecker` nach `AiNetLinter.Core.Checkers` (Plan 03)
+- [x] **Core-Entschlackung:** `AiNetLinter.Generators`-Namespace extrahiert (Plan 04)
+
 ---
 
 ## Epic 10: Erweiterte Analyse & CI/CD-Integration (Extensions & Best Practices)

@@ -1,5 +1,5 @@
 ﻿# Codegraph (Auto-generiert durch AiNetLinter 1.0.53)
-Produktionscode · 166 Typen · 14 Namespaces
+Produktionscode · 166 Typen · 15 Namespaces
 
 ## AiNetLinter (1)
 - Program → CliParsedArgs, LinterArgs
@@ -77,13 +77,11 @@ Produktionscode · 166 Typen · 14 Namespaces
 - UiSeparationConfig [record] → UiSeparationConfig, UiSeparationConfigOverride
 - UiSeparationConfigOverride [record] → UiSeparationConfigOverride
 
-## AiNetLinter.Core (33)
+## AiNetLinter.Core (23)
 - AnalysisState [record] → AnalysisState, TestCoverageIndex
 - AnalyzerArgs [record] → AnalyzerArgs, LinterConfig
 - CacheDestination [record] → AnalysisCacheManager, CacheDestination
-- CodegraphGenerator → TypeInfo
 - CompoundSuppressionEvaluator → CompoundSuppression
-- CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
 - DiffImpactAnalyzer
 - DocumentContext [record] → DocumentContext, LinterConfig
 - FixContext [record] → FixContext, ILintConsole
@@ -95,14 +93,7 @@ Produktionscode · 166 Typen · 14 Namespaces
 - MetricNames
 - PartialClassLineAggregator → LinterConfig, RuleViolation
 - PartialClassPart [record] → PartialClassPart
-- PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
-- PlaybookDocInfo [record] → PlaybookDocInfo
-- PlaybookDocScanResult [record] → PlaybookDocScanResult
-- PlaybookOptions [record] → LinterConfig, PlaybookOptions
-- PlaybookStats [record] → PlaybookStats
-- PlaybookSyntaxWalker
 - PostAnalysisChecks → AnalysisState, ClassInfo, IPerformanceProfiler, LinterConfig, TestSentinelConfig, TestSentinelContext
-- RepoPlaybookGenerator → LinterConfig, PlaybookBuildContext, PlaybookOptions, RuleViolation
 - RuleMetadata [record] → RuleMetadata
 - RuleRegistry → RuleMetadata
 - TestCoverageCollector [partial] → TestCoverageIndex, TestSentinelConfig
@@ -110,7 +101,6 @@ Produktionscode · 166 Typen · 14 Namespaces
 - TestCoverageResolver → TestCoverageIndex, TestSentinelConfig
 - TestProjectDetector
 - TestSentinelContext [record] → TestCoverageIndex, TestSentinelContext
-- TypeInfo [record] → TypeInfo
 
 ## AiNetLinter.Core.Checkers (25)
 - BoolParameterChecker → CheckerContext
@@ -148,6 +138,18 @@ Produktionscode · 166 Typen · 14 Namespaces
 - ProfilerContext [record] → ProfilerContext
 - ProfilerJsonReport [record] → ProfilerJsonReport, ProfilerSummary
 - ProfilerSummary [record] → ProfilerSummary
+
+## AiNetLinter.Generators (10)
+- CodegraphGenerator → TypeInfo
+- CursorRulesGenerator → GlobalConfig, LinterConfig, ProjectOverrideEntry
+- PlaybookBuildContext [record] → LinterConfig, PlaybookBuildContext, PlaybookStats
+- PlaybookDocInfo [record] → PlaybookDocInfo
+- PlaybookDocScanResult [record] → PlaybookDocScanResult
+- PlaybookOptions [record] → LinterConfig, PlaybookOptions
+- PlaybookStats [record] → PlaybookStats
+- PlaybookSyntaxWalker
+- RepoPlaybookGenerator → LinterConfig, PlaybookBuildContext, PlaybookOptions, RuleViolation
+- TypeInfo [record] → TypeInfo
 
 ## AiNetLinter.Metrics (7)
 - AIContextFootprintCalculator

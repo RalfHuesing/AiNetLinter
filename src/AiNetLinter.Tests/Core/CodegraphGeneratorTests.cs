@@ -5,12 +5,11 @@ using System.Threading.Tasks;
 using Xunit;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Core;
+using AiNetLinter.Generators;
 
 namespace AiNetLinter.Tests.Core;
 
-/// <summary>
-/// Unit-Tests fuer den CodegraphGenerator.
-/// </summary>
+// @covers CodegraphGenerator
 public sealed class CodegraphGeneratorTests
 {
     private static Solution CreateTestSolution(params (string FileName, string Source)[] files)

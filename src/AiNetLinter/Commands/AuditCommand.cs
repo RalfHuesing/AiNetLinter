@@ -12,6 +12,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Diagnostics;
+using AiNetLinter.Generators;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using AiNetLinter.Scope;
