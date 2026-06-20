@@ -2,7 +2,7 @@
 
 **Gestartet:** 2026-06-20  
 **Abgeschlossen:** —  
-**Offene Items:** 53
+**Offene Items:** 49
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -17,10 +17,10 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 - [x] **papers-B** — Datei- und Methodengrößen, Fragmentierung, "Lost in the Middle" → `temp\papers\papers-B-groessen.md`
 - [x] **papers-C** — LLM-Agenten & Code-Qualität 2023–2026 (SWE-bench, Anthropic, OpenAI, Microsoft) → `temp\papers\papers-C-llm-agenten.md`
 - [x] **papers-D** — C#-Idiome, .NET Design Guidelines, Microsoft Docs → `temp\papers\papers-D-csharp.md`
-- [ ] **papers-E** — Architekturmetriken (Kopplung, Kohäsion, DIT, CBO) → `temp\papers\papers-E-architektur.md`
-- [ ] **papers-F** — Code Smells & Fehleranfälligkeit (Palomba, Yamashita, Fowler) → `temp\papers\papers-F-smells.md`
-- [ ] **papers-G** — Test-Coverage & Testbarkeit → `temp\papers\papers-G-tests.md`
-- [ ] **papers-H** — Meta-Hypothese: Verbessert AiNetLinter-Compliance die Agenten-Performance? → `temp\papers\papers-H-meta-hypothese.md`
+- [x] **papers-E** — Architekturmetriken (Kopplung, Kohäsion, DIT, CBO) → `temp\papers\papers-E-architektur.md`
+- [x] **papers-F** — Code Smells & Fehleranfälligkeit (Palomba, Yamashita, Fowler) → `temp\papers\papers-F-smells.md`
+- [x] **papers-G** — Test-Coverage & Testbarkeit → `temp\papers\papers-G-tests.md`
+- [x] **papers-H** — Meta-Hypothese: Verbessert AiNetLinter-Compliance die Agenten-Performance? → `temp\papers\papers-H-meta-hypothese.md`
 
 ---
 
