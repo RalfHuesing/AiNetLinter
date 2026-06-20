@@ -15,6 +15,8 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
 Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
+- **MaxMethodParameterCount:** 3 mal deaktiviert.
+  *Bedeutung:* Zu viele Methodenparameter (max. 4).
 - **MaxCyclomaticComplexity:** 1 mal deaktiviert.
   *Bedeutung:* Zu hohe zyklomatische Komplexitaet (max. 12).
 - **MaxCognitiveComplexity:** 1 mal deaktiviert.
@@ -26,20 +28,20 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 194 / 208 (93 %)
-- **Verstösse nur wave-ready (default rules):** 3
+- **Wave-ready Dateien:** 195 / 209 (93 %)
+- **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
-  - `src/AiNetLinter/Core/Checkers/`: 3
+  - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
 - **src/AiNetLinter/**: 117 files, median Footprint 66 LOC, 5× disable-all
-- **src/AiNetLinter.Tests/**: 90 files, median Footprint 117 LOC, 9× disable-all
+- **src/AiNetLinter.Tests/**: 91 files, median Footprint 117 LOC, 9× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| agent-context | 3 | MaxMethodParameterCount |
+| - | 0 | Keine offenen Verstöße |
 

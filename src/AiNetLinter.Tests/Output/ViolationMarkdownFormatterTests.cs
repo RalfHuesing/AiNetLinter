@@ -416,4 +416,32 @@ public sealed class ViolationMarkdownFormatterTests
 
         Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxAIContextFootprint", result);
     }
+
+    [Fact]
+    public void Format_ViolationWithWarningSeverity_ContainsWarnTag()
+    {
+        var violation = new RuleViolation
+        {
+            FilePath = @"C:\Projects\MyApp\src\Foo.cs", LineNumber = 10,
+            RuleName = "MaxMethodLineCount", Details = "Methode hat 180 Zeilen", Guidance = "...",
+            EffectiveSeverity = "warning"
+        };
+        var result = ViolationMarkdownFormatter.Format(new[] { violation }, OutputRoot);
+        Assert.Contains("[warn]", result);
+        Assert.Contains("`[warn]`-Violations sind durch CompoundSuppression herabgestuft", result);
+    }
+
+    [Fact]
+    public void Format_ViolationWithNullSeverity_NoWarnTag()
+    {
+        var violation = new RuleViolation
+        {
+            FilePath = @"C:\Projects\MyApp\src\Foo.cs", LineNumber = 10,
+            RuleName = "MaxMethodLineCount", Details = "Methode hat 80 Zeilen", Guidance = "...",
+            EffectiveSeverity = null
+        };
+        var result = ViolationMarkdownFormatter.Format(new[] { violation }, OutputRoot);
+        Assert.DoesNotContain("[warn]", result);
+        Assert.DoesNotContain("`[warn]`-Violations sind durch CompoundSuppression herabgestuft", result);
+    }
 }

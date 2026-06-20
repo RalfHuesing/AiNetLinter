@@ -77,20 +77,9 @@ public static class ViolationMarkdownFormatter
                 .Where(v => string.Equals(v.RuleName, r.RuleName, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var prodCount = 0;
-            var testCount = 0;
-            foreach (var v in ruleViolations)
-            {
-                var relPath = PathNormalizer.ToRelative(outputRoot, v.FilePath ?? string.Empty);
-                if (PathNormalizer.IsTestFile(relPath))
-                {
-                    testCount++;
-                }
-                else
-                {
-                    prodCount++;
-                }
-            }
+            var testCount = ruleViolations.Count(v =>
+                PathNormalizer.IsTestFile(PathNormalizer.ToRelative(outputRoot, v.FilePath ?? string.Empty)));
+            var prodCount = ruleViolations.Count - testCount;
 
             var structMarker = StructuralRules.Contains(r.RuleName) ? "⚠" : string.Empty;
 
@@ -102,6 +91,14 @@ public static class ViolationMarkdownFormatter
             {
                 sb.Append($"| {r.RuleName} | {r.Count} | {prodCount} | {testCount} |\n");
             }
+        }
+
+        var hasWarnings = violations.Any(v =>
+            v.EffectiveSeverity?.Equals("warning", StringComparison.OrdinalIgnoreCase) == true);
+        if (hasWarnings)
+        {
+            sb.Append("\n> ℹ `[warn]`-Violations sind durch CompoundSuppression herabgestuft — " +
+                      "kein Build-Fehler, aber Agent-Information bleibt erhalten.\n\n");
         }
 
         return sb.ToString();
@@ -241,8 +238,10 @@ public static class ViolationMarkdownFormatter
         {
             var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
             var structTag = StructuralRules.Contains(v.RuleName ?? string.Empty) ? " [→ strukturell]" : string.Empty;
+            var warnTag = v.EffectiveSeverity?.Equals("warning", StringComparison.OrdinalIgnoreCase) == true
+                ? " [warn]" : string.Empty;
             var detail = (v.Details ?? string.Empty).Split('\n')[0].TrimEnd();
-            sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag} — {detail}\n");
+            sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag}{warnTag} — {detail}\n");
         }
     }
 }

@@ -43,6 +43,14 @@ public static class RuleMetadataRegistry
     {
         foreach (var v in violations)
         {
+            if (v.EffectiveSeverity != null)
+            {
+                if (v.EffectiveSeverity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                continue;
+            }
             var meta = Resolve(v.RuleName ?? "", config);
             if (meta.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
             {
