@@ -2,7 +2,7 @@
 
 **Gestartet:** 2026-06-20  
 **Abgeschlossen:** —  
-**Offene Items:** 12
+**Offene Items:** 3
 
 > Lies zuerst `Prompt.md` vollständig, dann führe die Phasen **in Reihenfolge** aus.  
 > Nach jedem abgeschlossenen Item: Checkbox auf `[x]` setzen und Fortschritt oben aktualisieren.
@@ -73,15 +73,15 @@ Alle sieben Cluster abarbeiten, **bevor** eine einzige Feature-Evaluation (Phase
 
 ## Phase 4 — System- und CLI-Features evaluieren
 
-- [ ] F01 — Baseline / Ratchet-Mechanismus → `Result\features\F01-Baseline-Ratchet.md`
-- [ ] F02 — Auto-Fix (`--fix` / `--dry-run`) → `Result\features\F02-AutoFix.md`
-- [ ] F03 — Discovery-Commands (`--list-rules`, `--describe-rule`, `--docs`) → `Result\features\F03-Discovery.md`
-- [ ] F04 — ProjectOverrides → `Result\features\F04-ProjectOverrides.md`
-- [ ] F05 — PathOverrides → `Result\features\F05-PathOverrides.md`
-- [ ] F06 — UiSeparation (Blazor / WPF) → `Result\features\F06-UiSeparation.md`
-- [ ] F07 — FileFilters → `Result\features\F07-FileFilters.md`
-- [ ] F08 — ForbiddenNamespaceDependencies → `Result\features\F08-ForbiddenNamespaceDependencies.md`
-- [ ] F09 — EnablePerformanceProfiling → `Result\features\F09-EnablePerformanceProfiling.md`
+- [x] F01 — Baseline / Ratchet-Mechanismus → `Result\features\F01-Baseline-Ratchet.md`
+- [x] F02 — Auto-Fix (`--fix` / `--dry-run`) → `Result\features\F02-AutoFix.md`
+- [x] F03 — Discovery-Commands (`--list-rules`, `--describe-rule`, `--docs`) → `Result\features\F03-Discovery.md`
+- [x] F04 — ProjectOverrides → `Result\features\F04-ProjectOverrides.md`
+- [x] F05 — PathOverrides → `Result\features\F05-PathOverrides.md`
+- [x] F06 — UiSeparation (Blazor / WPF) → `Result\features\F06-UiSeparation.md`
+- [x] F07 — FileFilters → `Result\features\F07-FileFilters.md`
+- [x] F08 — ForbiddenNamespaceDependencies → `Result\features\F08-ForbiddenNamespaceDependencies.md`
+- [x] F09 — EnablePerformanceProfiling → `Result\features\F09-EnablePerformanceProfiling.md`
 
 ---
 
