@@ -86,15 +86,15 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxMethodLineCount": 42,
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,
-    "MaxInheritanceDepth": 2,
+    "MaxInheritanceDepth": 3,
     "InheritanceDepthFrameworkPrefixes": [
       "System.",
       "Microsoft.UI.",
       "System.Windows."
     ],
-    "MinCognitiveComplexityForTest": 3,
+    "MinCognitiveComplexityForTest": 5,
     "AggregatePartialClassLineCount": false,
-    "MaxMethodOverloads": 3,
+    "MaxMethodOverloads": 5,
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
     "MaxDirectoryChildren": 0,
@@ -106,7 +106,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxPartialClassFilesExemptTypes": [],
     "MaxPublicMembersPerType": 15,
     "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "Args"],
-    "MaxAIContextFootprint": 5000,
+    "MaxAIContextFootprint": 2500,
     "MaxSwitchArms": 10,
     "MaxSwitchArmsExcludeDispatcher": true,
     "MaxSwitchArmsExemptTypes": []
@@ -171,7 +171,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
 | `BanPublicNestedTypes` | Global | Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Standard: `true`. Severity: `error`, Intent: `agent-context`. |
 | `BanPublicNestedTypesAllowPrivate` | Global | Wenn `true` (Standard): `private` nested Typen bleiben erlaubt, da sie kein externes Grep-Target für Agenten darstellen. Auf `false` setzen, um auch private nested Typen zu melden (strikter Greenfield-Modus). |
-| `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `true`). |
+| `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `false`). Nur bei konkretem Bedarf aktivieren — erzeugt sonst dauerhaft `measurements/`-Dateien im Projektverzeichnis. |
 | `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500). |
 | `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
 | `MaxMethodParameterCountInTestFiles` | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind. |
@@ -180,11 +180,11 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
-| `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 2). |
+| `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 3). Framework-Basisklassen (ASP.NET, EF Core, xUnit) können über `InheritanceDepthFrameworkPrefixes` ausgenommen werden. |
 | `InheritanceDepthFrameworkPrefixes` | Metrics | Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden (z. B. `["System.", "System.Windows."]`). |
-| `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert. |
+| `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert (Standard: 5). Niedrigere Werte erhöhen die Warning-Dichte; empfohlen: 5–7. |
 | `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
-| `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 3). |
+| `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 5). Erlaubt gängige .NET-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress` etc.); ab 6+ Überladungen ist ein Parameter-Object die bessere Wahl. |
 | `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). Records und Structs, bei denen **alle** Parameter Default-Werte haben, werden automatisch ausgenommen (Options/Config-Objects). |
 | `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
 | `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
@@ -193,7 +193,7 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxBoolParameterCount` | Metrics | Maximale Anzahl von `bool`-Parametern pro Methode oder Konstruktor (Standard: 0 = deaktiviert). `MaxBoolParameterCountAllowPrivate`: Wenn `true`, werden `private`/`protected` Methoden ausgenommen (Standard: `true`). `MaxBoolParameterCountExemptMethodPrefixes`: Methoden-Präfixe, die ausgenommen werden (Standard: `["Try"]`). |
 | `MaxPartialClassFiles` | Metrics | Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 0 = deaktiviert). Empfehlung: 2 — eine Deklarations- und eine Erweiterungsdatei. Guidance: Unter-Logik in eigenständige Klassen (z. B. `XyzChecker`) auslagern. `MaxPartialClassFilesExemptTypes`: vollqualifizierte oder einfache Typnamen, die ausgenommen werden (Standard: `[]`). |
 | `MaxPublicMembersPerType` | Metrics | Maximale Anzahl öffentlicher Member (Methoden, Properties, Felder, Events) pro Typ (Standard: 0 = deaktiviert). `MaxPublicMembersPerTypeExemptSuffixes`: Klassenname-Suffixe, für die die Prüfung übersprungen wird (Standard: `["Extensions", "Mapper", "Constants", "Config", "Args"]`). |
-| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 5000). Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. Bei Blazor-Komponenten aus mehreren `partial`-Dateien (`.razor.cs` + weitere partials) werden alle Teile als eine logische Einheit behandelt. |
+| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 2500). Oberhalb von ~2.500 Zeilen tritt der „Lost in the Middle"-Effekt bei LLM-Agenten messbar auf. Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. |
 | `MaxSwitchArms` | Metrics | Maximale Anzahl Arms in einem Switch-Expression bzw. Labels in einem Switch-Statement pro Methode. `0` = deaktiviert. Empfehlung: `10`. Dispatcher-Methoden (reine Routing-Tabellen) können per `MaxSwitchArmsExcludeDispatcher` ausgenommen werden. |
 | `MaxSwitchArmsExcludeDispatcher` | Metrics | Wenn `true` (Standard): Methoden die als Switch-Dispatcher klassifiziert werden (alle Cases sind triviale Einzeiler-Aufrufe), werden von `MaxSwitchArms` ausgenommen. Deckt den Hauptanwendungsfall "Routing-Tabelle mit 15+ Arms" ab. |
 | `MaxSwitchArmsExemptTypes` | Metrics | Einfache Typnamen (kein Namespace), deren Methoden von `MaxSwitchArms` komplett ausgenommen werden. Nützlich für State-Machine-Klassen mit vielen legitimen Zuständen (z. B. `["OrderStateMachine"]`). Standard: `[]`. |
