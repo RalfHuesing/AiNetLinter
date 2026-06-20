@@ -221,8 +221,6 @@ public sealed record GlobalConfig
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
     /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
     /// </summary>
-    // ainetlinter-disable MaxCyclomaticComplexity
-    // ainetlinter-disable MaxCognitiveComplexity
     public GlobalConfig Apply(GlobalConfigOverride? @override)
     {
         if (@override == null) return this;
@@ -397,6 +395,21 @@ public sealed record MetricsConfig
     public int SwitchDispatcherMaxCaseBodyLines { get; init; } = 3;
 
     /// <summary>
+    /// Methoden, deren Body ausschließlich ein 'return this with { … }' oder
+    /// 'return new T { … }' mit Null-Coalescing-Zuweisungen ist, werden von
+    /// MaxCyclomaticComplexity und MaxCognitiveComplexity ausgenommen.
+    /// Standard: true — diese Methoden sind semantisch flach trotz hohem McCabe-Wert.
+    /// </summary>
+    public bool ExcludeNullCoalescingInitializerComplexity { get; init; } = true;
+
+    /// <summary>
+    /// Maximaler Anteil an nicht-null-coalescing-Ästen damit eine Methode
+    /// als NullCoalescingInitializer gilt (0.0–1.0).
+    /// Standard: 0.0 — alle Branches müssen ?? oder ?: sein.
+    /// </summary>
+    public double NullCoalescingInitializerMaxNonCoalescingRatio { get; init; } = 0.0;
+
+    /// <summary>
     /// Maximale Anzahl Arms in einem Switch-Expression oder Labels in einem Switch-Statement.
     /// 0 = deaktiviert. Empfehlung: 10.
     /// Dispatcher-Methoden können mit <see cref="MaxSwitchArmsExcludeDispatcher"/> ausgenommen werden.
@@ -558,6 +571,8 @@ public sealed record MetricsConfig
         ComplexityNearMissTolerance = o.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
         ExcludeSwitchDispatcherCases = o.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
         SwitchDispatcherMaxCaseBodyLines = o.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
+        ExcludeNullCoalescingInitializerComplexity = o.ExcludeNullCoalescingInitializerComplexity ?? ExcludeNullCoalescingInitializerComplexity,
+        NullCoalescingInitializerMaxNonCoalescingRatio = o.NullCoalescingInitializerMaxNonCoalescingRatio ?? NullCoalescingInitializerMaxNonCoalescingRatio,
         MaxSwitchArms = o.MaxSwitchArms ?? MaxSwitchArms,
         MaxSwitchArmsExcludeDispatcher = o.MaxSwitchArmsExcludeDispatcher ?? MaxSwitchArmsExcludeDispatcher,
         MaxSwitchArmsExemptTypes = o.MaxSwitchArmsExemptTypes ?? MaxSwitchArmsExemptTypes,

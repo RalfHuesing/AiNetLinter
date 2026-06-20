@@ -114,6 +114,8 @@
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
     "SwitchDispatcherMaxCaseBodyLines": 3,
+    "ExcludeNullCoalescingInitializerComplexity": true,
+    "NullCoalescingInitializerMaxNonCoalescingRatio": 0,
     "MaxSwitchArms": 10,
     "MaxSwitchArmsExcludeDispatcher": true,
     "MaxSwitchArmsExemptTypes": [],

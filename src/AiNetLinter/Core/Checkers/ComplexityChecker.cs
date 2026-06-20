@@ -231,6 +231,12 @@ internal static class ComplexityChecker
 
     private static void CheckMethodComplexities(MethodDeclarationSyntax node, CheckerContext ctx, int cc, int cogC)
     {
+        if (ctx.Config.Metrics.ExcludeNullCoalescingInitializerComplexity
+            && MethodClassifier.IsNullCoalescingInitializer(node, ctx.Config.Metrics.NullCoalescingInitializerMaxNonCoalescingRatio))
+        {
+            return;
+        }
+
         ReportComplexityIfViolation(node, new ComplexityCheck(
             cc, ctx.Config.Metrics.MaxCyclomaticComplexity,
             LinterRuleIds.MaxCyclomaticComplexity, "Zyklomatische Komplexitaet",

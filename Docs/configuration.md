@@ -109,7 +109,9 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxAIContextFootprint": 2500,
     "MaxSwitchArms": 10,
     "MaxSwitchArmsExcludeDispatcher": true,
-    "MaxSwitchArmsExemptTypes": []
+    "MaxSwitchArmsExemptTypes": [],
+    "ExcludeNullCoalescingInitializerComplexity": true,
+    "NullCoalescingInitializerMaxNonCoalescingRatio": 0.0
   },
   "TestSentinel": {
     "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
@@ -200,6 +202,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
 | `FootprintIgnoreTypeNames` | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`. |
 | `ComplexityNearMissTolerance` | Metrics | Toleranzbereich über dem Komplexitätslimit. Verstöße im Bereich `(Limit, Limit + Toleranz]` werden mit dem Hinweis `[near-miss: knapp über Limit]` markiert, zählen aber weiterhin als Verstöße und beeinflussen den Exit-Code. Standard: `0` (deaktiviert). |
+| `ExcludeNullCoalescingInitializerComplexity` | Metrics | Methoden, deren Body ausschließlich ein `return this with { … }` oder `return new T { … }` mit Null-Coalescing-Zuweisungen ist, werden von `MaxCyclomaticComplexity` und `MaxCognitiveComplexity` ausgenommen. Standard: `true` — diese Methoden sind semantisch flach trotz hohem McCabe-Wert. |
+| `NullCoalescingInitializerMaxNonCoalescingRatio` | Metrics | Maximaler Anteil an nicht-null-coalescing-Ästen, damit eine Methode als NullCoalescingInitializer gilt (0.0–1.0). Standard: `0.0` — alle Branches müssen `??` oder `?:` sein. |
 | `MaxLinqChainLength` | Metrics | Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette (Standard: 0 = deaktiviert). `LinqMethodNames` enthält die erlaubten Methodennamen, um Builder-Ketten von der Prüfung auszuschließen. |
 | `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
 | `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
