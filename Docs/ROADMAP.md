@@ -316,6 +316,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **`CompoundSuppressionEvaluator`:** Isolierter Helper mit `Evaluate/FindConfigured/IsActive`
 - [x] **Phase 1 — Methoden-Ebene:** `MaxMethodLineCount` und `MaxMethodParameterCount` unterstützen Compound-Suppression mit 3-Szenarien-Guidance
 - [x] **Phase 2 — Klassen-Ebene:** `MaxPublicMembersPerType` und `MaxConstructorDependencies` unterstützen Compound-Suppression
-- [x] **CursorRules-Generator:** Abschnitt `Compound Suppressions` in `.mdc`-Output
-- [x] **Docs:** `rationale.md` Abschnitt 11, vollständiger `configuration.md`-Abschnitt
-- [x] **Tests:** Unit (Evaluator), Integration (3 Szenarien), Guidance-Text, Config-Sync
+- [x] **CursorRules-Generator:** Abschnitt `Compound Suppressions` in `.mdc`-Output (inkl. Severity-Spalte)
+- [x] **Docs:** `rationale.md` Abschnitt 11/12, vollständiger `configuration.md`-Abschnitt
+- [x] **Tests:** Unit (Evaluator), Integration (Szenarien A–L), Guidance-Text, Config-Sync
+- [x] **`SeverityOverride`:** `CompoundSuppression.SeverityOverride` und `RuleViolation.EffectiveSeverity` — Violations in Szenario A (RelaxedLimit überschritten, Bedingungen erfüllt) können auf `"warning"` herabgestuft werden; `HasErrorSeverity` berücksichtigt `EffectiveSeverity`; Formatter zeigt `[warn]`-Tag
