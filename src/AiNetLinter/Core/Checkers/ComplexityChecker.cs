@@ -220,10 +220,13 @@ internal static class ComplexityChecker
         }
 
         // Szenario C: Klassisch, keine Suppression konfiguriert
+        var scenarioCGuidance = codeLineCount > baseLimit * 2
+            ? $"Die Methode ist mehr als doppelt so lang wie erlaubt — prüfe ob ein vollständiges Refactoring sinnvoll ist: Zerlege in Handler, Steps oder Strategies (jede Einheit ≤ {baseLimit} Zeilen, eine Aufgabe pro Methode). Extract Method allein reicht hier wahrscheinlich nicht."
+            : "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code fuer KI-Agenten besser editierbar zu halten.";
         ctx.ReportViolation(node,
             LinterRuleIds.MaxMethodLineCount,
             $"Die Methode '{methodName}' hat {codeLineCount} Codezeilen (erlaubt sind maximal {baseLimit}, ohne Kommentare und Leerzeilen).",
-            "Lagere logische Abschnitte in kleinere Hilfsmethoden aus (Extract Method), um den Code für KI-Agenten besser editierbar zu halten.");
+            scenarioCGuidance);
     }
 
     private static void CheckMethodComplexities(MethodDeclarationSyntax node, CheckerContext ctx, int cc, int cogC)

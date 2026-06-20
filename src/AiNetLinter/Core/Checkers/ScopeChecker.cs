@@ -56,7 +56,7 @@ internal static class ScopeChecker
             ctx.ReportViolation(groupMethods[0],
                 nameof(ctx.Config.Metrics.MaxMethodOverloads),
                 $"Der Typ '{node.Identifier.Text}' deklariert {count} Ueberladungen fuer die Methode '{methodName}' (erlaubt sind maximal {ctx.Config.Metrics.MaxMethodOverloads}).",
-                "Reduziere die Anzahl der Ueberladungen, indem du unterschiedliche, sprechende Methodennamen waehlst.");
+                $"Reduziere die Anzahl der Ueberladungen: Waehle unterschiedliche, sprechende Methodennamen oder fasse optionale Parameter in einem Parameter-Object zusammen (z. B. 'sealed record {methodName}Options(...)' mit Properties fuer alle variablen Teile).");
         }
 
         if (ctx.Config.Global.PreventContextDependentOverloads && count > 1)
