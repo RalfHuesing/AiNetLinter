@@ -84,8 +84,8 @@ public static class CursorRulesGenerator
 
         sb.AppendLine("## Compound Suppressions (kontextabhängige Limiten)");
         sb.AppendLine("Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:\n");
-        sb.AppendLine("| Regel | Bedingung | Effektives Limit | Grund |");
-        sb.AppendLine("|:--|:--|:--|:--|");
+        sb.AppendLine("| Regel | Bedingung | Effektives Limit | Severity | Grund |");
+        sb.AppendLine("|:--|:--|:--|:--|:--|");
 
         foreach (var s in suppressions)
         {
@@ -93,8 +93,9 @@ public static class CursorRulesGenerator
                 c.AtMost.HasValue ? $"{c.Metric} ≤ {c.AtMost}" : $"{c.Metric} ≥ {c.AtLeast}");
             var conditions = string.Join(" AND ", condParts);
             var limit = s.RelaxedLimit.HasValue ? $"**{s.RelaxedLimit}**" : "supprimiert";
+            var severity = s.SeverityOverride != null ? $"`{s.SeverityOverride}`" : "—";
             var reason = s.Reason ?? "—";
-            sb.AppendLine($"| `{s.TargetRule}` | {conditions} | {limit} | {reason} |");
+            sb.AppendLine($"| `{s.TargetRule}` | {conditions} | {limit} | {severity} | {reason} |");
         }
         sb.AppendLine();
     }
