@@ -1,6 +1,7 @@
+using System.IO;
 using System.Text.RegularExpressions;
 
-namespace AiNetLinter.Scope;
+namespace AiNetLinter.Suppression;
 
 /// <summary>
 /// Erkennt Dateien mit dateiweitem ainetlinter-disable-all-Kommentar.
@@ -27,5 +28,5 @@ public static partial class DisableAllDetector
     }
 
     [GeneratedRegex(@"^// ainetlinter-disable all(?:\r?\n|$)", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
-    private static partial Regex DisableAllLinePattern();
+    internal static partial Regex DisableAllLinePattern();
 }

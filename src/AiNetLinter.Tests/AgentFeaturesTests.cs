@@ -3,6 +3,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using AiNetLinter.Scope;
+using AiNetLinter.Suppression;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 

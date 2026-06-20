@@ -1,11 +1,13 @@
-using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace AiNetLinter.Suppression;
 
 /// <summary>
 /// Entfernt exakte ainetlinter-disable-all-Zeilen aus C#-Quelldateien.
 /// </summary>
-public static partial class DisableAllCommentRemover
+public static class DisableAllCommentRemover
 {
     /// <summary>
     /// Entfernt exakte Disable-all-Zeilen aus allen analysierbaren .cs-Dateien unter path.
@@ -34,7 +36,7 @@ public static partial class DisableAllCommentRemover
 
     internal static string RemoveDisableAllLines(string content)
     {
-        return DisableAllLinePattern().Replace(content, string.Empty);
+        return DisableAllDetector.DisableAllLinePattern().Replace(content, string.Empty);
     }
 
     private static DisableAllRemoveResult RemoveFromFiles(IReadOnlyList<string> absolutePaths)
@@ -51,7 +53,4 @@ public static partial class DisableAllCommentRemover
 
         return new DisableAllRemoveResult(absolutePaths.Count, modified);
     }
-
-    [GeneratedRegex(@"^// ainetlinter-disable all(?:\r?\n|$)", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
-    private static partial Regex DisableAllLinePattern();
 }
