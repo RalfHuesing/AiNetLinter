@@ -159,7 +159,7 @@ internal static class PostAnalysisChecks
                 LineNumber = cls.LineNumber,
                 RuleName = nameof(effectiveConfig.Metrics.MaxInheritanceDepth),
                 Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {effectiveConfig.Metrics.MaxInheritanceDepth}).",
-                Guidance = "Ersetze tiefe Vererbung durch Komposition: Deklariere Instanzen der Basisklassen als private Felder und delegiere Methoden-Aufrufe explizit (z. B. 'private readonly BaseService _base; void DoX() => _base.DoX()'). Extrahiere gemeinsames Verhalten alternativ in einen eigenen Service, der von allen Beteiligten genutzt wird."
+                Guidance = "Ersetze tiefe Vererbung durch Komposition: Deklariere Instanzen der Basisklassen als private Felder und delegiere Methoden-Aufrufe explizit (z. B. 'private readonly BaseService _base; void DoX() => _base.DoX()'). Extrahiere gemeinsames Verhalten alternativ in einen eigenen Service. Falls die Tiefe durch Framework-Basisklassen (ASP.NET, EF Core, xUnit) entsteht: Namespace-Praefix in 'rules.json → Metrics.InheritanceDepthFrameworkPrefixes' eintragen, um False Positives auszuschliessen."
             });
         }
     }
@@ -226,7 +226,7 @@ internal static class PostAnalysisChecks
                 LineNumber = cls.LineNumber,
                 RuleName = "AIContextFootprint",
                 Details = detailsBuilder.ToString().TrimEnd('\r', '\n'),
-                Guidance = "Fuehre fuer die groessten Abhaengigkeiten (s. Details oben) ein schlankes Interface ein, das nur die tatsaechlich genutzten Methoden deklariert, und injiziere dieses statt der konkreten Klasse. Alternativ: Splitte diese Klasse, sodass jede Haelfte nur die Abhaengigkeiten benoetigt, die sie wirklich nutzt."
+                Guidance = "Fuehre fuer die groessten Abhaengigkeiten (s. Details oben) ein schlankes Interface ein, das nur die tatsaechlich genutzten Methoden deklariert, und injiziere dieses statt der konkreten Klasse. Alternativ: Splitte diese Klasse nach Verantwortlichkeiten. Hintergrund: LLM-Agenten uebersehen Invarianten bei mehr als ~2.500 transitiven Zeilen ('Lost in the Middle'-Effekt — U-foermige Attention-Kurve bleibt auch bei Modellen mit grossem Kontextfenster bestehen)."
             });
         }
     }

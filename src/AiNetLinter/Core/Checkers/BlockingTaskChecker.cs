@@ -109,8 +109,8 @@ internal static class BlockingTaskChecker
     }
 
     private static string BuildGuidance(string pattern, string fix) =>
-        $"Ersetze '{pattern}' durch '{fix}'. Blockierende Zugriffe auf Tasks blockieren ThreadPool-Threads " +
-        $"und sind in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF) deadlock-anfaellig. " +
+        $"Ersetze '{pattern}' durch '{fix}'. Blockierende Task-Zugriffe sind ein empirisch haeufiges LLM-Halluzinations-Muster in async-Kontexten " +
+        $"und deadlock-anfaellig in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF). " +
         $"Falls die aufrufende Methode nicht async sein kann: Methode zu 'async Task' umwandeln und " +
-        $"die Aufrufkette von oben nach async migrieren.";
+        $"die Aufrufkette von oben nach async migrieren (Async Propagation).";
 }

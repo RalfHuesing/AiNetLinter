@@ -18,7 +18,7 @@ internal static class AsyncVoidChecker
         ctx.ReportViolation(node,
             LinterRuleIds.BanAsyncVoid,
             $"Methode '{node.Identifier.Text}' ist als 'async void' deklariert.",
-            "Verwende 'async Task' als Rueckgabetyp. 'async void' schleudert Exceptions in den SynchronizationContext und macht sie fuer aufrufende try/catch-Bloecke unsichtbar. Ausnahme: Event-Handler mit Signatur '(object sender, EventArgs e)' bleiben erlaubt wenn 'AsyncVoidAllowEventHandlers: true' gesetzt ist.");
+            "Verwende 'async Task' als Rueckgabetyp. 'async void' ist das haeufigste async-Anti-Pattern in LLM-generiertem Code: Exceptions werden unkontrolliert in den SynchronizationContext geschleudert und sind fuer aufrufende try/catch-Bloecke unsichtbar. Ausnahme: Event-Handler mit Signatur '(object sender, EventArgs e)' bleiben erlaubt wenn 'AsyncVoidAllowEventHandlers: true' gesetzt ist.");
     }
 
     internal static void CheckLocalFunction(LocalFunctionStatementSyntax node, CheckerContext ctx)
@@ -29,7 +29,7 @@ internal static class AsyncVoidChecker
         ctx.ReportViolation(node,
             LinterRuleIds.BanAsyncVoid,
             $"Lokale Funktion '{node.Identifier.Text}' ist als 'async void' deklariert.",
-            "Verwende 'async Task' als Rueckgabetyp. Lokale 'async void'-Funktionen sind nie als Event-Handler gedacht und erzeugen unkontrollierbare Exception-Propagation.");
+            "Verwende 'async Task' als Rueckgabetyp. Lokale 'async void'-Funktionen sind nie als Event-Handler gedacht, erzeugen unkontrollierbare Exception-Propagation und werden von LLM-Agenten haeufig in verschachtelten async-Aufrufen generiert.");
     }
 
     private static bool IsAsyncVoid(SyntaxTokenList modifiers, TypeSyntax returnType) =>
