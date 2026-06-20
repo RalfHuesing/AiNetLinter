@@ -131,6 +131,18 @@ Betrifft Features: M06 (MaxInheritanceDepth), M08 (MaxConstructorDependencies), 
 - **Einschränkungen dieser Quelle:** Python-fokussiert; C#-Strukturen weisen durch stärkere Typisierung andere statische Analysemuster auf, die zugrunde liegende Kausalität (Kopplung erschwert Agenten-Orientierung) bleibt jedoch sprachunabhängig.
 - **Zeitliche Einordnung:** 2025/2026; aktuell.
 
+### Empirical OOD Complexity Study, 2024/2025 — Architectural Quality and Abstraction Deficiencies in PureAI Projects
+- **Fundort:** arXiv:2511.00872; via Web-Suche
+- **Betrifft AiNetLinter-Features:** M06 (MaxInheritanceDepth), M08 (MaxConstructorDependencies), M13 (MaxPublicMembersPerType)
+- **Kernaussagen:**
+  - Empirische Vergleiche zwischen rein KI-generierten Softwaresystemen ("PureAI") und menschlichen Projekten offenbaren ein signifikantes Defizit bei der objektorientierten Abstraktion.
+  - LLMs neigen bei steigender Aufgabenkomplexität dazu, Architekturen stark zu vereinfachen (Oversimplification), anstatt saubere Vererbungsstrukturen (DIT) oder wohlüberlegte SRP-Muster (wie Constructor Dependencies) zu implementieren.
+  - Das Resultat sind flache, aber unstrukturierte monolithische Klassen, bei denen die Komplexität in riesige Einzelfiles verschoben wird.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - AI-Systeme weisen zwar vordergründig eine geringere Dichte klassischer syntaktischer Smells auf, verletzen aber grundlegende Architekturmuster durch das Fehlen adäquater Abstraktions- und Kapselungsebenen.
+- **Einschränkungen dieser Quelle:** Untersucht End-to-End-Generierung; in interaktiven (Mensch-Maschine) Szenarien können menschliche Vorgaben dieses Defizit teilweise kompensieren.
+- **Zeitliche Einordnung:** 2024–2025; aktuell.
+
 ---
 
 ## Übergreifende Erkenntnisse
@@ -139,14 +151,15 @@ Die CK-Metriken (insbesondere DIT und CBO) sind seit den 1990ern empirisch wiede
 
 Für **LLM-Agenten** gewinnt die Reduktion der Kopplung (CBO) und Vererbungstiefe (DIT) eine neue Dimension: 
 1. **Reduktion von Project Context Conflicts:** Studien zu Datensätzen wie OpenClassGen (2025/2026) belegen, dass eine hohe Kopplung die Fehlerquote von Coding-Agenten erhöht, da diese fehlerhafte Annahmen über nicht im unmittelbaren Sichtfeld befindliche Typen und Methoden-Signaturen treffen.
-2. **Effizientere RAG- und Chunk-Navigation:** Geringere Verzeichnistiefen (M09) und modularer Code erleichtern Agenten-Scaffoldings die Selektion der relevanten Quelltext-Abschnitte für das Kontextfenster.
-3. **Muster-Reproduktion:** Agenten tendieren dazu, die vorgefundene Architektur zu kopieren. Ist das System stark gekoppelt, fügen Agenten oft noch stärkere Kopplung hinzu.
+2. **Abwehr von Oversimplification:** Da LLMs dazu neigen, OOD-Hierarchien zu stark zu vereinfachen und stattdessen unstrukturierte monolithische Klassen zu erzeugen, zwingen Linter-Grenzwerte für Klassen- und API-Größen (M01, M13) das Modell zur Einhaltung von Kapselung und Modularität.
+3. **Effizientere RAG- und Chunk-Navigation:** Geringere Verzeichnistiefen (M09) und modularer Code erleichtern Agenten-Scaffoldings die Selektion der relevanten Quelltext-Abschnitte für das Kontextfenster.
+4. **Muster-Reproduktion:** Agenten tendieren dazu, die vorgefundene Architektur zu kopieren. Ist das System stark gekoppelt, fügen Agenten oft noch stärkere Kopplung hinzu.
 
 Für Konstruktor-Abhängigkeiten (M08) gibt es einen starken industriellen Konsens (3–4 als Maximum), aber keine formelle Studie mit Grenzwertvalidierung. Die Evidenz für Namespace-Organisation und Verzeichnistiefe (M09, M10) ist qualitativ/praktisch.
 
-Partial Classes (M12) sind C#-spezifisch; der Konsens ist: legitim für Code-Generierung, Antipattern bei reiner Organisationsnutzung. Keine empirische Studie gefunden.
+Partial Classes (M12) sind C#-spezifisch; der Konsens is: legitim für Code-Generierung, Antipattern bei reiner Organisationsnutzung. Keine empirische Studie gefunden.
 
-Public-API-Größe (M13) ist nicht direkt durch eine Studie belegt; die Evidenz leitet sich aus CBO-Kopplung (weniger exponierte Member → weniger Kopplung) und Engineering-Praktiken ab.
+Public-API-Größe (M13) ist nicht direkt durch eine studie belegt; die Evidenz leitet sich aus CBO-Kopplung (weniger exponierte Member → weniger Kopplung) und Engineering-Praktiken ab.
 
 ## Nicht gefunden / Lücken
 

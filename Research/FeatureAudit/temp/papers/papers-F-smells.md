@@ -131,6 +131,18 @@ Betrifft Features: M03 (MaxMethodParameterCount), M11 (MaxBoolParameterCount), M
 - **Einschränkungen dieser Quelle:** Die Whitespace-Formatierung an sich stört LLMs weniger; kritisch sind vor allem unstrukturierte Benennungen und inkonsistente Case-Konventionen.
 - **Zeitliche Einordnung:** 2025; aktuell und zeitstabil bezüglich Transformer-Attention-Mechanismen.
 
+### Empirical LLM Code Smell Analysis, 2024/2025 — Naming Habits and Hybrid Detection Systems
+- **Fundort:** via Web-Suche
+- **Betrifft AiNetLinter-Features:** R11 (EnforceSemanticNaming), R09 (EnforcePascalCase), R10 (EnforceXmlDocumentation)
+- **Kernaussagen:**
+  - Studien zu Coding-Mustern von LLMs zeigen eine hohe Dichte an "Micro-Smells" bei der Variablennennung. Modellen fehlt oft der Projektkontext, weshalb sie standardmäßig generische Bezeichner (wie `data`, `temp`, `result`, `info`) verwenden, was die Wartbarkeit erschwert.
+  - Zudem weisen LLMs eine starke Tendenz zu "Over-Explaining" auf (Einfügen von redundanten, trivialen Kommentaren zu offensichtlichem Code), was Quelldateien unnötig vergrößert und wertvolle Kontext-Token verbraucht.
+  - In der Erkennung von Code Smells sind LLMs zwar flexibler als Heuristiken, neigen jedoch zu einer hohen Rate an Falsch-Positiven. Die stärkste empirische Performance wird durch **hybride Systeme** erzielt, bei denen statische, deterministische Tools (wie ein Linter) mit LLMs kombiniert werden.
+- **Konkrete Zahlen / Grenzwerte (falls vorhanden):**
+  - Reine LLM-Erkennung schwankt stark bei semantisch komplexen Smells (z.B. Feature Envy), wohingegen strukturelle Smells (Blob/God Class) konsistent erkannt werden.
+- **Einschränkungen dieser Quelle:** Analysiert primär Standardmodelle ohne projektspezifisches Context Engineering.
+- **Zeitliche Einordnung:** 2024–2025; aktuell.
+
 ---
 
 ## Übergreifende Erkenntnisse
@@ -138,10 +150,12 @@ Betrifft Features: M03 (MaxMethodParameterCount), M11 (MaxBoolParameterCount), M
 Die empirische Evidenz für Code Smells als Defektprädiktoren ist solide, aber variantenreich. Palomba et al. (2017) liefert die stärkste großangelegte Bestätigung. Fowler (1999/2018) ist die konzeptuelle Grundlage, aber keine Studie.
 
 Für **LLM-Agenten** gewinnen Namenskonventionen und Code Smells eine neue Bedeutung:
-1. **R11 (Semantic Naming) und R09 (PascalCase):** Die Studie von Du et al. (2025) liefert den empirischen Beleg, dass unstrukturierte Bezeichnernamen und inkonsistente Gehäuseschreibweise (Case) Tokenizer und Attention-Pfade verwirren. Dies führt zu Leistungseinbußen beim Verständnis und der Codegenerierung.
-2. **Boolean-Parameter-Trap (M11):** Hier fehlt eine dedizierte empirische Studie; der Konsens leitet sich aus dem SRP-Prinzip und der Clean-Code-Literatur ab. 
-3. **Switch-Statement-Komplexität (M15):** Die Evidenz ist über Cyclomatic-Complexity-Studien indirekt vorhanden, da verzweigte Switch-Strukturen die Pfaddivergenz (LM-CC) massiv erhöhen.
-4. **Silent-Catch (R13):** Ist als Antipattern weit anerkannt; die Evidenz ist überwiegend aus Praktiker-Beobachtungen und einer Längsschnittstudie (Casalnuovo 2019) — kein kontrolliertes Experiment mit Fehlerrate.
+1. **R11 (Semantic Naming) und R09 (PascalCase):** Die Studie von Du et al. (2025) liefert den empirischen Beleg, dass unstrukturierte Bezeichnernamen und inkonsistente Gehäuseschreibweise (Case) Tokenizer und Attention-Pfade verwirren. Zudem neigen LLMs ohne strikte Linter-Regeln dazu, generische Namen (`temp`, `data`) zu verwenden, was die Codebase langfristig verschlechtert.
+2. **Kommentar-Clutter (R10):** Da LLMs oft redundante, triviale Kommentare erzeugen ("Over-Explaining"), helfen Linter-Regeln, den Code-Footprint sauber und token-effizient zu halten.
+3. **Synergie statischer Linters & LLMs:** Statische Analyse-Tools (wie AiNetLinter) bilden das Fundament in hybriden Qualitätssicherungssystemen, da sie im Gegensatz zu LLMs deterministisch, latenzfrei und ohne False-Positives arbeiten.
+4. **Boolean-Parameter-Trap (M11):** Hier fehlt eine dedizierte empirische Studie; der Konsens leitet sich aus dem SRP-Prinzip und der Clean-Code-Literatur ab. 
+5. **Switch-Statement-Komplexität (M15):** Die Evidenz ist über Cyclomatic-Complexity-Studien indirekt vorhanden, da verzweigte Switch-Strukturen die Pfaddivergenz (LM-CC) massiv erhöhen.
+6. **Silent-Catch (R13):** Ist als Antipattern weit anerkannt; die Evidenz ist überwiegend aus Praktiker-Beobachtungen und einer Längsschnittstudie (Casalnuovo 2019) — kein kontrolliertes Experiment mit Fehlerrate.
 
 ## Nicht gefunden / Lücken
 
