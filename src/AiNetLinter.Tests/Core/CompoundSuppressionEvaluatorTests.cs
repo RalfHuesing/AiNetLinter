@@ -240,4 +240,93 @@ public sealed class CompoundSuppressionEvaluatorTests
         var result = CompoundSuppressionEvaluator.Evaluate("MaxMethodLineCount", suppressions, metrics);
         Assert.Equal(150, result);
     }
+
+    [Fact]
+    public void GetActiveSeverityOverride_NoSuppression_ReturnsNull()
+    {
+        var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 2 };
+        var result = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            "MaxMethodLineCount", null, metrics);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void GetActiveSeverityOverride_ConditionsNotMet_ReturnsNull()
+    {
+        var suppressions = new List<CompoundSuppression>
+        {
+            new()
+            {
+                TargetRule = "MaxMethodLineCount",
+                WhenAllOf = new List<MetricCondition>
+                    { new() { Metric = "CyclomaticComplexity", AtMost = 3 } },
+                RelaxedLimit = 150,
+                SeverityOverride = "warning"
+            }
+        };
+        var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 5 }; // > 3
+        var result = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            "MaxMethodLineCount", suppressions, metrics);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void GetActiveSeverityOverride_ConditionsMet_NoOverrideConfigured_ReturnsNull()
+    {
+        var suppressions = new List<CompoundSuppression>
+        {
+            new()
+            {
+                TargetRule = "MaxMethodLineCount",
+                WhenAllOf = new List<MetricCondition>
+                    { new() { Metric = "CyclomaticComplexity", AtMost = 3 } },
+                RelaxedLimit = 150
+                // SeverityOverride nicht gesetzt
+            }
+        };
+        var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 2 };
+        var result = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            "MaxMethodLineCount", suppressions, metrics);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void GetActiveSeverityOverride_ConditionsMet_WithOverride_ReturnsOverride()
+    {
+        var suppressions = new List<CompoundSuppression>
+        {
+            new()
+            {
+                TargetRule = "MaxMethodLineCount",
+                WhenAllOf = new List<MetricCondition>
+                    { new() { Metric = "CyclomaticComplexity", AtMost = 3 } },
+                RelaxedLimit = 150,
+                SeverityOverride = "warning"
+            }
+        };
+        var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 2 };
+        var result = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            "MaxMethodLineCount", suppressions, metrics);
+        Assert.Equal("warning", result);
+    }
+
+    [Fact]
+    public void GetActiveSeverityOverride_WrongRule_ReturnsNull()
+    {
+        var suppressions = new List<CompoundSuppression>
+        {
+            new()
+            {
+                TargetRule = "MaxMethodLineCount",
+                WhenAllOf = new List<MetricCondition>
+                    { new() { Metric = "CyclomaticComplexity", AtMost = 3 } },
+                RelaxedLimit = 150,
+                SeverityOverride = "warning"
+            }
+        };
+        var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 2 };
+        var result = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
+            "MaxMethodParameterCount", suppressions, metrics); // andere Regel
+        Assert.Null(result);
+    }
 }
