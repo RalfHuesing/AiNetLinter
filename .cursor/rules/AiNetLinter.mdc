@@ -8,7 +8,7 @@ Auto-generiert durch AiNetLinter 1.0.56 aus `rules.json`. Neuen Produktionscode 
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
-- Kurze, flache Methoden (≤60 Zeilen); ab 5 Parametern ein Input-`record`.
+- Kurze, flache Methoden (≤60 Zeilen); ab 5 Parametern (public) bzw. ab 7 Parametern (private/protected) ein Input-`record`.
 - `#nullable enable` am Dateianfang.
 - Kein leeres `catch` — Log + sichtbarer Fehler oder `throw;`.
 - Kein `dynamic`; `out` nur in `Try*`-Methoden (private Methoden ausgenommen).
@@ -19,7 +19,7 @@ Auto-generiert durch AiNetLinter 1.0.56 aus `rules.json`. Neuen Produktionscode 
 | :--- | :---: | :--- |
 | `MaxLineCount` | **500** | Datei splitten wenn sie wächst. |
 | `MaxMethodLineCount` | **60** | Eine Aufgabe pro Methode; Rest extrahieren. |
-| `MaxMethodParameterCount` | **4** | Ab Überschreitung: `record` als Parameter-Object. |
+| `MaxMethodParameterCount` | **4** (public/internal) · **6** (private/protected) | Ab Überschreitung: `record` als Parameter-Object. |
 | `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |
 | `MaxCognitiveComplexity` | **15** | Weniger Verschachtelung; Early Return bevorzugen (kognitiv). |
 | `MaxInheritanceDepth` | **3** | Komposition vor Vererbung. |

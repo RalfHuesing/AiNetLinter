@@ -173,6 +173,16 @@ public sealed record MetricsConfigOverride
     public IReadOnlyCollection<string>? MethodParameterCountIgnoreTypePrefixes { get; init; }
 
     /// <summary>
+    /// Wenn true: private und protected Methoden vom MaxMethodParameterCount-Check ausnehmen.
+    /// </summary>
+    public bool? MaxMethodParameterCountAllowPrivate { get; init; }
+
+    /// <summary>
+    /// Relaxiertes Limit für private/protected Methoden. 0 = gleicher Grenzwert wie MaxMethodParameterCount.
+    /// </summary>
+    public int? MaxMethodParameterCountForNonPublic { get; init; }
+
+    /// <summary>
     /// Maximale Zeilenanzahl pro Methode.
     /// </summary>
     public int? MaxMethodLineCount { get; init; }

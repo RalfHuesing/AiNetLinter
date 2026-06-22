@@ -31,6 +31,20 @@ public sealed record MetricsConfig
     public IReadOnlyCollection<string> MethodParameterCountIgnoreTypePrefixes { get; init; }
         = Array.Empty<string>();
 
+    /// <summary>
+    /// Wenn true: private und protected Methoden werden vom MaxMethodParameterCount-Check vollständig ausgenommen.
+    /// Standard: false (alle Methoden werden geprüft).
+    /// </summary>
+    public bool MaxMethodParameterCountAllowPrivate { get; init; } = false;
+
+    /// <summary>
+    /// Relaxiertes Limit für private und protected Methoden.
+    /// 0 = gleicher Grenzwert wie <see cref="MaxMethodParameterCount"/>.
+    /// Ignoriert wenn <see cref="MaxMethodParameterCountAllowPrivate"/> true ist.
+    /// Empfehlung: 6 — private Hilfsmethoden reichen Daten durch, ohne externe API-Ergonomie zu beeinflussen.
+    /// </summary>
+    public int MaxMethodParameterCountForNonPublic { get; init; } = 0;
+
     public int MaxMethodLineCount { get; init; } = 60;
     public int MaxCyclomaticComplexity { get; init; } = 12;
     public int MaxCognitiveComplexity { get; init; } = 15;
@@ -274,6 +288,8 @@ public sealed record MetricsConfig
         MaxMethodParameterCountInTestFiles = o.MaxMethodParameterCountInTestFiles ?? MaxMethodParameterCountInTestFiles,
         MethodParameterCountIgnoreTypeNames = o.MethodParameterCountIgnoreTypeNames ?? MethodParameterCountIgnoreTypeNames,
         MethodParameterCountIgnoreTypePrefixes = o.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
+        MaxMethodParameterCountAllowPrivate = o.MaxMethodParameterCountAllowPrivate ?? MaxMethodParameterCountAllowPrivate,
+        MaxMethodParameterCountForNonPublic = o.MaxMethodParameterCountForNonPublic ?? MaxMethodParameterCountForNonPublic,
         MaxMethodOverloads = o.MaxMethodOverloads ?? MaxMethodOverloads,
         CompoundSuppressions = o.CompoundSuppressions ?? CompoundSuppressions,
         MaxLinqChainLength = o.MaxLinqChainLength ?? MaxLinqChainLength,
