@@ -20,6 +20,8 @@ public static class DebtReportBuilder
         var absolutePaths = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(targetPath);
         var disableAllByFolder = GroupDisableAllByFolder(absolutePaths, outputRoot);
         var waveReady = BuildWaveReadyCandidates(violations, outputRoot);
+        var activeSuppressions = await SuppressionScanner.ScanAllAsync(targetPath);
+        var suppressionLines = BuildActiveSuppressions(activeSuppressions, outputRoot);
 
         var lines = new List<string>
         {
@@ -30,8 +32,41 @@ public static class DebtReportBuilder
         lines.Add("");
         lines.Add("## wave-ready candidates (no disable-all, has violations)");
         lines.AddRange(waveReady);
+        lines.Add("");
+        lines.Add("## active suppressions by file");
+        if (suppressionLines.Count > 0)
+        {
+            lines.AddRange(suppressionLines);
+        }
+        else
+        {
+            lines.Add("(keine aktiven Suppressions gefunden)");
+        }
 
         return string.Join('\n', lines);
+    }
+
+    private static IReadOnlyList<string> BuildActiveSuppressions(
+        IReadOnlyList<SuppressionEntry> suppressions,
+        string outputRoot)
+    {
+        if (suppressions.Count == 0)
+        {
+            return [];
+        }
+
+        return suppressions
+            .GroupBy(s => s.FilePath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var relative = PathNormalizer.ToRelative(outputRoot, g.Key);
+                var ruleDetails = g
+                    .OrderBy(s => s.LineNumber)
+                    .Select(s => $"{s.RuleName} (Zeile {s.LineNumber})");
+                return $"- {relative}: {string.Join(", ", ruleDetails)}";
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<FolderCount> GroupDisableAllByFolder(
