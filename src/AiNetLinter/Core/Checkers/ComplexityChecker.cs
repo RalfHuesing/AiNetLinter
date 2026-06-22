@@ -53,7 +53,9 @@ internal static class ComplexityChecker
 
     private static void CheckParamCount(MethodDeclarationSyntax node, CheckerContext ctx, int cc, int cogC)
     {
-        var baseLimit = GetEffectiveParamLimit(ctx);
+        if (BoolParameterChecker.IsPrivateOrProtected(node.Modifiers) && ctx.Config.Metrics.MaxMethodParameterCountAllowPrivate) return;
+
+        var baseLimit = GetEffectiveParamLimit(node, ctx);
         var effectiveParamCount = CountEffectiveParameters(node.ParameterList.Parameters, ctx);
         var codeLineCount = MethodLineCounter.GetCodeLineCount(node);
 
@@ -248,10 +250,15 @@ internal static class ComplexityChecker
             CognitiveComplexityGuidance.Build(node, cogC, ctx.Config.Metrics.MaxCognitiveComplexity)), ctx);
     }
 
-    private static int GetEffectiveParamLimit(CheckerContext ctx)
+    private static int GetEffectiveParamLimit(MethodDeclarationSyntax node, CheckerContext ctx)
     {
         var testLimit = ctx.Config.Metrics.MaxMethodParameterCountInTestFiles;
         if (ctx.IsTestFile && testLimit > 0) return testLimit;
+
+        var nonPublicLimit = ctx.Config.Metrics.MaxMethodParameterCountForNonPublic;
+        if (nonPublicLimit > 0 && BoolParameterChecker.IsPrivateOrProtected(node.Modifiers))
+            return nonPublicLimit;
+
         return ctx.Config.Metrics.MaxMethodParameterCount;
     }
 

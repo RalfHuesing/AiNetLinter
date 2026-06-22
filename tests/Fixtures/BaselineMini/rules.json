@@ -86,6 +86,8 @@
       "CancellationToken"
     ],
     "MethodParameterCountIgnoreTypePrefixes": [],
+    "MaxMethodParameterCountAllowPrivate": false,
+    "MaxMethodParameterCountForNonPublic": 0,
     "MaxMethodLineCount": 42,
     "MaxCyclomaticComplexity": 5,
     "MaxCognitiveComplexity": 5,

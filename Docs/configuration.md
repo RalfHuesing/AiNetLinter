@@ -179,6 +179,8 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 | `MaxMethodParameterCountInTestFiles` | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind. |
 | `MethodParameterCountIgnoreTypeNames` | Metrics | Typ-Namen (einfacher Name, kein Namespace), die beim Zählen der Parameter nicht berücksichtigt werden. Standard: `[]`. Empfehlung für .NET-Projekte: `["CancellationToken"]`. |
 | `MethodParameterCountIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden. Ermöglicht z. B. `["ILogger"]` um `ILogger<T>` auszuschließen. Standard: `[]`. |
+| `MaxMethodParameterCountAllowPrivate` | Metrics | Wenn `true`: `private` und `protected` Methoden werden vom Parameteranzahl-Check vollständig ausgenommen. Standard: `false`. |
+| `MaxMethodParameterCountForNonPublic` | Metrics | Relaxiertes Limit für `private`/`protected` Methoden (Standard: `0` = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: `6` — private Hilfsmethoden reichen Daten durch ohne externe API-Ergonomie zu beeinflussen. Ignoriert wenn `MaxMethodParameterCountAllowPrivate: true`. |
 | `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
 | `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
 | `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |

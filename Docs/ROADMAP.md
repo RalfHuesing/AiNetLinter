@@ -197,6 +197,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
 - [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter
 - [x] **Erweiterbare Silent-Catch-Allowlist:** `AllowedSilentCatchExceptionTypes` für projektspezifische Exception-Typen (z. B. Blazor `JSDisconnectedException`)
 - [x] **MaxMethodParameterCount Override-Exemption:** `override`- und Interface-Implementierungen ausgenommen (Signatur nicht änderbar)
+- [x] **MaxMethodParameterCount Accessibility-Differenzierung:** `MaxMethodParameterCountAllowPrivate` (vollständige Ausnahme) und `MaxMethodParameterCountForNonPublic` (relaxiertes Limit) für `private`/`protected` Methoden
 - [x] **Tech-Debt-Report (`--debt-report`):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
 - [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`), `--git-since`
 - [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in rules.json, Intent-Spalte in Summary, SARIF level
