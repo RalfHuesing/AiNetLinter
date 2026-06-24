@@ -366,9 +366,10 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **Regel-IDs:** `CSS_MaxCssLineCount`, `CSS_PreferScopedCss`, `CSS_MaxCssSelectorComplexity`, `CSS_ParseError` in `LinterRuleIds` und `RuleRegistry.Web.cs` registriert (Severity: error / warning, Intent: agent-context / general).
 - [x] **Project-Overrides:** `WebConfigOverride` und `CssConfigOverride` mit `Apply`-Logik; `ProjectConfigResolver.MergeConfig` reicht den Web-Override-Tree durch.
 - [x] **Suppression:** Eigener `WebSuppressionHelper` (dateiweit via `ainetlinter-disable all` und regel-spezifisch via `ainetlinter-disable RuleId`).
-- [x] **Test-Suite:** `CssAnalyzerTests.cs` (13 Tests, Szenarien A-H aus dem Research-Dokument) und `WebSuppressionHelperTests.cs` (6 Tests). 20 / 20 gruen.
+- [x] **Test-Suite:** `CssAnalyzerTests.cs` (15 Tests, Szenarien A-H aus dem Research-Dokument plus Edge-Cases) und `WebSuppressionHelperTests.cs` (6 Tests). 21 / 21 gruen.
 - [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter Web-Sektion sauber auf der eigenen Codebase durch (keine CSS-Violations im Self-Audit, ExCSS-Integration verifiziert).
 - [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um Web-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
+- [x] **Bugfix CSS_MaxCssSelectorComplexity-Zeilennummer** (Research/04_CSS_SelectorLineNumbers.md): `CheckSelectorComplexity` meldete immer `LineNumber = 1` statt der tatsaechlichen ExCSS-Quellzeile. Fix: Direktes Erstellen der `RuleViolation` mit `rule.StylesheetText?.Range.Start.Line` statt Umweg ueber den gemeinsamen Helper. Nebeneffekt: `CreateViolation` hat wieder ≤4 Parameter (MaxMethodParameterCount-Konformitaet). Testabdeckung: `Analyze_ReportsCorrectLineNumber_ForSelectorComplexityViolation`.
 
 ### Phase 2 — JavaScript (umgesetzt)
 
@@ -379,7 +380,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **Project-Overrides:** `JsConfigOverride` mit `MaxJsLineCount`, `EnforceJsModules`, `ExemptPaths`; `ProjectConfigResolver.MergeConfig` reicht den `Js`-Override-Tree durch.
 - [x] **WebFileCatalog:** Neuer Input-Record `WebFileDiscoveryRequest` buendelt `FileFilters`, `CssExemptPaths` und `JsExemptPaths` (Reduzierung der Parameter-Anzahl auf <=4 fuer `Collect()`).
 - [x] **WebFileSeparationChecker:** Splittet CSS- und JS-Analyse in eigene Helper-Methoden (`AnalyzeCssEntries` / `AnalyzeJsEntries`); gemeinsame Per-File-Verarbeitung in `AnalyzeSingleFile` (Cognitive Complexity von 22 auf ~6 reduziert).
-- [x] **Test-Suite:** `JsAnalyzerTests.cs` mit 19 Tests (Szenarien A-H aus dem Research-Dokument plus zusaetzliche Edge-Cases wie `globalThis`-Zuweisung, `this`-Zuweisung, `window.alert()`-Aufruf, mehrere Window-Pollutions, leerer Content). Alle Tests gruen.
+- [x] **Test-Suite:** `JsAnalyzerTests.cs` mit 20 Tests (Szenarien A-H aus dem Research-Dokument plus zusaetzliche Edge-Cases wie `globalThis`-Zuweisung, `this`-Zuweisung, `window.alert()`-Aufruf, mehrere Window-Pollutions, leerer Content, Zeilennummer bei Syntax-Fehlern). Alle Tests gruen.
 - [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter JS-Sektion sauber auf der eigenen Codebase durch (Integration-Tests bestanden, Esprima 3.0.6 API verifiziert, eigene Code-Regeln eingehalten: `EnforceNoSilentCatch`, `MaxMethodParameterCount`, `MaxCognitiveComplexity`).
 - [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um JS-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
 

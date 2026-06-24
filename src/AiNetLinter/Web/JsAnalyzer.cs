@@ -182,12 +182,15 @@ internal static class JsAnalyzer
     }
 
     private static RuleViolation CreateSyntaxErrorViolation(string filePath, ParserException ex) =>
-        CreateViolation(
-            filePath,
-            "JS_SyntaxError",
-            $"Syntax-Fehler in JavaScript: {ex.Description}",
-            "Korrigiere den Syntaxfehler im JavaScript (z. B. fehlende Klammern, " +
-            "ungueltige Statements). Nach Korrektur wird die volle Analyse ausgefuehrt.");
+        new RuleViolation
+        {
+            FilePath = filePath,
+            LineNumber = ex.LineNumber,
+            RuleName = "JS_SyntaxError",
+            Details = $"Syntax-Fehler in JavaScript: {ex.Description}",
+            Guidance = "Korrigiere den Syntaxfehler im JavaScript (z. B. fehlende Klammern, " +
+                "ungueltige Statements). Nach Korrektur wird die volle Analyse ausgefuehrt.",
+        };
 
     private static int CountLines(string content)
     {

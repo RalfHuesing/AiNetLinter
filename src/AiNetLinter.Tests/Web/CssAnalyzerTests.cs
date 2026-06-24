@@ -240,6 +240,23 @@ public sealed class CssAnalyzerTests
         Assert.Equal("CSS_MaxCssSelectorComplexity", violations[0].RuleName);
     }
 
+    [Fact]
+    public void Analyze_ReportsCorrectLineNumber_ForSelectorComplexityViolation()
+    {
+        const string css = """
+            .simple { color: red; }
+            .another { font-size: 1em; }
+            .a .b .c .d { color: blue; }
+            """;
+        var config = NewCssConfig(maxSelectorComplexity: 3);
+
+        var violations = CssAnalyzer.Analyze(css, "C:\\app\\wwwroot\\css\\x.css", config);
+
+        Assert.Single(violations);
+        Assert.Equal("CSS_MaxCssSelectorComplexity", violations[0].RuleName);
+        Assert.Equal(3, violations[0].LineNumber); // Selektor steht in Zeile 3
+    }
+
     private static CssConfig NewCssConfig(
         int maxLines = 300,
         int maxSelectorComplexity = 3,

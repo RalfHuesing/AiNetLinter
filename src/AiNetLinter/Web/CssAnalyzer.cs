@@ -112,14 +112,17 @@ internal static class CssAnalyzer
             var depth = ComputeMaxSelectorDepth(selectorText);
             if (depth <= maxComplexity) continue;
 
-            violations.Add(CreateViolation(
-                filePath,
-                "CSS_MaxCssSelectorComplexity",
-                $"CSS-Selektor '{Truncate(selectorText, 80)}' ist zu komplex " +
-                $"(Tiefe: {depth}, erlaubt: {maxComplexity}).",
-                "Nutze Scoped CSS (.razor.css) oder vereinfache den Selektor. " +
-                "Verschachtelte Klassen-Kombinationen sind fuer Modelle schwer zuzuordnen — " +
-                "ein klar benannter Wurzel-Selektor reduziert Fehlzuordnungen."));
+            violations.Add(new RuleViolation
+            {
+                FilePath = filePath,
+                LineNumber = rule.StylesheetText?.Range.Start.Line ?? 1,
+                RuleName = "CSS_MaxCssSelectorComplexity",
+                Details = $"CSS-Selektor '{Truncate(selectorText, 80)}' ist zu komplex " +
+                    $"(Tiefe: {depth}, erlaubt: {maxComplexity}).",
+                Guidance = "Nutze Scoped CSS (.razor.css) oder vereinfache den Selektor. " +
+                    "Verschachtelte Klassen-Kombinationen sind fuer Modelle schwer zuzuordnen — " +
+                    "ein klar benannter Wurzel-Selektor reduziert Fehlzuordnungen.",
+            });
         }
     }
 
@@ -175,7 +178,11 @@ internal static class CssAnalyzer
         return s.Length <= max ? s : s[..max] + "…";
     }
 
-    internal static RuleViolation CreateViolation(string filePath, string ruleName, string details, string guidance) =>
+    internal static RuleViolation CreateViolation(
+        string filePath,
+        string ruleName,
+        string details,
+        string guidance) =>
         new RuleViolation
         {
             FilePath = filePath,
