@@ -41,9 +41,9 @@ public sealed record MetricsConfig
     /// Relaxiertes Limit für private und protected Methoden.
     /// 0 = gleicher Grenzwert wie <see cref="MaxMethodParameterCount"/>.
     /// Ignoriert wenn <see cref="MaxMethodParameterCountAllowPrivate"/> true ist.
-    /// Empfehlung: 6 — private Hilfsmethoden reichen Daten durch, ohne externe API-Ergonomie zu beeinflussen.
+    /// Standard: 6 — private Hilfsmethoden reichen Daten durch, ohne externe API-Ergonomie zu beeinflussen.
     /// </summary>
-    public int MaxMethodParameterCountForNonPublic { get; init; } = 0;
+    public int MaxMethodParameterCountForNonPublic { get; init; } = 6;
 
     public int MaxMethodLineCount { get; init; } = 60;
     public int MaxCyclomaticComplexity { get; init; } = 12;
