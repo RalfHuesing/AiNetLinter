@@ -17,7 +17,7 @@ public sealed class RazorAnalyzerExtendedTests
     [Fact]
     public void Analyze_NoViolations_ForEmptyContent()
     {
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
         var violations = RazorAnalyzer.Analyze("", "C:\\app\\Pages\\Empty.razor", config);
         Assert.Empty(violations);
     }
@@ -26,7 +26,7 @@ public sealed class RazorAnalyzerExtendedTests
     [Fact]
     public void Analyze_NoViolations_ForNullContent()
     {
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
         var violations = RazorAnalyzer.Analyze(null!, "C:\\app\\Pages\\Null.razor", config);
         Assert.Empty(violations);
     }
@@ -43,7 +43,7 @@ public sealed class RazorAnalyzerExtendedTests
                 <MyComponent Value="x" />
             </div>
             """;
-        var config = RazorTestConfig.Default.With(maxNesting: 2);
+        var config = new RazorConfig { MaxMarkupNestingDepth = 2 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Void.razor", config);
 
@@ -60,7 +60,7 @@ public sealed class RazorAnalyzerExtendedTests
                 <p>real content</p>
             </div>
             """;
-        var config = RazorTestConfig.Default.With(maxNesting: 3);
+        var config = new RazorConfig { MaxMarkupNestingDepth = 3 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Comments.razor", config);
 
@@ -77,7 +77,7 @@ public sealed class RazorAnalyzerExtendedTests
                 <p>real content</p>
             </div>
             """;
-        var config = RazorTestConfig.Default.With(maxNesting: 3);
+        var config = new RazorConfig { MaxMarkupNestingDepth = 3 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\RazorComments.razor", config);
 
@@ -92,7 +92,7 @@ public sealed class RazorAnalyzerExtendedTests
             <button @onclick="HandleClick">Click</button>
             <input @bind="Text" />
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Form.razor", config);
 
@@ -109,7 +109,7 @@ public sealed class RazorAnalyzerExtendedTests
             sb.AppendLine($"@if (S{i}) {{ <p>{i}</p> }}");
         }
         var razor = sb.ToString();
-        var config = RazorTestConfig.Default.With(maxControlFlow: 0);
+        var config = new RazorConfig { MaxControlFlowBlocks = 0 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Many.razor", config);
 
@@ -123,7 +123,7 @@ public sealed class RazorAnalyzerExtendedTests
         const string razor = """
             <button @onclick="() => { DoSomething(); DoMore(); }">x</button>
             """;
-        var config = RazorTestConfig.Default.With(banInlineEventLambdas: false);
+        var config = new RazorConfig { BanInlineEventLambdas = false };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Lib.razor", config);
 
@@ -137,7 +137,7 @@ public sealed class RazorAnalyzerExtendedTests
         const string razor = """
             <div class="@(cond ? "a" : "b")">x</div>
             """;
-        var config = RazorTestConfig.Default.With(banInlineTernary: false);
+        var config = new RazorConfig { BanInlineTernaryInAttributes = false };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Classy.razor", config);
 
@@ -159,7 +159,7 @@ public sealed class RazorAnalyzerExtendedTests
                 }
             }
             """;
-        var config = RazorTestConfig.Default.With(maxForeachDepth: 0);
+        var config = new RazorConfig { MaxForeachNestingDepth = 0 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Deep.razor", config);
 
@@ -177,7 +177,7 @@ public sealed class RazorAnalyzerExtendedTests
                 }
             }
             """;
-        var config = RazorTestConfig.Default.With(maxForeachDepth: 2);
+        var config = new RazorConfig { MaxForeachNestingDepth = 2 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Items.razor", config);
 
@@ -198,7 +198,7 @@ public sealed class RazorAnalyzerExtendedTests
             sb.AppendLine($"@if (S{i}) {{ <p>{i}</p> }}");
         }
         var razor = sb.ToString();
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Multi.razor", config);
 
@@ -213,7 +213,7 @@ public sealed class RazorAnalyzerExtendedTests
         const string razor = """
             <div class="@(x?"a":"b")">x</div>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Tight.razor", config);
 
@@ -228,7 +228,7 @@ public sealed class RazorAnalyzerExtendedTests
         const string razor = """
             <button @onclick="@OnClick">x</button>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Ref.razor", config);
 
@@ -285,63 +285,4 @@ public sealed class RazorAnalyzerExtendedTests
 
         Assert.Equal(3, RazorAnalyzer.CountAttributes(attrs));
     }
-}
-
-/// <summary>
-/// Test-Helper: Builder-Pattern fuer RazorConfig-Varianten.
-/// Vermeidet einen 8-Parameter-Konstruktor (verletzt MaxMethodParameterCount).
-/// </summary>
-internal static class RazorTestConfig
-{
-    public static RazorConfig Default { get; } = new RazorConfig();
-
-    public static RazorConfig With(
-        RazorConfig source,
-        int? maxLines = null,
-        int? maxCodeBlockLines = null,
-        int? maxNesting = null,
-        bool? banInlineEventLambdas = null,
-        int? maxControlFlow = null,
-        int? maxForeachDepth = null,
-        int? maxComponentParams = null,
-        bool? banInlineTernary = null) =>
-        source with
-        {
-            MaxRazorLineCount = maxLines ?? source.MaxRazorLineCount,
-            MaxRazorCodeBlockLines = maxCodeBlockLines ?? source.MaxRazorCodeBlockLines,
-            MaxMarkupNestingDepth = maxNesting ?? source.MaxMarkupNestingDepth,
-            BanInlineEventLambdas = banInlineEventLambdas ?? source.BanInlineEventLambdas,
-            MaxControlFlowBlocks = maxControlFlow ?? source.MaxControlFlowBlocks,
-            MaxForeachNestingDepth = maxForeachDepth ?? source.MaxForeachNestingDepth,
-            MaxComponentParameterCount = maxComponentParams ?? source.MaxComponentParameterCount,
-            BanInlineTernaryInAttributes = banInlineTernary ?? source.BanInlineTernaryInAttributes,
-        };
-}
-
-/// <summary>
-/// Convenience-Erweiterung: ermoeglicht <c>RazorTestConfig.Default.With(...)</c> statt
-/// <c>RazorTestConfig.With(RazorTestConfig.Default, ...)</c>.
-/// </summary>
-internal static class RazorTestConfigExtensions
-{
-    public static RazorConfig With(
-        this RazorConfig source,
-        int? maxLines = null,
-        int? maxCodeBlockLines = null,
-        int? maxNesting = null,
-        bool? banInlineEventLambdas = null,
-        int? maxControlFlow = null,
-        int? maxForeachDepth = null,
-        int? maxComponentParams = null,
-        bool? banInlineTernary = null) =>
-        RazorTestConfig.With(
-            source,
-            maxLines,
-            maxCodeBlockLines,
-            maxNesting,
-            banInlineEventLambdas,
-            maxControlFlow,
-            maxForeachDepth,
-            maxComponentParams,
-            banInlineTernary);
-}
+}
