@@ -76,6 +76,16 @@ internal static class LinterRuleIds
     internal const string JS_MaxJsLineCount = "JS_MaxJsLineCount";
     internal const string JS_EnforceJsModules = "JS_EnforceJsModules";
     internal const string JS_SyntaxError = "JS_SyntaxError";
+
+    // Web-Analyse (RazorConfig) — Phase 3 der Extend-Web-Features-Epic
+    internal const string RAZOR_MaxRazorLineCount = "RAZOR_MaxRazorLineCount";
+    internal const string RAZOR_MaxRazorCodeBlockLines = "RAZOR_MaxRazorCodeBlockLines";
+    internal const string RAZOR_MaxMarkupNestingDepth = "RAZOR_MaxMarkupNestingDepth";
+    internal const string RAZOR_BanInlineEventLambdas = "RAZOR_BanInlineEventLambdas";
+    internal const string RAZOR_MaxControlFlowBlocks = "RAZOR_MaxControlFlowBlocks";
+    internal const string RAZOR_MaxForeachNestingDepth = "RAZOR_MaxForeachNestingDepth";
+    internal const string RAZOR_MaxComponentParameterCount = "RAZOR_MaxComponentParameterCount";
+    internal const string RAZOR_BanInlineTernaryInAttributes = "RAZOR_BanInlineTernaryInAttributes";
 }
 
 // --- Metric-Namen für CompoundSuppressions.WhenAllOf ---
