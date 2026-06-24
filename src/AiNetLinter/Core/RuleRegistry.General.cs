@@ -81,7 +81,8 @@ internal static partial class RuleRegistry
             [
                 "**Testklasse anlegen**: `{Name}Tests.cs` im entsprechenden Test-Projekt.",
                 "**`typeof(T)`-Referenz**: `typeof(FooClass)` in einer Testklasse — `EnableTestSentinel` erkennt das als Sentinel.",
-                "**`// @covers T`-Kommentar**: In einer bestehenden Testklasse ergänzen."
+                "**`// @covers T`-Kommentar**: In einer bestehenden Testklasse ergänzen.",
+                "**Blazor Code-Behind (False-Positive)**: Deklariere die Klasse im `.razor.cs`-File explizit mit `: ComponentBase` (damit die statische Analyse sie als ausgenommen erkennt) oder füge Namen/Suffix zu `rules.json → TestSentinel.ExemptClassNameSuffixes` hinzu."
             ],
             SicherheitsHinweis: null,
             Intent: "test-coverage",

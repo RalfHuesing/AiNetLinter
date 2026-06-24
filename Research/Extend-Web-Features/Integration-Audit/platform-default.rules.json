@@ -1,7 +1,7 @@
 {
   "Global": {
     "EnforceSealedClasses": true,
-    "AllowUnsealedPartialClasses": false,
+    "AllowUnsealedPartialClasses": true,
     "AllowDynamic": false,
     "AllowOutParameters": false,
     "EnforceValueObjectContracts": true,
@@ -21,13 +21,17 @@
     ],
     "SemanticNamingAllowSubstringOfMethodName": true,
     "AllowedSilentCatchExceptionTypes": [
+      "JSDisconnectedException",
+      "JSException",
       "ObjectDisposedException"
     ],
-    "EnforceMinimalApiAsParameters": false,
+    "EnforceMinimalApiAsParameters": true,
     "EnforceResultPatternOverExceptions": false,
     "ResultPatternAllowThrowInNamespaceSuffixes": [
       "Infrastructure",
-      "Endpoints",
+      "Handlers",
+      "Api",
+      "Auth",
       "Middleware",
       "Program"
     ],
@@ -46,13 +50,15 @@
       "NotImplementedException"
     ],
     "PreventContextDependentOverloads": false,
-    "EnforceNamespaceDirectoryMapping": true,
+    "EnforceNamespaceDirectoryMapping": false,
     "NamespaceDirectoryMappingMode": "suffix-match",
     "NamespaceDirectoryMappingIgnorePathSegments": [
-      "src",
-      "Source",
+      "Components",
       "Domains",
-      "Handlers"
+      "Handlers",
+      "Pages",
+      "Source",
+      "src"
     ],
     "NamespaceDirectoryMappingRequiredTrailingSegments": 2,
     "DetectAndBanPhantomDependencies": true,
@@ -64,9 +70,57 @@
       "Model",
       "Request",
       "Response",
-      "Command"
+      "Command",
+      "Record",
+      "Result",
+      "Violation"
     ],
-    "ImmutabilityExemptPatterns": [],
+    "ImmutabilityExemptPatterns": [
+      "*Options",
+      "*Json",
+      "*State",
+      "*Payload",
+      "*Input",
+      "*Settings",
+      "*Row",
+      "*Entry",
+      "*Notice",
+      "*Patch",
+      "*Config",
+      "*Parameters",
+      "*Cache",
+      "*Context",
+      "*Hub",
+      "*Gate",
+      "*Binder",
+      "*Tracker",
+      "*Store",
+      "*Mapper",
+      "*Converter",
+      "*Resolver",
+      "*Builder",
+      "*Formatter",
+      "*Catalog",
+      "*Coordinator",
+      "*Collector",
+      "*Sandbox",
+      "*Probe",
+      "*Hasher",
+      "*Material",
+      "*Complete",
+      "*Snapshot",
+      "*Archive",
+      "*Session",
+      "*Turn",
+      "*Message",
+      "*Interop",
+      "*Stack",
+      "*Layout",
+      "*Pane",
+      "*Tree",
+      "*Chrome",
+      "*Preferences"
+    ],
     "AllowedEmptyReads": false,
     "SealedClassExemptSuffixes": [
       "Base",
@@ -76,14 +130,11 @@
     "ImmutabilityExemptBaseTypes": [
       "ComponentBase",
       "LayoutComponentBase",
-      "ObservableObject",
-      "ObservableRecipient",
-      "BackgroundService",
       "AuthenticationStateProvider",
-      "INotifyPropertyChanged"
+      "BackgroundService"
     ],
-    "ImmutabilityAllowPrivateBackingFields": true,
-    "EnablePerformanceProfiling": false,
+    "ImmutabilityAllowPrivateBackingFields": false,
+    "EnablePerformanceProfiling": true,
     "BanAsyncVoid": true,
     "AsyncVoidAllowEventHandlers": true,
     "BanBlockingTaskAccess": true,
@@ -91,25 +142,45 @@
     "BanBlockingTaskAccessAllowInTests": false
   },
   "Metrics": {
-    "MaxLineCount": 500,
-    "MaxMethodParameterCount": 4,
-    "MaxMethodParameterCountInTestFiles": 6,
+    "MaxLineCount": 600,
+    "MaxMethodParameterCount": 6,
+    "MaxMethodParameterCountInTestFiles": 0,
     "MethodParameterCountIgnoreTypeNames": [
       "CancellationToken"
     ],
-    "MethodParameterCountIgnoreTypePrefixes": [],
+    "MethodParameterCountIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IOptionsSnapshot",
+      "IOptionsMonitor",
+      "IHostEnvironment",
+      "IWebHostEnvironment",
+      "IConfiguration",
+      "IServiceProvider",
+      "IHttpContextAccessor",
+      "HttpContext",
+      "TimeProvider",
+      "LinkGenerator",
+      "ProblemDetailsService"
+    ],
     "MaxMethodParameterCountAllowPrivate": false,
     "MaxMethodParameterCountForNonPublic": 6,
     "MaxMethodLineCount": 60,
     "MaxCyclomaticComplexity": 12,
     "MaxCognitiveComplexity": 15,
-    "MaxInheritanceDepth": 3,
-    "MinCognitiveComplexityForTest": 5,
+    "MaxInheritanceDepth": 2,
+    "MinCognitiveComplexityForTest": 3,
     "AggregatePartialClassLineCount": false,
-    "MaxMethodOverloads": 5,
+    "MaxMethodOverloads": 3,
     "MaxConstructorDependencies": 5,
-    "MaxDirectoryDepth": 4,
-    "InheritanceDepthFrameworkPrefixes": [],
+    "MaxDirectoryDepth": 7,
+    "InheritanceDepthFrameworkPrefixes": [
+      "Microsoft.AspNetCore.",
+      "Microsoft.AspNetCore.Components.",
+      "Microsoft.Extensions.",
+      "MudBlazor.",
+      "System."
+    ],
     "ConstructorDependencyIgnoreTypePrefixes": [
       "ILogger",
       "IOptions",
@@ -124,10 +195,11 @@
     "ConstructorDependencyExemptClassSuffixes": [
       "Exception"
     ],
-    "MaxAIContextFootprint": 2500,
+    "MaxAIContextFootprint": 5000,
     "FootprintIgnoreNamespacePrefixes": [],
     "FootprintIgnoreTypeNames": [
-      "LinterEngine"
+      "SqlExecutor",
+      "DataTableDragDropSettings"
     ],
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
@@ -152,9 +224,7 @@
       ".git"
     ],
     "MaxPartialClassFiles": 2,
-    "MaxPartialClassFilesExemptTypes": [
-      "RuleRegistry"
-    ],
+    "MaxPartialClassFilesExemptTypes": [],
     "MaxPublicMembersPerType": 15,
     "MaxPublicMembersPerTypeExemptSuffixes": [
       "Extensions",
@@ -255,10 +325,12 @@
       "Seed",
       "Migration",
       "Startup",
-      "Module"
+      "Module",
+      "Coordinator"
     ],
     "ExemptWhenInheritsFrom": [
       "ComponentBase",
+      "LayoutComponentBase",
       "IValueConverter",
       "Profile"
     ],
@@ -273,7 +345,7 @@
   },
   "UiSeparation": {
     "BlazorRequireCodeBehind": true,
-    "BlazorRequireCssIsolation": true,
+    "BlazorRequireCssIsolation": false,
     "WpfRequireMinimalCodeBehind": true,
     "WpfCodeBehindBaseTypes": [
       "Window",
@@ -320,6 +392,7 @@
       "ExemptPaths": [
         "**/wwwroot/lib/**",
         "**/node_modules/**",
+        "**/ClientTests/**",
         "**/*.min.js"
       ]
     },
@@ -330,7 +403,7 @@
       "BanInlineEventLambdas": true,
       "MaxControlFlowBlocks": 8,
       "MaxForeachNestingDepth": 2,
-      "MaxComponentParameterCount": 10,
+      "MaxComponentParameterCount": 5,
       "BanInlineTernaryInAttributes": true
     }
   },
@@ -339,7 +412,15 @@
       "Severity": "error",
       "Intent": "agent-context"
     },
+    "MaxMethodLineCount": {
+      "Severity": "error",
+      "Intent": "agent-context"
+    },
     "MaxCognitiveComplexity": {
+      "Severity": "error",
+      "Intent": "agent-context"
+    },
+    "MaxCyclomaticComplexity": {
       "Severity": "error",
       "Intent": "agent-context"
     },
@@ -359,32 +440,127 @@
       "Severity": "error",
       "Intent": "agent-resilience"
     },
-    "BanPublicNestedTypes": {
+    "EnforceNoVariableShadowing": {
+      "Severity": "error",
+      "Intent": "agent-resilience"
+    },
+    "EnforceReadonlyParameters": {
+      "Severity": "error",
+      "Intent": "agent-resilience"
+    },
+    "EnforceReadonlyFields": {
+      "Severity": "error",
+      "Intent": "agent-resilience"
+    },
+    "EnforceNoMagicValues": {
+      "Severity": "warning",
+      "Intent": "semantic-naming"
+    },
+    "EnforceResultPatternOverExceptions": {
+      "Severity": "error",
+      "Intent": "control-flow"
+    },
+    "MaxConstructorDependencies": {
+      "Severity": "error",
+      "Intent": "coupling"
+    },
+    "MaxMethodOverloads": {
+      "Severity": "error",
+      "Intent": "api-surface"
+    },
+    "AIContextFootprint": {
+      "Severity": "warning",
+      "Intent": "agent-context"
+    },
+    "EnforceExplicitStateImmutability": {
+      "Severity": "error",
+      "Intent": "agent-resilience"
+    },
+    "EnforceStrictBoundaryForBusinessLogic": {
+      "Severity": "error",
+      "Intent": "architecture"
+    },
+    "PreventContextDependentOverloads": {
       "Severity": "error",
       "Intent": "agent-context"
+    },
+    "RequireExplicitTruncationHandling": {
+      "Severity": "warning",
+      "Intent": "agent-resilience"
+    },
+    "EnforceNamespaceDirectoryMapping": {
+      "Severity": "error",
+      "Intent": "architecture"
+    },
+    "MaxDirectoryDepth": {
+      "Severity": "warning",
+      "Intent": "agent-context"
+    },
+    "DetectAndBanPhantomDependencies": {
+      "Severity": "error",
+      "Intent": "architecture"
     }
   },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
     "*.Tests": {
       "Global": {
-        "EnforceSealedClasses": false
+        "EnforceSealedClasses": false,
+        "EnforceExplicitStateImmutability": false,
+        "DetectAndBanPhantomDependencies": false
       },
       "Metrics": {
+        "MaxMethodParameterCountInTestFiles": 10,
         "MaxMethodLineCount": 100,
-        "MaxPublicMembersPerTypeExemptSuffixes": [
-          "Extensions",
-          "Mapper",
-          "Constants",
-          "Config",
-          "ConfigOverride",
-          "Args",
-          "Tests",
-          "Test",
-          "Specs"
-        ]
+        "MaxAIContextFootprint": 8000,
+        "MaxDirectoryDepth": 12
       }
     }
   },
-  "PathOverrides": {}
+  "PathOverrides": {
+    "San.smart.Planner.Platform/Components/Pages/Test/**": {
+      "Metrics": {
+        "MaxAIContextFootprint": 10000
+      }
+    },
+    "San.smart.Planner.Platform/Handlers/Admin/Ai/Patches/**": {
+      "Metrics": {
+        "MaxMethodParameterCount": 8
+      }
+    },
+    "San.smart.Planner.Platform/Handlers/Admin/Ai/Plugin/**": {
+      "Metrics": {
+        "MaxMethodParameterCount": 10
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/Ai/Exploration/**": {
+      "Metrics": {
+        "MaxMethodLineCount": 160,
+        "MaxCyclomaticComplexity": 28,
+        "MaxCognitiveComplexity": 30
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Configuration/CodeGraphDriftTests.cs": {
+      "Metrics": {
+        "MaxCyclomaticComplexity": 18,
+        "MaxCognitiveComplexity": 22
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/AdminBackendHandlerIntegrationTests.cs": {
+      "Metrics": {
+        "MaxMethodLineCount": 130
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/Admin/Ai/AiChatRollbackIntegrationTests.cs": {
+      "Metrics": {
+        "MaxMethodLineCount": 120
+      }
+    },
+    "San.smart.Planner.Platform.Tests/Handlers/TimelineViewLabSchedulerHandlerTests.cs": {
+      "Metrics": {
+        "MaxCyclomaticComplexity": 14,
+        "MaxCognitiveComplexity": 18
+      }
+    }
+  }
 }

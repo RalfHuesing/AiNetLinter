@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════
+   Components — Globale Stile für Site-eigene Komponenten-Klassen
+   (Nicht MudBlazor-spezifisch; ergänzt die scoped .razor.css-Dateien)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Site-Component Panel (Shadow ergänzt scoped border-Regeln ohne Konflikt) ── */
+
+.site-component {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+
+/* ── Spaltenraster-Kopf (Scheduler DOM-Chrome + DataTable via Tokens) ── */
+
+.san-column-grid-header {
+  background-color: var(--san-column-grid-header-bg);
+  border-bottom: 1px solid var(--san-column-grid-header-border);
+}
+
+.san-column-grid-header-row--major {
+  font-weight: var(--san-column-grid-header-font-weight);
+  border-bottom: 1px solid var(--san-column-grid-header-border);
+}
+
+.san-column-grid-header-cell {
+  padding: 0 var(--san-column-grid-header-padding-x);
+  border-right: 1px solid var(--san-column-grid-header-border);
+}
+
+.san-column-grid-header-cell:last-child {
+  border-right: none;
+}
+
+.san-column-grid-header-cell--sortable:hover {
+  background-color: var(--san-column-grid-header-hover-bg);
+}
+
+.san-column-grid-header-cell--sorted {
+  color: var(--san-column-grid-sort-color);
+}
+
+.san-column-grid-filter-cell {
+  padding: var(--san-column-grid-filter-row-padding);
+  border-right: 1px solid var(--san-column-grid-header-border);
+}
+
+.san-column-grid-filter-cell:last-child {
+  border-right: none;
+}
+
+.san-column-grid-filter-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--san-column-grid-filter-input-height);
+  padding: 0 var(--san-column-grid-filter-input-padding-x);
+  border: 1px solid var(--san-column-grid-filter-input-border);
+  border-radius: 0.25rem;
+  font: inherit;
+  font-size: var(--san-font-size-base);
+  background-color: var(--san-column-grid-filter-input-bg);
+  color: inherit;
+}
+
+.san-column-grid-filter-input:focus {
+  outline: 2px solid var(--san-column-grid-filter-active-border);
+  outline-offset: 0;
+}
+
+.san-column-grid-filter--active .san-column-grid-filter-input {
+  border-color: var(--san-column-grid-filter-active-border);
+  background-color: var(--san-column-grid-filter-active-bg);
+}
