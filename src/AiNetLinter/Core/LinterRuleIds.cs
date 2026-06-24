@@ -71,6 +71,11 @@ internal static class LinterRuleIds
     internal const string CSS_PreferScopedCss = "CSS_PreferScopedCss";
     internal const string CSS_MaxCssSelectorComplexity = "CSS_MaxCssSelectorComplexity";
     internal const string CSS_ParseError = "CSS_ParseError";
+
+    // Web-Analyse (JsConfig)
+    internal const string JS_MaxJsLineCount = "JS_MaxJsLineCount";
+    internal const string JS_EnforceJsModules = "JS_EnforceJsModules";
+    internal const string JS_SyntaxError = "JS_SyntaxError";
 }
 
 // --- Metric-Namen für CompoundSuppressions.WhenAllOf ---

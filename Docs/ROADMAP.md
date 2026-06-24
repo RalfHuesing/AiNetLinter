@@ -370,12 +370,18 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter Web-Sektion sauber auf der eigenen Codebase durch (keine CSS-Violations im Self-Audit, ExCSS-Integration verifiziert).
 - [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um Web-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
 
-### Phase 2 — JavaScript (geplant, nicht umgesetzt)
+### Phase 2 — JavaScript (umgesetzt)
 
-- [ ] **NuGet-Abhaengigkeit:** Esprima (BSD-3-Clause-Lizenz) als standardkonformer ECMAScript-Parser.
-- [ ] **Konfigurations-Sektion `Web.Js`:** `MaxJsLineCount`, `EnforceJsModules`, `ExemptPaths`.
-- [ ] **`JsAnalyzer`:** `ParseModule()` zuerst, Fallback auf `ParseScript()`. Prueft `JS_MaxJsLineCount` und `JS_EnforceJsModules` (verbotene `window.xyz = ...`-Zuweisungen).
-- [ ] **Regel-IDs:** `JS_MaxJsLineCount`, `JS_EnforceJsModules`, `JS_SyntaxError`.
+- [x] **NuGet-Abhaengigkeit:** Esprima 3.0.6 (BSD-3-Clause-Lizenz) als standardkonformer ECMAScript-Parser.
+- [x] **Konfigurations-Sektion `Web.Js`:** `MaxJsLineCount` (Standard 150), `EnforceJsModules` (Standard `true`), `ExemptPaths` in `rules.json` synchronisiert.
+- [x] **`JsAnalyzer`:** `JavaScriptParser.ParseModule()` zuerst, Fallback auf `ParseScript()`. Eine Datei gilt nur dann als ES6-Modul, wenn `ParseModule` gelingt UND der Body mindestens eine `Import`-/`Export`-Deklaration enthaelt (Esprima 3.x parst Skript-Code sonst ebenfalls als Modul). Prueft `JS_MaxJsLineCount`, `JS_EnforceJsModules` (fehlende `export`-Statements UND `window.xyz = ...`-Zuweisungen in Modulen) und `JS_SyntaxError`.
+- [x] **Regel-IDs:** `JS_MaxJsLineCount`, `JS_EnforceJsModules`, `JS_SyntaxError` in `LinterRuleIds` und `RuleRegistry.Web.cs` registriert (Severity: error / error / error, Intent: agent-context / agent-context / general).
+- [x] **Project-Overrides:** `JsConfigOverride` mit `MaxJsLineCount`, `EnforceJsModules`, `ExemptPaths`; `ProjectConfigResolver.MergeConfig` reicht den `Js`-Override-Tree durch.
+- [x] **WebFileCatalog:** Neuer Input-Record `WebFileDiscoveryRequest` buendelt `FileFilters`, `CssExemptPaths` und `JsExemptPaths` (Reduzierung der Parameter-Anzahl auf <=4 fuer `Collect()`).
+- [x] **WebFileSeparationChecker:** Splittet CSS- und JS-Analyse in eigene Helper-Methoden (`AnalyzeCssEntries` / `AnalyzeJsEntries`); gemeinsame Per-File-Verarbeitung in `AnalyzeSingleFile` (Cognitive Complexity von 22 auf ~6 reduziert).
+- [x] **Test-Suite:** `JsAnalyzerTests.cs` mit 19 Tests (Szenarien A-H aus dem Research-Dokument plus zusaetzliche Edge-Cases wie `globalThis`-Zuweisung, `this`-Zuweisung, `window.alert()`-Aufruf, mehrere Window-Pollutions, leerer Content). Alle Tests gruen.
+- [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter JS-Sektion sauber auf der eigenen Codebase durch (Integration-Tests bestanden, Esprima 3.0.6 API verifiziert, eigene Code-Regeln eingehalten: `EnforceNoSilentCatch`, `MaxMethodParameterCount`, `MaxCognitiveComplexity`).
+- [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um JS-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
 
 ### Phase 3 — Razor (geplant, nicht umgesetzt)
 

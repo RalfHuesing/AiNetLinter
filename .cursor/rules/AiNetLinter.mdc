@@ -34,6 +34,7 @@ Auto-generiert durch AiNetLinter 1.0.58 aus `rules.json`. Neuen Produktionscode 
 | `MaxLinqChainLength` | **0** | 0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen. |
 | `CSS_MaxCssLineCount` | **300** | CSS-Datei splitten oder in Scoped CSS ueberfuehren. |
 | `CSS_MaxCssSelectorComplexity` | **3** | Maximal 3 Selektor-Segmente; Scoped CSS nutzen. |
+| `JS_MaxJsLineCount` | **150** | JavaScript-Datei aufteilen oder Logik nach C# migrieren. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

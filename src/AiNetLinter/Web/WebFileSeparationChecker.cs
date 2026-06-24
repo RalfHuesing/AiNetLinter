@@ -11,7 +11,7 @@ using AiNetLinter.Models;
 namespace AiNetLinter.Web;
 
 /// <summary>
-/// Post-Analyse-Check fuer Web-Dateien (Phase 1: CSS, spaeter JS/Razor).
+/// Post-Analyse-Check fuer Web-Dateien (Phase 1: CSS, Phase 2: JS, Phase 3: Razor).
 /// Arbeitet auf dem Dateisystem (Roslyn sieht keine .css/.js/.razor-Dateien).
 /// Spiegel des UiFileSeparationChecker-Patterns aus Epic 22.
 /// </summary>
@@ -19,46 +19,67 @@ internal static class WebFileSeparationChecker
 {
     /// <summary>
     /// Startet die Web-Analyse fuer die gesamte Solution.
-    /// Fruehzeitiger Return, wenn Web.IsEnabled false ist (default) oder keine CSS-Konfiguration aktiv.
+    /// Fruehzeitiger Return, wenn Web.IsEnabled false ist (default) oder keine Web-Konfiguration aktiv.
     /// </summary>
     public static void Run(AnalysisState state, LinterConfig config)
     {
         if (!config.Web.IsEnabled) return;
 
-        // Phase 1 unterstuetzt nur CSS. JS/Razor werden in spaeteren Phasen ergaenzt
-        // und hier als No-Op behandelt.
         var solutionDir = GetSolutionDir(state.Solution);
         if (string.IsNullOrEmpty(solutionDir)) return;
 
-        var cssEntries = WebFileCatalog.Collect(
-            state.Solution,
-            solutionDir,
-            config.FileFilters,
-            config.Web.Css.ExemptPaths)
-            .Where(e => e.Type == WebFileType.Css)
-            .ToArray();
+        var request = new WebFileDiscoveryRequest(
+            FileFilters: config.FileFilters,
+            CssExemptPaths: config.Web.Css.ExemptPaths,
+            JsExemptPaths: config.Web.Js.ExemptPaths);
 
-        if (cssEntries.Length == 0) return;
+        var entries = WebFileCatalog.Collect(state.Solution, solutionDir, request);
+        if (entries.Count == 0) return;
 
-        foreach (var entry in cssEntries)
+        AnalyzeCssEntries(entries, config, state.Violations);
+        AnalyzeJsEntries(entries, config, state.Violations);
+    }
+
+    private static void AnalyzeCssEntries(
+        IReadOnlyList<WebFileEntry> entries,
+        LinterConfig config,
+        ConcurrentBag<RuleViolation> violations)
+    {
+        foreach (var entry in entries.Where(e => e.Type == WebFileType.Css))
         {
-            // Per-File ProjectOverride aufloesen — relevante Eigenschaften sind nur
-            // die CSS-Schwellenwerte (IsEnabled ist global gesteuert).
-            var effective = ProjectConfigResolver.ResolveForFile(
-                entry.AbsolutePath,
-                projectName: null,
-                globalConfig: config);
+            var effective = ResolveForFile(entry.AbsolutePath, config);
+            if (!IsCssAnalysisActive(effective)) continue;
 
-            if (!effective.Web.IsEnabled) continue;
-            if (!IsAnyCssRuleActive(effective.Web.Css)) continue;
-
-            AnalyzeCssFile(entry, effective, state.Violations);
+            AnalyzeSingleFile(
+                entry,
+                effective,
+                content => CssAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Css),
+                violations);
         }
     }
 
-    private static void AnalyzeCssFile(
+    private static void AnalyzeJsEntries(
+        IReadOnlyList<WebFileEntry> entries,
+        LinterConfig config,
+        ConcurrentBag<RuleViolation> violations)
+    {
+        foreach (var entry in entries.Where(e => e.Type == WebFileType.Js))
+        {
+            var effective = ResolveForFile(entry.AbsolutePath, config);
+            if (!IsJsAnalysisActive(effective)) continue;
+
+            AnalyzeSingleFile(
+                entry,
+                effective,
+                content => JsAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Js),
+                violations);
+        }
+    }
+
+    private static void AnalyzeSingleFile(
         WebFileEntry entry,
         LinterConfig effectiveConfig,
+        Func<string, System.Collections.Generic.IReadOnlyList<RuleViolation>> analyze,
         ConcurrentBag<RuleViolation> violations)
     {
         string content;
@@ -71,7 +92,7 @@ internal static class WebFileSeparationChecker
             return;
         }
 
-        var fileViolations = CssAnalyzer.Analyze(content, entry.AbsolutePath, effectiveConfig.Web.Css);
+        var fileViolations = analyze(content);
 
         foreach (var v in fileViolations)
         {
@@ -80,12 +101,23 @@ internal static class WebFileSeparationChecker
         }
     }
 
-    private static bool IsAnyCssRuleActive(CssConfig css)
-    {
-        return css.MaxCssLineCount > 0
-            || css.PreferScopedCss
-            || css.MaxCssSelectorComplexity > 0;
-    }
+    private static LinterConfig ResolveForFile(string absolutePath, LinterConfig globalConfig) =>
+        ProjectConfigResolver.ResolveForFile(absolutePath, projectName: null, globalConfig: globalConfig);
+
+    private static bool IsCssAnalysisActive(LinterConfig effective) =>
+        effective.Web.IsEnabled && IsAnyCssRuleActive(effective.Web.Css);
+
+    private static bool IsJsAnalysisActive(LinterConfig effective) =>
+        effective.Web.IsEnabled && IsAnyJsRuleActive(effective.Web.Js);
+
+    private static bool IsAnyCssRuleActive(CssConfig css) =>
+        css.MaxCssLineCount > 0
+        || css.PreferScopedCss
+        || css.MaxCssSelectorComplexity > 0;
+
+    private static bool IsAnyJsRuleActive(JsConfig js) =>
+        js.MaxJsLineCount > 0
+        || js.EnforceJsModules;
 
     private static string? GetSolutionDir(Microsoft.CodeAnalysis.Solution solution) =>
         string.IsNullOrEmpty(solution.FilePath)

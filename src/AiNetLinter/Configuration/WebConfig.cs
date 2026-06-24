@@ -22,6 +22,11 @@ public sealed record WebConfig
     public CssConfig Css { get; init; } = new();
 
     /// <summary>
+    /// Konfigurations-Subbereich fuer JavaScript-Dateien (Phase 2 der Extend-Web-Features-Epic).
+    /// </summary>
+    public JsConfig Js { get; init; } = new();
+
+    /// <summary>
     /// Wendet Projekt-Overrides an (siehe WebConfigOverride).
     /// </summary>
     public WebConfig Apply(WebConfigOverride? @override)
@@ -31,6 +36,7 @@ public sealed record WebConfig
         {
             IsEnabled = @override.IsEnabled ?? IsEnabled,
             Css = Css.Apply(@override.Css),
+            Js = Js.Apply(@override.Js),
         };
     }
 }
@@ -90,6 +96,53 @@ public sealed record CssConfig
             PreferScopedCss = @override.PreferScopedCss ?? PreferScopedCss,
             PreferScopedCssMinRuleCount = @override.PreferScopedCssMinRuleCount ?? PreferScopedCssMinRuleCount,
             MaxCssSelectorComplexity = @override.MaxCssSelectorComplexity ?? MaxCssSelectorComplexity,
+            ExemptPaths = @override.ExemptPaths ?? ExemptPaths,
+        };
+    }
+}
+
+// Test-Sentinel: JsConfig ist ueber JsAnalyzerTests.cs mit // @covers abgedeckt
+// (siehe Test-Datei; StaticTestSentinel akzeptiert @covers in Test-Dateien).
+/// <summary>
+/// JavaScript-spezifische Konfiguration (Phase 2 der Extend-Web-Features-Epic).
+/// Wird in der rules.json unter Web.Js gepflegt.
+/// </summary>
+public sealed record JsConfig
+{
+    /// <summary>
+    /// Maximale Anzahl Zeilen pro JavaScript-Datei (Standard: 150). Verhindert "Lost in the Middle"-Effekte
+    /// bei grossen monolithischen JS-Interop-Dateien in AI-Edit-Loops. Komplexe Logik gehoert in C#.
+    /// </summary>
+    public int MaxJsLineCount { get; init; } = 150;
+
+    /// <summary>
+    /// Wenn true (Standard), werden JS-Dateien ohne ES6-`export` und mit `window.*`-Zuweisungen
+    /// gemeldet. Blazor Dynamic Import erwartet Module; globale Script-Dateien sind nicht
+    /// robust isoliert importierbar.
+    /// </summary>
+    public bool EnforceJsModules { get; init; } = true;
+
+    /// <summary>
+    /// Glob-Muster fuer Pfade, die von der JS-Analyse ausgeschlossen werden
+    /// (z. B. jQuery, Bootstrap-Bundle, *.min.js).
+    /// </summary>
+    public IReadOnlyCollection<string> ExemptPaths { get; init; } = new[]
+    {
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.js",
+    };
+
+    /// <summary>
+    /// Wendet JS-spezifische Projekt-Overrides an.
+    /// </summary>
+    public JsConfig Apply(JsConfigOverride? @override)
+    {
+        if (@override == null) return this;
+        return this with
+        {
+            MaxJsLineCount = @override.MaxJsLineCount ?? MaxJsLineCount,
+            EnforceJsModules = @override.EnforceJsModules ?? EnforceJsModules,
             ExemptPaths = @override.ExemptPaths ?? ExemptPaths,
         };
     }
