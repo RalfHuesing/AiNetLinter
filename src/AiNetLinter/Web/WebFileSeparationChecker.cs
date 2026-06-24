@@ -38,6 +38,7 @@ internal static class WebFileSeparationChecker
 
         AnalyzeCssEntries(entries, config, state.Violations);
         AnalyzeJsEntries(entries, config, state.Violations);
+        AnalyzeRazorEntries(entries, config, state.Violations);
     }
 
     private static void AnalyzeCssEntries(
@@ -76,6 +77,24 @@ internal static class WebFileSeparationChecker
         }
     }
 
+    private static void AnalyzeRazorEntries(
+        IReadOnlyList<WebFileEntry> entries,
+        LinterConfig config,
+        ConcurrentBag<RuleViolation> violations)
+    {
+        foreach (var entry in entries.Where(e => e.Type == WebFileType.Razor))
+        {
+            var effective = ResolveForFile(entry.AbsolutePath, config);
+            if (!IsRazorAnalysisActive(effective)) continue;
+
+            AnalyzeSingleFile(
+                entry,
+                effective,
+                content => RazorAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Razor),
+                violations);
+        }
+    }
+
     private static void AnalyzeSingleFile(
         WebFileEntry entry,
         LinterConfig effectiveConfig,
@@ -110,6 +129,9 @@ internal static class WebFileSeparationChecker
     private static bool IsJsAnalysisActive(LinterConfig effective) =>
         effective.Web.IsEnabled && IsAnyJsRuleActive(effective.Web.Js);
 
+    private static bool IsRazorAnalysisActive(LinterConfig effective) =>
+        effective.Web.IsEnabled && IsAnyRazorRuleActive(effective.Web.Razor);
+
     private static bool IsAnyCssRuleActive(CssConfig css) =>
         css.MaxCssLineCount > 0
         || css.PreferScopedCss
@@ -118,6 +140,16 @@ internal static class WebFileSeparationChecker
     private static bool IsAnyJsRuleActive(JsConfig js) =>
         js.MaxJsLineCount > 0
         || js.EnforceJsModules;
+
+    private static bool IsAnyRazorRuleActive(RazorConfig razor) =>
+        razor.MaxRazorLineCount > 0
+        || razor.MaxRazorCodeBlockLines > 0
+        || razor.MaxMarkupNestingDepth > 0
+        || razor.BanInlineEventLambdas
+        || razor.MaxControlFlowBlocks > 0
+        || razor.MaxForeachNestingDepth > 0
+        || razor.MaxComponentParameterCount > 0
+        || razor.BanInlineTernaryInAttributes;
 
     private static string? GetSolutionDir(Microsoft.CodeAnalysis.Solution solution) =>
         string.IsNullOrEmpty(solution.FilePath)

@@ -44,6 +44,11 @@ public sealed record WebConfigOverride
     /// JS-spezifische Overrides.
     /// </summary>
     public JsConfigOverride? Js { get; init; }
+
+    /// <summary>
+    /// Razor-spezifische Overrides (Phase 3 der Extend-Web-Features-Epic).
+    /// </summary>
+    public RazorConfigOverride? Razor { get; init; }
 }
 
 /// <summary>
@@ -98,4 +103,51 @@ public sealed record JsConfigOverride
     /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).
     /// </summary>
     public IReadOnlyCollection<string>? ExemptPaths { get; init; }
+}
+
+/// <summary>
+/// Optionale Überschreibungen für die Razor-Konfiguration (pro Projekt).
+/// Wird in der rules.json unter ProjectOverrides.*.Web.Razor eingebunden.
+/// </summary>
+public sealed record RazorConfigOverride
+{
+    /// <summary>
+    /// Override fuer MaxRazorLineCount.
+    /// </summary>
+    public int? MaxRazorLineCount { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxRazorCodeBlockLines.
+    /// </summary>
+    public int? MaxRazorCodeBlockLines { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxMarkupNestingDepth.
+    /// </summary>
+    public int? MaxMarkupNestingDepth { get; init; }
+
+    /// <summary>
+    /// Override fuer BanInlineEventLambdas.
+    /// </summary>
+    public bool? BanInlineEventLambdas { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxControlFlowBlocks.
+    /// </summary>
+    public int? MaxControlFlowBlocks { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxForeachNestingDepth.
+    /// </summary>
+    public int? MaxForeachNestingDepth { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxComponentParameterCount.
+    /// </summary>
+    public int? MaxComponentParameterCount { get; init; }
+
+    /// <summary>
+    /// Override fuer BanInlineTernaryInAttributes.
+    /// </summary>
+    public bool? BanInlineTernaryInAttributes { get; init; }
 }

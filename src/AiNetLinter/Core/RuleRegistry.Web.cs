@@ -22,6 +22,14 @@ internal static partial class RuleRegistry
         BuildJsMaxJsLineCount(),
         BuildJsEnforceJsModules(),
         BuildJsSyntaxError(),
+        BuildRazorMaxRazorLineCount(),
+        BuildRazorMaxRazorCodeBlockLines(),
+        BuildRazorMaxMarkupNestingDepth(),
+        BuildRazorBanInlineEventLambdas(),
+        BuildRazorMaxControlFlowBlocks(),
+        BuildRazorMaxForeachNestingDepth(),
+        BuildRazorMaxComponentParameterCount(),
+        BuildRazorBanInlineTernaryInAttributes(),
     ];
 
     private static RuleMetadata BuildCssMaxCssLineCount() => new(
@@ -175,5 +183,187 @@ internal static partial class RuleRegistry
         IsEnabled: c => c.Web.IsEnabled,
         IsMetric: false,
         IncludeInCursorRules: false
+    );
+
+    private static RuleMetadata BuildRazorMaxRazorLineCount() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxRazorLineCount,
+        DisplayName: "Razor Dateilaenge",
+        GetShortDescription: c => $"Razor-Datei ueberschreitet das Zeilenlimit (max. {c.Web.Razor.MaxRazorLineCount}).",
+        Warum: "Lange Razor-Dateien uebersteigen das lesbare Kontextfenster. Agenten verlieren beim Erzeugen von Diffs die Uebersicht ueber die Markup-Struktur ('Lost in the Middle').",
+        Alternativen:
+        [
+            "**Komponente aufteilen**: Eigenstaendige UI-Bereiche in separate Blazor-Komponenten extrahieren.",
+            "**Partial Views / ChildContent**: Wiederkehrende Markup-Bloecke in wiederverwendbare Teilkomponenten verschieben.",
+            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxRazorLineCount *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "error",
+        CursorHint: "Razor-Komponente aufteilen oder Teilbereiche extrahieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxRazorLineCount > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxRazorLineCount,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxRazorLineCount (Web.IsEnabled muss true sein)"
+    );
+
+    private static RuleMetadata BuildRazorMaxRazorCodeBlockLines() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxRazorCodeBlockLines,
+        DisplayName: "Razor @code-Block-Groesse",
+        GetShortDescription: c => $"@code-Block ueberschreitet das Zeilenlimit (max. {c.Web.Razor.MaxRazorCodeBlockLines}).",
+        Warum: "Guard-Regel fuer Faelle, in denen trotz BlazorRequireCodeBehind ein @code-Block existiert. C#-Logik gehoert in die Code-Behind-Datei (.razor.cs).",
+        Alternativen:
+        [
+            "**Logik in Code-Behind verschieben**: 'partial class' in '.razor.cs' verwenden (Empfehlung).",
+            "**@functions extrahieren**: Bei sehr grossen Helper-Klassen separate Service-Klasse anlegen.",
+            "**Suppression** (bei Legacy): `@* ainetlinter-disable RAZOR_MaxRazorCodeBlockLines *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "@code-Block in Code-Behind-Datei (.razor.cs) verschieben.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxRazorCodeBlockLines > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxRazorCodeBlockLines,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxRazorCodeBlockLines"
+    );
+
+    private static RuleMetadata BuildRazorMaxMarkupNestingDepth() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxMarkupNestingDepth,
+        DisplayName: "Razor Markup-Verschachtelung",
+        GetShortDescription: c => $"HTML-Verschachtelungstiefe zu hoch (max. {c.Web.Razor.MaxMarkupNestingDepth} Ebenen).",
+        Warum: "Tiefe HTML-Hierarchien fuehren bei Agenten zu Tag-Mismatch-Halluzinationen — falsch geschlossene oder verschobene Elemente. KIs koennen die Tag-Hierarchie ueber mehrere Ebenen nicht zuverlaessig rekonstruieren.",
+        Alternativen:
+        [
+            "**Innere Bereiche extrahieren**: Komplexe Sub-Bereiche in eigene Blazor-Komponenten mit klar definierter API verschieben.",
+            "**Flachere Struktur anstreben**: Wiederkehrende Container-Klassen als CSS-Klasse statt als verschachteltes DIV.",
+            "**Suppression** (bei semantisch notwendiger Verschachtelung): `@* ainetlinter-disable RAZOR_MaxMarkupNestingDepth *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Innere Bereiche in eigene Komponenten extrahieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxMarkupNestingDepth > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxMarkupNestingDepth,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxMarkupNestingDepth"
+    );
+
+    private static RuleMetadata BuildRazorBanInlineEventLambdas() => new(
+        RuleId: LinterRuleIds.RAZOR_BanInlineEventLambdas,
+        DisplayName: "Inline-Event-Lambdas verbieten",
+        GetShortDescription: _ => "Mehrzeilige Inline-Event-Lambdas im Markup gefunden.",
+        Warum: "C#-Ausdruecke innerhalb von HTML-Attributen sind ein Mixed-Context, in dem Agenten regelmaessig Syntaxfehler produzieren (fehlende Klammern, falsche Anfuehrungszeichen).",
+        Alternativen:
+        [
+            "**Methoden-Referenz verwenden**: '@onclick=\"HandleClick\"' statt '@onclick=\"() => { ... }\"'.",
+            "**Triviales Einzeiler-Lambda** (erlaubt): '@onclick=\"() => Count++\"' ohne Semikolon und ohne Block.",
+            "**Logik in Code-Behind extrahieren**: Methode in '.razor.cs' anlegen und referenzieren."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Inline-Lambda durch Methoden-Referenz oder Code-Behind-Methode ersetzen.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineEventLambdas,
+        IsMetric: false,
+        IncludeInCursorRules: true,
+        ConfigKeyHint: "rules.json → Web.Razor.BanInlineEventLambdas"
+    );
+
+    private static RuleMetadata BuildRazorMaxControlFlowBlocks() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxControlFlowBlocks,
+        DisplayName: "Razor Control-Flow-Komplexitaet",
+        GetShortDescription: c => $"Zu viele Control-Flow-Bloecke (max. {c.Web.Razor.MaxControlFlowBlocks}).",
+        Warum: "Viele @if/@foreach/@switch-Bloecke signalisieren zu viel konditionale Render-Logik. Agenten koennen bei komplexem konditionalen Rendering nicht vorhersagen, welche HTML-Elemente tatsaechlich ausgegeben werden.",
+        Alternativen:
+        [
+            "**Teilbereiche extrahieren**: Konditionale Bereiche in eigene Komponenten mit klar definierten Parametern auslagern.",
+            "**Render-Fragments verwenden**: '@ChildContent' / 'RenderFragment' fuer flexible Wiederverwendung.",
+            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxControlFlowBlocks *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Teilbereiche in eigenstaendige Komponenten extrahieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxControlFlowBlocks > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxControlFlowBlocks,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxControlFlowBlocks"
+    );
+
+    private static RuleMetadata BuildRazorMaxForeachNestingDepth() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxForeachNestingDepth,
+        DisplayName: "Razor @foreach-Verschachtelung",
+        GetShortDescription: c => $"@foreach-Verschachtelungstiefe zu hoch (max. {c.Web.Razor.MaxForeachNestingDepth} Ebenen).",
+        Warum: "Verschachtelte @foreach-Schleifen multiplizieren die Agent-Komplexitaet bei der Render-Vorhersage. Jede Ebene fuegt eine Collection-Iteration hinzu, die der Agent konsistent durchdenken muss.",
+        Alternativen:
+        [
+            "**Innere Schleife in Kind-Komponente extrahieren**: '<InnerLoop Items=\"@innerItems\" />' statt direkt verschachteln.",
+            "**Daten vorab aggregieren**: 'GroupBy' / 'SelectMany' in der Code-Behind-Datei und das Ergebnis in einer flachen Schleife rendern.",
+            "**Suppression** (bei notwendiger Hierarchie): `@* ainetlinter-disable RAZOR_MaxForeachNestingDepth *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Innere Schleife in eigene Komponente extrahieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxForeachNestingDepth > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxForeachNestingDepth,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxForeachNestingDepth"
+    );
+
+    private static RuleMetadata BuildRazorMaxComponentParameterCount() => new(
+        RuleId: LinterRuleIds.RAZOR_MaxComponentParameterCount,
+        DisplayName: "Razor Komponenten-Parameter",
+        GetShortDescription: c => $"Komponentenaufruf hat zu viele Parameter (max. {c.Web.Razor.MaxComponentParameterCount}).",
+        Warum: "Ein Komponenten-Aufruf mit vielen Parametern ist das Markup-Aequivalent zu 'MaxMethodParameterCount'. Agenten verlieren die Zuordnung von Werten zu Parametern und generieren haeufig falsch geordnete oder vergessene Bindings.",
+        Alternativen:
+        [
+            "**Parameter-Objekt einfuehren**: Verwandte Parameter in einem 'record' buendeln ('<MyComp Config=\"@cfg\" />').",
+            "**Oeffentliche API reduzieren**: Nicht zwingend benoetigte Properties aus der Komponente entfernen.",
+            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxComponentParameterCount *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Verwandte Parameter in Parameter-Objekt zusammenfassen.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxComponentParameterCount > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Razor.MaxComponentParameterCount,
+        ConfigKeyHint: "rules.json → Web.Razor.MaxComponentParameterCount"
+    );
+
+    private static RuleMetadata BuildRazorBanInlineTernaryInAttributes() => new(
+        RuleId: LinterRuleIds.RAZOR_BanInlineTernaryInAttributes,
+        DisplayName: "Ternary in Attributen verbieten",
+        GetShortDescription: _ => "Ternary-Ausdruck im HTML-Attributwert gefunden.",
+        Warum: "Ternary-Ausdruecke innerhalb von HTML-Attributwerten erzeugen Mixed-Context zwischen HTML-String-Kontext und C#-Expressions-Kontext. Agenten muessen beide Kontexte gleichzeitig aufloesen und produzieren typische Fehler (fehlende Anfuehrungszeichen, vertauschte Klammern).",
+        Alternativen:
+        [
+            "**Attributwert in Property berechnen**: 'private string CssClass => isActive ? \"base active\" : \"base\";' und dann 'class=\"@CssClass\"'.",
+            "**Hilfsmethode verwenden**: 'GetCssClass(bool isActive)' in der Code-Behind-Datei.",
+            "**Suppression** (bei trivialen Bedingungen): `@* ainetlinter-disable RAZOR_BanInlineTernaryInAttributes *@`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "warning",
+        CursorHint: "Ternary-Ausdruck in Property oder Methode der Code-Behind-Datei extrahieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineTernaryInAttributes,
+        IsMetric: false,
+        IncludeInCursorRules: true,
+        ConfigKeyHint: "rules.json → Web.Razor.BanInlineTernaryInAttributes"
     );
 }
