@@ -11,6 +11,7 @@ public sealed record LinterConfig
     public TestSentinelConfig TestSentinel { get; init; } = new();
     public UiSeparationConfig UiSeparation { get; init; } = new();
     public FileFiltersConfig FileFilters { get; init; } = new();
+    public WebConfig Web { get; init; } = new();
     public IReadOnlyDictionary<string, RuleMetadataEntry> RuleMetadata { get; init; }
         = new Dictionary<string, RuleMetadataEntry>();
     public IReadOnlyCollection<NamespaceRule> ForbiddenNamespaceDependencies { get; init; } = Array.Empty<NamespaceRule>();

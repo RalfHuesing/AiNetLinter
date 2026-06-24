@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.57 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.58 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -32,6 +32,8 @@ Auto-generiert durch AiNetLinter 1.0.57 aus `rules.json`. Neuen Produktionscode 
 | `MaxPartialClassFiles` | **2** | 0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker). |
 | `MaxPublicMembersPerType` | **15** | 0 = deaktiviert; Typ aufteilen oder Member kapseln. |
 | `MaxLinqChainLength` | **0** | 0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen. |
+| `CSS_MaxCssLineCount` | **300** | CSS-Datei splitten oder in Scoped CSS ueberfuehren. |
+| `CSS_MaxCssSelectorComplexity` | **3** | Maximal 3 Selektor-Segmente; Scoped CSS nutzen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

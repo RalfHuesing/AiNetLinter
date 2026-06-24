@@ -9,6 +9,7 @@ using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
 using AiNetLinter.Metrics;
 using AiNetLinter.Suppression;
+using AiNetLinter.Web;
 using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Core;
@@ -60,6 +61,14 @@ internal static class PostAnalysisChecks
         RunMaxDirectoryChildrenCheck(state.Violations, config);
         sw.Stop();
         p.RecordPostAnalysisStep("MaxDirectoryChildren", sw.Elapsed.TotalMilliseconds);
+
+        if (config.Web.IsEnabled)
+        {
+            sw.Restart();
+            WebFileSeparationChecker.Run(state, config);
+            sw.Stop();
+            p.RecordPostAnalysisStep("WebFileSeparation", sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     private static void RunTestSentinel(AnalysisState state, LinterConfig config)

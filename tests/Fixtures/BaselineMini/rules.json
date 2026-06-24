@@ -258,6 +258,20 @@
     ],
     "SkipGeneratedCodeAttribute": false
   },
+  "Web": {
+    "IsEnabled": false,
+    "Css": {
+      "MaxCssLineCount": 300,
+      "PreferScopedCss": true,
+      "PreferScopedCssMinRuleCount": 5,
+      "MaxCssSelectorComplexity": 3,
+      "ExemptPaths": [
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.css"
+      ]
+    }
+  },
   "RuleMetadata": {},
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {},
