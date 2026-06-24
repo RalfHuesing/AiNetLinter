@@ -169,17 +169,18 @@ internal static partial class RuleRegistry
         new(
             RuleId: "EnforceSemanticNaming",
             DisplayName: "Semantische Namensgebung",
-            GetShortDescription: c => "Generische Namen (data, temp, obj) sind in oeffentlichen Signaturen verboten.",
-            Warum: "Generische Namen (`data`, `temp`, `obj`) in öffentlichen Signaturen geben keine Information über den Zweck — Agenten wählen falsche Variablen.",
+            GetShortDescription: c => "Generische Namen (data, temp, obj) und werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) sind verboten.",
+            Warum: "Generische Namen (`data`, `temp`, `obj`) oder werkzeug-generierte Dummy-Namen (`MyRegex`, `NewMethod`, `Class1`) geben keine Information über den Zweck — Agenten wählen falsche Variablen oder generieren fehlerhaften Code.",
             Alternativen:
             [
                 "**Sprechende Namen**: `data` → `userRecord`, `temp` → `formattedLabel`, `obj` → `siteConfiguration`.",
+                "**Werkzeug-Dummy-Namen ersetzen**: `MyRegex()` → `EmailValidatorRegex()`, `NewMethod()` → `ParseMetadata()`, `Class1` → `JsonConfigurationParser`.",
                 "**Typ als Namenspräfix**: Wenn kein fachlicher Name greifbar — zumindest den Typ kodieren (`configEntry` statt `obj`)."
             ],
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Keine `data`/`temp`/`obj` in öffentlichen Signaturen.",
+            CursorHint: "Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceSemanticNaming,
             IsMetric: false,

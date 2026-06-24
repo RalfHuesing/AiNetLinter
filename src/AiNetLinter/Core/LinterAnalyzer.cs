@@ -79,6 +79,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
+        NamingChecker.CheckDummyName(node.Identifier, "Klasse", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Klasse", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Klasse", _ctx);
         SealedClassChecker.Check(node, _ctx);
@@ -97,6 +98,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
+        NamingChecker.CheckDummyName(node.Identifier, "Record", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Record", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Record", _ctx);
         ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: true, _ctx);
@@ -112,6 +114,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
+        NamingChecker.CheckDummyName(node.Identifier, "Struct", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Struct", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Struct", _ctx);
         ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: false, _ctx);
@@ -125,13 +128,21 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
+        NamingChecker.CheckDummyName(node.Identifier, "Interface", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Interface", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Interface", _ctx);
         base.VisitInterfaceDeclaration(node);
     }
 
+    public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
+    {
+        NamingChecker.CheckDummyName(node.Identifier, "Enum", _ctx);
+        base.VisitEnumDeclaration(node);
+    }
+
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
+        NamingChecker.CheckDummyName(node.Identifier, "Methode", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Methode", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Methode", _ctx);
         var isPublic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
@@ -144,12 +155,14 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
     {
+        NamingChecker.CheckDummyName(node.Identifier, "lokale Funktion", _ctx);
         AsyncVoidChecker.CheckLocalFunction(node, _ctx);
         base.VisitLocalFunctionStatement(node);
     }
 
     public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
     {
+        NamingChecker.CheckDummyName(node.Identifier, "Eigenschaft", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Eigenschaft", _ctx);
         base.VisitPropertyDeclaration(node);
     }
@@ -164,7 +177,14 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public override void VisitParameter(ParameterSyntax node)
     {
         StateChecker.CheckOutParameter(node, _ctx);
+        NamingChecker.CheckDummyName(node.Identifier, "Parameter", _ctx);
         base.VisitParameter(node);
+    }
+
+    public override void VisitVariableDeclarator(VariableDeclaratorSyntax node)
+    {
+        NamingChecker.CheckDummyName(node.Identifier, "Variable/Feld", _ctx);
+        base.VisitVariableDeclarator(node);
     }
 
     public override void VisitInvocationExpression(InvocationExpressionSyntax node)

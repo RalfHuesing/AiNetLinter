@@ -127,7 +127,8 @@
     "MaxAIContextFootprint": 2500,
     "FootprintIgnoreNamespacePrefixes": [],
     "FootprintIgnoreTypeNames": [
-      "LinterEngine"
+      "LinterEngine",
+      "NamingChecker"
     ],
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
