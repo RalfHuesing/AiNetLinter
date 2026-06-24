@@ -90,7 +90,25 @@ internal static class MaintenanceCommand
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var checksums = catalog.ComputeChecksums(outputRoot);
+
+        var configPath = args.ConfigPath;
+        if (string.IsNullOrWhiteSpace(configPath))
+        {
+            var targetDir = Directory.Exists(args.TargetPath)
+                ? args.TargetPath
+                : Path.GetDirectoryName(args.TargetPath);
+            if (!string.IsNullOrEmpty(targetDir))
+            {
+                var candidate = Path.Combine(targetDir, "rules.json");
+                if (File.Exists(candidate))
+                {
+                    configPath = candidate;
+                }
+            }
+        }
+
+        var config = LinterConfigLoader.TryLoadConfig(configPath, isRequired: false);
+        var checksums = catalog.ComputeChecksums(outputRoot, config);
 
         BaselineWriter.Write(args.CreateBaselinePath!, checksums);
 

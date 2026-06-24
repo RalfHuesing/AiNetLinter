@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.Build.Locator;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
+using AiNetLinter.Configuration;
+using AiNetLinter.Web;
 
 namespace AiNetLinter.Baseline;
 
@@ -68,7 +70,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Liefert alle gültigen Quelldateien mit relativen Pfaden.
     /// </summary>
-    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot)
+    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, LinterConfig? config = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
         var entries = new List<SourceFileEntry>();
@@ -78,17 +80,31 @@ public sealed class SourceFileCatalog : IDisposable
             AppendProjectSourceFiles(project, solutionDir, outputRoot, entries);
         }
 
+        if (config != null && config.Web.IsEnabled && !string.IsNullOrEmpty(solutionDir))
+        {
+            var request = new WebFileDiscoveryRequest(
+                FileFilters: config.FileFilters,
+                CssExemptPaths: config.Web.Css.ExemptPaths,
+                JsExemptPaths: config.Web.Js.ExemptPaths);
+
+            var webEntries = WebFileCatalog.Collect(Solution, solutionDir, request);
+            foreach (var webEntry in webEntries)
+            {
+                entries.Add(new SourceFileEntry(webEntry.AbsolutePath, webEntry.RelativePath));
+            }
+        }
+
         return entries;
     }
 
     /// <summary>
     /// Berechnet SHA-256-Checksummen für alle Quelldateien.
     /// </summary>
-    public Dictionary<string, string> ComputeChecksums(string outputRoot)
+    public Dictionary<string, string> ComputeChecksums(string outputRoot, LinterConfig? config = null)
     {
         var checksums = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var entry in GetSourceFiles(outputRoot))
+        foreach (var entry in GetSourceFiles(outputRoot, config))
         {
             checksums[entry.RelativePath] = FileChecksumCalculator.ComputeSha256Hex(entry.AbsolutePath);
         }
