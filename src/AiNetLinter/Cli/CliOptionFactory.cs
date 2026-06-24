@@ -95,7 +95,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive).",
+        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive). 'integration' erklaert die vollstaendige Projekt-Integration Schritt fuer Schritt.",
     };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")
