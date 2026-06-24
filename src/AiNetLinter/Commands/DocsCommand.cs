@@ -15,6 +15,7 @@ internal static class DocsCommand
 {
     private static readonly Dictionary<string, string> DocResources = new(StringComparer.OrdinalIgnoreCase)
     {
+        { "integration", "Docs/integration.md" },
         { "readme", "README.md" },
         { "agent-api", "Docs/agent-api.md" },
         { "configuration", "Docs/configuration.md" },

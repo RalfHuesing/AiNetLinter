@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\README.md" LogicalName="README.md" />
+    <EmbeddedResource Include="..\..\Docs\integration.md" LogicalName="Docs/integration.md" />
     <EmbeddedResource Include="..\..\Docs\agent-api.md" LogicalName="Docs/agent-api.md" />
     <EmbeddedResource Include="..\..\Docs\configuration.md" LogicalName="Docs/configuration.md" />
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
