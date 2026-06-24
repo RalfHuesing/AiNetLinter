@@ -42,7 +42,7 @@ public sealed class RazorAnalyzerTests
                 }
             }
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Counter.razor", config);
 
@@ -55,7 +55,7 @@ public sealed class RazorAnalyzerTests
     {
         var lines = Enumerable.Range(1, 350).Select(i => $"<div>Line {i}</div>");
         var razor = string.Join("\n", lines);
-        var config = RazorTestConfig.Default.With(maxLines: 300);
+        var config = new RazorConfig { MaxRazorLineCount = 300 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Huge.razor", config);
 
@@ -84,7 +84,7 @@ public sealed class RazorAnalyzerTests
                 </div>
             </div>
             """;
-        var config = RazorTestConfig.Default.With(maxNesting: 6);
+        var config = new RazorConfig { MaxMarkupNestingDepth = 6 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Deep.razor", config);
 
@@ -101,7 +101,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <button @onclick="() => { Count++; Save(); }">Click</button>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Counter.razor", config);
 
@@ -117,7 +117,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <button @onclick="() => Count++">Click</button>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Counter.razor", config);
 
@@ -134,7 +134,7 @@ public sealed class RazorAnalyzerTests
             sb.AppendLine($"@if (State{i}) {{ <p>Case {i}</p> }}");
         }
         var razor = sb.ToString();
-        var config = RazorTestConfig.Default.With(maxControlFlow: 8);
+        var config = new RazorConfig { MaxControlFlowBlocks = 8 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\ManyStates.razor", config);
 
@@ -157,7 +157,7 @@ public sealed class RazorAnalyzerTests
                 }
             }
             """;
-        var config = RazorTestConfig.Default.With(maxForeachDepth: 2);
+        var config = new RazorConfig { MaxForeachNestingDepth = 2 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Nested.razor", config);
 
@@ -174,7 +174,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <MyComp A="a" B="b" C="c" D="d" E="e" F="f" />
             """;
-        var config = RazorTestConfig.Default.With(maxComponentParams: 5);
+        var config = new RazorConfig { MaxComponentParameterCount = 5 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\TooMany.razor", config);
 
@@ -191,7 +191,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <div class="base @(flag ? "active" : "")">x</div>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Classy.razor", config);
 
@@ -206,7 +206,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <div class="@CssClass">x</div>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Classy.razor", config);
 
@@ -234,7 +234,7 @@ public sealed class RazorAnalyzerTests
                 [Parameter] public IEnumerable<TItem>? Items { get; set; }
             }
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Generic.razor", config);
 
@@ -251,7 +251,7 @@ public sealed class RazorAnalyzerTests
             <h1>Hello</h1>
             <p>No code-behind here.</p>
             """;
-        var config = RazorTestConfig.Default;
+        var config = new RazorConfig();
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Simple.razor", config);
 
@@ -276,7 +276,7 @@ public sealed class RazorAnalyzerTests
             @if (I) { <p>r</p> }
             @if (J) { <p>q</p> }
             """;
-        var config = RazorTestConfig.Default.With(maxControlFlow: 8);
+        var config = new RazorConfig { MaxControlFlowBlocks = 8 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Legacy.razor", config);
 
@@ -291,7 +291,7 @@ public sealed class RazorAnalyzerTests
         const string razor = """
             <button class="btn" type="submit" aria-label="Save" disabled="@IsLoading">Save</button>
             """;
-        var config = RazorTestConfig.Default.With(maxComponentParams: 5);
+        var config = new RazorConfig { MaxComponentParameterCount = 5 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Save.razor", config);
 
@@ -310,7 +310,7 @@ public sealed class RazorAnalyzerTests
         }
         sb.AppendLine("}");
         var razor = sb.ToString();
-        var config = RazorTestConfig.Default.With(maxCodeBlockLines: 20);
+        var config = new RazorConfig { MaxRazorCodeBlockLines = 20 };
 
         var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Counter.razor", config);
 
