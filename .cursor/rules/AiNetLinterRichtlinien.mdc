@@ -10,12 +10,19 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 > [!NOTE]
 > Die allgemeinen Code-Qualitätsmetriken, Grenzwerte und aktiven Linter-Regeln werden automatisch über die Regeldatei [AiNetLinter.mdc](AiNetLinter.mdc) synchronisiert.
 
-## 1. Architektur-Verbote (Constraints)
+## 1. Grundprinzipien (Design Philosophy)
+
+- **Monolithisch & schlank bleiben**: AiNetLinter ist und bleibt ein einzelnes, eigenständiges CLI-Tool. Keine Plugin-Architektur, kein dynamisches Laden von Erweiterungen.
+- **Statische Kompilierung bevorzugen**: Kein `AssemblyLoadContext` oder Reflection-basiertes Laden zur Laufzeit.
+- **Einfachheit vor Abstraktion**: Bevorzuge direkte, verständliche Lösungen. Abstraktion nur dort, wo sie echten Mehrwert liefert (Wiederverwendung + Verständlichkeit).
+- **Wenig Magic**: Vermeide versteckte Mechanismen, die nur durch Lesen des generierten Codes verständlich sind.
+
+## 2. Architektur-Verbote (Constraints)
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
 - **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
 - **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
 
-## 2. Windows-Umgebung & Tool-Regeln
+## 3. Windows-Umgebung & Tool-Regeln
 
 Diese Entwicklungsumgebung läuft **ausschließlich unter Windows**. Alle Shell-Befehle und Tool-Aufrufe müssen Windows-kompatibel sein.
 
@@ -57,8 +64,13 @@ dotnet test           # Tests ausführen
 dotnet run            # Starten
 ```
 
-## 3. Updates & Tests
+## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commits:** Jedes Datei-Edit-Ergebnis schließt mit `### Commit-Vorschlag` (Conventional Commit, Deutsch, imperativ).
+
+## 5. Qualitätsdrift-Prävention
+
+- **Zero-Warning-Direktive:** Beide Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
+- **Result-Pattern bevorzugen:** Fehlerfälle explizit als `Result<T>` modellieren statt Exceptions zu werfen. Exceptions nur für echte, exogene Ausnahmefälle (z. B. Netzwerkausfall, IO-Fehler). Der Linter erzwingt dies nicht — die Einhaltung liegt beim Entwickler und der KI.
