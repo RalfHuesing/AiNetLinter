@@ -1,4 +1,4 @@
-﻿---
+---
 description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)
 globs: *.cs
 alwaysApply: true
@@ -40,7 +40,7 @@ Auto-generiert durch AiNetLinter 1.0.60 aus `rules.json`. Neuen Produktionscode 
 | `RAZOR_MaxMarkupNestingDepth` | **6** | Innere Bereiche in eigene Komponenten extrahieren. |
 | `RAZOR_MaxControlFlowBlocks` | **8** | Teilbereiche in eigenstaendige Komponenten extrahieren. |
 | `RAZOR_MaxForeachNestingDepth` | **2** | Innere Schleife in eigene Komponente extrahieren. |
-| `RAZOR_MaxComponentParameterCount` | **5** | Verwandte Parameter in Parameter-Objekt zusammenfassen. |
+| `RAZOR_MaxComponentParameterCount` | **10** | Verwandte Parameter in Parameter-Objekt zusammenfassen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

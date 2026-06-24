@@ -619,7 +619,7 @@ Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase
 | `Razor.BanInlineEventLambdas`     |   Boolean    |                            `true`                             | Wenn true, sind komplexe, mehrzeilige Inline-Event-Lambdas im Markup verboten. Methoden-Referenzen oder triviale Einzeiler sind erlaubt.                                                                     |
 | `Razor.MaxControlFlowBlocks`      |   Integer    |                              `8`                              | Maximale Anzahl an `@if`, `@foreach`, `@switch` etc. Bloecken pro Datei (Komplexitaet des konditionalen Renderings). `0` = deaktiviert.                                                                      |
 | `Razor.MaxForeachNestingDepth`    |   Integer    |                              `2`                              | Maximale Verschachtelungstiefe von `@foreach`-Schleifen (Verbindung von Markup und Daten-Iteration). `0` = deaktiviert.                                                                                      |
-| `Razor.MaxComponentParameterCount`|   Integer    |                              `5`                              | Maximale Anzahl an Parametern bei Komponenten-Aufrufen (HTML-Attribute ausgenommen). Verhindert unuebersichtliche Aufrufe. `0` = deaktiviert.                                                                 |
+| `Razor.MaxComponentParameterCount`|   Integer    |                              `10`                             | Maximale Anzahl an Parametern bei Komponenten-Aufrufen (HTML-Attribute ausgenommen). Verhindert unuebersichtliche Aufrufe. `0` = deaktiviert.                                                                 |
 | `Razor.BanInlineTernaryInAttributes`|  Boolean   |                            `true`                             | Wenn true, sind Ternary-Ausdruecke in HTML-Attributwerten (wie `class="base @(flag ? "active" : "")"`) verboten (Mixed-Context-Fehler).                                                                      |
 
 #### Regeln
@@ -722,7 +722,7 @@ window.myLegacyFunction = function () {
     "BanInlineEventLambdas": true,
     "MaxControlFlowBlocks": 8,
     "MaxForeachNestingDepth": 2,
-    "MaxComponentParameterCount": 5,
+    "MaxComponentParameterCount": 10,
     "BanInlineTernaryInAttributes": true
   }
 }

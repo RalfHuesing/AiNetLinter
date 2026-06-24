@@ -1,0 +1,51 @@
+@namespace San.smart.Planner.Platform.Components.Admin.Ai
+@using San.smart.Planner.Platform.Handlers.Admin.Ai
+
+<div class="ai-chat-panel__composer">
+    <MudSelect T="AdminAiInteractionMode"
+               Class="ai-chat-panel__mode-select mb-2"
+               Label="Interaktionsmodus"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               FullWidth="true"
+               Disabled="@(!Coordinator.CanSelectInteractionMode)"
+               Value="Workspace.InteractionMode"
+               ValueChanged="OnInteractionModeChangedAsync"
+               ToStringFunc="@FormatInteractionMode">
+        <MudSelectItem Value="AdminAiInteractionMode.Ask">Nur fragen (Ask)</MudSelectItem>
+        <MudSelectItem Value="AdminAiInteractionMode.Act">Änderungen anwenden (Act)</MudSelectItem>
+    </MudSelect>
+
+    <MudTextField T="string"
+                  Value="Coordinator.DraftText"
+                  ValueChanged="OnDraftTextChangedAsync"
+                  Label="Nachricht"
+                  Variant="Variant.Outlined"
+                  Lines="2"
+                  Immediate="true"
+                  Disabled="@(!Coordinator.CanSend)"
+                  OnKeyDown="OnKeyDownAsync" />
+    <MudStack Row="true" Spacing="1" Class="mt-2" AlignItems="AlignItems.Center">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Small"
+                   Class="site-component-toolbar-button"
+                   StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="@(!Coordinator.CanSend || string.IsNullOrWhiteSpace(Coordinator.DraftText))"
+                   OnClick="OnSendRequestedAsync">
+            Senden
+        </MudButton>
+        @if (ShowDebugAssistantButton)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="site-component-toolbar-button"
+                       StartIcon="@Icons.Material.Filled.BugReport"
+                       Disabled="@(!Coordinator.CanOperate || !Coordinator.HasSelectedSession || Coordinator.IsSendingDebugAssistant)"
+                       OnClick="OnDebugAssistantRequestedAsync">
+                Snapshot-Test
+            </MudButton>
+        }
+    </MudStack>
+</div>

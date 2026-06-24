@@ -201,10 +201,10 @@ public sealed record RazorConfig
     public int MaxForeachNestingDepth { get; init; } = 2;
 
     /// <summary>
-    /// Maximale Anzahl Parameter an einem Komponenten-Aufruf (Standard: 5).
+    /// Maximale Anzahl Parameter an einem Komponenten-Aufruf (Standard: 10).
     /// Markup-Aequivalent zu MaxMethodParameterCount; verhindert falsch geordnete Bindings.
     /// </summary>
-    public int MaxComponentParameterCount { get; init; } = 5;
+    public int MaxComponentParameterCount { get; init; } = 10;
 
     /// <summary>
     /// Wenn true (Standard), werden Ternary-Ausdruecke in HTML-Attributwerten
