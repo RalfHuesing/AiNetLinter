@@ -64,7 +64,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 ## general
 - **EnforceSealedClasses** — `sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.
 - **EnforcePascalCase** — Öffentliche Typen/Methoden/Properties: PascalCase.
-- **EnforceSemanticNaming** — Keine `data`/`temp`/`obj` in öffentlichen Signaturen.
+- **EnforceSemanticNaming** — Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.
 - **EnforceNullableEnable** — `#nullable enable` am Dateianfang jeder `.cs`-Datei.
 - **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
 - **AllowCancellationShutdownCatch** — `OperationCanceledException` beim Shutdown abfangen erlaubt.

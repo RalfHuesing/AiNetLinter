@@ -7,14 +7,35 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using System.Text.RegularExpressions;
+
 namespace AiNetLinter.Core.Checkers;
 
-internal static class NamingChecker
+internal static partial class NamingChecker
 {
     private static readonly HashSet<string> ForbiddenNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "data", "temp", "obj", "val", "tmp", "item", "param"
     };
+
+    [GeneratedRegex(@"^(?:s_|m_|_)?(?:MyRegex|NewMethod|Class1|Interface1|Struct1|Record1|MyClass|MyInterface|MyStruct|MyRecord)\d*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DummyNameRegex();
+
+    internal static void CheckDummyName(SyntaxToken identifier, string kind, CheckerContext ctx)
+    {
+        if (!ctx.Config.Global.EnforceSemanticNaming) return;
+
+        var name = identifier.Text;
+        if (string.IsNullOrEmpty(name)) return;
+
+        if (DummyNameRegex().IsMatch(name))
+        {
+            ctx.ReportViolation(identifier, new ViolationDescription(
+                nameof(ctx.Config.Global.EnforceSemanticNaming),
+                $"Der Name '{name}' ({kind}) ist ein generischer Platzhalter- oder Werkzeugname.",
+                "Ersetze den Bezeichner durch einen aussagekraeftigen Namen, der den Zweck des Elements beschreibt."));
+        }
+    }
 
     internal static void CheckPascalCase(SyntaxToken identifier, string kind, CheckerContext ctx)
     {
