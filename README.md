@@ -65,6 +65,7 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 | **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen praxistaugliche Konfigurationen ohne eine Einheitslösung für alle Projekttypen. |
 | **Compound-Suppressions** (`CompoundSuppressions`) | Ermöglicht kontextabhängige Regelunterdrückung und unterstützt `SeverityOverride: "warning"` — Verstöße in Szenario A (Bedingungen erfüllt, RelaxedLimit überschritten) können auf Warning herabgestuft werden, ohne den Build zu blockieren. |
 | **LINQ-Kettenlänge** (`MaxLinqChainLength`) | Begrenzt die Anzahl verketteter LINQ-Methoden pro Ausdruckskette, um kognitive Last zu reduzieren. Durch eine konfigurierbare Whitelist werden Builder-Ketten ignoriert. |
+| **CSS-Linting** (`CSS_MaxCssLineCount`, `CSS_PreferScopedCss`, `CSS_MaxCssSelectorComplexity`) | Web-Asset-Analyse via ExCSS (Phase 1). Begrenzt CSS-Dateigrößen, mahnt globale Stylesheets zugunsten von Blazor Scoped CSS (`.razor.css`) ab und verhindert tief geschachtelte Selektoren — alle drei Faktoren erhöhen die Fehlerrate autonomer Agenten bei CSS-Edits. Opt-in über `Web.IsEnabled = true`. |
 
 ---
 

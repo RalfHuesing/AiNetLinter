@@ -103,9 +103,11 @@ public sealed class CssAnalyzerTests
         Assert.DoesNotContain(violations, v => v.RuleName == "CSS_PreferScopedCss");
     }
 
-    // Szenario F — Suppression-Kommentar unterdrueckt Selector-Komplexitaet
+    // Szenario F — CssAnalyzer meldet Roh-Violation trotz Suppression-Kommentar.
+    // Die Suppression wird eine Ebene hoeher im WebFileSeparationChecker angewandt (WebSuppressionHelper).
+    // Der Analyzer selbst ist suppression-agnostisch — er liefert immer alle Violations.
     [Fact]
-    public void Analyze_NoMaxCssSelectorComplexity_WhenSuppressed()
+    public void Analyze_StillReportsViolation_SuppressionIsHandledByChecker()
     {
         const string css = """
             /* ainetlinter-disable CSS_MaxCssSelectorComplexity */
@@ -115,10 +117,6 @@ public sealed class CssAnalyzerTests
 
         var violations = CssAnalyzer.Analyze(css, "C:\\app\\wwwroot\\css\\x.css", config);
 
-        // MaxCssLineCount + Parser-basierte Checks werden durchlaufen; die Suppression
-        // wird erst im WebFileSeparationChecker angewandt — CssAnalyzer selbst meldet hier
-        // die Roh-Violation. Verifikation der Suppression erfolgt im WebFileSeparationCheckerTests.
-        // Hier nur bestaetigen, dass der Analyzer die Violation produziert:
         Assert.Single(violations);
         Assert.Equal("CSS_MaxCssSelectorComplexity", violations[0].RuleName);
     }
