@@ -146,7 +146,7 @@ public sealed class AgentFeaturesTests
     }
 
     [Fact]
-    public void Format_GuidanceInHeaderNotInDetailLine()
+    public void Format_GuidanceIsPrintedInDetailLine()
     {
         var violations = new[]
         {
@@ -162,14 +162,14 @@ public sealed class AgentFeaturesTests
 
         var result = ViolationMarkdownFormatter.Format(violations, @"C:\repo", CreateConfig());
 
-        // Rule legend appears in Regellegende section (not duplicated per violation line)
+        // Rule legend appears in Regellegende section
         Assert.Contains("### MaxCognitiveComplexity", result);
         Assert.Contains("**Warum:**", result);
         // Violation appears compactly in file section
         Assert.Contains("Z.15 MaxCognitiveComplexity", result);
         Assert.Contains("12 > 7", result);
-        // Guidance text is NOT duplicated in the violation line itself
-        Assert.DoesNotContain("Vereinfache verschachtelte", result.Substring(result.IndexOf("## Violations nach Datei", StringComparison.Ordinal)));
+        // Guidance text is printed under the violation line
+        Assert.Contains("Empfehlung: Vereinfache verschachtelte", result.Substring(result.IndexOf("## Violations nach Datei", StringComparison.Ordinal)));
     }
 
     [Fact]

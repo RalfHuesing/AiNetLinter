@@ -354,7 +354,7 @@ internal static class ComplexityChecker
                 ctx.ReportViolation(switchExpr, new ViolationDescription(
                     LinterRuleIds.MaxSwitchArms,
                     $"Switch-Expression hat {count} Arms (erlaubt: {limit}).",
-                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen."));
+                    $"Refaktoriere zu einem flachen Dictionary-Dispatch oder einer Registry-Lookup-Tabelle (Func/Action). Vermeide verschachtelte Switch-Kaskaden, da dies die kognitive Komplexität für KIs erhöht. Alternativ: 'MaxSwitchArmsExemptTypes' nutzen."));
         }
 
         // Switch-Statements: Labels zaehlen (nicht Sections — eine Section kann mehrere Labels haben)
@@ -365,7 +365,7 @@ internal static class ComplexityChecker
                 ctx.ReportViolation(switchStmt, new ViolationDescription(
                     LinterRuleIds.MaxSwitchArms,
                     $"Switch-Statement hat {count} Labels (erlaubt: {limit}).",
-                    $"Refaktoriere zu einem Dictionary-Dispatch oder extrahiere das Switch in eine dedizierte Dispatcher-Methode. Alternativ: 'MaxSwitchArmsExemptTypes' fuer legitime State-Machines nutzen."));
+                    $"Refaktoriere zu einem flachen Dictionary-Dispatch oder einer Registry-Lookup-Tabelle (Func/Action). Vermeide verschachtelte Switch-Kaskaden, da dies die kognitive Komplexität für KIs erhöht. Alternativ: 'MaxSwitchArmsExemptTypes' nutzen."));
         }
     }
 }

@@ -444,4 +444,30 @@ public sealed class ViolationMarkdownFormatterTests
         Assert.DoesNotContain("[warn]", result);
         Assert.DoesNotContain("`[warn]`-Violations sind durch CompoundSuppression herabgestuft", result);
     }
+
+    [Fact]
+    public void Format_IncludesGuidanceInRegularViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxSwitchArms", "Switch-Statement hat 23 Labels")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("Empfehlung: Guidance text", result);
+    }
+
+    [Fact]
+    public void Format_IncludesGuidanceInStructuralViolations()
+    {
+        var violations = new[]
+        {
+            CreateViolation(@"C:\Projects\MyApp\src\Foo.cs", 5, "MaxPartialClassFiles", "Auf 5 Dateien verteilt")
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("Empfehlung: Guidance text", result);
+    }
 }
