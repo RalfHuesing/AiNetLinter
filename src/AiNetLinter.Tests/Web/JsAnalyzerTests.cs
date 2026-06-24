@@ -98,7 +98,7 @@ public sealed class JsAnalyzerTests
         Assert.Equal("JS_EnforceJsModules", violations[0].RuleName);
     }
 
-    // Szenario F — Ungueltiges JS → JS_SyntaxError, kein Crash.
+    // Szenario F — Ungueltiges JS → JS_SyntaxError, kein Crash, korrekte Zeilennummer.
     [Fact]
     public void Analyze_ReportsSyntaxError_ForInvalidJs()
     {
@@ -110,6 +110,27 @@ public sealed class JsAnalyzerTests
         Assert.NotEmpty(violations);
         Assert.Equal("JS_SyntaxError", violations[0].RuleName);
         Assert.Contains("Syntax-Fehler", violations[0].Details);
+        Assert.Equal(1, violations[0].LineNumber); // Fehler liegt in Zeile 1
+    }
+
+    // Szenario F (Variante) — Syntax-Fehler in Zeile 3 → LineNumber korrekt uebermittelt.
+    // Kein export: ParseModule scheitert an Zeile 3, ParseScript ebenfalls an Zeile 3.
+    // export-Statements wuerden ParseScript bereits an Zeile 1 scheitern lassen.
+    [Fact]
+    public void Analyze_ReportsSyntaxError_WithCorrectLineNumber()
+    {
+        const string js = """
+            function a() {}
+            function b() {}
+            const x = ;
+            """;
+        var config = NewJsConfig();
+
+        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\broken3.js", config);
+
+        Assert.NotEmpty(violations);
+        Assert.Equal("JS_SyntaxError", violations[0].RuleName);
+        Assert.Equal(3, violations[0].LineNumber);
     }
 
     // Szenario G — Datei mit `export` wird von ParseScript abgelehnt, ParseModule gelingt.
