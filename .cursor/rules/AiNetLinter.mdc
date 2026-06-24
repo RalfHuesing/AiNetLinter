@@ -35,6 +35,12 @@ Auto-generiert durch AiNetLinter 1.0.58 aus `rules.json`. Neuen Produktionscode 
 | `CSS_MaxCssLineCount` | **300** | CSS-Datei splitten oder in Scoped CSS ueberfuehren. |
 | `CSS_MaxCssSelectorComplexity` | **3** | Maximal 3 Selektor-Segmente; Scoped CSS nutzen. |
 | `JS_MaxJsLineCount` | **150** | JavaScript-Datei aufteilen oder Logik nach C# migrieren. |
+| `RAZOR_MaxRazorLineCount` | **300** | Razor-Komponente aufteilen oder Teilbereiche extrahieren. |
+| `RAZOR_MaxRazorCodeBlockLines` | **20** | @code-Block in Code-Behind-Datei (.razor.cs) verschieben. |
+| `RAZOR_MaxMarkupNestingDepth` | **6** | Innere Bereiche in eigene Komponenten extrahieren. |
+| `RAZOR_MaxControlFlowBlocks` | **8** | Teilbereiche in eigenstaendige Komponenten extrahieren. |
+| `RAZOR_MaxForeachNestingDepth` | **2** | Innere Schleife in eigene Komponente extrahieren. |
+| `RAZOR_MaxComponentParameterCount` | **5** | Verwandte Parameter in Parameter-Objekt zusammenfassen. |
 
 ## Compound Suppressions (kontextabhängige Limiten)
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:

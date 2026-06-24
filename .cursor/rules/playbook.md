@@ -17,23 +17,26 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 - **without:** 1 mal deaktiviert.
   *Bedeutung:* Regel 'without'.
+- **RAZOR_MaxControlFlowBlocks:** 1 mal deaktiviert.
+  *Bedeutung:* Zu viele Control-Flow-Bloecke (max. 8).
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 217 / 235 (92 %)
-- **Verstösse nur wave-ready (default rules):** 0
+- **Wave-ready Dateien:** 221 / 239 (92 %)
+- **Verstösse nur wave-ready (default rules):** 7
 - **Top-Ordner wave-ready-Verstöße:**
-  - Keine offenen Verstöße in wave-ready Dateien.
+  - `src/AiNetLinter.Tests/Web/`: 4
+  - `src/AiNetLinter/Web/`: 3
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 132 files, median Footprint 75 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 102 files, median Footprint 121 LOC, 12× disable-all
+- **src/AiNetLinter/**: 134 files, median Footprint 76 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 104 files, median Footprint 124 LOC, 12× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| - | 0 | Keine offenen Verstöße |
+| agent-context | 7 | MaxCognitiveComplexity, MaxCyclomaticComplexity, MaxBoolParameterCount, MaxMethodParameterCount |
 

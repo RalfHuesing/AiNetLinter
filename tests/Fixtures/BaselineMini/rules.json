@@ -279,6 +279,16 @@
         "**/node_modules/**",
         "**/*.min.js"
       ]
+    },
+    "Razor": {
+      "MaxRazorLineCount": 300,
+      "MaxRazorCodeBlockLines": 20,
+      "MaxMarkupNestingDepth": 6,
+      "BanInlineEventLambdas": true,
+      "MaxControlFlowBlocks": 8,
+      "MaxForeachNestingDepth": 2,
+      "MaxComponentParameterCount": 5,
+      "BanInlineTernaryInAttributes": true
     }
   },
   "RuleMetadata": {},
