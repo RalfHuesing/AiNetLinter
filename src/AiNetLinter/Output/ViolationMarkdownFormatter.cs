@@ -181,13 +181,18 @@ public static class ViolationMarkdownFormatter
     {
         var path = PathNormalizer.ToRelative(outputRoot, v.FilePath);
         sb.Append($"- {path}:{v.LineNumber}\n");
-        if (string.IsNullOrWhiteSpace(v.Details)) return;
-
-        foreach (var line in v.Details.Split('\n'))
+        if (!string.IsNullOrWhiteSpace(v.Details))
         {
-            var trimmed = line.TrimEnd();
-            if (!string.IsNullOrEmpty(trimmed))
-                sb.Append($"  {trimmed}\n");
+            foreach (var line in v.Details.Split('\n'))
+            {
+                var trimmed = line.TrimEnd();
+                if (!string.IsNullOrEmpty(trimmed))
+                    sb.Append($"  {trimmed}\n");
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(v.Guidance))
+        {
+            sb.Append($"  Empfehlung: {v.Guidance.Trim()}\n");
         }
     }
 
@@ -242,6 +247,10 @@ public static class ViolationMarkdownFormatter
                 ? " [warn]" : string.Empty;
             var detail = (v.Details ?? string.Empty).Split('\n')[0].TrimEnd();
             sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag}{warnTag} — {detail}\n");
+            if (!string.IsNullOrWhiteSpace(v.Guidance))
+            {
+                sb.Append($"  Empfehlung: {v.Guidance.Trim()}\n");
+            }
         }
     }
 }
