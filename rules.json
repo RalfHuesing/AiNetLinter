@@ -371,7 +371,10 @@
         "EnforceSealedClasses": false
       },
       "Metrics": {
+        "MaxMethodParameterCount": 10,
+        "MaxMethodParameterCountInTestFiles": 10,
         "MaxMethodLineCount": 100,
+        "MaxBoolParameterCount": 3,
         "MaxPublicMembersPerTypeExemptSuffixes": [
           "Extensions",
           "Mapper",

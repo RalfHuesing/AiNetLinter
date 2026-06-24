@@ -604,7 +604,7 @@ Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase
 
 | Option                            |     Typ      |                            Default                            | Beschreibung                                                                                                                                                                                                 |
 | :-------------------------------- | :----------: | :-----------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IsEnabled`                       |   Boolean    |                            `false`                            | Aktiviert das gesamte Web-Modul (CSS, JS, spaeter Razor). Master-Switch.                                                                                                                                     |
+| `IsEnabled`                       |   Boolean    |                            `false`                            | Aktiviert das gesamte Web-Modul (CSS, JS, Razor). Master-Switch.                                                                                                                                             |
 | `Css.MaxCssLineCount`             |   Integer    |                             `300`                             | Maximale Zeilenanzahl pro CSS-Datei. Verhindert "Lost in the Middle" in grossen monolithischen Stylesheets. `0` = deaktiviert.                                                                               |
 | `Css.PreferScopedCss`             |   Boolean    |                            `true`                             | Wenn true, werden globale CSS-Dateien mit vielen Regeln zugunsten von Scoped CSS (`.razor.css`) abgemaahnt (Butterfly-Effekt).                                                                               |
 | `Css.PreferScopedCssMinRuleCount` |   Integer    |                              `5`                              | Schwellenwert: ab dieser Anzahl Stil-Regeln in einer globalen CSS-Datei wird `CSS_PreferScopedCss` ausgeloest. CSS-Dateien mit weniger Regeln (Resets, Custom Properties, `@font-face`) sind legitim global. |
@@ -613,6 +613,14 @@ Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase
 | `Js.MaxJsLineCount`               |   Integer    |                             `150`                             | Maximale Zeilenanzahl pro JavaScript-Datei. Verhindert "Lost in the Middle" in grossen monolithischen JS-Interop-Dateien. Komplexe Logik gehoert in C#. `0` = deaktiviert.                                   |
 | `Js.EnforceJsModules`             |   Boolean    |                            `true`                             | Wenn true, muessen JS-Dateien als ES6-Modul aufgebaut sein (`export`-Statement vorhanden) und duerfen keine `window.*`-Zuweisungen enthalten.                                                                |
 | `Js.ExemptPaths`                  | String-Array | `["**/wwwroot/lib/**", "**/node_modules/**", "**/*.min.js"]`  | Glob-Muster fuer Pfade, die von der JS-Analyse ausgeschlossen werden (z. B. jQuery, Bootstrap-Bundle, `*.min.js`).                                                                                           |
+| `Razor.MaxRazorLineCount`         |   Integer    |                             `300`                             | Maximale Zeilenanzahl pro Razor-Datei. Verhindert "Lost in the Middle" bei grossen Komponenten. `0` = deaktiviert.                                                                                           |
+| `Razor.MaxRazorCodeBlockLines`    |   Integer    |                             `20`                              | Maximale Zeilenanzahl fuer `@code`-Bloecke in `.razor`-Dateien (Guard-Regel fuer BlazorRequireCodeBehind). `0` = deaktiviert.                                                                                |
+| `Razor.MaxMarkupNestingDepth`     |   Integer    |                              `6`                              | Maximale Tiefe von HTML-Verschachtelungen (HTML-Elemente und Blazor-Komponenten zaehlen). Verhindert Tag-Mismatch-Halluzinationen bei KIs. `0` = deaktiviert.                                                 |
+| `Razor.BanInlineEventLambdas`     |   Boolean    |                            `true`                             | Wenn true, sind komplexe, mehrzeilige Inline-Event-Lambdas im Markup verboten. Methoden-Referenzen oder triviale Einzeiler sind erlaubt.                                                                     |
+| `Razor.MaxControlFlowBlocks`      |   Integer    |                              `8`                              | Maximale Anzahl an `@if`, `@foreach`, `@switch` etc. Bloecken pro Datei (Komplexitaet des konditionalen Renderings). `0` = deaktiviert.                                                                      |
+| `Razor.MaxForeachNestingDepth`    |   Integer    |                              `2`                              | Maximale Verschachtelungstiefe von `@foreach`-Schleifen (Verbindung von Markup und Daten-Iteration). `0` = deaktiviert.                                                                                      |
+| `Razor.MaxComponentParameterCount`|   Integer    |                              `5`                              | Maximale Anzahl an Parametern bei Komponenten-Aufrufen (HTML-Attribute ausgenommen). Verhindert unuebersichtliche Aufrufe. `0` = deaktiviert.                                                                 |
+| `Razor.BanInlineTernaryInAttributes`|  Boolean   |                            `true`                             | Wenn true, sind Ternary-Ausdruecke in HTML-Attributwerten (wie `class="base @(flag ? "active" : "")"`) verboten (Mixed-Context-Fehler).                                                                      |
 
 #### Regeln
 
@@ -625,10 +633,18 @@ Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase
 | `JS_MaxJsLineCount`            |  error   | agent-context | JavaScript-Datei ueberschreitet das Zeilenlimit. Empfehlung: Logik nach C# migrieren oder Datei aufteilen.                                  |
 | `JS_EnforceJsModules`          |  error   | agent-context | JavaScript-Datei ist kein ES6-Modul oder nutzt das globale `window`-Objekt. Empfehlung: `export` verwenden, `window`-Zuweisungen vermeiden. |
 | `JS_SyntaxError`               |  error   |    general    | JavaScript-Datei konnte nicht geparst werden (Syntax-Fehler). Empfehlung: Klammern / Statements korrigieren.                                |
+| `RAZOR_MaxRazorLineCount`         |  error   | agent-context | Razor-Datei ueberschreitet das Zeilenlimit. Empfehlung: Eigenstaendige UI-Bereiche in separate Blazor-Komponenten extrahieren.               |
+| `RAZOR_MaxRazorCodeBlockLines`    | warning  | agent-context | `@code`-Block hat zu viele Zeilen. Empfehlung: Verschiebe die C#-Logik in die Code-Behind-Datei (`.razor.cs`).                                |
+| `RAZOR_MaxMarkupNestingDepth`     | warning  | agent-context | HTML-Verschachtelungstiefe zu hoch. Empfehlung: Innere Bereiche in eigenstaendige Blazor-Komponenten extrahieren.                           |
+| `RAZOR_BanInlineEventLambdas`     | warning  | agent-context | Inline-Event-Lambda in Attribut ist zu komplex. Empfehlung: Logik in eine Methode in der Code-Behind-Datei verschieben.                       |
+| `RAZOR_MaxControlFlowBlocks`      | warning  | agent-context | Zu viele Control-Flow-Bloecke. Empfehlung: Teilbereiche in eigenstaendige Komponenten mit klar definierten Eingabe-Parametern auslagern.     |
+| `RAZOR_MaxForeachNestingDepth`    | warning  | agent-context | `@foreach`-Verschachtelungstiefe zu hoch. Empfehlung: Innere Schleife in eine Kind-Komponente extrahieren.                                   |
+| `RAZOR_MaxComponentParameterCount` | warning  | agent-context | Komponentenaufruf hat zu viele Parameter. Empfehlung: Parameter in ein Parameter-Objekt zusammenfassen oder API reduzieren.                   |
+| `RAZOR_BanInlineTernaryInAttributes` | warning | agent-context | Ternary-Ausdruck im Attributwert gefunden. Empfehlung: Wert in einer Property der Code-Behind-Datei vorab berechnen.                         |
 
 #### Suppression
 
-In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dateien der klassische JavaScript-Kommentar:
+In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dateien der klassische JavaScript-Kommentar und in `.razor`-Dateien die Razor-Kommentar-Syntax:
 
 ```css
 /* ainetlinter-disable CSS_MaxCssLineCount */
@@ -660,6 +676,20 @@ window.myLegacyFunction = function () {
 // Deaktiviert alle Regeln fuer den Rest der Datei
 ```
 
+```razor
+@* ainetlinter-disable RAZOR_MaxMarkupNestingDepth *@
+<div class="outer">
+    <div class="inner-1">
+        <div class="inner-2">
+            @* Semantisch notwendige Verschachtelung fuer ARIA-Struktur *@
+        </div>
+    </div>
+</div>
+
+@* ainetlinter-disable all *@
+@* Deaktiviert alle Regeln fuer den Rest der Datei *@
+```
+
 #### Empfohlene Konfiguration (Standardprofil mit Web-Linting):
 
 ```json
@@ -684,6 +714,16 @@ window.myLegacyFunction = function () {
       "**/node_modules/**",
       "**/*.min.js"
     ]
+  },
+  "Razor": {
+    "MaxRazorLineCount": 300,
+    "MaxRazorCodeBlockLines": 20,
+    "MaxMarkupNestingDepth": 6,
+    "BanInlineEventLambdas": true,
+    "MaxControlFlowBlocks": 8,
+    "MaxForeachNestingDepth": 2,
+    "MaxComponentParameterCount": 5,
+    "BanInlineTernaryInAttributes": true
   }
 }
 ```
