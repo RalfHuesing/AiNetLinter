@@ -396,3 +396,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **Dokumentation:** Vollstaendige Dokumentation der Regeln, Konfigurationen und Suppressions in `Docs/configuration.md` und `README.md`.
 
 *Hinweis zum Go/No-Go-Kriterium:* Das Risiko bezueglich Zeilennummern-Uebersetzung entfaellt beim textbasierten Parser, da dieser direkt auf den Original-Dateizeilen arbeitet und Zeilennummern praezise bestimmt.
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

@@ -76,3 +76,7 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 | [Docs/agent-api.md](Docs/agent-api.md) | Agent-API: alle CLI-Flags, Workflows, Error-Format, Discovery-Commands |
 | [Docs/configuration.md](Docs/configuration.md) | Vollständige Konfigurationsreferenz, CLI-Parameter, Workflows |
 | [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

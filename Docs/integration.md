@@ -210,3 +210,7 @@ AiNetLinter.exe --docs rules-json      ← Default-Konfiguration als JSON
 AiNetLinter.exe --list-rules           ← Alle Regeln als Tabelle
 AiNetLinter.exe --describe-rule <Id>   ← Eine Regel vollständig erklären
 ```
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

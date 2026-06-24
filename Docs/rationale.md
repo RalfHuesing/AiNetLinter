@@ -85,3 +85,7 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 *   **Wissenschaftlicher Hintergrund:** Das Konzept der **Residual Risk Acceptance** (NASA SE Handbook, 2016) anerkennt, dass nicht alle Metriken-Verletzungen gleiches Risiko tragen. Bei CC≤3 und CogC≤5 zeigen empirische Studien eine Defektwahrscheinlichkeit die ~70% unter Methoden mit CC>5 liegt (Palomba et al., 2018). Ein strukturell flacher aber langer Initialisierer ist keine Architekturverletzung — er ist eine legitime Entwurfsentscheidung.
 *   **Konsequenz:** `SeverityOverride: "warning"` erlaubt es, solche Violations im Output des Agenten sichtbar zu halten (Informationswert), ohne den CI-Build zu blockieren (kein Exit-Code 1). Der Agent sieht die Violation, kann aber entscheiden ob Handlungsbedarf besteht.
 *   **Referenz:** *NASA Office of the Chief Engineer (2016). "NASA Systems Engineering Handbook". NASA/SP-2016-6105.*
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

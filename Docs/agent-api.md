@@ -179,3 +179,7 @@ Auto-fixbare Regeln (`--fix`):
 - `EnforceSealedClasses` — `sealed` für konkrete Klassen
 - `EnforcePascalCase` — PascalCase für öffentliche Bezeichner
 - `EnforceNullableEnable` — `#nullable enable` am Dateianfang
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
