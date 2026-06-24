@@ -19,6 +19,9 @@ internal static partial class RuleRegistry
         BuildCssPreferScopedCss(),
         BuildCssMaxCssSelectorComplexity(),
         BuildCssParseError(),
+        BuildJsMaxJsLineCount(),
+        BuildJsEnforceJsModules(),
+        BuildJsSyntaxError(),
     ];
 
     private static RuleMetadata BuildCssMaxCssLineCount() => new(
@@ -103,6 +106,71 @@ internal static partial class RuleRegistry
         Intent: "general",
         Severity: "error",
         CursorHint: "Syntax-Fehler im CSS beheben.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled,
+        IsMetric: false,
+        IncludeInCursorRules: false
+    );
+
+    private static RuleMetadata BuildJsMaxJsLineCount() => new(
+        RuleId: LinterRuleIds.JS_MaxJsLineCount,
+        DisplayName: "JS Dateilaenge",
+        GetShortDescription: c => $"JavaScript-Datei ueberschreitet das Zeilenlimit (max. {c.Web.Js.MaxJsLineCount}).",
+        Warum: "Lange JavaScript-Dateien uebersteigen das lesbare Kontextfenster. Blazor-Interop-Dateien sollen minimal bleiben — komplexe Logik gehoert in C#.",
+        Alternativen:
+        [
+            "**Logik nach C# migrieren**: Komplexe Berechnungen in C#-Methoden verschieben (Handler im IJSObjectReference).",
+            "**Datei aufteilen**: Mehrere kleine ES6-Module mit klarer Verantwortung pro Datei.",
+            "**Custom Values uebergeben**: Daten via Parameter an die exportierte Funktion uebergeben statt im Closure zu kapseln."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "error",
+        CursorHint: "JavaScript-Datei aufteilen oder Logik nach C# migrieren.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Js.MaxJsLineCount > 0,
+        IsMetric: true,
+        IncludeInCursorRules: true,
+        GetMetricLimit: c => c.Web.Js.MaxJsLineCount,
+        ConfigKeyHint: "rules.json → Web.Js.MaxJsLineCount (Web.IsEnabled muss true sein)"
+    );
+
+    private static RuleMetadata BuildJsEnforceJsModules() => new(
+        RuleId: LinterRuleIds.JS_EnforceJsModules,
+        DisplayName: "ES6-Modul erzwingen",
+        GetShortDescription: c => "JavaScript-Datei ist kein ES6-Modul oder nutzt das globale 'window'-Objekt.",
+        Warum: "Blazors Dynamic Import erwartet Module; globale Script-Dateien sind nicht isoliert importierbar. Zuweisungen an 'window' erzeugen unvorhersehbare Seiteneffekte bei KI-Edits.",
+        Alternativen:
+        [
+            "**ES6-Export hinzufuegen**: 'export function myHelper() { ... }' oder 'export { myHelper };'.",
+            "**Dynamic Import nutzen**: 'await JSRuntime.InvokeAsync<IJSObjectReference>(\"import\", \"./myModule.js\")'.",
+            "**Suppression** (bei Legacy-Bridge): `// ainetlinter-disable JS_EnforceJsModules`."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "agent-context",
+        Severity: "error",
+        CursorHint: "ES6-Modul mit 'export' verwenden; window-Zuweisungen vermeiden.",
+        HasAutoFix: false,
+        IsEnabled: c => c.Web.IsEnabled && c.Web.Js.EnforceJsModules,
+        IsMetric: false,
+        IncludeInCursorRules: true,
+        ConfigKeyHint: "rules.json → Web.Js.EnforceJsModules"
+    );
+
+    private static RuleMetadata BuildJsSyntaxError() => new(
+        RuleId: LinterRuleIds.JS_SyntaxError,
+        DisplayName: "JS Syntax-Fehler",
+        GetShortDescription: c => "JavaScript-Datei konnte nicht geparst werden (Syntax-Fehler).",
+        Warum: "Ein JavaScript-Parse-Fehler verhindert die weitere Analyse — Agenten uebersehen fehlende Klammern oder Tippfehler und erzeugen nicht-funktionierende Module.",
+        Alternativen:
+        [
+            "**Syntax korrigieren**: Fehlende Klammern, ungueltige Statements oder Komma-Fehler beheben.",
+            "**ExemptPaths pruefen**: Falls Bibliotheks-JS betroffen ist, ggf. in `Web.Js.ExemptPaths` aufnehmen."
+        ],
+        SicherheitsHinweis: null,
+        Intent: "general",
+        Severity: "error",
+        CursorHint: "Syntax-Fehler im JavaScript beheben.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled,
         IsMetric: false,

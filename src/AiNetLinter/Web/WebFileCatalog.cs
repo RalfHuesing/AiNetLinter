@@ -26,6 +26,15 @@ public enum WebFileType
 }
 
 /// <summary>
+/// Input-Record fuer <see cref="WebFileCatalog.Collect"/> ab 5 Parametern.
+/// Bündelt FileFilters und ExemptPaths beider Web-Subdomänen (CSS, JS) zu einem einzigen Wert.
+/// </summary>
+public sealed record WebFileDiscoveryRequest(
+    FileFiltersConfig FileFilters,
+    IReadOnlyCollection<string> CssExemptPaths,
+    IReadOnlyCollection<string>? JsExemptPaths);
+
+/// <summary>
 /// Enumeriert Web-Dateien aus den Projektverzeichnissen der Solution.
 /// Filtert generierte Verzeichnisse (obj/, bin/, node_modules/) und ExemptPaths heraus.
 /// Arbeitet auf dem Dateisystem (Roslyn sieht keine .css/.js/.razor-Dateien).
@@ -37,13 +46,11 @@ internal static class WebFileCatalog
     /// </summary>
     /// <param name="solution">Bereits geladene Roslyn-Solution (kein zweites MSBuild-Laden noetig).</param>
     /// <param name="solutionDir">Absoluter Pfad zum Solution-Wurzelverzeichnis.</param>
-    /// <param name="fileFilters">Globale FileFilters (ExcludeDirectoryPatterns wird zusaetzlich angewandt).</param>
-    /// <param name="cssExemptPaths">CSS-spezifische ExemptPaths aus WebConfig.Css.</param>
+    /// <param name="request">Gebuendelte FileFilters + CSS-/JS-ExemptPaths.</param>
     public static IReadOnlyList<WebFileEntry> Collect(
         Solution solution,
         string solutionDir,
-        FileFiltersConfig fileFilters,
-        IReadOnlyCollection<string> cssExemptPaths)
+        WebFileDiscoveryRequest request)
     {
         if (string.IsNullOrEmpty(solutionDir) || !Directory.Exists(solutionDir))
         {
@@ -55,7 +62,7 @@ internal static class WebFileCatalog
 
         foreach (var projectDir in GetProjectDirectories(solution))
         {
-            CollectFromDirectory(projectDir, solutionDir, fileFilters, cssExemptPaths, entries, seenAbsolutePaths);
+            CollectFromDirectory(projectDir, solutionDir, request, entries, seenAbsolutePaths);
         }
 
         return entries;
@@ -73,15 +80,13 @@ internal static class WebFileCatalog
     private static void CollectFromDirectory(
         string projectDir,
         string solutionDir,
-        FileFiltersConfig fileFilters,
-        IReadOnlyCollection<string> cssExemptPaths,
+        WebFileDiscoveryRequest request,
         List<WebFileEntry> entries,
         HashSet<string> seenAbsolutePaths)
     {
         foreach (var filePath in SafeEnumerateFiles(projectDir))
         {
-            if (!TryClassifyFile(filePath, fileFilters, cssExemptPaths, solutionDir,
-                    out var type, out var relativePath))
+            if (!TryClassifyFile(filePath, request, solutionDir, out var type, out var relativePath))
             {
                 continue;
             }
@@ -103,8 +108,7 @@ internal static class WebFileCatalog
 
     private static bool TryClassifyFile(
         string filePath,
-        FileFiltersConfig fileFilters,
-        IReadOnlyCollection<string> cssExemptPaths,
+        WebFileDiscoveryRequest request,
         string solutionDir,
         out WebFileType type,
         out string relativePath)
@@ -113,14 +117,21 @@ internal static class WebFileCatalog
         relativePath = string.Empty;
 
         if (IsGeneratedPath(filePath)) return false;
-        if (FileFilterEvaluator.IsExcluded(filePath, fileFilters)) return false;
+        if (FileFilterEvaluator.IsExcluded(filePath, request.FileFilters)) return false;
 
         var detected = GetWebFileType(filePath);
         if (detected == null) return false;
 
         relativePath = Path.GetRelativePath(solutionDir, filePath).Replace('\\', '/');
 
-        if (detected == WebFileType.Css && MatchesAnyGlob(relativePath, cssExemptPaths))
+        if (detected == WebFileType.Css && MatchesAnyGlob(relativePath, request.CssExemptPaths))
+        {
+            return false;
+        }
+
+        if (detected == WebFileType.Js
+            && request.JsExemptPaths != null
+            && MatchesAnyGlob(relativePath, request.JsExemptPaths))
         {
             return false;
         }

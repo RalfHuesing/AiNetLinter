@@ -313,6 +313,15 @@
         "**/node_modules/**",
         "**/*.min.css"
       ]
+    },
+    "Js": {
+      "MaxJsLineCount": 150,
+      "EnforceJsModules": true,
+      "ExemptPaths": [
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.js"
+      ]
     }
   },
   "RuleMetadata": {

@@ -39,6 +39,11 @@ public sealed record WebConfigOverride
     /// CSS-spezifische Overrides.
     /// </summary>
     public CssConfigOverride? Css { get; init; }
+
+    /// <summary>
+    /// JS-spezifische Overrides.
+    /// </summary>
+    public JsConfigOverride? Js { get; init; }
 }
 
 /// <summary>
@@ -66,6 +71,28 @@ public sealed record CssConfigOverride
     /// Override fuer MaxCssSelectorComplexity.
     /// </summary>
     public int? MaxCssSelectorComplexity { get; init; }
+
+    /// <summary>
+    /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).
+    /// </summary>
+    public IReadOnlyCollection<string>? ExemptPaths { get; init; }
+}
+
+/// <summary>
+/// Optionale Überschreibungen für die JavaScript-Konfiguration (pro Projekt).
+/// Wird in der rules.json unter ProjectOverrides.*.Web.Js eingebunden.
+/// </summary>
+public sealed record JsConfigOverride
+{
+    /// <summary>
+    /// Override fuer MaxJsLineCount.
+    /// </summary>
+    public int? MaxJsLineCount { get; init; }
+
+    /// <summary>
+    /// Override fuer EnforceJsModules.
+    /// </summary>
+    public bool? EnforceJsModules { get; init; }
 
     /// <summary>
     /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).

@@ -604,25 +604,31 @@ Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase
 
 | Option                            |     Typ      |                            Default                            | Beschreibung                                                                                                                                                                                                 |
 | :-------------------------------- | :----------: | :-----------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IsEnabled`                       |   Boolean    |                            `false`                            | Aktiviert das gesamte Web-Modul (CSS, spaeter JS+Razor). Master-Switch.                                                                                                                                      |
+| `IsEnabled`                       |   Boolean    |                            `false`                            | Aktiviert das gesamte Web-Modul (CSS, JS, spaeter Razor). Master-Switch.                                                                                                                                     |
 | `Css.MaxCssLineCount`             |   Integer    |                             `300`                             | Maximale Zeilenanzahl pro CSS-Datei. Verhindert "Lost in the Middle" in grossen monolithischen Stylesheets. `0` = deaktiviert.                                                                               |
 | `Css.PreferScopedCss`             |   Boolean    |                            `true`                             | Wenn true, werden globale CSS-Dateien mit vielen Regeln zugunsten von Scoped CSS (`.razor.css`) abgemaahnt (Butterfly-Effekt).                                                                               |
 | `Css.PreferScopedCssMinRuleCount` |   Integer    |                              `5`                              | Schwellenwert: ab dieser Anzahl Stil-Regeln in einer globalen CSS-Datei wird `CSS_PreferScopedCss` ausgeloest. CSS-Dateien mit weniger Regeln (Resets, Custom Properties, `@font-face`) sind legitim global. |
 | `Css.MaxCssSelectorComplexity`    |   Integer    |                              `3`                              | Maximale Tiefe eines CSS-Selektors (Anzahl Selektor-Segmente, getrennt durch Komma/Whitespace/Combinators). Verhindert ueber-Engineered Selektoren. `0` = deaktiviert.                                       |
 | `Css.ExemptPaths`                 | String-Array | `["**/wwwroot/lib/**", "**/node_modules/**", "**/*.min.css"]` | Glob-Muster fuer Pfade, die von der CSS-Analyse ausgeschlossen werden (z. B. Bootstrap, MudBlazor, `*.min.css`).                                                                                             |
+| `Js.MaxJsLineCount`               |   Integer    |                             `150`                             | Maximale Zeilenanzahl pro JavaScript-Datei. Verhindert "Lost in the Middle" in grossen monolithischen JS-Interop-Dateien. Komplexe Logik gehoert in C#. `0` = deaktiviert.                                   |
+| `Js.EnforceJsModules`             |   Boolean    |                            `true`                             | Wenn true, muessen JS-Dateien als ES6-Modul aufgebaut sein (`export`-Statement vorhanden) und duerfen keine `window.*`-Zuweisungen enthalten.                                                                |
+| `Js.ExemptPaths`                  | String-Array | `["**/wwwroot/lib/**", "**/node_modules/**", "**/*.min.js"]`  | Glob-Muster fuer Pfade, die von der JS-Analyse ausgeschlossen werden (z. B. jQuery, Bootstrap-Bundle, `*.min.js`).                                                                                           |
 
 #### Regeln
 
-| Regel                          | Severity |    Intent     | Beschreibung                                                                                                              |
-| :----------------------------- | :------: | :-----------: | :------------------------------------------------------------------------------------------------------------------------ |
-| `CSS_MaxCssLineCount`          |  error   | agent-context | CSS-Datei ueberschreitet das Zeilenlimit. Empfehlung: Datei splitten oder in Scoped CSS ueberfuehren.                     |
-| `CSS_PreferScopedCss`          | warning  | agent-context | Globale CSS-Datei enthaelt mehr Regeln als der Schwellenwert. Empfehlung: Komponenten-Styles in `.razor.css` extrahieren. |
-| `CSS_MaxCssSelectorComplexity` | warning  | agent-context | CSS-Selektor zu tief verschachtelt. Empfehlung: Wurzel-Selektor verwenden, Spezifitaet reduzieren oder Scoped CSS.        |
-| `CSS_ParseError`               |  error   |    general    | CSS-Datei konnte nicht geparst werden (Syntax-Fehler). Empfehlung: Klammern / Selektor-Syntax korrigieren.                |
+| Regel                          | Severity |    Intent     | Beschreibung                                                                                                                                |
+| :----------------------------- | :------: | :-----------: | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CSS_MaxCssLineCount`          |  error   | agent-context | CSS-Datei ueberschreitet das Zeilenlimit. Empfehlung: Datei splitten oder in Scoped CSS ueberfuehren.                                       |
+| `CSS_PreferScopedCss`          | warning  | agent-context | Globale CSS-Datei enthaelt mehr Regeln als der Schwellenwert. Empfehlung: Komponenten-Styles in `.razor.css` extrahieren.                   |
+| `CSS_MaxCssSelectorComplexity` | warning  | agent-context | CSS-Selektor zu tief verschachtelt. Empfehlung: Wurzel-Selektor verwenden, Spezifitaet reduzieren oder Scoped CSS.                          |
+| `CSS_ParseError`               |  error   |    general    | CSS-Datei konnte nicht geparst werden (Syntax-Fehler). Empfehlung: Klammern / Selektor-Syntax korrigieren.                                  |
+| `JS_MaxJsLineCount`            |  error   | agent-context | JavaScript-Datei ueberschreitet das Zeilenlimit. Empfehlung: Logik nach C# migrieren oder Datei aufteilen.                                  |
+| `JS_EnforceJsModules`          |  error   | agent-context | JavaScript-Datei ist kein ES6-Modul oder nutzt das globale `window`-Objekt. Empfehlung: `export` verwenden, `window`-Zuweisungen vermeiden. |
+| `JS_SyntaxError`               |  error   |    general    | JavaScript-Datei konnte nicht geparst werden (Syntax-Fehler). Empfehlung: Klammern / Statements korrigieren.                                |
 
 #### Suppression
 
-In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet:
+In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dateien der klassische JavaScript-Kommentar:
 
 ```css
 /* ainetlinter-disable CSS_MaxCssLineCount */
@@ -639,6 +645,21 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet:
 } /* deaktiviert alle Regeln fuer den Rest der Datei */
 ```
 
+```javascript
+// ainetlinter-disable JS_MaxJsLineCount
+export function hugeLegacyWrapper() {
+  // Wird in Sprint 4 aufgeteilt
+}
+
+// ainetlinter-disable JS_EnforceJsModules
+window.myLegacyFunction = function () {
+  console.log("Legacy-Integration, wird migriert");
+};
+
+// ainetlinter-disable all
+// Deaktiviert alle Regeln fuer den Rest der Datei
+```
+
 #### Empfohlene Konfiguration (Standardprofil mit Web-Linting):
 
 ```json
@@ -653,6 +674,15 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet:
       "**/wwwroot/lib/**",
       "**/node_modules/**",
       "**/*.min.css"
+    ]
+  },
+  "Js": {
+    "MaxJsLineCount": 150,
+    "EnforceJsModules": true,
+    "ExemptPaths": [
+      "**/wwwroot/lib/**",
+      "**/node_modules/**",
+      "**/*.min.js"
     ]
   }
 }
