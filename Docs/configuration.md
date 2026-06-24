@@ -1458,3 +1458,7 @@ AiNetLinter.exe --path . --config rules.json --no-cache
 ### Kombinierter Lauf (Single Analysis)
 
 Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `AiNetLinter` die Ausführung des Lint-Laufs mit der Generierung des Playbooks. Wenn `--config` und `--playbook` im selben Aufruf verwendet werden, wird die semantische Roslyn-Analyse aller Dokumente **genau einmal** ausgeführt. Die berechneten Regelverstöße werden direkt an den Playbook-Generator weitergegeben, anstatt eine zweite vollständige Analyse anzustoßen.
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
