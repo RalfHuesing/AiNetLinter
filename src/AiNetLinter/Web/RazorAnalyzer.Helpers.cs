@@ -101,23 +101,45 @@ internal static partial class RazorAnalyzer
     /// </summary>
     internal static int ComputeMaxForeachNestingDepth(string content)
     {
+        var positions = CollectForeachPositions(content);
+        if (positions.Count == 0) return 0;
+
+        var intervals = CollectForeachIntervals(content, positions);
+        if (intervals.Count == 0) return 0;
+
+        return CalculateMaxNestingDepth(intervals);
+    }
+
+    private static List<int> CollectForeachPositions(string content)
+    {
         var positions = new List<int>();
         foreach (Match m in ForeachPattern.Matches(content))
         {
             var prev = m.Index > 0 ? content[m.Index - 1] : ' ';
-            if (char.IsLetterOrDigit(prev) || prev == '_') continue;
-            positions.Add(m.Index);
+            if (!char.IsLetterOrDigit(prev) && prev != '_')
+            {
+                positions.Add(m.Index);
+            }
         }
-        if (positions.Count == 0) return 0;
+        return positions;
+    }
 
+    private static List<(int Start, int End)> CollectForeachIntervals(string content, List<int> positions)
+    {
         var intervals = new List<(int Start, int End)>();
         foreach (var pos in positions)
         {
             var bodyEnd = FindForeachBodyEnd(content, pos);
-            if (bodyEnd > 0) intervals.Add((pos, bodyEnd));
+            if (bodyEnd > 0)
+            {
+                intervals.Add((pos, bodyEnd));
+            }
         }
-        if (intervals.Count == 0) return 0;
+        return intervals;
+    }
 
+    private static int CalculateMaxNestingDepth(List<(int Start, int End)> intervals)
+    {
         var maxDepth = 0;
         foreach (var iv in intervals)
         {
@@ -125,7 +147,10 @@ internal static partial class RazorAnalyzer
             foreach (var other in intervals)
             {
                 if (other.Start == iv.Start && other.End == iv.End) continue;
-                if (other.Start <= iv.Start && iv.End <= other.End) depth++;
+                if (other.Start <= iv.Start && iv.End <= other.End)
+                {
+                    depth++;
+                }
             }
             if (depth > maxDepth) maxDepth = depth;
         }
@@ -190,28 +215,48 @@ internal static partial class RazorAnalyzer
         if (i >= content.Length) return i;
 
         var c = content[i];
-        // Razor-Kommentar: @* ... *@
         if (c == '@' && i + 1 < content.Length && content[i + 1] == '*')
         {
-            var end = content.IndexOf("*@", i + 2, StringComparison.Ordinal);
-            if (end < 0) { endedInString = true; return content.Length; }
-            return end + 2;
+            return SkipRazorComment(content, i, out endedInString);
         }
-        // String- oder Char-Literal.
         if (c == '"' || c == '\'')
         {
-            var quote = c;
-            var j = i + 1;
-            while (j < content.Length)
-            {
-                if (content[j] == '\\' && j + 1 < content.Length) { j += 2; continue; }
-                if (content[j] == quote) return j + 1;
-                j++;
-            }
+            return SkipQuoteLiteral(content, i, c, out endedInString);
+        }
+        return i;
+    }
+
+    private static int SkipRazorComment(string content, int i, out bool endedInString)
+    {
+        var end = content.IndexOf("*@", i + 2, StringComparison.Ordinal);
+        if (end < 0)
+        {
             endedInString = true;
             return content.Length;
         }
-        return i;
+        endedInString = false;
+        return end + 2;
+    }
+
+    private static int SkipQuoteLiteral(string content, int i, char quote, out bool endedInString)
+    {
+        var j = i + 1;
+        while (j < content.Length)
+        {
+            if (content[j] == '\\' && j + 1 < content.Length)
+            {
+                j += 2;
+                continue;
+            }
+            if (content[j] == quote)
+            {
+                endedInString = false;
+                return j + 1;
+            }
+            j++;
+        }
+        endedInString = true;
+        return content.Length;
     }
 
     private static int CountLines(string content)

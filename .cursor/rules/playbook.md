@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.58 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
+Auto-generiert durch AiNetLinter 1.0.59 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -23,10 +23,9 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 ## 3. Migrations-Status
 
 - **Wave-ready Dateien:** 221 / 239 (92 %)
-- **Verstösse nur wave-ready (default rules):** 7
+- **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
-  - `src/AiNetLinter.Tests/Web/`: 4
-  - `src/AiNetLinter/Web/`: 3
+  - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
@@ -38,5 +37,5 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 | Intent | Offene Verstöße (wave-ready) | Regeln |
 | :--- | ---: | :--- |
-| agent-context | 7 | MaxCognitiveComplexity, MaxCyclomaticComplexity, MaxBoolParameterCount, MaxMethodParameterCount |
+| - | 0 | Keine offenen Verstöße |
 
