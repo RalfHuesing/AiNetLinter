@@ -1031,7 +1031,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 
 - `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
 - `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
-- `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
+- `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`- sowie Web-Dateien (CSS, JS, Razor) (Optional).
 - `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
 - `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 - `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
@@ -1117,7 +1117,8 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-sin
 {
   "version": 1,
   "files": {
-    "src/MyApp/Program.cs": "a1b2c3d4e5f6..."
+    "src/MyApp/Program.cs": "a1b2c3d4e5f6...",
+    "src/MyApp/styles.css": "e7f8a9b0c1d2..."
   }
 }
 ```

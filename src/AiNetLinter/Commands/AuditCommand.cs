@@ -124,7 +124,7 @@ internal static class AuditCommand
         }
 
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var currentChecksums = catalog.ComputeChecksums(outputRoot);
+        var currentChecksums = catalog.ComputeChecksums(outputRoot, config);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
         string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
