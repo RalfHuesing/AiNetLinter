@@ -23,3 +23,52 @@ public sealed record FileFiltersConfig
     /// </summary>
     public bool SkipGeneratedCodeAttribute { get; init; } = false;
 }
+
+/// <summary>
+/// Optionale Überschreibungen für die Web-Konfiguration (pro Projekt).
+/// Wird in der rules.json unter ProjectOverrides.*.Web eingebunden.
+/// </summary>
+public sealed record WebConfigOverride
+{
+    /// <summary>
+    /// Aktiviert/Deaktiviert die Web-Analyse fuer dieses Projekt.
+    /// </summary>
+    public bool? IsEnabled { get; init; }
+
+    /// <summary>
+    /// CSS-spezifische Overrides.
+    /// </summary>
+    public CssConfigOverride? Css { get; init; }
+}
+
+/// <summary>
+/// Optionale Überschreibungen für die CSS-Konfiguration (pro Projekt).
+/// Wird in der rules.json unter ProjectOverrides.*.Web.Css eingebunden.
+/// </summary>
+public sealed record CssConfigOverride
+{
+    /// <summary>
+    /// Override fuer MaxCssLineCount.
+    /// </summary>
+    public int? MaxCssLineCount { get; init; }
+
+    /// <summary>
+    /// Override fuer PreferScopedCss.
+    /// </summary>
+    public bool? PreferScopedCss { get; init; }
+
+    /// <summary>
+    /// Override fuer PreferScopedCssMinRuleCount.
+    /// </summary>
+    public int? PreferScopedCssMinRuleCount { get; init; }
+
+    /// <summary>
+    /// Override fuer MaxCssSelectorComplexity.
+    /// </summary>
+    public int? MaxCssSelectorComplexity { get; init; }
+
+    /// <summary>
+    /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).
+    /// </summary>
+    public IReadOnlyCollection<string>? ExemptPaths { get; init; }
+}

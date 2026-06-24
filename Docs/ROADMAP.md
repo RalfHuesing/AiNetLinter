@@ -349,3 +349,39 @@ Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, 
 ## Epic 28: LINQ-Komplexitäts-Kontrolle
 
 - [x] **Regel: MaxLinqChainLength** — Begrenzt die Anzahl verketteter LINQ-Methoden pro Ausdruckskette (Standard: 0 = deaktiviert).
+
+---
+
+## Epic 29: Web-Asset-Linting (CSS / JS / Razor)
+
+Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umgesetzt; Phase 2: JS und Phase 3: Razor folgen spaeter). Implementiert die Forschungsdokumente [Research/Extend-Web-Features/00_Overview.md](../Research/Extend-Web-Features/00_Overview.md), [01_CSS_Linting.md](../Research/Extend-Web-Features/01_CSS_Linting.md), [02_JS_Linting.md](../Research/Extend-Web-Features/02_JS_Linting.md) und [03_Razor_Linting.md](../Research/Extend-Web-Features/03_Razor_Linting.md).
+
+### Phase 1 — CSS (umgesetzt)
+
+- [x] **NuGet-Abhaengigkeit:** ExCSS 4.1.4 (MIT-Lizenz) als reines CSS-Parsing-Backend fuer die Selektor-Analyse.
+- [x] **Konfigurations-Sektion `Web` / `Web.Css`:** Neue Sektion in `rules.json` (master switch `Web.IsEnabled`, plus `MaxCssLineCount`, `PreferScopedCss`, `PreferScopedCssMinRuleCount`, `MaxCssSelectorComplexity`, `ExemptPaths`).
+- [x] **`WebFileCatalog`:** Enumeriert `.css`/`.razor.css`-Dateien aus den Projektverzeichnissen der Solution (parallel zur Roslyn-Solution, kein zweites MSBuild-Laden). Filtert `obj/`, `bin/`, `node_modules/` und CSS-spezifische `ExemptPaths` heraus.
+- [x] **`CssAnalyzer`:** AST-Walk ueber ExCSS-Stylesheet. Prueft Zeilenlimit, Selektor-Komplexitaet (Anzahl Segmente, getrennt durch Komma/Whitespace/Combinators) und Scoped-CSS-Empfehlung fuer globale Dateien. Erzeugt `CSS_ParseError` bei Syntax-Fehlern.
+- [x] **`WebFileSeparationChecker`:** Post-Analysis-Check (parallel zu `UiFileSeparationChecker`), der die CSS-Regeln ausfuehrt und Per-File Suppression (`/* ainetlinter-disable RuleId */`, `/* ainetlinter-disable all */`) anwendet.
+- [x] **Regel-IDs:** `CSS_MaxCssLineCount`, `CSS_PreferScopedCss`, `CSS_MaxCssSelectorComplexity`, `CSS_ParseError` in `LinterRuleIds` und `RuleRegistry.Web.cs` registriert (Severity: error / warning, Intent: agent-context / general).
+- [x] **Project-Overrides:** `WebConfigOverride` und `CssConfigOverride` mit `Apply`-Logik; `ProjectConfigResolver.MergeConfig` reicht den Web-Override-Tree durch.
+- [x] **Suppression:** Eigener `WebSuppressionHelper` (dateiweit via `ainetlinter-disable all` und regel-spezifisch via `ainetlinter-disable RuleId`).
+- [x] **Test-Suite:** `CssAnalyzerTests.cs` (13 Tests, Szenarien A-H aus dem Research-Dokument) und `WebSuppressionHelperTests.cs` (6 Tests). 20 / 20 gruen.
+- [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter Web-Sektion sauber auf der eigenen Codebase durch (keine CSS-Violations im Self-Audit, ExCSS-Integration verifiziert).
+- [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um Web-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
+
+### Phase 2 — JavaScript (geplant, nicht umgesetzt)
+
+- [ ] **NuGet-Abhaengigkeit:** Esprima (BSD-3-Clause-Lizenz) als standardkonformer ECMAScript-Parser.
+- [ ] **Konfigurations-Sektion `Web.Js`:** `MaxJsLineCount`, `EnforceJsModules`, `ExemptPaths`.
+- [ ] **`JsAnalyzer`:** `ParseModule()` zuerst, Fallback auf `ParseScript()`. Prueft `JS_MaxJsLineCount` und `JS_EnforceJsModules` (verbotene `window.xyz = ...`-Zuweisungen).
+- [ ] **Regel-IDs:** `JS_MaxJsLineCount`, `JS_EnforceJsModules`, `JS_SyntaxError`.
+
+### Phase 3 — Razor (geplant, nicht umgesetzt)
+
+- [ ] **NuGet-Abhaengigkeit:** `Microsoft.AspNetCore.Razor.Language` (MIT, First-Party) als Razor-Parser.
+- [ ] **Konfigurations-Sektion `Web.Razor`:** `MaxRazorLineCount`, `MaxRazorCodeBlockLines`, `BanInlineEventLambdas`, `MaxMarkupNestingDepth`, `MaxControlFlowBlocks`, `MaxForeachNestingDepth`, `MaxComponentParameterCount`, `BanInlineTernaryInAttributes`.
+- [ ] **`RazorAnalyzer`:** AST-Walk ueber `@code`/`@if`/`@foreach`-Bloecke. Prueft Markup-Nesting, Control-Flow-Komplexitaet und Inline-Event-Lambdas.
+- [ ] **Regel-IDs:** `RAZOR_MaxRazorLineCount`, `RAZOR_MaxRazorCodeBlockLines`, `RAZOR_MaxMarkupNestingDepth`, `RAZOR_BanInlineEventLambdas`, `RAZOR_MaxControlFlowBlocks`, `RAZOR_MaxForeachNestingDepth`, `RAZOR_MaxComponentParameterCount`, `RAZOR_BanInlineTernaryInAttributes`.
+
+**Go/No-Go-Kriterium fuer Phase 3:** Die Korrektheit der gemeldeten Zeilennummern fuer `@code`-Bloecke muss in einem Proof-of-Concept validiert werden, bevor mit der Implementierung begonnen wird. Die `@code`-Extraktion und die Zeilennummern-Uebersetzung sind die kritischen Risiken.

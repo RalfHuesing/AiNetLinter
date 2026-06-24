@@ -15,23 +15,23 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 
 ## 2. Kernfeatures
 
-*   **Roslyn-basierte semantische Analyse:** Evaluierung der gesamten Solution (.sln / .slnx) über einen einzigen Syntax-Walk pro Dokument. Nutzt echte Semantik-Informationen statt textbasierter Heuristiken. MSBuild Design-Time-Properties beschleunigen das Solution-Laden; die Dokument-Analyse läuft parallel bis `Environment.ProcessorCount`.
-*   **Feingranulares Regelwerk:** Umfassende Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
-*   **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
-*   **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
-*   **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
-*   **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
-*   **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
-*   **Gezielte Bulk-Suppression (`--add-disable-all` / `--remove-disable-all`):** Audit-basiertes Einfügen des Disable-all-Kommentars nur in Dateien mit Verstößen sowie sicheres Entfernen exakter Disable-all-Zeilen.
-*   **Dependency-Graph-Export:** Automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
-*   **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
-*   **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Flexibles Überschreiben oder Deaktivieren von Linter-Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) in der Konfiguration.
-*   **AI-Context-Footprint (Metrik):** Berechnet die Summe aller Codezeilen einer Klasse inklusive aller transitiv referenzierten eigenen Typen, um hohe Kopplung und große Kontext-Footprints für KIs zu vermeiden.
-*   **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
-*   **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
-*   **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
-*   **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs drastisch. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
-*   **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
+- **Roslyn-basierte semantische Analyse:** Evaluierung der gesamten Solution (.sln / .slnx) über einen einzigen Syntax-Walk pro Dokument. Nutzt echte Semantik-Informationen statt textbasierter Heuristiken. MSBuild Design-Time-Properties beschleunigen das Solution-Laden; die Dokument-Analyse läuft parallel bis `Environment.ProcessorCount`.
+- **Feingranulares Regelwerk:** Umfassende Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
+- **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
+- **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
+- **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
+- **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
+- **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
+- **Gezielte Bulk-Suppression (`--add-disable-all` / `--remove-disable-all`):** Audit-basiertes Einfügen des Disable-all-Kommentars nur in Dateien mit Verstößen sowie sicheres Entfernen exakter Disable-all-Zeilen.
+- **Dependency-Graph-Export:** Automatisches Zeichnen von Mermaid-Abhängigkeitsdiagrammen.
+- **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
+- **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Flexibles Überschreiben oder Deaktivieren von Linter-Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) in der Konfiguration.
+- **AI-Context-Footprint (Metrik):** Berechnet die Summe aller Codezeilen einer Klasse inklusive aller transitiv referenzierten eigenen Typen, um hohe Kopplung und große Kontext-Footprints für KIs zu vermeiden.
+- **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
+- **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
+- **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
+- **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs drastisch. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
+- **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 
 ---
 
@@ -78,7 +78,14 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "DetectAndBanPhantomDependencies": true,
     "BanPublicNestedTypes": true,
     "BanPublicNestedTypesAllowPrivate": true,
-    "ImmutabilityExemptSuffixes": ["Dto", "Entity", "Model", "Request", "Response", "Command"]
+    "ImmutabilityExemptSuffixes": [
+      "Dto",
+      "Entity",
+      "Model",
+      "Request",
+      "Response",
+      "Command"
+    ]
   },
   "Metrics": {
     "MaxLineCount": 500,
@@ -98,14 +105,26 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "MaxConstructorDependencies": 5,
     "MaxDirectoryDepth": 4,
     "MaxDirectoryChildren": 0,
-    "MaxDirectoryChildrenExemptNames": ["Migrations", "Generated", "wwwroot", "obj", "bin"],
+    "MaxDirectoryChildrenExemptNames": [
+      "Migrations",
+      "Generated",
+      "wwwroot",
+      "obj",
+      "bin"
+    ],
     "MaxBoolParameterCount": 1,
     "MaxBoolParameterCountAllowPrivate": true,
     "MaxBoolParameterCountExemptMethodPrefixes": ["Try"],
     "MaxPartialClassFiles": 2,
     "MaxPartialClassFilesExemptTypes": [],
     "MaxPublicMembersPerType": 15,
-    "MaxPublicMembersPerTypeExemptSuffixes": ["Extensions", "Mapper", "Constants", "Config", "Args"],
+    "MaxPublicMembersPerTypeExemptSuffixes": [
+      "Extensions",
+      "Mapper",
+      "Constants",
+      "Config",
+      "Args"
+    ],
     "MaxAIContextFootprint": 2500,
     "MaxSwitchArms": 10,
     "MaxSwitchArmsExcludeDispatcher": true,
@@ -114,10 +133,20 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
     "NullCoalescingInitializerMaxNonCoalescingRatio": 0.0
   },
   "TestSentinel": {
-    "ClassNamePatterns": ["{Name}Tests", "{Name}Test", "{Name}IntegrationTests", "{Name}*Tests"],
+    "ClassNamePatterns": [
+      "{Name}Tests",
+      "{Name}Test",
+      "{Name}IntegrationTests",
+      "{Name}*Tests"
+    ],
     "RecognizeTypeofReference": true,
     "RecognizeCoversComment": true,
-    "ExemptClassNameSuffixes": ["Extensions", "Constants", "Converter", "Profile"],
+    "ExemptClassNameSuffixes": [
+      "Extensions",
+      "Constants",
+      "Converter",
+      "Profile"
+    ],
     "ExemptWhenInheritsFrom": ["ComponentBase", "IValueConverter", "Profile"],
     "ExemptStaticClasses": true
   },
@@ -136,85 +165,85 @@ Die Konfiguration erfolgt über eine flache, leicht verständliche JSON-Struktur
 
 ### Erklärung der Regeln
 
-| Regel | Bereich | Beschreibung |
-| :--- | :--- | :--- |
-| `EnforceSealedClasses` | Global | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden. |
-| `AllowUnsealedPartialClasses` | Global | Erlaubt es, `partial` Klassen unsealed zu lassen (Standard: `false`, nützlich z. B. bei WPF Code-Behind oder Blazor Page-Components). |
-| `SealedClassExemptSuffixes` | Global | Liste von Klassenname-Suffixen, die von der `EnforceSealedClasses`-Prüfung ausgenommen sind (z. B. `["Base", "Foundation", "Host"]`). |
-| `AllowDynamic` | Global | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken). |
-| `AllowOutParameters` | Global | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records. |
-| `AllowTryPatternOutParameters` | Global | Erlaubt `out`-Parameter in folgenden idiomatischen Mustern (Standard: `true`): `bool Try*`- und `bool Is*`-Methoden; `string? Try*`-Methoden (Error-String-Muster: `null` = Erfolg, non-null = Fehlermeldung); `void Deconstruct(out ...)`-Methoden (C#-Sprachmuster); lokale Funktionen mit denselben Konventionen; Methoden, die ein Interface-Mitglied implementieren oder eine abstrakte Methode überschreiben (die Signatur ist dann vom Vertrag vorgegeben). |
-| `AllowOutParametersInPrivateMethods` | Global | Wenn `true`: `out`-Parameter in privaten Methoden werden von `AllowOutParameters` nicht gemeldet. Nützlich in Projekten mit no-DI-Architektur, die private Zerlegungshelfer intern nutzen. Öffentliche und `protected`/`internal` Methoden werden weiterhin geprüft. Standard: `true`. |
-| `AllowCancellationShutdownCatch` | Global | Erlaubt stummes Abfangen von Cancellation-Exceptions (wie `OperationCanceledException` oder `TaskCanceledException`) bei Host-Shutdown (ohne Pflicht eines `when`-Filters). |
-| `AllowedSilentCatchExceptionTypes` | Global | Liste von Exception-Typen (einfacher Name, kein Namespace), die lautlos abgefangen werden dürfen — z. B. `["JSDisconnectedException"]` für Blazor-Dispose-Methoden. Analogon zu `AllowCancellationShutdownCatch` für projektspezifische Typen. Standard: `[]` (leer). |
-| `EnforceMinimalApiAsParameters` | Global | Prüft Minimal-API-Endpunkte auf fehlendes `[AsParameters]` bei >4 Parametern (opt-in). |
-| `EnforceValueObjectContracts` | Global | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben. |
-| `EnableTestSentinel` | Global | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien. |
-| `EnforcePascalCase` | Global | Validiert PascalCase-Schreibweise für Klassen, Structs, Records, Interfaces, Methoden und Properties. |
-| `EnforceXmlDocumentation` | Global | Erzwingt XML-Dokumentationskommentare an öffentlichen Typ-Deklarationen (Klassen/Interfaces) (Standard: `false`). |
-| `EnforceSemanticNaming` | Global | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler. |
-| `SemanticNamingExemptMethodNames` | Global | Methoden-Namen, für die `EnforceSemanticNaming` nicht geprüft wird. Standard: `["Equals", "CompareTo", "GetHashCode"]` (BCL-Overrides, bei denen Parameternamen wie `obj` konventionell sind). Erweiterbar für projektspezifische Muster. |
-| `SemanticNamingAllowSubstringOfMethodName` | Global | Wenn `true`: Ein Parameter-Name wird nicht gemeldet, wenn er als Teilstring (case-insensitiv) im Methoden-Namen vorkommt. Beispiel: Parameter `item` in Methode `AppendTimelineItemAsync` → nicht flaggen. Standard: `true`. |
-| `EnforceNullableEnable` | Global | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird. |
-| `EnforceNoSilentCatch` | Global | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung. |
-| `BanAsyncVoid` | Global | Verbietet `async void`-Methoden und lokale Funktionen. |
-| `AsyncVoidAllowEventHandlers` | Global | Ermöglicht die Ausnahme von Event-Handlern mit Signatur `(object sender, EventArgs e)` von der `BanAsyncVoid`-Regel. |
-| `BanBlockingTaskAccess` | Global | Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). |
-| `BanBlockingTaskAccessAllowInMain` | Global | Erlaubt blockierende Task-Zugriffe in statischen `Main` Methoden. |
-| `BanBlockingTaskAccessAllowInTests` | Global | Erlaubt blockierende Task-Zugriffe in Test-Projekten. |
-| `EnforceResultPatternOverExceptions` | Global | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt. |
-| `ResultPatternAllowThrowInNamespaceSuffixes` | Global | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`. |
-| `ResultPatternAllowCatchRethrow` | Global | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`. |
-| `EnforceExplicitStateImmutability` | Global | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder). |
-| `ImmutabilityExemptBaseTypes` | Global | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`). |
-| `ImmutabilityAllowPrivateBackingFields` | Global | Erlaubt private mutable Felder mit Unterstrich (`_`) Präfix (z. B. typische WPF MVVM Backing-Felder) (Standard: `false`). |
-| `PreventContextDependentOverloads` | Global | Verbietet Methodenüberladungen, die sich nur durch primitive Typen bei gleicher Parameteranzahl unterscheiden. |
-| `EnforceNamespaceDirectoryMapping` | Global | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen. |
-| `DetectAndBanPhantomDependencies` | Global | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs. |
-| `BanPublicNestedTypes` | Global | Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Standard: `true`. Severity: `error`, Intent: `agent-context`. |
-| `BanPublicNestedTypesAllowPrivate` | Global | Wenn `true` (Standard): `private` nested Typen bleiben erlaubt, da sie kein externes Grep-Target für Agenten darstellen. Auf `false` setzen, um auch private nested Typen zu melden (strikter Greenfield-Modus). |
-| `EnablePerformanceProfiling` | Global | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `false`). Nur bei konkretem Bedarf aktivieren — erzeugt sonst dauerhaft `measurements/`-Dateien im Projektverzeichnis. |
-| `MaxLineCount` | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500). |
-| `MaxMethodParameterCount`| Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann. |
-| `MaxMethodParameterCountInTestFiles` | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind. |
-| `MethodParameterCountIgnoreTypeNames` | Metrics | Typ-Namen (einfacher Name, kein Namespace), die beim Zählen der Parameter nicht berücksichtigt werden. Standard: `[]`. Empfehlung für .NET-Projekte: `["CancellationToken"]`. |
-| `MethodParameterCountIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden. Ermöglicht z. B. `["ILogger"]` um `ILogger<T>` auszuschließen. Standard: `[]`. |
-| `MaxMethodParameterCountAllowPrivate` | Metrics | Wenn `true`: `private` und `protected` Methoden werden vom Parameteranzahl-Check vollständig ausgenommen. Standard: `false`. |
-| `MaxMethodParameterCountForNonPublic` | Metrics | Relaxiertes Limit für `private`/`protected` Methoden (Standard: `6`). `0` = gleicher Grenzwert wie `MaxMethodParameterCount`. Ignoriert wenn `MaxMethodParameterCountAllowPrivate: true`. |
-| `MaxMethodLineCount` | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42). |
-| `MaxCyclomaticComplexity`| Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5). |
-| `MaxCognitiveComplexity` | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5). |
-| `MaxInheritanceDepth` | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 3). Framework-Basisklassen (ASP.NET, EF Core, xUnit) können über `InheritanceDepthFrameworkPrefixes` ausgenommen werden. |
-| `InheritanceDepthFrameworkPrefixes` | Metrics | Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden (z. B. `["System.", "System.Windows."]`). |
-| `MinCognitiveComplexityForTest` | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert (Standard: 5). Niedrigere Werte erhöhen die Warning-Dichte; empfohlen: 5–7. |
-| `AggregatePartialClassLineCount` | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in). |
-| `MaxMethodOverloads` | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 5). Erlaubt gängige .NET-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress` etc.); ab 6+ Überladungen ist ein Parameter-Object die bessere Wahl. |
-| `MaxConstructorDependencies` | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). Records und Structs, bei denen **alle** Parameter Default-Werte haben, werden automatisch ausgenommen (Options/Config-Objects). |
-| `ConstructorDependencyIgnoreTypePrefixes` | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`). |
-| `ConstructorDependencyExemptClassSuffixes` | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten. |
-| `MaxDirectoryDepth` | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4). |
-| `MaxDirectoryChildren` | Metrics | Maximale Anzahl von Einträgen (Dateien + Unterordner) in einem Verzeichnis (Standard: 0 = deaktiviert). `MaxDirectoryChildrenExemptNames`: Ordnernamen, die ausgenommen werden (Standard: `["Migrations", "Generated", "wwwroot", "obj", "bin"]`). |
-| `MaxBoolParameterCount` | Metrics | Maximale Anzahl von `bool`-Parametern pro Methode oder Konstruktor (Standard: 0 = deaktiviert). `MaxBoolParameterCountAllowPrivate`: Wenn `true`, werden `private`/`protected` Methoden ausgenommen (Standard: `true`). `MaxBoolParameterCountExemptMethodPrefixes`: Methoden-Präfixe, die ausgenommen werden (Standard: `["Try"]`). |
-| `MaxPartialClassFiles` | Metrics | Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 0 = deaktiviert). Empfehlung: 2 — eine Deklarations- und eine Erweiterungsdatei. Guidance: Unter-Logik in eigenständige Klassen (z. B. `XyzChecker`) auslagern. `MaxPartialClassFilesExemptTypes`: vollqualifizierte oder einfache Typnamen, die ausgenommen werden (Standard: `[]`). |
-| `MaxPublicMembersPerType` | Metrics | Maximale Anzahl öffentlicher Member (Methoden, Properties, Felder, Events) pro Typ (Standard: 0 = deaktiviert). `MaxPublicMembersPerTypeExemptSuffixes`: Klassenname-Suffixe, für die die Prüfung übersprungen wird (Standard: `["Extensions", "Mapper", "Constants", "Config", "Args"]`). |
-| `MaxAIContextFootprint` | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 2500). Oberhalb von ~2.500 Zeilen tritt der „Lost in the Middle"-Effekt bei LLM-Agenten messbar auf. Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien. |
-| `MaxSwitchArms` | Metrics | Maximale Anzahl Arms in einem Switch-Expression bzw. Labels in einem Switch-Statement pro Methode. `0` = deaktiviert. Empfehlung: `10`. Dispatcher-Methoden (reine Routing-Tabellen) können per `MaxSwitchArmsExcludeDispatcher` ausgenommen werden. |
-| `MaxSwitchArmsExcludeDispatcher` | Metrics | Wenn `true` (Standard): Methoden die als Switch-Dispatcher klassifiziert werden (alle Cases sind triviale Einzeiler-Aufrufe), werden von `MaxSwitchArms` ausgenommen. Deckt den Hauptanwendungsfall "Routing-Tabelle mit 15+ Arms" ab. |
-| `MaxSwitchArmsExemptTypes` | Metrics | Einfache Typnamen (kein Namespace), deren Methoden von `MaxSwitchArms` komplett ausgenommen werden. Nützlich für State-Machine-Klassen mit vielen legitimen Zuständen (z. B. `["OrderStateMachine"]`). Standard: `[]`. |
-| `FootprintIgnoreNamespacePrefixes` | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`. |
-| `FootprintIgnoreTypeNames` | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`. |
-| `ComplexityNearMissTolerance` | Metrics | Toleranzbereich über dem Komplexitätslimit. Verstöße im Bereich `(Limit, Limit + Toleranz]` werden mit dem Hinweis `[near-miss: knapp über Limit]` markiert, zählen aber weiterhin als Verstöße und beeinflussen den Exit-Code. Standard: `0` (deaktiviert). |
-| `ExcludeNullCoalescingInitializerComplexity` | Metrics | Methoden, deren Body ausschließlich ein `return this with { … }` oder `return new T { … }` mit Null-Coalescing-Zuweisungen ist, werden von `MaxCyclomaticComplexity` und `MaxCognitiveComplexity` ausgenommen. Standard: `true` — diese Methoden sind semantisch flach trotz hohem McCabe-Wert. |
-| `NullCoalescingInitializerMaxNonCoalescingRatio` | Metrics | Maximaler Anteil an nicht-null-coalescing-Ästen, damit eine Methode als NullCoalescingInitializer gilt (0.0–1.0). Standard: `0.0` — alle Branches müssen `??` oder `?:` sein. |
-| `MaxLinqChainLength` | Metrics | Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette (Standard: 0 = deaktiviert). `LinqMethodNames` enthält die erlaubten Methodennamen, um Builder-Ketten von der Prüfung auszuschließen. |
-| `TestSentinel.ClassNamePatterns` | Config | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`. |
-| `TestSentinel.RecognizeTypeofReference` | Config | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`. |
-| `TestSentinel.RecognizeCoversComment` | Config | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`. |
-| `TestSentinel.ExemptClassNameSuffixes` | Config | Klassen mit diesen Namens-Suffixen werden vom Sentinel ausgenommen (z. B. `["Extensions", "Constants", "Converter"]`). |
-| `TestSentinel.ExemptWhenInheritsFrom` | Config | Klassen die von einem dieser Typen erben oder Interfaces implementieren, werden ausgenommen (z. B. `["ComponentBase", "IValueConverter"]`). |
-| `TestSentinel.ExemptStaticClasses` | Config | Statische Klassen werden vom Sentinel ausgenommen wenn `true`. Standard: `false`. |
-| `TestSentinel.TestProjectNameSuffixes` | Config | Projekt-Name-Suffixe, die ein Projekt als Testprojekt markieren, wenn keine Testrahmenbibliothek in den Metadaten erkannt wird (Fallback). Standard: `["Tests", "Test", "IntegrationTests", "Specs", "Spec"]`. Deckt reine Integration-Test-Projekte ohne direkten xunit-Verweis ab. |
-| `RuleMetadata` | Config | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung. |
+| Regel                                            | Bereich | Beschreibung                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| :----------------------------------------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EnforceSealedClasses`                           | Global  | Zwingt alle konkreten Klassen dazu, als `sealed` deklariert zu werden.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `AllowUnsealedPartialClasses`                    | Global  | Erlaubt es, `partial` Klassen unsealed zu lassen (Standard: `false`, nützlich z. B. bei WPF Code-Behind oder Blazor Page-Components).                                                                                                                                                                                                                                                                                                                              |
+| `SealedClassExemptSuffixes`                      | Global  | Liste von Klassenname-Suffixen, die von der `EnforceSealedClasses`-Prüfung ausgenommen sind (z. B. `["Base", "Foundation", "Host"]`).                                                                                                                                                                                                                                                                                                                              |
+| `AllowDynamic`                                   | Global  | Verbietet das Typschlüsselwort `dynamic` (verhindert statische Analyse-Lücken).                                                                                                                                                                                                                                                                                                                                                                                    |
+| `AllowOutParameters`                             | Global  | Verbietet `out`-Parameter zugunsten von C#-Tuples oder Records.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `AllowTryPatternOutParameters`                   | Global  | Erlaubt `out`-Parameter in folgenden idiomatischen Mustern (Standard: `true`): `bool Try*`- und `bool Is*`-Methoden; `string? Try*`-Methoden (Error-String-Muster: `null` = Erfolg, non-null = Fehlermeldung); `void Deconstruct(out ...)`-Methoden (C#-Sprachmuster); lokale Funktionen mit denselben Konventionen; Methoden, die ein Interface-Mitglied implementieren oder eine abstrakte Methode überschreiben (die Signatur ist dann vom Vertrag vorgegeben). |
+| `AllowOutParametersInPrivateMethods`             | Global  | Wenn `true`: `out`-Parameter in privaten Methoden werden von `AllowOutParameters` nicht gemeldet. Nützlich in Projekten mit no-DI-Architektur, die private Zerlegungshelfer intern nutzen. Öffentliche und `protected`/`internal` Methoden werden weiterhin geprüft. Standard: `true`.                                                                                                                                                                             |
+| `AllowCancellationShutdownCatch`                 | Global  | Erlaubt stummes Abfangen von Cancellation-Exceptions (wie `OperationCanceledException` oder `TaskCanceledException`) bei Host-Shutdown (ohne Pflicht eines `when`-Filters).                                                                                                                                                                                                                                                                                        |
+| `AllowedSilentCatchExceptionTypes`               | Global  | Liste von Exception-Typen (einfacher Name, kein Namespace), die lautlos abgefangen werden dürfen — z. B. `["JSDisconnectedException"]` für Blazor-Dispose-Methoden. Analogon zu `AllowCancellationShutdownCatch` für projektspezifische Typen. Standard: `[]` (leer).                                                                                                                                                                                              |
+| `EnforceMinimalApiAsParameters`                  | Global  | Prüft Minimal-API-Endpunkte auf fehlendes `[AsParameters]` bei >4 Parametern (opt-in).                                                                                                                                                                                                                                                                                                                                                                             |
+| `EnforceValueObjectContracts`                    | Global  | Zwingt Klassen mit Suffix `ValueObject` dazu, als `record` oder `readonly struct` deklariert zu sein und nur unveränderliche Eigenschaften (ohne `set`) zu haben.                                                                                                                                                                                                                                                                                                  |
+| `EnableTestSentinel`                             | Global  | Aktiviert den Test-Präsenzwächter für komplexe Quellcodedateien.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `EnforcePascalCase`                              | Global  | Validiert PascalCase-Schreibweise für Klassen, Structs, Records, Interfaces, Methoden und Properties.                                                                                                                                                                                                                                                                                                                                                              |
+| `EnforceXmlDocumentation`                        | Global  | Erzwingt XML-Dokumentationskommentare an öffentlichen Typ-Deklarationen (Klassen/Interfaces) (Standard: `false`).                                                                                                                                                                                                                                                                                                                                                  |
+| `EnforceSemanticNaming`                          | Global  | Markiert generische Parameternamen (z. B. `data`, `temp`, `val`) in öffentlichen Methoden als Fehler.                                                                                                                                                                                                                                                                                                                                                              |
+| `SemanticNamingExemptMethodNames`                | Global  | Methoden-Namen, für die `EnforceSemanticNaming` nicht geprüft wird. Standard: `["Equals", "CompareTo", "GetHashCode"]` (BCL-Overrides, bei denen Parameternamen wie `obj` konventionell sind). Erweiterbar für projektspezifische Muster.                                                                                                                                                                                                                          |
+| `SemanticNamingAllowSubstringOfMethodName`       | Global  | Wenn `true`: Ein Parameter-Name wird nicht gemeldet, wenn er als Teilstring (case-insensitiv) im Methoden-Namen vorkommt. Beispiel: Parameter `item` in Methode `AppendTimelineItemAsync` → nicht flaggen. Standard: `true`.                                                                                                                                                                                                                                       |
+| `EnforceNullableEnable`                          | Global  | Stellt sicher, dass `#nullable enable` in jeder Datei deklariert ist oder global über csproj erzwungen wird.                                                                                                                                                                                                                                                                                                                                                       |
+| `EnforceNoSilentCatch`                           | Global  | Verbietet stumme `catch`-Blöcke. Ein Catch-Block gilt als stumm (verschluckt), wenn er leer ist und weder `throw`, Methodenaufrufe (Invocations), Rückgabeanweisungen (`return`) noch Zuweisungen (`assignment`) an Felder/Eigenschaften enthält. Variable Namen, die mit `ignored` oder `expected` beginnen (z. B. `catch (Exception ignored)`), oder der Inline-Kommentar `// ainetlinter-disable EnforceNoSilentCatch` deaktivieren die Prüfung.                |
+| `BanAsyncVoid`                                   | Global  | Verbietet `async void`-Methoden und lokale Funktionen.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `AsyncVoidAllowEventHandlers`                    | Global  | Ermöglicht die Ausnahme von Event-Handlern mit Signatur `(object sender, EventArgs e)` von der `BanAsyncVoid`-Regel.                                                                                                                                                                                                                                                                                                                                               |
+| `BanBlockingTaskAccess`                          | Global  | Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`).                                                                                                                                                                                                                                                                                                                                                                          |
+| `BanBlockingTaskAccessAllowInMain`               | Global  | Erlaubt blockierende Task-Zugriffe in statischen `Main` Methoden.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `BanBlockingTaskAccessAllowInTests`              | Global  | Erlaubt blockierende Task-Zugriffe in Test-Projekten.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `EnforceResultPatternOverExceptions`             | Global  | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt.                                                                                                                                                                                                                                                                                                                           |
+| `ResultPatternAllowThrowInNamespaceSuffixes`     | Global  | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `[]`.                                                                                                                                                                                                                                                                   |
+| `ResultPatternAllowCatchRethrow`                 | Global  | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`.                                                                                                                                                                                                                                                                                                                                          |
+| `EnforceExplicitStateImmutability`               | Global  | Zwingt alle Klassen (außer DTOs/Entities) zu Immutabilität (init/get-only Eigenschaften und private readonly Felder).                                                                                                                                                                                                                                                                                                                                              |
+| `ImmutabilityExemptBaseTypes`                    | Global  | Liste von Basisklassen oder Schnittstellen, von denen erbende/implementierende Klassen vollständig von der Immutability-Prüfung ausgenommen sind (z. B. `["ComponentBase", "ObservableObject"]`).                                                                                                                                                                                                                                                                  |
+| `ImmutabilityAllowPrivateBackingFields`          | Global  | Erlaubt private mutable Felder mit Unterstrich (`_`) Präfix (z. B. typische WPF MVVM Backing-Felder) (Standard: `false`).                                                                                                                                                                                                                                                                                                                                          |
+| `PreventContextDependentOverloads`               | Global  | Verbietet Methodenüberladungen, die sich nur durch primitive Typen bei gleicher Parameteranzahl unterscheiden.                                                                                                                                                                                                                                                                                                                                                     |
+| `EnforceNamespaceDirectoryMapping`               | Global  | Stellt sicher, dass deklarierte Namespaces exakt der physischen Ordnerstruktur entsprechen.                                                                                                                                                                                                                                                                                                                                                                        |
+| `DetectAndBanPhantomDependencies`                | Global  | Verbietet die Einbindung nicht auflösbarer Namespaces sowie dynamische Reflection-Lade-APIs.                                                                                                                                                                                                                                                                                                                                                                       |
+| `BanPublicNestedTypes`                           | Global  | Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Standard: `true`. Severity: `error`, Intent: `agent-context`.                                                                                                                                  |
+| `BanPublicNestedTypesAllowPrivate`               | Global  | Wenn `true` (Standard): `private` nested Typen bleiben erlaubt, da sie kein externes Grep-Target für Agenten darstellen. Auf `false` setzen, um auch private nested Typen zu melden (strikter Greenfield-Modus).                                                                                                                                                                                                                                                   |
+| `EnablePerformanceProfiling`                     | Global  | Aktiviert die automatisierte Laufzeit-Messung aller Linter-Phasen und Dateianalysen (Standard: `false`). Nur bei konkretem Bedarf aktivieren — erzeugt sonst dauerhaft `measurements/`-Dateien im Projektverzeichnis.                                                                                                                                                                                                                                              |
+| `MaxLineCount`                                   | Metrics | Maximale Zeilenanzahl pro Datei (Standard: 500).                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `MaxMethodParameterCount`                        | Metrics | Maximale Parameteranzahl pro Methode (Standard: 4). `override`-Methoden und explizite/implizite Interface-Implementierungen sind ausgenommen, da ihre Signatur nicht geändert werden kann.                                                                                                                                                                                                                                                                         |
+| `MaxMethodParameterCountInTestFiles`             | Metrics | Separater Grenzwert für Testdateien (Standard: 0 = gleicher Grenzwert wie `MaxMethodParameterCount`). Empfehlung: 6–8, da Test-Arrange-Helfer naturgemäß breiter sind.                                                                                                                                                                                                                                                                                             |
+| `MethodParameterCountIgnoreTypeNames`            | Metrics | Typ-Namen (einfacher Name, kein Namespace), die beim Zählen der Parameter nicht berücksichtigt werden. Standard: `[]`. Empfehlung für .NET-Projekte: `["CancellationToken"]`.                                                                                                                                                                                                                                                                                      |
+| `MethodParameterCountIgnoreTypePrefixes`         | Metrics | Typ-Name-Präfixe, die beim Zählen der Parameter-Anzahl ignoriert werden. Ermöglicht z. B. `["ILogger"]` um `ILogger<T>` auszuschließen. Standard: `[]`.                                                                                                                                                                                                                                                                                                            |
+| `MaxMethodParameterCountAllowPrivate`            | Metrics | Wenn `true`: `private` und `protected` Methoden werden vom Parameteranzahl-Check vollständig ausgenommen. Standard: `false`.                                                                                                                                                                                                                                                                                                                                       |
+| `MaxMethodParameterCountForNonPublic`            | Metrics | Relaxiertes Limit für `private`/`protected` Methoden (Standard: `6`). `0` = gleicher Grenzwert wie `MaxMethodParameterCount`. Ignoriert wenn `MaxMethodParameterCountAllowPrivate: true`.                                                                                                                                                                                                                                                                          |
+| `MaxMethodLineCount`                             | Metrics | Maximale Codezeilenanzahl pro Methode ohne Kommentare/Leerzeilen (Standard: 42).                                                                                                                                                                                                                                                                                                                                                                                   |
+| `MaxCyclomaticComplexity`                        | Metrics | Maximale zyklomatische Komplexität (McCabe) pro Methode (Standard: 5).                                                                                                                                                                                                                                                                                                                                                                                             |
+| `MaxCognitiveComplexity`                         | Metrics | Maximale kognitive Komplexität (SonarSource) pro Methode (Standard: 5).                                                                                                                                                                                                                                                                                                                                                                                            |
+| `MaxInheritanceDepth`                            | Metrics | Maximale Tiefe der Vererbungshierarchie (Standard: 3). Framework-Basisklassen (ASP.NET, EF Core, xUnit) können über `InheritanceDepthFrameworkPrefixes` ausgenommen werden.                                                                                                                                                                                                                                                                                        |
+| `InheritanceDepthFrameworkPrefixes`              | Metrics | Namespace-Präfixe von Framework-Basistypen, die beim Zählen der Vererbungstiefe ignoriert werden (z. B. `["System.", "System.Windows."]`).                                                                                                                                                                                                                                                                                                                         |
+| `MinCognitiveComplexityForTest`                  | Metrics | Schwellenwert der kognitiven Komplexität, ab dem der Test Sentinel eine zugehörige Testklasse einfordert (Standard: 5). Niedrigere Werte erhöhen die Warning-Dichte; empfohlen: 5–7.                                                                                                                                                                                                                                                                               |
+| `AggregatePartialClassLineCount`                 | Metrics | Summiert Zeilenanzahl über alle `partial`-Teile eines Typs (opt-in).                                                                                                                                                                                                                                                                                                                                                                                               |
+| `MaxMethodOverloads`                             | Metrics | Maximale Anzahl von Methoden-Überladungen pro Name in einer Klasse (Standard: 5). Erlaubt gängige .NET-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress` etc.); ab 6+ Überladungen ist ein Parameter-Object die bessere Wahl.                                                                                                                                                                                                                           |
+| `MaxConstructorDependencies`                     | Metrics | Maximale Parameter-Anzahl pro Konstruktor / Primärkonstruktor (Standard: 5). Records und Structs, bei denen **alle** Parameter Default-Werte haben, werden automatisch ausgenommen (Options/Config-Objects).                                                                                                                                                                                                                                                       |
+| `ConstructorDependencyIgnoreTypePrefixes`        | Metrics | Typ-Name-Präfixe von Framework- oder Cross-Cutting-Abhängigkeiten, die bei `MaxConstructorDependencies` nicht mitgezählt werden (z. B. `["ILogger", "IOptions"]`).                                                                                                                                                                                                                                                                                                 |
+| `ConstructorDependencyExemptClassSuffixes`       | Metrics | Klassen-Name-Suffixe, für die `MaxConstructorDependencies` komplett übersprungen wird. Typisch: `["Exception"]` — Exception-Typen haben Payload-Parameter, keine DI-Abhängigkeiten.                                                                                                                                                                                                                                                                                |
+| `MaxDirectoryDepth`                              | Metrics | Maximale Ordnertiefe ab csproj-Ebene (Standard: 4).                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `MaxDirectoryChildren`                           | Metrics | Maximale Anzahl von Einträgen (Dateien + Unterordner) in einem Verzeichnis (Standard: 0 = deaktiviert). `MaxDirectoryChildrenExemptNames`: Ordnernamen, die ausgenommen werden (Standard: `["Migrations", "Generated", "wwwroot", "obj", "bin"]`).                                                                                                                                                                                                                 |
+| `MaxBoolParameterCount`                          | Metrics | Maximale Anzahl von `bool`-Parametern pro Methode oder Konstruktor (Standard: 0 = deaktiviert). `MaxBoolParameterCountAllowPrivate`: Wenn `true`, werden `private`/`protected` Methoden ausgenommen (Standard: `true`). `MaxBoolParameterCountExemptMethodPrefixes`: Methoden-Präfixe, die ausgenommen werden (Standard: `["Try"]`).                                                                                                                               |
+| `MaxPartialClassFiles`                           | Metrics | Maximale Anzahl von `partial`-Deklarationsdateien pro Typ (Standard: 0 = deaktiviert). Empfehlung: 2 — eine Deklarations- und eine Erweiterungsdatei. Guidance: Unter-Logik in eigenständige Klassen (z. B. `XyzChecker`) auslagern. `MaxPartialClassFilesExemptTypes`: vollqualifizierte oder einfache Typnamen, die ausgenommen werden (Standard: `[]`).                                                                                                         |
+| `MaxPublicMembersPerType`                        | Metrics | Maximale Anzahl öffentlicher Member (Methoden, Properties, Felder, Events) pro Typ (Standard: 0 = deaktiviert). `MaxPublicMembersPerTypeExemptSuffixes`: Klassenname-Suffixe, für die die Prüfung übersprungen wird (Standard: `["Extensions", "Mapper", "Constants", "Config", "Args"]`).                                                                                                                                                                         |
+| `MaxAIContextFootprint`                          | Metrics | Die maximale Anzahl transitiver Codezeilen von Klassenabhängigkeiten (Standard: 2500). Oberhalb von ~2.500 Zeilen tritt der „Lost in the Middle"-Effekt bei LLM-Agenten messbar auf. Bei Partial-Klassen wird die Meldung nur einmal pro logischer Klasse ausgegeben (Deduplication), unabhängig von der Anzahl der Partial-Dateien.                                                                                                                               |
+| `MaxSwitchArms`                                  | Metrics | Maximale Anzahl Arms in einem Switch-Expression bzw. Labels in einem Switch-Statement pro Methode. `0` = deaktiviert. Empfehlung: `10`. Dispatcher-Methoden (reine Routing-Tabellen) können per `MaxSwitchArmsExcludeDispatcher` ausgenommen werden.                                                                                                                                                                                                               |
+| `MaxSwitchArmsExcludeDispatcher`                 | Metrics | Wenn `true` (Standard): Methoden die als Switch-Dispatcher klassifiziert werden (alle Cases sind triviale Einzeiler-Aufrufe), werden von `MaxSwitchArms` ausgenommen. Deckt den Hauptanwendungsfall "Routing-Tabelle mit 15+ Arms" ab.                                                                                                                                                                                                                             |
+| `MaxSwitchArmsExemptTypes`                       | Metrics | Einfache Typnamen (kein Namespace), deren Methoden von `MaxSwitchArms` komplett ausgenommen werden. Nützlich für State-Machine-Klassen mit vielen legitimen Zuständen (z. B. `["OrderStateMachine"]`). Standard: `[]`.                                                                                                                                                                                                                                             |
+| `FootprintIgnoreNamespacePrefixes`               | Metrics | Namespace-Präfixe von Typen, die beim Footprint nicht gezählt werden. Nützlich wenn Drittanbieter-Quellcode direkt in der Solution liegt. Framework-Typen ohne Quellcode (MudBlazor NuGet, `System.*`) werden immer automatisch ausgeschlossen. Standard: `[]`.                                                                                                                                                                                                    |
+| `FootprintIgnoreTypeNames`                       | Metrics | Einfache Typ-Namen (kein Namespace), die bei `AIContextFootprint` nicht mitgezählt werden. Ergänzung zu `FootprintIgnoreNamespacePrefixes` für Infrastruktur-Omnipräsenz-Typen die durch den ganzen Dependency-Graphen fließen (z. B. zentrale `SqlExecutor`-Klassen). Nur einfacher Name: z. B. `"SqlExecutor"` nicht `"MyApp.Infra.SqlExecutor"`. Standard: `[]`.                                                                                                |
+| `ComplexityNearMissTolerance`                    | Metrics | Toleranzbereich über dem Komplexitätslimit. Verstöße im Bereich `(Limit, Limit + Toleranz]` werden mit dem Hinweis `[near-miss: knapp über Limit]` markiert, zählen aber weiterhin als Verstöße und beeinflussen den Exit-Code. Standard: `0` (deaktiviert).                                                                                                                                                                                                       |
+| `ExcludeNullCoalescingInitializerComplexity`     | Metrics | Methoden, deren Body ausschließlich ein `return this with { … }` oder `return new T { … }` mit Null-Coalescing-Zuweisungen ist, werden von `MaxCyclomaticComplexity` und `MaxCognitiveComplexity` ausgenommen. Standard: `true` — diese Methoden sind semantisch flach trotz hohem McCabe-Wert.                                                                                                                                                                    |
+| `NullCoalescingInitializerMaxNonCoalescingRatio` | Metrics | Maximaler Anteil an nicht-null-coalescing-Ästen, damit eine Methode als NullCoalescingInitializer gilt (0.0–1.0). Standard: `0.0` — alle Branches müssen `??` oder `?:` sein.                                                                                                                                                                                                                                                                                      |
+| `MaxLinqChainLength`                             | Metrics | Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette (Standard: 0 = deaktiviert). `LinqMethodNames` enthält die erlaubten Methodennamen, um Builder-Ketten von der Prüfung auszuschließen.                                                                                                                                                                                                                                                  |
+| `TestSentinel.ClassNamePatterns`                 | Config  | Muster für Testklassen-Namen, z. B. `["{Name}Tests", "{Name}*Tests"]`.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `TestSentinel.RecognizeTypeofReference`          | Config  | Erkennt `typeof(MyClass)` in einer Testklasse als Abdeckung. Standard: `true`.                                                                                                                                                                                                                                                                                                                                                                                     |
+| `TestSentinel.RecognizeCoversComment`            | Config  | Erkennt `// @covers MyClass`-Kommentare als Abdeckung. Standard: `true`.                                                                                                                                                                                                                                                                                                                                                                                           |
+| `TestSentinel.ExemptClassNameSuffixes`           | Config  | Klassen mit diesen Namens-Suffixen werden vom Sentinel ausgenommen (z. B. `["Extensions", "Constants", "Converter"]`).                                                                                                                                                                                                                                                                                                                                             |
+| `TestSentinel.ExemptWhenInheritsFrom`            | Config  | Klassen die von einem dieser Typen erben oder Interfaces implementieren, werden ausgenommen (z. B. `["ComponentBase", "IValueConverter"]`).                                                                                                                                                                                                                                                                                                                        |
+| `TestSentinel.ExemptStaticClasses`               | Config  | Statische Klassen werden vom Sentinel ausgenommen wenn `true`. Standard: `false`.                                                                                                                                                                                                                                                                                                                                                                                  |
+| `TestSentinel.TestProjectNameSuffixes`           | Config  | Projekt-Name-Suffixe, die ein Projekt als Testprojekt markieren, wenn keine Testrahmenbibliothek in den Metadaten erkannt wird (Fallback). Standard: `["Tests", "Test", "IntegrationTests", "Specs", "Spec"]`. Deckt reine Integration-Test-Projekte ohne direkten xunit-Verweis ab.                                                                                                                                                                               |
+| `RuleMetadata`                                   | Config  | Severity (`error`/`warning`) und Intent-Tags pro Regel für LLM-Priorisierung.                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
 
@@ -272,10 +301,10 @@ In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsan
 
 ### BanAsyncVoid
 
-| Schlüssel | Typ | Standard |
-|---|---|---|
-| `BanAsyncVoid` | `bool` | `true` |
-| `AsyncVoidAllowEventHandlers` | `bool` | `true` |
+| Schlüssel                     | Typ    | Standard |
+| ----------------------------- | ------ | -------- |
+| `BanAsyncVoid`                | `bool` | `true`   |
+| `AsyncVoidAllowEventHandlers` | `bool` | `true`   |
 
 Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert Exceptions direkt in den `SynchronizationContext`, wodurch sie für aufrufende `try/catch`-Blöcke unsichtbar werden und zum App-Absturz oder stillschweigendem Fehlerverfall führen können.
 
@@ -283,11 +312,11 @@ Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert E
 
 ### BanBlockingTaskAccess
 
-| Schlüssel | Typ | Standard |
-|---|---|---|
-| `BanBlockingTaskAccess` | `bool` | `true` |
-| `BanBlockingTaskAccessAllowInMain` | `bool` | `true` |
-| `BanBlockingTaskAccessAllowInTests` | `bool` | `false` |
+| Schlüssel                           | Typ    | Standard |
+| ----------------------------------- | ------ | -------- |
+| `BanBlockingTaskAccess`             | `bool` | `true`   |
+| `BanBlockingTaskAccessAllowInMain`  | `bool` | `true`   |
+| `BanBlockingTaskAccessAllowInTests` | `bool` | `false`  |
 
 Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). Diese Muster blockieren ThreadPool-Threads und können in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF) zu Deadlocks führen.
 
@@ -295,16 +324,17 @@ Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetRe
 
 ### MaxLinqChainLength
 
-| Schlüssel | Typ | Standard |
-|---|---|---|
-| `MaxLinqChainLength` | `int` | `0` (deaktiviert) |
-| `LinqMethodNames` | `string[]` | Standard-LINQ-Methodennamen |
+| Schlüssel            | Typ        | Standard                    |
+| -------------------- | ---------- | --------------------------- |
+| `MaxLinqChainLength` | `int`      | `0` (deaktiviert)           |
+| `LinqMethodNames`    | `string[]` | Standard-LINQ-Methodennamen |
 
 Begrenzt die Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette. Eine Kette mit mehr Methoden als der Schwellenwert erzeugt eine `warning` (kein `error`).
 
 **Empfohlener Schwellenwert:** 5 (ab 6 Methoden Warnung).
 
 **Konfigurationsbeispiel:**
+
 ```json
 "Metrics": {
   "MaxLinqChainLength": 5
@@ -312,6 +342,7 @@ Begrenzt die Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette.
 ```
 
 **Erweiterung der Whitelist** für projektspezifische LINQ-ähnliche APIs (z. B. EF Core Fluent API):
+
 ```json
 "Metrics": {
   "LinqMethodNames": ["Where", "Select", "Include", "ThenInclude"]
@@ -329,7 +360,7 @@ Der AI-Context-Footprint berechnet die Summe aller Codezeilen der Klasse selbst 
 
 Die Regel `EnforceSealedClasses` zwingt standardmäßig alle konkreten Klassen dazu, als `sealed` deklariert zu werden. In bestimmten Szenarien (z. B. WPF oder bei dedizierten Basisklassen) führt dies jedoch zu False-Positives:
 
-1. **WPF Partial-Klassen:** Der XAML-Compiler generiert für Code-Behind-Dateien partial Klassen, die standardmäßig nicht `sealed` deklariert sind. 
+1. **WPF Partial-Klassen:** Der XAML-Compiler generiert für Code-Behind-Dateien partial Klassen, die standardmäßig nicht `sealed` deklariert sind.
 2. **Designte Basisklassen:** Klassen, die als Basisklassen für Vererbung gedacht sind (z. B. `OrderHandlerBase`), sollten nicht versiegelt werden.
 
 Hierfür stehen folgende Konfigurationsoptionen zur Verfügung:
@@ -358,6 +389,7 @@ Die Regel `MaxInheritanceDepth` zählt standardmäßig alle Basisklassen bis zu 
 Mit `InheritanceDepthFrameworkPrefixes` können Namespace-Präfixe definiert werden, deren Typen beim Zählen der Vererbungstiefe ignoriert werden. Die Tiefe der eigenen Klassen-Hierarchie wird weiterhin korrekt ermittelt.
 
 Empfohlene Konfiguration für WPF- und Blazor-Projekte:
+
 ```json
 "Metrics": {
   "MaxInheritanceDepth": 2,
@@ -418,6 +450,7 @@ public sealed record SpecialOptions(bool A = false, bool B = false, ...);
 ```
 
 Empfohlene Konfiguration:
+
 ```json
 "Metrics": {
   "MaxConstructorDependencies": 5,
@@ -443,6 +476,7 @@ Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen
 - **`ImmutabilityAllowPrivateBackingFields`** (Boolean, Default: `false`): Wenn `true`, werden private Felder, die mit einem Unterstrich (`_`) beginnen, nicht als Verstoß gemeldet. Dies erlaubt typische WPF-MVVM Backing-Felder.
 
 #### Empfohlene Konfiguration für WPF (MVVM):
+
 ```json
 "Global": {
   "EnforceExplicitStateImmutability": true,
@@ -456,6 +490,7 @@ Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen
 ```
 
 #### Empfohlene Konfiguration für Blazor-Projekte:
+
 ```json
 "Global": {
   "EnforceExplicitStateImmutability": true,
@@ -484,17 +519,20 @@ Die Regel `EnforceNamespaceDirectoryMapping` stellt sicher, dass der Namespace e
 #### Beispiele
 
 ##### 1. Modus `"exact"`
+
 - **Pfad:** `Features/Admin/Users/`
 - **Namespace:** `MyApp.Features.Admin.Users` (Kein Verstoß)
 - **Namespace:** `MyApp.Features.Users` (Verstoß, da `Admin` fehlt)
 
 ##### 2. Modus `"suffix-match"` (RequiredTrailingSegments: 2, IgnorePathSegments: `["Domains"]`)
+
 - **Pfad:** `Handlers/Domains/Kalender/`
 - **Relevante Segmente:** `["Handlers", "Kalender"]` (da `"Domains"` ignoriert wird)
 - **Erwarteter Suffix (die letzten 2):** `"Handlers.Kalender"`
 - **Namespace:** `MyApp.Handlers.Kalender` (Kein Verstoß)
 
 ##### 3. Modus `"contains-all"`
+
 - **Pfad:** `Features/Admin/Users/`
 - **Namespace:** `MyApp.Features.Users.Admin` (Kein Verstoß, da `Features`, `Admin` und `Users` alle im Namespace vorkommen)
 
@@ -518,15 +556,15 @@ Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine
 
 #### Einstellungsoptionen
 
-| Option | Typ | Default | Beschreibung |
-| :--- | :---: | :---: | :--- |
-| `BlazorRequireCodeBehind` | Boolean | `true` | `.razor`-Dateien mit `@code {}`- oder `@functions {}`-Blöcken müssen eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Reine Template-Dateien ohne Inline-Code lösen keine Verletzung aus. |
-| `BlazorRequireCssIsolation` | Boolean | `true` | Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei haben (CSS-Isolation). Verhindert `<style>`-Blöcke inline. |
-| `BlazorCssIsolationOnlyWhenStylesNeeded` | Boolean | `true` | Wenn `true`, wird `BlazorRequireCssIsolation` nur ausgelöst, wenn die `.razor`-Datei native HTML-Elemente (`<div>`, `<span>` etc.) oder explizite `class=`/`style=`-Attribute enthält. Reine Komponenten-Komposition mit PascalCase-Tags (`<MudButton>`) löst keine Verletzung aus. Empfohlen für MudBlazor-Projekte. |
-| `WpfRequireMinimalCodeBehind` | Boolean | `true` | WPF Code-Behind-Klassen (partial classes mit WPF-Basistyp) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten. |
-| `WpfCodeBehindBaseTypes` | String-Array | `["Window", "UserControl", "Page", "NavigationWindow"]` | Basis-Typnamen, die eine Klasse als WPF Code-Behind identifizieren. |
-| `BlazorExcludeFileNames` | String-Array | `["_Imports.razor"]` | Razor-Dateinamen, die von den Blazor-Checks ausgeschlossen werden. |
-| `WpfExcludeClassNames` | String-Array | `[]` | Klassen-Namen, die vom WPF Code-Behind-Check ausgeschlossen werden. |
+| Option                                   |     Typ      |                         Default                         | Beschreibung                                                                                                                                                                                                                                                                                                          |
+| :--------------------------------------- | :----------: | :-----------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BlazorRequireCodeBehind`                |   Boolean    |                         `true`                          | `.razor`-Dateien mit `@code {}`- oder `@functions {}`-Blöcken müssen eine `.razor.cs`-Begleitdatei haben (Code-Behind-Partial-Class). Reine Template-Dateien ohne Inline-Code lösen keine Verletzung aus.                                                                                                             |
+| `BlazorRequireCssIsolation`              |   Boolean    |                         `true`                          | Jede `.razor`-Datei muss eine `.razor.css`-Begleitdatei haben (CSS-Isolation). Verhindert `<style>`-Blöcke inline.                                                                                                                                                                                                    |
+| `BlazorCssIsolationOnlyWhenStylesNeeded` |   Boolean    |                         `true`                          | Wenn `true`, wird `BlazorRequireCssIsolation` nur ausgelöst, wenn die `.razor`-Datei native HTML-Elemente (`<div>`, `<span>` etc.) oder explizite `class=`/`style=`-Attribute enthält. Reine Komponenten-Komposition mit PascalCase-Tags (`<MudButton>`) löst keine Verletzung aus. Empfohlen für MudBlazor-Projekte. |
+| `WpfRequireMinimalCodeBehind`            |   Boolean    |                         `true`                          | WPF Code-Behind-Klassen (partial classes mit WPF-Basistyp) dürfen nur den Konstruktor mit `InitializeComponent()` enthalten.                                                                                                                                                                                          |
+| `WpfCodeBehindBaseTypes`                 | String-Array | `["Window", "UserControl", "Page", "NavigationWindow"]` | Basis-Typnamen, die eine Klasse als WPF Code-Behind identifizieren.                                                                                                                                                                                                                                                   |
+| `BlazorExcludeFileNames`                 | String-Array |                  `["_Imports.razor"]`                   | Razor-Dateinamen, die von den Blazor-Checks ausgeschlossen werden.                                                                                                                                                                                                                                                    |
+| `WpfExcludeClassNames`                   | String-Array |                          `[]`                           | Klassen-Namen, die vom WPF Code-Behind-Check ausgeschlossen werden.                                                                                                                                                                                                                                                   |
 
 #### Suppression
 
@@ -558,6 +596,78 @@ Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine
 
 ---
 
+### Web-Asset-Linting (Web / CSS, JS, Razor)
+
+Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase 3: Razor). Web-Dateien werden nicht von Roslyn analysiert, sondern ueber einen parallelen File-System-Walk im PostAnalysis-Schritt geladen und mit dedizierten Analyzern verarbeitet (ExCSS fuer CSS, Esprima fuer JS, Microsoft.AspNetCore.Razor.Language fuer Razor). Opt-in: `Web.IsEnabled = true` schaltet das gesamte Web-Modul ein; ohne Aktivierung wird kein Web-Asset analysiert.
+
+#### Einstellungsoptionen
+
+| Option                            |     Typ      |                            Default                            | Beschreibung                                                                                                                                                                                                 |
+| :-------------------------------- | :----------: | :-----------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IsEnabled`                       |   Boolean    |                            `false`                            | Aktiviert das gesamte Web-Modul (CSS, spaeter JS+Razor). Master-Switch.                                                                                                                                      |
+| `Css.MaxCssLineCount`             |   Integer    |                             `300`                             | Maximale Zeilenanzahl pro CSS-Datei. Verhindert "Lost in the Middle" in grossen monolithischen Stylesheets. `0` = deaktiviert.                                                                               |
+| `Css.PreferScopedCss`             |   Boolean    |                            `true`                             | Wenn true, werden globale CSS-Dateien mit vielen Regeln zugunsten von Scoped CSS (`.razor.css`) abgemaahnt (Butterfly-Effekt).                                                                               |
+| `Css.PreferScopedCssMinRuleCount` |   Integer    |                              `5`                              | Schwellenwert: ab dieser Anzahl Stil-Regeln in einer globalen CSS-Datei wird `CSS_PreferScopedCss` ausgeloest. CSS-Dateien mit weniger Regeln (Resets, Custom Properties, `@font-face`) sind legitim global. |
+| `Css.MaxCssSelectorComplexity`    |   Integer    |                              `3`                              | Maximale Tiefe eines CSS-Selektors (Anzahl Selektor-Segmente, getrennt durch Komma/Whitespace/Combinators). Verhindert ueber-Engineered Selektoren. `0` = deaktiviert.                                       |
+| `Css.ExemptPaths`                 | String-Array | `["**/wwwroot/lib/**", "**/node_modules/**", "**/*.min.css"]` | Glob-Muster fuer Pfade, die von der CSS-Analyse ausgeschlossen werden (z. B. Bootstrap, MudBlazor, `*.min.css`).                                                                                             |
+
+#### Regeln
+
+| Regel                          | Severity |    Intent     | Beschreibung                                                                                                              |
+| :----------------------------- | :------: | :-----------: | :------------------------------------------------------------------------------------------------------------------------ |
+| `CSS_MaxCssLineCount`          |  error   | agent-context | CSS-Datei ueberschreitet das Zeilenlimit. Empfehlung: Datei splitten oder in Scoped CSS ueberfuehren.                     |
+| `CSS_PreferScopedCss`          | warning  | agent-context | Globale CSS-Datei enthaelt mehr Regeln als der Schwellenwert. Empfehlung: Komponenten-Styles in `.razor.css` extrahieren. |
+| `CSS_MaxCssSelectorComplexity` | warning  | agent-context | CSS-Selektor zu tief verschachtelt. Empfehlung: Wurzel-Selektor verwenden, Spezifitaet reduzieren oder Scoped CSS.        |
+| `CSS_ParseError`               |  error   |    general    | CSS-Datei konnte nicht geparst werden (Syntax-Fehler). Empfehlung: Klammern / Selektor-Syntax korrigieren.                |
+
+#### Suppression
+
+In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet:
+
+```css
+/* ainetlinter-disable CSS_MaxCssLineCount */
+/* Komplexes Legacy-Stylesheet wird in Sprint 3 migriert */
+
+/* ainetlinter-disable CSS_MaxCssSelectorComplexity */
+.container .sub-container .panel .content .button {
+  color: red;
+}
+
+/* ainetlinter-disable all */
+.foo {
+  color: blue;
+} /* deaktiviert alle Regeln fuer den Rest der Datei */
+```
+
+#### Empfohlene Konfiguration (Standardprofil mit Web-Linting):
+
+```json
+"Web": {
+  "IsEnabled": true,
+  "Css": {
+    "MaxCssLineCount": 300,
+    "PreferScopedCss": true,
+    "PreferScopedCssMinRuleCount": 5,
+    "MaxCssSelectorComplexity": 3,
+    "ExemptPaths": [
+      "**/wwwroot/lib/**",
+      "**/node_modules/**",
+      "**/*.min.css"
+    ]
+  }
+}
+```
+
+#### Abgrenzung zu Epic 22 (Blazor-UI-Datei-Trennung)
+
+`UiSeparation` prueft die **Struktur** von Blazor-Dateien (hat `.razor` eine `.razor.cs`? Hat es eine `.razor.css`?). `Web.Css` prueft den **Inhalt** der CSS-Dateien (Zeilenanzahl, Selektor-Komplexitaet, Scoped-CSS-Empfehlung). Beide Ebenen sind komplementaer: ein Projekt mit korrekt strukturierten Begleitdateien kann trotzdem zu grosse oder zu komplexe CSS-Inhalte haben.
+
+#### Architektur-Hinweis
+
+Der WebFileCatalog enumeriert Web-Dateien ueber das Dateisystem (Roslyn sieht `.css`/`.js`/`.razor` nicht) und nutzt die bereits geladene `Solution` als Quelle der Projektverzeichnisse — es findet kein zweites MSBuild-Laden statt. Pro Projekt koennen via `ProjectOverrides.*.Web` (mit `WebConfigOverride` / `CssConfigOverride`) abweichende Schwellenwerte gesetzt werden, z. B. um in Testprojekten das Web-Modul abzuschalten oder fuer Blazor-Projekte andere Limits zu setzen.
+
+---
+
 ### Datei- und Verzeichnis-Ausschlüsse (FileFilters)
 
 Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.
@@ -569,6 +679,7 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 - **`SkipGeneratedCodeAttribute`** (Boolean, Default: `false`): Wenn `true`, werden Klassen, Records und Structs, die mit dem `[GeneratedCode]` oder `[GeneratedCodeAttribute]` Attribut deklariert sind, vollständig von der Analyse übersprungen (inkl. ihrer Methoden und Member).
 
 #### Empfohlene Standardkonfiguration:
+
 ```json
 "FileFilters": {
   "ExcludeFilePatterns": [
@@ -611,6 +722,7 @@ Der Sentinel erkennt Testprojekte primär über Metadatenreferenzen (xunit, nuni
 - **`ExemptStaticClasses`** (Boolean, Default: `false`): Statische Klassen (z. B. `public static class StringExtensions`) werden übersprungen.
 
 #### Empfohlene Konfiguration für WPF-Projekte:
+
 ```json
 "TestSentinel": {
   "ExemptClassNameSuffixes": ["Extensions", "Constants", "Converter"],
@@ -620,6 +732,7 @@ Der Sentinel erkennt Testprojekte primär über Metadatenreferenzen (xunit, nuni
 ```
 
 #### Empfohlene Konfiguration für Blazor-Projekte:
+
 ```json
 "TestSentinel": {
   "ExemptWhenInheritsFrom": ["ComponentBase", "LayoutComponentBase"],
@@ -636,6 +749,7 @@ Die Regel `EnforceResultPatternOverExceptions` ist standardmäßig **deaktiviert
 - **`ResultPatternAllowCatchRethrow`** (Boolean, Default: `true`): Ein bloßes `throw;` ohne Expression (Rethrow in Catch) ist immer erlaubt. Das ist idomatisches C# für Log-and-Rethrow-Muster.
 
 #### Empfohlene Konfiguration (Strict-Profil mit Ausnahmen):
+
 ```json
 "Global": {
   "EnforceResultPatternOverExceptions": true,
@@ -666,15 +780,27 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
     "EnforceNoSilentCatch": true,
     "AllowCancellationShutdownCatch": true,
     "EnforceExplicitStateImmutability": true,
-    "ImmutabilityExemptBaseTypes": ["ObservableObject", "ObservableRecipient", "INotifyPropertyChanged"],
+    "ImmutabilityExemptBaseTypes": [
+      "ObservableObject",
+      "ObservableRecipient",
+      "INotifyPropertyChanged"
+    ],
     "ImmutabilityAllowPrivateBackingFields": true,
     "EnforceResultPatternOverExceptions": false
   },
   "Metrics": {
     "MaxInheritanceDepth": 2,
-    "InheritanceDepthFrameworkPrefixes": ["System.", "System.Windows.", "Microsoft.UI."],
+    "InheritanceDepthFrameworkPrefixes": [
+      "System.",
+      "System.Windows.",
+      "Microsoft.UI."
+    ],
     "MaxConstructorDependencies": 5,
-    "ConstructorDependencyIgnoreTypePrefixes": ["ILogger", "IOptions", "IHostEnvironment"]
+    "ConstructorDependencyIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IHostEnvironment"
+    ]
   },
   "FileFilters": {
     "ExcludeFilePatterns": ["*.designer.cs", "*.g.cs"],
@@ -688,7 +814,12 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
   },
   "UiSeparation": {
     "WpfRequireMinimalCodeBehind": true,
-    "WpfCodeBehindBaseTypes": ["Window", "UserControl", "Page", "NavigationWindow"],
+    "WpfCodeBehindBaseTypes": [
+      "Window",
+      "UserControl",
+      "Page",
+      "NavigationWindow"
+    ],
     "BlazorRequireCodeBehind": false,
     "BlazorRequireCssIsolation": false
   }
@@ -714,8 +845,15 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
   },
   "Metrics": {
     "MaxInheritanceDepth": 2,
-    "InheritanceDepthFrameworkPrefixes": ["Microsoft.AspNetCore.", "Microsoft.Extensions."],
-    "ConstructorDependencyIgnoreTypePrefixes": ["ILogger", "IOptions", "IHttpContextAccessor"]
+    "InheritanceDepthFrameworkPrefixes": [
+      "Microsoft.AspNetCore.",
+      "Microsoft.Extensions."
+    ],
+    "ConstructorDependencyIgnoreTypePrefixes": [
+      "ILogger",
+      "IOptions",
+      "IHttpContextAccessor"
+    ]
   },
   "FileFilters": {
     "ExcludeFilePatterns": ["*.g.cs", "*.generated.cs"],
@@ -759,15 +897,15 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
 
 ### Felder
 
-| Feld | Beschreibung |
-|:--|:--|
-| `TargetRule` | Rule-ID (z.B. `MaxMethodLineCount`) |
-| `WhenAllOf[].Metric` | Metric-Name (siehe unten) |
-| `WhenAllOf[].AtMost` | Bedingung: Metrik ≤ Wert |
-| `WhenAllOf[].AtLeast` | Bedingung: Metrik ≥ Wert |
-| `RelaxedLimit` | Relaxiertes Limit wenn aktiv. Fehlt = vollständig supprimieren |
-| `SeverityOverride` | Optionale Severity-Herabstufung für Violations in Szenario A (Bedingungen erfüllt, RelaxedLimit überschritten). Erlaubte Werte: `"warning"`, `"error"`. Wirkt nur in Kombination mit `RelaxedLimit`. Standard: `null` |
-| `Reason` | Freitext, erscheint in `.mdc` und Violation-Guidance |
+| Feld                  | Beschreibung                                                                                                                                                                                                          |
+| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TargetRule`          | Rule-ID (z.B. `MaxMethodLineCount`)                                                                                                                                                                                   |
+| `WhenAllOf[].Metric`  | Metric-Name (siehe unten)                                                                                                                                                                                             |
+| `WhenAllOf[].AtMost`  | Bedingung: Metrik ≤ Wert                                                                                                                                                                                              |
+| `WhenAllOf[].AtLeast` | Bedingung: Metrik ≥ Wert                                                                                                                                                                                              |
+| `RelaxedLimit`        | Relaxiertes Limit wenn aktiv. Fehlt = vollständig supprimieren                                                                                                                                                        |
+| `SeverityOverride`    | Optionale Severity-Herabstufung für Violations in Szenario A (Bedingungen erfüllt, RelaxedLimit überschritten). Erlaubte Werte: `"warning"`, `"error"`. Wirkt nur in Kombination mit `RelaxedLimit`. Standard: `null` |
+| `Reason`              | Freitext, erscheint in `.mdc` und Violation-Guidance                                                                                                                                                                  |
 
 ### Unterstützte Metric-Namen
 
@@ -779,9 +917,7 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
 ```json
 {
   "TargetRule": "MaxPublicMembersPerType",
-  "WhenAllOf": [
-    { "Metric": "ConstructorDependencies", "AtMost": 2 }
-  ],
+  "WhenAllOf": [{ "Metric": "ConstructorDependencies", "AtMost": 2 }],
   "Reason": "Interface-Adapter mit wenigen Deps sind trotz breiter API schwach gekoppelt."
 }
 ```
@@ -793,15 +929,19 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
 Da `AiNetLinter` auf Roslyn-Compiler-Diensten und `MSBuildWorkspace` aufbaut, muss das Tool für die Verwendung in anderen Repositories speziell kompiliert und verpackt werden.
 
 ### Lokalen Build erzeugen
+
 Um das Tool als eigenständiges, plattformspezifisches CLI-Tool für Windows zu kompilieren:
+
 ```bash
 dotnet publish src/AiNetLinter/AiNetLinter.csproj -c Release -r win-x64 --self-contained true -o ./publish
 ```
 
 ### WICHTIG: MSBuild-Abhängigkeiten (BuildHost-Ordner)
+
 `MSBuildWorkspace` benötigt externe Host-Prozesse zum Parsen von Visual Studio Projektdateien. Nach dem Build müssen zwingend folgende Unterordner im selben Verzeichnis wie die `AiNetLinter.exe` liegen:
-*   `BuildHost-netcore/`
-*   `BuildHost-net472/`
+
+- `BuildHost-netcore/`
+- `BuildHost-net472/`
 
 Diese Ordner werden standardmäßig beim `dotnet publish` automatisch erzeugt. **Wenn Sie das Tool in ein anderes Repository kopieren (z. B. in einen `tools/`-Ordner), müssen diese beiden Unterordner mitsamt ihren DLLs zwingend mitkopiert werden.** Andernfalls bricht das Tool bei der Analyse einer Solution mit einem fatalen MSBuildWorkspace-Ladefehler ab.
 
@@ -819,26 +959,26 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 
 ### Parameter
 
-*   `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
-*   `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
-*   `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
-*   `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
-*   `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
-*   `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
-*   `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
-*   `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
-*   `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
-*   `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
-*   `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
-*   `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
-*   `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
-*   `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
-*   `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
-*   `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-cursor-rules`: Prüft `.cursor/rules/AiNetLinter.mdc`. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
-*   `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
-*   `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
-*   `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
-*   `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
+- `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
+- `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
+- `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`-Dateien (Optional).
+- `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
+- `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
+- `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
+- `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
+- `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
+- `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
+- `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
+- `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
+- `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
+- `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
+- `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
+- `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als `.cursor/rules/AiNetLinter.mdc` Regeldatei (Optional).
+- `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-cursor-rules`: Prüft `.cursor/rules/AiNetLinter.mdc`. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
+- `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
+- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
+- `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
+- `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
 
 ### Automatischer rules.json-Sync
 
@@ -850,6 +990,7 @@ Beim Laden einer `rules.json` via `--config` gleicht der Linter die Datei **auto
 - **Kein Schreiben**, wenn die Datei bereits vollständig aktuell ist.
 
 Wenn eine Aktualisierung stattfand, erscheint im Output:
+
 ```
 [INFO]: rules.json synchronisiert (neue/entfernte Optionen): path/to/rules.json
 ```
@@ -892,11 +1033,11 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-sin
 
 **Semantik:**
 
-| Zustand | Verhalten |
-| :--- | :--- |
-| Checksumme identisch mit Baseline | Datei unverändert → Verstöße werden **nicht** gemeldet |
-| Checksumme abweichend oder Datei neu | Datei wurde angefasst → Verstöße werden **gemeldet** |
-| Irgendeine Abweichung erkannt | Gesamte Baseline-Datei wird neu geschrieben |
+| Zustand                              | Verhalten                                              |
+| :----------------------------------- | :----------------------------------------------------- |
+| Checksumme identisch mit Baseline    | Datei unverändert → Verstöße werden **nicht** gemeldet |
+| Checksumme abweichend oder Datei neu | Datei wurde angefasst → Verstöße werden **gemeldet**   |
+| Irgendeine Abweichung erkannt        | Gesamte Baseline-Datei wird neu geschrieben            |
 
 **Weicher Ratchet:** Nach einem Lauf mit geänderten Dateien werden die neuen Checksummen eingefroren — auch wenn noch Verstöße bestehen. Um weitere Verbesserungen zu erzwingen, die Datei erneut bearbeiten.
 
@@ -920,6 +1061,7 @@ Die Option `--fix` behebt einfache Verstöße (wie das Fehlen von `sealed` bei k
 Bei Änderungen öffentlicher, interner oder geschützter Methodensignaturen hilft die Impact-Analyse, alle davon betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution zu ermitteln. Sie analysiert dazu das Git-Diff (`git diff -U0`), ordnet geänderte Zeilen den deklarierten Methoden zu und sucht deren Referenzen.
 
 Aufrufbeispiel:
+
 ```bash
 ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
 ```
@@ -929,15 +1071,16 @@ ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
 Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
 
 Das Playbook wird über das CLI-Argument `--playbook <Pfad>` oder `-pb <Pfad>` generiert, standardmäßig unter `.cursor/rules/playbook.md`:
+
 ```bash
 ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
 ```
 
 ### Exit-Codes
 
-*   `0`: Erfolg (Keine Regelverstöße gefunden).
-*   `1`: Regelbrüche wurden identifiziert und ausgegeben.
-*   `2`: Fataler Fehler (z. B. IO-Exception, MSBuildWorkspace-Ladefehler).
+- `0`: Erfolg (Keine Regelverstöße gefunden).
+- `1`: Regelbrüche wurden identifiziert und ausgegeben.
+- `2`: Fataler Fehler (z. B. IO-Exception, MSBuildWorkspace-Ladefehler).
 
 ### Ausgabeformate
 
@@ -946,6 +1089,7 @@ Alle Dateipfade in der Ausgabe sind **relativ zum `--path`-Argument** (Verzeichn
 Der Linter erzeugt standardmäßig einen detaillierten **Markdown-Report**.
 
 Bei Erfolg wird lediglich `OK` ausgegeben. Bei Regelverstößen enthält der Report:
+
 - **Titel**: Anzahl der Regelverstöße (`# AiNetLinter - <X> violations`).
 - **Handlungsanweisung**: Vorgehensweise zur Behebung und False-Positive-Prüfung.
 - **Regellegende**: Erklärungen, warum eine Regel existiert und wie sie behoben wird.
@@ -989,6 +1133,7 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --add-disable-all
 ```
 
 **Ablauf:**
+
 1. Vollständiger Audit-Lauf mit der angegebenen `rules.json`
 2. Ermittlung aller Dateien mit mindestens einem Verstoß
 3. Einfügen von `// ainetlinter-disable all` am Dateianfang — nur in diesen Dateien
@@ -1028,7 +1173,7 @@ public sealed class ArchitectureTests
         var solutionPath = Path.GetFullPath("../../../MyProject.slnx");
         var configPath = Path.GetFullPath("../../../rules.json");
         var baselinePath = Path.GetFullPath("../../../ainetlinter-baseline.json");
-        
+
         // Pfad zur bereitgestellten AiNetLinter.exe (samt den BuildHost-Ordnern im selben Pfad)
         var linterCliPath = Path.GetFullPath("../../../tools/ainetlinter/AiNetLinter.exe");
 
@@ -1044,7 +1189,7 @@ public sealed class ArchitectureTests
 
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
-        
+
         string output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
 
@@ -1067,12 +1212,14 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 ### Workflow für Agenten
 
 1. **Vor einer Änderung:** Kontext aus generierten Artefakten laden
+
    ```
    Docs/playbook.md           — Architektur-Status, Top-Verstöße
    .cursor/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
    ```
 
 2. **Nach einer Änderung:** Linter ausführen
+
    ```powershell
    AiNetLinter.exe --path . --config rules.json
    ```
@@ -1084,28 +1231,31 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
    - `intent: architecture` — Namespace-/Vererbungsverstoß → nur mit Rücksprache beheben
 
 4. **Suppression bei unvermeidbaren Verstößen:**
+
    ```csharp
    // ainetlinter-disable EnforceNoSilentCatch
    catch (Exception) { }
-   
+
    catch (Exception ignored) { }  // Alternative: Variable "ignored" benennen
    ```
 
 ### Zwei-Stufen-Modell
 
-| Profil | Zweck | Wann aktivieren |
-|--------|-------|-----------------|
-| `platform-default` | Produktiv — Agenten beheben Verstöße direkt | Regulärer Entwicklungsbetrieb |
-| `platform-ai-strict` | Zielrichtung — zeigt was sein sollte | Code-Reviews, Architektur-Audits |
+| Profil               | Zweck                                       | Wann aktivieren                  |
+| -------------------- | ------------------------------------------- | -------------------------------- |
+| `platform-default`   | Produktiv — Agenten beheben Verstöße direkt | Regulärer Entwicklungsbetrieb    |
+| `platform-ai-strict` | Zielrichtung — zeigt was sein sollte        | Code-Reviews, Architektur-Audits |
 
 ### Cursor-Regeln synchronisieren
 
 Nach jeder `rules.json`-Änderung muss `.cursor/rules/AiNetLinter.mdc` neu generiert werden:
+
 ```powershell
 AiNetLinter.exe --path . --config rules.json --sync-cursor-rules
 ```
 
 Drift prüfen (Exit 1 bei Abweichungen, nützlich für CI):
+
 ```powershell
 AiNetLinter.exe --path . --config rules.json --sync-cursor-rules --check
 ```
@@ -1114,8 +1264,8 @@ AiNetLinter.exe --path . --config rules.json --sync-cursor-rules --check
 
 ## 9. Zukunfts-Roadmap (Ausblick)
 
-*   **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
-*   **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
+- **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
+- **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
 
 ---
 
@@ -1135,16 +1285,16 @@ Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt emp
 
 Bei größeren Migrations-Szenarien sollten viele Regeln schrittweise eingeführt werden. Hier ist die empfohlene Konfigurationsebene ("Pragmatic Agent Defaults"):
 
-| Regel | Pragmatic | Strict | Begründung / Kontext |
-| :--- | :--- | :--- | :--- |
-| `DetectAndBanPhantomDependencies` | **on** | **on** | Verhindert, dass KIs nicht-existente Typen/Namespaces oder dynamische Reflektion erzeugen. |
-| `RequireExplicitTruncationHandling` | **on** | **on** | Schützt vor Endlosschleifen beim I/O-Lesen. |
-| `MaxAIContextFootprint` | **5000** | **4000** | Schont das RAG-Kontextbudget der LLM-Modelle. |
-| `AllowUnsealedPartialClasses` | **on** | **on** | Erforderlich für UI-Frameworks wie Blazor (Komponenten-Klassen). |
-| `EnforceExplicitStateImmutability` | **off** | **on** | Sollte bei Legacy-Projekten zunächst deaktiviert bleiben und erst bei refaktorierter Immutability aktiviert werden. |
-| `EnforceNamespaceDirectoryMapping` | **off** | **on** | Bei Feature-Foldern oder älteren Namespace-Strukturen deaktivieren. |
-| `EnforceResultPatternOverExceptions` | **off** | **on** | Deaktivieren, falls im Altsystem noch weitreichend Exceptions geworfen werden (z. B. zur Validierung). |
-| `MaxCyclomaticComplexity` | **8** | **5** | Ein pragmatischerer Wert (8) verhindert übermäßiges Aufsplittern bei komplexen Altrechner-Methoden. |
+| Regel                                | Pragmatic | Strict   | Begründung / Kontext                                                                                                |
+| :----------------------------------- | :-------- | :------- | :------------------------------------------------------------------------------------------------------------------ |
+| `DetectAndBanPhantomDependencies`    | **on**    | **on**   | Verhindert, dass KIs nicht-existente Typen/Namespaces oder dynamische Reflektion erzeugen.                          |
+| `RequireExplicitTruncationHandling`  | **on**    | **on**   | Schützt vor Endlosschleifen beim I/O-Lesen.                                                                         |
+| `MaxAIContextFootprint`              | **5000**  | **4000** | Schont das RAG-Kontextbudget der LLM-Modelle.                                                                       |
+| `AllowUnsealedPartialClasses`        | **on**    | **on**   | Erforderlich für UI-Frameworks wie Blazor (Komponenten-Klassen).                                                    |
+| `EnforceExplicitStateImmutability`   | **off**   | **on**   | Sollte bei Legacy-Projekten zunächst deaktiviert bleiben und erst bei refaktorierter Immutability aktiviert werden. |
+| `EnforceNamespaceDirectoryMapping`   | **off**   | **on**   | Bei Feature-Foldern oder älteren Namespace-Strukturen deaktivieren.                                                 |
+| `EnforceResultPatternOverExceptions` | **off**   | **on**   | Deaktivieren, falls im Altsystem noch weitreichend Exceptions geworfen werden (z. B. zur Validierung).              |
+| `MaxCyclomaticComplexity`            | **8**     | **5**    | Ein pragmatischerer Wert (8) verhindert übermäßiges Aufsplittern bei komplexen Altrechner-Methoden.                 |
 
 ---
 
@@ -1180,7 +1330,7 @@ Um die Latenz im agentischen Entwicklungszyklus ("Agentic Feedback Loop") zu min
 
 ### Funktionsweise
 
-Bei jedem Linter-Durchlauf berechnet `AiNetLinter` für jede C#-Datei einen SHA-256-Hash über deren Inhalt. Ist die Datei seit der letzten Prüfung unverändert, werden ihre gemeldeten Regelverstöße, deklarierten Klassen, `partial`-Teile sowie Testabdeckungssignale direkt aus dem Cache geladen. 
+Bei jedem Linter-Durchlauf berechnet `AiNetLinter` für jede C#-Datei einen SHA-256-Hash über deren Inhalt. Ist die Datei seit der letzten Prüfung unverändert, werden ihre gemeldeten Regelverstöße, deklarierten Klassen, `partial`-Teile sowie Testabdeckungssignale direkt aus dem Cache geladen.
 Die zeitintensive semantische Roslyn-Analyse (`GetSemanticModelAsync()`) wird für diese Dateien vollständig übersprungen.
 
 ### Cache-Ort & Benennung
@@ -1193,11 +1343,12 @@ Der Cache wird im Unterordner `cache/` direkt neben der ausführbaren Datei (`Ai
   └── OtherSolution-f9e7c123.json
 ```
 
-Der 8-stellige Datei-Hash (`hash8`) basiert auf dem normalisierten absoluten Pfad der Solution-Datei und dem exakten Inhalt der verwendeten Konfigurationsdatei (`rules.json`). 
+Der 8-stellige Datei-Hash (`hash8`) basiert auf dem normalisierten absoluten Pfad der Solution-Datei und dem exakten Inhalt der verwendeten Konfigurationsdatei (`rules.json`).
 
 ### Cache-Invalidierung
 
 Die Cache-Validierung erfolgt vollautomatisch:
+
 - **Konfigurationsänderungen:** Eine Anpassung der Linter-Regeln in der `rules.json` ändert den Datei-Hash im Cache-Dateinamen. Es wird automatisch eine neue Cache-Datei erzeugt.
 - **Dateiveränderungen:** Geänderte Dateien besitzen einen neuen Inhalts-Hash und werden automatisch neu analysiert; ihr Cache-Eintrag wird aktualisiert.
 - **Tool-Updates:** Bei Schema-Änderungen des Linters wird der Cache über eine interne `SchemaVersion` automatisch vollständig invalidiert.
@@ -1217,13 +1368,13 @@ AiNetLinter.exe --config rules.json --path . --cache-ttl 240
 AiNetLinter.exe --config rules.json --path . --cache-ttl 0
 ```
 
-| `--cache-ttl` | Verhalten |
-| :--- | :--- |
+| `--cache-ttl`   | Verhalten                                             |
+| :-------------- | :---------------------------------------------------- |
 | `60` (Standard) | Cache-Dateien > 60 Min alt werden beim Start gelöscht |
-| `0` | Keine Bereinigung — Cache lebt unbegrenzt |
-| `> 0` | Bereinigung nach dem angegebenen Minutenwert |
+| `0`             | Keine Bereinigung — Cache lebt unbegrenzt             |
+| `> 0`           | Bereinigung nach dem angegebenen Minutenwert          |
 
-**Warum `LastWriteTimeUtc` statt Filename-Timestamp?** Der Filename-Timestamp kodiert *wann der Linter gebaut wurde*. `SaveIfDirty()` setzt `LastWriteTimeUtc` auf "jetzt" — das ist die korrekte Uhr für "wie frisch sind die Analyseergebnisse".
+**Warum `LastWriteTimeUtc` statt Filename-Timestamp?** Der Filename-Timestamp kodiert _wann der Linter gebaut wurde_. `SaveIfDirty()` setzt `LastWriteTimeUtc` auf "jetzt" — das ist die korrekte Uhr für "wie frisch sind die Analyseergebnisse".
 
 ### Deaktivierung über CLI
 

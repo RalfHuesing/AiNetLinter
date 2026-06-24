@@ -34,4 +34,9 @@ public sealed record ProjectOverrideEntry
     /// Überschreibungen der UI-Trennungsregeln (Blazor/WPF).
     /// </summary>
     public UiSeparationConfigOverride? UiSeparation { get; init; }
+
+    /// <summary>
+    /// Überschreibungen der Web-Konfiguration (CSS/JS/Razor).
+    /// </summary>
+    public WebConfigOverride? Web { get; init; }
 }

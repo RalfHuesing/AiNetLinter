@@ -101,6 +101,7 @@ internal static partial class RuleRegistry
         ..BuildGeneralAllowRules(),
         ..BuildGeneralAdvancedRules(),
         ..BuildUiSeparationRules(),
+        ..BuildWebAssetRules(),
     ];
 
     private static RuleMetadata[] BuildGeneralCoreRules() =>
@@ -485,4 +486,6 @@ internal static partial class RuleRegistry
             IncludeInCursorRules: false
         ),
     ];
+
+    // Web-Asset-Regeln sind in RuleRegistry.Web.cs ausgelagert (Datei-Groessen-Constraint).
 }

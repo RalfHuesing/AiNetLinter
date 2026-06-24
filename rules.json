@@ -152,7 +152,9 @@
       ".git"
     ],
     "MaxPartialClassFiles": 2,
-    "MaxPartialClassFilesExemptTypes": [],
+    "MaxPartialClassFilesExemptTypes": [
+      "RuleRegistry"
+    ],
     "MaxPublicMembersPerType": 15,
     "MaxPublicMembersPerTypeExemptSuffixes": [
       "Extensions",
@@ -298,6 +300,20 @@
       "bin/"
     ],
     "SkipGeneratedCodeAttribute": true
+  },
+  "Web": {
+    "IsEnabled": true,
+    "Css": {
+      "MaxCssLineCount": 300,
+      "PreferScopedCss": true,
+      "PreferScopedCssMinRuleCount": 5,
+      "MaxCssSelectorComplexity": 3,
+      "ExemptPaths": [
+        "**/wwwroot/lib/**",
+        "**/node_modules/**",
+        "**/*.min.css"
+      ]
+    }
   },
   "RuleMetadata": {
     "MaxLineCount": {
