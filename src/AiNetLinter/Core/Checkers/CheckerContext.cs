@@ -17,7 +17,7 @@ internal sealed class CheckerContext
     private readonly List<RuleViolation> _violations = new();
 
     internal string FilePath { get; }
-    internal LinterConfig Config { get; }
+    internal Config Config { get; }
     internal SemanticModel SemanticModel { get; }
     internal bool IsTestFile { get; }
     internal string? ProjectName { get; }
@@ -26,7 +26,7 @@ internal sealed class CheckerContext
     internal List<ClassInfo> Classes { get; } = new();
     internal List<PartialClassPart> PartialClassParts { get; } = new();
 
-    internal CheckerContext(string filePath, LinterConfig config, SemanticModel semanticModel, bool isTestFile, string? projectName)
+    internal CheckerContext(string filePath, Config config, SemanticModel semanticModel, bool isTestFile, string? projectName)
     {
         FilePath = filePath;
         Config = config;
@@ -44,7 +44,7 @@ internal sealed class CheckerContext
         AddViolation(new RuleViolation
         {
             FilePath          = FilePath,
-            LineNumber        = SyntaxHelper.LineOf(node),
+            LineNumber        = node.LineOf(),
             RuleName          = desc.RuleName,
             Details           = desc.Details,
             Guidance          = desc.Guidance,

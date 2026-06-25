@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -170,7 +170,7 @@ public sealed class AsyncVoidCheckerTests
 
     // --- Hilfsmethode ---
 
-    private static LinterConfig ConfigWith(bool banAsyncVoid = true, bool allowEventHandlers = true) =>
+    private static Config ConfigWith(bool banAsyncVoid = true, bool allowEventHandlers = true) =>
         TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig

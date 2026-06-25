@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -122,7 +122,7 @@ public sealed class RepoPlaybookGenerator
         return new PlaybookStats(totalResultMethods, totalThrows, suppressionCounts, docInfos, violations);
     }
 
-    private static async Task<PlaybookDocScanResult> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts, LinterConfig? config)
+    private static async Task<PlaybookDocScanResult> ScanDocumentAsync(Document document, Dictionary<string, int> suppressionCounts, Config? config)
     {
         var semanticModel = await document.GetSemanticModelAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
@@ -297,7 +297,7 @@ public sealed class RepoPlaybookGenerator
         sb.AppendLine();
     }
 
-    private static void AppendAgentPriority(StringBuilder sb, List<RuleViolation> waveReadyViolations, LinterConfig config)
+    private static void AppendAgentPriority(StringBuilder sb, List<RuleViolation> waveReadyViolations, Config config)
     {
         sb.AppendLine("## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)");
         sb.AppendLine();
@@ -331,7 +331,7 @@ public sealed class RepoPlaybookGenerator
         return parts.Length == 1 ? parts[0] : "Root";
     }
 
-    private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts, LinterConfig? config)
+    private static void AppendSuppressionList(StringBuilder sb, Dictionary<string, int> suppressionCounts, Config? config)
     {
         if (suppressionCounts.Count == 0)
         {
@@ -356,7 +356,7 @@ public sealed class RepoPlaybookGenerator
                 description = meta != null && config != null
                     ? meta.GetShortDescription(config)
                     : meta != null
-                        ? meta.GetShortDescription(new LinterConfig { Global = new(), Metrics = new() })
+                        ? meta.GetShortDescription(new Config { Global = new(), Metrics = new() })
                         : $"Regel '{rule}'.";
             }
             sb.AppendLine($"- **{rule}:** {count} mal deaktiviert.");

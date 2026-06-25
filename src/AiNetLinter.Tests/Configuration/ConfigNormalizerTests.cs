@@ -1,10 +1,10 @@
-using AiNetLinter.Configuration;
+﻿using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Tests.Configuration;
 
-public sealed class LinterConfigNormalizerTests
+public sealed class ConfigNormalizerTests
 {
-    private static LinterConfig CreateBaseConfig()
+    private static Config CreateBaseConfig()
     {
         _ = typeof(GlobalConfig);
         _ = typeof(MetricsConfig);
@@ -26,7 +26,7 @@ public sealed class LinterConfigNormalizerTests
             TestSentinel = new TestSentinelConfig { ClassNamePatterns = null! },
         };
 
-        var normalized = LinterConfigNormalizer.Normalize(config);
+        var normalized = ConfigNormalizer.Normalize(config);
 
         Assert.Equal(4, normalized.TestSentinel.ClassNamePatterns.Count);
         Assert.Contains("{Name}Tests", normalized.TestSentinel.ClassNamePatterns);
@@ -41,7 +41,7 @@ public sealed class LinterConfigNormalizerTests
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            LinterConfigNormalizer.Normalize(config));
+            ConfigNormalizer.Normalize(config));
 
         Assert.Contains("ClassNamePatterns[0]", exception.Message, StringComparison.Ordinal);
     }
@@ -55,7 +55,7 @@ public sealed class LinterConfigNormalizerTests
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            LinterConfigNormalizer.Normalize(config));
+            ConfigNormalizer.Normalize(config));
 
         Assert.Contains("{Name}", exception.Message, StringComparison.Ordinal);
     }

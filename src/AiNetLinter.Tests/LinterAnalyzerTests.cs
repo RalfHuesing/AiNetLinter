@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -8,9 +8,9 @@ namespace AiNetLinter.Tests;
 
 public sealed class LinterAnalyzerTests
 {
-    private static LinterConfig CreateDefaultConfig()
+    private static Config CreateDefaultConfig()
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

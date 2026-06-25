@@ -23,7 +23,7 @@ internal static class FootprintCommand
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
         try
         {
             using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);

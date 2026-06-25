@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -24,7 +24,7 @@ internal static class PostAnalysisChecks
     /// </summary>
     /// <param name="state">Der aktuelle Zustand der Analyse.</param>
     /// <param name="config">Die globale Konfiguration.</param>
-    public static void Run(AnalysisState state, LinterConfig config, IPerformanceProfiler? profiler = null)
+    public static void Run(AnalysisState state, Config config, IPerformanceProfiler? profiler = null)
     {
         var p = profiler ?? NullPerformanceProfiler.Instance;
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -71,7 +71,7 @@ internal static class PostAnalysisChecks
         }
     }
 
-    private static void RunTestSentinel(AnalysisState state, LinterConfig config)
+    private static void RunTestSentinel(AnalysisState state, Config config)
     {
         var context = new TestSentinelContext(state.TestCoverage, state.Violations, state.FileContents);
         foreach (var srcClass in state.SourceClasses)
@@ -80,7 +80,7 @@ internal static class PostAnalysisChecks
         }
     }
 
-    private static void CheckClassTestSentinel(ClassInfo srcClass, TestSentinelContext context, LinterConfig config)
+    private static void CheckClassTestSentinel(ClassInfo srcClass, TestSentinelContext context, Config config)
     {
         var effectiveConfig = srcClass.ProjectName != null
             ? ProjectConfigResolver.ResolveForProject(srcClass.ProjectName, config)
@@ -115,7 +115,7 @@ internal static class PostAnalysisChecks
     private static void CheckTestPresence(
         ClassInfo srcClass,
         TestSentinelContext context,
-        LinterConfig effectiveConfig)
+        Config effectiveConfig)
     {
         if (TestCoverageResolver.IsCovered(srcClass.Name, context.TestCoverage, effectiveConfig.TestSentinel))
         {
@@ -142,7 +142,7 @@ internal static class PostAnalysisChecks
         ConcurrentBag<ClassInfo> sourceClasses,
         ConcurrentBag<RuleViolation> violations,
         ConcurrentDictionary<string, string> fileContents,
-        LinterConfig config)
+        Config config)
     {
         foreach (var cls in sourceClasses)
         {
@@ -154,7 +154,7 @@ internal static class PostAnalysisChecks
         ClassInfo cls,
         ConcurrentBag<RuleViolation> violations,
         ConcurrentDictionary<string, string> fileContents,
-        LinterConfig config)
+        Config config)
     {
         var effectiveConfig = ProjectConfigResolver.ResolveForFile(cls.FilePath, cls.ProjectName, config);
 
@@ -177,7 +177,7 @@ internal static class PostAnalysisChecks
         ConcurrentBag<ClassInfo> sourceClasses,
         ConcurrentBag<RuleViolation> violations,
         ConcurrentDictionary<string, string> fileContents,
-        LinterConfig config)
+        Config config)
     {
         foreach (var cls in DeduplicatePartialClasses(sourceClasses))
         {
@@ -204,7 +204,7 @@ internal static class PostAnalysisChecks
         ClassInfo cls,
         ConcurrentBag<RuleViolation> violations,
         ConcurrentDictionary<string, string> fileContents,
-        LinterConfig config)
+        Config config)
     {
         var effectiveConfig = ProjectConfigResolver.ResolveForFile(cls.FilePath, cls.ProjectName, config);
 
@@ -243,7 +243,7 @@ internal static class PostAnalysisChecks
     private static void AddPartialClassViolations(
         ConcurrentBag<PartialClassPart> parts,
         ConcurrentBag<RuleViolation> violations,
-        LinterConfig config)
+        Config config)
     {
         foreach (var violation in PartialClassLineAggregator.BuildViolations(parts.ToArray(), config))
         {
@@ -254,7 +254,7 @@ internal static class PostAnalysisChecks
     private static void RunMaxPartialClassFilesCheck(
         ConcurrentBag<PartialClassPart> parts,
         ConcurrentBag<RuleViolation> violations,
-        LinterConfig config)
+        Config config)
     {
         var limit = config.Metrics.MaxPartialClassFiles;
         if (limit <= 0) return;
@@ -290,7 +290,7 @@ internal static class PostAnalysisChecks
 
     internal static void RunMaxDirectoryChildrenCheck(
         ConcurrentBag<RuleViolation> violations,
-        LinterConfig config)
+        Config config)
     {
         var limit = config.Metrics.MaxDirectoryChildren;
         if (limit <= 0) return;
@@ -305,7 +305,7 @@ internal static class PostAnalysisChecks
         string directory,
         string solutionBase,
         ConcurrentBag<RuleViolation> violations,
-        LinterConfig config)
+        Config config)
     {
         var dirName = Path.GetFileName(directory);
         if (IsExemptDirectory(dirName, config.Metrics.MaxDirectoryChildrenExemptNames)) return;

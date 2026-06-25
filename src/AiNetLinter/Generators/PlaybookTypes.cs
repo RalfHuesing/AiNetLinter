@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
@@ -11,7 +11,7 @@ namespace AiNetLinter.Generators;
 /// </summary>
 public sealed record PlaybookOptions(
     bool Verbose = false,
-    LinterConfig? Config = null,
+    Config? Config = null,
     string ConfigPath = "rules.json",
     IReadOnlyCollection<RuleViolation>? PrecomputedViolations = null);
 
@@ -42,6 +42,6 @@ internal sealed record PlaybookStats(
 internal sealed record PlaybookBuildContext(
     PlaybookStats Stats,
     string SolutionDir,
-    LinterConfig? Config,
+    Config? Config,
     string ConfigPath,
     string Version);

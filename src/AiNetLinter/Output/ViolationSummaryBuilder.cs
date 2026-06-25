@@ -1,4 +1,4 @@
-using AiNetLinter.Configuration;
+﻿using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Output;
@@ -28,7 +28,7 @@ public static class ViolationSummaryBuilder
     /// </summary>
     public static IReadOnlyList<RuleViolationCount> BuildByRule(
         IReadOnlyCollection<RuleViolation> violations,
-        LinterConfig? config = null)
+        Config? config = null)
     {
         return violations
             .GroupBy(v => v.RuleName, StringComparer.Ordinal)

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Linq;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
@@ -11,7 +11,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class MethodParameterCountAccessibilityTests
 {
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         int maxParams = 4,
         bool allowPrivate = false,
         int forNonPublic = 0) => new()
@@ -44,7 +44,7 @@ public sealed class MethodParameterCountAccessibilityTests
         }
     };
 
-    private static IReadOnlyCollection<RuleViolation> Analyze(string source, LinterConfig config)
+    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)
     {
         var tree = CSharpSyntaxTree.ParseText(source, path: "Test.cs");
         var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);

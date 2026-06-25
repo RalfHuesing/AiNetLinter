@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -11,9 +11,9 @@ namespace AiNetLinter.Tests;
 
 public sealed class FileFilterEvaluatorTests
 {
-    private static LinterConfig CreateTestConfig(FileFiltersConfig filters)
+    private static Config CreateTestConfig(FileFiltersConfig filters)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

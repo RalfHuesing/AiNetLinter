@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +28,7 @@ public static class ViolationMarkdownFormatter
     public static string Format(
         IReadOnlyCollection<RuleViolation> violations,
         string outputRoot,
-        LinterConfig? config = null)
+        Config? config = null)
     {
         if (violations.Count == 0)
             return string.Empty;

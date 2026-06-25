@@ -12,7 +12,7 @@ namespace AiNetLinter.Web;
 /// - Razor:  @* ainetlinter-disable RAZOR_MaxRazorLineCount *@
 /// Auch dateiweites Disable-all wird unterstuetzt: "ainetlinter-disable all".
 /// </summary>
-internal static class WebSuppressionHelper
+internal static class WebSuppressionDetector
 {
     /// <summary>
     /// Prueft, ob eine Regel in der Datei unterdrueckt wird.

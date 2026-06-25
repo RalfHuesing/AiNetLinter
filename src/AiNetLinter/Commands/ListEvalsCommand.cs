@@ -13,7 +13,7 @@ internal static class ListEvalsCommand
 {
     internal static int Run(ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
         var sb = new StringBuilder();
 
         sb.AppendLine("# AiNetLinter — Eval-Übersicht");

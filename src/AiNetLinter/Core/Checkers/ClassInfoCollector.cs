@@ -27,7 +27,7 @@ internal static class ClassInfoCollector
         {
             Name = string.IsNullOrWhiteSpace(symbol.Name) ? node.Identifier.Text : symbol.Name,
             FilePath = ctx.FilePath,
-            LineNumber = SyntaxHelper.LineOf(node),
+            LineNumber = node.LineOf(),
             MaxCognitiveComplexity = ComplexityChecker.GetMaxMethodComplexity(node),
             InheritanceDepth = InheritanceDepthChecker.GetInheritanceDepth(symbol, ctx),
             AIContextFootprint = footprintResult.TotalLines,

@@ -280,7 +280,7 @@ internal static class ComplexityChecker
         IReadOnlyCollection<string>? ignorePrefixes)
     {
         if (param.Type == null) return false;
-        var name = SyntaxHelper.GetSimpleTypeName(param.Type);
+        var name = param.Type.GetSimpleTypeName();
         if (name == null) return false;
 
         if (ignoreTypes != null && ignoreTypes.Count > 0 && ignoreTypes.Contains(name, StringComparer.Ordinal))

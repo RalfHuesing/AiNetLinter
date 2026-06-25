@@ -6,10 +6,10 @@ using Xunit;
 namespace AiNetLinter.Tests.Web;
 
 /// <summary>
-/// Unit-Tests fuer WebSuppressionHelper. Verifiziert dateiweite und regel-spezifische
+/// Unit-Tests fuer WebSuppressionDetector. Verifiziert dateiweite und regel-spezifische
 /// Suppression-Kommentare in Web-Dateien.
 /// </summary>
-public sealed class WebSuppressionHelperTests
+public sealed class WebSuppressionDetectorTests
 {
     [Fact]
     public void IsSuppressed_ReturnsTrue_WhenDisableAllPresent()
@@ -19,9 +19,9 @@ public sealed class WebSuppressionHelperTests
             .card { color: red; }
             """;
 
-        Assert.True(WebSuppressionHelper.IsSuppressed(content, "CSS_MaxCssLineCount"));
-        Assert.True(WebSuppressionHelper.IsSuppressed(content, "CSS_PreferScopedCss"));
-        Assert.True(WebSuppressionHelper.IsSuppressed(content, "CSS_MaxCssSelectorComplexity"));
+        Assert.True(WebSuppressionDetector.IsSuppressed(content, "CSS_MaxCssLineCount"));
+        Assert.True(WebSuppressionDetector.IsSuppressed(content, "CSS_PreferScopedCss"));
+        Assert.True(WebSuppressionDetector.IsSuppressed(content, "CSS_MaxCssSelectorComplexity"));
     }
 
     [Fact]
@@ -32,8 +32,8 @@ public sealed class WebSuppressionHelperTests
             .card { color: red; }
             """;
 
-        Assert.True(WebSuppressionHelper.IsSuppressed(content, "CSS_MaxCssLineCount"));
-        Assert.False(WebSuppressionHelper.IsSuppressed(content, "CSS_PreferScopedCss"));
+        Assert.True(WebSuppressionDetector.IsSuppressed(content, "CSS_MaxCssLineCount"));
+        Assert.False(WebSuppressionDetector.IsSuppressed(content, "CSS_PreferScopedCss"));
     }
 
     [Fact]
@@ -43,14 +43,14 @@ public sealed class WebSuppressionHelperTests
             .card { color: red; }
             """;
 
-        Assert.False(WebSuppressionHelper.IsSuppressed(content, "CSS_MaxCssLineCount"));
+        Assert.False(WebSuppressionDetector.IsSuppressed(content, "CSS_MaxCssLineCount"));
     }
 
     [Fact]
     public void IsSuppressed_ReturnsFalse_WhenContentIsEmpty()
     {
-        Assert.False(WebSuppressionHelper.IsSuppressed("", "CSS_MaxCssLineCount"));
-        Assert.False(WebSuppressionHelper.IsSuppressed(null, "CSS_MaxCssLineCount"));
+        Assert.False(WebSuppressionDetector.IsSuppressed("", "CSS_MaxCssLineCount"));
+        Assert.False(WebSuppressionDetector.IsSuppressed(null, "CSS_MaxCssLineCount"));
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class WebSuppressionHelperTests
             .card { color: red; }
             """;
 
-        Assert.True(WebSuppressionHelper.IsSuppressed(content, "CSS_MaxCssLineCount"));
+        Assert.True(WebSuppressionDetector.IsSuppressed(content, "CSS_MaxCssLineCount"));
     }
 
     [Fact]
@@ -71,6 +71,6 @@ public sealed class WebSuppressionHelperTests
             .card { color: red; }
             """;
 
-        Assert.False(WebSuppressionHelper.IsSuppressed(content, ""));
+        Assert.False(WebSuppressionDetector.IsSuppressed(content, ""));
     }
 }

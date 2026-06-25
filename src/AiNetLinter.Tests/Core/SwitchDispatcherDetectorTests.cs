@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Xunit;
@@ -21,13 +21,13 @@ public sealed class SwitchDispatcherDetectorTests
         return compilation.GetSemanticModel(tree);
     }
 
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         int maxComplexity,
         int nearMissTolerance,
         bool excludeDispatcher,
         int maxCaseBodyLines)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

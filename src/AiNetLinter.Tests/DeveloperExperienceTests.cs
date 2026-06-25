@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -20,7 +20,7 @@ namespace AiNetLinter.Tests;
 // @covers PlaybookSyntaxWalker
 // @covers AIContextFootprintCalculator
 // @covers ProjectConfigResolver
-// @covers LinterConfigLoader
+// @covers ConfigLoader
 // @covers ImpactExecutor
 // @covers PostAnalysisChecks
 // @covers TestProjectDetector
@@ -51,7 +51,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void ProjectConfigResolver_NoOverrides_ReturnsGlobalConfig()
     {
-        var globalConfig = new LinterConfig
+        var globalConfig = new Config
         {
             Global = new GlobalConfig { EnforceSemanticNaming = true },
             Metrics = new MetricsConfig { MaxLineCount = 100 }
@@ -66,7 +66,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void ProjectConfigResolver_WithWildcardMatch_MergesOverrides()
     {
-        var globalConfig = new LinterConfig
+        var globalConfig = new Config
         {
             Global = new GlobalConfig
             {
@@ -220,7 +220,7 @@ public sealed class DeveloperExperienceTests
         var docId = DocumentId.CreateNewId(projectId);
         solution = solution.AddDocument(docId, "WorkClass.cs", source);
 
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig
             {
@@ -249,14 +249,14 @@ public sealed class DeveloperExperienceTests
     }
 
     [Fact]
-    public void LinterConfigLoader_WithNonExistentFile_ReturnsNull()
+    public void ConfigLoader_WithNonExistentFile_ReturnsNull()
     {
-        var result = LinterConfigLoader.TryLoadConfig("nonexistent_file.json", isRequired: false);
+        var result = ConfigLoader.TryLoadConfig("nonexistent_file.json", isRequired: false);
         Assert.Null(result);
     }
 
     [Fact]
-    public void LinterConfigLoader_WithValidJson_LoadsConfig()
+    public void ConfigLoader_WithValidJson_LoadsConfig()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_config.json");
         var json = """
@@ -273,7 +273,7 @@ public sealed class DeveloperExperienceTests
         File.WriteAllText(tempPath, json);
         try
         {
-            var result = LinterConfigLoader.TryLoadConfig(tempPath, isRequired: false);
+            var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
             Assert.NotNull(result);
             Assert.True(result.Global.EnforceSealedClasses);
             Assert.Contains("Base", result.Global.SealedClassExemptSuffixes);
@@ -293,7 +293,7 @@ public sealed class DeveloperExperienceTests
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
 
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig
             {
@@ -345,7 +345,7 @@ public sealed class DeveloperExperienceTests
     {
         var root = FindProjectRoot();
         var configPath = Path.Combine(root, "rules.json");
-        var config = LinterConfigLoader.TryLoadConfig(configPath, isRequired: true);
+        var config = ConfigLoader.TryLoadConfig(configPath, isRequired: true);
         Assert.NotNull(config);
 
         CursorRulesGenerator.Sync(root, config, verbose: true);
@@ -357,7 +357,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void GuidanceD_CursorRulesContainsCompoundSuppressionsTable()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig
@@ -387,7 +387,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void GuidanceE_CursorRulesContainsNoCompoundSuppressionsTable()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig

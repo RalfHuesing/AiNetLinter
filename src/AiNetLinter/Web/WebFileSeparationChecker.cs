@@ -21,7 +21,7 @@ internal static class WebFileSeparationChecker
     /// Startet die Web-Analyse fuer die gesamte Solution.
     /// Fruehzeitiger Return, wenn Web.IsEnabled false ist (default) oder keine Web-Konfiguration aktiv.
     /// </summary>
-    public static void Run(AnalysisState state, LinterConfig config)
+    public static void Run(AnalysisState state, Config config)
     {
         if (!config.Web.IsEnabled) return;
 
@@ -43,7 +43,7 @@ internal static class WebFileSeparationChecker
 
     private static void AnalyzeCssEntries(
         IReadOnlyList<WebFileEntry> entries,
-        LinterConfig config,
+        Config config,
         ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Css))
@@ -61,7 +61,7 @@ internal static class WebFileSeparationChecker
 
     private static void AnalyzeJsEntries(
         IReadOnlyList<WebFileEntry> entries,
-        LinterConfig config,
+        Config config,
         ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Js))
@@ -79,7 +79,7 @@ internal static class WebFileSeparationChecker
 
     private static void AnalyzeRazorEntries(
         IReadOnlyList<WebFileEntry> entries,
-        LinterConfig config,
+        Config config,
         ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Razor))
@@ -97,7 +97,7 @@ internal static class WebFileSeparationChecker
 
     private static void AnalyzeSingleFile(
         WebFileEntry entry,
-        LinterConfig effectiveConfig,
+        Config effectiveConfig,
         Func<string, System.Collections.Generic.IReadOnlyList<RuleViolation>> analyze,
         ConcurrentBag<RuleViolation> violations)
     {
@@ -115,21 +115,21 @@ internal static class WebFileSeparationChecker
 
         foreach (var v in fileViolations)
         {
-            if (WebSuppressionHelper.IsSuppressed(content, v.RuleName)) continue;
+            if (WebSuppressionDetector.IsSuppressed(content, v.RuleName)) continue;
             violations.Add(v);
         }
     }
 
-    private static LinterConfig ResolveForFile(string absolutePath, LinterConfig globalConfig) =>
+    private static Config ResolveForFile(string absolutePath, Config globalConfig) =>
         ProjectConfigResolver.ResolveForFile(absolutePath, projectName: null, globalConfig: globalConfig);
 
-    private static bool IsCssAnalysisActive(LinterConfig effective) =>
+    private static bool IsCssAnalysisActive(Config effective) =>
         effective.Web.IsEnabled && IsAnyCssRuleActive(effective.Web.Css);
 
-    private static bool IsJsAnalysisActive(LinterConfig effective) =>
+    private static bool IsJsAnalysisActive(Config effective) =>
         effective.Web.IsEnabled && IsAnyJsRuleActive(effective.Web.Js);
 
-    private static bool IsRazorAnalysisActive(LinterConfig effective) =>
+    private static bool IsRazorAnalysisActive(Config effective) =>
         effective.Web.IsEnabled && IsAnyRazorRuleActive(effective.Web.Razor);
 
     private static bool IsAnyCssRuleActive(CssConfig css) =>

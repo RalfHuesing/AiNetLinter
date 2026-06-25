@@ -4,7 +4,7 @@ namespace AiNetLinter.Configuration;
 /// <summary>
 /// Die globale Konfigurationsstruktur für den Linter.
 /// </summary>
-public sealed record LinterConfig
+public sealed record Config
 {
     public required GlobalConfig Global { get; init; }
     public required MetricsConfig Metrics { get; init; }

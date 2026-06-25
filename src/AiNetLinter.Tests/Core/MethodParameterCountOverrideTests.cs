@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -9,7 +9,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class MethodParameterCountOverrideTests
 {
-    private static LinterConfig CreateConfig(int maxParams = 4) => new()
+    private static Config CreateConfig(int maxParams = 4) => new()
     {
         Global = new GlobalConfig
         {

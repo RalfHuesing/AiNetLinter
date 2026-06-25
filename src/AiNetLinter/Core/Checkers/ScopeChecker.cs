@@ -73,7 +73,7 @@ internal static class ScopeChecker
                 {
                     ctx.ReportViolation(methodGroup[j], new ViolationDescription(
                         nameof(ctx.Config.Global.PreventContextDependentOverloads),
-                        $"Die Methode '{methodGroup[j].Identifier.Text}' steht im Konflikt mit einer Überladung in Zeile {SyntaxHelper.LineOf(methodGroup[i])}. Beide unterscheiden sich nur in primitiven Typen.",
+                        $"Die Methode '{methodGroup[j].Identifier.Text}' steht im Konflikt mit einer Überladung in Zeile {methodGroup[i].LineOf()}. Beide unterscheiden sich nur in primitiven Typen.",
                         "Verwende explizite Methodennamen (z.B. 'ProcessInt' statt 'Process'), um Mehrdeutigkeiten für KI-Agenten zu vermeiden."));
                 }
             }

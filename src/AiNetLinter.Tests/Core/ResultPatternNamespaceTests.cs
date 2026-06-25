@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -9,11 +9,11 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class ResultPatternNamespaceTests
 {
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         string[]? allowedNamespaceSuffixes = null,
         bool allowCatchRethrow = false)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

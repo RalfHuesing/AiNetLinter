@@ -1,4 +1,4 @@
-using AiNetLinter.Configuration;
+﻿using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
@@ -15,10 +15,10 @@ namespace AiNetLinter.Tests;
 // @covers GitChangedFilesResolver
 public sealed class AgentFeaturesTests
 {
-    private static LinterConfig CreateConfig(Func<GlobalConfig, GlobalConfig>? configureGlobal = null)
+    private static Config CreateConfig(Func<GlobalConfig, GlobalConfig>? configureGlobal = null)
     {
         var global = configureGlobal?.Invoke(new GlobalConfig()) ?? new GlobalConfig();
-        return new LinterConfig
+        return new Config
         {
             Global = global,
             Metrics = new MetricsConfig
@@ -320,7 +320,7 @@ public sealed class AgentFeaturesTests
     [Fact]
     public void RuleMetadataRegistry_ResolvesKnownRule()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig(),

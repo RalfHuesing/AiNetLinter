@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -23,9 +23,9 @@ public sealed class NamespaceDirectoryMappingTests
         return (tree, compilation.GetSemanticModel(tree));
     }
 
-    private static LinterConfig CreateDefaultConfig()
+    private static Config CreateDefaultConfig()
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

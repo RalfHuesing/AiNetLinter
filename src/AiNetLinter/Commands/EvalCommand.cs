@@ -20,7 +20,7 @@ internal static class EvalCommand
         CancellationToken ct = default,
         ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
 
         if (string.IsNullOrWhiteSpace(args.TargetPath))
         {

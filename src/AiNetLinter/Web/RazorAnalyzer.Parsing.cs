@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace AiNetLinter.Web;
 
 /// <summary>
-/// Helper-Methoden fuer <see cref="RazorAnalyzer"/> (separate Datei wegen MaxLineCount-Limit
+/// Hilfs- und Parsing-Methoden fuer <see cref="RazorAnalyzer"/> (separate Datei wegen MaxLineCount-Limit
 /// und zur Reduktion der kognitiven Komplexitaet der Checker-Methoden).
 /// </summary>
 internal static partial class RazorAnalyzer

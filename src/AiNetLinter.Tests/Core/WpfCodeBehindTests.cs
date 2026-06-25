@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Linq;
@@ -12,11 +12,11 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class WpfCodeBehindTests
 {
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         bool wpfRequireMinimalCodeBehind = true,
         string[]? excludeClassNames = null)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

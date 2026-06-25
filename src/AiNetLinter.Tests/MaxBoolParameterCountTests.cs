@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -10,7 +10,7 @@ namespace AiNetLinter.Tests;
 
 public sealed class MaxBoolParameterCountTests
 {
-    private static LinterConfig CreateConfig(int limit = 1, bool allowPrivate = true, string[]? exemptPrefixes = null) =>
+    private static Config CreateConfig(int limit = 1, bool allowPrivate = true, string[]? exemptPrefixes = null) =>
         new()
         {
             Global = new GlobalConfig
@@ -33,7 +33,7 @@ public sealed class MaxBoolParameterCountTests
             }
         };
 
-    private static IReadOnlyCollection<RuleViolation> Analyze(string source, LinterConfig config)
+    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
         var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);

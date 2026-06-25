@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.IO;
@@ -19,7 +19,7 @@ public sealed class AuditCommandTests
     [Fact]
     public async Task RunAsync_WithInvalidConfig_ReturnsOne()
     {
-        // Config-Datei existiert nicht → LinterConfigLoader gibt null zurück → Exit 1
+        // Config-Datei existiert nicht → ConfigLoader gibt null zurück → Exit 1
         var args = new LinterArgs
         {
             TargetPath = ".",

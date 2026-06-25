@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Text.RegularExpressions;
@@ -19,7 +19,7 @@ public static class ProjectConfigResolver
     /// <param name="globalConfig">Die globale Linter-Konfiguration.</param>
     /// <param name="solutionBasePath">Basis-Pfad der Solution für relative Pfadberechnung.</param>
     /// <returns>Die für das Dokument effektive Linter-Konfiguration.</returns>
-    public static LinterConfig ResolveForDocument(Document document, LinterConfig globalConfig, string? solutionBasePath = null)
+    public static Config ResolveForDocument(Document document, Config globalConfig, string? solutionBasePath = null)
     {
         var config = ResolveForProject(document.Project.Name, globalConfig);
 
@@ -31,10 +31,10 @@ public static class ProjectConfigResolver
         return config;
     }
 
-    private static LinterConfig ResolveForPath(
+    private static Config ResolveForPath(
         string filePath,
         string? solutionBasePath,
-        LinterConfig config,
+        Config config,
         IReadOnlyDictionary<string, ProjectOverrideEntry> pathOverrides)
     {
         var relativePath = ResolveRelativePath(filePath, solutionBasePath);
@@ -77,7 +77,7 @@ public static class ProjectConfigResolver
     /// Wird für post-analytische Checks verwendet, bei denen kein Roslyn-Document verfügbar ist.
     /// Erst ProjectOverrides, dann PathOverrides (höhere Priorität).
     /// </summary>
-    public static LinterConfig ResolveForFile(string? filePath, string? projectName, LinterConfig globalConfig)
+    public static Config ResolveForFile(string? filePath, string? projectName, Config globalConfig)
     {
         var config = projectName != null
             ? ResolveForProject(projectName, globalConfig)
@@ -97,7 +97,7 @@ public static class ProjectConfigResolver
     /// <param name="projectName">Der Name des Roslyn-Projekts.</param>
     /// <param name="globalConfig">Die globale Linter-Konfiguration.</param>
     /// <returns>Die für das Projekt effektive Linter-Konfiguration.</returns>
-    public static LinterConfig ResolveForProject(string projectName, LinterConfig globalConfig)
+    public static Config ResolveForProject(string projectName, Config globalConfig)
     {
         if (globalConfig.ProjectOverrides == null || globalConfig.ProjectOverrides.Count == 0)
         {
@@ -121,7 +121,7 @@ public static class ProjectConfigResolver
         return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
     }
 
-    private static LinterConfig MergeConfig(LinterConfig global, ProjectOverrideEntry overrides)
+    private static Config MergeConfig(Config global, ProjectOverrideEntry overrides)
     {
         return global with
         {

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using System.Text;
@@ -20,8 +20,8 @@ internal static class SyncCursorRulesCommand
     /// </summary>
     internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
-        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        var c = console ?? LinterConsole.Instance;
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
             return 1;

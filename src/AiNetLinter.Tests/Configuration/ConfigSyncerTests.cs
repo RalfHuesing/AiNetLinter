@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using System.Text.Json;
@@ -7,7 +7,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Configuration;
 
-public sealed class LinterConfigSyncerTests
+public sealed class ConfigSyncerTests
 {
     private static readonly JsonSerializerOptions ReadOptions = new()
     {
@@ -21,7 +21,7 @@ public sealed class LinterConfigSyncerTests
         return path;
     }
 
-    private static LinterConfig DefaultConfig() => new()
+    private static Config DefaultConfig() => new()
     {
         Global = new GlobalConfig(),
         Metrics = new MetricsConfig(),
@@ -43,7 +43,7 @@ public sealed class LinterConfigSyncerTests
         try
         {
             var config = DefaultConfig();
-            var updated = LinterConfigSyncer.SyncIfNeeded(path, config);
+            var updated = ConfigSyncer.SyncIfNeeded(path, config);
 
             Assert.True(updated);
             var written = File.ReadAllText(path);
@@ -70,7 +70,7 @@ public sealed class LinterConfigSyncerTests
         try
         {
             var config = DefaultConfig();
-            LinterConfigSyncer.SyncIfNeeded(path, config);
+            ConfigSyncer.SyncIfNeeded(path, config);
 
             var written = File.ReadAllText(path);
             Assert.DoesNotContain("EnforceNoMagicValues", written);
@@ -93,15 +93,15 @@ public sealed class LinterConfigSyncerTests
         var path = WriteTempJson(userJson);
         try
         {
-            var loadedConfig = new LinterConfig
+            var loadedConfig = new Config
             {
                 Global = new GlobalConfig { EnforceSealedClasses = false },
                 Metrics = new MetricsConfig { MaxLineCount = 500 },
             };
-            LinterConfigSyncer.SyncIfNeeded(path, loadedConfig);
+            ConfigSyncer.SyncIfNeeded(path, loadedConfig);
 
             var written = File.ReadAllText(path);
-            var reloaded = JsonSerializer.Deserialize<LinterConfig>(written, ReadOptions)!;
+            var reloaded = JsonSerializer.Deserialize<Config>(written, ReadOptions)!;
 
             Assert.False(reloaded.Global.EnforceSealedClasses);
             Assert.Equal(500, reloaded.Metrics.MaxLineCount);
@@ -129,7 +129,7 @@ public sealed class LinterConfigSyncerTests
         var path = WriteTempJson(userJson);
         try
         {
-            var loadedConfig = new LinterConfig
+            var loadedConfig = new Config
             {
                 Global = new GlobalConfig(),
                 Metrics = new MetricsConfig(),
@@ -143,7 +143,7 @@ public sealed class LinterConfigSyncerTests
                 },
             };
 
-            LinterConfigSyncer.SyncIfNeeded(path, loadedConfig);
+            ConfigSyncer.SyncIfNeeded(path, loadedConfig);
 
             var written = File.ReadAllText(path);
             Assert.Contains("*.Tests", written);
@@ -161,11 +161,11 @@ public sealed class LinterConfigSyncerTests
     public void SyncIfNeeded_ReturnsFalse_WhenFileAlreadySynced()
     {
         var config = DefaultConfig();
-        var syncedJson = LinterConfigSyncer.Serialize(config);
+        var syncedJson = ConfigSyncer.Serialize(config);
         var path = WriteTempJson(syncedJson);
         try
         {
-            var updated = LinterConfigSyncer.SyncIfNeeded(path, config);
+            var updated = ConfigSyncer.SyncIfNeeded(path, config);
             Assert.False(updated);
         }
         finally { File.Delete(path); }
@@ -177,12 +177,12 @@ public sealed class LinterConfigSyncerTests
     public void SyncIfNeeded_DoesNotWriteFile_WhenAlreadySynced()
     {
         var config = DefaultConfig();
-        var syncedJson = LinterConfigSyncer.Serialize(config);
+        var syncedJson = ConfigSyncer.Serialize(config);
         var path = WriteTempJson(syncedJson);
         try
         {
             var beforeWrite = File.GetLastWriteTimeUtc(path);
-            LinterConfigSyncer.SyncIfNeeded(path, config);
+            ConfigSyncer.SyncIfNeeded(path, config);
             var afterWrite = File.GetLastWriteTimeUtc(path);
 
             Assert.Equal(beforeWrite, afterWrite);
@@ -205,7 +205,7 @@ public sealed class LinterConfigSyncerTests
         try
         {
             var config = DefaultConfig();
-            var updated = LinterConfigSyncer.SyncIfNeeded(path, config);
+            var updated = ConfigSyncer.SyncIfNeeded(path, config);
 
             Assert.True(updated);
             var written = File.ReadAllText(path);
@@ -239,12 +239,12 @@ public sealed class LinterConfigSyncerTests
         try
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var loaded = JsonSerializer.Deserialize<LinterConfig>(userJson, options)!;
+            var loaded = JsonSerializer.Deserialize<Config>(userJson, options)!;
 
-            LinterConfigSyncer.SyncIfNeeded(path, loaded);
+            ConfigSyncer.SyncIfNeeded(path, loaded);
 
             var written = File.ReadAllText(path);
-            var reloaded = JsonSerializer.Deserialize<LinterConfig>(written, ReadOptions)!;
+            var reloaded = JsonSerializer.Deserialize<Config>(written, ReadOptions)!;
 
             Assert.Single(reloaded.Metrics.CompoundSuppressions);
             var suppression = reloaded.Metrics.CompoundSuppressions[0];
@@ -257,7 +257,7 @@ public sealed class LinterConfigSyncerTests
     [Fact]
     public void SyncerC_MetricsConfigOverride_CompoundSuppressions_Applied()
     {
-        var globalConfig = new LinterConfig
+        var globalConfig = new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig

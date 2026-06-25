@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.IO;
@@ -16,7 +16,7 @@ namespace AiNetLinter.Tests.Diagnostics;
 public sealed class PerformanceProfilerTests
 {
     [Fact]
-    public void LinterConfigLoader_LoadsEnablePerformanceProfiling()
+    public void ConfigLoader_LoadsEnablePerformanceProfiling()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_config.json");
         var json = """
@@ -30,7 +30,7 @@ public sealed class PerformanceProfilerTests
         File.WriteAllText(tempPath, json);
         try
         {
-            var result = LinterConfigLoader.TryLoadConfig(tempPath, isRequired: false);
+            var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
             Assert.NotNull(result);
             Assert.False(result.Global.EnablePerformanceProfiling);
         }

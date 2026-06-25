@@ -12,7 +12,7 @@ namespace AiNetLinter.Configuration;
 /// fehlende Optionen werden mit Standardwerten ergänzt, entfernte Optionen verschwinden.
 /// Nutzer-Werte bleiben erhalten. Wird beim Laden immer ausgeführt.
 /// </summary>
-public static class LinterConfigSyncer
+public static class ConfigSyncer
 {
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
@@ -25,7 +25,7 @@ public static class LinterConfigSyncer
     /// Schreibt zurück wenn Abweichungen bestehen (neue/entfernte Optionen).
     /// Gibt true zurück wenn die Datei aktualisiert wurde.
     /// </summary>
-    public static bool SyncIfNeeded(string configPath, LinterConfig loadedConfig)
+    public static bool SyncIfNeeded(string configPath, Config loadedConfig)
     {
         try
         {
@@ -46,7 +46,7 @@ public static class LinterConfigSyncer
         }
     }
 
-    internal static string Serialize(LinterConfig config) =>
+    internal static string Serialize(Config config) =>
         JsonSerializer.Serialize(config, WriteOptions);
 
     private static string Normalize(string json) =>

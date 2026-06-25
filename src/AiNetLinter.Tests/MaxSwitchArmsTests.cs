@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 // @covers ComplexityChecker
 using Xunit;
@@ -25,12 +25,12 @@ public sealed class MaxSwitchArmsTests
         return compilation.GetSemanticModel(tree);
     }
 
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         int maxSwitchArms = 10,
         bool excludeDispatcher = true,
         string[]? exemptTypes = null)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

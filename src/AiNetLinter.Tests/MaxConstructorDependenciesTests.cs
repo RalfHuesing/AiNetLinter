@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Xunit;
 using Microsoft.CodeAnalysis;
@@ -12,9 +12,9 @@ namespace AiNetLinter.Tests;
 
 public sealed class MaxConstructorDependenciesTests
 {
-    private static LinterConfig CreateConfig(int maxDeps, string[]? ignorePrefixes = null, string[]? exemptSuffixes = null)
+    private static Config CreateConfig(int maxDeps, string[]? ignorePrefixes = null, string[]? exemptSuffixes = null)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

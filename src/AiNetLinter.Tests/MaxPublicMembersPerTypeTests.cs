@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -10,7 +10,7 @@ namespace AiNetLinter.Tests;
 
 public sealed class MaxPublicMembersPerTypeTests
 {
-    private static LinterConfig CreateConfig(int limit = 5, string[]? exemptSuffixes = null) =>
+    private static Config CreateConfig(int limit = 5, string[]? exemptSuffixes = null) =>
         new()
         {
             Global = new GlobalConfig
@@ -32,7 +32,7 @@ public sealed class MaxPublicMembersPerTypeTests
             }
         };
 
-    private static IReadOnlyCollection<RuleViolation> Analyze(string source, LinterConfig config)
+    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
         var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);

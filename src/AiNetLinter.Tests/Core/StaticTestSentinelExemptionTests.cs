@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,9 +12,9 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class StaticTestSentinelExemptionTests
 {
-    private static LinterConfig CreateSentinelConfig(TestSentinelConfig? sentinel = null)
+    private static Config CreateSentinelConfig(TestSentinelConfig? sentinel = null)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {
@@ -271,7 +271,7 @@ public static class StringExtensions
 }";
         // Global config: no exemptions
         // ProjectOverride for "TestProject": ExemptClassNameSuffixes = ["Extensions"]
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig
             {

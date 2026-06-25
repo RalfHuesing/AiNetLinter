@@ -32,7 +32,7 @@ internal sealed class LinterAutoFixer
         ILintConsole? console = null)
     {
         var baseTypes = await CollectBaseTypesAsync(solution);
-        var context = new FixContext(baseTypes, options.Verbose, options.DryRun, console ?? ConsoleLintConsole.Instance);
+        var context = new FixContext(baseTypes, options.Verbose, options.DryRun, console ?? LinterConsole.Instance);
         var currentSolution = solution;
         int fixedCount = 0;
 

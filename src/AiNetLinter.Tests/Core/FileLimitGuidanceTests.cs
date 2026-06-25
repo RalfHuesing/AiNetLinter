@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using System.Text;
@@ -14,7 +14,7 @@ namespace AiNetLinter.Tests.Core;
 /// </summary>
 public sealed class FileLimitGuidanceTests
 {
-    private static LinterConfig LowLineLimitConfig(int maxLineCount = 10)
+    private static Config LowLineLimitConfig(int maxLineCount = 10)
         => new()
         {
             Global = new GlobalConfig { EnforceNullableEnable = false },

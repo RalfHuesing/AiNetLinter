@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using System.Text;
@@ -23,8 +23,8 @@ internal static class PlaybookCheckCommand
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
-        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+        var c = console ?? LinterConsole.Instance;
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
 
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
         var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(

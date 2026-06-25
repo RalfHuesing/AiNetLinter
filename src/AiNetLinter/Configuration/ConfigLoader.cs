@@ -11,12 +11,12 @@ namespace AiNetLinter.Configuration;
 /// <summary>
 /// Hilfsklasse zum Laden und Deserialisieren der Linter-Konfiguration.
 /// </summary>
-public static class LinterConfigLoader
+public static class ConfigLoader
 {
     /// <summary>
     /// Versucht, die Konfiguration aus der angegebenen Datei zu laden.
     /// </summary>
-    public static LinterConfig? TryLoadConfig(string? configPath, bool isRequired)
+    public static Config? TryLoadConfig(string? configPath, bool isRequired)
     {
         if (string.IsNullOrWhiteSpace(configPath))
         {
@@ -50,17 +50,17 @@ public static class LinterConfigLoader
             return null;
         }
 
-        LinterConfigSyncer.SyncIfNeeded(configPath, config);
+        ConfigSyncer.SyncIfNeeded(configPath, config);
         return config;
     }
 
-    private static LinterConfig? LoadConfig(string configPath)
+    private static Config? LoadConfig(string configPath)
     {
         try
         {
             var content = File.ReadAllText(configPath);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var config = JsonSerializer.Deserialize<LinterConfig>(content, options);
+            var config = JsonSerializer.Deserialize<Config>(content, options);
             if (config?.Global?.ImmutabilityExemptSuffixes != null && config.Global.ImmutabilityExemptSuffixes.Count > 30)
             {
                 Console.Error.WriteLine(LinterErrorFormatter.Format(
@@ -69,7 +69,7 @@ public static class LinterConfigLoader
                     context: configPath,
                     hint: "Erwaege Wildcard-Muster zu nutzen."));
             }
-            return config is null ? null : LinterConfigNormalizer.Normalize(config);
+            return config is null ? null : ConfigNormalizer.Normalize(config);
         }
         catch (InvalidOperationException ex)
         {
