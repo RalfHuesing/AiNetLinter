@@ -45,9 +45,11 @@ internal static class HotspotMapBuilder
             sb.AppendLine();
             sb.AppendLine($"Keine Datei überschreitet 80% des Limits ({(int)(maxLineCount * WarnThreshold)} Zeilen).");
         }
-
-        sb.AppendLine();
-        sb.AppendLine($"## Alle anderen Dateien: {files.Count - critical.Count - warning.Count} Dateien im grünen Bereich");
+        else
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Alle anderen Dateien: {files.Count - critical.Count - warning.Count} Dateien im grünen Bereich");
+        }
 
         c.WriteLine(sb.ToString().TrimEnd());
         return 0;

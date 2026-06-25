@@ -3,10 +3,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Xunit;
 using AiNetLinter.Maps;
-using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Maps;
 
@@ -92,15 +90,4 @@ public sealed class VocabularyMapBuilderTests : IDisposable
         Assert.Equal("RealClass", entries[0].Name);
     }
 
-    private sealed class TestLintConsole : ILintConsole
-    {
-        private readonly StringBuilder _sb = new();
-        private readonly StringBuilder _errSb = new();
-
-        public string Output => _sb.ToString();
-        public string Error => _errSb.ToString();
-
-        public void WriteLine(string message) => _sb.AppendLine(message);
-        public void WriteError(string message) => _errSb.AppendLine(message);
-    }
 }

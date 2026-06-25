@@ -15,7 +15,7 @@ namespace AiNetLinter.Commands;
 /// </summary>
 internal static class MapCommand
 {
-    internal static async Task<int> RunAsync(
+    internal static Task<int> RunAsync(
         LinterArgs args,
         CancellationToken ct = default,
         ILintConsole? console = null)
@@ -29,7 +29,7 @@ internal static class MapCommand
                 "--path fehlt für --map",
                 context: $"--map {args.MapType}",
                 hint: "Pfad zur Solution oder zum Verzeichnis mit --path angeben."));
-            return 1;
+            return Task.FromResult(1);
         }
 
         var mapType = args.MapType?.ToLowerInvariant();
@@ -42,7 +42,7 @@ internal static class MapCommand
             _ => ReportUnknownType(mapType, c)
         };
 
-        return await Task.FromResult(exitCode);
+        return Task.FromResult(exitCode);
     }
 
     private static int ResolveMaxLineCount(LinterArgs args)
