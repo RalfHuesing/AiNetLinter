@@ -28,6 +28,13 @@ internal static class VocabularyMapBuilder
 
     internal static int Build(string targetPath, ILintConsole c)
     {
+        var root = Directory.Exists(targetPath) ? targetPath : Path.GetDirectoryName(targetPath);
+        if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
+        {
+            c.WriteError($"[ERROR]: Pfad '{targetPath}' existiert nicht.");
+            return 1;
+        }
+
         var csFiles = CollectCsFiles(targetPath);
         var entries = ExtractTypeEntries(csFiles, targetPath);
         var grouped = GroupBySuffix(entries);

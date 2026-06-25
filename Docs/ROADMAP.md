@@ -399,4 +399,17 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ---
 
+## Epic 30: Codebase-Landkarten (`--map`)
+
+Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Ausgaben für Drift-Audits und Eval-Prompts erzeugen — ohne manuelles PowerShell-Scripting.
+
+- [x] **`--map vocabulary`:** Scannt alle `.cs`-Dateien und gruppiert Typ-Deklarationen nach Suffix-Muster (`*Checker`, `*Detector`, `*Builder` usw.). Dient als direkter Input für E02 Naming-Drift-Audits. Erkennt gemischte Prüf-Klassen-Patterns als Hinweis auf potenziellen Naming-Drift.
+- [x] **`--map structure`:** Verzeichnisbaum mit Dateigrößen (LOC), sortiert nach Größe. Markiert Dateien ab 80 % (⚠) und 95 % (🔴) des konfigurierten `MaxLineCount`-Limits. Dient als direkter Input für E03 Architecture-Intent-Audits.
+- [x] **`--map hotspots`:** Fokussierte Ansicht: Nur Dateien die das `MaxLineCount`-Limit annähern. Proaktives Drift-Signal bevor ein Regelverstoß entsteht. Nutzt `--config` für projektspezifische Limits.
+- [x] **Keine Roslyn-Abhängigkeit:** Alle drei Maps basieren auf reinem Dateisystem-Scan — kein MSBuild-Load, Ausführung in <1 Sekunde.
+- [x] **Discovery:** Alle Maps in `--docs agent-api` und `--docs configuration` dokumentiert. Kein Timestamp-Header (konsistent mit `--docs`, `--list-rules`).
+- [x] **Test-Suite:** `VocabularyMapBuilderTests`, `StructureMapBuilderTests`, `HotspotMapBuilderTests` mit geteilter `TestLintConsole`-Fixture.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

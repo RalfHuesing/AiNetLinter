@@ -37,7 +37,7 @@ public static class Program
             try
             {
                 var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
-                if (linterArgs.Docs == null)
+                if (linterArgs.Docs == null && linterArgs.MapType == null)
                 {
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 }
