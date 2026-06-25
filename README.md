@@ -37,8 +37,12 @@ AiNetLinter ist selbst-erklärend: Die eingebauten Discovery-Commands ermöglich
 ```bash
 # Tool erkunden (kein --path nötig):
 ainetlinter --list-rules
+ainetlinter --list-evals
 ainetlinter --describe-rule EnforceSealedClasses
 ainetlinter --docs configuration
+
+# Eval-Audit-Prompts assemblieren (inkl. frischer Evidenz und Spezifikation):
+ainetlinter --eval naming-drift --path ./src/ --spec README.md > prompt.md
 
 # Lint-Lauf:
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
@@ -58,7 +62,7 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 
 | Regel | Warum relevant |
 | :--- | :--- |
-| **Codebase-Landkarten** (`--map`) | Generiert strukturierte Markdown-Übersichten (vocabulary, structure, hotspots) der Codebase für Drift-Audits und Eval-Prompts. |
+| **Codebase-Landkarten & Evals** (`--map`, `--eval`) | Generiert strukturierte Markdown-Übersichten (vocabulary, structure, hotspots) oder vollständig assemblierte LLM-Audit-Prompts mit frischer Evidenz für Drift-Audits. |
 | **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Macht den Linter in Legacy-Projekten mit tausenden Altlasten sofort einsetzbar. |
 | **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
 | **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs — verhindert die häufigste Halluzinations-Fehlerquelle in KI-generiertem Code. |

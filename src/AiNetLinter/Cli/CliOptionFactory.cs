@@ -128,4 +128,25 @@ internal static class CliOptionFactory
     {
         Description = "Codebase-Landkarte generieren. Erfordert --path. Typen: vocabulary | structure | hotspots",
     };
+
+    internal static Option<string?> CreateEvalOption() => new("--eval")
+    {
+        Description = "Assemblierten Eval-Audit-Prompt ausgeben. Erfordert --path. Namen: naming-drift | architecture-intent",
+    };
+
+    internal static Option<bool> CreateListEvalsOption() => new("--list-evals")
+    {
+        Description = "Alle verfügbaren Eval-Typen als Tabelle ausgeben",
+    };
+
+    internal static Option<string[]> CreateSpecOption()
+    {
+        var opt = new Option<string[]>("--spec")
+        {
+            Description = "Spezifikations-Quelle für --eval: Datei oder Verzeichnis (erste Ebene, nur .md). Mehrfach angebbar.",
+            AllowMultipleArgumentsPerToken = false,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
 }

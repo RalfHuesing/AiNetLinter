@@ -33,6 +33,16 @@ ainetlinter --map structure --path <pfad>
 ainetlinter --map hotspots --path <pfad> [--config <rules.json>]
 ```
 
+### Eval-Befehle (Assembled Audit Prompts)
+
+Generieren vollständige, sofort nutzbare LLM-Audit-Prompts inkl. Evidenz. Erfordern `--path`.
+
+```bash
+ainetlinter --list-evals
+ainetlinter --eval naming-drift        --path <pfad> [--spec <pfad>...]
+ainetlinter --eval architecture-intent --path <pfad> [--spec <pfad>...]
+```
+
 ---
 
 ## Lint-Workflows
@@ -99,6 +109,9 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--debt-report` | bool | Tech-Debt-Report generieren |
 | `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung) |
 | `--map <typ>` | string | Codebase-Landkarte generieren (`vocabulary`, `structure`, `hotspots`) |
+| `--eval <name>` | string | Assemblierten Eval-Prompt ausgeben (`naming-drift`, `architecture-intent`) |
+| `--list-evals` | bool | Verfügbare Eval-Typen auflisten |
+| `--spec <pfad>` | string[] | Spezifikationsquelle für `--eval`: Datei oder Verzeichnis (erste Ebene, nur .md). Mehrfach angebbar. |
 
 ---
 

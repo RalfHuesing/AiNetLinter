@@ -412,4 +412,21 @@ Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Au
 
 ---
 
+## Epic 31: Eval-Audit-Prompt-Feature (`--eval`)
+
+Assembliert vollständige LLM-Audit-Prompts aus eingebetteten Templates, Spezifikations-Quellen und frisch generierter Codebase-Evidenz.
+
+- [x] **`EvalDefinition` + `EvalRegistry`:** Repräsentiert und verwaltet die Eval-Typen (`naming-drift`, `architecture-intent`)
+- [x] **`SpecLoader`:** Lädt Dateien + Verzeichnisse (erste Ebene, .md) und stellt Fallback-Text bereit
+- [x] **`EvalAssembler`:** Lädt eingebettete Templates, ersetzt Platzhalter `{{...}}` und generiert Codebase-Evidenz automatisch
+- [x] **`EvalCommand` + `ListEvalsCommand`:** Implementiert Befehls-Ausführungen für prompt Generierung und Listing
+- [x] **CLI-Integration:** Unterstützung für `--eval`, `--list-evals`, `--spec` Optionen; Header-Unterdrückung bei Programmausgabe
+- [x] **Templates:** `Docs/Evals/naming-drift.md` und `Docs/Evals/architecture-intent.md` angelegt
+- [x] **csproj-Konfiguration:** EmbeddedResource-Einträge für beide Templates ergänzt
+- [x] **Test-Suite:** Unit-Tests in `SpecLoaderTests`, `EvalAssemblerTests` und `ListEvalsCommandTests` abgedeckt
+- [x] **Aufräumarbeiten:** `Research/Evals/` Ordner gelöscht (vollständig durch eingebettete Templates ersetzt)
+- [x] **Dokumentation:** Aktualisierung von `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
