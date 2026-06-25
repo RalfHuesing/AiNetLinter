@@ -10,7 +10,13 @@ Architektur-Drift ist subtiler als Naming-Drift. Ein Layer der "nur kurz" eine A
 
 **INTENT:** Architektur-Beschreibung aus der Doku — Prinzipien, explizite Verbote, gewollte Schichtung, Design-Entscheidungen mit Begründung.
 
-**STRUCTURE:** Datei- und Verzeichnisstruktur (PowerShell 7):
+**STRUCTURE:** Mit AiNetLinter direkt generieren (empfohlen):
+
+```powershell
+ainetlinter --map structure --path <verzeichnis-oder-solution>
+```
+
+Alternativ manuell (PowerShell 7):
 
 ```powershell
 # Dateiliste ohne bin/obj (kompakt — für kleinere Projekte)

@@ -1461,4 +1461,16 @@ Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `A
 
 ---
 
+## 18. Map-Ausgaben
+
+Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Sie benötigen kein `--config` (außer `--map hotspots` für präzise Grenzwerte).
+
+| Befehl | Zweck | Eval-Input |
+|---|---|---|
+| `--map vocabulary` | Typ-Namen nach Suffix gruppiert | E02 Naming-Drift |
+| `--map structure`  | Verzeichnisstruktur + Dateigrößen | E03 Architecture-Intent |
+| `--map hotspots`   | Dateien nahe am Limit | Proaktiv |
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

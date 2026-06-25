@@ -26,6 +26,11 @@ ainetlinter --search-rules "agent"
 
 # Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
 ainetlinter --docs configuration
+
+# Codebase-Landkarten generieren:
+ainetlinter --map vocabulary --path <pfad>
+ainetlinter --map structure --path <pfad>
+ainetlinter --map hotspots --path <pfad> [--config <rules.json>]
 ```
 
 ---
@@ -93,6 +98,7 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--impact <typ>` | string | Impact-Analyse für einen Typ |
 | `--debt-report` | bool | Tech-Debt-Report generieren |
 | `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung) |
+| `--map <typ>` | string | Codebase-Landkarte generieren (`vocabulary`, `structure`, `hotspots`) |
 
 ---
 

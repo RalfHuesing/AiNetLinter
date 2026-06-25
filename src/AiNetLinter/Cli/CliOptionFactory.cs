@@ -123,4 +123,9 @@ internal static class CliOptionFactory
         Description = "Cache-Lebensdauer in Minuten (0 = unbegrenzt). Standard: 60.",
         DefaultValueFactory = _ => 60,
     };
+
+    internal static Option<string?> CreateMapOption() => new("--map")
+    {
+        Description = "Codebase-Landkarte generieren. Erfordert --path. Typen: vocabulary | structure | hotspots",
+    };
 }
