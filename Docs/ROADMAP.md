@@ -1,4 +1,4 @@
-# AiNetLinter - Projekt-Roadmap
+﻿# AiNetLinter - Projekt-Roadmap
 
 Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Projekts und teilt die Features in logische Epics und Kapitel auf. Sie dient als Arbeitsgrundlage für die schrittweise Implementierung.
 
@@ -8,8 +8,8 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 - [x] Initialisierung der Projektstruktur mit `.slnx` (Solution) und `.csproj`
 - [x] Einrichtung der globalen AI-Richtlinien (`.cursor/rules/AiNetLinterRichtlinien.mdc`)
-- [x] Definition der Konfigurationsstruktur (`LinterConfig.cs`)
-- [x] **Automatischer rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`LinterConfigSyncer`)
+- [x] Definition der Konfigurationsstruktur (`Config.cs`)
+- [x] **Automatischer rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`ConfigSyncer`)
 - [x] Definition der Fehlermodelle (`RuleViolation.cs`)
 - [x] Implementierung des CLI-Einstiegspunkts (`Program.cs`) mit Argument-Parsing
 - [x] Setup des xUnit v3 Testprojekts (`AiNetLinter.Tests`) und Integration in die Solution
@@ -90,7 +90,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ### Architektur-Pflege (Code-Audit 2026-06)
 
-- [x] **DRY-Fix:** `LoadRulesJsonContent` in `LinterConfigLoader` zentralisiert (Plan 01)
+- [x] **DRY-Fix:** `LoadRulesJsonContent` in `ConfigLoader` zentralisiert (Plan 01)
 - [x] **Namespace-Konsistenz:** `DisableAllDetector` nach `AiNetLinter.Suppression` verschoben (Plan 02)
 - [x] **Namespace-Konsistenz:** `UiFileSeparationChecker` nach `AiNetLinter.Core.Checkers` (Plan 03)
 - [x] **Core-Entschlackung:** `AiNetLinter.Generators`-Namespace extrahiert (Plan 04)
@@ -270,7 +270,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 21: Consumer Integration & DX Refinements
 
-- [x] **Konfigurations-Erweiterungen:** Support für `ImmutabilityExemptPatterns` (Wildcards) und `AllowedEmptyReads` in `LinterConfig`.
+- [x] **Konfigurations-Erweiterungen:** Support für `ImmutabilityExemptPatterns` (Wildcards) und `AllowedEmptyReads` in `Config`.
 - [x] **Immutability Heuristiken:** Roslyn-basierte Erkennung von `IConfiguration`/`IOptions` Bindings und `[JsonSerializable]`.
 - [x] **Truncation & Test-Ausnahme:** Guidance-Update mit C#-Beispiel, Berücksichtigung von `AllowedEmptyReads` und Ausnehmen von Test-Fakes (Fake, Mock, Test).
 - [x] **Namespace-Abhängigkeiten mit Wildcards:** Glob-Matching für verbotene Namespace-Kopplungen.
@@ -312,7 +312,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 25: Compound Suppressions (Kontextabhängige Metrik-Gewichtung)
 
-- [x] **Datenmodell:** Records `MetricCondition` und `CompoundSuppression` in `LinterConfig.cs`
+- [x] **Datenmodell:** Records `MetricCondition` und `CompoundSuppression` in `Config.cs`
 - [x] **`MetricsConfig.CompoundSuppressions`:** Property mit 1 aktivem Default für `MaxMethodLineCount`
 - [x] **`CompoundSuppressionEvaluator`:** Isolierter Helper mit `Evaluate/FindConfigured/IsActive`
 - [x] **Phase 1 — Methoden-Ebene:** `MaxMethodLineCount` und `MaxMethodParameterCount` unterstützen Compound-Suppression mit 3-Szenarien-Guidance
@@ -365,8 +365,8 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **`WebFileSeparationChecker`:** Post-Analysis-Check (parallel zu `UiFileSeparationChecker`), der die CSS-Regeln ausfuehrt und Per-File Suppression (`/* ainetlinter-disable RuleId */`, `/* ainetlinter-disable all */`) anwendet.
 - [x] **Regel-IDs:** `CSS_MaxCssLineCount`, `CSS_PreferScopedCss`, `CSS_MaxCssSelectorComplexity`, `CSS_ParseError` in `LinterRuleIds` und `RuleRegistry.Web.cs` registriert (Severity: error / warning, Intent: agent-context / general).
 - [x] **Project-Overrides:** `WebConfigOverride` und `CssConfigOverride` mit `Apply`-Logik; `ProjectConfigResolver.MergeConfig` reicht den Web-Override-Tree durch.
-- [x] **Suppression:** Eigener `WebSuppressionHelper` (dateiweit via `ainetlinter-disable all` und regel-spezifisch via `ainetlinter-disable RuleId`).
-- [x] **Test-Suite:** `CssAnalyzerTests.cs` (15 Tests, Szenarien A-H aus dem Research-Dokument plus Edge-Cases) und `WebSuppressionHelperTests.cs` (6 Tests). 21 / 21 gruen.
+- [x] **Suppression:** Eigener `WebSuppressionDetector` (dateiweit via `ainetlinter-disable all` und regel-spezifisch via `ainetlinter-disable RuleId`).
+- [x] **Test-Suite:** `CssAnalyzerTests.cs` (15 Tests, Szenarien A-H aus dem Research-Dokument plus Edge-Cases) und `WebSuppressionDetectorTests.cs` (6 Tests). 21 / 21 gruen.
 - [x] **Dogfooding:** AiNetLinter laeuft mit aktivierter Web-Sektion sauber auf der eigenen Codebase durch (keine CSS-Violations im Self-Audit, ExCSS-Integration verifiziert).
 - [x] **Dokumentation:** Konfigurationsreferenz in `Docs/configuration.md` um Web-Sektion erweitert; dieser Epic-Eintrag in `ROADMAP.md`.
 - [x] **Bugfix CSS_MaxCssSelectorComplexity-Zeilennummer** (Research/04_CSS_SelectorLineNumbers.md): `CheckSelectorComplexity` meldete immer `LineNumber = 1` statt der tatsaechlichen ExCSS-Quellzeile. Fix: Direktes Erstellen der `RuleViolation` mit `rule.StylesheetText?.Range.Start.Line` statt Umweg ueber den gemeinsamen Helper. Nebeneffekt: `CreateViolation` hat wieder ≤4 Parameter (MaxMethodParameterCount-Konformitaet). Testabdeckung: `Analyze_ReportsCorrectLineNumber_ForSelectorComplexityViolation`.

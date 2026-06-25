@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using AiNetLinter.Configuration;
@@ -6,27 +6,27 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Configuration;
 
-// @covers LinterConfigLoader
-public sealed class LinterConfigLoaderRulesJsonTests
+// @covers ConfigLoader
+public sealed class ConfigLoaderRulesJsonTests
 {
     [Fact]
     public void LoadRulesJsonContent_GibtNullZurueck_WennPfadNull()
     {
-        var result = LinterConfigLoader.LoadRulesJsonContent(null);
+        var result = ConfigLoader.LoadRulesJsonContent(null);
         Assert.Null(result);
     }
 
     [Fact]
     public void LoadRulesJsonContent_GibtNullZurueck_WennPfadLeer()
     {
-        var result = LinterConfigLoader.LoadRulesJsonContent("");
+        var result = ConfigLoader.LoadRulesJsonContent("");
         Assert.Null(result);
     }
 
     [Fact]
     public void LoadRulesJsonContent_GibtNullZurueck_WennDateiNichtExistiert()
     {
-        var result = LinterConfigLoader.LoadRulesJsonContent("nicht_vorhanden.json");
+        var result = ConfigLoader.LoadRulesJsonContent("nicht_vorhanden.json");
         Assert.Null(result);
     }
 
@@ -37,7 +37,7 @@ public sealed class LinterConfigLoaderRulesJsonTests
         try
         {
             File.WriteAllText(tempFile, "{\"test\": true}");
-            var result = LinterConfigLoader.LoadRulesJsonContent(tempFile);
+            var result = ConfigLoader.LoadRulesJsonContent(tempFile);
             Assert.Equal("{\"test\": true}", result);
         }
         finally

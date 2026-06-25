@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -9,9 +9,9 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class ControlFlowResilienceTests
 {
-    private static LinterConfig CreateConfig(bool enabled)
+    private static Config CreateConfig(bool enabled)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {
@@ -271,9 +271,9 @@ public sealed class Test
         Assert.Empty(violations);
     }
 
-    private static LinterConfig CreateSilentCatchConfig(bool enabled, bool allowCancellationCatch)
+    private static Config CreateSilentCatchConfig(bool enabled, bool allowCancellationCatch)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

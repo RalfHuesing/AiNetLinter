@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using System.Threading;
@@ -22,7 +22,7 @@ internal static class MaintenanceCommand
     /// </summary>
     internal static async Task<int?> TryRunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
 
         if (args.CreateBaselinePath != null)
         {
@@ -44,7 +44,7 @@ internal static class MaintenanceCommand
 
     private static async Task<int> AddDisableAllAsync(LinterArgs args, CancellationToken ct, ILintConsole c)
     {
-        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null)
         {
             return 1;
@@ -52,7 +52,7 @@ internal static class MaintenanceCommand
 
         LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath, c);
 
-        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
+        string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
         var engine = new LinterEngine(config, rulesJsonContent);
         var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
@@ -107,7 +107,7 @@ internal static class MaintenanceCommand
             }
         }
 
-        var config = LinterConfigLoader.TryLoadConfig(configPath, isRequired: false);
+        var config = ConfigLoader.TryLoadConfig(configPath, isRequired: false);
         var checksums = catalog.ComputeChecksums(outputRoot, config);
 
         BaselineWriter.Write(args.CreateBaselinePath!, checksums);

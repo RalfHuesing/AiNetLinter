@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Linq;
@@ -12,9 +12,9 @@ namespace AiNetLinter.Tests;
 
 internal static class TestHelper
 {
-    public static LinterConfig CreateDefaultConfig()
+    public static Config CreateDefaultConfig()
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig()
@@ -55,13 +55,13 @@ internal static class TestHelper
     }
 
     public static CheckerContext CreateContext(
-        LinterConfig? config = null,
+        Config? config = null,
         SemanticModel? semanticModel = null,
         bool isTestFile = false,
         string filePath = "Test.cs",
         string? projectName = null)
     {
-        config ??= new LinterConfig
+        config ??= new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig()

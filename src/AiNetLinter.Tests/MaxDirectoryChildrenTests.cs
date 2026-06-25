@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
@@ -24,7 +24,7 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    private static LinterConfig CreateConfig(int limit, string[]? exemptNames = null) =>
+    private static Config CreateConfig(int limit, string[]? exemptNames = null) =>
         new()
         {
             Global = new GlobalConfig
@@ -47,7 +47,7 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
             SolutionBasePath = null
         };
 
-    private static RuleViolation[] RunCheck(string dir, LinterConfig config)
+    private static RuleViolation[] RunCheck(string dir, Config config)
     {
         var violations = new ConcurrentBag<RuleViolation>();
         var configWithBase = config with { SolutionBasePath = dir };

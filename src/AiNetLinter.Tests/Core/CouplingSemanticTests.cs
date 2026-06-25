@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -9,9 +9,9 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class CouplingSemanticTests
 {
-    private static LinterConfig CreateConfig(int maxConstructorDeps)
+    private static Config CreateConfig(int maxConstructorDeps)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

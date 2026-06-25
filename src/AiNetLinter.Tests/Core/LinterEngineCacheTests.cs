@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.IO;
 using System.Linq;
@@ -48,9 +48,9 @@ public sealed class LinterEngineCacheTests : IDisposable
         }
     }
 
-    private static LinterConfig CreateDefaultConfig()
+    private static Config CreateDefaultConfig()
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

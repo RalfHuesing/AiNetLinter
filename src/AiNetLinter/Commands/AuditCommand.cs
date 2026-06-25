@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -28,15 +28,15 @@ internal static class AuditCommand
     private const string FixedCountMessageFormat = "[INFO]: {0} einfache Regelverstoesse wurden automatisch behoben.";
 
     // Bündelt gemeinsame Parameter für private Audit-Methoden.
-    private sealed record AuditRunContext(LinterArgs Args, LinterConfig Config, IPerformanceProfiler Profiler, ILintConsole Console);
+    private sealed record AuditRunContext(LinterArgs Args, Config Config, IPerformanceProfiler Profiler, ILintConsole Console);
 
     /// <summary>
     /// Einstiegspunkt für den Audit-Befehl.
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
-        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        var c = console ?? LinterConsole.Instance;
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         if (config == null) return 1;
 
         IPerformanceProfiler profiler = config.Global.EnablePerformanceProfiling
@@ -60,7 +60,7 @@ internal static class AuditCommand
         try
         {
             profiler.StartPhase("DocumentAnalysis");
-            string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
+            string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
             var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
             var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes, ct);
             profiler.StopPhase("DocumentAnalysis");
@@ -127,7 +127,7 @@ internal static class AuditCommand
         var currentChecksums = catalog.ComputeChecksums(outputRoot, config);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
-        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
+        string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
         var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
         var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
@@ -185,7 +185,7 @@ internal static class AuditCommand
 
         if (!args.Fix) return (catalog, false);
 
-        string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
+        string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
         var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
         var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);

@@ -225,7 +225,7 @@ internal static class StateChecker
         foreach (var param in parameters)
         {
             if (param.Type == null) { count++; continue; }
-            var typeName = SyntaxHelper.GetSimpleTypeName(param.Type);
+            var typeName = param.Type.GetSimpleTypeName();
             var isFramework = typeName != null && ignorePrefixes.Any(p => typeName.StartsWith(p, StringComparison.OrdinalIgnoreCase));
             if (!isFramework) count++;
         }

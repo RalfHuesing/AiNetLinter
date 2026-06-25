@@ -6,14 +6,14 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Core.Checkers;
 
 /// <summary>
-/// Gemeinsame statische Hilfsmethoden für Syntax-Analyse, die von mehreren Checker-Klassen benötigt werden.
+/// Gemeinsame statische Erweiterungsmethoden für Syntax-Analyse.
 /// </summary>
-internal static class SyntaxHelper
+internal static class SyntaxNodeExtensions
 {
-    internal static int LineOf(SyntaxNode node) =>
+    internal static int LineOf(this SyntaxNode node) =>
         node.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
 
-    internal static string? GetSimpleTypeName(TypeSyntax type)
+    internal static string? GetSimpleTypeName(this TypeSyntax type)
     {
         if (type is NullableTypeSyntax nullable)
         {

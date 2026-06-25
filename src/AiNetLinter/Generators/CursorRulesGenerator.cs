@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.IO;
@@ -18,7 +18,7 @@ public static class CursorRulesGenerator
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach .cursor/rules/AiNetLinter.mdc relativ zum angegebenen Pfad.
     /// </summary>
-    public static void Sync(string targetPath, LinterConfig config, bool verbose, string configPath = "rules.json")
+    public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
     {
         string baseDir = ResolveBaseDirectory(targetPath);
         var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
@@ -60,7 +60,7 @@ public static class CursorRulesGenerator
         return targetPath;
     }
 
-    public static string GenerateContent(LinterConfig config, string configPath)
+    public static string GenerateContent(Config config, string configPath)
     {
         var sb = new StringBuilder();
         var version = typeof(CursorRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
@@ -77,7 +77,7 @@ public static class CursorRulesGenerator
         return sb.ToString();
     }
 
-    private static void AppendCompoundSuppressions(StringBuilder sb, LinterConfig config)
+    private static void AppendCompoundSuppressions(StringBuilder sb, Config config)
     {
         var suppressions = config.Metrics.CompoundSuppressions;
         if (suppressions == null || suppressions.Count == 0) return;
@@ -112,7 +112,7 @@ public static class CursorRulesGenerator
         sb.AppendLine();
     }
 
-    private static void AppendKurzStil(StringBuilder sb, LinterConfig config)
+    private static void AppendKurzStil(StringBuilder sb, Config config)
     {
         var g = config.Global;
         var m = config.Metrics;
@@ -152,7 +152,7 @@ public static class CursorRulesGenerator
     private static readonly string[] IntentOrder =
         ["agent-resilience", "agent-context", "architecture", "aspnet-binding", "test-coverage", "control-flow", "csharp-idiom", "general"];
 
-    private static void AppendMetricsTable(StringBuilder sb, LinterConfig config)
+    private static void AppendMetricsTable(StringBuilder sb, Config config)
     {
         sb.AppendLine("## Grenzwerte (Produktion)");
         sb.AppendLine("| Regel | Limit | Praxis |");
@@ -165,7 +165,7 @@ public static class CursorRulesGenerator
         sb.AppendLine();
     }
 
-    private static void AppendActiveRulesByIntent(StringBuilder sb, LinterConfig config)
+    private static void AppendActiveRulesByIntent(StringBuilder sb, Config config)
     {
         var activeRules = RuleRegistry.All
             .Where(r => r.IncludeInCursorRules && !r.IsMetric && r.IsEnabled(config))
@@ -196,7 +196,7 @@ public static class CursorRulesGenerator
         sb.AppendLine();
     }
 
-    private static void AppendDisabledCompact(StringBuilder sb, LinterConfig config)
+    private static void AppendDisabledCompact(StringBuilder sb, Config config)
     {
         var g = config.Global;
         var disabledNames = RuleRegistry.All
@@ -218,7 +218,7 @@ public static class CursorRulesGenerator
         sb.AppendLine();
     }
 
-    private static void AppendProjectOverridesDelta(StringBuilder sb, LinterConfig config)
+    private static void AppendProjectOverridesDelta(StringBuilder sb, Config config)
     {
         if (config.ProjectOverrides == null || config.ProjectOverrides.Count == 0)
             return;

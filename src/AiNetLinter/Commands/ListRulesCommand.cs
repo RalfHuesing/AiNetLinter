@@ -15,7 +15,7 @@ internal static class ListRulesCommand
 {
     internal static int ListAll(ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter — Regeluebersicht");
         sb.AppendLine();
@@ -34,7 +34,7 @@ internal static class ListRulesCommand
 
     internal static int DescribeOne(string ruleId, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
         var rule = RuleRegistry.TryResolve(ruleId);
         if (rule == null)
         {
@@ -74,7 +74,7 @@ internal static class ListRulesCommand
 
     internal static int Search(string term, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
 
         var matches = RuleRegistry.All
             .Where(r => Contains(r.RuleId, term)

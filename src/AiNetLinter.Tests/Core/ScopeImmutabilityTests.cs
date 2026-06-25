@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -9,9 +9,9 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class ScopeImmutabilityTests
 {
-    private static LinterConfig CreateConfig(int maxOverloads = 2)
+    private static Config CreateConfig(int maxOverloads = 2)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {
@@ -77,11 +77,11 @@ public sealed class Calc
         Assert.Contains("deklariert 3 Ueberladungen fuer die Methode 'Compute'", violations.First().Details);
     }
 
-    private static LinterConfig CreateImmutabilityTestConfig(
+    private static Config CreateImmutabilityTestConfig(
         bool allowPrivateBackingFields = false,
         string[]? exemptBaseTypes = null)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {

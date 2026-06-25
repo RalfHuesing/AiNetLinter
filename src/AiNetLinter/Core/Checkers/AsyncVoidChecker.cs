@@ -49,14 +49,14 @@ internal static class AsyncVoidChecker
         string? firstType = firstParamType switch
         {
             PredefinedTypeSyntax predefined => predefined.Keyword.Text,
-            _ => SyntaxHelper.GetSimpleTypeName(firstParamType)
+            _ => firstParamType.GetSimpleTypeName()
         };
         if (firstType is not ("object" or "Object")) return false;
 
         var secondParamType = parameters[1].Type;
         if (secondParamType == null) return false;
 
-        var secondType = SyntaxHelper.GetSimpleTypeName(secondParamType);
+        var secondType = secondParamType.GetSimpleTypeName();
         return secondType != null && secondType.EndsWith("EventArgs");
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -23,17 +23,17 @@ namespace AiNetLinter.Core;
 /// </summary>
 public sealed class LinterEngine
 {
-    private readonly LinterConfig _config;
+    private readonly Config _config;
     private readonly string? _rulesJsonContent;
     private readonly IPerformanceProfiler _profiler;
     private readonly ILintConsole _console;
 
-    internal LinterEngine(LinterConfig config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
+    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
     {
         _config = config;
         _rulesJsonContent = rulesJsonContent;
         _profiler = profiler ?? NullPerformanceProfiler.Instance;
-        _console = console ?? ConsoleLintConsole.Instance;
+        _console = console ?? LinterConsole.Instance;
     }
 
     /// <summary>
@@ -215,7 +215,7 @@ public sealed class LinterEngine
 
 
 
-    private LinterConfig ResolvePostAnalysisConfig(Solution solution)
+    private Config ResolvePostAnalysisConfig(Solution solution)
     {
         if (_config.SolutionBasePath != null)
             return _config;
@@ -286,7 +286,7 @@ public sealed class LinterEngine
     private static TestSignalsDto BuildTestSignals(
         LinterAnalyzer analyzer,
         SemanticModel semanticModel,
-        LinterConfig effectiveConfig,
+        Config effectiveConfig,
         bool isTestFile)
     {
         if (!isTestFile)
@@ -344,7 +344,7 @@ public sealed class LinterEngine
         }
     }
 
-    private void AddTestCoverage(LinterAnalyzer analyzer, SemanticModel semanticModel, LinterConfig effectiveConfig, TestCoverageIndex index)
+    private void AddTestCoverage(LinterAnalyzer analyzer, SemanticModel semanticModel, Config effectiveConfig, TestCoverageIndex index)
     {
         foreach (var cls in analyzer.Classes)
         {

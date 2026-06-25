@@ -1,4 +1,4 @@
-using AiNetLinter.Configuration;
+﻿using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
 namespace AiNetLinter.Core;
@@ -13,7 +13,7 @@ public static class PartialClassLineAggregator
     /// </summary>
     public static IReadOnlyCollection<RuleViolation> BuildViolations(
         IReadOnlyCollection<PartialClassPart> parts,
-        LinterConfig config)
+        Config config)
     {
         if (!config.Metrics.AggregatePartialClassLineCount || parts.Count == 0)
         {
@@ -28,7 +28,7 @@ public static class PartialClassLineAggregator
             .ToArray();
     }
 
-    private static RuleViolation? TryCreateViolation(IGrouping<string, PartialClassPart> group, LinterConfig config)
+    private static RuleViolation? TryCreateViolation(IGrouping<string, PartialClassPart> group, Config config)
     {
         var totalLines = group.Sum(p => p.FileLineCount);
         if (totalLines <= config.Metrics.MaxLineCount)

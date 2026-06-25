@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Threading;
@@ -20,7 +20,7 @@ internal static class MapCommand
         CancellationToken ct = default,
         ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
 
         if (string.IsNullOrWhiteSpace(args.TargetPath))
         {
@@ -50,7 +50,7 @@ internal static class MapCommand
         if (string.IsNullOrWhiteSpace(args.ConfigPath))
             return new MetricsConfig().MaxLineCount;
 
-        var config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
         return config?.Metrics.MaxLineCount ?? new MetricsConfig().MaxLineCount;
     }
 

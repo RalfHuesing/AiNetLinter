@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -10,7 +10,7 @@ namespace AiNetLinter.Tests;
 
 public sealed class MaxPartialClassFilesTests
 {
-    private static LinterConfig CreateConfig(int limit = 2, string[]? exemptTypes = null) =>
+    private static Config CreateConfig(int limit = 2, string[]? exemptTypes = null) =>
         new()
         {
             Global = new GlobalConfig

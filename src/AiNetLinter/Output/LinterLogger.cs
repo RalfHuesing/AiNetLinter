@@ -13,7 +13,7 @@ internal static class LinterLogger
     {
         if (verbose)
         {
-            var c = console ?? ConsoleLintConsole.Instance;
+            var c = console ?? LinterConsole.Instance;
             c.WriteLine($"[INFO]: Lade Konfiguration von: {configPath}");
             c.WriteLine($"[INFO]: Analysiere Ziel-Pfad: {targetPath}");
         }
@@ -23,7 +23,7 @@ internal static class LinterLogger
     {
         if (verbose)
         {
-            var c = console ?? ConsoleLintConsole.Instance;
+            var c = console ?? LinterConsole.Instance;
             c.WriteLine($"[INFO]: Erzeuge Baseline fuer: {targetPath}");
             c.WriteLine($"[INFO]: Ausgabedatei: {baselinePath}");
         }
@@ -33,7 +33,7 @@ internal static class LinterLogger
     {
         if (verbose)
         {
-            var c = console ?? ConsoleLintConsole.Instance;
+            var c = console ?? LinterConsole.Instance;
             c.WriteLine($"[INFO]: Audit und Disable-all-Injection unter: {targetPath}");
         }
     }
@@ -42,7 +42,7 @@ internal static class LinterLogger
     {
         if (verbose)
         {
-            var c = console ?? ConsoleLintConsole.Instance;
+            var c = console ?? LinterConsole.Instance;
             c.WriteLine($"[INFO]: Entferne Disable-all-Kommentare unter: {targetPath}");
         }
     }
@@ -51,7 +51,7 @@ internal static class LinterLogger
     {
         if (!verbose) return;
 
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
         var changedCount = comparison.ChangedFiles.Count;
         var removedCount = comparison.RemovedFiles.Count;
         c.WriteLine($"[INFO]: Baseline aktualisiert: {changedCount} geaendert, {removedCount} entfernt.");

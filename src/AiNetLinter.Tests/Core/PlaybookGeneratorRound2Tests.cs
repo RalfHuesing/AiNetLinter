@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.IO;
 using System.Threading.Tasks;
@@ -98,7 +98,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "SliceProj");
-        var config = new LinterConfig { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+        var config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
         var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
@@ -161,7 +161,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "MyApp", "MyService.cs");
-        var config = new LinterConfig { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+        var config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
         
         var violations = new[]
         {

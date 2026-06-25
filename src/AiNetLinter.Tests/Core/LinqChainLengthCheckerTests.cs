@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -171,13 +171,13 @@ public sealed class LinqChainLengthCheckerTests
 
     // --- Hilfsmethoden ---
 
-    private static LinterConfig ConfigWith(int limit) =>
+    private static Config ConfigWith(int limit) =>
         TestHelper.CreateDefaultConfig() with
         {
             Metrics = new MetricsConfig { MaxLinqChainLength = limit }
         };
 
-    private static LinterConfig ConfigWithCustomNames(int limit, IReadOnlyCollection<string> names) =>
+    private static Config ConfigWithCustomNames(int limit, IReadOnlyCollection<string> names) =>
         TestHelper.CreateDefaultConfig() with
         {
             Metrics = new MetricsConfig { MaxLinqChainLength = limit, LinqMethodNames = names }

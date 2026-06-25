@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -9,7 +9,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class SilentCatchAllowedTypesTests
 {
-    private static LinterConfig CreateConfig(string[]? allowedTypes = null) => new()
+    private static Config CreateConfig(string[]? allowedTypes = null) => new()
     {
         Global = new GlobalConfig
         {

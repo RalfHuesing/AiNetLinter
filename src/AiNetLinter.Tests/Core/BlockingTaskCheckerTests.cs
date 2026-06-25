@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -187,7 +187,7 @@ public sealed class BlockingTaskCheckerTests
 
     // --- Hilfsmethode ---
 
-    private static LinterConfig ConfigWith(
+    private static Config ConfigWith(
         bool ban = true,
         bool allowInMain = true,
         bool allowInTests = false) =>

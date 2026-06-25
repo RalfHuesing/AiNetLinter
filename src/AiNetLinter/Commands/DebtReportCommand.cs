@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Generic;
 using System.IO;
@@ -22,16 +22,16 @@ internal static class DebtReportCommand
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
-        LinterConfig? config = null;
+        var c = console ?? LinterConsole.Instance;
+        Config? config = null;
         IReadOnlyCollection<RuleViolation>? violations = null;
 
         if (!string.IsNullOrWhiteSpace(args.ConfigPath))
         {
-            config = LinterConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+            config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
             if (config != null)
             {
-                string? rulesJsonContent = LinterConfigLoader.LoadRulesJsonContent(args.ConfigPath);
+                string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
                 var engine = new LinterEngine(config, rulesJsonContent);
                 violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
             }

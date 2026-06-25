@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -20,7 +20,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public List<ClassInfo> Classes => _ctx.Classes;
     public List<PartialClassPart> PartialClassParts => _ctx.PartialClassParts;
 
-    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile, string? projectName = null)
+    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, Config config, bool isTestFile, string? projectName = null)
         : base(SyntaxWalkerDepth.Node)
     {
         _ctx = new CheckerContext(filePath, config, semanticModel, isTestFile, projectName);
@@ -34,10 +34,10 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         return analyzer._ctx.Violations;
     }
 
-    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config)
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, Config config)
         => Analyze(new AnalyzerArgs(filePath, semanticModel, config));
 
-    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, LinterConfig config, bool isTestFile)
+    public static IReadOnlyCollection<RuleViolation> Analyze(string filePath, SemanticModel semanticModel, Config config, bool isTestFile)
         => Analyze(new AnalyzerArgs(filePath, semanticModel, config, isTestFile));
 
     internal IReadOnlyCollection<RuleViolation> Violations => _ctx.Violations;
@@ -313,7 +313,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 public sealed record AnalyzerArgs(
     string FilePath,
     SemanticModel SemanticModel,
-    LinterConfig Config,
+    Config Config,
     bool IsTestFile = false,
     string? ProjectName = null
 );

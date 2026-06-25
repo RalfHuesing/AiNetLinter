@@ -29,7 +29,7 @@ internal static class DocsCommand
     /// </summary>
     internal static int Run(string? docName, ILintConsole? console = null)
     {
-        var c = console ?? ConsoleLintConsole.Instance;
+        var c = console ?? LinterConsole.Instance;
 
         if (string.IsNullOrWhiteSpace(docName))
         {

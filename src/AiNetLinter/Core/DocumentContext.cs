@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Configuration;
@@ -12,6 +12,6 @@ internal sealed record DocumentContext(
     string FilePath,
     SemanticModel SemanticModel,
     bool IsTestFile,
-    LinterConfig EffectiveConfig,
+    Config EffectiveConfig,
     string ProjectName
 );

@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -10,7 +10,7 @@ namespace AiNetLinter.Tests;
 
 public sealed class NestedTypesCheckerTests
 {
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         bool banPublicNestedTypes = true,
         bool banPublicNestedTypesAllowPrivate = true) =>
         new()
@@ -33,7 +33,7 @@ public sealed class NestedTypesCheckerTests
             Metrics = new MetricsConfig()
         };
 
-    private static IReadOnlyCollection<RuleViolation> Analyze(string source, LinterConfig config)
+    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
         var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);

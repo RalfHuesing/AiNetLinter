@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.Build.Locator;
 using AiNetLinter.Core;
@@ -70,7 +70,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Liefert alle gültigen Quelldateien mit relativen Pfaden.
     /// </summary>
-    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, LinterConfig? config = null)
+    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, Config? config = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
         var entries = new List<SourceFileEntry>();
@@ -100,7 +100,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Berechnet SHA-256-Checksummen für alle Quelldateien.
     /// </summary>
-    public Dictionary<string, string> ComputeChecksums(string outputRoot, LinterConfig? config = null)
+    public Dictionary<string, string> ComputeChecksums(string outputRoot, Config? config = null)
     {
         var checksums = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

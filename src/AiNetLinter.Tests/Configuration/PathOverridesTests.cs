@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Collections.Generic;
 using Xunit;
 using AiNetLinter.Configuration;
@@ -7,7 +7,7 @@ namespace AiNetLinter.Tests.Configuration;
 
 public sealed class PathOverridesTests
 {
-    private static LinterConfig CreateBaseConfig(int maxMethodLines = 42) => new()
+    private static Config CreateBaseConfig(int maxMethodLines = 42) => new()
     {
         Global = new GlobalConfig { EnforceSealedClasses = false },
         Metrics = new MetricsConfig { MaxMethodLineCount = maxMethodLines }
@@ -108,7 +108,7 @@ public sealed class PathOverridesTests
     [Fact]
     public void ResolveForFile_MatchingPath_AppliesMetricsOverride()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig { EnforceSealedClasses = false },
             Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },
@@ -133,7 +133,7 @@ public sealed class PathOverridesTests
     [Fact]
     public void ResolveForFile_NonMatchingPath_KeepsGlobalValue()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig { EnforceSealedClasses = false },
             Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },
@@ -158,7 +158,7 @@ public sealed class PathOverridesTests
     [Fact]
     public void ResolveForFile_ProjectAndPathOverrides_PathWins()
     {
-        var config = new LinterConfig
+        var config = new Config
         {
             Global = new GlobalConfig { EnforceSealedClasses = false },
             Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },

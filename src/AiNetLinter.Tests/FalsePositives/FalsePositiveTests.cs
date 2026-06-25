@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -15,7 +15,7 @@ namespace AiNetLinter.Tests.FalsePositives;
 /// </summary>
 public sealed class FalsePositiveTests
 {
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         bool allowOut = false,
         bool allowTryPatternOut = true,
         int maxParams = 4) => new()

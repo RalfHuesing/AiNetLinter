@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -17,7 +17,7 @@ namespace AiNetLinter.Core.Checkers;
 /// </summary>
 internal static class UiFileSeparationChecker
 {
-    public static void Run(AnalysisState state, LinterConfig config)
+    public static void Run(AnalysisState state, Config config)
     {
         var uiConfig = config.UiSeparation;
         if (!uiConfig.BlazorRequireCodeBehind && !uiConfig.BlazorRequireCssIsolation)

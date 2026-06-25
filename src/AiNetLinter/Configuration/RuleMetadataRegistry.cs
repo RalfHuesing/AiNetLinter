@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Core;
@@ -16,7 +16,7 @@ public static class RuleMetadataRegistry
     /// <summary>
     /// Ermittelt Severity und Intent für eine Regel (Konfiguration überschreibt Defaults).
     /// </summary>
-    public static RuleMetadataEntry Resolve(string ruleName, LinterConfig config)
+    public static RuleMetadataEntry Resolve(string ruleName, Config config)
     {
         if (config.RuleMetadata.TryGetValue(ruleName, out var configured))
         {
@@ -39,7 +39,7 @@ public static class RuleMetadataRegistry
     /// <summary>
     /// Gibt true zurück wenn mindestens ein Verstoß in der Sammlung Severity "error" hat.
     /// </summary>
-    public static bool HasErrorSeverity(IEnumerable<Models.RuleViolation> violations, LinterConfig config)
+    public static bool HasErrorSeverity(IEnumerable<Models.RuleViolation> violations, Config config)
     {
         foreach (var v in violations)
         {

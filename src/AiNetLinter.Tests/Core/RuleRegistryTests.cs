@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +24,7 @@ public sealed class RuleRegistryTests
             Assert.False(string.IsNullOrWhiteSpace(rule.Intent), $"Intent should not be empty for {rule.RuleId}.");
             Assert.False(string.IsNullOrWhiteSpace(rule.Severity), $"Severity should not be empty for {rule.RuleId}.");
 
-            var fakeConfig = new LinterConfig
+            var fakeConfig = new Config
             {
                 Global = new GlobalConfig(),
                 Metrics = new MetricsConfig()

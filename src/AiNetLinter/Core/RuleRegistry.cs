@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace AiNetLinter.Core;
 public sealed record RuleMetadata(
     string RuleId,
     string DisplayName,
-    Func<LinterConfig, string> GetShortDescription,
+    Func<Config, string> GetShortDescription,
     string Warum,
     string[] Alternativen,
     string? SicherheitsHinweis,
@@ -18,10 +18,10 @@ public sealed record RuleMetadata(
     string Severity,
     string CursorHint,
     bool HasAutoFix,
-    Func<LinterConfig, bool> IsEnabled,
+    Func<Config, bool> IsEnabled,
     bool IsMetric,
     bool IncludeInCursorRules,
-    Func<LinterConfig, int>? GetMetricLimit = null,
+    Func<Config, int>? GetMetricLimit = null,
     string? ConfigKeyHint = null
 );
 

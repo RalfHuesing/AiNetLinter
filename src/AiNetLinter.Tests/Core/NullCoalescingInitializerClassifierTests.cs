@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Linq;
 using Xunit;
@@ -31,12 +31,12 @@ public sealed class NullCoalescingInitializerClassifierTests
             .First(m => m.Identifier.Text == methodName);
     }
 
-    private static LinterConfig CreateConfig(
+    private static Config CreateConfig(
         int maxComplexity,
         bool excludeNullCoalescing,
         double maxNonCoalescingRatio)
     {
-        return new LinterConfig
+        return new Config
         {
             Global = new GlobalConfig
             {
