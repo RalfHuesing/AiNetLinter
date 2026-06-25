@@ -17,7 +17,7 @@ internal static class CliCommandBuilder
             options.DebtReport, options.WaveReady, options.OnlyChanged, options.GitSince,
             options.Fix, options.Impact, options.SyncCursorRules, options.Check, options.NoCache, options.CacheTtl,
             options.Footprint, options.Docs,
-            options.ListRules, options.DescribeRule, options.SearchRules,
+            options.ListRules, options.DescribeRule, options.SearchRules, options.Map,
         };
 
         return (root, options);
@@ -48,7 +48,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateDocsOption(),
             CliOptionFactory.CreateListRulesOption(),
             CliOptionFactory.CreateDescribeRuleOption(),
-            CliOptionFactory.CreateSearchRulesOption());
+            CliOptionFactory.CreateSearchRulesOption(),
+            CliOptionFactory.CreateMapOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
@@ -82,6 +83,7 @@ internal static class CliCommandBuilder
             Docs: parseResult.GetValue(options.Docs),
             ListRules: parseResult.GetValue(options.ListRules),
             DescribeRule: parseResult.GetValue(options.DescribeRule),
-            SearchRules: parseResult.GetValue(options.SearchRules));
+            SearchRules: parseResult.GetValue(options.SearchRules),
+            MapType: parseResult.GetValue(options.Map));
     }
 }

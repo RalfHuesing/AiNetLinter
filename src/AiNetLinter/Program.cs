@@ -87,6 +87,7 @@ public static class Program
             ListRules = parsed.ListRules,
             DescribeRule = parsed.DescribeRule,
             SearchRules = parsed.SearchRules,
+            MapType = parsed.MapType,
         };
     }
 
@@ -94,6 +95,8 @@ public static class Program
     {
         var standaloneResult = TryRunStandaloneCommand(args);
         if (standaloneResult.HasValue) return standaloneResult.Value;
+
+        if (args.MapType != null) return await MapCommand.RunAsync(args, ct);
 
         var validationError = ValidateArgs(args);
         if (validationError.HasValue) return validationError.Value;

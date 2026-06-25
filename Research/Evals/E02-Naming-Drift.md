@@ -10,13 +10,19 @@ LLMs erfinden bei jeder Session neue Namen wenn sie kein klares Vokabular-Vorbil
 
 **SPEC:** README oder Doku-Abschnitt der die Kernkonzepte beschreibt — wo Domain-Begriffe das erste Mal eingeführt werden.
 
-**IDENTIFIERS:** Klassen- und Methoden-Namen aus dem Code extrahieren (PowerShell 7):
+**IDENTIFIERS:** Mit AiNetLinter direkt generieren (empfohlen):
+
+```powershell
+ainetlinter --map vocabulary --path <verzeichnis-oder-solution>
+```
+
+Alternativ manuell (PowerShell 7):
 
 ```powershell
 # Klassen, Interfaces, Records, Enums — nur die Namen
 rg "(class|interface|record|enum)\s+(\w+)" src\ -o --no-filename -g "*.cs" | Sort-Object -Unique
 
-# Vollständige Typ-Deklarationen mit Modifier (empfohlen — zeigt mehr Kontext)
+# Vollständige Typ-Deklarationen mit Modifier (zeigt mehr Kontext)
 rg "^\s*(public|internal|private|protected|sealed|static|abstract).*?(class|interface|record|enum)\s+\w+" src\ --no-filename -g "*.cs" |
     ForEach-Object { $_.Trim() } | Sort-Object -Unique
 

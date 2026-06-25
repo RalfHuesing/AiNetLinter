@@ -128,13 +128,18 @@ public sealed class LinterArgs
     public string? SearchRules { get; init; }
 
     /// <summary>
+    /// Holt oder setzt den Typ der Codebase-Landkarte (vocabulary | structure | hotspots).
+    /// </summary>
+    public string? MapType { get; init; }
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
     {
-        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && string.IsNullOrEmpty(TargetPath))
+        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && MapType == null && string.IsNullOrEmpty(TargetPath))
         {
-            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules).";
+            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules, --map).";
         }
 
         if (HasConflictingModeOptions())

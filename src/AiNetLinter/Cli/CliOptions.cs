@@ -28,7 +28,8 @@ internal sealed record CliOptions(
     Option<string?> Docs,
     Option<bool> ListRules,
     Option<string?> DescribeRule,
-    Option<string?> SearchRules);
+    Option<string?> SearchRules,
+    Option<string?> Map);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Playbook, Verbose).
@@ -87,4 +88,5 @@ internal sealed record CliParsedArgs(
     string? Docs,
     bool ListRules,
     string? DescribeRule,
-    string? SearchRules);
+    string? SearchRules,
+    string? MapType);
