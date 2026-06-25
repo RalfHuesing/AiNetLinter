@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.CommandLine;
 
 namespace AiNetLinter.Cli;
