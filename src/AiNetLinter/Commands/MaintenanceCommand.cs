@@ -56,7 +56,7 @@ internal static class MaintenanceCommand
         var engine = new LinterEngine(config, rulesJsonContent);
         var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var violatingPaths = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, outputRoot);
+        var violatingPaths = ViolationPathResolver.ResolveAbsolutePaths(violations, outputRoot);
         var result = DisableAllCommentInjector.InjectIntoFiles(violatingPaths);
 
         if (args.Verbose)

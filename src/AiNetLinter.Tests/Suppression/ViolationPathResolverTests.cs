@@ -4,7 +4,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
 
-public sealed class ViolatingFilePathResolverTests
+public sealed class ViolationPathResolverTests
 {
     [Fact]
     public void ResolveAbsolutePaths_ReturnsDistinctExistingFiles()
@@ -23,7 +23,7 @@ public sealed class ViolatingFilePathResolverTests
                 CreateViolation("src/App/Worker.cs"),
             };
 
-            var resolved = ViolatingFilePathResolver.ResolveAbsolutePaths(violations, tempDir);
+            var resolved = ViolationPathResolver.ResolveAbsolutePaths(violations, tempDir);
 
             Assert.Single(resolved);
             Assert.Equal(filePath, resolved[0]);

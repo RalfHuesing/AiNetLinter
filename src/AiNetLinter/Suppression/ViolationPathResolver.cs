@@ -5,7 +5,7 @@ namespace AiNetLinter.Suppression;
 /// <summary>
 /// Löst relative Verstoß-Pfade in absolute Dateipfade auf.
 /// </summary>
-public static class ViolatingFilePathResolver
+public static class ViolationPathResolver
 {
     /// <summary>
     /// Ermittelt eindeutige absolute Pfade aller Dateien mit Audit-Verstößen.

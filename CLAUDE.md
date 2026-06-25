@@ -25,3 +25,15 @@ Die verbindlichen Coding-Richtlinien, Architektur-Constraints und Linter-Metrike
 ## Commits
 
 Conventional Commits auf Deutsch, imperativ. Beispiel: `feat: Regel XY ergänzt`.
+
+## Begriffs-Glossar (Vocabulary Alignment)
+
+Um zukünftigen Naming-Drift zu vermeiden, gilt folgende Übersetzung von Spezifikations-Begriffen in Code-Identifiers:
+
+- **Ratchet-Prinzip (Baseline-Ratchet)**: Im Code ausschließlich als `Baseline` bezeichnet (z. B. `BaselineViolationFilter`, `CliBaselineOptions`).
+- **Vertical Slices (Namespace-Abhängigkeiten)**: Im Code abgebildet durch `NamespaceCoupling` (z. B. `NamespaceCouplingChecker`) und `ForbiddenNamespaceDependencies` (in Konfiguration).
+- **Regel-Prüfer**: Generell als `*Checker` benennen (z. B. `SealedClassChecker`). Suffix `*Detector` ist reserviert für rein passive Zustandserkennung ohne Generierung von Violations (z. B. `GeneratedCodeDetector`).
+- **AI-Context-Footprint**: Bezeichnet die transitiven Codezeilen einer Klasse für LLM-Agenten. Im Code als `AIContextFootprint` bzw. `AIContextFootprintCalculator` bezeichnet.
+- **Bulk-Suppression / Disable-All-Kommentare**: Das Einfügen/Entfernen von dateiweiten Deaktivierungskommentaren. Im Code als `DisableAllCommentInjector` bzw. `DisableAllCommentRemover` bezeichnet.
+
+

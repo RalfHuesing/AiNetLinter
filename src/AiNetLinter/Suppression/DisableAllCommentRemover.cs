@@ -14,7 +14,7 @@ public static class DisableAllCommentRemover
     /// </summary>
     public static async Task<DisableAllRemoveResult> RemoveAsync(string path)
     {
-        var absolutePaths = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(path);
+        var absolutePaths = await SuppressionFileResolver.ResolveAbsolutePathsAsync(path);
         return RemoveFromFiles(absolutePaths);
     }
 
