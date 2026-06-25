@@ -17,7 +17,7 @@ public static class DebtReportBuilder
         IReadOnlyCollection<RuleViolation>? violations = null)
     {
         var outputRoot = OutputRootResolver.Resolve(targetPath);
-        var absolutePaths = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(targetPath);
+        var absolutePaths = await SuppressionFileResolver.ResolveAbsolutePathsAsync(targetPath);
         var disableAllByFolder = GroupDisableAllByFolder(absolutePaths, outputRoot);
         var waveReady = BuildWaveReadyCandidates(violations, outputRoot);
         var activeSuppressions = await SuppressionScanner.ScanAllAsync(targetPath);

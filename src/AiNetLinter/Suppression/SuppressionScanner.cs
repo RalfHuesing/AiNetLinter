@@ -57,7 +57,7 @@ public static class SuppressionScanner
         // 1. Get all C# files using the existing resolver
         try
         {
-            var csFiles = await SuppressionSourceFileResolver.ResolveAbsolutePathsAsync(targetPath);
+            var csFiles = await SuppressionFileResolver.ResolveAbsolutePathsAsync(targetPath);
             files.AddRange(csFiles);
         }
         catch (Exception ignored)

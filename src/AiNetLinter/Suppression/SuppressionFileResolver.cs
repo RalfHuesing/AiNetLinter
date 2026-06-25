@@ -6,7 +6,7 @@ namespace AiNetLinter.Suppression;
 /// <summary>
 /// Ermittelt analysierbare C#-Quelldateien unter einem CLI-Pfad.
 /// </summary>
-public static class SuppressionSourceFileResolver
+public static class SuppressionFileResolver
 {
     /// <summary>
     /// Liefert absolute Pfade aller analysierbaren .cs-Dateien unter path.
