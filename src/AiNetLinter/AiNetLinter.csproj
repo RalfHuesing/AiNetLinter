@@ -27,6 +27,8 @@
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
     <EmbeddedResource Include="..\..\Docs\ROADMAP.md" LogicalName="Docs/ROADMAP.md" />
     <EmbeddedResource Include="..\..\rules.json" LogicalName="rules.json" />
+    <EmbeddedResource Include="..\..\Docs\Evals\naming-drift.md" LogicalName="Docs/Evals/naming-drift.md" />
+    <EmbeddedResource Include="..\..\Docs\Evals\architecture-intent.md" LogicalName="Docs/Evals/architecture-intent.md" />
   </ItemGroup>
 
   <ItemGroup>

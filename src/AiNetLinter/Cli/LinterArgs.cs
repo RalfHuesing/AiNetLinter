@@ -133,13 +133,28 @@ public sealed class LinterArgs
     public string? MapType { get; init; }
 
     /// <summary>
+    /// Holt oder setzt den Eval-Typ für --eval (naming-drift | architecture-intent).
+    /// </summary>
+    public string? EvalType { get; init; }
+
+    /// <summary>
+    /// Gibt an ob alle verfügbaren Eval-Typen aufgelistet werden sollen.
+    /// </summary>
+    public bool ListEvals { get; init; }
+
+    /// <summary>
+    /// Spezifikations-Quellen für --eval (Dateien oder Verzeichnisse).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> SpecPaths { get; init; } = [];
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
     {
-        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && MapType == null && string.IsNullOrEmpty(TargetPath))
+        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && MapType == null && EvalType == null && !ListEvals && string.IsNullOrEmpty(TargetPath))
         {
-            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules, --map).";
+            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules, --map, --eval, --list-evals).";
         }
 
         if (HasConflictingModeOptions())

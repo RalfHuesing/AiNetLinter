@@ -1473,4 +1473,21 @@ Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Si
 
 ---
 
+## 19. Eval-Prompts (`--eval`)
+
+`--eval` assembliert einen vollständigen LLM-Audit-Prompt aus drei Quellen:
+
+1. **Template** — eingebettet im Binary (`Docs/Evals/`)
+2. **Spezifikation** — aus `--spec` Quellen (oder LLM-Fallback-Instruktion)
+3. **Evidenz** — frisch generiert (vocabulary map oder structure map)
+
+| Eval-Typ | Evidenz | --spec empfohlen |
+|:---|:---|:---|
+| `naming-drift` | VocabularyMap | README.md, Domain-Dokumentation |
+| `architecture-intent` | StructureMap | Architektur-Beschreibung, Designentscheidungen |
+
+`--spec` kann mehrfach angegeben werden. Verzeichnisse: nur erste Ebene, nur .md-Dateien.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
