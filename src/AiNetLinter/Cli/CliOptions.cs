@@ -34,7 +34,14 @@ internal sealed record CliOptions(
     Option<string?> Map,
     Option<string?> Eval,
     Option<bool> ListEvals,
-    Option<string[]> Spec);
+    Option<string[]> Spec,
+    Option<string[]> IncludeProjects,
+    Option<string[]> ExcludeProjects,
+    Option<string[]> IncludeNamespaces,
+    Option<string[]> ExcludeNamespaces,
+    Option<bool> ExcludeTests,
+    Option<bool> TestsOnly,
+    Option<bool> PublicOnly);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Playbook, Verbose).
@@ -97,4 +104,11 @@ internal sealed record CliParsedArgs(
     string? MapType,
     string? EvalType,
     bool ListEvals,
-    IReadOnlyList<string> SpecPaths);
+    IReadOnlyList<string> SpecPaths,
+    IReadOnlyList<string> IncludeProjects,
+    IReadOnlyList<string> ExcludeProjects,
+    IReadOnlyList<string> IncludeNamespaces,
+    IReadOnlyList<string> ExcludeNamespaces,
+    bool ExcludeTests,
+    bool TestsOnly,
+    bool PublicOnly);

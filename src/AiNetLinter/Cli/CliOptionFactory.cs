@@ -151,4 +151,63 @@ internal static class CliOptionFactory
         opt.Arity = ArgumentArity.ZeroOrMore;
         return opt;
     }
+
+    internal static Option<string[]> CreateIncludeProjectOption()
+    {
+        var opt = new Option<string[]>("--project")
+        {
+            Description = "Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. '*.Core,*.Domain').",
+            AllowMultipleArgumentsPerToken = true,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
+
+    internal static Option<string[]> CreateExcludeProjectOption()
+    {
+        var opt = new Option<string[]>("--exclude-project")
+        {
+            Description = "Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt, z. B. '*.Tests').",
+            AllowMultipleArgumentsPerToken = true,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
+
+    internal static Option<string[]> CreateIncludeNamespaceOption()
+    {
+        var opt = new Option<string[]>("--namespace")
+        {
+            Description = "Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. 'San.Auth*').",
+            AllowMultipleArgumentsPerToken = true,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
+
+    internal static Option<string[]> CreateExcludeNamespaceOption()
+    {
+        var opt = new Option<string[]>("--exclude-namespace")
+        {
+            Description = "Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt, z. B. '*.Internal').",
+            AllowMultipleArgumentsPerToken = true,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
+
+    internal static Option<bool> CreateExcludeTestsOption() => new("--exclude-tests")
+    {
+        Description = "Shortcut, um alle automatisch erkannten Testprojekte auszublenden.",
+    };
+
+    internal static Option<bool> CreateTestsOnlyOption() => new("--tests-only")
+    {
+        Description = "Shortcut, um ausschließlich Testprojekte zu analysieren.",
+    };
+
+    internal static Option<bool> CreatePublicOnlyOption() => new("--public-only")
+    {
+        Description = "Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.",
+    };
 }

@@ -21,6 +21,8 @@ internal static class CliCommandBuilder
             options.Footprint, options.Docs,
             options.ListRules, options.DescribeRule, options.SearchRules, options.Map,
             options.Eval, options.ListEvals, options.Spec,
+            options.IncludeProjects, options.ExcludeProjects, options.IncludeNamespaces, options.ExcludeNamespaces,
+            options.ExcludeTests, options.TestsOnly, options.PublicOnly,
         };
 
         return (root, options);
@@ -55,7 +57,14 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateMapOption(),
             CliOptionFactory.CreateEvalOption(),
             CliOptionFactory.CreateListEvalsOption(),
-            CliOptionFactory.CreateSpecOption());
+            CliOptionFactory.CreateSpecOption(),
+            CliOptionFactory.CreateIncludeProjectOption(),
+            CliOptionFactory.CreateExcludeProjectOption(),
+            CliOptionFactory.CreateIncludeNamespaceOption(),
+            CliOptionFactory.CreateExcludeNamespaceOption(),
+            CliOptionFactory.CreateExcludeTestsOption(),
+            CliOptionFactory.CreateTestsOnlyOption(),
+            CliOptionFactory.CreatePublicOnlyOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
@@ -93,6 +102,28 @@ internal static class CliCommandBuilder
             MapType: parseResult.GetValue(options.Map),
             EvalType: parseResult.GetValue(options.Eval),
             ListEvals: parseResult.GetValue(options.ListEvals),
-            SpecPaths: parseResult.GetValue(options.Spec) ?? []);
+            SpecPaths: parseResult.GetValue(options.Spec) ?? [],
+            IncludeProjects: ParseCommaSeparated(parseResult.GetValue(options.IncludeProjects)),
+            ExcludeProjects: ParseCommaSeparated(parseResult.GetValue(options.ExcludeProjects)),
+            IncludeNamespaces: ParseCommaSeparated(parseResult.GetValue(options.IncludeNamespaces)),
+            ExcludeNamespaces: ParseCommaSeparated(parseResult.GetValue(options.ExcludeNamespaces)),
+            ExcludeTests: parseResult.GetValue(options.ExcludeTests),
+            TestsOnly: parseResult.GetValue(options.TestsOnly),
+            PublicOnly: parseResult.GetValue(options.PublicOnly));
+    }
+
+    private static System.Collections.Generic.IReadOnlyList<string> ParseCommaSeparated(string[]? values)
+    {
+        if (values == null || values.Length == 0) return System.Array.Empty<string>();
+        var list = new System.Collections.Generic.List<string>();
+        foreach (var val in values)
+        {
+            if (string.IsNullOrWhiteSpace(val)) continue;
+            foreach (var split in val.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries))
+            {
+                list.Add(split);
+            }
+        }
+        return list;
     }
 }

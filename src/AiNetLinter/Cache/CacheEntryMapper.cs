@@ -10,7 +10,8 @@ namespace AiNetLinter.Cache;
 internal sealed record BuildEntryParams(
     string RelativePath,
     string Checksum,
-    LinterAnalyzer Analyzer,
+    IReadOnlyCollection<RuleViolation> Violations,
+    IEnumerable<ClassInfo> Classes,
     IEnumerable<PartialClassPart> PartialParts,
     TestSignalsDto TestSignals);
 
@@ -89,9 +90,9 @@ internal static class CacheEntryMapper
         {
             RelativePath = p.RelativePath,
             Checksum = p.Checksum,
-            Violations = p.Analyzer.Violations.Select(v => new RuleViolationDto(
+            Violations = p.Violations.Select(v => new RuleViolationDto(
                 v.FilePath, v.LineNumber, v.RuleName, v.Details, v.Guidance)).ToArray(),
-            Classes = p.Analyzer.Classes.Select(c => new ClassInfoDto(
+            Classes = p.Classes.Select(c => new ClassInfoDto(
                 c.Name, c.FilePath, c.LineNumber,
                 c.MaxCognitiveComplexity, c.InheritanceDepth, c.AIContextFootprint,
                 c.AIContextFootprintDetails.Select(d => new FootprintDetailDto(d.Name, d.Lines)).ToArray(),

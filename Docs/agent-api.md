@@ -126,6 +126,13 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--eval <name>` | string | Assemblierten Eval-Prompt ausgeben (`naming-drift`, `architecture-intent`) |
 | `--list-evals` | bool | Verfügbare Eval-Typen auflisten |
 | `--spec <pfad>` | string[] | Spezifikationsquelle für `--eval`: Datei oder Verzeichnis (erste Ebene, nur .md). Mehrfach angebbar. |
+| `--project <muster>` | string[] | Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Core,*.Domain`) |
+| `--exclude-project <muster>` | string[] | Schließt bestimmte Projekte aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Tests`) |
+| `--namespace <muster>` | string[] | Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. `San.Auth*`) |
+| `--exclude-namespace <muster>` | string[] | Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Internal`) |
+| `--exclude-tests` | bool | Shortcut, um alle automatisch erkannten Testprojekte auszublenden |
+| `--tests-only` | bool | Shortcut, um ausschließlich Testprojekte zu analysieren |
+| `--public-only` | bool | Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen |
 
 ---
 

@@ -148,6 +148,41 @@ public sealed class LinterArgs
     public System.Collections.Generic.IReadOnlyList<string> SpecPaths { get; init; } = [];
 
     /// <summary>
+    /// Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> IncludeProjects { get; init; } = [];
+
+    /// <summary>
+    /// Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> ExcludeProjects { get; init; } = [];
+
+    /// <summary>
+    /// Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> IncludeNamespaces { get; init; } = [];
+
+    /// <summary>
+    /// Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> ExcludeNamespaces { get; init; } = [];
+
+    /// <summary>
+    /// Shortcut, um alle automatisch erkannten Testprojekte auszublenden.
+    /// </summary>
+    public bool ExcludeTests { get; init; }
+
+    /// <summary>
+    /// Shortcut, um ausschließlich Testprojekte zu analysieren.
+    /// </summary>
+    public bool TestsOnly { get; init; }
+
+    /// <summary>
+    /// Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.
+    /// </summary>
+    public bool PublicOnly { get; init; }
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()

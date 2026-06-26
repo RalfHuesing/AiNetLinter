@@ -92,6 +92,13 @@ public static class Program
             EvalType = parsed.EvalType,
             ListEvals = parsed.ListEvals,
             SpecPaths = parsed.SpecPaths,
+            IncludeProjects = parsed.IncludeProjects,
+            ExcludeProjects = parsed.ExcludeProjects,
+            IncludeNamespaces = parsed.IncludeNamespaces,
+            ExcludeNamespaces = parsed.ExcludeNamespaces,
+            ExcludeTests = parsed.ExcludeTests,
+            TestsOnly = parsed.TestsOnly,
+            PublicOnly = parsed.PublicOnly,
         };
     }
 

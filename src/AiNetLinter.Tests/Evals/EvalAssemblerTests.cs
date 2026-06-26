@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Evals;
 
+[Collection("ConsoleTestCollection")]
 public sealed class EvalAssemblerTests : IDisposable
 {
     private readonly string _tempDir;

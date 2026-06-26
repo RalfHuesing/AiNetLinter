@@ -9,6 +9,7 @@ using AiNetLinter.Core.Checkers;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using AiNetLinter.Suppression;
+using AiNetLinter.Cli;
 
 namespace AiNetLinter.Core;
 
@@ -17,19 +18,22 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     private readonly CheckerContext _ctx;
     private readonly SyntaxTree _tree;
 
+    private readonly LinterArgs? _args;
+
     public List<ClassInfo> Classes => _ctx.Classes;
     public List<PartialClassPart> PartialClassParts => _ctx.PartialClassParts;
 
-    internal LinterAnalyzer(string filePath, SemanticModel semanticModel, Config config, bool isTestFile, string? projectName = null)
+    internal LinterAnalyzer(AnalyzerArgs args, LinterArgs? linterArgs = null)
         : base(SyntaxWalkerDepth.Node)
     {
-        _ctx = new CheckerContext(filePath, config, semanticModel, isTestFile, projectName);
-        _tree = semanticModel.SyntaxTree;
+        _ctx = new CheckerContext(args.FilePath, args.Config, args.SemanticModel, args.IsTestFile, args.ProjectName);
+        _tree = args.SemanticModel.SyntaxTree;
+        _args = linterArgs;
     }
 
     public static IReadOnlyCollection<RuleViolation> Analyze(AnalyzerArgs args)
     {
-        var analyzer = new LinterAnalyzer(args.FilePath, args.SemanticModel, args.Config, args.IsTestFile, args.ProjectName);
+        var analyzer = new LinterAnalyzer(args);
         analyzer.RunAnalysis();
         return analyzer._ctx.Violations;
     }
@@ -44,11 +48,30 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     internal void RunAnalysis()
     {
-        CheckLineCount();
-        CheckNullableEnable();
-        ScopeChecker.CheckNamespaceDirectoryMapping(_ctx);
+        var fileAllowed = IsFileNamespaceAllowed();
+        if (fileAllowed)
+        {
+            CheckLineCount();
+            CheckNullableEnable();
+            ScopeChecker.CheckNamespaceDirectoryMapping(_ctx);
+        }
         Visit(_tree.GetRoot());
         FilterSuppressedViolations();
+    }
+
+    private bool IsNamespaceAllowed()
+    {
+        if (_args == null) return true;
+        return NamespaceFilter.IsNamespaceAllowed(_ctx.CurrentNamespace, _args.IncludeNamespaces, _args.ExcludeNamespaces);
+    }
+
+    private bool IsFileNamespaceAllowed()
+    {
+        if (_args == null) return true;
+        var root = _tree.GetRoot();
+        var nsDecl = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
+        var ns = nsDecl?.Name.ToString() ?? "";
+        return NamespaceFilter.IsNamespaceAllowed(ns, _args.IncludeNamespaces, _args.ExcludeNamespaces);
     }
 
     // --- Visit* dispatchers ---
@@ -71,6 +94,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitUsingDirective(UsingDirectiveSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         if (node.Name != null)
             NamespaceCouplingChecker.CheckForbiddenNamespace(node.Name.ToString(), node, _ctx);
         PhantomDependencyChecker.CheckPhantomNamespace(node, _ctx);
@@ -79,6 +103,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckDummyName(node.Identifier, "Klasse", _ctx);
@@ -99,6 +124,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckDummyName(node.Identifier, "Record", _ctx);
@@ -116,6 +142,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         if (_ctx.Config.FileFilters.SkipGeneratedCodeAttribute && GeneratedCodeDetector.IsGenerated(node, _ctx))
             return;
         NamingChecker.CheckDummyName(node.Identifier, "Struct", _ctx);
@@ -133,6 +160,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         NamingChecker.CheckDummyName(node.Identifier, "Interface", _ctx);
         NamingChecker.CheckXmlDoc(node, node.Identifier.Text, "Interface", _ctx);
         NamingChecker.CheckPascalCase(node.Identifier, "Interface", _ctx);
@@ -142,6 +170,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
 
     public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
     {
+        if (!IsNamespaceAllowed()) return;
         NamingChecker.CheckDummyName(node.Identifier, "Enum", _ctx);
         NamingChecker.CheckAscii(node.Identifier, "Enum", _ctx);
         base.VisitEnumDeclaration(node);
