@@ -4,7 +4,7 @@ globs: *.cs
 alwaysApply: true
 ---
 # C#-Codequalität (AiNetLinter)
-Auto-generiert durch AiNetLinter 1.0.66 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
+Auto-generiert durch AiNetLinter 1.0.67 aus `rules.json`. Neuen Produktionscode direkt konform schreiben.
 
 ## Kurz-Stil
 - `sealed` für konkrete Klassen.
@@ -64,6 +64,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 ## general
 - **EnforceSealedClasses** — `sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.
 - **EnforcePascalCase** — Öffentliche Typen/Methoden/Properties: PascalCase.
+- **EnforceAsciiIdentifiers** — Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.
 - **EnforceSemanticNaming** — Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.
 - **EnforceNullableEnable** — `#nullable enable` am Dateianfang jeder `.cs`-Datei.
 - **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.

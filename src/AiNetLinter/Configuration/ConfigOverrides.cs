@@ -41,6 +41,11 @@ public sealed record GlobalConfigOverride
     public bool? EnforcePascalCase { get; init; }
 
     /// <summary>
+    /// Erzwingt, dass Bezeichner nur ASCII-Zeichen enthalten.
+    /// </summary>
+    public bool? EnforceAsciiIdentifiers { get; init; }
+
+    /// <summary>
     /// Erzwingt XML-Dokumentation für öffentliche Member.
     /// </summary>
     public bool? EnforceXmlDocumentation { get; init; }

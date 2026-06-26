@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.66 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
+Auto-generiert durch AiNetLinter 1.0.67 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -22,7 +22,7 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 241 / 259 (93 %)
+- **Wave-ready Dateien:** 242 / 260 (93 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
@@ -30,7 +30,7 @@ Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 ## 4. Architektur-Slices (nach Ordner)
 
 - **src/AiNetLinter/**: 145 files, median Footprint 75 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 113 files, median Footprint 117 LOC, 12× disable-all
+- **src/AiNetLinter.Tests/**: 114 files, median Footprint 121 LOC, 12× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)
