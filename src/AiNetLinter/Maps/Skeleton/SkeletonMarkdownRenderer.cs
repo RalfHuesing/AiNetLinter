@@ -62,21 +62,24 @@ internal static class SkeletonMarkdownRenderer
         sb.AppendLine();
         var modifierTag = BuildModifierTag(type.Modifiers);
         var basePart = type.BaseTypes != null ? $" {type.BaseTypes}" : "";
-        sb.AppendLine($"### {type.Name}{basePart}{modifierTag}");
-        sb.AppendLine($"`{type.RelativePath}`");
-        sb.AppendLine();
-        sb.AppendLine("```csharp");
+        sb.AppendLine($"### {type.Name}{basePart}{modifierTag} — `{type.RelativePath}`");
 
-        bool hasWrittenAny = false;
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Field, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Constructor, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Property, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PublicMethod, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.InternalMethod, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Event, hasWrittenAny);
-        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PrivateMethod, hasWrittenAny);
+        if (type.Members.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("```csharp");
 
-        sb.AppendLine("```");
+            bool hasWrittenAny = false;
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Field, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Constructor, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Property, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PublicMethod, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.InternalMethod, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Event, hasWrittenAny);
+            hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PrivateMethod, hasWrittenAny);
+
+            sb.AppendLine("```");
+        }
         sb.AppendLine();
     }
 

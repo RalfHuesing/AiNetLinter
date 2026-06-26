@@ -50,30 +50,26 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
         if (IsNestedType(node)) return;
-        _types.Add(BuildTypeInfo("class", node.Modifiers, node.Identifier.Text,
-            node.TypeParameterList, node.BaseList, node.Members));
+        _types.Add(BuildTypeInfo("class", node));
     }
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
         if (IsNestedType(node)) return;
         var kind = node.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record";
-        _types.Add(BuildTypeInfo(kind, node.Modifiers, node.Identifier.Text,
-            node.TypeParameterList, node.BaseList, node.Members));
+        _types.Add(BuildTypeInfo(kind, node));
     }
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
         if (IsNestedType(node)) return;
-        _types.Add(BuildTypeInfo("interface", node.Modifiers, node.Identifier.Text,
-            node.TypeParameterList, node.BaseList, node.Members));
+        _types.Add(BuildTypeInfo("interface", node));
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
         if (IsNestedType(node)) return;
-        _types.Add(BuildTypeInfo("struct", node.Modifiers, node.Identifier.Text,
-            node.TypeParameterList, node.BaseList, node.Members));
+        _types.Add(BuildTypeInfo("struct", node));
     }
 
     public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
@@ -97,22 +93,28 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
     private static bool IsNestedType(SyntaxNode node) =>
         node.Parent is TypeDeclarationSyntax;
 
-    private SkeletonTypeInfo BuildTypeInfo(
-        string typeKind,
-        SyntaxTokenList modifiers,
-        string name,
-        TypeParameterListSyntax? typeParams,
-        BaseListSyntax? baseList,
-        SyntaxList<MemberDeclarationSyntax> members)
+    private SkeletonTypeInfo BuildTypeInfo(string typeKind, TypeDeclarationSyntax node)
     {
-        var fullName = name + (typeParams?.ToString() ?? "");
-        var baseTypes = baseList != null ? ": " + baseList.Types.ToString() : null;
-        var memberInfos = ExtractMembers(members);
+        var fullName = node.Identifier.Text + (node.TypeParameterList?.ToString() ?? "");
+        var baseTypes = node.BaseList != null ? ": " + node.BaseList.Types.ToString() : null;
+        var memberInfos = ExtractMembers(node.Members);
+
+        if (node is RecordDeclarationSyntax recordDecl && recordDecl.ParameterList != null)
+        {
+            foreach (var param in recordDecl.ParameterList.Parameters)
+            {
+                var propType = param.Type?.ToString() ?? "object";
+                var propName = param.Identifier.Text;
+                var accessor = typeKind == "record struct" ? "{ get; set; }" : "{ get; init; }";
+                var sig = $"public {propType} {propName} {accessor}";
+                memberInfos.Add(new SkeletonMemberInfo(MemberKind.Property, NormalizeWhitespace(sig), null));
+            }
+        }
 
         return new SkeletonTypeInfo(
             _currentNamespace,
             typeKind,
-            BuildModifiers(modifiers),
+            BuildModifiers(node.Modifiers),
             fullName,
             baseTypes,
             _relativePath,

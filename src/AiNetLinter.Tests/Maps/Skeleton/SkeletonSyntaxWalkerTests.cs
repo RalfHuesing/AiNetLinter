@@ -77,8 +77,17 @@ public sealed class SkeletonSyntaxWalkerTests
             public sealed record MyDto(string Name, int Age);
             """;
         var (walker, _) = CreateWalker(code);
-        Assert.Single(walker.Types);
-        Assert.Equal("record", walker.Types[0].TypeKind);
+        var type = Assert.Single(walker.Types);
+        Assert.Equal("record", type.TypeKind);
+        Assert.Equal(2, type.Members.Count);
+        
+        var nameProp = Assert.Single(type.Members, m => m.Signature.Contains("Name"));
+        Assert.Equal(MemberKind.Property, nameProp.Kind);
+        Assert.Equal("public string Name { get; init; }", nameProp.Signature);
+
+        var ageProp = Assert.Single(type.Members, m => m.Signature.Contains("Age"));
+        Assert.Equal(MemberKind.Property, ageProp.Kind);
+        Assert.Equal("public int Age { get; init; }", ageProp.Signature);
     }
 
     [Fact]
