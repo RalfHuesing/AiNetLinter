@@ -142,4 +142,15 @@ public sealed class EvalAssemblerTests : IDisposable
             Console.SetError(originalError);
         }
     }
+
+    [Fact]
+    public void Assemble_ArchitectureIntent_TaskInstructionBeforeSpec()
+    {
+        const string specContent = "MY_ARCH_SPEC_CONTENT";
+        var result = EvalAssembler.Assemble(_architectureEval, _tempDir, specContent, "2026-01-01");
+        var taskPos = result.IndexOf("Deine Aufgabe", StringComparison.Ordinal);
+        var specPos = result.IndexOf(specContent,     StringComparison.Ordinal);
+        Assert.True(taskPos > -1, "Template muss 'Deine Aufgabe' enthalten.");
+        Assert.True(taskPos < specPos, "Task-Instruktion muss vor dem Spec-Inhalt erscheinen.");
+    }
 }
