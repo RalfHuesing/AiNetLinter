@@ -123,11 +123,6 @@ public sealed record GlobalConfig
     public IReadOnlyCollection<string> ImmutabilityExemptPatterns { get; init; } = Array.Empty<string>();
     public bool AllowedEmptyReads { get; init; } = false;
     public IReadOnlyCollection<string> SealedClassExemptSuffixes { get; init; } = ["Base", "Foundation", "Host"];
-    public IReadOnlyCollection<string> SkeletonDependencySuffixes { get; init; } = new[]
-    {
-        "Repository", "Service", "Handler", "Client", "Gateway",
-        "Manager", "Sender", "Factory", "Provider", "Logger", "Writer", "Reader"
-    };
     public IReadOnlyCollection<string> ImmutabilityExemptBaseTypes { get; init; } =
     [
         "ComponentBase",
@@ -196,7 +191,6 @@ public sealed record GlobalConfig
             AllowTryPatternOutParameters                = o.AllowTryPatternOutParameters                ?? AllowTryPatternOutParameters,
             AllowOutParametersInPrivateMethods          = o.AllowOutParametersInPrivateMethods          ?? AllowOutParametersInPrivateMethods,
             SealedClassExemptSuffixes                   = o.SealedClassExemptSuffixes                   ?? SealedClassExemptSuffixes,
-            SkeletonDependencySuffixes                  = o.SkeletonDependencySuffixes                  ?? SkeletonDependencySuffixes,
 
             // Naming und Stil
             EnforcePascalCase                           = o.EnforcePascalCase                           ?? EnforcePascalCase,

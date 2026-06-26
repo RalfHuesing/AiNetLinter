@@ -28,8 +28,7 @@ internal static class SkeletonMapBuilder
         var solutionPath = catalog.Solution.FilePath ?? targetPath;
         var solutionDir = Path.GetDirectoryName(solutionPath) ?? targetPath;
 
-        var suffixes = config.Global.SkeletonDependencySuffixes;
-        var types = await ExtractTypesAsync(catalog.Solution, solutionDir, suffixes, ct);
+        var types = await ExtractTypesAsync(catalog.Solution, solutionDir, ct);
 
         var markdown = SkeletonMarkdownRenderer.Render(types, solutionPath, DateTimeOffset.Now);
         console.WriteLine(markdown);
@@ -39,7 +38,6 @@ internal static class SkeletonMapBuilder
     private static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractTypesAsync(
         Solution solution,
         string solutionDir,
-        IReadOnlyCollection<string> suffixes,
         CancellationToken ct)
     {
         var allTypes = new System.Collections.Concurrent.ConcurrentBag<SkeletonTypeInfo>();
@@ -51,7 +49,7 @@ internal static class SkeletonMapBuilder
             CancellationToken = ct,
         }, async (doc, token) =>
         {
-            var docTypes = await ExtractFromDocumentAsync(doc, solutionDir, suffixes, token);
+            var docTypes = await ExtractFromDocumentAsync(doc, solutionDir, token);
             foreach (var t in docTypes)
                 allTypes.Add(t);
         });
@@ -70,14 +68,13 @@ internal static class SkeletonMapBuilder
     private static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
         Document document,
         string solutionDir,
-        IReadOnlyCollection<string> suffixes,
         CancellationToken ct)
     {
         var semanticModel = await document.GetSemanticModelAsync(ct);
         if (semanticModel == null) return [];
 
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? document.Name);
-        var walker = new SkeletonSyntaxWalker(semanticModel, relativePath, suffixes);
+        var walker = new SkeletonSyntaxWalker(semanticModel, relativePath);
         var root = await semanticModel.SyntaxTree.GetRootAsync(ct);
         walker.Visit(root);
         return walker.Types;

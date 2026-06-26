@@ -12,12 +12,7 @@ public sealed class SkeletonSyntaxWalkerTests
     private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(string code)
     {
         var (tree, model) = TestHelper.ParseCode(code);
-        var suffixes = new[]
-        {
-            "Repository", "Service", "Handler", "Client", "Gateway",
-            "Manager", "Sender", "Factory", "Provider", "Logger", "Writer", "Reader"
-        };
-        var walker = new SkeletonSyntaxWalker(model, "Test.cs", suffixes);
+        var walker = new SkeletonSyntaxWalker(model, "Test.cs");
         walker.Visit(tree.GetRoot());
         return (walker, model);
     }
@@ -144,5 +139,29 @@ public sealed class SkeletonSyntaxWalkerTests
         Assert.Equal(MemberKind.PublicMethod,   members[0].Kind);
         Assert.Equal(MemberKind.InternalMethod, members[1].Kind);
         Assert.Equal(MemberKind.PrivateMethod,  members[2].Kind);
+    }
+
+    [Fact]
+    public void ExtractsUsedDependenciesInMethod()
+    {
+        var code = """
+            namespace Foo;
+            public class Svc
+            {
+                private readonly object _workspace;
+                private readonly object _other;
+
+                public void Run()
+                {
+                    var x = _workspace;
+                }
+            }
+            """;
+        var (walker, _) = CreateWalker(code);
+        var method = walker.Types[0].Members
+            .First(m => m.Kind == MemberKind.PublicMethod);
+        Assert.NotNull(method.MetaComment);
+        Assert.Contains("Uses: _workspace", method.MetaComment);
+        Assert.DoesNotContain("_other", method.MetaComment);
     }
 }
