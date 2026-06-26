@@ -1549,6 +1549,46 @@ seine Empfehlungen als priorisierte Tabelle auszugeben:
 | P2 – Bald | Wichtig | Kurzfristige Maßnahme | ... |
 | P3 – Später | Nice-to-have | Langfristige Optimierung | ... |
 
+## Eingrenzung des Analyse-Scopes (Filtering)
+
+Bei großen Software-Systemen (Enterprise-Solutions) kann der Analysebereich gezielt eingeschränkt werden, um Token-Budget-Überschreitungen bei LLMs zu verhindern und die Performance zu verbessern.
+
+Folgende Filter stehen als CLI-Parameter zur Verfügung:
+
+### Projekt-Filterung
+
+- `--project <muster>`: Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Core,*.Domain`).
+- `--exclude-project <muster>`: Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Tests`).
+
+Beispiel:
+```bash
+ainetlinter --config rules.json --path ./Solution.sln --project "*.Core,*.Infrastructure"
+```
+
+### Namespace-Filterung
+
+- `--namespace <muster>`: Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. `San.Auth*`).
+- `--exclude-namespace <muster>`: Schließt bestimmte Namespaces aus der Analyse aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Internal`).
+
+Beispiel:
+```bash
+ainetlinter --config rules.json --path ./Solution.sln --namespace "San.Auth.*"
+```
+
+### Test-Shortcuts
+
+- `--exclude-tests`: Schließt alle Testprojekte (automatisch per Referenzen und Namen-Suffix erkannt) aus der Analyse aus.
+- `--tests-only`: Führt die Analyse ausschließlich auf Testprojekten aus.
+
+Beispiel:
+```bash
+ainetlinter --config rules.json --path ./Solution.sln --exclude-tests
+```
+
+### Sichtbarkeits-Filter
+
+- `--public-only`: Blendet private und protected Member aus generierten Skeleton Maps (`--map skeleton`) aus, um Token zu sparen.
+
 ---
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

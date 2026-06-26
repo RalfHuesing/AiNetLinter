@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -61,7 +61,7 @@ internal static class AuditCommand
         {
             profiler.StartPhase("DocumentAnalysis");
             string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
-            var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+            var engine = new LinterEngine(config, rulesJsonContent, profiler, c, args);
             var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes, ct);
             profiler.StopPhase("DocumentAnalysis");
 
@@ -124,12 +124,12 @@ internal static class AuditCommand
         }
 
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var currentChecksums = catalog.ComputeChecksums(outputRoot, config);
+        var currentChecksums = catalog.ComputeChecksums(outputRoot, config, args);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
         string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
-        var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+        var engine = new LinterEngine(config, rulesJsonContent, profiler, c, args);
         var violations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
         var filtered = BaselineViolationFilter.Filter(violations, comparison.ChangedFiles, outputRoot);
 
@@ -187,7 +187,7 @@ internal static class AuditCommand
 
         string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
 
-        var engine = new LinterEngine(config, rulesJsonContent, profiler, c);
+        var engine = new LinterEngine(config, rulesJsonContent, profiler, c, args);
         var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
             catalog.Solution, initialViolations, new FixOptions(args.Verbose, args.Check), c);

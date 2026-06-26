@@ -1,10 +1,11 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.Build.Locator;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
 using AiNetLinter.Configuration;
 using AiNetLinter.Web;
+using AiNetLinter.Cli;
 
 namespace AiNetLinter.Baseline;
 
@@ -70,13 +71,17 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Liefert alle gültigen Quelldateien mit relativen Pfaden.
     /// </summary>
-    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, Config? config = null)
+    public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, Config? config = null, LinterArgs? args = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
         var entries = new List<SourceFileEntry>();
 
         foreach (var project in Solution.Projects)
         {
+            if (args != null && !ShouldIncludeProject(project, args, config))
+            {
+                continue;
+            }
             AppendProjectSourceFiles(project, solutionDir, outputRoot, entries);
         }
 
@@ -100,11 +105,11 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Berechnet SHA-256-Checksummen für alle Quelldateien.
     /// </summary>
-    public Dictionary<string, string> ComputeChecksums(string outputRoot, Config? config = null)
+    public Dictionary<string, string> ComputeChecksums(string outputRoot, Config? config = null, LinterArgs? args = null)
     {
         var checksums = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var entry in GetSourceFiles(outputRoot, config))
+        foreach (var entry in GetSourceFiles(outputRoot, config, args))
         {
             checksums[entry.RelativePath] = FileChecksumCalculator.ComputeSha256Hex(entry.AbsolutePath);
         }
@@ -115,10 +120,12 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Sammelt Dokumente für die parallele Linter-Analyse.
     /// </summary>
-    public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync()
+    public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync(LinterArgs? args = null, Config? config = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
-        var tasks = Solution.Projects.Select(project => CollectProjectWorkItemsAsync(project, solutionDir));
+        var tasks = Solution.Projects
+            .Where(project => args == null || ShouldIncludeProject(project, args, config))
+            .Select(project => CollectProjectWorkItemsAsync(project, solutionDir));
         var results = await Task.WhenAll(tasks);
 
         var workItems = new List<CatalogDocumentWorkItem>();
@@ -242,6 +249,23 @@ public sealed class SourceFileCatalog : IDisposable
             .ToArray();
         if (files.Length > 0) return files[0];
         throw new FileNotFoundException($"Keine .sln oder .slnx Datei im Verzeichnis gefunden: {dir}");
+    }
+
+    internal static bool ShouldIncludeProject(Project project, LinterArgs args, Config? config)
+    {
+        var testSuffixes = config?.TestSentinel?.TestProjectNameSuffixes;
+        var isTest = TestProjectDetector.IsTestProject(project, testSuffixes);
+
+        if (args.ExcludeTests && isTest) return false;
+        if (args.TestsOnly && !isTest) return false;
+
+        if (args.IncludeProjects.Count > 0 && !args.IncludeProjects.Any(p => NamespaceFilter.MatchesGlob(project.Name, p)))
+            return false;
+
+        if (args.ExcludeProjects.Count > 0 && args.ExcludeProjects.Any(p => NamespaceFilter.MatchesGlob(project.Name, p)))
+            return false;
+
+        return true;
     }
 }
 

@@ -434,4 +434,17 @@ Assembliert vollständige LLM-Audit-Prompts aus eingebetteten Templates, Spezifi
 
 ---
 
+## Epic 32: Globales Projekt- & Namespace-Filtering
+
+Einführung von globalen Filter-Parametern zur Eingrenzung des Analyse-Scopes bei großen Software-Systemen.
+
+- [x] **CLI-Optionen:** Integration der Parameter `--project`, `--exclude-project`, `--namespace`, `--exclude-namespace`, `--exclude-tests`, `--tests-only` und `--public-only` in die CLI-Infrastruktur (`LinterArgs`, `CliOptionFactory`, `CliOptions`, `CliCommandBuilder`, `Program`).
+- [x] **Projekt- und Testfilterung:** Dynamische Filterung der Projekte in `SourceFileCatalog` und `LinterEngine` bei der Document-Sammlung zur Optimierung von Performance und CI-Zeiten.
+- [x] **Namespace-Filterung:** Dynamischer Ausschluss von C#-Typdeklarationen in Walks & Checks (`LinterAnalyzer`, `SkeletonSyntaxWalker`), um Kontext-Überlastung bei LLMs zu verhindern.
+- [x] **Sichtbarkeits-Filterung:** Filterung nicht-öffentlicher Member bei der Skeleton-Map-Generierung (`--public-only`).
+- [x] **Dokumentation:** Aktualisierung der CLI-Tabellen und Hinzufügen von Scope-Filtering Handbüchern in `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`.
+- [x] **Test-Suite:** Implementierung der Unit-Tests `NamespaceFilterTests` sowie Ergänzungen in `SourceFileCatalogTests`, `LinterAnalyzerTests` und `SkeletonSyntaxWalkerTests`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

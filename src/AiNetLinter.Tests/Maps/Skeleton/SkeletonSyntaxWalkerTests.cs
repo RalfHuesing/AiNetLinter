@@ -9,10 +9,19 @@ namespace AiNetLinter.Tests.Maps.Skeleton;
 
 public sealed class SkeletonSyntaxWalkerTests
 {
-    private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(string code)
+    private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(
+        string code,
+        System.Collections.Generic.IReadOnlyList<string>? includeNamespaces = null,
+        System.Collections.Generic.IReadOnlyList<string>? excludeNamespaces = null,
+        bool publicOnly = false)
     {
         var (tree, model) = TestHelper.ParseCode(code);
-        var walker = new SkeletonSyntaxWalker(model, "Test.cs");
+        var walker = new SkeletonSyntaxWalker(
+            model,
+            "Test.cs",
+            includeNamespaces ?? System.Array.Empty<string>(),
+            excludeNamespaces ?? System.Array.Empty<string>(),
+            publicOnly);
         walker.Visit(tree.GetRoot());
         return (walker, model);
     }
@@ -163,5 +172,43 @@ public sealed class SkeletonSyntaxWalkerTests
         Assert.NotNull(method.MetaComment);
         Assert.Contains("Uses: _workspace", method.MetaComment);
         Assert.DoesNotContain("_other", method.MetaComment);
+    }
+
+    [Fact]
+    public void Walk_WithNamespaceFilter_IgnoresExcludedNamespaces()
+    {
+        var code = """
+            namespace Foo;
+            public class MyService1 { }
+            """;
+        var (walker1, _) = CreateWalker(code, includeNamespaces: new[] { "Bar" });
+        Assert.Empty(walker1.Types);
+
+        var (walker2, _) = CreateWalker(code, excludeNamespaces: new[] { "Foo" });
+        Assert.Empty(walker2.Types);
+
+        var (walker3, _) = CreateWalker(code, includeNamespaces: new[] { "Foo" });
+        Assert.Single(walker3.Types);
+    }
+
+    [Fact]
+    public void Walk_WithPublicOnly_ExcludesPrivateMembers()
+    {
+        var code = """
+            namespace Foo;
+            public class MyService
+            {
+                public string PubProp { get; set; }
+                private string PrivField;
+                protected void ProtMethod() { }
+            }
+            """;
+        var (walker, _) = CreateWalker(code, publicOnly: true);
+        var type = Assert.Single(walker.Types);
+        var memberSignatures = type.Members.Select(m => m.Signature).ToList();
+        
+        Assert.Contains(memberSignatures, s => s.Contains("PubProp"));
+        Assert.DoesNotContain(memberSignatures, s => s.Contains("PrivField"));
+        Assert.DoesNotContain(memberSignatures, s => s.Contains("ProtMethod"));
     }
 }

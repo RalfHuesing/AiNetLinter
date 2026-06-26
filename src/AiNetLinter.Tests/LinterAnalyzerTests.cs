@@ -1,8 +1,9 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Cli;
 
 namespace AiNetLinter.Tests;
 
@@ -439,4 +440,30 @@ namespace TestNamespace
         Assert.Contains(violations, v => v.RuleName == "DetectAndBanPhantomDependencies");
     }
 
+    [Fact]
+    public void Analyze_WithNamespaceFilter_DoesNotReportViolationsInExcludedNamespaces()
+    {
+        const string source = @"
+#nullable enable
+namespace ExcludedNamespace;
+public class MyUnsealedClass
+{
+    // would violate EnforceSealedClasses, but namespace is excluded
+}";
+        var config = CreateDefaultConfig();
+        config = config with { Global = config.Global with { EnforceSealedClasses = true } };
+        var (tree, model) = GetSemanticContext(source);
+        
+        var linterArgs = new LinterArgs 
+        { 
+            TargetPath = "", 
+            Verbose = false, 
+            ExcludeNamespaces = new[] { "ExcludedNamespace" } 
+        };
+        
+        var analyzer = new LinterAnalyzer(new AnalyzerArgs("Test.cs", model, config), linterArgs);
+        analyzer.RunAnalysis();
+        var violations = analyzer.Violations;
+        Assert.Empty(violations);
+    }
 }

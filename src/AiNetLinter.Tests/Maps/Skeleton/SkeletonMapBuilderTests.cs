@@ -24,7 +24,8 @@ public sealed class SkeletonMapBuilderTests
             Global = new AiNetLinter.Configuration.GlobalConfig(),
             Metrics = new AiNetLinter.Configuration.MetricsConfig()
         };
-        var result = await SkeletonMapBuilder.BuildAsync(slnPath, config, console);
+        var args = new AiNetLinter.Cli.LinterArgs { TargetPath = slnPath, Verbose = false };
+        var result = await SkeletonMapBuilder.BuildAsync(slnPath, config, console, args);
 
         Assert.Equal(0, result);
         var output = console.Output;
@@ -41,9 +42,10 @@ public sealed class SkeletonMapBuilderTests
             Global = new AiNetLinter.Configuration.GlobalConfig(),
             Metrics = new AiNetLinter.Configuration.MetricsConfig()
         };
+        var args = new AiNetLinter.Cli.LinterArgs { TargetPath = "/nonexistent/path", Verbose = false };
         // SourceFileCatalog.LoadAsync wirft FileNotFoundException
         await Assert.ThrowsAsync<FileNotFoundException>(
-            () => SkeletonMapBuilder.BuildAsync("/nonexistent/path", config, console));
+            () => SkeletonMapBuilder.BuildAsync("/nonexistent/path", config, console, args));
     }
 
     private static string? FindSlnxFile()

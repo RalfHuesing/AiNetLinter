@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,6 +13,7 @@ using AiNetLinter.Output;
 using AiNetLinter.Suppression;
 using AiNetLinter.Metrics;
 using AiNetLinter.Cache;
+using AiNetLinter.Cli;
 
 [assembly: InternalsVisibleTo("AiNetLinter.Tests")]
 
@@ -28,12 +29,15 @@ public sealed class LinterEngine
     private readonly IPerformanceProfiler _profiler;
     private readonly ILintConsole _console;
 
-    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
+    private readonly LinterArgs? _args;
+
+    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null, LinterArgs? args = null)
     {
         _config = config;
         _rulesJsonContent = rulesJsonContent;
         _profiler = profiler ?? NullPerformanceProfiler.Instance;
         _console = console ?? LinterConsole.Instance;
+        _args = args;
     }
 
     /// <summary>
@@ -136,7 +140,7 @@ public sealed class LinterEngine
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
         var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
-        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes);
+        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes, _args, _config);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(ct), (item, token) =>
             AnalyzeWorkItemAsync(item, state, cache, token));
@@ -146,22 +150,28 @@ public sealed class LinterEngine
         Solution solution,
         SourceFileCatalog? catalog,
         string? solutionDir,
-        IReadOnlyList<string> testSuffixes)
+        IReadOnlyList<string> testSuffixes,
+        LinterArgs? args,
+        Config config)
     {
         if (catalog != null)
         {
-            return await catalog.CollectDocumentWorkItemsAsync();
+            return await catalog.CollectDocumentWorkItemsAsync(args, config);
         }
 
-        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes);
+        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes, args, config);
     }
 
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsFromSolutionAsync(
         Solution solution,
         string? solutionDir,
-        IReadOnlyList<string> testSuffixes)
+        IReadOnlyList<string> testSuffixes,
+        LinterArgs? args,
+        Config config)
     {
-        var tasks = solution.Projects.Select(project => CollectProjectDocumentsAsync(project, solutionDir, testSuffixes));
+        var tasks = solution.Projects
+            .Where(project => args == null || SourceFileCatalog.ShouldIncludeProject(project, args, config))
+            .Select(project => CollectProjectDocumentsAsync(project, solutionDir, testSuffixes));
         var results = await Task.WhenAll(tasks);
 
         var workItems = new List<CatalogDocumentWorkItem>();
@@ -262,7 +272,7 @@ public sealed class LinterEngine
         var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config, solutionDir);
         var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
 
-        var analyzer = new LinterAnalyzer(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName);
+        var analyzer = new LinterAnalyzer(new AnalyzerArgs(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName), _args);
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 
@@ -279,7 +289,7 @@ public sealed class LinterEngine
         if (dest.Manager == null || dest.Checksum == null) return;
         var testSignals = BuildTestSignals(analyzer, context.SemanticModel, context.EffectiveConfig, context.IsTestFile);
         var entry = CacheEntryMapper.BuildEntry(new BuildEntryParams(
-            dest.RelativePath, dest.Checksum, analyzer, analyzer.PartialClassParts, testSignals));
+            dest.RelativePath, dest.Checksum, analyzer.Violations, analyzer.Classes, analyzer.PartialClassParts, testSignals));
         dest.Manager.Set(dest.RelativePath, entry);
     }
 
