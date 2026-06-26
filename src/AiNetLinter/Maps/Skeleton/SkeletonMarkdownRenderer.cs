@@ -24,21 +24,33 @@ internal static class SkeletonMarkdownRenderer
             + $" | Typen: {types.Count}"
             + $" | Member: {types.Sum(t => t.Members.Count)}"
             + $" | Pfad: {solutionPath.Replace('\\', '/')}");
+        sb.AppendLine();
+        sb.AppendLine("---");
 
         var byNamespace = types
             .GroupBy(t => t.Namespace)
-            .OrderBy(g => g.Key, StringComparer.Ordinal);
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .ToList();
 
-        foreach (var ns in byNamespace)
+        var totalTypesWritten = 0;
+
+        for (int i = 0; i < byNamespace.Count; i++)
         {
-            sb.AppendLine();
-            sb.AppendLine("---");
+            var ns = byNamespace[i];
             sb.AppendLine();
             sb.AppendLine($"## {ns.Key}");
 
-            foreach (var type in ns.OrderBy(t => t.Name, StringComparer.Ordinal))
+            var sortedTypes = ns.OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
+            for (int j = 0; j < sortedTypes.Count; j++)
             {
+                var type = sortedTypes[j];
                 AppendType(sb, type);
+                totalTypesWritten++;
+
+                if (totalTypesWritten < types.Count)
+                {
+                    sb.AppendLine("---");
+                }
             }
         }
 
@@ -55,32 +67,32 @@ internal static class SkeletonMarkdownRenderer
         sb.AppendLine();
         sb.AppendLine("```csharp");
 
-        AppendMembersOfKind(sb, type.Members, MemberKind.Field);
-        AppendMembersOfKind(sb, type.Members, MemberKind.Constructor, addBlankBefore: true);
-        AppendMembersOfKind(sb, type.Members, MemberKind.Property, addBlankBefore: true);
-        AppendMembersOfKind(sb, type.Members, MemberKind.PublicMethod, addBlankBefore: true);
-        AppendMembersOfKind(sb, type.Members, MemberKind.InternalMethod, addBlankBefore: true);
-        AppendMembersOfKind(sb, type.Members, MemberKind.Event, addBlankBefore: true);
-        AppendMembersOfKind(sb, type.Members, MemberKind.PrivateMethod, addBlankBefore: true);
+        bool hasWrittenAny = false;
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Field, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Constructor, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Property, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PublicMethod, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.InternalMethod, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.Event, hasWrittenAny);
+        hasWrittenAny = AppendMembersOfKind(sb, type.Members, MemberKind.PrivateMethod, hasWrittenAny);
 
         sb.AppendLine("```");
         sb.AppendLine();
-        sb.AppendLine("---");
     }
 
-    private static void AppendMembersOfKind(
+    private static bool AppendMembersOfKind(
         StringBuilder sb,
         IReadOnlyList<SkeletonMemberInfo> members,
         MemberKind kind,
-        bool addBlankBefore = false)
+        bool hasWrittenAny)
     {
         var filtered = members.Where(m => m.Kind == kind).ToList();
-        if (filtered.Count == 0) return;
+        if (filtered.Count == 0) return hasWrittenAny;
 
-        if (addBlankBefore && sb.Length > 0 && sb[^1] != '\n')
+        if (hasWrittenAny)
+        {
             sb.AppendLine();
-        else if (addBlankBefore)
-            sb.AppendLine();
+        }
 
         foreach (var m in filtered)
         {
@@ -89,6 +101,8 @@ internal static class SkeletonMarkdownRenderer
                 : m.Signature;
             sb.AppendLine(line);
         }
+
+        return true;
     }
 
     private static string BuildModifierTag(string modifiers)
