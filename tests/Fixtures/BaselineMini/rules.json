@@ -62,6 +62,20 @@
       "Foundation",
       "Host"
     ],
+    "SkeletonDependencySuffixes": [
+      "Repository",
+      "Service",
+      "Handler",
+      "Client",
+      "Gateway",
+      "Manager",
+      "Sender",
+      "Factory",
+      "Provider",
+      "Logger",
+      "Writer",
+      "Reader"
+    ],
     "ImmutabilityExemptBaseTypes": [
       "ComponentBase",
       "LayoutComponentBase",

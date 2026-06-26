@@ -102,6 +102,7 @@ public sealed record GlobalConfigOverride
     public IReadOnlyCollection<string>? ImmutabilityExemptPatterns { get; init; }
     public bool? AllowedEmptyReads { get; init; }
     public IReadOnlyCollection<string>? SealedClassExemptSuffixes { get; init; }
+    public IReadOnlyCollection<string>? SkeletonDependencySuffixes { get; init; }
     public IReadOnlyCollection<string>? ImmutabilityExemptBaseTypes { get; init; }
     public bool? ImmutabilityAllowPrivateBackingFields { get; init; }
     public IReadOnlyCollection<string>? ResultPatternAllowThrowInNamespaceSuffixes { get; init; }

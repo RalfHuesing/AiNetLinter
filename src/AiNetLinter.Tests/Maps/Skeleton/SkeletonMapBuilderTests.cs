@@ -19,7 +19,12 @@ public sealed class SkeletonMapBuilderTests
         if (slnPath == null) return; // kein .slnx im CI — überspringen
 
         var console = new TestLintConsole();
-        var result = await SkeletonMapBuilder.BuildAsync(slnPath, console);
+        var config = new AiNetLinter.Configuration.Config
+        {
+            Global = new AiNetLinter.Configuration.GlobalConfig(),
+            Metrics = new AiNetLinter.Configuration.MetricsConfig()
+        };
+        var result = await SkeletonMapBuilder.BuildAsync(slnPath, config, console);
 
         Assert.Equal(0, result);
         var output = console.Output;
@@ -31,9 +36,14 @@ public sealed class SkeletonMapBuilderTests
     public async Task BuildAsync_InvalidPath_ReturnsOne()
     {
         var console = new TestLintConsole();
+        var config = new AiNetLinter.Configuration.Config
+        {
+            Global = new AiNetLinter.Configuration.GlobalConfig(),
+            Metrics = new AiNetLinter.Configuration.MetricsConfig()
+        };
         // SourceFileCatalog.LoadAsync wirft FileNotFoundException
         await Assert.ThrowsAsync<FileNotFoundException>(
-            () => SkeletonMapBuilder.BuildAsync("/nonexistent/path", console));
+            () => SkeletonMapBuilder.BuildAsync("/nonexistent/path", config, console));
     }
 
     private static string? FindSlnxFile()

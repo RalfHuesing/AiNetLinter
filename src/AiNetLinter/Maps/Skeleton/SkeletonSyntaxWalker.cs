@@ -14,24 +14,23 @@ namespace AiNetLinter.Maps.Skeleton;
 /// </summary>
 internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 {
-    private static readonly IReadOnlySet<string> DependencySuffixes = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "Repository", "Service", "Handler", "Client", "Gateway",
-        "Manager", "Sender", "Factory", "Provider", "Logger", "Writer", "Reader",
-    };
-
     private readonly SemanticModel _semanticModel;
     private readonly string _relativePath;
+    private readonly IReadOnlyCollection<string> _dependencySuffixes;
     private readonly List<SkeletonTypeInfo> _types = [];
     private string _currentNamespace = "";
 
     public IReadOnlyList<SkeletonTypeInfo> Types => _types;
 
-    internal SkeletonSyntaxWalker(SemanticModel semanticModel, string relativePath)
+    internal SkeletonSyntaxWalker(
+        SemanticModel semanticModel,
+        string relativePath,
+        IReadOnlyCollection<string> dependencySuffixes)
         : base(SyntaxWalkerDepth.Node)
     {
         _semanticModel = semanticModel;
         _relativePath = relativePath;
+        _dependencySuffixes = dependencySuffixes;
     }
 
     public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
@@ -251,12 +250,12 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
         return [.. typeNames];
     }
 
-    private static bool IsDependencyType(string typeName)
+    private bool IsDependencyType(string typeName)
     {
         if (typeName.Length >= 2 && typeName[0] == 'I' && char.IsUpper(typeName[1]))
             return true;
 
-        foreach (var suffix in DependencySuffixes)
+        foreach (var suffix in _dependencySuffixes)
         {
             if (typeName.EndsWith(suffix, StringComparison.Ordinal))
                 return true;
