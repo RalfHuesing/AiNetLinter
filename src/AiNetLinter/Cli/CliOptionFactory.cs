@@ -128,7 +128,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateMapOption() => new("--map")
     {
-        Description = "Codebase-Landkarte generieren. Erfordert --path. Typen: vocabulary | structure | hotspots",
+        Description = "Codebase-Landkarte generieren. Erfordert --path. Typen: vocabulary | structure | hotspots | skeleton",
     };
 
     internal static Option<string?> CreateEvalOption() => new("--eval")

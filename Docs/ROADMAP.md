@@ -406,9 +406,10 @@ Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Au
 - [x] **`--map vocabulary`:** Scannt alle `.cs`-Dateien und gruppiert Typ-Deklarationen nach Suffix-Muster (`*Checker`, `*Detector`, `*Builder` usw.). Dient als direkter Input für E02 Naming-Drift-Audits. Erkennt gemischte Prüf-Klassen-Patterns als Hinweis auf potenziellen Naming-Drift.
 - [x] **`--map structure`:** Verzeichnisbaum mit Dateigrößen (LOC), sortiert nach Größe. Markiert Dateien ab 80 % (⚠) und 95 % (🔴) des konfigurierten `MaxLineCount`-Limits. Dient als direkter Input für E03 Architecture-Intent-Audits.
 - [x] **`--map hotspots`:** Fokussierte Ansicht: Nur Dateien die das `MaxLineCount`-Limit annähern. Proaktives Drift-Signal bevor ein Regelverstoß entsteht. Nutzt `--config` für projektspezifische Limits.
-- [x] **Keine Roslyn-Abhängigkeit:** Alle drei Maps basieren auf reinem Dateisystem-Scan — kein MSBuild-Load, Ausführung in <1 Sekunde.
-- [x] **Discovery:** Alle Maps in `--docs agent-api` und `--docs configuration` dokumentiert. Kein Timestamp-Header (konsistent mit `--docs`, `--list-rules`).
-- [x] **Test-Suite:** `VocabularyMapBuilderTests`, `StructureMapBuilderTests`, `HotspotMapBuilderTests` mit geteilter `TestLintConsole`-Fixture.
+- [x] **`--map skeleton`:** Semantisches Code-Skelett für LLM-Audits (Signaturen + Throws + Uses). Reduziert das RAG-Kontextvolumen um ~70–85 % durch das Verbergen von Methodenrümpfen bei gleichzeitigem Erhalt von Abhängigkeiten und Fehlerflüssen.
+- [x] **Keine Roslyn-Abhängigkeit bei v1-Maps:** Die ersten drei Maps basieren auf reinem Dateisystem-Scan — kein MSBuild-Load, Ausführung in <1 Sekunde; `skeleton` nutzt Roslyn MSBuildWorkspace für semantische Auflösung.
+- [x] **Discovery:** Alle Maps in `--docs agent-api` und `--docs configuration` dokumentiert. Kein Timestamp-Header bei v1-Maps.
+- [x] **Test-Suite:** `VocabularyMapBuilderTests`, `StructureMapBuilderTests`, `HotspotMapBuilderTests` und `SkeletonMapBuilderTests` / `SkeletonSyntaxWalkerTests`.
 
 ---
 

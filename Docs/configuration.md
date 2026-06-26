@@ -1464,13 +1464,32 @@ Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `A
 
 ## 18. Map-Ausgaben
 
-Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Sie benötigen kein `--config` (außer `--map hotspots` für präzise Grenzwerte).
+Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Sie benötigen kein `--config` (außer `--map hotspots` für präzise Grenzwerte). Die ersten drei Maps arbeiten rein dateibasiert; `--map skeleton` führt eine vollständige semantische Analyse über MSBuildWorkspace aus.
 
 | Befehl | Zweck | Eval-Input |
 |---|---|---|
 | `--map vocabulary` | Typ-Namen nach Suffix gruppiert | E02 Naming-Drift |
 | `--map structure`  | Verzeichnisstruktur + Dateigrößen | E03 Architecture-Intent |
 | `--map hotspots`   | Dateien nahe am Limit | Proaktiv |
+| `--map skeleton`   | Semantisches Code-Skelett mit Signaturen + Throws + Uses | LLM-Audits, Code-Reviews |
+
+#### `--map skeleton`
+
+Erzeugt eine vollständige **Skeleton Map** der Solution: Für jeden Typ werden Namespace, Modifikatoren, Basistypen und alle Member-Signaturen ausgegeben. Methoden-Rümpfe werden durch Inline-Kommentare ersetzt:
+
+- `// Throws: X` — geworfene Exception-Typen (aus `throw new X()`-Statements)
+- `// Uses: IRepo, IService` — injizierte Abhängigkeiten, auf die die Methode zugreift
+
+**Erfordert:** `--path` zu einer `.sln`- oder `.slnx`-Datei (oder Verzeichnis mit einer davon).
+**Ausgabe:** stdout (Markdown). Empfehlung: in Datei umleiten und als Kontext für LLM-Audit nutzen.
+
+**Token-Ersparnis:** ~70–85% gegenüber rohem Quellcode bei vollem Erhalt der Architektur-Information.
+
+**Anwendungsfälle:** Code-Duplikat-Erkennung, Naming-Drift-Audit, Abhängigkeitsanalyse, Architektur-Review durch LLM-Agenten.
+
+```bash
+ainetlinter --map skeleton --path ./src/MySolution.sln > skeleton.md
+```
 
 ---
 

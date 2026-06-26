@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Threading;
@@ -15,7 +15,7 @@ namespace AiNetLinter.Commands;
 /// </summary>
 internal static class MapCommand
 {
-    internal static Task<int> RunAsync(
+    internal static async Task<int> RunAsync(
         LinterArgs args,
         CancellationToken ct = default,
         ILintConsole? console = null)
@@ -29,10 +29,13 @@ internal static class MapCommand
                 "--path fehlt für --map",
                 context: $"--map {args.MapType}",
                 hint: "Pfad zur Solution oder zum Verzeichnis mit --path angeben."));
-            return Task.FromResult(1);
+            return 1;
         }
 
         var mapType = args.MapType?.ToLowerInvariant();
+
+        if (mapType == "skeleton")
+            return await AiNetLinter.Maps.Skeleton.SkeletonMapBuilder.BuildAsync(args.TargetPath, c, ct);
 
         var exitCode = mapType switch
         {
@@ -42,7 +45,7 @@ internal static class MapCommand
             _ => ReportUnknownType(mapType, c)
         };
 
-        return Task.FromResult(exitCode);
+        return exitCode;
     }
 
     private static int ResolveMaxLineCount(LinterArgs args)
@@ -60,7 +63,7 @@ internal static class MapCommand
             LinterErrorCodes.ResourceNotFound,
             $"Unbekannter Map-Typ '{mapType}'",
             context: $"--map {mapType}",
-            hint: "Gültige Typen: vocabulary, structure, hotspots"));
+            hint: "Gültige Typen: vocabulary, structure, hotspots, skeleton"));
         return 1;
     }
 }
