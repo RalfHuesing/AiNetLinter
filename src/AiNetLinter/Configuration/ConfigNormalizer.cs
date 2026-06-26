@@ -21,9 +21,18 @@ public static class ConfigNormalizer
         var testSentinel = config.TestSentinel ?? new TestSentinelConfig();
         var patterns = NormalizeClassNamePatterns(testSentinel.ClassNamePatterns);
         var fileFilters = config.FileFilters ?? new FileFiltersConfig();
+        var global = config.Global ?? new GlobalConfig();
 
         return config with
         {
+            Global = global with
+            {
+                SkeletonDependencySuffixes = global.SkeletonDependencySuffixes ?? new[]
+                {
+                    "Repository", "Service", "Handler", "Client", "Gateway",
+                    "Manager", "Sender", "Factory", "Provider", "Logger", "Writer", "Reader"
+                }
+            },
             TestSentinel = testSentinel with
             {
                 ClassNamePatterns = patterns,

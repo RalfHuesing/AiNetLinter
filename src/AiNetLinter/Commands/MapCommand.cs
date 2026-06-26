@@ -35,7 +35,11 @@ internal static class MapCommand
         var mapType = args.MapType?.ToLowerInvariant();
 
         if (mapType == "skeleton")
-            return await AiNetLinter.Maps.Skeleton.SkeletonMapBuilder.BuildAsync(args.TargetPath, c, ct);
+        {
+            var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false) 
+                ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+            return await AiNetLinter.Maps.Skeleton.SkeletonMapBuilder.BuildAsync(args.TargetPath, config, c, ct);
+        }
 
         var exitCode = mapType switch
         {

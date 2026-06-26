@@ -12,7 +12,12 @@ public sealed class SkeletonSyntaxWalkerTests
     private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(string code)
     {
         var (tree, model) = TestHelper.ParseCode(code);
-        var walker = new SkeletonSyntaxWalker(model, "Test.cs");
+        var suffixes = new[]
+        {
+            "Repository", "Service", "Handler", "Client", "Gateway",
+            "Manager", "Sender", "Factory", "Provider", "Logger", "Writer", "Reader"
+        };
+        var walker = new SkeletonSyntaxWalker(model, "Test.cs", suffixes);
         walker.Visit(tree.GetRoot());
         return (walker, model);
     }
