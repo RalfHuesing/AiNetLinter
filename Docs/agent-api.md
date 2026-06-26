@@ -43,6 +43,19 @@ ainetlinter --eval naming-drift        --path <pfad> [--spec <pfad>...]
 ainetlinter --eval architecture-intent --path <pfad> [--spec <pfad>...]
 ```
 
+**Prompt-Aufbau:** Jede per `--spec` übergebene Datei wird in einen XML-Container
+eingebettet (`<doc name="DATEINAME">…</doc>`), sodass Heading-Hierarchien und
+`---`-Trennzeichen in Spec-Dateien nicht mit dem Template-Rahmen kollidieren.
+Der `{{SPEC}}`-Block im Template ist mit `<specs>…</specs>` ummantelt.
+
+**Token-Warnung:** Überschreitet der assemblierte Prompt ~15.000 Tokens
+(Schätzung: `Zeichenanzahl / 4`), gibt das Tool eine Warnung auf `stderr` aus.
+Der Prompt wird trotzdem auf `stdout` ausgegeben.
+
+**Output-Format:** Beide Templates enden mit einem Pflicht-Abschnitt der das
+Modell zu einer P1/P2/P3-Empfehlungstabelle (Spalten: Priorität, Befund,
+Empfehlung, Aufwand) zwingt.
+
 ---
 
 ## Lint-Workflows
