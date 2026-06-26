@@ -81,6 +81,26 @@ internal static partial class RuleRegistry
             IncludeInCursorRules: true
         ),
         new(
+            RuleId: "EnforceAsciiIdentifiers",
+            DisplayName: "ASCII-Bezeichner Pflicht",
+            GetShortDescription: c => "Bezeichner dürfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
+            Warum: "Nicht-ASCII-Zeichen erhoehen den Token-Footprint fuer LLM-Tokenizer (BPE) und koennen zu Schreibweisen-Drift (Halluzinationen), Encoding-Problemen oder homoglyphen Sicherheitsluecken fuehren.",
+            Alternativen:
+            [
+                "**Umlaute umschreiben**: `Prüfung` → `Pruefung`.",
+                "**Englische Namen bevorzugen**: `Prüfung` → `Validation` / `Audit`.",
+                "**Rein ASCII-Zeichen verwenden**: Entferne Emojis, Akzente oder fremdsprachige Unicode-Zeichen."
+            ],
+            SicherheitsHinweis: "Verhindert Homoglyphen-Angriffe (Trojan Source), bei denen ähnlich aussehende Unicode-Zeichen verwendet werden, um Schadcode zu tarnen.",
+            Intent: "general",
+            Severity: "error",
+            CursorHint: "Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.EnforceAsciiIdentifiers,
+            IsMetric: false,
+            IncludeInCursorRules: true
+        ),
+        new(
             RuleId: "EnforceSemanticNaming",
             DisplayName: "Semantische Namensgebung",
             GetShortDescription: c => "Generische Namen (data, temp, obj) und werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) sind verboten.",

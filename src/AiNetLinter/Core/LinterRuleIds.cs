@@ -37,6 +37,7 @@ internal static class LinterRuleIds
     internal const string BanPublicNestedTypes = nameof(GlobalConfig.BanPublicNestedTypes);
     internal const string EnforceNoSilentCatch = nameof(GlobalConfig.EnforceNoSilentCatch);
     internal const string EnforcePascalCase = nameof(GlobalConfig.EnforcePascalCase);
+    internal const string EnforceAsciiIdentifiers = nameof(GlobalConfig.EnforceAsciiIdentifiers);
     internal const string EnforceXmlDocumentation = nameof(GlobalConfig.EnforceXmlDocumentation);
     internal const string EnforceSemanticNaming = nameof(GlobalConfig.EnforceSemanticNaming);
     internal const string EnforceNullableEnable = nameof(GlobalConfig.EnforceNullableEnable);

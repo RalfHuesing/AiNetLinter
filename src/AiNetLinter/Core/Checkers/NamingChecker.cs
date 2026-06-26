@@ -123,4 +123,59 @@ internal static partial class NamingChecker
             t.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia) ||
             t.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia));
     }
+
+    internal static void CheckAscii(SyntaxToken identifier, string kind, CheckerContext ctx)
+    {
+        if (!ctx.Config.Global.EnforceAsciiIdentifiers) return;
+
+        var name = identifier.Text;
+        if (string.IsNullOrEmpty(name)) return;
+
+        if (name.StartsWith("@"))
+        {
+            name = name.Substring(1);
+        }
+
+        foreach (var c in name)
+        {
+            if (!IsAsciiIdentifierChar(c))
+            {
+                ctx.ReportViolation(identifier, new ViolationDescription(
+                    nameof(ctx.Config.Global.EnforceAsciiIdentifiers),
+                    $"Der Name '{identifier.Text}' ({kind}) enthaelt Nicht-ASCII-Zeichen (z. B. '{c}').",
+                    "Verwende ausschliesslich ASCII-Zeichen (a-z, A-Z, 0-9, _) fuer Bezeichner. Umschreibe Umlaute (ae, oe, ue, ss) oder waehle englische Bezeichner."));
+                return;
+            }
+        }
+    }
+
+    internal static void CheckAsciiNamespace(BaseNamespaceDeclarationSyntax node, CheckerContext ctx)
+    {
+        if (!ctx.Config.Global.EnforceAsciiIdentifiers) return;
+
+        var fullname = node.Name.ToString();
+        if (string.IsNullOrEmpty(fullname)) return;
+
+        var segments = fullname.Split('.');
+        foreach (var segment in segments)
+        {
+            var name = segment.StartsWith("@") ? segment.Substring(1) : segment;
+            foreach (var c in name)
+            {
+                if (!IsAsciiIdentifierChar(c))
+                {
+                    ctx.ReportViolation(node.Name, new ViolationDescription(
+                        nameof(ctx.Config.Global.EnforceAsciiIdentifiers),
+                        $"Der Namespace-Name '{fullname}' enthaelt Nicht-ASCII-Zeichen (z. B. '{c}').",
+                        "Verwende ausschliesslich ASCII-Zeichen (a-z, A-Z, 0-9, _) und Punkte (.) fuer Namespaces."));
+                    return;
+                }
+            }
+        }
+    }
+
+    private static bool IsAsciiIdentifierChar(char c)
+    {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+    }
 }

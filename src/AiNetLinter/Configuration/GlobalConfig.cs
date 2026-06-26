@@ -13,6 +13,7 @@ public sealed record GlobalConfig
     public bool EnforceValueObjectContracts { get; init; } = true;
     public bool EnableTestSentinel { get; init; } = true;
     public bool EnforcePascalCase { get; init; } = true;
+    public bool EnforceAsciiIdentifiers { get; init; } = true;
     public bool EnforceXmlDocumentation { get; init; } = false;
     public bool EnforceSemanticNaming { get; init; } = true;
     public bool EnforceNullableEnable { get; init; } = true;
@@ -193,6 +194,7 @@ public sealed record GlobalConfig
 
             // Naming und Stil
             EnforcePascalCase                           = o.EnforcePascalCase                           ?? EnforcePascalCase,
+            EnforceAsciiIdentifiers                     = o.EnforceAsciiIdentifiers                     ?? EnforceAsciiIdentifiers,
             EnforceSemanticNaming                       = o.EnforceSemanticNaming                       ?? EnforceSemanticNaming,
             SemanticNamingExemptMethodNames             = o.SemanticNamingExemptMethodNames             ?? SemanticNamingExemptMethodNames,
             SemanticNamingAllowSubstringOfMethodName    = o.SemanticNamingAllowSubstringOfMethodName    ?? SemanticNamingAllowSubstringOfMethodName,
