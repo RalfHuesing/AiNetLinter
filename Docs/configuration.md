@@ -1488,6 +1488,47 @@ Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Si
 
 `--spec` kann mehrfach angegeben werden. Verzeichnisse: nur erste Ebene, nur .md-Dateien.
 
+### Prompt-Aufbau
+
+Jede per `--spec` übergebene Datei wird automatisch in einen XML-Container
+eingebettet:
+
+```xml
+<specs>
+<doc name="README.md">
+...Dateiinhalt...
+</doc>
+<doc name="architecture.md">
+...Dateiinhalt...
+</doc>
+</specs>
+```
+
+Das verhindert Konflikte zwischen Heading-Hierarchien (`#`, `##`) und
+Trennzeichen (`---`) in Spec-Dateien und dem Template-Rahmen.
+
+### Token-Budget-Warnung
+
+Überschreitet der assemblierte Prompt ~15.000 Tokens (Schätzung: `Zeichen / 4`),
+gibt das Tool eine Warnung auf `stderr` aus:
+
+```
+[WARN] Eval-Prompt ist sehr groß (~18 500 Tokens geschätzt). Erwäge --spec auf die wichtigsten Dateien zu reduzieren.
+```
+
+Der Prompt wird trotzdem ausgegeben — der Nutzer entscheidet ob er ihn verwendet.
+
+### Output-Format
+
+Beide Eval-Templates enden mit einem Pflicht-Abschnitt der das LLM anweist,
+seine Empfehlungen als priorisierte Tabelle auszugeben:
+
+| Priorität | Befund | Empfehlung | Aufwand |
+|-----------|--------|------------|---------|
+| P1 – Sofort | Aktives Problem | Sofortmaßnahme | Klein/Mittel/Groß |
+| P2 – Bald | Wichtig | Kurzfristige Maßnahme | ... |
+| P3 – Später | Nice-to-have | Langfristige Optimierung | ... |
+
 ---
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

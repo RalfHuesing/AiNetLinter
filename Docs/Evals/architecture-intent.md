@@ -10,18 +10,6 @@ Deine Aufgabe: Strukturelle Abweichungen vom Intent finden.
 
 ---
 
-## Ursprünglicher Design-Intent
-
-{{SPEC}}
-
----
-
-## Aktuelle Struktur (Auto-Generiert)
-
-{{STRUCTURE_MAP}}
-
----
-
 ## Deine Aufgabe
 
 ### Erfüllte Prinzipien
@@ -44,3 +32,34 @@ Unverhältnismäßig große Verzeichnisse oder Dateien (potenzielle God Classes)
 
 ### Urteil
 Vollständig konform / Kleiner Drift / Signifikanter Drift / Starker Drift
+
+---
+
+## Ursprünglicher Design-Intent
+
+<specs>
+{{SPEC}}
+</specs>
+
+---
+
+## Aktuelle Struktur (Auto-Generiert)
+
+{{STRUCTURE_MAP}}
+
+---
+
+## Empfehlungen (Pflichtformat)
+
+Schreibe am Ende deines Berichts jede Empfehlung als Tabellenzeile.
+Keine Empfehlung weglassen — auch P3-Hinweise sind wertvoll.
+
+| Priorität | Befund | Empfehlung | Aufwand |
+|-----------|--------|------------|---------|
+| P1 – Sofort | ... | ... | Klein / Mittel / Groß |
+| P2 – Bald   | ... | ... | ... |
+| P3 – Später | ... | ... | ... |
+
+- **P1** = blockiert Qualitätsziele oder erzeugt aktiv Drift
+- **P2** = wichtig, aber kein unmittelbarer Schaden
+- **P3** = nice-to-have / langfristig

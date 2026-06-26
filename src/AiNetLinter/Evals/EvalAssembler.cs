@@ -11,9 +11,12 @@ namespace AiNetLinter.Evals;
 /// <summary>
 /// Lädt das eingebettete Template eines Eval-Typs, ersetzt alle Platzhalter
 /// und gibt den assemblierten Prompt zurück.
+/// Gibt eine stderr-Warnung aus wenn der Prompt die Token-Schwelle überschreitet.
 /// </summary>
 internal static class EvalAssembler
 {
+    private const int TokenWarningThreshold = 15_000;
+
     internal static string Assemble(
         EvalDefinition eval,
         string targetPath,
@@ -23,12 +26,24 @@ internal static class EvalAssembler
         var template = LoadTemplate(eval.Name);
         var evidence = BuildEvidence(eval, targetPath);
 
-        return template
+        var prompt = template
             .Replace("{{SPEC}}",           spec)
             .Replace("{{VOCABULARY_MAP}}", eval.Evidence == EvalEvidenceType.Vocabulary ? evidence : "")
             .Replace("{{STRUCTURE_MAP}}",  eval.Evidence == EvalEvidenceType.Structure  ? evidence : "")
             .Replace("{{GENERATED_AT}}",   generatedAt)
             .Replace("{{TARGET_PATH}}",    targetPath.Replace('\\', '/'));
+
+        WarnIfLargePrompt(prompt);
+        return prompt;
+    }
+
+    private static void WarnIfLargePrompt(string prompt)
+    {
+        var estimatedTokens = prompt.Length / 4;
+        if (estimatedTokens > TokenWarningThreshold)
+            Console.Error.WriteLine(
+                $"[WARN] Eval-Prompt ist sehr groß (~{estimatedTokens:N0} Tokens geschätzt). " +
+                "Erwäge --spec auf die wichtigsten Dateien zu reduzieren.");
     }
 
     private static string LoadTemplate(string evalName)

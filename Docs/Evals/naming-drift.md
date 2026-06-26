@@ -9,18 +9,6 @@ Deine Aufgabe: Semantischen Naming-Drift zwischen Spezifikation und Code-Identif
 
 ---
 
-## Spezifikation (Domain-Vokabular)
-
-{{SPEC}}
-
----
-
-## Code-Identifiers (Auto-Generiert)
-
-{{VOCABULARY_MAP}}
-
----
-
 ## Deine Aufgabe
 
 **Schritt 1 — Kanonisches Vokabular extrahieren**
@@ -47,3 +35,34 @@ technisches Hilfskonstrukt sind?
 
 ### Urteil
 Skala 1–5 (1 = kein Drift, 5 = starker Drift). Ein Satz Begründung.
+
+---
+
+## Spezifikation (Domain-Vokabular)
+
+<specs>
+{{SPEC}}
+</specs>
+
+---
+
+## Code-Identifiers (Auto-Generiert)
+
+{{VOCABULARY_MAP}}
+
+---
+
+## Empfehlungen (Pflichtformat)
+
+Schreibe am Ende deines Berichts jede Empfehlung als Tabellenzeile.
+Keine Empfehlung weglassen — auch P3-Hinweise sind wertvoll.
+
+| Priorität | Befund | Empfehlung | Aufwand |
+|-----------|--------|------------|---------|
+| P1 – Sofort | ... | ... | Klein / Mittel / Groß |
+| P2 – Bald   | ... | ... | ... |
+| P3 – Später | ... | ... | ... |
+
+- **P1** = blockiert Qualitätsziele oder erzeugt aktiv Drift
+- **P2** = wichtig, aber kein unmittelbarer Schaden
+- **P3** = nice-to-have / langfristig
