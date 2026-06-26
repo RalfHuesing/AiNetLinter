@@ -1,4 +1,4 @@
-﻿# AiNetLinter - Projekt-Roadmap
+# AiNetLinter - Projekt-Roadmap
 
 Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Projekts und teilt die Features in logische Epics und Kapitel auf. Sie dient als Arbeitsgrundlage für die schrittweise Implementierung.
 
@@ -426,6 +426,10 @@ Assembliert vollständige LLM-Audit-Prompts aus eingebetteten Templates, Spezifi
 - [x] **Test-Suite:** Unit-Tests in `SpecLoaderTests`, `EvalAssemblerTests` und `ListEvalsCommandTests` abgedeckt
 - [x] **Aufräumarbeiten:** `Research/Evals/` Ordner gelöscht (vollständig durch eingebettete Templates ersetzt)
 - [x] **Dokumentation:** Aktualisierung von `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`
+- [x] **Prompt-Qualität Phase 2 — XML-Spec-Isolation:** `SpecLoader` bettet jede Spec-Datei in `<doc name="DATEINAME">…</doc>` ein; Template umschließt `{{SPEC}}` mit `<specs>…</specs>`. Löst Heading-Kollision und `---`-Trennzeichen-Konflikt zwischen Spec-Inhalt und Template-Rahmen.
+- [x] **Prompt-Qualität Phase 2 — Task-First-Ordering:** Beide Eval-Templates umstrukturiert: Aufgaben-Instruktion steht jetzt VOR den Daten-Abschnitte (Anthropic Best Practice für lange Kontexte).
+- [x] **Prompt-Qualität Phase 2 — Token-Budget-Warnung:** `EvalAssembler` gibt Warnung auf `stderr` aus wenn der assemblierte Prompt ~15.000 Tokens überschreitet (Schätzung: Zeichenanzahl / 4). Kein Hard-Fail — Nutzer entscheidet.
+- [x] **Prompt-Qualität Phase 2 — P1/P2/P3-Output-Format:** Beide Templates enden mit einem Pflicht-Abschnitt der das LLM zu strukturierten, priorisierten Empfehlungen (Tabelle mit Priorität/Befund/Empfehlung/Aufwand) zwingt.
 
 ---
 

@@ -92,4 +92,36 @@ public sealed class SpecLoaderTests : IDisposable
         var result = SpecLoader.Load(["C:/does/not/exist.md", _validFile]);
         Assert.Contains("valid content", result);
     }
+
+    [Fact]
+    public void Load_SingleFile_WrapsContentInDocTag()
+    {
+        var result = SpecLoader.Load([_validFile]);
+        Assert.Contains("<doc name=\"valid.md\">", result);
+        Assert.Contains("</doc>", result);
+    }
+
+    [Fact]
+    public void Load_MultipleFiles_EachWrappedInOwnDocTag()
+    {
+        var result = SpecLoader.Load([_fileA, _fileB]);
+        Assert.Contains("<doc name=\"spec-a.md\">", result);
+        Assert.Contains("<doc name=\"spec-b.md\">", result);
+    }
+
+    [Fact]
+    public void Load_MultipleFiles_NoMarkdownSeparatorBetweenDocs()
+    {
+        var result = SpecLoader.Load([_fileA, _fileB]);
+        Assert.DoesNotContain("\n\n---\n\n", result);
+    }
+
+    [Fact]
+    public void Load_DocTag_ContainsOnlyFileName_NotFullPath()
+    {
+        var result = SpecLoader.Load([_validFile]);
+        // name-Attribut darf nur den Dateinamen enthalten, nicht den absoluten Pfad
+        Assert.DoesNotContain(_tempDir, result.Split('\n')[0]);
+        Assert.Contains("valid.md", result);
+    }
 }
