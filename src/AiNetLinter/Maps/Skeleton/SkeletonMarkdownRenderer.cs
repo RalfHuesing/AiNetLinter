@@ -100,7 +100,7 @@ internal static class SkeletonMarkdownRenderer
         foreach (var m in filtered)
         {
             var line = m.MetaComment != null
-                ? $"{m.Signature} // {m.MetaComment}"
+                ? $"{m.Signature} /* {m.MetaComment} */"
                 : m.Signature;
             sb.AppendLine(line);
         }

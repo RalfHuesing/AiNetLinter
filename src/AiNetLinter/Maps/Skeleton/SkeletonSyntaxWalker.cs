@@ -16,7 +16,6 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 {
     private readonly SemanticModel _semanticModel;
     private readonly string _relativePath;
-    private readonly IReadOnlyCollection<string> _dependencySuffixes;
     private readonly List<SkeletonTypeInfo> _types = [];
     private string _currentNamespace = "";
 
@@ -24,13 +23,11 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 
     internal SkeletonSyntaxWalker(
         SemanticModel semanticModel,
-        string relativePath,
-        IReadOnlyCollection<string> dependencySuffixes)
+        string relativePath)
         : base(SyntaxWalkerDepth.Node)
     {
         _semanticModel = semanticModel;
         _relativePath = relativePath;
-        _dependencySuffixes = dependencySuffixes;
     }
 
     public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
@@ -192,13 +189,13 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
         if (bodyNode == null) return null;
 
         var throws = ExtractThrowTypes(bodyNode);
-        var uses = ExtractUsedDependencyTypes(bodyNode, context);
+        var uses = ExtractUsedDependencies(bodyNode, context);
 
         var parts = new List<string>();
         if (throws.Count > 0) parts.Add("Throws: " + string.Join(", ", throws));
         if (uses.Count > 0)   parts.Add("Uses: " + string.Join(", ", uses));
 
-        return parts.Count > 0 ? string.Join(" | ", parts) : null;
+        return parts.Count > 0 ? string.Join("; ", parts) : null;
     }
 
     private IReadOnlyList<string> ExtractThrowTypes(SyntaxNode body)
@@ -225,12 +222,12 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
         return [.. types];
     }
 
-    private IReadOnlyList<string> ExtractUsedDependencyTypes(SyntaxNode body, SyntaxNode context)
+    private IReadOnlyList<string> ExtractUsedDependencies(SyntaxNode body, SyntaxNode context)
     {
         var containingType = _semanticModel.GetDeclaredSymbol(context)?.ContainingType;
         if (containingType == null) return [];
 
-        var typeNames = new SortedSet<string>(StringComparer.Ordinal);
+        var dependencyNames = new SortedSet<string>(StringComparer.Ordinal);
 
         foreach (var identifier in body.DescendantNodes().OfType<IdentifierNameSyntax>())
         {
@@ -238,32 +235,10 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
             if (symbol is not (IFieldSymbol or IPropertySymbol)) continue;
             if (!SymbolEqualityComparer.Default.Equals(symbol.ContainingType, containingType)) continue;
 
-            var typeName = symbol switch
-            {
-                IFieldSymbol f    => f.Type.Name,
-                IPropertySymbol p => p.Type.Name,
-                _                 => null,
-            };
-
-            if (!string.IsNullOrEmpty(typeName) && IsDependencyType(typeName))
-                typeNames.Add(typeName);
+            dependencyNames.Add(symbol.Name);
         }
 
-        return [.. typeNames];
-    }
-
-    private bool IsDependencyType(string typeName)
-    {
-        if (typeName.Length >= 2 && typeName[0] == 'I' && char.IsUpper(typeName[1]))
-            return true;
-
-        foreach (var suffix in _dependencySuffixes)
-        {
-            if (typeName.EndsWith(suffix, StringComparison.Ordinal))
-                return true;
-        }
-
-        return false;
+        return [.. dependencyNames];
     }
 
     private static MemberKind ClassifyMethodKind(SyntaxTokenList modifiers, SyntaxNode? parent)
