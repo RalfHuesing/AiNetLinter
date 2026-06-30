@@ -224,7 +224,24 @@ public sealed class SourceFileCatalog : IDisposable
     {
         if (!MSBuildLocator.IsRegistered)
         {
-            MSBuildLocator.RegisterDefaults();
+            BuildHostPatcher.PatchBuildHostForVs2026();
+            try
+            {
+                MSBuildLocator.RegisterDefaults();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN]: Error during MSBuild registration: {ex.Message}");
+                MSBuildLocator.RegisterDefaults();
+            }
+            finally
+            {
+                // Clear environment variables so the child BuildHost.exe (.NET Framework) 
+                // doesn't inherit .NET Core SDK paths.
+                Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", null);
+                Environment.SetEnvironmentVariable("MSBuildExtensionsPath", null);
+                Environment.SetEnvironmentVariable("MSBuildSDKsPath", null);
+            }
         }
     }
 
