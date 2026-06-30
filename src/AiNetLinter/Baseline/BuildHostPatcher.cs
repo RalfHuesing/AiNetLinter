@@ -36,6 +36,14 @@ public static class BuildHostPatcher
 
     private static string? FindVs2026MsBuildDir()
     {
+        var locatorPath = FindVs2026MsBuildDirViaLocator();
+        if (locatorPath != null) return locatorPath;
+
+        return FindVs2026MsBuildDirViaManualScan();
+    }
+
+    private static string? FindVs2026MsBuildDirViaLocator()
+    {
         try
         {
             var instances = MSBuildLocator.QueryVisualStudioInstances();
@@ -54,6 +62,44 @@ public static class BuildHostPatcher
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[WARN]: Error querying Visual Studio instances: {ex.Message}");
+        }
+        return null;
+    }
+
+    private static string? FindVs2026MsBuildDirViaManualScan()
+    {
+        try
+        {
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string vsRoot = Path.Combine(programFiles, "Microsoft Visual Studio");
+            if (!Directory.Exists(vsRoot)) return null;
+
+            foreach (var vsVerDir in Directory.GetDirectories(vsRoot))
+            {
+                var msbuildPath = CheckVsVersionDir(vsVerDir);
+                if (msbuildPath != null) return msbuildPath;
+            }
+        }
+        catch (Exception ignored)
+        {
+            _ = ignored;
+        }
+        return null;
+    }
+
+    private static string? CheckVsVersionDir(string vsVerDir)
+    {
+        var folderName = Path.GetFileName(vsVerDir);
+        if (int.TryParse(folderName, out int majorVer) && majorVer >= 18)
+        {
+            foreach (var editionDir in Directory.GetDirectories(vsVerDir))
+            {
+                var msbuildBinDir = Path.Combine(editionDir, @"MSBuild\Current\Bin");
+                if (File.Exists(Path.Combine(msbuildBinDir, "System.Collections.Immutable.dll")))
+                {
+                    return msbuildBinDir;
+                }
+            }
         }
         return null;
     }
