@@ -73,7 +73,7 @@ internal static class HotspotMapBuilder
 
         sb.AppendLine("| Datei | Zeilen | Auslastung | Verbleibend |");
         sb.AppendLine("|:---|---:|---:|---:|");
-        foreach (var f in files.OrderByDescending(x => x.Lines))
+        foreach (var f in files.OrderByDescending(x => x.Lines).ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
             var pct = (double)f.Lines / maxLineCount * 100;
             var remaining = maxLineCount - f.Lines;

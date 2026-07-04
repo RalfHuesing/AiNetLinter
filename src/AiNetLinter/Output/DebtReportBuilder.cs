@@ -63,6 +63,7 @@ public static class DebtReportBuilder
                 var relative = PathNormalizer.ToRelative(outputRoot, g.Key);
                 var ruleDetails = g
                     .OrderBy(s => s.LineNumber)
+                    .ThenBy(s => s.RuleName, StringComparer.Ordinal)
                     .Select(s => $"{s.RuleName} (Zeile {s.LineNumber})");
                 return $"- {relative}: {string.Join(", ", ruleDetails)}";
             })

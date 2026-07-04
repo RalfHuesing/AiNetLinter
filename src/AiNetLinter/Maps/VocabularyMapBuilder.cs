@@ -137,7 +137,7 @@ internal static class VocabularyMapBuilder
         sb.AppendLine();
         sb.AppendLine("## Typ-Gruppen nach Suffix (Produktionscode)");
 
-        foreach (var (suffix, types) in grouped.OrderByDescending(kv => kv.Value.Count))
+        foreach (var (suffix, types) in grouped.OrderByDescending(kv => kv.Value.Count).ThenBy(kv => kv.Key, StringComparer.Ordinal))
         {
             sb.AppendLine();
             sb.AppendLine($"### *{suffix} ({types.Count})");
@@ -155,7 +155,7 @@ internal static class VocabularyMapBuilder
         sb.AppendLine();
         sb.AppendLine("| Suffix | Anzahl | Anteil |");
         sb.AppendLine("|:---|---:|---:|");
-        foreach (var (suffix, types) in grouped.OrderByDescending(kv => kv.Value.Count))
+        foreach (var (suffix, types) in grouped.OrderByDescending(kv => kv.Value.Count).ThenBy(kv => kv.Key, StringComparer.Ordinal))
         {
             var pct = prodTypes.Count > 0 ? (double)types.Count / prodTypes.Count * 100 : 0.0;
             sb.AppendLine($"| {suffix} | {types.Count} | {pct:F0} % |");
