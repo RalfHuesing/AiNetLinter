@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.IO;
 using System.Threading.Tasks;
@@ -182,5 +182,50 @@ public sealed class PlaybookGeneratorRound2Tests
         // Verify that the playbook contains the precomputed violation in its Migrations-Status
         Assert.Contains("EnforceSealedClasses", content);
         Assert.Contains("Verstösse nur wave-ready (default rules):** 1", content);
+    }
+
+    [Fact]
+    public async Task BuildContentAsync_SortsIntentsAndRulesDeterministically()
+    {
+        const string source = "namespace MyApp; public class MyService { }";
+        var solution = BuildSolution(source, "MyApp", "MyService.cs");
+        var config = new Config
+        {
+            Global = new GlobalConfig(),
+            Metrics = new MetricsConfig(),
+            RuleMetadata = new Dictionary<string, RuleMetadataEntry>
+            {
+                { "MaxConstructorDependencies", new RuleMetadataEntry { Severity = "warning", Intent = "coupling" } }
+            }
+        };
+
+        var violations = new[]
+        {
+            new RuleViolation { FilePath = "MyService.cs", LineNumber = 1, RuleName = "MaxSwitchArms", Details = "Details", Guidance = "Guidance" }, // Intent: general, Count: 1
+            new RuleViolation { FilePath = "MyService.cs", LineNumber = 2, RuleName = "MaxConstructorDependencies", Details = "Details", Guidance = "Guidance" }, // Intent: coupling, Count: 1
+            new RuleViolation { FilePath = "MyService.cs", LineNumber = 3, RuleName = "MaxMethodLineCount", Details = "Details", Guidance = "Guidance" }, // Intent: agent-context, Count: 1
+            new RuleViolation { FilePath = "MyService.cs", LineNumber = 4, RuleName = "MaxLineCount", Details = "Details", Guidance = "Guidance" } // Intent: agent-context, Count: 1 (Total agent-context = 2)
+        };
+
+        var content = await RepoPlaybookGenerator.BuildContentAsync(
+            solution,
+            new PlaybookOptions(Config: config, ConfigPath: "rules.json", PrecomputedViolations: violations));
+
+        // The intent groups have counts: agent-context (2), coupling (1), general (1).
+        // Since agent-context has 2, it is first.
+        // coupling and general both have 1, so coupling (alphabetically first) comes before general.
+        // Inside agent-context, the rules MaxLineCount and MaxMethodLineCount must be sorted alphabetically: "MaxLineCount, MaxMethodLineCount".
+        
+        Assert.Contains("| agent-context | 2 | MaxLineCount, MaxMethodLineCount |", content);
+        Assert.Contains("| coupling | 1 | MaxConstructorDependencies |", content);
+        Assert.Contains("| general | 1 | MaxSwitchArms |", content);
+
+        // Verify the exact sequence of the lines in the table
+        var idxAgent = content.IndexOf("| agent-context | 2 |");
+        var idxCoupling = content.IndexOf("| coupling | 1 |");
+        var idxGeneral = content.IndexOf("| general | 1 |");
+
+        Assert.True(idxAgent < idxCoupling, "agent-context should come before coupling");
+        Assert.True(idxCoupling < idxGeneral, "coupling should come before general");
     }
 }

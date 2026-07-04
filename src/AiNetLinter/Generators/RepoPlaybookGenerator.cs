@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -253,7 +253,9 @@ public sealed class RepoPlaybookGenerator
             .Select(v => GetViolationFolder(v, ctx.SolutionDir))
             .GroupBy(d => d)
             .Select(g => new { Folder = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count).Take(3).ToList();
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Folder, StringComparer.Ordinal)
+            .Take(3).ToList();
         if (folderGroups.Count == 0)
         {
             sb.AppendLine("  - Keine offenen Verstöße in wave-ready Dateien.");
@@ -288,7 +290,9 @@ public sealed class RepoPlaybookGenerator
                 int medianLoc = sortedLocs.Count > 0 ? sortedLocs[sortedLocs.Count / 2] : 0;
                 return new { Slice = g.Key, FileCount = docs.Count, MedianLoc = medianLoc, DisableAllCount = docs.Count(d => d.HasDisableAll) };
             })
-            .OrderByDescending(x => x.FileCount).Take(5).ToList();
+            .OrderByDescending(x => x.FileCount)
+            .ThenBy(x => x.Slice, StringComparer.Ordinal)
+            .Take(5).ToList();
         foreach (var slice in sliceGroups)
         {
             var disableAllStr = slice.DisableAllCount > 0 ? $", {slice.DisableAllCount}× disable-all" : "";
@@ -305,8 +309,10 @@ public sealed class RepoPlaybookGenerator
         sb.AppendLine("| :--- | ---: | :--- |");
         var intentGroups = waveReadyViolations
             .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
-            .Select(g => new { Intent = g.Key, Count = g.Count(), Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct()) })
-            .OrderByDescending(x => x.Count).ToList();
+            .Select(g => new { Intent = g.Key, Count = g.Count(), Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct().OrderBy(r => r, StringComparer.Ordinal)) })
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Intent, StringComparer.Ordinal)
+            .ToList();
         if (intentGroups.Count == 0)
         {
             sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
@@ -341,7 +347,7 @@ public sealed class RepoPlaybookGenerator
 
         sb.AppendLine("Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:");
         sb.AppendLine();
-        foreach (var item in suppressionCounts.OrderByDescending(x => x.Value))
+        foreach (var item in suppressionCounts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal))
         {
             var rule = item.Key;
             var count = item.Value;

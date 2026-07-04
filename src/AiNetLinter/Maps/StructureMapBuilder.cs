@@ -52,6 +52,7 @@ internal static class StructureMapBuilder
                     Directory: relativeDir);
             })
             .OrderByDescending(f => f.Lines)
+            .ThenBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -72,7 +73,8 @@ internal static class StructureMapBuilder
         // Verzeichnis-Übersicht
         var byDir = files
             .GroupBy(f => string.IsNullOrEmpty(f.Directory) ? "(Root)" : f.Directory)
-            .OrderByDescending(g => g.Sum(f => f.Lines));
+            .OrderByDescending(g => g.Sum(f => f.Lines))
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
         sb.AppendLine("## Verzeichnis-Übersicht");
         sb.AppendLine();

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.IO;
@@ -226,7 +226,7 @@ public static class CursorRulesGenerator
         sb.AppendLine("## Projekt-Overrides (nur Abweichungen)");
         sb.AppendLine();
 
-        foreach (var pair in config.ProjectOverrides)
+        foreach (var pair in config.ProjectOverrides.OrderBy(x => x.Key, StringComparer.Ordinal))
         {
             var parts = CollectOverrideParts(pair.Value);
             if (parts.Count > 0)

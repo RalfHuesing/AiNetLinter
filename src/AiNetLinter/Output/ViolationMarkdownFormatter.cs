@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -173,7 +173,7 @@ public static class ViolationMarkdownFormatter
         string outputRoot)
     {
         sb.Append($"\n### {group.Key}\n");
-        foreach (var v in group.OrderBy(x => PathNormalizer.ToRelative(outputRoot, x.FilePath), StringComparer.OrdinalIgnoreCase))
+        foreach (var v in group.OrderBy(x => PathNormalizer.ToRelative(outputRoot, x.FilePath), StringComparer.OrdinalIgnoreCase).ThenBy(x => x.LineNumber))
             AppendStructuralViolation(sb, v, outputRoot);
     }
 
@@ -239,7 +239,7 @@ public static class ViolationMarkdownFormatter
         string outputRoot)
     {
         sb.Append($"\n#### {fileGroup.Key}\n");
-        foreach (var v in fileGroup.OrderBy(x => x.LineNumber))
+        foreach (var v in fileGroup.OrderBy(x => x.LineNumber).ThenBy(x => x.RuleName ?? string.Empty, StringComparer.Ordinal))
         {
             var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
             var structTag = StructuralRules.Contains(v.RuleName ?? string.Empty) ? " [→ strukturell]" : string.Empty;
