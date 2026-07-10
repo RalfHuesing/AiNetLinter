@@ -42,6 +42,27 @@ internal static partial class RuleRegistry
             IncludeInCursorRules: true
         ),
         new(
+            RuleId: "AvoidExcessiveMiddleMen",
+            DisplayName: "Vermeidung von Middle-Man-Klassen",
+            GetShortDescription: c => $"Die Klasse ist als Middle Man eingestuft (Weiterleitungs-Verhältnis > {c.Global.MaxMiddleManForwardingRatio:P0}).",
+            Warum: "Klassen, die primär als reine Weiterleitungsschicht agieren, erhöhen die Indirektionstiefe der Codebasis. Für KI-Agenten führt dies zu erheblichem Tool-Call-Overhead (ständiges Nachschlagen von Weiterleitungsgliedern), erhöhtem Tokenverbrauch im Kontextfenster und einer höheren Wahrscheinlichkeit für fehlerhafte Parameterübergaben.",
+            Alternativen:
+            [
+                "**Logik konsolidieren**: Die Weiterleitungsmethoden auflösen und die Logik direkt in der aufrufenden Klasse implementieren.",
+                "**Direkte Assoziation**: Den Collaborator direkt an der Aufrufstelle verwenden (z. B. Law of Demeter durch kontrollierte Freigabe anpassen, anstatt 4 Delegations-Wrapper zu bauen).",
+                "**Ausnahme deklarieren**: Wenn es sich um einen legitimen Proxy, Adapter oder eine Facade handelt, das entsprechende Suffix (z.B. `Proxy`, `Adapter`, `Facade`) im Klassennamen verwenden."
+            ],
+            SicherheitsHinweis: "Das Zusammenfassen von Klassen kann die Trennung von Belangen (Separation of Concerns) verändern. Prüfen Sie, ob die lose Kopplung hier tatsächlich architektonisch notwendig ist.",
+            Intent: "general",
+            Severity: "warning",
+            CursorHint: "Vermeide reine Weiterleitungsklassen ohne eigene Logik; konsolidiere Wrapper.",
+            HasAutoFix: false,
+            IsEnabled: c => c.Global.AvoidExcessiveMiddleMen,
+            IsMetric: false,
+            IncludeInCursorRules: true,
+            ConfigKeyHint: "rules.json → Global.MaxMiddleManForwardingRatio"
+        ),
+        new(
             RuleId: "BanPublicNestedTypes",
             DisplayName: "Keine Nested Typen",
             GetShortDescription: c => "Verbot oeffentlicher nested Typen.",
