@@ -137,6 +137,11 @@ public sealed record GlobalConfigOverride
     public int? MiddleManMinMemberCount { get; init; }
 
     /// <summary>
+    /// Bestimmt, ob private Methoden und Properties für die Middle-Man-Analyse berücksichtigt werden.
+    /// </summary>
+    public bool? MiddleManIncludePrivateMembers { get; init; }
+
+    /// <summary>
     /// Klassenname-Suffixe, die vom Middle-Man-Check ausgenommen sind.
     /// </summary>
     public IReadOnlyCollection<string>? MiddleManExemptSuffixes { get; init; }

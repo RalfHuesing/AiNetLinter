@@ -843,8 +843,9 @@ Die Regel `AvoidExcessiveMiddleMen` ist standardmäßig **aktiviert** (`true`). 
 #### Einstellungsoptionen
 
 - **`AvoidExcessiveMiddleMen`** (Boolean, Default: `true`): Aktiviert oder deaktiviert den Middle-Man-Check.
-- **`MaxMiddleManForwardingRatio`** (Double, Default: `0.60`): Grenzwert für das Verhältnis von Weiterleitungen zur Gesamtanzahl nicht-privater Methoden und Properties der Klasse. Eine Klasse mit z. B. 10 Methoden, von denen 7 nur Aufrufe weiterleiten (Ratio: 70%), wird abgemahnt.
-- **`MiddleManMinMemberCount`** (Integer, Default: `5`): Mindestanzahl nicht-privater Mitglieder (Methoden/Properties) in einer Klasse, ab der die Regel überhaupt greift. Kleine Klassen (z. B. einfache Adapter oder Wrapper mit 2–4 Membern) werden ignoriert, um Fehlalarme zu vermeiden.
+- **`MaxMiddleManForwardingRatio`** (Double, Default: `0.60`): Grenzwert für das Verhältnis von Weiterleitungen zur Gesamtanzahl berücksichtigter Methoden und Properties der Klasse. Eine Klasse mit z. B. 10 Methoden, von denen 7 nur Aufrufe weiterleiten (Ratio: 70%), wird abgemahnt. (Bezieht bei `MiddleManIncludePrivateMembers: true` auch private Member ein).
+- **`MiddleManMinMemberCount`** (Integer, Default: `5`): Mindestanzahl berücksichtigter Mitglieder (Methoden/Properties) in einer Klasse, ab der die Regel überhaupt greift. Kleine Klassen (z. B. einfache Adapter oder Wrapper mit 2–4 Membern) werden ignoriert, um Fehlalarme zu vermeiden. (Bezieht bei `MiddleManIncludePrivateMembers: true` auch private Member ein).
+- **`MiddleManIncludePrivateMembers`** (Boolean, Default: `false`): Wenn `true`, werden auch private Methoden und Properties auf Weiterleitungen analysiert. Explizite Interface-Implementierungen (z. B. `void IDisposable.Dispose()`) bleiben standardmäßig ausgenommen, da sie syntaktisch erzwungen sind.
 - **`MiddleManExemptSuffixes`** (Array von Strings, Default: `["Extensions", "Proxy", "Adapter", "Facade"]`): Klassen, deren Name mit einem dieser Suffixe endet, werden vom Check ausgenommen.
 
 #### Erkennungslogik
@@ -862,6 +863,7 @@ Eine Methode oder Property wird als **Weiterleitung (Pure Forwarder)** gewertet,
   "AvoidExcessiveMiddleMen": true,
   "MaxMiddleManForwardingRatio": 0.60,
   "MiddleManMinMemberCount": 5,
+  "MiddleManIncludePrivateMembers": false,
   "MiddleManExemptSuffixes": [
     "Extensions",
     "Proxy",

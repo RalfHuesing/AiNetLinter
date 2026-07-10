@@ -62,6 +62,7 @@
     "AvoidExcessiveMiddleMen": true,
     "MaxMiddleManForwardingRatio": 0.6,
     "MiddleManMinMemberCount": 5,
+    "MiddleManIncludePrivateMembers": false,
     "MiddleManExemptSuffixes": [
       "Extensions",
       "Proxy",
