@@ -116,6 +116,39 @@ public sealed record GlobalConfig
     /// </summary>
     public bool BanPublicNestedTypesAllowPrivate { get; init; } = true;
 
+    /// <summary>
+    /// Erkennt und meldet Klassen, die primär als Weiterleitungsschicht ("Middle Man") agieren,
+    /// da sie die Indirektionstiefe für Agenten unnötig erhöhen.
+    /// </summary>
+    public bool AvoidExcessiveMiddleMen { get; init; } = true;
+
+    /// <summary>
+    /// Grenzwert für das Verhältnis von reinen Weiterleitungsmethoden/-properties zur Gesamtanzahl.
+    /// Standard: 0.60 (60%).
+    /// </summary>
+    public double MaxMiddleManForwardingRatio { get; init; } = 0.60;
+
+    /// <summary>
+    /// Mindestanzahl nicht-privater Mitglieder einer Klasse, ab der die Middle-Man-Regel greift.
+    /// Kleine Wrapper/Adapter (z.B. mit weniger als 5 Membern) werden ignoriert.
+    /// Standard: 5.
+    /// </summary>
+    public int MiddleManMinMemberCount { get; init; } = 5;
+
+    /// <summary>
+    /// Klassenname-Suffixe, die vom Middle-Man-Check ausgenommen sind.
+    /// Standard: ["Extensions", "Proxy", "Adapter", "Facade"].
+    /// </summary>
+    public IReadOnlyCollection<string> MiddleManExemptSuffixes { get; init; }
+        = ["Extensions", "Proxy", "Adapter", "Facade"];
+
+    /// <summary>
+    /// Basisklassen oder Schnittstellen, bei deren Implementierung eine Klasse vom Middle-Man-Check ausgenommen ist.
+    /// Standard: ["ComponentBase", "LayoutComponentBase"].
+    /// </summary>
+    public IReadOnlyCollection<string> MiddleManExemptBaseTypes { get; init; }
+        = ["ComponentBase", "LayoutComponentBase"];
+
     public IReadOnlyCollection<string> ImmutabilityExemptSuffixes { get; init; } = new[]
     {
         "Dto", "Entity", "Model", "Request", "Response", "Command"
@@ -236,6 +269,12 @@ public sealed record GlobalConfig
             BanBlockingTaskAccess                       = o.BanBlockingTaskAccess                       ?? BanBlockingTaskAccess,
             BanBlockingTaskAccessAllowInMain            = o.BanBlockingTaskAccessAllowInMain            ?? BanBlockingTaskAccessAllowInMain,
             BanBlockingTaskAccessAllowInTests           = o.BanBlockingTaskAccessAllowInTests           ?? BanBlockingTaskAccessAllowInTests,
+
+            AvoidExcessiveMiddleMen                     = o.AvoidExcessiveMiddleMen                     ?? AvoidExcessiveMiddleMen,
+            MaxMiddleManForwardingRatio                 = o.MaxMiddleManForwardingRatio                 ?? MaxMiddleManForwardingRatio,
+            MiddleManMinMemberCount                     = o.MiddleManMinMemberCount                     ?? MiddleManMinMemberCount,
+            MiddleManExemptSuffixes                     = o.MiddleManExemptSuffixes                     ?? MiddleManExemptSuffixes,
+            MiddleManExemptBaseTypes                    = o.MiddleManExemptBaseTypes                    ?? MiddleManExemptBaseTypes,
         };
     }
 }

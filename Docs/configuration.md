@@ -836,6 +836,41 @@ Die Regel `EnforceResultPatternOverExceptions` ist standardmäßig **deaktiviert
 
 > Fachliche Fehler → `Result<T>`; Infrastruktur/Unerwartetes → `throw` + Log. Die `AllowedExceptions`-Liste (z. B. `ArgumentNullException`) bleibt für typ-basierte Ausnahmen unverändert aktiv.
 
+### Vermeidung von Middle-Man-Klassen (AvoidExcessiveMiddleMen)
+
+Die Regel `AvoidExcessiveMiddleMen` ist standardmäßig **aktiviert** (`true`). Sie analysiert Klassen daraufhin, ob sie überwiegend als reine Weiterleitungsschichten ("Middle Man") agieren. Dies ist ein wichtiger Design-Constraint für agentische KI-Systeme, da tiefe Weiterleitungsketten den Agenten zwingen, viele Dateien nacheinander zu lesen (Tool-Call-Inflation) und den Kontext mit redundantem Wrapper-Code zu füllen.
+
+#### Einstellungsoptionen
+
+- **`AvoidExcessiveMiddleMen`** (Boolean, Default: `true`): Aktiviert oder deaktiviert den Middle-Man-Check.
+- **`MaxMiddleManForwardingRatio`** (Double, Default: `0.60`): Grenzwert für das Verhältnis von Weiterleitungen zur Gesamtanzahl nicht-privater Methoden und Properties der Klasse. Eine Klasse mit z. B. 10 Methoden, von denen 7 nur Aufrufe weiterleiten (Ratio: 70%), wird abgemahnt.
+- **`MiddleManMinMemberCount`** (Integer, Default: `5`): Mindestanzahl nicht-privater Mitglieder (Methoden/Properties) in einer Klasse, ab der die Regel überhaupt greift. Kleine Klassen (z. B. einfache Adapter oder Wrapper mit 2–4 Membern) werden ignoriert, um Fehlalarme zu vermeiden.
+- **`MiddleManExemptSuffixes`** (Array von Strings, Default: `["Extensions", "Proxy", "Adapter", "Facade"]`): Klassen, deren Name mit einem dieser Suffixe endet, werden vom Check ausgenommen.
+
+#### Erkennungslogik
+
+Eine Methode oder Property wird als **Weiterleitung (Pure Forwarder)** gewertet, wenn:
+* Sie als Expression-Body (`=>`) oder als Block mit genau einer return- oder Ausdrücksanweisung deklariert ist.
+* Der Rumpf ausschließlich an ein Feld, eine Eigenschaft oder eine statische Methode einer *anderen* Klasse (Collaborator) delegiert.
+* Keine Bedingungen (`if`), Schleifen (`foreach`), lokale Variablen oder `try-catch`-Blöcke enthalten sind.
+* Aufrufe an lokale Hilfsmethoden der gleichen Klasse oder an geerbte Methoden von Basisklassen zählen *nicht* als Weiterleitung an externe Collaborators.
+
+#### Empfohlene Konfiguration:
+
+```json
+"Global": {
+  "AvoidExcessiveMiddleMen": true,
+  "MaxMiddleManForwardingRatio": 0.60,
+  "MiddleManMinMemberCount": 5,
+  "MiddleManExemptSuffixes": [
+    "Extensions",
+    "Proxy",
+    "Adapter",
+    "Facade"
+  ]
+}
+```
+
 ### Profil-Vorlagen
 
 Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollständige `rules.json`-Datei zusammengestellt werden.

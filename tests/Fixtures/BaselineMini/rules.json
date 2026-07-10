@@ -47,6 +47,15 @@
     "DetectAndBanPhantomDependencies": false,
     "BanPublicNestedTypes": true,
     "BanPublicNestedTypesAllowPrivate": true,
+    "AvoidExcessiveMiddleMen": true,
+    "MaxMiddleManForwardingRatio": 0.6,
+    "MiddleManMinMemberCount": 5,
+    "MiddleManExemptSuffixes": [
+      "Extensions",
+      "Proxy",
+      "Adapter",
+      "Facade"
+    ],
     "ImmutabilityExemptSuffixes": [
       "Dto",
       "Entity",

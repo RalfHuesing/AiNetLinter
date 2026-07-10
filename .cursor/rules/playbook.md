@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.71 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
+Auto-generiert durch AiNetLinter 1.0.72 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
@@ -15,22 +15,22 @@ Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die
 ## 2. Abweichungen / Unterdrueckte Linter-Regeln
 Folgende Regeln werden in diesem Projekt bewusst unterdrueckt:
 
-- **without:** 1 mal deaktiviert.
-  *Bedeutung:* Regel 'without'.
 - **RAZOR_MaxControlFlowBlocks:** 1 mal deaktiviert.
   *Bedeutung:* Zu viele Control-Flow-Bloecke (max. 8).
+- **without:** 1 mal deaktiviert.
+  *Bedeutung:* Regel 'without'.
 
 ## 3. Migrations-Status
 
-- **Wave-ready Dateien:** 252 / 270 (93 %)
+- **Wave-ready Dateien:** 254 / 272 (93 %)
 - **Verstösse nur wave-ready (default rules):** 0
 - **Top-Ordner wave-ready-Verstöße:**
   - Keine offenen Verstöße in wave-ready Dateien.
 
 ## 4. Architektur-Slices (nach Ordner)
 
-- **src/AiNetLinter/**: 151 files, median Footprint 76 LOC, 6× disable-all
-- **src/AiNetLinter.Tests/**: 118 files, median Footprint 121 LOC, 12× disable-all
+- **src/AiNetLinter/**: 152 files, median Footprint 79 LOC, 6× disable-all
+- **src/AiNetLinter.Tests/**: 119 files, median Footprint 121 LOC, 12× disable-all
 - **DefaultRunnerReporters.cs/**: 1 files, median Footprint 11 LOC
 
 ## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)

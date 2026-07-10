@@ -122,6 +122,31 @@ public sealed record GlobalConfigOverride
     public bool? BanPublicNestedTypesAllowPrivate { get; init; }
 
     /// <summary>
+    /// Erkennt und meldet Klassen, die primär als Weiterleitungsschicht ("Middle Man") agieren.
+    /// </summary>
+    public bool? AvoidExcessiveMiddleMen { get; init; }
+
+    /// <summary>
+    /// Grenzwert für das Verhältnis von reinen Weiterleitungsmethoden/-properties zur Gesamtanzahl.
+    /// </summary>
+    public double? MaxMiddleManForwardingRatio { get; init; }
+
+    /// <summary>
+    /// Mindestanzahl nicht-privater Mitglieder einer Klasse, ab der die Middle-Man-Regel greift.
+    /// </summary>
+    public int? MiddleManMinMemberCount { get; init; }
+
+    /// <summary>
+    /// Klassenname-Suffixe, die vom Middle-Man-Check ausgenommen sind.
+    /// </summary>
+    public IReadOnlyCollection<string>? MiddleManExemptSuffixes { get; init; }
+
+    /// <summary>
+    /// Basisklassen oder Schnittstellen, bei deren Implementierung eine Klasse vom Middle-Man-Check ausgenommen ist.
+    /// </summary>
+    public IReadOnlyCollection<string>? MiddleManExemptBaseTypes { get; init; }
+
+    /// <summary>
     /// Verbietet async void Methoden und lokale Funktionen.
     /// </summary>
     public bool? BanAsyncVoid { get; init; }

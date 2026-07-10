@@ -112,6 +112,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         NamingChecker.CheckAscii(node.Identifier, "Klasse", _ctx);
         SealedClassChecker.Check(node, _ctx);
         ValueObjectChecker.Check(node, node.Identifier.Text, isRecord: false, _ctx);
+        MiddleManChecker.Check(node, _ctx);
         ScopeChecker.CheckMethodOverloads(node, _ctx);
         StateChecker.CheckPrimaryConstructorDependencies(node, _ctx);
         ImmutabilityChecker.CheckClass(node, _ctx);
