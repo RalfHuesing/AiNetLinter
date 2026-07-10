@@ -136,6 +136,13 @@ public sealed record GlobalConfig
     public int MiddleManMinMemberCount { get; init; } = 5;
 
     /// <summary>
+    /// Wenn <c>true</c>, werden auch private Methoden und Properties für die Middle-Man-Analyse
+    /// berücksichtigt (Standard: <c>false</c>).
+    /// </summary>
+    public bool MiddleManIncludePrivateMembers { get; init; } = false;
+
+
+    /// <summary>
     /// Klassenname-Suffixe, die vom Middle-Man-Check ausgenommen sind.
     /// Standard: ["Extensions", "Proxy", "Adapter", "Facade"].
     /// </summary>
@@ -275,6 +282,7 @@ public sealed record GlobalConfig
             MiddleManMinMemberCount                     = o.MiddleManMinMemberCount                     ?? MiddleManMinMemberCount,
             MiddleManExemptSuffixes                     = o.MiddleManExemptSuffixes                     ?? MiddleManExemptSuffixes,
             MiddleManExemptBaseTypes                    = o.MiddleManExemptBaseTypes                    ?? MiddleManExemptBaseTypes,
+            MiddleManIncludePrivateMembers              = o.MiddleManIncludePrivateMembers              ?? MiddleManIncludePrivateMembers,
         };
     }
 }
