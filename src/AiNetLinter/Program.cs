@@ -79,6 +79,7 @@ public static class Program
             HasImpact = parsed.Impact.HasImpact,
             ImpactRef = parsed.Impact.ImpactRef,
             SyncCursorRules = parsed.SyncCursorRules,
+            CursorRulesPath = parsed.CursorRulesPath,
             Check = parsed.Check,
             NoCache = parsed.NoCache,
             CacheTtlMinutes = parsed.CacheTtlMinutes,

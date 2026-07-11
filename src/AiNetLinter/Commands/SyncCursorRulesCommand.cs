@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.IO;
 using System.Text;
@@ -28,8 +28,8 @@ internal static class SyncCursorRulesCommand
         }
 
         string baseDir = ResolveBaseDirectory(args.TargetPath);
-        var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
-        var mdcPath = Path.Combine(cursorRulesDir, "AiNetLinter.mdc");
+        var mdcPath = CursorRulesGenerator.ResolveCursorRulesPath(baseDir, args.CursorRulesPath);
+        var cursorRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
         var content = CursorRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json");
 

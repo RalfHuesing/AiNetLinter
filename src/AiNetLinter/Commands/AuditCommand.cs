@@ -170,7 +170,12 @@ internal static class AuditCommand
             {
                 c.WriteLine("[INFO]: Synchronisiere Cursor-Regeln (.mdc)...");
             }
-            CursorRulesGenerator.Sync(args.TargetPath, config, args.Verbose);
+            CursorRulesGenerator.Sync(new CursorRulesSyncOptions(
+                args.TargetPath,
+                config,
+                args.Verbose,
+                args.ConfigPath ?? "rules.json",
+                args.CursorRulesPath));
         }
         catch (Exception ex)
         {

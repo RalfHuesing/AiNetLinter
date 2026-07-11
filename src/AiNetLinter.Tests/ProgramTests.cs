@@ -1,5 +1,7 @@
 using Xunit;
+using System.CommandLine;
 using AiNetLinter;
+using AiNetLinter.Cli;
 
 namespace AiNetLinter.Tests;
 
@@ -34,5 +36,23 @@ public sealed class ProgramTests
         {
             Console.SetOut(originalOut);
         }
+    }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_CursorRulesPath()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--cursor-rules-path", "my-rules-dir" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal("my-rules-dir", parsed.CursorRulesPath);
+    }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_CursorRulesPath_WithAlias()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-crp", "my-rules-dir" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal("my-rules-dir", parsed.CursorRulesPath);
     }
 }
