@@ -402,5 +402,11 @@
       }
     }
   },
-  "PathOverrides": {}
+  "PathOverrides": {
+    "src/AiNetLinter/Commands/AuditCommand.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    }
+  }
 }

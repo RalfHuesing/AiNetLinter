@@ -88,6 +88,11 @@ public sealed class LinterArgs
     public bool SyncCursorRules { get; init; }
 
     /// <summary>
+    /// Holt oder setzt den benutzerdefinierten Pfad fuer die Cursor-Regeln (.mdc-Datei oder Verzeichnis).
+    /// </summary>
+    public string? CursorRulesPath { get; init; }
+
+    /// <summary>
     /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-cursor-rules und --playbook).
     /// </summary>
     public bool Check { get; init; }

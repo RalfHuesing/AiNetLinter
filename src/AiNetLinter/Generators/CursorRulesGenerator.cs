@@ -11,28 +11,38 @@ using AiNetLinter.Core;
 namespace AiNetLinter.Generators;
 
 /// <summary>
+/// Optionen für die Synchronisation der Cursor-Regeln.
+/// </summary>
+public sealed record CursorRulesSyncOptions(
+    string TargetPath,
+    Config Config,
+    bool Verbose,
+    string ConfigPath = "rules.json",
+    string? CursorRulesPath = null);
+
+/// <summary>
 /// Generiert eine Cursor-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
 /// </summary>
 public static class CursorRulesGenerator
 {
     /// <summary>
-    /// Generiert die MDC-Datei und schreibt sie nach .cursor/rules/AiNetLinter.mdc relativ zum angegebenen Pfad.
+    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad basierend auf den Optionen.
     /// </summary>
-    public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
+    public static void Sync(CursorRulesSyncOptions options)
     {
-        string baseDir = ResolveBaseDirectory(targetPath);
-        var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
-        if (!Directory.Exists(cursorRulesDir))
+        string baseDir = ResolveBaseDirectory(options.TargetPath);
+        var mdcPath = ResolveCursorRulesPath(baseDir, options.CursorRulesPath);
+        var cursorRulesDir = Path.GetDirectoryName(mdcPath);
+        if (!string.IsNullOrEmpty(cursorRulesDir) && !Directory.Exists(cursorRulesDir))
         {
             Directory.CreateDirectory(cursorRulesDir);
         }
 
-        var mdcPath = Path.Combine(cursorRulesDir, "AiNetLinter.mdc");
-        var content = GenerateContent(config, configPath);
+        var content = GenerateContent(options.Config, options.ConfigPath);
 
         if (File.Exists(mdcPath) && File.ReadAllText(mdcPath, Encoding.UTF8) == content)
         {
-            if (verbose)
+            if (options.Verbose)
             {
                 Console.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
             }
@@ -41,10 +51,49 @@ public static class CursorRulesGenerator
 
         File.WriteAllText(mdcPath, content, Encoding.UTF8);
 
-        if (verbose)
+        if (options.Verbose)
         {
             Console.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
         }
+    }
+
+    /// <summary>
+    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad (Überladung für Rückwärtskompatibilität).
+    /// </summary>
+    public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
+    {
+        Sync(new CursorRulesSyncOptions(targetPath, config, verbose, configPath));
+    }
+
+    /// <summary>
+    /// Ermittelt den Pfad zur Cursor-Regeldatei.
+    /// Prüft zuerst, ob ein benutzerdefinierter Pfad übergeben wurde.
+    /// Wenn nicht, wird geraten: Existiert .agents/rules? Dann dorthin. Andernfalls .cursor/rules.
+    /// </summary>
+    public static string ResolveCursorRulesPath(string baseDir, string? customPath = null)
+    {
+        if (!string.IsNullOrEmpty(customPath))
+        {
+            if (Directory.Exists(customPath) || (!customPath.EndsWith(".mdc", StringComparison.OrdinalIgnoreCase) && !Path.HasExtension(customPath)))
+            {
+                return Path.Combine(customPath, "AiNetLinter.mdc");
+            }
+            return customPath;
+        }
+
+        var agentsMdc = Path.Combine(baseDir, ".agents", "rules", "AiNetLinter.mdc");
+        var cursorMdc = Path.Combine(baseDir, ".cursor", "rules", "AiNetLinter.mdc");
+
+        if (File.Exists(agentsMdc)) return agentsMdc;
+        if (File.Exists(cursorMdc)) return cursorMdc;
+
+        var agentsRulesDir = Path.Combine(baseDir, ".agents", "rules");
+        if (Directory.Exists(agentsRulesDir)) return agentsMdc;
+
+        var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
+        if (Directory.Exists(cursorRulesDir)) return cursorMdc;
+
+        return cursorMdc;
     }
 
     private static string ResolveBaseDirectory(string targetPath)

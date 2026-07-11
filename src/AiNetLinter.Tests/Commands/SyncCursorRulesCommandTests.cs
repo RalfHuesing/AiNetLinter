@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Generators;
 
 namespace AiNetLinter.Tests.Commands;
 
@@ -128,5 +129,79 @@ public sealed class SyncCursorRulesCommandTests
         {
             File.Delete(tmpFile);
         }
+    }
+
+    [Fact]
+    public void ResolveCursorRulesPath_CustomPathAsDirectory_AppendsDefaultFileName()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "ResolveCustomDir_" + Guid.NewGuid());
+        Directory.CreateDirectory(tmpDir);
+        try
+        {
+            var result = CursorRulesGenerator.ResolveCursorRulesPath(tmpDir, tmpDir);
+            Assert.Equal(Path.Combine(tmpDir, "AiNetLinter.mdc"), result);
+        }
+        finally
+        {
+            Directory.Delete(tmpDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveCursorRulesPath_CustomPathAsMdcFile_ReturnsSame()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveCustomFile_" + Guid.NewGuid());
+        var customPath = Path.Combine(baseDir, "my_custom.mdc");
+        var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir, customPath);
+        Assert.Equal(customPath, result);
+    }
+
+    [Fact]
+    public void ResolveCursorRulesPath_Guessing_PrefersAgentsRulesIfItExists()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
+        var agentsDir = Path.Combine(baseDir, ".agents", "rules");
+        var cursorDir = Path.Combine(baseDir, ".cursor", "rules");
+        
+        Directory.CreateDirectory(agentsDir);
+        Directory.CreateDirectory(cursorDir);
+        
+        try
+        {
+            var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
+            Assert.Equal(Path.Combine(agentsDir, "AiNetLinter.mdc"), result);
+        }
+        finally
+        {
+            Directory.Delete(baseDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveCursorRulesPath_Guessing_FallsBackToCursorRulesIfOnlyItExists()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
+        var cursorDir = Path.Combine(baseDir, ".cursor", "rules");
+        
+        Directory.CreateDirectory(cursorDir);
+        
+        try
+        {
+            var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
+            Assert.Equal(Path.Combine(cursorDir, "AiNetLinter.mdc"), result);
+        }
+        finally
+        {
+            Directory.Delete(baseDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveCursorRulesPath_Guessing_DefaultsToCursorRulesIfNeitherExists()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
+        // Neither directory exists
+        var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
+        Assert.Equal(Path.Combine(baseDir, ".cursor", "rules", "AiNetLinter.mdc"), result);
     }
 }
