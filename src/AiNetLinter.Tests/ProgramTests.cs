@@ -55,4 +55,22 @@ public sealed class ProgramTests
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.Equal("my-rules-dir", parsed.CursorRulesPath);
     }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_SyncCursorRulesOnly()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--sync-cursor-rules-only" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.True(parsed.SyncCursorRulesOnly);
+    }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_SyncCursorRulesOnly_WithAlias()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-scro" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.True(parsed.SyncCursorRulesOnly);
+    }
 }

@@ -88,6 +88,11 @@ public sealed class LinterArgs
     public bool SyncCursorRules { get; init; }
 
     /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob nur Cursor-Regeldateien (.mdc) synchronisiert werden sollen (Fast-Path ohne Audit).
+    /// </summary>
+    public bool SyncCursorRulesOnly { get; init; }
+
+    /// <summary>
     /// Holt oder setzt den benutzerdefinierten Pfad fuer die Cursor-Regeln (.mdc-Datei oder Verzeichnis).
     /// </summary>
     public string? CursorRulesPath { get; init; }

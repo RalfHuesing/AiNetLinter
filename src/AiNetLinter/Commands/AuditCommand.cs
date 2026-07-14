@@ -66,7 +66,7 @@ internal static class AuditCommand
             profiler.StopPhase("DocumentAnalysis");
 
             profiler.StartPhase("OptionalOutputs");
-            await GenerateOptionalOutputsAsync(currentCatalog2.Solution, ctx, violations);
+            var optionalExitCode = await GenerateOptionalOutputsAsync(currentCatalog2.Solution, ctx, violations);
             profiler.StopPhase("OptionalOutputs");
 
             var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
@@ -74,7 +74,7 @@ internal static class AuditCommand
             var exitCode = WriteViolationsAndExit(scoped, outputRoot, ctx);
 
             profiler.WriteReport(args.TargetPath, currentCatalog2.Solution.FilePath, args.ConfigPath);
-            return exitCode;
+            return exitCode != 0 || optionalExitCode != 0 ? 1 : 0;
         }
         finally
         {
@@ -87,7 +87,7 @@ internal static class AuditCommand
         var profiler = ctx.Profiler;
         // Baseline-Pfad bleibt unverändert, um Regressionsrisiken zu vermeiden.
         profiler.StartPhase("OptionalOutputs");
-        await GenerateOptionalOutputsAsync(catalog.Solution, ctx);
+        var optionalExitCode = await GenerateOptionalOutputsAsync(catalog.Solution, ctx);
         profiler.StopPhase("OptionalOutputs");
 
         profiler.StartPhase("AutoFix");
@@ -97,7 +97,7 @@ internal static class AuditCommand
         {
             var exitCode = await AuditWithBaselineAsync(ctx, currentCatalog, ct);
             profiler.WriteReport(ctx.Args.TargetPath, currentCatalog.Solution.FilePath, ctx.Args.ConfigPath);
-            return exitCode;
+            return exitCode != 0 || optionalExitCode != 0 ? 1 : 0;
         }
         finally
         {
@@ -143,12 +143,13 @@ internal static class AuditCommand
         return WriteViolationsAndExit(scoped, outputRoot, ctx);
     }
 
-    private static async Task GenerateOptionalOutputsAsync(
+    private static async Task<int> GenerateOptionalOutputsAsync(
         Solution solution,
         AuditRunContext ctx,
         IReadOnlyCollection<RuleViolation>? violations = null)
     {
         var (args, config, _, c) = ctx;
+        int exitCode = 0;
 
         if (args.PlaybookPath != null)
         {
@@ -157,30 +158,22 @@ internal static class AuditCommand
 
         if (args.SyncCursorRules)
         {
-            TrySyncCursorRules(ctx);
-        }
-    }
-
-    private static void TrySyncCursorRules(AuditRunContext ctx)
-    {
-        var (args, config, _, c) = ctx;
-        try
-        {
-            if (args.Verbose)
+            try
             {
-                c.WriteLine("[INFO]: Synchronisiere Cursor-Regeln (.mdc)...");
+                var syncResult = SyncCursorRulesCommand.Run(args, c);
+                if (syncResult != 0)
+                {
+                    exitCode = syncResult;
+                }
             }
-            CursorRulesGenerator.Sync(new CursorRulesSyncOptions(
-                args.TargetPath,
-                config,
-                args.Verbose,
-                args.ConfigPath ?? "rules.json",
-                args.CursorRulesPath));
+            catch (Exception ex)
+            {
+                c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
+                exitCode = 1;
+            }
         }
-        catch (Exception ex)
-        {
-            c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
-        }
+
+        return exitCode;
     }
 
     private static async Task<(SourceFileCatalog Catalog, bool NeedsDispose)> ApplyAutoFixIfNeededAsync(
