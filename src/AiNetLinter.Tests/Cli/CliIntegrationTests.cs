@@ -129,6 +129,70 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
+    public void SyncCursorRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
+    {
+        using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
+        var rootDir = FindSolutionRoot();
+        var linterDllPath = FindLinterDll(rootDir);
+
+        var tempCursorRulesDir = Path.Combine(workspace.RootPath, ".cursor", "rules");
+        Directory.CreateDirectory(tempCursorRulesDir);
+        var expectedMdcPath = Path.Combine(tempCursorRulesDir, "AiNetLinter.mdc");
+
+        var processInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-cursor-rules",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(processInfo);
+        Assert.NotNull(process);
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.Equal(1, process.ExitCode);
+        Assert.Contains("EnforceSealedClasses", output);
+        Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}. Output:\n{output}");
+    }
+
+    [Fact]
+    public void SyncCursorRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
+    {
+        using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
+        var rootDir = FindSolutionRoot();
+        var linterDllPath = FindLinterDll(rootDir);
+
+        var tempCursorRulesDir = Path.Combine(workspace.RootPath, ".cursor", "rules");
+        Directory.CreateDirectory(tempCursorRulesDir);
+        var expectedMdcPath = Path.Combine(tempCursorRulesDir, "AiNetLinter.mdc");
+
+        var processInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-cursor-rules-only",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(processInfo);
+        Assert.NotNull(process);
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.Equal(0, process.ExitCode);
+        Assert.DoesNotContain("EnforceSealedClasses", output);
+        Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}");
+    }
+
+    [Fact]
     public void GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
     {
         var rootDir = FindSolutionRoot();

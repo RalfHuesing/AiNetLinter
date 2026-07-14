@@ -85,6 +85,12 @@ internal static class CliOptionFactory
         Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei",
     };
 
+    internal static Option<bool> CreateSyncCursorRulesOnlyOption() => new("--sync-cursor-rules-only", "-scro")
+    {
+        Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
+    };
+
+
     internal static Option<string?> CreateCursorRulesPathOption() => new("--cursor-rules-path", "-crp")
     {
         Description = "Benutzerdefinierter Pfad (Verzeichnis oder .mdc-Datei) fuer die Synchronisation der Cursor-Regeln (Optional)",

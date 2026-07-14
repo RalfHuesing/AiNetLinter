@@ -144,11 +144,16 @@ Optional: Playbook erzeugen (Repo-Statistik, Migrations-Status):
 
 Drift-Check in CI (ohne Datei zu schreiben):
 
-```cmd
-AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-cursor-rules --check
-```
+- Nur Cursor-Regeln prüfen (schneller Pfad ohne Lint-Lauf):
+  ```cmd
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-cursor-rules-only --check
+  ```
+- Kombinierter Lauf (Linter-Prüfung + Cursor-Regeln prüfen):
+  ```cmd
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-cursor-rules --check
+  ```
 
-Exit 1 wenn `.cursor/rules/AiNetLinter.mdc` veraltet ist.
+Exit 1 wenn `.cursor/rules/AiNetLinter.mdc` veraltet ist oder (im kombinierten Lauf) Code-Verstöße vorliegen.
 
 ---
 

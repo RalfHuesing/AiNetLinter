@@ -48,7 +48,7 @@ internal static class SyncCursorRulesCommand
             c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ResourceNotFound,
                 "Cursor-Regeldatei existiert nicht.",
                 context: mdcPath,
-                hint: "Cursor-Regeln mit --sync-cursor-rules (ohne --check) erzeugen."));
+                hint: "Cursor-Regeln mit --sync-cursor-rules-only (ohne --check) erzeugen."));
             return 1;
         }
 
@@ -58,7 +58,7 @@ internal static class SyncCursorRulesCommand
             c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.DriftDetected,
                 "Cursor-Regeln stimmen nicht mit der gespeicherten Datei ueberein.",
                 context: mdcPath,
-                hint: "Cursor-Regeln mit --sync-cursor-rules (ohne --check) aktualisieren."));
+                hint: "Cursor-Regeln mit --sync-cursor-rules-only (ohne --check) aktualisieren."));
             return 1;
         }
 

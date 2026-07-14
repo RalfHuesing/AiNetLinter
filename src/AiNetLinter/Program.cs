@@ -79,6 +79,7 @@ public static class Program
             HasImpact = parsed.Impact.HasImpact,
             ImpactRef = parsed.Impact.ImpactRef,
             SyncCursorRules = parsed.SyncCursorRules,
+            SyncCursorRulesOnly = parsed.SyncCursorRulesOnly,
             CursorRulesPath = parsed.CursorRulesPath,
             Check = parsed.Check,
             NoCache = parsed.NoCache,
@@ -112,10 +113,8 @@ public static class Program
 
         if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, ct);
 
-        // Schneller Pfad: --sync-cursor-rules ohne --playbook.
-        // Wenn --playbook ebenfalls gesetzt ist, fällt der Aufruf durch zu AuditCommand,
-        // das beide Ausgaben via GenerateOptionalOutputsAsync erzeugt.
-        if (args.SyncCursorRules && args.PlaybookPath == null) return SyncCursorRulesCommand.Run(args);
+        // Schneller Pfad: --sync-cursor-rules-only.
+        if (args.SyncCursorRulesOnly) return SyncCursorRulesCommand.Run(args);
 
         if (args.Footprint != null) return await FootprintCommand.RunAsync(args, ct);
 
