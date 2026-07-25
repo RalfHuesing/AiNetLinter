@@ -16,6 +16,12 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 - **Statische Kompilierung bevorzugen**: Kein `AssemblyLoadContext` oder Reflection-basiertes Laden zur Laufzeit.
 - **Einfachheit vor Abstraktion**: Bevorzuge direkte, verständliche Lösungen. Abstraktion nur dort, wo sie echten Mehrwert liefert (Wiederverwendung + Verständlichkeit).
 - **Wenig Magic**: Vermeide versteckte Mechanismen, die nur durch Lesen des generierten Codes verständlich sind.
+- **Dokumentation als Kontext nutzen**: Vor tiefgreifenden Änderungen oder Refactorings die Dokumentation im Ordner `Docs/` konsultieren:
+  - `Docs/configuration.md`: Sämtliche CLI-Optionen, Konfigurationsschemata und Linter-Regeln.
+  - `Docs/agent-api.md`: Spezifikation der Agenten-Schnittstellen und Formate.
+  - `Docs/integration.md`: Integrationsleitfaden für IDEs und externe Tools.
+  - `Docs/ROADMAP.md`: Geplante Features, Architektur-Entscheidungen und Fortschritt.
+  - `Docs/rationale.md`: Hintergründe und Motive zu Architektur-Entscheidungen.
 
 ## 2. Architektur-Verbote (Constraints)
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
