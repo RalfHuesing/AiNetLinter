@@ -35,11 +35,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.",
+            AgentHint: "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.",
             HasAutoFix: true,
             IsEnabled: c => c.Global.EnforceSealedClasses,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AvoidExcessiveMiddleMen",
@@ -55,11 +55,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: "Das Zusammenfassen von Klassen kann die Trennung von Belangen (Separation of Concerns) verändern. Prüfen Sie, ob die lose Kopplung hier tatsächlich architektonisch notwendig ist.",
             Intent: "general",
             Severity: "warning",
-            CursorHint: "Vermeide reine Weiterleitungsklassen ohne eigene Logik; konsolidiere Wrapper.",
+            AgentHint: "Vermeide reine Weiterleitungsklassen ohne eigene Logik; konsolidiere Wrapper.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AvoidExcessiveMiddleMen,
             IsMetric: false,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             ConfigKeyHint: "rules.json → Global.MaxMiddleManForwardingRatio"
         ),
         new(
@@ -76,11 +76,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: "Bei > 5 betroffenen Typen: Nutzer fragen. Externe Referenzen auf `HostClass.NestedType` sind Breaking Changes — Scope prüfen.",
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Verbot oeffentlicher nested Typen.",
+            AgentHint: "Verbot oeffentlicher nested Typen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.BanPublicNestedTypes,
             IsMetric: false,
-            IncludeInCursorRules: false,
+            IncludeInAgentRules: false,
             ConfigKeyHint: "rules.json → Global.NestedTypeExemptSuffixes"
         ),
         new(
@@ -95,11 +95,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Öffentliche Typen/Methoden/Properties: PascalCase.",
+            AgentHint: "Öffentliche Typen/Methoden/Properties: PascalCase.",
             HasAutoFix: true,
             IsEnabled: c => c.Global.EnforcePascalCase,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceAsciiIdentifiers",
@@ -115,11 +115,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: "Verhindert Homoglyphen-Angriffe (Trojan Source), bei denen ähnlich aussehende Unicode-Zeichen verwendet werden, um Schadcode zu tarnen.",
             Intent: "general",
             Severity: "error",
-            CursorHint: "Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
+            AgentHint: "Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceAsciiIdentifiers,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceSemanticNaming",
@@ -135,11 +135,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.",
+            AgentHint: "Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceSemanticNaming,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceNullableEnable",
@@ -153,11 +153,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "`#nullable enable` am Dateianfang jeder `.cs`-Datei.",
+            AgentHint: "`#nullable enable` am Dateianfang jeder `.cs`-Datei.",
             HasAutoFix: true,
             IsEnabled: c => c.Global.EnforceNullableEnable,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
     ];
 
@@ -177,11 +177,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "`dynamic` ist verboten.",
+            AgentHint: "`dynamic` ist verboten.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowDynamic,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AllowOutParameters",
@@ -197,11 +197,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "csharp-idiom",
             Severity: "warning",
-            CursorHint: "`out` Parameter verboten; Ausnahme: `Try*`-Methoden.",
+            AgentHint: "`out` Parameter verboten; Ausnahme: `Try*`-Methoden.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowOutParameters,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AllowUnsealedPartialClasses",
@@ -212,11 +212,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten).",
+            AgentHint: "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten).",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowUnsealedPartialClasses,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AllowTryPatternOutParameters",
@@ -227,11 +227,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "`out` in `Try*`-Methoden erlaubt.",
+            AgentHint: "`out` in `Try*`-Methoden erlaubt.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowTryPatternOutParameters,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AllowCancellationShutdownCatch",
@@ -242,11 +242,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "`OperationCanceledException` beim Shutdown abfangen erlaubt.",
+            AgentHint: "`OperationCanceledException` beim Shutdown abfangen erlaubt.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowCancellationShutdownCatch,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "AllowedEmptyReads",
@@ -257,11 +257,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Leseoperationen immer mit unmittelbarem Guard versehen.",
+            AgentHint: "Leseoperationen immer mit unmittelbarem Guard versehen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.AllowedEmptyReads,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
     ];
 
@@ -280,11 +280,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "warning",
-            CursorHint: "XML-Dokumentation für öffentliche APIs.",
+            AgentHint: "XML-Dokumentation für öffentliche APIs.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceXmlDocumentation,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceExplicitStateImmutability",
@@ -300,11 +300,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-resilience",
             Severity: "error",
-            CursorHint: "Felder und Properties `readonly`/`init`-only.",
+            AgentHint: "Felder und Properties `readonly`/`init`-only.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceExplicitStateImmutability,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceMinimalApiAsParameters",
@@ -318,11 +318,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "aspnet-binding",
             Severity: "error",
-            CursorHint: "Minimal-API: >4 Parameter → `[AsParameters]` + `record`.",
+            AgentHint: "Minimal-API: >4 Parameter → `[AsParameters]` + `record`.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceMinimalApiAsParameters,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceResultPatternOverExceptions",
@@ -337,11 +337,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "control-flow",
             Severity: "error",
-            CursorHint: "`Result<T>` für Domänenfehler; `throw` nur für Infrastruktur-Fehler.",
+            AgentHint: "`Result<T>` für Domänenfehler; `throw` nur für Infrastruktur-Fehler.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceResultPatternOverExceptions,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "EnforceValueObjectContracts",
@@ -356,11 +356,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "general",
             Severity: "error",
-            CursorHint: "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.",
+            AgentHint: "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceValueObjectContracts,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "PreventContextDependentOverloads",
@@ -375,11 +375,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
+            AgentHint: "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.PreventContextDependentOverloads,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
     ];
 
@@ -398,11 +398,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "error",
-            CursorHint: "Blazor-Komponenten muessen Code-Behind nutzen.",
+            AgentHint: "Blazor-Komponenten muessen Code-Behind nutzen.",
             HasAutoFix: false,
             IsEnabled: c => c.UiSeparation.BlazorRequireCodeBehind,
             IsMetric: false,
-            IncludeInCursorRules: false
+            IncludeInAgentRules: false
         ),
         new(
             RuleId: "BlazorRequireCssIsolation",
@@ -417,11 +417,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "warning",
-            CursorHint: "Blazor-Komponenten muessen CSS-Isolation nutzen.",
+            AgentHint: "Blazor-Komponenten muessen CSS-Isolation nutzen.",
             HasAutoFix: false,
             IsEnabled: c => c.UiSeparation.BlazorRequireCssIsolation,
             IsMetric: false,
-            IncludeInCursorRules: false
+            IncludeInAgentRules: false
         ),
         new(
             RuleId: "WpfRequireMinimalCodeBehind",
@@ -436,11 +436,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "error",
-            CursorHint: "WPF-Code-Behind darf keine Business-Logik enthalten.",
+            AgentHint: "WPF-Code-Behind darf keine Business-Logik enthalten.",
             HasAutoFix: false,
             IsEnabled: c => c.UiSeparation.WpfRequireMinimalCodeBehind,
             IsMetric: false,
-            IncludeInCursorRules: false
+            IncludeInAgentRules: false
         ),
     ];
 

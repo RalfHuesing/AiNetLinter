@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -43,14 +43,14 @@ public sealed class RuleRegistryTests
     }
 
     [Fact]
-    public void AllRules_HaveNonEmptyWarumAndCursorHint()
+    public void AllRules_HaveNonEmptyWarumAndAgentHint()
     {
         foreach (var rule in RuleRegistry.All)
         {
             Assert.False(string.IsNullOrWhiteSpace(rule.Warum),
                 $"Warum darf nicht leer sein fuer {rule.RuleId}.");
-            Assert.False(string.IsNullOrWhiteSpace(rule.CursorHint),
-                $"CursorHint darf nicht leer sein fuer {rule.RuleId}.");
+            Assert.False(string.IsNullOrWhiteSpace(rule.AgentHint),
+                $"AgentHint darf nicht leer sein fuer {rule.RuleId}.");
             Assert.NotEmpty(rule.Alternativen);
         }
     }

@@ -1073,7 +1073,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
 - `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 - `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
-- `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.cursor/rules/` empfiehlt sich `.mdc` als Dateiendung.
+- `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.agents/rules/` empfiehlt sich `.mdc` als Dateiendung.
 - `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
 - `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
 - `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
@@ -1081,10 +1081,10 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
 - `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
 - `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
-- `-scr`, `--sync-cursor-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.cursor/rules`).
-- `-scro`, `--sync-cursor-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.cursor/rules`).
-- `-crp`, `--cursor-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Cursor-Regeln (Optional).
-- `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-cursor-rules` oder `--sync-cursor-rules-only`: Prüft die Cursor-Regeldatei. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
+- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`).
+- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`).
+- `-arp`, `--agent-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Agent-Regeln (Optional).
+- `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-agent-rules` oder `--sync-agent-rules-only`: Prüft die Cursor-Regeldatei. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
 - `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
 - `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
@@ -1181,10 +1181,10 @@ ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
 
 Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
 
-Das Playbook wird über das CLI-Argument `--playbook <Pfad>` oder `-pb <Pfad>` generiert, standardmäßig unter `.cursor/rules/playbook.md`:
+Das Playbook wird über das CLI-Argument `--playbook <Pfad>` oder `-pb <Pfad>` generiert, standardmäßig unter `.agents/rules/playbook.md`:
 
 ```bash
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .cursor/rules/playbook.md
+ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .agents/rules/playbook.md
 ```
 
 ### Exit-Codes
@@ -1326,7 +1326,7 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
    ```
    Docs/playbook.md           — Architektur-Status, Top-Verstöße
-   .cursor/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
+   .agents/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
    ```
 
 2. **Nach einer Änderung:** Linter ausführen
@@ -1357,31 +1357,31 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 | `platform-default`   | Produktiv — Agenten beheben Verstöße direkt | Regulärer Entwicklungsbetrieb    |
 | `platform-ai-strict` | Zielrichtung — zeigt was sein sollte        | Code-Reviews, Architektur-Audits |
 
-### Cursor-Regeln synchronisieren
+### Agent-Regeln synchronisieren
 
-Nach jeder `rules.json`-Änderung muss `.cursor/rules/AiNetLinter.mdc` neu generiert werden.
+Nach jeder `rules.json`-Änderung muss `.agents/rules/AiNetLinter.mdc` neu generiert werden.
 
 **Nur synchronisieren (Schnell-Pfad ohne Lint-Lauf):**
 
 ```powershell
-AiNetLinter.exe --path . --config rules.json --sync-cursor-rules-only
+AiNetLinter.exe --path . --config rules.json --sync-agent-rules-only
 ```
 
 **Kombinierter Lauf (Lint + Synchronisation in einem Schritt):**
 
 ```powershell
-AiNetLinter.exe --path . --config rules.json --sync-cursor-rules
+AiNetLinter.exe --path . --config rules.json --sync-agent-rules
 ```
 
 Drift prüfen (Exit 1 bei Abweichungen, nützlich für CI):
 
 - Ohne Lint-Lauf (nur MDC-Check):
   ```powershell
-  AiNetLinter.exe --path . --config rules.json --sync-cursor-rules-only --check
+  AiNetLinter.exe --path . --config rules.json --sync-agent-rules-only --check
   ```
 - Mit Lint-Lauf (Lint + MDC-Check):
   ```powershell
-  AiNetLinter.exe --path . --config rules.json --sync-cursor-rules --check
+  AiNetLinter.exe --path . --config rules.json --sync-agent-rules --check
   ```
 
 ---
@@ -1401,7 +1401,7 @@ Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt emp
 
 1. **Konfiguration anlegen:** Erstelle eine `rules.json` mit den gewünschten Abweichungen von den Standardwerten. Fehlende Keys werden beim nächsten Lauf automatisch mit Standardwerten ergänzt (Auto-Sync, s. u.). Entfernte oder umbenannte Keys werden ebenfalls automatisch bereinigt.
 2. **Projekt-Overrides für Tests:** Definiere unter `ProjectOverrides` (z. B. für `*.Tests`) pragmatischere Schwellenwerte. So dürfen im Testcode Literale (Magic Values) verwendet werden und das Sealing konkreter Klassen kann deaktiviert werden.
-3. **Synchronisation der MDC-Dateien:** Nutze `--sync-cursor-rules` im Pre-Commit- oder CI-Schritt, um die `.cursor/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.cursor/rules/CodeQualitaet.mdc` verwaltet werden.
+3. **Synchronisation der MDC-Dateien:** Nutze `--sync-agent-rules` im Pre-Commit- oder CI-Schritt, um die `.agents/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.agents/rules/CodeQualitaet.mdc` verwaltet werden.
 4. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 7). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
 5. **MSBuild BuildHost-Verzeichnis:** Stelle sicher, dass bei der Distribution des Linters im CI-Build/Publish-Prozess die Verzeichnisse `BuildHost-netcore/` und `BuildHost-net472/` stets direkt neben der ausführbaren `AiNetLinter.exe` liegen.
 

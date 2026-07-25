@@ -7,7 +7,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ## Epic 1: Bootstrapping & Infrastruktur
 
 - [x] Initialisierung der Projektstruktur mit `.slnx` (Solution) und `.csproj`
-- [x] Einrichtung der globalen AI-Richtlinien (`.cursor/rules/AiNetLinterRichtlinien.mdc`)
+- [x] Einrichtung der globalen AI-Richtlinien (`.agents/rules/AiNetLinterRichtlinien.mdc`)
 - [x] Definition der Konfigurationsstruktur (`Config.cs`)
 - [x] **Automatischer rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`ConfigSyncer`)
 - [x] Definition der Fehlermodelle (`RuleViolation.cs`)
@@ -235,7 +235,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
   - _LLM-Impact:_ Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
   - _Machbarkeit:_ 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
 - [x] **Automatisch generiertes Repo-Playbook:**
-  - _Beschreibung:_ Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.cursor/rules/playbook.md`.
+  - _Beschreibung:_ Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.agents/rules/playbook.md`.
   - _LLM-Impact:_ Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
   - _Machbarkeit:_ 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
 - [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
@@ -275,7 +275,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Truncation & Test-Ausnahme:** Guidance-Update mit C#-Beispiel, Berücksichtigung von `AllowedEmptyReads` und Ausnehmen von Test-Fakes (Fake, Mock, Test).
 - [x] **Namespace-Abhängigkeiten mit Wildcards:** Glob-Matching für verbotene Namespace-Kopplungen.
 - [x] **Auto-Fixer sealed nested classes:** Erweiterung des automatischen Sealing auf private verschachtelte Klassen.
-- [x] **Cursor-Rules Generator Overhaul:** Vollständiges Rendern aller globalen Schalter, Metadaten-Tags und tabellarische Darstellung der `ProjectOverrides`.
+- [x] **Agent-Rules Generator Overhaul:** Vollständiges Rendern aller globalen Schalter, Metadaten-Tags und tabellarische Darstellung der `ProjectOverrides`.
 - [x] **Schnellerer Rules-Sync & CLI `--check`:** Direkter Konfigurations-Check und Drift-Erkennung ohne Laden der Solution (Exit 1 bei Abweichung).
 - [x] **Detaillierter Footprint & Debug-CLI:** `--footprint <Klassenname>` mit Auswertung der Top-3 Abhängigkeiten zur RAG-Optimierung.
 - [x] **Repo-Playbook-Generator Erweiterung:** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
@@ -317,7 +317,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **`CompoundSuppressionEvaluator`:** Isolierter Helper mit `Evaluate/FindConfigured/IsActive`
 - [x] **Phase 1 — Methoden-Ebene:** `MaxMethodLineCount` und `MaxMethodParameterCount` unterstützen Compound-Suppression mit 3-Szenarien-Guidance
 - [x] **Phase 2 — Klassen-Ebene:** `MaxPublicMembersPerType` und `MaxConstructorDependencies` unterstützen Compound-Suppression
-- [x] **CursorRules-Generator:** Abschnitt `Compound Suppressions` in `.mdc`-Output (inkl. Severity-Spalte)
+- [x] **AgentRules-Generator:** Abschnitt `Compound Suppressions` in `.mdc`-Output (inkl. Severity-Spalte)
 - [x] **Docs:** `rationale.md` Abschnitt 11/12, vollständiger `configuration.md`-Abschnitt
 - [x] **Tests:** Unit (Evaluator), Integration (Szenarien A–L), Guidance-Text, Config-Sync
 - [x] **`SeverityOverride`:** `CompoundSuppression.SeverityOverride` und `RuleViolation.EffectiveSeverity` — Violations in Szenario A (RelaxedLimit überschritten, Bedingungen erfüllt) können auf `"warning"` herabgestuft werden; `HasErrorSeverity` berücksichtigt `EffectiveSeverity`; Formatter zeigt `[warn]`-Tag
@@ -401,7 +401,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ## Epic 30: Codebase-Landkarten (`--map`)
 
-Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Ausgaben für Drift-Audits und Eval-Prompts erzeugen — ohne manuelles PowerShell-Scripting.
+Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Ausgaben für Drift-Audits und Eval-Prompts erzeugen — ohne manuelles PowerShell-saripting.
 
 - [x] **`--map vocabulary`:** Scannt alle `.cs`-Dateien und gruppiert Typ-Deklarationen nach Suffix-Muster (`*Checker`, `*Detector`, `*Builder` usw.). Dient als direkter Input für E02 Naming-Drift-Audits. Erkennt gemischte Prüf-Klassen-Patterns als Hinweis auf potenziellen Naming-Drift.
 - [x] **`--map structure`:** Verzeichnisbaum mit Dateigrößen (LOC), sortiert nach Größe. Markiert Dateien ab 80 % (⚠) und 95 % (🔴) des konfigurierten `MaxLineCount`-Limits. Dient als direkter Input für E03 Architecture-Intent-Audits.

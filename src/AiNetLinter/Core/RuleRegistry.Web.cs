@@ -46,11 +46,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "error",
-        CursorHint: "CSS-Datei splitten oder in Scoped CSS ueberfuehren.",
+        AgentHint: "CSS-Datei splitten oder in Scoped CSS ueberfuehren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Css.MaxCssLineCount > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Css.MaxCssLineCount,
         ConfigKeyHint: "rules.json → Web.Css.MaxCssLineCount (Web.IsEnabled muss true sein)"
     );
@@ -69,11 +69,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Globale CSS-Dateien klein halten; Komponenten-Styles in .razor.css.",
+        AgentHint: "Globale CSS-Dateien klein halten; Komponenten-Styles in .razor.css.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Css.PreferScopedCss,
         IsMetric: false,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         ConfigKeyHint: "rules.json → Web.Css.PreferScopedCss | Web.Css.PreferScopedCssMinRuleCount"
     );
 
@@ -91,11 +91,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Maximal 3 Selektor-Segmente; Scoped CSS nutzen.",
+        AgentHint: "Maximal 3 Selektor-Segmente; Scoped CSS nutzen.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Css.MaxCssSelectorComplexity > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Css.MaxCssSelectorComplexity,
         ConfigKeyHint: "rules.json → Web.Css.MaxCssSelectorComplexity (Web.IsEnabled muss true sein)"
     );
@@ -113,11 +113,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "general",
         Severity: "error",
-        CursorHint: "Syntax-Fehler im CSS beheben.",
+        AgentHint: "Syntax-Fehler im CSS beheben.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled,
         IsMetric: false,
-        IncludeInCursorRules: false
+        IncludeInAgentRules: false
     );
 
     private static RuleMetadata BuildJsMaxJsLineCount() => new(
@@ -134,11 +134,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "error",
-        CursorHint: "JavaScript-Datei aufteilen oder Logik nach C# migrieren.",
+        AgentHint: "JavaScript-Datei aufteilen oder Logik nach C# migrieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Js.MaxJsLineCount > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Js.MaxJsLineCount,
         ConfigKeyHint: "rules.json → Web.Js.MaxJsLineCount (Web.IsEnabled muss true sein)"
     );
@@ -157,11 +157,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "error",
-        CursorHint: "ES6-Modul mit 'export' verwenden; window-Zuweisungen vermeiden.",
+        AgentHint: "ES6-Modul mit 'export' verwenden; window-Zuweisungen vermeiden.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Js.EnforceJsModules,
         IsMetric: false,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         ConfigKeyHint: "rules.json → Web.Js.EnforceJsModules"
     );
 
@@ -178,11 +178,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "general",
         Severity: "error",
-        CursorHint: "Syntax-Fehler im JavaScript beheben.",
+        AgentHint: "Syntax-Fehler im JavaScript beheben.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled,
         IsMetric: false,
-        IncludeInCursorRules: false
+        IncludeInAgentRules: false
     );
 
     private static RuleMetadata BuildRazorMaxRazorLineCount() => new(
@@ -199,11 +199,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "error",
-        CursorHint: "Razor-Komponente aufteilen oder Teilbereiche extrahieren.",
+        AgentHint: "Razor-Komponente aufteilen oder Teilbereiche extrahieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxRazorLineCount > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxRazorLineCount,
         ConfigKeyHint: "rules.json → Web.Razor.MaxRazorLineCount (Web.IsEnabled muss true sein)"
     );
@@ -222,11 +222,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "@code-Block in Code-Behind-Datei (.razor.cs) verschieben.",
+        AgentHint: "@code-Block in Code-Behind-Datei (.razor.cs) verschieben.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxRazorCodeBlockLines > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxRazorCodeBlockLines,
         ConfigKeyHint: "rules.json → Web.Razor.MaxRazorCodeBlockLines"
     );
@@ -245,11 +245,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Innere Bereiche in eigene Komponenten extrahieren.",
+        AgentHint: "Innere Bereiche in eigene Komponenten extrahieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxMarkupNestingDepth > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxMarkupNestingDepth,
         ConfigKeyHint: "rules.json → Web.Razor.MaxMarkupNestingDepth"
     );
@@ -268,11 +268,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Inline-Lambda durch Methoden-Referenz oder Code-Behind-Methode ersetzen.",
+        AgentHint: "Inline-Lambda durch Methoden-Referenz oder Code-Behind-Methode ersetzen.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineEventLambdas,
         IsMetric: false,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         ConfigKeyHint: "rules.json → Web.Razor.BanInlineEventLambdas"
     );
 
@@ -290,11 +290,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Teilbereiche in eigenstaendige Komponenten extrahieren.",
+        AgentHint: "Teilbereiche in eigenstaendige Komponenten extrahieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxControlFlowBlocks > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxControlFlowBlocks,
         ConfigKeyHint: "rules.json → Web.Razor.MaxControlFlowBlocks"
     );
@@ -313,11 +313,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Innere Schleife in eigene Komponente extrahieren.",
+        AgentHint: "Innere Schleife in eigene Komponente extrahieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxForeachNestingDepth > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxForeachNestingDepth,
         ConfigKeyHint: "rules.json → Web.Razor.MaxForeachNestingDepth"
     );
@@ -336,11 +336,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Verwandte Parameter in Parameter-Objekt zusammenfassen.",
+        AgentHint: "Verwandte Parameter in Parameter-Objekt zusammenfassen.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.MaxComponentParameterCount > 0,
         IsMetric: true,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxComponentParameterCount,
         ConfigKeyHint: "rules.json → Web.Razor.MaxComponentParameterCount"
     );
@@ -359,11 +359,11 @@ internal static partial class RuleRegistry
         SicherheitsHinweis: null,
         Intent: "agent-context",
         Severity: "warning",
-        CursorHint: "Ternary-Ausdruck in Property oder Methode der Code-Behind-Datei extrahieren.",
+        AgentHint: "Ternary-Ausdruck in Property oder Methode der Code-Behind-Datei extrahieren.",
         HasAutoFix: false,
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineTernaryInAttributes,
         IsMetric: false,
-        IncludeInCursorRules: true,
+        IncludeInAgentRules: true,
         ConfigKeyHint: "rules.json → Web.Razor.BanInlineTernaryInAttributes"
     );
 }

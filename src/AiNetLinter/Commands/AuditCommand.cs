@@ -156,11 +156,11 @@ internal static class AuditCommand
             await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations), c);
         }
 
-        if (args.SyncCursorRules)
+        if (args.SyncAgentRules)
         {
             try
             {
-                var syncResult = SyncCursorRulesCommand.Run(args, c);
+                var syncResult = SyncAgentRulesCommand.Run(args, c);
                 if (syncResult != 0)
                 {
                     exitCode = syncResult;
@@ -168,7 +168,7 @@ internal static class AuditCommand
             }
             catch (Exception ex)
             {
-                c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Cursor-Regeln: {ex.Message}");
+                c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Agent-Regeln: {ex.Message}");
                 exitCode = 1;
             }
         }

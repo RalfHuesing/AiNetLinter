@@ -11,31 +11,31 @@ using AiNetLinter.Core;
 namespace AiNetLinter.Generators;
 
 /// <summary>
-/// Optionen für die Synchronisation der Cursor-Regeln.
+/// Optionen für die Synchronisation der Agent-Regeln.
 /// </summary>
-public sealed record CursorRulesSyncOptions(
+public sealed record AgentRulesSyncOptions(
     string TargetPath,
     Config Config,
     bool Verbose,
     string ConfigPath = "rules.json",
-    string? CursorRulesPath = null);
+    string? AgentRulesPath = null);
 
 /// <summary>
-/// Generiert eine Cursor-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
+/// Generiert eine Agent-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
 /// </summary>
-public static class CursorRulesGenerator
+public static class AgentRulesGenerator
 {
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad basierend auf den Optionen.
     /// </summary>
-    public static void Sync(CursorRulesSyncOptions options)
+    public static void Sync(AgentRulesSyncOptions options)
     {
         string baseDir = ResolveBaseDirectory(options.TargetPath);
-        var mdcPath = ResolveCursorRulesPath(baseDir, options.CursorRulesPath);
-        var cursorRulesDir = Path.GetDirectoryName(mdcPath);
-        if (!string.IsNullOrEmpty(cursorRulesDir) && !Directory.Exists(cursorRulesDir))
+        var mdcPath = ResolveAgentRulesPath(baseDir, options.AgentRulesPath);
+        var agentRulesDir = Path.GetDirectoryName(mdcPath);
+        if (!string.IsNullOrEmpty(agentRulesDir) && !Directory.Exists(agentRulesDir))
         {
-            Directory.CreateDirectory(cursorRulesDir);
+            Directory.CreateDirectory(agentRulesDir);
         }
 
         var content = GenerateContent(options.Config, options.ConfigPath);
@@ -44,7 +44,7 @@ public static class CursorRulesGenerator
         {
             if (options.Verbose)
             {
-                Console.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
+                Console.WriteLine($"[INFO]: Agent-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
             }
             return;
         }
@@ -53,7 +53,7 @@ public static class CursorRulesGenerator
 
         if (options.Verbose)
         {
-            Console.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
+            Console.WriteLine($"[INFO]: Agent-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
         }
     }
 
@@ -62,15 +62,15 @@ public static class CursorRulesGenerator
     /// </summary>
     public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
     {
-        Sync(new CursorRulesSyncOptions(targetPath, config, verbose, configPath));
+        Sync(new AgentRulesSyncOptions(targetPath, config, verbose, configPath));
     }
 
     /// <summary>
-    /// Ermittelt den Pfad zur Cursor-Regeldatei.
+    /// Ermittelt den Pfad zur Agent-Regeldatei.
     /// Prüft zuerst, ob ein benutzerdefinierter Pfad übergeben wurde.
-    /// Wenn nicht, wird geraten: Existiert .agents/rules? Dann dorthin. Andernfalls .cursor/rules.
+    /// Wenn nicht: Standard ist .agents/rules/AiNetLinter.mdc.
     /// </summary>
-    public static string ResolveCursorRulesPath(string baseDir, string? customPath = null)
+    public static string ResolveAgentRulesPath(string baseDir, string? customPath = null)
     {
         if (!string.IsNullOrEmpty(customPath))
         {
@@ -82,18 +82,7 @@ public static class CursorRulesGenerator
         }
 
         var agentsMdc = Path.Combine(baseDir, ".agents", "rules", "AiNetLinter.mdc");
-        var cursorMdc = Path.Combine(baseDir, ".cursor", "rules", "AiNetLinter.mdc");
-
-        if (File.Exists(agentsMdc)) return agentsMdc;
-        if (File.Exists(cursorMdc)) return cursorMdc;
-
-        var agentsRulesDir = Path.Combine(baseDir, ".agents", "rules");
-        if (Directory.Exists(agentsRulesDir)) return agentsMdc;
-
-        var cursorRulesDir = Path.Combine(baseDir, ".cursor", "rules");
-        if (Directory.Exists(cursorRulesDir)) return cursorMdc;
-
-        return cursorMdc;
+        return agentsMdc;
     }
 
     private static string ResolveBaseDirectory(string targetPath)
@@ -112,7 +101,7 @@ public static class CursorRulesGenerator
     public static string GenerateContent(Config config, string configPath)
     {
         var sb = new StringBuilder();
-        var version = typeof(CursorRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        var version = typeof(AgentRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
         AppendFrontmatter(sb, version, configPath);
         AppendKurzStil(sb, config);
@@ -209,7 +198,7 @@ public static class CursorRulesGenerator
         foreach (var metric in RuleRegistry.All.Where(r => r.IsMetric))
         {
             var val = metric.GetMetricLimit != null ? metric.GetMetricLimit(config) : 0;
-            sb.AppendLine($"| `{metric.RuleId}` | **{val}** | {metric.CursorHint} |");
+            sb.AppendLine($"| `{metric.RuleId}` | **{val}** | {metric.AgentHint} |");
         }
         sb.AppendLine();
     }
@@ -217,7 +206,7 @@ public static class CursorRulesGenerator
     private static void AppendActiveRulesByIntent(StringBuilder sb, Config config)
     {
         var activeRules = RuleRegistry.All
-            .Where(r => r.IncludeInCursorRules && !r.IsMetric && r.IsEnabled(config))
+            .Where(r => r.IncludeInAgentRules && !r.IsMetric && r.IsEnabled(config))
             .Select(r => (Rule: r, Intent: RuleMetadataRegistry.Resolve(r.RuleId, config).Intent))
             .ToList();
 
@@ -236,7 +225,7 @@ public static class CursorRulesGenerator
             foreach (var (rule, _) in group)
             {
                 var displayName = rule.RuleId == "StaticTestSentinel" ? "EnableTestSentinel" : rule.RuleId;
-                sb.AppendLine($"- **{displayName}** — {rule.CursorHint}");
+                sb.AppendLine($"- **{displayName}** — {rule.AgentHint}");
             }
             sb.AppendLine();
         }
@@ -249,7 +238,7 @@ public static class CursorRulesGenerator
     {
         var g = config.Global;
         var disabledNames = RuleRegistry.All
-            .Where(r => r.IncludeInCursorRules && !r.IsMetric && !r.IsEnabled(config) && !r.RuleId.StartsWith("Allow", StringComparison.Ordinal))
+            .Where(r => r.IncludeInAgentRules && !r.IsMetric && !r.IsEnabled(config) && !r.RuleId.StartsWith("Allow", StringComparison.Ordinal))
             .Select(r => r.RuleId == "StaticTestSentinel" ? "`EnableTestSentinel`" : $"`{r.RuleId}`")
             .ToList();
 
@@ -307,7 +296,7 @@ public static class CursorRulesGenerator
     private static void CollectGlobalOverrideParts(ProjectOverrideEntry overrides, List<string> parts)
     {
         if (overrides.Global == null) return;
-        foreach (var rule in RuleRegistry.All.Where(r => r.IncludeInCursorRules && !r.IsMetric))
+        foreach (var rule in RuleRegistry.All.Where(r => r.IncludeInAgentRules && !r.IsMetric))
         {
             var propName = rule.RuleId == "StaticTestSentinel" ? "EnableTestSentinel" : rule.RuleId;
             var prop = typeof(GlobalConfigOverride).GetProperty(propName);

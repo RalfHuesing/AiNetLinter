@@ -118,9 +118,9 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
 | `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive) |
 | `--playbook <pfad>` | string | Repo-Playbook generieren |
-| `--sync-cursor-rules` | bool | `.cursor/rules/AiNetLinter.mdc` im Rahmen eines Linter-Laufs aktualisieren |
-| `--sync-cursor-rules-only` | bool | Nur `.cursor/rules/AiNetLinter.mdc` aktualisieren und Programm sofort beenden (schneller Pfad ohne Lint-Lauf) |
-| `--cursor-rules-path <pfad>` / `-crp <pfad>` | string | Custom-Pfad (.mdc-Datei oder Verzeichnis) für die Synchronisation der Cursor-Regeln (Optional) |
+| `--sync-agent-rules` | bool | `.agents/rules/AiNetLinter.mdc` im Rahmen eines Linter-Laufs aktualisieren |
+| `--sync-agent-rules-only` | bool | Nur `.agents/rules/AiNetLinter.mdc` aktualisieren und Programm sofort beenden (schneller Pfad ohne Lint-Lauf) |
+| `--agent-rules-path <pfad>` / `-arp <pfad>` | string | Custom-Pfad (.mdc-Datei oder Verzeichnis) für die Synchronisation der Agent-Regeln (Optional) |
 | `--impact <typ>` | string | Impact-Analyse für einen Typ |
 | `--debt-report` | bool | Tech-Debt-Report generieren |
 | `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung) |

@@ -80,25 +80,25 @@ internal static class CliOptionFactory
         Arity = ArgumentArity.ZeroOrOne
     };
 
-    internal static Option<bool> CreateSyncCursorRulesOption() => new("--sync-cursor-rules", "-scr")
+    internal static Option<bool> CreateSyncAgentRulesOption() => new("--sync-agent-rules", "-sar")
     {
-        Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei",
+        Description = "Synchronisiert die rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei",
     };
 
-    internal static Option<bool> CreateSyncCursorRulesOnlyOption() => new("--sync-cursor-rules-only", "-scro")
+    internal static Option<bool> CreateSyncAgentRulesOnlyOption() => new("--sync-agent-rules-only", "-saro")
     {
-        Description = "Synchronisiert die rules.json Konfiguration als .cursor/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
+        Description = "Synchronisiert die rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
     };
 
 
-    internal static Option<string?> CreateCursorRulesPathOption() => new("--cursor-rules-path", "-crp")
+    internal static Option<string?> CreateAgentRulesPathOption() => new("--agent-rules-path", "-arp")
     {
-        Description = "Benutzerdefinierter Pfad (Verzeichnis oder .mdc-Datei) fuer die Synchronisation der Cursor-Regeln (Optional)",
+        Description = "Benutzerdefinierter Pfad (Verzeichnis oder .mdc-Datei) fuer die Synchronisation der Agent-Regeln (Optional)",
     };
 
     internal static Option<bool> CreateCheckOption() => new("--check")
     {
-        Description = "Prueft auf Drift (z. B. bei --sync-cursor-rules) ohne Dateien zu schreiben",
+        Description = "Prueft auf Drift (z. B. bei --sync-agent-rules) ohne Dateien zu schreiben",
     };
 
     internal static Option<string?> CreateFootprintOption() => new("--footprint")

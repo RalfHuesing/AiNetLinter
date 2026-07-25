@@ -24,7 +24,7 @@ namespace AiNetLinter.Tests;
 // @covers ImpactExecutor
 // @covers PostAnalysisChecks
 // @covers TestProjectDetector
-// @covers CursorRulesGenerator
+// @covers AgentRulesGenerator
 
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
@@ -288,7 +288,7 @@ public sealed class DeveloperExperienceTests
     }
 
     [Fact]
-    public void SyncCursorRules_GeneratesMdcFile_WritesSuccessfully()
+    public void SyncAgentRules_GeneratesMdcFile_WritesSuccessfully()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
@@ -320,9 +320,9 @@ public sealed class DeveloperExperienceTests
 
         try
         {
-            CursorRulesGenerator.Sync(tempDir, config, verbose: false);
+            AgentRulesGenerator.Sync(tempDir, config, verbose: false);
 
-            var mdcPath = Path.Combine(tempDir, ".cursor", "rules", "AiNetLinter.mdc");
+            var mdcPath = Path.Combine(tempDir, ".agents", "rules", "AiNetLinter.mdc");
             Assert.True(File.Exists(mdcPath));
 
             var content = File.ReadAllText(mdcPath);
@@ -341,21 +341,21 @@ public sealed class DeveloperExperienceTests
     }
 
     [Fact]
-    public void SyncCursorRules_OnSelfRepository_UpdatesMdc()
+    public void SyncAgentRules_OnSelfRepository_UpdatesMdc()
     {
         var root = FindProjectRoot();
         var configPath = Path.Combine(root, "rules.json");
         var config = ConfigLoader.TryLoadConfig(configPath, isRequired: true);
         Assert.NotNull(config);
 
-        CursorRulesGenerator.Sync(root, config, verbose: true);
+        AgentRulesGenerator.Sync(root, config, verbose: true);
 
-        var mdcPath = Path.Combine(root, ".cursor", "rules", "AiNetLinter.mdc");
+        var mdcPath = Path.Combine(root, ".agents", "rules", "AiNetLinter.mdc");
         Assert.True(File.Exists(mdcPath));
     }
 
     [Fact]
-    public void GuidanceD_CursorRulesContainsCompoundSuppressionsTable()
+    public void GuidanceD_AgentRulesContainsCompoundSuppressionsTable()
     {
         var config = new Config
         {
@@ -378,14 +378,14 @@ public sealed class DeveloperExperienceTests
             }
         };
 
-        var content = CursorRulesGenerator.GenerateContent(config, "rules.json");
+        var content = AgentRulesGenerator.GenerateContent(config, "rules.json");
 
         Assert.Contains("## Compound Suppressions (kontextabhängige Limiten)", content);
         Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | — | Test reason here |", content);
     }
 
     [Fact]
-    public void GuidanceE_CursorRulesContainsNoCompoundSuppressionsTable()
+    public void GuidanceE_AgentRulesContainsNoCompoundSuppressionsTable()
     {
         var config = new Config
         {
@@ -396,7 +396,7 @@ public sealed class DeveloperExperienceTests
             }
         };
 
-        var content = CursorRulesGenerator.GenerateContent(config, "rules.json");
+        var content = AgentRulesGenerator.GenerateContent(config, "rules.json");
 
         Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
     }

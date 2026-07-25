@@ -230,7 +230,7 @@ public sealed class RepoPlaybookGenerator
         sb.AppendLine("# AI Repository Playbook (Auto-Generated)");
         sb.AppendLine($"Auto-generiert durch AiNetLinter {ctx.Version} aus `{ctx.ConfigPath}`.");
         sb.AppendLine("Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.");
-        sb.AppendLine("Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.");
+        sb.AppendLine("Es dient als Orientierungshilfe fuer LLM-Agenten, um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.");
         sb.AppendLine();
         sb.AppendLine("## 1. Genutzte Architekturmuster");
         sb.AppendLine($"- **Result-Pattern-Nutzung:** {ctx.Stats.TotalResultMethods} Methoden liefern `Result` oder `Result<T>` zurueck.");

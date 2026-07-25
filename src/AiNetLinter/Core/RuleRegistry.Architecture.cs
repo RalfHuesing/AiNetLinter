@@ -23,11 +23,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "error",
-            CursorHint: "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
+            AgentHint: "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
             HasAutoFix: false,
             IsEnabled: c => c.ForbiddenNamespaceDependencies.Any(),
             IsMetric: false,
-            IncludeInCursorRules: false
+            IncludeInAgentRules: false
         ),
         new(
             RuleId: "EnforceNamespaceDirectoryMapping",
@@ -42,11 +42,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "error",
-            CursorHint: "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).",
+            AgentHint: "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceNamespaceDirectoryMapping,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: "DetectAndBanPhantomDependencies",
@@ -62,11 +62,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "architecture",
             Severity: "error",
-            CursorHint: "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.",
+            AgentHint: "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.DetectAndBanPhantomDependencies,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
     ];
 
@@ -87,11 +87,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "test-coverage",
             Severity: "warning",
-            CursorHint: "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.",
+            AgentHint: "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnableTestSentinel,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
     ];
 }

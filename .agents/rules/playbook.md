@@ -6,7 +6,7 @@ alwaysApply: false
 # AI Repository Playbook (Auto-Generated)
 Auto-generiert durch AiNetLinter 1.0.76 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
-Es dient als Orientierungshilfe fuer KI-Assistenten (wie Cursor), um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
+Es dient als Orientierungshilfe fuer LLM-Agenten, um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 
 ## 1. Genutzte Architekturmuster
 - **Result-Pattern-Nutzung:** 5 Methoden liefern `Result` oder `Result<T>` zurueck.

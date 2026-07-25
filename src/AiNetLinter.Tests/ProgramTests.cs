@@ -39,38 +39,38 @@ public sealed class ProgramTests
     }
 
     [Fact]
-    public void CliCommandBuilder_Parses_CursorRulesPath()
+    public void CliCommandBuilder_Parses_AgentRulesPath()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--cursor-rules-path", "my-rules-dir" });
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--agent-rules-path", "my-rules-dir" });
         var parsed = CliCommandBuilder.Parse(result, options);
-        Assert.Equal("my-rules-dir", parsed.CursorRulesPath);
+        Assert.Equal("my-rules-dir", parsed.AgentRulesPath);
     }
 
     [Fact]
-    public void CliCommandBuilder_Parses_CursorRulesPath_WithAlias()
+    public void CliCommandBuilder_Parses_AgentRulesPath_WithAlias()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-crp", "my-rules-dir" });
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-arp", "my-rules-dir" });
         var parsed = CliCommandBuilder.Parse(result, options);
-        Assert.Equal("my-rules-dir", parsed.CursorRulesPath);
+        Assert.Equal("my-rules-dir", parsed.AgentRulesPath);
     }
 
     [Fact]
-    public void CliCommandBuilder_Parses_SyncCursorRulesOnly()
+    public void CliCommandBuilder_Parses_SyncAgentRulesOnly()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--sync-cursor-rules-only" });
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--sync-agent-rules-only" });
         var parsed = CliCommandBuilder.Parse(result, options);
-        Assert.True(parsed.SyncCursorRulesOnly);
+        Assert.True(parsed.SyncAgentRulesOnly);
     }
 
     [Fact]
-    public void CliCommandBuilder_Parses_SyncCursorRulesOnly_WithAlias()
+    public void CliCommandBuilder_Parses_SyncAgentRulesOnly_WithAlias()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-scro" });
+        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-saro" });
         var parsed = CliCommandBuilder.Parse(result, options);
-        Assert.True(parsed.SyncCursorRulesOnly);
+        Assert.True(parsed.SyncAgentRulesOnly);
     }
 }

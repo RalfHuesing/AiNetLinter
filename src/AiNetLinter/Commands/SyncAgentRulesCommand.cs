@@ -11,12 +11,12 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Commands;
 
 /// <summary>
-/// Synchronisiert oder prüft die Cursor-Regeldateien (.mdc) aus der aktuellen Konfiguration.
+/// Synchronisiert oder prüft die Agent-Regeldateien (.mdc) aus der aktuellen Konfiguration.
 /// </summary>
-internal static class SyncCursorRulesCommand
+internal static class SyncAgentRulesCommand
 {
     /// <summary>
-    /// Führt die Cursor-Regeln-Synchronisation oder Drift-Prüfung aus.
+    /// Führt die Agent-Regeln-Synchronisation oder Drift-Prüfung aus.
     /// </summary>
     internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
@@ -28,17 +28,17 @@ internal static class SyncCursorRulesCommand
         }
 
         string baseDir = ResolveBaseDirectory(args.TargetPath);
-        var mdcPath = CursorRulesGenerator.ResolveCursorRulesPath(baseDir, args.CursorRulesPath);
-        var cursorRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
+        var mdcPath = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, args.AgentRulesPath);
+        var agentRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
-        var content = CursorRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json");
+        var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json");
 
         if (args.Check)
         {
             return RunCheck(mdcPath, content, c);
         }
 
-        return RunWrite(cursorRulesDir, mdcPath, content, c);
+        return RunWrite(agentRulesDir, mdcPath, content, c);
     }
 
     private static int RunCheck(string mdcPath, string content, ILintConsole c)
@@ -46,9 +46,9 @@ internal static class SyncCursorRulesCommand
         if (!File.Exists(mdcPath))
         {
             c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ResourceNotFound,
-                "Cursor-Regeldatei existiert nicht.",
+                "Agent-Regeldatei existiert nicht.",
                 context: mdcPath,
-                hint: "Cursor-Regeln mit --sync-cursor-rules-only (ohne --check) erzeugen."));
+                hint: "Agent-Regeln mit --sync-agent-rules-only (ohne --check) erzeugen."));
             return 1;
         }
 
@@ -56,31 +56,31 @@ internal static class SyncCursorRulesCommand
         if (existing != content)
         {
             c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.DriftDetected,
-                "Cursor-Regeln stimmen nicht mit der gespeicherten Datei ueberein.",
+                "Agent-Regeln stimmen nicht mit der gespeicherten Datei ueberein.",
                 context: mdcPath,
-                hint: "Cursor-Regeln mit --sync-cursor-rules-only (ohne --check) aktualisieren."));
+                hint: "Agent-Regeln mit --sync-agent-rules-only (ohne --check) aktualisieren."));
             return 1;
         }
 
-        c.WriteLine("[OK]: Cursor-Regeln sind aktuell.");
+        c.WriteLine("[OK]: Agent-Regeln sind aktuell.");
         return 0;
     }
 
-    private static int RunWrite(string cursorRulesDir, string mdcPath, string content, ILintConsole c)
+    private static int RunWrite(string agentRulesDir, string mdcPath, string content, ILintConsole c)
     {
-        if (!Directory.Exists(cursorRulesDir))
+        if (!Directory.Exists(agentRulesDir))
         {
-            Directory.CreateDirectory(cursorRulesDir);
+            Directory.CreateDirectory(agentRulesDir);
         }
 
         if (File.Exists(mdcPath) && File.ReadAllText(mdcPath, Encoding.UTF8) == content)
         {
-            c.WriteLine($"[INFO]: Cursor-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
+            c.WriteLine($"[INFO]: Agent-Regeldatei ist bereits aktuell (kein Schreibzugriff): {mdcPath}");
             return 0;
         }
 
         File.WriteAllText(mdcPath, content, Encoding.UTF8);
-        c.WriteLine($"[INFO]: Cursor-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
+        c.WriteLine($"[INFO]: Agent-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
         return 0;
     }
 

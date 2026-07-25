@@ -52,7 +52,7 @@ public sealed class CliIntegrationTests
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
-        var playbookFile = Path.Combine(rootDir, ".cursor", "rules", "playbook.md");
+        var playbookFile = Path.Combine(rootDir, ".agents", "rules", "playbook.md");
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
@@ -85,9 +85,9 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncCursorRulesAndPlaybook_Combined_GeneratesBoth()
+    public void SyncAgentRulesAndPlaybook_Combined_GeneratesBoth()
     {
-        // Reproduziert den P0-Bug: --sync-cursor-rules + --playbook im selben Aufruf
+        // Reproduziert den P0-Bug: --sync-agent-rules + --playbook im selben Aufruf
         // sollte beide Artefakte erzeugen (früher return verhinderte das Playbook).
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -100,7 +100,7 @@ public sealed class CliIntegrationTests
         var processInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\" --sync-cursor-rules --playbook \"{tempPlaybookPath}\"",
+            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\" --sync-agent-rules --playbook \"{tempPlaybookPath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -129,20 +129,20 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncCursorRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
+    public void SyncAgentRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
 
-        var tempCursorRulesDir = Path.Combine(workspace.RootPath, ".cursor", "rules");
-        Directory.CreateDirectory(tempCursorRulesDir);
-        var expectedMdcPath = Path.Combine(tempCursorRulesDir, "AiNetLinter.mdc");
+        var tempAgentRulesDir = Path.Combine(workspace.RootPath, ".agents", "rules");
+        Directory.CreateDirectory(tempAgentRulesDir);
+        var expectedMdcPath = Path.Combine(tempAgentRulesDir, "AiNetLinter.mdc");
 
         var processInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-cursor-rules",
+            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -161,20 +161,20 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncCursorRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
+    public void SyncAgentRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
 
-        var tempCursorRulesDir = Path.Combine(workspace.RootPath, ".cursor", "rules");
-        Directory.CreateDirectory(tempCursorRulesDir);
-        var expectedMdcPath = Path.Combine(tempCursorRulesDir, "AiNetLinter.mdc");
+        var tempAgentRulesDir = Path.Combine(workspace.RootPath, ".agents", "rules");
+        Directory.CreateDirectory(tempAgentRulesDir);
+        var expectedMdcPath = Path.Combine(tempAgentRulesDir, "AiNetLinter.mdc");
 
         var processInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-cursor-rules-only",
+            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules-only",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -276,7 +276,7 @@ public sealed class CliIntegrationTests
 
     /// <summary>
     /// Kein Assert — schreibt Linter-Output nach test-output/self-lint.txt (.gitignore'd).
-    /// Für Claude Code: nach dotnet test die Datei lesen statt erneut zu testen.
+    /// Für LLM-Agenten: nach dotnet test die Datei lesen statt erneut zu testen.
     /// </summary>
     [Fact]
     public void DiagnosticDump_SelfLintOutput_WritesToFile()

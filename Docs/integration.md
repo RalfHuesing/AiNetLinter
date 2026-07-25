@@ -1,10 +1,10 @@
 # AiNetLinter — Projekt-Integration (Schritt-für-Schritt)
 
-AiNetLinter ist ein CLI-Linter für .NET-Projekte, der C#-Code (und optional CSS, JavaScript, Razor) auf AI-Lesbarkeit und Strukturqualität prüft — Metriken wie Methodenlänge, zyklomatische Komplexität, Kopplung und semantische Benennung, optimiert für LLM-Agenten als Entwicklungspartner. Das Tool läuft als eigenständige `.exe`, erzeugt Markdown-Reports und synchronisiert Coding-Regeln direkt in Cursor/Claude-Regelwerke.
+AiNetLinter ist ein CLI-Linter für .NET-Projekte, der C#-Code (und optional CSS, JavaScript, Razor) auf AI-Lesbarkeit und Strukturqualität prüft — Metriken wie Methodenlänge, zyklomatische Komplexität, Kopplung und semantische Benennung, optimiert für LLM-Agenten als Entwicklungspartner. Das Tool läuft als eigenständige `.exe`, erzeugt Markdown-Reports und synchronisiert Coding-Regeln direkt in LLM-Agenten-Regelwerke.
 
 Diese Anleitung richtet sich an AI-Agenten, die AiNetLinter als Quality-Gate in ein bestehendes .NET-Projekt integrieren sollen.
 
-**Ziel:** AiNetLinter läuft als automatisierter Test im bestehenden Testprojekt. Neue Regelverstösse in geänderten Dateien blockieren den Build (Ratchet-Prinzip). Cursor/Claude-Regeln werden automatisch synchronisiert.
+**Ziel:** AiNetLinter läuft als automatisierter Test im bestehenden Testprojekt. Neue Regelverstösse in geänderten Dateien blockieren den Build (Ratchet-Prinzip). Agent-Regeln werden automatisch synchronisiert.
 
 ---
 
@@ -89,7 +89,7 @@ TEST "LintReport wird erzeugt und ist grün":
        --config  <Pfad zur rules.json>
        --path    <Solution-Root>
        --baseline <Pfad zur Baseline-JSON>   ← nach Schritt 6 verfügbar
-       --sync-cursor-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (oder .cursor/rules/AiNetLinter.mdc)
+       --sync-agent-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (oder .agents/rules/AiNetLinter.mdc)
 
    4. Prozess starten, stdout + stderr lesen, auf Exit warten
 
@@ -130,9 +130,9 @@ Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ra
 
 ## Schritt 7: Agent Rules (.agents / .cursor) synchronisieren
 
-`--sync-cursor-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
+`--sync-agent-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
 
-- `.agents/rules/AiNetLinter.mdc` (oder `.cursor/rules/AiNetLinter.mdc`) — Metriken und aktive Regeln aus der `rules.json`
+- `.agents/rules/AiNetLinter.mdc` (oder `.agents/rules/AiNetLinter.mdc`) — Metriken und aktive Regeln aus der `rules.json`
 
 Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
 
@@ -144,16 +144,16 @@ Optional: Playbook erzeugen (Repo-Statistik, Migrations-Status):
 
 Drift-Check in CI (ohne Datei zu schreiben):
 
-- Nur Cursor-Regeln prüfen (schneller Pfad ohne Lint-Lauf):
+- Nur Agent-Regeln prüfen (schneller Pfad ohne Lint-Lauf):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-cursor-rules-only --check
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules-only --check
   ```
-- Kombinierter Lauf (Linter-Prüfung + Cursor-Regeln prüfen):
+- Kombinierter Lauf (Linter-Prüfung + Agent-Regeln prüfen):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-cursor-rules --check
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules --check
   ```
 
-Exit 1 wenn `.cursor/rules/AiNetLinter.mdc` veraltet ist oder (im kombinierten Lauf) Code-Verstöße vorliegen.
+Exit 1 wenn `.agents/rules/AiNetLinter.mdc` veraltet ist oder (im kombinierten Lauf) Code-Verstöße vorliegen.
 
 ---
 
@@ -200,7 +200,7 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
 | Startkonfiguration | `AiNetLinter/rules/<projektname>.rules.json` | Ja |
 | Baseline (Ratchet) | `AiNetLinter/rules/<projektname>-baseline.json` | Ja |
 | Tool-Dokumentation | `AiNetLinter/docs/*.md` | Ja |
-| Cursor/Claude-Regeln | `.cursor/rules/AiNetLinter.mdc` | Ja |
+| Agent-Regeln | `.agents/rules/AiNetLinter.mdc` | Ja |
 | Lint-Reports | `AiNetLinter/output/` | **Nein** (gitignored) |
 
 ---

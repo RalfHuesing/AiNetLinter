@@ -12,15 +12,15 @@ using AiNetLinter.Generators;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// Tests für <see cref="SyncCursorRulesCommand"/>.
+/// Tests für <see cref="SyncAgentRulesCommand"/>.
 /// </summary>
 [Collection("ConsoleTestCollection")]
-public sealed class SyncCursorRulesCommandTests
+public sealed class SyncAgentRulesCommandTests
 {
     [Fact]
     public void Run_CheckMode_WhenFileNotExists_ReturnsOne()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncCursorRulesTest_" + Guid.NewGuid());
+        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncAgentRulesTest_" + Guid.NewGuid());
         Directory.CreateDirectory(tmpDir);
 
         // Erstelle ein minimales rules.json damit Config geladen werden kann
@@ -33,7 +33,7 @@ public sealed class SyncCursorRulesCommandTests
             ConfigPath = rulesPath,
             Verbose = false,
             Check = true,
-            SyncCursorRules = true,
+            SyncAgentRules = true,
         };
 
         var originalError = Console.Error;
@@ -41,7 +41,7 @@ public sealed class SyncCursorRulesCommandTests
         Console.SetError(errorWriter);
         try
         {
-            var result = SyncCursorRulesCommand.Run(args);
+            var result = SyncAgentRulesCommand.Run(args);
             Assert.Equal(1, result);
         }
         finally
@@ -54,7 +54,7 @@ public sealed class SyncCursorRulesCommandTests
     [Fact]
     public void Run_WriteMode_CreatesFile()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncCursorRulesTest_" + Guid.NewGuid());
+        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncAgentRulesTest_" + Guid.NewGuid());
         Directory.CreateDirectory(tmpDir);
 
         // Traversiere von AppContext.BaseDirectory bis rules.json gefunden wird
@@ -71,15 +71,15 @@ public sealed class SyncCursorRulesCommandTests
             ConfigPath = rulesPath,
             Verbose = false,
             Check = false,
-            SyncCursorRules = true,
+            SyncAgentRules = true,
         };
 
         try
         {
-            var result = SyncCursorRulesCommand.Run(args);
+            var result = SyncAgentRulesCommand.Run(args);
             Assert.Equal(0, result);
 
-            var mdcPath = Path.Combine(tmpDir, ".cursor", "rules", "AiNetLinter.mdc");
+            var mdcPath = Path.Combine(tmpDir, ".agents", "rules", "AiNetLinter.mdc");
             Assert.True(File.Exists(mdcPath), "Die .mdc-Datei sollte erstellt worden sein.");
         }
         finally
@@ -107,7 +107,7 @@ public sealed class SyncCursorRulesCommandTests
         Directory.CreateDirectory(tmpDir);
         try
         {
-            var result = SyncCursorRulesCommand.ResolveBaseDirectory(tmpDir);
+            var result = SyncAgentRulesCommand.ResolveBaseDirectory(tmpDir);
             Assert.Equal(tmpDir, result);
         }
         finally
@@ -122,7 +122,7 @@ public sealed class SyncCursorRulesCommandTests
         var tmpFile = Path.GetTempFileName();
         try
         {
-            var result = SyncCursorRulesCommand.ResolveBaseDirectory(tmpFile);
+            var result = SyncAgentRulesCommand.ResolveBaseDirectory(tmpFile);
             Assert.Equal(Path.GetDirectoryName(tmpFile), result);
         }
         finally
@@ -132,13 +132,13 @@ public sealed class SyncCursorRulesCommandTests
     }
 
     [Fact]
-    public void ResolveCursorRulesPath_CustomPathAsDirectory_AppendsDefaultFileName()
+    public void ResolveAgentRulesPath_CustomPathAsDirectory_AppendsDefaultFileName()
     {
         var tmpDir = Path.Combine(Path.GetTempPath(), "ResolveCustomDir_" + Guid.NewGuid());
         Directory.CreateDirectory(tmpDir);
         try
         {
-            var result = CursorRulesGenerator.ResolveCursorRulesPath(tmpDir, tmpDir);
+            var result = AgentRulesGenerator.ResolveAgentRulesPath(tmpDir, tmpDir);
             Assert.Equal(Path.Combine(tmpDir, "AiNetLinter.mdc"), result);
         }
         finally
@@ -148,60 +148,19 @@ public sealed class SyncCursorRulesCommandTests
     }
 
     [Fact]
-    public void ResolveCursorRulesPath_CustomPathAsMdcFile_ReturnsSame()
+    public void ResolveAgentRulesPath_CustomPathAsMdcFile_ReturnsSame()
     {
         var baseDir = Path.Combine(Path.GetTempPath(), "ResolveCustomFile_" + Guid.NewGuid());
         var customPath = Path.Combine(baseDir, "my_custom.mdc");
-        var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir, customPath);
+        var result = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, customPath);
         Assert.Equal(customPath, result);
     }
 
     [Fact]
-    public void ResolveCursorRulesPath_Guessing_PrefersAgentsRulesIfItExists()
+    public void ResolveAgentRulesPath_Guessing_DefaultsToAgentsRules()
     {
         var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
-        var agentsDir = Path.Combine(baseDir, ".agents", "rules");
-        var cursorDir = Path.Combine(baseDir, ".cursor", "rules");
-        
-        Directory.CreateDirectory(agentsDir);
-        Directory.CreateDirectory(cursorDir);
-        
-        try
-        {
-            var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
-            Assert.Equal(Path.Combine(agentsDir, "AiNetLinter.mdc"), result);
-        }
-        finally
-        {
-            Directory.Delete(baseDir, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void ResolveCursorRulesPath_Guessing_FallsBackToCursorRulesIfOnlyItExists()
-    {
-        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
-        var cursorDir = Path.Combine(baseDir, ".cursor", "rules");
-        
-        Directory.CreateDirectory(cursorDir);
-        
-        try
-        {
-            var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
-            Assert.Equal(Path.Combine(cursorDir, "AiNetLinter.mdc"), result);
-        }
-        finally
-        {
-            Directory.Delete(baseDir, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void ResolveCursorRulesPath_Guessing_DefaultsToCursorRulesIfNeitherExists()
-    {
-        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
-        // Neither directory exists
-        var result = CursorRulesGenerator.ResolveCursorRulesPath(baseDir);
-        Assert.Equal(Path.Combine(baseDir, ".cursor", "rules", "AiNetLinter.mdc"), result);
+        var result = AgentRulesGenerator.ResolveAgentRulesPath(baseDir);
+        Assert.Equal(Path.Combine(baseDir, ".agents", "rules", "AiNetLinter.mdc"), result);
     }
 }

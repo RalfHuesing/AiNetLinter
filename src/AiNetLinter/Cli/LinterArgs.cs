@@ -83,22 +83,22 @@ public sealed class LinterArgs
     public string? ImpactRef { get; init; }
 
     /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob Cursor-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
+    /// Holt oder setzt einen Wert, der angibt, ob Agent-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
     /// </summary>
-    public bool SyncCursorRules { get; init; }
+    public bool SyncAgentRules { get; init; }
 
     /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob nur Cursor-Regeldateien (.mdc) synchronisiert werden sollen (Fast-Path ohne Audit).
+    /// Holt oder setzt einen Wert, der angibt, ob nur Agent-Regeldateien (.mdc) synchronisiert werden sollen (Fast-Path ohne Audit).
     /// </summary>
-    public bool SyncCursorRulesOnly { get; init; }
+    public bool SyncAgentRulesOnly { get; init; }
 
     /// <summary>
-    /// Holt oder setzt den benutzerdefinierten Pfad fuer die Cursor-Regeln (.mdc-Datei oder Verzeichnis).
+    /// Holt oder setzt den benutzerdefinierten Pfad fuer die Agent-Regeln (.mdc-Datei oder Verzeichnis).
     /// </summary>
-    public string? CursorRulesPath { get; init; }
+    public string? AgentRulesPath { get; init; }
 
     /// <summary>
-    /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-cursor-rules und --playbook).
+    /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-agent-rules und --playbook).
     /// </summary>
     public bool Check { get; init; }
 

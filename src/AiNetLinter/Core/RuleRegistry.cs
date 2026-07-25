@@ -16,11 +16,11 @@ public sealed record RuleMetadata(
     string? SicherheitsHinweis,
     string Intent,
     string Severity,
-    string CursorHint,
+    string AgentHint,
     bool HasAutoFix,
     Func<Config, bool> IsEnabled,
     bool IsMetric,
-    bool IncludeInCursorRules,
+    bool IncludeInAgentRules,
     Func<Config, int>? GetMetricLimit = null,
     string? ConfigKeyHint = null
 );
@@ -67,11 +67,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Datei splitten wenn sie wächst.",
+            AgentHint: "Datei splitten wenn sie wächst.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxLineCount > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxLineCount
         ),
         new(
@@ -88,11 +88,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Eine Aufgabe pro Methode; Rest extrahieren.",
+            AgentHint: "Eine Aufgabe pro Methode; Rest extrahieren.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxMethodLineCount > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxMethodLineCount
         ),
         new(
@@ -109,11 +109,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Ab Überschreitung: `record` als Parameter-Object.",
+            AgentHint: "Ab Überschreitung: `record` als Parameter-Object.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxMethodParameterCount > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxMethodParameterCount
         ),
     ];
@@ -134,11 +134,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe).",
+            AgentHint: "Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe).",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxCyclomaticComplexity > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxCyclomaticComplexity
         ),
         new(
@@ -155,11 +155,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "error",
-            CursorHint: "Weniger Verschachtelung; Early Return bevorzugen (kognitiv).",
+            AgentHint: "Weniger Verschachtelung; Early Return bevorzugen (kognitiv).",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxCognitiveComplexity > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxCognitiveComplexity
         ),
         new(
@@ -175,11 +175,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Komposition vor Vererbung.",
+            AgentHint: "Komposition vor Vererbung.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxInheritanceDepth > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxInheritanceDepth
         ),
         new(
@@ -195,11 +195,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Methoden mit eindeutigen Namen bevorzugen.",
+            AgentHint: "Methoden mit eindeutigen Namen bevorzugen.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxMethodOverloads > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxMethodOverloads
         ),
     ];
@@ -219,11 +219,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Verantwortlichkeit aufteilen bei Überschreitung.",
+            AgentHint: "Verantwortlichkeit aufteilen bei Überschreitung.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxConstructorDependencies > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxConstructorDependencies
         ),
         new(
@@ -240,11 +240,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: "Interfaces einführen kann Architekturentscheidungen ändern. Nutzer fragen ob Interfaces im Projekt erlaubt sind.",
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren.",
+            AgentHint: "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxAIContextFootprint > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
             ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
         ),
@@ -265,11 +265,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "Ordner nicht unnötig tief schachteln.",
+            AgentHint: "Ordner nicht unnötig tief schachteln.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxDirectoryDepth > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxDirectoryDepth
         ),
         new(
@@ -284,11 +284,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen.",
+            AgentHint: "0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxDirectoryChildren > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxDirectoryChildren
         ),
         new(
@@ -306,11 +306,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "0 = deaktiviert; bool-Parameter in Parameter-Object bündeln.",
+            AgentHint: "0 = deaktiviert; bool-Parameter in Parameter-Object bündeln.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxBoolParameterCount > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxBoolParameterCount
         ),
         new(
@@ -328,11 +328,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: "Partials aufzulösen ist ein tiefgreifender Architektureingriff. **Nutzer ZWINGEND fragen bevor du beginnst** — die gewählte Alternativarchitektur muss dem Projektstil entsprechen.",
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker).",
+            AgentHint: "0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker).",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxPartialClassFiles > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxPartialClassFiles,
             ConfigKeyHint: "rules.json → Metrics.MaxPartialClassFiles | Ausnahmen via PathOverrides"
         ),
@@ -348,14 +348,14 @@ internal static partial class RuleRegistry
                 "**Extension-Methoden auslagern**: Optional-/Hilfsmethoden als `*Extensions`-Klasse im selben Namespace (Suffix `Extensions` ist per Default exempt).",
                 "**State-Objekt**: Zusammengehörige Properties in ein dediziertes `record`-Zustandsobjekt auslagern."
             ],
-            SicherheitsHinweis: "Oft ein SRP-Signal. Vor größerem Refactoring Nutzer fragen und Architektur-Constraints (`.agents/rules`, `.cursor/rules`) lesen.",
+            SicherheitsHinweis: "Oft ein SRP-Signal. Vor größerem Refactoring Nutzer fragen und Architektur-Constraints (`.agents/rules`) lesen.",
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "0 = deaktiviert; Typ aufteilen oder Member kapseln.",
+            AgentHint: "0 = deaktiviert; Typ aufteilen oder Member kapseln.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxPublicMembersPerType > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxPublicMembersPerType,
             ConfigKeyHint: "rules.json → Metrics.MaxPublicMembersPerType | Ausnahmen via PathOverrides"
         ),
@@ -376,11 +376,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-context",
             Severity: "warning",
-            CursorHint: "0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen.",
+            AgentHint: "0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen.",
             HasAutoFix: false,
             IsEnabled: c => c.Metrics.MaxLinqChainLength > 0,
             IsMetric: true,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxLinqChainLength,
             ConfigKeyHint: "rules.json → Metrics.MaxLinqChainLength | Metrics.LinqMethodNames"
         ),
@@ -403,11 +403,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-resilience",
             Severity: "error",
-            CursorHint: "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.",
+            AgentHint: "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.EnforceNoSilentCatch,
             IsMetric: false,
-            IncludeInCursorRules: true
+            IncludeInAgentRules: true
         ),
         new(
             RuleId: LinterRuleIds.BanAsyncVoid,
@@ -424,11 +424,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-resilience",
             Severity: "error",
-            CursorHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
+            AgentHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.BanAsyncVoid,
             IsMetric: false,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
         ),
         new(
@@ -448,11 +448,11 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: "agent-resilience",
             Severity: "error",
-            CursorHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
+            AgentHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
             HasAutoFix: false,
             IsEnabled: c => c.Global.BanBlockingTaskAccess,
             IsMetric: false,
-            IncludeInCursorRules: true,
+            IncludeInAgentRules: true,
             ConfigKeyHint: "rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
         ),
     ];

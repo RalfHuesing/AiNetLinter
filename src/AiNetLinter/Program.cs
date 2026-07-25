@@ -78,9 +78,9 @@ public static class Program
             Fix = parsed.Fix,
             HasImpact = parsed.Impact.HasImpact,
             ImpactRef = parsed.Impact.ImpactRef,
-            SyncCursorRules = parsed.SyncCursorRules,
-            SyncCursorRulesOnly = parsed.SyncCursorRulesOnly,
-            CursorRulesPath = parsed.CursorRulesPath,
+            SyncAgentRules = parsed.SyncAgentRules,
+            SyncAgentRulesOnly = parsed.SyncAgentRulesOnly,
+            AgentRulesPath = parsed.AgentRulesPath,
             Check = parsed.Check,
             NoCache = parsed.NoCache,
             CacheTtlMinutes = parsed.CacheTtlMinutes,
@@ -113,8 +113,8 @@ public static class Program
 
         if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, ct);
 
-        // Schneller Pfad: --sync-cursor-rules-only.
-        if (args.SyncCursorRulesOnly) return SyncCursorRulesCommand.Run(args);
+        // Schneller Pfad: --sync-agent-rules-only.
+        if (args.SyncAgentRulesOnly) return SyncAgentRulesCommand.Run(args);
 
         if (args.Footprint != null) return await FootprintCommand.RunAsync(args, ct);
 
