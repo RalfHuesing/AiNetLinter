@@ -163,4 +163,81 @@ public sealed class SyncAgentRulesCommandTests
         var result = AgentRulesGenerator.ResolveAgentRulesPath(baseDir);
         Assert.Equal(Path.Combine(baseDir, ".agents", "rules", "AiNetLinter.mdc"), result);
     }
+
+    [Fact]
+    public void DetectBaselineUsage_NoBaselineFileOrArg_ReturnsFalse()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_False_" + Guid.NewGuid());
+        Directory.CreateDirectory(tmpDir);
+        try
+        {
+            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir);
+            Assert.False(result);
+        }
+        finally
+        {
+            Directory.Delete(tmpDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DetectBaselineUsage_BaselineJsonExists_ReturnsTrue()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_True_" + Guid.NewGuid());
+        Directory.CreateDirectory(tmpDir);
+        var baselineFile = Path.Combine(tmpDir, "baseline.json");
+        File.WriteAllText(baselineFile, "{}");
+        try
+        {
+            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir);
+            Assert.True(result);
+        }
+        finally
+        {
+            Directory.Delete(tmpDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DetectBaselineUsage_BaselinePathArgExists_ReturnsTrue()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_Arg_" + Guid.NewGuid());
+        Directory.CreateDirectory(tmpDir);
+        var customBaseline = Path.Combine(tmpDir, "my_custom_baseline.json");
+        File.WriteAllText(customBaseline, "{}");
+        try
+        {
+            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir, customBaseline);
+            Assert.True(result);
+        }
+        finally
+        {
+            Directory.Delete(tmpDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GenerateContent_WithHasBaselineTrue_IncludesBaselineSection()
+    {
+        var config = new AiNetLinter.Configuration.Config
+        {
+            Global = new AiNetLinter.Configuration.GlobalConfig(),
+            Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+        };
+        var content = AgentRulesGenerator.GenerateContent(config, "rules.json", hasBaseline: true);
+        Assert.Contains("## Baseline-Mechanik (Inkrementelle Analyse)", content);
+        Assert.Contains("--create-baseline", content);
+    }
+
+    [Fact]
+    public void GenerateContent_WithHasBaselineFalse_OmitsBaselineSection()
+    {
+        var config = new AiNetLinter.Configuration.Config
+        {
+            Global = new AiNetLinter.Configuration.GlobalConfig(),
+            Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+        };
+        var content = AgentRulesGenerator.GenerateContent(config, "rules.json", hasBaseline: false);
+        Assert.DoesNotContain("## Baseline-Mechanik", content);
+    }
 }

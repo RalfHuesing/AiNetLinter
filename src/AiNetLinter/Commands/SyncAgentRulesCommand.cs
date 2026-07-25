@@ -31,7 +31,8 @@ internal static class SyncAgentRulesCommand
         var mdcPath = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, args.AgentRulesPath);
         var agentRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
-        var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json");
+        bool hasBaseline = AgentRulesGenerator.DetectBaselineUsage(baseDir, args.BaselinePath);
+        var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json", hasBaseline: hasBaseline);
 
         if (args.Check)
         {

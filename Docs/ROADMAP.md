@@ -443,7 +443,14 @@ Einführung von globalen Filter-Parametern zur Eingrenzung des Analyse-Scopes be
 - [x] **Namespace-Filterung:** Dynamischer Ausschluss von C#-Typdeklarationen in Walks & Checks (`LinterAnalyzer`, `SkeletonSyntaxWalker`), um Kontext-Überlastung bei LLMs zu verhindern.
 - [x] **Sichtbarkeits-Filterung:** Filterung nicht-öffentlicher Member bei der Skeleton-Map-Generierung (`--public-only`).
 - [x] **Dokumentation:** Aktualisierung der CLI-Tabellen und Hinzufügen von Scope-Filtering Handbüchern in `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`.
-- [x] **Test-Suite:** Implementierung der Unit-Tests `NamespaceFilterTests` sowie Ergänzungen in `SourceFileCatalogTests`, `LinterAnalyzerTests` und `SkeletonSyntaxWalkerTests`.
+## Epic 33: Bedingte Baseline-Dokumentation in Agent-Rules (`--sync-agent-rules`)
+
+Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projekt-agnostische Erklärung der Baseline-Mechanik (`--create-baseline`), wenn im Zielprojekt eine Baseline verwendet wird.
+
+- [x] **Dynamische Erkennung (`DetectBaselineUsage`):** Automatische Prüfung in `AgentRulesGenerator`, ob im Workspace eine Baseline-Datei (z. B. `baseline.json`) existiert oder `--baseline` per CLI übergeben wurde.
+- [x] **Bedingter Abschnitt (`## Baseline-Mechanik`):** Generierung der Erklärungen zu Zweck, `--create-baseline`-Aktualisierung, Verbot von manuellem Editieren und Projekt-Integration nur bei aktiver Baseline-Nutzung.
+- [x] **Test-Suite:** Unit-Tests in `SyncAgentRulesCommandTests.cs` zur Validierung der Erkennung und der bedingten Abschnitte.
+- [x] **Dokumentation:** Aktualisierung von `configuration.md`, `agent-api.md`, `README.md` und `ROADMAP.md`.
 
 ---
 

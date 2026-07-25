@@ -18,7 +18,9 @@ public sealed record AgentRulesSyncOptions(
     Config Config,
     bool Verbose,
     string ConfigPath = "rules.json",
-    string? AgentRulesPath = null);
+    string? AgentRulesPath = null,
+    string? BaselinePath = null,
+    bool? HasBaseline = null);
 
 /// <summary>
 /// Generiert eine Agent-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
@@ -38,7 +40,8 @@ public static class AgentRulesGenerator
             Directory.CreateDirectory(agentRulesDir);
         }
 
-        var content = GenerateContent(options.Config, options.ConfigPath);
+        bool hasBaseline = options.HasBaseline ?? DetectBaselineUsage(baseDir, options.BaselinePath);
+        var content = GenerateContent(options.Config, options.ConfigPath, hasBaseline: hasBaseline);
 
         if (File.Exists(mdcPath) && File.ReadAllText(mdcPath, Encoding.UTF8) == content)
         {
@@ -85,6 +88,46 @@ public static class AgentRulesGenerator
         return agentsMdc;
     }
 
+    /// <summary>
+    /// Prüft, ob eine Baseline-Datei im Verzeichnis existiert oder per CLI übergeben wurde.
+    /// </summary>
+    public static bool DetectBaselineUsage(string baseDir, string? baselinePath = null)
+    {
+        if (!string.IsNullOrWhiteSpace(baselinePath) && File.Exists(baselinePath))
+        {
+            return true;
+        }
+
+        if (Directory.Exists(baseDir))
+        {
+            var defaultBaseline = Path.Combine(baseDir, "baseline.json");
+            if (File.Exists(defaultBaseline))
+            {
+                return true;
+            }
+
+            try
+            {
+                var files = Directory.GetFiles(baseDir, "*.json", SearchOption.TopDirectoryOnly);
+                foreach (var f in files)
+                {
+                    var name = Path.GetFileName(f);
+                    if (name.Contains("baseline", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ignored) when (ignored is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                _ = ignored;
+                // Inklusive Fehler bei Berechtigungen / Pfaden sicher ignorieren
+            }
+        }
+
+        return false;
+    }
+
     private static string ResolveBaseDirectory(string targetPath)
     {
         if (Directory.Exists(targetPath))
@@ -98,7 +141,7 @@ public static class AgentRulesGenerator
         return targetPath;
     }
 
-    public static string GenerateContent(Config config, string configPath)
+    public static string GenerateContent(Config config, string configPath, bool hasBaseline = false)
     {
         var sb = new StringBuilder();
         var version = typeof(AgentRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
@@ -107,12 +150,26 @@ public static class AgentRulesGenerator
         AppendKurzStil(sb, config);
         AppendMetricsTable(sb, config);
         AppendCompoundSuppressions(sb, config);
+        if (hasBaseline)
+        {
+            AppendBaselineMechanik(sb);
+        }
         AppendActiveRulesByIntent(sb, config);
         AppendDisabledCompact(sb, config);
         AppendProjectOverridesDelta(sb, config);
         sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --docs <name>`.");
 
         return sb.ToString();
+    }
+
+    private static void AppendBaselineMechanik(StringBuilder sb)
+    {
+        sb.AppendLine("## Baseline-Mechanik (Inkrementelle Analyse)");
+        sb.AppendLine("- **Zweck:** Ein Baseline-Snapshot (`--baseline <pfad>`) friert den akzeptierten Ist-Zustand ein, sodass bei künftigen Audits nur Regelverstöße in neuen oder geänderten Dateien gemeldet werden.");
+        sb.AppendLine("- **Aktualisierung / Erzeugung:** Aufruf von `AiNetLinter.exe --create-baseline <pfad>` mit denselben `--config` und `--path` Parametern schreibt den Snapshot vollständig neu.");
+        sb.AppendLine("- **Wichtig:** Hashes/Inhalte der Baseline-JSON-Datei **niemals von Hand editieren** — erneutes Ausführen von `--create-baseline` ist die einzige vorgesehene und fehlerfreie Methode.");
+        sb.AppendLine("- **Projekt-Integration:** Die konkrete Aufruf-Konvention (z. B. via `dotnet test`, Build-Skript oder CI-Step) unterscheidet sich je nach Projekt und ist in dessen Dokumentation/Skripten nachzuschlagen.");
+        sb.AppendLine();
     }
 
     private static void AppendCompoundSuppressions(StringBuilder sb, Config config)
