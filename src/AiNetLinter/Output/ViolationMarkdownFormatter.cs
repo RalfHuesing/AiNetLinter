@@ -110,12 +110,19 @@ public static class ViolationMarkdownFormatter
         sb.Append("\n## Handlungsanweisung\n\n");
         sb.Append("Analysiere die Violations im Kontext der Architektur und Coding-Richtlinien dieses Projekts.\n");
 
+        var agentsRulesPath = Path.Combine(projectRoot, ".agents", "rules");
         var cursorRulesPath = Path.Combine(projectRoot, ".cursor", "rules");
         var claudeMdPath = Path.Combine(projectRoot, "CLAUDE.md");
+        var agentsMdPath = Path.Combine(projectRoot, "AGENTS.md");
 
-        if (Directory.Exists(cursorRulesPath))
+        if (Directory.Exists(agentsRulesPath))
+            sb.Append("Projektkonfiguration erkannt: `.agents/rules` — Architektur-Constraints und Regeln dort beachten.\n");
+        else if (Directory.Exists(cursorRulesPath))
             sb.Append("Projektkonfiguration erkannt: `.cursor/rules` — Architektur-Constraints und Regeln dort beachten.\n");
-        if (File.Exists(claudeMdPath))
+
+        if (File.Exists(agentsMdPath))
+            sb.Append("Projektkonfiguration erkannt: `AGENTS.md` — Architektur-Constraints dort beachten.\n");
+        else if (File.Exists(claudeMdPath))
             sb.Append("Projektkonfiguration erkannt: `CLAUDE.md` — Architektur-Constraints dort beachten.\n");
 
         sb.Append("\n**Schritt 1 — False-Positive-Prüfung (PFLICHT vor jeder Änderung)**\n");

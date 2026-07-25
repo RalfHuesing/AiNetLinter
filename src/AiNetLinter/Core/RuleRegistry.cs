@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -348,7 +348,7 @@ internal static partial class RuleRegistry
                 "**Extension-Methoden auslagern**: Optional-/Hilfsmethoden als `*Extensions`-Klasse im selben Namespace (Suffix `Extensions` ist per Default exempt).",
                 "**State-Objekt**: Zusammengehörige Properties in ein dediziertes `record`-Zustandsobjekt auslagern."
             ],
-            SicherheitsHinweis: "Oft ein SRP-Signal. Vor größerem Refactoring Nutzer fragen und Architektur-Constraints (`.cursor/rules`, `CLAUDE.md`) lesen.",
+            SicherheitsHinweis: "Oft ein SRP-Signal. Vor größerem Refactoring Nutzer fragen und Architektur-Constraints (`.agents/rules`, `.cursor/rules`) lesen.",
             Intent: "agent-context",
             Severity: "warning",
             CursorHint: "0 = deaktiviert; Typ aufteilen oder Member kapseln.",

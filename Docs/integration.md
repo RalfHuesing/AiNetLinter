@@ -89,14 +89,14 @@ TEST "LintReport wird erzeugt und ist grün":
        --config  <Pfad zur rules.json>
        --path    <Solution-Root>
        --baseline <Pfad zur Baseline-JSON>   ← nach Schritt 6 verfügbar
-       --sync-cursor-rules                   ← synchronisiert .cursor/rules/AiNetLinter.mdc
+       --sync-cursor-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (oder .cursor/rules/AiNetLinter.mdc)
 
-  4. Prozess starten, stdout + stderr lesen, auf Exit warten
+   4. Prozess starten, stdout + stderr lesen, auf Exit warten
 
-  5. Report in output/<stem>.md schreiben (UTF-8)
+   5. Report in output/<stem>.md schreiben (UTF-8)
 
-  6. WENN exitCode != 0: Test fehlschlagen mit Hinweis auf Report-Pfad
-     WENN exitCode == 0: sicherstellen dass .cursor/rules/AiNetLinter.mdc existiert
+   6. WENN exitCode != 0: Test fehlschlagen mit Hinweis auf Report-Pfad
+      WENN exitCode == 0: sicherstellen dass .agents/rules/AiNetLinter.mdc existiert
 ```
 
 **Hinweis Schritt 2 (Tool nicht vorhanden):** In xUnit heisst das `Assert.SkipUnless`, in NUnit `Assume.That(condition)`, in MSTest `Assert.Inconclusive()`. Wähle die für das Projekt passende Variante — das Ziel ist dasselbe: Test wird als "übersprungen" markiert, nicht als Fehler.
@@ -128,18 +128,18 @@ Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ra
 
 ---
 
-## Schritt 7: Cursor/Claude Rules synchronisieren
+## Schritt 7: Agent Rules (.agents / .cursor) synchronisieren
 
 `--sync-cursor-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
 
-- `.cursor/rules/AiNetLinter.mdc` — Metriken und aktive Regeln aus der `rules.json`
+- `.agents/rules/AiNetLinter.mdc` (oder `.cursor/rules/AiNetLinter.mdc`) — Metriken und aktive Regeln aus der `rules.json`
 
-Diese Datei macht die konfigurierten Grenzwerte für Cursor und Claude Code direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
+Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
 
 Optional: Playbook erzeugen (Repo-Statistik, Migrations-Status):
 
 ```
---playbook .cursor/rules/playbook.mdc
+--playbook .agents/rules/playbook.md
 ```
 
 Drift-Check in CI (ohne Datei zu schreiben):
