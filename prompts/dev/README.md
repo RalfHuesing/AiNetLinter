@@ -12,3 +12,7 @@ Bedarf entsteht.
   etwas umsetzen. Für rohe Ideen, offene Überlegungen, "lass uns über X
   nachdenken" — Ausgang ist offen (kann in nichts, in direkten
   Datei-Änderungen oder in einem Auftrag an `dev-loop/` enden).
+- **[`create-agents-md.md`](create-agents-md.md)** — erzeugt eine
+  projekt-spezifische `AGENTS.md` im aktuellen Projekt (Rules-Verzeichnis
+  erkennen, Build-/Test-Commands ableiten, nur relative Pfade). Einmal
+  referenzieren, fertig.
