@@ -63,11 +63,22 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
   ```bash
   dotnet run --project src/AiNetLinter -- --sync-agent-rules-only
   ```
-  *(Hinweis: `playbook.md` wird nicht mehr in `.agents/rules/` abgelegt).*
 
 ---
 
-## 5. Agenten-Verhaltensregeln (Sparring & Planning)
+## 5. Commit- & PR-Konventionen
+
+- Verwendet werden **Conventional Commits** in englischer Sprache (z. B. `feat:`, `fix:`, `docs:`, `chore:`).
+
+---
+
+## 6. Dev-Loop & Task-Orchestration
+
+- Für mehrstufige Aufgaben (Audits, Refactorings, Features): siehe `.agents/Agent-Scaffolding/dev-loop/README.md`.
+
+---
+
+## 7. Agenten-Verhaltensregeln (Sparring & Planning)
 
 - **Erst Mitdenken, dann Umsetzen**: Bei größeren Vorhaben oder neuen Features erst kurz im Sparring-Modus die Idee spiegeln und Vor-/Nachteile abwägen.
 - **Kompakte Antworten**: Antworten prägnant halten – Fazit und Kernaussage zuerst.
