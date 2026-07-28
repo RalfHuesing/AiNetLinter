@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 # AI Repository Playbook (Auto-Generated)
-Auto-generiert durch AiNetLinter 1.0.76 aus `C:\Daten\Entwicklung\Ralf\AiNetLinter\rules.json`.
+Auto-generiert durch AiNetLinter 1.0.77 aus `rules.json`.
 Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.
 Es dient als Orientierungshilfe fuer LLM-Agenten, um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.
 

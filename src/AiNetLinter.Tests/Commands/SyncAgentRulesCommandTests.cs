@@ -240,4 +240,19 @@ public sealed class SyncAgentRulesCommandTests
         var content = AgentRulesGenerator.GenerateContent(config, "rules.json", hasBaseline: false);
         Assert.DoesNotContain("## Baseline-Mechanik", content);
     }
+
+    [Fact]
+    public void GenerateContent_WithAbsolutePath_UsesOnlyFileNameInHeader()
+    {
+        var config = new AiNetLinter.Configuration.Config
+        {
+            Global = new AiNetLinter.Configuration.GlobalConfig(),
+            Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+        };
+        var fullPath = @"C:\Daten\Entwicklung\SAN\San.smart.Planner.Platform\San.smart.Planner.Platform.Tests.Logic\AiNetLinter\rules\platform-default.rules.json";
+        var content = AgentRulesGenerator.GenerateContent(config, fullPath);
+
+        Assert.Contains("aus `platform-default.rules.json`.", content);
+        Assert.DoesNotContain(@"C:\Daten\", content);
+    }
 }

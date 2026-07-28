@@ -222,13 +222,21 @@ public sealed class RepoPlaybookGenerator
 
     private static void AppendHeader(StringBuilder sb, PlaybookBuildContext ctx)
     {
+        var configFileName = string.IsNullOrWhiteSpace(ctx.ConfigPath)
+            ? "rules.json"
+            : Path.GetFileName(ctx.ConfigPath);
+        if (string.IsNullOrWhiteSpace(configFileName))
+        {
+            configFileName = ctx.ConfigPath;
+        }
+
         sb.AppendLine("---");
         sb.AppendLine("description: Repo-Statistik, bei Architektur-Fragen lesen");
         sb.AppendLine("globs: ");
         sb.AppendLine("alwaysApply: false");
         sb.AppendLine("---");
         sb.AppendLine("# AI Repository Playbook (Auto-Generated)");
-        sb.AppendLine($"Auto-generiert durch AiNetLinter {ctx.Version} aus `{ctx.ConfigPath}`.");
+        sb.AppendLine($"Auto-generiert durch AiNetLinter {ctx.Version} aus `{configFileName}`.");
         sb.AppendLine("Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.");
         sb.AppendLine("Es dient als Orientierungshilfe fuer LLM-Agenten, um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.");
         sb.AppendLine();

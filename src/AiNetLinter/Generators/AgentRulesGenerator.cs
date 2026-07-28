@@ -197,13 +197,21 @@ public static class AgentRulesGenerator
 
     private static void AppendFrontmatter(StringBuilder sb, string version, string configPath)
     {
+        var configFileName = string.IsNullOrWhiteSpace(configPath)
+            ? "rules.json"
+            : Path.GetFileName(configPath);
+        if (string.IsNullOrWhiteSpace(configFileName))
+        {
+            configFileName = configPath;
+        }
+
         sb.AppendLine("---");
         sb.AppendLine("description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)");
         sb.AppendLine("globs: *.cs");
         sb.AppendLine("alwaysApply: true");
         sb.AppendLine("---");
         sb.AppendLine("# C#-Codequalität (AiNetLinter)");
-        sb.AppendLine($"Auto-generiert durch AiNetLinter {version} aus `{configPath}`. Neuen Produktionscode direkt konform schreiben.");
+        sb.AppendLine($"Auto-generiert durch AiNetLinter {version} aus `{configFileName}`. Neuen Produktionscode direkt konform schreiben.");
         sb.AppendLine();
     }
 
