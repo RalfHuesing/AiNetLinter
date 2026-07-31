@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T15:00:00Z
+last_updated: 2026-07-31T17:00:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -99,21 +99,32 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       wieder, bevor der Server startet (siehe
       `src/AiNetLinter/Commands/McpServerCommand.cs:36`). Genau das ist
       die Lücke, die EPIC-02/step-002 schließt.
-- [ ] EPIC-02: **in Arbeit → step-002**. Server-Zustand &
-      Staleness-Invalidierung — zustandshaltende Server-Klasse ohne
-      DI-Container (Vorbild: statische Commands/direkte Instanziierung),
-      Hash/mtime-Cache pro Datei, lazy Prüfung vor jeder Tool-Antwort,
-      inkrementelles Update über `SourceFileCatalog.WithUpdatedSolution`
-      (kein Komplett-Reload), Thread-sicherer Zugriff auf
-      `Solution`/`Compilation` (`konzept.md` Muss-Haben "Lazy
-      Staleness-Invalidierung", "Thread-sicherer Zugriff").
-- [ ] EPIC-03: Symbolgraph-Tools — `find_symbol`, `find_references`,
-      `get_impact`, `get_type_hierarchy`, `get_file_skeleton`. Basis:
+- [x] EPIC-02: **abgeschlossen → step-002** (`approved`, siehe
+      `step-002/step-review.md`). Server-Zustand & Staleness-Invalidierung
+      — zustandshaltende Server-Klasse ohne DI-Container (Vorbild:
+      statische Commands/direkte Instanziierung), Hash/mtime-Cache pro
+      Datei, lazy Prüfung vor jeder Tool-Antwort, inkrementelles Update
+      über `SourceFileCatalog.WithUpdatedSolution` (kein Komplett-Reload),
+      Thread-sicherer Zugriff auf `Solution`/`Compilation` (`konzept.md`
+      Muss-Haben "Lazy Staleness-Invalidierung", "Thread-sicherer
+      Zugriff") — vollständig umgesetzt in `McpCodeGraphServer`
+      (`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`). Review vermerkt
+      `TD-003` (Race Condition in `SourceFileCatalog.RegisterMSBuild`,
+      vorbestehend, kein Blocker) als Tech-Debt, kein offenes Finding.
+- [ ] EPIC-03: **in Arbeit → step-003**. Symbolgraph-Tools — `find_symbol`,
+      `find_references`, `get_impact`, `get_type_hierarchy`,
+      `get_file_skeleton`. Basis:
       `SymbolFinder.FindDeclarationsAsync`/`FindDerivedClassesAsync`/
       `FindImplementationsAsync` (neu einzubinden),
       `DiffImpactAnalyzer.FindCallSitesAsync`/`AnalyzeAsync` (bereits
       vorhanden), `Maps/Skeleton/SkeletonMapBuilder.cs` granularisiert auf
       eine Datei statt Whole-Repo-Dump (`konzept.md` Tool-Tabelle).
+      **step-003** deckt davon die Tool-Registrierungs-Infrastruktur
+      (wiederverwendbare `[ERROR]`-Antwort-Helper, Closure-basierte
+      Anbindung an `McpCodeGraphServer`) plus das erste Tool `find_symbol`
+      ab (Basis: `SymbolFinder.FindSourceDeclarationsAsync`, siehe
+      `step-003/step-plan.md`) — die restlichen 4 Tools bleiben offen für
+      weitere EPIC-03-Steps.
 - [ ] EPIC-04: Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
       `SourceFileCatalog.GetSourceFiles` + `Web/WebFileCatalog.cs`
       `Collect`, kein neuer Datei-Scan nötig, siehe "Entdeckte
