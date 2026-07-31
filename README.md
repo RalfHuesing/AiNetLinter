@@ -2,7 +2,7 @@
 
 Wiederverwendbare Workflow-Bausteine für agentische Coding-Sessions —
 Markdown-Dateien, die eine KI-Session anweisen, eine bestimmte Rolle
-(Orchestrator, Planer, Coder, Auditer, …) zu übernehmen und einen
+(Orchestrator, Planer, Coder, Kritiker, …) zu übernehmen und einen
 definierten Prozess abzuarbeiten. Kein Code, keine Abhängigkeiten außer
 einem Werkzeug, das Subagenten/Sub-Konversationen mit isoliertem Kontext
 starten kann.
@@ -47,7 +47,7 @@ und wandern nicht hierher — die Dateien in diesem Repo sind bewusst
 projekt-unabhängig. Wo genau diese Konventionen liegen
 (`.agents/rules/`, `.cursor/rules/`), muss nicht vorab festgelegt
 werden — die Workflows in `dev-loop/` erkennen das selbst (siehe
-`dev-loop/task-loop/spec.md` §3.1).
+`dev-loop/drift-loop/spec.md` §3.1).
 
 Wo genau du dieses Repo innerhalb eines Projekts platzierst (`.agents/
 Agent-Scaffolding/`, `tools/agent-scaffolding/`, …), ist egal — alle

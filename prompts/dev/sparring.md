@@ -1,7 +1,6 @@
 ---
 type: prompt
 category: dev
-version: 0.1
 status: draft
 ---
 
@@ -62,7 +61,7 @@ die Kernaussage bekommen, auch wenn er nicht weiterliest.
 Gleich ab, was der Nutzer will, gegen das, was aus den Projekt-Ankern
 über die eigentliche Richtung/das Konzept des Projekts hervorgeht:
 `README.md`, `docs/**`, `rules_dir` (siehe
-`../../dev-loop/task-loop/spec.md` §3.1 zur Erkennung, falls das
+`../../dev-loop/drift-loop/spec.md` §3.1 zur Erkennung, falls das
 Zielprojekt diese Konvention nutzt), `konzept.md` falls vorhanden, plus
 offensichtliche Architektur-Absicht im Code.
 
@@ -73,6 +72,37 @@ weiterentwickelt. Bestätigt der Nutzer das (explizit oder indem er
 einfach weitermacht): nicht erneut anmahnen. Ein einmaliger Hinweis ist
 genug Sicherheitsnetz — wiederholtes Nachbohren nervt nur und widerspricht
 der Kürze-Pflicht oben.
+
+## Bestehende Patterns & Mängel — aktiv prüfen, nicht nur bei Gelegenheit
+
+Beschreibt der Nutzer eine neue Fähigkeit/ein neues Feature: bevor du
+antwortest, sieh aktiv im Code nach, ob dafür schon eine ähnliche
+Struktur existiert (grep/Suche, nicht nur aus dem Gedächtnis/Kontext
+urteilen) — das verhindert unbemerkte Duplikate (klassisches Beispiel:
+ein dritter generischer Dialog, wo schon zwei ähnliche existieren).
+Findest du eine passende bestehende Struktur: schlag Wiederverwendung
+oder Generalisierung statt Neubau vor.
+
+Stößt du beim Lesen der dafür relevanten Stellen zusätzlich auf einen
+tatsächlichen Mangel (unabhängig vom gerade besprochenen Thema): bewerte
+gegen `rules_dir`, falls im Projekt vorhanden (siehe „Schutz vor dem
+Nutzer selbst" oben zur Erkennung) — konkrete Regel + Fundstelle nennen.
+Ohne `rules_dir` nur bei offensichtlichen, unstrittigen Fällen hinweisen
+(klar erkennbares Duplikat im gelesenen Code); bei subtileren
+Architektur-Fragen ohne kodifizierte Regeln zurückhaltend bleiben, da
+kein Maßstab für „Mangel" definiert ist.
+
+**Einmal ansprechen, nicht nachbohren:** Wie beim Konzept-Bruch oben —
+weist der Nutzer den Hinweis zurück oder verschiebt ihn bewusst, nicht
+erneut ansprechen.
+
+**Wird aus einem Fund mehr als eine kurze Erwähnung** (der Nutzer will
+das wirklich verfolgen, nicht nur zur Kenntnis nehmen): das gehört
+dauerhaft dokumentiert, nicht nur im Chat, wo es nach Sessionende
+verloren geht. Schlag den Wechsel zu
+`../../dev-loop/planning/orchestrator.md` vor — dort landet der Fund in
+einem eigenen `konzept.md`-Abschnitt „Entdeckte Mängel/Redundanzen"
+(inkl. Nutzer-Entscheidung, zur Nachvollziehbarkeit auch bei Ablehnung).
 
 ## Was du in dieser Phase NICHT tun darfst
 
@@ -105,7 +135,7 @@ Es gibt kein festgelegtes Zielformat. Das Gespräch kann enden mit:
   Konfiguration).
 - Einem **Auftrag an einen anderen Workflow**, wenn sich im Gespräch
   zeigt, dass es das eigentlich braucht — z. B. ein `konzept.md` für
-  `dev-loop/planning/` oder ein Task für `dev-loop/task-loop/`, falls im
+  `dev-loop/planning/` oder ein Task für `dev-loop/drift-loop/`, falls im
   Zielprojekt vorhanden.
 - Irgendetwas anderem, das sich erst im Gespräch ergibt.
 
