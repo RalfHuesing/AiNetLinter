@@ -130,7 +130,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithBothTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithThreeTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -147,9 +147,10 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(2, tools.Count);
+        Assert.Equal(3, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
+        Assert.Contains(tools, t => t.Name == "get_impact");
     }
 
     [Fact]

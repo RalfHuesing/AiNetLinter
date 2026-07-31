@@ -62,6 +62,18 @@ internal static class McpServerOptionsFactory
                     "keine .js/.razor/.xaml/.html/.css-Dateien.",
             }));
 
+        tools.Add(McpServerTool.Create(
+            (string? gitRef = null, string? symbolIdentifier = null, CancellationToken ct = default) =>
+                GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "get_impact",
+                Description = "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
+                    "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
+                    "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
+                    ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
+            }));
+
         return tools;
     }
 

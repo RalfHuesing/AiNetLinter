@@ -68,6 +68,18 @@ internal static class McpToolResults
     }
 
     /// <summary>
+    /// Kurzform fuer den Fall, dass ein Tool-Aufruf gegenseitig exklusive Parameter verletzt
+    /// (z. B. <c>get_impact</c>s <c>gitRef</c> und <c>symbolIdentifier</c> beide gesetzt).
+    /// </summary>
+    internal static CallToolResult InvalidArgument(string message)
+    {
+        return Error(
+            LinterErrorCodes.InvalidArgument,
+            message,
+            hint: "Entweder gitRef ODER symbolIdentifier angeben, nie beide.");
+    }
+
+    /// <summary>
     /// Baut ein Erfolgsergebnis mit genau einem Text-Content-Block.
     /// </summary>
     internal static CallToolResult Text(string text)
