@@ -75,6 +75,15 @@ Verweis auf die Tech-Debt-ID).
   footprint-teurer Parametertyp), andere Stelle — siehe TD-005 für die
   verallgemeinerte Beobachtung, die über TD-004s ursprünglichen Scope
   (nur die Factory) hinausgeht.
+- **Update (step-005, 2026-07-31):** Mit dem dritten Tool-Eintrag
+  (`get_impact`) liegt `McpServerOptionsFactory` laut Coder-Selbst-Lint
+  bei 2469/2500 — nur noch 31 Zeilen Puffer bis zum Limit. Kritiker hat
+  Build/Selbst-Lint gegengeprüft (`OK`, 0 Violations). Für die
+  verbleibenden zwei EPIC-03-Tools (`get_type_hierarchy`,
+  `get_file_skeleton`) ist damit real zu erwarten, dass die Grenze beim
+  nächsten oder übernächsten Tool-Eintrag reißt — siehe Vorschlag oben
+  (mehrere kleinere Factory-Klassen statt einer monolithischen
+  Sammelstelle), spätestens jetzt konkret zu prüfen.
 
 ### TD-005 — `McpCodeGraphServer`-Parameter lässt Tool-Klassen kaum eigenen `AIContextFootprint`-Spielraum [Priorität: mittel]
 
@@ -113,3 +122,8 @@ Verweis auf die Tech-Debt-ID).
   `AIContextFootprintCalculator`, falls dafür bereits ein
   Konfigurationsmechanismus existiert).
 - **Status:** offen
+- **Update (step-005, 2026-07-31):** `GetImpactTool` selbst blieb bei
+  2458/2500 (vom Coder gemessen, vom Kritiker per Build/Selbst-Lint
+  gegengeprüft) — knapper Puffer, aber noch kein Reißen. Bestätigt den
+  strukturellen Engpass unverändert für die zwei verbleibenden
+  EPIC-03-Tools.
