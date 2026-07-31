@@ -17,7 +17,7 @@ Dieses Dokument sammelt Ergänzungen, Optimierungen und weiterführende Ideen f�
 * **Lösung (KLAR):** Lazy Hash/mtime-Prüfung auf `.csproj`/`.sln`/`.slnx`. Bei Abweichung wird ein leichtgewichtiger Reload der Solution getriggert oder ein Hinweis an den Agenten ausgegeben.
 
 ### 1.3 Thread-Safety bei parallelen Tool-Calls
-* **Problem:** Modernere KI-Agenten rufen oft mehrere MCP-Tools simultan/parallel auf.
+* **Problem:** Modernere KI-Agenten rufen oft mehere MCP-Tools simultan/parallel auf.
 * **Lösung (KLAR):** Der Inkremental-Updater (`SourceFileCatalog` / Cache-Map) wird intern strikt mit einem `SemaphoreSlim` bzw. `lock` geschützt, um Race-Conditions bei parallelen Invalidation-Checks zu verhindern.
 
 ### 1.4 Optionales `get_call_tree`-Tool (Zukunftsidee)
@@ -36,20 +36,55 @@ Dieses Dokument sammelt Ergänzungen, Optimierungen und weiterführende Ideen f�
 
 ---
 
-## 3. Bekämpfung von AI-Drift & Duplikaten
+## 3. Bekämpfung von AI-Drift & Verzahnung mit `rules.json`
 
-### 3.1 Realismus-Check: Was ist technisch & beim Token-Budget sinnvoll?
+### 3.1 AI-Drift Bekämpfung (Pragmatische Werkzeuge)
 * **Unrealistisch / Zu teuer:** Vollwertige semantische Code-Klon-Erkennung (AST-Isomorphie oder Vektor-Embeddings), um z. B. zu erkennen, ob ein Algorithmus unter anderem Namen schon 40-mal existiert. Das sprengt die Latenz und das Speicherbudget eines residenten Roslyn-Servers.
 * **Realistisch, hochgradig effektiv & machbar (High ROI):**
+  * **Duplicate-Symbol-Warnung bei Namens-Kollisionen (`find_symbol`):** Gibt bei >1 Treffer für gleiche Namensmuster einen Drift-Warnhinweis zurück.
+  * **Contextual Health & Violation Hints (`get_file_skeleton` / `get_violations`):** Meldet aktive Linter-Violations direkt im Header-Metadatenbereich.
 
-#### A. Duplicate-Symbol-Warnung bei Namens-Kollisionen (`find_symbol`)
-* Findet `find_symbol` bei einer Suche nach einer Helper-Klasse/Methode mehrere gleichnamige Symbole in unterschiedlichen Namespaces (z. B. 5x `StringExtensions`), gibt das Tool einen expliziten **Drift-Warnhinweis** zurück:
-  > `⚠️ DRIFT WARNING: 4 classes named 'StringExtensions' already exist in namespaces (A.Utils, B.Helpers, ...). Consider reusing existing helpers instead of creating a 5th one!`
+### 3.2 Deep Integration: `rules.json` als Active Policy Engine für MCP (Neu / SOBER ANALYSIS)
 
-#### B. Contextual Health & Violation Hints (`get_file_skeleton` / `get_violations`)
-* Wenn ein Agent `get_file_skeleton` für eine Datei aufruft, um vor einer Änderung ihren Aufbau zu verstehen, meldet der Server in den Header-Metadaten direkt vorhandene Probleme:
-  > `File Health: 3 Linter Violations active (e.g. AINET012: Dependency Direction). Hotspot Score: High.`
-* Das warnt den Agenten *bevor* er neuen Code schreibt oder falsche Muster kopiert.
+Aktuell ist `rules.json` eine passive Konfigurationsdatei für den CLI-Batch-Lauf. Für den interaktiven MCP-Server-Betrieb ergeben sich 4 hochgradig begründete Erweiterungsoptionen in `rules.json`:
+
+#### A. Handlungshinweise für KI-Agenten (`"agent_hint"`)
+* **Problem:** Ein Linter-Fehler wie `AINET012: Dependency Direction Violation` sagt dem LLM zwar, *dass* ein Fehler vorliegt, aber nicht, *wie* er in dieser konkreten Codebasis behoben werden soll.
+* **Erweiterung in `rules.json`:** Jede Regel kann optional einen `agent_hint`-String definieren:
+  ```json
+  "AINET012": {
+    "enabled": true,
+    "severity": "error",
+    "agent_hint": "Controllers must not access DbContext directly. Inject IRepository<T> instead."
+  }
+  ```
+* **Nutzen:** `get_violations` gibt diesen Satz direkt an den Agenten weiter. Das spart Korrektur-Schleifen.
+
+#### B. Rausch-Filterung & Kategorisierung (`"mcp_config"`)
+* **Problem:** In CI/CD prüft der Linter auch Trivialitäten (Missing XML Comments, Formatting, Brace Style). Ein KI-Agent im MCP-Loop verbrennt Tokens, wenn `get_violations` 40 Formatierungs-Warnungen zurückgibt.
+* **Erweiterung in `rules.json`:**
+  ```json
+  "mcp_config": {
+    "min_severity": "warning",
+    "suppress_categories_for_agents": ["formatting", "documentation"],
+    "focus_categories": ["architecture", "design", "security", "correctness"]
+  }
+  ```
+* **Nutzen:** Der MCP-Server filtert kosmetisches Rauschen für den Agenten heraus und fokussiert das Token-Budget auf Architektur und Korrektheit.
+
+#### C. "No-New-Violations"-Ratchet (Schutz für Legacy-Code)
+* **Problem:** Eine Brownfield-Datei hat bereits 15 Alt-Verstöße. Ein KI-Agent kann nicht die ganze Datei refactoren (Risiko von Breaking Changes). Er darf aber **keine 16. Violation** hinzufügen.
+* **Erweiterung in `rules.json` / `get_violations`:**
+  ```json
+  "mcp_config": {
+    "enforce_ratchet_mode": true
+  }
+  ```
+* **Nutzen:** Bei `get_violations(check_delta: true)` vergleicht der MCP-Server den Zustand vor und nach den Edits des Agenten. Alt-Verstöße werden geduldet, neue Verstöße schlagen sofort Alarm.
+
+#### D. Kompaktes Architektur-Briefing (`get_active_rules` / MCP Resource)
+* **Problem:** Der KI-Agent weiß zu Session-Beginn nicht, welche Architektur-Regeln im Projekt gelten, ohne rohe JSON-Dateien manuell zu lesen.
+* **Lösung:** Eine MCP-Ressource oder ein Tool `get_active_rules`, das die aktiven Vorgaben aus `rules.json` in 10 prägnanten Sätzen zusammenfasst (z. B. *"Architektur: Controller -> Services -> Repositories. Max Params: 4. Immudabilität: Record-Types bevorzugen"*).
 
 ---
 
@@ -127,9 +162,12 @@ Die Symbol-ID `M:MyNamespace.OrderService.ProcessOrder(MyNamespace.OrderDto)` id
 | LLM-Anleitung via Handshake | **Klar** | Server `instructions` im MCP-Initialization-Call |
 | Duplicate-Symbol Drift-Warning | **Klar** | Warnhinweis bei >1 Treffer für gleiche Namensmuster |
 | Health-Header in `get_file_skeleton` | **Klar** | Metadaten mit Linter-Violations & Hotspot-Score anhängen |
+| **`agent_hint` in `rules.json`** | **NEU (Policy-Engine)** | Direkte Handlungsempfehlungen für das LLM in Regelsätzen hinterlegen |
+| **`mcp_config` Rausch-Filterung** | **NEU (Policy-Engine)** | Kosmetisches Rauschen (Formatting) für Agenten ausblenden, Fokus auf Architektur |
+| **No-New-Violations Ratchet** | **NEU (Policy-Engine)** | Delta-Prüfung: Erlaubt Alt-Verstöße in Brownfield, blockiert neue Verstöße |
 | **Stabile Symbol-IDs (`DocId`)** | **Klargestellt** | Für Folge-Abfragen (Lese-Referenzen) nach Agenten-Edits, nicht zum Schreiben |
-| **Blast-Radius (`get_impact` Depth)** | **NEU (aus Markt-Benchmark)** | Transitive Aufrufer-Analyse über N Ebenen via Roslyn |
-| **`get_symbol_body`** | **NEU (aus Markt-Benchmark)** | Punktgenaues Lesen nur eines Methodenrumpfs |
-| **Interface/DI Resolution** | **NEU (aus Markt-Benchmark)** | Zuordnung Interface-Methode $\rightarrow$ konkrete Impl. |
+| **Blast-Radius (`get_impact` Depth)** | **NEU (Markt-Benchmark)** | Transitive Aufrufer-Analyse über N Ebenen via Roslyn |
+| **`get_symbol_body`** | **NEU (Markt-Benchmark)** | Punktgenaues Lesen nur eines Methodenrumpfs |
+| **Interface/DI Resolution** | **NEU (Markt-Benchmark)** | Zuordnung Interface-Methode $\rightarrow$ konkrete Impl. |
 | `.csproj`-Invalidierung | **In Diskussion** | Wie tiefgehend? Nur mtime-Check oder voller Event-Reload? |
 | `get_call_tree` (Method Graph) | **Idee / Später** | Reicht `find_references` für V1 oder direkt Call-Tree? |
