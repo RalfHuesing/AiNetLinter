@@ -4,14 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Commands;
@@ -22,11 +20,10 @@ namespace AiNetLinter.Commands;
 /// </summary>
 internal static class McpServerCommand
 {
-    private const string ServerName = "ainetlinter";
-
     /// <summary>
     /// Loest die Ziel-Solution auf, laedt sie (bester Versuch, kein Absturz bei Fehlschlag) und
-    /// startet danach den MCP-Server mit einem (in diesem Step) leeren Tool-Set.
+    /// startet danach den MCP-Server mit dem in diesem Step registrierten Tool-Set (aktuell
+    /// nur <c>find_symbol</c>, siehe <see cref="McpServerOptionsFactory"/>).
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
@@ -37,7 +34,7 @@ internal static class McpServerCommand
         var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
         using var mcpState = new McpCodeGraphServer(catalog, c);
 
-        var serverOptions = CreateServerOptions();
+        var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);
         await using var server = McpServer.Create(transport, serverOptions);
         await server.RunAsync(ct);
@@ -122,23 +119,5 @@ internal static class McpServerCommand
             console.WriteError($"[WARN]: MCP-Server startet ohne geladene Solution ({solutionPath}): {ex.Message}");
             return null;
         }
-    }
-
-    private static McpServerOptions CreateServerOptions()
-    {
-        return new McpServerOptions
-        {
-            ServerInfo = new Implementation
-            {
-                Name = ServerName,
-                Version = GetServerVersion(),
-            },
-            ToolCollection = new McpServerPrimitiveCollection<McpServerTool>(),
-        };
-    }
-
-    private static string GetServerVersion()
-    {
-        return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
     }
 }
