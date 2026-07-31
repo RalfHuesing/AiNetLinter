@@ -1641,6 +1641,18 @@ ainetlinter --config rules.json --path ./Solution.sln --exclude-tests
 
 - `--public-only`: Blendet private und protected Member aus generierten Skeleton Maps (`--map skeleton`) aus, um Token zu sparen.
 
+### Suppression-Bypass (--ignore-suppressions)
+
+- `--ignore-suppressions [sprachen...]`: Umgeht Code-Unterdrückungen (dateiweite `disable all` und inline `disable [Rule]`) dynamisch während des Linter-Laufs für die angegebenen Sprachklassen.
+  - **Erlaubte Werte:** `all` (Standard bei Aufruf ohne Parameter), `cs` (oder `c#`), `razor`, `js`, `css`.
+  - **Formate:** Kommagetrennt (`--ignore-suppressions cs,razor`) oder durch Leerzeichen getrennt (`--ignore-suppressions cs razor`).
+
+Beispiel:
+```bash
+ainetlinter --config rules.json --path . --ignore-suppressions
+ainetlinter --config rules.json --path . --ignore-suppressions cs,razor
+```
+
 ---
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
