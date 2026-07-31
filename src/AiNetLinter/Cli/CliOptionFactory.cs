@@ -222,6 +222,11 @@ internal static class CliOptionFactory
         Description = "Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.",
     };
 
+    internal static Option<bool> CreateMcpServerOption() => new("--mcp-server")
+    {
+        Description = "Startet einen stdio-basierten MCP-Server (Model Context Protocol) statt eines Batch-Laufs. --path optional, Default: aktuelles Arbeitsverzeichnis.",
+    };
+
     internal static Option<string[]> CreateIgnoreSuppressionsOption()
     {
         var opt = new Option<string[]>("--ignore-suppressions")

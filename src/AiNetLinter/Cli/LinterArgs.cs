@@ -198,6 +198,11 @@ public sealed class LinterArgs
     public System.Collections.Generic.IReadOnlyList<string>? IgnoreSuppressions { get; init; }
 
     /// <summary>
+    /// Gibt an, ob statt eines Batch-Laufs ein stdio-basierter MCP-Server (Model Context Protocol) gestartet werden soll.
+    /// </summary>
+    public bool McpServer { get; init; }
+
+    /// <summary>
     /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
     /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()
@@ -255,7 +260,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals || McpServer;
 
     private string? ValidateIgnoreSuppressions()
     {

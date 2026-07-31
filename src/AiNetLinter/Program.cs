@@ -37,6 +37,11 @@ public static class Program
             try
             {
                 var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
+
+                // Schneller Pfad: --mcp-server. Kein stdout-Header, da das JSON-RPC-Framing
+                // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
+                if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token);
+
                 if (linterArgs.Docs == null && linterArgs.MapType == null
                     && linterArgs.EvalType == null && !linterArgs.ListEvals)
                 {
@@ -102,6 +107,7 @@ public static class Program
             TestsOnly = parsed.TestsOnly,
             PublicOnly = parsed.PublicOnly,
             IgnoreSuppressions = parsed.IgnoreSuppressions,
+            McpServer = parsed.McpServer,
         };
     }
 

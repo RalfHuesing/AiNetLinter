@@ -1,0 +1,155 @@
+#nullable enable
+
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Commands;
+using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.Tests.Output;
+using ModelContextProtocol.Client;
+using Xunit;
+
+namespace AiNetLinter.Tests.Commands;
+
+[Collection("ConsoleTestCollection")]
+public sealed class McpServerCommandTests
+{
+    [Fact]
+    public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "First.slnx"), "");
+            File.WriteAllText(Path.Combine(tempDir, "Second.slnx"), "");
+
+            var console = new TestLintConsole();
+            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+
+            Assert.Null(result);
+            var error = Assert.Single(console.Errors);
+            Assert.Contains("AMBIGUOUS_SOLUTION", error);
+            Assert.Contains("First.slnx", error);
+            Assert.Contains("Second.slnx", error);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveSolutionPathOrError_NoSolutionFound_ReportsResourceNotFound()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var console = new TestLintConsole();
+            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+
+            Assert.Null(result);
+            var error = Assert.Single(console.Errors);
+            Assert.Contains("RESOURCE_NOT_FOUND", error);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveSolutionPathOrError_SingleCandidate_ReturnsIt()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var sln = Path.Combine(tempDir, "Only.slnx");
+            File.WriteAllText(sln, "");
+
+            var console = new TestLintConsole();
+            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+
+            Assert.Equal(sln, result);
+            Assert.Empty(console.Errors);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveSolutionPathOrError_MissingPath_UsesCurrentDirectory()
+    {
+        var tempDir = CreateTempDir();
+        var originalDir = Directory.GetCurrentDirectory();
+        try
+        {
+            var sln = Path.Combine(tempDir, "Only.slnx");
+            File.WriteAllText(sln, "");
+            Directory.SetCurrentDirectory(tempDir);
+
+            var console = new TestLintConsole();
+            var result = McpServerCommand.ResolveSolutionPathOrError("", console);
+
+            Assert.Equal(sln, result);
+            Assert.Empty(console.Errors);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDir);
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task TryLoadSolutionAsync_BrokenSlnx_LogsWarningWithoutThrowing()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var brokenSln = Path.Combine(tempDir, "Broken.slnx");
+            File.WriteAllText(brokenSln, "<this-is-not-a-valid-slnx-document>");
+
+            var console = new TestLintConsole();
+            var exception = await Record.ExceptionAsync(
+                () => McpServerCommand.TryLoadSolutionAsync(brokenSln, CancellationToken.None, console));
+
+            Assert.Null(exception);
+            Assert.Contains(console.Errors, e => e.Contains("[WARN]", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_ServerRespondsWithEmptyToolList()
+    {
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
+
+        Assert.Empty(tools);
+    }
+
+    private static string CreateTempDir()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+}

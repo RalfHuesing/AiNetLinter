@@ -17,4 +17,5 @@ internal static class LinterErrorCodes
     internal const string AnalysisFailed      = "ANALYSIS_FAILED";
     internal const string ResourceNotFound    = "RESOURCE_NOT_FOUND";
     internal const string DriftDetected       = "DRIFT_DETECTED";
+    internal const string AmbiguousSolution   = "AMBIGUOUS_SOLUTION";
 }
