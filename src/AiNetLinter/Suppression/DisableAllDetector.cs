@@ -11,15 +11,27 @@ public static partial class DisableAllDetector
     /// <summary>
     /// Prüft, ob der Dateiinhalt einen exakten Disable-all-Kommentar enthält.
     /// </summary>
-    public static bool HasDisableAll(string fileContent) =>
-        DisableAllLinePattern().IsMatch(fileContent);
+    public static bool HasDisableAll(string fileContent, IgnoreSuppressionsFilter? filter = null, string languageKind = "cs")
+    {
+        if (filter != null && filter.ShouldIgnoreSuppression(languageKind))
+        {
+            return false;
+        }
+
+        return DisableAllLinePattern().IsMatch(fileContent);
+    }
 
     /// <summary>
     /// Prüft, ob die Datei unter dem angegebenen Pfad Disable-all enthält.
     /// </summary>
-    public static bool FileHasDisableAll(string absolutePath)
+    public static bool FileHasDisableAll(string absolutePath, IgnoreSuppressionsFilter? filter = null)
     {
         if (!File.Exists(absolutePath))
+        {
+            return false;
+        }
+
+        if (filter != null && filter.ShouldIgnoreSuppressionForFile(absolutePath))
         {
             return false;
         }

@@ -16,9 +16,9 @@ public static class SuppressionScanner
     /// <summary>
     /// Scans a single file for `ainetlinter-disable` comments.
     /// </summary>
-    public static IReadOnlyList<SuppressionEntry> ScanFile(string filePath)
+    public static IReadOnlyList<SuppressionEntry> ScanFile(string filePath, IgnoreSuppressionsFilter? filter = null)
     {
-        if (!File.Exists(filePath))
+        if (!File.Exists(filePath) || (filter != null && filter.ShouldIgnoreSuppressionForFile(filePath)))
         {
             return Array.Empty<SuppressionEntry>();
         }
@@ -50,7 +50,7 @@ public static class SuppressionScanner
     /// <summary>
     /// Scans all files under targetPath (C# and Razor files) for suppressions.
     /// </summary>
-    public static async Task<IReadOnlyList<SuppressionEntry>> ScanAllAsync(string targetPath)
+    public static async Task<IReadOnlyList<SuppressionEntry>> ScanAllAsync(string targetPath, IgnoreSuppressionsFilter? filter = null)
     {
         var files = new List<string>();
 
@@ -100,7 +100,7 @@ public static class SuppressionScanner
         var allEntries = new List<SuppressionEntry>();
         foreach (var file in files.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            allEntries.AddRange(ScanFile(file));
+            allEntries.AddRange(ScanFile(file, filter));
         }
 
         return allEntries;

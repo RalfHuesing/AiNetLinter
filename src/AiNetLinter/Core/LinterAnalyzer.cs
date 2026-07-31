@@ -352,7 +352,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     {
         var fileContent = _tree.GetText().ToString();
         var active = _ctx.Violations
-            .Where(v => !SuppressionEvaluator.IsSuppressed(fileContent, v.RuleName ?? "", v.LineNumber))
+            .Where(v => !SuppressionEvaluator.IsSuppressed(fileContent, v.RuleName ?? "", v.LineNumber, _args?.IgnoreSuppressions))
             .ToList();
         _ctx.ReplaceViolations(active);
     }
