@@ -5,7 +5,7 @@ started_at: 2026-07-31T09:30:00Z
 last_updated: 2026-07-31T09:30:00Z
 rules_dir: .agents/rules
 total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-004
+current_step: step-005
 ---
 
 # Task State: codegraph-mcp
@@ -31,6 +31,7 @@ eine Zeile.>
 | step-002 | EPIC-02 | done | Resident McpCodeGraphServer + Lazy-Staleness-Invalidierung | 0/3 | yes | approved | 81cf007 |
 | step-003 | EPIC-03 | done | Tool-Infrastruktur + erstes Tool find_symbol (fix-01: solution-not-loaded coverage) | 1/3 | yes | approved | 9d6cecc |
 | step-004 | EPIC-03 | done | Zweites Tool find_references | 0/3 | yes | approved | a9e91ed |
+| step-005 | EPIC-03 | in_progress | Drittes Tool get_impact | 0/3 | - | - | - |
 
 ## Config (optional)
 
