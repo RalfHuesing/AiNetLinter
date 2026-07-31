@@ -26,7 +26,7 @@ current_step: step-003
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI Option --ignore-suppressions in CliOptions, CliOptionFactory, LinterArgs und CliCommandBuilder integrieren | 0/3 | 03602ea | approved | 03602ea |
 | step-002 | EPIC-02 | done | Core Suppression Bypass Engine (IgnoreSuppressionsFilter) in SuppressionEvaluator, WebSuppressionDetector, DisableAllDetector und SuppressionScanner integrieren | 0/3 | 8b82704 | approved | 8b82704 |
-| step-003 | EPIC-03 | open | Transparente Header-Ausgabe des Ignore-Suppressions-Modus in CLI, DebtReportBuilder und RepoPlaybookGenerator | 0/3 | - | - | - |
+| step-003 | EPIC-03 | done | Transparente Header-Ausgabe des Ignore-Suppressions-Modus in CLI, DebtReportBuilder und RepoPlaybookGenerator | 0/3 | 7e9873a | approved | 7e9873a |
 
 ## Config (optional)
 
