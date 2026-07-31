@@ -471,6 +471,23 @@ siehe §10.6.
   Nutzer arbeitet, wo er arbeitet)
 - Conventional Commits, deutsche Imperativ-Form (sofern Projekt-Rules
   nichts anderes vorgeben — siehe `skills/coder/SKILL.md`)
+- **Commit-Subject trägt zusätzlich den Task-Kurznamen als Suffix**
+  `[<kurzname>]` (Kurzname = Verzeichnisname von `<task-dir>`) — bei
+  **jedem** Commit dieses Tasks, nicht nur bei den `docs(task)`/
+  `chore(task)`-Commits, also auch bei Code-Commits des Coders
+  (`feat(...)`, `fix(...)`, …). Der bestehende `(scope)`-Slot bleibt
+  unverändert für das Code-Modul reserviert (z. B. `feat(userconfig):`)
+  — beide Signale ergänzen sich, sie fallen nicht immer zusammen (ein
+  Task kann Steps in mehreren Modulen erzeugen). Zählt gegen die 72-Zeichen-
+  Grenze des Subjects.
+  **Warum:** `<task-dir>` wird nach Task-Abschluss typischerweise
+  gelöscht — der bestehende `Refs: <task-dir>/step-NNN`-Trailer im Body
+  (siehe `skills/coder/SKILL.md` Schritt 5) hilft danach nicht mehr:
+  `git log --oneline` zeigt ihn gar nicht, und der referenzierte Pfad
+  zeigt nach der Löschung ins Leere. Der Suffix im Subject bleibt dagegen
+  als reiner Text durchsuchbar (`git log --oneline --grep <kurzname>`)
+  und macht so auch nach der Löschung erkennbar, welche Commits
+  zusammengehören.
 - **Task-Doku wird mitcommittet, nicht nur auf der Platte belassen** —
   jeder Step hinterlässt eine nachvollziehbare Commit-Historie seiner
   Zustände. Pro Step entstehen dabei mehrere kleine Commits statt einem
@@ -508,7 +525,7 @@ siehe §10.6.
     committen, an der aktuellen `HEAD`-Position, mit einer ehrlichen
     Commit-Message, die das als Nachtrag kennzeichnet (z. B.
     `chore(task): Nachtrag — vor Doku-Commit-Regel liegen gebliebene
-    Step-Dateien committen`).
+    Step-Dateien committen [<kurzname>]`).
   - **Nie versuchen, die Historie so aussehen zu lassen, als wäre der
     Commit schon immer an der „richtigen" chronologischen Stelle
     gewesen.** Ein Rebase zu diesem Zweck schreibt jeden nachfolgenden

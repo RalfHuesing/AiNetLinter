@@ -150,6 +150,12 @@ Subagent-Typen**:
 Planer und Kritiker committen selbst **nichts**. `git add` dabei immer
 **gezielt**, nie breit (`-A`/`.`).
 
+**Jeder Commit-Subject in diesem Task** (auch deine eigenen, nicht nur
+die des Coders) trägt zusätzlich den Task-Kurznamen als Suffix
+`[<kurzname>]` (Kurzname = Verzeichnisname von `<task-dir>`) — siehe
+`spec.md` §10.3. Die Beispiel-Messages unten sind entsprechend
+formatiert.
+
 ## Schritt 3 — Planer aufrufen
 
 ### 3a. Roadmap-Modus (nur bei Schritt 1, Fall A, Punkt 3)
@@ -158,7 +164,7 @@ Auftrag: „Leite aus `konzept.md` eine grobe Roadmap ab." Nach Rückkehr:
 - `<task-dir>/roadmap.md` sollte existieren (Template
   `templates/roadmap.md`), inkl. Tech-Stack-Notiz.
 - **Committe `roadmap.md`** (Message z. B. `docs(task): Roadmap für
-  feature-x ableiten`).
+  feature-x ableiten [feature-x]`).
 - Falls der Planer blockiert hat (z. B. `konzept.md` zu vage): Status
   `blocked`, Nutzer informieren, Loop pausiert hier.
 
@@ -174,7 +180,7 @@ gibst du vor, siehe `spec.md` §6.2.1). Input immer: `konzept.md`,
   plus ggf. aktualisiertes `roadmap.md`: Trage den Step in die
   Steps-Tabelle von `task-state.md` ein (Status `open`), **committe
   `roadmap.md`-Diff + neuen Step-Plan zusammen** (ein Commit, Message z. B.
-  `docs(task): plane step-004 (Epic „Auth-Refactor")`).
+  `docs(task): plane step-004 (Epic „Auth-Refactor") [feature-x]`).
 - **„Keine offenen Epics mehr, kein Fix ausstehend":** Das ist das Signal
   für den Abschluss-Check — weiter zu Schritt 6.
 
@@ -197,7 +203,7 @@ Step-Plan liefert:
    `tech-debt.md`-Diff (falls vorhanden) + Status-Update in
    `step-plan.md` (ein Commit, siehe Tabelle oben):
    - `approved` → Step-Status `done`. Commit-Message z. B.
-     `chore(task): step-NNN Review dokumentieren (Verdict: approved)`.
+     `chore(task): step-NNN Review dokumentieren (Verdict: approved) [feature-x]`.
      Kurze Statusmeldung an Nutzer, zurück zu Schritt 3b für den
      nächsten Step.
    - `issues` → **Fix-Step** (Mechanismus: `spec.md` §6.2.1, Budget:

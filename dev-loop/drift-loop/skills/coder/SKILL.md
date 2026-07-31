@@ -85,10 +85,14 @@ not found", fehlendes SDK, Auth-Fehler, nicht erreichbarer Port, …)?
 ### Schritt 5 — Code-Commit machen
 
 Gezielter `git add`, aktueller Branch, Conventional Commit, Deutsch
-Imperativ, Subject ≤ 72 Zeichen, Body mit Verweis auf Step
-(`Refs: <task-dir>/step-NNN`). Bei `step_type: batch`: ein Commit für
-alle Items. Kein Push. `step-plan.md`/`step-result.md` **noch nicht**
-mitcommitten (kommt in Schritt 7).
+Imperativ, Subject ≤ 72 Zeichen inkl. Suffix, Body mit Verweis auf Step
+(`Refs: <task-dir>/step-NNN`). Subject trägt zusätzlich den
+Task-Kurznamen als Suffix `[<kurzname>]` (Kurzname = Verzeichnisname von
+`<task-dir>`, siehe `../../spec.md` §10.3) — der `(scope)`-Slot bleibt
+fürs Code-Modul reserviert, der Suffix kommt zusätzlich ans Subject-Ende.
+Bei `step_type: batch`: ein Commit für alle Items. Kein Push.
+`step-plan.md`/`step-result.md` **noch nicht** mitcommitten (kommt in
+Schritt 7).
 
 ### Schritt 6 — Result schreiben
 
@@ -117,8 +121,9 @@ Aktualisiere danach `status` in `step-plan.md` von `in_progress` auf
 ### Schritt 7 — Doku-Commit machen
 
 Zweiter, kleiner Commit — nur Task-Doku (`step-plan.md` +
-`step-result.md`). Kein Push. Grund für zwei Commits: der Doku-Commit
-referenziert den Hash des Code-Commits, kann also erst danach entstehen.
+`step-result.md`). Subject wie in Schritt 5 mit Suffix `[<kurzname>]`.
+Kein Push. Grund für zwei Commits: der Doku-Commit referenziert den Hash
+des Code-Commits, kann also erst danach entstehen.
 
 ## Was du NICHT tun darfst
 
