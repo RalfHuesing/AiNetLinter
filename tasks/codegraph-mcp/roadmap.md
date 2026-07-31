@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T09:45:00Z
+last_updated: 2026-07-31T15:00:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -70,30 +70,43 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: **in Arbeit → step-001** (deckt CLI-Flag, NuGet-Paket,
-      Solution-Auswahl mit Mehrdeutigkeits-Abbruch und minimalen startenden
-      Server mit leerem Tool-Set ab; die zustandsvolle Resident-Server-Klasse
-      wandert nach EPIC-02, das Tool-Set nach EPIC-03 — Epic bleibt bis dahin
-      offen). CLI-Einstiegspunkt & Server-Grundgerüst — neues Flag
-      `--mcp-server` (`Cli/CliOptions.cs`, `CliOptionFactory.cs`,
-      `LinterArgs.cs`), neuer `Commands/McpServerCommand.cs` (Vorbild:
-      `ImpactCommand.cs`/`MapCommand.cs`), Dispatch in `Program.cs`,
-      `ModelContextProtocol`-NuGet-Paket in `AiNetLinter.csproj`,
-      Solution-Auswahl über `--path` mit Mehrdeutigkeits-Abbruch bei
-      mehreren `.sln`/`.slnx`-Kandidaten (Verschärfung ggü. bestehendem
-      `SourceFileCatalog.FindSolutionFile`-Verhalten), resident laden via
-      `SourceFileCatalog.LoadAsync`, Server bleibt bei Ladefehler am
-      Leben und liefert strukturierte `[ERROR]`-Antworten
-      (`konzept.md` Muss-Haben "Neuer Ausführungsmodus", "Solution-
-      Auswahl beim Start", "Fehlerbehandlung ohne Absturz" Teil 1).
-- [ ] EPIC-02: Server-Zustand & Staleness-Invalidierung — zustandshaltende
-      Server-Klasse ohne DI-Container (Vorbild: statische
-      Commands/direkte Instanziierung), Hash/mtime-Cache pro Datei,
-      lazy Prüfung vor jeder Tool-Antwort, inkrementelles Update über
-      `SourceFileCatalog.WithUpdatedSolution` (kein Komplett-Reload),
-      Thread-sicherer Zugriff auf `Solution`/`Compilation`
-      (`konzept.md` Muss-Haben "Lazy Staleness-Invalidierung",
-      "Thread-sicherer Zugriff").
+- [x] EPIC-01: **abgeschlossen → step-001**. CLI-Einstiegspunkt &
+      Server-Grundgerüst — neues Flag `--mcp-server` (`Cli/CliOptions.cs`,
+      `CliOptionFactory.cs`, `LinterArgs.cs`), neuer
+      `Commands/McpServerCommand.cs` (Vorbild: `ImpactCommand.cs`/
+      `MapCommand.cs`), Dispatch in `Program.cs`, `ModelContextProtocol`-
+      NuGet-Paket in `AiNetLinter.csproj`, Solution-Auswahl über `--path`
+      mit Mehrdeutigkeits-Abbruch bei mehreren `.sln`/`.slnx`-Kandidaten
+      (Verschärfung ggü. bestehendem `SourceFileCatalog.FindSolutionFile`-
+      Verhalten), Server bleibt bei Ladefehler am Leben und liefert
+      strukturierte `[ERROR]`-Antworten (`konzept.md` Muss-Haben "Neuer
+      Ausführungsmodus", "Solution-Auswahl beim Start", "Fehlerbehandlung
+      ohne Absturz" Teil 1).
+      **Entscheidung zum Abschluss (Planer, step-002-Vorbereitung):** Das
+      Epic wurde in step-001 selbst bereits bewusst auf genau diese vier
+      Teile verengt — die zustandsvolle Resident-Server-Klasse wurde
+      explizit EPIC-02 zugeschlagen, das Tool-Set EPIC-03 (siehe die
+      vorherige Fassung dieser Zeile sowie `step-001/step-plan.md`).
+      Step-001 hat exakt diesen verengten Scope vollständig und `approved`
+      geliefert (siehe `step-001/step-review.md`) — es gibt innerhalb
+      dieser Abgrenzung nichts Offenes mehr. Das Epic formal weiter offen
+      zu lassen, bis EPIC-02 fertig ist, würde die beiden Epics inhaltlich
+      wieder vermischen, die step-001 bewusst getrennt hat. Daher: EPIC-01
+      abgehakt, EPIC-02 trägt den Rest eigenständig weiter (siehe unten).
+      Zur Klarheit unverändert: `McpServerCommand` hält aktuell **keinen**
+      wiederverwendbaren Zustand — `TryLoadSolutionAsync` lädt den
+      `SourceFileCatalog` in einem `using`-Block und disposed ihn sofort
+      wieder, bevor der Server startet (siehe
+      `src/AiNetLinter/Commands/McpServerCommand.cs:36`). Genau das ist
+      die Lücke, die EPIC-02/step-002 schließt.
+- [ ] EPIC-02: **in Arbeit → step-002**. Server-Zustand &
+      Staleness-Invalidierung — zustandshaltende Server-Klasse ohne
+      DI-Container (Vorbild: statische Commands/direkte Instanziierung),
+      Hash/mtime-Cache pro Datei, lazy Prüfung vor jeder Tool-Antwort,
+      inkrementelles Update über `SourceFileCatalog.WithUpdatedSolution`
+      (kein Komplett-Reload), Thread-sicherer Zugriff auf
+      `Solution`/`Compilation` (`konzept.md` Muss-Haben "Lazy
+      Staleness-Invalidierung", "Thread-sicherer Zugriff").
 - [ ] EPIC-03: Symbolgraph-Tools — `find_symbol`, `find_references`,
       `get_impact`, `get_type_hierarchy`, `get_file_skeleton`. Basis:
       `SymbolFinder.FindDeclarationsAsync`/`FindDerivedClassesAsync`/
