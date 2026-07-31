@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T23:30:00Z
+last_updated: 2026-07-31T22:00:00Z  # aktualisiert: step-009 approved, step-010 in Planung
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -183,7 +183,7 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       `SkeletonSyntaxWalker`) aufgefallen, da alle Fixture-/Coder-Tests
       ausschließlich In-Fixture-Hierarchien ohne externe Basistypen prüften
       (siehe `step-007/step-review.md` Finding 1).
-- [ ] EPIC-04: **in Arbeit → step-009**. Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
+- [ ] EPIC-04: **in Arbeit → step-010**. Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
       `SourceFileCatalog.GetSourceFiles` + `Web/WebFileCatalog.cs`
       `Collect`, kein neuer Datei-Scan nötig, siehe "Entdeckte
       Mängel/Redundanzen" in `konzept.md`), `get_hotspots` (Basis:
@@ -196,22 +196,34 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       **Gleiche Dogfooding-Pflicht wie EPIC-03** (siehe dort) gilt für
       jeden EPIC-04-Tool-Step.
       **step-008** (`approved`, siehe `step-008/step-review.md`) lieferte
-      `get_index_scope` — erstes EPIC-04-Tool fertig. Tech-Debt-Update aus
-      dem Review: `FileStructureToolRegistrations` liegt bei 2434/2500
-      `AIContextFootprint` (nur noch 66 Zeilen Puffer, siehe `tech-debt.md`
-      TD-004/TD-005), für die restlichen drei EPIC-04-Tools im Auge zu
-      behalten. **step-009** (geplant) liefert `get_hotspots` (Basis:
-      `Maps/HotspotMapBuilder.cs`, aber neu gegen die resident gehaltene
-      `Solution` statt gegen einen unabhängigen Filesystem-Scan gebaut,
-      da `HotspotMapBuilder` selbst CLI-/`ILintConsole`-gebunden ist und
-      nicht direkt wiederverwendet werden kann — analog zur `.cs`-Zählung
-      in step-008). Führt dabei einen additiven, optionalen
-      `maxLineCount`-Konstruktor-Parameter auf `McpCodeGraphServer` ein
-      (Config-Verdrahtung über `args.ConfigPath`, wiederverwendet
-      `MapCommand.ResolveMaxLineCount`-Logik) — bislang hielt der
-      MCP-Server keinerlei `rules.json`-Zustand. Danach bleiben
-      `get_violations` und `search_pattern` als letzte zwei offene
-      EPIC-04-Tools.
+      `get_index_scope` — erstes EPIC-04-Tool fertig.
+      **step-009** (`approved`, siehe `step-009/step-review.md`) lieferte
+      `get_hotspots` — zweites EPIC-04-Tool fertig. Tech-Debt-Update aus
+      dem Review: `FileStructureToolRegistrations` liegt bei 2455/2500
+      `AIContextFootprint` (nur noch 45 Zeilen Puffer, Trend
+      ~11-15 Zeilen pro `tools.Add(...)`-Eintrag — siehe `tech-debt.md`
+      TD-004-Update), `GetHotspotsTool` bei 2424/2500 (TD-005-Muster
+      „dünner Dispatch + separate Scanner-Datei" erneut bestätigt),
+      `TD-007` neu dokumentiert (`McpCodeGraphServer.TryApplyContentChange`
+      hat 5 Parameter, vorbestehend aus step-002). **step-010** (geplant)
+      liefert `get_violations` — drittes EPIC-04-Tool. Basis: volle
+      Wiederverwendung der bestehenden `LinterEngine.RunAsync(Solution,
+      noCache: true, cacheTtlMinutes: 0, ct)`-Pipeline (per-doc Parallel-
+      Analyse + Post-Analysis-Checks), **kein** Disk-Cache, **kein**
+      zweiter Lint-Loop — exakt die in `konzept.md` Muss-Haven "Cache
+      umgehen" geforderte Architektur. Scope-Filter (case-insensitive
+      `Contains` auf Projekt-Name oder solution-relativen Pfad) als
+      Post-Filter auf den fertigen `RuleViolation`-Listen, konsistent mit
+      `get_hotspots` (gleiche Vereinfachung, gleiche "Bekannte Ausnahme"-
+      Begründung: kein echtes C#-Namespace-Parsing). Erfordert einen
+      additiven, optionalen `Config?`-Konstruktor-Parameter auf
+      `McpCodeGraphServer` (bisher hielt der Server keine
+      `rules.json`/`Config`-Daten — `get_hotspots` brauchte nur den
+      `MaxLineCount`-Int, `get_violations` braucht die volle `Config`),
+      Verdrahtung über `args.ConfigPath` in `McpServerCommand` per neuer
+      `ResolveConfig(LinterArgs)`-Hilfsmethode (gleiches Muster wie
+      `ResolveMaxLineCount` aus step-009). Danach bleibt nur noch
+      `search_pattern` als letztes offenes EPIC-04-Tool.
 - [ ] EPIC-05: Scope-Kommunikation & Miss-Hint — jede Tool-`description`
       der Roslyn-basierten Tools benennt explizit die C#-only-Grenze,
       `initialize`-Antwort trägt denselben Hinweis zentral im
