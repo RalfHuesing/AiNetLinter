@@ -30,5 +30,5 @@ Grober Anker, kein Detailplan — Detail-Steps entstehen erst JIT im Step-Modus 
 - [x] EPIC-01: CLI Option & Argument Parsing — `--ignore-suppressions` in `CliOptions`, `CliOptionFactory` und `LinterArgs` registrieren inkl. Argument-Parsing (Default `all`, Alias `c#` zu `cs`, Validierung) (→ step-001).
 - [x] EPIC-02: Core Suppression Bypass Engine — `IgnoreSuppressionsFilter`/Mode implementieren und in `SuppressionScanner` sowie Web-Analyzern (C#, Razor, JS, CSS) einbinden (→ step-002).
 - [x] EPIC-03: Header & Report Output Rendering — CLI-Header-Ausgaben, `DebtReportBuilder` und Playbook-Output um active ignore-suppressions Status ergänzen (→ step-003).
-- [ ] EPIC-04: Integration & Unit Test Coverage — Unit- und Integrationstests für Sprachfilter, Alias-Normalisierung, Parsing-Fehler und Bypass-Verhalten erstellen.
-- [ ] EPIC-05: Documentation & Roadmap Sync — `Docs/configuration.md`, `Docs/ROADMAP.md` und `README.md` mit `--ignore-suppressions` Spezifikation aktualisieren.
+- [x] EPIC-04: Integration & Unit Test Coverage — Unit- und Integrationstests für Sprachfilter, Alias-Normalisierung, Parsing-Fehler und Bypass-Verhalten erstellen (→ step-004).
+- [x] EPIC-05: Documentation & Roadmap Sync — `Docs/configuration.md`, `Docs/ROADMAP.md` und `README.md` mit `--ignore-suppressions` Spezifikation aktualisieren (→ step-005).
