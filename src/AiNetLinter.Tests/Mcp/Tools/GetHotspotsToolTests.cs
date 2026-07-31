@@ -79,8 +79,8 @@ public sealed class GetHotspotsToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Greeter.cs, Caller.cs, OtherCaller.cs, Hierarchy.cs.
-        Assert.Contains("Gescannt: 4 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
+        // Greeter.cs, Caller.cs, OtherCaller.cs, Hierarchy.cs, ViolationTrigger.cs.
+        Assert.Contains("Gescannt: 5 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

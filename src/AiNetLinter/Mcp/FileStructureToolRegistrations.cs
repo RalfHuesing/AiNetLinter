@@ -8,11 +8,13 @@ namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_skeleton</c>,
-/// <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
-/// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
-/// eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten
-/// Tool waechst (siehe step-007 JIT-Kontext). Vorbereitet fuer die verbleibenden EPIC-04-Tools
-/// (<c>get_violations</c>, <c>search_pattern</c>).
+/// <c>get_index_scope</c>, <c>get_hotspots</c>) an der von
+/// <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
+/// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
+/// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst (siehe step-007
+/// JIT-Kontext). <c>get_violations</c> ist in eine eigene <see cref="AnalysisToolRegistrations"/>-
+/// Klasse ausgelagert, weil sein <c>LinterEngine</c>-Pull-in den Footprint dieser Klasse ueber das
+/// 2500-Limit getrieben hat (siehe step-010 DoD-Footprint-Kontrolle).
 /// </summary>
 internal static class FileStructureToolRegistrations
 {

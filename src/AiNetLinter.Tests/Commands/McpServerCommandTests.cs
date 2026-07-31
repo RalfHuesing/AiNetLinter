@@ -131,7 +131,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithSevenTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithEightTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -148,7 +148,7 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(7, tools.Count);
+        Assert.Equal(8, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");
@@ -156,6 +156,7 @@ public sealed class McpServerCommandTests
         Assert.Contains(tools, t => t.Name == "get_type_hierarchy");
         Assert.Contains(tools, t => t.Name == "get_index_scope");
         Assert.Contains(tools, t => t.Name == "get_hotspots");
+        Assert.Contains(tools, t => t.Name == "get_violations");
     }
 
     [Fact]
@@ -210,6 +211,33 @@ public sealed class McpServerCommandTests
         Assert.Contains(".cs:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains(".xaml:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("voll vom Symbolgraph abgedeckt", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetViolationsReturnsAtLeastOneViolation()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "get_violations",
+            new Dictionary<string, object?>(),
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        // ViolationTrigger.cs ist die deterministische Fixture-Verletzung (fehlendes `sealed`).
+        Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -399,6 +427,38 @@ public sealed class McpServerCommandTests
         var result = McpServerCommand.ResolveMaxLineCount(args);
 
         Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result);
+    }
+
+    [Fact]
+    public void ResolveConfig_ConfigWithCustomMaxLineCount_UsesConfigFromArgs()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var configPath = Path.Combine(tempDir, "rules.json");
+            File.WriteAllText(configPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+            var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir, Verbose = false };
+
+            var result = McpServerCommand.ResolveConfig(args);
+
+            Assert.NotNull(result);
+            Assert.Equal(5, result.Metrics.MaxLineCount);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveConfig_NoConfigPath_ReturnsDefaultConfig()
+    {
+        var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
+
+        var result = McpServerCommand.ResolveConfig(args);
+
+        Assert.NotNull(result);
+        Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result.Metrics.MaxLineCount);
     }
 
     private static string CreateTempDir()

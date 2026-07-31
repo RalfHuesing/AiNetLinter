@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -26,11 +27,17 @@ internal sealed class McpCodeGraphServer : IDisposable
     private SourceFileCatalog? _catalog;
 
     // 700 = new MetricsConfig().MaxLineCount (Default-Parameter-Werte muessen compile-time constant sein).
-    public McpCodeGraphServer(SourceFileCatalog? catalog, ILintConsole? console = null, int maxLineCount = 700)
+    public McpCodeGraphServer(
+        SourceFileCatalog? catalog,
+        ILintConsole? console = null,
+        int maxLineCount = 700,
+        Config? config = null,
+        ILintConsole? consoleOverride = null)
     {
         _catalog = catalog;
-        _console = console ?? LinterConsole.Instance;
+        _console = consoleOverride ?? console ?? LinterConsole.Instance;
         MaxLineCount = maxLineCount;
+        Config = config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
 
         if (_catalog is not null)
         {
@@ -46,6 +53,22 @@ internal sealed class McpCodeGraphServer : IDisposable
     /// fest, nicht pro Tool-Call — die Config aendert sich zur Laufzeit nicht.
     /// </summary>
     public int MaxLineCount { get; }
+
+    /// <summary>
+    /// Vollstaendige Linter-Konfiguration (aus <c>rules.json</c> via <c>--config</c> geladen, sonst
+    /// <see cref="Config"/>-Default). Benoetigt von Tools, die regelbasiert arbeiten (z. B.
+    /// <c>get_violations</c> fuer <see cref="Core.LinterEngine"/>-Konstruktion und
+    /// PathOverrides). Nie <see langword="null"/> — der Konstruktor normalisiert mit <c>?? new Config()</c>.
+    /// </summary>
+    public Config Config { get; }
+
+    /// <summary>
+    /// Konsolen-Kanal, an den der MCP-Server selbst loggt. Wird von <c>get_violations</c> an
+    /// <see cref="Core.LinterEngine"/> weitergereicht, damit Lint-Warnungen auf demselben Kanal
+    /// landen wie die uebrigen MCP-Server-Logs (nicht auf stdout, wo sie mit dem stdio-MCP-Verkehr
+    /// kollidieren wuerden).
+    /// </summary>
+    public ILintConsole Console => _console;
 
     /// <summary>
     /// Liefert die aktuelle, ggf. lazy aktualisierte <see cref="Solution"/> — <see langword="null"/>,

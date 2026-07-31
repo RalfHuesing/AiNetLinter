@@ -1,0 +1,172 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
+using AiNetLinter.Core;
+using AiNetLinter.Models;
+using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
+
+namespace AiNetLinter.Mcp.Tools;
+
+/// <summary>
+/// Reine Formatierungs-/Filter-Logik fuer <see cref="GetViolationsTool"/> — in eine eigene Datei
+/// ausgelagert, damit <see cref="GetViolationsTool"/>s eigener <c>AIContextFootprint</c> (siehe
+/// <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu <see cref="GetHotspotsScanner"/>).
+/// Delegiert die eigentliche Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
+/// mit <c>noCache: true</c> — bewusst KEIN Neubau einer eigenen Lint-Loop, weil
+/// <c>konzept.md</c> fuer <c>get_violations</c> explizit die <see cref="LinterEngine"/> als Basis
+/// vorsieht und der Disk-Cache fuer den resident laufenden Server irrelevant ist (Muss-Haven "Cache
+/// umgehen": Cache dient der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
+/// Post-Filter auf den fertigen <see cref="RuleViolation"/>s (case-insensitive <c>Contains</c> auf
+/// Projekt-Name oder solution-relativem Pfad), kein Pre-Filter ueber <see cref="LinterArgs"/> — siehe
+/// "Bekannte Ausnahmen" im Step-Plan. Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt
+/// unit-testbar.
+/// </summary>
+internal static class GetViolationsScanner
+{
+    /// <summary>
+    /// Baut den vollstaendigen Lint-Violations-Report fuer <paramref name="solution"/> als Text. Ist
+    /// <paramref name="scopeFilter"/> gesetzt, aber matched keine Datei, wird eine explizite
+    /// "Keine Dateien im Scope"-Meldung geliefert statt der sonst irrefuehrenden "keine Violations"-
+    /// Aussage. Defensive <c>try/catch</c> defensiv fuer unerwartete Lint-Errors —
+    /// ueberspringt die betroffene Datei nicht moeglich (der Fehler waere global), liefert aber
+    /// stattdessen einen Fehlertext, damit der MCP-Aufruf nicht crasht.
+    /// </summary>
+    internal static async Task<string> BuildViolationsTextAsync(
+        Solution solution,
+        Config config,
+        ILintConsole console,
+        string? scopeFilter,
+        CancellationToken ct)
+    {
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var fileToProject = BuildFileToProjectMap(solution, solutionDir);
+
+        IReadOnlyCollection<RuleViolation> violations;
+        try
+        {
+            var engine = new LinterEngine(
+                config: config,
+                rulesJsonContent: null,
+                profiler: null,
+                console: console,
+                args: null);
+            violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return LinterErrorFormatter.Format(
+                LinterErrorCodes.AnalysisFailed,
+                "Unerwarteter Fehler bei der Lint-Analyse.",
+                context: ex.Message,
+                hint: "LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
+        }
+
+        return FormatReport(solutionDir, fileToProject, violations, scopeFilter);
+    }
+
+    private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var project in solution.Projects)
+        {
+            foreach (var document in project.Documents)
+            {
+                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
+                if (document.FilePath is null) continue;
+                map[document.FilePath] = project.Name;
+            }
+        }
+        return map;
+    }
+
+    private static bool MatchesScope(string filePath, string projectName, string solutionDir, string? scopeFilter)
+    {
+        if (string.IsNullOrEmpty(scopeFilter)) return true;
+        if (projectName.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
+
+        var relativePath = Path.GetRelativePath(solutionDir, filePath);
+        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatReport(
+        string solutionDir,
+        Dictionary<string, string> fileToProject,
+        IReadOnlyCollection<RuleViolation> violations,
+        string? scopeFilter)
+    {
+        var filtered = violations
+            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
+                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
+            .ToList();
+
+        if (filtered.Count == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
+        {
+            return $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.";
+        }
+
+        var fileCount = filtered.Select(v => v.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var sb = new StringBuilder();
+        var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
+        sb.AppendLine($"Lint-Violations: {filtered.Count} Verstoesse in {fileCount} Dateien{scopeSuffix}");
+        sb.AppendLine();
+
+        if (filtered.Count == 0)
+        {
+            sb.AppendLine("Keine Lint-Violations.");
+            return sb.ToString().TrimEnd();
+        }
+
+        var errors = filtered.Where(v => ResolveSeverity(v) == "error").ToList();
+        var warnings = filtered.Where(v => ResolveSeverity(v) != "error").ToList();
+
+        AppendSection(sb, "Fehler", errors, solutionDir);
+        AppendSection(sb, "Warnungen", warnings, solutionDir);
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private static string ResolveSeverity(RuleViolation v)
+    {
+        if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
+        return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
+    }
+
+    private static void AppendSection(
+        StringBuilder sb, string heading, IReadOnlyList<RuleViolation> violations, string solutionDir)
+    {
+        sb.AppendLine($"## {heading}");
+        sb.AppendLine();
+
+        if (violations.Count == 0)
+        {
+            sb.AppendLine("Keine.");
+            sb.AppendLine();
+            return;
+        }
+
+        sb.AppendLine("| Datei | Zeile | Regel | Details |");
+        sb.AppendLine("|:---|---:|:---|:---|");
+        foreach (var v in violations.OrderBy(x => x.FilePath, StringComparer.OrdinalIgnoreCase)
+                                    .ThenBy(x => x.LineNumber)
+                                    .ThenBy(x => x.RuleName, StringComparer.OrdinalIgnoreCase))
+        {
+            var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
+            sb.AppendLine($"| {relativePath} | {v.LineNumber} | {v.RuleName} | {v.Details} |");
+        }
+        sb.AppendLine();
+    }
+
+    private static string? LookupProjectName(Dictionary<string, string> fileToProject, string filePath)
+    {
+        return fileToProject.TryGetValue(filePath, out var name) ? name : null;
+    }
+}

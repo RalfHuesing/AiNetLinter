@@ -33,8 +33,8 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Greeter.cs, Caller.cs, OtherCaller.cs, Hierarchy.cs.
-        Assert.Contains(".cs: 4 Dateien (voll vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
+        // Greeter.cs, Caller.cs, OtherCaller.cs, Hierarchy.cs, ViolationTrigger.cs.
+        Assert.Contains(".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

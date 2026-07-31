@@ -407,6 +407,16 @@
       "Metrics": {
         "MaxAIContextFootprint": 2700
       }
+    },
+    "src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
     }
   }
 }

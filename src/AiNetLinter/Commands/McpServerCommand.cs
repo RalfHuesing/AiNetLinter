@@ -33,7 +33,7 @@ internal static class McpServerCommand
         if (solutionPath is null) return 1;
 
         var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
-        using var mcpState = new McpCodeGraphServer(catalog, c, ResolveMaxLineCount(args));
+        using var mcpState = new McpCodeGraphServer(catalog, c, ResolveMaxLineCount(args), ResolveConfig(args));
 
         var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);
@@ -58,6 +58,24 @@ internal static class McpServerCommand
 
         var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
         return config?.Metrics.MaxLineCount ?? new MetricsConfig().MaxLineCount;
+    }
+
+    /// <summary>
+    /// Loest die vollstaendige Linter-<see cref="Config"/> auf — identische Logik wie
+    /// <see cref="ResolveMaxLineCount"/>, nur die Entitaet ist groesser (wird fuer
+    /// <c>get_violations</c>/<see cref="McpCodeGraphServer.Config"/> gebraucht). Bei gesetztem
+    /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
+    /// <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein CLI-Lint-Lauf
+    /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt
+    /// <c>private</c>, damit die Config-Verdrahtung direkt testbar ist (siehe step-010).
+    /// </summary>
+    internal static Config ResolveConfig(LinterArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.ConfigPath))
+            return new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+
+        return ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false)
+            ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
     }
 
     /// <summary>

@@ -41,6 +41,7 @@ internal static class McpServerOptionsFactory
 
         SymbolGraphToolRegistrations.Register(tools, mcpState);
         FileStructureToolRegistrations.Register(tools, mcpState);
+        AnalysisToolRegistrations.Register(tools, mcpState);
 
         return tools;
     }

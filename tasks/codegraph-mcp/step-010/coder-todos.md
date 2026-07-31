@@ -1,0 +1,17 @@
+- [ ] 1. McpCodeGraphServer.cs: add Config + Console-Property, additive constructor params
+- [ ] 2. McpServerCommand.cs: add ResolveConfig helper, wire into McpCodeGraphServer construction
+- [ ] 3. GetViolationsTool.cs (new): thin dispatch
+- [ ] 4. GetViolationsScanner.cs (new): BuildViolationsText delegating to LinterEngine.RunAsync
+- [ ] 5. FileStructureToolRegistrations.cs: register get_violations, update class comment
+- [ ] 6. rules.json: PathOverrides for GetViolationsTool + GetViolationsScanner if footprint > 2500
+- [ ] 7. ViolationTrigger.cs (fixture): deterministic sealed-class violation
+- [ ] 8. GetViolationsToolTests.cs (new)
+- [ ] 9. McpServerCommandTests.cs: rename to 8 tools, add E2E + ResolveConfig unit tests
+- [ ] 10. Build + test green
+- [ ] 11. Footprint self-lint for new classes
+- [ ] 12. Cache-bypass verification
+- [ ] 13. Self-lint (ainetlinter --config rules.json --path .) green
+- [ ] 14. Dogfooding: run get_violations against AiNetLinter.slnx
+- [ ] 15. Code commit
+- [ ] 16. step-result.md + status update
+- [ ] 17. Docs commit
