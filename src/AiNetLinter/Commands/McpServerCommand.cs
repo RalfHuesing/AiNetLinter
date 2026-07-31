@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using ModelContextProtocol.Server;
@@ -32,13 +33,31 @@ internal static class McpServerCommand
         if (solutionPath is null) return 1;
 
         var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
-        using var mcpState = new McpCodeGraphServer(catalog, c);
+        using var mcpState = new McpCodeGraphServer(catalog, c, ResolveMaxLineCount(args));
 
         var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);
         await using var server = McpServer.Create(transport, serverOptions);
         await server.RunAsync(ct);
         return 0;
+    }
+
+    /// <summary>
+    /// Loest den konfigurierten Zeilen-Grenzwert auf — identische Logik wie
+    /// <see cref="MapCommand"/>s private Hilfsmethode gleichen Namens (1:1-Uebernahme statt
+    /// Sichtbarkeitsanhebung einer 6-Zeilen-Methode ueber Projektgrenzen). Bei gesetztem
+    /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
+    /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
+    /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt <c>private</c>,
+    /// damit die Config-Verdrahtung direkt testbar ist (siehe step-009).
+    /// </summary>
+    internal static int ResolveMaxLineCount(LinterArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.ConfigPath))
+            return new MetricsConfig().MaxLineCount;
+
+        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+        return config?.Metrics.MaxLineCount ?? new MetricsConfig().MaxLineCount;
     }
 
     /// <summary>

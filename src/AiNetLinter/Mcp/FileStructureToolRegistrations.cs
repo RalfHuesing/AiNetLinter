@@ -8,11 +8,11 @@ namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_skeleton</c>,
-/// <c>get_index_scope</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
-/// Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener
-/// <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool
-/// waechst (siehe step-007 JIT-Kontext). Vorbereitet fuer die weiteren EPIC-04-Tools
-/// (<c>get_hotspots</c>, <c>get_violations</c>, <c>search_pattern</c>).
+/// <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
+/// eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten
+/// Tool waechst (siehe step-007 JIT-Kontext). Vorbereitet fuer die verbleibenden EPIC-04-Tools
+/// (<c>get_violations</c>, <c>search_pattern</c>).
 /// </summary>
 internal static class FileStructureToolRegistrations
 {
@@ -44,6 +44,18 @@ internal static class FileStructureToolRegistrations
                     ".cs (voll vom Symbolgraph abgedeckt) sowie .css/.html/.js/.razor/.xaml " +
                     "(jeweils nicht vom Symbolgraph abgedeckt, mit Anzahl) — Orientierung, bevor " +
                     "andere Tools wie find_symbol/search_pattern aufgerufen werden.",
+            }));
+
+        tools.Add(McpServerTool.Create(
+            (string? scopeFilter = null, CancellationToken ct = default) =>
+                GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "get_hotspots",
+                Description = "Liefert .cs-Dateien der geladenen Solution, die sich ihrem " +
+                    "konfigurierten Zeilen-Limit (MaxLineCount aus rules.json/Default) naehern " +
+                    "oder es ueberschreiten — Drift-Signal vor einem geplanten Edit. Optionaler " +
+                    "scopeFilter matched gegen Projekt-Name oder solution-relativen Dateipfad.",
             }));
     }
 }

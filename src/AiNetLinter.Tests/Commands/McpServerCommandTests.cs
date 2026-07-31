@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Tests.Fixtures;
 using AiNetLinter.Tests.Output;
@@ -130,7 +131,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithSixTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithSevenTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -147,13 +148,40 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(6, tools.Count);
+        Assert.Equal(7, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");
         Assert.Contains(tools, t => t.Name == "get_file_skeleton");
         Assert.Contains(tools, t => t.Name == "get_type_hierarchy");
         Assert.Contains(tools, t => t.Name == "get_index_scope");
+        Assert.Contains(tools, t => t.Name == "get_hotspots");
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetHotspotsReturnsAllGreenForSmallFixture()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "get_hotspots",
+            new Dictionary<string, object?>(),
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("im gruenen Bereich", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -341,6 +369,36 @@ public sealed class McpServerCommandTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("IGreeting", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("SpecialGreeting", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveMaxLineCount_ConfigWithCustomMaxLineCount_ReturnsConfiguredValue()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var configPath = Path.Combine(tempDir, "rules.json");
+            File.WriteAllText(configPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+            var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir, Verbose = false };
+
+            var result = McpServerCommand.ResolveMaxLineCount(args);
+
+            Assert.Equal(5, result);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveMaxLineCount_NoConfigPath_ReturnsMetricsConfigDefault()
+    {
+        var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
+
+        var result = McpServerCommand.ResolveMaxLineCount(args);
+
+        Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result);
     }
 
     private static string CreateTempDir()

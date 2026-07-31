@@ -25,10 +25,12 @@ internal sealed class McpCodeGraphServer : IDisposable
     private readonly Dictionary<string, FileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private SourceFileCatalog? _catalog;
 
-    public McpCodeGraphServer(SourceFileCatalog? catalog, ILintConsole? console = null)
+    // 700 = new MetricsConfig().MaxLineCount (Default-Parameter-Werte muessen compile-time constant sein).
+    public McpCodeGraphServer(SourceFileCatalog? catalog, ILintConsole? console = null, int maxLineCount = 700)
     {
         _catalog = catalog;
         _console = console ?? LinterConsole.Instance;
+        MaxLineCount = maxLineCount;
 
         if (_catalog is not null)
         {
@@ -37,6 +39,13 @@ internal sealed class McpCodeGraphServer : IDisposable
     }
 
     public bool IsLoaded => _catalog is not null;
+
+    /// <summary>
+    /// Zeilen-Grenzwert (aus <c>rules.json</c>/<see cref="AiNetLinter.Configuration.MetricsConfig"/>-Default),
+    /// gegen den <c>get_hotspots</c> Dateien der residenten Solution klassifiziert. Pro Server-Session
+    /// fest, nicht pro Tool-Call — die Config aendert sich zur Laufzeit nicht.
+    /// </summary>
+    public int MaxLineCount { get; }
 
     /// <summary>
     /// Liefert die aktuelle, ggf. lazy aktualisierte <see cref="Solution"/> — <see langword="null"/>,
