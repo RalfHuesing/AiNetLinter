@@ -135,6 +135,7 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--exclude-tests` | bool | Shortcut, um alle automatisch erkannten Testprojekte auszublenden |
 | `--tests-only` | bool | Shortcut, um ausschließlich Testprojekte zu analysieren |
 | `--public-only` | bool | Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen |
+| `--ignore-suppressions [sprachen...]` | string[] | Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) umgehen (`all`, `cs`/`c#`, `razor`, `js`, `css`). Default: `all`. |
 
 ---
 
