@@ -173,7 +173,12 @@ public sealed class DiffImpactAnalyzer
         return list;
     }
 
-    private static Document? FindDocumentByPath(Solution solution, string filePath)
+    /// <summary>
+    /// Sucht ein <see cref="Document"/> ueber alle Projekte der Solution per (case-insensitivem)
+    /// Dateipfad-Vergleich. Wird auch von <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/>
+    /// (MCP) fuer die positionsbasierte Symbolaufloesung wiederverwendet.
+    /// </summary>
+    internal static Document? FindDocumentByPath(Solution solution, string filePath)
     {
         foreach (var project in solution.Projects)
         {
@@ -278,7 +283,13 @@ public sealed class DiffImpactAnalyzer
                accessibility == Accessibility.ProtectedOrInternal;
     }
 
-    private static async Task<List<string>> FindCallSitesAsync(ISymbol symbol, Solution solution)
+    /// <summary>
+    /// Findet alle Aufrufstellen von <paramref name="symbol"/> ueber
+    /// <see cref="SymbolFinder.FindReferencesAsync(ISymbol, Solution, System.Threading.CancellationToken)"/>
+    /// und formatiert sie als "Datei:Zeile - Aufruf von ...". Wird auch von
+    /// <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/> (MCP) wiederverwendet.
+    /// </summary>
+    internal static async Task<List<string>> FindCallSitesAsync(ISymbol symbol, Solution solution)
     {
         var callSites = new List<string>();
         var references = await SymbolFinder.FindReferencesAsync(symbol, solution);

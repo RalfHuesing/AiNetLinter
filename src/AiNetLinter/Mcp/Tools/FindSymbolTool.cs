@@ -73,7 +73,12 @@ internal static class FindSymbolTool
         };
     }
 
-    private static IEnumerable<string> FormatSymbolLocations(ISymbol symbol, string outputRoot)
+    /// <summary>
+    /// Formatiert alle Quell-Fundstellen von <paramref name="symbol"/> als "Datei:Zeile - Kind:
+    /// Signatur". Wird auch von <see cref="FindReferencesTool"/> fuer die Ambiguitaets-
+    /// Fehlermeldung (Liste der Kandidaten) wiederverwendet.
+    /// </summary>
+    internal static IEnumerable<string> FormatSymbolLocations(ISymbol symbol, string outputRoot)
     {
         var kindLabel = DescribeKind(symbol);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))

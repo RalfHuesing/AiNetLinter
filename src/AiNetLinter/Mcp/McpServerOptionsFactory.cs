@@ -51,6 +51,17 @@ internal static class McpServerOptionsFactory
                     "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
             }));
 
+        tools.Add(McpServerTool.Create(
+            (string symbolIdentifier, CancellationToken ct = default) =>
+                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "find_references",
+                Description = "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
+                    "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
+                    "keine .js/.razor/.xaml/.html/.css-Dateien.",
+            }));
+
         return tools;
     }
 

@@ -130,7 +130,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithFindSymbolTool()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithBothTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -147,8 +147,9 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        var tool = Assert.Single(tools);
-        Assert.Equal("find_symbol", tool.Name);
+        Assert.Equal(2, tools.Count);
+        Assert.Contains(tools, t => t.Name == "find_symbol");
+        Assert.Contains(tools, t => t.Name == "find_references");
     }
 
     [Fact]
@@ -175,6 +176,32 @@ public sealed class McpServerCommandTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ViolatingClass", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_FindReferencesReturnsCallSite()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "find_references",
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" },
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
     }
 
     private static string CreateTempDir()

@@ -41,6 +41,33 @@ internal static class McpToolResults
     }
 
     /// <summary>
+    /// Kurzform fuer den Fall, dass ein Symbol-Identifikator (Datei:Zeile:Spalte oder
+    /// qualifizierter/teil-qualifizierter Name) auf kein Symbol aufloest (z. B. <c>find_references</c>).
+    /// </summary>
+    internal static CallToolResult SymbolNotFound(string identifier)
+    {
+        return Error(
+            LinterErrorCodes.SymbolNotFound,
+            $"Kein Symbol gefunden fuer Identifikator '{identifier}'.",
+            context: identifier,
+            hint: "Schreibweise pruefen oder 'find_symbol' zur Suche nutzen.");
+    }
+
+    /// <summary>
+    /// Kurzform fuer den Fall, dass ein Symbol-Identifikator auf mehrere Symbole aufloest —
+    /// <paramref name="candidateLines"/> listet die Fundstellen (z. B. via
+    /// <see cref="Tools.FindSymbolTool.FormatSymbolLocations"/>) als Entscheidungshilfe.
+    /// </summary>
+    internal static CallToolResult AmbiguousSymbol(string identifier, IEnumerable<string> candidateLines)
+    {
+        return Error(
+            LinterErrorCodes.AmbiguousSymbol,
+            $"Identifikator '{identifier}' ist mehrdeutig — mehrere Symbole gefunden.",
+            context: string.Join("\n", candidateLines),
+            hint: "Identifikator praezisieren (voll qualifizierter Name oder Datei:Zeile:Spalte).");
+    }
+
+    /// <summary>
     /// Baut ein Erfolgsergebnis mit genau einem Text-Content-Block.
     /// </summary>
     internal static CallToolResult Text(string text)
