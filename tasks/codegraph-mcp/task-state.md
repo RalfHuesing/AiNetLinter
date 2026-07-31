@@ -27,7 +27,7 @@ eine Zeile.>
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| step-001 | EPIC-01 | done | CLI-Einstiegspunkt --mcp-server + minimaler stdio-MCP-Server | 0/3 | yes | approved | 3ae6230 |
 
 ## Config (optional)
 
