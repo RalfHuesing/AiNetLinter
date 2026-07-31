@@ -29,7 +29,7 @@ eine Zeile.>
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI-Einstiegspunkt --mcp-server + minimaler stdio-MCP-Server | 0/3 | yes | approved | 3ae6230 |
 | step-002 | EPIC-02 | done | Resident McpCodeGraphServer + Lazy-Staleness-Invalidierung | 0/3 | yes | approved | 81cf007 |
-| step-003 | EPIC-03 | done (fix-01 pending) | Tool-Infrastruktur + erstes Tool find_symbol | 1/3 | yes | issues | e89ede5 |
+| step-003 | EPIC-03 | done | Tool-Infrastruktur + erstes Tool find_symbol (fix-01: solution-not-loaded coverage) | 1/3 | yes | approved | 9d6cecc |
 
 ## Config (optional)
 
