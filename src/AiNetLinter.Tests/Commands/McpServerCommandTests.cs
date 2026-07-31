@@ -113,10 +113,12 @@ public sealed class McpServerCommandTests
             File.WriteAllText(brokenSln, "<this-is-not-a-valid-slnx-document>");
 
             var console = new TestLintConsole();
+            AiNetLinter.Baseline.SourceFileCatalog? catalog = null;
             var exception = await Record.ExceptionAsync(
-                () => McpServerCommand.TryLoadSolutionAsync(brokenSln, CancellationToken.None, console));
+                async () => catalog = await McpServerCommand.TryLoadSolutionAsync(brokenSln, CancellationToken.None, console));
 
             Assert.Null(exception);
+            Assert.Null(catalog);
             Assert.Contains(console.Errors, e => e.Contains("[WARN]", StringComparison.Ordinal));
         }
         finally

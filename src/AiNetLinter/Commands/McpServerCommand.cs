@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
+using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -33,7 +34,8 @@ internal static class McpServerCommand
         var solutionPath = ResolveSolutionPathOrError(args.TargetPath, c);
         if (solutionPath is null) return 1;
 
-        await TryLoadSolutionAsync(solutionPath, ct, c);
+        var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
+        using var mcpState = new McpCodeGraphServer(catalog, c);
 
         var serverOptions = CreateServerOptions();
         var transport = new StdioServerTransport(serverOptions);
@@ -99,22 +101,26 @@ internal static class McpServerCommand
     }
 
     /// <summary>
-    /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird nur geloggt (Console.Error) —
-    /// der Server startet trotzdem mit (noch) leerem Tool-Set (siehe Step-Scope).
+    /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird nur geloggt (Console.Error) und
+    /// <see langword="null"/> geliefert — der Server startet trotzdem, der Aufrufer haelt den
+    /// geladenen <see cref="SourceFileCatalog"/> resident (siehe <see cref="RunAsync"/>).
     /// </summary>
-    internal static async Task TryLoadSolutionAsync(string solutionPath, CancellationToken ct, ILintConsole console)
+    internal static async Task<SourceFileCatalog?> TryLoadSolutionAsync(string solutionPath, CancellationToken ct, ILintConsole console)
     {
         try
         {
-            using var catalog = await SourceFileCatalog.LoadAsync(solutionPath, ct);
+            var catalog = await SourceFileCatalog.LoadAsync(solutionPath, ct);
             if (catalog.HasLoadingErrors)
             {
                 console.WriteError($"[WARN]: Solution mit Workspace-Diagnosen geladen: {solutionPath}");
             }
+
+            return catalog;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             console.WriteError($"[WARN]: MCP-Server startet ohne geladene Solution ({solutionPath}): {ex.Message}");
+            return null;
         }
     }
 
