@@ -33,7 +33,7 @@ eine Zeile.>
 | step-004 | EPIC-03 | done | Zweites Tool find_references | 0/3 | yes | approved | a9e91ed |
 | step-005 | EPIC-03 | done | Drittes Tool get_impact (fix-01: stdio subprocess hang fixed) | 1/3 | yes | approved | 8db5f4b |
 | step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
-| step-007 | EPIC-03 | done (fix-01 pending) | Fünftes/letztes Tool get_type_hierarchy | 1/3 | yes | issues | e90b52c |
+| step-007 | EPIC-03 | done | Fünftes/letztes Tool get_type_hierarchy (fix-01: external base/interface display fixed) | 1/3 | yes | approved | 22e8410 |
 
 ## Config (optional)
 
