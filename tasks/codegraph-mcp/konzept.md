@@ -87,6 +87,27 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
     Tools liefern für nicht betroffene Bereiche weiterhin korrekte Antworten,
     für betroffene Bereiche einen Warnhinweis (Roslyns bestehende Toleranz
     gegenüber fehlerhaftem Code wird genutzt, nicht neu gebaut).
+- **Explizite Scope-Kommunikation (C#-only für den Symbolgraph):** Die
+  Roslyn-basierten Tools (`find_symbol`, `find_references`, `get_impact`,
+  `get_type_hierarchy`, `get_file_skeleton`) decken ausschließlich `.cs`
+  ab. Das wird nicht stillschweigend vorausgesetzt, sondern aktiv
+  kommuniziert: jede Tool-`description` benennt die Grenze explizit
+  ("nur C#/.cs, kein JavaScript/Razor-Markup/WPF-XAML/HTML/CSS"), zusätzlich
+  trägt die `initialize`-Antwort des Servers (`instructions`-Feld, vom
+  `ModelContextProtocol`-SDK unterstützt) denselben Hinweis einmal zentral.
+  Begründung: ohne das würde ein Agent bei gemischtem Code (JS, Blazor,
+  WPF — reale Projektzusammensetzung) nach einer JS-Funktion suchen,
+  „nicht gefunden" für „existiert nicht" statt für „falsches Tool" halten
+  und unnötig viele Anfragen verbrauchen — genau der Fehlerfall, den der
+  Server eigentlich vermeiden soll.
+- **Miss-Hint statt stiller Leermenge:** Findet `find_symbol` (typischer
+  Einstiegspunkt „wo ist X") keinen C#-Treffer, macht der Server
+  zusätzlich einen einfachen Text-Fallback (`search_pattern`-Mechanik) über
+  die vom Graph **nicht** abgedeckten Dateitypen (`.js`, `.razor`,
+  `.cshtml`, `.xaml`, `.html`, `.css`) im Solution-Verzeichnis. Gibt es dort
+  einen Treffer, meldet der Server explizit „kein C#-Symbol, aber
+  Texttreffer in `<Datei>` (nicht Teil des Graphs)" statt einer bloßen
+  Leermeldung.
 - **`get_violations` umgeht den bestehenden Disk-Cache
   (`AnalysisCacheManager`) und rechnet direkt gegen die resident gehaltene
   `Compilation`.** Begründung: der Disk-Cache existiert, um Re-Compilation
@@ -96,7 +117,7 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
   gleichzeitig laufende Prozesse gegen dieselbe Solution (siehe "Wie" /
   Cache-Isolation) würden sich sonst dieselbe Cache-Datei teilen, ohne
   dass `AnalysisCacheManager` dafür eine prozessübergreifende Sperre hat.
-- Tool-Set wie unten unter "Wie" beschrieben (8 Tools).
+- Tool-Set wie unten unter "Wie" beschrieben (9 Tools).
 - Thread-sicherer Zugriff auf die gehaltene `Solution`/`Compilation` —
   nicht weil der drift-loop selbst parallelisiert (er ist laut Spec strikt
   seriell), sondern weil der Server auch außerhalb dieses einen Workflows
@@ -131,6 +152,13 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
   Ergänzung, kein Umbau.
 - **Kein generischer Multi-Sprachen-Support.** Bleibt .NET/Roslyn-spezifisch,
   wie der Rest von AiNetLinter.
+- **Kein Cross-Language-Symbolgraph.** Der Symbolgraph (`find_symbol`,
+  `find_references`, `get_impact`, `get_type_hierarchy`, `get_file_skeleton`)
+  bleibt auf `.cs` beschränkt — kein Verknüpfen von C#-Methoden mit
+  JS-Aufrufen aus Blazor-Interop, kein XAML-Bindings-Graph, keine
+  Razor-Markup-Struktur. Bewusste Grenze, kein Versehen — siehe Muss-Haben
+  "Explizite Scope-Kommunikation" und "Miss-Hint" dafür, dass diese Grenze
+  dem Agenten nicht erst durch Trial-and-Error auffällt.
 - **Kein Plugin-/Erweiterungssystem, kein `AssemblyLoadContext`** für den
   MCP-Modus — läuft als zusätzlicher Modus im selben monolithischen
   Executable (siehe "Verworfene Alternativen" zur Begründung gegenüber
@@ -221,6 +249,13 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
 - [Core/RuleRegistry.cs](src/AiNetLinter/Core/RuleRegistry.cs),
   [Core/LinterEngine.cs](src/AiNetLinter/Core/LinterEngine.cs) — Basis für
   `get_violations`.
+- [Web/WebFileCatalog.cs](src/AiNetLinter/Web/WebFileCatalog.cs) — enumeriert
+  bereits heute JS-/CSS-/Razor-Dateien für die Web-Checker; Basis für
+  `get_index_scope`, kein neuer Datei-Scan nötig.
+- [Core/Checkers/WpfSeparationChecker.cs](src/AiNetLinter/Core/Checkers/WpfSeparationChecker.cs)
+  — zeigt die bestehende Grenze auf: WPF/XAML wird nur indirekt über
+  C#-Code-Behind geprüft, nie die `.xaml`-Datei selbst — Beleg für den
+  oben dokumentierten Non-Goal "kein Cross-Language-Symbolgraph".
 - [Docs/agent-api.md](Docs/agent-api.md), [Docs/integration.md](Docs/integration.md)
   — Doku-Ergänzung.
 - [AiNetLinter.csproj](src/AiNetLinter/AiNetLinter.csproj) — neue
@@ -271,14 +306,25 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
     MCP-Server selbst umgeht das Problem für sich (siehe Muss-Haben/"Wie"),
     die CLI-interne Race bleibt unangetastetes Bestandsverhalten außerhalb
     des hier definierten Scopes.
+- **`get_index_scope` braucht keinen neuen Datei-Scan**
+  - **Gefunden:** `WebFileCatalog.Collect` (siehe "Wo im Projekt") liefert
+    bereits die Dateiliste, aus der die Web-Checker (JS/CSS/Razor) ihre
+    eigene Abdeckung ableiten — exakt die Grundlage, die `get_index_scope`
+    für die Dateityp-Aufschlüsselung braucht.
+  - **Bezug:** kein Regelverstoß, Wiederverwendungs-Chance analog zum
+    ersten Fund oben.
+  - **Vorschlag:** `get_index_scope` direkt auf `SourceFileCatalog.GetSourceFiles`
+    + `WebFileCatalog.Collect` aufbauen statt eigener Dateisystem-Traversierung.
+  - **Entscheidung:** übernommen ins Scope (siehe Tool-Tabelle unter "Wie").
 
 ## Wie (grober Ansatz)
 
-### Tool-Set (8 MCP-Tools)
+### Tool-Set (9 MCP-Tools)
 
 | Tool | Input | Output | Basis (bestehender Code) |
 | :--- | :--- | :--- | :--- |
-| `find_symbol` | Name/Pattern (Substring/Glob), optionaler Kind-Filter (Klasse/Methode/Property/Interface) | Fundstellen: Datei:Zeile, Kind, Signatur, umschließender Typ | `SymbolFinder.FindDeclarationsAsync` (neu einzubinden) |
+| `get_index_scope` | keins | Dateityp-Aufschlüsselung der Solution: `.cs` (voll vom Graph abgedeckt) vs. `.js`/`.razor`/`.xaml`/`.html`/`.css` (nicht abgedeckt, jeweils mit Anzahl) — Orientierung, bevor der Agent überhaupt sucht | `SourceFileCatalog.GetSourceFiles`/`WebFileCatalog.Collect` (bereits vorhanden, liefern schon heute die Dateiliste für die Web-Checker) |
+| `find_symbol` | Name/Pattern (Substring/Glob), optionaler Kind-Filter (Klasse/Methode/Property/Interface) | Fundstellen: Datei:Zeile, Kind, Signatur, umschließender Typ. Kein Treffer → Text-Fallback über nicht-C#-Dateitypen, siehe Muss-Haben „Miss-Hint" | `SymbolFinder.FindDeclarationsAsync` (neu einzubinden) |
 | `find_references` | Symbol-Identifikator (Datei:Zeile:Spalte oder qualifizierter Name) | Alle Aufrufstellen: Datei:Zeile, aufrufender Kontext, Projekt | `DiffImpactAnalyzer.FindCallSitesAsync` (bereits vorhanden) |
 | `get_impact` | Git-Ref (optional) oder Symbol direkt | Betroffene Call-Sites geänderter Signaturen | `DiffImpactAnalyzer.AnalyzeAsync` (bereits vorhanden, `--impact`) |
 | `get_type_hierarchy` | Typ-Identifikator | Basisklassen, abgeleitete Klassen, Interface-Implementierer | `SymbolFinder.FindDerivedClassesAsync`/`FindImplementationsAsync` (neu einzubinden) |
@@ -339,9 +385,15 @@ passieren können? Geprüft (`Cache/AnalysisCacheManager.cs`):
 - `dotnet test` läuft vollständig grün.
 - `ainetlinter --mcp-server --path <Solution>` startet einen stdio-MCP-Server,
   der sich von einem MCP-Client (z. B. Claude Code) verbinden lässt und alle
-  8 Tools über `tools/list` meldet.
-- Jedes der 8 Tools liefert für eine reale Test-Solution korrekte Ergebnisse
+  9 Tools über `tools/list` meldet.
+- Jedes der 9 Tools liefert für eine reale Test-Solution korrekte Ergebnisse
   (ein Integrationstest je Tool).
+- `get_index_scope` liefert für eine Test-Solution mit gemischtem Code (C#,
+  JS, Razor, XAML, CSS) eine korrekte Dateityp-Aufschlüsselung.
+- Eine Anfrage nach einem Namen, der nur in einer `.js`/`.razor`/`.xaml`-Datei
+  vorkommt, liefert die explizite Miss-Hint-Meldung ("kein C#-Symbol, aber
+  Texttreffer in `<Datei>`, nicht Teil des Graphs") statt einer stillen
+  Leermenge.
 - Eine Änderung an einer Quelldatei zwischen zwei Tool-Calls wird beim
   nächsten Call, der diese Datei betrifft, korrekt erkannt (dedizierter
   Staleness-Test).
@@ -366,7 +418,7 @@ passieren können? Geprüft (`Cache/AnalysisCacheManager.cs`):
 - Dokumentation aktualisiert: `Docs/agent-api.md`, `Docs/integration.md`,
   `Docs/ROADMAP.md`, `README.md`.
 - Manueller Praxistest: Server gegen `San.smart.Planner.Platform` (~160k LOC)
-  gestartet, mindestens 3 der 8 Tools live gegen die reale Solution
+  gestartet, mindestens 3 der 9 Tools live gegen die reale Solution
   ausprobiert und Ergebnis stichprobenartig verifiziert.
 
 ## Offene Punkte
