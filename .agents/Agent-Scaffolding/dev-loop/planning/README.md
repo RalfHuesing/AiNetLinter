@@ -29,6 +29,6 @@ weiter statt neu zu starten.
 ## Output
 
 `<task-dir>/konzept.md` mit `status: ready` — erfüllt dann automatisch
-die Mindestanforderungen aus [`../task-loop/spec.md`](../task-loop/spec.md)
-§6 und kann direkt an [`../task-loop/orchestrator.md`](../task-loop/orchestrator.md)
+die Mindestanforderungen aus [`../drift-loop/spec.md`](../drift-loop/spec.md)
+§3.2 und kann direkt an [`../drift-loop/orchestrator.md`](../drift-loop/orchestrator.md)
 übergeben werden.

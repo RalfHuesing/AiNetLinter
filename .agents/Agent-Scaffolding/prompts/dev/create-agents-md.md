@@ -1,7 +1,6 @@
 ---
 type: prompt
 category: dev
-version: 0.1
 status: draft
 ---
 
@@ -52,7 +51,7 @@ Feste Präfixe?
 
 ### dev-loop-Erkennung (optional)
 
-Suche nach einem Ordner mit `README.md` + `task-loop/orchestrator.md`
+Suche nach einem Ordner mit `README.md` + `drift-loop/orchestrator.md`
 (Signatur dieses Scaffolding-Ansatzes) — irgendwo im Projekt, häufig
 unter `.agents/Agent-Scaffolding/` o. ä. Gefunden: relativen Pfad dorthin
 für Schritt 4 notieren. Nicht gefunden: einfach weglassen, keine

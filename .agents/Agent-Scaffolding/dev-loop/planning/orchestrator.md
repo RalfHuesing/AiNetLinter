@@ -1,10 +1,9 @@
 ---
 workflow: konzept-workflow
-version: 0.3
 status: draft
 role: "interaktiver Begleiter (läuft in der aktuellen Session, kein Subagenten-Loop)"
 invoked_as: "orchestrator.md <task-dir> (Pfad zu diesem Ordner ist projektabhängig)"
-produces_input_for: ../task-loop/orchestrator.md
+produces_input_for: ../drift-loop/orchestrator.md
 ---
 
 # Konzept-Workflow: Interaktive Konzeptentwicklung
@@ -12,11 +11,11 @@ produces_input_for: ../task-loop/orchestrator.md
 ## Pfad-Hinweis
 
 Alle Pfade in dieser Datei, die auf andere Dateien **innerhalb von
-`dev-loop/`** verweisen (z. B. `templates/konzept.md`, `../task-loop/…`),
+`dev-loop/`** verweisen (z. B. `templates/konzept.md`, `../drift-loop/…`),
 sind relativ zu dieser Datei zu verstehen — funktionieren unabhängig
 davon, wo `dev-loop/` in deinem Projekt liegt. Verweise auf **projekt-
 eigene** Konventionen (`<rules_dir>/**`, erkannt gemäß
-`../task-loop/spec.md` §3.1; `README.md`, `docs/**`) meinen dagegen den
+`../drift-loop/spec.md` §3.1; `README.md`, `docs/**`) meinen dagegen den
 Ort relativ zu deinem **Projekt-Root** (wo der Agent
 gerade arbeitet) — unabhängig davon, wo `dev-loop/` selbst liegt.
 
@@ -30,8 +29,8 @@ Der Nutzer hat dort (meistens) bereits eine `konzept.md` mit einer rohen,
 in eigenen Worten geschriebenen Idee angelegt — oder gibt dir die Idee
 direkt im Aufruf-Prompt mit. Deine Aufgabe: **im Dialog** mit dem Nutzer
 diese Idee so weit schärfen, bis daraus eine Aufgaben-Doku wird, die
-`../task-loop/spec.md` §6 (Mindestanforderungen) erfüllt — danach kann
-`../task-loop/orchestrator.md` direkt darauf aufsetzen.
+`../drift-loop/spec.md` §3.2 (Mindestanforderungen) erfüllt — danach kann
+`../drift-loop/orchestrator.md` direkt darauf aufsetzen.
 
 Diese Datei ist bewusst **tool-agnostisch und projekt-unabhängig**
 formuliert — unverändert kopierbar/einbindbar in jedes andere Projekt,
@@ -39,7 +38,7 @@ wie der Rest von `dev-loop/` auch.
 
 ## Grundprinzip: Dialog statt Autonomie
 
-Das unterscheidet diesen Workflow fundamental von `../task-loop/`: Dort
+Das unterscheidet diesen Workflow fundamental von `../drift-loop/`: Dort
 arbeiten Subagenten möglichst unbeaufsichtigt einen Plan ab. Hier bist
 **du selbst** — in der laufenden, interaktiven Session — der
 Gesprächspartner des Nutzers, direkt und live. Kein Delegieren an
@@ -79,9 +78,10 @@ Unklarheit fragst du nach, statt zu raten oder autonom zu entscheiden.
 
 ### Rules-Verzeichnis erkennen
 
-Bevor du Projektkonventionen liest, ermittle **wo** sie liegen — das ist
-nicht mehr fest verdrahtet. Zwei bekannte Konventionen werden geprüft:
-`.agents/rules/` und `.cursor/rules/` (projekt-root-relativ).
+Bevor du Projektkonventionen liest, ermittle **wo** sie liegen — der Ort
+ist projektabhängig, nicht fest verdrahtet. Zwei bekannte Konventionen
+werden geprüft: `.agents/rules/` und `.cursor/rules/`
+(projekt-root-relativ).
 
 - Existiert **genau eines** der beiden Verzeichnisse: das ist `rules_dir`
   — automatisch übernehmen, keine Rückfrage nötig.
@@ -93,14 +93,15 @@ nicht mehr fest verdrahtet. Zwei bekannte Konventionen werden geprüft:
   (Wert `keins`, falls der Nutzer bestätigt, dass es keine gibt).
 
 Ab hier und in allen folgenden Schritten ist mit „Projektkonventionen"
-immer `<rules_dir>/**` gemeint, nicht mehr wörtlich `.agents/rules/**`.
+immer `<rules_dir>/**` gemeint — der ermittelte Pfad, nicht wörtlich
+`.agents/rules/**`.
 
 ### Anker lesen, Projekt-Art einschätzen
 
 - Lies `<rules_dir>/**` (siehe oben), `README.md`, `docs/**`, `AGENTS.md`
   (projekt-root-relativ, siehe Pfad-Hinweis oben) — was immer davon
   existiert. `AGENTS.md` ergänzt `<rules_dir>/**`, ersetzt es nicht. Das
-  ist dieselbe Anker-Grundlage wie beim Planer in `../task-loop/spec.md`
+  ist dieselbe Anker-Grundlage wie beim Planer in `../drift-loop/spec.md`
   §3.
 - Schätze ein, ob substanzieller Bestandscode existiert (mehr als
   Konfiguration/Skelett — z. B. mehrere Quellcode-Dateien mit echtem
@@ -113,7 +114,7 @@ immer `<rules_dir>/**` gemeint, nicht mehr wörtlich `.agents/rules/**`.
     Modul benennen), nicht abstrakt. **Pointer-Prinzip:** Was du dabei in
     „Wo im Projekt" (Schritt 5) festhältst, sind Fundstellen (Datei/Modul
     + ein Satz Relevanz), keine Verhaltens- oder Architektur-Behauptungen
-    — der Planer im `task-loop` verlässt sich beim Task-Start nicht auf
+    — der Planer im `drift-loop` verlässt sich beim Task-Start nicht auf
     den Inhalt, sondern prüft an den genannten Fundstellen den dann
     aktuellen Stand selbst nach. Das hält den Abschnitt auch dann noch
     nützlich, wenn sich der Code zwischen Konzept- und Umsetzungsphase
@@ -139,6 +140,46 @@ Grenze):
   Grundsatzentscheidungen, oder große Bestandscode-Fläche betroffen →
   mehrere Runden, ruhig gründlich
 
+## Schritt 3a — Aktiv nach bestehenden Patterns/Mängeln suchen (nur brownfield)
+
+Nur relevant bei `project_kind: brownfield` (bei `greenfield` gibt es
+noch keinen Bestandscode, den man dafür durchsuchen könnte). Ergänzt den
+einmaligen groben Überblick aus Schritt 2 um eine **pro Thema** aktive
+Suche — Schritt 2 reicht allein nicht, weil er vor dem eigentlichen
+Gespräch über konkrete Features passiert und daher nicht wissen kann,
+wonach im Detail zu suchen ist.
+
+**Wann:** Bevor du auf ein vom Nutzer beschriebenes neues Feature/eine
+neue Fähigkeit antwortest bzw. die nächste Fragerunde (Schritt 4)
+formulierst — nicht nur einmal zu Beginn.
+
+**Was:**
+1. **Pattern-Reuse-Check:** Durchsuche den Code aktiv (grep/Suche) nach
+   bereits bestehenden, ähnlichen Strukturen zu dem, was der Nutzer gerade
+   beschreibt — nicht nur aus dem Gedächtnis/Kontext urteilen. Findest du
+   etwas Passendes: schlag vor, es wiederzuverwenden oder zu
+   generalisieren, statt einen Neubau ins Konzept zu schreiben. Klassisches
+   Beispiel: Nutzer will einen neuen Bestätigungsdialog, es existieren
+   bereits zwei ähnliche generische Dialoge — Hinweis statt drittem Dialog.
+2. **Mängel-Check:** Fällt dir beim Lesen der dafür relevanten Stellen
+   zusätzlich ein tatsächlicher Mangel auf (unabhängig vom gerade
+   besprochenen Thema) — bewerte gegen `<rules_dir>/**`, falls vorhanden
+   (konkrete Regel zitieren). Ohne `rules_dir` nur bei offensichtlichen,
+   unstrittigen Fällen hinweisen (z. B. klar erkennbares Duplikat im
+   gelesenen Code) — bei subtileren Architektur-Fragen ohne kodifizierte
+   Regeln zurückhaltend bleiben, da kein Maßstab für „Mangel" definiert ist.
+
+**Wie ansprechen:** Einmal, konkret, mit Fundstelle — dann dem Nutzer die
+Entscheidung überlassen („reicht dir die bestehende Lösung, oder soll
+trotzdem neu gebaut werden?", „soll das mit in den Scope?"). Kein
+wiederholtes Nachbohren, wenn der Nutzer bewusst ablehnt oder verschiebt
+— siehe „Was du NICHT tun darfst" unten.
+
+**Ergebnis:** Jeder Fund (angenommen, verschoben oder abgelehnt) landet in
+`konzept.md` unter „Entdeckte Mängel/Redundanzen" (siehe Schritt 5) — auch
+abgelehnte, damit dieselbe Frage nicht in einer späteren Runde erneut
+aufkommt.
+
 ## Schritt 4 — Eine Fragerunde
 
 - Wähle die **1 bis 4 wichtigsten** offenen Punkte dieser Runde — nicht
@@ -158,6 +199,11 @@ Grenze):
 Nach jeder beantworteten Runde:
 - Ergänze/schärfe die passenden Abschnitte — **konsolidieren**, nicht nur
   anhängen: löst eine Antwort einen früheren Platzhalter auf, ersetze ihn.
+- **Funde aus Schritt 3a einpflegen:** Jeder Pattern-Reuse-/Mängel-Fund
+  bekommt einen Eintrag unter „Entdeckte Mängel/Redundanzen" — unabhängig
+  von der Nutzer-Entscheidung. Wird ein Fund angenommen: zusätzlich in
+  „Scope > Muss-Haben" aufnehmen, mit Verweis zurück auf den Eintrag
+  (Pointer-Prinzip, nicht doppelt ausformulieren).
 - Aktualisiere `open_questions` im Frontmatter (Erledigtes raus, neu
   Aufgekommenes rein) und `last_updated`.
 - Existiert ein Git-Repository: committe den Stand (kleiner Commit, z. B.
@@ -178,7 +224,7 @@ Dann: **frage den Nutzer explizit**, ob das Konzept fertig ist — das
 entscheidest nicht du allein. Bei Bestätigung:
 - `status: ready`, finaler Commit (falls Git-Repo vorhanden).
 - Kurze Zusammenfassung + Hinweis: *„Bereit für
-  `../task-loop/orchestrator.md <task-dir>`."*
+  `../drift-loop/orchestrator.md <task-dir>`."*
 
 ## Was du NICHT tun darfst
 
@@ -186,7 +232,7 @@ entscheidest nicht du allein. Bei Bestätigung:
   Annahme unkommentiert ins Konzept schreiben.
 - **Nicht auf `ready` setzen ohne explizite Nutzer-Bestätigung.**
 - **Keine Implementierungsdetails vorwegnehmen**, die eigentlich der
-  Planer in `../task-loop/spec.md` treffen sollte (konkrete
+  Planer in `../drift-loop/spec.md` treffen sollte (konkrete
   Dateiaufteilung, Klassen-/Funktionsnamen, Zeilen-genaue Änderungen) —
   hier geht es um das Konzept, nicht den Umsetzungsplan.
 - **Verworfene Alternativen nicht stillschweigend weglassen** —
@@ -194,3 +240,7 @@ entscheidest nicht du allein. Bei Bestätigung:
   verworfen hat.
 - **Nicht alles auf einmal fragen.** Kleine Runden, nicht ein
   Fragebogen mit zwanzig Punkten.
+- **Bei einem abgelehnten oder verschobenen Fund aus Schritt 3a nicht
+  erneut nachbohren.** Einmaliger Hinweis ist genug Sicherheitsnetz —
+  der Fund bleibt trotzdem dokumentiert (siehe Schritt 5), wiederholtes
+  Ansprechen nervt nur und widerspricht Schritt 4s „kleine Runden".

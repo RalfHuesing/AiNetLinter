@@ -14,7 +14,7 @@ Industriepraxis, im Zuge der Einführung von Micro-Batches und
 - [GitHub Spec-Kit](https://github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit/)
   — offene Referenzimplementierung für Spec-driven Development
   (Spec → Plan → Tasks → Code), direkteste Entsprechung zu
-  `dev-loop/task-loop/`.
+  `dev-loop/drift-loop/`.
 - [12-Factor Agents](https://agentic-design.ai/patterns/evaluation-monitoring/twelve-factor-agent)
   — pragmatische Prinzipien-Liste (Zustand persistieren, Prompts
   versionieren, Kontext selbst managen); deckt sich stark mit dem, was
@@ -24,13 +24,13 @@ Industriepraxis, im Zuge der Einführung von Micro-Batches und
   Doku). Übernommen, siehe `AGENTS.md` in diesem Repo.
 - [Anthropic — Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
   — fünf Grundmuster (Prompt Chaining, Routing, Parallelization,
-  Orchestrator-Workers, Evaluator-Optimizer). `dev-loop/task-loop/` ist
+  Orchestrator-Workers, Evaluator-Optimizer). `dev-loop/drift-loop/` ist
   im Kern Orchestrator-Workers.
 - [Anthropic — When to use multi-agent systems](https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them)
   — warnt vor **rollen-basierter** Zerlegung (Planner/Implementer/Tester)
   als Hauptquelle für Koordinations-Overhead; empfiehlt Zerlegung nach
-  Kontext-Grenzen statt nach Aufgaben-Typ. Betrifft `dev-loop/task-loop/`
-  direkt (Planer/Coder/Auditer) — dort aber durch vollständige
+  Kontext-Grenzen statt nach Aufgaben-Typ. Betrifft `dev-loop/drift-loop/`
+  direkt (Planer/Coder/Kritiker) — dort aber durch vollständige
   Datei-Artefakte statt Konversationskontext-Übergabe abgefedert.
 - [awesome-harness-engineering](https://github.com/ai-boost/awesome-harness-engineering)
   — kuratierte Sammel-Liste für weitere Recherche.
