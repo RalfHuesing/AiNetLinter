@@ -24,7 +24,7 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| step-001 | EPIC-01 | open | CLI Option --ignore-suppressions in CliOptions, CliOptionFactory, LinterArgs und CliCommandBuilder integrieren | 0/3 | - | - | - |
+| step-001 | EPIC-01 | done | CLI Option --ignore-suppressions in CliOptions, CliOptionFactory, LinterArgs und CliCommandBuilder integrieren | 0/3 | 03602ea | approved | 03602ea |
 
 ## Config (optional)
 
