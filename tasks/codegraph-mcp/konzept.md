@@ -5,10 +5,7 @@ project_kind: brownfield
 estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-07-31
-open_questions:
-  - Exakte finale Tool-Namen/Parametrisierung (kann sich beim Planer im drift-loop noch verschieben)
-  - Kaltstart-Zeit bei 160k LOC noch nicht gemessen — steuert, ob persistenter Cache Muss-Haben wird
-  - Bestätigung: ModelContextProtocol-NuGet-Paket als neue externe Abhängigkeit akzeptiert
+open_questions: []
 ---
 
 # Konzept: AiNetLinter als stdio-MCP-Codegraph-Server
@@ -58,9 +55,23 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
 
 ### Muss-Haben
 
-- Neuer Ausführungsmodus (Arbeitsname `--mcp-server`, finaler Flag-Name
-  Sache des Planers), der einen stdio-MCP-Server startet statt eines
-  Batch-Laufs.
+- Neuer Ausführungsmodus **`--mcp-server`** (Name bestätigt), der einen
+  stdio-MCP-Server startet statt eines Batch-Laufs.
+- **Solution-Auswahl beim Start:** `ainetlinter --mcp-server --path <Datei-
+  oder-Verzeichnis>` — gleiche `--path`-Semantik wie bei allen anderen
+  Commands (Datei direkt, oder Verzeichnis mit Auto-Suche nach `.sln`/
+  `.slnx`, bestehende Logik aus `SourceFileCatalog.FindSolutionFile`).
+  Fehlt `--path`, wird das aktuelle Arbeitsverzeichnis verwendet — das ist
+  der Normalfall für die Registrierung als MCP-Server: der Host (z. B.
+  Claude Code) startet den Prozess mit `cwd` = Projekt-Root, ohne dass der
+  Nutzer den Pfad manuell in der Server-Config eintragen muss (analog zur
+  Registrierung anderer stdio-MCP-Server pro Projekt). **Verschärfung
+  gegenüber der bestehenden CLI-Logik:** findet die Verzeichnissuche mehr
+  als eine `.sln`/`.slnx`-Datei, bricht der Server-Start mit einer klaren
+  Fehlermeldung ab (Kandidaten benannt) statt wie bisher `files[0]`
+  stillschweigend zu wählen — bei einem Batch-Lauf fällt eine falsch
+  gewählte Solution sofort auf, bei einem resident laufenden Server würde
+  sie sonst die komplette Session unbemerkt falsch beantworten.
 - Server lädt die Solution **einmal** beim Start (`SourceFileCatalog.LoadAsync`)
   und hält sie resident im Speicher für die gesamte Session — kein Neuladen
   der `MSBuildWorkspace` pro Tool-Call.
@@ -76,6 +87,15 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
     Tools liefern für nicht betroffene Bereiche weiterhin korrekte Antworten,
     für betroffene Bereiche einen Warnhinweis (Roslyns bestehende Toleranz
     gegenüber fehlerhaftem Code wird genutzt, nicht neu gebaut).
+- **`get_violations` umgeht den bestehenden Disk-Cache
+  (`AnalysisCacheManager`) und rechnet direkt gegen die resident gehaltene
+  `Compilation`.** Begründung: der Disk-Cache existiert, um Re-Compilation
+  zwischen unabhängigen CLI-Prozessstarts zu vermeiden — ein resident
+  laufender Server hat dieses Problem nicht, er kompiliert nie neu. Der
+  eigentliche Grund, warum das hier explizit festgehalten wird: mehrere
+  gleichzeitig laufende Prozesse gegen dieselbe Solution (siehe "Wie" /
+  Cache-Isolation) würden sich sonst dieselbe Cache-Datei teilen, ohne
+  dass `AnalysisCacheManager` dafür eine prozessübergreifende Sperre hat.
 - Tool-Set wie unten unter "Wie" beschrieben (8 Tools).
 - Thread-sicherer Zugriff auf die gehaltene `Solution`/`Compilation` —
   nicht weil der drift-loop selbst parallelisiert (er ist laut Spec strikt
@@ -163,6 +183,18 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
 - **Embedding-basierte semantische Suche gleich mit einführen:** verworfen
   für diese Iteration — eigenes Subsystem, das den Scope erheblich
   vergrößert, ohne dass der Bedarf dafür schon belegt ist (siehe Non-Goals).
+- **Eigener zweiter Disk-Cache-Namespace für den MCP-Modus** (z. B. eigenes
+  Präfix, damit CLI und MCP-Server sich nicht in die Quere kommen, aber
+  beide trotzdem einen Disk-Cache nutzen): verworfen zugunsten von "MCP-Modus
+  nutzt gar keinen Disk-Cache" — der resident gehaltene Compilation-Zustand
+  erfüllt den Zweck des Disk-Caches (Vermeidung von Re-Compile zwischen
+  Prozessstarts) bereits vollständig; ein zweiter Namespace wäre zusätzliche
+  Komplexität ohne zusätzlichen Nutzen.
+- **Persistenter Cache/Kaltstart-Optimierung als Muss-Haben:** verworfen für
+  diese Iteration — Kaltstart-Zeit bei 160k LOC ist ein Fixkosten-Faktor
+  (MSBuild/Roslyn-Ladezeit), der sich ohnehin nur einmal pro Server-Session
+  amortisiert und nutzerseitig als hinnehmbar bestätigt wurde. Bleibt
+  Nice-to-Have, falls sich das in der Praxis anders zeigt.
 
 ## Wo im Projekt
 
@@ -219,6 +251,26 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
   - **Entscheidung:** übernommen — als Rahmenbedingung in Scope/Zielplattformen
     festgehalten, kein Non-Goal nötig, da kein tatsächlicher Konflikt bei
     korrekter Umsetzung.
+- **Vorbestehende Cache-Race zwischen zwei parallelen CLI-Lint-Läufen**
+  - **Gefunden:** bei der Prüfung der Nutzer-Frage zu Multi-Instanz-Cache
+    (`Cache/AnalysisCacheManager.cs`, Zeile 82-88 `SaveIfDirty`): zwei
+    gleichzeitige `ainetlinter`-Lint-Läufe gegen dieselbe Solution mit
+    denselben `rules.json` teilen sich dieselbe Cache-Datei
+    (`{solutionName}-{hash8}-{buildTimestamp}.json`); es gibt keine
+    prozessübergreifende Datei-Sperre, `SaveIfDirty()` überschreibt komplett
+    — letzter Schreiber gewinnt, der andere Prozess verliert seine in dieser
+    Session gesammelten Cache-Einträge stillschweigend.
+  - **Bezug:** kein `rules_dir`-Regelverstoß, sondern ein bereits heute
+    bestehendes Verhalten, unabhängig vom MCP-Server. Keine falschen
+    Lint-Ergebnisse dadurch (Cache-Treffer bleiben checksum-validiert), nur
+    verminderte Cache-Wirksamkeit bei paralleler Nutzung.
+  - **Vorschlag:** eigenes, von diesem Task unabhängiges Ticket/Task, falls
+    parallele CLI-Läufe auf derselben Solution in der Praxis tatsächlich
+    vorkommen (aktuell nicht belegt).
+  - **Entscheidung:** bewusst **nicht** in diesen Task übernommen — der
+    MCP-Server selbst umgeht das Problem für sich (siehe Muss-Haben/"Wie"),
+    die CLI-interne Race bleibt unangetastetes Bestandsverhalten außerhalb
+    des hier definierten Scopes.
 
 ## Wie (grober Ansatz)
 
@@ -253,6 +305,35 @@ Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
    parallel zum neuen Server-Modus weiter (kein Killswitch, keine
    Migration bestehender Nutzung).
 
+### Cache-Isolation zwischen mehreren Prozessen
+
+Frage aus der Konzeptrunde: Gibt es ein Problem mit dem bestehenden
+Disk-Cache (`AnalysisCacheManager`), wenn mehrere MCP-Server-Instanzen für
+unterschiedliche Projekte laufen, während parallel weiterhin normale
+`ainetlinter`-Lint-Läufe (auf demselben oder einem anderen Projekt)
+passieren können? Geprüft (`Cache/AnalysisCacheManager.cs`):
+
+- **Unterschiedliche Solutions kollidieren nie:** der Cache-Dateiname wird
+  aus `SHA256(solutionPath + rulesJsonContent)` gebildet — jede Solution
+  bekommt eine eigene Datei im gemeinsamen `cache/`-Verzeichnis neben der
+  `.exe`. Beliebig viele MCP-Server-Instanzen für unterschiedliche
+  Projekte sind unproblematisch, unabhängig von Lint-Läufen auf anderen
+  Projekten.
+- **Dieselbe Solution + derselbe MCP-Server:** kein Thema, da `get_violations`
+  laut Muss-Haben oben den Disk-Cache gar nicht erst anfasst.
+- **Dieselbe Solution, MCP-Server + gleichzeitiger CLI-Lint-Lauf:** ohne die
+  obige Entscheidung (`get_violations` ohne Disk-Cache) hätten beide
+  Prozesse dieselbe Cache-Datei geöffnet — `AnalysisCacheManager` hat keine
+  prozessübergreifende Sperre, `SaveIfDirty()` überschreibt die Datei
+  komplett (`File.WriteAllText`), letzter Schreiber gewinnt. Durch den
+  Disk-Cache-Bypass im MCP-Modus tritt dieser Fall nicht mehr auf: der
+  CLI-Lint-Lauf bleibt alleiniger Schreiber seiner Cache-Datei.
+- **Vorbestehendes, nicht zu diesem Task gehörendes Risiko:** zwei
+  gleichzeitige CLI-Lint-Läufe (ganz ohne MCP) gegen **dieselbe** Solution
+  mit denselben `rules.json` teilen sich schon heute dieselbe Cache-Datei
+  ohne Cross-Prozess-Sperre — das ist ein bestehendes Verhalten, unabhängig
+  von diesem Feature, siehe "Entdeckte Mängel/Redundanzen".
+
 ## Definition of Done / Erfolgskriterien
 
 - `dotnet test` läuft vollständig grün.
@@ -270,6 +351,16 @@ Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
 - Eine nicht ladbare Solution (z. B. kaputte `.slnx`) führt dazu, dass der
   Server startet, aber jeder Tool-Call einen strukturierten Fehler statt
   eines Crashs liefert.
+- Ein Zielverzeichnis mit mehreren `.sln`/`.slnx`-Kandidaten und ohne
+  explizites `--path` auf eine konkrete Datei führt zu einem Start-Abbruch
+  mit klarer Fehlermeldung (Kandidaten benannt) statt einer stillschweigend
+  falschen Solution-Auswahl.
+- Zwei MCP-Server-Instanzen für unterschiedliche Solutions laufen parallel
+  ohne Cache-Datei-Kollision (unterschiedliche Hash-Präfixe, siehe "Wie" /
+  Cache-Isolation).
+- Ein MCP-Server und ein gleichzeitiger CLI-Lint-Lauf auf **derselben**
+  Solution laufen ohne Cache-Datei-Konflikt (MCP-Modus schreibt/liest den
+  Disk-Cache nicht).
 - Der bestehende CLI-Batch-Modus (`--map`, `--impact`, regulärer Lint-Lauf)
   bleibt unverändert lauffähig (Regressionstest).
 - Dokumentation aktualisiert: `Docs/agent-api.md`, `Docs/integration.md`,
@@ -280,12 +371,8 @@ Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
 
 ## Offene Punkte
 
-- Exakte finale Tool-Namen/Parametrisierung — der Planer im drift-loop kann
-  hier noch feinjustieren, die obige Tabelle ist der fachliche Vertrags-
-  Rahmen, keine finale API-Signatur.
-- Kaltstart-Zeit bei 160k LOC ist noch nicht gemessen. Stellt sich heraus,
-  dass sie für interaktive Nutzung zu langsam ist, wird der persistente
-  Cache (aktuell Nice-to-Have) zum Muss-Haben.
-- Bestätigung ausstehend: `ModelContextProtocol`-NuGet-Paket als neue
-  externe Abhängigkeit akzeptiert — bisher hat AiNetLinter nur
-  Roslyn/System.CommandLine/CSS-/JS-Parser als Third-Party-Dependencies.
+*Keine blockierenden offenen Punkte.* Einzige bewusst nicht hier
+festgelegte Größe: die exakte finale Tool-Namen/Parametrisierung — das ist
+laut Konzept-Workflow explizit Sache des Planers im drift-loop (keine
+Datei-/Signatur-genaue Implementierungsdetails auf Konzept-Ebene), die
+Tabelle unter "Wie" ist der fachliche Vertrags-Rahmen dafür.
