@@ -9,6 +9,7 @@ und selbstkorrigierend aus:
 |---|---|---|---|
 | 1. Planung | [`planning/`](planning/README.md) | Interaktiver Dialog in der laufenden Session | Du hast nur eine grobe Idee, willst sie im Gespräch schärfen |
 | 2. Umsetzung | [`drift-loop/`](drift-loop/README.md) | Autonomer Subagenten-Loop, ein Step nach dem anderen JIT geplant (Planer → Coder → Kritiker) | Der Weg zum Ziel wird Schritt für Schritt JIT mit Blick auf den echten Codestand geplant |
+| 2. Umsetzung (Alternative, **PoC**) | [`dynamic-loop/`](dynamic-loop/README.md) | Derselbe Einstieg, aber die Rollen entstehen zur Laufzeit; festgeschrieben ist nur ein schmaler Regel-Kern (~90 Zeilen) | Experiment: Reicht ein kleiner Satz harter Leitplanken, wenn das Modell die Rollen selbst entwirft? Noch ungetestet |
 
 **Ablauf:**
 1. Kannst du die Aufgabe schon in 5 Sätzen mit klarem Ziel, Scope und
