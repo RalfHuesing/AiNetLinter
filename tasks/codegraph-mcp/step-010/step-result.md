@@ -54,14 +54,53 @@ ainetlinter --config rules.json --path . → OK (0 Violations)
 
 ## Selbst-Lint-Footprint-Kontrolle (DoD-Pflicht)
 
+Wortwörtlicher Output von `ainetlinter --footprint <Klasse> --path .` (gemessen 2026-07-31 23:50:12–23:50:46, Reihenfolge DoD-konform):
+
 ```
---footprint GetViolationsTool              → 2451 (< 2500) ✓
---footprint GetViolationsScanner           → 1834 (< 2500) ✓
---footprint FileStructureToolRegistrations → 2480 (< 2500) ✓ (wieder unter Limit, weil get_violations rausgenommen)
---footprint AnalysisToolRegistrations      → 2459 (< 2500) ✓ (neue Registrar-Klasse)
+# Run: 2026-07-31 23:50:12
+$ ainetlinter --footprint GetViolationsTool --path .
+AI-Context-Footprint fuer Klasse 'AiNetLinter.Mcp.Tools.GetViolationsTool':
+Gesamt transitive Zeilen: 2451
+Top-Abhängigkeiten:
+  + AiNetLinter.Configuration.MetricsConfig (396 Zeilen)
+  + AiNetLinter.Configuration.GlobalConfigOverride (357 Zeilen)
+  + AiNetLinter.Configuration.MetricsConfigOverride (357 Zeilen)
 ```
 
-**Konsequenz:** keine `PathOverrides` für `GetViolationsTool`/`GetViolationsScanner` in `rules.json` nötig (beide unter 2500, wie im Plan als "Empfehlung 6000" angekündigt war — das wäre übertrieben gewesen). Stattdessen: dritte Registrar-Klasse `AnalysisToolRegistrations.cs` umgesetzt (Plan-Ausweich-Option, in step-009/step-plan.md bereits angedeutet).
+```
+# Run: 2026-07-31 23:50:26
+$ ainetlinter --footprint GetViolationsScanner --path .
+AI-Context-Footprint fuer Klasse 'AiNetLinter.Mcp.Tools.GetViolationsScanner':
+Gesamt transitive Zeilen: 1834
+Top-Abhängigkeiten:
+  + AiNetLinter.Configuration.MetricsConfig (396 Zeilen)
+  + AiNetLinter.Configuration.GlobalConfigOverride (357 Zeilen)
+  + AiNetLinter.Configuration.MetricsConfigOverride (357 Zeilen)
+```
+
+```
+# Run: 2026-07-31 23:50:36
+$ ainetlinter --footprint FileStructureToolRegistrations --path .
+AI-Context-Footprint fuer Klasse 'AiNetLinter.Mcp.FileStructureToolRegistrations':
+Gesamt transitive Zeilen: 2480
+Top-Abhängigkeiten:
+  + AiNetLinter.Configuration.MetricsConfig (396 Zeilen)
+  + AiNetLinter.Configuration.GlobalConfigOverride (357 Zeilen)
+  + AiNetLinter.Configuration.MetricsConfigOverride (357 Zeilen)
+```
+
+```
+# Run: 2026-07-31 23:50:46
+$ ainetlinter --footprint AnalysisToolRegistrations --path .
+AI-Context-Footprint fuer Klasse 'AiNetLinter.Mcp.AnalysisToolRegistrations':
+Gesamt transitive Zeilen: 2459
+Top-Abhängigkeiten:
+  + AiNetLinter.Configuration.MetricsConfig (396 Zeilen)
+  + AiNetLinter.Configuration.GlobalConfigOverride (357 Zeilen)
+  + AiNetLinter.Configuration.MetricsConfigOverride (357 Zeilen)
+```
+
+**Konsequenz:** alle vier Klassen < 2500. keine `PathOverrides` für `GetViolationsTool`/`GetViolationsScanner` in `rules.json` nötig (beide unter 2500, wie im Plan als "Empfehlung 6000" angekündigt war — das wäre übertrieben gewesen). Stattdessen: dritte Registrar-Klasse `AnalysisToolRegistrations.cs` umgesetzt (Plan-Ausweich-Option, in step-009/step-plan.md bereits angedeutet).
 
 ## Cache-Bypass-Verifikation (DoD-Pflicht)
 
