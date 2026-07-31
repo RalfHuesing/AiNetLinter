@@ -80,3 +80,4 @@ dotnet run            # Starten
 
 - **Zero-Warning-Direktive:** Beide Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
 - **Result-Pattern bevorzugen:** Fehlerfälle explizit als `Result<T>` modellieren statt Exceptions zu werfen. Exceptions nur für echte, exogene Ausnahmefälle (z. B. Netzwerkausfall, IO-Fehler). Der Linter erzwingt dies nicht — die Einhaltung liegt beim Entwickler und der KI.
+- **Sparsamer Einsatz von Code-Kommentaren (Clean Code):** Self-Documenting Code bevorzugen; im Zweifelsfall keine Kommentare schreiben. Verboten im Code: Task-/Step-Referenzen (z. B. `step-008`), Refactoring-Historie (`war früher private`), Agenten-Regeln oder redundante Nacherzeugung von Funktionsnamen. Ausnahmen: Nur notwendige Erklärungen für unkonventionelles *Why* (Workarounds, technische Sonderfälle).
