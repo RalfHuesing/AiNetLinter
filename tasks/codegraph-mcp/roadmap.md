@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T22:00:00Z
+last_updated: 2026-07-31T23:00:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -129,7 +129,11 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       gebaut) inkl. Identifikator-Aufloesung (Datei:Zeile:Spalte oder
       qualifizierter Name) — die restlichen 3 Tools (`get_impact`,
       `get_type_hierarchy`, `get_file_skeleton`) bleiben offen für weitere
-      EPIC-03-Steps.
+      EPIC-03-Steps. **step-005** (geplant) liefert `get_impact`
+      (Basis: `DiffImpactAnalyzer.AnalyzeAsync` fuer den Git-Ref-Zweig,
+      `FindReferencesTool.ResolveSymbolAsync` + `DiffImpactAnalyzer.FindCallSitesAsync`
+      fuer den Symbol-direkt-Zweig, beide bereits vorhanden/wiederverwendet)
+      — danach bleiben `get_type_hierarchy`/`get_file_skeleton` offen.
       **Neu seit 2026-07-31 (ersetzt EPIC-09, siehe unten):** jeder
       verbleibende EPIC-03-Tool-Step verifiziert sein Tool zusätzlich zu
       den Fixture-Tests einmal ad-hoc gegen die eigene `AiNetLinter.slnx`
