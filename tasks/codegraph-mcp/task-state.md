@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: codegraph-mcp
 started_at: 2026-07-31T09:30:00Z
-last_updated: 2026-07-31T22:00:00Z
+last_updated: 2026-07-31T20:30:00Z
 rules_dir: .agents/rules
 total_fix_rounds: 3  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-009
@@ -14,7 +14,7 @@ current_step: step-009
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-010` (planned, EPIC-04, `get_violations`)
+- **Aktueller Schritt:** `step-010` (done pending audit, paused, EPIC-04, `get_violations`)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-07-31T09:30:00Z
@@ -36,7 +36,7 @@ eine Zeile.>
 | step-007 | EPIC-03 | done | Fünftes/letztes Tool get_type_hierarchy (fix-01: external base/interface display fixed) | 1/3 | yes | approved | 22e8410 |
 | step-008 | EPIC-04 | done | Erstes EPIC-04-Tool get_index_scope | 0/3 | yes | approved | 6624312 |
 | step-009 | EPIC-04 | done | Zweites EPIC-04-Tool get_hotspots | 0/3 | yes | approved | 995500e (code), 71779a4 (review) |
-| step-010 | EPIC-04 | open (planned) | Drittes EPIC-04-Tool get_violations | 0/3 | no | - | - |
+| step-010 | EPIC-04 | done (pending audit, paused) | Drittes EPIC-04-Tool get_violations | 0/3 | yes | - | e63176d (code, extern), 7474226 (docs) |
 
 ## Config (optional)
 
@@ -108,3 +108,52 @@ Modus `step`) — **nicht** erneut den Coder aufrufen, der Step ist bereits
 vollständig codiert und committet. Erst nach dem Kritiker-Verdict
 (`approved`/`issues`/`blocked`) normal weiter im Loop (Schritt 3b für den
 nächsten Step bzw. Fix-Step).
+
+## Pause-Notiz (manueller Stopp, 2026-07-31 22:30 UTC+2)
+
+Der Loop wurde auf **expliziten Nutzer-Wunsch** angehalten, kein
+`blocked`-Zustand aus dem Workflow selbst:
+
+- **Stand:** step-010 (`get_violations`, EPIC-04) ist vom **Coder fertig
+  umgesetzt** — Code-Commit `e63176d` (extern durch Nutzer angelegt,
+  enthält den kompletten Code-Stand zzgl. `tasks/codegraph-mcp-next/Konzept.md`
+  und einem Working-File `coder-todos.md`, Conventional-Commit-Format
+  mit `[codegraph-mcp]`-Suffix ist nicht erfüllt, laut Skill-Regel
+  kein History-Rewrite), Doku-Commit `7474226`, `step-result.md` liegt
+  vor mit Status `done`, `step-plan.md` ist auf `done (pending audit)`
+  gesetzt. Build/Test vom Coder als grün dokumentiert (1088/1088,
+  0 Warnungen), Selbst-Lint OK, Footprint-Checks dokumentiert
+  (GetViolationsTool 2451, GetViolationsScanner 1834,
+  FileStructureToolRegistrations 2480, AnalysisToolRegistrations 2459
+  — alle < 2500), Cache-Bypass via Filter-Test verifiziert, Dogfooding
+  gegen reale `AiNetLinter.slnx` durchgeführt (Codebase lint-clean,
+  0 Violations in beiden Pfaden).
+- **Offen:** Der **Kritiker-Review für step-010 ist nicht abgeschlossen**
+  — `step-010/step-review.md` existiert noch nicht. Der Kritiker-Subagent
+  hat während der Initialisierungs-/Kontext-Aufbau-Phase mit
+  `task_error: aborted` abgebrochen (technischer Subagent-Fehler, kein
+  inhaltliches Finding — Subagent-Inhalt-Aufbau kann beim extern
+  angelegten Commit mit unüblichem Format unzuverlässig sein). Keine
+  Hintergrund-Tasks (verifiziert per `task_query`).
+- **Bekannte Unschärfen aus Coder-Result** (zu prüfen beim nächsten
+  Kritiker-Lauf): (1) zusätzliche `PathOverrides` für `FindReferencesTool`/
+  `FindSymbolTool` (je 2700) als Regression-Fix für `Configuration`-
+  Namespace-Pull-in durch `McpCodeGraphServer.Config` — Coder schlägt
+  vor, das als **Tech-Debt-Eintrag** aufzunehmen (mittelfristig
+  struktureller Refactor statt PathOverrides); (2) `consoleOverride`-
+  Parameter am `McpCodeGraphServer`-Konstruktor wurde hinzugefügt, in
+  diesem Step nicht aktiv genutzt (Plan-konform); (3) dritte
+  Registrar-Klasse `AnalysisToolRegistrations` umgesetzt (Plan-Ausweich-
+  Option, vom Planer antizipiert — `FileStructureToolRegistrations`
+  wäre sonst auf 2492 Zeilen gelandet).
+- **Kein offener Prozess/Agent mehr:** verifiziert per `task_query`
+  (kein Background-Task) und Working-Tree ist clean.
+
+**Wiederaufnahme:** Beim nächsten Orchestrator-Lauf (`orchestrator.md`
+Schritt 1, Fall B) direkt mit dem **Kritiker-Aufruf für step-010**
+fortsetzen (Input: `step-010/step-plan.md` + `step-010/step-result.md`,
+Modus `step`) — **nicht** erneut den Coder aufrufen, der Step ist bereits
+vollständig codiert und committet. Erst nach dem Kritiker-Verdict
+(`approved`/`issues`/`blocked`) normal weiter im Loop (Schritt 3b für den
+nächsten Step — `search_pattern` als letztes offenes EPIC-04-Tool
+davor, oder ggf. Fix-Step bei `issues`).
