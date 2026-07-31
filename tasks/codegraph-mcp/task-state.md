@@ -5,7 +5,7 @@ started_at: 2026-07-31T09:30:00Z
 last_updated: 2026-07-31T09:30:00Z
 rules_dir: .agents/rules
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-001
+current_step: step-002
 ---
 
 # Task State: codegraph-mcp
@@ -28,6 +28,7 @@ eine Zeile.>
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI-Einstiegspunkt --mcp-server + minimaler stdio-MCP-Server | 0/3 | yes | approved | 3ae6230 |
+| step-002 | EPIC-02 | in_progress | Resident McpCodeGraphServer + Lazy-Staleness-Invalidierung | 0/3 | - | - | - |
 
 ## Config (optional)
 
