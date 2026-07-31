@@ -5,7 +5,7 @@ started_at: 2026-07-31T08:36:00+02:00
 last_updated: 2026-07-31T08:36:00+02:00
 rules_dir: .agents/rules
 total_fix_rounds: 0
-current_step: step-004
+current_step: step-005
 ---
 
 # Task State: ignore-suppressions
@@ -14,7 +14,7 @@ current_step: step-004
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`: 12)
-- **Aktueller Schritt:** `step-004`
+- **Aktueller Schritt:** `step-005`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-07-31T08:36:00+02:00
@@ -28,6 +28,7 @@ current_step: step-004
 | step-002 | EPIC-02 | done | Core Suppression Bypass Engine (IgnoreSuppressionsFilter) in SuppressionEvaluator, WebSuppressionDetector, DisableAllDetector und SuppressionScanner integrieren | 0/3 | 8b82704 | approved | 8b82704 |
 | step-003 | EPIC-03 | done | Transparente Header-Ausgabe des Ignore-Suppressions-Modus in CLI, DebtReportBuilder und RepoPlaybookGenerator | 0/3 | 7e9873a | approved | 7e9873a |
 | step-004 | EPIC-04 | done | End-to-End Linter Integrationstests für --ignore-suppressions über C#, Razor, JS und CSS erstellen | 0/3 | 2ca7000 | approved | 2ca7000 |
+| step-005 | EPIC-05 | open | Dokumentation in Docs/configuration.md, Docs/ROADMAP.md und README.md mit --ignore-suppressions synchronisieren | 0/3 | - | - | - |
 
 ## Config (optional)
 
