@@ -75,7 +75,7 @@ public sealed class RepoPlaybookGenerator
         var stats = await ScanSolutionAsync(solution, opts);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
         var version = typeof(RepoPlaybookGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-        return BuildContent(new PlaybookBuildContext(stats, solutionDir, opts.Config, opts.ConfigPath, version));
+        return BuildContent(new PlaybookBuildContext(stats, solutionDir, opts.Config, opts.ConfigPath, version, opts.IgnoreSuppressions));
     }
 
     private static async Task<PlaybookStats> ScanSolutionAsync(Solution solution, PlaybookOptions opts)
@@ -236,6 +236,14 @@ public sealed class RepoPlaybookGenerator
         sb.AppendLine("alwaysApply: false");
         sb.AppendLine("---");
         sb.AppendLine("# AI Repository Playbook (Auto-Generated)");
+        if (ctx.IgnoreSuppressions != null && ctx.IgnoreSuppressions.Count > 0)
+        {
+            var filter = new AiNetLinter.Suppression.IgnoreSuppressionsFilter(ctx.IgnoreSuppressions);
+            if (filter.IsActive)
+            {
+                sb.AppendLine($"[Ignore-Suppressions: {string.Join(", ", filter.ActiveLanguages)}]");
+            }
+        }
         sb.AppendLine($"Auto-generiert durch AiNetLinter {ctx.Version} aus `{configFileName}`.");
         sb.AppendLine("Dieses Dokument wurde automatisiert durch den **AiNetLinter** erzeugt.");
         sb.AppendLine("Es dient als Orientierungshilfe fuer LLM-Agenten, um sich an die Codierungsrichtlinien, Architekturmuster und Ausnahmen dieser Codebase anzupassen.");

@@ -40,7 +40,8 @@ public static class Program
                 if (linterArgs.Docs == null && linterArgs.MapType == null
                     && linterArgs.EvalType == null && !linterArgs.ListEvals)
                 {
-                    Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
+                    Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
                 }
                 return await ExecuteLinterAsync(linterArgs, cts.Token);
             }
@@ -159,5 +160,12 @@ public static class Program
             return 1;
         }
         return null;
+    }
+
+    private static string FormatIgnoreSuppressionsHeaderNotice(LinterArgs args)
+    {
+        var normalized = args.GetNormalizedIgnoreSuppressions();
+        if (normalized.Count == 0) return "";
+        return $" [Ignore-Suppressions: {string.Join(", ", normalized)}]";
     }
 }

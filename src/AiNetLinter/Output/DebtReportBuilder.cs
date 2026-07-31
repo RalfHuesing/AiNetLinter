@@ -14,18 +14,21 @@ public static class DebtReportBuilder
     /// </summary>
     public static async Task<string> BuildAsync(
         string targetPath,
-        IReadOnlyCollection<RuleViolation>? violations = null)
+        IReadOnlyCollection<RuleViolation>? violations = null,
+        IReadOnlyList<string>? ignoreSuppressions = null)
     {
         var outputRoot = OutputRootResolver.Resolve(targetPath);
+        var ignoreFilter = ignoreSuppressions != null ? new IgnoreSuppressionsFilter(ignoreSuppressions) : null;
         var absolutePaths = await SuppressionFileResolver.ResolveAbsolutePathsAsync(targetPath);
         var disableAllByFolder = GroupDisableAllByFolder(absolutePaths, outputRoot);
         var waveReady = BuildWaveReadyCandidates(violations, outputRoot);
-        var activeSuppressions = await SuppressionScanner.ScanAllAsync(targetPath);
+        var activeSuppressions = await SuppressionScanner.ScanAllAsync(targetPath, ignoreFilter);
         var suppressionLines = BuildActiveSuppressions(activeSuppressions, outputRoot);
 
+        var ignoreNotice = FormatIgnoreNotice(ignoreFilter);
         var lines = new List<string>
         {
-            "# AiNetLinter - debt report",
+            $"# AiNetLinter - debt report{ignoreNotice}",
             "## disable-all by folder",
         };
         lines.AddRange(disableAllByFolder.Select(x => $"{x.Count} {x.Folder}"));
@@ -118,6 +121,17 @@ public static class DebtReportBuilder
     {
         var lastSep = relativePath.LastIndexOf('/');
         return lastSep > 0 ? relativePath[..(lastSep + 1)] : relativePath;
+    }
+
+    private static string FormatIgnoreNotice(IgnoreSuppressionsFilter? filter)
+    {
+        if (filter == null || !filter.IsActive) return "";
+        var activeLangs = filter.ActiveLanguages;
+        if (activeLangs.Count == 4 && filter.ShouldIgnoreSuppression("cs") && filter.ShouldIgnoreSuppression("razor") && filter.ShouldIgnoreSuppression("js") && filter.ShouldIgnoreSuppression("css"))
+        {
+            return " [Ignore-Suppressions: all]";
+        }
+        return $" [Ignore-Suppressions: {string.Join(", ", activeLangs)}]";
     }
 
     private sealed record FolderCount(int Count, string Folder);

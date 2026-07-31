@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using System.IO;
@@ -37,7 +37,7 @@ internal static class DebtReportCommand
             }
         }
 
-        var report = await DebtReportBuilder.BuildAsync(args.TargetPath, violations);
+        var report = await DebtReportBuilder.BuildAsync(args.TargetPath, violations, args.IgnoreSuppressions);
         c.WriteLine(report);
         return 0;
     }

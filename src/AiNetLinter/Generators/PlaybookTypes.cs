@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
@@ -13,7 +13,8 @@ public sealed record PlaybookOptions(
     bool Verbose = false,
     Config? Config = null,
     string ConfigPath = "rules.json",
-    IReadOnlyCollection<RuleViolation>? PrecomputedViolations = null);
+    IReadOnlyCollection<RuleViolation>? PrecomputedViolations = null,
+    IReadOnlyList<string>? IgnoreSuppressions = null);
 
 internal sealed record PlaybookDocInfo(
     string FilePath,
@@ -44,4 +45,5 @@ internal sealed record PlaybookBuildContext(
     string SolutionDir,
     Config? Config,
     string ConfigPath,
-    string Version);
+    string Version,
+    IReadOnlyList<string>? IgnoreSuppressions = null);
