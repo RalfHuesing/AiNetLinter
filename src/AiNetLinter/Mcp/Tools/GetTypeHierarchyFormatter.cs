@@ -44,7 +44,7 @@ internal static class GetTypeHierarchyFormatter
         var current = type.BaseType;
         while (current is not null)
         {
-            foreach (var line in FindSymbolTool.FormatSymbolLocations(current, outputRoot))
+            foreach (var line in FormatHierarchyTypeReference(current, outputRoot))
             {
                 yield return line;
             }
@@ -55,7 +55,27 @@ internal static class GetTypeHierarchyFormatter
 
     private static IEnumerable<string> FormatInterfaces(INamedTypeSymbol type, string outputRoot)
     {
-        return type.AllInterfaces.SelectMany(i => FindSymbolTool.FormatSymbolLocations(i, outputRoot));
+        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot));
+    }
+
+    /// <summary>
+    /// Formatiert einen Basistyp/ein Interface fuer die Basisklassen-/Interface-Sektionen. Anders als
+    /// <see cref="FindSymbolTool.FormatSymbolLocations"/> (gedacht fuer lokale Symbol-Fundstellen,
+    /// daher auf <c>IsInSource</c> gefiltert) verwirft dies Typen ohne Quell-Location nicht: BCL-/NuGet-
+    /// Basistypen und -Interfaces (z. B. <c>object</c>, <c>IDisposable</c>, <c>CSharpSyntaxWalker</c>)
+    /// sind hier der Normalfall, kein Sonderfall, und muessen sichtbar bleiben statt spurlos zu
+    /// verschwinden (siehe step-007/fix-01, Review-Finding 1).
+    /// </summary>
+    private static IEnumerable<string> FormatHierarchyTypeReference(INamedTypeSymbol symbol, string outputRoot)
+    {
+        var sourceLines = FindSymbolTool.FormatSymbolLocations(symbol, outputRoot).ToList();
+        if (sourceLines.Count > 0)
+        {
+            return sourceLines;
+        }
+
+        var kindLabel = symbol.TypeKind == TypeKind.Interface ? "Interface" : "Klasse";
+        return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo)" };
     }
 
     private static async Task<string> FormatSubtypesSectionAsync(

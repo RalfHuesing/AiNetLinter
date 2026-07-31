@@ -93,4 +93,34 @@ public sealed class GetTypeHierarchyToolTests
         Assert.Contains("BaseGreeting", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Keine abgeleiteten Typen.", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ClassWithImplicitObjectBase_ReturnsExternalBaseTypeInsteadOfEmptyMessage()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(catalog);
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("object", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Basisklasse.", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TypeWithExternalInterface_ReturnsExternalInterfaceInsteadOfEmptyMessage()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(catalog);
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DisposableGreeting", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("IDisposable", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Interfaces.", textContent.Text, StringComparison.Ordinal);
+    }
 }

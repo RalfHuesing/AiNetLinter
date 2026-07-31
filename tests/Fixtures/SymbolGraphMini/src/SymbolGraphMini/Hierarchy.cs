@@ -1,3 +1,5 @@
+using System;
+
 namespace SymbolGraphMini;
 
 public interface IGreeting
@@ -12,4 +14,11 @@ public class BaseGreeting : IGreeting
 
 public class SpecialGreeting : BaseGreeting
 {
+}
+
+public sealed class DisposableGreeting : IDisposable
+{
+    public void Dispose()
+    {
+    }
 }
