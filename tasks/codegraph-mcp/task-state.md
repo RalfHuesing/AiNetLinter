@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: codegraph-mcp
 started_at: 2026-07-31T09:30:00Z
-last_updated: 2026-07-31T23:45:00Z
+last_updated: 2026-07-31T23:00:00Z
 rules_dir: .agents/rules
 total_fix_rounds: 3  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-009
@@ -14,7 +14,7 @@ current_step: step-009
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-001`
+- **Aktueller Schritt:** `step-009` (approved, EPIC-04, `get_hotspots`)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-07-31T09:30:00Z
@@ -35,7 +35,7 @@ eine Zeile.>
 | step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
 | step-007 | EPIC-03 | done | Fünftes/letztes Tool get_type_hierarchy (fix-01: external base/interface display fixed) | 1/3 | yes | approved | 22e8410 |
 | step-008 | EPIC-04 | done | Erstes EPIC-04-Tool get_index_scope | 0/3 | yes | approved | 6624312 |
-| step-009 | EPIC-04 | done (pending audit, paused) | Zweites EPIC-04-Tool get_hotspots | 0/3 | yes | - | 995500e |
+| step-009 | EPIC-04 | done | Zweites EPIC-04-Tool get_hotspots | 0/3 | yes | approved | 995500e |
 
 ## Config (optional)
 

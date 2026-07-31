@@ -30,6 +30,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-004 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` | mittel | Sammelpunkt für alle `McpServerTool.Create(...)`-Registrierungen der 9 MCP-Tools; schon nach dem ersten Tool musste die Konstruktion aus `McpServerCommand.cs` ausgelagert werden, um `AIContextFootprint` (2500) nicht zu reißen — Risiko, dass die Factory selbst mit den restlichen 8 Tools erneut ans Limit kommt. |
 | TD-005 | `src/AiNetLinter/Mcp/Tools/*Tool.cs` (pro-Tool-Klassen) | mittel | `McpCodeGraphServer` als Parametertyp einer Tool-`ExecuteAsync`-Methode zieht bereits allein einen Großteil des `AIContextFootprint`-Budgets (2500); in step-004 riss dadurch erstmals die Tool-Klasse selbst (`FindReferencesTool`, 2515), nicht die Factory (TD-004) — jede weitere EPIC-03/04-Tool-Klasse mit demselben Parameter hat kaum noch eigenen Zeilen-Spielraum. In step-008 riss das Limit sogar trotz von Anfang an dünnem Dispatch, weil die eigene Zeilenzahl der Klasse selbst mitzählt. |
 | TD-006 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` vs. `src/AiNetLinter/Web/WebFileCatalog.cs` | niedrig | Neuer `.xaml`/`.html`-Scan dupliziert `IsGeneratedPath`/`SafeEnumerateFiles` aus `WebFileCatalog` 1:1 statt sie (analog `GetProjectDirectories`) wiederzuverwenden. |
+| TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (`TryApplyContentChange`) | niedrig | Methode hat 5 Parameter (`Document, string, DateTime, FileState, ref Solution`), über `MaxMethodParameterCount` = 4; vorbestehend seit step-002, nicht durch step-009 verursacht. |
 
 ## Einträge
 
@@ -251,4 +252,44 @@ Verweis auf die Tech-Debt-ID).
   `IsGeneratedPath` einmalig in eine gemeinsame, von beiden Seiten
   nutzbare interne Hilfsklasse (z. B. `FileSystemScanHelpers`) ziehen,
   statt ein drittes Mal zu duplizieren.
+- **Status:** offen
+
+### TD-007 — `McpCodeGraphServer.TryApplyContentChange` mit 5 Parametern über `MaxMethodParameterCount` [Priorität: niedrig]
+
+- **Gefunden in:** step-009 (Kritiker-Review vom 2026-07-31), beim
+  Nachvollziehen der Zeilen-Bilanz von `McpCodeGraphServer.cs` (delta
+  +11 Zeilen durch den additiven `maxLineCount`-Konstruktor-Parameter,
+  siehe `git show 995500e -- src/AiNetLinter/Mcp/McpCodeGraphServer.cs`).
+- **Ort:** `src/AiNetLinter/Mcp/McpCodeGraphServer.cs`, Methode
+  `TryApplyContentChange(Document, string, DateTime, FileState,
+  ref Solution)` — 5 Parameter.
+- **Befund:** Die Methode nimmt 5 Parameter entgegen
+  (`Document document, string path, DateTime currentMtime, FileState known,
+  ref Solution updated`), `MaxMethodParameterCount` ist in
+  `rules.json → Metrics` auf 4 gesetzt. Eine Selbst-Lint-Prüfung
+  schlägt hier nicht an, weil der bestehende Selbst-Lint-Output des
+  Repos (`ainetlinter --config rules.json --path .`) sauber durchläuft
+  (0 Violations) — vermutlich, weil die Methode `private` ist und
+  `MaxMethodParameterCountAllowPrivate` im konkreten `rules.json` über
+  `MaxMethodParameterCountForNonPublic: 6` greift; gleichzeitig ist
+  der `MaxMethodParameterCount` aber auch Bestandteil von
+  `AIContextFootprint`-bezogenen Übersichtsmetriken, deren
+  reproduzierbare Messung im aktuellen Repository-Stand
+  (Stand 2026-07-31) das Problem nicht sichtbar macht. Der Coder hat
+  in `step-009` `McpCodeGraphServer.cs` zwar erweitert (additiver
+  Konstruktor-Parameter + Property), aber `TryApplyContentChange`
+  nicht angefasst — vorbestehender Code aus step-002 (`81cf007`).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-009
+  (der nur `get_hotspots` einführt, nicht die Staleness-Logik
+  umbaut). Eine Refaktorierung in einen Input-`record` (laut Regel
+  ab 5 Parametern vorgesehen) wäre eine sinnvolle, aber eigenständige
+  Aufgabe — typischerweise kombinierbar mit dem ohnehin noch
+  ausstehenden Locking-Fix für die Race-Condition in
+  `SourceFileCatalog.RegisterMSBuild` (TD-003), da beide
+  `McpCodeGraphServer` betreffen.
+- **Vorschlag:** Bei einem der nächsten Schritte, die ohnehin
+  `McpCodeGraphServer` anfassen (z. B. EPIC-06 Robustheit), die
+  5 Parameter in einen Input-`record` (z. B.
+  `StalenessCheckRequest(Document Document, string Path, DateTime
+  CurrentMtime, FileState Known, ref Solution Updated)`) ziehen.
 - **Status:** offen
