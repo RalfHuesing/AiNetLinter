@@ -52,7 +52,7 @@ public sealed class CliIntegrationTests
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
-        var playbookFile = Path.Combine(rootDir, ".agents", "rules", "playbook.md");
+        var playbookFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
@@ -67,21 +67,31 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
-        // Act
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
+        try
+        {
+            // Act
+            using var process = Process.Start(processInfo);
+            Assert.NotNull(process);
 
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
 
-        // Assert
-        Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
-        Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
+            // Assert
+            Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
+            Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
 
-        var content = File.ReadAllText(playbookFile);
-        Assert.Contains("Auto-generiert durch AiNetLinter", content);
-        Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
+            var content = File.ReadAllText(playbookFile);
+            Assert.Contains("Auto-generiert durch AiNetLinter", content);
+            Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
+        }
+        finally
+        {
+            if (File.Exists(playbookFile))
+            {
+                File.Delete(playbookFile);
+            }
+        }
     }
 
     [Fact]
