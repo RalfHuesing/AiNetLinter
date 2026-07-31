@@ -111,7 +111,8 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       (`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`). Review vermerkt
       `TD-003` (Race Condition in `SourceFileCatalog.RegisterMSBuild`,
       vorbestehend, kein Blocker) als Tech-Debt, kein offenes Finding.
-- [ ] EPIC-03: **in Arbeit → step-004**. Symbolgraph-Tools — `find_symbol`,
+- [x] EPIC-03: **abgeschlossen → step-003..step-007 (+ fix-01 zu step-005 und
+      step-007)**. Symbolgraph-Tools — `find_symbol`,
       `find_references`, `get_impact`, `get_type_hierarchy`,
       `get_file_skeleton`. Basis:
       `SymbolFinder.FindDeclarationsAsync`/`FindDerivedClassesAsync`/
@@ -162,7 +163,27 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       den Fixture-Tests einmal ad-hoc gegen die eigene `AiNetLinter.slnx`
       (Abschnitt "Dogfooding" in `step-result.md`, siehe `konzept.md`
       Muss-Haben).
-- [ ] EPIC-04: Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
+      **Abschluss-Update (Planer, step-008-Vorbereitung, 2026-07-31):**
+      `step-007/fix-01` (`approved`, siehe `step-007/fix-01/step-review.md`)
+      war die letzte offene Fix-Runde — damit sind alle fünf Symbolgraph-
+      Tools (`find_symbol`, `find_references`, `get_impact`,
+      `get_file_skeleton`, `get_type_hierarchy`) vollständig `approved` und
+      EPIC-03 ist geschlossen. Die neue Dogfooding-Pflicht hat sich dabei
+      zweimal konkret ausgezahlt (kein rein theoretisches Kriterium): (1)
+      **step-005/fix-01** behob einen echten Subprozess-Hang in
+      `DiffImpactAnalyzer.RunGitDiff` unter stdio-Transport, der den
+      Server bei `get_impact`-Aufrufen mit `gitRef` blockiert hätte — von
+      den Fixture-Tests nicht erkannt, erst durch den Dogfooding-Lauf
+      gegen die reale `AiNetLinter.slnx` sichtbar geworden (siehe
+      `step-005/step-review.md` Finding 1). (2) **step-007/fix-01** behob,
+      dass `get_type_hierarchy` externe (BCL-/NuGet-)Basisklassen und
+      -Interfaces stillschweigend aus der Ausgabe entfernte statt sie
+      sichtbar zu machen — ebenfalls nur durch eigenes Kritiker-Dogfooding
+      gegen reale Repo-Typen (`PerformanceProfiler`, `SourceFileCatalog`,
+      `SkeletonSyntaxWalker`) aufgefallen, da alle Fixture-/Coder-Tests
+      ausschließlich In-Fixture-Hierarchien ohne externe Basistypen prüften
+      (siehe `step-007/step-review.md` Finding 1).
+- [ ] EPIC-04: **in Arbeit → step-008**. Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
       `SourceFileCatalog.GetSourceFiles` + `Web/WebFileCatalog.cs`
       `Collect`, kein neuer Datei-Scan nötig, siehe "Entdeckte
       Mängel/Redundanzen" in `konzept.md`), `get_hotspots` (Basis:
