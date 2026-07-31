@@ -35,7 +35,7 @@ eine Zeile.>
 | step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
 | step-007 | EPIC-03 | done | Fünftes/letztes Tool get_type_hierarchy (fix-01: external base/interface display fixed) | 1/3 | yes | approved | 22e8410 |
 | step-008 | EPIC-04 | done | Erstes EPIC-04-Tool get_index_scope | 0/3 | yes | approved | 6624312 |
-| step-009 | EPIC-04 | done | Zweites EPIC-04-Tool get_hotspots | 0/3 | yes | approved | 995500e |
+| step-009 | EPIC-04 | done | Zweites EPIC-04-Tool get_hotspots | 0/3 | yes | approved | 995500e (code), 71779a4 (review) |
 
 ## Config (optional)
 
