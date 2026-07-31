@@ -25,7 +25,7 @@ current_step: step-002
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI Option --ignore-suppressions in CliOptions, CliOptionFactory, LinterArgs und CliCommandBuilder integrieren | 0/3 | 03602ea | approved | 03602ea |
-| step-002 | EPIC-02 | open | Core Suppression Bypass Engine (IgnoreSuppressionsFilter) in SuppressionEvaluator, WebSuppressionDetector, DisableAllDetector und SuppressionScanner integrieren | 0/3 | - | - | - |
+| step-002 | EPIC-02 | done | Core Suppression Bypass Engine (IgnoreSuppressionsFilter) in SuppressionEvaluator, WebSuppressionDetector, DisableAllDetector und SuppressionScanner integrieren | 0/3 | 8b82704 | approved | 8b82704 |
 
 ## Config (optional)
 
