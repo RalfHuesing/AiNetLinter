@@ -5,7 +5,7 @@ started_at: 2026-07-31T09:30:00Z
 last_updated: 2026-07-31T09:30:00Z
 rules_dir: .agents/rules
 total_fix_rounds: 3  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-007
+current_step: step-008
 ---
 
 # Task State: codegraph-mcp
@@ -34,6 +34,7 @@ eine Zeile.>
 | step-005 | EPIC-03 | done | Drittes Tool get_impact (fix-01: stdio subprocess hang fixed) | 1/3 | yes | approved | 8db5f4b |
 | step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
 | step-007 | EPIC-03 | done | Fünftes/letztes Tool get_type_hierarchy (fix-01: external base/interface display fixed) | 1/3 | yes | approved | 22e8410 |
+| step-008 | EPIC-04 | in_progress | Erstes EPIC-04-Tool get_index_scope | 0/3 | - | - | - |
 
 ## Config (optional)
 
