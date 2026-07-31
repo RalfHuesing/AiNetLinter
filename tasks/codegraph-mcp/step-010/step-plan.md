@@ -1,5 +1,5 @@
 ---
-status: open
+status: in_progress
 type: step-plan
 task: codegraph-mcp
 step: 010
