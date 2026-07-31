@@ -4,7 +4,7 @@ task: codegraph-mcp
 started_at: 2026-07-31T09:30:00Z
 last_updated: 2026-07-31T09:30:00Z
 rules_dir: .agents/rules
-total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-003
 ---
 
@@ -29,7 +29,7 @@ eine Zeile.>
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI-Einstiegspunkt --mcp-server + minimaler stdio-MCP-Server | 0/3 | yes | approved | 3ae6230 |
 | step-002 | EPIC-02 | done | Resident McpCodeGraphServer + Lazy-Staleness-Invalidierung | 0/3 | yes | approved | 81cf007 |
-| step-003 | EPIC-03 | in_progress | Tool-Infrastruktur + erstes Tool find_symbol | 0/3 | - | - | - |
+| step-003 | EPIC-03 | done (fix-01 pending) | Tool-Infrastruktur + erstes Tool find_symbol | 1/3 | yes | issues | e89ede5 |
 
 ## Config (optional)
 
