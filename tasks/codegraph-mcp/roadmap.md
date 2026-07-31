@@ -133,7 +133,16 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       (Basis: `DiffImpactAnalyzer.AnalyzeAsync` fuer den Git-Ref-Zweig,
       `FindReferencesTool.ResolveSymbolAsync` + `DiffImpactAnalyzer.FindCallSitesAsync`
       fuer den Symbol-direkt-Zweig, beide bereits vorhanden/wiederverwendet)
-      — danach bleiben `get_type_hierarchy`/`get_file_skeleton` offen.
+      — inkl. `fix-01` (`approved`), das einen echten Subprozess-Hang in
+      `DiffImpactAnalyzer.RunGitDiff` unter stdio-Transport behoben hat
+      (nur durch die neue Dogfooding-Pflicht entdeckt, siehe
+      `step-005/step-review.md` Finding 1). **step-006** (geplant) liefert
+      `get_file_skeleton` (Basis: `SkeletonMapBuilder.ExtractFromDocumentAsync`,
+      bereits granular pro Datei, nur Sichtbarkeit angehoben) — bewusst vor
+      `get_type_hierarchy` eingeordnet, da letzteres eine bislang
+      ungenutzte `SymbolFinder`-API neu einbinden muss (höheres Risiko),
+      siehe `step-006/step-plan.md` „Reihenfolge-Begründung". Danach bleibt
+      `get_type_hierarchy` als letztes offenes EPIC-03-Tool.
       **Neu seit 2026-07-31 (ersetzt EPIC-09, siehe unten):** jeder
       verbleibende EPIC-03-Tool-Step verifiziert sein Tool zusätzlich zu
       den Fixture-Tests einmal ad-hoc gegen die eigene `AiNetLinter.slnx`
