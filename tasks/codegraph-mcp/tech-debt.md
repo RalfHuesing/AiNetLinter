@@ -2,7 +2,7 @@
 task: codegraph-mcp
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-07-31
+last_updated: 2026-07-31 (step-008)
 ---
 
 # Tech-Debt-Log: codegraph-mcp
@@ -28,7 +28,8 @@ Verweis auf die Tech-Debt-ID).
 | TD-002 | `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` | niedrig | End-to-End-Test startet echten Subprozess (`AiNetLinter.exe`), spürbar länger als Unit-Tests — bei weiteren Subprozess-Tests in EPIC-07 ggf. Fixture-Prozess-Pool erwägen. |
 | TD-003 | `src/AiNetLinter/Baseline/SourceFileCatalog.cs` (`RegisterMSBuild`) | mittel | Nicht-thread-sicherer Check-then-Act (`if (!MSBuildLocator.IsRegistered)`) führt bei parallel laufenden Testklassen, die `SourceFileCatalog.LoadAsync` erstmalig aufrufen, intermittierend zu `InvalidOperationException`; durch die 5 neuen parallelen `LoadAsync`-Aufrufe in `McpCodeGraphServerTests` steigt die Kollisionswahrscheinlichkeit. |
 | TD-004 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` | mittel | Sammelpunkt für alle `McpServerTool.Create(...)`-Registrierungen der 9 MCP-Tools; schon nach dem ersten Tool musste die Konstruktion aus `McpServerCommand.cs` ausgelagert werden, um `AIContextFootprint` (2500) nicht zu reißen — Risiko, dass die Factory selbst mit den restlichen 8 Tools erneut ans Limit kommt. |
-| TD-005 | `src/AiNetLinter/Mcp/Tools/*Tool.cs` (pro-Tool-Klassen) | mittel | `McpCodeGraphServer` als Parametertyp einer Tool-`ExecuteAsync`-Methode zieht bereits allein einen Großteil des `AIContextFootprint`-Budgets (2500); in step-004 riss dadurch erstmals die Tool-Klasse selbst (`FindReferencesTool`, 2515), nicht die Factory (TD-004) — jede weitere EPIC-03/04-Tool-Klasse mit demselben Parameter hat kaum noch eigenen Zeilen-Spielraum. |
+| TD-005 | `src/AiNetLinter/Mcp/Tools/*Tool.cs` (pro-Tool-Klassen) | mittel | `McpCodeGraphServer` als Parametertyp einer Tool-`ExecuteAsync`-Methode zieht bereits allein einen Großteil des `AIContextFootprint`-Budgets (2500); in step-004 riss dadurch erstmals die Tool-Klasse selbst (`FindReferencesTool`, 2515), nicht die Factory (TD-004) — jede weitere EPIC-03/04-Tool-Klasse mit demselben Parameter hat kaum noch eigenen Zeilen-Spielraum. In step-008 riss das Limit sogar trotz von Anfang an dünnem Dispatch, weil die eigene Zeilenzahl der Klasse selbst mitzählt. |
+| TD-006 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` vs. `src/AiNetLinter/Web/WebFileCatalog.cs` | niedrig | Neuer `.xaml`/`.html`-Scan dupliziert `IsGeneratedPath`/`SafeEnumerateFiles` aus `WebFileCatalog` 1:1 statt sie (analog `GetProjectDirectories`) wiederzuverwenden. |
 
 ## Einträge
 
@@ -195,3 +196,59 @@ Verweis auf die Tech-Debt-ID).
   aber als etabliertes Vorgehen für EPIC-04 kann dieser Eintrag beim
   nächsten Planer-Durchlauf als „bekanntes, bereits gelebtes Muster"
   behandelt werden statt als offenes Risiko.
+- **Update (step-008, 2026-07-31):** Erstes EPIC-04-Tool (`get_index_scope`)
+  bestätigt TD-005 auf eine bisher nicht dokumentierte Weise: der Coder
+  wandte das „dünner Dispatch + separate Datei"-Muster diesmal von Anfang
+  an an (nicht erst reaktiv), trotzdem riss `GetIndexScopeTool` zunächst
+  bei 2503/2500 — nicht wegen einer neuen footprint-teuren Abhängigkeit,
+  sondern schlicht wegen der eigenen Zeilenzahl der Klasse (~119 Zeilen
+  Scan-/Formatierungslogik), da `AIContextFootprintCalculator` die
+  deklarierende Datei der gemessenen Klasse selbst mitzählt. Nach
+  Auslagerung der Zähl-/Formatierungslogik in `GetIndexScopeScanner`
+  (ohne `McpCodeGraphServer`-Abhängigkeit, daher selbst nur 116 Zeilen
+  Footprint) liegt `GetIndexScopeTool` bei 2413/2500,
+  `FileStructureToolRegistrations` bei 2434/2500 (nur noch 66 Zeilen
+  Puffer, Trend seit step-007 unverändert ~11-15 Zeilen pro
+  `tools.Add(...)`-Eintrag) — vom Kritiker per eigenem
+  `--footprint GetIndexScopeTool`/`--footprint
+  FileStructureToolRegistrations`-Lauf unabhängig bestätigt. Für die
+  restlichen drei EPIC-04-Tools (`get_hotspots`, `get_violations`,
+  `search_pattern`) heißt das konkret: **von Anfang an** als dünner
+  Dispatch + separate Logik-Datei planen reicht allein nicht aus, wenn die
+  Logik selbst mehr als ~60-80 Zeilen braucht — der Footprint der
+  Tool-Klasse muss unabhängig von der Auslagerungs-Entscheidung eigenständig
+  geschätzt werden. Puffer von `FileStructureToolRegistrations` (66 Zeilen)
+  bleibt nach TD-004s bisherigem Trend für die verbleibenden drei Tools
+  eng, sollte der nächste Planer-Durchlauf wie in step-007 empfohlen im
+  Auge behalten.
+
+### TD-006 — `.xaml`/`.html`-Scan dupliziert `WebFileCatalog`-Hilfsmethoden statt sie wiederzuverwenden [Priorität: niedrig]
+
+- **Gefunden in:** step-008 (Kritiker-Review vom 2026-07-31), beim
+  Nachvollziehen des Commit-Diffs `6624312`.
+- **Ort:** `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` (Methoden
+  `SafeEnumerateFiles`, `IsGeneratedPath`) gegenüber
+  `src/AiNetLinter/Web/WebFileCatalog.cs` (Zeile 105-113 bzw. 149-155,
+  wortgleiche Logik).
+- **Befund:** Der Step hat `WebFileCatalog.GetProjectDirectories` bewusst
+  von `private` auf `internal` angehoben, um genau diese eine
+  Wiederverwendung zu ermöglichen (im Plan explizit begründet) — für die
+  zwei direkt danach folgenden Hilfsmethoden `SafeEnumerateFiles`/
+  `IsGeneratedPath` wurde derselbe Schritt nicht gegangen, stattdessen
+  wurden beide 1:1 in `GetIndexScopeScanner` neu geschrieben (siehe
+  step-plan.md, das dies bereits so vorsah: "mit try/catch analog zu
+  `WebFileCatalog.SafeEnumerateFiles`"). Funktional identisch, keine
+  Verhaltensabweichung, aber zwei Stellen, die bei einer künftigen
+  Änderung (z. B. weitere Ausschluss-Verzeichnisse) synchron gehalten
+  werden müssten.
+- **Warum nicht sofort gefixt:** Der Plan hat die Duplikation bewusst in
+  Kauf genommen (kein Versehen), außerhalb des Scopes von step-008, das
+  konzept.md-Muss-Haben "Explizite Scope-Kommunikation" zu liefern, nicht
+  eine Web-Scan-Infrastruktur zu konsolidieren.
+- **Vorschlag:** Bei einem der nächsten EPIC-04-Tool-Steps (`get_hotspots`/
+  `get_violations`), falls dort ein weiterer Dateisystem-Scan mit
+  ähnlichem Ausschluss-Muster nötig wird, `SafeEnumerateFiles`/
+  `IsGeneratedPath` einmalig in eine gemeinsame, von beiden Seiten
+  nutzbare interne Hilfsklasse (z. B. `FileSystemScanHelpers`) ziehen,
+  statt ein drittes Mal zu duplizieren.
+- **Status:** offen
