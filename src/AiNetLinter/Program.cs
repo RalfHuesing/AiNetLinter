@@ -100,6 +100,7 @@ public static class Program
             ExcludeTests = parsed.ExcludeTests,
             TestsOnly = parsed.TestsOnly,
             PublicOnly = parsed.PublicOnly,
+            IgnoreSuppressions = parsed.IgnoreSuppressions,
         };
     }
 

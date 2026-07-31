@@ -22,7 +22,7 @@ internal static class CliCommandBuilder
             options.ListRules, options.DescribeRule, options.SearchRules, options.Map,
             options.Eval, options.ListEvals, options.Spec,
             options.IncludeProjects, options.ExcludeProjects, options.IncludeNamespaces, options.ExcludeNamespaces,
-            options.ExcludeTests, options.TestsOnly, options.PublicOnly,
+            options.ExcludeTests, options.TestsOnly, options.PublicOnly, options.IgnoreSuppressions,
         };
 
         return (root, options);
@@ -66,11 +66,20 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateExcludeNamespaceOption(),
             CliOptionFactory.CreateExcludeTestsOption(),
             CliOptionFactory.CreateTestsOnlyOption(),
-            CliOptionFactory.CreatePublicOnlyOption());
+            CliOptionFactory.CreatePublicOnlyOption(),
+            CliOptionFactory.CreateIgnoreSuppressionsOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
     {
+        IReadOnlyList<string>? ignoreSuppressions = null;
+        if (parseResult.GetResult(options.IgnoreSuppressions) is not null)
+        {
+            var rawValues = parseResult.GetValue(options.IgnoreSuppressions);
+            var parsedList = ParseCommaSeparated(rawValues);
+            ignoreSuppressions = parsedList.Count == 0 ? new[] { "all" } : parsedList;
+        }
+
         return new CliParsedArgs(
             ConfigPath: parseResult.GetValue(options.Config),
             TargetPath: parseResult.GetValue(options.Path) ?? "",
@@ -113,7 +122,8 @@ internal static class CliCommandBuilder
             ExcludeNamespaces: ParseCommaSeparated(parseResult.GetValue(options.ExcludeNamespaces)),
             ExcludeTests: parseResult.GetValue(options.ExcludeTests),
             TestsOnly: parseResult.GetValue(options.TestsOnly),
-            PublicOnly: parseResult.GetValue(options.PublicOnly));
+            PublicOnly: parseResult.GetValue(options.PublicOnly),
+            IgnoreSuppressions: ignoreSuppressions);
     }
 
     private static System.Collections.Generic.IReadOnlyList<string> ParseCommaSeparated(string[]? values)

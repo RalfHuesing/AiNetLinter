@@ -43,7 +43,8 @@ internal sealed record CliOptions(
     Option<string[]> ExcludeNamespaces,
     Option<bool> ExcludeTests,
     Option<bool> TestsOnly,
-    Option<bool> PublicOnly);
+    Option<bool> PublicOnly,
+    Option<string[]> IgnoreSuppressions);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Playbook, Verbose).
@@ -115,4 +116,5 @@ internal sealed record CliParsedArgs(
     IReadOnlyList<string> ExcludeNamespaces,
     bool ExcludeTests,
     bool TestsOnly,
-    bool PublicOnly);
+    bool PublicOnly,
+    IReadOnlyList<string>? IgnoreSuppressions);

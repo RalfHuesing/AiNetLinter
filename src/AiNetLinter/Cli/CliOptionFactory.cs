@@ -221,4 +221,15 @@ internal static class CliOptionFactory
     {
         Description = "Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.",
     };
+
+    internal static Option<string[]> CreateIgnoreSuppressionsOption()
+    {
+        var opt = new Option<string[]>("--ignore-suppressions")
+        {
+            Description = "Ignoriert Suppressions (dateiweit & inline) fuer bestimmte Sprachen (kommagetrennt oder mehrfach angebbar: all, cs/c#, razor, js, css). Standard ohne Wert: all.",
+            AllowMultipleArgumentsPerToken = true,
+        };
+        opt.Arity = ArgumentArity.ZeroOrMore;
+        return opt;
+    }
 }

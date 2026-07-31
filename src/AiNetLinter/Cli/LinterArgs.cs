@@ -193,11 +193,45 @@ public sealed class LinterArgs
     public bool PublicOnly { get; init; }
 
     /// <summary>
+    /// Holt oder setzt die Sprachen, für die Suppressions während der Analyse ignoriert werden sollen (null = nicht aktiv).
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string>? IgnoreSuppressions { get; init; }
+
+    /// <summary>
+    /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()
+    {
+        if (IgnoreSuppressions == null || IgnoreSuppressions.Count == 0) return System.Array.Empty<string>();
+
+        var set = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var item in IgnoreSuppressions)
+        {
+            if (string.IsNullOrWhiteSpace(item)) continue;
+            var token = item.Trim().ToLowerInvariant();
+            if (token == "c#") token = "cs";
+            set.Add(token);
+        }
+
+        if (set.Contains("all"))
+        {
+            return new[] { "all" };
+        }
+
+        var result = new System.Collections.Generic.List<string>();
+        foreach (var lang in new[] { "cs", "razor", "js", "css" })
+        {
+            if (set.Contains(lang)) result.Add(lang);
+        }
+        return result;
+    }
+
+    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
     {
-        if (Docs == null && !ListRules && DescribeRule == null && SearchRules == null && MapType == null && EvalType == null && !ListEvals && string.IsNullOrEmpty(TargetPath))
+        if (IsPathMissing())
         {
             return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules, --map, --eval, --list-evals).";
         }
@@ -212,6 +246,29 @@ public sealed class LinterArgs
             return "[ERROR]: --only-changed erfordert --baseline.";
         }
 
+        return ValidateIgnoreSuppressions();
+    }
+
+    private bool IsPathMissing()
+    {
+        return !HasStandaloneCommand() && string.IsNullOrEmpty(TargetPath);
+    }
+
+    private bool HasStandaloneCommand() =>
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals;
+
+    private string? ValidateIgnoreSuppressions()
+    {
+        if (IgnoreSuppressions == null) return null;
+
+        var allowed = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "all", "cs", "c#", "razor", "js", "css" };
+        foreach (var lang in IgnoreSuppressions)
+        {
+            if (string.IsNullOrWhiteSpace(lang) || !allowed.Contains(lang.Trim()))
+            {
+                return $"[ERROR]: Ungueltige Sprache fuer --ignore-suppressions: '{lang}'. Erlaubte Werte: all, cs, c#, razor, js, css.";
+            }
+        }
         return null;
     }
 
