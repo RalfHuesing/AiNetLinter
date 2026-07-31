@@ -5,7 +5,7 @@ started_at: 2026-07-31T08:36:00+02:00
 last_updated: 2026-07-31T08:36:00+02:00
 rules_dir: .agents/rules
 total_fix_rounds: 0
-current_step: step-002
+current_step: step-003
 ---
 
 # Task State: ignore-suppressions
@@ -14,7 +14,7 @@ current_step: step-002
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`: 12)
-- **Aktueller Schritt:** `step-002`
+- **Aktueller Schritt:** `step-003`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-07-31T08:36:00+02:00
@@ -26,6 +26,7 @@ current_step: step-002
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | CLI Option --ignore-suppressions in CliOptions, CliOptionFactory, LinterArgs und CliCommandBuilder integrieren | 0/3 | 03602ea | approved | 03602ea |
 | step-002 | EPIC-02 | done | Core Suppression Bypass Engine (IgnoreSuppressionsFilter) in SuppressionEvaluator, WebSuppressionDetector, DisableAllDetector und SuppressionScanner integrieren | 0/3 | 8b82704 | approved | 8b82704 |
+| step-003 | EPIC-03 | open | Transparente Header-Ausgabe des Ignore-Suppressions-Modus in CLI, DebtReportBuilder und RepoPlaybookGenerator | 0/3 | - | - | - |
 
 ## Config (optional)
 
