@@ -1,8 +1,6 @@
 #nullable enable
 
 using System.Reflection;
-using System.Threading;
-using AiNetLinter.Mcp.Tools;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -41,49 +39,8 @@ internal static class McpServerOptionsFactory
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
-        tools.Add(McpServerTool.Create(
-            (string namePattern, string? kind = null, CancellationToken ct = default) =>
-                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, ct),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_symbol",
-                Description = "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
-                    "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
-            }));
-
-        tools.Add(McpServerTool.Create(
-            (string symbolIdentifier, CancellationToken ct = default) =>
-                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, ct),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_references",
-                Description = "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
-                    "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
-                    "keine .js/.razor/.xaml/.html/.css-Dateien.",
-            }));
-
-        tools.Add(McpServerTool.Create(
-            (string? gitRef = null, string? symbolIdentifier = null, CancellationToken ct = default) =>
-                GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, ct),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_impact",
-                Description = "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
-                    "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
-                    "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
-                    ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
-            }));
-
-        tools.Add(McpServerTool.Create(
-            (string filePath, CancellationToken ct = default) =>
-                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_file_skeleton",
-                Description = "Liefert das Struktur-Skelett (Typen, Signaturen ohne " +
-                    "Bodies) einer einzelnen C#-Datei per relativem Dateipfad. " +
-                    "Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
-            }));
+        SymbolGraphToolRegistrations.Register(tools, mcpState);
+        FileStructureToolRegistrations.Register(tools, mcpState);
 
         return tools;
     }
