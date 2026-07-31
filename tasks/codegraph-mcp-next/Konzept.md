@@ -17,7 +17,7 @@ Dieses Dokument sammelt Ergänzungen, Optimierungen und weiterführende Ideen f�
 * **Lösung (KLAR):** Lazy Hash/mtime-Prüfung auf `.csproj`/`.sln`/`.slnx`. Bei Abweichung wird ein leichtgewichtiger Reload der Solution getriggert oder ein Hinweis an den Agenten ausgegeben.
 
 ### 1.3 Thread-Safety bei parallelen Tool-Calls
-* **Problem:** Modernere KI-Agenten rufen oft mehere MCP-Tools simultan/parallel auf.
+* **Problem:** Modernere KI-Agenten rufen oft mehrere MCP-Tools simultan/parallel auf.
 * **Lösung (KLAR):** Der Inkremental-Updater (`SourceFileCatalog` / Cache-Map) wird intern strikt mit einem `SemaphoreSlim` bzw. `lock` geschützt, um Race-Conditions bei parallelen Invalidation-Checks zu verhindern.
 
 ### 1.4 Optionales `get_call_tree`-Tool (Zukunftsidee)
@@ -44,47 +44,32 @@ Dieses Dokument sammelt Ergänzungen, Optimierungen und weiterführende Ideen f�
   * **Duplicate-Symbol-Warnung bei Namens-Kollisionen (`find_symbol`):** Gibt bei >1 Treffer für gleiche Namensmuster einen Drift-Warnhinweis zurück.
   * **Contextual Health & Violation Hints (`get_file_skeleton` / `get_violations`):** Meldet aktive Linter-Violations direkt im Header-Metadatenbereich.
 
-### 3.2 Deep Integration: `rules.json` als Active Policy Engine für MCP (Neu / SOBER ANALYSIS)
+### 3.2 Diskussion: Verzahnung mit `rules.json` (Pro vs. Kontra & Reality-Check)
 
-Aktuell ist `rules.json` eine passive Konfigurationsdatei für den CLI-Batch-Lauf. Für den interaktiven MCP-Server-Betrieb ergeben sich 4 hochgradig begründete Erweiterungsoptionen in `rules.json`:
+Hier stehen vier Ideen zur Diskussion, zusammen mit den kritischen Nutzer-Kontra-Argumenten für die spätere Abwägung:
 
-#### A. Handlungshinweise für KI-Agenten (`"agent_hint"`)
-* **Problem:** Ein Linter-Fehler wie `AINET012: Dependency Direction Violation` sagt dem LLM zwar, *dass* ein Fehler vorliegt, aber nicht, *wie* er in dieser konkreten Codebasis behoben werden soll.
-* **Erweiterung in `rules.json`:** Jede Regel kann optional einen `agent_hint`-String definieren:
-  ```json
-  "AINET012": {
-    "enabled": true,
-    "severity": "error",
-    "agent_hint": "Controllers must not access DbContext directly. Inject IRepository<T> instead."
-  }
-  ```
-* **Nutzen:** `get_violations` gibt diesen Satz direkt an den Agenten weiter. Das spart Korrektur-Schleifen.
+#### 1. Handlungshinweise für KI-Agenten (`"agent_hint"`)
+* **Pro-Idee:** `rules.json` speichert pro Regel einen `agent_hint`-Text (*"Controllers must not access DbContext directly..."*), der bei `get_violations` mit ausgegeben wird.
+* **⚠️ KONTRA / REALITY-CHECK (Nutzer-Hinweis):**
+  * Ist die präzise Detektion solcher komplexen semantischen Regeln nicht teilweise utopisch oder zu schwer zu pflegen?
+  * Roslyn-Regeln erkennen oft syntaktische Muster, aber spezifische Architektur-Fixes in Prosa sind schwer wartbar und blähen das Regelwerk auf.
 
-#### B. Rausch-Filterung & Kategorisierung (`"mcp_config"`)
-* **Problem:** In CI/CD prüft der Linter auch Trivialitäten (Missing XML Comments, Formatting, Brace Style). Ein KI-Agent im MCP-Loop verbrennt Tokens, wenn `get_violations` 40 Formatierungs-Warnungen zurückgibt.
-* **Erweiterung in `rules.json`:**
-  ```json
-  "mcp_config": {
-    "min_severity": "warning",
-    "suppress_categories_for_agents": ["formatting", "documentation"],
-    "focus_categories": ["architecture", "design", "security", "correctness"]
-  }
-  ```
-* **Nutzen:** Der MCP-Server filtert kosmetisches Rauschen für den Agenten heraus und fokussiert das Token-Budget auf Architektur und Korrektheit.
+#### 2. Rausch-Filterung & Kategorisierung (`"mcp_config"`)
+* **Pro-Idee:** Kosmetische Regeln (Formatting) im MCP-Server ausblenden, um KI-Token zu sparen.
+* **⚠️ KONTRA / REALITY-CHECK (Nutzer-Hinweis):**
+  * `rules.json` ist bereits heute riesig und unübersichtlich – selbst LLMs blicken bei zu vielen Konfigurationsoptionen kaum noch durch. Noch mehr JSON-Optionen verschlimmern die Komplexität.
+  * Ein Verstoß ist ein Verstoß und sollte behoben werden. Verstecken von Regeln schafft verdeckte Tech-Debt.
 
-#### C. "No-New-Violations"-Ratchet (Schutz für Legacy-Code)
-* **Problem:** Eine Brownfield-Datei hat bereits 15 Alt-Verstöße. Ein KI-Agent kann nicht die ganze Datei refactoren (Risiko von Breaking Changes). Er darf aber **keine 16. Violation** hinzufügen.
-* **Erweiterung in `rules.json` / `get_violations`:**
-  ```json
-  "mcp_config": {
-    "enforce_ratchet_mode": true
-  }
-  ```
-* **Nutzen:** Bei `get_violations(check_delta: true)` vergleicht der MCP-Server den Zustand vor und nach den Edits des Agenten. Alt-Verstöße werden geduldet, neue Verstöße schlagen sofort Alarm.
+#### 3. "No-New-Violations"-Ratchet Mode (Delta-Prüfung)
+* **Pro-Idee:** In Brownfield-Dateien Alt-Verstöße dulden und nur *neue* Verstöße als Fehler ausgeben.
+* **⚠️ KONTRA / REALITY-CHECK (Nutzer-Hinweis):**
+  * Eine Baseline/Ratchet muss in Projekten irgendwann abgearbeitet und entfernt werden.
+  * Das Duldungs-Pattern führt in der Praxis dazu, dass Tech-Debt über Jahrzehnte rumgeschleppt wird, statt sie konsequent zu beseitigen.
 
-#### D. Kompaktes Architektur-Briefing (`get_active_rules` / MCP Resource)
-* **Problem:** Der KI-Agent weiß zu Session-Beginn nicht, welche Architektur-Regeln im Projekt gelten, ohne rohe JSON-Dateien manuell zu lesen.
-* **Lösung:** Eine MCP-Ressource oder ein Tool `get_active_rules`, das die aktiven Vorgaben aus `rules.json` in 10 prägnanten Sätzen zusammenfasst (z. B. *"Architektur: Controller -> Services -> Repositories. Max Params: 4. Immudabilität: Record-Types bevorzugen"*).
+#### 4. Kompaktes Architektur-Briefing (`get_active_rules`)
+* **Pro-Idee:** MCP-Ressource oder Tool zur Zusammenfassung der aktiven `rules.json`.
+* **⚠️ KONTRA / REALITY-CHECK (Nutzer-Hinweis):**
+  * **Redundant!** Wir haben dafür bereits `.agents\rules\AiNetLinter.mdc`, das über den CLI-Command `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` automatisch generiert und von Agenten-IDEs (Cursor/Windsurf/Antigravity) direkt geladen wird. Ein zusätzliches MCP-Tool dafür ist reine Doppelarbeit.
 
 ---
 
@@ -155,16 +140,17 @@ Die Symbol-ID `M:MyNamespace.OrderService.ProcessOrder(MyNamespace.OrderDto)` id
 
 ## 7. Gesamt-Übersicht: Status & Roadmap-Kandidaten
 
-| Thema | Status | Maßnahme / Entscheidung |
+| Thema | Status | Maßnahme / Abwägung |
 | :--- | :--- | :--- |
 | `max_results` / Token-Schutz | **Klar** | Verpflichtend für alle Listen-Tools |
 | Thread-Safety / Async-Locks | **Klar** | Interne Synchronisation via SemaphoreSlim |
 | LLM-Anleitung via Handshake | **Klar** | Server `instructions` im MCP-Initialization-Call |
 | Duplicate-Symbol Drift-Warning | **Klar** | Warnhinweis bei >1 Treffer für gleiche Namensmuster |
 | Health-Header in `get_file_skeleton` | **Klar** | Metadaten mit Linter-Violations & Hotspot-Score anhängen |
-| **`agent_hint` in `rules.json`** | **NEU (Policy-Engine)** | Direkte Handlungsempfehlungen für das LLM in Regelsätzen hinterlegen |
-| **`mcp_config` Rausch-Filterung** | **NEU (Policy-Engine)** | Kosmetisches Rauschen (Formatting) für Agenten ausblenden, Fokus auf Architektur |
-| **No-New-Violations Ratchet** | **NEU (Policy-Engine)** | Delta-Prüfung: Erlaubt Alt-Verstöße in Brownfield, blockiert neue Verstöße |
+| **`agent_hint` in `rules.json`** | **⚠️ Kontra-Vorbehalt** | *Kritik:* Detektion oft utopisch / schwer zu pflegen. |
+| **`mcp_config` Rausch-Filterung** | **⚠️ Kontra-Vorbehalt** | *Kritik:* `rules.json` ist bereits zu groß; Filterung versteckt nur Tech-Debt. |
+| **No-New-Violations Ratchet** | **⚠️ Kontra-Vorbehalt** | *Kritik:* Ratchet schleppt Tech-Debt über Dekaden mit. Verstöße müssen gefixt werden. |
+| **Architektur-Briefing Tool** | **❌ Verworfen** | *Kritik:* Redundant zu `.agents\rules\AiNetLinter.mdc` (`--sync-agent-rules-only`). |
 | **Stabile Symbol-IDs (`DocId`)** | **Klargestellt** | Für Folge-Abfragen (Lese-Referenzen) nach Agenten-Edits, nicht zum Schreiben |
 | **Blast-Radius (`get_impact` Depth)** | **NEU (Markt-Benchmark)** | Transitive Aufrufer-Analyse über N Ebenen via Roslyn |
 | **`get_symbol_body`** | **NEU (Markt-Benchmark)** | Punktgenaues Lesen nur eines Methodenrumpfs |
