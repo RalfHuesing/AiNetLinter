@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T00:00:00Z
+last_updated: 2026-07-31T09:45:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -70,7 +70,11 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: CLI-Einstiegspunkt & Server-Grundgerüst — neues Flag
+- [ ] EPIC-01: **in Arbeit → step-001** (deckt CLI-Flag, NuGet-Paket,
+      Solution-Auswahl mit Mehrdeutigkeits-Abbruch und minimalen startenden
+      Server mit leerem Tool-Set ab; die zustandsvolle Resident-Server-Klasse
+      wandert nach EPIC-02, das Tool-Set nach EPIC-03 — Epic bleibt bis dahin
+      offen). CLI-Einstiegspunkt & Server-Grundgerüst — neues Flag
       `--mcp-server` (`Cli/CliOptions.cs`, `CliOptionFactory.cs`,
       `LinterArgs.cs`), neuer `Commands/McpServerCommand.cs` (Vorbild:
       `ImpactCommand.cs`/`MapCommand.cs`), Dispatch in `Program.cs`,
