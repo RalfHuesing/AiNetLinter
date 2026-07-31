@@ -1,0 +1,28 @@
+#nullable enable
+
+using System.Threading;
+using System.Threading.Tasks;
+using ModelContextProtocol.Protocol;
+
+namespace AiNetLinter.Mcp.Tools;
+
+/// <summary>
+/// MCP-Tool <c>get_index_scope</c>: liefert eine Dateityp-Aufschluesselung der resident gehaltenen
+/// Solution — .cs (voll vom Symbolgraph abgedeckt) sowie .css/.html/.js/.razor/.xaml (jeweils nicht
+/// vom Symbolgraph abgedeckt, mit Anzahl). Orientierungspunkt, den ein Agent laut konzept.md aufrufen
+/// soll, bevor er ueberhaupt mit find_symbol/search_pattern zu suchen beginnt (siehe step-008). Bewusst
+/// duenner Dispatch auf <see cref="GetIndexScopeScanner.BuildBreakdownText"/> — keine eigene Zaehl-/
+/// Formatierungslogik (TD-005-Muster, analog zu <see cref="GetTypeHierarchyFormatter"/>), damit dieser
+/// Klasse eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) klein bleibt.
+/// </summary>
+internal static class GetIndexScopeTool
+{
+    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
+    {
+        var solution = state.GetCurrentSolution();
+        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+
+        var text = GetIndexScopeScanner.BuildBreakdownText(solution);
+        return Task.FromResult(McpToolResults.Text(text));
+    }
+}

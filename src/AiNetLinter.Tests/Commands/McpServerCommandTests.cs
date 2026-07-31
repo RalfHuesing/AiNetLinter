@@ -130,7 +130,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithFiveTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithSixTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -147,12 +147,41 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(5, tools.Count);
+        Assert.Equal(6, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");
         Assert.Contains(tools, t => t.Name == "get_file_skeleton");
         Assert.Contains(tools, t => t.Name == "get_type_hierarchy");
+        Assert.Contains(tools, t => t.Name == "get_index_scope");
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetIndexScopeReturnsFileTypeBreakdown()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "get_index_scope",
+            new Dictionary<string, object?>(),
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains(".cs:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(".xaml:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("voll vom Symbolgraph abgedeckt", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

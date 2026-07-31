@@ -68,7 +68,13 @@ internal static class WebFileCatalog
         return entries;
     }
 
-    private static IEnumerable<string> GetProjectDirectories(Solution solution)
+    /// <summary>
+    /// Liefert ein Projektverzeichnis je <see cref="Project"/> mit gesetztem <see cref="Project.FilePath"/>,
+    /// dedupliziert. Auf <c>internal</c> angehoben (war <c>private</c>), damit <c>GetIndexScopeTool</c>
+    /// (siehe step-008) dieselbe Projektverzeichnis-Enumeration fuer den .xaml/.html-Scan wiederverwenden
+    /// kann, statt eine zweite, eigene Enumeration zu bauen — keine Verhaltensaenderung.
+    /// </summary>
+    internal static IEnumerable<string> GetProjectDirectories(Solution solution)
     {
         return solution.Projects
             .Where(p => !string.IsNullOrEmpty(p.FilePath))
