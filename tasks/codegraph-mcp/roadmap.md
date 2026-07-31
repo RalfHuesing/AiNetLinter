@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T23:00:00Z
+last_updated: 2026-07-31T23:30:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -143,6 +143,20 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       ungenutzte `SymbolFinder`-API neu einbinden muss (höheres Risiko),
       siehe `step-006/step-plan.md` „Reihenfolge-Begründung". Danach bleibt
       `get_type_hierarchy` als letztes offenes EPIC-03-Tool.
+      **step-007** (geplant) liefert `get_type_hierarchy` (Basis:
+      `INamedTypeSymbol.BaseType`-Kette + `AllInterfaces` für Basisklassen/
+      Interfaces, `SymbolFinder.FindDerivedClassesAsync`/
+      `FindImplementationsAsync` neu eingebunden für abgeleitete/
+      implementierende Typen; Symbol-Auflösung wiederverwendet über
+      `FindReferencesTool.ResolveSymbolAsync`) — inkl. proaktiver
+      Aufteilung von `McpServerOptionsFactory.BuildToolCollection` in zwei
+      Registrar-Klassen (`SymbolGraphToolRegistrations`/
+      `FileStructureToolRegistrations`), wie vom Kritiker in
+      `step-006/step-review.md` empfohlen (TD-004-Puffer war auf 20
+      Zeilen gesunken). **Voraussichtlich letzter EPIC-03-Step** — bei
+      `approved`-Review von step-007 sind alle fünf Symbolgraph-Tools
+      fertig; formale Abhakung des Epics erfolgt wie üblich erst im
+      nächsten Step-Modus-Aufruf nach dem Review, nicht hier vorweggenommen.
       **Neu seit 2026-07-31 (ersetzt EPIC-09, siehe unten):** jeder
       verbleibende EPIC-03-Tool-Step verifiziert sein Tool zusätzlich zu
       den Fixture-Tests einmal ad-hoc gegen die eigene `AiNetLinter.slnx`
