@@ -12,6 +12,16 @@ max_fix_gesamt: 12
 total_fix_rounds: 0
 current_unit: units/001
 previous_workflow: drift-loop  # Fremde Artefakte unter step-NNN/ + task-state.md
+
+## Baseline (Phase 2, 2026-07-31T21:35 UTC+2)
+
+- `dotnet build AiNetLinter.slnx -c Debug` → grün, **0 Warnungen**,
+  0 Fehler, 10.66s. Konsistent mit step-010-Result.
+- `dotnet test AiNetLinter.slnx -c Debug --no-build` →
+  **1088/1088 grün**, 0 Fehler, 0 übersprungen, 6m 56s. Konsistent
+  mit step-010-Result.
+- **Was bereits vor dem dynamic-Loop rot war:** nichts.
+- **Bewertung:** grüne Baseline, Phase 3 kann starten.
 ---
 
 # Task State: codegraph-mcp (dynamic-loop)
