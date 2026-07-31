@@ -74,6 +74,17 @@ internal static class McpServerOptionsFactory
                     ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
             }));
 
+        tools.Add(McpServerTool.Create(
+            (string filePath, CancellationToken ct = default) =>
+                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "get_file_skeleton",
+                Description = "Liefert das Struktur-Skelett (Typen, Signaturen ohne " +
+                    "Bodies) einer einzelnen C#-Datei per relativem Dateipfad. " +
+                    "Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
+            }));
+
         return tools;
     }
 

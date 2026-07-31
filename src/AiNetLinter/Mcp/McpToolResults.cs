@@ -80,6 +80,20 @@ internal static class McpToolResults
     }
 
     /// <summary>
+    /// Kurzform fuer den Fall, dass ein per Dateipfad angegebenes Tool-Argument (z. B.
+    /// <c>get_file_skeleton</c>s <c>filePath</c>) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
+    /// in der Solution aufloest.
+    /// </summary>
+    internal static CallToolResult FileNotFound(string relativePath)
+    {
+        return Error(
+            LinterErrorCodes.ResourceNotFound,
+            $"Datei '{relativePath}' nicht in der Solution gefunden.",
+            context: relativePath,
+            hint: "Pfad relativ zum Solution-Verzeichnis angeben (Forward- oder Backslash), 'find_symbol' zur Orientierung nutzen.");
+    }
+
+    /// <summary>
     /// Baut ein Erfolgsergebnis mit genau einem Text-Content-Block.
     /// </summary>
     internal static CallToolResult Text(string text)

@@ -70,7 +70,12 @@ internal static class SkeletonMapBuilder
             .ToList();
     }
 
-    private static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
+    /// <summary>
+    /// Extrahiert die Skeleton-Typen eines einzelnen Dokuments. Wird auch von
+    /// <see cref="AiNetLinter.Mcp.Tools.GetFileSkeletonTool"/> (MCP) fuer die Einzeldatei-Extraktion
+    /// wiederverwendet.
+    /// </summary>
+    internal static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
         Document document,
         string solutionDir,
         LinterArgs args,
