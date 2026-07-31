@@ -61,7 +61,12 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von \*ValueObject Suffix)
 - [x] **Traceability-Graphen (Entfernt):** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
 - [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
-- [ ] **Suppressions-Status im Report (Vorschlag 7):** Einbindung von Suppressions-Daten im Report (z. B. welche Dateien ainetlinter-disable verwenden), so dass der Report eine vollständige Übersicht über aktive Ausnahmen gibt.
+- [ ] **Granularer Bypass-Modus für Suppressions (`--ignore-suppressions`):**
+  Neuer CLI-Schalter zur Deaktivierung der Suppression-Auswertung während des Analyse-Laufs.
+  - *CLI-Syntax:* `--ignore-suppressions` (ohne Wert = `all`) oder mit kommagetrennter Sprach-/Dateityp-Liste, z. B. `--ignore-suppressions c#,razor` bzw. `--ignore-suppressions=c#,razor`.
+  - *Zulässige Werte:* `all` (Default), `c#` (oder `cs`), `razor`, `js`, `css`.
+  - *Wirkungsweise:* Ignoriert in allen betroffenen Dateien der ausgewählten Sprachklassen **vollständig** sämtliche Suppressions – sowohl dateiweite (`// ainetlinter-disable all`) als auch gezielte Inline-Kommentare (`// ainetlinter-disable RuleName`, `@* ... *@`, `/* ... */`).
+  - *Report-Transparenz:* Berichte und CLI-Outputs weisen im Header transparent den aktiven Ignore-Modus aus (z. B. `[Ignore-Suppressions: c#, razor]`), um Verwechslungen mit Standard-Baseline-Runs zu vermeiden.
 
 ---
 
