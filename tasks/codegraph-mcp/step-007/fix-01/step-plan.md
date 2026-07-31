@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: codegraph-mcp
 step: 007/fix-01
