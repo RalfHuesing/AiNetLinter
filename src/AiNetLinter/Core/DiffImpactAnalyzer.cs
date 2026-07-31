@@ -85,6 +85,7 @@ public sealed class DiffImpactAnalyzer
             WorkingDirectory = repoRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -92,9 +93,18 @@ public sealed class DiffImpactAnalyzer
         using var process = Process.Start(startInfo);
         if (process == null) return null;
 
-        var output = process.StandardOutput.ReadToEnd();
+        process.StandardInput.Close();
+
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Append(e.Data).Append('\n'); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Append(e.Data).Append('\n'); };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
         process.WaitForExit();
-        return process.ExitCode == 0 ? output : null;
+
+        return process.ExitCode == 0 ? stdout.ToString() : null;
     }
 
     internal static Dictionary<string, List<int>> ParseGitDiffHunks(string gitDiffOutput)

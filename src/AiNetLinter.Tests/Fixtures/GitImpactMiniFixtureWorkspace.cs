@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace AiNetLinter.Tests.Fixtures;
 
@@ -34,6 +35,23 @@ public sealed class GitImpactMiniFixtureWorkspace : IDisposable
             "public int Add(int a, int b) => a + b;",
             "public int Add(int a, int b) => a + b + 0;");
         File.WriteAllText(CalculatorPath, changed);
+    }
+
+    /// <summary>
+    /// Aendert den Body von <c>Calculator.Add</c> und committet die Aenderung sofort — erzeugt einen
+    /// zweiten Commit, sodass <c>HEAD~1</c> einen echten, auswertbaren Diff liefert (fuer den
+    /// Subprozess-Test mit explizitem <c>gitRef</c>-Parameter, siehe <c>McpServerCommandTests</c>).
+    /// </summary>
+    public void CommitCalculatorAddBodyChange()
+    {
+        var content = File.ReadAllText(CalculatorPath);
+        var changed = content.Replace(
+            "public int Add(int a, int b) => a + b;",
+            "public int Add(int a, int b) => a + b + 1;");
+        File.WriteAllText(CalculatorPath, changed);
+
+        RunGit("add -A");
+        RunGit("commit -m second");
     }
 
     public void Dispose()
@@ -78,6 +96,7 @@ public sealed class GitImpactMiniFixtureWorkspace : IDisposable
             WorkingDirectory = RootPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -88,10 +107,18 @@ public sealed class GitImpactMiniFixtureWorkspace : IDisposable
             throw new InvalidOperationException($"git-Prozess konnte nicht gestartet werden ('git {arguments}').");
         }
 
+        process.StandardInput.Close();
+
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Append(e.Data).Append('\n'); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Append(e.Data).Append('\n'); };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
         process.WaitForExit();
         if (process.ExitCode != 0)
         {
-            var stderr = process.StandardError.ReadToEnd();
             throw new InvalidOperationException($"'git {arguments}' schlug fehl (Exit {process.ExitCode}): {stderr}");
         }
     }

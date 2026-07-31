@@ -205,6 +205,60 @@ public sealed class McpServerCommandTests
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetImpactWithGitRefReturnsCallSite()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.CommitCalculatorAddBodyChange();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "get_impact",
+            new Dictionary<string, object?> { ["gitRef"] = "HEAD~1" },
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("CalculatorCaller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetImpactWithoutGitRefUncommittedReturnsCallSite()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.ChangeCalculatorAddBodyWithoutCommitting();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "get_impact",
+            new Dictionary<string, object?>(),
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("CalculatorCaller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
     private static string CreateTempDir()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-test-{Guid.NewGuid():N}");
