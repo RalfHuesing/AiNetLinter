@@ -183,7 +183,7 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       `SkeletonSyntaxWalker`) aufgefallen, da alle Fixture-/Coder-Tests
       ausschließlich In-Fixture-Hierarchien ohne externe Basistypen prüften
       (siehe `step-007/step-review.md` Finding 1).
-- [ ] EPIC-04: **in Arbeit → step-008**. Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
+- [ ] EPIC-04: **in Arbeit → step-009**. Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
       `SourceFileCatalog.GetSourceFiles` + `Web/WebFileCatalog.cs`
       `Collect`, kein neuer Datei-Scan nötig, siehe "Entdeckte
       Mängel/Redundanzen" in `konzept.md`), `get_hotspots` (Basis:
@@ -195,6 +195,23 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       Dateibestand) (`konzept.md` Tool-Tabelle, "Wie" / Cache-Isolation).
       **Gleiche Dogfooding-Pflicht wie EPIC-03** (siehe dort) gilt für
       jeden EPIC-04-Tool-Step.
+      **step-008** (`approved`, siehe `step-008/step-review.md`) lieferte
+      `get_index_scope` — erstes EPIC-04-Tool fertig. Tech-Debt-Update aus
+      dem Review: `FileStructureToolRegistrations` liegt bei 2434/2500
+      `AIContextFootprint` (nur noch 66 Zeilen Puffer, siehe `tech-debt.md`
+      TD-004/TD-005), für die restlichen drei EPIC-04-Tools im Auge zu
+      behalten. **step-009** (geplant) liefert `get_hotspots` (Basis:
+      `Maps/HotspotMapBuilder.cs`, aber neu gegen die resident gehaltene
+      `Solution` statt gegen einen unabhängigen Filesystem-Scan gebaut,
+      da `HotspotMapBuilder` selbst CLI-/`ILintConsole`-gebunden ist und
+      nicht direkt wiederverwendet werden kann — analog zur `.cs`-Zählung
+      in step-008). Führt dabei einen additiven, optionalen
+      `maxLineCount`-Konstruktor-Parameter auf `McpCodeGraphServer` ein
+      (Config-Verdrahtung über `args.ConfigPath`, wiederverwendet
+      `MapCommand.ResolveMaxLineCount`-Logik) — bislang hielt der
+      MCP-Server keinerlei `rules.json`-Zustand. Danach bleiben
+      `get_violations` und `search_pattern` als letzte zwei offene
+      EPIC-04-Tools.
 - [ ] EPIC-05: Scope-Kommunikation & Miss-Hint — jede Tool-`description`
       der Roslyn-basierten Tools benennt explizit die C#-only-Grenze,
       `initialize`-Antwort trägt denselben Hinweis zentral im
