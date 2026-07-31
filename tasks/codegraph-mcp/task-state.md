@@ -32,7 +32,7 @@ eine Zeile.>
 | step-003 | EPIC-03 | done | Tool-Infrastruktur + erstes Tool find_symbol (fix-01: solution-not-loaded coverage) | 1/3 | yes | approved | 9d6cecc |
 | step-004 | EPIC-03 | done | Zweites Tool find_references | 0/3 | yes | approved | a9e91ed |
 | step-005 | EPIC-03 | done | Drittes Tool get_impact (fix-01: stdio subprocess hang fixed) | 1/3 | yes | approved | 8db5f4b |
-| step-006 | EPIC-03 | in_progress | Viertes Tool get_file_skeleton | 0/3 | - | - | - |
+| step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
 
 ## Config (optional)
 

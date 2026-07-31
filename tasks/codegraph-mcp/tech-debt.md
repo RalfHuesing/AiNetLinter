@@ -84,6 +84,22 @@ Verweis auf die Tech-Debt-ID).
   nächsten oder übernächsten Tool-Eintrag reißt — siehe Vorschlag oben
   (mehrere kleinere Factory-Klassen statt einer monolithischen
   Sammelstelle), spätestens jetzt konkret zu prüfen.
+- **Update (step-006, 2026-07-31):** Mit dem vierten Tool-Eintrag
+  (`get_file_skeleton`) liegt `McpServerOptionsFactory` bei 2480/2500 —
+  nur noch **20 Zeilen Puffer** (Trend: 2469 → 2480, also +11 Zeilen für
+  einen einzigen `tools.Add(...)`-Block). Vom Kritiker per eigenem
+  `--footprint McpServerOptionsFactory --path .`-Lauf unabhängig
+  gegengeprüft, Werte bestätigt. Nur noch **ein** EPIC-03-Tool offen
+  (`get_type_hierarchy`) — bei einem weiteren `tools.Add(...)`-Eintrag
+  von vergleichbarer Größe (~11-15 Zeilen) ist das Reißen der Grenze
+  beim nächsten EPIC-03-Step sehr wahrscheinlich, nicht mehr nur
+  möglich. Konkrete Empfehlung an den nächsten Planer: die in
+  `step-006/step-plan.md` (Datei 4, "Ausweich-Option") bereits
+  dokumentierte Aufteilung von `BuildToolCollection` in
+  `RegisterSymbolTools`/`RegisterStructureTools` **vorab**, nicht erst
+  reaktiv nach einem gerissenen Limit, einplanen — der Puffer ist zu
+  knapp geworden, um das Risiko noch einen weiteren Step lang
+  zuzuwarten.
 
 ### TD-005 — `McpCodeGraphServer`-Parameter lässt Tool-Klassen kaum eigenen `AIContextFootprint`-Spielraum [Priorität: mittel]
 
@@ -127,3 +143,14 @@ Verweis auf die Tech-Debt-ID).
   gegengeprüft) — knapper Puffer, aber noch kein Reißen. Bestätigt den
   strukturellen Engpass unverändert für die zwei verbleibenden
   EPIC-03-Tools.
+- **Update (step-006, 2026-07-31):** `GetFileSkeletonTool` liegt bei
+  2428/2500 (Kritiker per eigenem `--footprint GetFileSkeletonTool
+  --path .`-Lauf unabhängig gegengeprüft, Wert bestätigt) — etwas mehr
+  Puffer als `GetImpactTool` (2458), da `GetFileSkeletonTool` selbst
+  keinen zusätzlichen footprint-teuren Parametertyp wie
+  `DiffImpactAnalyzer`-Rückgabewerte einbringt, nur `LinterArgs`
+  (überwiegend primitive Properties) und die kleinen
+  `SkeletonTypeInfo`/`SkeletonMemberInfo`-Typen. Trend weiterhin: jede
+  Tool-Klasse bleibt knapp unter dem Limit, aber ohne strukturellen
+  Spielraum für signifikant mehr eigene Logik. Für `get_type_hierarchy`
+  (letztes offenes EPIC-03-Tool) unverändert relevant.
