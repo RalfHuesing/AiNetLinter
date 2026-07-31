@@ -4,7 +4,7 @@ type: konzept
 project_kind: brownfield
 estimated_scope: large
 rules_dir: .agents/rules
-last_updated: 2026-07-31
+last_updated: 2026-07-31  # aktualisiert: Dogfooding statt externem Praxistest (siehe "Entdeckte Mängel/Redundanzen")
 open_questions: []
 ---
 
@@ -127,6 +127,21 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
   `Docs/ROADMAP.md`, `README.md`.
 - Tests: Unit-Tests für die Staleness-Invalidierung, Integrationstests je
   Tool gegen eine Test-Solution (analog bestehender CLI-Integrationstests).
+- **Dogfooding pro Tool-Step gegen die eigene `AiNetLinter.slnx`:** Jeder
+  Step, der eines der 9 Tools neu einführt oder in seiner Kernlogik
+  wesentlich ändert, verifiziert es zusätzlich zu den automatisierten
+  Fixture-Tests **einmal ad-hoc gegen die reale AiNetLinter-Solution
+  selbst** (Coder startet den gebauten Server wie im bestehenden
+  E2E-Testmuster, aber mit `--path` auf das Repo-Root statt einer
+  Mini-Fixture, und ruft das Tool mit einer echten Abfrage auf — z. B.
+  `find_symbol` nach einem tatsächlich existierenden Klassennamen). Kein
+  zusätzlicher Step/Task dafür nötig — die Prüfung ist Teil des ohnehin
+  laufenden Tool-Steps, dokumentiert unter einem eigenen Abschnitt
+  „Dogfooding" in `step-result.md` (Aufruf, Kurzergebnis, Auffälligkeiten).
+  Ersetzt keine automatisierten Tests, ergänzt sie um einen Realismus-Check
+  gegen echten, gewachsenen Code, den Mini-Fixtures strukturell nicht
+  leisten können (echte Namenskollisionen, echte Kommentare/Strings als
+  potenzielle False Positives, echte Dateigrößen).
 
 ### Nice-to-Have (optional, spätere Iteration)
 
@@ -316,6 +331,35 @@ Indexing for AI Agents" (2026), https://anthonywest.co.uk/research/code-intellig
   - **Vorschlag:** `get_index_scope` direkt auf `SourceFileCatalog.GetSourceFiles`
     + `WebFileCatalog.Collect` aufbauen statt eigener Dateisystem-Traversierung.
   - **Entscheidung:** übernommen ins Scope (siehe Tool-Tabelle unter "Wie").
+- **Iteratives Agenten-Dogfooding statt einmaligem externen Praxistest**
+  - **Gefunden:** Der ursprüngliche DoD-Punkt sah einen einmaligen
+    "manuellen Praxistest" gegen `San.smart.Planner.Platform` (~160k LOC)
+    am Task-Ende vor. Nutzer-Nachfrage (Chat, 2026-07-31) + eigene Prüfung
+    ergaben zwei Probleme damit: (1) "manuell" bedeutete faktisch, dass kein
+    Subagent dieses Kriterium selbst verifizieren konnte — es hätte immer
+    auf einen Nutzer-Bericht ganz am Ende gewartet, statt Probleme früh zu
+    finden. (2) Die tatsächlich vorhandene Solution unter
+    `C:\Daten\Entwicklung\SAN\San.smart.Planner.Platform\San.smart.Planner.Platform.slnx`
+    hat in diesem Checkout nur ~3.600 Zeilen C# (nicht ~160k) — der
+    ursprünglich erhoffte Skalierungsnachweis (Kaltstart/Verhalten bei
+    einer sehr großen Solution) wäre mit dieser konkreten Solution ohnehin
+    nicht einlösbar gewesen.
+  - **Bezug:** kein Regelverstoß, sondern eine Verbesserung des
+    Verifikationsmechanismus selbst — passend zum Nutzer-Wunsch, Coder-
+    /Kritiker-Agenten das direkt selbst nachprüfen zu lassen, statt auf
+    einen externen, agentenseitig unzugänglichen Nachweis zu warten, und
+    ohne dafür zusätzliche Mini-Steps/Tasks einzuführen.
+  - **Vorschlag:** externe Solution als Testziel komplett streichen.
+    Stattdessen: jeder Tool-Step dogfoodet das jeweils gebaute Tool
+    ad-hoc gegen die eigene, real gewachsene `AiNetLinter.slnx` (immer
+    verfügbar, ausreichend komplex für echte Namenskollisionen/Edge-Cases,
+    kein Zugriffsproblem, keine Diskrepanz zwischen behaupteter und
+    tatsächlicher Größe).
+  - **Entscheidung:** übernommen — siehe "Muss-Haben" (neue Dogfooding-
+    Zeile) und "Definition of Done" (angepasste Zeile). Ein Skalierungstest
+    bei sehr großen externen Solutions (100k+ LOC) bleibt eine offene, nicht
+    in diesem Task verfolgte Fragestellung, falls der Nutzer dafür künftig
+    eine passende Solution identifiziert.
 
 ## Wie (grober Ansatz)
 
@@ -417,9 +461,12 @@ passieren können? Geprüft (`Cache/AnalysisCacheManager.cs`):
   bleibt unverändert lauffähig (Regressionstest).
 - Dokumentation aktualisiert: `Docs/agent-api.md`, `Docs/integration.md`,
   `Docs/ROADMAP.md`, `README.md`.
-- Manueller Praxistest: Server gegen `San.smart.Planner.Platform` (~160k LOC)
-  gestartet, mindestens 3 der 9 Tools live gegen die reale Solution
-  ausprobiert und Ergebnis stichprobenartig verifiziert.
+- Kontinuierliches Dogfooding (blockierend, siehe Muss-Haben): jedes der 9
+  Tools wurde in seinem jeweiligen Step mindestens einmal agentenseitig
+  gegen die eigene `AiNetLinter.slnx`-Solution aufgerufen (nicht nur gegen
+  Fixtures) — dokumentiert im jeweiligen `step-result.md`, Abschnitt
+  „Dogfooding". Ersetzt den früher vorgesehenen einmaligen externen
+  Praxistest (siehe „Entdeckte Mängel/Redundanzen" für die Begründung).
 
 ## Offene Punkte
 

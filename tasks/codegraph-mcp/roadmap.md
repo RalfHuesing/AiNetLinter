@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp
 derived_from: konzept.md
 created_at: 2026-07-31T00:00:00Z
-last_updated: 2026-07-31T21:00:00Z
+last_updated: 2026-07-31T22:00:00Z
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -130,6 +130,11 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       qualifizierter Name) — die restlichen 3 Tools (`get_impact`,
       `get_type_hierarchy`, `get_file_skeleton`) bleiben offen für weitere
       EPIC-03-Steps.
+      **Neu seit 2026-07-31 (ersetzt EPIC-09, siehe unten):** jeder
+      verbleibende EPIC-03-Tool-Step verifiziert sein Tool zusätzlich zu
+      den Fixture-Tests einmal ad-hoc gegen die eigene `AiNetLinter.slnx`
+      (Abschnitt "Dogfooding" in `step-result.md`, siehe `konzept.md`
+      Muss-Haben).
 - [ ] EPIC-04: Struktur-/Qualitäts-Tools — `get_index_scope` (Basis:
       `SourceFileCatalog.GetSourceFiles` + `Web/WebFileCatalog.cs`
       `Collect`, kein neuer Datei-Scan nötig, siehe "Entdeckte
@@ -140,6 +145,8 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       und rechnet direkt gegen die resident gehaltene `Compilation`),
       `search_pattern` (Text-/Regex-Fallback über den Solution-
       Dateibestand) (`konzept.md` Tool-Tabelle, "Wie" / Cache-Isolation).
+      **Gleiche Dogfooding-Pflicht wie EPIC-03** (siehe dort) gilt für
+      jeden EPIC-04-Tool-Step.
 - [ ] EPIC-05: Scope-Kommunikation & Miss-Hint — jede Tool-`description`
       der Roslyn-basierten Tools benennt explizit die C#-only-Grenze,
       `initialize`-Antwort trägt denselben Hinweis zentral im
@@ -177,9 +184,15 @@ oder als obsolet markiert) — kein starres Vorab-Dokument.
       MCP-Server), `Docs/ROADMAP.md`, `README.md` (`konzept.md`
       Muss-Haben "Dokumentation", `AGENTS.md` §4 Update-Pflicht bei
       Feature-Änderungen).
-- [ ] EPIC-09: Manueller Praxistest — Server gegen
-      `San.smart.Planner.Platform` (~160k LOC) gestartet, mindestens 3
-      der 9 Tools live ausprobiert, Ergebnis stichprobenartig verifiziert
-      (`konzept.md` Definition of Done, letzter Punkt — bewusst als
-      eigenes, spätes Epic, da abhängig von allen vorherigen Epics und
-      manuell statt automatisiert prüfbar).
+- [x] EPIC-09: **gestrichen (obsolet), 2026-07-31** — ursprünglich
+      "Manueller Praxistest gegen `San.smart.Planner.Platform` (~160k
+      LOC)". Ersetzt durch kontinuierliches, agentenseitiges Dogfooding
+      pro Tool-Step gegen die eigene `AiNetLinter.slnx` (siehe `konzept.md`
+      Muss-Haben "Dogfooding pro Tool-Step" sowie "Entdeckte Mängel/
+      Redundanzen" für die Begründung — Nutzer-Entscheidung, Chat
+      2026-07-31: externe Solution hatte in diesem Checkout nur ~3.600
+      statt ~160k LOC, taugte ohnehin nicht mehr als Skalierungsnachweis,
+      und "manuell" hätte kein Subagent selbst verifizieren können). Kein
+      eigenständiger Step/Epic mehr nötig — die Prüfung ist ab sofort Teil
+      jedes Tool-Steps in EPIC-03/EPIC-04 (Abschnitt "Dogfooding" in
+      `step-result.md`).
