@@ -4,7 +4,7 @@ task: codegraph-mcp
 started_at: 2026-07-31T09:30:00Z
 last_updated: 2026-07-31T09:30:00Z
 rules_dir: .agents/rules
-total_fix_rounds: 2  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+total_fix_rounds: 3  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-007
 ---
 
@@ -33,7 +33,7 @@ eine Zeile.>
 | step-004 | EPIC-03 | done | Zweites Tool find_references | 0/3 | yes | approved | a9e91ed |
 | step-005 | EPIC-03 | done | Drittes Tool get_impact (fix-01: stdio subprocess hang fixed) | 1/3 | yes | approved | 8db5f4b |
 | step-006 | EPIC-03 | done | Viertes Tool get_file_skeleton | 0/3 | yes | approved | c125511 |
-| step-007 | EPIC-03 | in_progress | Fünftes/letztes Tool get_type_hierarchy | 0/3 | - | - | - |
+| step-007 | EPIC-03 | done (fix-01 pending) | Fünftes/letztes Tool get_type_hierarchy | 1/3 | yes | issues | e90b52c |
 
 ## Config (optional)
 

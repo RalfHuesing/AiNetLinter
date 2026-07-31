@@ -100,6 +100,31 @@ Verweis auf die Tech-Debt-ID).
   reaktiv nach einem gerissenen Limit, einplanen — der Puffer ist zu
   knapp geworden, um das Risiko noch einen weiteren Step lang
   zuzuwarten.
+- **Update (step-007, 2026-07-31):** Die in step-006 empfohlene Aufteilung
+  wurde umgesetzt: `BuildToolCollection` ruft nur noch
+  `SymbolGraphToolRegistrations.Register`/`FileStructureToolRegistrations.Register`
+  auf. `McpServerOptionsFactory` selbst fiel dadurch von 2480 auf 2437,
+  **trotz** eines fünften registrierten Tools — die Aufteilung wirkt wie
+  im step-007-Plan begründet (die eigene Dateilänge der Factory zählt in
+  den Footprint, nicht die Body-Aufrufe der Tool-Klassen). Kritiker hat
+  Wert per eigenem `--footprint McpServerOptionsFactory`-Lauf bestätigt.
+  Das Grundproblem ist damit aber nur verschoben, nicht gelöst:
+  `SymbolGraphToolRegistrations` selbst liegt bereits bei 2455/2500 (nur
+  45 Zeilen Puffer, von Kritiker unabhängig bestätigt) — die vier
+  Symbolgraph-Tools sind mit EPIC-03 vollständig, ein sechstes würde dort
+  nicht mehr hinpassen. `FileStructureToolRegistrations` liegt bei
+  2422/2500 (78 Zeilen Puffer) und ist als Ziel für die vier
+  EPIC-04-Tools (`get_index_scope`, `get_hotspots`, `get_violations`,
+  `search_pattern`) vorgesehen — bei ~11-15 Zeilen pro Tool-Eintrag
+  (Trend aus TD-004-Historie) reicht der Puffer rechnerisch für maximal
+  5-6 weitere Einträge, die vier EPIC-04-Tools sollten also gerade noch
+  hineinpassen, aber ohne nennenswerten Rest-Puffer für ein späteres
+  siebtes/achtes Tool. Empfehlung an den nächsten Planer: Footprint von
+  `FileStructureToolRegistrations` nach jedem der vier EPIC-04-Tool-Steps
+  im Auge behalten (wie bisher bei `McpServerOptionsFactory` praktiziert)
+  und ggf. eine dritte Registrar-Klasse (z. B. für Analyse-/Metrik-Tools)
+  einplanen, statt die Aufteilungs-Frage erneut bis zum gerissenen Limit
+  laufen zu lassen.
 
 ### TD-005 — `McpCodeGraphServer`-Parameter lässt Tool-Klassen kaum eigenen `AIContextFootprint`-Spielraum [Priorität: mittel]
 
@@ -154,3 +179,19 @@ Verweis auf die Tech-Debt-ID).
   Tool-Klasse bleibt knapp unter dem Limit, aber ohne strukturellen
   Spielraum für signifikant mehr eigene Logik. Für `get_type_hierarchy`
   (letztes offenes EPIC-03-Tool) unverändert relevant.
+- **Update (step-007, 2026-07-31):** `GetTypeHierarchyTool` liegt bei
+  2423/2500 (Kritiker per eigenem `--footprint GetTypeHierarchyTool
+  --path .`-Lauf unabhängig gegengeprüft, Wert bestätigt) — vergleichbarer
+  Puffer wie die übrigen Tool-Klassen, dank konsequenter Anwendung des in
+  diesem Step selbst erstmals von Anfang an (statt nachträglich)
+  angewendeten Musters „dünner Dispatch + separate Formatter-Datei ohne
+  `McpCodeGraphServer`-Abhängigkeit" (`GetTypeHierarchyFormatter.cs`).
+  EPIC-03 ist mit diesem Step abgeschlossen — alle fünf Symbolgraph-Tools
+  bleiben strukturell unter dem Limit. Für die vier EPIC-04-Tools bleibt
+  TD-005 unverändert relevant: jede neue `*Tool.cs`-Klasse mit
+  `McpCodeGraphServer`-Parameter sollte von Anfang an nach demselben
+  Muster gebaut werden, nicht erst nachträglich aufgeteilt werden.
+  **Status bleibt offen** (strukturelles Muster, kein einmaliger Fix),
+  aber als etabliertes Vorgehen für EPIC-04 kann dieser Eintrag beim
+  nächsten Planer-Durchlauf als „bekanntes, bereits gelebtes Muster"
+  behandelt werden statt als offenes Risiko.
