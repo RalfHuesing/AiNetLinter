@@ -23,18 +23,29 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 
 ## 2. Entwicklungs- & Test-Workflow
 
-### Verifikation vor und nach Änderungen
-1. **Tests ausführen**: Nach JEDER Code-Änderung MÜSSEN die Tests ausgeführt und bestanden werden:
+### Verifikation & Test-Kategorien
+Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensiv sein kann, sind die Tests in `Unit` und `Integration` kategorisiert. Agenten sollen Testkategorien während der Entwicklung gezielt auswählen:
+
+1. **Schnelle Iteration (während der Entwicklung)**:
+   Verwende gefilterte Läufe für schnelles Feedback (z. B. Unit-Tests in ~1 Sekunde):
+   ```bash
+   dotnet test --filter Category=Unit
+   ```
+   (oder alternativ `dotnet test --filter Category!=Integration`)
+
+2. **Abschluss-Verifikation (vor Task-Beendigung)**:
+   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf grün durchgeführt werden:
    ```bash
    dotnet test
    ```
-2. **Build prüfen**:
+
+3. **Build prüfen**:
    ```bash
    dotnet build
    ```
 
 > [!IMPORTANT]
-> Beende einen Task erst, wenn `dotnet test` grün durchgelaufen ist!
+> Beende einen Task erst, wenn `dotnet test` (Volllauf) grün durchgelaufen ist!
 
 ---
 
