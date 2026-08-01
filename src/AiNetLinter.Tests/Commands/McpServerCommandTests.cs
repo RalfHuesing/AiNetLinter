@@ -131,7 +131,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithEightTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithNineTools()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -148,7 +148,7 @@ public sealed class McpServerCommandTests
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(8, tools.Count);
+        Assert.Equal(9, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");
@@ -157,6 +157,7 @@ public sealed class McpServerCommandTests
         Assert.Contains(tools, t => t.Name == "get_index_scope");
         Assert.Contains(tools, t => t.Name == "get_hotspots");
         Assert.Contains(tools, t => t.Name == "get_violations");
+        Assert.Contains(tools, t => t.Name == "search_pattern");
     }
 
     [Fact]
@@ -238,6 +239,34 @@ public sealed class McpServerCommandTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         // ViolationTrigger.cs ist die deterministische Fixture-Verletzung (fehlendes `sealed`).
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_SearchPatternReturnsExpectedHit()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "ainetlinter-mcp-test-client",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        var result = await client.CallToolAsync(
+            "search_pattern",
+            new Dictionary<string, object?> { ["pattern"] = "Greeter" },
+            cancellationToken: cts.Token);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        // "Greeter" matcht in Greeter.cs selbst (Typ-Name, Aufrufstellen) — relativer Pfad
+        // muss im Treffer-Output erscheinen.
+        Assert.Contains("Greeter.cs", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
