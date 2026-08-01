@@ -40,4 +40,30 @@ internal static class McpTruncation
         var meta = $"[{totalMatches} Treffer gesamt, {maxResults} gezeigt — Pattern verfeinern oder maxResults erhöhen]";
         return string.Join("\n", shown) + "\n" + meta;
     }
+
+    /// <summary>
+    /// Liefert <paramref name="fileList"/> als kommaseparierte Dateipfad-Liste. Wenn
+    /// <paramref name="totalFiles"/> groesser als <paramref name="maxFiles"/> ist, werden nur die
+    /// ersten <paramref name="maxFiles"/> Dateipfade zurueckgegeben und eine Meta-Zeile
+    /// "[N Dateien mit Textfund, M gezeigt — search_pattern fuer Details]" angehaengt. Zweite
+    /// Variante zu <see cref="TruncateLines"/> — andere Meta-Zeile, weil der Fallback-Aufruf ein
+    /// anderes Tool ist (search_pattern fuer Inhalte) als bei der Haupt-Treffer-Liste (Pattern
+    /// verfeinern oder maxResults erhoehen). Bewusst als eigenstaendige Methode statt einer
+    /// parametrisierten Variante, weil semantisch unterschiedlich und eine Generalisierung die
+    /// bestehende search_pattern-Verwendung subtil aendern wuerde (A5).
+    /// </summary>
+    internal static string TruncateFileList(
+        IReadOnlyList<string> fileList,
+        int totalFiles,
+        int maxFiles = 10)
+    {
+        if (totalFiles <= maxFiles)
+        {
+            return string.Join(", ", fileList);
+        }
+
+        var shown = fileList.Count <= maxFiles ? fileList : fileList.Take(maxFiles).ToList();
+        var meta = $"[{totalFiles} Dateien mit Textfund, {maxFiles} gezeigt — search_pattern fuer Details]";
+        return string.Join(", ", shown) + "\n" + meta;
+    }
 }

@@ -23,14 +23,16 @@ internal static class SymbolGraphToolRegistrations
     internal static void Register(McpServerPrimitiveCollection<McpServerTool> tools, McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string namePattern, string? kind = null, CancellationToken ct = default) =>
-                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, ct),
+            (string namePattern, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "find_symbol",
                 Description = "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
                     "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-                    "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen.",
+                    "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen. " +
+                    "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+                    "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.",
             }));
 
         tools.Add(McpServerTool.Create(
