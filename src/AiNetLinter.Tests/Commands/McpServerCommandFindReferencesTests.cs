@@ -1,12 +1,8 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
+using AiNetLinter.Tests.Mcp;
 using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
@@ -23,26 +19,13 @@ public sealed class McpServerCommandFindReferencesTests
     public async Task RunAsync_ValidFixture_FindReferencesWithMaxResultsTruncates()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
+        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
 
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var text = await client.CallToolGetTextAsync(
             "find_references",
-            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet", ["maxResults"] = 2 },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet", ["maxResults"] = 2 });
 
-        Assert.NotEqual(true, result.IsError);
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
+        Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
     }
 }

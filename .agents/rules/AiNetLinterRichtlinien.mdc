@@ -72,6 +72,7 @@ dotnet run            # Starten
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
+- **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur (`McpLiveRepositoryTests` und `McpTestClient` in `AiNetLinter.Tests`) in `dotnet test` umgesetzt. Das Anlegen von ad-hoc Python-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commit-Vorschlag Pflicht:** Bei jeder Änderung an Dateien, die im Git versioniert werden, muss die Antwort des Agenten immer mit einem konkreten `### Commit-Vorschlag` abschließen. Dieser enthält ausschließlich den reinen Commit-Text (Conventional Commit auf Deutsch, imperativ, z. B. `refactor: CLI-Optionen auf --sync-agent-rules umgestellt`) ohne Shell-Befehle (`git commit ...`), damit er direkt in das Git-Feld der IDE kopiert werden kann.

@@ -232,7 +232,6 @@ public sealed class SourceFileCatalog : IDisposable
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[WARN]: Error during MSBuild registration: {ex.Message}");
-                MSBuildLocator.RegisterDefaults();
             }
             finally
             {

@@ -622,9 +622,11 @@ Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
   (Regressionstest).
 - Dokumentation aktualisiert: `Docs/agent-api.md`, `Docs/integration.md`,
   `Docs/ROADMAP.md`, `README.md`.
-- Kontinuierliches Dogfooding: jedes der 9 Tools wurde in seiner jeweiligen
-  Einheit mindestens einmal agentenseitig gegen die eigene `AiNetLinter.slnx`
-  aufgerufen (nicht nur gegen Fixtures).
+- Kontinuierliches Dogfooding: jedes der 9 Tools wird in seiner jeweiligen
+  Einheit agentenseitig über die C#-Testinfrastruktur (`McpLiveRepositoryTests`
+  und `McpTestClient` in `AiNetLinter.Tests`) gegen die eigene `AiNetLinter.slnx`
+  verifiziert. Das Erstellen von temporären Python-Skripten im `.todos/`-Verzeichnis
+  ist untersagt.
 
 **Aus den übernommenen Erweiterungen (neu, siehe "Erweiterungen ins Scope"):**
 
