@@ -41,6 +41,8 @@ inhaltliche Neubewertung.
 | TD-012 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs` (kein Scanner-Split) | niedrig | ~~112 Z. Logik komplett im Tool, kein `FindSymbolScanner.cs` — einziges MCP-Tool ohne Scanner-Abspaltung.~~ **Geschlossen durch Einheit 004** (Commit `c6261ea`): `FindSymbolScanner.cs` (94 Z.) angelegt, TD-005-Muster erfüllt. |
 | TD-013 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs:63` (Miss-Hint-Datei-Liste) | niedrig | ~~`string.Join(", ", missHits)` ohne Trunkierung — bei Last-Fixture (500 Dateien) könnte die Hint-Zeile Hunderte Dateien auflisten. `McpTruncation` (002) ist nicht auf den Miss-Hint angewendet.~~ **Geschlossen durch Einheit 004** (Commit `c6261ea`): `McpTruncation.TruncateFileList` als zweite Methode, konsistente Meta-Zeile für die Datei-Liste. |
 | TD-014 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (Footprint) | niedrig | 2484/2500 (16 Z. Puffer) — `ServerInstructions`-Block (+14 Z. in 003) hat die Klasse an die Grenze gebracht. Const-String sollte nicht weiter wachsen; P0/P1-Extensions (Kaltstart, `--mcp-log`, Auto-Discovery) reißen das Limit bei der nächsten Erweiterung. **Inline** beim nächsten Anlass: `McpServerOptionsBuilder` oder Init-`record` analog TD-009. |
+| TD-015 | `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`) | niedrig | Dead Code — Hilfsmethode hat keinen Production-Caller; alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig). Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`). Erkannt im Review von Einheit 006. |
+| TD-016 | `tests/Fixtures/*/` (Fixture-Code-Duplikation) | niedrig | `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` in 4 Fixture-Workspace-Klassen dupliziert (`SymbolGraphMiniFixtureWorkspace`, `GitImpactMiniFixtureWorkspace`, `CompileErrorMiniFixtureWorkspace`, evtl. weitere). Kandidat für gemeinsame Basisklasse. Erkannt im Review von Einheit 006 (Coder-Beobachtung). |
 
 ## Einträge
 
@@ -140,4 +142,18 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (gemessen 2484/2500, 16 Z. Puffer, Stand `dd4b44e`).
 - **Befund:** Der `ServerInstructions`-Block (+14 Z. in 003) hat diese Klasse an die Grenze gebracht. Der Const-String ist konzeptuell bindend (kanonische Formulierung laut Plan-Schritt 3) und sollte **nicht** weiter wachsen. Die P0/P1-Extensions aus `konzept.md` Z. 207-324 (z. B. `--mcp-log`-State, "lädt noch"-State, `rules.json`-Auto-Discovery, Staleness-Sweep-`mtime`-Kurzschluss) werden `McpServerOptionsFactory` mit hoher Wahrscheinlichkeit erneut erweitern — die nächsten 16 Z. reißen das Limit. Coder dokumentiert das in `result.md` Beobachtung 2. **Erkannt im Review von Einheit 003** (Kritiker-Vorschlag "Vorschlag 3").
 - **Vorschlag:** Vor der nächsten substanziellen Erweiterung an `McpServerOptionsFactory` (z. B. bei Einbau des `--mcp-log`-Flags aus P0/P1) eine Aufteilung prüfen — z. B. ein `McpServerOptionsBuilder`-Pattern (analog `McpServerCommand`-Aufteilung in `McpServerOptionsFactory` + Registrar-Klassen) oder ein Init-`record` (analog TD-009-Vorschlag für `McpCodeGraphServer`). **Nicht eigenständige Refactor-Einheit**, sondern **inline** beim nächsten Anlass.
+- **Status:** offen
+
+### TD-015 — `McpToolResults.WarningsSection` Dead Code [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`-Methode).
+- **Befund:** Die Methode wurde in Einheit 006 angelegt als generischer Helper für Tool-Output-Warnings, hat aber **keinen** Production-Caller — alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig), weil `WarningsSection` als Identitäts-Funktion (ohne tatsächliche Aggregation) zu schwach war. Der dazugehörige Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`, testet die Identität, nicht das Verhalten). A3-Nachweis technisch korrekt, aber wertlos. **Erkannt im Review von Einheit 006** (Kritiker-Vorschlag).
+- **Vorschlag:** Bei der nächsten substanziellen Erweiterung an `McpToolResults.cs` prüfen, ob `WarningsSection` noch gebraucht wird — wahrscheinlich löschen + Test entfernen. Oder: bei EPIC-07 (Tests-Ausbau) als kleinen Aufräumer-Schritt mitnehmen.
+- **Status:** offen
+
+### TD-016 — Fixture-Code-Duplikation in 4 Workspace-Klassen [Priorität: niedrig]
+
+- **Ort:** `tests/Fixtures/{SymbolGraphMini,GitImpactMini,CompileErrorMini,...}FixtureWorkspace.cs` und ggf. weitere.
+- **Befund:** `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` (oder gleichwertige Helper) sind in 4 Fixture-Workspace-Klassen dupliziert. Funktional identisch, keine Verhaltensabweichung, aber bei künftigen Änderungen (z. B. weiterer Ausschluss-Pfad, neue Fixture-Datei-Typen) müssten 4 Stellen synchron gehalten werden. **Erkannt im Review von Einheit 006** (Coder-Beobachtung, vom Kritiker als TD-Eintrag wert befunden).
+- **Vorschlag:** **Inline** beim nächsten Fixture-Block (z. B. wenn EPIC-08 Last-Fixture-Generierung aus P1-6 eine weitere Fixture braucht). Gemeinsame Basisklasse `McpTestFixtureBase` o.ä. mit den drei Helpern, vier Fixture-Klassen erben davon.
 - **Status:** offen

@@ -92,8 +92,8 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 17 | 23 |
-| `max_fix_pro_einheit` | 3 | 0 (in 005) | 3 |
+| `max_aufrufe` | 40 | 20 | 20 |
+| `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
 **Aufruf-Log:**
@@ -114,6 +114,9 @@ Count gegen Coder.
 - 1× Planer für 005 (Trunkierung in `find_references` + `get_impact`)
 - 1× Coder für 005 (Commit `3eb13bf`, 1114/1114 grün, 6 neue Tests, A3 dokumentiert)
 - 1× Kritiker für 005 (Verdict: `approved`, 0/0/2, P0/P1-Trunkierung in 4/4 Listen-Tools erfüllt, **TD-011-Stand aktualisiert**)
+- 1× Planer für 006 (EPIC-06 Robustheit)
+- 1× Coder für 006 (Commit `de47034`, 1127/1127 grün, 13 neue Tests, A3 dokumentiert)
+- 1× Kritiker für 006 (Verdict: `approved`, 0/1/5, **TD-015/016 als Vorschläge** — 1 MAJOR Dead Code, aber kein `issues` weil 8/9 Tools alternativen Pfad nutzen)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -382,6 +385,62 @@ in dieser Session ab dem 004-Planer-Aufruf.
      `Docs/integration.md` mit Registrierung, `Docs/ROADMAP.md`
      + `README.md`.
   4. P0/P1-Rest-Erweiterungen: Kaltstart entkoppeln,
+     `rules.json`-Auto-Discovery, Staleness-Sweep mit
+     Verzeichnis-`mtime`, `--mcp-log` Call-Log, RefreshStale-
+     Documents-Verzeichnis-Sweep (neu/gelöschte Dateien),
+     `ILintConsole` für MCP (stdout-Schutz).
+  Konkrete Wahl trifft der Planer JIT.
+
+### Einheit 006 — EPIC-06 Robustheit (Compile-Fehler-Warnhinweis + Server-Lifecycle)
+
+- **Plan:** `units/006/plan.md` (Commit `25c1800`) — 6 Vor-der-
+  Planung-Checks, 10 Schritte (Schritt 4 gestrichen wegen
+  besserer Footprint-Bilanz), 12 A3-erforderliche Tests, neue
+  Fixture `CompileErrorMiniFixture`.
+- **Result:** `units/006/result.md` (Commit `a8234e3`) —
+  Code-Commit `de47034` (`feat(mcp): compile-fehler-warnhinweis
+  in allen 9 tools + server-lifecycle (EPIC-06)`). 4 neue
+  Dateien (`McpCompileDiagnostics.cs` als statischer Helper,
+  `McpServerCommandErrorHandlingTests.cs` als neue E2E-Datei,
+  `CompileErrorMiniFixtureWorkspace.cs`, 8 Fixture-Dateien)
+  + Modifikationen an 9 Tools + 10 Test-Dateien. 13 neue
+  Tests (12 geplant + 1 Helper-Test). Volllauf 1127/1127
+  grün. Build 0/0. A3 für 5 Tests wortwörtlich dokumentiert
+  + 7 transitiv abgesichert. Schritt-1-Befund: MSBuildWorkspace
+  lädt kaputte Solution, Plan-B entfällt.
+- **Review:** `units/006/review.md` (siehe aktueller Commit) —
+  Verdict **`approved`**, 0/1/5. 1 MAJOR: `McpToolResults.
+  WarningsSection` ist Dead Code (kein Production-Caller),
+  aber alle 8 Tools nutzen den alternativen
+  `BuildAggregateWarningAsync` + `PrependWarning` — also
+  kein `issues`-Verdict. T9 (`get_violations` Negativtest)
+  am Code verifiziert. TD-003-Umgehung ausreichend.
+- **Aufrufe:** Planer + Coder + Kritiker = 3 für 006, plus
+  17 aus 001+002+002/fix-01+003+004+005 = 20/40.
+- **Footprint:** alle 4 betroffenen Klassen unter Limit
+  (kein PathOverride-Eingriff nötig).
+- **Tech-Debt:** TD-015 (`WarningsSection` Dead Code) +
+  TD-016 (Fixture-Code-Duplikation in 4 Workspace-Klassen)
+  in `tech-debt.md` aufgenommen (Kritiker-Vorschläge). 12 →
+  14 offene Einträge.
+- **Status:** **`approved`**. 006 ist **komplett
+  abgeschlossen**. **EPIC-06 vollständig** (Compile-Fehler-
+  Warnhinweis in 8/9 Tools, `get_violations` mit Negativtest,
+  Server-Lifecycle mit E2E-Tests).
+- **Nächste Einheit:** offen für Planer-Aufruf.
+  Wahrscheinlichste Kandidaten:
+  1. **EPIC-07** (Tests-Ausbau, Konzept Z. 104-107, 624):
+     Staleness-Invalidierung, Integrationstests je Tool,
+     Miss-Hint, Mehrdeutigkeits-Abbruch, Cache-Isolation,
+     CLI-Regression. **TD-003-Fix** (`RegisterMSBuild`
+     Race) sollte hier inline addressiert werden (Kritiker
+     hat die Umgehung als „ausreichend" bewertet, aber
+     struktureller Fix ist sauberer).
+  2. **EPIC-08** (Doku, Konzept Z. 107-108, 623):
+     `Docs/agent-api.md` mit MCP-Modus,
+     `Docs/integration.md` mit Registrierung, `Docs/ROADMAP.md`
+     + `README.md`.
+  3. P0/P1-Rest-Erweiterungen: Kaltstart entkoppeln,
      `rules.json`-Auto-Discovery, Staleness-Sweep mit
      Verzeichnis-`mtime`, `--mcp-log` Call-Log, RefreshStale-
      Documents-Verzeichnis-Sweep (neu/gelöschte Dateien),
