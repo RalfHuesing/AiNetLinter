@@ -5,81 +5,96 @@ status: poc
 
 # dynamic-loop (PoC)
 
-Gegenentwurf zu [`drift-loop/`](../drift-loop/README.md): Statt Rollen,
-Prompts und Zerlegung **vorab** festzuschreiben, entwirft der Orchestrator
-sie **zur Laufzeit** für den konkreten Task — auf Basis von `konzept.md`,
-den Projektregeln und dem echten Codestand.
-
-Festgeschrieben ist nur [`kernel.md`](kernel.md), und der zerfällt in
-zwei Teile mit unterschiedlicher Verbindlichkeit:
-
-- **Teil A — harte Regeln** (7). Deckel, „wer prüft fixt nicht", Tests
-  müssen fehlschlagen können, nichts Unwiederbringliches, im Zweifel
-  fragen, `konzept.md`/Projektregeln nur lesbar, Kernel unantastbar.
-- **Teil B — benannte Gefahren.** Kollisionen, Drift, Duplikate,
-  unscharfe Rollen, isolierte Sessions, Resume, Token-Kosten. Stichworte
-  ohne Lösungsweg — die löst der Loop selbst.
-
-**Das Kriterium für die Trennung:** Ein Fehler, der *laut* scheitert,
-braucht keine Regel — der Agent merkt ihn und reagiert (Teil B). Ein
-Fehler, der *still* oder *irreversibel* scheitert, braucht eine, weil die
-Instanz, die ihn begeht, dieselbe wäre, die ihn bemerken müsste (Teil A).
-Eine Testsuite ohne Tests ist von innen nicht von Erfolg zu
-unterscheiden; ein Deckel, den der Loop selbst anheben darf, ist keiner;
-ein an das Gebaute angepasstes `konzept.md` sieht hinterher völlig
-konsistent aus.
-
-## Starten
+Schlanker Gegenentwurf zu [`drift-loop/`](../drift-loop/README.md): feste
+Rollen (Planer, Coder, Kritiker), aber ein kurzer Kernel aus harten
+Regeln statt einer ~2200-Zeilen-Spezifikation mit Roadmap/Epics,
+Batch-Steps und Modell-Zuweisung.
 
 ```
 dynamic-loop/orchestrator.md <task-dir>
 ```
 
-Gleicher Einstieg wie bei `drift-loop`: Im `<task-dir>` liegt
-`konzept.md`, alles Weitere entsteht dort. Optional `konfig.md` für
-abweichende Deckel.
+Im `<task-dir>` liegt `konzept.md`. Angefangene Verzeichnisse (auch aus
+`drift-loop`) werden übernommen, nicht neu gestartet.
 
-**Angefangene Task-Verzeichnisse werden übernommen**, auch solche aus
-`drift-loop` mit vorhandenen `step-NNN/`. Fremde Artefakte werden
-gelesen und bleiben liegen — nichts wird konvertiert oder gelöscht,
-fertige Arbeit nicht wiederholt. Status-Labels gelten dabei als
-Behauptung: Was wirklich fertig ist, entscheidet `git log` und der Code,
-nicht ein `status: done` im Frontmatter. Uncommittete Änderungen im
-Working-Tree werden dir gezeigt, nicht stillschweigend mitcommittet oder
-verworfen (Orchestrator Phase 0, Fall 3).
+## Vorgeschichte: warum es diese Datei so und nicht anders gibt
 
-## Was der Loop selbst erzeugt
+Diese Loop ist die zweite Fassung. Die erste bestand aus zwei getrennten
+Experimenten: `dynamic-loop` (Rollen entstehen zur Laufzeit, Kernel als
+harte Grenze) und `asimov-loop` (kein Verfahren, nur sieben Gesetze).
+Beide waren der Versuch, `drift-loop`s Umfang zu hinterfragen — inspiriert
+von [Claude-of-Duty](https://github.com/mshumer/Claude-of-Duty), dessen
+Prompt Subagenten weitgehend frei lässt.
 
-`<task-dir>/agents/*.md` — die Rollen-Prompts dieses Tasks. Sie sind
-Artefakte wie jedes andere: committet, im `git log` nachvollziehbar, und
-durch das **Meta-Review** (Orchestrator Phase 4) im Lauf änderbar, wenn
-sich zeigt, dass eine Prüfrolle nur durchwinkt oder eine Rolle ihre
-Aufrufe nicht verdient. Der Kernel bleibt dabei unantastbar (A7).
+Recherche dazu (vollständig in
+[`../../docs/references.md`](../../docs/references.md), Abschnitt
+2026-08-01) hat beide Experimente relativiert, statt sie zu bestätigen:
+
+- **Rollen zur Laufzeit erfinden lassen ist noch nicht zuverlässig
+  belegt.** [The Meta-Agent Challenge](https://arxiv.org/abs/2606.04455)
+  zeigt für aktuelle Frontier-Modelle hohe Varianz und teils Reward-
+  Hacking, wenn sie sich selbst eine Agenten-/Rollenstruktur bauen
+  sollen. [MetaGPT](https://arxiv.org/abs/2308.00352) — das etablierteste
+  Multi-Agent-Framework mit festen Rollen + SOP-Artefakten — nennt
+  dynamische Rollenwahl explizit als *zukünftige*, nicht als heute
+  erprobte Richtung. Und selbst der Namensgeber
+  [Claude-of-Duty](https://github.com/mshumer/Claude-of-Duty) trägt die
+  radikale Lesart nur bedingt: sein eigentlicher Bauplan ist
+  `ARCHITECTURE.md`, ein festes Vertragsdokument, gegen das alle
+  Subagenten arbeiten — näher an `drift-loop`s festen Artefakten als an
+  „kein Verfahren". Deshalb hier: **feste Rollen**, keine Laufzeit-
+  Erfindung mehr.
+- **Wenig Verfahrenstext + Modell-Urteil statt vieler Einzelregeln ist
+  dagegen gut belegt** — aber an die Fähigkeit des jeweiligen Modells
+  gekoppelt, nicht daran, wie die Rollen zustande kommen. Anthropic hat
+  für Claude Opus/Fable 5 [80 % des Claude-Code-Systemprompts
+  gestrichen](https://www.developersdigest.tech/blog/claude-5-context-engineering-rules-hn-analysis)
+  („rules become judgment") ohne Eval-Verlust, und
+  [Claude's Constitution](https://www.aigl.blog/claudes-constitution/)
+  ist strukturell fast deckungsgleich mit diesem Kernel: harte
+  Constraints plus abgestufte Priorität für den Rest, statt einer langen
+  Regel-Liste. Deshalb hier: **kurzer Kernel** bleibt, statt zurück zu
+  `drift-loop`s vollem Verfahren.
+- **Harte Zahlen-Deckel bleiben Teil A, nicht Teil B.** Nicht jedes Modell
+  bremst sich beim „noch besser machen" selbst — insbesondere manche
+  nicht-westlichen Modelle neigen dazu, Linter-Meckerei oder eigene
+  Commits immer weiter nachzupolieren, statt den Task voranzutreiben. Das
+  scheitert *still* (sieht wie Sorgfalt aus, kostet aber Budget für nichts
+  Angefordertes) — genau das Kriterium, das in diesem Workflow einen
+  Platz in Teil A statt Teil B verlangt. Daraus folgt A5 („Fertig ist
+  fertig") als neue Regel.
+
+**`asimov-loop/` ist damit entfallen** — seine beiden tragenden Ideen
+(Kürze, harte Gesetze statt Verfahren) leben in diesem Kernel weiter,
+seine dritte Idee (kein Verfahren, keine festen Rollen) nicht mehr.
 
 ## Unterschied zu `drift-loop` in einer Zeile
 
-`drift-loop` weiß vorher, wie gearbeitet wird, und ist dadurch
-reproduzierbar. `dynamic-loop` entscheidet es unterwegs und ist dadurch
-anpassungsfähig — auf Kosten der Reproduzierbarkeit: zwei Läufe über
-dasselbe `konzept.md` können unterschiedliche Rollen hervorbringen.
+`drift-loop` legt Roadmap-Mechanik, Batch-Steps, Kritiker-Ebenen-Details,
+Git-Konventionen und Modell-Zuweisung explizit fest — reproduzierbar,
+aber ausführlich. `dynamic-loop` gibt dieselben drei Rollen und denselben
+JIT-Grundgedanken vor, überlässt das *Wie* innerhalb der Kernel-Grenzen
+aber dem Modell-Urteil der jeweiligen Session.
 
 ## Status: PoC, ungetestet
 
 Offen und bewusst noch nicht entschieden:
 
-- **Trägt der Kernel?** Rund 130 Zeilen gegen ~2200 in `drift-loop`. Ob
-  die weggelassenen Regeln fehlen, zeigt erst ein echter Lauf.
-- **Ist die Grenze zwischen Teil A und B richtig gezogen?** „Scheitert
-  laut vs. still" ist ein Kriterium, keine Messung. Serialität steht
-  jetzt in Teil B — wenn der erste Lauf zwei Agenten gleichzeitig auf
-  denselben Tree lässt, gehört sie zurück nach A.
-- **Taugt das Meta-Review?** Eine Rolle, die den Flow kritisiert, kann
-  auch zum Selbstbestätigungsapparat werden.
-- **Wie gut sind selbstgeschriebene Rollen-Prompts?** Sie entstehen
-  einmalig und blind zu Task-Beginn, ohne die Korrekturschleife, die
-  handgeschriebene Prompts über mehrere Iterationen bekommen haben.
+- **Trägt der kürzere Kernel trotz fester Rollen?** Die Rollenfrage ist
+  jetzt durch Literatur gestützt beantwortet, die Frage „wie viel
+  Verfahrenstext braucht selbst eine feste Rolle" nicht — das zeigt erst
+  ein echter Lauf im Vergleich zu `drift-loop`.
+- **Ist A5 („Fertig ist fertig") die richtige Grenze?** Sie ist aus einer
+  konkreten Beobachtung entstanden (bestimmte Modelle polieren
+  Commits/Linter-Meckerei endlos nach), nicht aus Literatur — ob sie zu
+  eng oder zu weit gefasst ist, zeigt sich erst im Einsatz mit
+  unterschiedlichen Modellen.
+- **Ist die Grenze zwischen Teil A und B sonst richtig gezogen?**
+  „Scheitert laut vs. still" ist ein Kriterium, keine Messung.
 
 Der sinnvolle nächste Schritt ist kein weiterer Absatz hier, sondern
-derselbe Task einmal durch beide Workflows — verglichen an Wall-Clock,
-Fix-Runden und der entscheidenden Frage: **Hat der kurze Flow irgendwo
-weitergemacht, wo der lange gestoppt hätte?**
+derselbe Task einmal durch `drift-loop` und `dynamic-loop` — verglichen an
+Wall-Clock, Fix-Runden und Token-Verbrauch.
+
+**521 Zeilen** in `kernel.md` + `orchestrator.md` + `agents/*.md` (621 mit
+dieser Datei) gegen ~2200 in `drift-loop/spec.md` allein.

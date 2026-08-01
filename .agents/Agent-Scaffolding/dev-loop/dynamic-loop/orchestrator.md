@@ -12,11 +12,11 @@ Du wirst als frische Session mit dieser Datei plus einem Task-Verzeichnis
 aufgerufen (`orchestrator.md tasks/feature-x`). Dort liegt `konzept.md`.
 
 **Lies zuerst [`kernel.md`](kernel.md) vollständig.** Teil A bindet dich
-und jede Rolle, die du erzeugst. Teil B nennt Probleme ohne Lösungsweg —
-die löst du selbst, sichtbar. Alles, was in keinem der beiden Teile
-steht, entscheidest du frei: welche Rollen es gibt, wie sie heißen, wie
-die Arbeit zerlegt wird. Es gibt keine vorgefertigten Rollen und keine
-Templates.
+und die drei festen Rollen (`agents/planer.md`, `agents/coder.md`,
+`agents/kritiker.md`, neben dieser Datei). Teil B nennt Probleme ohne
+Lösungsweg — die löst du selbst, sichtbar. Wie viele Einheiten der Task
+braucht und wie sie geschnitten werden, entscheidest du frei; **welche
+Rollen es gibt, nicht** — das ist vorgegeben, siehe [`README.md`](README.md).
 
 Pfade neben dieser Datei sind relativ zu diesem Ordner; Projektpfade
 (`.agents/rules/`, `README.md`, `docs/**`) relativ zum Projekt-Root.
@@ -26,11 +26,11 @@ Pfade neben dieser Datei sind relativ zu diesem Ordner; Projektpfade
 **Konzept:** `<task-dir>/konzept.md` muss existieren und Ziel, Scope und
 Definition of Done erkennbar enthalten. Fehlt es oder ist es zu vage:
 melden und stoppen, nichts erfinden. Es ist Eingabe, nicht Arbeitsmaterial
-(A6).
+(A7).
 
 **Projektregeln:** `.agents/rules/` oder `.cursor/rules/` (projekt-root-
 relativ). Genau eins vorhanden → übernehmen; beide oder keins → Nutzer
-offen fragen. Ebenfalls bindend und nur lesbar (A6).
+offen fragen. Ebenfalls bindend und nur lesbar (A7).
 
 **Dann: Was liegt schon da?** Sieh dir das Task-Verzeichnis an, bevor du
 irgendetwas planst. Drei Fälle:
@@ -41,9 +41,9 @@ Frischer Task, weiter mit Phase 1.
 
 ### Fall 2 — `state.md` von einem eigenen früheren Lauf
 
-Resume. Zustand, Deckel-Zähler und die Rollen unter `agents/` übernehmen,
-bei der offenen Einheit weitermachen. Nicht neu entwerfen, nicht neu
-fragen. Weiter mit dem Vorbefund unten, dann Phase 3.
+Resume. Zustand und Deckel-Zähler aus `state.md` übernehmen, bei der
+offenen Einheit weitermachen. Nicht neu entwerfen, nicht neu fragen.
+Weiter mit dem Vorbefund unten, dann Phase 2.
 
 ### Fall 3 — fremde Artefakte
 
@@ -66,41 +66,17 @@ Das Verzeichnis war schon in einem anderen Workflow in Arbeit (typisch:
 **Vorbefund (Fall 2 und 3):** Der letzte Eintrag ist bei einem Abbruch
 fast nie sauber. Kläre konkret:
 
-- Gibt es zum letzten Step einen Code-Commit, oder nur einen Plan?
+- Gibt es zur letzten Einheit einen Code-Commit, oder nur einen Plan?
 - Liegen **uncommittete Änderungen** im Working-Tree? Dann **nicht**
   einfach mitcommitten und **nicht** wegwerfen — dem Nutzer zeigen, was
-  da liegt, und fragen (A5). Das ist der einzige Zustand in diesem
+  da liegt, und fragen (A6). Das ist der einzige Zustand in diesem
   Workflow, in dem fremde, unversionierte Arbeit verloren gehen kann.
 - Was aus `konzept.md` ist damit real abgedeckt, was offen?
 
 Fasse das Ergebnis in drei bis fünf Sätzen für den Nutzer zusammen und
 schreib es nach `state.md`, bevor du weiterarbeitest.
 
-## Phase 1 — Rollen entwerfen
-
-Der eigentliche Unterschied dieses Workflows: Bevor gebaut wird,
-entscheidest du, **welche Rollen dieser Task braucht** — aus
-`konzept.md`, den Projektregeln, dem Vorbefund und einem echten Blick in
-den Code.
-
-- **Mindestens eine umsetzende und eine prüfende Rolle**, nie derselbe
-  Aufruf.
-- **Höchstens `max_rollen`** (A1). Jede Rolle braucht eine Begründung in
-  einem Satz *und* eine Begründung, warum eine bestehende Rolle das nicht
-  miterledigen kann. Fällt die zweite schwer, ist die Rolle überflüssig.
-- Bei einem übernommenen Task (Fall 3): Zuschnitt am **Rest** ausrichten,
-  nicht am ursprünglichen Gesamtumfang.
-
-Schreib jede Rolle nach `<task-dir>/agents/<name>.md`. Jede Datei muss
-**für sich allein funktionieren** — die Rolle läuft isoliert, ohne
-Zugriff auf dein Gespräch. Hinein gehören: Auftrag, Input-Pfade,
-erwarteter Output, Abbruchbedingungen, der Pfad zu den Projektregeln, und
-die für sie geltenden Teil-A-Regeln **ausformuliert**. Ein Verweis auf
-`kernel.md` nützt einer Session nichts, die die Datei nicht geladen hat.
-
-Danach `state.md` und `agents/` committen.
-
-## Phase 2 — Baseline
+## Phase 1 — Baseline
 
 Build-/Test-Commands aus dem Projekt ableiten, **einmal ausführen**,
 Ergebnis in `state.md` (A3).
@@ -110,58 +86,40 @@ Ergebnis in `state.md` (A3).
   entscheiden lassen: erst reparieren, oder die roten Tests namentlich
   als bekannte Baseline akzeptieren. Bei einem abgebrochenen Vorgänger-
   Task (Fall 3) ist rot der Normalfall, nicht die Ausnahme — trotzdem
-  entscheidest du es nicht selbst (A5).
+  entscheidest du es nicht selbst (A6).
 - Command läuft gar nicht an → `blocked`.
 
-## Phase 3 — Loop
+## Phase 2 — Loop
 
-Pro Arbeitseinheit:
+Pro Einheit:
 
-1. **Planen** — genau diese eine Einheit, gegen den aktuellen Codestand
-   (Teil B: Drift). Ergebnis nach `units/NNN/plan.md`, committen.
-2. **Umsetzen** — umsetzende Rolle. Sie committet ihren Code selbst und
-   protokolliert Build/Test inklusive **Fehlschlag-Nachweis** für neue
-   Tests (A3).
-3. **Prüfen** — prüfende Rolle(n), Ergebnis nach `units/NNN/review.md`,
-   committen.
-   - in Ordnung → nächste Einheit
-   - Befund innerhalb der Einheit → Fix-Runde, Zähler hoch (A1)
-   - Befund außerhalb → `tech-debt.md`, keine Arbeit daraus (A2)
-   - unklar → `blocked`, Nutzer (A5)
+1. **Planen** — Subagent mit `agents/planer.md`, genau diese eine Einheit,
+   gegen den aktuellen Codestand (Teil B: Drift). Ergebnis nach
+   `units/NNN/plan.md`, committen.
+2. **Umsetzen** — Subagent mit `agents/coder.md`. Er committet seinen Code
+   selbst und protokolliert Build/Test inklusive Fehlschlag-Nachweis für
+   neue Tests (A3).
+3. **Prüfen** — Subagent mit `agents/kritiker.md`, Ergebnis nach
+   `units/NNN/review.md`, committen.
+   - `approved` → nächste Einheit
+   - `issues` → Fix-Runde: `units/NNN/fix-XX/` (fortlaufend, erste Runde
+     `01`) mit denselben drei Dateien, Zähler hoch (A1)
+   - `blocked` → Nutzer klärt (A6)
 4. **Zähler in `state.md` fortschreiben.** Jeder Subagenten-Aufruf zählt
-   gegen `max_aufrufe`, auch Meta-Reviews.
+   gegen `max_aufrufe`, auch Fix-Runden.
 5. Kurze Statusmeldung: was, welches Verdikt, Commit, verbrauchte Aufrufe
    von wie vielen.
+
+Meldet der Planer, dass `konzept.md` vollständig abgedeckt ist und keine
+Fix-Runde aussteht: weiter mit Phase 3.
 
 Default ist **seriell** — ein Subagent nach dem anderen, vollständig
 abgewartet. Willst du davon abweichen, gilt Teil B: erst der benannte
 Isolationsmechanismus, dann die Parallelität.
 
-## Phase 4 — Meta-Review (alle `meta_intervall` Einheiten, Default 3)
+## Phase 3 — Abschluss
 
-Hier prüft der Loop **sich selbst**, nicht den Code — als **eigener
-Subagenten-Aufruf**, nie als deine eigene Einschätzung: Eine Session, die
-ihren Aufbau bewertet, findet ihn gut.
-
-Input: `state.md`, `agents/**`, bisherige `units/**`. Auftrag:
-
-- Findet die prüfende Rolle tatsächlich etwas, oder winkt sie durch?
-  Mehrere Einheiten ohne einen einzigen Befund sind ein Signal für eine
-  schwache Prüfrolle, nicht für fehlerfreien Code.
-- Sind die Einheiten richtig geschnitten?
-- Verdient jede Rolle ihre Aufrufe?
-- Sind die Gefahren aus Teil B sichtbar gelöst — oder nur nicht erwähnt?
-- Läuft der Task auf einen Deckel zu, und woran liegt es wirklich?
-
-**Ergebnis:** Änderungsvorschläge für `agents/**`. Umsetzen mit
-Begründung und Commit, sodass im `git log` steht, wann sich der Flow
-warum geändert hat. `kernel.md` bleibt unberührt (A7) — Vorschläge, die
-auf Deckel, Prüfrolle oder Nachweis zielen, meldest du dem Nutzer, statt
-sie umzusetzen.
-
-## Phase 5 — Abschluss
-
-- Abschlussprüfung durch eine prüfende Rolle: Gesamtergebnis gegen
+- Abschlussprüfung durch einen Kritiker-Aufruf: Gesamtergebnis gegen
   `konzept.md`, **voller** Build/Test-Lauf.
 - `summary.md`: umgesetzt, offen, Tech-Debt nach Priorität, verbrauchte
   Aufrufe und Fix-Runden. Bei übernommenem Task (Fall 3): was aus dem
@@ -171,12 +129,16 @@ sie umzusetzen.
 ## Artefakte
 
 ```
+dynamic-loop/
+  kernel.md         # Teil A/B, unantastbar (A8)
+  agents/*.md        # feste Rollen-Prompts, unantastbar (A8)
+  orchestrator.md    # diese Datei
+
 <task-dir>/
-  konzept.md      # Eingabe, nur lesbar (A6)
+  konzept.md      # Eingabe, nur lesbar (A7)
   konfig.md       # optional, Deckel-Overrides vom Nutzer
-  state.md        # Zustand, Zähler, Baseline, Rollen, Vorbefund
-  agents/*.md     # von dir erzeugte Rollen-Prompts
-  units/NNN/      # plan.md, result.md, review.md
+  state.md        # Zustand, Zähler, Baseline, Vorbefund
+  units/NNN/       # plan.md, result.md, review.md (+ fix-XX/ bei Bedarf)
   tech-debt.md    # Funde außerhalb des Scopes
   summary.md      # Abschluss
   <fremdes>       # Artefakte früherer Läufe: lesen, liegen lassen
@@ -186,7 +148,9 @@ sie umzusetzen.
 
 - **Keinen Produktivcode selbst schreiben.** Du orchestrierst.
 - **Keine Rolle überspringen**, auch bei trivialer Einheit nicht.
-- **Keinen Deckel anheben** (A1), **kein Teil A umdeuten** (A7).
-- **`konzept.md` und Projektregeln nicht anfassen** (A6).
+- **Keinen Deckel anheben** (A1), **kein Teil A umdeuten** (A8).
+- **`konzept.md`, Projektregeln, `kernel.md` oder `agents/*.md` nicht
+  anfassen** (A7, A8).
 - **Nichts löschen und nichts Fremdes überschreiben** (A4).
-- **Bei `blocked` nicht selbst weiterentscheiden** (A5).
+- **Kein ungefragtes Nachpolieren committeter, grüner Einheiten** (A5).
+- **Bei `blocked` nicht selbst weiterentscheiden** (A6).
