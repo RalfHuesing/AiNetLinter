@@ -23,7 +23,12 @@ internal static class FindReferencesTool
 {
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, loest den Identifikator zu einem
-    /// Symbol auf und liefert dessen Aufrufstellen als Text.
+    /// Symbol auf und liefert dessen Aufrufstellen als Text. Stellt dem Aufrufstellen-Output
+    /// einen EPIC-06-Aggregat-Warnhinweis voran, falls die Solution Compile-Fehler in einzelnen
+    /// Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst nicht, dass die Antwort
+    /// unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions
+    /// ab und liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs (EPIC-06
+    /// Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string symbolIdentifier, int maxResults, CancellationToken ct)
@@ -31,18 +36,31 @@ internal static class FindReferencesTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct);
-        if (error is not null) return error;
-
-        var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
-        if (callSites.Count == 0)
+        try
         {
-            return McpToolResults.Text($"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'");
-        }
+            var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct);
+            if (error is not null) return error;
 
-        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-        return McpToolResults.Text(McpTruncation.TruncateLines(
-            callSites, callSites.Count, normalizedMaxResults));
+            var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
+            var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+
+            if (callSites.Count == 0)
+            {
+                return McpToolResults.Text(FindSymbolTool.PrependWarning(
+                    warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"));
+            }
+
+            var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+            return McpToolResults.Text(FindSymbolTool.PrependWarning(
+                warning,
+                McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return McpToolResults.CompilationError(
+                $"Unerwarteter Fehler in find_references: {ex.Message}",
+                context: symbolIdentifier);
+        }
     }
 
     /// <summary>

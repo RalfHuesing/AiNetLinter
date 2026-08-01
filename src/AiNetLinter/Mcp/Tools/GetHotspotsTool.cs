@@ -18,13 +18,14 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class GetHotspotsTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(
+    internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string? scopeFilter, CancellationToken ct)
     {
         var solution = state.GetCurrentSolution();
-        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var text = GetHotspotsScanner.BuildHotspotsText(solution, state.MaxLineCount, scopeFilter);
-        return Task.FromResult(McpToolResults.Text(text));
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
     }
 }

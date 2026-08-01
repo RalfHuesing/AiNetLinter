@@ -97,4 +97,19 @@ public sealed class GetHotspotsToolTests
         Assert.Contains("Keine Dateien im Scope", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("im gruenen Bereich", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.Matches(@"\b\d+\s+Dateien?\s+haben\s+Compile-Fehler", text);
+    }
 }

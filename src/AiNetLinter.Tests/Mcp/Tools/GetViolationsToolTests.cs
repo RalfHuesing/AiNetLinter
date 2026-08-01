@@ -81,4 +81,23 @@ public sealed class GetViolationsToolTests
         // Markdown-Tabellen-Header muss im Output erscheinen.
         Assert.Contains("| Datei | Zeile | Regel | Details |", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_DoesNotIncludeCompileErrorsAsViolations()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        // Compile-Fehler (CS1513, CS0246 usw.) sind KEIN Lint-Verstoss — bestehende Lint-Ausgabe
+        // bleibt unveraendert, der EPIC-06-Compile-Warnhinweis wird fuer get_violations NICHT
+        // aktiviert (Lint-Output blaeht sich nicht auf). Negativtest.
+        var result = await GetViolationsTool.ExecuteAsync(state, null, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("CS1513", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("CS0246", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Hinweis:", text, StringComparison.Ordinal);
+    }
 }

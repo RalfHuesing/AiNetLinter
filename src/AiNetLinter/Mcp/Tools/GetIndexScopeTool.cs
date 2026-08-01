@@ -17,12 +17,13 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class GetIndexScopeTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
+    internal static async Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
     {
         var solution = state.GetCurrentSolution();
-        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var text = GetIndexScopeScanner.BuildBreakdownText(solution);
-        return Task.FromResult(McpToolResults.Text(text));
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
     }
 }

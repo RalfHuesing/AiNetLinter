@@ -26,6 +26,11 @@ internal static class FindSymbolTool
 {
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
+    /// Stellt dem Scanner-Output einen EPIC-06-Aggregat-Warnhinweis voran, falls die Solution
+    /// Compile-Fehler in einzelnen Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst
+    /// nicht, dass die Antwort unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt
+    /// unerwartete Roslyn-Exceptions ab und liefert einen strukturierten [ERROR]-Antwort statt
+    /// eines Server-Crashs (EPIC-06 Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
@@ -39,9 +44,19 @@ internal static class FindSymbolTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var text = await FindSymbolScanner.FindMatchesAndFormat(
-            solution, namePattern, kind, normalizedMaxResults);
-        return McpToolResults.Text(text);
+        try
+        {
+            var text = await FindSymbolScanner.FindMatchesAndFormat(
+                solution, namePattern, kind, normalizedMaxResults);
+            var warning = await BuildAggregateWarningAsync(solution, ct);
+            return McpToolResults.Text(PrependWarning(warning, text));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return McpToolResults.CompilationError(
+                $"Unerwarteter Fehler in find_symbol: {ex.Message}",
+                context: namePattern);
+        }
     }
 
     /// <summary>
@@ -70,5 +85,26 @@ internal static class FindSymbolTool
         if (symbol.Kind == SymbolKind.Method) return "Methode";
         if (symbol.Kind == SymbolKind.Property) return "Property";
         return symbol.Kind.ToString();
+    }
+
+    /// <summary>
+    /// Stellt einen EPIC-06-Aggregat-Warnhinweis vor <paramref name="text"/>, falls die Solution
+    /// Compile-Fehler in mindestens einer Datei hat. Shared-Helper, weil das identische Muster in
+    /// mehreren Tools verwendet wird (find_symbol, find_references, get_impact,
+    /// get_type_hierarchy, search_pattern). Bei 0 Compile-Fehlern wird der Original-Text
+    /// unveraendert zurueckgegeben.
+    /// </summary>
+    internal static async Task<string> BuildAggregateWarningAsync(Solution solution, CancellationToken ct)
+    {
+        var diagnosticsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(solution, ct);
+        var totalErrors = diagnosticsByFile.Values.Sum(list => list.Count);
+        return totalErrors > 0
+            ? McpCompileDiagnostics.FormatAggregateWarning(diagnosticsByFile.Count, totalErrors)
+            : string.Empty;
+    }
+
+    internal static string PrependWarning(string warning, string text)
+    {
+        return string.IsNullOrEmpty(warning) ? text : warning + "\n\n" + text;
     }
 }

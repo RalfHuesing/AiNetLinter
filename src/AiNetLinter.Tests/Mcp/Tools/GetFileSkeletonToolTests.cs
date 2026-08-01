@@ -74,4 +74,25 @@ public sealed class GetFileSkeletonToolTests
         Assert.Contains("Greet", relativeText, StringComparison.Ordinal);
         Assert.Contains("Greet", absoluteText, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFile_OutputContainsFileSpecificWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        // BrokenClassA.cs hat einen Syntax-Fehler (offene Klammer in Methodensignatur) — der
+        // datei-spezifische Warnhinweis muss erscheinen, weil das Skelett unvollstaendig ist.
+        var result = await GetFileSkeletonTool.ExecuteAsync(
+            state, "src/CompileErrorMini/BrokenClassA.cs", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        // Datei-spezifischer Hinweis (NICHT Aggregate-Format "N Dateien mit Compile-Fehlern").
+        Assert.Contains("Diese Datei hat", text, StringComparison.Ordinal);
+        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+        // Diagnostics-IDs (CS1513 etc.) koennen im datei-spezifischen Format vorkommen.
+        Assert.Matches(@"CS\d{4}", text);
+    }
 }

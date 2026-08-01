@@ -37,4 +37,30 @@ public sealed class McpToolResultsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Equal("Hallo", textContent.Text);
     }
+
+    [Fact]
+    public void WarningsSection_ReturnsWarningTextUnchanged_ForConcatenationByTool()
+    {
+        // EPIC-06-Aggregat-Helper: liefert den Hint-Text unveraendert zurueck, damit der
+        // Aufrufer ihn vor den eigentlichen Output konkatenieren kann. Kein CallToolResult
+        // bewusst — der Tool-Output wird zu einem einzigen Text-Content-Block zusammengefuehrt
+        // (eine Code-Stelle, ein Format, kein Multi-Block-Result-Building in jedem Tool).
+        var warning = "Hinweis: 3 Dateien mit Compile-Fehlern";
+        var result = McpToolResults.WarningsSection(warning);
+
+        Assert.Equal(warning, result);
+        // Symbolischer A3-Schutz: ohne diese Methode wuerde der Aufruf nicht kompilieren,
+        // daher ist die Kompilierbarkeit selbst der Nachweis, dass der Test ohne Implementation rot wird.
+    }
+
+    [Fact]
+    public void CompilationError_ReturnsErrorWithWorkspaceDiagnosticCode()
+    {
+        var result = McpToolResults.CompilationError("Compile-Fehler blockieren Aufloesung", context: "BrokenClassA");
+
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("WORKSPACE_DIAGNOSTIC", textContent.Text);
+        Assert.Contains("BrokenClassA", textContent.Text);
+    }
 }

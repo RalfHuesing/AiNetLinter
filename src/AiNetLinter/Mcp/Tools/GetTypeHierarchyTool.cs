@@ -33,6 +33,7 @@ internal static class GetTypeHierarchyTool
         }
 
         var text = await GetTypeHierarchyFormatter.BuildHierarchyTextAsync(type, solution, ct);
-        return McpToolResults.Text(text);
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
     }
 }

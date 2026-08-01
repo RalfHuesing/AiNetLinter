@@ -123,4 +123,19 @@ public sealed class GetTypeHierarchyToolTests
         Assert.Contains("IDisposable", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Keine Interfaces.", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ValidClassA", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
 }

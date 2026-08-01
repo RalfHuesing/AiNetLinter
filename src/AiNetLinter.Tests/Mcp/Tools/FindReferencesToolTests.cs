@@ -111,4 +111,21 @@ public sealed class FindReferencesToolTests
         Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern verfeinern oder maxResults erhöhen", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        // ValidClassA.DoWork existiert in der CompileErrorMini-Fixture ohne Aufrufstellen — daher
+        // greift der "Keine Aufrufstellen"-Pfad. Der Aggregate-Warnhinweis muss trotzdem davor stehen.
+        var result = await FindReferencesTool.ExecuteAsync(state, "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
 }

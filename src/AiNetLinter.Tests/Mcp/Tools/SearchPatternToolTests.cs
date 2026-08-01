@@ -180,4 +180,21 @@ public sealed class SearchPatternToolTests
         Assert.DoesNotContain("gitRef", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(catalog);
+
+        // "ValidClass" matcht in den 3 ValidClass-Dateien — Aggregate-Warnhinweis muss davor stehen.
+        var result = await SearchPatternTool.ExecuteAsync(
+            state, pattern: "ValidClass", isRegex: false, maxResults: 50, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
 }

@@ -63,6 +63,7 @@ internal static class SearchPatternTool
                 hint: "Pruefe pattern auf gueltige Regex-Syntax.");
         }
 
-        return McpToolResults.Text(text);
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
     }
 }

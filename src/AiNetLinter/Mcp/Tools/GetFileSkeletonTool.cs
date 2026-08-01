@@ -32,12 +32,14 @@ internal static class GetFileSkeletonTool
 
         var args = new LinterArgs { TargetPath = "", Verbose = false };
         var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document, solutionDir, args, ct);
-        if (types.Count == 0)
-        {
-            return McpToolResults.Text($"Keine Typen gefunden in '{filePath}'");
-        }
 
-        var markdown = SkeletonMarkdownRenderer.Render(types, filePath, System.DateTimeOffset.Now);
-        return McpToolResults.Text(markdown);
+        var diagnosticsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(solution, ct);
+        var fileWarning = McpCompileDiagnostics.FormatFileWarning(
+            diagnosticsByFile.GetValueOrDefault(absolutePath, []));
+        var markdown = types.Count == 0
+            ? $"Keine Typen gefunden in '{filePath}'"
+            : SkeletonMarkdownRenderer.Render(types, filePath, System.DateTimeOffset.Now);
+        return McpToolResults.Text(
+            string.IsNullOrEmpty(fileWarning) ? markdown : fileWarning + "\n\n" + markdown);
     }
 }
