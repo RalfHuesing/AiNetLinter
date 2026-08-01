@@ -13,6 +13,7 @@ namespace AiNetLinter.Tests.Commands;
 /// Tests für <see cref="PlaybookCheckCommand"/>.
 /// </summary>
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class PlaybookCheckCommandTests
 {
     [Fact]

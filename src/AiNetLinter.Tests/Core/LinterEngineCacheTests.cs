@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.IO;
 using System.Linq;
@@ -14,7 +14,6 @@ using AiNetLinter.Cache;
 
 namespace AiNetLinter.Tests.Core;
 
-[Collection("ConsoleTestCollection")]
 public sealed class LinterEngineCacheTests : IDisposable
 {
     private readonly string _tempDir;

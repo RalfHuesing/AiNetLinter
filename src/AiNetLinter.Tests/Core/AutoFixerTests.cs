@@ -12,7 +12,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core;
 
 // @covers LinterAutoFixer
 

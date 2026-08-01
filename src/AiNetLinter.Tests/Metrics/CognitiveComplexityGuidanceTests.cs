@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Metrics;
 
 /// <summary>
 /// Prüft, dass CognitiveComplexityGuidance.Build unterschiedliche Guidance liefert

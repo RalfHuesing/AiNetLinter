@@ -6,6 +6,7 @@ namespace AiNetLinter.Tests.Cli;
 
 // @covers LinterArgs
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class CliIntegrationTests
 {
     [Fact]

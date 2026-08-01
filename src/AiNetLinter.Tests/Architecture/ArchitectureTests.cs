@@ -1,10 +1,10 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Architecture;
 
 public sealed class ArchitectureTests
 {
@@ -22,7 +22,9 @@ public sealed class ArchitectureTests
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
-                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceExplicitStateImmutability = false,                
+                PreventContextDependentOverloads = false,                
+                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig

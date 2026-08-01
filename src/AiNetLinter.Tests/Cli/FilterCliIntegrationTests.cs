@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Cli;
 // @covers SkeletonSyntaxWalker
 // @covers SkeletonMapBuilder
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class FilterCliIntegrationTests
 {
     private readonly string _rootDir;

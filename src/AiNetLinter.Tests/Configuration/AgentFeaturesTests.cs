@@ -1,4 +1,4 @@
-﻿using AiNetLinter.Configuration;
+using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
@@ -7,7 +7,7 @@ using AiNetLinter.Suppression;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Configuration;
 
 // @covers TestCoverageResolver
 // @covers TestCoverageCollector

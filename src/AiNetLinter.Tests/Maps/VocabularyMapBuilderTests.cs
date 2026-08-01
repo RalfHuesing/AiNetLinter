@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 using AiNetLinter.Maps;
+using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps;
 
@@ -72,7 +73,7 @@ public sealed class VocabularyMapBuilderTests : IDisposable
             ("B.cs", "internal sealed class BarDetector {}"));
         var console = new TestLintConsole();
         VocabularyMapBuilder.Build(_tempDir, console);
-        Assert.Contains("Gemischte Patterns", console.Output);
+        Assert.Contains("Gemischte Patterns", console.OutputText);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -6,7 +6,7 @@ using AiNetLinter.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core;
 
 public sealed class MaxPartialClassFilesTests
 {

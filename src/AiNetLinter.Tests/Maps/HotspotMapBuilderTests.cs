@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 using AiNetLinter.Maps;
+using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps;
 
@@ -45,7 +46,7 @@ public sealed class HotspotMapBuilderTests : IDisposable
         CreateTempFiles(("Small.cs", "namespace Foo;"));
         var console = new TestLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
-        Assert.Contains("grünen Bereich", console.Output);
+        Assert.Contains("grünen Bereich", console.OutputText);
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public sealed class HotspotMapBuilderTests : IDisposable
         CreateTempFiles(("Critical.cs", linesContent));
         var console = new TestLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
-        Assert.Contains("Kritische Dateien", console.Output);
-        Assert.Contains("Critical.cs", console.Output);
+        Assert.Contains("Kritische Dateien", console.OutputText);
+        Assert.Contains("Critical.cs", console.OutputText);
     }
 
     [Fact]
@@ -68,8 +69,8 @@ public sealed class HotspotMapBuilderTests : IDisposable
         CreateTempFiles(("Warning.cs", linesContent));
         var console = new TestLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
-        Assert.Contains("Warnungs-Dateien", console.Output);
-        Assert.Contains("Warning.cs", console.Output);
+        Assert.Contains("Warnungs-Dateien", console.OutputText);
+        Assert.Contains("Warning.cs", console.OutputText);
     }
 
 }

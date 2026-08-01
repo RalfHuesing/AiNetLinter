@@ -5,7 +5,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Cli;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core;
 
 public sealed class LinterAnalyzerTests
 {

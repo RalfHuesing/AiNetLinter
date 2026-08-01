@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 // @covers ComplexityChecker
 using Xunit;
@@ -11,8 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MaxSwitchArmsTests
 {
     private static SemanticModel CreateSemanticModel(string source)

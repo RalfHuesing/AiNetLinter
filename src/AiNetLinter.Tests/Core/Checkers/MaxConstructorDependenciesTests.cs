@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Xunit;
 using Microsoft.CodeAnalysis;
@@ -8,8 +8,9 @@ using AiNetLinter.Core;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MaxConstructorDependenciesTests
 {
     private static Config CreateConfig(int maxDeps, string[]? ignorePrefixes = null, string[]? exemptSuffixes = null)

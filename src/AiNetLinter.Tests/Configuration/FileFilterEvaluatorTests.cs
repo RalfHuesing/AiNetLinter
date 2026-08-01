@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Configuration;
 
 public sealed class FileFilterEvaluatorTests
 {

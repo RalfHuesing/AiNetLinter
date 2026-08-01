@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 using AiNetLinter.Maps;
+using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps;
 
@@ -68,7 +69,7 @@ public sealed class StructureMapBuilderTests : IDisposable
         CreateTempFiles(("BigClass.cs", linesContent));
         var console = new TestLintConsole();
         StructureMapBuilder.Build(_tempDir, 500, console);
-        Assert.Contains("⚠ Warnung", console.Output);
+        Assert.Contains("⚠ Warnung", console.OutputText);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public sealed class StructureMapBuilderTests : IDisposable
         CreateTempFiles(("CriticalClass.cs", linesContent));
         var console = new TestLintConsole();
         StructureMapBuilder.Build(_tempDir, 500, console);
-        Assert.Contains("🔴 Kritisch", console.Output);
+        Assert.Contains("🔴 Kritisch", console.OutputText);
     }
 
 }

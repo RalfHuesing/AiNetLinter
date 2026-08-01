@@ -1,7 +1,7 @@
 #nullable enable
 
 using AiNetLinter.Commands;
-using AiNetLinter.Tests.Maps;
+using AiNetLinter.Tests.Output;
 using Xunit;
 
 namespace AiNetLinter.Tests.Evals;
@@ -13,8 +13,8 @@ public sealed class ListEvalsCommandTests
     {
         var console = new TestLintConsole();
         ListEvalsCommand.Run(console);
-        Assert.Contains("naming-drift", console.Output);
-        Assert.Contains("architecture-intent", console.Output);
+        Assert.Contains("naming-drift", console.OutputText);
+        Assert.Contains("architecture-intent", console.OutputText);
     }
 
     [Fact]

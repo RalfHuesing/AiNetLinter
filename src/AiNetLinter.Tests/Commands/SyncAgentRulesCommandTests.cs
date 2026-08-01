@@ -15,6 +15,7 @@ namespace AiNetLinter.Tests.Commands;
 /// Tests für <see cref="SyncAgentRulesCommand"/>.
 /// </summary>
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class SyncAgentRulesCommandTests
 {
     [Fact]

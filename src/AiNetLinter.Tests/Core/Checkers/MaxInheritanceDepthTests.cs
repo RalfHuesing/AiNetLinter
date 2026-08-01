@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -6,8 +6,9 @@ using AiNetLinter.Core;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MaxInheritanceDepthTests
 {
     private static Config CreateDefaultConfig()

@@ -1,10 +1,10 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core;
 
 public sealed class LinterEngineTests
 {

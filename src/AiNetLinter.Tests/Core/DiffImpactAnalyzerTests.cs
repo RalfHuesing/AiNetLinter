@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using AiNetLinter.Core;
 using Xunit;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core;
 
 // @covers DiffImpactAnalyzer
 

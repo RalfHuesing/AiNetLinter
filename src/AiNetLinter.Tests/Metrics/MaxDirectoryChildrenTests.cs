@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
@@ -6,7 +6,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Metrics;
 
 public sealed class MaxDirectoryChildrenTests : IDisposable
 {

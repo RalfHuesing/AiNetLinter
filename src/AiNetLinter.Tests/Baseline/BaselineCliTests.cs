@@ -6,6 +6,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Baseline;
 
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class BaselineCliTests
 {
     [Fact]

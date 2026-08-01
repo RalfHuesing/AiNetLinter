@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.IO;
@@ -14,6 +14,7 @@ namespace AiNetLinter.Tests.Commands;
 /// Tests für <see cref="AuditCommand"/>.
 /// </summary>
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class AuditCommandTests
 {
     [Fact]

@@ -5,11 +5,10 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Maps.Skeleton;
-using AiNetLinter.Tests.Maps;
+using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps.Skeleton;
 
-[Collection("ConsoleTestCollection")]
 public sealed class SkeletonMapBuilderTests
 {
     [Fact]
@@ -28,7 +27,7 @@ public sealed class SkeletonMapBuilderTests
         var result = await SkeletonMapBuilder.BuildAsync(slnPath, config, console, args);
 
         Assert.Equal(0, result);
-        var output = console.Output;
+        var output = console.OutputText;
         Assert.Contains("# AiNetLinter — Skeleton Map", output);
         Assert.Contains("```csharp", output);
     }

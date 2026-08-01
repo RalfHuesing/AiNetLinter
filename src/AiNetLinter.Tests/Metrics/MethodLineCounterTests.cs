@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -6,7 +6,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Metrics;
 
 public sealed class MethodLineCounterTests
 {

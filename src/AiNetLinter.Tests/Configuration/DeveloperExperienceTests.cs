@@ -14,7 +14,7 @@ using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Configuration;
 
 // @covers RepoPlaybookGenerator
 // @covers PlaybookSyntaxWalker

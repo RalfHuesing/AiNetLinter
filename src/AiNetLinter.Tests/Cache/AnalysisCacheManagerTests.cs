@@ -7,32 +7,15 @@ using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Cache;
 
+using AiNetLinter.Tests.Fixtures;
+
 namespace AiNetLinter.Tests.Cache;
 
 public sealed class AnalysisCacheManagerTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cachetests-");
 
-    public AnalysisCacheManagerTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ainetlinter-cachetests-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
-        }
-        catch (Exception ignored)
-        {
-            System.Diagnostics.Debug.WriteLine($"Cleanup failed: {ignored.Message}");
-        }
-    }
+    public void Dispose() => _tempDir.Dispose();
 
     [Fact]
     public void CacheManager_LoadAndSave_WorksCorrectly()

@@ -3,9 +3,10 @@ using System.CommandLine;
 using AiNetLinter;
 using AiNetLinter.Cli;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Cli;
 
 [Collection("ConsoleTestCollection")]
+[Trait("Category", "Integration")]
 public sealed class ProgramTests
 {
     [Fact]

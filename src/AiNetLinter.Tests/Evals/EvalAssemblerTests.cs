@@ -5,19 +5,19 @@ using System.IO;
 using AiNetLinter.Evals;
 using Xunit;
 
+using AiNetLinter.Tests.Fixtures;
+
 namespace AiNetLinter.Tests.Evals;
 
-[Collection("ConsoleTestCollection")]
 public sealed class EvalAssemblerTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir;
     private readonly EvalDefinition _namingDriftEval;
     private readonly EvalDefinition _architectureEval;
 
     public EvalAssemblerTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AiNetLinter_EvalAssemblerTests_" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = TestTempDirectory.Create("AiNetLinter_EvalAssemblerTests_");
 
         // Erstelle eine Dummy-.cs-Datei, damit der Vocabulary/Structure Map Builder etwas findet
         var dummyFile = Path.Combine(_tempDir, "FooChecker.cs");
@@ -29,13 +29,7 @@ public sealed class EvalAssemblerTests : IDisposable
             ?? throw new InvalidOperationException("architecture-intent not found");
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
-            Directory.Delete(_tempDir, recursive: true);
-        }
-    }
+    public void Dispose() => _tempDir.Dispose();
 
     [Fact]
     public void Assemble_ReplacesGeneratedAtPlaceholder()

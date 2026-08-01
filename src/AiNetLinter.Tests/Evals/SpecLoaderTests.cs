@@ -5,19 +5,20 @@ using System.IO;
 using AiNetLinter.Evals;
 using Xunit;
 
+using AiNetLinter.Tests.Fixtures;
+
 namespace AiNetLinter.Tests.Evals;
 
 public sealed class SpecLoaderTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir;
     private readonly string _validFile;
     private readonly string _fileA;
     private readonly string _fileB;
 
     public SpecLoaderTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AiNetLinter_SpecLoaderTests_" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = TestTempDirectory.Create("AiNetLinter_SpecLoaderTests_");
 
         _validFile = Path.Combine(_tempDir, "valid.md");
         File.WriteAllText(_validFile, "valid content");
@@ -29,13 +30,7 @@ public sealed class SpecLoaderTests : IDisposable
         File.WriteAllText(_fileB, "content-b");
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
-            Directory.Delete(_tempDir, recursive: true);
-        }
-    }
+    public void Dispose() => _tempDir.Dispose();
 
     [Fact]
     public void Load_EmptyList_ReturnsFallbackText()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -7,9 +7,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 // @covers LinterAnalyzer
+[Trait("Category", "Unit")]
 public sealed class NamespaceDirectoryMappingTests
 {
     private static (SyntaxTree, SemanticModel) GetSemanticContext(string source)
