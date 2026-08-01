@@ -92,7 +92,7 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 20 | 20 |
+| `max_aufrufe` | 40 | 21 | 19 |
 | `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
@@ -117,6 +117,8 @@ Count gegen Coder.
 - 1× Planer für 006 (EPIC-06 Robustheit)
 - 1× Coder für 006 (Commit `de47034`, 1127/1127 grün, 13 neue Tests, A3 dokumentiert)
 - 1× Kritiker für 006 (Verdict: `approved`, 0/1/5, **TD-015/016 als Vorschläge** — 1 MAJOR Dead Code, aber kein `issues` weil 8/9 Tools alternativen Pfad nutzen)
+- 1× Coder für 007 (Commits `49feb65`+`3b29d72`+`bb0544d`+`acb8ee4`, 9 neue Tests in 6 Dateien + TD-003 strukturell gefixt + TD-015 inline gelöst + TD-016 **teil**geschlossen)
+- **0× Kritiker für 007** — User-Stopp bevor Review gestartet werden konnte (siehe 007-Block unten).
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -446,3 +448,117 @@ in dieser Session ab dem 004-Planer-Aufruf.
      Documents-Verzeichnis-Sweep (neu/gelöschte Dateien),
      `ILintConsole` für MCP (stdout-Schutz).
   Konkrete Wahl trifft der Planer JIT.
+
+---
+
+## ⚠️ SESSION-STOPP (2026-08-02, 00:25)
+
+**Stopp-Grund:** User-Abbruch ("warte bis der coder fertig ist dann
+stoppen wir alles"). Coder für Einheit 007 ist erfolgreich
+durchgelaufen, danach wurde der Workflow auf User-Wunsch gestoppt —
+**kein Kritiker-Aufruf, kein Volllauf-`dotnet test`**.
+
+### Stand bei Stopp
+
+- **Build:** grün, 0 Warnungen (Coder-Bericht).
+- **Tests:** 80/80 Unit-Tests grün (Coder-Bericht, vor 007: 72).
+  Zusätzlich 12/12 gezielter E2E-Slice auf alle 007-neuen Tests
+  grün (Coder-Bericht). **Volllauf `dotnet test AiNetLinter.slnx`
+  wurde NICHT durchgeführt** — laut `AGENTS.md` §2 Pflicht vor
+  Task-Beendigung, also formaler Stand: **nicht abschließend
+  verifiziert**. Gezielter Slice deckt aber alle neuen Tests ab.
+- **Working tree:** clean, alle 007-Änderungen lokal committed
+  (kein Push per A4).
+- **4 Commits lokal** (Reihenfolge):
+  - `49feb65` `fix(baseline): sourcefilecatalog registermsbuild thread-safe (TD-003)`
+  - `3b29d72` `feat(tests): EPIC-07 tests-ausbau (6 dod-bereiche abgesichert)`
+  - `bb0544d` `chore(task): unit 007 result`
+  - `acb8ee4` `chore(task): unit 007 result, commit-hashes ergaenzt`
+- **Commit-Disziplin:** Abweichung vom Plan (2 geplante Commits → 4
+  tatsächliche, weil result.md und Hash-Ergänzung als eigene Commits
+  statt im Test-Commit mitgenommen). Inhaltlich unkritisch, formal
+  ein bisschen zerfasert. Nächste Session sollte das bei der
+  Bewertung berücksichtigen.
+- **TD-Status nach 007:**
+  - **TD-003** — **geschlossen** (strukturell gefixt, Lock +
+    Check-Lock-Check + 3 Tests in
+    `SourceFileCatalogRegisterMSBuildTests.cs` mit A3 via
+    Reflection).
+  - **TD-015** — **geschlossen** (WarningsSection-Methode +
+    XML-Doc + tautologischer Test entfernt.
+    `McpToolResults.cs` 134 → 122 Z.).
+  - **TD-016** — **TEILGESCHLOSSEN**: Commit `6c872e4` hat nur
+    `BaselineMiniFixtureWorkspace` und `SymbolGraphMiniFixtureWorkspace`
+    auf `FixtureWorkspaceBase` umgestellt. `CompileErrorMiniFixtureWorkspace`
+    und `GitImpactMiniFixtureWorkspace` enthalten weiterhin die
+    duplizierten `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`-
+    Methoden. Coder hat das transparent in `result.md` und
+    `tech-debt.md` (TD-016-Teilschluss-Anmerkung) dokumentiert und
+    Folge-Refactor als **TD-016a** für künftigen Cycle empfohlen.
+  - Offene TD-Einträge jetzt: TD-001, TD-002, TD-003✅, TD-004,
+    TD-005, TD-006, TD-007, TD-008, TD-009, TD-010, TD-011, TD-012✅,
+    TD-013✅, TD-014, TD-015✅, TD-016(teil)+TD-016a neu — exakte
+    Zählung in `tech-debt.md`-Index prüfen.
+- **Plan-Abweichung:** `CliBatchRegressionTests` testet Exit-Code 1
+  (nicht 0 wie im Plan angedeutet) — der Plan hatte einen
+  inneren Widerspruch ("Exit-Code 0" + "ViolationTrigger im
+  Output"). Coder hat das korrekt zu Exit-Code 1 + ViolationTrigger
+  aufgelöst und in `result.md` dokumentiert. **Muss vom Kritiker
+  in der nächsten Session bestätigt werden**.
+
+### Nächste Aktion (für nächste Session)
+
+1. **Prüfen, ob die 4 Commits den Erwartungen entsprechen**
+   (ggf. squashen oder fehlende Struktur ergänzen — nach
+   `AGENTS.md` §2 ist `dotnet test` Pflicht).
+2. **Volllauf `dotnet test AiNetLinter.slnx --no-build`**
+   ausführen — wenn grün, ist EPIC-07 formal verifiziert.
+   Bei rotem Test: `McpServerCommand*Tests.cs` evtl. von den
+   neuen E2E-Tests beeinflusst (selbe `[Collection]`-Race-
+   Risiken trotz TD-003-Fix, A3 ist verifiziert aber Last noch
+   nicht).
+3. **Kritiker-Aufruf für 007** (war zum Stopp-Zeitpunkt
+   ausstehend) — Verdict zu 9 neuen Tests, 4 Commits, 2
+   TD-Schließungen (TD-003 + TD-015) + 1 TD-Teilschluss (TD-016)
+   + 1 Plan-Abweichung (CliBatchRegression Exit-Code).
+4. **TD-016a-Eintrag in `tech-debt.md`** ergänzen, falls
+   bestätigt wird, dass CompileErrorMini- und GitImpactMini-
+   Workspace noch die duplizierten Helper tragen
+   (Coder-Bericht prüfen, dann Index-Zeile hinzufügen).
+5. **Push der 4 Commits** nach erfolgreichem Kritiker-`approved`
+   (per A4 erlaubt: Push ja, Amend nein).
+6. **Nächste Einheit (008):** Planer-Aufruf. Kandidaten:
+   EPIC-08 (Doku: `Docs/agent-api.md`, `Docs/integration.md`,
+   `Docs/ROADMAP.md`, `README.md`) — letzte offene P0-Säule
+   nach EPIC-06+EPIC-07. Oder die P0/P1-Rest-Erweiterungen
+   (Kaltstart, Auto-Discovery, Staleness-Sweep-`mtime`,
+   `--mcp-log`, Verzeichnis-Sweep, `ILintConsole`). Planer
+   entscheidet JIT.
+
+### Tech-Debt-Stand zum Mitnehmen (Kurzfassung)
+
+- Offene Punkte struktureller Natur: TD-001 (ungenutzte
+  transitive Dep), TD-002 (Subprozess-E2E), TD-004
+  (Footprint-Druck Registrar), TD-005 (Server-Param-Pull-in),
+  TD-006 (Dateiscan-Duplikation), TD-007 (5-Param-Methode
+  in McpCodeGraphServer), TD-008 (`PathOverrides`-Pragmatik
+  vs. `ILinterEngineConfig`-Refactor), TD-009 (5/5
+  Konstruktor-Deps am Limit), TD-010 (SearchPatternTool
+  Footprint knapp), TD-011 (5. Registrar-Klasse beim nächsten
+  Symbolgraph-Tool zwingend), TD-014 (McpServerOptionsFactory
+  knapp).
+- Plus **TD-016a** neu (2 von 4 Fixtures noch nicht refaktoriert).
+- Plus die P0/P1-Rest-Erweiterungen aus `konzept.md` Z. 207-324
+  (alle noch offen).
+- Plus `get_symbol_body` + stabile Symbol-IDs (P2-Backlog
+  aus `tasks/codegraph-mcp-next/Konzept.md`, explizit
+  außerhalb dieses Tasks).
+
+### Resümee
+
+Coder hat die Aufgabe formal sauber umgesetzt (3/4 Commits sind
+geplant, der 4. ist ein Hash-Fixup; alle A3-Nachweise dokumentiert;
+alle 6 EPIC-07-DoD-Bereiche mit jeweils mindestens 1 Test
+abgesichert; 2 TD-Einträge sauber geschlossen, 1 teilsgeschlossen
+mit dokumentierter Folge-Aufgabe). Was fehlt für den formalen
+Abschluss: **Volllauf-Verifikation + Kritiker-Review + Push**.
