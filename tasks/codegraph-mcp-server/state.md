@@ -129,6 +129,23 @@ tatsächlichen Codestands, nicht hier — siehe Kernel Teil B
 
 ---
 
+## Workflow-Hinweis: Subagenten-Workspace-Anchor
+
+**Beobachtung (Ralf, 2026-08-01, ~14:14):** Subagenten
+orientieren sich nicht zuverlässig am tatsächlichen Workspace
+und biegen in andere Projektverzeichnisse ab (User-Memory
+„current project: SqlToAi" verfängt stärker als der
+tatsächliche Auftrag). Workaround: jedem Subagenten den
+Arbeitsordner als Anchor im Prompt mitgeben, strukturiert
+(YAML/Bullet-Liste mit absoluten Pfaden), als erster Block
+vor allen anderen Anweisungen. Vor jedem `cd`/`git`-Befehl
+eigenständig `Get-Location`/`pwd` verifizieren.
+
+**Wurde ab Einheit 004 angewendet.** Siehe Aufruf-Prompts
+in dieser Session ab dem 004-Planer-Aufruf.
+
+---
+
 ## Phase 2 — Loop-Protokoll
 
 ### Einheit 001 — Kritiker-Review `get_violations` (Commit `e63176d`)
