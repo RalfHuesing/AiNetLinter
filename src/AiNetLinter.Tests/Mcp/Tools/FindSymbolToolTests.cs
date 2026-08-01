@@ -49,12 +49,61 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAsync_NoMatch_ReturnsNoResultsText()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
 
         var result = await FindSymbolTool.FindMatchesAsync(catalog.Solution, "DoesNotExistXyz", kind: null, CancellationToken.None);
 
         Assert.Contains("Keine Treffer fuer 'DoesNotExistXyz'", result);
+    }
+
+    [Fact]
+    public async Task FindMatchesAsync_NoCsMatchButNonCsHit_ReturnsMissHintWithFileList()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+
+        var result = await FindSymbolTool.FindMatchesAsync(
+            catalog.Solution, "userService", kind: null, CancellationToken.None);
+
+        // C#-Leermenge-Bestaetigung.
+        Assert.Contains("Keine Treffer fuer 'userService'", result);
+        // Miss-Hint-Markierung.
+        Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);
+        // Pfad-Liste enthaelt die Fixture-Datei.
+        Assert.Contains("site.js", result);
+        // Fallback-Verweis: search_pattern ist der naechste Schritt.
+        Assert.Contains("search_pattern", result);
+    }
+
+    [Fact]
+    public async Task FindMatchesAsync_NoCsMatchAndNoNonCsHit_ReturnsPlainNoMatchText()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+
+        var result = await FindSymbolTool.FindMatchesAsync(
+            catalog.Solution, "DoesNotExistXyzBlub123", kind: null, CancellationToken.None);
+
+        // Plain-NoMatch-Text (kein Miss-Hint-Pfad).
+        Assert.Contains("Keine Treffer fuer 'DoesNotExistXyzBlub123'", result);
+        // Explizit kein Miss-Hint: das Pattern kommt in keiner Nicht-C#-Datei vor.
+        Assert.DoesNotContain("Hinweis: kein C#-Symbol", result);
+    }
+
+    [Fact]
+    public async Task FindMatchesAsync_KindFilterMissHit_StillFires()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+
+        var result = await FindSymbolTool.FindMatchesAsync(
+            catalog.Solution, "userService", kind: "class", CancellationToken.None);
+
+        // Kind-Filter aendert nichts an der Non-C#-Suche — Miss-Hint feuert trotzdem.
+        Assert.Contains("Kind-Filter: class", result);
+        Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);
+        Assert.Contains("site.js", result);
     }
 
     [Fact]

@@ -51,7 +51,18 @@ internal static class FindSymbolTool
         if (filtered.Count == 0)
         {
             var kindSuffix = kind is null ? "" : $" (Kind-Filter: {kind})";
-            return $"Keine Treffer fuer '{namePattern}'{kindSuffix}";
+            var baseText = $"Keine Treffer fuer '{namePattern}'{kindSuffix}";
+            var missHits = SearchPatternScanner.GetFilesWithHits(
+                solution, namePattern, isRegex: false);
+            if (missHits.Count == 0)
+            {
+                return baseText;
+            }
+            // Miss-Hint: nennt nur die Dateipfade, keine Inhalte (Konzept Z. 169-174).
+            // Forward-Slash-Pfade sind konsistent mit SearchPatternScanner.
+            var fileList = string.Join(", ", missHits);
+            return $"{baseText}\nHinweis: kein C#-Symbol, aber Textfund in {fileList} " +
+                $"(nicht Teil des Symbolgraphs — fuer Inhalte search_pattern nutzen).";
         }
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";

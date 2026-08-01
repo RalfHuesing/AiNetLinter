@@ -29,7 +29,8 @@ internal static class SymbolGraphToolRegistrations
             {
                 Name = "find_symbol",
                 Description = "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
-                    "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
+                    "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
+                    "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen.",
             }));
 
         tools.Add(McpServerTool.Create(
