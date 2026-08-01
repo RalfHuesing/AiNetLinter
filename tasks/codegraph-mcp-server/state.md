@@ -92,13 +92,16 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 2 | 38 |
+| `max_aufrufe` | 40 | 5 | 35 |
 | `max_fix_pro_einheit` | 3 | 0 | 3 |
 | `max_fix_gesamt` | 12 | 0 | 12 |
 
 **Aufruf-Log:**
 - 1× Planer für 001 (Kritiker-Review `get_violations`)
-- 1× Kritiker für 001 (Verdict: `approved`, 0/0/5, 1 neuer Tech-Debt-Vorschlag)
+- 1× Kritiker für 001 (Verdict: `approved`, 0/0/5, 1 TD-Vorschlag → TD-009 übernommen)
+- 1× Planer für 002 (`search_pattern`-Tool, inkl. P0/P1)
+- 1× Coder für 002 (Commit `28e6e58`, 1097/1097 grün, A3 für 10 Tests dokumentiert)
+- 1× Kritiker für 002 (Verdict: `issues`, 0/1/6, 1 MAJOR + 2 TD-Vorschläge)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -149,3 +152,36 @@ tatsächlichen Codestands, nicht hier — siehe Kernel Teil B
   (EPIC-04, 4/4), EPIC-05 (Scope-Kommunikation + Miss-Hint),
   EPIC-06 (Robustheit), EPIC-07 (Tests), EPIC-08 (Doku), dann die
   P0/P1-Erweiterungen. Konkrete Wahl trifft der Planer JIT.
+
+### Einheit 002 — `search_pattern` Tool (Commit `28e6e58`)
+
+- **Plan:** `units/002/plan.md` (Commit `286233d`) — 4 Vor-der-
+  Planung-Checks, 6 offene Fragen an Coder, A3-Pflicht pro Test.
+- **Result:** `units/002/result.md` (Commit `91278ea`) — 4 neue
+  Dateien + 2 Modifikationen, 9 neue Tests (8 Unit + 1 E2E) +
+  1 modifizierter Tool-Count-Test, alle mit A3-Fehlschlag-Nachweis.
+  Build: 0 Warnungen. Tests: 1097/1097 grün (vorher 1088, +9).
+  Footprint TD-004 widerlegt: keine 4. Registrar-Klasse.
+  `SearchPatternTool` 2482/2500 (18 Z. Puffer knapp), Coder
+  dokumentiert.
+- **Review:** `units/002/review.md` (siehe aktueller Commit) —
+  Verdict **`issues`**, 0 CRITICAL, **1 MAJOR** (M-1: falscher
+  `McpToolResults.InvalidArgument`-Helper an Z. 40 liefert
+  irreführenden Hint für `search_pattern`, inkonsistent mit der
+  korrekten Nutzung an Z. 57-60; Test 8 prüft nur Existenz von
+  `INVALID_ARGUMENT`, nicht Hint-Korrektheit — deshalb A3-Pfad
+  unentdeckt), 6 MINOR.
+- **Aufrufe:** Planer (1) + Coder (1) + Kritiker (1) = 3 für 002,
+  plus 2 aus 001 = 5/40.
+- **Tech-Debt-Vorschläge im Review (kein direkter Edit durch
+  Orchestrator, A7/A5):**
+  - **TD-010** (mittel): `SearchPatternTool` 2482/2500 knapp,
+    künftige Tools treiben das wahrscheinlich über 2500 (vom
+    Kritiker vorgeschlagen).
+  - **TD-011** (niedrig): `SymbolGraphToolRegistrations` 2487/2500
+    knapp, 5. Registrar-Klasse beim nächsten Symbolgraph-Tool
+    wahrscheinlich (vom Kritiker vorgeschlagen).
+  - Nutzer entscheidet, ob TD-010/TD-011 in `tech-debt.md`
+    übernommen werden.
+- **Status:** **`issues`**. Fix-Runde `002/fix-01/` wird als
+  nächstes eingeleitet (Planer → Coder → Kritiker).
