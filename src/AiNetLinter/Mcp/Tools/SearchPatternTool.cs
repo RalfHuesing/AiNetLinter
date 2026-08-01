@@ -37,7 +37,10 @@ internal static class SearchPatternTool
     {
         if (string.IsNullOrEmpty(pattern))
         {
-            return McpToolResults.InvalidArgument("pattern darf nicht leer sein.");
+            return McpToolResults.Error(
+                LinterErrorCodes.InvalidArgument,
+                "pattern darf nicht leer sein.",
+                hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;

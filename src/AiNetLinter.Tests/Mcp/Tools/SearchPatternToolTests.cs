@@ -171,5 +171,13 @@ public sealed class SearchPatternToolTests
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        // M-1-Regression-Schutz: der Hint muss search_pattern-spezifisch sein, nicht der
+        // get_impact-Hartkodierung ("Entweder gitRef ODER symbolIdentifier angeben, nie beide.")
+        // aus McpToolResults.InvalidArgument. Der konkrete Hint-Wortlaut ist im Tool fixiert;
+        // diese Assertion haengt an der gleichen Formulierung wie der Code-Fix. Bei
+        // Aenderung des Hint-Wortlauts im Tool ist diese Assertion mitzuaendern.
+        Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("gitRef", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
 }
