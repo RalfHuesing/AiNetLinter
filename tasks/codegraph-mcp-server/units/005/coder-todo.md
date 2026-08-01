@@ -1,0 +1,21 @@
+# Coder-Todos für Einheit 005
+
+- [ ] **Schritt 0a** — Baseline-Build (`dotnet build AiNetLinter.slnx`) zur Verifikation
+- [ ] **Schritt 0b** — Probe-Signatur mit Default testen (FindReferences + GetImpact)
+- [ ] **Schritt 0c** — Probe-Signatur ohne Default testen (Fallback-Vorbereitung)
+- [ ] **Schritt 1** — `FindReferencesTool.cs` Trunkierung (`maxResults` + `McpTruncation.TruncateLines`)
+- [ ] **Schritt 2** — `GetImpactTool.cs` Trunkierung (Symbol-Branch + Git-Ref-Branch)
+- [ ] **Schritt 3** — `SymbolGraphToolRegistrations.cs` Delegate + Description erweitern
+- [ ] **Schritt 4** — Fixture erweitern: `Caller.cs` (`RunTwice`/`RunThrice`) + `CalculatorCaller.cs` (`RunTwice`/`RunThrice`)
+- [ ] **Schritt 5** — Plan-Abweichungen evaluieren nach Footprint-Messung
+- [ ] **Schritt 6** — Unit-Tests: `FindReferencesToolTests.cs` (2 neue) + `GetImpactToolTests.cs` (2 neue) + 7 bestehende um `maxResults: 50` ergänzen
+- [ ] **Schritt 7** — A3-Fehlschlag-Nachweis pro neuem Test (temporäres Zurückpatchen + Build/Test)
+- [ ] **Schritt 8** — E2E-Tests in neuen Dateien: `McpServerCommandFindReferencesTests.cs` + `McpServerCommandGetImpactTests.cs`
+- [ ] **Schritt 9a** — Build komplett
+- [ ] **Schritt 9b** — Targeted Re-Run
+- [ ] **Schritt 9c** — Footprint-Messung (vor und nach)
+- [ ] **Schritt 9d** — Volllauf
+- [ ] **Schritt 9e** — Self-Lint
+- [ ] **Schritt 10** — Dogfooding: `find_references` + `get_impact` (Symbol + Git-Ref) gegen `AiNetLinter.slnx`
+- [ ] **Schritt 11** — Commit (gezielt, conventional)
+- [ ] **Schritt 12** — `result.md` schreiben
