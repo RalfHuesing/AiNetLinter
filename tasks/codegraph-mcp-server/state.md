@@ -92,8 +92,8 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 11 | 29 |
-| `max_fix_pro_einheit` | 3 | 0 (in 003) | 3 |
+| `max_aufrufe` | 40 | 14 | 26 |
+| `max_fix_pro_einheit` | 3 | 0 (in 004) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
 **Aufruf-Log:**
@@ -108,6 +108,9 @@ Count gegen Coder.
 - 1× Planer für 003 (EPIC-05 Miss-Hint + Scope-Kommunikation)
 - 1× Coder für 003 (Commit `dd4b44e`, 1101/1101 grün, 4 neue Tests + 1 modifiziert, A3 dokumentiert)
 - 1× Kritiker für 003 (Verdict: `approved`, 0/0/4, Plan-Abweichung begründet, 3 TD-Vorschläge → TD-012/013/014 übernommen)
+- 1× Planer für 004 (Trunkierung in `find_symbol` + TD-012/013 inline)
+- 1× Coder für 004 (Commit `c6261ea`, 1108/1108 grün, 7 neue + 8 modifizierte Tests, A3 dokumentiert)
+- 1× Kritiker für 004 (Verdict: `approved`, 0/0/3, 3 Plan-Abweichungen begründet, **TD-012/013 geschlossen bestätigt**)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -290,4 +293,47 @@ in dieser Session ab dem 004-Planer-Aufruf.
   2. **EPIC-06** (Robustheit bei Compile-/Solution-Fehlern).
   3. **EPIC-07** (Tests-Ausbau).
   4. **EPIC-08** (Doku).
+  Konkrete Wahl trifft der Planer JIT.
+
+### Einheit 004 — Trunkierung + Scanner-Split + Miss-Hint-Trunkierung in `find_symbol`
+
+- **Plan:** `units/004/plan.md` (Commit `5950645`) — 5 Vor-der-
+  Planung-Checks, 11 Schritte, 3 vom Planer vorgegebene
+  Entscheidungen (`DescribeKind`/`FormatSymbolLocations` im
+  Tool, eigene E2E-Datei statt `McpServerCommandTests.cs`).
+- **Result:** `units/004/result.md` (Commit `72704c7`) —
+  Code-Commit `c6261ea` (`feat(mcp): find_symbol trunkierung
+  + scanner-split (TD-012, TD-013)`). 4 neue Dateien
+  (`FindSymbolScanner.cs` 94 Z., `FindSymbolScannerTests.cs`,
+  `McpServerCommandFindSymbolTests.cs`, 2 Fixture-Dateien
+  `Component.razor`+`Page.xaml`) + mehrere Modifikationen.
+  7 neue Tests + 8 modifizierte, alle mit A3. Volllauf
+  1108/1108 grün. Build 0/0.
+- **Review:** `units/004/review.md` (siehe aktueller Commit) —
+  Verdict **`approved`**, 0/0/3, 3 Plan-Abweichungen alle
+  begründet. **TD-012 + TD-013 geschlossen bestätigt.**
+- **Aufrufe:** Planer + Coder + Kritiker = 3 für 004, plus
+  11 aus 001+002+002/fix-01+003 = 14/40.
+- **Footprint:** `FindSymbolTool` 2529 → 2491 (-38 Z.,
+  Scanner-Split hat Logik rausgezogen — schöner
+  Nebeneffekt), `FindSymbolScanner` neu 94 Z.,
+  `SymbolGraphToolRegistrations` 2488 → 2490 (+2 Z.,
+  Puffer 10 Z. knapp), `McpTruncation` 44 → 70 (+26 Z.
+  für `TruncateFileList`).
+- **Tech-Debt:** TD-012 + TD-013 in `tech-debt.md` auf
+  **geschlossen** gesetzt (Status-Feld + Index-Zeile
+  aktualisiert, Body bleibt für die Historie). 14 → 12
+  offene Einträge.
+- **Status:** **`approved`**. 004 ist **komplett
+  abgeschlossen**.
+- **Nächste Einheit:** offen für Planer-Aufruf.
+  Wahrscheinlichste Kandidaten:
+  1. **005 = Trunkierungs-Einbau in `find_references` +
+     `get_impact`** (analog 004, sinnvoll weil
+     `McpTruncation` jetzt etabliert ist).
+  2. **EPIC-06** (Robustheit bei Compile-/Solution-
+     Fehlern).
+  3. **EPIC-07** (Tests-Ausbau).
+  4. **EPIC-08** (Doku — inkl. Trunkierungs-Format-Regel
+     in `Docs/agent-api.md`).
   Konkrete Wahl trifft der Planer JIT.
