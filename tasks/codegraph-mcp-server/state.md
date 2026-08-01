@@ -92,8 +92,8 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 8 | 32 |
-| `max_fix_pro_einheit` | 3 | 0 (in 002) | 3 |
+| `max_aufrufe` | 40 | 11 | 29 |
+| `max_fix_pro_einheit` | 3 | 0 (in 003) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
 **Aufruf-Log:**
@@ -105,6 +105,9 @@ Count gegen Coder.
 - 1× Planer für 002/fix-01 (M-1 Hint-Bug)
 - 1× Coder für 002/fix-01 (Commit `bd9e6fd`, 1097/1097 grün, A3 dokumentiert)
 - 1× Kritiker für 002/fix-01 (Verdict: `approved`, 0/0/0, keine echten Befunde)
+- 1× Planer für 003 (EPIC-05 Miss-Hint + Scope-Kommunikation)
+- 1× Coder für 003 (Commit `dd4b44e`, 1101/1101 grün, 4 neue Tests + 1 modifiziert, A3 dokumentiert)
+- 1× Kritiker für 003 (Verdict: `approved`, 0/0/4, Plan-Abweichung begründet, 3 TD-Vorschläge → TD-012/013/014 übernommen)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -227,3 +230,47 @@ tatsächlichen Codestands, nicht hier — siehe Kernel Teil B
      Z. 604-606.
   Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift",
   keine Vorauswahl).
+
+### Einheit 003 — EPIC-05 Miss-Hint + Scope-Kommunikation in `find_symbol`
+
+- **Plan:** `units/003/plan.md` (Commit `45678a8`) — 5 Vor-der-
+  Planung-Checks, 9 Schritte, 5 A3-erforderliche Tests, harte
+  Scope-Grenze. Plan-Abweichung ermöglicht: 1 neue Test-Datei
+  erlaubt.
+- **Result:** `units/003/result.md` (Commit `2c46168`) —
+  Code-Commit `dd4b44e` (`feat(mcp): find_symbol miss-hint +
+  initialize instructions`). 5 modifizierte Dateien + 1 neue
+  Test-Datei (`McpServerOptionsFactoryTests.cs`, 31 Z., aus
+  Plan-Abweichung). 4 neue Tests + 1 modifizierter, alle mit
+  A3-Fehlschlag-Nachweis. Volllauf 1101/1101 grün. Build 0/0.
+  Self-Lint OK. Dogfooding dokumentiert.
+- **Review:** `units/003/review.md` (siehe aktueller Commit) —
+  Verdict **`approved`**, 0 CRITICAL, 0 MAJOR, 4 MINOR
+  (voll-`McpServerCommandTests.cs`, pre-existing
+  `#nullable enable`-Lücke in `FindSymbolToolTests.cs`,
+  Konzept-Wortlaut vs. SDK-Property, PathOverride-Puffer).
+  Plan-Abweichung **begründet** bewertet.
+- **Aufrufe:** Planer + Coder + Kritiker = 3 für 003, plus
+  8 aus 001+002+002/fix-01 = 11/40.
+- **Tech-Debt-Vorschläge im Review (übernommen):**
+  - **TD-012** (niedrig): `FindSymbolTool` ohne Scanner-Split
+    (TD-005-Generalisierung). **Inline** beim nächsten
+    `find_symbol`-Anlass (z. B. 004 Trunkierung).
+  - **TD-013** (niedrig): `find_symbol`-Miss-Hint-Datei-Liste
+    ohne Trunkierung. **Inline** beim nächsten `find_symbol`-
+    Anlass oder Last-Fixture-Messlauf.
+  - **TD-014** (niedrig): `McpServerOptionsFactory` 2484/2500
+    (16 Z. Puffer). **Inline** beim nächsten Anlass (z. B.
+    `--mcp-log`-Flag).
+- **Status:** **`approved`**. EPIC-05 für `find_symbol`
+  abgeschlossen. Konzept Z. 604-606 (Miss-Hint-DoD) und
+  Z. 98-101 (Scope-Kommunikation) erfüllt.
+- **Nächste Einheit:** offen für Planer-Aufruf. Kandidaten:
+  1. **004 = Trunkierungs-Einbau in `find_symbol`** (analog
+     `search_pattern` in 002) — würde TD-012 (Scanner-Split)
+     und TD-013 (Miss-Hint-Trunkierung) **inline** mitnehmen
+     können (Kritiker-Vorschlag in 003).
+  2. **EPIC-06** (Robustheit bei Compile-/Solution-Fehlern).
+  3. **EPIC-07** (Tests-Ausbau).
+  4. **EPIC-08** (Doku).
+  Konkrete Wahl trifft der Planer JIT.

@@ -38,6 +38,9 @@ inhaltliche Neubewertung.
 | TD-009 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (Konstruktor) | mittel | 5/5 Parameter am `MaxConstructorDependencies`-Limit, keine Reserve für die P0/P1-`McpCodeGraphServer`-Erweiterungen aus `konzept.md`. |
 | TD-010 | `src/AiNetLinter/Mcp/Tools/SearchPatternTool.cs` (Footprint) | mittel | 2482/2500 (18 Z. Puffer) — knapp; `McpCodeGraphServer.Config`-Pull-in (~1110 Z. Configuration-Namespace) trifft das Tool beim nächsten analyse-orientierten Tool-Block, der denselben Server referenziert. Strukturelle Lösung `ILinterEngineConfig`-Interface (4-6h Refactor, in keiner Einheit bisher gescoped). Pragmatik: `PathOverrides: 2700` analog TD-008. |
 | TD-011 | `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` (Footprint) | niedrig | 2487/2500 (13 Z. Puffer) — knapp; 5. Registrar-Klasse wahrscheinlich nötig beim nächsten Symbolgraph-Tool, das dazukommt. Erkannt im `units/002/result.md` (Anhang Footprint-Messung). |
+| TD-012 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs` (kein Scanner-Split) | niedrig | 112 Z. Logik komplett im Tool, kein `FindSymbolScanner.cs` — einziges MCP-Tool ohne Scanner-Abspaltung. TD-005-Muster (dünner Dispatch + separate Scanner-Datei) bei `search_pattern`/`get_violations`/`get_hotspots` etabliert. **Nicht eigenständige Refactor-Einheit**, sondern inline beim nächsten Anlass (z. B. 004 Trunkierung in `find_symbol`). |
+| TD-013 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs:63` (Miss-Hint-Datei-Liste) | niedrig | `string.Join(", ", missHits)` ohne Trunkierung — bei Last-Fixture (500 Dateien) könnte die Hint-Zeile Hunderte Dateien auflisten. `McpTruncation` (002) ist nicht auf den Miss-Hint angewendet. **Inline** beim nächsten `find_symbol`-Anlass (Trunkierung oder Last-Fixture-Messlauf). |
+| TD-014 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (Footprint) | niedrig | 2484/2500 (16 Z. Puffer) — `ServerInstructions`-Block (+14 Z. in 003) hat die Klasse an die Grenze gebracht. Const-String sollte nicht weiter wachsen; P0/P1-Extensions (Kaltstart, `--mcp-log`, Auto-Discovery) reißen das Limit bei der nächsten Erweiterung. **Inline** beim nächsten Anlass: `McpServerOptionsBuilder` oder Init-`record` analog TD-009. |
 
 ## Einträge
 
@@ -116,4 +119,25 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` (gemessen 2487/2500, 13 Z. Puffer, Stand `28e6e58`).
 - **Befund:** Die 4. Registrar-Klasse (`AnalysisToolRegistrations`) wurde in Einheit 002 nicht nötig (TD-004-Vorhersage widerlegt), aber die Symbolgraph-Registrar-Klasse selbst ist jetzt am Limit (13 Z. Puffer). Sobald ein weiteres Symbolgraph-Tool dazukommt (z. B. `get_symbol_body` aus `konzept.md` P2-Backlog, oder eine Erweiterung an `find_symbol`/`find_references`/`get_impact`), ist eine 5. Registrar-Klasse wahrscheinlich.
 - **Vorschlag:** Beim nächsten Symbolgraph-Tool-Block die Footprints aller drei existierenden Registrar-Klassen re-messen (Planer-Pflicht-Check, siehe `units/002/plan.md` Check 4 als Vorbild) und ggf. eine 5. Registrar-Klasse einplanen.
+- **Status:** offen
+
+### TD-012 — `FindSymbolTool` ohne Scanner-Split (TD-005-Generalisierung) [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs` (112 Z. Logik, kein `FindSymbolScanner.cs`).
+- **Befund:** `find_symbol` ist das einzige MCP-Tool ohne Scanner-Abspaltung — die gesamte Logik (`ExecuteAsync` + `FindMatchesAsync` + `FilterByKind` + `FormatSymbolLocations` + `DescribeKind`) lebt im Tool. Bei `search_pattern` (002) und `get_violations` (001) wurde das TD-005-Muster (dünner Dispatch + separate Scanner-Datei) von Anfang an angewendet, bei `find_symbol` (drift-loop-approved, vor 001) wurde es ausgelassen. Das Tool hat aktuell PathOverride 2700 mit 171 Z. Puffer — also **kein** akuter Handlungsdruck. **Erkannt im Review von Einheit 003** (Kritiker-Vorschlag in `units/003/review.md` "Vorschlag 1").
+- **Vorschlag:** Beim nächsten Anlass, der `find_symbol` ohnehin anfasst (z. B. 004 Trunkierung in `find_symbol` analog `search_pattern` in 002), den Scanner-Split in derselben Einheit mitnehmen — dann kostet es ~10 Z. extra Diff, statt einer eigenständigen Refactor-Einheit. Konkret: `SearchPatternTool`-/`SearchPatternScanner`-Trennung als Vorbild.
+- **Status:** offen
+
+### TD-013 — `find_symbol`-Miss-Hint-Datei-Liste ohne Trunkierung [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs:63` (`var fileList = string.Join(", ", missHits);`).
+- **Befund:** Der Miss-Hint-Pfad hängt **alle** Treffer-Dateien kommasepariert an die Hint-Zeile. In `SymbolGraphMini` (1 Datei) und in der `AiNetLinter.slnx` (max. 3 Dateien mit dem 003-Pattern) kein Problem. Bei der Last-Fixture (500/5000 Dateien, P1-6) mit einem weitverbreiteten String-Literal könnte der Hint Hunderte Dateien auflisten — UX-Problem. `McpTruncation` (eingeführt in 002 für `search_pattern`) trunkiert den Haupt-Treffer-Output, ist aber **nicht** auf den Miss-Hint angewendet. **Erkannt im Review von Einheit 003** (Kritiker-Vorschlag "Vorschlag 2").
+- **Vorschlag:** Beim nächsten `find_symbol`-Anlass (Trunkierung TD-013-Zusammenhang oder Last-Fixture-Messlauf) `McpTruncation` auf die Miss-Hint-Liste anwenden, mit konsistenter Meta-Zeile (z. B. `"[342 Dateien mit Textfund, 10 gezeigt — search_pattern für Details]"`).
+- **Status:** offen
+
+### TD-014 — `McpServerOptionsFactory` Footprint knapp am Limit [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (gemessen 2484/2500, 16 Z. Puffer, Stand `dd4b44e`).
+- **Befund:** Der `ServerInstructions`-Block (+14 Z. in 003) hat diese Klasse an die Grenze gebracht. Der Const-String ist konzeptuell bindend (kanonische Formulierung laut Plan-Schritt 3) und sollte **nicht** weiter wachsen. Die P0/P1-Extensions aus `konzept.md` Z. 207-324 (z. B. `--mcp-log`-State, "lädt noch"-State, `rules.json`-Auto-Discovery, Staleness-Sweep-`mtime`-Kurzschluss) werden `McpServerOptionsFactory` mit hoher Wahrscheinlichkeit erneut erweitern — die nächsten 16 Z. reißen das Limit. Coder dokumentiert das in `result.md` Beobachtung 2. **Erkannt im Review von Einheit 003** (Kritiker-Vorschlag "Vorschlag 3").
+- **Vorschlag:** Vor der nächsten substanziellen Erweiterung an `McpServerOptionsFactory` (z. B. bei Einbau des `--mcp-log`-Flags aus P0/P1) eine Aufteilung prüfen — z. B. ein `McpServerOptionsBuilder`-Pattern (analog `McpServerCommand`-Aufteilung in `McpServerOptionsFactory` + Registrar-Klassen) oder ein Init-`record` (analog TD-009-Vorschlag für `McpCodeGraphServer`). **Nicht eigenständige Refactor-Einheit**, sondern **inline** beim nächsten Anlass.
 - **Status:** offen
