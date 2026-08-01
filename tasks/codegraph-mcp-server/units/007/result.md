@@ -56,7 +56,7 @@ Commit-Hash: `49feb65`
 | `src/AiNetLinter.Tests/Commands/CliBatchRegressionTests.cs` | NEU, 87 Z. | EPIC-07 (f): CLI-Batch-Modus gegen `SymbolGraphMini`-Mini-Fixture, `ViolationTrigger` als Marker |
 | `tasks/codegraph-mcp-server/tech-debt.md` | +12/−5 | TD-015 + TD-016 als geschlossen markiert (Index + Eintrag) |
 
-Commit-Hash: siehe Nächste Schritte — wird am Ende ergänzt.
+Commit-Hash: `3b29d72`
 
 ## A3-Nachweis pro Test (wortwörtlich)
 
