@@ -36,26 +36,30 @@ internal static class SymbolGraphToolRegistrations
             }));
 
         tools.Add(McpServerTool.Create(
-            (string symbolIdentifier, CancellationToken ct = default) =>
-                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, ct),
+            (string symbolIdentifier, int maxResults = 50, CancellationToken ct = default) =>
+                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "find_references",
                 Description = "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
                     "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
-                    "keine .js/.razor/.xaml/.html/.css-Dateien.",
+                    "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
+                    "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die " +
+                    "Gesamt-Trefferzahl.",
             }));
 
         tools.Add(McpServerTool.Create(
-            (string? gitRef = null, string? symbolIdentifier = null, CancellationToken ct = default) =>
-                GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, ct),
+            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, CancellationToken ct = default) =>
+                GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_impact",
                 Description = "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
                     "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
                     "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
-                    ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.",
+                    ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
+                    "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+                    "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.",
             }));
 
         tools.Add(McpServerTool.Create(

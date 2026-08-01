@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 using ModelContextProtocol.Protocol;
@@ -25,7 +26,7 @@ internal static class FindReferencesTool
     /// Symbol auf und liefert dessen Aufrufstellen als Text.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string symbolIdentifier, CancellationToken ct)
+        McpCodeGraphServer state, string symbolIdentifier, int maxResults, CancellationToken ct)
     {
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -39,7 +40,9 @@ internal static class FindReferencesTool
             return McpToolResults.Text($"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'");
         }
 
-        return McpToolResults.Text(string.Join("\n", callSites));
+        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        return McpToolResults.Text(McpTruncation.TruncateLines(
+            callSites, callSites.Count, normalizedMaxResults));
     }
 
     /// <summary>

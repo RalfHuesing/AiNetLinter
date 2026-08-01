@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -19,7 +20,7 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class GetImpactTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? gitRef, string? symbolIdentifier, CancellationToken ct)
+        McpCodeGraphServer state, string? gitRef, string? symbolIdentifier, int maxResults, CancellationToken ct)
     {
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -36,14 +37,14 @@ internal static class GetImpactTool
 
         if (hasSymbolIdentifier)
         {
-            return await ExecuteSymbolBranchAsync(solution, symbolIdentifier!, ct);
+            return await ExecuteSymbolBranchAsync(solution, symbolIdentifier!, maxResults, ct);
         }
 
-        return await ExecuteGitRefBranchAsync(solution, gitRef);
+        return await ExecuteGitRefBranchAsync(solution, gitRef, maxResults);
     }
 
     private static async Task<CallToolResult> ExecuteSymbolBranchAsync(
-        Solution solution, string symbolIdentifier, CancellationToken ct)
+        Solution solution, string symbolIdentifier, int maxResults, CancellationToken ct)
     {
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
         if (error is not null) return error;
@@ -54,10 +55,12 @@ internal static class GetImpactTool
             return McpToolResults.Text($"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'");
         }
 
-        return McpToolResults.Text(string.Join("\n", callSites));
+        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        return McpToolResults.Text(McpTruncation.TruncateLines(
+            callSites, callSites.Count, normalizedMaxResults));
     }
 
-    private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, string? gitRef)
+    private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, string? gitRef, int maxResults)
     {
         var targetPath = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
         var callSites = await DiffImpactAnalyzer.AnalyzeAsync(solution, targetPath, gitRef, verbose: false);
@@ -68,6 +71,8 @@ internal static class GetImpactTool
             return McpToolResults.Text($"Keine betroffenen Aufrufstellen gefunden fuer '{refLabel}'");
         }
 
-        return McpToolResults.Text(string.Join("\n", callSites));
+        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        return McpToolResults.Text(McpTruncation.TruncateLines(
+            callSites, callSites.Count, normalizedMaxResults));
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -15,7 +16,7 @@ public sealed class FindReferencesToolTests
     {
         var state = new McpCodeGraphServer(null);
 
-        var result = await FindReferencesTool.ExecuteAsync(state, "irrelevant", CancellationToken.None);
+        var result = await FindReferencesTool.ExecuteAsync(state, "irrelevant", maxResults: 50, CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -86,10 +87,28 @@ public sealed class FindReferencesToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(catalog);
 
-        var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", CancellationToken.None);
+        var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ValidSymbolWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(catalog);
+
+        // Caller.cs hat nach Fixture-Erweiterung 5 Greet-Aufrufe (1 in Run + 2 in RunTwice + 3 in RunThrice)
+        // ueber die Roslyn-Call-Site-API; maxResults: 2 erzwingt Trunkierung mit Meta-Zeile.
+        var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 2, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Pattern verfeinern oder maxResults erhöhen", textContent.Text, StringComparison.Ordinal);
     }
 }
