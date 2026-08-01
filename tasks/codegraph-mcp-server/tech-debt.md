@@ -36,6 +36,8 @@ inhaltliche Neubewertung.
 | TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (`TryApplyContentChange`) | niedrig | Methode hat 5 Parameter (`Document, string, DateTime, FileState, ref Solution`), über `MaxMethodParameterCount` = 4; vorbestehend, `Selbst-Lint` schlägt aktuell nicht an (`MaxMethodParameterCountForNonPublic`-Override), Refactor-Kandidat in einen Input-`record`. |
 | TD-008 | `src/AiNetLinter/rules.json` (`PathOverrides` für `FindReferencesTool`/`FindSymbolTool`) | niedrig | `Config`-Property auf `McpCodeGraphServer` zieht den `Configuration`-Namespace (~750 Zeilen) transitiv in alle Tool-Klassen, die den Server referenzieren — via `PathOverrides` (`MaxAIContextFootprint: 2700`) statt strukturellem Fix (`ILinterEngineConfig`-Kapselung) aufgefangen. Wird durch jede weitere Konfigurations-Erweiterung an `McpCodeGraphServer` (z. B. für die neuen P0/P1-Erweiterungen aus `konzept.md`) potenziell verschärft — beim nächsten Antasten von `McpCodeGraphServer` mitprüfen. |
 | TD-009 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (Konstruktor) | mittel | 5/5 Parameter am `MaxConstructorDependencies`-Limit, keine Reserve für die P0/P1-`McpCodeGraphServer`-Erweiterungen aus `konzept.md`. |
+| TD-010 | `src/AiNetLinter/Mcp/Tools/SearchPatternTool.cs` (Footprint) | mittel | 2482/2500 (18 Z. Puffer) — knapp; `McpCodeGraphServer.Config`-Pull-in (~1110 Z. Configuration-Namespace) trifft das Tool beim nächsten analyse-orientierten Tool-Block, der denselben Server referenziert. Strukturelle Lösung `ILinterEngineConfig`-Interface (4-6h Refactor, in keiner Einheit bisher gescoped). Pragmatik: `PathOverrides: 2700` analog TD-008. |
+| TD-011 | `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` (Footprint) | niedrig | 2487/2500 (13 Z. Puffer) — knapp; 5. Registrar-Klasse wahrscheinlich nötig beim nächsten Symbolgraph-Tool, das dazukommt. Erkannt im `units/002/result.md` (Anhang Footprint-Messung). |
 
 ## Einträge
 
@@ -100,4 +102,18 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter/Mcp/McpCodeGraphServer.cs:30-46` (Konstruktor mit 5 Parametern: `SourceFileCatalog?, ILintConsole?, int, Config?, ILintConsole?`).
 - **Befund:** Die Parameterzahl deckt sich exakt mit dem `MaxConstructorDependencies: 5`-Limit aus `rules.json` (siehe `AiNetLinter.mdc` Z. 27) — der Selbst-Lint schlägt derzeit nicht an, weil der Wert **erreicht** ist, nicht überschritten. **Die Reserve ist weg.** Die `konzept.md` P0/P1-Erweiterungen ("`--mcp-log`", "Kaltstart entkoppeln", "Staleness-Sweep Verzeichnis-`mtime`", "`rules.json`-Auto-Discovery" u. a., Z. 207-324) werden `McpCodeGraphServer` in den nächsten Schritten mit hoher Wahrscheinlichkeit erneut erweitern — die erste sechste Dependency reißt das Limit und damit den Build.
 - **Vorschlag:** Bei der nächsten Erweiterung an `McpCodeGraphServer` den Konstruktor auf ein Input-`record` umstellen (analog zum Vorschlag in TD-007 für `TryApplyContentChange`). Konkret: ein `internal sealed record McpCodeGraphServerOptions(SourceFileCatalog? Catalog, ILintConsole Console, int MaxLineCount, Config Config)` (oder vergleichbar). Dadurch wachsen zukünftige Konfigurations-Erweiterungen am `record` (additive Property), nicht an der Parameterliste. **Erkannt im Review von Einheit 001** (Kritiker-Vorschlag in `units/001/review.md` Abschnitt "Tech-Debt-Vorschlag").
+- **Status:** offen
+
+### TD-010 — `SearchPatternTool`-Footprint knapp am `AIContextFootprint`-Limit [Priorität: mittel]
+
+- **Ort:** `src/AiNetLinter/Mcp/Tools/SearchPatternTool.cs` (gemessen 2482/2500, 18 Z. Puffer, Stand `28e6e58`).
+- **Befund:** Der `McpCodeGraphServer.Config`-Property-Pull-in zieht den `Configuration`-Namespace (~1110 Z.) transitiv in alle Tool-Klassen mit `McpCodeGraphServer`-Referenz — derselbe Mechanismus wie bei `FindSymbolTool`/`FindReferencesTool` (TD-008, dort bereits durch `PathOverrides: 2700` pragmatisch aufgefangen). `SearchPatternTool` hat aktuell 18 Z. Puffer; jede künftige Erweiterung am `Configuration`-Namespace (z. B. Properties für die P0/P1-`McpCodeGraphServer`-Erweiterungen aus `konzept.md` Z. 207-324) treibt das Tool mit hoher Wahrscheinlichkeit über 2500 und reißt das Build.
+- **Vorschlag:** Beim nächsten analyse-orientierten Tool-Block, der `McpCodeGraphServer` referenziert: entweder `PathOverrides: 2700` analog TD-008 setzen (Pragmatik, etabliertes Precedent) ODER den ohnehin nötigen `ILinterEngineConfig`-Refactor (TD-008-Vorschlag) endlich angehen, der TD-008/TD-010 gemeinsam strukturell löst. **Strukturelle Schließung allein TD-010-spezifisch nicht möglich** — der Refactor ist eine TD-008/TD-010-Investition.
+- **Status:** offen
+
+### TD-011 — `SymbolGraphToolRegistrations`-Footprint knapp [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` (gemessen 2487/2500, 13 Z. Puffer, Stand `28e6e58`).
+- **Befund:** Die 4. Registrar-Klasse (`AnalysisToolRegistrations`) wurde in Einheit 002 nicht nötig (TD-004-Vorhersage widerlegt), aber die Symbolgraph-Registrar-Klasse selbst ist jetzt am Limit (13 Z. Puffer). Sobald ein weiteres Symbolgraph-Tool dazukommt (z. B. `get_symbol_body` aus `konzept.md` P2-Backlog, oder eine Erweiterung an `find_symbol`/`find_references`/`get_impact`), ist eine 5. Registrar-Klasse wahrscheinlich.
+- **Vorschlag:** Beim nächsten Symbolgraph-Tool-Block die Footprints aller drei existierenden Registrar-Klassen re-messen (Planer-Pflicht-Check, siehe `units/002/plan.md` Check 4 als Vorbild) und ggf. eine 5. Registrar-Klasse einplanen.
 - **Status:** offen

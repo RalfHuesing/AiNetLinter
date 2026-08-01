@@ -92,9 +92,9 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 5 | 35 |
-| `max_fix_pro_einheit` | 3 | 0 | 3 |
-| `max_fix_gesamt` | 12 | 0 | 12 |
+| `max_aufrufe` | 40 | 8 | 32 |
+| `max_fix_pro_einheit` | 3 | 0 (in 002) | 3 |
+| `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
 **Aufruf-Log:**
 - 1× Planer für 001 (Kritiker-Review `get_violations`)
@@ -102,6 +102,9 @@ Count gegen Coder.
 - 1× Planer für 002 (`search_pattern`-Tool, inkl. P0/P1)
 - 1× Coder für 002 (Commit `28e6e58`, 1097/1097 grün, A3 für 10 Tests dokumentiert)
 - 1× Kritiker für 002 (Verdict: `issues`, 0/1/6, 1 MAJOR + 2 TD-Vorschläge)
+- 1× Planer für 002/fix-01 (M-1 Hint-Bug)
+- 1× Coder für 002/fix-01 (Commit `bd9e6fd`, 1097/1097 grün, A3 dokumentiert)
+- 1× Kritiker für 002/fix-01 (Verdict: `approved`, 0/0/0, keine echten Befunde)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -185,3 +188,42 @@ tatsächlichen Codestands, nicht hier — siehe Kernel Teil B
     übernommen werden.
 - **Status:** **`issues`**. Fix-Runde `002/fix-01/` wird als
   nächstes eingeleitet (Planer → Coder → Kritiker).
+
+### Einheit 002/fix-01 — M-1 Hint-Bug Fix
+
+- **Plan:** `units/002/fix-01/plan.md` (Commit `517bebe`) — exakte
+  Code-/Test-Diffs, A3-Methodik operationalisiert, harte Scope-
+  Grenze.
+- **Result:** `units/002/fix-01/result.md` (Commit `b1a08a3`) —
+  Coder-Commit `bd9e6fd` (`fix(mcp): search_pattern leerer-
+  pattern-Hint`). `SearchPatternTool.cs:40` nutzt jetzt
+  `McpToolResults.Error(LinterErrorCodes.InvalidArgument, ...,
+  hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.")`
+  analog Z. 57-60. Test 8 um 3 Assertions erweitert. A3: alle 6
+  Schritte dokumentiert, Failure "Not found: 'Pattern angeben'"
+  wortwörtlich. Volllauf 1097/1097 grün.
+- **Review:** `units/002/fix-01/review.md` (siehe aktueller
+  Commit) — Verdict **`approved`**, 0/0/0, keine echten
+  Befunde, 2 B-Hinweise (außerhalb des Scopes) für künftige
+  Planer.
+- **Aufrufe:** Planer + Coder + Kritiker = 3, gesamt jetzt
+  8/40.
+- **Status:** **`approved`**. Einheit 002 ist **komplett
+  abgeschlossen** (1 erfolgreiche Fix-Runde). EPIC-04 ist
+  fertig: 4/4 Tools reviewt (`get_index_scope`, `get_hotspots`,
+  `get_violations`, `search_pattern`).
+- **Tech-Debt:** TD-010 (`SearchPatternTool`-Footprint knapp)
+  und TD-011 (`SymbolGraphToolRegistrations`-Footprint knapp)
+  in `tech-debt.md` übernommen (Kritiker-Vorschläge aus 002
+  Review, gleiche Logik wie TD-009 in 001).
+- **Nächste Einheit:** offen für Planer-Aufruf. Die zwei
+  wahrscheinlichsten Kandidaten aus `konzept.md`:
+  1. **EPIC-05 Trunkierungs-Einbau in `find_symbol`** (analog
+     `search_pattern` in 002) — Konzept Z. 215-225 fordert
+     Trunkierung für alle Listen-Tools; `McpTruncation.cs` ist
+     wiederverwendbar.
+  2. **EPIC-05 Miss-Hint in `find_symbol`** via
+     `GetFilesWithHits`-API (aus 002 exportiert) — Konzept
+     Z. 604-606.
+  Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift",
+  keine Vorauswahl).
