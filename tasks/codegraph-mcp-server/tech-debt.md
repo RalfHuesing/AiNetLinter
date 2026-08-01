@@ -35,6 +35,7 @@ inhaltliche Neubewertung.
 | TD-006 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` vs. `src/AiNetLinter/Web/WebFileCatalog.cs` | niedrig | `.xaml`/`.html`-Scan dupliziert `IsGeneratedPath`/`SafeEnumerateFiles` aus `WebFileCatalog` 1:1 statt sie wiederzuverwenden. |
 | TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (`TryApplyContentChange`) | niedrig | Methode hat 5 Parameter (`Document, string, DateTime, FileState, ref Solution`), über `MaxMethodParameterCount` = 4; vorbestehend, `Selbst-Lint` schlägt aktuell nicht an (`MaxMethodParameterCountForNonPublic`-Override), Refactor-Kandidat in einen Input-`record`. |
 | TD-008 | `src/AiNetLinter/rules.json` (`PathOverrides` für `FindReferencesTool`/`FindSymbolTool`) | niedrig | `Config`-Property auf `McpCodeGraphServer` zieht den `Configuration`-Namespace (~750 Zeilen) transitiv in alle Tool-Klassen, die den Server referenzieren — via `PathOverrides` (`MaxAIContextFootprint: 2700`) statt strukturellem Fix (`ILinterEngineConfig`-Kapselung) aufgefangen. Wird durch jede weitere Konfigurations-Erweiterung an `McpCodeGraphServer` (z. B. für die neuen P0/P1-Erweiterungen aus `konzept.md`) potenziell verschärft — beim nächsten Antasten von `McpCodeGraphServer` mitprüfen. |
+| TD-009 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (Konstruktor) | mittel | 5/5 Parameter am `MaxConstructorDependencies`-Limit, keine Reserve für die P0/P1-`McpCodeGraphServer`-Erweiterungen aus `konzept.md`. |
 
 ## Einträge
 
@@ -92,4 +93,11 @@ inhaltliche Neubewertung.
 - **Ort:** `rules.json` (`PathOverrides` für `src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs`/`FindSymbolTool.cs`, `MaxAIContextFootprint: 2700`).
 - **Befund:** Das Hinzufügen der `Config`-Property auf `McpCodeGraphServer` zog den `Configuration`-Namespace (~750 Zeilen) transitiv in alle Tool-Klassen mit `McpCodeGraphServer`-Referenz — `FindReferencesTool`/`FindSymbolTool` sprangen dadurch von ~1768 auf ~2519/2518 Zeilen. Mit `PathOverrides` pragmatisch aufgefangen (Precedent: `AuditCommand.cs`), nicht strukturell gelöst.
 - **Vorschlag:** Eine bessere langfristige Lösung wäre ein `internal interface ILinterEngineConfig` o. ä., das nur die von `LinterEngine` benötigten Properties exportiert — geschätzt 4-6h-Refactor, lohnt sich erst, wenn `McpCodeGraphServer` durch weitere Konfigurations-Erweiterungen (siehe TD-005) noch mehr Tool-Klassen in dieselbe Footprint-Nähe zieht.
+- **Status:** offen
+
+### TD-009 — `McpCodeGraphServer`-Konstruktor mit 5 Parametern am `MaxConstructorDependencies`-Limit [Priorität: mittel]
+
+- **Ort:** `src/AiNetLinter/Mcp/McpCodeGraphServer.cs:30-46` (Konstruktor mit 5 Parametern: `SourceFileCatalog?, ILintConsole?, int, Config?, ILintConsole?`).
+- **Befund:** Die Parameterzahl deckt sich exakt mit dem `MaxConstructorDependencies: 5`-Limit aus `rules.json` (siehe `AiNetLinter.mdc` Z. 27) — der Selbst-Lint schlägt derzeit nicht an, weil der Wert **erreicht** ist, nicht überschritten. **Die Reserve ist weg.** Die `konzept.md` P0/P1-Erweiterungen ("`--mcp-log`", "Kaltstart entkoppeln", "Staleness-Sweep Verzeichnis-`mtime`", "`rules.json`-Auto-Discovery" u. a., Z. 207-324) werden `McpCodeGraphServer` in den nächsten Schritten mit hoher Wahrscheinlichkeit erneut erweitern — die erste sechste Dependency reißt das Limit und damit den Build.
+- **Vorschlag:** Bei der nächsten Erweiterung an `McpCodeGraphServer` den Konstruktor auf ein Input-`record` umstellen (analog zum Vorschlag in TD-007 für `TryApplyContentChange`). Konkret: ein `internal sealed record McpCodeGraphServerOptions(SourceFileCatalog? Catalog, ILintConsole Console, int MaxLineCount, Config Config)` (oder vergleichbar). Dadurch wachsen zukünftige Konfigurations-Erweiterungen am `record` (additive Property), nicht an der Parameterliste. **Erkannt im Review von Einheit 001** (Kritiker-Vorschlag in `units/001/review.md` Abschnitt "Tech-Debt-Vorschlag").
 - **Status:** offen

@@ -92,9 +92,13 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 0 | 40 |
-| `max_fix_pro_einheit` | 3 | — | — |
+| `max_aufrufe` | 40 | 2 | 38 |
+| `max_fix_pro_einheit` | 3 | 0 | 3 |
 | `max_fix_gesamt` | 12 | 0 | 12 |
+
+**Aufruf-Log:**
+- 1× Planer für 001 (Kritiker-Review `get_violations`)
+- 1× Kritiker für 001 (Verdict: `approved`, 0/0/5, 1 neuer Tech-Debt-Vorschlag)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -113,3 +117,35 @@ tatsächlichen Codestands, nicht hier — siehe Kernel Teil B
 
 → Planer für Einheit 001 aufrufen (Kritiker-Review für
 `get_violations`).
+
+---
+
+## Phase 2 — Loop-Protokoll
+
+### Einheit 001 — Kritiker-Review `get_violations` (Commit `e63176d`)
+
+- **Plan:** `units/001/plan.md` (Commit `272db39`) — 4-Ebenen-Checkliste
+  mit `file:line`-Belegen, A3-Nicht-Notwendigkeit begründet
+  (Review-only).
+- **Result:** `units/001/result.md` (Commit `272db39`) — historisches
+  Coder-Resultat, gespiegelt aus `git show
+  7474226:tasks/codegraph-mcp/step-010/step-result.md`. Read-only-
+  Übernahme, kein Eingriff in den Original-Commit.
+- **Review:** `units/001/review.md` (siehe aktueller Commit) —
+  Verdict **`approved`**, 0 CRITICAL, 0 MAJOR, 5 MINOR
+  (Stil/Struktur-Beobachtungen, alle "fertig, fertig").
+- **Aufrufe:** Planer (1) + Kritiker (1) = 2/40.
+- **Tech-Debt:** TD-009 übernommen (Vorschlag des Kritikers, kein
+  direkter Edit durch den Kritiker — vom Orchestrator in
+  `tech-debt.md` ergänzt). TD-008 als weiter gültig markiert
+  (PathOverrides = Pragmatik, nicht struktur-fix; `ILinterEngineConfig`-
+  Refactor bleibt offen).
+- **Status:** **approved**. EPIC-04 in `konzept.md` Zeile 79 ist
+  um eine reviewte Position reicher — die "fertig"-Verschiebung in
+  der Tool-Set-Tabelle (Z. 550) ist Sache des Nutzers (A7), nicht
+  dieses Commits.
+- **Nächste Einheit:** offen für Planer-Aufruf — wahrscheinlichste
+  Kandidaten laut `konzept.md` in Reihenfolge: `search_pattern`
+  (EPIC-04, 4/4), EPIC-05 (Scope-Kommunikation + Miss-Hint),
+  EPIC-06 (Robustheit), EPIC-07 (Tests), EPIC-08 (Doku), dann die
+  P0/P1-Erweiterungen. Konkrete Wahl trifft der Planer JIT.
