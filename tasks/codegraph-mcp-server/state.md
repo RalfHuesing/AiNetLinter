@@ -92,8 +92,8 @@ Count gegen Coder.
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 14 | 26 |
-| `max_fix_pro_einheit` | 3 | 0 (in 004) | 3 |
+| `max_aufrufe` | 40 | 17 | 23 |
+| `max_fix_pro_einheit` | 3 | 0 (in 005) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 
 **Aufruf-Log:**
@@ -111,6 +111,9 @@ Count gegen Coder.
 - 1× Planer für 004 (Trunkierung in `find_symbol` + TD-012/013 inline)
 - 1× Coder für 004 (Commit `c6261ea`, 1108/1108 grün, 7 neue + 8 modifizierte Tests, A3 dokumentiert)
 - 1× Kritiker für 004 (Verdict: `approved`, 0/0/3, 3 Plan-Abweichungen begründet, **TD-012/013 geschlossen bestätigt**)
+- 1× Planer für 005 (Trunkierung in `find_references` + `get_impact`)
+- 1× Coder für 005 (Commit `3eb13bf`, 1114/1114 grün, 6 neue Tests, A3 dokumentiert)
+- 1× Kritiker für 005 (Verdict: `approved`, 0/0/2, P0/P1-Trunkierung in 4/4 Listen-Tools erfüllt, **TD-011-Stand aktualisiert**)
 
 Kein `konfig.md` vorhanden → keine User-Overrides. Defaults aktiv.
 
@@ -336,4 +339,51 @@ in dieser Session ab dem 004-Planer-Aufruf.
   3. **EPIC-07** (Tests-Ausbau).
   4. **EPIC-08** (Doku — inkl. Trunkierungs-Format-Regel
      in `Docs/agent-api.md`).
+  Konkrete Wahl trifft der Planer JIT.
+
+### Einheit 005 — Trunkierung in `find_references` + `get_impact`
+
+- **Plan:** `units/005/plan.md` (Commit `9d2dd99`) — 5 Vor-der-
+  Planung-Checks, 11 Schritte, 1 mögliche Plan-Abweichung
+  (Symbol-Branch-Delegation, vom Coder **nicht** genommen).
+- **Result:** `units/005/result.md` (Commit `d6023e8`) —
+  Code-Commit `3eb13bf` (`feat(mcp): find_references +
+  get_impact trunkierung (P0/P1)`). 9 files changed, 6 neue
+  Tests (3 Unit + 3 E2E, 2 neue E2E-Dateien analog 004),
+  Fixture-Erweiterung (`RunTwice`/`RunThrice` in
+  `Caller.cs` + `CalculatorCaller.cs`). Volllauf 1114/1114
+  grün. Build 0/0. A3 für 3 Unit-Tests dokumentiert.
+- **Review:** `units/005/review.md` (siehe aktueller Commit)
+  — Verdict **`approved`**, 0/0/2. Plan-Erfüllung 100 %,
+  keine Plan-Abweichung ausgelöst, Konzept-Treue erfüllt.
+  Korrektur des Kritikers: `McpServerCommandTests.cs` ist
+  426/500 (nicht 499/500 wie Planer angenommen), 74 Z.
+  Puffer.
+- **Aufrufe:** Planer + Coder + Kritiker = 3 für 005, plus
+  14 aus 001+002+002/fix-01+003+004 = 17/40.
+- **Footprint TD-011:** `FindReferencesTool` 2519 → 2522
+  (+3, Puffer 178), `GetImpactTool` 2490 → 2495 (+5, Puffer
+  5 knapp), `SymbolGraphToolRegistrations` 2490 → 2494 (+4,
+  Puffer **6 knapp**). **TD-011 in `tech-debt.md`
+  verschärft** (Puffer-Schrumpfung dokumentiert, „5. Klasse
+  zwingend" statt „wahrscheinlich").
+- **Status:** **`approved`**. 005 ist **komplett
+  abgeschlossen**. **P0/P1-Trunkierung in allen 4
+  Listen-Tools erfüllt** (`search_pattern` 002, `find_symbol`
+  004, `find_references`+`get_impact` 005).
+- **Nächste Einheit:** offen für Planer-Aufruf. Kandidaten
+  (in Reihenfolge der Konzept-Logik):
+  1. **EPIC-06** (Robustheit bei Compile-/Solution-Fehlern,
+     Konzept Z. 146-153, DoD Z. 609-611): MCP-Server soll
+     auch bei Compile-Fehlern antworten, statt abzustürzen.
+  2. **EPIC-07** (Tests-Ausbau): Staleness-Invalidierung,
+     Mehrdeutigkeits-Abbruch, Cache-Isolation, etc.
+  3. **EPIC-08** (Doku): `Docs/agent-api.md` mit MCP-Modus,
+     `Docs/integration.md` mit Registrierung, `Docs/ROADMAP.md`
+     + `README.md`.
+  4. P0/P1-Rest-Erweiterungen: Kaltstart entkoppeln,
+     `rules.json`-Auto-Discovery, Staleness-Sweep mit
+     Verzeichnis-`mtime`, `--mcp-log` Call-Log, RefreshStale-
+     Documents-Verzeichnis-Sweep (neu/gelöschte Dateien),
+     `ILintConsole` für MCP (stdout-Schutz).
   Konkrete Wahl trifft der Planer JIT.
