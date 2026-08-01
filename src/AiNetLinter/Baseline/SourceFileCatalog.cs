@@ -220,10 +220,21 @@ public sealed class SourceFileCatalog : IDisposable
                path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }
 
+    // TD-003: Statischer Lock + Check-Lock-Check-Pattern gegen die Race-Bedingung bei
+    // parallel laufenden Test-Klassen, die SourceFileCatalog.LoadAsync erstmalig aufrufen.
+    // MSBuildLocator ist ein prozessglobaler State, daher muss die Registration serialisiert
+    // werden. Der Fast-Pfad (Lock-frei) bleibt erhalten, um Lock-Contention im Normalfall
+    // (99% der Aufrufe nach dem ersten) zu vermeiden.
+    private static readonly object _msbuildRegistrationLock = new();
+
     private static void RegisterMSBuild()
     {
-        if (!MSBuildLocator.IsRegistered)
+        if (MSBuildLocator.IsRegistered) return; // Fast-Pfad: kein Lock, kein erneuter Patch
+
+        lock (_msbuildRegistrationLock)
         {
+            if (MSBuildLocator.IsRegistered) return; // Double-Check: Thread B sieht Thread A's Registration
+
             BuildHostPatcher.PatchBuildHostForVs2026();
             try
             {
@@ -235,7 +246,7 @@ public sealed class SourceFileCatalog : IDisposable
             }
             finally
             {
-                // Clear environment variables so the child BuildHost.exe (.NET Framework) 
+                // Clear environment variables so the child BuildHost.exe (.NET Framework)
                 // doesn't inherit .NET Core SDK paths.
                 Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", null);
                 Environment.SetEnvironmentVariable("MSBuildExtensionsPath", null);
