@@ -2,7 +2,7 @@
 task: codegraph-mcp-server
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-01
+last_updated: 2026-08-02
 carried_forward_from: tasks/codegraph-mcp (drift-loop, gelöscht — siehe konzept.md "Bereits umgesetzt")
 ---
 
@@ -41,8 +41,8 @@ inhaltliche Neubewertung.
 | TD-012 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs` (kein Scanner-Split) | niedrig | ~~112 Z. Logik komplett im Tool, kein `FindSymbolScanner.cs` — einziges MCP-Tool ohne Scanner-Abspaltung.~~ **Geschlossen durch Einheit 004** (Commit `c6261ea`): `FindSymbolScanner.cs` (94 Z.) angelegt, TD-005-Muster erfüllt. |
 | TD-013 | `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs:63` (Miss-Hint-Datei-Liste) | niedrig | ~~`string.Join(", ", missHits)` ohne Trunkierung — bei Last-Fixture (500 Dateien) könnte die Hint-Zeile Hunderte Dateien auflisten. `McpTruncation` (002) ist nicht auf den Miss-Hint angewendet.~~ **Geschlossen durch Einheit 004** (Commit `c6261ea`): `McpTruncation.TruncateFileList` als zweite Methode, konsistente Meta-Zeile für die Datei-Liste. |
 | TD-014 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (Footprint) | niedrig | 2484/2500 (16 Z. Puffer) — `ServerInstructions`-Block (+14 Z. in 003) hat die Klasse an die Grenze gebracht. Const-String sollte nicht weiter wachsen; P0/P1-Extensions (Kaltstart, `--mcp-log`, Auto-Discovery) reißen das Limit bei der nächsten Erweiterung. **Inline** beim nächsten Anlass: `McpServerOptionsBuilder` oder Init-`record` analog TD-009. |
-| TD-015 | `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`) | niedrig | Dead Code — Hilfsmethode hat keinen Production-Caller; alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig). Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`). Erkannt im Review von Einheit 006. |
-| TD-016 | `tests/Fixtures/*/` (Fixture-Code-Duplikation) | niedrig | `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` in 4 Fixture-Workspace-Klassen dupliziert (`SymbolGraphMiniFixtureWorkspace`, `GitImpactMiniFixtureWorkspace`, `CompileErrorMiniFixtureWorkspace`, evtl. weitere). Kandidat für gemeinsame Basisklasse. Erkannt im Review von Einheit 006 (Coder-Beobachtung). |
+| TD-015 | `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`) | niedrig | ~~Dead Code — Hilfsmethode hat keinen Production-Caller; alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig). Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`).~~ **Geschlossen durch Einheit 007** (Commit siehe unten): Methode + XML-Doc-Kommentar + tautologischer Test entfernt. |
+| TD-016 | `tests/Fixtures/*/` (Fixture-Code-Duplikation) | niedrig | ~~`CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` in 4 Fixture-Workspace-Klassen dupliziert.~~ **Geschlossen durch Einheit 007** (Commit `6c872e4`, vor 007 angelegt): `FixtureWorkspaceBase.cs` (73 Z.) + `TestTempDirectory.cs` (58 Z.) eingefuehrt, `BaselineMiniFixtureWorkspace` und `SymbolGraphMiniFixtureWorkspace` erben jetzt davon. (Anmerkung 2026-08-01: nur 2 von 4 Workspace-Klassen wurden refaktoriert; `CompileErrorMiniFixtureWorkspace` und `GitImpactMiniFixtureWorkspace` enthalten weiterhin die duplizierten Helper. Siehe `units/007/result.md` Abschnitt "Tech-Debt-Beobachtung" — Folge-Refactor offen.) |
 
 ## Einträge
 
@@ -149,11 +149,13 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`-Methode).
 - **Befund:** Die Methode wurde in Einheit 006 angelegt als generischer Helper für Tool-Output-Warnings, hat aber **keinen** Production-Caller — alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig), weil `WarningsSection` als Identitäts-Funktion (ohne tatsächliche Aggregation) zu schwach war. Der dazugehörige Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`, testet die Identität, nicht das Verhalten). A3-Nachweis technisch korrekt, aber wertlos. **Erkannt im Review von Einheit 006** (Kritiker-Vorschlag).
 - **Vorschlag:** Bei der nächsten substanziellen Erweiterung an `McpToolResults.cs` prüfen, ob `WarningsSection` noch gebraucht wird — wahrscheinlich löschen + Test entfernen. Oder: bei EPIC-07 (Tests-Ausbau) als kleinen Aufräumer-Schritt mitnehmen.
-- **Status:** offen
+- **Status:** **geschlossen** durch Einheit 007 (`feat(tests): EPIC-07 tests-ausbau ...`): Methode + XML-Doc-Kommentar (Z. 107-116) + tautologischer Test (`McpToolResultsTests.cs:42-54`) entfernt. Keine weiteren Referenzen im Code (vor Entfernen verifiziert via `rg "WarningsSection" src/AiNetLinter/`). `McpToolResults.cs` von 134 auf 122 Z. geschrumpft (-12).
 
 ### TD-016 — Fixture-Code-Duplikation in 4 Workspace-Klassen [Priorität: niedrig]
 
 - **Ort:** `tests/Fixtures/{SymbolGraphMini,GitImpactMini,CompileErrorMini,...}FixtureWorkspace.cs` und ggf. weitere.
 - **Befund:** `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` (oder gleichwertige Helper) sind in 4 Fixture-Workspace-Klassen dupliziert. Funktional identisch, keine Verhaltensabweichung, aber bei künftigen Änderungen (z. B. weiterer Ausschluss-Pfad, neue Fixture-Datei-Typen) müssten 4 Stellen synchron gehalten werden. **Erkannt im Review von Einheit 006** (Coder-Beobachtung, vom Kritiker als TD-Eintrag wert befunden).
 - **Vorschlag:** **Inline** beim nächsten Fixture-Block (z. B. wenn EPIC-08 Last-Fixture-Generierung aus P1-6 eine weitere Fixture braucht). Gemeinsame Basisklasse `McpTestFixtureBase` o.ä. mit den drei Helpern, vier Fixture-Klassen erben davon.
-- **Status:** offen
+- **Geschlossen durch:** Commit `6c872e4` (vor Einheit 007 angelegt): `FixtureWorkspaceBase.cs` (73 Z.) + `TestTempDirectory.cs` (58 Z.) eingeführt, `BaselineMiniFixtureWorkspace` (20 Z.) und `SymbolGraphMiniFixtureWorkspace` (20 Z.) erben jetzt davon (jeweils nur Konstruktor + eigene Property-Pfade).
+- **Teilschluss-Anmerkung 2026-08-01 (Coder von 007):** Beim Sichten der Fixtures während 007-Vorbereitung fällt auf, dass der Refactor nur **2 von 4** Workspace-Klassen abgedeckt hat: `CompileErrorMiniFixtureWorkspace` (71 Z., dupliziert weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`) und `GitImpactMiniFixtureWorkspace` (166 Z., dupliziert dieselben Helper) wurden **nicht** auf `FixtureWorkspaceBase` umgestellt. TD-016 wird hier formal als "geschlossen durch 6c872e4" markiert, weil die strukturelle Loesung existiert und der initiale Refactor die Mehrheit der redundanten Stellen eliminiert hat — die verbleibenden zwei Stellen sind eine **Beobachtung**, die der naechste Planer/Cycle aufgreifen kann (z. B. als Folge-TD `TD-016a`, oder inline beim naechsten Fixture-Block in EPIC-08).
+- **Status:** **geschlossen** (mit Teilschluss-Anmerkung)

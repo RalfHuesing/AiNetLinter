@@ -25,6 +25,14 @@ internal sealed class AnalysisCacheManager
         _cache = cache;
     }
 
+    /// <summary>
+    /// Vollstaendiger Pfad zur Cache-Datei (intern fuer Test-Sichtbarkeit, nicht fuer
+    /// Production-Caller gedacht). EPIC-07 Cache-Isolation-Tests verifizieren ueber
+    /// diese Property, dass unterschiedliche Solution-Pfade zu unterschiedlichen
+    /// Cache-Filenamen fuehren.
+    /// </summary>
+    internal string CachePath => _cachePath;
+
     public static AnalysisCacheManager Load(string exeDir, string solutionPath, string rulesJsonContent, TimeSpan cacheTtl)
     {
         var cacheDir = Path.Combine(exeDir, "cache");

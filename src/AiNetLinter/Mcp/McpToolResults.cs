@@ -105,18 +105,6 @@ internal static class McpToolResults
     }
 
     /// <summary>
-    /// Liefert einen normalen Text-Content-Block (kein <see cref="CallToolResult.IsError"/>), der
-    /// einem Tool-Output als Warnhinweis vorangestellt wird. Wird fuer den EPIC-06-Pfad genutzt:
-    /// Compile-Fehler bedeuten nicht, dass der Tool-Call gescheitert ist, nur dass das Ergebnis
-    /// moeglicherweise unvollstaendig ist. Der Aufrufer haengt den Hint-Text typischerweise vor
-    /// den eigentlichen Output an und liefert das Ergebnis per <see cref="Text"/> (nicht per
-    /// <see cref="WarningsSection"/> direkt — diese Methode liefert nur den rohen Block, nicht
-    /// das fertige <see cref="CallToolResult"/>; der Einfachkeit halber wird der Hint-String in
-    /// den eigentlichen Output konkateniert).
-    /// </summary>
-    internal static string WarningsSection(string warningText) => warningText;
-
-    /// <summary>
     /// Kurzform fuer den Fall, dass ein Tool wegen Compile-Fehlern gar nicht sinnvoll antworten
     /// kann (z. B. das angefragte Symbol existiert nur in einer fehlerhaften Datei und Roslyn kann
     /// es nicht aufloesen). Liefert ein <c>[ERROR]: WORKSPACE_DIAGNOSTIC</c>-Ergebnis mit dem
