@@ -3,6 +3,8 @@ task: codegraph-mcp-server
 workflow: dynamic-loop
 started_at: 2026-08-01
 orchestrator_session: mvs_9bacea56e2a54bcab43a08aa6be14c16
+resumed_at: 2026-08-02
+resumed_by: mvs_287875e0a9f74becbf96dca3b88b20fb
 rules_dir: .agents/rules
 case: 1 (frischer Task-Verzeichnis-Stand, aber inhaltlich Konsolidierung aus
   `tasks/codegraph-mcp` (drift-loop, gelöscht) und `tasks/codegraph-mcp-next`
@@ -562,3 +564,167 @@ alle 6 EPIC-07-DoD-Bereiche mit jeweils mindestens 1 Test
 abgesichert; 2 TD-Einträge sauber geschlossen, 1 teilsgeschlossen
 mit dokumentierter Folge-Aufgabe). Was fehlt für den formalen
 Abschluss: **Volllauf-Verifikation + Kritiker-Review + Push**.
+
+---
+
+## Phase 2 — Fortsetzung (2026-08-02, ~17:00)
+
+### Eingang des neuen Orchestrator-Laufs
+
+**User-Hinweis (Ralf, 2026-08-02, ~16:59):**
+
+- Tests wurden umstrukturiert — MCP-Tools jetzt **direkt per C#** testbar
+  (keine Python-Skripte mehr nötig).
+- Explizite **Test-Kategorien** (`Category=Unit` / `Category=Integration`)
+  verwenden, weil die Tests teils ewig dauern.
+- Build ist grün.
+
+### Verifikation der neuen Test-Infrastruktur (gelesen, 2026-08-02, 17:01)
+
+Commits `3b315c2` + `4f6fa6f` (von Ralf nach 007 manuell eingespielt):
+
+- **`src/AiNetLinter.Tests/Mcp/McpTestClient.cs`** (NEU, 114 Z.):
+  Sauberer C#-Harness für E2E-Tests via `StdioClientTransport` zum
+  kompilierten `AiNetLinter.exe --mcp-server`. Methoden:
+  `ConnectAsync(targetDir)` / `CallToolAsync(tool, args)` /
+  `CallToolGetTextAsync(tool, args)` / `ListToolsAsync()` /
+  `DisposeAsync()`. Ersetzt die ad-hoc Python-Dogfooding-Skripte.
+- **`src/AiNetLinter.Tests/Fixtures/BaselineMcpFixture.cs`** (NEU, 34 Z.):
+  `IClassFixture<BaselineMcpFixture>` — verbindet einmalig pro Testklasse
+  einen `McpTestClient` gegen `BaselineMiniFixtureWorkspace`.
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpFixture.cs`** (NEU, 34 Z.):
+  Pendant für `SymbolGraphMiniFixtureWorkspace`.
+- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** (NEU,
+  47 Z.): Pendant gegen das echte `AiNetLinter.slnx` (findet Repo-Root
+  via `AppContext.BaseDirectory`-Walk).
+- **`src/AiNetLinter.Tests/Fixtures/BaselineCatalogFixture.cs`** (NEU,
+  30 Z.) + **`SymbolGraphCatalogFixture.cs`** (NEU, 30 Z.):
+  Pendant für **Unit-Tests** — `IClassFixture<*>` liefert einmal pro
+  Testklasse einen geladenen `SourceFileCatalog`, kein Server-Subprozess
+  nötig.
+- **`src/AiNetLinter.Tests/Mcp/McpServerAllToolsE2ETests.cs`** (NEU,
+  182 Z., 14 Tests): alle 9 Tools via `SymbolGraphMcpFixture` E2E.
+  `[Trait("Category", "Integration")]`.
+- **`src/AiNetLinter.Tests/Mcp/McpLiveRepositoryTests.cs`** (NEU, 145 Z.,
+  9 Tests): Live-Dogfooding-Tests gegen `AiNetLinter.slnx`.
+  `[Trait("Category", "Integration")]`.
+- **Test-Kategorien:** 9 Test-Klassen markiert mit `Category=Integration`,
+  18 Test-Klassen mit `Category=Unit`. Subagenten können
+  `dotnet test --filter Category=Unit` für schnelle Iterationen nutzen
+  (80 Tests in ~21s statt 7+ min im Volllauf).
+- **AGENTS.md §2 aktualisiert** (Commit `d3c4da8`): Test-Kategorien
+  als verpflichtender Workflow dokumentiert. Subagenten sind angewiesen,
+  `Category=Unit` während der Entwicklung zu nutzen.
+
+### Aktuelle Lage (2026-08-02, 17:03)
+
+- **Working tree:** clean.
+- **Branch:** `main`, 3 commits ahead of `origin/main`:
+  - `3b315c2` test(infra): introduce shared class fixtures (Ralf)
+  - `4f6fa6f` perf(tests): enable multi-core parallelization (Ralf)
+  - `ed58ba0` chore(task): state update nach unit 007 (letzte Session)
+- **Hinweis Commit-Disziplin:** die 3 neuen Commits haben **kein**
+  `[codegraph-mcp-server]`-Suffix — User hat sie manuell eingespielt,
+  nicht der Coder-Agent. Außerhalb des Orchestrator-Workflows
+  entstanden, deshalb kein Verstoß gegen A4. Suffix ist
+  Konventionssache, kein Hard-Requirement für extern hinzugefügte Commits.
+- **Build:** grün, 0 Warnungen, 0 Fehler (User-Bestätigung).
+- **Tests gezielt (Unit-Slice):** 80/80 grün in 21s, gemessen
+  2026-08-02 17:03 (`dotnet test --no-build --filter "Category=Unit"`).
+- **Volllauf:** läuft im Hintergrund (gestartet 17:03, erwartet
+  ~8-10 min wegen MCP-Subprozess-Starts, 1130+ Tests).
+
+### Konsequenz für den Orchestrator-Lauf
+
+**Was sich ändert vs. 001-007:**
+
+1. **Subagenten-Workspace-Anchor** (siehe oben) bleibt
+   Pflicht-Bestandteil jedes Subagenten-Prompts — die Hinweise aus 004+
+   werden fortgeführt.
+2. **Test-Kategorie-Hinweis wird ergänzt:** Subagenten bekommen den
+   expliziten Hinweis, `Category=Unit` während der Entwicklung zu
+   nutzen und nur vor Task-Beendigung (bzw. für A3-Nachweis neuer
+   Integration-Tests) den Volllauf zu fahren. AGENTS.md §2 ist
+   verbindlich.
+3. **MCP-Tool-Tests jetzt in C#:** Statt Python-Skripte für
+   Tool-Smoke-Tests können Planer/Coder/Kritiker den
+   `McpTestClient` + `*McpFixture` direkt in xUnit-Tests verwenden.
+   Das ist die bevorzugte Test-Form für künftige Tool-Schritte.
+4. **`McpLiveRepositoryFixture` ersetzt Python-Dogfooding:** Das
+   im `konzept.md` Z. 193-204 geforderte Dogfooding pro Tool-Step
+   gegen die echte `AiNetLinter.slnx` ist jetzt ein xUnit-Test
+   (`McpLiveRepositoryTests` als Vorlage), kein manuelles Skript
+   mehr nötig. Coder können diese Tests als Vorlage kopieren
+   und für Tool-spezifische Live-Assertions erweitern.
+
+### Einheit 007 — Kritiker-Review (abgeschlossen 2026-08-02, ~17:18)
+
+- **Verdict:** **`approved`** (0 CRITICAL, 0 MAJOR, 1 MINOR).
+- **Review:** `units/007/review.md` (229 Z.) — Plan-Erfüllung 100 %,
+  alle 6 EPIC-07-DoD-Bereiche (a–f) abgesichert + 2 Bonus-Tests.
+  TD-003 strukturell korrekt (Check-Lock-Check), TD-015 sauber weg,
+  TD-016 transparent als Teilschluss dokumentiert. `McpServerCommand
+  Tests.cs` 0 Zeilen Diff in `3b29d72`. 4 Commits A4-konform
+  (kein Push, kein Amend, kein `-A`).
+- **MINOR:** Methodenname `..._ExitsZero` in
+  `CliBatchRegressionTests.cs:32` bei tatsächlich assertiertem
+  Exit 1 — kosmetisch, kein Build-/Test-Impact. Folge-Rename
+  bei nächster Gelegenheit.
+- **Volllauf-Verifikation (AGENTS.md §2):** 1161/1161 grün in
+  5:55 min, gemessen 2026-08-02 17:10. AGENTS.md-Pflicht vor
+  Task-Beendigung erfüllt.
+- **TD-003 Status-Update** in `tech-debt.md`:
+  Index-Zeile + Status-Block auf „geschlossen durch 007
+  (Commit `49feb65`)" gesetzt.
+- **TD-016a neu** in `tech-debt.md` aufgenommen: Folge-Refactor
+  für `CompileErrorMiniFixtureWorkspace` (71 Z.) und
+  `GitImpactMiniFixtureWorkspace` (166 Z.) — duplizieren
+  weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`.
+  Vorschlag: standalone (~1-2h) oder inline beim nächsten
+  Fixture-Block. Risiko Git-Init-Logik in GitImpactMini.
+- **Aufrufe:** 1× Kritiker (für 007) = jetzt 22/40.
+
+### Nächste Aktion (für 008)
+
+1. **Push** der 4 Commits (`49feb65` + `3b29d72` + `bb0544d` +
+   `acb8ee4`) + der 3 Ralf-Refactor-Commits (`3b315c2` +
+   `4f6fa6f` + `ed58ba0`) nach `origin/main` — A4 erlaubt
+   Push, kein Amend. (Bzw. 2 eigene Commits noch dazu für
+   `review.md` und `tech-debt.md`.)
+2. **Planer für Einheit 008** aufrufen. Kandidaten (in Reihenfolge
+   der Konzept-Logik + Tech-Debt):
+   - **TD-016a** (2 verbleibende Fixture-Workspaces
+     `CompileErrorMiniFixtureWorkspace` + `GitImpactMiniFixtureWorkspace`
+     auf `FixtureWorkspaceBase` umstellen) — klein, ~1-2h, kann
+     standalone laufen. Konsistent mit TD-016-Teilschluss-Anmerkung
+     und 007-Kritiker-Vorschlag.
+   - **EPIC-08 (Doku)** — `Docs/agent-api.md` mit MCP-Modus,
+     `Docs/integration.md` mit Registrierung, `Docs/ROADMAP.md` +
+     `README.md`. Letzte offene P0-Säule nach EPIC-06+07.
+   - **P0/P1-Rest-Erweiterungen** (Kaltstart, Auto-Discovery,
+     Staleness-Sweep-`mtime`, `--mcp-log`, Verzeichnis-Sweep,
+     `ILintConsole`).
+   Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift").
+
+### Tech-Debt-Stand zum Mitnehmen (Kurzfassung)
+
+Nach 007 + Review:
+
+- **TD-003** geschlossen (Commit `49feb65`, 007) — Status aktualisiert
+- **TD-012** geschlossen (Commit `c6261ea`, 004)
+- **TD-013** geschlossen (Commit `c6261ea`, 004)
+- **TD-015** geschlossen (Commit `3b29d72`, 007)
+- **TD-016** geschlossen mit Teilschluss-Anmerkung (Commit `6c872e4`,
+  vor 007) — TD-016a ist Folge-Refactor für die 2 verbleibenden
+  Fixtures
+- **TD-016a** NEU aufgenommen aus 007-Review
+- Alle anderen Einträge TD-001, TD-002, TD-004, TD-005, TD-006,
+  TD-007, TD-008, TD-009, TD-010, TD-011, TD-014 weiterhin offen.
+
+### Verbrauchtes Aufruf-Budget (aktualisiert 17:18)
+
+| Größe | Default | Verbraucht | Verbleibend |
+| :--- | :---: | :---: | :---: |
+| `max_aufrufe` | 40 | 22 (Kritiker für 007 dazugekommen) | 18 |
+| `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
+| `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
