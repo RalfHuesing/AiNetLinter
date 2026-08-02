@@ -29,15 +29,14 @@ Keine Modifikationen an `konzept.md`, `kernel.md`, Rollen-Dateien, `.agents/rule
 
 ## Commit-Hashes
 
-Die Commits wurden in dieser Reihenfolge angelegt (alle nach diesem `result.md`):
-1. `docs(mcp): agent-api um mcp-server-modus-sektion erweitert [codegraph-mcp-server]`
-2. `docs(mcp): integration um mcp-server-registrieren-sektion erweitert [codegraph-mcp-server]`
-3. `docs(mcp): roadmap um mcp-server-epic-status erweitert [codegraph-mcp-server]`
-4. `docs(mcp): readme um mcp-server-modus-hinweis erweitert [codegraph-mcp-server]`
-5. `test(mcp): doku-smoke-tests gegen den laufenden mcp-server [codegraph-mcp-server]`
-6. `chore(task): unit 008 result, EPIC-08 doku abgeschlossen [codegraph-mcp-server]`
+Die Commits wurden in dieser Reihenfolge angelegt:
 
-Hashes werden nach `git commit` in einer Folge-Notiz im state.md ergänzt (Orchestrator-Aufgabe); der `result.md`-Commit selbst ist der letzte.
+1. `1e6c818` — `docs(mcp): agent-api um mcp-server-modus-sektion erweitert [codegraph-mcp-server]`
+2. `d15875b` — `docs(mcp): integration um mcp-server-registrieren-sektion erweitert [codegraph-mcp-server]`
+3. `63b731d` — `docs(mcp): roadmap um mcp-server-epic-status erweitert [codegraph-mcp-server]`
+4. `ace264e` — `docs(mcp): readme um mcp-server-modus-hinweis erweitert [codegraph-mcp-server]`
+5. `6619367` — `test(mcp): doku-smoke-tests gegen den laufenden mcp-server [codegraph-mcp-server]`
+6. `6f2a4b9` — `chore(task): unit 008 result, EPIC-08 doku abgeschlossen [codegraph-mcp-server]` (enthält dieses `result.md` + `volllauf.log`)
 
 ## A3-Nachweis pro neuem Test
 
