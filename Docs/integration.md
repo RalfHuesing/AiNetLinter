@@ -218,4 +218,68 @@ AiNetLinter.exe --describe-rule <Id>   ← Eine Regel vollständig erklären
 
 ---
 
+## MCP-Server registrieren
+
+AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitzustellen (Claude Code, Cursor, eigene Agent-Loops). Vollständige Tool-Referenz, Trunkierungs-Format und Error-Codes: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+
+### Registrierung im MCP-Host
+
+Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleicher JSON-Spec):
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server"]
+    }
+  }
+}
+```
+
+Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter Pfad-Parameter nötig** — der Server sucht beim Start die Ziel-Solution selbst.
+
+### cwd-Verhalten
+
+Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht.
+
+### Mehrdeutigkeit: mehrere Solutions im cwd
+
+Liegen im `cwd` mehrere `.sln`- oder `.slnx`-Dateien, bricht der Server-Start mit einem `[ERROR]: AMBIGUOUS_SOLUTION`-Fehler ab. Abhilfe: explizit `--path <Datei>` in den `args` setzen:
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server", "--path", "./src/MeinProjekt.slnx"]
+    }
+  }
+}
+```
+
+`--path` akzeptiert sowohl eine direkte Solution-Datei (relativ oder absolut) als auch ein Verzeichnis, in dem dann ebenfalls nach genau einer `.sln`/`.slnx` gesucht wird. `0` Kandidaten führen analog zu `[ERROR]: RESOURCE_NOT_FOUND`.
+
+### Tool-vs-`rg`-Empfehlung für Agent-Loops
+
+Wenn der MCP-Server registriert ist, sollten Agent-Loops **folgende Reihenfolge** einhalten:
+
+1. **Zuerst** symbolische Tools: `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `find_references` / `get_impact` (Aufrufstellen), `get_type_hierarchy` (Vererbung), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
+2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster.
+3. **Niemals** `rg` / `grep` für **C#-Symbole** (Klassen-, Methoden-, Property-Namen). Diese Tools durchsuchen Strings und Kommentare mit, produzieren False Positives in gleichnamigen Symbolen anderswo und liefern keine Typ-/Signatur-Information.
+
+Konkret:
+
+- Klassennamen suchen → `find_symbol(namePattern: "MyClass", kind: "Klasse")`
+- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod")` oder `get_impact(symbolIdentifier: ...)`
+- Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
+- TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
+- Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
+
+### Mehrere parallele Server-Instanzen
+
+Pro Solution ein eigener Server-Prozess — die Cache-Isolation zwischen verschiedenen Solutions ist SHA-256-basiert (siehe Konzept und `AnalysisCacheManager`), der Nutzer braucht nichts zu konfigurieren. Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache, weil `get_violations` den Disk-Cache umgeht.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
