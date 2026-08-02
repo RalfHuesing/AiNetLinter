@@ -2,7 +2,7 @@
 task: codegraph-mcp-server
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-02 (TD-003 geschlossen durch 007, TD-016a neu aus 007-Review)
+last_updated: 2026-08-02 (TD-016a geschlossen durch 009)
 carried_forward_from: tasks/codegraph-mcp (drift-loop, gelöscht — siehe konzept.md "Bereits umgesetzt")
 ---
 
@@ -43,7 +43,7 @@ inhaltliche Neubewertung.
 | TD-014 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (Footprint) | niedrig | 2484/2500 (16 Z. Puffer) — `ServerInstructions`-Block (+14 Z. in 003) hat die Klasse an die Grenze gebracht. Const-String sollte nicht weiter wachsen; P0/P1-Extensions (Kaltstart, `--mcp-log`, Auto-Discovery) reißen das Limit bei der nächsten Erweiterung. **Inline** beim nächsten Anlass: `McpServerOptionsBuilder` oder Init-`record` analog TD-009. |
 | TD-015 | `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`) | niedrig | ~~Dead Code — Hilfsmethode hat keinen Production-Caller; alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig). Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`).~~ **Geschlossen durch Einheit 007** (Commit siehe unten): Methode + XML-Doc-Kommentar + tautologischer Test entfernt. |
 | TD-016 | `tests/Fixtures/*/` (Fixture-Code-Duplikation) | niedrig | ~~`CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` in 4 Fixture-Workspace-Klassen dupliziert.~~ **Geschlossen durch Einheit 007** (Commit `6c872e4`, vor 007 angelegt): `FixtureWorkspaceBase.cs` (73 Z.) + `TestTempDirectory.cs` (58 Z.) eingefuehrt, `BaselineMiniFixtureWorkspace` und `SymbolGraphMiniFixtureWorkspace` erben jetzt davon. (Anmerkung 2026-08-01: nur 2 von 4 Workspace-Klassen wurden refaktoriert; `CompileErrorMiniFixtureWorkspace` und `GitImpactMiniFixtureWorkspace` enthalten weiterhin die duplizierten Helper. Siehe `units/007/result.md` Abschnitt "Tech-Debt-Beobachtung" — Folge-Refactor offen.) |
-| TD-016a | `src/AiNetLinter.Tests/Fixtures/{CompileErrorMini,GitImpactMini}FixtureWorkspace.cs` | niedrig | Folge-Refactor aus TD-016: zwei der vier Fixture-Workspace-Klassen wurden in `6c872e4` nicht auf `FixtureWorkspaceBase` umgestellt und duplizieren weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`. |
+| TD-016a | `src/AiNetLinter.Tests/Fixtures/{CompileErrorMini,GitImpactMini}FixtureWorkspace.cs` | niedrig | ~~Folge-Refactor aus TD-016: zwei der vier Fixture-Workspace-Klassen wurden in `6c872e4` nicht auf `FixtureWorkspaceBase` umgestellt und duplizieren weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`.~~ **Geschlossen durch Einheit 009** (Commits `b0c2283` + `8f0427e`): beide Klassen erben jetzt von `FixtureWorkspaceBase`, duplizierte Helper entfernt, `GitImpactMini.Dispose` als Override mit `ClearReadOnlyAttributes` vor `base.Dispose()`. Reflection-Tests in `TD016aRefactorTests.cs` als A3-Sicherung gegen Re-Drift (CS0108-Compiler-Check ist zweite Schicht). |
 
 ## Einträge
 
@@ -166,4 +166,29 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter.Tests/Fixtures/CompileErrorMiniFixtureWorkspace.cs` (71 Z.) und `src/AiNetLinter.Tests/Fixtures/GitImpactMiniFixtureWorkspace.cs` (166 Z.).
 - **Befund:** Beim TD-016-Refactor in `6c872e4` wurden `BaselineMiniFixtureWorkspace` (20 Z.) und `SymbolGraphMiniFixtureWorkspace` (20 Z.) auf `FixtureWorkspaceBase` (73 Z.) umgestellt — die beiden Klassen mit Zusatzlogik (`CompileErrorMini`: Compile-Fehler-spezifische Helper, `GitImpactMini`: `InitializeGitRepoWithInitialCommit`) wurden **nicht** migriert. `grep` bestätigt: `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` kommen in beiden Klassen weiterhin wortgleich als `private static`-Methoden vor, parallel zur identischen Implementierung in `FixtureWorkspaceBase`. **Erkannt im Review von Einheit 007** (Coder-Beobachtung in `result.md` Abschnitt „TD-016 — geschlossen (mit Teilschluss-Anmerkung)").
 - **Vorschlag:** **Inline** beim nächsten Fixture-Block (z. B. wenn EPIC-08 Last-Fixture-Generierung aus P1-6 eine weitere Fixture braucht). Planer entscheidet, ob ein eigenständiger Refactor (TD-016a-Einheit, ~1-2 h) oder inline-Mitnahme sinnvoller ist. Risikofaktor bei `GitImpactMiniFixtureWorkspace`: die Git-Init-Logik muss beim Umbau auf eine gemeinsame `TestTempDirectory` mit-konsolidiert werden, sonst gehen Initial-Commits verloren.
-- **Status:** offen
+- **Status:** **geschlossen** durch Einheit 009 (Commits `b0c2283` + `8f0427e`):
+  - `CompileErrorMiniFixtureWorkspace` von 71 auf 25 Z. geschrumpft (Konstruktor delegiert an
+    `FixtureWorkspaceBase`, duplizierte `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot` entfernt,
+    `Dispose` von der Basis geerbt).
+  - `GitImpactMiniFixtureWorkspace` von 166 auf 114 Z. geschrumpft (Konstruktor delegiert an
+    `FixtureWorkspaceBase`, `InitializeGitRepoWithInitialCommit()` als Post-Basis-Aktion, `Dispose`
+    als Override mit `ClearReadOnlyAttributes(RootPath)` **vor** `base.Dispose()`, duplizierte Helper
+    entfernt).
+  - `RunGit` und `ClearReadOnlyAttributes` bleiben in der abgeleiteten Klasse (sind
+    GitImpactMini-spezifisch, nicht generisch).
+  - Bestehende Tests grün (A3-Sicherung über die schon vorhandenen Tests in
+    `McpServerCommandErrorHandlingTests.cs` (12 E2E), `McpServerCommandGetImpactTests.cs` (1 E2E),
+    `McpServerCommandTests.cs` (2 E2E), `GetImpactToolTests.cs` (1 Unit) und 9 Tool-Unit-Tests mit
+    `CompileErrorMiniFixtureWorkspace`).
+  - **Strukturelle A3-Sicherung** in `TD016aRefactorTests.cs` (`src/AiNetLinter.Tests/Fixtures/`,
+    `[Trait("Category", "Unit")]`): 2 Reflection-Tests (1 Theory mit 2 InlineData, 1 Theory mit 6
+    InlineData = 8 Test-Invokationen) prüfen, dass beide Klassen von `FixtureWorkspaceBase` erben
+    und keine eigenen `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot` definieren.
+  - **Zweite A3-Schicht durch den Compiler**: wer versehentlich einen der drei Helper wieder
+    einführt, kassiert `CS0108` (Member blendet vererbten Member aus) und mit
+    `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` bricht der Build — der Test muss gar nicht
+    laufen, um die Regression zu fangen. Beobachtung im Coder-A3-Lauf: sowohl `CopyFixture` als
+    auch `IsGeneratedPath` lösen CS0108 aus, weil sie in `FixtureWorkspaceBase` als
+    `protected static` mit identischer Signatur existieren.
+  - Volllauf `dotnet test AiNetLinter.slnx --no-build` post-009: 1173/1173 grün in 6:20 min
+    (1165 vor 009 + 8 neue Reflection-Test-Invokationen).
