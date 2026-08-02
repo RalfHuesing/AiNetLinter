@@ -14,7 +14,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Zaehl-/Formatierungslogik fuer <see cref="GetIndexScopeTool"/> — in eine eigene Datei
 /// ausgelagert, damit <see cref="GetIndexScopeTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu <see cref="GetTypeHierarchyFormatter"/>/
+/// <c> klein bleibt 
 /// <see cref="SymbolIdentifierResolver"/>). Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> —
 /// direkt unit-testbar. .cs-Zaehlung ueber <see cref="SourceFileCatalog.IsValidDocument"/>,
 /// .css/.js/.razor-Zaehlung ueber <see cref="WebFileCatalog.Collect"/>, .xaml/.html ueber einen neuen,

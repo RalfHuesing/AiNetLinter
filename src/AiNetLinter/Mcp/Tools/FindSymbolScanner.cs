@@ -13,12 +13,12 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Symbol-Scan- und Format-Logik fuer <see cref="FindSymbolTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="FindSymbolTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu
-/// <see cref="SearchPatternScanner"/>, TD-012-Scanner-Split). Keine Abhaengigkeit von
+/// (siehe <c> klein bleibt 
+/// <see cref="SearchPatternScanner"/>,. Keine Abhaengigkeit von
 /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Trunkierung des
 /// Haupt-Treffer-Outputs ueber <see cref="McpTruncation.TruncateLines"/>, Trunkierung der
 /// Miss-Hint-Datei-Liste ueber <see cref="McpTruncation.TruncateFileList"/>
-/// (TD-013-Schliessung).
+///.
 /// </summary>
 internal static class FindSymbolScanner
 {
@@ -27,7 +27,7 @@ internal static class FindSymbolScanner
     /// <paramref name="namePattern"/>. Verwendet <see cref="SymbolFinder"/> fuer die
     /// Symbol-Suche, <see cref="McpTruncation"/> fuer die Trunkierung. Bei null
     /// C#-Treffern wird der Miss-Hint ueber <see cref="SearchPatternScanner.GetFilesWithHits"/>
-    /// aufgebaut und ebenfalls trunkiert (TD-013).
+    /// aufgebaut und ebenfalls trunkiert.
     /// </summary>
     /// <param name="solution">Bereits geladene Roslyn-Solution.</param>
     /// <param name="namePattern">Substring-Match auf Symbol-Namen (case-insensitive).</param>
@@ -69,7 +69,7 @@ internal static class FindSymbolScanner
         {
             return baseText;
         }
-        // Trunkierung der Datei-Liste (TD-013): Default 10 Dateien, Meta-Zeile via
+        // Trunkierung der Datei-Liste : Default 10 Dateien, Meta-Zeile via
         // McpTruncation.TruncateFileList. Forward-Slash-Pfade konsistent mit
         // SearchPatternScanner.GetFilesWithHits.
         var fileList = McpTruncation.TruncateFileList(missHits, missHits.Count);

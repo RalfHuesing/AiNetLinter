@@ -263,9 +263,6 @@ public sealed class MissingDocClass
     {
         const string sourceCode = @"
 namespace Test;
-/// <summary>
-/// Good class.
-/// </summary>
 public sealed class GoodClass
 {
     /// <summary>
@@ -288,9 +285,6 @@ public sealed class GoodClass
     {
         const string sourceCode = @"
 namespace Test;
-/// <summary>
-/// Good class.
-/// </summary>
 public sealed class GoodClass {}";
         var config = CreateDefaultConfig() with
         {
@@ -307,14 +301,8 @@ public sealed class GoodClass {}";
     {
         const string sourceCode = @"
 namespace Test;
-/// <summary>
-/// Good class.
-/// </summary>
 public sealed class GoodClass
 {
-    /// <summary>
-    /// Work.
-    /// </summary>
     public void Work()
     {
         try {}

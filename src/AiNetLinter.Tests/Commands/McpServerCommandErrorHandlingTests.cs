@@ -13,11 +13,11 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// E2E-Tests fuer den EPIC-06-Server-Lifecycle: eine kaputte Solution fuehrt nicht zu einem
+/// E2E-Tests fuer den
 /// Server-Crash, sondern jeder Tool-Call liefert eine strukturierte [ERROR]-Antwort; eine
 /// valide Solution mit Compile-Fehlern in einzelnen Dateien liefert fuer die betroffene
-/// Datei den EPIC-06-Warnhinweis statt eines Absturzes. Thematisch fokussiert auf die
-/// 006-Erweiterung (Plan-Pruefschritt 8, E2E fuer Server-Lifecycle).
+/// Datei den
+/// 006-Erweiterung.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 public sealed class McpServerCommandErrorHandlingTests
@@ -68,7 +68,7 @@ public sealed class McpServerCommandErrorHandlingTests
     public async Task RunAsync_ValidFixture_CompileErrorFileReturnsWarningSection()
     {
         // Valide Solution mit intentionalen Compile-Fehlern: get_file_skeleton auf eine kaputte
-        // Datei muss den EPIC-06-datei-spezifischen Warnhinweis liefern, kein Crash, kein
+        // Datei muss den
         // unstrukturierter Output.
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");

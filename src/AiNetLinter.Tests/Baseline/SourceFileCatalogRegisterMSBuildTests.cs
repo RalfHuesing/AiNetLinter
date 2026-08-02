@@ -12,7 +12,6 @@ using Xunit;
 namespace AiNetLinter.Tests.Baseline;
 
 /// <summary>
-/// TD-003: <see cref="SourceFileCatalog.RegisterMSBuild"/> war als Check-then-Act ohne
 /// Lock implementiert. Bei parallel laufenden <c>LoadAsync</c>-Aufrufen (z. B. mehrere
 /// parallele Test-Klassen, die erstmalig eine Solution laden) konnte es zu einer
 /// <see cref="InvalidOperationException"/> von <c>MSBuildLocator.RegisterDefaults()</c>
@@ -20,7 +19,7 @@ namespace AiNetLinter.Tests.Baseline;
 ///
 /// Im bestehenden Code wird die Exception durch ein inneres <c>try/catch</c> geschluckt
 /// und auf <c>Console.Error</c> als <c>[WARN]: Error during MSBuild registration</c>
-/// geloggt. Der TD-003-Fix fuehrt ein statisches Lock + Check-Lock-Check-Pattern ein,
+/// geloggt. Der
 /// sodass die Race-Bedingung erst gar nicht auftritt — und die MSBuild-Setup-Routine
 /// (PatchBuildHostForVs2026, MSBuildLocator.RegisterDefaults, Environment.SetEnvironmentVariable)
 /// nur einmal pro Prozess ausgefuehrt wird.

@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// zu einem Symbol auf, prueft, dass es ein Typ ist (Klasse/Interface/Struct), und delegiert an
 /// <see cref="GetTypeHierarchyFormatter.BuildHierarchyTextAsync"/> fuer die eigentliche
 /// Traversierung/Formatierung. Bewusst duenner Dispatch ohne eigene Traversierungs-/
-/// Formatierungslogik (TD-005). Deckt nur .cs-Dateien ab.
+/// Formatierungslogik. Deckt nur.cs-Dateien ab.
 /// </summary>
 internal static class GetTypeHierarchyTool
 {

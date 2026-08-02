@@ -291,9 +291,6 @@ public sealed record MetricsConfigOverride
     /// </summary>
     public int? MaxSwitchArms { get; init; }
 
-    /// <summary>
-    /// Override für MaxSwitchArmsExcludeDispatcher.
-    /// </summary>
     public bool? MaxSwitchArmsExcludeDispatcher { get; init; }
 
     /// <summary>

@@ -7,9 +7,6 @@ namespace AiNetLinter.Models;
 /// </summary>
 public sealed record ClassInfo
 {
-    /// <summary>
-    /// Der Name der Klasse.
-    /// </summary>
     public required string Name { get; init; }
 
     /// <summary>

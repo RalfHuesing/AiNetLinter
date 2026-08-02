@@ -7,7 +7,7 @@ namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsBuilder"/>: konzentriert auf die Default-Werte
-/// (TD-014). Aus <c>McpServerOptionsFactoryTests.cs</c> ausgelagert, weil der Builder eine
+///. Aus <c>McpServerOptionsFactoryTests.cs</c> ausgelagert, weil der Builder eine
 /// eigenstaendige, testbare Einheit ist — die Factory-Tests pruefen nur den Endpunkt
 /// <c>Create(state) -&gt; McpServerOptions</c> via realer Integration.
 /// </summary>

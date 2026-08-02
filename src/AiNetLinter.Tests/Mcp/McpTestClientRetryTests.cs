@@ -12,7 +12,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// Deterministische Unit-Tests fuer die Retry-Schleife in
 /// <see cref="McpTestClient.ConnectAsync"/>. Demonstriert den Failure-Mode ohne echten
 /// Server-Subprozess — der FileNotFound-Pfad schlaegt deterministisch fehl, der Retry-Loop
-/// wird sichtbar (A3 fuer TD-019).
+/// wird sichtbar (A3 fuer.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 public sealed class McpTestClientRetryTests

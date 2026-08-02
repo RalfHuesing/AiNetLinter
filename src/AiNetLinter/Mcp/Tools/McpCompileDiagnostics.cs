@@ -10,9 +10,9 @@ using Microsoft.CodeAnalysis;
 namespace AiNetLinter.Mcp.Tools;
 
 /// <summary>
-/// Buendelt Roslyn-Compile-Diagnostics einer Solution fuer den EPIC-06-Warnhinweis-Pfad. Reine
+/// Buendelt Roslyn-Compile-Diagnostics einer Solution fuer den
 /// Funktionen ohne <see cref="McpCodeGraphServer"/>-Abhaengigkeit — direkt unit-testbar mit
-/// einer beliebigen geladenen Solution als Eingabe (TD-005-Muster eingehalten: Tool-Klassen
+/// einer beliebigen geladenen Solution als Eingabe 
 /// bleiben duenn und delegieren an diese Helper-Klasse).
 /// </summary>
 internal static class McpCompileDiagnostics

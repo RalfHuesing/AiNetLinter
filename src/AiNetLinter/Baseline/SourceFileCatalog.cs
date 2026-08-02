@@ -220,7 +220,6 @@ public sealed class SourceFileCatalog : IDisposable
                path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }
 
-    // TD-003: Statischer Lock + Check-Lock-Check-Pattern gegen die Race-Bedingung bei
     // parallel laufenden Test-Klassen, die SourceFileCatalog.LoadAsync erstmalig aufrufen.
     // MSBuildLocator ist ein prozessglobaler State, daher muss die Registration serialisiert
     // werden. Der Fast-Pfad (Lock-frei) bleibt erhalten, um Lock-Contention im Normalfall

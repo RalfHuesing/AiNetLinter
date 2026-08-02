@@ -7,9 +7,9 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Eingefuehrt mit TD-009, weil
+/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Eingefuehrt mit
 /// der vorherige 5-Parameter-Konstruktor das projektweite <c>MaxConstructorDependencies: 5</c>-Limit
-/// (siehe <c>AiNetLinter.mdc</c> Z. 27) exakt erreichte — jede weitere P0/P1-Erweiterung
+/// (siehe <c> exakt erreichte — jede weitere P0/P1-Erweiterung
 /// an <see cref="McpCodeGraphServer"/> haette den Build gebrochen. Mit diesem Record wachsen
 /// kuenftige Konfigurations-Properties additiv, ohne die Konstruktor-Signatur zu aendern.
 /// </summary>

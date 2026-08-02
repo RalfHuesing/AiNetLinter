@@ -126,7 +126,6 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        // EPIC-06 Aggregate-Warnhinweis: muss vor dem eigentlichen Treffer-Output erscheinen.
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
         Assert.Contains("ValidClassA", text, StringComparison.Ordinal);

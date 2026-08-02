@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Traversierungs-/Formatierungslogik fuer <see cref="GetTypeHierarchyTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="GetTypeHierarchyTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) klein bleibt (TD-005), analog zu
+/// (siehe <c> klein bleibt, analog zu
 /// <see cref="SymbolIdentifierResolver"/> fuer <see cref="FindReferencesTool"/>. Keine Abhaengigkeit
 /// von <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
 /// </summary>
@@ -64,7 +64,7 @@ internal static class GetTypeHierarchyFormatter
     /// daher auf <c>IsInSource</c> gefiltert) verwirft dies Typen ohne Quell-Location nicht: BCL-/NuGet-
     /// Basistypen und -Interfaces (z. B. <c>object</c>, <c>IDisposable</c>, <c>CSharpSyntaxWalker</c>)
     /// sind hier der Normalfall, kein Sonderfall, und muessen sichtbar bleiben statt spurlos zu
-    /// verschwinden (siehe step-007/fix-01, Review-Finding 1).
+    /// verschwinden.
     /// </summary>
     private static IEnumerable<string> FormatHierarchyTypeReference(INamedTypeSymbol symbol, string outputRoot)
     {

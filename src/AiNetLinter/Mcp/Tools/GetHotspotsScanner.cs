@@ -13,11 +13,11 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Scan-/Formatierungslogik fuer <see cref="GetHotspotsTool"/> — in eine eigene Datei
 /// ausgelagert, damit <see cref="GetHotspotsTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu <see cref="GetIndexScopeScanner"/>).
+/// <c> klein bleibt.
 /// Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Liefert dieselbe
 /// Kennzahl wie <see cref="AiNetLinter.Maps.HotspotMapBuilder"/> (CLI-Map-Typ <c>--map hotspots</c>),
 /// aber gegen die resident gehaltene <see cref="Solution"/> statt eines Einmal-Filesystem-Scans, damit
-/// z. B. Test-Fixtures im selben Verzeichnisbaum nicht faelschlich mitgezaehlt werden (siehe step-009
+/// z. B. Test-Fixtures im selben Verzeichnisbaum nicht faelschlich mitgezaehlt werden 
 /// JIT-Kontext). Die zwei Schwellwert-Konstanten sind bewusst aus <see cref="AiNetLinter.Maps.HotspotMapBuilder"/>
 /// dupliziert (dessen Formatierungs-Methoden sind <c>private</c>, eine Abhaengigkeit dorthin wuerde
 /// keinen echten Wiederverwendungs-Gewinn bringen).

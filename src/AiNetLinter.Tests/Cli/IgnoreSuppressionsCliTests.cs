@@ -10,28 +10,22 @@ public sealed class IgnoreSuppressionsCliTests
     [Fact]
     public void IgnoreSuppressions_NotSet_ReturnsNull()
     {
-        // Arrange
         var (root, options) = CliCommandBuilder.Build();
         var parseResult = root.Parse(new[] { "--path", "." });
 
-        // Act
         var parsedArgs = CliCommandBuilder.Parse(parseResult, options);
 
-        // Assert
         Assert.Null(parsedArgs.IgnoreSuppressions);
     }
 
     [Fact]
     public void IgnoreSuppressions_NoValue_DefaultsToAll()
     {
-        // Arrange
         var (root, options) = CliCommandBuilder.Build();
         var parseResult = root.Parse(new[] { "--path", ".", "--ignore-suppressions" });
 
-        // Act
         var parsedArgs = CliCommandBuilder.Parse(parseResult, options);
 
-        // Assert
         Assert.NotNull(parsedArgs.IgnoreSuppressions);
         Assert.Single(parsedArgs.IgnoreSuppressions!);
         Assert.Equal("all", parsedArgs.IgnoreSuppressions![0]);
@@ -40,7 +34,6 @@ public sealed class IgnoreSuppressionsCliTests
     [Fact]
     public void IgnoreSuppressions_AliasCSharp_NormalizesToCs()
     {
-        // Arrange
         var linterArgs = new LinterArgs
         {
             TargetPath = ".",
@@ -48,11 +41,9 @@ public sealed class IgnoreSuppressionsCliTests
             IgnoreSuppressions = new[] { "c#", "razor" }
         };
 
-        // Act
         var validationError = linterArgs.Validate();
         var normalized = linterArgs.GetNormalizedIgnoreSuppressions();
 
-        // Assert
         Assert.Null(validationError);
         Assert.Equal(2, normalized.Count);
         Assert.Equal("cs", normalized[0]);
@@ -62,11 +53,9 @@ public sealed class IgnoreSuppressionsCliTests
     [Fact]
     public void IgnoreSuppressions_MultipleLanguages_NormalizesAndDeduplicates()
     {
-        // Arrange
         var (root, options) = CliCommandBuilder.Build();
         var parseResult = root.Parse(new[] { "--path", ".", "--ignore-suppressions", "cs,razor", "js", "c#" });
 
-        // Act
         var parsedArgs = CliCommandBuilder.Parse(parseResult, options);
         var linterArgs = new LinterArgs
         {
@@ -78,7 +67,6 @@ public sealed class IgnoreSuppressionsCliTests
         var validationError = linterArgs.Validate();
         var normalized = linterArgs.GetNormalizedIgnoreSuppressions();
 
-        // Assert
         Assert.Null(validationError);
         Assert.Equal(3, normalized.Count);
         Assert.Contains("cs", normalized);
@@ -89,7 +77,6 @@ public sealed class IgnoreSuppressionsCliTests
     [Fact]
     public void IgnoreSuppressions_InvalidLanguage_ReturnsValidationError()
     {
-        // Arrange
         var linterArgs = new LinterArgs
         {
             TargetPath = ".",
@@ -97,10 +84,8 @@ public sealed class IgnoreSuppressionsCliTests
             IgnoreSuppressions = new[] { "cs", "invalid_lang" }
         };
 
-        // Act
         var validationError = linterArgs.Validate();
 
-        // Assert
         Assert.NotNull(validationError);
         Assert.Contains("Ungueltige Sprache fuer --ignore-suppressions: 'invalid_lang'", validationError);
     }

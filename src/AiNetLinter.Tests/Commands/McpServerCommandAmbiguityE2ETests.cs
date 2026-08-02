@@ -9,7 +9,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// E2E-Test fuer EPIC-07 Mehrdeutigkeits-Abbruch (Konzept Z. 617-618): ein Zielverzeichnis
+/// E2E-Test fuer: ein Zielverzeichnis
 /// mit mehreren .sln/.slnx-Kandidaten ohne explizites <c>--path</c> auf eine Datei fuehrt
 /// zu einem Server-Start-Abbruch mit klarer Fehlermeldung auf stderr statt einer
 /// stillschweigend falschen Solution-Auswahl. Unit-Test in <c>McpServerCommandTests.cs</c>
@@ -17,7 +17,7 @@ namespace AiNetLinter.Tests.Commands;
 ///
 /// Da der Server bei Mehrdeutigkeit bereits vor <c>McpServer.Create</c> abbricht, ist
 /// kein <c>McpClient</c>-Connect moeglich — der Test startet den Subprozess direkt
-/// und liest stderr (analog <c>McpServerCommandErrorHandlingTests.cs</c> aus Einheit 006).
+/// und liest stderr (analog <c>McpServerCommandErrorHandlingTests.cs</c> aus.
 ///
 /// A3-Pfad: wenn <c>FindSolutionCandidates</c> in <c>McpServerCommand</c> durch
 /// <c>SourceFileCatalog.FindSolutionFile</c> ersetzt wird (das <c>files[0]</c> silent

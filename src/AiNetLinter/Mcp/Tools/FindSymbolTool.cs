@@ -18,19 +18,19 @@ namespace AiNetLinter.Mcp.Tools;
 /// ueberschreibbar via <c>maxResults</c>. Argument-Validierung lebt im Tool (nicht im Scanner),
 /// damit der Scanner reine Daten bekommt und einfacher unit-testbar bleibt. Bewusst duenner
 /// Dispatch auf <see cref="FindSymbolScanner.FindMatchesAndFormat"/> — keine eigene Scan- oder
-/// Formatierungslogik (TD-005-Muster, analog <see cref="SearchPatternTool"/>), damit diese
-/// Klasse eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) klein bleibt
-/// (TD-012-Scanner-Split).
+/// Formatierungslogik, damit diese
+/// Klasse eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt
+///.
 /// </summary>
 internal static class FindSymbolTool
 {
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
-    /// Stellt dem Scanner-Output einen EPIC-06-Aggregat-Warnhinweis voran, falls die Solution
+    /// Stellt dem Scanner-Output einen
     /// Compile-Fehler in einzelnen Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst
     /// nicht, dass die Antwort unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt
     /// unerwartete Roslyn-Exceptions ab und liefert einen strukturierten [ERROR]-Antwort statt
-    /// eines Server-Crashs (EPIC-06 Defensiv-Pfad).
+    /// eines Server-Crashs.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
@@ -88,7 +88,7 @@ internal static class FindSymbolTool
     }
 
     /// <summary>
-    /// Stellt einen EPIC-06-Aggregat-Warnhinweis vor <paramref name="text"/>, falls die Solution
+    /// Stellt einen
     /// Compile-Fehler in mindestens einer Datei hat. Shared-Helper, weil das identische Muster in
     /// mehreren Tools verwendet wird (find_symbol, find_references, get_impact,
     /// get_type_hierarchy, search_pattern). Bei 0 Compile-Fehlern wird der Original-Text

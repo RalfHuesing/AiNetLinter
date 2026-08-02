@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Formatierungs-/Filter-Logik fuer <see cref="GetViolationsTool"/> — in eine eigene Datei
 /// ausgelagert, damit <see cref="GetViolationsTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu <see cref="GetHotspotsScanner"/>).
+/// <c> klein bleibt.
 /// Delegiert die eigentliche Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
 /// mit <c>noCache: true</c> — bewusst KEIN Neubau einer eigenen Lint-Loop, weil
 /// <c>konzept.md</c> fuer <c>get_violations</c> explizit die <see cref="LinterEngine"/> als Basis
@@ -27,7 +27,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// umgehen": Cache dient der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
 /// Post-Filter auf den fertigen <see cref="RuleViolation"/>s (case-insensitive <c>Contains</c> auf
 /// Projekt-Name oder solution-relativem Pfad), kein Pre-Filter ueber <see cref="LinterArgs"/> — siehe
-/// "Bekannte Ausnahmen" im Step-Plan. Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt
+/// "Bekannte Ausnahmen" im
 /// unit-testbar.
 /// </summary>
 internal static class GetViolationsScanner

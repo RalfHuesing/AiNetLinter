@@ -9,8 +9,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// EPIC-07 CLI-Regression (Konzept Z. 622): der bestehende CLI-Batch-Modus
-/// (ainetlinter --config rules.json --path &lt;dir&gt;) bleibt nach allen EPIC-01..06-
+///: der bestehende CLI-Batch-Modus
+/// (ainetlinter --config rules.json --path &lt;dir&gt;) bleibt nach allen
 /// Aenderungen unveraendert lauffaehig. Bestehender Test
 /// <c>CliIntegrationTests.RunLinterCli_OnWholeSolution_ReturnsSuccess</c> deckt die echte
 /// AiNetLinter-Solution ab; dieser Test deckt eine Mini-Fixture
@@ -19,7 +19,7 @@ namespace AiNetLinter.Tests.Commands;
 /// als Erfolgs-Marker nutzt.
 ///
 /// A3-Pfad: wenn in <c>Program.Main</c> der CLI-Dispatcher die args-Verarbeitung
-/// bricht (z. B. weil ein neuer EPIC-01..06-Pfad zuerst returnt, bevor
+/// bricht (z. B. weil ein neuer
 /// <c>ExecuteLinterAsync</c> aufgerufen wird), oder wenn der Pfad zu
 /// <c>ViolationTrigger.cs</c> durch einen Refactor von <c>EnforceSealedClasses</c>
 /// stillschweigend uebersprungen wird, schlaegt dieser Test fehl.

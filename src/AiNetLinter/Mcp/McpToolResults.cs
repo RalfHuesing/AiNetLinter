@@ -93,9 +93,6 @@ internal static class McpToolResults
             hint: "Pfad relativ zum Solution-Verzeichnis angeben (Forward- oder Backslash), 'find_symbol' zur Orientierung nutzen.");
     }
 
-    /// <summary>
-    /// Baut ein Erfolgsergebnis mit genau einem Text-Content-Block.
-    /// </summary>
     internal static CallToolResult Text(string text)
     {
         return new CallToolResult

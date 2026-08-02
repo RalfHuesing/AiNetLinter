@@ -8,7 +8,7 @@ namespace AiNetLinter.Mcp;
 /// <summary>
 /// Fluent-Builder fuer <see cref="McpServerOptions"/>. Aus <see cref="McpServerOptionsFactory"/>
 /// ausgelagert, um die Factory selbst unter dem <c>AIContextFootprint</c>-Limit zu halten
-/// (siehe <c>AiNetLinter.mdc</c> Z. 15, 28) und kuenftige P0/P1-Erweiterungen
+/// (siehe <c> und kuenftige P0/P1-Erweiterungen
 /// (<c>--mcp-log</c>-State, <c>rules.json</c>-Auto-Discovery-Hint, "laedt noch"-State) als
 /// additive <c>With*</c>-Methoden zu ermoeglichen, ohne die Factory selbst zu vergroessern.
 /// Instanzen sind nicht thread-safe — pro Build-Vorgang neu erzeugen.

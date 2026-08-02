@@ -15,8 +15,8 @@ namespace AiNetLinter.Mcp.Tools;
 /// .css). Argument-Validierung lebt im Tool (nicht im Scanner), damit der Scanner reine Daten
 /// bekommt und einfacher unit-testbar bleibt. Bewusst duenner Dispatch auf
 /// <see cref="SearchPatternScanner.SearchAndFormat"/> — keine eigene Scan- oder Formatierungslogik
-/// (TD-005-Muster, analog zu <see cref="GetViolationsTool"/>), damit dieser Klasse eigener
-/// <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) klein bleibt.
+///, damit dieser Klasse eigener
+/// <c>AIContextFootprint</c> (siehe <c> klein bleibt.
 /// </summary>
 internal static class SearchPatternTool
 {
@@ -24,7 +24,7 @@ internal static class SearchPatternTool
    /// Scannt die resident gehaltene Solution nach <paramref name="pattern"/>. Liefert bei
     /// ungueltiger Regex-Syntax (nur <paramref name="isRegex"/>=true) einen
     /// <c>INVALID_ARGUMENT</c>-Fehler statt zu crashen (Result-Pattern, siehe
-    /// <c>AiNetLinterRichtlinien.mdc</c> §5). <see cref="Task.Run"/> umschliesst den
+    /// <c>. <see cref="Task.Run"/> umschliesst den
     /// CPU-/IO-bound Scan, damit der <c>McpCodeGraphServer</c>-Lock nicht unnoetig gehalten wird
     /// (siehe Plan: bewusst eingesetzt, <c>Task.Run</c> ist hier kein Ueber-Engineering).
     /// </summary>

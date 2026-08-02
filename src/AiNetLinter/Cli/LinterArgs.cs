@@ -7,14 +7,8 @@ namespace AiNetLinter.Cli;
 /// </summary>
 public sealed class LinterArgs
 {
-    /// <summary>
-    /// Holt oder setzt den Pfad zur optionalen Konfigurationsdatei.
-    /// </summary>
     public string? ConfigPath { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Zielpfad (Datei oder Verzeichnis), der analysiert werden soll.
-    /// </summary>
     public required string TargetPath { get; init; }
 
     /// <summary>
@@ -22,24 +16,12 @@ public sealed class LinterArgs
     /// </summary>
     public required bool Verbose { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Pfad, unter dem das AI-Playbook generiert werden soll.
-    /// </summary>
     public string? PlaybookPath { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Pfad, unter dem eine neue Baseline-Datei erstellt werden soll.
-    /// </summary>
     public string? CreateBaselinePath { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Pfad zur existierenden Baseline-Datei.
-    /// </summary>
     public string? BaselinePath { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob nur geaenderte Dateien geprueft werden sollen.
-    /// </summary>
     public bool OnlyChanged { get; init; }
 
     /// <summary>
@@ -62,9 +44,6 @@ public sealed class LinterArgs
     /// </summary>
     public bool WaveReady { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt die Git-Referenz (z. B. "HEAD~1"), ab der Aenderungen analysiert werden.
-    /// </summary>
     public string? GitSince { get; init; }
 
     /// <summary>
@@ -112,14 +91,8 @@ public sealed class LinterArgs
     /// </summary>
     public int CacheTtlMinutes { get; init; } = 60;
 
-    /// <summary>
-    /// Holt oder setzt den Namen der Klasse fuer eine detaillierte Footprint-Analyse.
-    /// </summary>
     public string? Footprint { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Namen des auszugebenden eingebetteten Dokuments.
-    /// </summary>
     public string? Docs { get; init; }
 
     /// <summary>
@@ -127,24 +100,12 @@ public sealed class LinterArgs
     /// </summary>
     public bool ListRules { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt die Regel-ID, fuer die eine Beschreibung ausgegeben werden soll.
-    /// </summary>
     public string? DescribeRule { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Suchbegriff fuer die Regelsuche.
-    /// </summary>
     public string? SearchRules { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Typ der Codebase-Landkarte (vocabulary | structure | hotspots).
-    /// </summary>
     public string? MapType { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt den Eval-Typ für --eval (naming-drift | architecture-intent).
-    /// </summary>
     public string? EvalType { get; init; }
 
     /// <summary>

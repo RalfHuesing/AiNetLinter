@@ -16,9 +16,6 @@ public sealed record WebConfig
     /// </summary>
     public bool IsEnabled { get; init; } = false;
 
-    /// <summary>
-    /// Konfigurations-Subbereich fuer CSS-Dateien.
-    /// </summary>
     public CssConfig Css { get; init; } = new();
 
     /// <summary>

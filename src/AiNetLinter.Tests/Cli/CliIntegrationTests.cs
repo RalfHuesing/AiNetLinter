@@ -12,7 +12,6 @@ public sealed class CliIntegrationTests
     [Fact]
     public void RunLinterCli_OnWholeSolution_ReturnsSuccess()
     {
-        // Arrange
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
@@ -32,7 +31,6 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
-        // Act
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 
@@ -40,7 +38,6 @@ public sealed class CliIntegrationTests
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
 
-        // Assert
         Assert.Null(error == "" ? null : error);
         Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
         Assert.Contains("OK", output);
@@ -49,7 +46,6 @@ public sealed class CliIntegrationTests
     [Fact]
     public void GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
     {
-        // Arrange
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
@@ -70,7 +66,6 @@ public sealed class CliIntegrationTests
 
         try
         {
-            // Act
             using var process = Process.Start(processInfo);
             Assert.NotNull(process);
 
@@ -78,7 +73,6 @@ public sealed class CliIntegrationTests
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            // Assert
             Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
             Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
 
@@ -257,7 +251,6 @@ public sealed class CliIntegrationTests
     [Fact]
     public void RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
     {
-        // Arrange
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "non-existent-config.json");
@@ -273,14 +266,12 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
-        // Act
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
 
-        // Assert
         Assert.True(process.ExitCode == 1, $"Linter sollte mit Exit-Code 1 fehlschlagen, beendete aber mit {process.ExitCode}.");
         Assert.Contains("[ERROR]", error);
     }

@@ -10,7 +10,6 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void IgnoreSuppressionsFilter_Inactive_DoesNotIgnoreAnyLanguage()
     {
-        // Arrange
         var filter = IgnoreSuppressionsFilter.None;
 
         // Act & Assert
@@ -24,7 +23,6 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void IgnoreSuppressionsFilter_CsLanguage_BypassesCsOnly()
     {
-        // Arrange
         var filter = new IgnoreSuppressionsFilter(new[] { "c#", "razor" });
 
         // Act & Assert
@@ -44,7 +42,6 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void IgnoreSuppressionsFilter_AllLanguages_BypassesAllLanguages()
     {
-        // Arrange
         var filter = new IgnoreSuppressionsFilter(new[] { "all" });
 
         // Act & Assert
@@ -59,16 +56,13 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void SuppressionEvaluator_WithIgnoreFilter_ReturnsNotSuppressed()
     {
-        // Arrange
         var content = "// ainetlinter-disable EnforceNullableEnable\nclass Foo {}";
         var activeFilter = new IgnoreSuppressionsFilter(new[] { "cs" });
         var inactiveFilter = IgnoreSuppressionsFilter.None;
 
-        // Act
         bool suppressedWithActive = SuppressionEvaluator.IsSuppressed(content, "EnforceNullableEnable", 1, activeFilter);
         bool suppressedWithInactive = SuppressionEvaluator.IsSuppressed(content, "EnforceNullableEnable", 1, inactiveFilter);
 
-        // Assert
         Assert.False(suppressedWithActive);
         Assert.True(suppressedWithInactive);
     }
@@ -76,17 +70,14 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void WebSuppressionDetector_WithIgnoreFilter_ReturnsNotSuppressed()
     {
-        // Arrange
         var jsContent = "// ainetlinter-disable JS_MaxJsLineCount\nconsole.log('hi');";
         var cssContent = "/* ainetlinter-disable CSS_MaxCssLineCount */\nbody { color: red; }";
 
         var filter = new IgnoreSuppressionsFilter(new[] { "js" });
 
-        // Act
         bool jsSuppressed = WebSuppressionDetector.IsSuppressed(jsContent, "JS_MaxJsLineCount", filter, "js");
         bool cssSuppressed = WebSuppressionDetector.IsSuppressed(cssContent, "CSS_MaxCssLineCount", filter, "css");
 
-        // Assert
         Assert.False(jsSuppressed); // JS ignore filter is active
         Assert.True(cssSuppressed); // CSS ignore filter is NOT active
     }
@@ -94,14 +85,11 @@ public sealed class IgnoreSuppressionsFilterTests
     [Fact]
     public void DisableAllDetector_WithIgnoreFilter_ReturnsFalseForDisableAll()
     {
-        // Arrange
         var content = "// ainetlinter-disable all\nclass Bar {}";
         var filter = new IgnoreSuppressionsFilter(new[] { "cs" });
 
-        // Act
         bool hasDisableAll = DisableAllDetector.HasDisableAll(content, filter, "cs");
 
-        // Assert
         Assert.False(hasDisableAll);
     }
 }

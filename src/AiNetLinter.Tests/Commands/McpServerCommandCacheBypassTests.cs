@@ -10,7 +10,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// EPIC-07 Cache-Isolation (Konzept Z. 619-621): Ein MCP-Server + ein gleichzeitiger
+///: Ein MCP-Server + ein gleichzeitiger
 /// CLI-Lint-Lauf auf derselben Solution kollidieren nicht. Begruendung: der MCP-Modus
 /// umgeht den Disk-Cache (<see cref="AnalysisCacheManager"/>) per Konzept Z. 175-183.
 /// Statt eines E2E-Process-Coordination-Tests verifiziert dieser Reflection-Test die

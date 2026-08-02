@@ -6,11 +6,11 @@ using Xunit;
 namespace AiNetLinter.Tests.Fixtures;
 
 /// <summary>
-/// Strukturelle A3-Sicherung fuer TD-016a: verifiziert, dass die 2 ehemals duplizierten
+/// Strukturelle A3-Sicherung fuer
 /// Workspace-Klassen tatsaechlich von <see cref="FixtureWorkspaceBase"/> erben und keine
 /// eigenen <c>CopyFixture</c>/<c>IsGeneratedPath</c>/<c>FindSolutionRoot</c>-Helper mehr
 /// definieren. Verhindert, dass die Refactor-Wirkung versehentlich rueckgaengig gemacht
-/// wird — TD-016 selbst hatte das Problem (nur 2/4 Klassen refaktoriert), weil es
+/// wird —, weil es
 /// keine strukturelle Sicherung gab.
 /// </summary>
 public sealed class TD016aRefactorTests

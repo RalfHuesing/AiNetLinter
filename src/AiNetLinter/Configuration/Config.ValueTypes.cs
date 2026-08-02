@@ -35,19 +35,10 @@ public sealed record WebConfigOverride
     /// </summary>
     public bool? IsEnabled { get; init; }
 
-    /// <summary>
-    /// CSS-spezifische Overrides.
-    /// </summary>
     public CssConfigOverride? Css { get; init; }
 
-    /// <summary>
-    /// JS-spezifische Overrides.
-    /// </summary>
     public JsConfigOverride? Js { get; init; }
 
-    /// <summary>
-    /// Razor-spezifische Overrides (Phase 3 der Extend-Web-Features-Epic).
-    /// </summary>
     public RazorConfigOverride? Razor { get; init; }
 }
 
@@ -57,29 +48,14 @@ public sealed record WebConfigOverride
 /// </summary>
 public sealed record CssConfigOverride
 {
-    /// <summary>
-    /// Override fuer MaxCssLineCount.
-    /// </summary>
     public int? MaxCssLineCount { get; init; }
 
-    /// <summary>
-    /// Override fuer PreferScopedCss.
-    /// </summary>
     public bool? PreferScopedCss { get; init; }
 
-    /// <summary>
-    /// Override fuer PreferScopedCssMinRuleCount.
-    /// </summary>
     public int? PreferScopedCssMinRuleCount { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxCssSelectorComplexity.
-    /// </summary>
     public int? MaxCssSelectorComplexity { get; init; }
 
-    /// <summary>
-    /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).
-    /// </summary>
     public IReadOnlyCollection<string>? ExemptPaths { get; init; }
 }
 
@@ -89,19 +65,10 @@ public sealed record CssConfigOverride
 /// </summary>
 public sealed record JsConfigOverride
 {
-    /// <summary>
-    /// Override fuer MaxJsLineCount.
-    /// </summary>
     public int? MaxJsLineCount { get; init; }
 
-    /// <summary>
-    /// Override fuer EnforceJsModules.
-    /// </summary>
     public bool? EnforceJsModules { get; init; }
 
-    /// <summary>
-    /// Override fuer ExemptPaths (vollstaendige Ersetzung, keine Merge).
-    /// </summary>
     public IReadOnlyCollection<string>? ExemptPaths { get; init; }
 }
 
@@ -111,43 +78,19 @@ public sealed record JsConfigOverride
 /// </summary>
 public sealed record RazorConfigOverride
 {
-    /// <summary>
-    /// Override fuer MaxRazorLineCount.
-    /// </summary>
     public int? MaxRazorLineCount { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxRazorCodeBlockLines.
-    /// </summary>
     public int? MaxRazorCodeBlockLines { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxMarkupNestingDepth.
-    /// </summary>
     public int? MaxMarkupNestingDepth { get; init; }
 
-    /// <summary>
-    /// Override fuer BanInlineEventLambdas.
-    /// </summary>
     public bool? BanInlineEventLambdas { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxControlFlowBlocks.
-    /// </summary>
     public int? MaxControlFlowBlocks { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxForeachNestingDepth.
-    /// </summary>
     public int? MaxForeachNestingDepth { get; init; }
 
-    /// <summary>
-    /// Override fuer MaxComponentParameterCount.
-    /// </summary>
     public int? MaxComponentParameterCount { get; init; }
 
-    /// <summary>
-    /// Override fuer BanInlineTernaryInAttributes.
-    /// </summary>
     public bool? BanInlineTernaryInAttributes { get; init; }
 }

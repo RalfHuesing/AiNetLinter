@@ -71,7 +71,7 @@ public static class AgentRulesGenerator
     /// <summary>
     /// Ermittelt den Pfad zur Agent-Regeldatei.
     /// Prüft zuerst, ob ein benutzerdefinierter Pfad übergeben wurde.
-    /// Wenn nicht: Standard ist .agents/rules/AiNetLinter.mdc.
+    /// Wenn nicht: Standard ist.agents/rules/
     /// </summary>
     public static string ResolveAgentRulesPath(string baseDir, string? customPath = null)
     {

@@ -23,7 +23,7 @@ internal static class McpTruncation
     /// "[N Treffer gesamt, M gezeigt — Pattern verfeinern oder maxResults erhöhen]" angehaengt.
     /// Quelle der Wahrheit fuer die Gesamtzahl in der Meta-Zeile ist <paramref name="totalMatches"/>
     /// (nicht <c>hitLines.Count</c>), damit die Aussage auch dann korrekt bleibt, wenn ein
-    /// Aufrufer aus Speichergruenden vorab trunkiert hat (z. B. in einer kuenftigen EPIC-08-
+    /// Aufrufer aus Speichergruenden vorab trunkiert hat (z. B. in einer kuenftigen
     /// Optimierung).
     /// </summary>
     internal static string TruncateLines(

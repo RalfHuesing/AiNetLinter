@@ -11,10 +11,10 @@ namespace AiNetLinter.Mcp.Tools;
 /// konfigurierten <see cref="McpCodeGraphServer.MaxLineCount"/>-Limit naehern oder es ueberschreiten —
 /// dieselbe Kennzahl wie der bestehende CLI-Map-Typ <c>--map hotspots</c>
 /// (<see cref="AiNetLinter.Maps.HotspotMapBuilder"/>), aber granular gegen die geladene Solution statt
-/// eines Einmal-Filesystem-Scans, inkl. optionalem Namespace-/Projekt-Filter (siehe step-009). Bewusst
+/// eines Einmal-Filesystem-Scans, inkl. optionalem Namespace-/Projekt-Filter. Bewusst
 /// duenner Dispatch auf <see cref="GetHotspotsScanner.BuildHotspotsText"/> — keine eigene Scan-/
-/// Formatierungslogik (TD-005-Muster, analog zu <see cref="GetIndexScopeTool"/>), damit dieser Klasse
-/// eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) klein bleibt.
+/// Formatierungslogik, damit dieser Klasse
+/// eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt.
 /// </summary>
 internal static class GetHotspotsTool
 {

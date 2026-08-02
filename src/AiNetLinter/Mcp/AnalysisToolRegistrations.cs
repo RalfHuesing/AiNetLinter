@@ -12,8 +12,8 @@ namespace AiNetLinter.Mcp;
 /// Tool-Collection. Aus <see cref="FileStructureToolRegistrations"/> ausgelagert, weil
 /// <c>get_violations</c> durch den transitiven Pull-in aus <c>LinterEngine</c> +
 /// <c>LinterAnalyzer</c> + allen Checkern den <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) der <see cref="FileStructureToolRegistrations"/>-Klasse ueber das
-/// 2500-Limit getrieben hat (siehe step-010 DoD-Footprint-Kontrolle: 2492 Zeilen, +4 ueber
+/// <c> der <see cref="FileStructureToolRegistrations"/>-Klasse ueber das
+/// 2500-Limit getrieben hat 
 /// Limit). <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
 /// datei-inhalts-basiert arbeitet (wie <c>get_violations</c>) und damit semantisch nicht zu
 /// <see cref="SymbolGraphToolRegistrations"/> (C#-Symbolgraph) oder
@@ -24,7 +24,7 @@ internal static class AnalysisToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein DI-Container
-    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+    /// (siehe <c>.
     /// </summary>
     internal static void Register(McpServerPrimitiveCollection<McpServerTool> tools, McpCodeGraphServer mcpState)
     {

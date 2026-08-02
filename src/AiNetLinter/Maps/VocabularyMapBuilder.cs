@@ -17,7 +17,7 @@ internal sealed record VocabularyTypeEntry(string Name, string RelativePath, boo
 
 /// <summary>
 /// Erzeugt eine Vocabulary Map: Typ-Deklarationen gruppiert nach Suffix-Muster.
-/// Dient als direkter Input für Eval-Prompt E02 (Naming-Drift-Audit).
+/// Dient als direkter Input für.
 /// </summary>
 internal static class VocabularyMapBuilder
 {

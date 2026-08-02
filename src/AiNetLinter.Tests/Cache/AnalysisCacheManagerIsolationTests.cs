@@ -10,7 +10,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Cache;
 
 /// <summary>
-/// EPIC-07 Cache-Isolation (Konzept Z. 619-621): Zwei Cache-Loads mit unterschiedlichen
+///: Zwei Cache-Loads mit unterschiedlichen
 /// Solution-Pfaden muessen unterschiedliche Cache-Filenamen erzeugen. Zwei Cache-Loads
 /// mit gleichem Solution-Pfad denselben Hash-Anteil. Das Filename-Pattern ist
 /// "{solutionName}-{SHA256(solutionPath + rulesJson)[..8]}-{timestamp}.json".

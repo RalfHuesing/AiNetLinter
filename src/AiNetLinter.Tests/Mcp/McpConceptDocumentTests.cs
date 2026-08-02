@@ -9,7 +9,7 @@ namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
 /// A3-Sicherung gegen Re-Drift des Konzepts: jede spaetere Aenderung an den
-/// vier in Einheit 010 korrigierten Stellen in
+/// vier in
 /// <c>tasks/codegraph-mcp-server/konzept.md</c>, die den Wortlaut zurueck auf
 /// den veralteten Stand bringt, wird durch einen dieser Tests gefangen.
 ///

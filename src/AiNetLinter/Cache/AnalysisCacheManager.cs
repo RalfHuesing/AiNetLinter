@@ -27,7 +27,7 @@ internal sealed class AnalysisCacheManager
 
     /// <summary>
     /// Vollstaendiger Pfad zur Cache-Datei (intern fuer Test-Sichtbarkeit, nicht fuer
-    /// Production-Caller gedacht). EPIC-07 Cache-Isolation-Tests verifizieren ueber
+    /// Production-Caller gedacht).
     /// diese Property, dass unterschiedliche Solution-Pfade zu unterschiedlichen
     /// Cache-Filenamen fuehren.
     /// </summary>

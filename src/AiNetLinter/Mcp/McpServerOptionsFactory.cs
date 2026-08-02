@@ -9,13 +9,13 @@ namespace AiNetLinter.Mcp;
 /// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection. Bewusst
 /// aus <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert und durch
 /// <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder aufgeteilt
-/// (TD-014): haette <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen
+/// : haette <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen
 /// Members, waechst dessen AIContextFootprint durch die Tool-Registrierungs-
 /// Abhaengigkeiten ueber das Limit.
 /// </summary>
 internal static class McpServerOptionsFactory
 {
-    // Zentraler Scope-Hint fuer den initialize-Handshake (EPIC-05 / 003).
+    // Zentraler Scope-Hint fuer den initialize-Handshake.
     // Wird via ModelContextProtocol-SDK-Property McpServerOptions.ServerInstructions
     // an den Server-Info-Block der initialize-Antwort durchgereicht. Nennt die
     // C#-only-Grenze einmal server-weit, damit der Agent sie nicht pro Tool-
@@ -31,7 +31,7 @@ internal static class McpServerOptionsFactory
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
     /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+    /// DI-Container (siehe <c>.
     /// </summary>
     internal static McpServerOptions Create(McpCodeGraphServer mcpState)
     {

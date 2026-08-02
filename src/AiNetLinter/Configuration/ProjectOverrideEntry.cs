@@ -15,9 +15,6 @@ public sealed record RuleMetadataEntry
 /// </summary>
 public sealed record ProjectOverrideEntry
 {
-    /// <summary>
-    /// Überschreibungen der globalen Konfigurationswerte.
-    /// </summary>
     public GlobalConfigOverride? Global { get; init; }
 
     /// <summary>
@@ -35,8 +32,5 @@ public sealed record ProjectOverrideEntry
     /// </summary>
     public UiSeparationConfigOverride? UiSeparation { get; init; }
 
-    /// <summary>
-    /// Überschreibungen der Web-Konfiguration (CSS/JS/Razor).
-    /// </summary>
     public WebConfigOverride? Web { get; init; }
 }

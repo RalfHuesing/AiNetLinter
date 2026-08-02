@@ -16,7 +16,7 @@ internal sealed record StructureFileInfo(string RelativePath, int Lines, string 
 
 /// <summary>
 /// Erzeugt eine Structure Map: Verzeichnisstruktur mit Dateigrößen.
-/// Dient als direkter Input für Eval-Prompt E03 (Architecture-Intent-Audit).
+/// Dient als direkter Input für.
 /// </summary>
 internal static class StructureMapBuilder
 {

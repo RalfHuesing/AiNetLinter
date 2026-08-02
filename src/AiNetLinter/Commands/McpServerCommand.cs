@@ -50,7 +50,7 @@ internal static class McpServerCommand
     /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
     /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
     /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt <c>private</c>,
-    /// damit die Config-Verdrahtung direkt testbar ist (siehe step-009).
+    /// damit die Config-Verdrahtung direkt testbar ist.
     /// </summary>
     internal static int ResolveMaxLineCount(LinterArgs args)
     {
@@ -68,7 +68,7 @@ internal static class McpServerCommand
     /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
     /// <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein CLI-Lint-Lauf
     /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt
-    /// <c>private</c>, damit die Config-Verdrahtung direkt testbar ist (siehe step-010).
+    /// <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
     /// </summary>
     internal static Config ResolveConfig(LinterArgs args)
     {

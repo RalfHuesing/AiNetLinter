@@ -25,7 +25,7 @@ public sealed class McpTestClient : IAsyncDisposable
 
     /// <summary>
     /// Verbindet sich mit dem kompilierten <c>AiNetLinter.exe --mcp-server</c> für den Zielpfad.
-    /// Bei flake-anfaelligen Parallel-Init-Szenarien (siehe TD-019, 010-Volllauf-Beobachtung) greift
+    /// Bei flake-anfaelligen Parallel-Init-Szenarien  greift
     /// eine Retry-Schleife mit exponentiellem Backoff: Default 3 Retries (0.5s/1s/2s) reichen im
     /// Median, im Worst-Case werden ~3.5s zusaetzliche Wartezeit pro Connect verbrannt.
     /// </summary>

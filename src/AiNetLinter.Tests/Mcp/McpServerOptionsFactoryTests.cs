@@ -7,11 +7,11 @@ namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsFactory"/>: konzentriert auf den zentralen Scope-Hint
-/// (EPIC-05 / Einheit 003), der via <c>McpServerOptions.ServerInstructions</c> in der
+///, der via <c>McpServerOptions.ServerInstructions</c> in der
 /// <c>initialize</c>-Antwort des Servers landet. Aus <c>McpServerCommandTests.cs</c> ausgelagert,
 /// weil diese Datei bereits am <c>MaxLineCount</c>-Limit (500) liegt und das Hinzufuegen
 /// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde (siehe Plan-Abweichung im
-/// <c>result.md</c> von Einheit 003).
+/// <c>result.md</c> von.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 public sealed class McpServerOptionsFactoryTests

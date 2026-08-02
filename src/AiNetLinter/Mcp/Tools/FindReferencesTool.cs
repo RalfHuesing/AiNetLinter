@@ -24,10 +24,10 @@ internal static class FindReferencesTool
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, loest den Identifikator zu einem
     /// Symbol auf und liefert dessen Aufrufstellen als Text. Stellt dem Aufrufstellen-Output
-    /// einen EPIC-06-Aggregat-Warnhinweis voran, falls die Solution Compile-Fehler in einzelnen
+    /// einen
     /// Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst nicht, dass die Antwort
     /// unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions
-    /// ab und liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs (EPIC-06
+    /// ab und liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs 
     /// Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(

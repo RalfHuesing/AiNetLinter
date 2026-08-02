@@ -12,7 +12,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// E2E-Test fuer EPIC-07 Staleness-Invalidierung (Konzept Z. 612-615): eine Datei-Aenderung
+/// E2E-Test fuer: eine Datei-Aenderung
 /// auf Disk zwischen zwei Tool-Calls muss beim naechsten betroffenen Call korrekt propagiert
 /// werden. Unit-Tests in <c>McpCodeGraphServerTests.cs</c> beweisen die Scanner-Logik;
 /// dieser Test beweist die Wire-Propagierung durch den realen MCP-Subprozess.

@@ -13,14 +13,14 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Datei-Inhalts-Scan- und Format-Logik fuer <see cref="SearchPatternTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="SearchPatternTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) klein bleibt (TD-005-Muster, analog zu <see cref="GetViolationsScanner"/>).
+/// <c> klein bleibt.
 /// Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Datei-Scan
 /// sequentiell (<c>Directory.EnumerateFiles</c> pro Projektverzeichnis), Plain-Text-Treffer als
 /// "{relativerPfad}:{zeilennummer}: {inhalt}" (Forward-Slashes, konsistent mit
 /// <see cref="GetViolationsScanner"/>). Trunkierung ueber <see cref="McpTruncation.TruncateLines"/>.
 /// <para>
-/// Zusatz-API <see cref="GetFilesWithHits"/> ist der **importierbare Mechanismus fuer EPIC-05 /
-/// Einheit 003 (Miss-Hint in <c>find_symbol</c>)**: liefert nur die Dateipfad-Liste (kein Text,
+/// Zusatz-API <see cref="GetFilesWithHits"/> ist der **importierbare Mechanismus fuer
+///**: liefert nur die Dateipfad-Liste (kein Text,
 /// keine Zeilennummern), damit <c>find_symbol</c> bei C#-Leermenge einen "es gibt aber Treffer
 /// in diesen Nicht-C#-Dateien"-Hinweis bauen kann, ohne Text zu duplizieren.
 /// </para>
@@ -79,7 +79,7 @@ internal static class SearchPatternScanner
 
     /// <summary>
     /// Liefert die Liste der Dateipfade (solution-relativ, Forward-Slashes) mit mindestens einem
-    /// Treffer fuer <paramref name="pattern"/>. Wird von Einheit 003 (Miss-Hint in
+    /// Treffer fuer <paramref name="pattern"/>. Wird von
     /// <c>find_symbol</c>) verwendet, um bei C#-Leermenge einen "es gibt aber Treffer in diesen
     /// Nicht-C#-Dateien"-Hinweis zu bauen. Keine Sortierung nach Treffer-Haeufigkeit — die Reihenfolge
     /// ist deterministisch nach Dateipfad (ordinal). Wirft <see cref="ArgumentException"/> bei
