@@ -57,6 +57,17 @@ Not found: "LinterEnginXYZ"
 
 Der Server liefert tatsächlich Treffer (siehe Anfang des Output-Strings: `src/AiNetLinter.Tests/Configuration/FileFilterEval...`), aber keiner enthält den erfundenen Token `LinterEnginXYZ`. A3-Pfad bestätigt: Doku-Aussage „LinterEngine ist ein gültiges find_symbol-Beispiel" würde bei einem Parameternamen-Drift sofort rot.
 
+### A3-1 grün (zurückgebogen)
+
+**Build:** grün (0/0).
+
+**Test grün, wortwörtlich:**
+```
+Bestanden!   : Fehler:     0, erfolgreich:     3, übersprungen:     0, gesamt:     3, Dauer: 5 s - AiNetLinter.Tests.dll (net10.0)
+```
+
+3/3 in 5 s. A3-Pfad bestätigt: die Assertion `LinterEngine` matched wieder den echten Server-Output, sobald die Assertion auf den korrekten Token zurückgebogen ist. Methodisch analog zu A3-2 unten.
+
 ### A3-2 (`GetIndexScope_ListsCsAsLargestCategory`): Assertion `.cs` → `.csXYZ`
 
 **Test rot, wortwörtlich:**
@@ -82,6 +93,17 @@ Not found: "Treffer gesamt XYZ"
 ```
 
 A3-Pfad: die Trunkierungs-Meta-Zeile aus `McpTruncation.cs:40` ist wortwörtlich in der Doku zitiert; jede Änderung am Format (Wortlaut, Trennzeichen, Reihenfolge) wird sofort rot. Pattern „Get" mit `maxResults=1` ist deterministisch > 50 Treffer in der AiNetLinter-Solution und erzwingt damit Trunkierung.
+
+### A3-3 grün (zurückgebogen)
+
+**Build:** grün (0/0).
+
+**Test grün, wortwörtlich:**
+```
+Bestanden!   : Fehler:     0, erfolgreich:     3, übersprungen:     0, gesamt:     3, Dauer: 5 s - AiNetLinter.Tests.dll (net10.0)
+```
+
+3/3 in 5 s. A3-Pfad bestätigt: die Trunkierungs-Assertion (`Treffer gesamt` + `gezeigt`) matched die echte Meta-Zeile, sobald die Assertion-Tokens zurückgebogen sind. Methodisch analog zu A3-2 oben.
 
 ### A3-2 grün (zurückgebogen)
 
