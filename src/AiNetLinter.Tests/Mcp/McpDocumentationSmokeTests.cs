@@ -70,4 +70,37 @@ public sealed class McpDocumentationSmokeTests : IClassFixture<McpLiveRepository
         Assert.Contains("Treffer gesamt", text, System.StringComparison.Ordinal);
         Assert.Contains("gezeigt", text, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void AgentApi_CountsCsharpOnlyToolsCorrectly()
+    {
+        // Erwartung: Docs/agent-api.md#mcp-server-modus Z. 238 nennt 6 C#-only-Tools und hebt
+        // search_pattern als Nicht-C#-only-Fallback heraus. Doku-Drift zwischen Fliesstext,
+        // Tabelle (Z. 242-252) und dem wortwoertlich zitierten ServerInstructions-Block
+        // (Quelle: McpServerOptionsFactory.cs:26-31) wird durch diese Assertion gefangen.
+        //
+        // Strategie: File-Read auf Docs/agent-api.md (statt hartkodierter Erwartungs-String
+        // wie in Plan-Variante). Begruendung: ein A3-Pfad "Doku manipulieren -> Test rot"
+        // funktioniert nur, wenn der Test die Doku tatsaechlich liest. Hartkodierte Strings
+        // wuerden jeden Doku-Drift verschweigen (Test waere immer gruen).
+        //
+        // A3-Pfad: Doku enthaelt "7 Tools sind C#-only" -> Assert.DoesNotContain("7 Tools")
+        // wird rot. Doku enthaelt "6 Tools sind C#-only" -> beide Assertions gruen.
+        //
+        // Pfad-Aufloesung: bin/Debug/net10.0/ ist 5 Ebenen unter dem Repo-Root
+        // (AiNetLinter.Tests/bin/Debug/net10.0/), also 5x ".." hoch und dann "Docs/agent-api.md".
+        var baseDir = AppContext.BaseDirectory;
+        var docPath = System.IO.Path.GetFullPath(
+            System.IO.Path.Combine(baseDir, "..", "..", "..", "..", "..", "Docs", "agent-api.md"));
+
+        Assert.True(System.IO.File.Exists(docPath),
+            $"Doku-Datei nicht gefunden unter '{docPath}'. Bitte Pfad-Aufloesung pruefen.");
+
+        var docText = System.IO.File.ReadAllText(docPath);
+
+        Assert.Contains("6 Tools sind C#-only", docText, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("7 Tools sind C#-only", docText, System.StringComparison.Ordinal);
+        Assert.Contains("`search_pattern` ist der vorgesehene Fallback", docText, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, System.StringComparison.Ordinal);
+    }
 }
