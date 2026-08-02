@@ -67,9 +67,10 @@ Alternativ als globale Session-Variable setzen: `$env:GIT_PAGER = ''`
 ### Build & Test
 ```powershell
 dotnet build          # Kompilieren
-dotnet test           # Tests ausführen
+dotnet test           # Tests ausführen (Ergebnis landet deterministisch in TestResults/latest.trx)
 dotnet run            # Starten
 ```
+* **Test-Logging & Auswertung:** Jeder `dotnet test`-Lauf überschreibt durch `.runsettings` automatisch `TestResults/latest.trx`. Bei Fehlschlägen oder langem/abgeschnittenem Terminal-Output liest der Agent direkt `TestResults/latest.trx` zur Fehlerdiagnose aus.
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.

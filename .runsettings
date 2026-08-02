@@ -5,7 +5,11 @@
   </RunConfiguration>
   <LoggerRunSettings>
     <Loggers>
-      <Logger friendlyName="trx" enabled="True" />
+      <Logger friendlyName="trx" enabled="True">
+        <Configuration>
+          <LogFileName>latest.trx</LogFileName>
+        </Configuration>
+      </Logger>
     </Loggers>
   </LoggerRunSettings>
 </RunSettings>
