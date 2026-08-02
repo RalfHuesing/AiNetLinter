@@ -817,11 +817,74 @@ Nach 007 + Review:
 - Alle anderen Einträge TD-001, TD-002, TD-004, TD-005, TD-006,
   TD-007, TD-008, TD-009, TD-010, TD-011, TD-014 weiterhin offen.
 
-### Verbrauchtes Aufruf-Budget (aktualisiert 19:55)
+### Einheit 010 — Konzept-Pflege (abgeschlossen 2026-08-02, ~20:35)
+
+- **Plan:** `units/010/plan.md` (778 Z., Commit `9368011`) — Wahl
+  fiel auf Konzept-Pflege, weil der 009-Kritiker explizit
+  empfohlen hat, vor A1-Erweiterungen die 3 veralteten Konzept-
+  Stellen aus 008 zu beheben. A7-Aufhebung: Planer hat die
+  wortwörtlichen Korrekturen vorgegeben, Coder durfte `konzept.md`
+  editieren.
+- **Coder-Result:** `units/010/result.md` — 4 Commits:
+  1× `docs(mcp): konzept tool-status-tabelle + server-betrieb
+  an code-stand angepasst` (`84f4dc3`), 1× `test(mcp):
+  konzept-reflection-tests gegen code-drift` (`f913bda`),
+  2× `chore(task): result + hash-nachtrag` (`62e58c0`,
+  `a4bc708`). 4/4 Korrekturen wortwörtlich 1:1 (Z. 546/550/551/
+  559-560), 5/5 Reflection-Tests, alle A3 echt. Volllauf
+  1178/1178 grün (Lauf 2 nach Flake in Lauf 1; 1. Lauf hatte
+  `SymbolGraphMcpFixture`-Timeout bei 16 parallelen
+  Test-Collections, Re-Run in 1s grün, **kein 010-Regress**).
+  3 begründete Plan-Abweichungen (separate Test-Datei, Regex statt
+  `Assert.Contains` für Markdown-Bold, voll-qualifizierter
+  `Regex`-Typ).
+- **Kritiker-Review:** `units/010/review.md` (Commit `b2a88b4`) —
+  Verdict **`approved`**: 0/0/5, alle MINOR. Volllauf-Flake
+  als **pre-existing** gewertet, **kein 010-Regress**.
+- **TD-019 neu** in `tech-debt.md`: parallele MCP-Server-Init-
+  Stabilität in `SymbolGraphMcpFixture`. Niedrig.
+- **Aufrufe:** 1× Planer + 1× Coder + 1× Kritiker = 34/40.
+
+### Strategie für 011 (Tech-Debt-Bündel)
+
+**User-Anweisung (Ralf, 2026-08-02, ~20:45):** "Ok, schließe das
+dann komplett ab - gebündelt." — keine Mini-Steps mehr, sondern
+einen echten Brocken mit mehreren Tech-Debt-Aktionen in einer
+Einheit.
+
+**Bündel für 011 (vom Orchestrator vorgeschlagen):**
+
+- **TD-009** (Pflicht): `McpCodeGraphServer`-Konstruktor auf
+  Input-`record` umstellen (`internal sealed record
+  McpCodeGraphServerOptions`). Löst 5/5-Limit-Reserve-Problem
+  für nachfolgende P0/P1-Erweiterungen (Kaltstart, Auto-Discovery).
+- **TD-014** (Pflicht): `McpServerOptionsFactory` aufteilen in
+  `McpServerOptionsBuilder` + Factory. Footprint-Reserve für
+  `--mcp-log` (A5), Auto-Discovery (A1) und Konzept-
+  Erweiterungen.
+- **TD-019** (Pflicht, falls Zeit): parallele MCP-Init-Stabilität
+  in `SymbolGraphMcpFixture` — Lock-Pattern oder sequenzielle
+  Init-Phase.
+- **Optional TD-008/TD-010** (`ILinterEngineConfig`-Interface):
+  größerer Refactor (4-6h), kann in 011 mitgenommen werden,
+  wenn die Coder-Kapazität reicht.
+
+**Achtung:** Volllauf muss am Ende grün bleiben (1178+mind =
+1178). Budget nach 011: 34/40 + 3 (Planer/Coder/Kritiker) = 37/40,
+3/40 verbleibend — genug für genau eine weitere Einheit oder
+Task-Abschluss mit `summary.md`.
+
+### Nächste Aktion
+
+1. **Push** der 5 lokalen Commits nach `origin/main` (4× 010
+   + 1× review) — A4 erlaubt.
+2. **Planer für Einheit 011 = TD-Bündel** aufrufen.
+
+### Verbrauchtes Aufruf-Budget (aktualisiert 20:45)
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 31 (1× Planer + 1× Coder + 1× Kritiker für 008, 1× Planer + 1× Coder + 1× Kritiker für 008/fix-01, 1× Planer + 1× Coder + 1× Kritiker für 009) | 9 |
+| `max_aufrufe` | 40 | 34 (zuzügl. 011-Planer/Coder/Kritiker = 37 nach 011) | 6 (3 nach 011) |
 | `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
