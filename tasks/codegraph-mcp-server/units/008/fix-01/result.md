@@ -48,7 +48,7 @@ Drei Commits in der Reihenfolge Pflicht-1 → Optional-1 → Optional-3:
 1. `700eb4e` — `docs(mcp): agent-api C#-only-zaehlung korrigiert [codegraph-mcp-server]`
 2. `5593c91` — `test(mcp): doku-zaehlung-vs-agent-api-md-test [codegraph-mcp-server]`
 3. `28d2c5e` — `chore(task): unit 008 fix-01 a3-block-symmetrie [codegraph-mcp-server]`
-4. `?????` — `chore(task): unit 008 fix-01 result [codegraph-mcp-server]` (dieses `result.md`; Hash wird nach Commit-Schritt ergänzt, siehe Commit-Log unten)
+4. `669b07d` — `chore(task): unit 008 fix-01 result [codegraph-mcp-server]` (dieses `result.md`)
 
 ## A3-Nachweis
 
