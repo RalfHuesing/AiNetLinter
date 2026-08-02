@@ -16,7 +16,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
   - `Diagnostics/`: Performance-Profiler und Messungen.
 - **Unit & Integration Tests**: `src/AiNetLinter.Tests/` (xUnit, Roslyn Workspace/MSBuild Workspaces).
 - **Konfiguration**: `rules.json` definiert das aktive Regelwerk und Parameter.
-- **Agent-Regeln (.agents)**: `.agents/rules/` enthält generierte Regelsätze (`.mdc`), insbesondere `.agents/rules/AiNetLinter.mdc`.
+- **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `rules.json`, Linter-Metriken) und `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt). Details siehe Abschnitt 6.
 - **Dokumentation**: `Docs/` enthält Systemdokumentation, CLI-Referenzen und Anleitungen.
 
 ---
@@ -49,21 +49,7 @@ Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensi
 
 ---
 
-## 3. Architektur- & Codier-Richtlinien
-
-1. **Fehlerbehandlung / Result-Pattern**:
-   - Methoden in der Linter-Engine nutzen bevorzugt das `Result`- oder `Result<T>`-Pattern für erwartbare Fehler.
-   - Exceptions (`throw`) sind Ausnahmesituationen oder unerwarteten Programmierfehlern vorbehalten.
-2. **Immutability & Performance**:
-   - Roslyn-SyntaxTree & SemanticModel Zugriffe sparsam halten.
-   - Record-Types für unveränderliche Datenstrukturen nutzen.
-3. **Symptom-Fixing Verboten**:
-   - Keine fehlgeschlagenen Unit-Tests einfach auskommentieren oder Assertions abschwächen.
-   - Ursachen immer in der underlying Engine oder im Rule-Processor beheben.
-
----
-
-## 4. Dokumentations- & Regel-Synchronisation
+## 3. Dokumentations- & Regel-Synchronisation
 
 - **Regel- oder CLI-Änderungen**:
   Wenn CLI-Optionen, `rules.json`-Schemata oder Regel-Verhalten geändert werden, MÜSSEN folgende Dokumente aktualisiert werden:
@@ -77,19 +63,19 @@ Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensi
 
 ---
 
-## 5. Commit- & PR-Konventionen
+## 4. Commit- & PR-Konventionen
 
-- Verwendet werden **Conventional Commits** in englischer Sprache (z. B. `feat:`, `fix:`, `docs:`, `chore:`).
+- Conventional Commits **auf Deutsch**, imperativ (z. B. `feat:`, `fix:`, `docs:`, `chore:`).
+- Weitere Format-Pflichten (u. a. Pflicht-`### Commit-Vorschlag`-Block): siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §4.
 
 ---
 
-## 6. Dev-Loop & Task-Orchestration
+## 5. Dev-Loop & Task-Orchestration
 
 - Für mehrstufige Aufgaben (Audits, Refactorings, Features): siehe `.agents/Agent-Scaffolding/dev-loop/README.md`.
 
 ---
 
-## 7. Agenten-Verhaltensregeln (Sparring & Planning)
+## 6. Code-Style, Architektur & Agenten-Verhalten
 
-- **Erst Mitdenken, dann Umsetzen**: Bei größeren Vorhaben oder neuen Features erst kurz im Sparring-Modus die Idee spiegeln und Vor-/Nachteile abwägen.
-- **Kompakte Antworten**: Antworten prägnant halten – Fazit und Kernaussage zuerst.
+Sämtliche Coding-Konventionen, Architektur-Leitplanken, Qualitätsdrift-Prävention und Agenten-Verhaltensregeln (Sparring, Antwortstil) liegen ausschließlich in `.agents/rules/`, primär `.agents/rules/AiNetLinterRichtlinien.mdc`. Diese Datei hier bleibt bewusst ein schlanker Einstiegspunkt — Inhaltliches bitte dort pflegen, nicht hier duplizieren.

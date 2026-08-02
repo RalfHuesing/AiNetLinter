@@ -16,6 +16,7 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 - **Statische Kompilierung bevorzugen**: Kein `AssemblyLoadContext` oder Reflection-basiertes Laden zur Laufzeit.
 - **Einfachheit vor Abstraktion**: Bevorzuge direkte, verständliche Lösungen. Abstraktion nur dort, wo sie echten Mehrwert liefert (Wiederverwendung + Verständlichkeit).
 - **Wenig Magic**: Vermeide versteckte Mechanismen, die nur durch Lesen des generierten Codes verständlich sind.
+- **Immutability & Performance**: Record-Types für unveränderliche Datenstrukturen bevorzugen. Roslyn-`SyntaxTree`-/`SemanticModel`-Zugriffe sparsam halten (teuer).
 - **Dokumentation als Kontext nutzen**: Vor tiefgreifenden Änderungen oder Refactorings die Dokumentation im Ordner `Docs/` konsultieren:
   - `Docs/configuration.md`: Sämtliche CLI-Optionen, Konfigurationsschemata und Linter-Regeln.
   - `Docs/agent-api.md`: Spezifikation der Agenten-Schnittstellen und Formate.
@@ -81,4 +82,15 @@ dotnet run            # Starten
 
 - **Zero-Warning-Direktive:** Beide Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
 - **Result-Pattern bevorzugen:** Fehlerfälle explizit als `Result<T>` modellieren statt Exceptions zu werfen. Exceptions nur für echte, exogene Ausnahmefälle (z. B. Netzwerkausfall, IO-Fehler). Der Linter erzwingt dies nicht — die Einhaltung liegt beim Entwickler und der KI.
-- **Sparsamer Einsatz von Code-Kommentaren (Clean Code):** Self-Documenting Code bevorzugen; im Zweifelsfall keine Kommentare schreiben. Verboten im Code: Task-/Step-Referenzen (z. B. `step-008`), Refactoring-Historie (`war früher private`), Agenten-Regeln oder redundante Nacherzeugung von Funktionsnamen. Ausnahmen: Nur notwendige Erklärungen für unkonventionelles *Why* (Workarounds, technische Sonderfälle).
+- **Symptom-Fixing verboten:** Fehlschlagende Tests nicht auskommentieren oder Assertions abschwächen, um sie grün zu bekommen. Ursache immer in der zugrunde liegenden Engine bzw. im Rule-Processor beheben.
+- **Sparsamer Einsatz von Code-Kommentaren (Clean Code):** Self-Documenting Code bevorzugen; im Zweifelsfall keine Kommentare schreiben.
+  - **Verboten:** Jede Referenz auf Task-/Planungsartefakte, die den Code überleben soll — `step-008`, `TD-005`, `EPIC-06`, `unit 009`, Ticket-/Issue-IDs o. Ä. Diese Ordner/Dokumente werden nach Task-Abschluss gelöscht; der Verweis wird dann bedeutungslos. Architektur-Rationale gehört als ID-freier *Why*-Kommentar in den Code — z. B. "Formatierung ausgelagert, damit die Klasse unter dem Kopplungslimit bleibt" statt "TD-005-Muster, siehe step-007".
+  - **Verboten:** Refactoring-Historie (`war früher private`), Agenten-/Prompt-Regeln im Code.
+  - **Verboten:** Redundante Nacherzeugung des Bezeichners — ein Kommentar, der nur in Worten wiederholt, was Name/Signatur bereits sagen (Beispiel: `// Listet alle Tools auf` über einer Methode `ListTools()`). Bei sprechendem Namen und überschaubarer Methode: kein Kommentar.
+  - **Ausnahme:** Nur notwendige Erklärungen für unkonventionelles *Why* (Workarounds, technische Sonderfälle, nicht offensichtliche Constraints).
+  - **Aufräumen erlaubt:** Trifft ein Agent im Zuge einer Änderung im berührten Code auf eine bestehende Verletzung dieser Regel, darf er sie im selben Zug entfernen bzw. umschreiben — auch wenn das nicht Teil des eigentlichen Auftrags war.
+
+## 6. Agenten-Arbeitsstil
+
+- **Erst Mitdenken, dann Umsetzen:** Bei größeren Vorhaben oder neuen Features erst kurz im Sparring-Modus die Idee spiegeln und Vor-/Nachteile abwägen.
+- **Kompakte Antworten:** Antworten prägnant halten – Fazit und Kernaussage zuerst.
