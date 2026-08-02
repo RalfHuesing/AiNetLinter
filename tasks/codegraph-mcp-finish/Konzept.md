@@ -6,6 +6,7 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-03
 open_questions: []
+execution_vehicle: ".agents/Agent-Scaffolding/dev-loop/drift-loop/orchestrator.md (vollagentisch autonom, nicht dynamic-loop wie der Vorgänger-Task)"
 supersedes: tasks/codegraph-mcp-server, tasks/codegraph-mcp-next
 ---
 
@@ -23,9 +24,23 @@ wachsender struktureller Tech-Debt-Block — und erweitert den Symbolgraphen
 zusätzlich um drei Punkte aus dem separaten Ideen-Backlog
 (`tasks/codegraph-mcp-next`), die der Nutzer bewusst **nicht** als optional
 eingestuft haben will (siehe Entscheidung unten: "Erfahrungsgemäß werden
-Nice-to-Have-Punkte von Agenten-Loops nie umgesetzt"). Nach Abschluss dieses
-Tasks werden `tasks/codegraph-mcp-server` und `tasks/codegraph-mcp-next`
-gelöscht — alles inhaltlich Relevante daraus steht ab hier.
+Nice-to-Have-Punkte von Agenten-Loops nie umgesetzt"). `tasks/codegraph-mcp-server`
+und `tasks/codegraph-mcp-next` wurden bereits gelöscht (Commits `f5fe57e`/
+`d4cbb70`, noch vor Abschluss dieses Tasks) — alles inhaltlich Relevante
+daraus steht ab hier, gegen die Git-Historie beider Commits verifiziert
+(inkl. aller Unit-`plan.md`/`result.md`/`review.md`-Dateien, kein
+CRITICAL-Finding über den gesamten Loop hinweg unentdeckt geblieben).
+Zusätzlich
+fließt hier ein zweites, bisher separat verfolgtes Thema vollständig ein:
+**Testsuite-Performance.** Der Volllauf (`dotnet test AiNetLinter.slnx
+--no-build`) dauert aktuell auf Standard-Hardware ~8 Minuten, was jede
+Coder-Einheit in diesem Task spürbar verlangsamt. Ein früherer,
+eigenständiger Anlauf dazu war zu weiten Teilen bereits umgesetzt, aber
+teilweise durch die spätere `codegraph-mcp-server`-Arbeit wieder
+regressiert (siehe Block F) — dieser frühere Anlauf existiert als
+eigenständiger Task-Ordner nicht mehr, sein gesamter relevanter Inhalt
+(Stand, offene Punkte, neue Befunde) steht vollständig unten in Block F
+und in "Bereits umgesetzt".
 
 ## Warum / Kontext
 
@@ -107,6 +122,28 @@ gelöscht — alles inhaltlich Relevante daraus steht ab hier.
 wird **so wie sie ist** review-abgeschlossen, die `PathOverride`-Erweiterung
 wird als Pragmatik akzeptiert — der strukturelle Fix folgt separat als
 eigene Muss-Haben-Einheit C, nicht als Voraussetzung für den 011-Abschluss.
+
+**Testsuite-Performance — Stand verifiziert gegen Code, nicht nur gegen
+den alten Plan eines inzwischen nicht mehr existierenden Task-Ordners:**
+8 von 9 ursprünglichen
+Muss-Haben-Punkten sind bereits umgesetzt (`xunit.runner.json` mit
+Parallelisierung, `[Trait("Category", "Unit"|"Integration")]` auf allen
+Testklassen, konsolidiertes `TestLintConsole`, gemeinsamer
+`TestTempDirectory`-Helper, Root-Testdateien einsortiert,
+`McpServerCommandTests.cs` bereits organisch in 8 Dateien gesplittet
+(359 statt 513 Zeilen), Fixture-Sharing für `Mcp/Tools/*` über
+`SymbolGraphCatalogFixture`/`BaselineCatalogFixture` — verifiziert in
+[FindReferencesToolTests.cs](src/AiNetLinter.Tests/Mcp/Tools/FindReferencesToolTests.cs),
+`Category=Unit`-Nutzung während der Entwicklung ist in `AGENTS.md` §2
+verbindlich dokumentiert). **Eine Regression wurde in dieser Session neu
+gefunden** (siehe Muss-Haben F.1) — der ursprüngliche Punkt 4
+("`ConsoleTestCollection`-Zwangsserialisierung auf 8 begründete Klassen
+eingrenzen") ist während der späteren `codegraph-mcp-server`-Arbeit auf
+**21 Klassen** zurückgewachsen, 13 davon neue MCP-E2E-Testklassen ohne
+erkennbare Console-Capture-Begründung. Die vier ursprünglichen
+Nice-to-Have-Punkte (`Core/`-Sub-Gliederung, Test-Data-Builder,
+`CliProcessRunner`-Helper, `#nullable enable`-Retrofit) wurden nie
+begonnen.
 
 **Noch nicht begonnen — sieben P0/P1-Erweiterungen, in `konzept.md` (jetzt
 gelöscht) als "kein offener Punkt mehr" (Scope-Entscheidung) markiert, aber
@@ -335,6 +372,74 @@ bewusst als Muss-Haben statt "später" eingestuft):
    (Factory-Registrierungen/Convention-based-Scanning werden bewusst nicht
    erkannt).
 
+**F. Testsuite-Performance** (bewusst als Muss-Haben statt Nice-to-Have —
+gleiche Begründung wie bei E: optional markierte Punkte werden
+erfahrungsgemäß nie umgesetzt)
+
+1. **`ConsoleTestCollection`-Regression beheben (größter Hebel).**
+   Verifiziert: 21 Testklassen tragen aktuell
+   `[Collection("ConsoleTestCollection")]`
+   ([ConsoleTestCollection.cs](src/AiNetLinter.Tests/ConsoleTestCollection.cs):
+   `DisableParallelization = true`) — ein früherer, eigenständiger Anlauf
+   zur Testsuite-Performance hatte das bewusst auf 8 Klassen mit echtem
+   Console-Capture-Bedarf eingegrenzt. 13 der jetzt 21 sind MCP-E2E-Testklassen
+   (`McpServerAllToolsE2ETests`, `McpLiveRepositoryTests`,
+   `McpServerCommandErrorHandlingTests`, `McpServerCommandStalenessTests`,
+   `McpServerCommandAmbiguityE2ETests`, `McpCodeGraphServerConstructorTests`,
+   `McpDocumentationSmokeTests`, `McpServerOptionsBuilderTests`,
+   `McpServerOptionsFactoryTests`, `McpTestClientParallelTests`,
+   `McpTestClientRetryTests`, `FindSymbolToolTests`), vermutlich als
+   Vorsichtsmaßnahme gegen TD-003 (MSBuildLocator-Race) und/oder TD-019
+   (paralleler Subprozess-Init-Flake) dort hineingewachsen — beide sind
+   inzwischen mit einem gezielten Fix versehen (statisches Lock in
+   Einheit 007, Retry-Logik in Einheit 011). Weil `parallelizeTestCollections:
+   true` (`xunit.runner.json`) zwischen Collections, nicht aber innerhalb
+   einer Collection parallelisiert, laufen diese 21 Klassen — darunter fast
+   alle teuren Subprozess-Starts der gesamten Suite — strikt seriell und
+   nutzen die verfügbaren CPU-Kerne nicht. Das ist der wahrscheinlich
+   größte Einzelfaktor für die ~8 Minuten Volllauf. Fix: pro Klasse prüfen,
+   ob ein echter Console-Capture-Bedarf besteht (Kriterium aus der neuen
+   Regel in `AiNetLinterRichtlinien.mdc` §4); wo nicht, Collection-Mitgliedschaft
+   entfernen. Falls die eigentliche Sorge Ressourcen-Konkurrenz bei vielen
+   gleichzeitigen `AiNetLinter.exe`-Prozessen war (echter TD-019-Befund,
+   nicht nur Locking): eine begrenzende, aber nicht vollständig
+   serialisierende Lösung (z. B. gemeinsame `SemaphoreSlim` mit 3-4 Slots
+   in einer eigenen `ICollectionFixture`) statt Totalserialisierung.
+2. **Geteilter/gepoolter Subprozess für CLI-Integrationstests.** 8 Dateien
+   starten `AiNetLinter.exe` per `Process.Start`/`ProcessStartInfo`
+   (`BaselineCliTests`, `WebBaselineTests`, `CliIntegrationTests`,
+   `FilterCliIntegrationTests`, `CliBatchRegressionTests`,
+   `McpServerCommandAmbiguityE2ETests`, `GitImpactMiniFixtureWorkspace`,
+   `DisableAllCliTests`) — deckt sich mit TD-002 aus dem gelöschten
+   `codegraph-mcp-server/tech-debt.md` ("Subprozess-E2E-Test ohne
+   Fixture-Pool"). Fix: gemeinsamer `CliProcessRunner`-Helper für die
+   verstreuten `Process.Start`-Stellen — löst DRY **und** ist die
+   Grundlage, um wo fachlich vertretbar von
+   Prozess-Start-pro-Testmethode auf Prozess-Start-pro-Testklasse
+   umzustellen.
+3. **`Core/`-Testordner sub-gliedern, danach `MaxDirectoryChildren` aktivieren.**
+   42 Dateien (gewachsen von 37 zum Zeitpunkt des alten Konzepts), größter
+   Flachordner im Testprojekt. Sub-Gliederung analog zur Kategorisierung in
+   `AiNetLinter.mdc` (agent-resilience/architecture/general/test-coverage) —
+   reine Organisationsfrage, kein Laufzeit-Hebel. **Nutzer-Entscheidung:**
+   im Anschluss `MaxDirectoryChildren` (aktuell projektweit deaktiviert)
+   aktivieren und einen sinnvollen Grenzwert setzen, statt die Regel
+   unangetastet zu lassen — die Sub-Gliederung schafft genau den Zustand,
+   gegen den die Regel sinnvoll geprüft werden kann.
+4. **Test-Data-Builder/Object-Mother** für `Config`/`GlobalConfig`/
+   `CheckerContext` statt ad-hoc-Konstruktion pro Test — reduziert
+   Boilerplate, kein Laufzeit-Hebel.
+5. **`#nullable enable`-Datei-Pragma als Randmitnahme.** **Nutzer-
+   Entscheidung:** keine eigene Flächenaktion für die ~63 betroffenen
+   Dateien (funktional irrelevant wegen projektweitem
+   `<Nullable>enable</Nullable>`, reiner Formalismus) — die Pragma-Zeile
+   wird nur in Dateien nachgerüstet, die im Rahmen von A-F ohnehin
+   angefasst werden.
+6. **Laufzeitmessung vorher/nachher dokumentieren** (eine frühere Messung
+   dazu ist nicht mehr aktuell nachvollziehbar, da der Volllauf seither
+   erneut gewachsen ist) — ohne Zielprozentzahl, aber mit klarer Zahl, damit
+   der nächste Task nicht wieder von "gefühlt 8 Minuten" ausgehen muss.
+
 ### Nice-to-Have (optional, spätere Iteration)
 
 Bewusst kurz gehalten — siehe Entscheidung oben, dass "optional" faktisch
@@ -369,9 +474,19 @@ werden können:
   Vorgänger-Konzept geprüft und verworfen, Begründungen bleiben gültig
   (Marktabdeckung bereits vorhanden, Risiko einer Fehlinterpretation durch
   den Agenten, oder redundant zu bereits vorhandenen Mechanismen).
-- **Keine neuen Features außerhalb von A/B/C/D/E oben.** Dieser Task ist
-  Fertigstellung + Tech-Debt + die drei explizit vom Nutzer verbindlich
-  gemachten Symbolgraph-Erweiterungen — keine offene Feature-Erweiterungsrunde.
+- **Keine Änderung an Testinhalten/Assertions** — Block F ist reines
+  Boilerplate-/Organisations-/Parallelitäts-Refactoring, was getestet
+  wird und mit welchem erwarteten Ergebnis bleibt exakt gleich.
+- **Kein Test-Framework-Wechsel** — xUnit v3 bleibt, alle Fixes nutzen
+  native xUnit-Mechanismen
+  (`[Trait]`, `IClassFixture`/`ICollectionFixture`, `xunit.runner.json`).
+- **Keine neue Testabdeckung durch Block F** — Performance-/Struktur-Fix,
+  kein Coverage-Ausbau (Testabdeckung für B/C/E entsteht durch die
+  jeweilige Einheit selbst, nicht durch Block F).
+- **Keine neuen Features außerhalb von A/B/C/D/E/F oben.** Dieser Task ist
+  Fertigstellung + Tech-Debt + Testsuite-Performance + die drei explizit
+  vom Nutzer verbindlich gemachten Symbolgraph-Erweiterungen — keine
+  offene Feature-Erweiterungsrunde.
 
 ## Zielplattformen / Technischer Rahmen
 
@@ -379,7 +494,7 @@ Unverändert: .NET 10, gleiches Executable (`AiNetLinter.csproj`), offizielles
 `ModelContextProtocol`-NuGet-Paket (stdio-Transport), kein DI-Container,
 Wiederverwendung von `SourceFileCatalog`/`SymbolFinder`/`SkeletonMapBuilder`/
 `HotspotMapBuilder`/`RuleRegistry`/`LinterEngine`. Keine Änderung an diesen
-Grundsatzentscheidungen nötig — der gesamte Restumfang (A-E) baut auf der
+Grundsatzentscheidungen nötig — der gesamte Restumfang (A-F) baut auf der
 bestehenden Architektur auf.
 
 ## Verworfene Alternativen
@@ -393,7 +508,11 @@ persistenter Cache als Muss-Haben, zusätzliche Thread-Safety über das
 bestehende `Lock` hinaus, `.csproj`/`.sln`-Hash-Invalidierung statt
 Verzeichnis-Sweep, Duplicate-Symbol-Drift-Warnung, Dead-Code-Detection,
 PageRank/Symbol-Centrality, `get_call_tree` als eigenes Tool statt
-`depth`-Parameter (siehe E.2).
+`depth`-Parameter (siehe E.2). Zu Block F: drei-stufige Test-Kategorisierung
+(`Unit`/`Slow`/`Integration`) statt zwei-stufig — verworfen, kein
+identifizierter Fall "langsam, aber nicht Integration"; komplette
+Testsuite-Neuschreibung oder Framework-Wechsel — nie ernsthaft erwogen,
+bestehende Konventionen sind bereits gut, Fokus liegt auf Infrastruktur.
 
 ## Wo im Projekt
 
@@ -419,6 +538,16 @@ PageRank/Symbol-Centrality, `get_call_tree` als eigenes Tool statt
   `src/AiNetLinter.Tests/Fixtures/*McpFixture.cs` — Basis für B.6
   (stdout-Framing-E2E-Test) und B.3 (Last-Fixture-Generator, neuer Ordner
   `src/AiNetLinter.Tests/Fixtures/LastFixture*` o. ä.).
+- [src/AiNetLinter.Tests/ConsoleTestCollection.cs](src/AiNetLinter.Tests/ConsoleTestCollection.cs) —
+  Ziel für F.1, aktuell 21 Testklassen als Mitglieder (Liste siehe F.1).
+- [src/AiNetLinter.Tests/Baseline/BaselineCliTests.cs](src/AiNetLinter.Tests/Baseline/BaselineCliTests.cs)
+  und 7 weitere Dateien mit `Process.Start`/`ProcessStartInfo` — Ziel für F.2
+  (`CliProcessRunner`-Helper).
+- [src/AiNetLinter.Tests/Core/](src/AiNetLinter.Tests/Core) (42 Dateien) —
+  Ziel für F.3 (Sub-Gliederung).
+- [src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs](src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs),
+  `BaselineCatalogFixture.cs` — bereits vorhandenes Fixture-Sharing-Muster,
+  Vorbild falls F.1 weitere `ICollectionFixture`-Lösungen braucht.
 - [Docs/agent-api.md](Docs/agent-api.md), [Docs/integration.md](Docs/integration.md),
   [Docs/ROADMAP.md](Docs/ROADMAP.md) — laufend nachziehen (ROADMAP.md
   Zeilen 478-493 bereits korrekt als "Geplant" für B geführt, wird bei
@@ -470,6 +599,18 @@ PageRank/Symbol-Centrality, `get_call_tree` als eigenes Tool statt
   - **Vorschlag:** B.3 (Last-Fixture) vor B.4/B.5 einplanen (bereits so in
     der Reihenfolge oben umgesetzt).
   - **Entscheidung:** übernommen ins Scope (→ Reihenfolge in Muss-Haben B).
+- **`ConsoleTestCollection` von 8 auf 21 Mitglieder zurückgewachsen.**
+  - **Gefunden:** Ein früherer Anlauf zur Testsuite-Performance hatte die
+    Zwangsserialisierung explizit auf 8 Klassen mit echtem
+    Console-Capture-Bedarf eingegrenzt. Aktuell verifiziert: 21
+    Mitglieder, 13 davon MCP-E2E-Testklassen ohne erkennbaren
+    Console-Capture-Bezug.
+  - **Bezug:** neue Regel in `AiNetLinterRichtlinien.mdc` §4
+    ("Testsuite-Parallelität bewahren", in dieser Session ergänzt) —
+    Zwangsserialisierung braucht eine explizite Begründung pro Klasse.
+  - **Vorschlag:** siehe Muss-Haben F.1.
+  - **Entscheidung:** übernommen ins Scope (→ Muss-Haben F.1, größter
+    Laufzeit-Hebel im gesamten Task).
 
 ## Wie (grober Ansatz)
 
@@ -477,18 +618,25 @@ Kein neuer Architektur-Ansatz nötig — reine Fortsetzung der bestehenden
 Struktur (Resident-Server, lazy Invalidierung, Tool-Klasse +
 Scanner/Formatter-Begleitdatei + Registrar-Eintrag pro Tool). Der Planer im
 nachfolgenden Loop leitet aus diesem Konzept Einheiten ab; verbindliche
-Reihenfolge (Entscheidung des Nutzers):
+Reihenfolge (Nutzer-Entscheidung, Block F bewusst zuerst: jede
+nachfolgende Einheit fährt selbst mehrfach Volllauf/gefilterte Läufe
+während ihrer eigenen Coder-/Kritiker-Iteration — F verkürzt den Volllauf
+spürbar, insbesondere F.1, die `ConsoleTestCollection`-Regression, und
+der gesamte restliche Task profitiert direkt davon, nicht nur der
+Endzustand):
 
-1. **Einheit "011-Abschluss"** (Muss-Haben A): Prozess-Bereinigung, Volllauf
+1. **Block F** (F.1 → F.2 → F.3 → F.4 → F.5 → F.6) — Testsuite-Performance zuerst.
+2. **Einheit "011-Abschluss"** (Muss-Haben A): Prozess-Bereinigung, Volllauf
    nachfahren, Kritiker-Review für die 6 bestehenden Commits, Push.
-2. **Einheit "TD-008/010-Refactor"** (Muss-Haben C): `ILinterEngineConfig`,
+3. **Einheit "TD-008/010-Refactor"** (Muss-Haben C): `ILinterEngineConfig`,
    reduziert alle 13 PathOverrides auf ihren tatsächlichen Bedarf.
-3. **Einheiten B.1 → B.2 → B.3 → B.4 → B.5 → B.6 → B.7** (Betriebsrisiko
+4. **Einheiten B.1 → B.2 → B.3 → B.4 → B.5 → B.6 → B.7** (Betriebsrisiko
    zuerst, siehe Muss-Haben B für die vollständige Begründung der
    Reihenfolge).
-4. **Einheiten E.1 → E.2 → E.3** (Symbolgraph-Erweiterungen aus
-   `codegraph-mcp-next`) zuletzt, da sie von einem bereits entlasteten
-   Footprint (Schritt 2) profitieren und E.1 TD-011 mitlöst.
+5. **Einheiten E.1 → E.2 → E.3** (Symbolgraph-Erweiterungen aus dem
+   ehemaligen `codegraph-mcp-next`-Backlog) zuletzt, da sie von einem
+   bereits entlasteten Footprint (Schritt 3) profitieren und E.1 TD-011
+   mitlöst.
 
 ## Definition of Done / Erfolgskriterien
 
@@ -518,13 +666,26 @@ Reihenfolge (Entscheidung des Nutzers):
 - `dotnet build`/`dotnet test AiNetLinter.slnx --no-build` grün, 0
   Warnungen, keine durch diesen Task verursachte Regression im CLI-Batch-
   Modus (Regressionstest wie in EPIC-07 bereits etabliert).
-- `tasks/codegraph-mcp-server/` und `tasks/codegraph-mcp-next/` sind
-  gelöscht, ohne dass eine Nachfrage "wo stand das nochmal" nötig wird —
-  dieses Dokument ist an der Stelle vollständig.
+- **Block F:** `ConsoleTestCollection` hat nur noch Mitglieder mit
+  dokumentiertem Console-Capture-Bedarf (jede verbleibende Mitgliedschaft
+  mit Begründung im XML-Doc-Kommentar der Klasse, konsistent mit der neuen
+  Regel in `AiNetLinterRichtlinien.mdc` §4); `CliProcessRunner`-Helper im
+  Einsatz an allen 8 identifizierten Stellen; `Core/`-Testordner
+  sub-gegliedert; Volllauf-Laufzeit vorher/nachher gemessen und in
+  `result.md`/`summary.md` dokumentiert (keine harte Zielzahl, aber eine
+  belegte Verbesserung).
+- `tasks/test-optimierung/` ist gelöscht (letzter noch verbleibender
+  Vorgänger-Ordner — `codegraph-mcp-server`/`codegraph-mcp-next` sind
+  bereits vor Beginn der Umsetzung gelöscht, siehe "Bereits umgesetzt"),
+  ohne dass eine Nachfrage "wo stand das nochmal" nötig wird — dieses
+  Dokument ist an der Stelle vollständig.
 
 ## Offene Punkte
 
-Keine blockierenden offenen Punkte — alle vier Grundsatzentscheidungen
-(Umgang mit Einheit 011, Reihenfolge von B, TD-008/010 als Muss-Haben,
-E als Muss-Haben statt Nice-to-Have) sind vom Nutzer getroffen und oben
-eingearbeitet.
+Keine blockierenden offenen Punkte. Alle sieben Grundsatzentscheidungen
+aus beiden Konzeptions-Runden sind vom Nutzer getroffen und oben
+eingearbeitet: Umgang mit Einheit 011 (Review wie sie ist), Reihenfolge
+von B (Betriebsrisiko zuerst), TD-008/010 als Muss-Haben, E als
+Muss-Haben statt Nice-to-Have, Block F zuerst in der Gesamtreihenfolge,
+`#nullable enable` als Randmitnahme statt Flächenaktion, `MaxDirectoryChildren`
+wird in diesem Task nach der `Core/`-Sub-Gliederung (F.3) aktiviert.

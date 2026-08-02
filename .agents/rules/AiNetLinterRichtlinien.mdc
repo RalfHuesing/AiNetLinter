@@ -74,6 +74,18 @@ dotnet run            # Starten
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
+- **Testsuite-Parallelität bewahren:** Neue Testklassen werden standardmäßig
+  **nicht** in eine zwangsserialisierende Collection (`[Collection("ConsoleTestCollection")]`,
+  `DisableParallelization = true` o. ä.) aufgenommen. Ausnahme nur bei echtem,
+  im Code (XML-Doc-Kommentar an der Klasse) begründetem Bedarf — z. B. globale
+  `Console.Out`/`Console.Error`-Umleitung, die sich mit parallel laufenden
+  Tests gegenseitig stören würde. Vermutete Nebenläufigkeits-Probleme bei
+  MSBuild-/Subprozess-basierten Tests (`MSBuildLocator`-Registrierung,
+  parallele `AiNetLinter.exe`-Starts) werden gezielt gelöst (statisches Lock,
+  eigene Fixture, Retry-Logik, begrenzende `SemaphoreSlim`) — die gesamte
+  Collection zwangsserialisieren ist die teuerste und am wenigsten
+  zielgerichtete Lösung und braucht vor jedem Einsatz eine explizite
+  Begründung, warum die gezielte Lösung nicht reicht.
 - **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur (`McpLiveRepositoryTests` und `McpTestClient` in `AiNetLinter.Tests`) in `dotnet test` umgesetzt. Das Anlegen von ad-hoc Python-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
