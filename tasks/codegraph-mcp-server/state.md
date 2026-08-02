@@ -707,7 +707,7 @@ Commits `3b315c2` + `4f6fa6f` (von Ralf nach 007 manuell eingespielt):
 - **Aufrufe:** 1× Planer (008) + 1× Coder (008) + 1× Kritiker (008)
   = 25/40.
 
-### Einheit 008/fix-01 — Doku-Drift F-001 (in Bearbeitung)
+### Einheit 008/fix-01 — Doku-Drift F-001 (abgeschlossen 2026-08-02, ~19:06)
 
 - **Plan:** `units/008/fix-01/plan.md` (446 Z., Commit `96f1029`) —
   Pflicht-Fix F-001 (`agent-api.md:238` wortwörtlich 1:1 nach
@@ -722,6 +722,10 @@ Commits `3b315c2` + `4f6fa6f` (von Ralf nach 007 manuell eingespielt):
   4:57 min (gemessen 2026-08-02 ~19:00). Plan-Abweichung: File-Read
   im 4. Test statt hartkodierter String (methodisch korrekter, im
   Test-Kommentar Z. 82-85 und im result.md begründet).
+- **Kritiker-Review:** `units/008/fix-01/review.md` (Commit
+  `31d11ac`) — Verdict **`approved`**: 0/0/1, MINOR kritisiert den
+  Plan (Plan widerspricht sich intern zwischen hartkodiertem String
+  und A3-Methode), Coder hat methodisch korrekte Wahl getroffen.
 - **MINOR F-003** (Self-Lint-Pfad-Differenz Plan `tests/Fixtures/...`
   vs. Result `src/BaselineMini/...`): Inhaltlich konsistent (1
   gewollte Fixture-Violation, kein Regress), nur Pfad-Hinweis
@@ -729,40 +733,74 @@ Commits `3b315c2` + `4f6fa6f` (von Ralf nach 007 manuell eingespielt):
   Self-Lint gegen `BaselineMini` geplant wird, ist der reale
   Pfad **`src/BaselineMini/ViolatingClass.cs`** (1 erwartete
   Violation in `EnforceSealedClasses`), nicht `tests/Fixtures/...`.
-- **Aufrufe:** 1× Planer (008/fix-01) + 1× Coder (008/fix-01) =
-  27/40. Kritiker (008/fix-01) folgt.
+- **Push:** 17 Commits (4× 007, 3× Ralf, 7× 008, 3× Orchestrator
+  007/008) am 2026-08-02 ~19:03 nach `origin/main` gepusht.
+- **Aufrufe:** 1× Planer + 1× Coder + 1× Kritiker = 28/40.
 
-### Nächste Aktion (für 009)
+### Einheit 009 — TD-016a Folge-Refactor (abgeschlossen 2026-08-02, ~19:50)
 
-1. **Kritiker-Aufruf für 008/fix-01** (Pflicht) — Verdict zu den
-   5 Commits + Volllauf 1165/1165.
-2. **Bei `approved`:** Push **aller** lokalen Commits nach
-   `origin/main` (4× 007-Commits, 3× Ralf-Commits, 7× 008-Commits,
-   2× Orchestrator-Commits für 007-review/TD-Update, 3×
-   Orchestrator-Commits für 008-plan/review, 5× 008/fix-01-Commits
-   = 24 Commits gesamt, schubweise gepusht). A4 erlaubt Push.
-3. **Planer für Einheit 009** aufrufen. Kandidaten (in Reihenfolge
-   der Konzept-Logik + Tech-Debt):
-   - **P0/P1-Rest-Erweiterungen** (Konzept Z. 207-324, 9 Items
-     gelistet in `Docs/ROADMAP.md`) — alle einzeln eigene Einheiten
-     wert: Kaltstart entkoppeln, `rules.json`-Auto-Discovery,
-     Staleness-Sweep mit Verzeichnis-`mtime`, `--mcp-log` Call-Log,
-     RefreshStaleDocuments-Verzeichnis-Sweep neu/gelöscht,
-     `ILintConsole` für MCP, Last-Fixture + Messlauf,
-     Tool-vs-`rg`-Empfehlung (Doku-Pflicht — bereits in 008 erfüllt).
-   - **TD-016a** (2 verbleibende Fixture-Workspaces refactoren) —
-     klein, ~1-2h, kann standalone laufen. Konsistent mit
-     TD-016-Teilschluss-Anmerkung und 007-Kritiker-Vorschlag.
-   - **Konzept-Pflege-Einheit** (vom Kritiker in 008 angeregt) —
-     3 veraltete Stellen in `konzept.md` an Code-Stand anpassen
-     (Z. 539-552 Tool-Status, Z. 550 `get_impact`-Beschreibung,
-     Z. 564 Kaltstart-Suggestion). Reine Markdown-Einheit.
-   - **Tech-Debt-Refactor** (z. B. TD-008/TD-010 als
-     `ILinterEngineConfig`-Investition, TD-009 als Constructor-`record`,
-     TD-014 als `McpServerOptionsBuilder`) — nur sinnvoll, wenn
-     nächste P0/P1-Erweiterung `McpCodeGraphServer` sowieso anfasst
-     (z. B. Kaltstart entkoppeln → TD-009 triggert).
-   Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift").
+- **Plan:** `units/009/plan.md` (574 Z., Commit `39c4caa`) — Wahl
+  fiel auf TD-016a, weil Konzept-DoD met ist (EPIC-01..08 alle
+  approved) und TD-016a die kleinste echte Coder-pflichtige Arbeit
+  ist. Konzept-Diskrepanzen aus 008 sind explizit User-pflichtig
+  (A7), P0/P1-Rest sind alle "optional", keine P0-Pflicht offen.
+- **Coder-Result:** `units/009/result.md` — 4 Commits:
+  1× `refactor(tests): CompileErrorMini + GitImpactMini auf
+  FixtureWorkspaceBase umstellen` (`b0c2283`), 1× `test(tests):
+  TD-016a fixture-base refactor regression-schutz
+  (reflection-tests)` (`8f0427e`), 1× `chore(debt): TD-016a
+  geschlossen durch 009` (`0535660`), 1× `chore(task): unit 009
+  result` (`5ea191e`). CompileErrorMini 71→21 Z.,
+  GitImpactMini 166→118 Z. (besser als Plan-Schätzung).
+  Volllauf **1173/1173** grün in 6:20 min (vor 009: 1165, +8
+  Reflection-Invokationen). **A3 echt gefahren mit 3 Schichten**:
+  A3-1 Vererbungs-Reflection, A3-2 Helper-Entfernungs-Reflection
+  (CS0108-Compiler-Bonus entdeckt und dokumentiert), funktionale
+  A3 über 14+ bestehende Tests.
+- **Kritiker-Review:** `units/009/review.md` (Commit `0b4e323`) —
+  Verdict **`approved`**: 0/0/1, MINOR M1 = Zeilenzahlen
+  25/114→21/118 in `tech-debt.md` (mit dem Review-Commit in
+  `0b4e323` inline korrigiert). Sonst alles sauber.
+- **TD-016a Status-Update** in `tech-debt.md`:
+  Index-Zeile + Eintrag-Body auf „geschlossen durch 009
+  (Commits `b0c2283` + `8f0427e`)" gesetzt, CS0108-Beobachtung
+  im Body dokumentiert.
+- **Hinweis vom Kritiker:** Zwischen 009-Ende und Review-Commit
+  hat Ralf einen `894be8b docs(rules)` Commit beigetragen
+  (AGENTS.md auf Pointer eindampfen, Regeln in `.agents/rules`
+  konsolidieren). Berührt 009 nicht, soll separat gepusht werden.
+- **Push:** folgt jetzt (siehe nächste Aktion).
+- **Aufrufe:** 1× Planer + 1× Coder + 1× Kritiker = 31/40.
+
+### Nächste Aktion (für 010)
+
+1. **Push** der 6 009-Commits + Ralf's `894be8b` nach
+   `origin/main` — A4 erlaubt Push, kein Amend. (Ralf-Commit
+   separat behandelt, wie vom Kritiker empfohlen, weil er
+   außerhalb des 009-Scopes liegt und vom User committed wurde.)
+2. **Planer für Einheit 010** aufrufen. Kandidaten (in Reihenfolge
+   der Kritiker-Empfehlung in 009):
+   - **(A1) `rules.json`-Auto-Discovery** (P0, Konzept Z. 257-264):
+     Ohne `--config` neben der Solution nach `rules.json` suchen,
+     `[WARN]` auf stderr + Vermerk in `get_violations`-Antwort.
+     ~2-3h, kleinste P0, risikoarm, vor A4 (Kaltstart) weil
+     A4 TD-009 triggert.
+   - **Konzept-Pflege-Einheit** (3 veraltete Stellen aus 008
+     angeregt: `konzept.md` Z. 539-552, 550, 564) — ~1h, sauber,
+     niedrigste Risiko. **VOR** A1 sinnvoll, damit A1 nicht auf
+     veralteten Konzept-Annahmen implementiert wird.
+   - **(A4) Kaltstart entkoppeln** (P0, Konzept Z. 265-275) — ~4-6h,
+     triggert TD-009 (McpCodeGraphServer-Konstruktor am Limit).
+     **Doppeleinheit-Setup** mit TD-009-Refactor nötig.
+   - **(A2) Verzeichnis-Sweep** (P1) + **(A3) Staleness-mtime**
+     (P1) — gekoppelt, gleiche Sweep-Mechanik.
+   - **(A5) `--mcp-log`** (P1) + **(A6) `ILintConsole`** (P1) +
+     **(A7) Last-Fixture** (P1, braucht A4 als Voraussetzung) —
+     später.
+   - Andere Tech-Debt-Refactors (TD-008/010, TD-014) — inline
+     in den jeweiligen P0/P1-Erweiterungen, nicht eigenständig.
+   Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift"),
+   aber Strategie-Empfehlung: **Konzept-Pflege zuerst, dann A1**.
 
 ### Tech-Debt-Stand zum Mitnehmen (Kurzfassung)
 
@@ -779,11 +817,11 @@ Nach 007 + Review:
 - Alle anderen Einträge TD-001, TD-002, TD-004, TD-005, TD-006,
   TD-007, TD-008, TD-009, TD-010, TD-011, TD-014 weiterhin offen.
 
-### Verbrauchtes Aufruf-Budget (aktualisiert 19:00)
+### Verbrauchtes Aufruf-Budget (aktualisiert 19:55)
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 27 (1× Planer + 1× Coder + 1× Kritiker für 008, 1× Planer + 1× Coder für 008/fix-01) | 13 |
+| `max_aufrufe` | 40 | 31 (1× Planer + 1× Coder + 1× Kritiker für 008, 1× Planer + 1× Coder + 1× Kritiker für 008/fix-01, 1× Planer + 1× Coder + 1× Kritiker für 009) | 9 |
 | `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
