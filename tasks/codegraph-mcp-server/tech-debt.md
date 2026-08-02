@@ -167,10 +167,10 @@ inhaltliche Neubewertung.
 - **Befund:** Beim TD-016-Refactor in `6c872e4` wurden `BaselineMiniFixtureWorkspace` (20 Z.) und `SymbolGraphMiniFixtureWorkspace` (20 Z.) auf `FixtureWorkspaceBase` (73 Z.) umgestellt — die beiden Klassen mit Zusatzlogik (`CompileErrorMini`: Compile-Fehler-spezifische Helper, `GitImpactMini`: `InitializeGitRepoWithInitialCommit`) wurden **nicht** migriert. `grep` bestätigt: `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` kommen in beiden Klassen weiterhin wortgleich als `private static`-Methoden vor, parallel zur identischen Implementierung in `FixtureWorkspaceBase`. **Erkannt im Review von Einheit 007** (Coder-Beobachtung in `result.md` Abschnitt „TD-016 — geschlossen (mit Teilschluss-Anmerkung)").
 - **Vorschlag:** **Inline** beim nächsten Fixture-Block (z. B. wenn EPIC-08 Last-Fixture-Generierung aus P1-6 eine weitere Fixture braucht). Planer entscheidet, ob ein eigenständiger Refactor (TD-016a-Einheit, ~1-2 h) oder inline-Mitnahme sinnvoller ist. Risikofaktor bei `GitImpactMiniFixtureWorkspace`: die Git-Init-Logik muss beim Umbau auf eine gemeinsame `TestTempDirectory` mit-konsolidiert werden, sonst gehen Initial-Commits verloren.
 - **Status:** **geschlossen** durch Einheit 009 (Commits `b0c2283` + `8f0427e`):
-  - `CompileErrorMiniFixtureWorkspace` von 71 auf 25 Z. geschrumpft (Konstruktor delegiert an
+  - `CompileErrorMiniFixtureWorkspace` von 71 auf 21 Z. geschrumpft (Konstruktor delegiert an
     `FixtureWorkspaceBase`, duplizierte `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot` entfernt,
     `Dispose` von der Basis geerbt).
-  - `GitImpactMiniFixtureWorkspace` von 166 auf 114 Z. geschrumpft (Konstruktor delegiert an
+  - `GitImpactMiniFixtureWorkspace` von 166 auf 118 Z. geschrumpft (Konstruktor delegiert an
     `FixtureWorkspaceBase`, `InitializeGitRepoWithInitialCommit()` als Post-Basis-Aktion, `Dispose`
     als Override mit `ClearReadOnlyAttributes(RootPath)` **vor** `base.Dispose()`, duplizierte Helper
     entfernt).
