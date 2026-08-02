@@ -53,12 +53,9 @@ die wortwörtlichen Korrekturen im Plan standen (Plan Sektion 2, 3.8,
 
 | # | Commit | Datei(en) | Message |
 |---:|---|---|---|
-| 1 | siehe unten | `tasks/codegraph-mcp-server/konzept.md` | `docs(mcp): tool-status-tabelle + server-betrieb an code-stand angepasst [codegraph-mcp-server]` |
-| 2 | siehe unten | `src/AiNetLinter.Tests/Mcp/McpConceptDocumentTests.cs` | `test(mcp): konzept-reflection-tests gegen code-drift [codegraph-mcp-server]` |
-| 3 | siehe unten | `tasks/codegraph-mcp-server/units/010/result.md` + `volllauf.log` | `chore(task): unit 010 result, konzept-pflege abgeschlossen [codegraph-mcp-server]` |
-
-(Hashes werden nach den Commits ergänzt — siehe Commit-Block am Ende
-dieser Datei.)
+| 1 | `84f4dc3` | `tasks/codegraph-mcp-server/konzept.md` | `docs(mcp): tool-status-tabelle + server-betrieb an code-stand angepasst [codegraph-mcp-server]` |
+| 2 | `f913bda` | `src/AiNetLinter.Tests/Mcp/McpConceptDocumentTests.cs` | `test(mcp): konzept-reflection-tests gegen code-drift [codegraph-mcp-server]` |
+| 3 | `62e58c0` | `tasks/codegraph-mcp-server/units/010/result.md` + `volllauf.log` | `chore(task): unit 010 result, konzept-pflege abgeschlossen [codegraph-mcp-server]` |
 
 ## A3-Nachweis (5 Tests, alle 5 mit wortwörtlichem Failure-Output)
 
@@ -262,10 +259,15 @@ Discovery)**, jetzt mit sauberer Konzept-Grundlage für
 
 ---
 
-## Commit-Block (am Ende, nach den Commits ausgefüllt)
+## Commit-Block
 
-<!-- Wird nach `git commit` befüllt. Reihenfolge der Commits: -->
+Reihenfolge der Commits (lokal, nicht gepusht — Branch `main` ist
+4 Commits ahead of `origin/main`, 1× Planer-Commit `9368011` + 3×
+010-Commits):
 
-1. `docs(mcp): tool-status-tabelle + server-betrieb an code-stand angepasst [codegraph-mcp-server]` — Hash: `<commit-1>` — Datei: `konzept.md`
-2. `test(mcp): konzept-reflection-tests gegen code-drift [codegraph-mcp-server]` — Hash: `<commit-2>` — Datei: `McpConceptDocumentTests.cs`
-3. `chore(task): unit 010 result, konzept-pflege abgeschlossen [codegraph-mcp-server]` — Hash: `<commit-3>` — Dateien: `result.md`, `volllauf.log`
+1. `84f4dc3` — `docs(mcp): tool-status-tabelle + server-betrieb an code-stand angepasst [codegraph-mcp-server]` — Datei: `konzept.md` (+6/−5)
+2. `f913bda` — `test(mcp): konzept-reflection-tests gegen code-drift [codegraph-mcp-server]` — Datei: `McpConceptDocumentTests.cs` (NEU, 108 Z.)
+3. `62e58c0` — `chore(task): unit 010 result, konzept-pflege abgeschlossen [codegraph-mcp-server]` — Dateien: `result.md` (NEU), `volllauf.log` (NEU)
+
+Hinweis: Commit 3 enthält `volllauf.log` als Anhang zum
+Result-Protokoll (Plan Sektion 5 Schritt 8).
