@@ -543,12 +543,12 @@ damit sie nicht als loses Zweitdokument verloren gehen.
 | `get_index_scope` | keins | Dateityp-Aufschlüsselung der Solution | `SourceFileCatalog.GetSourceFiles`/`WebFileCatalog.Collect` | fertig |
 | `find_symbol` | Name/Pattern, optionaler Kind-Filter | Fundstellen inkl. Miss-Hint-Fallback | `SymbolFinder.FindDeclarationsAsync` | fertig |
 | `find_references` | Symbol-Identifikator | Alle Aufrufstellen | `DiffImpactAnalyzer.FindCallSitesAsync` | fertig |
-| `get_impact` | Git-Ref oder Symbol | Betroffene Call-Sites | `DiffImpactAnalyzer.AnalyzeAsync` | fertig |
+| `get_impact` | `gitRef` (Git-Commit-Ref, leer = uncommittete Änderungen) **oder** `symbolIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), exklusiv — nie beide | Betroffene Call-Sites | `DiffImpactAnalyzer.AnalyzeAsync` | fertig |
 | `get_type_hierarchy` | Typ-Identifikator | Basis-/abgeleitete Typen | `SymbolFinder.FindDerivedClassesAsync`/`FindImplementationsAsync` | fertig |
 | `get_file_skeleton` | Dateipfad | Struktur-Skelett einer Datei | `SkeletonMapBuilder` | fertig |
 | `get_hotspots` | Optionaler Filter | Kopplungs-/Hotspot-Kennzahlen | `HotspotMapBuilder` | fertig |
-| `get_violations` | Datei-/Symbol-Scope | Aktuelle Lint-Verstöße | `RuleRegistry`/`LinterEngine` | codiert, Review offen |
-| `search_pattern` | Regex/Text-Pattern | Textstellen im Dateibestand | Fallback für Nicht-Symbol-Fälle | offen |
+| `get_violations` | Optionaler `scopeFilter` (Projekt-Name oder solution-relativer Dateipfad), Default = gesamte Solution | Aktuelle Lint-Verstöße | `RuleRegistry`/`LinterEngine` | fertig |
+| `search_pattern` | Regex/Text-Pattern | Textstellen im Dateibestand | Fallback für Nicht-Symbol-Fälle | fertig |
 
 Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
 
@@ -556,8 +556,9 @@ Bewusst **keine** Tools zum Schreiben/Ändern von Code (siehe Non-Goals).
 
 1. Start: `ainetlinter --mcp-server --path <Solution>` lädt die Solution
    einmal via `SourceFileCatalog.LoadAsync` und hält sie resident für die
-   gesamte Prozesslaufzeit. Transport/Handshake stehen dabei unabhängig vom
-   Ladezustand sofort bereit (siehe "Erweiterungen ins Scope" / Kaltstart).
+   gesamte Prozesslaufzeit. Transport/Handshake **sollen** unabhängig vom
+   Ladezustand sofort bereitstehen — Fix siehe "Erweiterungen ins Scope"
+   (Kaltstart entkoppeln).
 2. Jeder Tool-Call prüft zunächst lazy, ob die von ihm betroffene(n)
    Datei(en) sich seit dem letzten bekannten Stand geändert haben
    (Hash/mtime-Vergleich, über Verzeichnis-`mtime` kurzgeschlossen); bei
