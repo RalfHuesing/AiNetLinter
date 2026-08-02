@@ -10,17 +10,13 @@ namespace AiNetLinter.Tests.Fixtures;
 /// <c>tasks/codegraph-mcp/step-005/step-plan.md</c>, Datei 6/7). Wiederverwendbares Muster fuer
 /// kuenftige Tests, die ebenfalls den Git-Ref-Zweig brauchen.
 /// </summary>
-public sealed class GitImpactMiniFixtureWorkspace : IDisposable
+public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
 {
     public GitImpactMiniFixtureWorkspace()
+        : base("GitImpactMini", "ainetlinter-gitimpact-mini")
     {
-        var sourceRoot = Path.Combine(FindSolutionRoot(), "tests", "Fixtures", "GitImpactMini");
-        RootPath = Path.Combine(Path.GetTempPath(), $"ainetlinter-gitimpact-mini-{Guid.NewGuid():N}");
-        CopyFixture(sourceRoot, RootPath);
         InitializeGitRepoWithInitialCommit();
     }
-
-    public string RootPath { get; }
 
     public string CalculatorPath => Path.Combine(RootPath, "src", "GitImpactMini", "Calculator.cs");
 
@@ -54,18 +50,15 @@ public sealed class GitImpactMiniFixtureWorkspace : IDisposable
         RunGit("commit -m second");
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
-        if (Directory.Exists(RootPath))
-        {
-            ClearReadOnlyAttributes(RootPath);
-            Directory.Delete(RootPath, recursive: true);
-        }
+        ClearReadOnlyAttributes(RootPath);
+        base.Dispose();
     }
 
     /// <summary>
-    /// Git markiert Objekte im <c>.git</c>-Ordner unter Windows z. T. als schreibgeschuetzt —
-    /// ohne diesen Schritt schlaegt <see cref="Directory.Delete(string, bool)"/> mit
+    /// Git markiert Objekte im <c>.git</c>-Ordner unter Windows z. T. als schreibgeschuetzt — ohne
+    /// diesen Schritt schlaegt <see cref="Directory.Delete(string, bool)"/> mit
     /// <see cref="UnauthorizedAccessException"/> fehl.
     /// </summary>
     private static void ClearReadOnlyAttributes(string rootPath)
@@ -121,46 +114,5 @@ public sealed class GitImpactMiniFixtureWorkspace : IDisposable
         {
             throw new InvalidOperationException($"'git {arguments}' schlug fehl (Exit {process.ExitCode}): {stderr}");
         }
-    }
-
-    private static void CopyFixture(string sourceRoot, string destinationRoot)
-    {
-        Directory.CreateDirectory(destinationRoot);
-
-        foreach (var sourceFile in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceRoot, sourceFile);
-            if (IsGeneratedPath(relativePath))
-            {
-                continue;
-            }
-
-            var targetFile = Path.Combine(destinationRoot, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-            File.Copy(sourceFile, targetFile, overwrite: true);
-        }
-    }
-
-    private static bool IsGeneratedPath(string relativePath)
-    {
-        var parts = relativePath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
-        return parts.Contains("obj", StringComparer.OrdinalIgnoreCase) ||
-               parts.Contains("bin", StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Solution root not found.");
     }
 }
