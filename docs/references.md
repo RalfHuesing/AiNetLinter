@@ -147,3 +147,49 @@ Skill-Sammlungen generell):**
   Auffindungs-/Selektionsproblem als ein reines Zählproblem — bleibt aber
   ungeprüft, ob `drift-loop/skills/` (aktuell 3 Skills) davon überhaupt
   betroffen wäre.
+
+## 2026-08-03 — `dynamic-loop`-Experiment beendet, Konsolidierung auf `drift-loop`
+
+Anlass: Sparring zu einem realen `dynamic-loop`-Lauf (`codegraph-mcp-
+server`-Task in einem Fremdprojekt, 11 Einheiten) — Bauchgefühl, dass
+Einheiten zu kleinteilig geschnitten wurden und `dotnet test`
+unverhältnismäßig oft komplett lief, plus die offene Frage, ob zwei
+parallele Umsetzungs-Workflows überhaupt sinnvoll sind.
+
+- Bestätigt aus [„When to use multi-agent
+  systems"](https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them)
+  (bereits oben notiert): rollenbasierte Zerlegung (hier: Planer/Coder/
+  Kritiker) ist ein anerkannter Overhead-Kandidat — aber durch
+  Datei-Artefakt-Handoff statt Konversationskontext bereits abgefedert
+  (wie am 2026-08-01 vermerkt), nicht aufgehoben.
+- Gegenprobe aus dem eigenen Task-Log: der Kritiker fand in Einheit 002
+  einen realen `MAJOR`-Bug (falscher Error-Hint), den der Coder-eigene
+  Test nicht abdeckte — konkreter Beleg für das Evaluator-Optimizer-Muster
+  aus [„Building Effective
+  Agents"](https://www.anthropic.com/research/building-effective-agents),
+  nicht nur Overhead ohne Gegenwert.
+- **Granularität:** `drift-loop/spec.md` §10.6 (Micro-Batches) hat für
+  das Bündelungs-Problem bereits einen konkreten, konfigurierbaren
+  Mechanismus (`max_batch_items`, `max_batch_diff_lines`); `dynamic-
+  loop/kernel.md` überließ dieselbe Entscheidung reinem Modell-Urteil
+  ("entscheidest du frei") — die beobachtete Reibung ist ein Datenpunkt
+  dafür, dass dieses Urteil nicht zuverlässig genug greift, nicht nur ein
+  Gefühl.
+- **Test-Kadenz:** In keinem der beiden Workflows gab es eine Regel
+  „gezielt während der Arbeit, ein Volllauf als Gate vor dem Commit" —
+  die Lücke wurde ad hoc im Zielprojekt selbst nachgezogen
+  (`AGENTS.md`-Testkategorien), nicht im Workflow. Jetzt in
+  `drift-loop/skills/coder/SKILL.md` Schritt 4 nachgezogen.
+- **„2000 Zeilen Prompt sind zu viel"-These geprüft und nicht
+  bestätigt:** Subagenten laden pro Aufruf nur ihre eigene
+  `skills/<rolle>/SKILL.md` (~150-270 Zeilen) plus Templates/
+  Task-Artefakte — `spec.md` (~700 Zeilen) wird darin nur per
+  Abschnittsnummer referenziert, nicht vollständig mitgeladen. Die Länge
+  sitzt in der Referenzdokumentation, nicht im tatsächlichen
+  Subagenten-Kontext.
+
+**Konsequenz:** `dynamic-loop/` entfernt (Git-Historie bleibt abrufbar,
+Vorgeschichte dokumentiert in `dev-loop/drift-loop/README.md`) — nur noch
+ein Umsetzungs-Workflow (`drift-loop`), dessen eigene Mechanismen die
+beobachtete Reibung bereits strukturell adressieren, ergänzt um die
+Test-Kadenz-Regel.
