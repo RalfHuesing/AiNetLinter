@@ -26,18 +26,17 @@ internal sealed class McpCodeGraphServer : IDisposable
     private readonly Dictionary<string, FileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private SourceFileCatalog? _catalog;
 
-    // 700 = new MetricsConfig().MaxLineCount (Default-Parameter-Werte muessen compile-time constant sein).
-    public McpCodeGraphServer(
-        SourceFileCatalog? catalog,
-        ILintConsole? console = null,
-        int maxLineCount = 700,
-        Config? config = null,
-        ILintConsole? consoleOverride = null)
+    // Eingefuehrt mit TD-009: Input-Record ersetzt den frueheren 5-Parameter-Konstruktor,
+    // der am projektweiten MaxConstructorDependencies: 5-Limit lag (siehe AiNetLinter.mdc Z. 27
+    // und McpCodeGraphServerOptions.cs). Erlaubt additive P0/P1-Erweiterungen an der Config,
+    // ohne die Konstruktor-Signatur zu aendern.
+    public McpCodeGraphServer(McpCodeGraphServerOptions options)
     {
-        _catalog = catalog;
-        _console = consoleOverride ?? console ?? LinterConsole.Instance;
-        MaxLineCount = maxLineCount;
-        Config = config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+        ArgumentNullException.ThrowIfNull(options);
+        _catalog = options.Catalog;
+        _console = options.Console;
+        MaxLineCount = options.MaxLineCount;
+        Config = options.Config;
 
         if (_catalog is not null)
         {

@@ -33,7 +33,8 @@ internal static class McpServerCommand
         if (solutionPath is null) return 1;
 
         var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
-        using var mcpState = new McpCodeGraphServer(catalog, c, ResolveMaxLineCount(args), ResolveConfig(args));
+        using var mcpState = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            catalog, c, ResolveMaxLineCount(args), ResolveConfig(args)));
 
         var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);
