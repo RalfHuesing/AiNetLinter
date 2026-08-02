@@ -880,11 +880,87 @@ Task-Abschluss mit `summary.md`.
    + 1× review) — A4 erlaubt.
 2. **Planer für Einheit 011 = TD-Bündel** aufrufen.
 
-### Verbrauchtes Aufruf-Budget (aktualisiert 20:45)
+## ⚠️ SESSION-STOPP (2026-08-02, ~23:40)
+
+**Stopp-Grund:** User-Anweisung "stoppe wenn 011 inkl. kritiker
+komplett durch ist". Coder-Aufruf lief sehr lange (Planer 20:35,
+Coder 20:55-22:54, vermutlich vom User gecancelt; Re-Start
+bg_c2db49ae hat den Abschluss gemacht und wurde auf User-Hinweis
+"zwei coder laufen" wieder gestoppt). Kritiker wurde nicht
+aufgerufen.
+
+### Stand bei Stopp
+
+- **Working tree:** clean, 8 Commits ahead of `origin/main`.
+- **Build:** grün, 0 Warnungen, 0 Fehler (vom Coder-Re-Start
+  dokumentiert).
+- **Tests:**
+  - Unit-Slice 105/105 grün (88 + 8 + 7 + 2 = 105, inkl. 7 neue
+    `McpServerOptionsBuilderTests` + 2 neue
+    `McpCodeGraphServerConstructorTests` + 1 neuer
+    `McpTestClientParallelTests` + 3 neue
+    `McpTestClientRetryTests`).
+  - **Volllauf 1191/1191 grün** (1178 + 13 neue Tests durch 011;
+    Lauf vom Coder-Re-Start erfolgreich abgeschlossen).
+- **Kein Push** (A4, kein Kritiker-Approval).
+- **8 Commits lokal** (Reihenfolge):
+  1. `b0a9439` `chore(task): plan unit 011, TD-buendel`
+  2. `4bcd5ab` `refactor(mcp): mcp-server-options-builder + schlanke
+     factory (TD-014)`
+  3. `075a8a0` `feat(mcp): mcp-code-graph-server-konstruktor auf
+     input-record umgestellt (TD-009)`
+  4. `af41a6b` `refactor(mcp): 64 mcp-code-graph-server-call-sites
+     auf options-record migriert (TD-009)`
+  5. `1201840` `test(mcp): retry-logik in mcp-test-client gegen
+     parallel-init-flake (TD-019)`
+  6. `a530b4f` `chore(debt): TD-009 + TD-014 + TD-019 geschlossen
+     durch 011`
+  7. `8a663c7` `chore(rules): pathoverride 2700 fuer 9 von
+     TD-009/014 betroffene dateien`
+  8. `f69dea6` `chore(task): unit 011 result, TD-009 + TD-014 +
+     TD-019 geschlossen`
+- **Plan-Abweichung:** Coder hat `rules.json` um 9
+  `PathOverride: 2700`-Einträge erweitert (Registrar + Tool-
+  Klassen + McpServerOptionsFactory). Begründung: TD-009 hat den
+  Footprint-Pull-in von `Configuration` in mehrere Klassen
+  verstärkt. Pragmatik statt strukturellem Refactor, **analog
+  TD-008-Vorgehen**. Strukturelle Lösung (ILinterEngineConfig-
+  Interface) bleibt 012+.
+- **TD-Status nach 011:** TD-009, TD-014, TD-019 alle geschlossen.
+  Verbleibend 11 offene TD-Einträge: TD-001, TD-002, TD-004, TD-005,
+  TD-006, TD-007, TD-008, TD-010, TD-011, TD-019(?), TD-(?)
+  [exakte Zählung in `tech-debt.md`-Index prüfen].
+- **Plan-Abweichung `rules.json`:** Vom Plan vorgesehen als
+  optionale Pragmatik (Plan §10 "Restproblem, bewusst NICHT in
+  011"), vom Coder umgesetzt als pragmatische Sofortmaßnahme.
+  TD-008/010 bleiben offen als Folge.
+- **A7/A8-Konformität:** keine Edits an `konzept.md`,
+  `kernel.md`, Rollen-Dateien, `.agents/rules/**` außer
+  `rules.json`-PathOverride (vom Plan implizit erlaubt als
+  Pragmatik).
+
+### Nächste Aktion (für nächste Session)
+
+1. **Volllauf selbst nachfahren** zur Bestätigung (Coder hat
+   1191/1191 grün dokumentiert, aber ein eigener Lauf schadet
+   nicht).
+2. **Kritiker-Aufruf für 011** — Verdict zu den 6 TD-Commits +
+   result.md + rules.json-Plan-Abweichung.
+3. **Bei `approved`:** Push der 8 Commits nach `origin/main` —
+   A4 erlaubt Push nach Approval. **Oder**: 8 Commits verwerfen
+   via `git reset --hard origin/main` und mit 012 (TD-008/010
+   ILinterEngineConfig) starten — User entscheidet.
+4. **TD-008/010 (ILinterEngineConfig)** oder A1
+   (`rules.json`-Auto-Discovery) als nächste Einheit — die
+   9 PathOverride-Erhöhungen aus 011 sind die Pragmatik-Lösung
+   für genau dieses Problem, der strukturelle Refactor
+   (ILinterEngineConfig-Interface) beseitigt die Wurzel.
+
+### Verbrauchtes Aufruf-Budget (aktualisiert 23:40)
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 34 (zuzügl. 011-Planer/Coder/Kritiker = 37 nach 011) | 6 (3 nach 011) |
+| `max_aufrufe` | 40 | 35 (1× Planer + 1× Coder-Re-Start für 011; **kein Kritiker**) | 5 |
 | `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
