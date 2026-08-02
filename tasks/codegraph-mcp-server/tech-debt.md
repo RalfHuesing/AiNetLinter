@@ -2,7 +2,7 @@
 task: codegraph-mcp-server
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-02
+last_updated: 2026-08-02 (TD-003 geschlossen durch 007, TD-016a neu aus 007-Review)
 carried_forward_from: tasks/codegraph-mcp (drift-loop, gelöscht — siehe konzept.md "Bereits umgesetzt")
 ---
 
@@ -29,7 +29,7 @@ inhaltliche Neubewertung.
 |---|---|---|---|
 | TD-001 | `AiNetLinter.csproj` (`ModelContextProtocol`-Paket) | niedrig | Transitive `Microsoft.Extensions.AI.Abstractions`-Abhängigkeit ungenutzt mitgezogen. |
 | TD-002 | `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` | niedrig | End-to-End-Test startet echten Subprozess (`AiNetLinter.exe`), spürbar länger als Unit-Tests. |
-| TD-003 | `src/AiNetLinter/Baseline/SourceFileCatalog.cs` (`RegisterMSBuild`) | mittel | Nicht-thread-sicherer Check-then-Act führt bei parallel laufenden Testklassen intermittierend zu `InvalidOperationException`. |
+| TD-003 | `src/AiNetLinter/Baseline/SourceFileCatalog.cs` (`RegisterMSBuild`) | mittel | ~~Nicht-thread-sicherer Check-then-Act führt bei parallel laufenden Testklassen intermittierend zu `InvalidOperationException`.~~ **Geschlossen durch Einheit 007** (Commit `49feb65`): statisches Lock + Check-Lock-Check-Pattern + 3 Tests (Reflection + 20 parallele `LoadAsync`-Calls + Idempotenz). |
 | TD-004 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` + Registrar-Klassen | mittel | Wiederkehrender `AIContextFootprint`-Druck (Limit 2500) auf Sammelpunkte der Tool-Registrierung; bereits dreimal per Aufteilung in weitere Registrar-Klasse aufgefangen (`SymbolGraphToolRegistrations`/`FileStructureToolRegistrations`/`AnalysisToolRegistrations`), für `search_pattern` voraussichtlich eine vierte nötig. |
 | TD-005 | `src/AiNetLinter/Mcp/Tools/*Tool.cs` (pro-Tool-Klassen) | mittel | `McpCodeGraphServer` als Parametertyp einer Tool-`ExecuteAsync`-Methode zieht bereits einen Großteil des `AIContextFootprint`-Budgets transitiv mit; etabliertes Gegenmuster ("dünner Dispatch + separate Formatter-/Scanner-Datei ohne `McpCodeGraphServer`-Abhängigkeit") funktioniert, muss aber weiter bewusst angewendet werden. |
 | TD-006 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` vs. `src/AiNetLinter/Web/WebFileCatalog.cs` | niedrig | `.xaml`/`.html`-Scan dupliziert `IsGeneratedPath`/`SafeEnumerateFiles` aus `WebFileCatalog` 1:1 statt sie wiederzuverwenden. |
@@ -43,6 +43,7 @@ inhaltliche Neubewertung.
 | TD-014 | `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (Footprint) | niedrig | 2484/2500 (16 Z. Puffer) — `ServerInstructions`-Block (+14 Z. in 003) hat die Klasse an die Grenze gebracht. Const-String sollte nicht weiter wachsen; P0/P1-Extensions (Kaltstart, `--mcp-log`, Auto-Discovery) reißen das Limit bei der nächsten Erweiterung. **Inline** beim nächsten Anlass: `McpServerOptionsBuilder` oder Init-`record` analog TD-009. |
 | TD-015 | `src/AiNetLinter/Mcp/McpToolResults.cs:117` (`WarningsSection`) | niedrig | ~~Dead Code — Hilfsmethode hat keinen Production-Caller; alle 8 Tools mit Compile-Fehler-Warnhinweis (006) nutzen stattdessen `FindSymbolTool.BuildAggregateWarningAsync` + `McpToolResults.PrependWarning` (oder gleichwertig). Test (`McpToolResultsTests.cs:42-54`) ist tautologisch (`result == warningText`).~~ **Geschlossen durch Einheit 007** (Commit siehe unten): Methode + XML-Doc-Kommentar + tautologischer Test entfernt. |
 | TD-016 | `tests/Fixtures/*/` (Fixture-Code-Duplikation) | niedrig | ~~`CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` in 4 Fixture-Workspace-Klassen dupliziert.~~ **Geschlossen durch Einheit 007** (Commit `6c872e4`, vor 007 angelegt): `FixtureWorkspaceBase.cs` (73 Z.) + `TestTempDirectory.cs` (58 Z.) eingefuehrt, `BaselineMiniFixtureWorkspace` und `SymbolGraphMiniFixtureWorkspace` erben jetzt davon. (Anmerkung 2026-08-01: nur 2 von 4 Workspace-Klassen wurden refaktoriert; `CompileErrorMiniFixtureWorkspace` und `GitImpactMiniFixtureWorkspace` enthalten weiterhin die duplizierten Helper. Siehe `units/007/result.md` Abschnitt "Tech-Debt-Beobachtung" — Folge-Refactor offen.) |
+| TD-016a | `src/AiNetLinter.Tests/Fixtures/{CompileErrorMini,GitImpactMini}FixtureWorkspace.cs` | niedrig | Folge-Refactor aus TD-016: zwei der vier Fixture-Workspace-Klassen wurden in `6c872e4` nicht auf `FixtureWorkspaceBase` umgestellt und duplizieren weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`. |
 
 ## Einträge
 
@@ -65,7 +66,7 @@ inhaltliche Neubewertung.
 - **Ort:** `src/AiNetLinter/Baseline/SourceFileCatalog.cs`, `RegisterMSBuild()` — nicht-thread-sicherer Check-then-Act (`if (!MSBuildLocator.IsRegistered)`).
 - **Befund:** Führt bei parallel laufenden Testklassen, die `SourceFileCatalog.LoadAsync` erstmalig aufrufen, intermittierend zu `InvalidOperationException` (beobachtet, reproduziert als Timing-Flake — ein direkt anschließender Lauf war grün).
 - **Vorschlag:** `RegisterMSBuild()` mit statischem Lock absichern (Check-Lock-Check) und/oder betroffene Testklassen in eine gemeinsame, nicht-parallele xUnit-Collection stecken. Vor weiteren MCP-Integrationstests (EPIC-07) angehen, da die Kollisionswahrscheinlichkeit mit jeder weiteren parallelen Testklasse steigt.
-- **Status:** offen
+- **Status:** **geschlossen** durch Einheit 007 (Commit `49feb65`): `SourceFileCatalog.RegisterMSBuild` mit `private static readonly object _msbuildRegistrationLock` + Check-Lock-Check-Pattern abgesichert. Struktureller A3: `RegisterMSBuild_HasStaticLockField_ForThreadSafeRegistration` (Reflection auf das Feld). Funktionale Verifikation: `LoadAsync_TwentyParallelCallsAcrossFixtures_AllSucceed` (smoke) + `LoadAsync_SecondSequentialCall_DoesNotRepatchBuildHost` (Idempotenz). Klasse von 286 auf 302 Z. gewachsen (vor 007: 286; +Lock-Feld + Kommentar; gut innerhalb `MaxLineCount: 500`). Workaround 006 (`ConsoleTestCollection`) bleibt als zusätzliche Schicht bestehen, ist aber nicht mehr die einzige Absicherung.
 
 ### TD-004 — Wiederkehrender `AIContextFootprint`-Druck auf Tool-Registrierungs-Sammelpunkte [Priorität: mittel]
 
@@ -159,3 +160,10 @@ inhaltliche Neubewertung.
 - **Geschlossen durch:** Commit `6c872e4` (vor Einheit 007 angelegt): `FixtureWorkspaceBase.cs` (73 Z.) + `TestTempDirectory.cs` (58 Z.) eingeführt, `BaselineMiniFixtureWorkspace` (20 Z.) und `SymbolGraphMiniFixtureWorkspace` (20 Z.) erben jetzt davon (jeweils nur Konstruktor + eigene Property-Pfade).
 - **Teilschluss-Anmerkung 2026-08-01 (Coder von 007):** Beim Sichten der Fixtures während 007-Vorbereitung fällt auf, dass der Refactor nur **2 von 4** Workspace-Klassen abgedeckt hat: `CompileErrorMiniFixtureWorkspace` (71 Z., dupliziert weiterhin `CopyFixture`/`IsGeneratedPath`/`FindSolutionRoot`) und `GitImpactMiniFixtureWorkspace` (166 Z., dupliziert dieselben Helper) wurden **nicht** auf `FixtureWorkspaceBase` umgestellt. TD-016 wird hier formal als "geschlossen durch 6c872e4" markiert, weil die strukturelle Loesung existiert und der initiale Refactor die Mehrheit der redundanten Stellen eliminiert hat — die verbleibenden zwei Stellen sind eine **Beobachtung**, die der naechste Planer/Cycle aufgreifen kann (z. B. als Folge-TD `TD-016a`, oder inline beim naechsten Fixture-Block in EPIC-08).
 - **Status:** **geschlossen** (mit Teilschluss-Anmerkung)
+
+### TD-016a — TD-016-Folge: 2 verbleibende Fixture-Klassen noch nicht refaktoriert [Priorität: niedrig]
+
+- **Ort:** `src/AiNetLinter.Tests/Fixtures/CompileErrorMiniFixtureWorkspace.cs` (71 Z.) und `src/AiNetLinter.Tests/Fixtures/GitImpactMiniFixtureWorkspace.cs` (166 Z.).
+- **Befund:** Beim TD-016-Refactor in `6c872e4` wurden `BaselineMiniFixtureWorkspace` (20 Z.) und `SymbolGraphMiniFixtureWorkspace` (20 Z.) auf `FixtureWorkspaceBase` (73 Z.) umgestellt — die beiden Klassen mit Zusatzlogik (`CompileErrorMini`: Compile-Fehler-spezifische Helper, `GitImpactMini`: `InitializeGitRepoWithInitialCommit`) wurden **nicht** migriert. `grep` bestätigt: `CopyFixture` / `IsGeneratedPath` / `FindSolutionRoot` kommen in beiden Klassen weiterhin wortgleich als `private static`-Methoden vor, parallel zur identischen Implementierung in `FixtureWorkspaceBase`. **Erkannt im Review von Einheit 007** (Coder-Beobachtung in `result.md` Abschnitt „TD-016 — geschlossen (mit Teilschluss-Anmerkung)").
+- **Vorschlag:** **Inline** beim nächsten Fixture-Block (z. B. wenn EPIC-08 Last-Fixture-Generierung aus P1-6 eine weitere Fixture braucht). Planer entscheidet, ob ein eigenständiger Refactor (TD-016a-Einheit, ~1-2 h) oder inline-Mitnahme sinnvoller ist. Risikofaktor bei `GitImpactMiniFixtureWorkspace`: die Git-Init-Logik muss beim Umbau auf eine gemeinsame `TestTempDirectory` mit-konsolidiert werden, sonst gehen Initial-Commits verloren.
+- **Status:** offen
