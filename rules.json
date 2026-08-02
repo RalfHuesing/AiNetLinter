@@ -408,6 +408,21 @@
         "MaxAIContextFootprint": 2700
       }
     },
+    "src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/McpServerOptionsFactory.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
     "src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2700
@@ -418,7 +433,37 @@
         "MaxAIContextFootprint": 2700
       }
     },
+    "src/AiNetLinter/Mcp/Tools/GetFileSkeletonTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetHotspotsTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
     "src/AiNetLinter/Mcp/Tools/GetImpactTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetIndexScopeTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetTypeHierarchyTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetViolationsTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/SearchPatternTool.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2700
       }
