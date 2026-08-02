@@ -20,7 +20,8 @@ public sealed class SymbolGraphMcpFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         Workspace = new SymbolGraphMiniFixtureWorkspace();
-        Client = await McpTestClient.ConnectAsync(Workspace.RootPath);
+        Client = await McpTestClient.ConnectAsync(Workspace.RootPath, timeoutSeconds: 60,
+            retryOptions: new McpTestClientRetryOptions(MaxRetries: 5, BaseDelayMs: 1000, BackoffFactor: 2.0));
     }
 
     public async ValueTask DisposeAsync()

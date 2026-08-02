@@ -20,7 +20,8 @@ public sealed class McpLiveRepositoryFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         RepositoryRoot = FindRepositoryRoot();
-        Client = await McpTestClient.ConnectAsync(RepositoryRoot);
+        Client = await McpTestClient.ConnectAsync(RepositoryRoot, timeoutSeconds: 60,
+            retryOptions: new McpTestClientRetryOptions(MaxRetries: 5, BaseDelayMs: 1000, BackoffFactor: 2.0));
     }
 
     public async ValueTask DisposeAsync()

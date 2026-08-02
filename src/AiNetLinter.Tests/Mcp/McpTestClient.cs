@@ -25,30 +25,57 @@ public sealed class McpTestClient : IAsyncDisposable
 
     /// <summary>
     /// Verbindet sich mit dem kompilierten <c>AiNetLinter.exe --mcp-server</c> für den Zielpfad.
+    /// Bei flake-anfaelligen Parallel-Init-Szenarien (siehe TD-019, 010-Volllauf-Beobachtung) greift
+    /// eine Retry-Schleife mit exponentiellem Backoff: Default 3 Retries (0.5s/1s/2s) reichen im
+    /// Median, im Worst-Case werden ~3.5s zusaetzliche Wartezeit pro Connect verbrannt.
     /// </summary>
     public static async Task<McpTestClient> ConnectAsync(
         string targetDirectory,
         int timeoutSeconds = 30,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        McpTestClientRetryOptions? retryOptions = null)
     {
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        if (!File.Exists(exePath))
+        retryOptions ??= new McpTestClientRetryOptions();
+        var attempt = 0;
+        Exception? lastException = null;
+
+        while (attempt <= retryOptions.MaxRetries)
         {
-            throw new FileNotFoundException($"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}");
+            try
+            {
+                var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+                if (!File.Exists(exePath))
+                {
+                    throw new FileNotFoundException($"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}");
+                }
+
+                var transport = new StdioClientTransport(new StdioClientTransportOptions
+                {
+                    Name = "ainetlinter-mcp-test-client",
+                    Command = exePath,
+                    Arguments = ["--mcp-server", "--path", targetDirectory],
+                });
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
+                var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+                return new McpTestClient(client);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                lastException = ex;
+                attempt++;
+                if (attempt > retryOptions.MaxRetries) break;
+
+                var delayMs = retryOptions.BaseDelayMs * Math.Pow(retryOptions.BackoffFactor, attempt - 1);
+                await Task.Delay(TimeSpan.FromMilliseconds(delayMs), cancellationToken);
+            }
         }
 
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", targetDirectory],
-        });
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-        var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        return new McpTestClient(client);
+        throw new InvalidOperationException(
+            $"MCP-Client-Connect scheiterte nach {retryOptions.MaxRetries + 1} Versuchen gegen '{targetDirectory}'.",
+            lastException);
     }
 
     /// <summary>
