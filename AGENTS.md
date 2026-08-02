@@ -45,7 +45,7 @@ Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensi
    ```
 
 4. **Test-Ergebnisse & Logging**:
-   Das Ergebnis von `dotnet test` wird durch `.runsettings` automatisch deterministisch in `TestResults/latest.trx` überschrieben. Bei Testfehlern oder abgeschnittenem Konsolen-Output im Terminal liest der Agent direkt `TestResults/latest.trx` zur Fehlerdiagnose aus, anstatt den Testlauf unvollständig erneut zu starten.
+   Das Ergebnis wird in `TestResults/latest.trx` geloggt (Details & Diagnose-Workflow siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §3).
 
 > [!IMPORTANT]
 > Beende einen Task erst, wenn `dotnet test` (Volllauf) grün durchgelaufen ist!
