@@ -684,26 +684,84 @@ Commits `3b315c2` + `4f6fa6f` (von Ralf nach 007 manuell eingespielt):
   Fixture-Block. Risiko Git-Init-Logik in GitImpactMini.
 - **Aufrufe:** 1× Kritiker (für 007) = jetzt 22/40.
 
-### Nächste Aktion (für 008)
+### Einheit 008 — EPIC-08 Doku (abgeschlossen 2026-08-02, ~18:25)
 
-1. **Push** der 4 Commits (`49feb65` + `3b29d72` + `bb0544d` +
-   `acb8ee4`) + der 3 Ralf-Refactor-Commits (`3b315c2` +
-   `4f6fa6f` + `ed58ba0`) nach `origin/main` — A4 erlaubt
-   Push, kein Amend. (Bzw. 2 eigene Commits noch dazu für
-   `review.md` und `tech-debt.md`.)
-2. **Planer für Einheit 008** aufrufen. Kandidaten (in Reihenfolge
+- **Plan:** `units/008/plan.md` (880 Z., Commit `9247951`) — Wahl
+  fiel auf EPIC-08 (Doku, einzige noch offene Muss-Have-Säule aus
+  `konzept.md` Z. 105-107). 2 Konzept-Diskrepanzen vom Planer
+  dokumentiert (A7-konform).
+- **Coder-Result:** `units/008/result.md` — 4 Doku-Dateien erweitert
+  (+232 Z. gesamt) + 1 neue A3-Verifikations-Test-Datei
+  (`McpDocumentationSmokeTests.cs`, 73 Z., 3 Smoke-Tests gegen den
+  laufenden MCP-Server). 7 Commits, alle A4-konform. Volllauf
+  1164/1164 grün in 6:50 min (gemessen 2026-08-02 ~18:18). 3
+  Konzept-Diskrepanzen dokumentiert (2 vom Planer + 1 vom Coder
+  selbst entdeckt, Z. 564).
+- **Kritiker-Review:** `units/008/review.md` (Commit `5196623`) —
+  Verdict **`issues`**: 1 MAJOR F-001 (`Docs/agent-api.md:238`
+  zählte „7 Tools sind C#-only", Tabelle listet aber 6), 3 MINOR
+  (F-002 A3-Asymmetrie, F-003 Self-Lint-Pfad-Differenz, F-004
+  Klammer-Inkonsistenz als Wurzel von F-001). Sonst alles sauber:
+  1164/1164 grün, Doku-Treue 1:1 zum Code, A3-Tests mit
+  dokumentiertem Pfad, A7 eingehalten.
+- **Aufrufe:** 1× Planer (008) + 1× Coder (008) + 1× Kritiker (008)
+  = 25/40.
+
+### Einheit 008/fix-01 — Doku-Drift F-001 (in Bearbeitung)
+
+- **Plan:** `units/008/fix-01/plan.md` (446 Z., Commit `96f1029`) —
+  Pflicht-Fix F-001 (`agent-api.md:238` wortwörtlich 1:1 nach
+  Kritiker-Korrekturtext), optional F-002 (A3-Symmetrie in
+  `result.md`) + optional 4. A3-Wortlaut-Test.
+- **Coder-Result:** `units/008/fix-01/result.md` — 5 Commits:
+  1× `docs(mcp): agent-api C#-only-zaehlung korrigiert`
+  (`700eb4e`), 1× `test(mcp): doku-zaehlung-vs-agent-api-md-test`
+  (`5593c91`), 1× `chore(task): a3-block-symmetrie` (`28d2c5e`),
+  2× `chore(task): result + hash-nachtrag` (`669b07d`, `77e5ebf`).
+  F-001 + F-002 + A3-4 alle umgesetzt. Volllauf 1165/1165 grün in
+  4:57 min (gemessen 2026-08-02 ~19:00). Plan-Abweichung: File-Read
+  im 4. Test statt hartkodierter String (methodisch korrekter, im
+  Test-Kommentar Z. 82-85 und im result.md begründet).
+- **MINOR F-003** (Self-Lint-Pfad-Differenz Plan `tests/Fixtures/...`
+  vs. Result `src/BaselineMini/...`): Inhaltlich konsistent (1
+  gewollte Fixture-Violation, kein Regress), nur Pfad-Hinweis
+  inkonsistent. **Hinweis für künftige Planer** (ab 009+): wenn
+  Self-Lint gegen `BaselineMini` geplant wird, ist der reale
+  Pfad **`src/BaselineMini/ViolatingClass.cs`** (1 erwartete
+  Violation in `EnforceSealedClasses`), nicht `tests/Fixtures/...`.
+- **Aufrufe:** 1× Planer (008/fix-01) + 1× Coder (008/fix-01) =
+  27/40. Kritiker (008/fix-01) folgt.
+
+### Nächste Aktion (für 009)
+
+1. **Kritiker-Aufruf für 008/fix-01** (Pflicht) — Verdict zu den
+   5 Commits + Volllauf 1165/1165.
+2. **Bei `approved`:** Push **aller** lokalen Commits nach
+   `origin/main` (4× 007-Commits, 3× Ralf-Commits, 7× 008-Commits,
+   2× Orchestrator-Commits für 007-review/TD-Update, 3×
+   Orchestrator-Commits für 008-plan/review, 5× 008/fix-01-Commits
+   = 24 Commits gesamt, schubweise gepusht). A4 erlaubt Push.
+3. **Planer für Einheit 009** aufrufen. Kandidaten (in Reihenfolge
    der Konzept-Logik + Tech-Debt):
-   - **TD-016a** (2 verbleibende Fixture-Workspaces
-     `CompileErrorMiniFixtureWorkspace` + `GitImpactMiniFixtureWorkspace`
-     auf `FixtureWorkspaceBase` umstellen) — klein, ~1-2h, kann
-     standalone laufen. Konsistent mit TD-016-Teilschluss-Anmerkung
-     und 007-Kritiker-Vorschlag.
-   - **EPIC-08 (Doku)** — `Docs/agent-api.md` mit MCP-Modus,
-     `Docs/integration.md` mit Registrierung, `Docs/ROADMAP.md` +
-     `README.md`. Letzte offene P0-Säule nach EPIC-06+07.
-   - **P0/P1-Rest-Erweiterungen** (Kaltstart, Auto-Discovery,
-     Staleness-Sweep-`mtime`, `--mcp-log`, Verzeichnis-Sweep,
-     `ILintConsole`).
+   - **P0/P1-Rest-Erweiterungen** (Konzept Z. 207-324, 9 Items
+     gelistet in `Docs/ROADMAP.md`) — alle einzeln eigene Einheiten
+     wert: Kaltstart entkoppeln, `rules.json`-Auto-Discovery,
+     Staleness-Sweep mit Verzeichnis-`mtime`, `--mcp-log` Call-Log,
+     RefreshStaleDocuments-Verzeichnis-Sweep neu/gelöscht,
+     `ILintConsole` für MCP, Last-Fixture + Messlauf,
+     Tool-vs-`rg`-Empfehlung (Doku-Pflicht — bereits in 008 erfüllt).
+   - **TD-016a** (2 verbleibende Fixture-Workspaces refactoren) —
+     klein, ~1-2h, kann standalone laufen. Konsistent mit
+     TD-016-Teilschluss-Anmerkung und 007-Kritiker-Vorschlag.
+   - **Konzept-Pflege-Einheit** (vom Kritiker in 008 angeregt) —
+     3 veraltete Stellen in `konzept.md` an Code-Stand anpassen
+     (Z. 539-552 Tool-Status, Z. 550 `get_impact`-Beschreibung,
+     Z. 564 Kaltstart-Suggestion). Reine Markdown-Einheit.
+   - **Tech-Debt-Refactor** (z. B. TD-008/TD-010 als
+     `ILinterEngineConfig`-Investition, TD-009 als Constructor-`record`,
+     TD-014 als `McpServerOptionsBuilder`) — nur sinnvoll, wenn
+     nächste P0/P1-Erweiterung `McpCodeGraphServer` sowieso anfasst
+     (z. B. Kaltstart entkoppeln → TD-009 triggert).
    Konkrete Wahl trifft der Planer JIT (Kernel Teil B "Drift").
 
 ### Tech-Debt-Stand zum Mitnehmen (Kurzfassung)
@@ -721,10 +779,11 @@ Nach 007 + Review:
 - Alle anderen Einträge TD-001, TD-002, TD-004, TD-005, TD-006,
   TD-007, TD-008, TD-009, TD-010, TD-011, TD-014 weiterhin offen.
 
-### Verbrauchtes Aufruf-Budget (aktualisiert 17:18)
+### Verbrauchtes Aufruf-Budget (aktualisiert 19:00)
 
 | Größe | Default | Verbraucht | Verbleibend |
 | :--- | :---: | :---: | :---: |
-| `max_aufrufe` | 40 | 22 (Kritiker für 007 dazugekommen) | 18 |
+| `max_aufrufe` | 40 | 27 (1× Planer + 1× Coder + 1× Kritiker für 008, 1× Planer + 1× Coder für 008/fix-01) | 13 |
 | `max_fix_pro_einheit` | 3 | 0 (in 006) | 3 |
+| `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
 | `max_fix_gesamt` | 12 | 1 (002/fix-01) | 11 |
