@@ -210,6 +210,136 @@ Fehlermeldungen sind maschinenlesbar:
 
 ---
 
+## MCP-Server-Modus
+
+Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
+
+### Server-Lifecycle
+
+Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Cursor, eigene Agent-Loops). Start:
+
+```bash
+ainetlinter --mcp-server            # sucht .sln/.slnx im aktuellen Verzeichnis
+ainetlinter --mcp-server --path <Datei/Verzeichnis>   # explizite Ziel-Solution
+```
+
+Bei `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) kann bei großen Solutions spürbar dauern, danach sind Tool-Calls schnell.
+
+Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
+
+Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuild-Fehler), startet der Server trotzdem — jeder Tool-Call liefert dann einen `SOLUTION_NOT_LOADED`-Fehler statt eines Crashs.
+
+### Scope-Hinweis (C#-only)
+
+Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
+
+> Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+
+Konsequenz für den Agent-Loop: 7 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, search_pattern nutzt auch Nicht-C#-Dateien), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt. Für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` ist `search_pattern` der vorgesehene Fallback.
+
+### Die 9 Tools
+
+| Tool | Input | Output | C#-only | Trunkierung |
+| :--- | :--- | :--- | :---: | :---: |
+| `find_symbol` | `namePattern` (Substring), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` | ja | ja |
+| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), `maxResults?` (Default 50) | Alle Aufrufstellen | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; leer = uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50) | Betroffene Call-Sites | ja | ja |
+| `get_type_hierarchy` | `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name) | Basisklassen, implementierte Interfaces, abgeleitete Typen | ja | nein |
+| `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies) | ja | nein |
+| `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
+| `get_hotspots` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | `.cs`-Dateien, die ihrem `MaxLineCount`-Limit nahekommen oder es überschreiten | nein | nein |
+| `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag | ja | nein |
+| `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
+
+Beispiel-Aufruf (JSON-RPC über stdio):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "find_symbol",
+    "arguments": {
+      "namePattern": "LinterEngine",
+      "maxResults": 5
+    }
+  }
+}
+```
+
+### Trunkierungs-Format
+
+Vier Listen-Tools (`find_symbol`, `find_references`, `get_impact`, `search_pattern`) respektieren den `maxResults`-Parameter (Default 50) und hängen bei Überschreitung eine **einheitliche Meta-Zeile** an die Ausgabe an. Zwei semantisch unterschiedliche Meta-Zeilen existieren:
+
+**Listen-Trunkierung** (Treffer-Liste, `McpTruncation.cs:40`):
+
+```
+[N Treffer gesamt, M gezeigt — Pattern verfeinern oder maxResults erhöhen]
+```
+
+**Datei-Listen-Trunkierung** (Miss-Hint-Fallback in `find_symbol` bei 0 C#-Treffern, `McpTruncation.cs:66`):
+
+```
+[N Dateien mit Textfund, M gezeigt — search_pattern fuer Details]
+```
+
+Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` übernommen — der Code ist die Source of Truth, nicht das Konzept.
+
+### Miss-Hint (find_symbol Fallback)
+
+Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
+
+### Compile-Fehler-Warnhinweis (EPIC-06)
+
+Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 9 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
+
+```
+Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
+```
+
+`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` prependet keinen Compile-Warnhinweis — der Lint-Lauf liefert die Compile-Fehler selbst als Violations.
+
+### Staleness-Invalidierung
+
+`McpCodeGraphServer.GetCurrentSolution()` wird vor **jedem** Tool-Aufruf aufgerufen und prüft pro Document, ob die Datei auf der Platte neuer ist als der zuletzt gesehene `mtime`. Bei Abweichung wird der SHA-256-Hash verglichen, um reine `mtime`-Touchups (z. B. durch einen IDE-Save) zu ignorieren, und nur bei tatsächlicher Inhaltsänderung ein inkrementelles `WithDocumentText`-Update gefahren. **Es findet kein Komplett-Reload des MSBuildWorkspace statt.**
+
+### Error-Reporting
+
+Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im Tool-Response-Text:
+
+```
+[ERROR]: <CODE>: <Kurzmeldung>
+  context: <Datei oder Schritt>
+  hint:    <umsetzbare Empfehlung>
+```
+
+### Error-Codes im MCP-Kontext
+
+| Code | Bedeutung im MCP-Kontext |
+| :--- | :--- |
+| `CONFIG_REQUIRED` | `--config` fehlt (für `get_violations`) |
+| `CONFIG_NOT_FOUND` | `rules.json` nicht gefunden |
+| `CONFIG_INVALID` | `rules.json` nicht parsebar |
+| `CONFIG_SMELL` | Konfigurationsgeruch (z. B. zu breite Ausnahmen) |
+| `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
+| `BASELINE_INVALID` | Baseline-Datei nicht parsebar |
+| `WORKSPACE_DIAGNOSTIC` | Roslyn/MSBuild-Compile-Fehler (auch Defensiv-Wrapper der Tools) |
+| `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
+| `RESOURCE_NOT_FOUND` | Datei/Solution-Pfad nicht gefunden (Server-Start oder `get_file_skeleton`) |
+| `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
+| `AMBIGUOUS_SOLUTION` | Mehrere `.sln`/`.slnx` im `cwd` ohne `--path` |
+| `SOLUTION_NOT_LOADED` | Server startete ohne geladene Solution; Tool-Calls liefern diesen Fehler |
+| `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
+| `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
+| `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`) |
+
+### Verhalten bei nicht-ladbarer Solution
+
+Schlägt der `SourceFileCatalog.LoadAsync` beim Server-Start fehl, wird nur ein `[WARN]: MCP-Server startet ohne geladene Solution (...)` auf `stderr` geschrieben, der Server startet trotzdem und jeder Tool-Call liefert einen `SOLUTION_NOT_LOADED`-Fehler (siehe Error-Codes-Tabelle). Der Server stürzt nicht ab.
+
+---
+
 ## Vollständige Rule-ID-Tabelle
 
 Aktuelle Regel-Liste abrufen:
