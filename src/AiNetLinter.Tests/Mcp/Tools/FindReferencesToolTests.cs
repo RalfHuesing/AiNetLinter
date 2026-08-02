@@ -22,7 +22,7 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(null);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
 
         var result = await FindReferencesTool.ExecuteAsync(state, "irrelevant", maxResults: 50, CancellationToken.None);
 
@@ -79,7 +79,7 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     [Fact]
     public async Task ExecuteAsync_ValidQualifiedName_ReturnsCallSiteInCaller()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -91,7 +91,7 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     [Fact]
     public async Task ExecuteAsync_ValidSymbolWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 2, CancellationToken.None);
 
@@ -107,7 +107,7 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
 
         var result = await FindReferencesTool.ExecuteAsync(state, "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);
 

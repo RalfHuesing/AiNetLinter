@@ -22,7 +22,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(null);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -34,7 +34,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_SmallMaxLineCount_MarksFileAsCritical()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog, maxLineCount: 1);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog, maxLineCount: 1));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -47,7 +47,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_MidRangeMaxLineCount_MarksFileAsWarning()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog, maxLineCount: 7);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog, maxLineCount: 7));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -60,7 +60,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_DefaultMaxLineCount_AllFilesGreen()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -72,7 +72,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_ReturnsAllFiles()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 
@@ -84,7 +84,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
-        var state = new McpCodeGraphServer(_fixture.Catalog);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, "DoesNotExistAnywhere", CancellationToken.None);
 
@@ -99,7 +99,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
