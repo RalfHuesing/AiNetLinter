@@ -235,7 +235,7 @@ Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstru
 
 > Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 7 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, search_pattern nutzt auch Nicht-C#-Dateien), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt. Für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` ist `search_pattern` der vorgesehene Fallback.
+Konsequenz für den Agent-Loop: 6 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
 ### Die 9 Tools
 
