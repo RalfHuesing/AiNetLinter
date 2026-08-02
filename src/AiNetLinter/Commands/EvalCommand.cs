@@ -10,6 +10,9 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Assembliert einen vollständigen Eval-Audit-Prompt und gibt ihn auf stdout aus.
+/// </summary>
 internal static class EvalCommand
 {
     internal static Task<int> RunAsync(

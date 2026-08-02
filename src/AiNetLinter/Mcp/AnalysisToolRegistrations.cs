@@ -21,6 +21,11 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class AnalysisToolRegistrations
 {
+    /// <summary>
+    /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen den
+    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein DI-Container
+    /// (siehe <c>.
+    /// </summary>
     internal static void Register(McpServerPrimitiveCollection<McpServerTool> tools, McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(

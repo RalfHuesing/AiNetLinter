@@ -7,6 +7,9 @@ using System.Text;
 
 namespace AiNetLinter.Maps.Skeleton;
 
+/// <summary>
+/// Rendert eine Liste von <see cref="SkeletonTypeInfo"/>-Objekten als Markdown.
+/// </summary>
 internal static class SkeletonMarkdownRenderer
 {
     internal static string Render(

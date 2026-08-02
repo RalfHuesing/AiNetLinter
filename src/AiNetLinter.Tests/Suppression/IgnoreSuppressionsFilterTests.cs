@@ -4,6 +4,7 @@ using AiNetLinter.Web;
 
 namespace AiNetLinter.Tests.Suppression;
 
+// @covers IgnoreSuppressionsFilter
 public sealed class IgnoreSuppressionsFilterTests
 {
     [Fact]
@@ -11,6 +12,7 @@ public sealed class IgnoreSuppressionsFilterTests
     {
         var filter = IgnoreSuppressionsFilter.None;
 
+        // Act & Assert
         Assert.False(filter.IsActive);
         Assert.False(filter.ShouldIgnoreSuppression("cs"));
         Assert.False(filter.ShouldIgnoreSuppression("razor"));
@@ -23,6 +25,7 @@ public sealed class IgnoreSuppressionsFilterTests
     {
         var filter = new IgnoreSuppressionsFilter(new[] { "c#", "razor" });
 
+        // Act & Assert
         Assert.True(filter.IsActive);
         Assert.True(filter.ShouldIgnoreSuppression("cs"));
         Assert.True(filter.ShouldIgnoreSuppression("c#"));
@@ -41,6 +44,7 @@ public sealed class IgnoreSuppressionsFilterTests
     {
         var filter = new IgnoreSuppressionsFilter(new[] { "all" });
 
+        // Act & Assert
         Assert.True(filter.IsActive);
         Assert.True(filter.ShouldIgnoreSuppression("cs"));
         Assert.True(filter.ShouldIgnoreSuppression("razor"));

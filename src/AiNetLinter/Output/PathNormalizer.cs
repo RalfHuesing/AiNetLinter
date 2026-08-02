@@ -1,7 +1,14 @@
 namespace AiNetLinter.Output;
 
+/// <summary>
+/// Normalisiert absolute Dateipfade zu relativen Pfaden für die CLI-Ausgabe.
+/// </summary>
 public static class PathNormalizer
 {
+    /// <summary>
+    /// Wandelt einen absoluten Dateipfad in einen relativen Pfad zur Output-Basis um.
+    /// Verwendet Forward-Slashes für plattformunabhängige LLM-Lesbarkeit.
+    /// </summary>
     public static string ToRelative(string outputRoot, string absoluteFilePath)
     {
         if (string.IsNullOrEmpty(absoluteFilePath))
@@ -21,6 +28,9 @@ public static class PathNormalizer
         return relative.Replace('\\', '/');
     }
 
+    /// <summary>
+    /// Prüft, ob ein relativer Dateipfad eine Testdatei darstellt.
+    /// </summary>
     public static bool IsTestFile(string relativePath) =>
         relativePath.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) ||
         relativePath.Contains(".Tests\\", StringComparison.OrdinalIgnoreCase);

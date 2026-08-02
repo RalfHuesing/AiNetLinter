@@ -127,6 +127,7 @@ namespace TestNamespace
     public void Analyze_WithDisableAllComment_IgnoresAllViolations()
     {
         const string source = @"
+// ainetlinter-disable all
 namespace TestNamespace
 {
     public class UnsealedClass

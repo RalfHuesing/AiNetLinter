@@ -20,6 +20,9 @@ using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Führt den Standard-Lint-Audit (mit und ohne Baseline) aus.
+/// </summary>
 internal static class AuditCommand
 {
     private const string FixedCountMessageFormat = "[INFO]: {0} einfache Regelverstoesse wurden automatisch behoben.";
@@ -27,6 +30,9 @@ internal static class AuditCommand
     // Bündelt gemeinsame Parameter für private Audit-Methoden.
     private sealed record AuditRunContext(LinterArgs Args, Config Config, IPerformanceProfiler Profiler, ILintConsole Console);
 
+    /// <summary>
+    /// Einstiegspunkt für den Audit-Befehl.
+    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

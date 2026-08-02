@@ -7,13 +7,25 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Metrics;
 
+/// <summary>
+/// Berechnet den transitiven AI-Context-Footprint (Summe der Codezeilen aller abhängigen Typen).
+/// </summary>
 public static class AIContextFootprintCalculator
 {
+    /// <summary>
+    /// Berechnet den transitiven AI-Context-Footprint für ein bestimmtes Typ-Symbol.
+    /// </summary>
+    /// <param name="classSymbol">Das Typ-Symbol der Klasse, deren Footprint berechnet werden soll.</param>
+    /// <param name="ignoreNamespacePrefixes">Namespace-Präfixe von Typen, die nicht mitgezählt werden.</param>
+    /// <returns>Die Gesamtzahl transitiv referenzierter Codezeilen.</returns>
     public static int Calculate(INamedTypeSymbol classSymbol, IReadOnlyCollection<string>? ignoreNamespacePrefixes = null, IReadOnlyCollection<string>? ignoreTypeNames = null)
     {
         return CalculateDetailed(classSymbol, ignoreNamespacePrefixes, ignoreTypeNames).TotalLines;
     }
 
+    /// <summary>
+    /// Berechnet den transitiven AI-Context-Footprint und ermittelt die Top-Abhängigkeiten.
+    /// </summary>
     public static (int TotalLines, List<(string Name, int Lines)> TopDependencies) CalculateDetailed(
         INamedTypeSymbol classSymbol,
         IReadOnlyCollection<string>? ignoreNamespacePrefixes = null,

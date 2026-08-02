@@ -13,8 +13,14 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Führt die AI-Context-Footprint-Analyse für eine einzelne Klasse aus.
+/// </summary>
 internal static class FootprintCommand
 {
+    /// <summary>
+    /// Sucht die Klasse in der Solution und gibt die Footprint-Details aus.
+    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

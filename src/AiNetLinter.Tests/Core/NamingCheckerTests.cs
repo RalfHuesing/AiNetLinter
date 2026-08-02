@@ -28,6 +28,7 @@ public sealed class NamingCheckerTests
 
         var (tree, model) = TestHelper.ParseCode(code);
         
+        // 1. Check in production code file
         var config = TestHelper.CreateDefaultConfig() with { Global = new GlobalConfig { EnforceSemanticNaming = true } };
         var violationsProd = LinterAnalyzer.Analyze("TestClass.cs", model, config, isTestFile: false);
         
@@ -36,6 +37,7 @@ public sealed class NamingCheckerTests
         Assert.Contains(dummyViolationsProd, v => v.Details.Contains("MyRegex"));
         Assert.Contains(dummyViolationsProd, v => v.Details.Contains("s_myRegex2"));
 
+        // 2. Check in test file
         var violationsTest = LinterAnalyzer.Analyze("TestClassTests.cs", model, config, isTestFile: true);
         var dummyViolationsTest = violationsTest.Where(v => v.RuleName == "EnforceSemanticNaming").ToList();
         Assert.Equal(2, dummyViolationsTest.Count);

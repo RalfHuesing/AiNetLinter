@@ -10,6 +10,9 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Generiert Codebase-Landkarten für Drift-Erkennung und Eval-Prompts.
+/// </summary>
 internal static class MapCommand
 {
     internal static async Task<int> RunAsync(

@@ -6,6 +6,9 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Generators;
 
+/// <summary>
+/// Optionen für die Playbook-Generierung.
+/// </summary>
 public sealed record PlaybookOptions(
     bool Verbose = false,
     Config? Config = null,

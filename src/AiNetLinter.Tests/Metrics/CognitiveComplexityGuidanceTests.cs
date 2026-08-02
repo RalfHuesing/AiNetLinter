@@ -7,6 +7,10 @@ using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Tests.Metrics;
 
+/// <summary>
+/// Prüft, dass CognitiveComplexityGuidance.Build unterschiedliche Guidance liefert
+/// je nachdem ob die Methode kurz+dicht oder lang+komplex ist.
+/// </summary>
 public sealed class CognitiveComplexityGuidanceTests
 {
     private static MethodDeclarationSyntax ParseMethod(string methodBody)

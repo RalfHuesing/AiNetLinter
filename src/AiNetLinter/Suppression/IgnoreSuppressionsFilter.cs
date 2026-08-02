@@ -6,8 +6,15 @@ using System.IO;
 
 namespace AiNetLinter.Suppression;
 
+/// <summary>
+/// Steuert das Ignorieren/Bypass von Suppressions pro Sprachklasse während der statischen Analyse.
+/// Erlaubte Sprach-Identifier: "cs", "razor", "js", "css", "all".
+/// </summary>
 public sealed class IgnoreSuppressionsFilter
 {
+    /// <summary>
+    /// Inaktiver Standard-Filter (kein Bypass).
+    /// </summary>
     public static IgnoreSuppressionsFilter None { get; } = new(null);
 
     private readonly bool _ignoreAll;
@@ -36,8 +43,14 @@ public sealed class IgnoreSuppressionsFilter
         }
     }
 
+    /// <summary>
+    /// Gibt an, ob mindestens ein Bypass aktiv ist.
+    /// </summary>
     public bool IsActive => _ignoreAll || _ignoredLanguages.Count > 0;
 
+    /// <summary>
+    /// Liefert die Liste der kanonischen aktiven Ignore-Sprachen (z. B. "cs", "razor").
+    /// </summary>
     public IReadOnlyList<string> ActiveLanguages
     {
         get
@@ -53,6 +66,9 @@ public sealed class IgnoreSuppressionsFilter
         }
     }
 
+    /// <summary>
+    /// Prüft, ob Suppressions für die angegebene Sprachklasse (z. B. "cs", "razor", "js", "css") ignoriert werden sollen.
+    /// </summary>
     public bool ShouldIgnoreSuppression(string languageKind)
     {
         if (!IsActive) return false;
@@ -61,6 +77,9 @@ public sealed class IgnoreSuppressionsFilter
         return _ignoredLanguages.Contains(normalized);
     }
 
+    /// <summary>
+    /// Ermittelt die Sprachklasse anhand des Dateipfads (.cs, .razor, .js, .css) und prüft den Bypass.
+    /// </summary>
     public bool ShouldIgnoreSuppressionForFile(string filePath)
     {
         if (!IsActive) return false;

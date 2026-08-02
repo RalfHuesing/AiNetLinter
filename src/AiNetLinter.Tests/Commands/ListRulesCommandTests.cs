@@ -6,6 +6,9 @@ using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Commands;
 
+/// <summary>
+/// Tests fuer <see cref="ListRulesCommand"/>.
+/// </summary>
 public sealed class ListRulesCommandTests
 {
     [Fact]

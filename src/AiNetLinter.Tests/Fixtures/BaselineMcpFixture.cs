@@ -7,6 +7,11 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Erstellt einmalig pro Testklasse ein temporaeres <see cref="BaselineMiniFixtureWorkspace"/>
+/// und verbindet einen <see cref="McpTestClient"/>.
+/// Wird in Read-Only E2E-Tests via <see cref="IClassFixture{BaselineMcpFixture}"/> verwendet.
+/// </summary>
 public sealed class BaselineMcpFixture : IAsyncLifetime
 {
     public BaselineMiniFixtureWorkspace Workspace { get; private set; } = null!;

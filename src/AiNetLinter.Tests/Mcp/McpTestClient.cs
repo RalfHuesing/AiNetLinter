@@ -10,6 +10,10 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Tests.Mcp;
 
+/// <summary>
+/// Sauberer C#-Harness für E2E- und Integrationstests von MCP-Tools über <see cref="StdioClientTransport"/>.
+/// Ersetzt ad-hoc Python-Dogfooding-Skripte und stellt typsichere Helper für xUnit-Tests bereit.
+/// </summary>
 public sealed class McpTestClient : IAsyncDisposable
 {
     private readonly McpClient _client;
@@ -19,6 +23,12 @@ public sealed class McpTestClient : IAsyncDisposable
         _client = client;
     }
 
+    /// <summary>
+    /// Verbindet sich mit dem kompilierten <c>AiNetLinter.exe --mcp-server</c> für den Zielpfad.
+    /// Bei flake-anfaelligen Parallel-Init-Szenarien  greift
+    /// eine Retry-Schleife mit exponentiellem Backoff: Default 3 Retries (0.5s/1s/2s) reichen im
+    /// Median, im Worst-Case werden ~3.5s zusaetzliche Wartezeit pro Connect verbrannt.
+    /// </summary>
     public static async Task<McpTestClient> ConnectAsync(
         string targetDirectory,
         int timeoutSeconds = 30,
@@ -68,6 +78,9 @@ public sealed class McpTestClient : IAsyncDisposable
             lastException);
     }
 
+    /// <summary>
+    /// Führt ein MCP-Tool aus und gibt das rohe <see cref="CallToolResult"/> zurück.
+    /// </summary>
     public async Task<CallToolResult> CallToolAsync(
         string toolName,
         IReadOnlyDictionary<string, object?>? arguments = null,
@@ -80,6 +93,9 @@ public sealed class McpTestClient : IAsyncDisposable
         return await _client.CallToolAsync(toolName, arguments, cancellationToken: cts.Token);
     }
 
+    /// <summary>
+    /// Ruft die Liste aller vom MCP-Server bereitgestellten Tools ab.
+    /// </summary>
     public async Task<IList<McpClientTool>> ListToolsAsync(
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
@@ -90,6 +106,10 @@ public sealed class McpTestClient : IAsyncDisposable
         return await _client.ListToolsAsync(cancellationToken: cts.Token);
     }
 
+    /// <summary>
+    /// Führt ein MCP-Tool aus und liefert den String des ersten <see cref="TextContentBlock"/> zurück.
+    /// Wirft eine Exception bei MCP-Fehlerstatus.
+    /// </summary>
     public async Task<string> CallToolGetTextAsync(
         string toolName,
         IReadOnlyDictionary<string, object?>? arguments = null,

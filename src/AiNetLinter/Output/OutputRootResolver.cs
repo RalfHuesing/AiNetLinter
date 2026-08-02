@@ -1,7 +1,14 @@
 namespace AiNetLinter.Output;
 
+/// <summary>
+/// Ermittelt die Pfadbasis für relative Ausgabepfade aus dem CLI-Argument --path.
+/// </summary>
 public static class OutputRootResolver
 {
+    /// <summary>
+    /// Löst das --path-Argument in ein absolutes Verzeichnis auf.
+    /// Verzeichnis → FullPath; Solution-Datei → übergeordnetes Verzeichnis.
+    /// </summary>
     public static string Resolve(string targetPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);

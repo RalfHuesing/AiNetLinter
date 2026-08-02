@@ -9,6 +9,12 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools;
 
+/// <summary>
+/// Buendelt Roslyn-Compile-Diagnostics einer Solution fuer den
+/// Funktionen ohne <see cref="McpCodeGraphServer"/>-Abhaengigkeit — direkt unit-testbar mit
+/// einer beliebigen geladenen Solution als Eingabe 
+/// bleiben duenn und delegieren an diese Helper-Klasse).
+/// </summary>
 internal static class McpCompileDiagnostics
 {
     /// <summary>
@@ -70,6 +76,12 @@ internal static class McpCompileDiagnostics
         ((List<Diagnostic>)list).Add(diagnostic);
     }
 
+    /// <summary>
+    /// Baut einen knappen Warnhinweis-Text fuer eine einzelne Datei (datei-spezifische Tools).
+    /// Format: "Hinweis: Diese Datei hat N Compile-Fehler — Ergebnis ist moeglicherweise
+    /// unvollstaendig. Diagnostics: &lt;Id&gt;: &lt;Message&gt;; ..." mit maximal
+    /// <paramref name="maxShown"/> Diagnostics (Rest wird mit "+M weitere" angedeutet).
+    /// </summary>
     internal static string FormatFileWarning(IReadOnlyList<Diagnostic> diagnostics, int maxShown = 3)
     {
         if (diagnostics.Count == 0) return string.Empty;
@@ -81,6 +93,13 @@ internal static class McpCompileDiagnostics
                $"Diagnostics: {string.Join("; ", shown)}{suffix}";
     }
 
+    /// <summary>
+    /// Baut eine aggregierte Header-Zeile fuer Tools ohne direkten Datei-Bezug im Output
+    /// (<c>find_symbol</c>, <c>find_references</c>, <c>get_impact</c>, <c>get_type_hierarchy</c>,
+    /// <c>search_pattern</c> sowie die drei Aggregate-Tools). Format:
+    /// "Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe
+    /// get_file_skeleton fuer die betroffenen Dateien."
+    /// </summary>
     internal static string FormatAggregateWarning(int fileCount, int totalErrors)
     {
         if (fileCount == 0 || totalErrors == 0) return string.Empty;

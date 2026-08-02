@@ -3,8 +3,14 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Baseline;
 
+/// <summary>
+/// Filtert Regelverstöße anhand der Baseline-Änderungserkennung.
+/// </summary>
 public static class BaselineViolationFilter
 {
+    /// <summary>
+    /// Behält nur Verstöße in Dateien, deren Checksumme von der Baseline abweicht.
+    /// </summary>
     public static IReadOnlyCollection<RuleViolation> Filter(
         IReadOnlyCollection<RuleViolation> violations,
         IReadOnlySet<string> changedFiles,

@@ -2,12 +2,18 @@
 
 namespace AiNetLinter.Cli;
 
+/// <summary>
+/// Argumente fuer die Ausfuehrung des Linters, die aus den CLI-Optionen geparst werden.
+/// </summary>
 public sealed class LinterArgs
 {
     public string? ConfigPath { get; init; }
 
     public required string TargetPath { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob detaillierte Ausgaben (Verbose) protokolliert werden sollen.
+    /// </summary>
     public required bool Verbose { get; init; }
 
     public string? PlaybookPath { get; init; }
@@ -18,38 +24,80 @@ public sealed class LinterArgs
 
     public bool OnlyChanged { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob Deaktivierungskommentare in alle betroffenen Dateien eingefuegt werden sollen.
+    /// </summary>
     public bool AddDisableAll { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob alle Deaktivierungskommentare aus den Quelldateien entfernt werden sollen.
+    /// </summary>
     public bool RemoveDisableAll { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob ein Bericht ueber die technische Schuld ausgegeben werden soll.
+    /// </summary>
     public bool DebtReport { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob die Analyse im Wave-Ready-Modus ausgefuehrt werden soll.
+    /// </summary>
     public bool WaveReady { get; init; }
 
     public string? GitSince { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob gefundene einfache Verstoesse automatisch behoben werden sollen.
+    /// </summary>
     public bool Fix { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob eine semantische Diff-Impact-Analyse ausgefuehrt werden soll.
+    /// </summary>
     public bool HasImpact { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt die optionale Git-Referenz, die fuer die Diff-Impact-Analyse genutzt wird.
+    /// </summary>
     public string? ImpactRef { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob Agent-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
+    /// </summary>
     public bool SyncAgentRules { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt einen Wert, der angibt, ob nur Agent-Regeldateien (.mdc) synchronisiert werden sollen (Fast-Path ohne Audit).
+    /// </summary>
     public bool SyncAgentRulesOnly { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt den benutzerdefinierten Pfad fuer die Agent-Regeln (.mdc-Datei oder Verzeichnis).
+    /// </summary>
     public string? AgentRulesPath { get; init; }
 
+    /// <summary>
+    /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-agent-rules und --playbook).
+    /// </summary>
     public bool Check { get; init; }
 
+    /// <summary>
+    /// Deaktiviert den Analyse-Cache (erzwingt vollständige Neu-Analyse aller Dateien).
+    /// </summary>
     public bool NoCache { get; init; }
 
+    /// <summary>
+    /// Cache-Lebensdauer in Minuten. 0 = unbegrenzt. Standard: 60.
+    /// </summary>
     public int CacheTtlMinutes { get; init; } = 60;
 
     public string? Footprint { get; init; }
 
     public string? Docs { get; init; }
 
+    /// <summary>
+    /// Gibt an, ob alle bekannten Regeln als Tabelle ausgegeben werden sollen.
+    /// </summary>
     public bool ListRules { get; init; }
 
     public string? DescribeRule { get; init; }
@@ -60,28 +108,64 @@ public sealed class LinterArgs
 
     public string? EvalType { get; init; }
 
+    /// <summary>
+    /// Gibt an ob alle verfügbaren Eval-Typen aufgelistet werden sollen.
+    /// </summary>
     public bool ListEvals { get; init; }
 
+    /// <summary>
+    /// Spezifikations-Quellen für --eval (Dateien oder Verzeichnisse).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> SpecPaths { get; init; } = [];
 
+    /// <summary>
+    /// Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> IncludeProjects { get; init; } = [];
 
+    /// <summary>
+    /// Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> ExcludeProjects { get; init; } = [];
 
+    /// <summary>
+    /// Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> IncludeNamespaces { get; init; } = [];
 
+    /// <summary>
+    /// Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> ExcludeNamespaces { get; init; } = [];
 
+    /// <summary>
+    /// Shortcut, um alle automatisch erkannten Testprojekte auszublenden.
+    /// </summary>
     public bool ExcludeTests { get; init; }
 
+    /// <summary>
+    /// Shortcut, um ausschließlich Testprojekte zu analysieren.
+    /// </summary>
     public bool TestsOnly { get; init; }
 
+    /// <summary>
+    /// Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.
+    /// </summary>
     public bool PublicOnly { get; init; }
 
+    /// <summary>
+    /// Holt oder setzt die Sprachen, für die Suppressions während der Analyse ignoriert werden sollen (null = nicht aktiv).
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string>? IgnoreSuppressions { get; init; }
 
+    /// <summary>
+    /// Gibt an, ob statt eines Batch-Laufs ein stdio-basierter MCP-Server (Model Context Protocol) gestartet werden soll.
+    /// </summary>
     public bool McpServer { get; init; }
 
+    /// <summary>
+    /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
+    /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()
     {
         if (IgnoreSuppressions == null || IgnoreSuppressions.Count == 0) return System.Array.Empty<string>();
@@ -108,6 +192,9 @@ public sealed class LinterArgs
         return result;
     }
 
+    /// <summary>
+    /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
+    /// </summary>
     public string? Validate()
     {
         if (IsPathMissing())

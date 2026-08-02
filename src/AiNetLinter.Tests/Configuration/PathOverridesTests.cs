@@ -94,13 +94,16 @@ public sealed class PathOverridesTests
             }
         };
 
+        // After ProjectOverride: 60
         var afterProject = global.Metrics.Apply(global.ProjectOverrides["MyApp"].Metrics);
         Assert.Equal(60, afterProject.MaxMethodLineCount);
 
+        // After PathOverride: 80 (wins)
         var afterPath = afterProject.Apply(global.PathOverrides["src/MyApp/Handlers/**"].Metrics);
         Assert.Equal(80, afterPath.MaxMethodLineCount);
     }
 
+    // --- ResolveForFile ---
 
     [Fact]
     public void ResolveForFile_MatchingPath_AppliesMetricsOverride()

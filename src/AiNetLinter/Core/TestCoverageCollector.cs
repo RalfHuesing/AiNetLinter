@@ -6,8 +6,14 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Core;
 
+/// <summary>
+/// Extrahiert Testabdeckungssignale (typeof, nameof, @covers) aus Testdateien.
+/// </summary>
 public static partial class TestCoverageCollector
 {
+    /// <summary>
+    /// Sammelt Abdeckungssignale aus einer Testdatei in den Index.
+    /// </summary>
     public static void Collect(
         SyntaxTree tree,
         SemanticModel semanticModel,

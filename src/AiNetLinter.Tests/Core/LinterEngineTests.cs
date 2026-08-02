@@ -112,6 +112,7 @@ public sealed class ComplexDomainService
     public async Task Run_WithDisableAllComment_SuppressesStaticTestSentinel()
     {
         const string sourceClass = """
+            // ainetlinter-disable all
             namespace Domain;
             public sealed class ComplexDomainService
             {
@@ -144,6 +145,7 @@ public sealed class ComplexDomainService
     public async Task Run_WithDisableAllComment_SuppressesMaxInheritanceDepth()
     {
         const string sourceCode = """
+            // ainetlinter-disable all
             namespace Test;
             public class RootClass {}
             public class ParentClass : RootClass {}
@@ -266,6 +268,7 @@ public sealed class HighlyRelevantService
 namespace Domain.Tests;
 public class HighlyRelevantServiceTests
 {
+    // Keine Testmethoden
 }";
 
         var solution = CreateAdhocSolution(

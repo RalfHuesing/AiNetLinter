@@ -4,6 +4,10 @@ using System.Text;
 
 namespace AiNetLinter.Output;
 
+/// <summary>
+/// Erzeugt strukturierte Fehlermeldungen fuer maschinenlesbares Parsing durch Agenten.
+/// Format: [ERROR]: {code}: {message}[\n  context: {context}][\n  hint: {hint}]
+/// </summary>
 internal static class LinterErrorFormatter
 {
     internal static string Format(string code, string message, string? context = null, string? hint = null)

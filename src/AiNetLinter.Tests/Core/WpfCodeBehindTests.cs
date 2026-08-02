@@ -70,6 +70,7 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
+        // InitializeComponent();
     }
 }";
         var model = GetSemanticModel(source);
@@ -87,10 +88,12 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
+        // InitializeComponent();
     }
 
     private void Button_Click(object sender, object e)
     {
+        // logic here
     }
 }";
         var model = GetSemanticModel(source);

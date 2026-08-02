@@ -6,6 +6,9 @@ using System.Linq;
 
 namespace AiNetLinter.Evals;
 
+/// <summary>
+/// Statisches Register aller verfügbaren Eval-Typen.
+/// </summary>
 internal static class EvalRegistry
 {
     internal static readonly IReadOnlyList<EvalDefinition> All =

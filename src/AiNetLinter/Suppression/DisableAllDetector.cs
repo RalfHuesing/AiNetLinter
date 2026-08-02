@@ -3,8 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace AiNetLinter.Suppression;
 
+/// <summary>
+/// Erkennt Dateien mit dateiweitem ainetlinter-disable-all-Kommentar.
+/// </summary>
 public static partial class DisableAllDetector
 {
+    /// <summary>
+    /// Prüft, ob der Dateiinhalt einen exakten Disable-all-Kommentar enthält.
+    /// </summary>
     public static bool HasDisableAll(string fileContent, IgnoreSuppressionsFilter? filter = null, string languageKind = "cs")
     {
         if (filter != null && filter.ShouldIgnoreSuppression(languageKind))
@@ -15,6 +21,9 @@ public static partial class DisableAllDetector
         return DisableAllLinePattern().IsMatch(fileContent);
     }
 
+    /// <summary>
+    /// Prüft, ob die Datei unter dem angegebenen Pfad Disable-all enthält.
+    /// </summary>
     public static bool FileHasDisableAll(string absolutePath, IgnoreSuppressionsFilter? filter = null)
     {
         if (!File.Exists(absolutePath))

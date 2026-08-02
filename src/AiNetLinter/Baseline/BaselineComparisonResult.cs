@@ -1,5 +1,8 @@
 namespace AiNetLinter.Baseline;
 
+/// <summary>
+/// Ergebnis des Vergleichs zwischen gespeicherter und aktueller Baseline.
+/// </summary>
 public sealed record BaselineComparisonResult
 {
     public required IReadOnlySet<string> ChangedFiles { get; init; }

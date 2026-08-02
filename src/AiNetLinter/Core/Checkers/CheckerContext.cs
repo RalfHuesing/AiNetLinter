@@ -9,6 +9,9 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Core.Checkers;
 
+/// <summary>
+/// Gemeinsamer Kontext für alle Checker-Klassen: Dateiinformationen, Konfiguration und Verstoß-Sammlung.
+/// </summary>
 internal sealed class CheckerContext
 {
     private readonly List<RuleViolation> _violations = new();
@@ -34,6 +37,9 @@ internal sealed class CheckerContext
 
     internal void AddViolation(RuleViolation violation) => _violations.Add(violation);
 
+    /// <summary>
+    /// Kurzform für AddViolation — FilePath und LineNumber werden automatisch gesetzt.
+    /// </summary>
     internal void ReportViolation(SyntaxNode node, ViolationDescription desc) =>
         AddViolation(new RuleViolation
         {
@@ -76,6 +82,10 @@ internal sealed class CheckerContext
     }
 }
 
+/// <summary>
+/// Beschreibt einen Regelverstoß (Regel-ID, Nachricht, Leitfaden, Severity).
+/// Wird an ReportViolation-Overloads übergeben.
+/// </summary>
 internal sealed record ViolationDescription(
     string RuleName,
     string Details,

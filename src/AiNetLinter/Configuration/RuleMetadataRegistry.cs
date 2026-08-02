@@ -5,11 +5,17 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Configuration;
 
+/// <summary>
+/// Liefert Standard-Metadaten für bekannte Regeln und merged benutzerdefinierte Einträge.
+/// </summary>
 public static class RuleMetadataRegistry
 {
     public static IReadOnlyCollection<string> KnownRuleNames =>
         RuleRegistry.All.Where(r => !string.IsNullOrEmpty(r.Warum)).Select(r => r.RuleId).ToList().AsReadOnly();
 
+    /// <summary>
+    /// Ermittelt Severity und Intent für eine Regel (Konfiguration überschreibt Defaults).
+    /// </summary>
     public static RuleMetadataEntry Resolve(string ruleName, Config config)
     {
         if (config.RuleMetadata.TryGetValue(ruleName, out var configured))
@@ -30,6 +36,9 @@ public static class RuleMetadataRegistry
         return new RuleMetadataEntry();
     }
 
+    /// <summary>
+    /// Gibt true zurück wenn mindestens ein Verstoß in der Sammlung Severity "error" hat.
+    /// </summary>
     public static bool HasErrorSeverity(IEnumerable<Models.RuleViolation> violations, Config config)
     {
         foreach (var v in violations)

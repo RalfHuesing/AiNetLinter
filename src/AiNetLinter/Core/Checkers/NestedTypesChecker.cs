@@ -6,6 +6,11 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Core.Checkers;
 
+/// <summary>
+/// Prueft ob ein Typ oeffentliche oder interne Typen verschachtelt.
+/// Private nested Typen bleiben standardmaessig erlaubt (Implementierungsdetail)
+/// und sind kein Grep-Target fuer KI-Agenten.
+/// </summary>
 internal static class NestedTypesChecker
 {
     internal static void Check(TypeDeclarationSyntax node, CheckerContext ctx)

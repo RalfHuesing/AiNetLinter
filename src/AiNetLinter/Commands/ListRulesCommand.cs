@@ -8,6 +8,9 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Gibt Regelinformationen aus: Übersicht, Detail-Beschreibung oder Volltextsuche.
+/// </summary>
 internal static class ListRulesCommand
 {
     internal static int ListAll(ILintConsole? console = null)

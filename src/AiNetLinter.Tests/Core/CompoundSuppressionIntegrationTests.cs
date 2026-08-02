@@ -28,6 +28,7 @@ public sealed class CompoundSuppressionIntegrationTests
             sb.AppendLine($"        if (p1 > {i}) {{ var temp{i} = {i}; }}");
         }
         
+        // Fill up to method lines
         int currentMethodBodyLines = cc - 1;
         int targetMethodBodyLines = lineCount - 2; // -1 for signature, -1 for closing brace
         int fill = targetMethodBodyLines - currentMethodBodyLines;

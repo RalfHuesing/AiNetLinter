@@ -2,6 +2,9 @@
 
 namespace AiNetLinter.Output;
 
+/// <summary>
+/// Definierte Fehlercodes fuer maschinenlesbares Error-Reporting.
+/// </summary>
 internal static class LinterErrorCodes
 {
     internal const string ConfigRequired      = "CONFIG_REQUIRED";

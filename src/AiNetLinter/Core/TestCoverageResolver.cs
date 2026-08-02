@@ -2,8 +2,14 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Core;
 
+/// <summary>
+/// Prüft, ob eine Quellklasse durch Testsignale abgedeckt ist.
+/// </summary>
 public static class TestCoverageResolver
 {
+    /// <summary>
+    /// Ermittelt, ob für die Quellklasse Testabdeckung nachgewiesen wurde.
+    /// </summary>
     public static bool IsCovered(string sourceClassName, TestCoverageIndex index, TestSentinelConfig config)
     {
         ArgumentNullException.ThrowIfNull(index);

@@ -20,9 +20,11 @@ public sealed class DebtReportBuilderTests
         var file1Content = """
             // ainetlinter-disable EnforceSealedClasses
             public class A {}
+            // ainetlinter-disable MaxLineCount
             """;
 
         var file2Content = """
+            // ainetlinter-disable all
             public class B {}
             """;
 

@@ -9,6 +9,14 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
 
+/// <summary>
+/// MCP-Tool <c>get_impact</c>: findet Aufrufstellen geaenderter C#-Signaturen. Zwei gegenseitig
+/// exklusive Eingabe-Modi — entweder <paramref name="gitRef"/> (optional, leer = uncommittete
+/// Aenderungen; delegiert an <see cref="DiffImpactAnalyzer.AnalyzeAsync"/>) oder
+/// <paramref name="symbolIdentifier"/> (delegiert an
+/// <see cref="FindReferencesTool.ResolveSymbolAsync"/> + <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>).
+/// Bewusst duenner Dispatch ohne eigene Analyse-/Parsing-Logik. Deckt nur .cs-Dateien ab.
+/// </summary>
 internal static class GetImpactTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(

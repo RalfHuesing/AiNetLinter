@@ -362,6 +362,7 @@ public sealed class MiddleManCheckerTests
                 // Explizite Implementierung (sollte ignoriert werden)
                 void IDisposable.Dispose() => _c.DoStuff();
                 
+                // 4 private Forwarder
                 private void M1() => _c.DoStuff();
                 private void M2() => _c.DoStuff();
                 private int P1 => _c.Value;

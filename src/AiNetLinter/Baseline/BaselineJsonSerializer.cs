@@ -2,6 +2,9 @@ using System.Text.Json;
 
 namespace AiNetLinter.Baseline;
 
+/// <summary>
+/// JSON-Serialisierung für Baseline-Dateien.
+/// </summary>
 internal static class BaselineJsonSerializer
 {
     private static readonly JsonSerializerOptions Options = new()

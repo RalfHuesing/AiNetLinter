@@ -5,6 +5,10 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Web;
 
+/// <summary>
+/// Unit-Tests fuer WebSuppressionDetector. Verifiziert dateiweite und regel-spezifische
+/// Suppression-Kommentare in Web-Dateien.
+/// </summary>
 public sealed class WebSuppressionDetectorTests
 {
     [Fact]

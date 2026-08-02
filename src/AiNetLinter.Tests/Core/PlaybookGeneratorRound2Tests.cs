@@ -12,7 +12,13 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core;
 
+// @covers RepoPlaybookGenerator
+// @covers PlaybookSyntaxWalker
 
+/// <summary>
+/// Tests für die in Round 2 eingeführten Playbook-Features:
+/// BuildContentAsync, --playbook --check, Ordner-Slices, projektinternes Result.
+/// </summary>
 public sealed class PlaybookGeneratorRound2Tests
 {
     private static Solution BuildSolution(string source, string projectName = "TestProj", string docName = "Doc.cs")

@@ -198,6 +198,7 @@ namespace Test;
 [GeneratedCode(""MyGenerator"", ""1.0"")]
 public class MyGeneratedClass
 {
+    // Unsealed class
 }";
 
         var solution = CreateAdhocSolution(("Service.cs", sourceCode));

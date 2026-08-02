@@ -4,6 +4,7 @@ using AiNetLinter.Cli;
 
 namespace AiNetLinter.Tests.Cli;
 
+// @covers LinterArgs
 public sealed class IgnoreSuppressionsCliTests
 {
     [Fact]

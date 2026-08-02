@@ -9,6 +9,10 @@ namespace AiNetLinter.Output;
 
 public sealed record RuleLegendEntry(string Warum, string[] Alternativen, string? SicherheitsHinweis = null);
 
+/// <summary>
+/// Enthält Warum-Beschreibungen und Fix-Alternativen für alle bekannten Linter-Regeln.
+/// Neue Regeln in der RuleRegistry ergänzen.
+/// </summary>
 public static class RuleLegendRegistry
 {
     public static bool HasEntry(string ruleName) => RuleRegistry.TryResolve(ruleName) != null;

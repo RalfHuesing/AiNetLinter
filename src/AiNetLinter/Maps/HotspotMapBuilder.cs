@@ -8,6 +8,10 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Maps;
 
+/// <summary>
+/// Erzeugt eine Hotspot Map: Dateien die sich ihrem konfigurierten Limit nähern.
+/// Proaktives Drift-Signal — sichtbar bevor ein Regelverstoß entsteht.
+/// </summary>
 internal static class HotspotMapBuilder
 {
     private const double WarnThreshold     = 0.80;

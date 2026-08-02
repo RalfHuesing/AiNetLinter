@@ -10,6 +10,7 @@ namespace AiNetLinter.Tests.Core;
 
 public sealed class BlockingTaskCheckerTests
 {
+    // --- .Wait() ---
 
     [Fact]
     public void TaskWait_Reports_Violation()
@@ -32,6 +33,7 @@ public sealed class BlockingTaskCheckerTests
         Assert.Equal("BanBlockingTaskAccess", ctx.Violations[0].RuleName);
     }
 
+    // --- .Result ---
 
     [Fact]
     public void TaskResult_Reports_Violation()
@@ -54,6 +56,7 @@ public sealed class BlockingTaskCheckerTests
         Assert.Equal("BanBlockingTaskAccess", ctx.Violations[0].RuleName);
     }
 
+    // --- .GetAwaiter().GetResult() ---
 
     [Fact]
     public void GetAwaiterGetResult_Reports_Violation()
@@ -77,6 +80,7 @@ public sealed class BlockingTaskCheckerTests
         Assert.Equal("BanBlockingTaskAccess", ctx.Violations[0].RuleName);
     }
 
+    // --- Negativ-Tests ---
 
     [Fact]
     public void AwaitedTask_NoViolation()
@@ -181,6 +185,7 @@ public sealed class BlockingTaskCheckerTests
         Assert.Empty(ctx.Violations);
     }
 
+    // --- Hilfsmethode ---
 
     private static Config ConfigWith(
         bool ban = true,

@@ -16,12 +16,22 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Generators;
 
+/// <summary>
+/// Generiert ein Repository-Playbook (.md) mit Suppression-Statistiken und Architekturmustern.
+/// </summary>
 public sealed class RepoPlaybookGenerator
 {
     private const string DisableMarker = "ainetlinter-disable";
     private const string AllKeyword = "all";
     private const string MultiLineCommentEnd = "*/";
 
+    /// <summary>
+    /// Generiert das Playbook und schreibt es in die angegebene Datei.
+    /// </summary>
+    /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
+    /// <param name="outputPath">Der Pfad zur Ausgabedatei (.md).</param>
+    /// <param name="options">Optionen für Verbosity, Konfiguration und Vorab-Violations.</param>
+    /// <returns>Ein Task-Objekt für asynchrone Ausführung.</returns>
     public static async Task GenerateAsync(
         Solution solution,
         string outputPath,
@@ -50,6 +60,13 @@ public sealed class RepoPlaybookGenerator
         }
     }
 
+    /// <summary>
+    /// Generiert den Playbook-Inhalt als String (ohne Datei zu schreiben).
+    /// Für den --check-Modus und Tests.
+    /// </summary>
+    /// <param name="solution">Die zu analysierende Roslyn-Solution.</param>
+    /// <param name="options">Optionen für Verbosity, Konfiguration und Vorab-Violations.</param>
+    /// <returns>Der generierte Markdown-Inhalt.</returns>
     public static async Task<string> BuildContentAsync(
         Solution solution,
         PlaybookOptions? options = null)

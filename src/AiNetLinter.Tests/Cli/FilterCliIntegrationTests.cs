@@ -7,6 +7,10 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Cli;
 
+// @covers SourceFileCatalog
+// @covers NamespaceFilter
+// @covers SkeletonSyntaxWalker
+// @covers SkeletonMapBuilder
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class FilterCliIntegrationTests
@@ -106,6 +110,7 @@ public sealed class FilterCliIntegrationTests
     [Fact]
     public void SkeletonMap_ExcludeProjectByExactName_OutputExcludesProject()
     {
+        // Exakter Projektname ohne Glob
         var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-project AiNetLinter");
 
         Assert.Equal(0, exitCode);
@@ -123,6 +128,7 @@ public sealed class FilterCliIntegrationTests
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
+        // Nur CLI-Typen sollen enthalten sein
         Assert.Contains("LinterArgs", output, StringComparison.Ordinal);
         Assert.Contains("CliOptionFactory", output, StringComparison.Ordinal);
         // Andere Namespaces dürfen nicht enthalten sein
@@ -137,6 +143,7 @@ public sealed class FilterCliIntegrationTests
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
+        // Maps-Typen müssen enthalten sein
         Assert.Contains("SkeletonMapBuilder", output, StringComparison.Ordinal);
         // Namespace-Abschnitte anderer Namespaces dürfen nicht enthalten sein
         // (Typnamen können als Methodenparameter im Output erscheinen – daher Abschnitt prüfen)
@@ -203,8 +210,11 @@ public sealed class FilterCliIntegrationTests
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
+        // Keine Test-Namespaces
         Assert.DoesNotContain("AiNetLinter.Tests", output, StringComparison.Ordinal);
+        // Keine privaten Member
         Assert.DoesNotContain("private ", output, StringComparison.Ordinal);
+        // Produktionstypen vorhanden
         Assert.Contains("AiNetLinter", output, StringComparison.Ordinal);
     }
 

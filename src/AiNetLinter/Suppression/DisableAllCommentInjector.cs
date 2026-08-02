@@ -1,7 +1,13 @@
 namespace AiNetLinter.Suppression;
 
+/// <summary>
+/// Fügt dateiweite ainetlinter-disable-all-Kommentare in C#-Quelldateien ein.
+/// </summary>
 public static class DisableAllCommentInjector
 {
+    /// <summary>
+    /// Fügt den Disable-all-Kommentar oben in die angegebenen Dateien ein.
+    /// </summary>
     public static DisableAllInjectResult InjectIntoFiles(IReadOnlyList<string> absolutePaths)
     {
         int modified = 0;
@@ -22,6 +28,9 @@ public static class DisableAllCommentInjector
         return new DisableAllInjectResult(absolutePaths.Count, modified, skipped);
     }
 
+    /// <summary>
+    /// Fügt den Disable-all-Kommentar in eine einzelne Datei ein, sofern noch nicht vorhanden.
+    /// </summary>
     public static bool TryInjectIntoFile(string absolutePath)
     {
         var content = File.ReadAllText(absolutePath);

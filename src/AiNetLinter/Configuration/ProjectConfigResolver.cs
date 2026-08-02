@@ -6,8 +6,19 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Configuration;
 
+/// <summary>
+/// Löst die effektive Konfiguration für ein Dokument oder ein Projekt auf Basis von Projekt-Overrides auf.
+/// </summary>
 public static class ProjectConfigResolver
 {
+    /// <summary>
+    /// Löst die effektive Linter-Konfiguration für ein bestimmtes Roslyn-Dokument auf.
+    /// Erst ProjectOverrides, dann PathOverrides (höhere Priorität).
+    /// </summary>
+    /// <param name="document">Das zu analysierende Roslyn-Dokument.</param>
+    /// <param name="globalConfig">Die globale Linter-Konfiguration.</param>
+    /// <param name="solutionBasePath">Basis-Pfad der Solution für relative Pfadberechnung.</param>
+    /// <returns>Die für das Dokument effektive Linter-Konfiguration.</returns>
     public static Config ResolveForDocument(Document document, Config globalConfig, string? solutionBasePath = null)
     {
         var config = ResolveForProject(document.Project.Name, globalConfig);
@@ -61,6 +72,11 @@ public static class ProjectConfigResolver
         return Regex.IsMatch(relativePath, regexPattern, RegexOptions.IgnoreCase);
     }
 
+    /// <summary>
+    /// Löst die effektive Linter-Konfiguration anhand von Projektname und absolutem Dateipfad auf.
+    /// Wird für post-analytische Checks verwendet, bei denen kein Roslyn-Document verfügbar ist.
+    /// Erst ProjectOverrides, dann PathOverrides (höhere Priorität).
+    /// </summary>
     public static Config ResolveForFile(string? filePath, string? projectName, Config globalConfig)
     {
         var config = projectName != null
@@ -75,6 +91,12 @@ public static class ProjectConfigResolver
         return config;
     }
 
+    /// <summary>
+    /// Löst die effektive Linter-Konfiguration für einen Projektnamen auf.
+    /// </summary>
+    /// <param name="projectName">Der Name des Roslyn-Projekts.</param>
+    /// <param name="globalConfig">Die globale Linter-Konfiguration.</param>
+    /// <returns>Die für das Projekt effektive Linter-Konfiguration.</returns>
     public static Config ResolveForProject(string projectName, Config globalConfig)
     {
         if (globalConfig.ProjectOverrides == null || globalConfig.ProjectOverrides.Count == 0)

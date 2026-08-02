@@ -4,6 +4,9 @@ using System.IO;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Isolierte Temp-Kopie des BaselineMini-Fixtures fuer parallele CLI-Tests.
+/// </summary>
 public sealed class BaselineMiniFixtureWorkspace : FixtureWorkspaceBase
 {
     public BaselineMiniFixtureWorkspace() 

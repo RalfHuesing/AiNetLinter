@@ -7,8 +7,14 @@ using System.Text.RegularExpressions;
 
 namespace AiNetLinter.Core;
 
+/// <summary>
+/// Hilfsklasse zum Filtern von Namespaces und Projekten anhand von Inklusion/Exklusion-Wildcards.
+/// </summary>
 internal static class NamespaceFilter
 {
+    /// <summary>
+    /// Prüft, ob ein Namespace unter Berücksichtigung von Includes und Excludes erlaubt ist.
+    /// </summary>
     public static bool IsNamespaceAllowed(
         string ns,
         IReadOnlyList<string> includes,
@@ -27,6 +33,9 @@ internal static class NamespaceFilter
         return true;
     }
 
+    /// <summary>
+    /// Prüft, ob ein String (z.B. Projektname oder Namespace) einem Glob-Muster mit Wildcards (*) entspricht.
+    /// </summary>
     public static bool MatchesGlob(string value, string pattern)
     {
         if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(pattern))

@@ -4,6 +4,9 @@ using AiNetLinter.Baseline;
 
 namespace AiNetLinter.Output;
 
+/// <summary>
+/// Kapselt Logging-Operationen fuer die Linter-Ausfuehrung.
+/// </summary>
 internal static class LinterLogger
 {
     public static void LogStart(bool verbose, string configPath, string targetPath, ILintConsole? console = null)

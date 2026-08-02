@@ -41,6 +41,7 @@ public sealed class AnalysisCacheManagerTests : IDisposable
         manager.Set(relativePath, entry);
         manager.SaveIfDirty();
 
+        // Load again
         var manager2 = AnalysisCacheManager.Load(_tempDir, solutionPath, rulesContent, TimeSpan.FromMinutes(60));
         var found = manager2.TryGet(relativePath, checksum, out var loadedEntry);
         Assert.True(found);

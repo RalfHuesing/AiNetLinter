@@ -70,12 +70,15 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
         var result = await FindSymbolScanner.FindMatchesAndFormat(
             _symbolGraphFixture.Catalog.Solution, "userService", kind: null, maxResults: 50);
 
+        // C#-Leermenge-Bestaetigung.
         Assert.Contains("Keine Treffer fuer 'userService'", result);
+        // Miss-Hint-Markierung.
         Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);
         // Pfad-Liste enthaelt die Fixture-Dateien (3 Stueck, untrunkiert).
         Assert.Contains("site.js", result);
         Assert.Contains("Component.razor", result);
         Assert.Contains("Page.xaml", result);
+        // Fallback-Verweis: search_pattern ist der naechste Schritt.
         Assert.Contains("search_pattern", result);
     }
 

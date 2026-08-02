@@ -10,8 +10,15 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Maps;
 
+/// <summary>
+/// Ein Eintrag für eine Typ-Deklaration in der Vocabulary Map.
+/// </summary>
 internal sealed record VocabularyTypeEntry(string Name, string RelativePath, bool IsTest);
 
+/// <summary>
+/// Erzeugt eine Vocabulary Map: Typ-Deklarationen gruppiert nach Suffix-Muster.
+/// Dient als direkter Input für.
+/// </summary>
 internal static class VocabularyMapBuilder
 {
     private static readonly Regex TypePattern = new(

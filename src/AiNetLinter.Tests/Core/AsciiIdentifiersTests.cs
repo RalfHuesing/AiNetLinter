@@ -33,6 +33,12 @@ public sealed class AsciiIdentifiersTests
 
         var asciiViolations = violations.Where(v => v.RuleName == "EnforceAsciiIdentifiers").ToList();
         
+        // Expected violations:
+        // 1. Class: BestätigungsService
+        // 2. Property: Straße
+        // 3. Method: PrüfeDaten
+        // 4. Parameter: größe
+        // 5. Variable: zähler
         Assert.Equal(5, asciiViolations.Count);
         
         Assert.Contains(asciiViolations, v => v.Details.Contains("BestätigungsService"));

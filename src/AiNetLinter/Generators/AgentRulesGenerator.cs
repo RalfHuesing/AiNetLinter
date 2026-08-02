@@ -10,6 +10,9 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Generators;
 
+/// <summary>
+/// Optionen für die Synchronisation der Agent-Regeln.
+/// </summary>
 public sealed record AgentRulesSyncOptions(
     string TargetPath,
     Config Config,
@@ -19,8 +22,14 @@ public sealed record AgentRulesSyncOptions(
     string? BaselinePath = null,
     bool? HasBaseline = null);
 
+/// <summary>
+/// Generiert eine Agent-Regeldatei (.mdc) basierend auf der aktuellen Linter-Konfiguration.
+/// </summary>
 public static class AgentRulesGenerator
 {
+    /// <summary>
+    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad basierend auf den Optionen.
+    /// </summary>
     public static void Sync(AgentRulesSyncOptions options)
     {
         string baseDir = ResolveBaseDirectory(options.TargetPath);
@@ -51,11 +60,19 @@ public static class AgentRulesGenerator
         }
     }
 
+    /// <summary>
+    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad (Überladung für Rückwärtskompatibilität).
+    /// </summary>
     public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
     {
         Sync(new AgentRulesSyncOptions(targetPath, config, verbose, configPath));
     }
 
+    /// <summary>
+    /// Ermittelt den Pfad zur Agent-Regeldatei.
+    /// Prüft zuerst, ob ein benutzerdefinierter Pfad übergeben wurde.
+    /// Wenn nicht: Standard ist.agents/rules/
+    /// </summary>
     public static string ResolveAgentRulesPath(string baseDir, string? customPath = null)
     {
         if (!string.IsNullOrEmpty(customPath))
@@ -71,6 +88,9 @@ public static class AgentRulesGenerator
         return agentsMdc;
     }
 
+    /// <summary>
+    /// Prüft, ob eine Baseline-Datei im Verzeichnis existiert oder per CLI übergeben wurde.
+    /// </summary>
     public static bool DetectBaselineUsage(string baseDir, string? baselinePath = null)
     {
         if (!string.IsNullOrWhiteSpace(baselinePath) && File.Exists(baselinePath))

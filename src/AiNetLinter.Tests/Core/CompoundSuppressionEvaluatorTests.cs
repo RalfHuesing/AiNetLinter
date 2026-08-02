@@ -281,6 +281,7 @@ public sealed class CompoundSuppressionEvaluatorTests
                 WhenAllOf = new List<MetricCondition>
                     { new() { Metric = "CyclomaticComplexity", AtMost = 3 } },
                 RelaxedLimit = 150
+                // SeverityOverride nicht gesetzt
             }
         };
         var metrics = new Dictionary<string, int> { ["CyclomaticComplexity"] = 2 };

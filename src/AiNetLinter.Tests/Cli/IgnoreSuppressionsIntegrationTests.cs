@@ -8,6 +8,10 @@ using AiNetLinter.Web;
 
 namespace AiNetLinter.Tests.Cli;
 
+// @covers LinterArgs
+// @covers IgnoreSuppressionsFilter
+// @covers SuppressionEvaluator
+// @covers WebSuppressionDetector
 public sealed class IgnoreSuppressionsIntegrationTests
 {
     [Fact]

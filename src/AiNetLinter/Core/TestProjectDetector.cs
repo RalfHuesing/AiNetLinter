@@ -6,6 +6,9 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Core;
 
+/// <summary>
+/// Hilfsklasse zur Erkennung von Testprojekten anhand ihrer Metadatenreferenzen und Projektnamen.
+/// </summary>
 public static class TestProjectDetector
 {
     private static readonly string[] TestKeywords = ["xunit", "nunit", "testplatform", "unittesting"];
@@ -13,6 +16,15 @@ public static class TestProjectDetector
     private static readonly string[] DefaultTestProjectNameSuffixes =
         ["Tests", "Test", "IntegrationTests", "Specs", "Spec"];
 
+    /// <summary>
+    /// Prüft, ob ein Projekt ein Testprojekt ist.
+    /// Primär via Metadatenreferenzen, Fallback über Projektnamen-Suffixe.
+    /// </summary>
+    /// <param name="project">Das zu prüfende Roslyn-Projekt.</param>
+    /// <param name="testProjectNameSuffixes">
+    /// Optionale Projektnamen-Suffixe (Fallback). Null = Standardliste verwenden.
+    /// </param>
+    /// <returns>True, wenn das Projekt ein Testprojekt ist; andernfalls False.</returns>
     public static bool IsTestProject(Project project, IReadOnlyList<string>? testProjectNameSuffixes = null)
     {
         foreach (var reference in project.MetadataReferences)

@@ -7,6 +7,11 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Laedt einmalig pro Testklasse ein <see cref="SymbolGraphMiniFixtureWorkspace"/>
+/// und dessen Roslyn <see cref="SourceFileCatalog"/>.
+/// Wird in Tool-Unit-Tests via <see cref="IClassFixture{SymbolGraphCatalogFixture}"/> verwendet.
+/// </summary>
 public sealed class SymbolGraphCatalogFixture : IAsyncLifetime
 {
     public SymbolGraphMiniFixtureWorkspace Workspace { get; private set; } = null!;

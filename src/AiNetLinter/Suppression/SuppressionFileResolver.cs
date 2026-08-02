@@ -3,8 +3,14 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Suppression;
 
+/// <summary>
+/// Ermittelt analysierbare C#-Quelldateien unter einem CLI-Pfad.
+/// </summary>
 public static class SuppressionFileResolver
 {
+    /// <summary>
+    /// Liefert absolute Pfade aller analysierbaren .cs-Dateien unter path.
+    /// </summary>
     public static async Task<IReadOnlyList<string>> ResolveAbsolutePathsAsync(string path)
     {
         if (CanLoadSolution(path))

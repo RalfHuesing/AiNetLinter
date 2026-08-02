@@ -2,6 +2,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Metrics;
 
+/// <summary>
+/// Erzeugt konkrete Refactor-Hints bei starker Überschreitung der kognitiven Komplexität.
+/// </summary>
 public static class CognitiveComplexityGuidance
 {
     private const int ExcessThreshold = 2;

@@ -6,7 +6,11 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core;
 
+// @covers DiffImpactAnalyzer
 
+/// <summary>
+/// Unit-Tests für den DiffImpactAnalyzer zur Verifizierung des Git-Diff-Hunk-Parsers.
+/// </summary>
 public sealed class DiffImpactAnalyzerTests
 {
     [Fact]

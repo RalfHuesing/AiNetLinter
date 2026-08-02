@@ -4,8 +4,14 @@ using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Scope;
 
+/// <summary>
+/// Filtert Verstöße nach Wellen-Workflow-Kriterien (wave-ready, git, only-changed).
+/// </summary>
 public static class ViolationScopeFilter
 {
+    /// <summary>
+    /// Wendet konfigurierbare Scope-Filter auf die Verstoßliste an.
+    /// </summary>
     public static IReadOnlyCollection<RuleViolation> Apply(
         IReadOnlyCollection<RuleViolation> violations,
         ViolationScopeOptions options,
@@ -40,6 +46,9 @@ public static class ViolationScopeFilter
         PathNormalizer.ToRelative(outputRoot, filePath).Replace('\\', '/');
 }
 
+/// <summary>
+/// Optionen für Scope-Filter im Audit-Lauf.
+/// </summary>
 public sealed record ViolationScopeOptions
 {
     public bool WaveReady { get; init; }

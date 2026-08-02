@@ -69,6 +69,7 @@ internal static class StateChecker
             return;
         }
 
+        // Scenario C: Classic
         ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxConstructorDependencies,
             $"Der Konstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",
@@ -134,6 +135,7 @@ internal static class StateChecker
             return;
         }
 
+        // Scenario C: Classic
         ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxConstructorDependencies,
             $"Der Primaerkonstruktor hat {count} Parameter (erlaubt sind maximal {baseLimit}, Framework-Typen nicht gezaehlt).",

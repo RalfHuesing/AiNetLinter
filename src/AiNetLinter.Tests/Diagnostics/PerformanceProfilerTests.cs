@@ -11,6 +11,8 @@ namespace AiNetLinter.Tests.Diagnostics;
 
 // @covers PerformanceProfiler
 // @covers DocumentPerformanceEntry
+// @covers ProfilerJsonReport
+// @covers ProfilerSummary
 public sealed class PerformanceProfilerTests
 {
     [Fact]

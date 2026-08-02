@@ -16,7 +16,19 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Configuration;
 
+// @covers RepoPlaybookGenerator
+// @covers PlaybookSyntaxWalker
+// @covers AIContextFootprintCalculator
+// @covers ProjectConfigResolver
+// @covers ConfigLoader
+// @covers ImpactExecutor
+// @covers PostAnalysisChecks
+// @covers TestProjectDetector
+// @covers AgentRulesGenerator
 
+/// <summary>
+/// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
+/// </summary>
 public sealed class DeveloperExperienceTests
 {
     private static (SyntaxTree, SemanticModel) GetSemanticContext(string source, string assemblyName = "TestAssembly")
@@ -97,6 +109,7 @@ public sealed class DeveloperExperienceTests
         Assert.Equal(100, resolved.Metrics.MaxLineCount);   // Kept from global
         Assert.Equal(50, resolved.Metrics.MaxMethodLineCount); // Overridden
 
+        // Verify Epic 20 rules
         Assert.False(resolved.Global.EnforceExplicitStateImmutability);
         Assert.Contains("CustomException", resolved.Global.AllowedExceptions);
         Assert.False(resolved.Global.PreventContextDependentOverloads);
@@ -105,6 +118,7 @@ public sealed class DeveloperExperienceTests
         Assert.Contains("TestDto", resolved.Global.ImmutabilityExemptSuffixes);
         Assert.Contains("Exempt", resolved.Global.SealedClassExemptSuffixes);
         
+        // Verify Metrics
         Assert.Equal(8, resolved.Metrics.MaxDirectoryDepth);
     }
 

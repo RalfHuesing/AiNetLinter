@@ -10,6 +10,9 @@ using AiNetLinter.Commands;
 
 namespace AiNetLinter.Tests.Commands;
 
+/// <summary>
+/// Tests für <see cref="AuditCommand"/>.
+/// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class AuditCommandTests

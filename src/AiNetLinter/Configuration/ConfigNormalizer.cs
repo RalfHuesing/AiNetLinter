@@ -1,5 +1,8 @@
 namespace AiNetLinter.Configuration;
 
+/// <summary>
+/// Stellt deserialisierte Konfigurationen auf gültige Standardwerte ein.
+/// </summary>
 public static class ConfigNormalizer
 {
     private static readonly string[] DefaultClassNamePatterns =
@@ -10,6 +13,9 @@ public static class ConfigNormalizer
         "{Name}*Tests",
     ];
 
+    /// <summary>
+    /// Normalisiert optionale TestSentinel-Felder nach JSON-Deserialisierung.
+    /// </summary>
     public static Config Normalize(Config config)
     {
         var testSentinel = config.TestSentinel ?? new TestSentinelConfig();

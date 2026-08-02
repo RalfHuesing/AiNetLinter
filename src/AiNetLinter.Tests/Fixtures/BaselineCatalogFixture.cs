@@ -7,6 +7,11 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Laedt einmalig pro Testklasse ein <see cref="BaselineMiniFixtureWorkspace"/>
+/// und dessen Roslyn <see cref="SourceFileCatalog"/>.
+/// Wird in Tool-Unit-Tests via <see cref="IClassFixture{BaselineCatalogFixture}"/> verwendet.
+/// </summary>
 public sealed class BaselineCatalogFixture : IAsyncLifetime
 {
     public BaselineMiniFixtureWorkspace Workspace { get; private set; } = null!;

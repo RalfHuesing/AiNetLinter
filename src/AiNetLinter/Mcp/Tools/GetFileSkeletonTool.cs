@@ -10,6 +10,13 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
 
+/// <summary>
+/// MCP-Tool <c>get_file_skeleton</c>: liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies)
+/// einer einzelnen C#-Datei per relativem (oder absolutem) Dateipfad. Bewusst duenner Dispatch auf
+/// die bereits pro-Dokument arbeitende <see cref="SkeletonMapBuilder.ExtractFromDocumentAsync"/> +
+/// <see cref="SkeletonMarkdownRenderer.Render"/> — keine eigene Extraktions-/Rendering-Logik. Deckt
+/// nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.
+/// </summary>
 internal static class GetFileSkeletonTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(

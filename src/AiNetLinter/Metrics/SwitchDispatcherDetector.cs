@@ -7,8 +7,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Metrics;
 
+/// <summary>
+/// Erkennt Switch-Dispatcher-Methoden: Methoden die nur als Routing-Tabelle
+/// fungieren und deren Cases alle trivial (Methodenaufruf + return / throw) sind.
+/// </summary>
 internal static class SwitchDispatcherDetector
 {
+    /// <summary>
+    /// Gibt true zurück wenn die Methode als Switch-Dispatcher klassifiziert wird.
+    /// </summary>
     public static bool IsDispatcher(MethodDeclarationSyntax node, int maxCaseBodyLines)
     {
         if (node.Body != null)
@@ -170,7 +177,14 @@ internal static class SwitchDispatcherDetector
         return false;
     }
 
+    /// <summary>
+    /// Berechnet die angepasste McCabe-Komplexität ohne Dispatcher-Branches.
+    /// Gibt 1 zurück (Basis-Komplexität der Methode selbst).
+    /// </summary>
     public static int GetAdjustedCyclomaticComplexity(MethodDeclarationSyntax node) => 1;
 
+    /// <summary>
+    /// Berechnet die angepasste Kognitive Komplexität ohne Dispatcher-Branches.
+    /// </summary>
     public static int GetAdjustedCognitiveComplexity(MethodDeclarationSyntax node) => 1;
 }

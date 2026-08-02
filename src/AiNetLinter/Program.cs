@@ -9,8 +9,16 @@ using AiNetLinter.Commands;
 
 namespace AiNetLinter;
 
+/// <summary>
+/// Der CLI-Einstiegspunkt für den Linter.
+/// </summary>
 public static class Program
 {
+    /// <summary>
+    /// Der Einstiegspunkt für die Ausführung der Linter-CLI.
+    /// </summary>
+    /// <param name="args">Die Befehlszeilenargumente.</param>
+    /// <returns>Der Exit-Code des Programms (0 = Erfolg, 1 = Linter-Verstoesse, 2 = Fataler Fehler).</returns>
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
@@ -113,6 +121,7 @@ public static class Program
 
         if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, ct);
 
+        // Schneller Pfad: --sync-agent-rules-only.
         if (args.SyncAgentRulesOnly) return SyncAgentRulesCommand.Run(args);
 
         if (args.Footprint != null) return await FootprintCommand.RunAsync(args, ct);

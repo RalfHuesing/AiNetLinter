@@ -6,6 +6,10 @@ using System.Linq;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Abstract base class for isolated fixture workspaces in tests.
+/// Eliminates duplicated workspace copying and temp directory boilerplate.
+/// </summary>
 public abstract class FixtureWorkspaceBase : IDisposable
 {
     private readonly TestTempDirectory _tempDir;

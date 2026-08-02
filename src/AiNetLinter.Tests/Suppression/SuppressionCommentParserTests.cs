@@ -21,6 +21,7 @@ public sealed class SuppressionCommentParserTests
     public void ContainsDisableAll_DetectsExistingComment()
     {
         const string content = """
+            // ainetlinter-disable all
             namespace Test;
             """;
 
@@ -41,6 +42,7 @@ public sealed class SuppressionCommentParserTests
     public void ContainsDisableAll_IgnoresRuleSpecificComment()
     {
         const string content = """
+            // ainetlinter-disable MaxLineCount
             namespace Test;
             """;
 

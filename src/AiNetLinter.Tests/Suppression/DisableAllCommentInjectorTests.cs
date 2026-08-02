@@ -31,6 +31,7 @@ public sealed class DisableAllCommentInjectorTests
     {
         var filePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-inject-{Guid.NewGuid():N}.cs");
         const string source = """
+            // ainetlinter-disable all
             namespace Test;
             """;
         try

@@ -15,8 +15,17 @@ using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Startet einen stdio-basierten MCP-Server (Model Context Protocol) fuer die aufgeloeste Solution.
+/// Laeuft, bis der Client die Verbindung trennt oder das Cancellation-Token signalisiert wird.
+/// </summary>
 internal static class McpServerCommand
 {
+    /// <summary>
+    /// Loest die Ziel-Solution auf, laedt sie (bester Versuch, kein Absturz bei Fehlschlag) und
+    /// startet danach den MCP-Server mit dem in diesem Step registrierten Tool-Set (aktuell
+    /// nur <c>find_symbol</c>, siehe <see cref="McpServerOptionsFactory"/>).
+    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;
@@ -70,6 +79,12 @@ internal static class McpServerCommand
             ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
     }
 
+    /// <summary>
+    /// Loest den Ziel-Solution-Pfad auf (Datei direkt, Verzeichnis mit Auto-Suche, Default = cwd).
+    /// Bricht bei 0 oder &gt;=2 gefundenen Kandidaten mit einer strukturierten [ERROR]-Ausgabe ab
+    /// und liefert dann <see langword="null"/>. Reine Funktion ohne MSBuild/Solution-Load, daher
+    /// unabhaengig von <see cref="RunAsync"/> testbar.
+    /// </summary>
     internal static string? ResolveSolutionPathOrError(string targetPath, ILintConsole console)
     {
         var basePath = string.IsNullOrEmpty(targetPath) ? Directory.GetCurrentDirectory() : targetPath;
@@ -120,6 +135,11 @@ internal static class McpServerCommand
         return null;
     }
 
+    /// <summary>
+    /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird nur geloggt (Console.Error) und
+    /// <see langword="null"/> geliefert — der Server startet trotzdem, der Aufrufer haelt den
+    /// geladenen <see cref="SourceFileCatalog"/> resident (siehe <see cref="RunAsync"/>).
+    /// </summary>
     internal static async Task<SourceFileCatalog?> TryLoadSolutionAsync(string solutionPath, CancellationToken ct, ILintConsole console)
     {
         try

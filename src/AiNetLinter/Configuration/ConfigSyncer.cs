@@ -7,6 +7,11 @@ using System.Text.Json.Serialization;
 
 namespace AiNetLinter.Configuration;
 
+/// <summary>
+/// Gleicht eine Nutzer-rules.json mit dem aktuellen Schema ab:
+/// fehlende Optionen werden mit Standardwerten ergänzt, entfernte Optionen verschwinden.
+/// Nutzer-Werte bleiben erhalten. Wird beim Laden immer ausgeführt.
+/// </summary>
 public static class ConfigSyncer
 {
     private static readonly JsonSerializerOptions WriteOptions = new()
@@ -15,6 +20,11 @@ public static class ConfigSyncer
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// Vergleicht den Dateiinhalt mit der serialisierten Form der geladenen Konfiguration.
+    /// Schreibt zurück wenn Abweichungen bestehen (neue/entfernte Optionen).
+    /// Gibt true zurück wenn die Datei aktualisiert wurde.
+    /// </summary>
     public static bool SyncIfNeeded(string configPath, Config loadedConfig)
     {
         try

@@ -9,12 +9,18 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
+/// <summary>
+/// Führt die semantische Diff-Impact-Analyse ab einer Git-Referenz aus.
+/// </summary>
 internal static class ImpactCommand
 {
     private const string NoImpactCallSitesMessage = "Keine betroffenen Aufrufstellen gefunden.";
     private const string ImpactHeaderMessage = "# Semantische Diff-Impact-Analyse";
     private const string CallSitesFoundMessage = "Gefundene betroffene Aufrufstellen fuer geaenderte Signaturen:";
 
+    /// <summary>
+    /// Führt die Impact-Analyse für die Solution aus.
+    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

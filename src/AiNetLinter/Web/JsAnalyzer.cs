@@ -9,8 +9,20 @@ using Esprima.Ast;
 
 namespace AiNetLinter.Web;
 
+/// <summary>
+/// Analysiert JavaScript-Inhalte auf Zeilenlimit, ES6-Modul-Verwendung und Window-Pollution.
+/// Verwendet Esprima (BSD-3-Clause-Lizenz) als standardkonformer ECMAScript-Parser.
+/// Implementiert die Regeln aus Research/Extend-Web-Features/02_JS_Linting.md Phase 2.
+/// </summary>
 internal static class JsAnalyzer
 {
+    /// <summary>
+    /// Analysiert JavaScript-Quelltext und liefert alle Regelverstoesse fuer die drei JS-Regeln.
+    /// </summary>
+    /// <param name="jsContent">Roher JavaScript-Quelltext.</param>
+    /// <param name="filePath">Absoluter Pfad zur JS-Datei (fuer Violation-Metadata).</param>
+    /// <param name="config">Aktuelle effektive JsConfig (bereits mit ProjectOverride aufgeloest).</param>
+    /// <returns>Liste der Regelverstoesse; nie null, ggf. leer.</returns>
     public static IReadOnlyList<RuleViolation> Analyze(string jsContent, string filePath, JsConfig config)
     {
         var violations = new List<RuleViolation>();
@@ -56,6 +68,14 @@ internal static class JsAnalyzer
             "'Lost in the Middle'-Fehlern bei KI-Diffs."));
     }
 
+    /// <summary>
+    /// Versucht ParseModule zuerst (Blazor-Interop-Dateien sind grundsaetzlich ES6-Module);
+    /// faellt auf ParseScript zurueck, wenn die Datei kein Modul-strict parsebares Programm ist.
+    /// Setzt parsed=false und meldet JS_SyntaxError wenn beide Versuche scheitern.
+    /// Eine Datei gilt nur dann als Modul, wenn ParseModule gelingt UND der Body
+    /// mindestens eine Export- oder Import-Deklaration enthaelt. (Esprima 3.x parst
+    /// Skript-Code ebenfalls als Modul, sofern keine Modul-Features verwendet werden.)
+    /// </summary>
     private static NodeList<Statement> TryParse(
         string jsContent,
         string filePath,
@@ -96,6 +116,10 @@ internal static class JsAnalyzer
         }
     }
 
+    /// <summary>
+    /// Prueft, ob der Body mindestens eine Import- oder Export-Deklaration enthaelt.
+    /// Nur dann gilt die Datei semantisch als ES6-Modul.
+    /// </summary>
     private static bool ContainsModuleDeclaration(NodeList<Statement> body)
     {
         foreach (var statement in body)

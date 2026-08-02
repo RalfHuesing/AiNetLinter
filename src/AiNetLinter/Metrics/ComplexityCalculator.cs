@@ -4,8 +4,14 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Metrics;
 
+/// <summary>
+/// Berechnet Komplexitätsmetriken für C#-Syntaxknoten.
+/// </summary>
 public static class ComplexityCalculator
 {
+    /// <summary>
+    /// Berechnet die Zyklomatische Komplexität (McCabe) für eine Methode oder Eigenschaft.
+    /// </summary>
     public static int GetCyclomaticComplexity(MethodDeclarationSyntax method)
     {
         var walker = new CyclomaticComplexityWalker();
@@ -13,6 +19,9 @@ public static class ComplexityCalculator
         return walker.Complexity;
     }
 
+    /// <summary>
+    /// Berechnet die Kognitive Komplexität (SonarSource) für eine Methode oder Eigenschaft.
+    /// </summary>
     public static int GetCognitiveComplexity(MethodDeclarationSyntax method)
     {
         var walker = new CognitiveComplexityWalker();
@@ -20,6 +29,9 @@ public static class ComplexityCalculator
         return walker.Complexity;
     }
 
+    /// <summary>
+    /// Walker zur Berechnung der zyklomatischen Komplexität (McCabe).
+    /// </summary>
     private sealed class CyclomaticComplexityWalker : CSharpSyntaxWalker
     {
         public int Complexity { get; private set; } = 1; // Basis-Komplexität ist immer 1
@@ -92,6 +104,9 @@ public static class ComplexityCalculator
         }
     }
 
+    /// <summary>
+    /// Walker zur Berechnung der Kognitiven Komplexität (SonarSource).
+    /// </summary>
     private sealed class CognitiveComplexityWalker : CSharpSyntaxWalker
     {
         public int Complexity { get; private set; }

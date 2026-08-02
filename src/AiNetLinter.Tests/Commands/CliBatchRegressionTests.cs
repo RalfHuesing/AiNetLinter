@@ -61,6 +61,7 @@ public sealed class CliBatchRegressionTests
         // fehlendes sealed), daher erwarten wir Exit-Code 1 (= Violations gefunden) statt 0.
         // Der bestehende Test RunLinterCli_OnWholeSolution_ReturnsSuccess laeuft gegen die
         // echte Solution (clean, Exit 0) — dieser Test ist das Pendant fuer die Mini-Fixture
+        // mit Verletzung.
         Assert.True(
             process.ExitCode == 1,
             $"Linter-CLI brach unerwartet ab (Exit {process.ExitCode}, erwartet 1 fuer Violations). "

@@ -49,6 +49,7 @@ public sealed class SpecLoaderTests : IDisposable
     [Fact]
     public void Load_Directory_ReadsOnlyTopLevelMd()
     {
+        // Erstellt: subdir/nested.md
         var subDir = Path.Combine(_tempDir, "subdir");
         Directory.CreateDirectory(subDir);
         File.WriteAllText(Path.Combine(subDir, "nested.md"), "nested content");
@@ -63,6 +64,7 @@ public sealed class SpecLoaderTests : IDisposable
     [Fact]
     public void Load_Directory_IgnoresNonMdFiles()
     {
+        // Erstellt: notes.txt (ignoriert)
         var txtFile = Path.Combine(_tempDir, "notes.txt");
         File.WriteAllText(txtFile, "txt content");
 

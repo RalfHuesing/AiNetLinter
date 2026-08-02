@@ -3,6 +3,13 @@ using System.Text;
 
 namespace AiNetLinter.Tests.Fixtures;
 
+/// <summary>
+/// Isolierte Temp-Kopie des GitImpactMini-Fixtures mit einem echten, lokal initialisierten
+/// Git-Repository (initialer Commit ueber den Ausgangszustand) — fuer Tests des Git-Ref-Zweigs von
+/// <see cref="AiNetLinter.Core.DiffImpactAnalyzer.AnalyzeAsync"/> (siehe
+/// <c>tasks/codegraph-mcp/. Wiederverwendbares Muster fuer
+/// kuenftige Tests, die ebenfalls den Git-Ref-Zweig brauchen.
+/// </summary>
 public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
 {
     public GitImpactMiniFixtureWorkspace()
@@ -13,6 +20,10 @@ public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
 
     public string CalculatorPath => Path.Combine(RootPath, "src", "GitImpactMini", "Calculator.cs");
 
+    /// <summary>
+    /// Aendert die Signatur/den Body von <c>Calculator.Add</c> ohne zu committen — bildet den Fall
+    /// "uncommittete Aenderungen" ab, den <c>get_impact</c> ohne <c>gitRef</c>-Parameter abdeckt.
+    /// </summary>
     public void ChangeCalculatorAddBodyWithoutCommitting()
     {
         var content = File.ReadAllText(CalculatorPath);
@@ -22,6 +33,11 @@ public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
         File.WriteAllText(CalculatorPath, changed);
     }
 
+    /// <summary>
+    /// Aendert den Body von <c>Calculator.Add</c> und committet die Aenderung sofort — erzeugt einen
+    /// zweiten Commit, sodass <c>HEAD~1</c> einen echten, auswertbaren Diff liefert (fuer den
+    /// Subprozess-Test mit explizitem <c>gitRef</c>-Parameter, siehe <c>McpServerCommandTests</c>).
+    /// </summary>
     public void CommitCalculatorAddBodyChange()
     {
         var content = File.ReadAllText(CalculatorPath);
@@ -40,6 +56,11 @@ public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
         base.Dispose();
     }
 
+    /// <summary>
+    /// Git markiert Objekte im <c>.git</c>-Ordner unter Windows z. T. als schreibgeschuetzt — ohne
+    /// diesen Schritt schlaegt <see cref="Directory.Delete(string, bool)"/> mit
+    /// <see cref="UnauthorizedAccessException"/> fehl.
+    /// </summary>
     private static void ClearReadOnlyAttributes(string rootPath)
     {
         foreach (var path in Directory.EnumerateFileSystemEntries(rootPath, "*", SearchOption.AllDirectories))
