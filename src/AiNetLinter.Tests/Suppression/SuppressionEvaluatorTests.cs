@@ -8,7 +8,6 @@ public sealed class SuppressionEvaluatorTests
     public void IsSuppressed_WithDisableAllAtFileStart_ReturnsTrueForAnyRule()
     {
         const string source = """
-            // ainetlinter-disable all
             namespace Test;
             public sealed class Example {}
             """;

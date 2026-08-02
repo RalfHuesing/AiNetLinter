@@ -5,14 +5,6 @@ using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
 
-/// <summary>
-/// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection. Bewusst
-/// aus <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert und durch
-/// <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder aufgeteilt
-/// : haette <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen
-/// Members, waechst dessen AIContextFootprint durch die Tool-Registrierungs-
-/// Abhaengigkeiten ueber das Limit.
-/// </summary>
 internal static class McpServerOptionsFactory
 {
     // Zentraler Scope-Hint fuer den initialize-Handshake.
@@ -28,11 +20,6 @@ internal static class McpServerOptionsFactory
         "ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: " +
         "get_index_scope, get_hotspots.";
 
-    /// <summary>
-    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
-    /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (siehe <c>.
-    /// </summary>
     internal static McpServerOptions Create(McpCodeGraphServer mcpState)
     {
         return new McpServerOptionsBuilder()

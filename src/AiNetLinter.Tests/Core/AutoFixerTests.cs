@@ -14,11 +14,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core;
 
-// @covers LinterAutoFixer
 
-/// <summary>
-/// Unit-Tests für den LinterAutoFixer zur Verifizierung der Korrektur-Operationen.
-/// </summary>
 public sealed class AutoFixerTests
 {
     private static Solution CreateTestSolution(Dictionary<string, string> files)

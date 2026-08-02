@@ -1,14 +1,7 @@
 namespace AiNetLinter.Baseline;
 
-/// <summary>
-/// Vergleicht gespeicherte Baseline-Checksummen mit dem aktuellen Dateistand.
-/// Erkennt Umbenennungen anhand identischer SHA-256-Hashes, um falsch-positive "neue Datei"-Meldungen zu vermeiden.
-/// </summary>
 public static class BaselineComparer
 {
-    /// <summary>
-    /// Ermittelt geänderte, neue und entfernte Dateien anhand der Checksummen.
-    /// </summary>
     public static BaselineComparisonResult Compare(
         BaselineFile storedBaseline,
         IReadOnlyDictionary<string, string> currentChecksums)

@@ -4,14 +4,8 @@ using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Output;
 
-/// <summary>
-/// Erzeugt einen parsebaren Tech-Debt-Report für den Wellen-Workflow.
-/// </summary>
 public static class DebtReportBuilder
 {
-    /// <summary>
-    /// Baut den Debt-Report aus Disable-all-Dateien und optionalen Audit-Verstößen.
-    /// </summary>
     public static async Task<string> BuildAsync(
         string targetPath,
         IReadOnlyCollection<RuleViolation>? violations = null,

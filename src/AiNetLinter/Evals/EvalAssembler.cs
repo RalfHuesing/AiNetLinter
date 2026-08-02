@@ -8,11 +8,6 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Evals;
 
-/// <summary>
-/// Lädt das eingebettete Template eines Eval-Typs, ersetzt alle Platzhalter
-/// und gibt den assemblierten Prompt zurück.
-/// Gibt eine stderr-Warnung aus wenn der Prompt die Token-Schwelle überschreitet.
-/// </summary>
 internal static class EvalAssembler
 {
     private const int TokenWarningThreshold = 15_000;
@@ -85,9 +80,6 @@ internal static class EvalAssembler
         return collector.Output;
     }
 
-    /// <summary>
-    /// Interne Konsole die alles in einen String sammelt statt auf stdout auszugeben.
-    /// </summary>
     private sealed class StringLintConsole : ILintConsole
     {
         private readonly StringBuilder _sb = new();

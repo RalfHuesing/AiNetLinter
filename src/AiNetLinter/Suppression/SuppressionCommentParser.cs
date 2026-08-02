@@ -1,23 +1,11 @@
 namespace AiNetLinter.Suppression;
 
-/// <summary>
-/// Parst ainetlinter-disable-Kommentare in Quellcodezeilen.
-/// </summary>
 public static class SuppressionCommentParser
 {
-    /// <summary>
-    /// Marker-Text für Suppression-Kommentare.
-    /// </summary>
     public const string DisableMarker = "ainetlinter-disable";
 
-    /// <summary>
-    /// Standardzeile zum dateiweiten Deaktivieren aller Regeln.
-    /// </summary>
     public const string DisableAllLine = "// ainetlinter-disable all";
 
-    /// <summary>
-    /// Prüft, ob eine Zeile die angegebene Regel unterdrückt.
-    /// </summary>
     public static bool MatchesRule(string lineText, string ruleName)
     {
         var suffix = GetDisableSuffix(lineText);
@@ -30,9 +18,6 @@ public static class SuppressionCommentParser
                suffix.StartsWith(ruleName, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Prüft, ob der Dateiinhalt bereits einen dateiweiten Disable-all-Kommentar enthält.
-    /// </summary>
     public static bool ContainsDisableAll(string fileContent)
     {
         foreach (var line in fileContent.Split('\n'))
@@ -46,18 +31,12 @@ public static class SuppressionCommentParser
         return false;
     }
 
-    /// <summary>
-    /// Prüft, ob eine Zeile alle Regeln unterdrückt.
-    /// </summary>
     public static bool MatchesDisableAll(string lineText)
     {
         var suffix = GetDisableSuffix(lineText);
         return suffix != null && IsDisableAllSuffix(suffix);
     }
 
-    /// <summary>
-    /// Prüft, ob eine Zeile exakt dem Disable-all-Kommentar entspricht.
-    /// </summary>
     public static bool IsExactDisableAllLine(string lineText)
     {
         var normalizedLine = lineText.TrimEnd('\r');

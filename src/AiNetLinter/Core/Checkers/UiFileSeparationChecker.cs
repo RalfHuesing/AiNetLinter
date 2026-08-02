@@ -93,11 +93,6 @@ internal static class UiFileSeparationChecker
             Guidance = guidance
         };
 
-    /// <summary>
-    /// Prüft, ob die Regel in der Razor-Datei unterdrückt wird.
-    /// Blazor-Kommentar-Syntax: @* ainetlinter-disable RuleName *@
-    /// Auch C#-Kommentar-Syntax wird unterstützt: // ainetlinter-disable RuleName
-    /// </summary>
     internal static bool IsRazorSuppressed(string fileContent, string ruleName)
     {
         if (string.IsNullOrEmpty(fileContent)) return false;
@@ -106,12 +101,6 @@ internal static class UiFileSeparationChecker
             || fileContent.Contains("ainetlinter-disable all", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Erkennt ob eine Razor-Datei tatsächlich CSS-Isolation benötigt.
-    /// Kriterien: native HTML-Elemente (lowercase Tags wie &lt;div&gt;, &lt;span&gt;)
-    /// oder class=/style=-Attribute (lowercase = HTML, PascalCase = Blazor-Props).
-    /// Reine Komponenten-Komposition (nur PascalCase-Tags) braucht keine CSS-Datei.
-    /// </summary>
     internal static bool RazorNeedsCss(string fileContent)
     {
         if (string.IsNullOrEmpty(fileContent)) return false;

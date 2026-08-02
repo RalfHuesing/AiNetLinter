@@ -4,9 +4,6 @@ using System.IO;
 
 namespace AiNetLinter.Tests.Fixtures;
 
-/// <summary>
-/// Isolierte Temp-Kopie des SymbolGraphMini-Fixtures fuer parallele find_references-Tests.
-/// </summary>
 public sealed class SymbolGraphMiniFixtureWorkspace : FixtureWorkspaceBase
 {
     public SymbolGraphMiniFixtureWorkspace() 

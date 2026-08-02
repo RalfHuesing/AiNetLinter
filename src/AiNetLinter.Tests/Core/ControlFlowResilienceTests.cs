@@ -367,7 +367,6 @@ public sealed class Test
         try {}
         catch (Exception)
         {
-            // Empty catch -> Swallowed!
         }
     }
 
@@ -404,7 +403,6 @@ public sealed class Test
         try {}
         catch (TaskCanceledException)
         {
-            // Allowed
         }
     }
 }";

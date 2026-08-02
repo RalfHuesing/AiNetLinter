@@ -12,13 +12,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
 
-/// <summary>
-/// E2E-Tests fuer den
-/// Server-Crash, sondern jeder Tool-Call liefert eine strukturierte [ERROR]-Antwort; eine
-/// valide Solution mit Compile-Fehlern in einzelnen Dateien liefert fuer die betroffene
-/// Datei den
-/// 006-Erweiterung.
-/// </summary>
 [Collection("ConsoleTestCollection")]
 public sealed class McpServerCommandErrorHandlingTests
 {
@@ -68,8 +61,6 @@ public sealed class McpServerCommandErrorHandlingTests
     public async Task RunAsync_ValidFixture_CompileErrorFileReturnsWarningSection()
     {
         // Valide Solution mit intentionalen Compile-Fehlern: get_file_skeleton auf eine kaputte
-        // Datei muss den
-        // unstrukturierter Output.
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");

@@ -27,7 +27,6 @@ public sealed class ConfigSyncerTests
         Metrics = new MetricsConfig(),
     };
 
-    // --- neue Optionen werden ergänzt ---
 
     [Fact]
     public void SyncIfNeeded_AddsNewOption_WhenMissingFromUserFile()
@@ -190,7 +189,6 @@ public sealed class ConfigSyncerTests
         finally { File.Delete(path); }
     }
 
-    // --- CompoundSuppressions Sync ---
 
     [Fact]
     public void SyncerA_ConfigWithoutCompoundSuppressionsKey_GetsPopulatedWithDefault()

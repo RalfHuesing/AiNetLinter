@@ -9,7 +9,6 @@ public sealed class DisableAllCommentRemoverTests
     public void RemoveDisableAllLines_RemovesExactLineWithLf()
     {
         const string source = """
-            // ainetlinter-disable all
             namespace Test;
 
             """;
@@ -35,8 +34,6 @@ public sealed class DisableAllCommentRemoverTests
     public void RemoveDisableAllLines_KeepsIndentedOrPartialMatches()
     {
         const string source = """
-             // ainetlinter-disable all
-            // ainetlinter-disable all extra
             namespace Test;
 
             """;
@@ -53,7 +50,6 @@ public sealed class DisableAllCommentRemoverTests
         const string source = """
             namespace Test
             {
-            // ainetlinter-disable all
                 public sealed class Example {}
             }
 

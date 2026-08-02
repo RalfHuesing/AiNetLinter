@@ -5,19 +5,10 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Prüft ob eine CompoundSuppression für eine Regel aktiv ist
-/// und berechnet das effektive Limit.
-/// </summary>
 internal static class CompoundSuppressionEvaluator
 {
     private const int NoSuppressionSentinel = -1;
 
-    /// <summary>
-    /// Gibt das effektive Limit für <paramref name="ruleName"/> zurück.
-    /// Rückgabe: effektives Limit (0 = vollständig supprimiert),
-    ///           <see cref="NoSuppressionSentinel"/> wenn keine Suppression greift.
-    /// </summary>
     internal static int Evaluate(
         string ruleName,
         IReadOnlyList<CompoundSuppression>? suppressions,
@@ -37,7 +28,6 @@ internal static class CompoundSuppressionEvaluator
         return NoSuppressionSentinel;
     }
 
-    /// <summary>true wenn eine Suppression für die Regel konfiguriert ist (unabhängig ob aktiv).</summary>
     internal static CompoundSuppression? FindConfigured(
         string ruleName,
         IReadOnlyList<CompoundSuppression>? suppressions)
@@ -48,13 +38,6 @@ internal static class CompoundSuppressionEvaluator
         return null;
     }
 
-    /// <summary>
-    /// Gibt den SeverityOverride zurück wenn Compound-Bedingungen erfüllt sind
-    /// und die konfigurierte Suppression einen SeverityOverride enthält.
-    /// Gibt null zurück wenn: keine Suppression, kein SeverityOverride,
-    /// oder Bedingungen nicht erfüllt.
-    /// Wirkt nur in Szenario A (RelaxedLimit vorhanden und überschritten).
-    /// </summary>
     internal static string? GetActiveSeverityOverride(
         string ruleName,
         IReadOnlyList<CompoundSuppression>? suppressions,

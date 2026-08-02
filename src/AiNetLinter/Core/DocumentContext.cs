@@ -5,9 +5,6 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Kontextinformationen für das zu analysierende Dokument.
-/// </summary>
 internal sealed record DocumentContext(
     string FilePath,
     SemanticModel SemanticModel,

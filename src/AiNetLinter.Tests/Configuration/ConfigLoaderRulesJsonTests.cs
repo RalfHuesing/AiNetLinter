@@ -6,7 +6,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Configuration;
 
-// @covers ConfigLoader
 public sealed class ConfigLoaderRulesJsonTests
 {
     [Fact]

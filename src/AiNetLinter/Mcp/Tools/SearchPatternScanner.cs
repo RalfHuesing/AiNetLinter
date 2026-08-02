@@ -77,14 +77,6 @@ internal static class SearchPatternScanner
         return McpTruncation.TruncateLines(hitLines, totalMatches, maxResults);
     }
 
-    /// <summary>
-    /// Liefert die Liste der Dateipfade (solution-relativ, Forward-Slashes) mit mindestens einem
-    /// Treffer fuer <paramref name="pattern"/>. Wird von
-    /// <c>find_symbol</c>) verwendet, um bei C#-Leermenge einen "es gibt aber Treffer in diesen
-    /// Nicht-C#-Dateien"-Hinweis zu bauen. Keine Sortierung nach Treffer-Haeufigkeit — die Reihenfolge
-    /// ist deterministisch nach Dateipfad (ordinal). Wirft <see cref="ArgumentException"/> bei
-    /// ungueltiger Regex-Syntax (analog <see cref="SearchAndFormat"/>).
-    /// </summary>
     internal static IReadOnlyList<string> GetFilesWithHits(
         Solution solution,
         string pattern,

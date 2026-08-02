@@ -4,9 +4,6 @@ using System.CommandLine;
 
 namespace AiNetLinter.Cli;
 
-/// <summary>
-/// Erzeugt einzelne CLI-Optionen für den AiNetLinter-Einstiegspunkt.
-/// </summary>
 internal static class CliOptionFactory
 {
     internal static Option<string?> CreateConfigOption() => new("--config", "-c")

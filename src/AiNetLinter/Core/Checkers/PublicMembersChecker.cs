@@ -72,7 +72,6 @@ internal static class PublicMembersChecker
             return;
         }
 
-        // Scenario C: Classic
         ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxPublicMembersPerType,
             $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",

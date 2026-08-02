@@ -13,12 +13,6 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
 
-/// <summary>
-/// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (Datei:Zeile:Spalte oder
-/// qualifizierter/teil-qualifizierter Name) zu genau einem Roslyn-<see cref="ISymbol"/> auf und
-/// liefert dessen Aufrufstellen ueber <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>. Deckt
-/// nur .cs-Dateien ab (Roslyn-Symbolgraph).
-/// </summary>
 internal static class FindReferencesTool
 {
     /// <summary>
@@ -63,12 +57,6 @@ internal static class FindReferencesTool
         }
     }
 
-    /// <summary>
-    /// Loest <paramref name="identifier"/> entweder ueber eine Datei:Zeile:Spalte-Angabe oder ueber
-    /// einen qualifizierten/teil-qualifizierten Namen zu genau einem Symbol auf. Reine Funktion
-    /// (Solution rein, Symbol/Fehler raus) ohne Abhaengigkeit von <see cref="McpCodeGraphServer"/> —
-    /// direkt unit-testbar.
-    /// </summary>
     internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolAsync(
         Solution solution, string identifier, CancellationToken ct)
     {

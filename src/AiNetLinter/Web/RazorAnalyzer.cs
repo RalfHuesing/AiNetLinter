@@ -9,23 +9,8 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Web;
 
-/// <summary>
-/// Analysiert Razor/Blazor-Komponenten-Markup auf AI-spezifische Probleme: Dateigroesse,
-/// Markup-Verschachtelung, Control-Flow-Komplexitaet, Inline-Lambdas und Ternary-Ausdruecke.
-/// Implementiert die Regeln aus Research/Extend-Web-Features/03_Razor_Linting.md Phase 3.
-///
-/// Implementierungs-Ansatz: rein textbasiert. Die Regeln basieren auf Pattern-Counting
-/// (Anzahl Bloecke, Anzahl Verschachtelungen, Anzahl Attribute), nicht auf AST-Semantik.
-/// Ein dedizierter Razor-Parser (Microsoft.AspNetCore.Razor.Language) ist fuer diese
-/// Pattern-Checks nicht erforderlich — der textbasierte Ansatz ist robuster, schneller
-/// und hat keine externen Abhaengigkeiten. C#-Logik innerhalb von @code/@if/@foreach
-/// wird nicht analysiert (das ist Aufgabe der Code-Behind-Datei .razor.cs).
-/// </summary>
 internal static partial class RazorAnalyzer
 {
-    /// <summary>
-    /// Void HTML-Elemente (kein Closing-Tag erforderlich). Zaehlen nicht zur Verschachtelungstiefe.
-    /// </summary>
     private static readonly HashSet<string> VoidElements = new(StringComparer.OrdinalIgnoreCase)
     {
         "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -72,9 +57,6 @@ internal static partial class RazorAnalyzer
         @"@(\w[\w\-]*)\s*=\s*(?:""([^""]*?)""|'([^']*?)')",
         RegexOptions.Compiled);
 
-    /// <summary>
-    /// Analysiert den Razor-Quelltext und liefert alle Regelverstoesse.
-    /// </summary>
     public static IReadOnlyList<RuleViolation> Analyze(
         string razorContent, string filePath, RazorConfig config)
     {

@@ -3,14 +3,8 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Aggregiert Zeilenanzahl über partial-Klassenteile hinweg.
-/// </summary>
 public static class PartialClassLineAggregator
 {
-    /// <summary>
-    /// Erzeugt MaxLineCount-Verstöße für partial-Typen, deren Summe das Limit überschreitet.
-    /// </summary>
     public static IReadOnlyCollection<RuleViolation> BuildViolations(
         IReadOnlyCollection<PartialClassPart> parts,
         Config config)
@@ -48,9 +42,6 @@ public static class PartialClassLineAggregator
     }
 }
 
-/// <summary>
-/// Ein partial-Klassenteil mit Dateizeilenanzahl.
-/// </summary>
 public sealed record PartialClassPart(
     string TypeName,
     string FilePath,

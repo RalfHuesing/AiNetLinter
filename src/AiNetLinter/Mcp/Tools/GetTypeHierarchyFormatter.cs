@@ -19,11 +19,6 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class GetTypeHierarchyFormatter
 {
-    /// <summary>
-    /// Baut den vollstaendigen Hierarchie-Text fuer <paramref name="type"/>: Basisklassen-Kette,
-    /// implementierte Interfaces sowie (je nach <see cref="ITypeSymbol.TypeKind"/>) abgeleitete
-    /// Klassen bzw. implementierende Typen.
-    /// </summary>
     internal static async Task<string> BuildHierarchyTextAsync(
         INamedTypeSymbol type, Solution solution, CancellationToken ct)
     {
@@ -58,14 +53,6 @@ internal static class GetTypeHierarchyFormatter
         return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot));
     }
 
-    /// <summary>
-    /// Formatiert einen Basistyp/ein Interface fuer die Basisklassen-/Interface-Sektionen. Anders als
-    /// <see cref="FindSymbolTool.FormatSymbolLocations"/> (gedacht fuer lokale Symbol-Fundstellen,
-    /// daher auf <c>IsInSource</c> gefiltert) verwirft dies Typen ohne Quell-Location nicht: BCL-/NuGet-
-    /// Basistypen und -Interfaces (z. B. <c>object</c>, <c>IDisposable</c>, <c>CSharpSyntaxWalker</c>)
-    /// sind hier der Normalfall, kein Sonderfall, und muessen sichtbar bleiben statt spurlos zu
-    /// verschwinden.
-    /// </summary>
     private static IEnumerable<string> FormatHierarchyTypeReference(INamedTypeSymbol symbol, string outputRoot)
     {
         var sourceLines = FindSymbolTool.FormatSymbolLocations(symbol, outputRoot).ToList();

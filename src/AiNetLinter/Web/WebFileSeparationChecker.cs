@@ -10,17 +10,8 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Web;
 
-/// <summary>
-/// Post-Analyse-Check fuer Web-Dateien (Phase 1: CSS, Phase 2: JS, Phase 3: Razor).
-/// Arbeitet auf dem Dateisystem (Roslyn sieht keine .css/.js/.razor-Dateien).
-/// Spiegel des UiFileSeparationChecker-Patterns aus Epic 22.
-/// </summary>
 internal static class WebFileSeparationChecker
 {
-    /// <summary>
-    /// Startet die Web-Analyse fuer die gesamte Solution.
-    /// Fruehzeitiger Return, wenn Web.IsEnabled false ist (default) oder keine Web-Konfiguration aktiv.
-    /// </summary>
     public static void Run(AnalysisState state, Config config, AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter = null)
     {
         if (!config.Web.IsEnabled) return;

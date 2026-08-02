@@ -97,18 +97,6 @@ public class NonSealedClass
     public void Analyze_WithFileTooLong_ReturnsLineCountViolation()
     {
         const string sourceCode = @"
-// Line 1
-// Line 2
-// Line 3
-// Line 4
-// Line 5
-// Line 6
-// Line 7
-// Line 8
-// Line 9
-// Line 10
-// Line 11
-// Line 12
 ";
         var config = CreateDefaultConfig();
         var (tree, model) = GetSemanticContext(sourceCode);
@@ -265,9 +253,6 @@ public sealed class MissingDocClass
 namespace Test;
 public sealed class GoodClass
 {
-    /// <summary>
-    /// Method with bad param name.
-    /// </summary>
     public void Save(string data) {}
 }";
         var config = CreateDefaultConfig() with

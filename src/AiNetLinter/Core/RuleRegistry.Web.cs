@@ -10,9 +10,6 @@ namespace AiNetLinter.Core;
 /// </summary>
 internal static partial class RuleRegistry
 {
-    /// <summary>
-    /// Web-Asset-Regeln (Phase 1: CSS, Phase 2: JS, Phase 3: Razor). Opt-in via Web.IsEnabled.
-    /// </summary>
     private static RuleMetadata[] BuildWebAssetRules() =>
     [
         BuildCssMaxCssLineCount(),

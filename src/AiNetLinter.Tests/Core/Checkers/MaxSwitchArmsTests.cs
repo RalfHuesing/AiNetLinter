@@ -1,6 +1,5 @@
 #nullable enable
 
-// @covers ComplexityChecker
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;

@@ -18,11 +18,6 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class FileStructureToolRegistrations
 {
-    /// <summary>
-    /// Fuegt <paramref name="tools"/> die dateistruktur-orientierten Tools hinzu. Tools erreichen den
-    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein DI-Container
-    /// (siehe <c>.
-    /// </summary>
     internal static void Register(McpServerPrimitiveCollection<McpServerTool> tools, McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(

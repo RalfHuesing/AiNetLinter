@@ -12,14 +12,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Führt den Technical Debt Report des Linters aus.
-/// </summary>
 internal static class DebtReportCommand
 {
-    /// <summary>
-    /// Führt die Audit-Erfassung und den Tech-Debt-Berichtsaufbau aus.
-    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

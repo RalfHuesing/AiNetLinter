@@ -8,12 +8,6 @@ using Xunit;
 // @covers RazorConfig (StaticTestSentinel: Kognitive Komplexitaet 6 > Schwellwert 5; Konfiguration ist ueber diese Tests abgedeckt.)
 namespace AiNetLinter.Tests.Web;
 
-/// <summary>
-/// Unit-Tests fuer RazorAnalyzer. Implementiert die Test-Szenarien A-N aus
-/// Research/Extend-Web-Features/03_Razor_Linting.md Abschnitt 8.
-/// Weitere Tests (Edge-Cases, Helper-Methoden, Szenarien-Kombinationen) sind in
-/// <see cref="RazorAnalyzerExtendedTests"/> ausgelagert, um die Datei unter MaxLineCount (500) zu halten.
-/// </summary>
 public sealed class RazorAnalyzerTests
 {
     // Szenario A — Saubere Komponente unter 300 Zeilen, flaches Markup,

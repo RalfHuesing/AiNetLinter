@@ -7,25 +7,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
-/// <summary>
-/// A3-Sicherung gegen Re-Drift des Konzepts: jede spaetere Aenderung an den
-/// vier in
-/// <c>tasks/codegraph-mcp-server/konzept.md</c>, die den Wortlaut zurueck auf
-/// den veralteten Stand bringt, wird durch einen dieser Tests gefangen.
-///
-/// Die vier Anker:
-/// <list type="bullet">
-///   <item>Z. 550 <c>get_violations</c>-Zeile: Input = <c>scopeFilter</c>, Status = <c>fertig</c></item>
-///   <item>Z. 551 <c>search_pattern</c>-Zeile: Status = <c>fertig</c></item>
-///   <item>Z. 546 <c>get_impact</c>-Zeile: Input beschreibt <c>gitRef</c>/<c>symbolIdentifier</c> exklusiv</item>
-///   <item>Z. 559-560 Server-Betrieb / Punkt 1: "sollen" + Verweis "Kaltstart entkoppeln"</item>
-/// </list>
-///
-/// Repo-Root-Resolution identisch zu <c>McpLiveRepositoryFixture</c>
-/// (<c>src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs:34-47</c>),
-/// nur dass hier nach <c>konzept.md</c> statt nach <c>AiNetLinter.slnx</c>
-/// gesucht wird.
-/// </summary>
 public sealed class McpConceptDocumentTests
 {
     private const string KonzeptRelativerPfad = "tasks/codegraph-mcp-server/konzept.md";
@@ -98,7 +79,6 @@ public sealed class McpConceptDocumentTests
         // Formulierung aktuell ueber zwei Markdown-Zeilen verteilt ist (Z. 559
         // endet mit "unabhaengig vom", Z. 560 beginnt mit "   Ladezustand")
         // und beim Re-Wrap beliebig umbrechen kann. Plan-Abweichung
-        // dokumentiert in result.md.
         Assert.Contains("**sollen**", konzept);
         Assert.Matches(new System.Text.RegularExpressions.Regex(
             @"\*\*sollen\*\*\s*unabhängig\s+vom\s+Ladezustand"), konzept);

@@ -5,10 +5,6 @@ using System.IO;
 
 namespace AiNetLinter.Tests.Fixtures;
 
-/// <summary>
-/// Disposable wrapper for a temporary test directory created via <see cref="Directory.CreateTempSubdirectory"/>.
-/// Safely deletes directory contents on dispose.
-/// </summary>
 public sealed class TestTempDirectory : IDisposable
 {
     public string DirectoryPath { get; }

@@ -6,9 +6,6 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Gibt alle verfügbaren Eval-Typen als Tabelle aus.
-/// </summary>
 internal static class ListEvalsCommand
 {
     internal static int Run(ILintConsole? console = null)

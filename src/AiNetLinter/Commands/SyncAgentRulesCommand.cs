@@ -10,14 +10,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Synchronisiert oder prüft die Agent-Regeldateien (.mdc) aus der aktuellen Konfiguration.
-/// </summary>
 internal static class SyncAgentRulesCommand
 {
-    /// <summary>
-    /// Führt die Agent-Regeln-Synchronisation oder Drift-Prüfung aus.
-    /// </summary>
     internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

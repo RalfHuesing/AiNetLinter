@@ -9,15 +9,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Cache;
 
-/// <summary>
-///: Zwei Cache-Loads mit unterschiedlichen
-/// Solution-Pfaden muessen unterschiedliche Cache-Filenamen erzeugen. Zwei Cache-Loads
-/// mit gleichem Solution-Pfad denselben Hash-Anteil. Das Filename-Pattern ist
-/// "{solutionName}-{SHA256(solutionPath + rulesJson)[..8]}-{timestamp}.json".
-///
-/// Diese Tests beweisen die Isolations-Eigenschaft ueber die neu eingefuehrte
-/// <see cref="AnalysisCacheManager.CachePath"/>-Property (internal, fuer Test-Sichtbarkeit).
-/// </summary>
 public sealed class AnalysisCacheManagerIsolationTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cache-iso-");

@@ -12,10 +12,6 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Core;
 
-/// <summary>
-/// Testet, dass PathOverrides in PostAnalysisChecks korrekt aufgelöst werden,
-/// wenn SolutionBasePath gesetzt ist.
-/// </summary>
 public sealed class PostAnalysisChecksPathOverrideTests
 {
     private static readonly string SolutionBase = @"C:\Solution";

@@ -11,10 +11,6 @@ using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Tests.FalsePositives;
 
-/// <summary>
-/// Tests für die False-Positive-Erweiterungen: AllowOutParametersInPrivateMethods,
-/// SemanticNamingExemptMethodNames, FootprintIgnoreTypeNames, SemanticNamingAllowSubstringOfMethodName.
-/// </summary>
 public sealed class FalsePositiveExtensionsTests
 {
     private static Config CreateBaseConfig() => new()

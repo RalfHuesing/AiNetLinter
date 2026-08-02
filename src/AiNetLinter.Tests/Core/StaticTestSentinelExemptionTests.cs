@@ -269,7 +269,6 @@ public static class StringExtensions
         return s;
     }
 }";
-        // Global config: no exemptions
         // ProjectOverride for "TestProject": ExemptClassNameSuffixes = ["Extensions"]
         var config = new Config
         {

@@ -9,10 +9,6 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace AiNetLinter.Tests.Configuration;
 
-// @covers TestCoverageResolver
-// @covers TestCoverageCollector
-// @covers PartialClassLineAggregator
-// @covers GitChangedFilesResolver
 public sealed class AgentFeaturesTests
 {
     private static Config CreateConfig(Func<GlobalConfig, GlobalConfig>? configureGlobal = null)

@@ -26,10 +26,6 @@ internal static class SymbolIdentifierResolver
         return semanticModel.GetDeclaredSymbol(node) ?? semanticModel.GetSymbolInfo(node).Symbol;
     }
 
-    /// <summary>
-    /// Prueft, ob <paramref name="identifier"/> dem Format <c>Datei:Zeile:Spalte</c> entspricht
-    /// (letzte zwei ':'-getrennte Segmente sind Ganzzahlen).
-    /// </summary>
     internal static bool TryParsePosition(string identifier, out string path, out int line, out int column)
     {
         path = string.Empty;

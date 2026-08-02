@@ -8,14 +8,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Configuration;
 
-/// <summary>
-/// Hilfsklasse zum Laden und Deserialisieren der Linter-Konfiguration.
-/// </summary>
 public static class ConfigLoader
 {
-    /// <summary>
-    /// Versucht, die Konfiguration aus der angegebenen Datei zu laden.
-    /// </summary>
     public static Config? TryLoadConfig(string? configPath, bool isRequired)
     {
         if (string.IsNullOrWhiteSpace(configPath))
@@ -86,10 +80,6 @@ public static class ConfigLoader
         }
     }
 
-    /// <summary>
-    /// Liest den Inhalt der Config-Datei für die Cache-Invalidierung.
-    /// Gibt null zurück wenn der Pfad leer oder die Datei nicht vorhanden ist.
-    /// </summary>
     public static string? LoadRulesJsonContent(string? configPath)
     {
         if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))

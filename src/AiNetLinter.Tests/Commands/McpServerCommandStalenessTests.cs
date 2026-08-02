@@ -11,18 +11,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
 
-/// <summary>
-/// E2E-Test fuer: eine Datei-Aenderung
-/// auf Disk zwischen zwei Tool-Calls muss beim naechsten betroffenen Call korrekt propagiert
-/// werden. Unit-Tests in <c>McpCodeGraphServerTests.cs</c> beweisen die Scanner-Logik;
-/// dieser Test beweist die Wire-Propagierung durch den realen MCP-Subprozess.
-///
-/// A3-Pfad: wenn in <c>McpCodeGraphServer.TryApplyContentChange</c> der Aufruf
-/// <c>updated.WithDocumentText(...)</c> auskommentiert wird (oder durch ein no-op ersetzt),
-/// dann aktualisiert der Staleness-Check zwar mtime/Hash-State, aber die Solution
-/// enthaelt weiterhin den alten Inhalt. Der zweite find_symbol-Aufruf wuerde die neue
-/// Klasse <c>CallerRenamedXyz</c> nicht finden, der Test schlaegt fehl.
-/// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandStalenessTests

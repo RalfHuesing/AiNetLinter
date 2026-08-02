@@ -22,9 +22,6 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class GetIndexScopeScanner
 {
-    /// <summary>
-    /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> als Text.
-    /// </summary>
     internal static string BuildBreakdownText(Solution solution)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";

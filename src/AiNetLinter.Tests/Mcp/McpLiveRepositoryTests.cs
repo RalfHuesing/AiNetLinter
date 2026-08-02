@@ -8,11 +8,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
-/// <summary>
-/// Live-Integrationstests fuer alle 9 MCP-Tools direkt gegen das eigene Repository.
-/// Ersetzt ad-hoc Python-Dogfooding-Skripte durch saubere, automatisierte C# xUnit-Tests.
-/// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Testklasse.
-/// </summary>
 [Trait("Category", "Integration")]
 [Collection("ConsoleTestCollection")]
 public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixture>

@@ -14,16 +14,8 @@ using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Führt nachgelagerte Prüfungen nach der primären syntaktischen Analyse aus (z. B. Test Sentinel, Vererbungstiefe und AI-Context-Footprint).
-/// </summary>
 internal static class PostAnalysisChecks
 {
-    /// <summary>
-    /// Startet die post-analytischen Prüfungen für die gesamte Solution.
-    /// </summary>
-    /// <param name="state">Der aktuelle Zustand der Analyse.</param>
-    /// <param name="config">Die globale Konfiguration.</param>
     public static void Run(AnalysisState state, Config config, IPerformanceProfiler? profiler = null)
     {
         var p = profiler ?? NullPerformanceProfiler.Instance;
@@ -185,11 +177,6 @@ internal static class PostAnalysisChecks
         }
     }
 
-    /// <summary>
-    /// Gibt jede logische Klasse genau einmal zurück.
-    /// Partial-Klassen erzeugen einen <see cref="ClassInfo"/> pro Datei, haben aber denselben
-    /// transitiven Footprint (gleicher Roslyn-Symbol). Ohne Dedup würden sie mehrfach gemeldet.
-    /// </summary>
     internal static IEnumerable<ClassInfo> DeduplicatePartialClasses(IEnumerable<ClassInfo> sourceClasses)
     {
         var nonPartial = sourceClasses.Where(static c => !c.IsPartial);

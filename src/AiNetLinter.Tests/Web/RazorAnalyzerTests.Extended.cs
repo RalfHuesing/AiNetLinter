@@ -6,11 +6,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Web;
 
-/// <summary>
-/// Erweiterte Tests fuer RazorAnalyzer: Edge-Cases, deaktivierte Regeln, Szenarien-Kombinationen
-/// und direkte Tests der internen Helper-Methoden. Aufgeteilt in eigene Datei, um die
-/// Haupt-Test-Datei unter MaxLineCount (500) zu halten.
-/// </summary>
 public sealed class RazorAnalyzerExtendedTests
 {
     // Zusatztest — Leere Datei liefert keine Violations.
@@ -285,4 +280,4 @@ public sealed class RazorAnalyzerExtendedTests
 
         Assert.Equal(3, RazorAnalyzer.CountAttributes(attrs));
     }
-}
+}

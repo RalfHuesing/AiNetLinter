@@ -9,7 +9,6 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
-// @covers LinterAnalyzer
 [Trait("Category", "Unit")]
 public sealed class NamespaceDirectoryMappingTests
 {

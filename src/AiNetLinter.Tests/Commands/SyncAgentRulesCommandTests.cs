@@ -11,9 +11,6 @@ using AiNetLinter.Generators;
 
 namespace AiNetLinter.Tests.Commands;
 
-/// <summary>
-/// Tests für <see cref="SyncAgentRulesCommand"/>.
-/// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class SyncAgentRulesCommandTests

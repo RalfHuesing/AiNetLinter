@@ -8,10 +8,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Fixtures;
 
-/// <summary>
-/// Startet einmalig pro Testklasse den MCP-Server-Prozess gegen das echte Repository (AiNetLinter.slnx).
-/// Wird in Read-Only Integrationstests via <see cref="IClassFixture{McpLiveRepositoryFixture}"/> verwendet.
-/// </summary>
 public sealed class McpLiveRepositoryFixture : IAsyncLifetime
 {
     public McpTestClient Client { get; private set; } = null!;

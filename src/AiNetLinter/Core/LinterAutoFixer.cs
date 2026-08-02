@@ -13,18 +13,12 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Behebt einfache Linter-Verstoesse automatisiert ueber Roslyn Syntax-Transformationen.
-/// </summary>
 internal sealed class LinterAutoFixer
 {
     private const string SealedRule   = LinterRuleIds.EnforceSealedClasses;
     private const string ReadonlyRule  = "EnforceReadonlyFields";
     private const string NullableRule  = LinterRuleIds.EnforceNullableEnable;
 
-    /// <summary>
-    /// Fuehrt die automatische Korrektur fuer unterstuetzte Regeln auf der Solution aus.
-    /// </summary>
     internal static async Task<(int FixedCount, Solution UpdatedSolution)> FixAsync(
         Solution solution,
         IReadOnlyCollection<RuleViolation> violations,
@@ -318,7 +312,4 @@ internal sealed class LinterAutoFixer
         ILintConsole Console);
 }
 
-/// <summary>
-/// Optionen für <see cref="LinterAutoFixer.FixAsync"/>.
-/// </summary>
 internal sealed record FixOptions(bool Verbose, bool DryRun = false);

@@ -4,15 +4,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Metrics;
 
-/// <summary>
-/// Zählt Codezeilen einer Methode ohne Kommentare und Leerzeilen.
-/// </summary>
 public static class MethodLineCounter
 {
-    /// <summary>
-    /// Ermittelt die Anzahl der Codezeilen einer Methode (Signatur und Körper, ohne Kommentare und Leerzeilen).
-    /// Gibt 0 zurück, wenn die Methode keinen implementierten Körper hat.
-    /// </summary>
     public static int GetCodeLineCount(MethodDeclarationSyntax method)
     {
         if (method.Body == null && method.ExpressionBody == null)
@@ -23,9 +16,6 @@ public static class MethodLineCounter
         return GetCodeLineCount((SyntaxNode)method);
     }
 
-    /// <summary>
-    /// Ermittelt die Anzahl der Codezeilen eines beliebigen Syntax-Knotens (ohne Kommentare und Leerzeilen).
-    /// </summary>
     public static int GetCodeLineCount(SyntaxNode node)
     {
         var codeLines = new HashSet<int>();

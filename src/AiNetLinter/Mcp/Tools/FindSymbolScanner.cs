@@ -22,20 +22,6 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class FindSymbolScanner
 {
-    /// <summary>
-    /// Liefert den fertig formatierten und trunkierten Treffer-Text fuer
-    /// <paramref name="namePattern"/>. Verwendet <see cref="SymbolFinder"/> fuer die
-    /// Symbol-Suche, <see cref="McpTruncation"/> fuer die Trunkierung. Bei null
-    /// C#-Treffern wird der Miss-Hint ueber <see cref="SearchPatternScanner.GetFilesWithHits"/>
-    /// aufgebaut und ebenfalls trunkiert.
-    /// </summary>
-    /// <param name="solution">Bereits geladene Roslyn-Solution.</param>
-    /// <param name="namePattern">Substring-Match auf Symbol-Namen (case-insensitive).</param>
-    /// <param name="kind">Optionaler Kind-Filter ("class"/"interface"/"method"/"property").</param>
-    /// <param name="maxResults">Obergrenze fuer die Anzahl ausgegebener Trefferzeilen
-    /// (siehe <see cref="McpTruncation.TruncateLines"/>); muss >= 1 sein (Aufrufer normalisiert).</param>
-    /// <returns>Plain-Text-Output (Trefferzeilen + optionale Trunkierungs-Meta-Zeile,
-    /// optionale Miss-Hint-Zeile mit eigener Trunkierungs-Meta-Zeile).</returns>
     internal static async Task<string> FindMatchesAndFormat(
         Solution solution,
         string namePattern,

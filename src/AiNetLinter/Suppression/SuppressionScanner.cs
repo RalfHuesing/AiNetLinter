@@ -8,14 +8,8 @@ using System.Threading.Tasks;
 
 namespace AiNetLinter.Suppression;
 
-/// <summary>
-/// Scans source files for active suppression comments.
-/// </summary>
 public static class SuppressionScanner
 {
-    /// <summary>
-    /// Scans a single file for `ainetlinter-disable` comments.
-    /// </summary>
     public static IReadOnlyList<SuppressionEntry> ScanFile(string filePath, IgnoreSuppressionsFilter? filter = null)
     {
         if (!File.Exists(filePath) || (filter != null && filter.ShouldIgnoreSuppressionForFile(filePath)))
@@ -47,9 +41,6 @@ public static class SuppressionScanner
         return entries;
     }
 
-    /// <summary>
-    /// Scans all files under targetPath (C# and Razor files) for suppressions.
-    /// </summary>
     public static async Task<IReadOnlyList<SuppressionEntry>> ScanAllAsync(string targetPath, IgnoreSuppressionsFilter? filter = null)
     {
         var files = new List<string>();
@@ -63,7 +54,6 @@ public static class SuppressionScanner
         catch (Exception ignored)
         {
             _ = ignored;
-            // Fallback or ignore
         }
 
         // 2. Enumerate razor files in target directory if it exists
@@ -93,7 +83,6 @@ public static class SuppressionScanner
             catch (Exception ignored)
             {
                 _ = ignored;
-                // Ignore directory enumeration issues
             }
         }
 
@@ -136,9 +125,6 @@ public static class SuppressionScanner
     }
 }
 
-/// <summary>
-/// Model class representing a single suppression entry.
-/// </summary>
 public sealed record SuppressionEntry(
     string FilePath,
     int LineNumber,

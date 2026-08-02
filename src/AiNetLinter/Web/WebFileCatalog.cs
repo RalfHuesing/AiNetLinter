@@ -9,15 +9,8 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Web;
 
-/// <summary>
-/// Repräsentiert eine im Dateisystem gefundene Web-Datei (CSS, JS oder Razor).
-/// Spiegel der Architektur aus Research/Extend-Web-Features/00_Overview.md Abschnitt 2.2.
-/// </summary>
 public sealed record WebFileEntry(string AbsolutePath, string RelativePath, WebFileType Type);
 
-/// <summary>
-/// Dateityp einer Web-Asset-Datei.
-/// </summary>
 public enum WebFileType
 {
     Css,
@@ -25,28 +18,13 @@ public enum WebFileType
     Razor,
 }
 
-/// <summary>
-/// Input-Record fuer <see cref="WebFileCatalog.Collect"/> ab 5 Parametern.
-/// Bündelt FileFilters und ExemptPaths beider Web-Subdomänen (CSS, JS) zu einem einzigen Wert.
-/// </summary>
 public sealed record WebFileDiscoveryRequest(
     FileFiltersConfig FileFilters,
     IReadOnlyCollection<string> CssExemptPaths,
     IReadOnlyCollection<string>? JsExemptPaths);
 
-/// <summary>
-/// Enumeriert Web-Dateien aus den Projektverzeichnissen der Solution.
-/// Filtert generierte Verzeichnisse (obj/, bin/, node_modules/) und ExemptPaths heraus.
-/// Arbeitet auf dem Dateisystem (Roslyn sieht keine .css/.js/.razor-Dateien).
-/// </summary>
 internal static class WebFileCatalog
 {
-    /// <summary>
-    /// Sammelt alle Web-Dateien aus den Projektverzeichnissen.
-    /// </summary>
-    /// <param name="solution">Bereits geladene Roslyn-Solution (kein zweites MSBuild-Laden noetig).</param>
-    /// <param name="solutionDir">Absoluter Pfad zum Solution-Wurzelverzeichnis.</param>
-    /// <param name="request">Gebuendelte FileFilters + CSS-/JS-ExemptPaths.</param>
     public static IReadOnlyList<WebFileEntry> Collect(
         Solution solution,
         string solutionDir,

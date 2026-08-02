@@ -15,23 +15,12 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Analysiert das Git-Diff und findet alle Call-Sites in der Solution, die von geaenderten Methodensignaturen betroffen sind.
-/// </summary>
 public sealed class DiffImpactAnalyzer
 {
     private const string GitCommand = "git";
     private const string FilePathPrefix = "+++ b/";
     private const string HunkPrefix = "@@ ";
 
-    /// <summary>
-    /// Führt die semantische Diff-Impact-Analyse aus und gibt eine Liste der betroffenen Aufrufstellen zurück.
-    /// </summary>
-    /// <param name="solution">Die geladene Roslyn-Solution.</param>
-    /// <param name="targetPath">Der Zielpfad des Projekts/der Solution.</param>
-    /// <param name="gitSinceRef">Der Git-Commit-Verweis (z. B. HEAD~1) oder null/leer für uncommitteten Code.</param>
-    /// <param name="verbose">Aktiviert detailliertes Protokoll-Logging.</param>
-    /// <returns>Eine Liste von formatierten Aufrufstellen (Call-Sites).</returns>
     public static async Task<List<string>> AnalyzeAsync(Solution solution, string targetPath, string? gitSinceRef, bool verbose)
     {
         var repoRoot = FindGitRoot(targetPath);
@@ -183,11 +172,6 @@ public sealed class DiffImpactAnalyzer
         return list;
     }
 
-    /// <summary>
-    /// Sucht ein <see cref="Document"/> ueber alle Projekte der Solution per (case-insensitivem)
-    /// Dateipfad-Vergleich. Wird auch von <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/>
-    /// (MCP) fuer die positionsbasierte Symbolaufloesung wiederverwendet.
-    /// </summary>
     internal static Document? FindDocumentByPath(Solution solution, string filePath)
     {
         foreach (var project in solution.Projects)
@@ -293,12 +277,6 @@ public sealed class DiffImpactAnalyzer
                accessibility == Accessibility.ProtectedOrInternal;
     }
 
-    /// <summary>
-    /// Findet alle Aufrufstellen von <paramref name="symbol"/> ueber
-    /// <see cref="SymbolFinder.FindReferencesAsync(ISymbol, Solution, System.Threading.CancellationToken)"/>
-    /// und formatiert sie als "Datei:Zeile - Aufruf von ...". Wird auch von
-    /// <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/> (MCP) wiederverwendet.
-    /// </summary>
     internal static async Task<List<string>> FindCallSitesAsync(ISymbol symbol, Solution solution)
     {
         var callSites = new List<string>();

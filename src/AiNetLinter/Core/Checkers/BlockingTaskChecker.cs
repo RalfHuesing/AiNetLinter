@@ -88,7 +88,6 @@ internal static class BlockingTaskChecker
 
     private static bool IsSyntacticTaskHint(ExpressionSyntax expression)
     {
-        // Fallback ohne Semantic Model: prüfe ob der Bezeichner/Text wie Task, Awaitable oder Async aussieht
         var text = expression.ToString();
         return text.Contains("Task") || text.Contains("Awaitable") || text.Contains("Async");
     }

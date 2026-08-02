@@ -196,7 +196,6 @@ public sealed class NullCoalescingInitializerClassifierTests
         Assert.Empty(violationsWithExemption.Where(v => v.RuleName == nameof(MetricsConfig.MaxCyclomaticComplexity)));
         Assert.Empty(violationsWithExemption.Where(v => v.RuleName == nameof(MetricsConfig.MaxCognitiveComplexity)));
 
-        // Ohne Ausnahme: Fehlermeldung
         var configWithoutExemption = CreateConfig(maxComplexity: 2, excludeNullCoalescing: false, maxNonCoalescingRatio: 0.0);
         var violationsWithoutExemption = LinterAnalyzer.Analyze("Test.cs", model, configWithoutExemption);
 

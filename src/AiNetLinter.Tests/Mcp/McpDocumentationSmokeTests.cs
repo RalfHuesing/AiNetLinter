@@ -43,7 +43,6 @@ public sealed class McpDocumentationSmokeTests : IClassFixture<McpLiveRepository
     {
         // Erwartung: "get_index_scope" listet .cs als groesste Datei-Kategorie. Wird in der Doku
         // (Docs/agent-api.md#mcp-server-modus, Tool-Tabelle) als die vom Symbolgraph voll
-        // abgedeckte Kategorie beschrieben.
         var text = await _fixture.Client.CallToolGetTextAsync(
             "get_index_scope", new Dictionary<string, object?>());
         Assert.NotNull(text);
@@ -78,15 +77,12 @@ public sealed class McpDocumentationSmokeTests : IClassFixture<McpLiveRepository
         // search_pattern als Nicht-C#-only-Fallback heraus. Doku-Drift zwischen Fliesstext,
         // Tabelle (Z. 242-252) und dem wortwoertlich zitierten ServerInstructions-Block
         // (Quelle: McpServerOptionsFactory.cs:26-31) wird durch diese Assertion gefangen.
-        //
         // Strategie: File-Read auf Docs/agent-api.md (statt hartkodierter Erwartungs-String
         // wie in Plan-Variante). Begruendung: ein A3-Pfad "Doku manipulieren -> Test rot"
         // funktioniert nur, wenn der Test die Doku tatsaechlich liest. Hartkodierte Strings
         // wuerden jeden Doku-Drift verschweigen (Test waere immer gruen).
-        //
         // A3-Pfad: Doku enthaelt "7 Tools sind C#-only" -> Assert.DoesNotContain("7 Tools")
         // wird rot. Doku enthaelt "6 Tools sind C#-only" -> beide Assertions gruen.
-        //
         // Pfad-Aufloesung: bin/Debug/net10.0/ ist 5 Ebenen unter dem Repo-Root
         // (AiNetLinter.Tests/bin/Debug/net10.0/), also 5x ".." hoch und dann "Docs/agent-api.md".
         var baseDir = AppContext.BaseDirectory;

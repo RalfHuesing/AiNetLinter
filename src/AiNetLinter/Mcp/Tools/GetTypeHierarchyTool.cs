@@ -7,14 +7,6 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
 
-/// <summary>
-/// MCP-Tool <c>get_type_hierarchy</c>: loest einen Typ-Identifikator (Datei:Zeile:Spalte oder
-/// qualifizierter/teil-qualifizierter Name) ueber <see cref="FindReferencesTool.ResolveSymbolAsync"/>
-/// zu einem Symbol auf, prueft, dass es ein Typ ist (Klasse/Interface/Struct), und delegiert an
-/// <see cref="GetTypeHierarchyFormatter.BuildHierarchyTextAsync"/> fuer die eigentliche
-/// Traversierung/Formatierung. Bewusst duenner Dispatch ohne eigene Traversierungs-/
-/// Formatierungslogik. Deckt nur.cs-Dateien ab.
-/// </summary>
 internal static class GetTypeHierarchyTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(

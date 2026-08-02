@@ -12,13 +12,6 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace AiNetLinter.Mcp;
 
-/// <summary>
-/// Haelt die geladene Solution ueber die Laufzeit des MCP-Servers resident und prueft lazy
-/// (bei jedem <see cref="GetCurrentSolution"/>-Aufruf) per Hash/mtime, ob bekannte Quelldateien
-/// seit dem letzten Zugriff auf der Platte geaendert wurden. Betroffene Dokumente werden
-/// inkrementell ueber <see cref="SourceFileCatalog.WithUpdatedSolution"/> aktualisiert, kein
-/// Komplett-Reload der <see cref="Microsoft.CodeAnalysis.MSBuild.MSBuildWorkspace"/>.
-/// </summary>
 internal sealed class McpCodeGraphServer : IDisposable
 {
     private readonly Lock _lock = new();
@@ -26,7 +19,6 @@ internal sealed class McpCodeGraphServer : IDisposable
     private readonly Dictionary<string, FileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private SourceFileCatalog? _catalog;
 
-    // Eingefuehrt mit
     // der am projektweiten MaxConstructorDependencies: 5-Limit lag 
     // und McpCodeGraphServerOptions.cs). Erlaubt additive P0/P1-Erweiterungen an der Config,
     // ohne die Konstruktor-Signatur zu aendern.
@@ -46,11 +38,6 @@ internal sealed class McpCodeGraphServer : IDisposable
 
     public bool IsLoaded => _catalog is not null;
 
-    /// <summary>
-    /// Zeilen-Grenzwert (aus <c>rules.json</c>/<see cref="AiNetLinter.Configuration.MetricsConfig"/>-Default),
-    /// gegen den <c>get_hotspots</c> Dateien der residenten Solution klassifiziert. Pro Server-Session
-    /// fest, nicht pro Tool-Call — die Config aendert sich zur Laufzeit nicht.
-    /// </summary>
     public int MaxLineCount { get; }
 
     /// <summary>
@@ -69,10 +56,6 @@ internal sealed class McpCodeGraphServer : IDisposable
     /// </summary>
     public ILintConsole Console => _console;
 
-    /// <summary>
-    /// Liefert die aktuelle, ggf. lazy aktualisierte <see cref="Solution"/> — <see langword="null"/>,
-    /// wenn beim Start keine Solution geladen werden konnte.
-    /// </summary>
     public Solution? GetCurrentSolution()
     {
         lock (_lock)

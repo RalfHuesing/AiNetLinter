@@ -74,7 +74,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         return NamespaceFilter.IsNamespaceAllowed(ns, _args.IncludeNamespaces, _args.ExcludeNamespaces);
     }
 
-    // --- Visit* dispatchers ---
 
     public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
     {
@@ -279,7 +278,6 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
         base.VisitThrowExpression(node);
     }
 
-    // --- Private helpers ---
 
     private void CheckLineCount()
     {

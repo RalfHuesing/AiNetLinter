@@ -5,9 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Core.Checkers;
 
-/// <summary>
-/// Gemeinsame statische Erweiterungsmethoden für Syntax-Analyse.
-/// </summary>
 internal static class SyntaxNodeExtensions
 {
     internal static int LineOf(this SyntaxNode node) =>

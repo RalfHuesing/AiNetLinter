@@ -9,15 +9,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Maps;
 
-/// <summary>
-/// Ein Eintrag für eine Datei in der Structure Map.
-/// </summary>
 internal sealed record StructureFileInfo(string RelativePath, int Lines, string Directory);
 
-/// <summary>
-/// Erzeugt eine Structure Map: Verzeichnisstruktur mit Dateigrößen.
-/// Dient als direkter Input für.
-/// </summary>
 internal static class StructureMapBuilder
 {
     internal static int Build(string targetPath, int maxLineCount, ILintConsole c)
@@ -70,7 +63,6 @@ internal static class StructureMapBuilder
             + $" | Pfad: {root.Replace('\\', '/')}");
         sb.AppendLine();
 
-        // Verzeichnis-Übersicht
         var byDir = files
             .GroupBy(f => string.IsNullOrEmpty(f.Directory) ? "(Root)" : f.Directory)
             .OrderByDescending(g => g.Sum(f => f.Lines))
@@ -90,7 +82,6 @@ internal static class StructureMapBuilder
             sb.AppendLine($"| {dirName} | {dir.Count()} | {dir.Sum(f => f.Lines):N0} |");
         }
 
-        // Alle Dateien mit Warnstufe
         sb.AppendLine();
         sb.AppendLine("## Alle Dateien (sortiert nach Größe)");
         sb.AppendLine();

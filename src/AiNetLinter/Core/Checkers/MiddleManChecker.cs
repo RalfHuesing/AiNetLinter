@@ -50,18 +50,14 @@ internal static class MiddleManChecker
     {
         if (!ctx.Config.Global.AvoidExcessiveMiddleMen) return true;
 
-        // Statische Klassen werden ignoriert
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) return true;
 
-        // Abstrakte Klassen werden ignoriert
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.AbstractKeyword))) return true;
 
         var className = node.Identifier.Text;
 
-        // Suffix-Ausnahme prüfen
         if (HasExemptSuffix(className, ctx)) return true;
 
-        // Basisklassen-Ausnahme prüfen
         if (HasExemptBaseType(node, ctx)) return true;
 
         return false;

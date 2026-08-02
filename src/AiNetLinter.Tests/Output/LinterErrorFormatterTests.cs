@@ -5,9 +5,6 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
-/// <summary>
-/// Tests fuer <see cref="LinterErrorFormatter"/> und <see cref="LinterErrorCodes"/>.
-/// </summary>
 public sealed class LinterErrorFormatterTests
 {
     [Fact]

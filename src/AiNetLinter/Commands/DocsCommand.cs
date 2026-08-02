@@ -8,9 +8,6 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Gibt die eingebettete Dokumentation auf der Konsole aus.
-/// </summary>
 internal static class DocsCommand
 {
     private static readonly Dictionary<string, string> DocResources = new(StringComparer.OrdinalIgnoreCase)
@@ -24,9 +21,6 @@ internal static class DocsCommand
         { "rules-json", "rules.json" }
     };
 
-    /// <summary>
-    /// Gibt die angegebene eingebettete Markdown-Datei aus.
-    /// </summary>
     internal static int Run(string? docName, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

@@ -110,7 +110,6 @@ public sealed class Service {
 public sealed class Service {
     private void Helper(string a, string b, string c, string d, string e) {}
 }";
-        // 5 params, nonPublicLimit=6 → ok
         var violations = Analyze(source, CreateConfig(maxParams: 4, forNonPublic: 6));
         Assert.Empty(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
     }
@@ -157,7 +156,6 @@ public class Service {
 public sealed class Service {
     private void Helper(string a, string b, string c, string d, string e) {}
 }";
-        // forNonPublic=0 → main limit applies
         var violations = Analyze(source, CreateConfig(maxParams: 4, forNonPublic: 0));
         Assert.Single(violations.Where(v => v.RuleName == "MaxMethodParameterCount"));
     }

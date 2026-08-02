@@ -12,14 +12,8 @@ using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Führt Wartungsaktionen wie das Verwalten von Baselines und das Injizieren/Entfernen von Deaktivierungskommentaren aus.
-/// </summary>
 internal static class MaintenanceCommand
 {
-    /// <summary>
-    /// Versucht einen Wartungsmodus auszuführen. Gibt <c>null</c> zurück, wenn kein Wartungsmodus aktiv ist.
-    /// </summary>
     internal static async Task<int?> TryRunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

@@ -8,9 +8,6 @@ using AiNetLinter.Commands;
 
 namespace AiNetLinter.Tests.Commands;
 
-/// <summary>
-/// Tests für <see cref="DocsCommand"/>.
-/// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class DocsCommandTests

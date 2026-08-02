@@ -8,10 +8,6 @@ using Xunit;
 // @covers CssConfig (StaticTestSentinel: Kognitive Komplexitaet 6 > Schwellwert 5; Konfiguration ist ueber diese Tests abgedeckt.)
 namespace AiNetLinter.Tests.Web;
 
-/// <summary>
-/// Unit-Tests fuer CssAnalyzer. Implementiert die Test-Szenarien A-H aus
-/// Research/Extend-Web-Features/01_CSS_Linting.md Abschnitt 5.
-/// </summary>
 public sealed class CssAnalyzerTests
 {
     // Szenario A — CSS unter Limit, einfache Selektoren → keine Violations
@@ -193,7 +189,6 @@ public sealed class CssAnalyzerTests
         Assert.Equal(2, CssAnalyzer.ComputeMaxSelectorDepth(".a > .b"));  // 2 Segmente
         Assert.Equal(3, CssAnalyzer.ComputeMaxSelectorDepth(".a + .b ~ .c"));  // 3 Segmente
         Assert.Equal(0, CssAnalyzer.ComputeMaxSelectorDepth(""));
-        // Single Selector: 1 Segment
         Assert.Equal(1, CssAnalyzer.ComputeMaxSelectorDepth(".foo"));
     }
 

@@ -10,10 +10,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
-/// <summary>
-/// Umfassende E2E- und Edge-Case-Tests fuer alle 9 MCP-Tools.
-/// Nutzt <see cref="SymbolGraphMcpFixture"/> zur einmaligen Fixture- und Client-Instanziierung pro Testklasse.
-/// </summary>
 [Trait("Category", "Integration")]
 [Collection("ConsoleTestCollection")]
 public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixture>

@@ -14,9 +14,6 @@ using AiNetLinter.Cli;
 
 namespace AiNetLinter.Maps.Skeleton;
 
-/// <summary>
-/// Lädt eine Solution via MSBuildWorkspace und erzeugt eine Skeleton Map für LLM-Audits.
-/// </summary>
 internal static class SkeletonMapBuilder
 {
     internal static async Task<int> BuildAsync(
@@ -70,11 +67,6 @@ internal static class SkeletonMapBuilder
             .ToList();
     }
 
-    /// <summary>
-    /// Extrahiert die Skeleton-Typen eines einzelnen Dokuments. Wird auch von
-    /// <see cref="AiNetLinter.Mcp.Tools.GetFileSkeletonTool"/> (MCP) fuer die Einzeldatei-Extraktion
-    /// wiederverwendet.
-    /// </summary>
     internal static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
         Document document,
         string solutionDir,

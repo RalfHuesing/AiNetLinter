@@ -20,7 +20,6 @@ public sealed class WebBaselineTests
 
         try
         {
-            // 1. Enable Web features in rules.json
             var rulesJson = File.ReadAllText(workspace.ConfigPath);
             rulesJson = rulesJson.Replace("\"IsEnabled\": false", "\"IsEnabled\": true");
             File.WriteAllText(workspace.ConfigPath, rulesJson);
@@ -33,7 +32,6 @@ public sealed class WebBaselineTests
             File.WriteAllText(cssPath, "body { color: red; }");
             File.WriteAllText(razorPath, "<h3>Component</h3>");
 
-            // 3. Create baseline using CLI
             var createResult = RunLinter(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
 
@@ -76,7 +74,6 @@ public sealed class WebBaselineTests
             // CSS has 1 line initially (no violation)
             File.WriteAllText(cssPath, ".btn { color: blue; }");
 
-            // 3. Create baseline using CLI
             var createResult = RunLinter(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
             Assert.Equal(0, createResult.ExitCode);

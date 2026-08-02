@@ -3,14 +3,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Scope;
 
-/// <summary>
-/// Ermittelt geänderte Dateien via git diff (optional, nur wenn .git vorhanden).
-/// </summary>
 public static class GitChangedFilesResolver
 {
-    /// <summary>
-    /// Liefert relative Pfade geänderter .cs-Dateien seit dem angegebenen Git-Ref.
-    /// </summary>
     public static IReadOnlyCollection<string> ResolveSince(string targetPath, string gitSinceRef)
     {
         var repoRoot = FindGitRoot(targetPath);

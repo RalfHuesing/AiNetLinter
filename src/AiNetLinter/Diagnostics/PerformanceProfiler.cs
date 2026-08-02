@@ -11,9 +11,6 @@ using System.Text.Json;
 
 namespace AiNetLinter.Diagnostics;
 
-/// <summary>
-/// Verwaltet Zeitmessungen für verschiedene Linter-Phasen und generiert Protokollberichte.
-/// </summary>
 public sealed class PerformanceProfiler : IPerformanceProfiler
 {
     private readonly bool _enabled;
@@ -56,9 +53,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         }
     }
 
-    /// <summary>
-    /// Startet oder startet eine bestimmte Ausführungsphase neu.
-    /// </summary>
     public void StartPhase(string phaseName)
     {
         if (!_enabled) return;
@@ -66,9 +60,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         sw.Restart();
     }
 
-    /// <summary>
-    /// Stoppt eine Phase und zeichnet deren Dauer auf.
-    /// </summary>
     public void StopPhase(string phaseName)
     {
         if (!_enabled) return;
@@ -79,9 +70,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         }
     }
 
-    /// <summary>
-    /// Zeichnet die Performance-Daten für die Analyse einer einzelnen Datei auf.
-    /// </summary>
     public void RecordDocumentAnalysis(string filePath, double durationMs, int violationsCount)
     {
         if (!_enabled) return;
@@ -93,9 +81,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         });
     }
 
-    /// <summary>
-    /// Zeichnet die Dauer eines spezifischen Post-Analysis-Schritts auf.
-    /// </summary>
     public void RecordPostAnalysisStep(string stepName, double durationMs)
     {
         if (!_enabled) return;
@@ -119,9 +104,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
         public double OutputWritingMs { get; init; }
     }
 
-    /// <summary>
-    /// Generiert die Berichte im base-Verzeichnis unter measurements/ (wenn aktiviert).
-    /// </summary>
     public void WriteReport(string targetPath, string? solutionFilePath, string? rulesFilePath = null)
     {
         if (!_enabled) return;
@@ -283,9 +265,6 @@ public sealed class PerformanceProfiler : IPerformanceProfiler
     }
 }
 
-/// <summary>
-/// Repräsentiert die gemessene Leistung für ein einzelnes Dokument.
-/// </summary>
 public sealed record DocumentPerformanceEntry
 {
     public required string FilePath { get; init; }
@@ -293,9 +272,6 @@ public sealed record DocumentPerformanceEntry
     public required int ViolationsCount { get; init; }
 }
 
-/// <summary>
-/// Repräsentiert den strukturierten Bericht im JSON-Format.
-/// </summary>
 public sealed record ProfilerJsonReport
 {
     public required string SolutionName { get; init; }
@@ -308,9 +284,6 @@ public sealed record ProfilerJsonReport
     public required List<DocumentPerformanceEntry> Documents { get; init; }
 }
 
-/// <summary>
-/// Zusammenfassende Performance-Metriken.
-/// </summary>
 public sealed record ProfilerSummary
 {
     public required double TotalDurationMs { get; init; }

@@ -9,10 +9,6 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.FalsePositives;
 
-/// <summary>
-/// Explorations-Suite: legitimer C#-Code, der vom Linter nicht als Fehler gemeldet werden darf.
-/// Jeder Test beschreibt ein konkretes FP-Szenario. Fehlschläge beweisen echte False-Positives.
-/// </summary>
 public sealed class FalsePositiveTests
 {
     private static Config CreateConfig(

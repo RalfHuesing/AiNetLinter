@@ -7,9 +7,6 @@ using Microsoft.Build.Locator;
 
 namespace AiNetLinter.Baseline;
 
-/// <summary>
-/// Patches the out-of-process BuildHost.exe folder and configuration for VS 2026/MSBuild 18+ compatibility.
-/// </summary>
 public static class BuildHostPatcher
 {
     public static void PatchBuildHostForVs2026()

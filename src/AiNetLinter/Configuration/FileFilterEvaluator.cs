@@ -6,9 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace AiNetLinter.Configuration;
 
-/// <summary>
-/// Evaluiert, ob eine Datei aufgrund der konfigurierten Datei- und Verzeichnisausschlüsse übersprungen werden soll.
-/// </summary>
 internal static class FileFilterEvaluator
 {
     public static bool IsExcluded(string filePath, FileFiltersConfig filters)
@@ -55,10 +52,6 @@ internal static class FileFilterEvaluator
         return Regex.IsMatch(input, regex, RegexOptions.IgnoreCase);
     }
 
-    /// <summary>
-    /// Public Variante von MatchesGlob fuer andere Module (z. B. WebFileCatalog), die gegen
-    /// relative Pfade oder freie Texte globben wollen. Erlaubt "**"-Segmente.
-    /// </summary>
     public static bool MatchesGlobForWeb(string input, string pattern)
     {
         if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(pattern)) return false;

@@ -27,10 +27,6 @@ internal static class LinqChainLengthChecker
             BuildGuidance(chainLength, limit)));
     }
 
-    /// <summary>
-    /// Zählt die LINQ-Methoden in einer Kette.
-    /// Walk: Ausgehend vom äußersten Aufruf die Expression-Kette nach innen.
-    /// </summary>
     private static int CountLinqChain(
         InvocationExpressionSyntax root,
         IReadOnlyCollection<string> linqNames)
@@ -51,11 +47,6 @@ internal static class LinqChainLengthChecker
         return count;
     }
 
-    /// <summary>
-    /// Prüft ob dieser Knoten selbst ein innerer LINQ-Aufruf ist
-    /// (d.h. ob er als Expression in einem äußeren InvocationExpression vorkommt).
-    /// Wenn ja, wird er übersprungen — nur die äußerste Kette zählt.
-    /// </summary>
     private static bool IsNestedLinqCall(InvocationExpressionSyntax node)
     {
         if (node.Parent is MemberAccessExpressionSyntax parentAccess

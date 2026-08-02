@@ -168,7 +168,6 @@ public sealed class AsyncVoidCheckerTests
         Assert.Empty(ctx.Violations);
     }
 
-    // --- Hilfsmethode ---
 
     private static Config ConfigWith(bool banAsyncVoid = true, bool allowEventHandlers = true) =>
         TestHelper.CreateDefaultConfig() with

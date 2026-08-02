@@ -10,9 +10,6 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Maps.Skeleton;
 
-/// <summary>
-/// Extrahiert Typ-Skelette (Signaturen + Metadaten) aus einem C#-Syntaxbaum via SemanticModel.
-/// </summary>
 internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 {
     private readonly SemanticModel _semanticModel;

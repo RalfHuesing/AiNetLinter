@@ -9,9 +9,6 @@ using AiNetLinter.Cli;
 
 namespace AiNetLinter.Baseline;
 
-/// <summary>
-/// Lädt eine Solution und enumeriert analysierbare Quelldateien.
-/// </summary>
 public sealed class SourceFileCatalog : IDisposable
 {
     private readonly MSBuildWorkspace? _workspace;
@@ -33,9 +30,6 @@ public sealed class SourceFileCatalog : IDisposable
     public Solution Solution { get; }
     public bool HasLoadingErrors { get; }
 
-    /// <summary>
-    /// Lädt die Solution aus dem angegebenen Pfad.
-    /// </summary>
     public static async Task<SourceFileCatalog> LoadAsync(string path, System.Threading.CancellationToken ct = default)
     {
         var slnPath = FindSolutionFile(path);
@@ -60,17 +54,11 @@ public sealed class SourceFileCatalog : IDisposable
         return new SourceFileCatalog(workspace, solution, hasLoadingErrors);
     }
 
-    /// <summary>
-    /// Erzeugt eine neue Catalog-Instanz mit einer aktualisierten In-Memory-Solution (z.B. nach AutoFix).
-    /// </summary>
     internal SourceFileCatalog WithUpdatedSolution(Solution updatedSolution)
     {
         return new SourceFileCatalog(_workspace, updatedSolution, HasLoadingErrors);
     }
 
-    /// <summary>
-    /// Liefert alle gültigen Quelldateien mit relativen Pfaden.
-    /// </summary>
     public IReadOnlyList<SourceFileEntry> GetSourceFiles(string outputRoot, Config? config = null, LinterArgs? args = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
@@ -102,9 +90,6 @@ public sealed class SourceFileCatalog : IDisposable
         return entries;
     }
 
-    /// <summary>
-    /// Berechnet SHA-256-Checksummen für alle Quelldateien.
-    /// </summary>
     public Dictionary<string, string> ComputeChecksums(string outputRoot, Config? config = null, LinterArgs? args = null)
     {
         var checksums = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -117,9 +102,6 @@ public sealed class SourceFileCatalog : IDisposable
         return checksums;
     }
 
-    /// <summary>
-    /// Sammelt Dokumente für die parallele Linter-Analyse.
-    /// </summary>
     public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync(LinterArgs? args = null, Config? config = null)
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
@@ -137,9 +119,6 @@ public sealed class SourceFileCatalog : IDisposable
         return workItems;
     }
 
-    /// <summary>
-    /// Gibt den MSBuild-Workspace frei.
-    /// </summary>
     public void Dispose() => _workspace?.Dispose();
 
     internal static bool IsValidDocument(Document document, string? solutionDir)
@@ -246,7 +225,6 @@ public sealed class SourceFileCatalog : IDisposable
             finally
             {
                 // Clear environment variables so the child BuildHost.exe (.NET Framework)
-                // doesn't inherit .NET Core SDK paths.
                 Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", null);
                 Environment.SetEnvironmentVariable("MSBuildExtensionsPath", null);
                 Environment.SetEnvironmentVariable("MSBuildSDKsPath", null);
@@ -295,7 +273,4 @@ public sealed class SourceFileCatalog : IDisposable
     }
 }
 
-/// <summary>
-/// Dokument mit Testprojekt-Kennzeichnung für die Linter-Analyse.
-/// </summary>
 public sealed record CatalogDocumentWorkItem(Document Document, bool IsTestProject);

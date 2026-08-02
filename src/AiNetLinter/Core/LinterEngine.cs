@@ -19,9 +19,6 @@ using AiNetLinter.Cli;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Koordiniert das Laden der Solution via MSBuildWorkspace und die semantische Analyse aller Klassen.
-/// </summary>
 public sealed class LinterEngine
 {
     private readonly Config _config;
@@ -40,27 +37,18 @@ public sealed class LinterEngine
         _args = args;
     }
 
-    /// <summary>
-    /// Führt die Analyse auf dem angegebenen Pfad aus und liefert alle Regelverstöße.
-    /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(string path, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
         using var catalog = await SourceFileCatalog.LoadAsync(path, ct);
         return await RunAsync(catalog, noCache, cacheTtlMinutes, ct);
     }
 
-    /// <summary>
-    /// Führt die Analyse auf einer geladenen Solution aus.
-    /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(SourceFileCatalog catalog, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
         var cache = noCache ? null : BuildCache(catalog, catalog.Solution.FilePath ?? catalog.Solution.Workspace.GetType().Name, cacheTtlMinutes);
         return await RunInternalAsync(catalog.Solution, catalog, cache, ct);
     }
 
-    /// <summary>
-    /// Führt die Analyse auf einer bestehenden Solution im Speicher aus.
-    /// </summary>
     public async Task<IReadOnlyCollection<RuleViolation>> RunAsync(Solution solution, bool noCache = false, int cacheTtlMinutes = 60, CancellationToken ct = default)
     {
         var cache = noCache ? null : BuildCache(null, solution.FilePath ?? solution.Workspace.GetType().Name, cacheTtlMinutes);
@@ -80,9 +68,6 @@ public sealed class LinterEngine
         return AnalysisCacheManager.Load(exeDir, solutionPath, _rulesJsonContent, ttl);
     }
 
-    /// <summary>
-    /// Erzeugt MSBuild-Workspace-Eigenschaften für Design-Time-Laden.
-    /// </summary>
     public static Dictionary<string, string> CreateWorkspaceProperties() => new()
     {
         ["DesignTimeBuild"] = "true",

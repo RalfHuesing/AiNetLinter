@@ -46,7 +46,6 @@ public sealed class Sample
 {
     public void Work()
     {
-        // comment line
         var a = 1;
 
         /* block comment */

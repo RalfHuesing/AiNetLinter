@@ -52,7 +52,6 @@ public sealed class LinqChainLengthCheckerTests
         Assert.Empty(ctx.Violations);
     }
 
-    // --- Negativ-Tests ---
 
     [Fact]
     public void Disabled_NoViolation()
@@ -169,7 +168,6 @@ public sealed class LinqChainLengthCheckerTests
         Assert.Empty(ctx.Violations);
     }
 
-    // --- Hilfsmethoden ---
 
     private static Config ConfigWith(int limit) =>
         TestHelper.CreateDefaultConfig() with

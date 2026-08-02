@@ -4,7 +4,6 @@ using System.IO;
 
 namespace AiNetLinter.Tests.Cli;
 
-// @covers LinterArgs
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class CliIntegrationTests
@@ -220,7 +219,6 @@ public sealed class CliIntegrationTests
 
         try
         {
-            // Erst generieren
             using (var genProcess = Process.Start(MakeProcess("")))
             {
                 Assert.NotNull(genProcess);
@@ -231,7 +229,6 @@ public sealed class CliIntegrationTests
 
             Assert.True(File.Exists(tempPlaybookPath));
 
-            // Dann prüfen (--check)
             using var checkProcess = Process.Start(MakeProcess("--check"));
             Assert.NotNull(checkProcess);
             string output = checkProcess.StandardOutput.ReadToEnd();
@@ -276,10 +273,6 @@ public sealed class CliIntegrationTests
         Assert.Contains("[ERROR]", error);
     }
 
-    /// <summary>
-    /// Kein Assert — schreibt Linter-Output nach test-output/self-lint.txt (.gitignore'd).
-    /// Für LLM-Agenten: nach dotnet test die Datei lesen statt erneut zu testen.
-    /// </summary>
     [Fact]
     public void DiagnosticDump_SelfLintOutput_WritesToFile()
     {

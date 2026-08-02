@@ -4,9 +4,6 @@ using System.CommandLine;
 
 namespace AiNetLinter.Cli;
 
-/// <summary>
-/// Erzeugt die System.CommandLine-Definition für die AiNetLinter-CLI.
-/// </summary>
 internal static class CliCommandBuilder
 {
     internal static (RootCommand Root, CliOptions Options) Build()

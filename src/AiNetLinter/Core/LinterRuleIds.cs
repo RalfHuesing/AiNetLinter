@@ -4,14 +4,8 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Core;
 
-/// <summary>
-/// Typisierte Konstanten für alle Linter-Regel-IDs.
-/// Statt Magic Strings "EnforceSealedClasses" → LinterRuleIds.EnforceSealedClasses.
-/// Änderungen an Config-Properties werden über nameof() automatisch propagiert.
-/// </summary>
 internal static class LinterRuleIds
 {
-    // --- Metriken (MetricsConfig) ---
     internal const string MaxLineCount = nameof(MetricsConfig.MaxLineCount);
     internal const string MaxMethodLineCount = nameof(MetricsConfig.MaxMethodLineCount);
     internal const string MaxMethodParameterCount = nameof(MetricsConfig.MaxMethodParameterCount);
@@ -62,18 +56,15 @@ internal static class LinterRuleIds
     // Namespace-Abhängigkeitsregel (über ForbiddenNamespaceDependencies-Collection gesteuert)
     internal const string ForbiddenNamespaceDependency = "ForbiddenNamespaceDependency";
 
-    // UI-Separation (UiSeparationConfig)
     internal const string BlazorRequireCodeBehind = "BlazorRequireCodeBehind";
     internal const string BlazorRequireCssIsolation = "BlazorRequireCssIsolation";
     internal const string WpfRequireMinimalCodeBehind = "WpfRequireMinimalCodeBehind";
 
-    // Web-Analyse (CssConfig)
     internal const string CSS_MaxCssLineCount = "CSS_MaxCssLineCount";
     internal const string CSS_PreferScopedCss = "CSS_PreferScopedCss";
     internal const string CSS_MaxCssSelectorComplexity = "CSS_MaxCssSelectorComplexity";
     internal const string CSS_ParseError = "CSS_ParseError";
 
-    // Web-Analyse (JsConfig)
     internal const string JS_MaxJsLineCount = "JS_MaxJsLineCount";
     internal const string JS_EnforceJsModules = "JS_EnforceJsModules";
     internal const string JS_SyntaxError = "JS_SyntaxError";

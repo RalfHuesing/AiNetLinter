@@ -5,11 +5,6 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
-/// <summary>
-/// Stellt sicher dass jede in RuleMetadataRegistry registrierte Regel einen expliziten
-/// Legende-Eintrag in RuleLegendRegistry hat. Schlägt an wenn eine neue Regel hinzugefügt
-/// wird ohne gleichzeitig Warum-Text und Fix-Alternativen zu ergänzen.
-/// </summary>
 public sealed class RuleLegendRegistryTests
 {
     public static IEnumerable<object[]> AllKnownRuleNames =>

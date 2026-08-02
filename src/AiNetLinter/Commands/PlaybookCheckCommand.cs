@@ -13,14 +13,8 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
 
-/// <summary>
-/// Prüft, ob das gespeicherte Playbook mit dem aktuell generierten übereinstimmt.
-/// </summary>
 internal static class PlaybookCheckCommand
 {
-    /// <summary>
-    /// Führt die Playbook-Drift-Prüfung aus.
-    /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;

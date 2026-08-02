@@ -8,20 +8,8 @@ using ExCSS;
 
 namespace AiNetLinter.Web;
 
-/// <summary>
-/// Analysiert CSS-Inhalte auf Groesse, Selektor-Komplexitaet und Scoped-CSS-Verwendung.
-/// Verwendet ExCSS als reines CSS-Parsing-Backend (MIT-Lizenz) — kein Code-Generator, nur AST-Walk.
-/// Implementiert die Regeln aus Research/Extend-Web-Features/01_CSS_Linting.md Phase 1.
-/// </summary>
 internal static class CssAnalyzer
 {
-    /// <summary>
-    /// Analysiert CSS-Inhalt und liefert alle Regelverstoesse fuer die drei CSS-Regeln.
-    /// </summary>
-    /// <param name="cssContent">Roher CSS-Quelltext.</param>
-    /// <param name="filePath">Absoluter Pfad zur CSS-Datei (fuer Violation-Metadata).</param>
-    /// <param name="config">Aktuelle effektive CssConfig (bereits mit ProjectOverride aufgeloest).</param>
-    /// <returns>Liste der Regelverstoesse; nie null, ggf. leer.</returns>
     public static IReadOnlyList<RuleViolation> Analyze(string cssContent, string filePath, CssConfig config)
     {
         var violations = new List<RuleViolation>();
@@ -152,10 +140,6 @@ internal static class CssAnalyzer
         return count;
     }
 
-    /// <summary>
-    /// Berechnet die maximale Komplexitaet (Anzahl Segmente) einer Selector-List.
-    /// Selektor-Segmente werden durch Komma, Whitespace und CSS-Combinators (>, +, ~) getrennt.
-    /// </summary>
     internal static int ComputeMaxSelectorDepth(string selectorText)
     {
         var max = 0;
