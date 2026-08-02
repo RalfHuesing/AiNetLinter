@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -8,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class FindReferencesToolTests
+public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public FindReferencesToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -26,10 +34,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_QualifiedName_ReturnsSingleMatch()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(catalog.Solution, "Greeter.Greet", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -39,10 +44,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_UnknownName_ReturnsSymbolNotFoundError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(catalog.Solution, "DoesNotExistXyz", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "DoesNotExistXyz", CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -53,10 +55,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_AmbiguousSimpleName_ReturnsAmbiguousSymbolError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(catalog.Solution, "Run", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "Run", CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -69,11 +68,8 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_PositionIdentifier_ReturnsSymbolAtPosition()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
-        var identifier = $"{fixture.GreeterPath}:5:19";
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(catalog.Solution, identifier, CancellationToken.None);
+        var identifier = $"{_fixture.Workspace.GreeterPath}:5:19";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -83,9 +79,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_ValidQualifiedName_ReturnsCallSiteInCaller()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -97,12 +91,8 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_ValidSymbolWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
-        // Caller.cs hat nach Fixture-Erweiterung 5 Greet-Aufrufe (1 in Run + 2 in RunTwice + 3 in RunThrice)
-        // ueber die Roslyn-Call-Site-API; maxResults: 2 erzwingt Trunkierung mit Meta-Zeile.
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 2, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
@@ -119,8 +109,6 @@ public sealed class FindReferencesToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(catalog);
 
-        // ValidClassA.DoWork existiert in der CompileErrorMini-Fixture ohne Aufrufstellen — daher
-        // greift der "Keine Aufrufstellen"-Pfad. Der Aggregate-Warnhinweis muss trotzdem davor stehen.
         var result = await FindReferencesTool.ExecuteAsync(state, "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);

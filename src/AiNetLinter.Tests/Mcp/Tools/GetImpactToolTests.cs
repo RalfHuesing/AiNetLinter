@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -8,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class GetImpactToolTests
+public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetImpactToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -26,9 +34,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_BothGitRefAndSymbolGiven_ReturnsInvalidArgumentError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: "HEAD~1", symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -40,9 +46,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierGiven_DelegatesToResolveSymbolAndReturnsCallSites()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -54,9 +58,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownSymbolIdentifier_ReturnsSymbolNotFoundError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "DoesNotExistXyz", maxResults: 50, CancellationToken.None);
 
@@ -83,9 +85,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_NoGitRepository_ReturnsEmptyResultNotCrash()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: null, maxResults: 50, CancellationToken.None);
 
@@ -97,12 +97,8 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
-        // Symbol-Branch: delegiert an FindReferencesTool.ResolveSymbolAsync + FindCallSitesAsync.
-        // Caller.cs hat nach Fixture-Erweiterung 5+ Greet-Aufrufe, maxResults: 2 erzwingt Trunkierung.
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 2, CancellationToken.None);
 
@@ -121,9 +117,6 @@ public sealed class GetImpactToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(catalog);
 
-        // Git-Branch: delegiert an DiffImpactAnalyzer.AnalyzeAsync.
-        // CalculatorCaller.cs hat nach Fixture-Erweiterung 6 Add-Aufrufe (1+2+3), maxResults: 2
-        // erzwingt Trunkierung.
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: null, maxResults: 2, CancellationToken.None);
 
@@ -141,8 +134,6 @@ public sealed class GetImpactToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(catalog);
 
-        // Symbol-Branch: ValidClassA.DoWork hat keine Aufrufstellen in der CompileErrorMini-Fixture,
-        // daher greift der "Keine Aufrufstellen"-Pfad. Aggregate-Warnhinweis muss davor stehen.
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);
 

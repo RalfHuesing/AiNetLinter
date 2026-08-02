@@ -8,16 +8,26 @@ using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.Tests.Mcp;
 using AiNetLinter.Tests.Output;
-using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
 
-[Collection("ConsoleTestCollection")]
-public sealed class McpServerCommandTests
+public sealed class McpServerCommandTests : IClassFixture<SymbolGraphMcpFixture>, IClassFixture<BaselineMcpFixture>
 {
+    private readonly SymbolGraphMcpFixture _symbolGraphMcpFixture;
+    private readonly BaselineMcpFixture _baselineMcpFixture;
+
+    public McpServerCommandTests(
+        SymbolGraphMcpFixture symbolGraphMcpFixture,
+        BaselineMcpFixture baselineMcpFixture)
+    {
+        _symbolGraphMcpFixture = symbolGraphMcpFixture;
+        _baselineMcpFixture = baselineMcpFixture;
+    }
+
     [Fact]
     public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
     {
@@ -133,20 +143,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_ServerRespondsWithNineTools()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
+        var tools = await _baselineMcpFixture.Client.ListToolsAsync();
 
         Assert.Equal(9, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
@@ -163,23 +160,9 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetHotspotsReturnsAllGreenForSmallFixture()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "get_hotspots",
-            new Dictionary<string, object?>(),
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?>());
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -189,23 +172,9 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetIndexScopeReturnsFileTypeBreakdown()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "get_index_scope",
-            new Dictionary<string, object?>(),
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?>());
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -217,78 +186,33 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetViolationsReturnsAtLeastOneViolation()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "get_violations",
-            new Dictionary<string, object?>(),
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?>());
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // ViolationTrigger.cs ist die deterministische Fixture-Verletzung (fehlendes `sealed`).
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task RunAsync_ValidFixture_SearchPatternReturnsExpectedHit()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "search_pattern",
-            new Dictionary<string, object?> { ["pattern"] = "Greeter" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["pattern"] = "Greeter" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // "Greeter" matcht in Greeter.cs selbst (Typ-Name, Aufrufstellen) — relativer Pfad
-        // muss im Treffer-Output erscheinen.
         Assert.Contains("Greeter.cs", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task RunAsync_ValidFixture_FindSymbolReturnsMatch()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _baselineMcpFixture.Client.CallToolAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "Violating" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["namePattern"] = "Violating" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -298,23 +222,9 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_FindReferencesReturnsCallSite()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "find_references",
-            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -326,22 +236,11 @@ public sealed class McpServerCommandTests
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.CommitCalculatorAddBodyChange();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
 
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
         var result = await client.CallToolAsync(
             "get_impact",
-            new Dictionary<string, object?> { ["gitRef"] = "HEAD~1" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["gitRef"] = "HEAD~1" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -353,22 +252,11 @@ public sealed class McpServerCommandTests
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
 
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
         var result = await client.CallToolAsync(
             "get_impact",
-            new Dictionary<string, object?>(),
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?>());
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -378,23 +266,9 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "get_file_skeleton",
-            new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/Greeter.cs" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/Greeter.cs" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -404,23 +278,9 @@ public sealed class McpServerCommandTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
-
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "ainetlinter-mcp-test-client",
-            Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
-        });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
             "get_type_hierarchy",
-            new Dictionary<string, object?> { ["typeIdentifier"] = "BaseGreeting" },
-            cancellationToken: cts.Token);
+            new Dictionary<string, object?> { ["typeIdentifier"] = "BaseGreeting" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

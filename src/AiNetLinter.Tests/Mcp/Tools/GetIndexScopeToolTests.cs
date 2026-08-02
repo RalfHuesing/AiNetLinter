@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -7,9 +11,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class GetIndexScopeToolTests
+public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetIndexScopeToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -25,24 +35,19 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsCsCountMarkedAsGraphCovered()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Greeter.cs, Caller.cs, OtherCaller.cs, Hierarchy.cs, ViolationTrigger.cs.
         Assert.Contains(".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsJsRazorCssCountsViaWebFileCatalog()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -56,9 +61,7 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsXamlAndHtmlCountsMarkedAsNotGraphCovered()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -85,7 +88,6 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Nur die eine echte Page.xaml/index.html aus wwwroot zaehlen, nicht die generierten unter obj/.
         Assert.Contains(".xaml: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
         Assert.Contains(".html: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
     }

@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -7,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class GetViolationsToolTests
+public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetViolationsToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -25,10 +34,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionNoScopeFilter_ReturnsViolationForKnownFixture()
     {
-        // ViolationTrigger.cs ist eine bewusste, deterministische Lint-Verletzung (fehlendes `sealed`).
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetViolationsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -41,24 +47,19 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_RestrictsViolations()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // ViolationTrigger.cs lebt in src/SymbolGraphMini/ — muss enthalten sein.
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetViolationsTool.ExecuteAsync(state, "DoesNotExistAnywhere", CancellationToken.None);
 
@@ -70,15 +71,12 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionWithViolation_FormatsViolationsAsMarkdownTable()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Markdown-Tabellen-Header muss im Output erscheinen.
         Assert.Contains("| Datei | Zeile | Regel | Details |", textContent.Text, StringComparison.Ordinal);
     }
 
@@ -89,9 +87,6 @@ public sealed class GetViolationsToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(catalog);
 
-        // Compile-Fehler (CS1513, CS0246 usw.) sind KEIN Lint-Verstoss — bestehende Lint-Ausgabe
-        // bleibt unveraendert, der EPIC-06-Compile-Warnhinweis wird fuer get_violations NICHT
-        // aktiviert (Lint-Output blaeht sich nicht auf). Negativtest.
         var result = await GetViolationsTool.ExecuteAsync(state, null, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);

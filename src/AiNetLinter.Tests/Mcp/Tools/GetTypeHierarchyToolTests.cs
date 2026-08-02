@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -7,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class GetTypeHierarchyToolTests
+public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetTypeHierarchyToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -25,9 +34,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownTypeIdentifier_ReturnsSymbolNotFoundError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", CancellationToken.None);
 
@@ -39,9 +46,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_IdentifierResolvesToMethodNotType_ReturnsInvalidArgumentError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", CancellationToken.None);
 
@@ -53,9 +58,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_ClassWithBaseAndDerived_ReturnsInterfaceAndDerivedClass()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
 
@@ -68,9 +71,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_InterfaceType_ReturnsImplementingClasses()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "IGreeting", CancellationToken.None);
 
@@ -82,9 +83,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_LeafClassWithoutDerivedTypes_ReturnsNoDerivedTypesMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "SpecialGreeting", CancellationToken.None);
 
@@ -97,9 +96,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_ClassWithImplicitObjectBase_ReturnsExternalBaseTypeInsteadOfEmptyMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
 
@@ -112,9 +109,7 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_TypeWithExternalInterface_ReturnsExternalInterfaceInsteadOfEmptyMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DisposableGreeting", CancellationToken.None);
 

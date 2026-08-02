@@ -67,6 +67,19 @@ public sealed class McpTestClient : IAsyncDisposable
     }
 
     /// <summary>
+    /// Ruft die Liste aller vom MCP-Server bereitgestellten Tools ab.
+    /// </summary>
+    public async Task<IList<McpClientTool>> ListToolsAsync(
+        int timeoutSeconds = 30,
+        CancellationToken cancellationToken = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
+        return await _client.ListToolsAsync(cancellationToken: cts.Token);
+    }
+
+    /// <summary>
     /// Führt ein MCP-Tool aus und liefert den String des ersten <see cref="TextContentBlock"/> zurück.
     /// Wirft eine Exception bei MCP-Fehlerstatus.
     /// </summary>

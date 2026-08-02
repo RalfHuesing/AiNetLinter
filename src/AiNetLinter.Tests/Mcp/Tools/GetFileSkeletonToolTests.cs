@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -7,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class GetFileSkeletonToolTests
+public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetFileSkeletonToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -25,9 +34,7 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownFilePath_ReturnsResourceNotFoundError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/DoesNotExist.cs", CancellationToken.None);
@@ -40,9 +47,7 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_ValidRelativePath_ReturnsGreeterSkeletonWithGreetMethod()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
@@ -58,14 +63,12 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_AbsolutePath_ResolvesSameAsRelativePath()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(catalog);
+        var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var relativeResult = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
         var absoluteResult = await GetFileSkeletonTool.ExecuteAsync(
-            state, fixture.GreeterPath, CancellationToken.None);
+            state, _fixture.Workspace.GreeterPath, CancellationToken.None);
 
         Assert.NotEqual(true, relativeResult.IsError);
         Assert.NotEqual(true, absoluteResult.IsError);
@@ -82,17 +85,13 @@ public sealed class GetFileSkeletonToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(catalog);
 
-        // BrokenClassA.cs hat einen Syntax-Fehler (offene Klammer in Methodensignatur) — der
-        // datei-spezifische Warnhinweis muss erscheinen, weil das Skelett unvollstaendig ist.
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/CompileErrorMini/BrokenClassA.cs", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        // Datei-spezifischer Hinweis (NICHT Aggregate-Format "N Dateien mit Compile-Fehlern").
         Assert.Contains("Diese Datei hat", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
-        // Diagnostics-IDs (CS1513 etc.) koennen im datei-spezifischen Format vorkommen.
         Assert.Matches(@"CS\d{4}", text);
     }
 }

@@ -10,9 +10,15 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
-public sealed class SearchPatternToolTests
+public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public SearchPatternToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -29,27 +35,21 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_PlainTextSubstring_FindsExpectedHitsInFixture()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "Greeter", isRegex: false, maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Greeter.cs enthaelt "public class Greeter" und ist ueber den project-dir-Scan erreichbar.
         Assert.Contains("Greeter.cs", textContent.Text, StringComparison.Ordinal);
-        // Echte Treffer (nicht nur Path-Match).
         Assert.Contains("Greeter", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_RegexPattern_FindsExpectedHitsInFixture()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -60,31 +60,24 @@ public sealed class SearchPatternToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Greeter.cs/Hierarchy.cs/Caller.cs/OtherCaller.cs/ViolationTrigger.cs beginnen mit "public class".
         Assert.Contains("public class", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_PlainTextTruncatesAtMaxResults_AppendsMetaLine()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "public", isRegex: false, maxResults: 2, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // "public" matcht in jeder .cs-Datei mehrfach, also N >= 3 garantiert.
         Assert.Contains("[", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern verfeinern oder maxResults erhöhen", textContent.Text, StringComparison.Ordinal);
 
-        // Genau 2 Trefferzeilen (gezaehlt an ":NNN: " Muster, 1-basiert, mind. 3-stellig ist nicht
-        // garantiert, also nur auf ":\d+: " matchen). Meta-Zeile beginnt mit "[", Trefferzeilen
-        // mit relativen Pfaden — die ersten zwei Zeilen vor der Meta-Zeile sind Treffer.
         var lines = textContent.Text.Split('\n');
         var metaIndex = -1;
         for (var i = 0; i < lines.Length; i++)
@@ -101,9 +94,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_NoMatch_ReturnsZeroHitsMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -138,16 +129,13 @@ public sealed class SearchPatternToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Generated.cs unter obj/ muss durch den IsGeneratedPath-Filter ausgeschlossen sein.
         Assert.DoesNotContain("Generated.cs", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_InvalidRegex_ReturnsInvalidArgumentError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "(unclosed", isRegex: true, maxResults: 50, CancellationToken.None);
@@ -161,9 +149,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_EmptyPattern_ReturnsInvalidArgumentError()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(catalog);
+        using var state = new McpCodeGraphServer(_fixture.Catalog);
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "", isRegex: false, maxResults: 50, CancellationToken.None);
@@ -171,11 +157,6 @@ public sealed class SearchPatternToolTests
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        // M-1-Regression-Schutz: der Hint muss search_pattern-spezifisch sein, nicht der
-        // get_impact-Hartkodierung ("Entweder gitRef ODER symbolIdentifier angeben, nie beide.")
-        // aus McpToolResults.InvalidArgument. Der konkrete Hint-Wortlaut ist im Tool fixiert;
-        // diese Assertion haengt an der gleichen Formulierung wie der Code-Fix. Bei
-        // Aenderung des Hint-Wortlauts im Tool ist diese Assertion mitzuaendern.
         Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("gitRef", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
@@ -188,7 +169,6 @@ public sealed class SearchPatternToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(catalog);
 
-        // "ValidClass" matcht in den 3 ValidClass-Dateien — Aggregate-Warnhinweis muss davor stehen.
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "ValidClass", isRegex: false, maxResults: 50, CancellationToken.None);
 

@@ -10,7 +10,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Baseline;
 
-[Collection("ConsoleTestCollection")]
 public sealed class WebBaselineTests
 {
     [Fact]
