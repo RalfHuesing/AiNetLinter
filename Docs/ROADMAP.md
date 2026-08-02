@@ -460,4 +460,38 @@ Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projek
 
 ---
 
+## MCP-Codegraph-Server (EPIC-01..08)
+
+Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus.
+
+### Abgeschlossen
+
+- [x] **EPIC-01 — CLI-Flag:** `--mcp-server` als neuer Server-Start, stdio-Transport, JSON-RPC-Handshake.
+- [x] **EPIC-02 — Resident-Server:** Solution wird einmal via `MSBuildWorkspace` geladen und über die Prozesslaufzeit resident gehalten; Staleness-Invalidierung per Datei-`mtime` + SHA-256-Hash mit inkrementellem `WithDocumentText` (kein Komplett-Reload).
+- [x] **EPIC-03 — 5/9 Symbolgraph-Tools:** `find_symbol`, `find_references`, `get_impact`, `get_type_hierarchy`, `get_file_skeleton`.
+- [x] **EPIC-04 — 4/4 Struktur-/Qualitäts-Tools:** `get_index_scope`, `get_hotspots`, `get_violations`, `search_pattern` (alle reviewt, approved).
+- [x] **EPIC-05 — Scope-Kommunikation + Miss-Hint:** `McpServerOptionsFactory.ServerInstructions` sendet den C#-only-Scope zentral beim `initialize`-Handshake; `find_symbol` liefert bei 0 C#-Treffern eine trunkierte Datei-Liste der Nicht-C#-Treffer als Fallback-Hinweis auf `search_pattern`.
+- [x] **EPIC-06 — Robustheit:** 8/9 Tools prependieren einen aggregierten Compile-Fehler-Warnhinweis; `get_file_skeleton` nutzt einen datei-spezifischen Warnhinweis; nicht-ladbare Solution führt zu Server-Start mit `[WARN]` und Tool-Calls liefern `SOLUTION_NOT_LOADED` statt Crash; Defensiv-Wrapper fangen unerwartete Roslyn-Exceptions ab.
+- [x] **EPIC-07 — Test-Infrastruktur:** 9 neue Test-Klassen + Erweiterung der `McpLiveRepositoryTests`/`McpTestClient`-Harness + neue Fixtures (`CompileErrorMiniFixture`, `McpLiveRepositoryFixture`, u. a.); Volllauf 1161/1161 grün.
+- [ ] **EPIC-08 — Doku:** **in Umsetzung (Einheit 008)** — neue Sektion „MCP-Server-Modus" in `agent-api.md`, „MCP-Server registrieren" in `integration.md` inkl. Tool-vs-`rg`-Empfehlung, dieser Roadmap-Status-Block, README-Hinweis; A3-verifiziert durch `McpDocumentationSmokeTests` (3 Tests gegen den laufenden Server).
+
+### Nächste Phase — P0/P1-Rest-Erweiterungen (Konzept Z. 207-324)
+
+Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. Jede hat eigenes Risiko und bekommt eine eigene Planungs-Einheit:
+
+- **Trunkierung + `maxResults` für alle Listen-Tools** — `find_symbol`, `find_references`, `get_impact`, `search_pattern` mit `maxResults`-Parameter (Default 50) und einheitlicher Meta-Zeile. Status: **bereits umgesetzt** in 002/004/005; bleibt hier als Referenz.
+- **Regel-ID in `get_violations`-Ausgabe** — jeder Verstoß trägt seine Regel-ID, kein `agent_hint`-Feld nötig. Status: **bereits umgesetzt** in 001; bleibt hier als Referenz.
+- **Kaltstart entkoppeln** — stdio-Transport zuerst aufsetzen, Solution-Load als Hintergrund-Task; `McpCodeGraphServer` bekommt dritten Zustand „lädt noch", Tools antworten in dieser Zeit mit einer strukturierten „Solution wird noch geladen"-Antwort. **Geplant** (Konzept Z. 265-275).
+- **Neu angelegte/gelöschte `.cs`-Dateien sichtbar machen** — zusätzlicher Verzeichnis-Sweep, der Dokumente ohne Datei entfernt und neue Dateien über die Roslyn-Solution-API einhängt (Projekt-Zuordnung über längsten gemeinsamen Pfad-Präfix). Bekannte Einschränkung: `<Compile Remove=...>`-Ausschlüsse werden nicht erkannt. **Geplant** (Konzept Z. 241-256).
+- **Staleness-Sweep über Verzeichnis-`mtime` kurzschließen** — Verzeichnis-`mtime` cachen, unveränderte Verzeichnisse komplett überspringen; deckt zusammen mit dem vorigen Punkt den Datei-Sweep ab. **Geplant** (Konzept Z. 276-283).
+- **`rules.json`-Auto-Discovery** — ohne `--config` neben der aufgelösten Solution-Datei nach `rules.json` suchen; wird keine gefunden, `[WARN]` auf stderr **und** Vermerk in `get_violations`-Antwort. **Geplant** (Konzept Z. 257-264).
+- **stdout strukturell als reiner Protokollkanal** — eigene `ILintConsole`-Implementierung für den MCP-Modus, die auch `WriteLine` nach stderr leitet. **Geplant** (Konzept Z. 284-293).
+- **Generierte Last-Fixture** — synthetische Solution definierter Größe (z. B. 500/5.000 Dateien) als Skalierungsnachweis; Messlauf für Kaltstart-Zeit und Tool-Call-Dauer. **Geplant** (Konzept Z. 294-304).
+- **Opt-in Call-Log (`--mcp-log`)** — schlankes Call-Log (Zeitstempel, Tool-Name, Parameter, Ergebniszeilen, Trunkierung ja/nein, Dauer, Leermenge), Default aus. **Geplant** (Konzept Z. 305-315).
+- **Tool-vs-`rg`-Empfehlung in `Docs/integration.md`** — reine Doku, kein Code. Status: **umgesetzt in 008** (siehe `integration.md#mcp-server-registrieren`).
+
+Details und Reihenfolge der geplanten Punkte: `tasks/codegraph-mcp-server/konzept.md` Z. 207-324. Jede Erweiterung wird einzeln geplant, eigene Einheit, eigener Review — keine „Alles-oder-nichts"-Bündelung.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
