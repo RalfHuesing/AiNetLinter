@@ -11,19 +11,24 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Umfassende E2E- und Edge-Case-Tests für alle 9 MCP-Tools.
-/// Nutzt Fixture-Workspaces zur gezielten Verifikation von Randfällen (Edge Cases).
+/// Umfassende E2E- und Edge-Case-Tests fuer alle 9 MCP-Tools.
+/// Nutzt <see cref="SymbolGraphMcpFixture"/> zur einmaligen Fixture- und Client-Instanziierung pro Testklasse.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection("ConsoleTestCollection")]
-public sealed class McpServerAllToolsE2ETests
+public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixture>
 {
+    private readonly SymbolGraphMcpFixture _fixture;
+
+    public McpServerAllToolsE2ETests(SymbolGraphMcpFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public async Task FindSymbol_KindFilter_ReturnsFilteredSymbolsOnly()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "find_symbol",
             new Dictionary<string, object?>
             {
@@ -37,10 +42,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task FindSymbol_ZeroResults_ReturnsNoMatchMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "find_symbol",
             new Dictionary<string, object?> { ["namePattern"] = "NonExistentSymbol999" });
 
@@ -50,10 +52,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task FindReferences_UnknownSymbol_ReturnsErrorResult()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var result = await client.CallToolAsync(
+        var result = await _fixture.Client.CallToolAsync(
             "find_references",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "NonExistent.Symbol" });
 
@@ -65,10 +64,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetImpact_BothArgumentsProvided_ReturnsErrorMessage()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var result = await client.CallToolAsync(
+        var result = await _fixture.Client.CallToolAsync(
             "get_impact",
             new Dictionary<string, object?>
             {
@@ -82,10 +78,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetTypeHierarchy_ValidType_ReturnsHierarchyInfo()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "get_type_hierarchy",
             new Dictionary<string, object?> { ["typeIdentifier"] = "Greeter" });
 
@@ -95,10 +88,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetTypeHierarchy_UnknownType_ReturnsErrorResult()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var result = await client.CallToolAsync(
+        var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy",
             new Dictionary<string, object?> { ["typeIdentifier"] = "UnknownClass123" });
 
@@ -110,10 +100,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetFileSkeleton_NonExistentFile_ReturnsErrorOrNotFound()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var result = await client.CallToolAsync(
+        var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton",
             new Dictionary<string, object?> { ["filePath"] = "src/DoesNotExist.cs" });
 
@@ -123,10 +110,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetFileSkeleton_NonCsFile_ReturnsErrorResult()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var result = await client.CallToolAsync(
+        var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton",
             new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/wwwroot/Page.xaml" });
 
@@ -138,10 +122,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetIndexScope_ValidWorkspace_ReturnsFileTypeBreakdown()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync("get_index_scope");
+        var text = await _fixture.Client.CallToolGetTextAsync("get_index_scope");
 
         Assert.Contains(".cs", text, StringComparison.Ordinal);
         Assert.Contains(".razor", text, StringComparison.Ordinal);
@@ -151,10 +132,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetHotspots_ValidWorkspace_ReturnsHotspotSummary()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync("get_hotspots");
+        var text = await _fixture.Client.CallToolGetTextAsync("get_hotspots");
 
         Assert.NotNull(text);
     }
@@ -162,10 +140,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task GetViolations_WithScopeFilter_FiltersResults()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "get_violations",
             new Dictionary<string, object?> { ["scopeFilter"] = "SymbolGraphMini" });
 
@@ -175,10 +150,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task SearchPattern_PlainTextSearch_ReturnsMatches()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "search_pattern",
             new Dictionary<string, object?>
             {
@@ -192,10 +164,7 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task SearchPattern_RegexSearch_ReturnsMatches()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "search_pattern",
             new Dictionary<string, object?>
             {
@@ -209,9 +178,6 @@ public sealed class McpServerAllToolsE2ETests
     [Fact]
     public async Task UnknownTool_Call_ThrowsMcpProtocolException()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
-
-        await Assert.ThrowsAsync<McpProtocolException>(() => client.CallToolAsync("unknown_tool_name"));
+        await Assert.ThrowsAsync<McpProtocolException>(() => _fixture.Client.CallToolAsync("unknown_tool_name"));
     }
 }

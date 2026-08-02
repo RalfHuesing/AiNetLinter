@@ -2,41 +2,32 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
+using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Live-Integrationstests für alle 9 MCP-Tools direkt gegen das eigene Repository.
+/// Live-Integrationstests fuer alle 9 MCP-Tools direkt gegen das eigene Repository.
 /// Ersetzt ad-hoc Python-Dogfooding-Skripte durch saubere, automatisierte C# xUnit-Tests.
+/// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Testklasse.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection("ConsoleTestCollection")]
-public sealed class McpLiveRepositoryTests
+public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixture>
 {
-    private static string GetRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "AiNetLinter.slnx")))
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
+    private readonly McpLiveRepositoryFixture _fixture;
 
-        throw new DirectoryNotFoundException("AiNetLinter.slnx konnte im Elternverzeichnispfad nicht gefunden werden.");
+    public McpLiveRepositoryTests(McpLiveRepositoryFixture fixture)
+    {
+        _fixture = fixture;
     }
 
     [Fact]
     public async Task LiveDogfood_FindSymbol_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "find_symbol",
             new Dictionary<string, object?>
             {
@@ -52,10 +43,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_FindReferences_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "find_references",
             new Dictionary<string, object?>
             {
@@ -70,10 +58,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetImpact_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "get_impact",
             new Dictionary<string, object?>
             {
@@ -88,10 +73,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetTypeHierarchy_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "get_type_hierarchy",
             new Dictionary<string, object?>
             {
@@ -106,10 +88,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetFileSkeleton_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "get_file_skeleton",
             new Dictionary<string, object?>
             {
@@ -124,10 +103,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetIndexScope_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync("get_index_scope");
+        var text = await _fixture.Client.CallToolGetTextAsync("get_index_scope");
 
         Assert.NotNull(text);
         Assert.NotEmpty(text);
@@ -137,10 +113,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetHotspots_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync("get_hotspots");
+        var text = await _fixture.Client.CallToolGetTextAsync("get_hotspots");
 
         Assert.NotNull(text);
         Assert.NotEmpty(text);
@@ -149,10 +122,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_GetViolations_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync("get_violations");
+        var text = await _fixture.Client.CallToolGetTextAsync("get_violations");
 
         Assert.NotNull(text);
         Assert.NotEmpty(text);
@@ -161,10 +131,7 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_SearchPattern_ReturnsResults()
     {
-        var repoRoot = GetRepositoryRoot();
-        await using var client = await McpTestClient.ConnectAsync(repoRoot);
-
-        var text = await client.CallToolGetTextAsync(
+        var text = await _fixture.Client.CallToolGetTextAsync(
             "search_pattern",
             new Dictionary<string, object?>
             {

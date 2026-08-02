@@ -417,6 +417,16 @@
       "Metrics": {
         "MaxAIContextFootprint": 2700
       }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetImpactTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
     }
   }
 }

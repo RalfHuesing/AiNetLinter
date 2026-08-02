@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -8,8 +10,19 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Collection("ConsoleTestCollection")]
-public sealed class FindSymbolToolTests
+public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>, IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly BaselineCatalogFixture _baselineFixture;
+    private readonly SymbolGraphCatalogFixture _symbolGraphFixture;
+
+    public FindSymbolToolTests(
+        BaselineCatalogFixture baselineFixture,
+        SymbolGraphCatalogFixture symbolGraphFixture)
+    {
+        _baselineFixture = baselineFixture;
+        _symbolGraphFixture = symbolGraphFixture;
+    }
+
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
@@ -25,11 +38,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_SubstringMatch_ReturnsFileLineAndKind()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "Violating", kind: null, maxResults: 50);
+            _baselineFixture.Catalog.Solution, "Violating", kind: null, maxResults: 50);
 
         Assert.Contains("ViolatingClass.cs", result);
         Assert.Contains("Klasse", result);
@@ -39,11 +49,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_KindFilterExcludesNonMatchingKind()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "Violating", kind: "method", maxResults: 50);
+            _baselineFixture.Catalog.Solution, "Violating", kind: "method", maxResults: 50);
 
         Assert.Contains("Keine Treffer", result);
     }
@@ -51,11 +58,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_NoMatch_ReturnsNoResultsText()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "DoesNotExistXyz", kind: null, maxResults: 50);
+            _symbolGraphFixture.Catalog.Solution, "DoesNotExistXyz", kind: null, maxResults: 50);
 
         Assert.Contains("Keine Treffer fuer 'DoesNotExistXyz'", result);
     }
@@ -63,11 +67,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_NoCsMatchButNonCsHit_ReturnsMissHintWithFileList()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "userService", kind: null, maxResults: 50);
+            _symbolGraphFixture.Catalog.Solution, "userService", kind: null, maxResults: 50);
 
         // C#-Leermenge-Bestaetigung.
         Assert.Contains("Keine Treffer fuer 'userService'", result);
@@ -84,11 +85,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_NoCsMatchAndNoNonCsHit_ReturnsPlainNoMatchText()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "DoesNotExistXyzBlub123", kind: null, maxResults: 50);
+            _symbolGraphFixture.Catalog.Solution, "DoesNotExistXyzBlub123", kind: null, maxResults: 50);
 
         // Plain-NoMatch-Text (kein Miss-Hint-Pfad).
         Assert.Contains("Keine Treffer fuer 'DoesNotExistXyzBlub123'", result);
@@ -99,11 +97,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_KindFilterMissHit_StillFires()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "userService", kind: "class", maxResults: 50);
+            _symbolGraphFixture.Catalog.Solution, "userService", kind: "class", maxResults: 50);
 
         // Kind-Filter aendert nichts an der Non-C#-Suche — Miss-Hint feuert trotzdem.
         Assert.Contains("Kind-Filter: class", result);
@@ -114,11 +109,8 @@ public sealed class FindSymbolToolTests
     [Fact]
     public async Task FindMatchesAndFormat_CaseInsensitive_MatchesRegardlessOfCase()
     {
-        using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            catalog.Solution, "violating", kind: null, maxResults: 50);
+            _baselineFixture.Catalog.Solution, "violating", kind: null, maxResults: 50);
 
         Assert.Contains("ViolatingClass", result);
     }
