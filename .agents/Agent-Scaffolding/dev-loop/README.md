@@ -9,7 +9,6 @@ und selbstkorrigierend aus:
 |---|---|---|---|
 | 1. Planung | [`planning/`](planning/README.md) | Interaktiver Dialog in der laufenden Session | Du hast nur eine grobe Idee, willst sie im Gespräch schärfen |
 | 2. Umsetzung | [`drift-loop/`](drift-loop/README.md) | Autonomer Subagenten-Loop, ein Step nach dem anderen JIT geplant (Planer → Coder → Kritiker) | Der Weg zum Ziel wird Schritt für Schritt JIT mit Blick auf den echten Codestand geplant |
-| 2. Umsetzung (Alternative, **PoC**) | [`dynamic-loop/`](dynamic-loop/README.md) | Derselbe Einstieg, feste Rollen (Planer/Coder/Kritiker), aber ein kurzer Regel-Kern aus harten Regeln + benannten Gefahren statt eines vollen Verfahrens (~620 Zeilen) | Experiment: Reicht ein kleiner Regel-Kern mit festen Rollen, wenn das *Wie* dem Modell-Urteil überlassen bleibt? Noch ungetestet, siehe `dynamic-loop/README.md` für die Begründung |
 
 **Ablauf:**
 1. Kannst du die Aufgabe schon in 5 Sätzen mit klarem Ziel, Scope und

@@ -65,9 +65,18 @@ Vom Orchestrator:
 
 ### Schritt 4 — Build/Test laufen lassen
 
-Build-/Test-Commands aus der Tech-Stack-Notiz ausführen. Bei rot gilt die
-Vorab-Klassifikation Infrastruktur/Tooling vs. Code-Defekt (Schritt 4a)
-und danach ein Budget von 3 Versuchen:
+Während der Implementierung (Schritt 3) darfst du beliebig oft gezielt
+testen — nur das betroffene Modul, oder eine vom Projekt selbst
+dokumentierte schnelle Teilmenge (`<rules_dir>/**`/`AGENTS.md`, falls
+vorhanden, z. B. eine Kategorisierung wie „nur Unit-Tests"). Das ist
+Iteration, kein Ersatz für das Folgende.
+
+**Vor dem Commit (Schritt 5) ist genau ein vollständiger Lauf des
+Test-Commands aus der Tech-Stack-Notiz Pflicht** — nicht mehrfach
+wiederholt, nicht durch den gezielten Testlauf ersetzt. Das ist das
+einzige Gate, das zählt: grün davor heißt nichts, grün danach schon. Bei
+rot gilt die Vorab-Klassifikation Infrastruktur/Tooling vs. Code-Defekt
+(Schritt 4a) und danach ein Budget von 3 Versuchen:
 
 #### Schritt 4a — Vorab-Klassifikation: Infrastruktur/Tooling vs. Code
 
