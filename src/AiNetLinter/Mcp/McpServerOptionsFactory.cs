@@ -1,22 +1,20 @@
 #nullable enable
 
 using System.Reflection;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection. Bewusst aus
-/// <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert: haette
-/// <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen Members, waechst dessen
-/// AIContextFootprint (siehe <c>AiNetLinter.mdc</c>) durch die Tool-Registrierungs-Abhaengigkeiten
-/// (<see cref="McpCodeGraphServer"/>, <see cref="FindSymbolTool"/>, ...) ueber das Limit.
+/// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection. Bewusst
+/// aus <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert und durch
+/// <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder aufgeteilt
+/// (TD-014): haette <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen
+/// Members, waechst dessen AIContextFootprint durch die Tool-Registrierungs-
+/// Abhaengigkeiten ueber das Limit.
 /// </summary>
 internal static class McpServerOptionsFactory
 {
-    private const string ServerName = "ainetlinter";
-
     // Zentraler Scope-Hint fuer den initialize-Handshake (EPIC-05 / 003).
     // Wird via ModelContextProtocol-SDK-Property McpServerOptions.ServerInstructions
     // an den Server-Info-Block der initialize-Antwort durchgereicht. Nennt die
@@ -31,22 +29,17 @@ internal static class McpServerOptionsFactory
         "get_index_scope, get_hotspots.";
 
     /// <summary>
-    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen den
-    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein DI-Container
-    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
+    /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
+    /// DI-Container (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static McpServerOptions Create(McpCodeGraphServer mcpState)
     {
-        return new McpServerOptions
-        {
-            ServerInfo = new Implementation
-            {
-                Name = ServerName,
-                Version = GetServerVersion(),
-            },
-            ServerInstructions = ServerInstructions,
-            ToolCollection = BuildToolCollection(mcpState),
-        };
+        return new McpServerOptionsBuilder()
+            .WithServerVersion(GetServerVersion())
+            .WithServerInstructions(ServerInstructions)
+            .WithToolCollection(BuildToolCollection(mcpState))
+            .Build();
     }
 
     private static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(McpCodeGraphServer mcpState)
