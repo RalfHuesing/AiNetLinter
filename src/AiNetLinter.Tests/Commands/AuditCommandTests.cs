@@ -11,7 +11,10 @@ using AiNetLinter.Commands;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// Tests für <see cref="AuditCommand"/>.
+/// Tests für <see cref="AuditCommand"/>. Leitet <see cref="Console.Out"/> und
+/// <see cref="Console.Error"/> via <see cref="Console.SetOut"/>/<see cref="Console.SetError"/>
+/// auf <see cref="StringWriter"/> um, um die Fehlerausgabe bei fehlender Config-Datei zu prüfen —
+/// parallel laufende Tests würden sich die globale Konsolenumleitung gegenseitig überschreiben.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]

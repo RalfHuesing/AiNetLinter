@@ -14,7 +14,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// beobachtbarem Server-Verhalten.
 /// </summary>
 [Trait("Category", "Integration")]
-[Collection("ConsoleTestCollection")]
 public sealed class McpDocumentationSmokeTests : IClassFixture<McpLiveRepositoryFixture>
 {
     private readonly McpLiveRepositoryFixture _fixture;

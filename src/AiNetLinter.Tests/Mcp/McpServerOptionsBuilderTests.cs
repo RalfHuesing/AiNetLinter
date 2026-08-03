@@ -11,7 +11,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// eigenstaendige, testbare Einheit ist — die Factory-Tests pruefen nur den Endpunkt
 /// <c>Create(state) -&gt; McpServerOptions</c> via realer Integration.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpServerOptionsBuilderTests
 {
     [Fact]

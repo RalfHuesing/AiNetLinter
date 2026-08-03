@@ -5,6 +5,12 @@ using AiNetLinter.Cli;
 
 namespace AiNetLinter.Tests.Cli;
 
+/// <summary>
+/// <c>Main_WithValidArgs_PrintsRunHeaderInTextMode</c> leitet <c>Console.Out</c> via
+/// <c>Console.SetOut</c> auf einen <c>StringWriter</c> um, um die Textmodus-Kopfzeile
+/// ("# Run: ") zu pruefen — parallel laufende Tests wuerden sich die globale
+/// Konsolenumleitung gegenseitig ueberschreiben.
+/// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class ProgramTests

@@ -3,6 +3,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
@@ -24,12 +25,11 @@ namespace AiNetLinter.Tests.Commands;
 /// zurueckliefert), dann wuerde der Server die erste Solution laden, der Exit-Code
 /// waere 0, und der Test schlaegt fehl.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandAmbiguityE2ETests
 {
     [Fact]
-    public void RunAsync_DirectoryWithTwoSlnx_AbortsWithAmbiguousSolutionError()
+    public async Task RunAsync_DirectoryWithTwoSlnx_AbortsWithAmbiguousSolutionError()
     {
         using var tempDir = TestTempDirectory.Create("ainetlinter-ambiguity-");
         tempDir.CreateFile("First.slnx", "");
@@ -48,6 +48,7 @@ public sealed class McpServerCommandAmbiguityE2ETests
             CreateNoWindow = true,
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
         Assert.True(

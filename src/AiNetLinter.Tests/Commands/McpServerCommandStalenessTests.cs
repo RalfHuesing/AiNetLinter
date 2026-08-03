@@ -23,7 +23,6 @@ namespace AiNetLinter.Tests.Commands;
 /// enthaelt weiterhin den alten Inhalt. Der zweite find_symbol-Aufruf wuerde die neue
 /// Klasse <c>CallerRenamedXyz</c> nicht finden, der Test schlaegt fehl.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandStalenessTests
 {

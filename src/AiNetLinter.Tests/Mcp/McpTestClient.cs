@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -41,6 +42,16 @@ public sealed class McpTestClient : IAsyncDisposable
 
         while (attempt <= retryOptions.MaxRetries)
         {
+            // Slot wird nur fuer den eigentlichen Subprozess-Start plus Handshake belegt und
+            // sofort danach freigegeben (nicht erst bei DisposeAsync) — die Bremse begrenzt so
+            // die Zahl gleichzeitiger Start-Vorgaenge (der teure, ressourcenintensive Moment),
+            // nicht die Zahl insgesamt gleichzeitig verbundener Clients. Waere die Freigabe an
+            // DisposeAsync gekoppelt, wuerde jeder Aufrufer mit mehr gleichzeitigen Connects als
+            // Gate-Slots (z. B. McpTestClientParallelTests mit 16) dauerhaft blockieren: alle
+            // erfolgreichen Connects haetten ihre Slots noch belegt und die wartenden Connects
+            // koennten nie einen freien Slot bekommen, weil dessen Freigabe erst nach Abschluss
+            // aller Connects erfolgen wuerde — klassischer Deadlock.
+            using var lease = await SubprocessConcurrencyGate.AcquireAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");

@@ -10,7 +10,10 @@ using AiNetLinter.Commands;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// Tests für <see cref="PlaybookCheckCommand"/>.
+/// Tests für <see cref="PlaybookCheckCommand"/>. Leitet <see cref="Console.Error"/> via
+/// <see cref="Console.SetError"/> um, um die "[ERROR]"-Meldung bei fehlender Playbook-Datei
+/// zu prüfen — parallel laufende Tests würden sich die globale Konsolenumleitung gegenseitig
+/// überschreiben.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]

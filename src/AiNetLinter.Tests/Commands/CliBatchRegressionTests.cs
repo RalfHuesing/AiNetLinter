@@ -3,6 +3,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
@@ -24,12 +25,11 @@ namespace AiNetLinter.Tests.Commands;
 /// <c>ViolationTrigger.cs</c> durch einen Refactor von <c>EnforceSealedClasses</c>
 /// stillschweigend uebersprungen wird, schlaegt dieser Test fehl.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class CliBatchRegressionTests
 {
     [Fact]
-    public void RunLinterCli_OnSymbolGraphMiniFixture_ReportsViolationAndExitsZero()
+    public async Task RunLinterCli_OnSymbolGraphMiniFixture_ReportsViolationAndExitsZero()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
@@ -50,6 +50,7 @@ public sealed class CliBatchRegressionTests
             CreateNoWindow = true,
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 

@@ -9,7 +9,6 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
-[Collection("ConsoleTestCollection")]
 public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>, IClassFixture<SymbolGraphCatalogFixture>
 {
     private readonly BaselineCatalogFixture _baselineFixture;

@@ -3,6 +3,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
 namespace AiNetLinter.Tests.Cli;
@@ -11,7 +13,6 @@ namespace AiNetLinter.Tests.Cli;
 // @covers NamespaceFilter
 // @covers SkeletonSyntaxWalker
 // @covers SkeletonMapBuilder
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class FilterCliIntegrationTests
 {
@@ -31,9 +32,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --exclude-tests ────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_ExcludeTests_OutputContainsNoTestTypes()
+    public async Task SkeletonMap_ExcludeTests_OutputContainsNoTestTypes()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-tests");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-tests");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -44,9 +45,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void VocabularyMap_ExcludeTests_OutputContainsNoTestSuffix()
+    public async Task VocabularyMap_ExcludeTests_OutputContainsNoTestSuffix()
     {
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map vocabulary --exclude-tests");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map vocabulary --exclude-tests");
 
         Assert.Equal(0, exitCode);
         // Tests-only Dateipfade dürfen nicht erscheinen
@@ -57,9 +58,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --tests-only ───────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_TestsOnly_OutputContainsOnlyTestNamespaces()
+    public async Task SkeletonMap_TestsOnly_OutputContainsOnlyTestNamespaces()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --tests-only");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --tests-only");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -73,9 +74,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --project ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_ProjectFilter_OutputContainsOnlyMatchingProject()
+    public async Task SkeletonMap_ProjectFilter_OutputContainsOnlyMatchingProject()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --project AiNetLinter");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --project AiNetLinter");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -84,9 +85,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_ProjectGlobFilter_WildcardMatchesTests()
+    public async Task SkeletonMap_ProjectGlobFilter_WildcardMatchesTests()
     {
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --project \"*.Tests\"");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --project \"*.Tests\"");
 
         Assert.Equal(0, exitCode);
         // Nur Tests-Typen sollen enthalten sein
@@ -97,9 +98,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --exclude-project ──────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_ExcludeProjectByGlob_OutputExcludesTests()
+    public async Task SkeletonMap_ExcludeProjectByGlob_OutputExcludesTests()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-project \"*.Tests\"");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-project \"*.Tests\"");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -108,10 +109,10 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_ExcludeProjectByExactName_OutputExcludesProject()
+    public async Task SkeletonMap_ExcludeProjectByExactName_OutputExcludesProject()
     {
         // Exakter Projektname ohne Glob
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-project AiNetLinter");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-project AiNetLinter");
 
         Assert.Equal(0, exitCode);
         // AiNetLinter-Projekt ausgeschlossen → nur AiNetLinter.Tests kann enthalten sein
@@ -122,9 +123,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --namespace ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_NamespaceFilter_OutputContainsOnlyCliNamespace()
+    public async Task SkeletonMap_NamespaceFilter_OutputContainsOnlyCliNamespace()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -137,9 +138,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_NamespaceGlobFilter_MatchesSubnamespaces()
+    public async Task SkeletonMap_NamespaceGlobFilter_MatchesSubnamespaces()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --namespace \"AiNetLinter.Maps*\"");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --namespace \"AiNetLinter.Maps*\"");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -154,9 +155,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --exclude-namespace ────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_ExcludeNamespace_OutputExcludesNamespace()
+    public async Task SkeletonMap_ExcludeNamespace_OutputExcludesNamespace()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-namespace AiNetLinter.Cli");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-namespace AiNetLinter.Cli");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -169,9 +170,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_ExcludeNamespaceGlob_ExcludesAllTestNamespaces()
+    public async Task SkeletonMap_ExcludeNamespaceGlob_ExcludesAllTestNamespaces()
     {
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-namespace \"AiNetLinter.Tests*\"");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-namespace \"AiNetLinter.Tests*\"");
 
         Assert.Equal(0, exitCode);
         Assert.DoesNotContain("AiNetLinter.Tests", output, StringComparison.Ordinal);
@@ -180,9 +181,9 @@ public sealed class FilterCliIntegrationTests
     // ─── --public-only ──────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_PublicOnly_OutputExcludesPrivateMethods()
+    public async Task SkeletonMap_PublicOnly_OutputExcludesPrivateMethods()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli --public-only");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli --public-only");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -192,9 +193,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_WithoutPublicOnly_OutputContainsPrivateMembers()
+    public async Task SkeletonMap_WithoutPublicOnly_OutputContainsPrivateMembers()
     {
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --namespace AiNetLinter.Cli");
 
         Assert.Equal(0, exitCode);
         // Ohne --public-only müssen private Member enthalten sein
@@ -204,9 +205,9 @@ public sealed class FilterCliIntegrationTests
     // ─── Kombinationen ──────────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_ExcludeTestsAndPublicOnly_ShowsOnlyPublicProductionTypes()
+    public async Task SkeletonMap_ExcludeTestsAndPublicOnly_ShowsOnlyPublicProductionTypes()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-tests --public-only");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-tests --public-only");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -219,9 +220,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_ProjectAndNamespaceFilter_NarrowsOutputFurther()
+    public async Task SkeletonMap_ProjectAndNamespaceFilter_NarrowsOutputFurther()
     {
-        var (output, error, exitCode) = Run(
+        var (output, error, exitCode) = await RunAsync(
             $"--path \"{_slnPath}\" --map skeleton --project AiNetLinter --namespace AiNetLinter.Cli");
 
         Assert.Equal(0, exitCode);
@@ -232,9 +233,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_TestsOnlyAndNamespaceFilter_ShowsOnlyMatchingTestNamespace()
+    public async Task SkeletonMap_TestsOnlyAndNamespaceFilter_ShowsOnlyMatchingTestNamespace()
     {
-        var (output, error, exitCode) = Run(
+        var (output, error, exitCode) = await RunAsync(
             $"--path \"{_slnPath}\" --map skeleton --tests-only --namespace \"AiNetLinter.Tests.Cli\"");
 
         Assert.Equal(0, exitCode);
@@ -248,9 +249,9 @@ public sealed class FilterCliIntegrationTests
     // ─── Grenzfälle & Fehler ────────────────────────────────────────────────────
 
     [Fact]
-    public void SkeletonMap_UnknownProject_ReturnsEmptyOutputWithoutError()
+    public async Task SkeletonMap_UnknownProject_ReturnsEmptyOutputWithoutError()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --project \"NonExistentProject\"");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --project \"NonExistentProject\"");
 
         // Kein Projekt passt → leere (aber erfolgreiche) Ausgabe
         Assert.Equal(0, exitCode);
@@ -260,9 +261,9 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_UnknownNamespace_ReturnsEmptyOutputWithoutError()
+    public async Task SkeletonMap_UnknownNamespace_ReturnsEmptyOutputWithoutError()
     {
-        var (output, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --namespace \"NonExistent.Namespace\"");
+        var (output, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --namespace \"NonExistent.Namespace\"");
 
         Assert.Equal(0, exitCode);
         Assert.Empty(error);
@@ -270,11 +271,11 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void SkeletonMap_ExcludeTestsAndTestsOnly_ExcludeTestsTakesPrecedence()
+    public async Task SkeletonMap_ExcludeTestsAndTestsOnly_ExcludeTestsTakesPrecedence()
     {
         // Wenn beide Flags angegeben werden, darf der Linter nicht abstürzen
         // (einer macht alle projekts leer durch die Kombination → leere oder fast-leere Ausgabe)
-        var (_, error, exitCode) = Run($"--path \"{_slnPath}\" --map skeleton --exclude-tests --tests-only");
+        var (_, error, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map skeleton --exclude-tests --tests-only");
 
         Assert.Equal(0, exitCode);
         // Kein Crash, kein stderr
@@ -284,9 +285,9 @@ public sealed class FilterCliIntegrationTests
     // ─── Andere Map-Typen mit Filtern ───────────────────────────────────────────
 
     [Fact]
-    public void VocabularyMap_ExcludeProject_ExcludesProjectFromOutput()
+    public async Task VocabularyMap_ExcludeProject_ExcludesProjectFromOutput()
     {
-        var (output, _, exitCode) = Run($"--path \"{_slnPath}\" --map vocabulary --exclude-project \"*.Tests\"");
+        var (output, _, exitCode) = await RunAsync($"--path \"{_slnPath}\" --map vocabulary --exclude-project \"*.Tests\"");
 
         Assert.Equal(0, exitCode);
         // In Vocabulary-Maps erscheint der relative Pfad der Datei
@@ -294,13 +295,13 @@ public sealed class FilterCliIntegrationTests
     }
 
     [Fact]
-    public void StructureMap_ProductionSrcOnly_ExcludesTestFiles()
+    public async Task StructureMap_ProductionSrcOnly_ExcludesTestFiles()
     {
         // StructureMapBuilder ist verzeichnisbasiert und kennt keine MSBuild-Projekte.
         // Filter per --exclude-project wirken nur bei Skeleton (Solution-basiert).
         // Für den StructureMap-Test übergeben wir direkt das Produktionsverzeichnis.
         var productionDir = Path.Combine(_rootDir, "src", "AiNetLinter");
-        var (output, _, exitCode) = Run($"--path \"{productionDir}\" --map structure");
+        var (output, _, exitCode) = await RunAsync($"--path \"{productionDir}\" --map structure");
 
         Assert.Equal(0, exitCode);
         // Nur Produktionsdateien sind im src/AiNetLinter-Verzeichnis
@@ -311,7 +312,7 @@ public sealed class FilterCliIntegrationTests
 
     // ─── Hilfsinfrastruktur ─────────────────────────────────────────────────────
 
-    private (string Output, string Error, int ExitCode) Run(string arguments)
+    private async Task<(string Output, string Error, int ExitCode)> RunAsync(string arguments)
     {
         var processInfo = new ProcessStartInfo
         {
@@ -323,6 +324,7 @@ public sealed class FilterCliIntegrationTests
             CreateNoWindow        = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo)
             ?? throw new InvalidOperationException("Konnte den Linter-Prozess nicht starten.");
 

@@ -9,7 +9,11 @@ using AiNetLinter.Commands;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// Tests für <see cref="DocsCommand"/>.
+/// Tests für <see cref="DocsCommand"/>. Leitet in jedem Testfall <see cref="Console.Out"/>
+/// und/oder <see cref="Console.Error"/> via <see cref="Console.SetOut"/>/<see cref="Console.SetError"/>
+/// um, um den ausgegebenen Dokumentationstext bzw. die Fehlermeldung bei unbekanntem
+/// Dokumentnamen zu prüfen — parallel laufende Tests würden sich die globale Konsolenumleitung
+/// gegenseitig überschreiben.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]

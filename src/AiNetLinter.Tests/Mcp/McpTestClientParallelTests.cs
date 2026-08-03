@@ -13,7 +13,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// ordnungsgemaess disposed werden. Integration-Test, weil er einen echten Server-Subprozess
 /// startet — laeuft im Volllauf, nicht im Unit-Slice.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpTestClientParallelTests
 {
     [Fact]

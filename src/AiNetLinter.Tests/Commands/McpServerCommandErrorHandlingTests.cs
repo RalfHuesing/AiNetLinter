@@ -19,7 +19,6 @@ namespace AiNetLinter.Tests.Commands;
 /// Datei den
 /// 006-Erweiterung.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpServerCommandErrorHandlingTests
 {
     [Fact]
@@ -45,6 +44,7 @@ public sealed class McpServerCommandErrorHandlingTests
             });
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
             var result = await client.CallToolAsync(
                 "find_symbol",
@@ -82,6 +82,7 @@ public sealed class McpServerCommandErrorHandlingTests
         });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var result = await client.CallToolAsync(
             "get_file_skeleton",

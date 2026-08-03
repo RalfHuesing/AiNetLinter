@@ -14,7 +14,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Testklasse.
 /// </summary>
 [Trait("Category", "Integration")]
-[Collection("ConsoleTestCollection")]
 public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixture>
 {
     private readonly McpLiveRepositoryFixture _fixture;

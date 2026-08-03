@@ -13,7 +13,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde (siehe Plan-Abweichung im
 /// <c>result.md</c> von.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpServerOptionsFactoryTests
 {
     [Fact]

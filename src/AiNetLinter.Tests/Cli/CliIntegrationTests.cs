@@ -1,16 +1,17 @@
 using Xunit;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using AiNetLinter.Tests.Fixtures;
 
 namespace AiNetLinter.Tests.Cli;
 
 // @covers LinterArgs
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class CliIntegrationTests
 {
     [Fact]
-    public void RunLinterCli_OnWholeSolution_ReturnsSuccess()
+    public async Task RunLinterCli_OnWholeSolution_ReturnsSuccess()
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -31,6 +32,7 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 
@@ -44,7 +46,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
+    public async Task GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -66,6 +68,7 @@ public sealed class CliIntegrationTests
 
         try
         {
+            using var lease = await SubprocessConcurrencyGate.AcquireAsync();
             using var process = Process.Start(processInfo);
             Assert.NotNull(process);
 
@@ -90,7 +93,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncAgentRulesAndPlaybook_Combined_GeneratesBoth()
+    public async Task SyncAgentRulesAndPlaybook_Combined_GeneratesBoth()
     {
         // Reproduziert den P0-Bug: --sync-agent-rules + --playbook im selben Aufruf
         // sollte beide Artefakte erzeugen (früher return verhinderte das Playbook).
@@ -114,6 +117,7 @@ public sealed class CliIntegrationTests
 
         try
         {
+            using var lease = await SubprocessConcurrencyGate.AcquireAsync();
             using var process = Process.Start(processInfo);
             Assert.NotNull(process);
             string output = process.StandardOutput.ReadToEnd();
@@ -134,7 +138,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncAgentRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
+    public async Task SyncAgentRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
         var rootDir = FindSolutionRoot();
@@ -154,6 +158,7 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
         string output = process.StandardOutput.ReadToEnd();
@@ -166,7 +171,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void SyncAgentRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
+    public async Task SyncAgentRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
         var rootDir = FindSolutionRoot();
@@ -186,6 +191,7 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
         string output = process.StandardOutput.ReadToEnd();
@@ -198,7 +204,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
+    public async Task GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -221,6 +227,7 @@ public sealed class CliIntegrationTests
         try
         {
             // Erst generieren
+            using (var genLease = await SubprocessConcurrencyGate.AcquireAsync())
             using (var genProcess = Process.Start(MakeProcess("")))
             {
                 Assert.NotNull(genProcess);
@@ -232,6 +239,7 @@ public sealed class CliIntegrationTests
             Assert.True(File.Exists(tempPlaybookPath));
 
             // Dann prüfen (--check)
+            using var checkLease = await SubprocessConcurrencyGate.AcquireAsync();
             using var checkProcess = Process.Start(MakeProcess("--check"));
             Assert.NotNull(checkProcess);
             string output = checkProcess.StandardOutput.ReadToEnd();
@@ -249,7 +257,7 @@ public sealed class CliIntegrationTests
     }
 
     [Fact]
-    public void RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
+    public async Task RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -266,6 +274,7 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 
@@ -281,7 +290,7 @@ public sealed class CliIntegrationTests
     /// Für LLM-Agenten: nach dotnet test die Datei lesen statt erneut zu testen.
     /// </summary>
     [Fact]
-    public void DiagnosticDump_SelfLintOutput_WritesToFile()
+    public async Task DiagnosticDump_SelfLintOutput_WritesToFile()
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -301,6 +310,7 @@ public sealed class CliIntegrationTests
             CreateNoWindow = true
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo)!;
         var output = process.StandardOutput.ReadToEnd();
         var error = process.StandardError.ReadToEnd();

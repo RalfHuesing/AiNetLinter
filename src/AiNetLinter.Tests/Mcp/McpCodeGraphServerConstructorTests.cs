@@ -11,7 +11,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// nimmt genau einen Parameter vom Typ <see cref="McpCodeGraphServerOptions"/>. Eingefuehrt mit
 /// <c>MaxConstructorDependencies: 5</c>-Limit lag.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpCodeGraphServerConstructorTests
 {
     [Fact]

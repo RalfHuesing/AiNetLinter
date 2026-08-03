@@ -12,7 +12,10 @@ using AiNetLinter.Generators;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// Tests für <see cref="SyncAgentRulesCommand"/>.
+/// Tests für <see cref="SyncAgentRulesCommand"/>. <c>Run_CheckMode_WhenFileNotExists_ReturnsOne</c>
+/// leitet <see cref="Console.Error"/> via <see cref="Console.SetError"/> um, um die Fehlerausgabe
+/// im Check-Modus ohne vorhandene .mdc-Datei zu prüfen — parallel laufende Tests würden sich die
+/// globale Konsolenumleitung gegenseitig überschreiben.
 /// </summary>
 [Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]

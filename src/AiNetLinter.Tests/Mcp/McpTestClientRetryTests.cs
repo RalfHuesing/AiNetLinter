@@ -14,7 +14,6 @@ namespace AiNetLinter.Tests.Mcp;
 /// Server-Subprozess — der FileNotFound-Pfad schlaegt deterministisch fehl, der Retry-Loop
 /// wird sichtbar (A3 fuer.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 public sealed class McpTestClientRetryTests
 {
     [Fact]

@@ -1,22 +1,22 @@
 using System.Diagnostics;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
 namespace AiNetLinter.Tests.Baseline;
 
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class BaselineCliTests
 {
     [Fact]
-    public void CreateBaseline_WithoutConfig_WritesJsonAndReturnsSuccess()
+    public async Task CreateBaseline_WithoutConfig_WritesJsonAndReturnsSuccess()
     {
         var fixtureRoot = GetFixtureRoot();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
         try
         {
-            var result = RunLinter(
+            var result = await RunLinterAsync(
                 $"--path \"{fixtureRoot}\" --create-baseline \"{baselinePath}\"");
 
             Assert.Equal(0, result.ExitCode);
@@ -33,18 +33,18 @@ public sealed class BaselineCliTests
     }
 
     [Fact]
-    public void AuditWithBaseline_UnchangedFiles_ReturnsSuccess()
+    public async Task AuditWithBaseline_UnchangedFiles_ReturnsSuccess()
     {
         var fixtureRoot = GetFixtureRoot();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
         var configPath = Path.Combine(fixtureRoot, "rules.json");
         try
         {
-            var createResult = RunLinter(
+            var createResult = await RunLinterAsync(
                 $"--path \"{fixtureRoot}\" --create-baseline \"{baselinePath}\"");
             Assert.Equal(0, createResult.ExitCode);
 
-            var auditResult = RunLinter(
+            var auditResult = await RunLinterAsync(
                 $"--config \"{configPath}\" --path \"{fixtureRoot}\" --baseline \"{baselinePath}\"");
 
             Assert.Equal(0, auditResult.ExitCode);
@@ -57,20 +57,20 @@ public sealed class BaselineCliTests
     }
 
     [Fact]
-    public void AuditWithBaseline_ChangedFile_ReportsViolationsAndUpdatesBaseline()
+    public async Task AuditWithBaseline_ChangedFile_ReportsViolationsAndUpdatesBaseline()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
         var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
         try
         {
-            RunLinter($"--path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
+            await RunLinterAsync($"--path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
             var baselineBefore = BaselineReader.Read(baselinePath);
             var relativePath = baselineBefore.Files.Keys.First(k => k.EndsWith("ViolatingClass.cs", StringComparison.OrdinalIgnoreCase));
 
             File.WriteAllText(workspace.ViolatingClassPath, originalContent + Environment.NewLine);
 
-            var auditResult = RunLinter(
+            var auditResult = await RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
 
             Assert.Equal(1, auditResult.ExitCode);
@@ -79,7 +79,7 @@ public sealed class BaselineCliTests
             var baselineAfter = BaselineReader.Read(baselinePath);
             Assert.NotEqual(baselineBefore.Files[relativePath], baselineAfter.Files[relativePath]);
 
-            var secondAudit = RunLinter(
+            var secondAudit = await RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
             Assert.Equal(0, secondAudit.ExitCode);
         }
@@ -102,7 +102,7 @@ public sealed class BaselineCliTests
         Assert.Equal(1, exitCode);
     }
 
-    private static (int ExitCode, string Output, string Error) RunLinter(string arguments)
+    private static async Task<(int ExitCode, string Output, string Error)> RunLinterAsync(string arguments)
     {
         var rootDir = FindSolutionRoot();
         var linterDllPath = FindLinterDll(rootDir);
@@ -117,6 +117,7 @@ public sealed class BaselineCliTests
             CreateNoWindow = true,
         };
 
+        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
         using var process = Process.Start(processInfo);
         Assert.NotNull(process);
 
