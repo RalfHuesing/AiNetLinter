@@ -27,6 +27,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerConstructorTests.cs`, `McpServerOptionsFactoryTests.cs`, `McpTestClientRetryTests.cs` | niedrig | Vorbestehende XML-Doc-Kommentare brechen mitten im Satz ab |
 | TD-002 | `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs:92` | niedrig | Tote, vorbestehende Variable `baselineAfter` (deklariert, nie assertet) |
 | TD-003 | `src/AiNetLinter/Cli/LinterArgs.cs:223-224` | niedrig | `--sync-agent-rules-only` fehlt in `HasStandaloneCommand()`, verlangt unnötig `--path`/`--config` |
+| TD-004 | 6 Testdateien (`Architecture/ArchitectureTests.cs`, `Core/LinterAnalyzerTests.cs`, `Core/LinterEngineCacheTests.cs`, `Core/LinterEngineTests.cs`, `Core/Checkers/MaxInheritanceDepthTests.cs`, `Core/Checkers/NamespaceDirectoryMappingTests.cs`) | niedrig | Lokale private Methode `CreateDefaultConfig()` kollidiert namentlich mit `TestHelper.CreateDefaultConfig()` |
 
 ## Einträge
 
@@ -114,4 +115,35 @@ Verweis auf die Tech-Debt-ID).
   in mehreren Step-Plänen dieses Tasks referenzierte Kurzbefehl
   `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` ohne
   Zusatzargumente funktioniert.
+- **Status:** offen
+
+### TD-004 — Namenskollision `CreateDefaultConfig()` in 6 Testdateien [Priorität: niedrig]
+
+- **Gefunden in:** step-004 (4 Dateien) + step-005 (2 weitere Dateien),
+  gebündelt im Kritiker-Review von step-005 (2026-08-03) — vom Coder in
+  step-005 `step-result.md` unter „Beobachtungen" vorgemerkt, Bündelung
+  laut Notiz im step-005-Plan explizit dem Kritiker überlassen.
+- **Ort:** `src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs`,
+  `src/AiNetLinter.Tests/Core/LinterAnalyzerTests.cs`,
+  `src/AiNetLinter.Tests/Core/LinterEngineCacheTests.cs`,
+  `src/AiNetLinter.Tests/Core/LinterEngineTests.cs`,
+  `src/AiNetLinter.Tests/Core/Checkers/MaxInheritanceDepthTests.cs`,
+  `src/AiNetLinter.Tests/Core/Checkers/NamespaceDirectoryMappingTests.cs`
+  — jeweils eine private statische Methode `CreateDefaultConfig()`
+  (verifiziert per Grep, exakt diese 6 Treffer projektweit).
+- **Befund:** Der lokale Methodenname ist identisch zu
+  `TestHelper.CreateDefaultConfig()`, das seit step-004/005 in denselben
+  Dateien per `TestHelper.CreateDefaultConfig() with {...}` aufgerufen
+  wird. Kein Compile-Konflikt (unterschiedliche Klassen/Scopes), aber für
+  Leser verwirrend zu unterscheiden, welcher `CreateDefaultConfig()`-Aufruf
+  gemeint ist, insbesondere da die lokale Methode selbst jetzt den
+  `TestHelper`-Aufruf im Rumpf enthält.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-004/step-005
+  (reine Konstruktions-Ausdruck-Konsolidierung, keine
+  Methodenumbenennung/Aufrufstellen-Änderung) — in step-005 explizit als
+  „bewusst nicht umbenannt" dokumentiert, Bündelungsentscheidung an den
+  Kritiker delegiert.
+- **Vorschlag:** Bei nächster inhaltlicher Berührung einer dieser 6
+  Dateien die lokale Methode umbenennen (z. B. `LocalConfig()`/
+  `BaseConfig()`), inkl. aller Aufrufstellen im jeweiligen Testkörper.
 - **Status:** offen
