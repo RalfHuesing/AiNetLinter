@@ -27,7 +27,7 @@ public sealed class SwitchDispatcherDetectorTests
         bool excludeDispatcher,
         int maxCaseBodyLines)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

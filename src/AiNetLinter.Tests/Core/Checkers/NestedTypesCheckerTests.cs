@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -14,7 +16,7 @@ public sealed class NestedTypesCheckerTests
     private static Config CreateConfig(
         bool banPublicNestedTypes = true,
         bool banPublicNestedTypesAllowPrivate = true) =>
-        new()
+        TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -30,8 +32,7 @@ public sealed class NestedTypesCheckerTests
                 EnableTestSentinel = false,
                 BanPublicNestedTypes = banPublicNestedTypes,
                 BanPublicNestedTypesAllowPrivate = banPublicNestedTypesAllowPrivate
-            },
-            Metrics = new MetricsConfig()
+            }
         };
 
     private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)

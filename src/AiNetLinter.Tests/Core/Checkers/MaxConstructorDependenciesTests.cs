@@ -15,7 +15,7 @@ public sealed class MaxConstructorDependenciesTests
 {
     private static Config CreateConfig(int maxDeps, string[]? ignorePrefixes = null, string[]? exemptSuffixes = null)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

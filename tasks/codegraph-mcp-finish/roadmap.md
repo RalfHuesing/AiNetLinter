@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-005-Planung: F.4 Teil 1/2 (step-004) approved, F.4 Teil 2/2 + F.5-Teilfortschritt in Arbeit (step-005)
+last_updated: 2026-08-03  # step-005: F.4 vollständig abgeschlossen (Teil 2/2), F.5-Teilfortschritt umgesetzt
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -77,18 +77,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
       für 8 Subprozess-Teststellen (F.2, **erledigt → step-002**, approved),
       `Core/`-Testordner sub-gliedern + danach `MaxDirectoryChildren`
       aktivieren (F.3, **erledigt → step-003**, approved), Test-Data-Builder/
-      Object-Mother (F.4, Teil 1/2 **erledigt → step-004**, approved: 19
-      Dateien Kern-Testinfrastruktur; Teil 2/2 **in Arbeit → step-005**:
-      restliche 19 Dateien mit lokaler `CreateConfig`/`ConfigWith`-Methode in
-      `Core/Checkers/`+`Metrics/`+`FalsePositives/` — bei erneuter
-      Code-Sichtung für step-005 auf tatsächlich 19 statt der in step-004
-      geschätzten 23 verifiziert, siehe step-005 „Aktueller Projektzustand"),
-      `#nullable enable`-Pragma nur als Randmitnahme in ohnehin
-      angefassten Dateien (F.5, **Teilfortschritt in step-005**: 11 der 19
-      dort angefassten Dateien fehlte die Pragma-Zeile, wird im selben Step
-      nachgerüstet — keine eigene Flächenaktion, weiterhin offen für Dateien
-      außerhalb aller Block-F/A-F-Steps), Laufzeitmessung vorher/nachher
-      dokumentieren (F.6, weiterhin offen). Läuft laut Konzept-Vorgabe
+      Object-Mother (F.4, **vollständig abgeschlossen → step-004 +
+      step-005**, approved: 19 Dateien Kern-Testinfrastruktur in step-004 +
+      19 restliche Dateien mit lokaler `CreateConfig`/`ConfigWith`-Methode in
+      `Core/Checkers/`+`Metrics/`+`FalsePositives/` in step-005 — bei
+      erneuter Code-Sichtung für step-005 auf tatsächlich 19 statt der in
+      step-004 geschätzten 23 verifiziert, siehe step-005 „Aktueller
+      Projektzustand"), `#nullable enable`-Pragma nur als Randmitnahme in
+      ohnehin angefassten Dateien (F.5, **Teilfortschritt in step-005**: 11
+      der 19 dort angefassten Dateien fehlte die Pragma-Zeile, im selben
+      Step nachgerüstet — keine eigene Flächenaktion, weiterhin offen für
+      Dateien außerhalb aller Block-F/A-F-Steps), Laufzeitmessung
+      vorher/nachher dokumentieren (F.6, weiterhin offen, für einen
+      Folge-Step). Läuft laut Konzept-Vorgabe
       **zuerst**, damit alle nachfolgenden Einheiten von kürzeren
       Volllauf-Zeiten profitieren. Bezug: Konzept.md „Muss-Haben F".
       F.1-Ergebnis (step-001): Volllauf von ~8 Min. auf ~1 m 35–41 s

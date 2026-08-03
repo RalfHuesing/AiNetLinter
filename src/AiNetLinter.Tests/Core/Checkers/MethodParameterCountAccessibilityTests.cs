@@ -14,7 +14,7 @@ public sealed class MethodParameterCountAccessibilityTests
     private static Config CreateConfig(
         int maxParams = 4,
         bool allowPrivate = false,
-        int forNonPublic = 0) => new()
+        int forNonPublic = 0) => TestHelper.CreateDefaultConfig() with
     {
         Global = new GlobalConfig
         {

@@ -18,7 +18,7 @@ public sealed class FalsePositiveTests
     private static Config CreateConfig(
         bool allowOut = false,
         bool allowTryPatternOut = true,
-        int maxParams = 4) => new()
+        int maxParams = 4) => TestHelper.CreateDefaultConfig() with
     {
         Global = new GlobalConfig
         {

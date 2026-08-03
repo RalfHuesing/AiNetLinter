@@ -15,7 +15,7 @@ namespace AiNetLinter.Tests.Metrics;
 public sealed class FileLimitGuidanceTests
 {
     private static Config LowLineLimitConfig(int maxLineCount = 10)
-        => new()
+        => TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnforceNullableEnable = false },
             Metrics = new MetricsConfig

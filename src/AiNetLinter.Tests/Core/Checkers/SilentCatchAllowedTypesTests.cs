@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿#nullable enable
+
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
@@ -9,7 +11,7 @@ namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class SilentCatchAllowedTypesTests
 {
-    private static Config CreateConfig(string[]? allowedTypes = null) => new()
+    private static Config CreateConfig(string[]? allowedTypes = null) => TestHelper.CreateDefaultConfig() with
     {
         Global = new GlobalConfig
         {

@@ -1,4 +1,6 @@
-﻿using Xunit;
+﻿#nullable enable
+
+using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
@@ -11,7 +13,7 @@ public sealed class CouplingSemanticTests
 {
     private static Config CreateConfig(int maxConstructorDeps)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

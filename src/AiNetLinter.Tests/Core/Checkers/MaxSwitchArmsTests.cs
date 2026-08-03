@@ -31,7 +31,7 @@ public sealed class MaxSwitchArmsTests
         bool excludeDispatcher = true,
         string[]? exemptTypes = null)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

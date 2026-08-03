@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -13,7 +15,7 @@ public sealed class MaxInheritanceDepthTests
 {
     private static Config CreateDefaultConfig()
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

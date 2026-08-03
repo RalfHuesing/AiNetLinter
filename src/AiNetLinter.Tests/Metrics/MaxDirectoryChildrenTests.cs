@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using System.IO;
 using System.Linq;
@@ -25,7 +27,7 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
     }
 
     private static Config CreateConfig(int limit, string[]? exemptNames = null) =>
-        new()
+        TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

@@ -16,7 +16,7 @@ public sealed class WpfCodeBehindTests
         bool wpfRequireMinimalCodeBehind = true,
         string[]? excludeClassNames = null)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -35,7 +35,6 @@ public sealed class WpfCodeBehindTests
                 DetectAndBanPhantomDependencies = false,
                 EnableTestSentinel = false,
             },
-            Metrics = new MetricsConfig(),
             UiSeparation = new UiSeparationConfig
             {
                 WpfRequireMinimalCodeBehind = wpfRequireMinimalCodeBehind,

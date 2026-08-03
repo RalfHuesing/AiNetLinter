@@ -17,7 +17,7 @@ namespace AiNetLinter.Tests.FalsePositives;
 /// </summary>
 public sealed class FalsePositiveExtensionsTests
 {
-    private static Config CreateBaseConfig() => new()
+    private static Config CreateBaseConfig() => TestHelper.CreateDefaultConfig() with
     {
         Global = new GlobalConfig
         {

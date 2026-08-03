@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -11,7 +13,7 @@ namespace AiNetLinter.Tests.Core.Checkers;
 public sealed class MaxPartialClassFilesTests
 {
     private static Config CreateConfig(int limit = 2, string[]? exemptTypes = null) =>
-        new()
+        TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

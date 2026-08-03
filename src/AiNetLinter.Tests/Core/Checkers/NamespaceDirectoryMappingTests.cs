@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using System.Linq;
@@ -26,7 +28,7 @@ public sealed class NamespaceDirectoryMappingTests
 
     private static Config CreateDefaultConfig()
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -40,8 +42,7 @@ public sealed class NamespaceDirectoryMappingTests
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
-            },
-            Metrics = new MetricsConfig()
+            }
         };
     }
 

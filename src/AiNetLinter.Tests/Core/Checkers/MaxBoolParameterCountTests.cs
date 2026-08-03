@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,7 +14,7 @@ namespace AiNetLinter.Tests.Core.Checkers;
 public sealed class MaxBoolParameterCountTests
 {
     private static Config CreateConfig(int limit = 1, bool allowPrivate = true, string[]? exemptPrefixes = null) =>
-        new()
+        TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

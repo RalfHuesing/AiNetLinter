@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,7 +14,7 @@ namespace AiNetLinter.Tests.Core.Checkers;
 public sealed class MaxPublicMembersPerTypeTests
 {
     private static Config CreateConfig(int limit = 5, string[]? exemptSuffixes = null) =>
-        new()
+        TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
