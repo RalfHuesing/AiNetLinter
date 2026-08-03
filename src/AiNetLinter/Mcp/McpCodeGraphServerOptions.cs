@@ -27,8 +27,10 @@ internal sealed record McpCodeGraphServerOptions
     public int MaxLineCount { get; init; } = 700;
 
     /// <summary>Vollstaendige Linter-Konfiguration aus <c>rules.json</c> via <c>--config</c>,
-    /// sonst Default-<see cref="Config"/>.</summary>
-    public required Config Config { get; init; }
+    /// sonst Default-<see cref="Config"/>. Exposed als schmale Lese-Sicht
+    /// (<see cref="ILinterEngineConfig"/>), damit der vollstaendige <c>Configuration</c>-Namespace
+    /// nicht in den Footprint der <c>McpCodeGraphServer</c>-Konsumenten gezogen wird.</summary>
+    public required ILinterEngineConfig Config { get; init; }
 
     /// <summary>
     /// Factory-Methode mit identischer Parameter-Signatur wie der vorherige

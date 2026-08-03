@@ -58,8 +58,10 @@ internal sealed class McpCodeGraphServer : IDisposable
     /// <see cref="Config"/>-Default). Benoetigt von Tools, die regelbasiert arbeiten (z. B.
     /// <c>get_violations</c> fuer <see cref="Core.LinterEngine"/>-Konstruktion und
     /// PathOverrides). Nie <see langword="null"/> — der Konstruktor normalisiert mit <c>?? new Config()</c>.
+    /// Exposed als schmale Lese-Sicht (<see cref="ILinterEngineConfig"/>), damit Tool-Klassen
+    /// nur die Properties ins Footprint ziehen, die sie auch tatsaechlich konsumieren.
     /// </summary>
-    public Config Config { get; }
+    public ILinterEngineConfig Config { get; }
 
     /// <summary>
     /// Konsolen-Kanal, an den der MCP-Server selbst loggt. Wird von <c>get_violations</c> an

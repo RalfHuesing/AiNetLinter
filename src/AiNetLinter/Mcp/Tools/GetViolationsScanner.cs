@@ -42,11 +42,16 @@ internal static class GetViolationsScanner
     /// </summary>
     internal static async Task<string> BuildViolationsTextAsync(
         Solution solution,
-        Config config,
+        ILinterEngineConfig config,
         ILintConsole console,
         string? scopeFilter,
         CancellationToken ct)
     {
+        // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
+        // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
+        // von Config implementiert, der Downcast ist daher nicht spekulativ.
+        var concreteConfig = (Config)config;
+
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var fileToProject = BuildFileToProjectMap(solution, solutionDir);
 
@@ -54,7 +59,7 @@ internal static class GetViolationsScanner
         try
         {
             var engine = new LinterEngine(
-                config: config,
+                config: concreteConfig,
                 rulesJsonContent: null,
                 profiler: null,
                 console: console,
