@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-03
 rules_dir: .agents/rules
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-007
+current_step: step-008
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-007
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 1 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-007` (vollständig abgeschlossen inkl. fix-01, EPIC-02 damit abgehakt)
+- **Aktueller Schritt:** `step-008` (ILinterEngineConfig-Interface-Refactor, EPIC-03)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -35,6 +35,7 @@ eine Zeile.>
 | step-006 | EPIC-01 | done | Laufzeitmessung vorher/nachher dokumentieren (F.6) | 0/3 | 3821111 | approved | 3821111, 4e5f1dc |
 | step-007 | EPIC-02 | done | Einheit-011-Abschluss: Verifikation + nachgeholtes Kritiker-Review | 1/3 | 7b3f193 | issues → fix-01 approved | 7b3f193, 830b513, 831b2d3, 7f23841, cf3d7ac, 48871af, (review-commit) |
 | step-007/fix-01 | EPIC-02 | done | TD-Referenzen + abgeschnittene Satzreste aus 3 Produktionsdateien entfernen (Rules §5-Konformität) | (1/3) | cf3d7ac | approved | cf3d7ac, 48871af, (review-commit) |
+| step-008 | EPIC-03 | in_progress | ILinterEngineConfig-Interface extrahieren, PathOverride-Liste auf Rest reduzieren (Muss-Haben C, TD-008/TD-010) | 0/3 | — | — | — |
 
 ## Config (optional)
 

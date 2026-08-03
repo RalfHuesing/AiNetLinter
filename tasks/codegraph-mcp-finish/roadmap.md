@@ -107,23 +107,32 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Dateien sub-gegliedert, `MaxDirectoryChildren` = 30 aktiv,
       F.3-Tech-Debt-Fund `TD-003` (`--sync-agent-rules-only` fehlt in
       `HasStandaloneCommand()`) bleibt offen (Nutzer-Entscheidung).
-- [ ] EPIC-02: Einheit-011-Abschluss (Muss-Haben A) — offene
-      `AiNetLinter.exe`/`testhost.exe`-Prozesse bereinigen, Volllauf
-      frisch fahren (nicht nur Coder-Bericht übernehmen), Kritiker-Review
-      für die 6 lokalen 011-Commits (TD-009 Konstruktor-Record, TD-014
-      Factory-Aufteilung, TD-019 Test-Flake-Retry) inkl. der
-      9-Datei-`PathOverride`-Erweiterung als akzeptiertem Pragmatik-Fix
-      nachholen, anschließend Push der 11 lokalen Commits. Bezug:
-      Konzept.md „Muss-Haben A". **Fund beim Planen von step-007
-      (2026-08-03):** Der Push-Teil ist bereits erledigt — per
-      `git merge-base --is-ancestor` verifiziert, alle 6 Einheit-011-Commits
-      (`4bcd5ab`…`8a663c7`) sind bereits Vorfahren von `origin/main`
-      (aktuell bei `877bef9`), vermutlich beim Push der step-001..004-Arbeit
-      dieses Tasks mit hochgeschoben, **ohne** das hier geforderte
-      Kritiker-Review. `Konzept.md`s Stand „11 Commits lokal ohne Push"
-      (`git log -1` = `59c2f5e`) ist damit veraltet. Offen bleibt aus
-      Muss-Haben A ausschließlich das nachgeholte Review (kein Push mehr
-      nötig/möglich) → **in Arbeit → step-007**.
+- [x] EPIC-02: Einheit-011-Abschluss (Muss-Haben A) — **erledigt →
+      step-007 + step-007/fix-01**, beide approved. Bezug: Konzept.md
+      „Muss-Haben A". Drei Beobachtungen aus dem Planungszeitraum von
+      step-007 (2026-08-03), jetzt alle erledigt: (1) Der Push-Teil war
+      bereits erfolgt — per `git merge-base --is-ancestor` verifiziert,
+      alle 6 Einheit-011-Commits (`4bcd5ab`…`8a663c7`) sind Vorfahren
+      von `origin/main`, vermutlich beim Push der step-001..004-Arbeit
+      mit hochgeschoben, `Konzept.md`s Stand „11 Commits lokal ohne
+      Push" (`git log -1` = `59c2f5e`) ist damit veraltet. (2) Volllauf
+      frisch nachgefahren statt nur Coder-Bericht übernommen: `dotnet
+      test AiNetLinter.slnx --no-build` 1186/1186 grün, ~1 m 41 s
+      (step-007). (3) Nachgeholtes Review der 6 lokalen 011-Commits
+      (TD-009 Konstruktor-Record, TD-014 Factory-Aufteilung, TD-019
+      Test-Flake-Retry) inkl. der 9-Datei-`PathOverride`-Erweiterung
+      (`rules.json`, 14 Einträge mit `MaxAIContextFootprint: 2700`,
+      davon 9 neu aus Commit `8a663c7`) als akzeptiertem Pragmatik-Fix
+      — im step-007-Review ohne `issues`-Verdict auf den 011-Commits
+      selbst. Drei nachträglich entdeckte MAJOR-Findings (TD-/Plan-
+      Artefakt-Referenzen + abgeschnittene Satzreste in 3
+      Produktionsdateien, `AiNetLinterRichtlinien.mdc` §5) wurden in
+      **step-007/fix-01** (`cf3d7ac1`) behoben — 3 Pflichtdateien +
+      5 Test-Dateien als MINOR-Mitnahme, Build grün, Tests 1186/1184
+      (1 Last-Flake in `McpServerCommandErrorHandlingTests` an
+      `SubprocessConcurrencyGate.AcquireAsync`, außerhalb des Step-
+      Scopes, als `TD-005` dokumentiert). EPIC-02 ist inhaltlich
+      abgeschlossen.
 - [ ] EPIC-03: `ILinterEngineConfig`-Refactor (Muss-Haben C, TD-008/
       TD-010) — schlankes Interface für `McpCodeGraphServer.Config`
       extrahieren, `rules.json`-`PathOverride`-Liste (13 Einträge) auf
