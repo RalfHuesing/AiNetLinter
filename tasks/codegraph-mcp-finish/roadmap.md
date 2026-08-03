@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-003-Planung: EPIC-01-Notiz F.2 abgehakt, F.3 in Arbeit
+last_updated: 2026-08-03  # step-004-Planung: F.3 abgehakt (approved), F.4 in Arbeit (Teilscope)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -76,7 +76,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       F.1, **erledigt → step-001**, approved), `CliProcessRunner`-Helper
       für 8 Subprozess-Teststellen (F.2, **erledigt → step-002**, approved),
       `Core/`-Testordner sub-gliedern + danach `MaxDirectoryChildren`
-      aktivieren (F.3, **in Arbeit → step-003**), Test-Data-Builder/Object-Mother (F.4),
+      aktivieren (F.3, **erledigt → step-003**, approved), Test-Data-Builder/
+      Object-Mother (F.4, **in Arbeit → step-004**, Teilscope: 19 Dateien
+      Kern-Testinfrastruktur — `Core/Checkers/`- und `FalsePositives/`-Cluster
+      mit 23 weiteren, bereits parametrisierten Config-Fabriken bewusst
+      zurückgestellt, siehe step-004 „Aktueller Projektzustand"/Notes),
       `#nullable enable`-Pragma nur als Randmitnahme in ohnehin
       angefassten Dateien (F.5), Laufzeitmessung vorher/nachher
       dokumentieren (F.6). Läuft laut Konzept-Vorgabe **zuerst**, damit
@@ -89,7 +93,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (step-002, kein zweiter konkurrierender Mechanismus entstanden).
       F.2-Tech-Debt-Fund `TD-002` (tote Variable `baselineAfter` in
       `WebBaselineTests.cs:92`) bleibt bewusst offen (Nutzer-Entscheidung,
-      kein automatischer Fix-Step).
+      kein automatischer Fix-Step). F.3-Ergebnis (step-003): `Core/` von
+      42 auf 19+27(Checkers)+7(Metrics) Dateien sub-gegliedert,
+      `MaxDirectoryChildren` = 30 aktiv, F.3-Tech-Debt-Fund `TD-003`
+      (`--sync-agent-rules-only` fehlt in `HasStandaloneCommand()`) bleibt
+      offen (Nutzer-Entscheidung).
 - [ ] EPIC-02: Einheit-011-Abschluss (Muss-Haben A) — offene
       `AiNetLinter.exe`/`testhost.exe`-Prozesse bereinigen, Volllauf
       frisch fahren (nicht nur Coder-Bericht übernehmen), Kritiker-Review

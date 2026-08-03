@@ -30,6 +30,7 @@ eine Zeile.>
 | step-001 | EPIC-01 | done | ConsoleTestCollection-Regression beheben (F.1) | 0/3 | e466020 | approved | e466020, 8581a4d |
 | step-002 | EPIC-01 | done | CliProcessRunner-Helper (F.2) | 0/3 | a566ea4 | approved | a566ea4, 172bdc5 |
 | step-003 | EPIC-01 | done | Core/-Testordner subgliedern, MaxDirectoryChildren aktivieren (F.3) | 0/3 | 8cae25c | approved | 8cae25c, cede919 |
+| step-004 | EPIC-01 | in_progress | Test-Data-Builder statt ad-hoc-Konstruktion, Teil 1/2 (F.4) | 0/3 | - | - | - |
 
 ## Config (optional)
 
