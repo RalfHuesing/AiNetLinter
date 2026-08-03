@@ -6,12 +6,11 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Tests fuer <see cref="McpServerOptionsFactory"/>: konzentriert auf den zentralen Scope-Hint
-///, der via <c>McpServerOptions.ServerInstructions</c> in der
+/// Tests fuer <see cref="McpServerOptionsFactory"/>: konzentriert auf den zentralen Scope-Hint,
+/// der via <c>McpServerOptions.ServerInstructions</c> in der
 /// <c>initialize</c>-Antwort des Servers landet. Aus <c>McpServerCommandTests.cs</c> ausgelagert,
 /// weil diese Datei bereits am <c>MaxLineCount</c>-Limit (500) liegt und das Hinzufuegen
-/// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde (siehe Plan-Abweichung im
-/// <c>result.md</c> von.
+/// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde.
 /// </summary>
 public sealed class McpServerOptionsFactoryTests
 {

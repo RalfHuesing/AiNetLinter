@@ -6,12 +6,12 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection. Bewusst
-/// aus <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert und durch
-/// <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder aufgeteilt
-/// : haette <see cref="McpCodeGraphServer"/> als Parametertyp eines eigenen
-/// Members, waechst dessen AIContextFootprint durch die Tool-Registrierungs-
-/// Abhaengigkeiten ueber das Limit.
+/// Baut die <see cref="McpServerOptions"/> inkl. der registrierten Tool-Collection.
+/// Bewusst aus <see cref="AiNetLinter.Commands.McpServerCommand"/> ausgelagert
+/// und durch <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder
+/// aufgeteilt: ohne diese Auslagerung waechst der AIContextFootprint von
+/// <see cref="McpCodeGraphServer"/> durch die Tool-Registrierungs-Abhaengigkeiten
+/// ueber das projektweite Limit (siehe <c>AiNetLinter.mdc</c>).
 /// </summary>
 internal static class McpServerOptionsFactory
 {
@@ -31,7 +31,7 @@ internal static class McpServerOptionsFactory
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
     /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (siehe <c>.
+    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static McpServerOptions Create(McpCodeGraphServer mcpState)
     {

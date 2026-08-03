@@ -7,11 +7,12 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Eingefuehrt mit
-/// der vorherige 5-Parameter-Konstruktor das projektweite <c>MaxConstructorDependencies: 5</c>-Limit
-/// (siehe <c> exakt erreichte — jede weitere P0/P1-Erweiterung
-/// an <see cref="McpCodeGraphServer"/> haette den Build gebrochen. Mit diesem Record wachsen
-/// kuenftige Konfigurations-Properties additiv, ohne die Konstruktor-Signatur zu aendern.
+/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Eingefuehrt als
+/// Ersatz fuer den frueheren 5-Parameter-Konstruktor, der am projektweiten
+/// <c>MaxConstructorDependencies: 5</c>-Limit (siehe <c>AiNetLinter.mdc</c>)
+/// exakt angelangt war — jede weitere P0/P1-Erweiterung am Konstruktor
+/// haette den Build gebrochen. Mit diesem Record wachsen kuenftige
+/// Konfigurations-Properties additiv, ohne die Konstruktor-Signatur zu aendern.
 /// </summary>
 internal sealed record McpCodeGraphServerOptions
 {
@@ -31,10 +32,10 @@ internal sealed record McpCodeGraphServerOptions
 
     /// <summary>
     /// Factory-Methode mit identischer Parameter-Signatur wie der vorherige
-    /// <c>McpCodeGraphServer</c>-Konstruktor. Erlaubt minimal-invasive Migration der
-    /// 65 Call-Sites (1:1-Uebersetzung) ohne neuen 5-Parameter-Record-Konstruktor.
-    /// <c>consoleOverride</c> wurde bewusst entfernt (siehe Plan-Abweichung 8 in
-    /// <c>units/011/plan.md</c>) — kein einziger Call-Site uebergibt ihn.
+    /// <c>McpCodeGraphServer</c>-Konstruktor. Erlaubt minimal-invasive Migration
+    /// der Call-Sites (1:1-Uebersetzung) ohne neuen 5-Parameter-Record-Konstruktor.
+    /// <c>consoleOverride</c> wurde bewusst entfernt: kein einziger Call-Site
+    /// uebergibt ihn.
     /// </summary>
     public static McpCodeGraphServerOptions From(
         SourceFileCatalog? catalog,

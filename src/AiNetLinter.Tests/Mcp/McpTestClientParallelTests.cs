@@ -8,8 +8,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Last-Test fuer
-/// alle erfolgreich sein (Retry faengt den 010-Volllauf-Flake ab), oder saemtliche Clients
+/// Last-Test fuer <see cref="McpTestClient.ConnectAsync"/>: 16 parallele Aufrufe muessen
+/// entweder alle erfolgreich sein (Retry faengt den Volllauf-Flake ab), oder saemtliche Clients
 /// ordnungsgemaess disposed werden. Integration-Test, weil er einen echten Server-Subprozess
 /// startet — laeuft im Volllauf, nicht im Unit-Slice.
 /// </summary>

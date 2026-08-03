@@ -7,9 +7,10 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Strukturelle A3-Sicherung fuer
-/// nimmt genau einen Parameter vom Typ <see cref="McpCodeGraphServerOptions"/>. Eingefuehrt mit
-/// <c>MaxConstructorDependencies: 5</c>-Limit lag.
+/// Strukturelle A3-Sicherung fuer den Konstruktor von <see cref="McpCodeGraphServer"/>:
+/// Er nimmt genau einen Parameter vom Typ <see cref="McpCodeGraphServerOptions"/>. Eingefuehrt,
+/// weil der Konstruktor am projektweiten <c>MaxConstructorDependencies: 5</c>-Limit
+/// (siehe <c>AiNetLinter.mdc</c>) angelangt war und ein weiterer Parameter den Build gebrochen haette.
 /// </summary>
 public sealed class McpCodeGraphServerConstructorTests
 {
