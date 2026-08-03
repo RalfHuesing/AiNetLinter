@@ -32,7 +32,7 @@ eine Zeile.>
 | step-003 | EPIC-01 | done | Core/-Testordner subgliedern, MaxDirectoryChildren aktivieren (F.3) | 0/3 | 8cae25c | approved | 8cae25c, cede919 |
 | step-004 | EPIC-01 | done | Test-Data-Builder statt ad-hoc-Konstruktion, Teil 1/2 (F.4) | 0/3 | 26fd08f | approved | 26fd08f, ae4d6d1 |
 | step-005 | EPIC-01 | done | Test-Data-Builder Rest-Cluster (F.4 Teil 2/2) + `#nullable enable`-Randmitnahme (F.5) | 0/3 | d744dc9 | approved | d744dc9, 0f6c2cd, fcf1d32 |
-| step-006 | EPIC-01 | in_progress | Laufzeitmessung vorher/nachher dokumentieren (F.6) | 0/3 | - | - | e8015d2 |
+| step-006 | EPIC-01 | done | Laufzeitmessung vorher/nachher dokumentieren (F.6) | 0/3 | 3821111 | approved | 3821111, 4e5f1dc |
 
 ## Config (optional)
 
