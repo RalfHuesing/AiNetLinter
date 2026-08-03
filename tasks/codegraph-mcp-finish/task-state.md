@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-03
 rules_dir: .agents/rules
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-005
+current_step: step-006
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-005
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-005`
+- **Aktueller Schritt:** `step-006`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -32,6 +32,7 @@ eine Zeile.>
 | step-003 | EPIC-01 | done | Core/-Testordner subgliedern, MaxDirectoryChildren aktivieren (F.3) | 0/3 | 8cae25c | approved | 8cae25c, cede919 |
 | step-004 | EPIC-01 | done | Test-Data-Builder statt ad-hoc-Konstruktion, Teil 1/2 (F.4) | 0/3 | 26fd08f | approved | 26fd08f, ae4d6d1 |
 | step-005 | EPIC-01 | done | Test-Data-Builder Rest-Cluster (F.4 Teil 2/2) + `#nullable enable`-Randmitnahme (F.5) | 0/3 | d744dc9 | approved | d744dc9, 0f6c2cd, fcf1d32 |
+| step-006 | EPIC-01 | in_progress | Laufzeitmessung vorher/nachher dokumentieren (F.6) | 0/3 | - | - | e8015d2 |
 
 ## Config (optional)
 
