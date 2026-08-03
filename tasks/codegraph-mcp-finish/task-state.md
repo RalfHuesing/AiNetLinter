@@ -28,7 +28,7 @@ eine Zeile.>
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | ConsoleTestCollection-Regression beheben (F.1) | 0/3 | e466020 | approved | e466020, 8581a4d |
-| step-002 | EPIC-01 | in_progress | CliProcessRunner-Helper (F.2) | 0/3 | - | - | - |
+| step-002 | EPIC-01 | done | CliProcessRunner-Helper (F.2) | 0/3 | a566ea4 | approved | a566ea4, 172bdc5 |
 
 ## Config (optional)
 

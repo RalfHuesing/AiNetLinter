@@ -25,6 +25,7 @@ Verweis auf die Tech-Debt-ID).
 | ID | Bereich / Datei | Priorität | Kurzfassung |
 |---|---|---|---|
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerConstructorTests.cs`, `McpServerOptionsFactoryTests.cs`, `McpTestClientRetryTests.cs` | niedrig | Vorbestehende XML-Doc-Kommentare brechen mitten im Satz ab |
+| TD-002 | `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs:92` | niedrig | Tote, vorbestehende Variable `baselineAfter` (deklariert, nie assertet) |
 
 ## Einträge
 
@@ -55,4 +56,31 @@ Verweis auf die Tech-Debt-ID).
 - **Vorschlag:** Bei nächster inhaltlicher Berührung dieser drei Klassen
   (z. B. im Rahmen eines künftigen Steps zu `Mcp/`) die abgerissenen
   Sätze vervollständigen oder kürzen, statt sie weiter mitzuschleppen.
+- **Status:** offen
+
+### TD-002 — Tote Variable `baselineAfter` in `WebBaselineTests` [Priorität: niedrig]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-03), vom Coder
+  bereits im `step-result.md` unter „Beobachtungen" vorgemerkt.
+- **Ort:** `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs:92` (Methode
+  `AuditWithBaseline_ChangedWebFile_ReportsViolationsAndUpdatesBaseline`)
+  — `var baselineAfter = BaselineReader.Read(baselinePath);` wird
+  deklariert, aber nie in einem Assert verwendet.
+- **Befund:** War bereits vor step-002 unbenutzt (verifiziert: der Diff in
+  `a566ea4` ändert an dieser Zeile nur `void` → `async Task`-Umbau des
+  umschließenden Test-Signatur-Kontexts, nicht die Zeile selbst). Kein
+  Compiler-Warncode für unbenutzte lokale Variablen mit direkter
+  Zuweisung durch eine Methode mit Seiteneffekt (kein CS0219 hier, da die
+  Methode `BaselineReader.Read` aufgerufen und ihr Rückgabewert nur nicht
+  genutzt wird) — daher bleibt sie unbemerkt.
+- **Warum nicht sofort gefixt:** Außerhalb des reinen
+  Boilerplate-/Aufruf-Mechanik-Scopes von step-002 (Non-Goal „Keine
+  Änderung an Testinhalten/Assertions" aus `Konzept.md`) — ob die Zeile
+  entfernt oder (wahrscheinlicher beabsichtigt) um einen fehlenden Assert
+  auf den aktualisierten Baseline-Checksum ergänzt werden soll, ist eine
+  inhaltliche Testentscheidung, keine mechanische.
+- **Vorschlag:** Bei nächster inhaltlicher Berührung dieses Tests klären,
+  ob ein Assert auf `baselineAfter` fehlt (wahrscheinlicher, da die
+  Methode explizit „UpdatesBaseline" im Namen trägt) oder die Variable
+  ersatzlos entfernt werden kann.
 - **Status:** offen
