@@ -8,7 +8,7 @@ epic: EPIC-03
 coded_by_model: claude-sonnet-5
 coded_by_model_knowledge_cutoff: 2026-01
 code_commit: fd395c2
-docs_commit: PENDING
+docs_commit: be6ff6a
 ---
 
 # Step 008 Result: ILinterEngineConfig-Interface extrahiert, PathOverride-Liste 14 → 2
