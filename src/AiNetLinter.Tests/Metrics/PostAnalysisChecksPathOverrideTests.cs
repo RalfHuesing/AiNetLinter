@@ -48,7 +48,7 @@ public sealed class PostAnalysisChecksPathOverrideTests
             ProjectName = project,
         };
 
-    private static Config MakeConfig(int globalLimit, int pathOverrideLimit) => new()
+    private static Config MakeConfig(int globalLimit, int pathOverrideLimit) => TestHelper.CreateDefaultConfig() with
     {
         Global = new GlobalConfig
         {
@@ -126,7 +126,7 @@ public sealed class PostAnalysisChecksPathOverrideTests
     {
         // Ensure ** glob correctly matches nested path segments
         var state = CreateState(MakeClass("Nested", @"C:\Solution\App\Pages\Test\Sub\Deep\Page.cs", footprint: 7000));
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnableTestSentinel = false, EnforceSealedClasses = false },
             Metrics = new MetricsConfig { MaxAIContextFootprint = 5000 },

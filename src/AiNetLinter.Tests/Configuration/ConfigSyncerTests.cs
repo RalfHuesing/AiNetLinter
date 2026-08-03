@@ -21,11 +21,7 @@ public sealed class ConfigSyncerTests
         return path;
     }
 
-    private static Config DefaultConfig() => new()
-    {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
+    private static Config DefaultConfig() => TestHelper.CreateDefaultConfig();
 
     // --- neue Optionen werden ergänzt ---
 
@@ -93,7 +89,7 @@ public sealed class ConfigSyncerTests
         var path = WriteTempJson(userJson);
         try
         {
-            var loadedConfig = new Config
+            var loadedConfig = TestHelper.CreateDefaultConfig() with
             {
                 Global = new GlobalConfig { EnforceSealedClasses = false },
                 Metrics = new MetricsConfig { MaxLineCount = 500 },
@@ -129,10 +125,8 @@ public sealed class ConfigSyncerTests
         var path = WriteTempJson(userJson);
         try
         {
-            var loadedConfig = new Config
+            var loadedConfig = TestHelper.CreateDefaultConfig() with
             {
-                Global = new GlobalConfig(),
-                Metrics = new MetricsConfig(),
                 ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
                 {
                     ["*.Tests"] = new ProjectOverrideEntry
@@ -257,9 +251,8 @@ public sealed class ConfigSyncerTests
     [Fact]
     public void SyncerC_MetricsConfigOverride_CompoundSuppressions_Applied()
     {
-        var globalConfig = new Config
+        var globalConfig = TestHelper.CreateDefaultConfig() with
         {
-            Global = new GlobalConfig(),
             Metrics = new MetricsConfig
             {
                 CompoundSuppressions = new List<CompoundSuppression>()

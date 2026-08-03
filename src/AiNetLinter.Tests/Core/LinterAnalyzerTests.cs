@@ -11,7 +11,7 @@ public sealed class LinterAnalyzerTests
 {
     private static Config CreateDefaultConfig()
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

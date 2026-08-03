@@ -24,11 +24,7 @@ public sealed class RuleRegistryTests
             Assert.False(string.IsNullOrWhiteSpace(rule.Intent), $"Intent should not be empty for {rule.RuleId}.");
             Assert.False(string.IsNullOrWhiteSpace(rule.Severity), $"Severity should not be empty for {rule.RuleId}.");
 
-            var fakeConfig = new Config
-            {
-                Global = new GlobalConfig(),
-                Metrics = new MetricsConfig()
-            };
+            var fakeConfig = TestHelper.CreateDefaultConfig();
 
             var shortDesc = rule.GetShortDescription(fakeConfig);
             Assert.False(string.IsNullOrWhiteSpace(shortDesc), $"ShortDescription should not be empty for {rule.RuleId}.");

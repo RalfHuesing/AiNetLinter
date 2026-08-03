@@ -97,7 +97,7 @@ public sealed class Sample
             .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         var model = compilation.GetSemanticModel(tree);
 
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

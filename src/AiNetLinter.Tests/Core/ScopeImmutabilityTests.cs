@@ -11,7 +11,7 @@ public sealed class ScopeImmutabilityTests
 {
     private static Config CreateConfig(int maxOverloads = 2)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -81,7 +81,7 @@ public sealed class Calc
         bool allowPrivateBackingFields = false,
         string[]? exemptBaseTypes = null)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -100,7 +100,6 @@ public sealed class Calc
                 ImmutabilityAllowPrivateBackingFields = allowPrivateBackingFields,
                 ImmutabilityExemptBaseTypes = exemptBaseTypes ?? Array.Empty<string>()
             },
-            Metrics = new MetricsConfig()
         };
     }
 

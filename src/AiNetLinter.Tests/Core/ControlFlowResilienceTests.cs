@@ -11,7 +11,7 @@ public sealed class ControlFlowResilienceTests
 {
     private static Config CreateConfig(bool enabled)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -273,7 +273,7 @@ public sealed class Test
 
     private static Config CreateSilentCatchConfig(bool enabled, bool allowCancellationCatch)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

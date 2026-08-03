@@ -13,7 +13,7 @@ public sealed class ResultPatternNamespaceTests
         string[]? allowedNamespaceSuffixes = null,
         bool allowCatchRethrow = false)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

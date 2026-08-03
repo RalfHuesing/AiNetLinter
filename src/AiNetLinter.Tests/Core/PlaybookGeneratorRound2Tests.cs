@@ -98,7 +98,7 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "SliceProj");
-        var config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
+        var config = TestHelper.CreateDefaultConfig();
         var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
         try
         {
@@ -161,8 +161,8 @@ public sealed class PlaybookGeneratorRound2Tests
             """;
 
         var solution = BuildSolution(source, "MyApp", "MyService.cs");
-        var config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
-        
+        var config = TestHelper.CreateDefaultConfig();
+
         var violations = new[]
         {
             new RuleViolation
@@ -189,10 +189,8 @@ public sealed class PlaybookGeneratorRound2Tests
     {
         const string source = "namespace MyApp; public class MyService { }";
         var solution = BuildSolution(source, "MyApp", "MyService.cs");
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
-            Global = new GlobalConfig(),
-            Metrics = new MetricsConfig(),
             RuleMetadata = new Dictionary<string, RuleMetadataEntry>
             {
                 { "MaxConstructorDependencies", new RuleMetadataEntry { Severity = "warning", Intent = "coupling" } }

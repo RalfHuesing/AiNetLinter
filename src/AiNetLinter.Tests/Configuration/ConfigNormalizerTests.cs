@@ -11,11 +11,7 @@ public sealed class ConfigNormalizerTests
         _ = typeof(TestSentinelConfig);
         _ = typeof(UiSeparationConfig);
 
-        return new()
-        {
-            Global = new GlobalConfig(),
-            Metrics = new MetricsConfig(),
-        };
+        return TestHelper.CreateDefaultConfig();
     }
 
     [Fact]

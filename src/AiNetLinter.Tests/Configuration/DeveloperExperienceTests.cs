@@ -51,7 +51,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void ProjectConfigResolver_NoOverrides_ReturnsGlobalConfig()
     {
-        var globalConfig = new Config
+        var globalConfig = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnforceSemanticNaming = true },
             Metrics = new MetricsConfig { MaxLineCount = 100 }
@@ -66,7 +66,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void ProjectConfigResolver_WithWildcardMatch_MergesOverrides()
     {
-        var globalConfig = new Config
+        var globalConfig = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -220,13 +220,12 @@ public sealed class DeveloperExperienceTests
         var docId = DocumentId.CreateNewId(projectId);
         solution = solution.AddDocument(docId, "WorkClass.cs", source);
 
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
                 AllowedExceptions = new[] { "ArgumentNullException" }
             },
-            Metrics = new MetricsConfig()
         };
 
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
@@ -293,7 +292,7 @@ public sealed class DeveloperExperienceTests
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
 
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -357,9 +356,8 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void GuidanceD_AgentRulesContainsCompoundSuppressionsTable()
     {
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
-            Global = new GlobalConfig(),
             Metrics = new MetricsConfig
             {
                 CompoundSuppressions = new List<CompoundSuppression>
@@ -387,9 +385,8 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void GuidanceE_AgentRulesContainsNoCompoundSuppressionsTable()
     {
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
-            Global = new GlobalConfig(),
             Metrics = new MetricsConfig
             {
                 CompoundSuppressions = new List<CompoundSuppression>()

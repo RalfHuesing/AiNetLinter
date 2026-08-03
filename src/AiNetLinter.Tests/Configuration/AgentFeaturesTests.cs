@@ -18,7 +18,7 @@ public sealed class AgentFeaturesTests
     private static Config CreateConfig(Func<GlobalConfig, GlobalConfig>? configureGlobal = null)
     {
         var global = configureGlobal?.Invoke(new GlobalConfig()) ?? new GlobalConfig();
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = global,
             Metrics = new MetricsConfig
@@ -320,11 +320,7 @@ public sealed class AgentFeaturesTests
     [Fact]
     public void RuleMetadataRegistry_ResolvesKnownRule()
     {
-        var config = new Config
-        {
-            Global = new GlobalConfig(),
-            Metrics = new MetricsConfig(),
-        };
+        var config = TestHelper.CreateDefaultConfig();
 
         var metadata = RuleMetadataRegistry.Resolve("MaxLineCount", config);
 

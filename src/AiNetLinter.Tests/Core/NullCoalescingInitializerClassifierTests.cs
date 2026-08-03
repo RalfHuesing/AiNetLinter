@@ -36,7 +36,7 @@ public sealed class NullCoalescingInitializerClassifierTests
         bool excludeNullCoalescing,
         double maxNonCoalescingRatio)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

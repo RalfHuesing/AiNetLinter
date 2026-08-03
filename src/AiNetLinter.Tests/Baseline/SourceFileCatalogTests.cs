@@ -32,10 +32,8 @@ public sealed class SourceFileCatalogTests
         solution = solution.AddProject(projectId2, "MyProject.Tests", "MyProject.Tests", LanguageNames.CSharp);
         var project2 = solution.GetProject(projectId2)!;
 
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
-            Global = new GlobalConfig(),
-            Metrics = new MetricsConfig(),
             TestSentinel = new TestSentinelConfig
             {
                 TestProjectNameSuffixes = new[] { "Tests" }

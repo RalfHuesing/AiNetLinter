@@ -14,7 +14,7 @@ public sealed class StaticTestSentinelExemptionTests
 {
     private static Config CreateSentinelConfig(TestSentinelConfig? sentinel = null)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
@@ -271,7 +271,7 @@ public static class StringExtensions
 }";
         // Global config: no exemptions
         // ProjectOverride for "TestProject": ExemptClassNameSuffixes = ["Extensions"]
-        var config = new Config
+        var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {

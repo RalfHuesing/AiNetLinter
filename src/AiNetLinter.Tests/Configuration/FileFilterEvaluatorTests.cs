@@ -13,7 +13,7 @@ public sealed class FileFilterEvaluatorTests
 {
     private static Config CreateTestConfig(FileFiltersConfig filters)
     {
-        return new Config
+        return TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
             {
