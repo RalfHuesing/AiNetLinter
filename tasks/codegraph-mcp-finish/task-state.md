@@ -31,7 +31,7 @@ eine Zeile.>
 | step-002 | EPIC-01 | done | CliProcessRunner-Helper (F.2) | 0/3 | a566ea4 | approved | a566ea4, 172bdc5 |
 | step-003 | EPIC-01 | done | Core/-Testordner subgliedern, MaxDirectoryChildren aktivieren (F.3) | 0/3 | 8cae25c | approved | 8cae25c, cede919 |
 | step-004 | EPIC-01 | done | Test-Data-Builder statt ad-hoc-Konstruktion, Teil 1/2 (F.4) | 0/3 | 26fd08f | approved | 26fd08f, ae4d6d1 |
-| step-005 | EPIC-01 | in_progress | Test-Data-Builder Rest-Cluster (F.4 Teil 2/2) + `#nullable enable`-Randmitnahme (F.5) | 0/3 | - | - | f711372 |
+| step-005 | EPIC-01 | done | Test-Data-Builder Rest-Cluster (F.4 Teil 2/2) + `#nullable enable`-Randmitnahme (F.5) | 0/3 | d744dc9 | approved | d744dc9, 0f6c2cd, fcf1d32 |
 
 ## Config (optional)
 
