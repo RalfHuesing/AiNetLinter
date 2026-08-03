@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-005: F.4 vollständig abgeschlossen (Teil 2/2), F.5-Teilfortschritt umgesetzt
+last_updated: 2026-08-03  # step-007-Planung: EPIC-01 (F.1-F.6) vollständig abgehakt, EPIC-02-Push-Fund dokumentiert
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -71,7 +71,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: Testsuite-Performance (Block F) — `ConsoleTestCollection`
+- [x] EPIC-01: Testsuite-Performance (Block F) — `ConsoleTestCollection`
       von 21 auf begründete Mitglieder eingrenzen (größter Laufzeit-Hebel,
       F.1, **erledigt → step-001**, approved), `CliProcessRunner`-Helper
       für 8 Subprozess-Teststellen (F.2, **erledigt → step-002**, approved),
@@ -84,14 +84,17 @@ obsolet markiert) — kein starres Vorab-Dokument.
       erneuter Code-Sichtung für step-005 auf tatsächlich 19 statt der in
       step-004 geschätzten 23 verifiziert, siehe step-005 „Aktueller
       Projektzustand"), `#nullable enable`-Pragma nur als Randmitnahme in
-      ohnehin angefassten Dateien (F.5, **Teilfortschritt in step-005**: 11
-      der 19 dort angefassten Dateien fehlte die Pragma-Zeile, im selben
-      Step nachgerüstet — keine eigene Flächenaktion, weiterhin offen für
-      Dateien außerhalb aller Block-F/A-F-Steps), Laufzeitmessung
-      vorher/nachher dokumentieren (F.6, weiterhin offen, für einen
-      Folge-Step). Läuft laut Konzept-Vorgabe
-      **zuerst**, damit alle nachfolgenden Einheiten von kürzeren
-      Volllauf-Zeiten profitieren. Bezug: Konzept.md „Muss-Haben F".
+      ohnehin angefassten Dateien (F.5, **erledigt (Teilfortschritt wie
+      laut Konzept vorgesehen) → step-005**, approved: 11 der 19 dort
+      angefassten Dateien fehlte die Pragma-Zeile, im selben Step
+      nachgerüstet — keine eigene Flächenaktion, wie in `Konzept.md`
+      Zeile 432-437 als Nutzer-Entscheidung vorgegeben, damit gilt F.5 als
+      abgeschlossen), Laufzeitmessung vorher/nachher dokumentieren
+      (F.6, **erledigt → step-006**, approved: Volllauf von ~8 Min. auf
+      ~1 m 35-40 s reduziert, Faktor ~4,9x, formal mit zwei
+      zeitgestoppten Läufen + TRX-Gegencheck dokumentiert). **Alle sechs
+      Teilpunkte F.1-F.6 sind damit vollständig erledigt und approved —
+      EPIC-01 ist inhaltlich abgeschlossen.** Bezug: Konzept.md „Muss-Haben F".
       F.1-Ergebnis (step-001): Volllauf von ~8 Min. auf ~1 m 35–41 s
       reduziert (informelle Messung, formale F.6-Dokumentation steht noch
       aus); neue `SubprocessConcurrencyGate`-Bremse
@@ -111,7 +114,16 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Factory-Aufteilung, TD-019 Test-Flake-Retry) inkl. der
       9-Datei-`PathOverride`-Erweiterung als akzeptiertem Pragmatik-Fix
       nachholen, anschließend Push der 11 lokalen Commits. Bezug:
-      Konzept.md „Muss-Haben A".
+      Konzept.md „Muss-Haben A". **Fund beim Planen von step-007
+      (2026-08-03):** Der Push-Teil ist bereits erledigt — per
+      `git merge-base --is-ancestor` verifiziert, alle 6 Einheit-011-Commits
+      (`4bcd5ab`…`8a663c7`) sind bereits Vorfahren von `origin/main`
+      (aktuell bei `877bef9`), vermutlich beim Push der step-001..004-Arbeit
+      dieses Tasks mit hochgeschoben, **ohne** das hier geforderte
+      Kritiker-Review. `Konzept.md`s Stand „11 Commits lokal ohne Push"
+      (`git log -1` = `59c2f5e`) ist damit veraltet. Offen bleibt aus
+      Muss-Haben A ausschließlich das nachgeholte Review (kein Push mehr
+      nötig/möglich) → **in Arbeit → step-007**.
 - [ ] EPIC-03: `ILinterEngineConfig`-Refactor (Muss-Haben C, TD-008/
       TD-010) — schlankes Interface für `McpCodeGraphServer.Config`
       extrahieren, `rules.json`-`PathOverride`-Liste (13 Einträge) auf
