@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Threading.Tasks;
 using AiNetLinter.Suppression;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
@@ -8,11 +8,11 @@ namespace AiNetLinter.Tests.Suppression;
 public sealed class DisableAllCliTests
 {
     [Fact]
-    public void AddDisableAll_OnViolatingFixture_InjectOnlyIntoViolatingFiles()
+    public async Task AddDisableAll_OnViolatingFixture_InjectOnlyIntoViolatingFiles()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
 
-        var result = RunLinter(
+        var result = await CliProcessRunner.RunLinterAsync(
             $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --add-disable-all");
 
         Assert.Equal(0, result.ExitCode);
@@ -21,13 +21,13 @@ public sealed class DisableAllCliTests
     }
 
     [Fact]
-    public void RemoveDisableAll_OnFixture_RemovesExactDisableAllLine()
+    public async Task RemoveDisableAll_OnFixture_RemovesExactDisableAllLine()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
         var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
         File.WriteAllText(workspace.ViolatingClassPath, DisableAllCommentInjector.PrependDisableAll(originalContent));
 
-        var result = RunLinter($"--path \"{workspace.RootPath}\" --remove-disable-all");
+        var result = await CliProcessRunner.RunLinterAsync($"--path \"{workspace.RootPath}\" --remove-disable-all");
 
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(originalContent, File.ReadAllText(workspace.ViolatingClassPath));
@@ -57,58 +57,5 @@ public sealed class DisableAllCliTests
         });
 
         Assert.Equal(1, exitCode);
-    }
-
-    private static (int ExitCode, string Output, string Error) RunLinter(string arguments)
-    {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
-
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" {arguments}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        return (process.ExitCode, output, error);
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Solution root not found.");
-    }
-
-    private static string FindLinterDll(string rootDir)
-    {
-        var binDir = Path.Combine(rootDir, "src", "AiNetLinter", "bin");
-        var files = Directory.GetFiles(binDir, "AiNetLinter.dll", SearchOption.AllDirectories);
-        if (files.Length == 0)
-        {
-            throw new FileNotFoundException("AiNetLinter.dll not found.");
-        }
-
-        return files.OrderByDescending(File.GetLastWriteTimeUtc).First();
     }
 }

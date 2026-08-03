@@ -48,17 +48,14 @@ public sealed class McpServerCommandAmbiguityE2ETests
             CreateNoWindow = true,
         };
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-        Assert.True(
-            process!.WaitForExit(TimeSpan.FromSeconds(10)),
-            "Server-Prozess hat nicht innerhalb 10s beendet — vermutlich blockiert er im MCP-Wartemodus.");
+        var result = await CliProcessRunner.RunAsync(processInfo, TimeSpan.FromSeconds(10));
 
-        var stderr = process.StandardError.ReadToEnd();
-        Assert.NotEqual(0, process.ExitCode);
-        Assert.Contains("AMBIGUOUS_SOLUTION", stderr, StringComparison.Ordinal);
-        Assert.Contains("First.slnx", stderr, StringComparison.Ordinal);
-        Assert.Contains("Second.slnx", stderr, StringComparison.Ordinal);
+        Assert.True(
+            !result.TimedOut,
+            "Server-Prozess hat nicht innerhalb 10s beendet — vermutlich blockiert er im MCP-Wartemodus.");
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("AMBIGUOUS_SOLUTION", result.Error, StringComparison.Ordinal);
+        Assert.Contains("First.slnx", result.Error, StringComparison.Ordinal);
+        Assert.Contains("Second.slnx", result.Error, StringComparison.Ordinal);
     }
 }

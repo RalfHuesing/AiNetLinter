@@ -2,8 +2,7 @@
 
 using System;
 using System.IO;
-using System.Linq;
-using System.Diagnostics;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
@@ -13,7 +12,7 @@ namespace AiNetLinter.Tests.Baseline;
 public sealed class WebBaselineTests
 {
     [Fact]
-    public void CreateBaseline_WithWebEnabled_IncludesWebFiles()
+    public async Task CreateBaseline_WithWebEnabled_IncludesWebFiles()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-web-baseline-{Guid.NewGuid():N}.json");
@@ -34,7 +33,7 @@ public sealed class WebBaselineTests
             File.WriteAllText(razorPath, "<h3>Component</h3>");
 
             // 3. Create baseline using CLI
-            var createResult = RunLinter(
+            var createResult = await CliProcessRunner.RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
 
             Assert.Equal(0, createResult.ExitCode);
@@ -56,7 +55,7 @@ public sealed class WebBaselineTests
     }
 
     [Fact]
-    public void AuditWithBaseline_ChangedWebFile_ReportsViolationsAndUpdatesBaseline()
+    public async Task AuditWithBaseline_ChangedWebFile_ReportsViolationsAndUpdatesBaseline()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
         var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-web-baseline-{Guid.NewGuid():N}.json");
@@ -72,12 +71,12 @@ public sealed class WebBaselineTests
             // 2. Create web files in the workspace project directory
             var projectDir = Path.Combine(workspace.RootPath, "src", "BaselineMini");
             var cssPath = Path.Combine(projectDir, "styles.css");
-            
+
             // CSS has 1 line initially (no violation)
             File.WriteAllText(cssPath, ".btn { color: blue; }");
 
             // 3. Create baseline using CLI
-            var createResult = RunLinter(
+            var createResult = await CliProcessRunner.RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --create-baseline \"{baselinePath}\"");
             Assert.Equal(0, createResult.ExitCode);
 
@@ -85,7 +84,7 @@ public sealed class WebBaselineTests
             File.WriteAllText(cssPath, ".btn {" + Environment.NewLine + "  color: blue;" + Environment.NewLine + "}");
 
             // 5. Audit - should report the CSS violation on the changed file
-            var auditResult = RunLinter(
+            var auditResult = await CliProcessRunner.RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
 
             Assert.Equal(1, auditResult.ExitCode);
@@ -93,9 +92,9 @@ public sealed class WebBaselineTests
 
             // 6. Baseline should have been updated with the new checksum
             var baselineAfter = BaselineReader.Read(baselinePath);
-            
+
             // 7. Run audit again - should pass because the baseline has been updated to include the change
-            var secondAuditResult = RunLinter(
+            var secondAuditResult = await CliProcessRunner.RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
             Assert.Equal(0, secondAuditResult.ExitCode);
         }
@@ -105,64 +104,11 @@ public sealed class WebBaselineTests
         }
     }
 
-    private static (int ExitCode, string Output, string Error) RunLinter(string arguments)
-    {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
-
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" {arguments}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        return (process.ExitCode, output, error);
-    }
-
     private static void DeleteIfExists(string path)
     {
         if (File.Exists(path))
         {
             File.Delete(path);
         }
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Solution root not found.");
-    }
-
-    private static string FindLinterDll(string rootDir)
-    {
-        var binDir = Path.Combine(rootDir, "src", "AiNetLinter", "bin");
-        var files = Directory.GetFiles(binDir, "AiNetLinter.dll", SearchOption.AllDirectories);
-        if (files.Length == 0)
-        {
-            throw new FileNotFoundException("AiNetLinter.dll not found.");
-        }
-
-        return files.OrderByDescending(File.GetLastWriteTimeUtc).First();
     }
 }

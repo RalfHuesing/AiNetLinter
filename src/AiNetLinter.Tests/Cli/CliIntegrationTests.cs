@@ -1,5 +1,4 @@
 using Xunit;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
@@ -13,8 +12,8 @@ public sealed class CliIntegrationTests
     [Fact]
     public async Task RunLinterCli_OnWholeSolution_ReturnsSuccess()
     {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
+        var linterDllPath = CliProcessRunner.FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
         var targetPath = rootDir;
 
@@ -22,61 +21,30 @@ public sealed class CliIntegrationTests
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
         Assert.True(Directory.Exists(targetPath), $"Zielverzeichnis nicht gefunden unter: {targetPath}");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{targetPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{targetPath}\"");
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        Assert.Null(error == "" ? null : error);
-        Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
-        Assert.Contains("OK", output);
+        Assert.Null(result.Error == "" ? null : result.Error);
+        Assert.True(result.ExitCode == 0, $"Linter schlug mit Exit-Code {result.ExitCode} fehl. Output:\n{result.Output}\nError:\n{result.Error}");
+        Assert.Contains("OK", result.Output);
     }
 
     [Fact]
     public async Task GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
     {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
+        var linterDllPath = CliProcessRunner.FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
         var playbookFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\" --playbook \"{playbookFile}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
         try
         {
-            using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-            using var process = Process.Start(processInfo);
-            Assert.NotNull(process);
+            var result = await CliProcessRunner.RunLinterAsync(
+                $"--config \"{configPath}\" --path \"{rootDir}\" --playbook \"{playbookFile}\"");
 
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            Assert.True(process.ExitCode == 0, $"Linter schlug mit Exit-Code {process.ExitCode} fehl. Output:\n{output}\nError:\n{error}");
+            Assert.True(result.ExitCode == 0, $"Linter schlug mit Exit-Code {result.ExitCode} fehl. Output:\n{result.Output}\nError:\n{result.Error}");
             Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
 
             var content = File.ReadAllText(playbookFile);
@@ -97,37 +65,23 @@ public sealed class CliIntegrationTests
     {
         // Reproduziert den P0-Bug: --sync-agent-rules + --playbook im selben Aufruf
         // sollte beide Artefakte erzeugen (früher return verhinderte das Playbook).
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
+        var linterDllPath = CliProcessRunner.FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
         var tempPlaybookPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Config nicht gefunden: {configPath}");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\" --sync-agent-rules --playbook \"{tempPlaybookPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
         try
         {
-            using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-            using var process = Process.Start(processInfo);
-            Assert.NotNull(process);
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
+            var result = await CliProcessRunner.RunLinterAsync(
+                $"--config \"{configPath}\" --path \"{rootDir}\" --sync-agent-rules --playbook \"{tempPlaybookPath}\"");
 
-            Assert.True(process.ExitCode == 0,
-                $"Kombinierter Aufruf fehlgeschlagen (Exit {process.ExitCode}).\nOutput: {output}\nError: {error}");
+            Assert.True(result.ExitCode == 0,
+                $"Kombinierter Aufruf fehlgeschlagen (Exit {result.ExitCode}).\nOutput: {result.Output}\nError: {result.Error}");
             Assert.True(File.Exists(tempPlaybookPath),
-                $"Playbook wurde nicht erzeugt (P0-Bug). Output: {output}");
+                $"Playbook wurde nicht erzeugt (P0-Bug). Output: {result.Output}");
             var content = File.ReadAllText(tempPlaybookPath);
             Assert.Contains("AI Repository Playbook", content);
         }
@@ -141,114 +95,64 @@ public sealed class CliIntegrationTests
     public async Task SyncAgentRules_WithViolations_RunsLintAndReturnsExitCodeOneAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
 
         var tempAgentRulesDir = Path.Combine(workspace.RootPath, ".agents", "rules");
         Directory.CreateDirectory(tempAgentRulesDir);
         var expectedMdcPath = Path.Combine(tempAgentRulesDir, "AiNetLinter.mdc");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = await CliProcessRunner.RunLinterAsync(
+            $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules");
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        Assert.Equal(1, process.ExitCode);
-        Assert.Contains("EnforceSealedClasses", output);
-        Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}. Output:\n{output}");
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("EnforceSealedClasses", result.Output);
+        Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}. Output:\n{result.Output}");
     }
 
     [Fact]
     public async Task SyncAgentRulesOnly_WithViolations_ReturnsSuccessAndSyncsRules()
     {
         using var workspace = new Fixtures.BaselineMiniFixtureWorkspace();
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
 
         var tempAgentRulesDir = Path.Combine(workspace.RootPath, ".agents", "rules");
         Directory.CreateDirectory(tempAgentRulesDir);
         var expectedMdcPath = Path.Combine(tempAgentRulesDir, "AiNetLinter.mdc");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules-only",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = await CliProcessRunner.RunLinterAsync(
+            $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --sync-agent-rules-only");
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        Assert.Equal(0, process.ExitCode);
-        Assert.DoesNotContain("EnforceSealedClasses", output);
+        Assert.Equal(0, result.ExitCode);
+        Assert.DoesNotContain("EnforceSealedClasses", result.Output);
         Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}");
     }
 
     [Fact]
     public async Task GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
     {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
+        var linterDllPath = CliProcessRunner.FindLinterDll(rootDir);
         var configPath = Path.Combine(rootDir, "rules.json");
         var tempPlaybookPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
 
         Assert.True(File.Exists(linterDllPath));
         Assert.True(File.Exists(configPath));
 
-        ProcessStartInfo MakeProcess(string extraArgs) => new()
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\" --playbook \"{tempPlaybookPath}\" {extraArgs}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        string BuildArguments(string extraArgs) =>
+            $"--config \"{configPath}\" --path \"{rootDir}\" --playbook \"{tempPlaybookPath}\" {extraArgs}";
 
         try
         {
             // Erst generieren
-            using (var genLease = await SubprocessConcurrencyGate.AcquireAsync())
-            using (var genProcess = Process.Start(MakeProcess("")))
-            {
-                Assert.NotNull(genProcess);
-                genProcess.StandardOutput.ReadToEnd();
-                genProcess.WaitForExit();
-                Assert.Equal(0, genProcess.ExitCode);
-            }
+            var genResult = await CliProcessRunner.RunLinterAsync(BuildArguments(""));
+            Assert.Equal(0, genResult.ExitCode);
 
             Assert.True(File.Exists(tempPlaybookPath));
 
             // Dann prüfen (--check)
-            using var checkLease = await SubprocessConcurrencyGate.AcquireAsync();
-            using var checkProcess = Process.Start(MakeProcess("--check"));
-            Assert.NotNull(checkProcess);
-            string output = checkProcess.StandardOutput.ReadToEnd();
-            string error = checkProcess.StandardError.ReadToEnd();
-            checkProcess.WaitForExit();
+            var checkResult = await CliProcessRunner.RunLinterAsync(BuildArguments("--check"));
 
-            Assert.True(checkProcess.ExitCode == 0,
-                $"--playbook --check sollte Exit 0 liefern. Output: {output}\nError: {error}");
-            Assert.Contains("[OK]", output);
+            Assert.True(checkResult.ExitCode == 0,
+                $"--playbook --check sollte Exit 0 liefern. Output: {checkResult.Output}\nError: {checkResult.Error}");
+            Assert.Contains("[OK]", checkResult.Output);
         }
         finally
         {
@@ -259,30 +163,14 @@ public sealed class CliIntegrationTests
     [Fact]
     public async Task RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()
     {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
         var configPath = Path.Combine(rootDir, "non-existent-config.json");
         var targetPath = rootDir;
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{targetPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{targetPath}\"");
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        Assert.True(process.ExitCode == 1, $"Linter sollte mit Exit-Code 1 fehlschlagen, beendete aber mit {process.ExitCode}.");
-        Assert.Contains("[ERROR]", error);
+        Assert.True(result.ExitCode == 1, $"Linter sollte mit Exit-Code 1 fehlschlagen, beendete aber mit {result.ExitCode}.");
+        Assert.Contains("[ERROR]", result.Error);
     }
 
     /// <summary>
@@ -292,64 +180,15 @@ public sealed class CliIntegrationTests
     [Fact]
     public async Task DiagnosticDump_SelfLintOutput_WritesToFile()
     {
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = FindLinterDll(rootDir);
+        var rootDir = CliProcessRunner.FindSolutionRoot();
         var configPath = Path.Combine(rootDir, "rules.json");
         var outputDir = Path.Combine(rootDir, "test-output");
         var outputFile = Path.Combine(outputDir, "self-lint.txt");
 
         Directory.CreateDirectory(outputDir);
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{rootDir}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{rootDir}\"");
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo)!;
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        File.WriteAllText(outputFile, $"ExitCode: {process.ExitCode}\n\n{output}\n---STDERR---\n{error}");
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
-
-    private static string FindLinterDll(string rootDir)
-    {
-        var binDir = Path.Combine(rootDir, "src", "AiNetLinter", "bin");
-        if (!Directory.Exists(binDir))
-        {
-            throw new DirectoryNotFoundException($"Das Build-Ausgabeverzeichnis existiert nicht: {binDir}");
-        }
-
-        // Suche nach AiNetLinter.dll in Debug/Release Ordnern
-        var files = Directory.GetFiles(binDir, "AiNetLinter.dll", SearchOption.AllDirectories);
-        if (files.Length == 0)
-        {
-            throw new FileNotFoundException("Die Datei 'AiNetLinter.dll' wurde in keinem Build-Unterordner gefunden.");
-        }
-
-        // Falls mehrere existieren (z. B. Debug und Release), nimm den aktuellsten
-        return files[0];
+        File.WriteAllText(outputFile, $"ExitCode: {result.ExitCode}\n\n{result.Output}\n---STDERR---\n{result.Error}");
     }
 }

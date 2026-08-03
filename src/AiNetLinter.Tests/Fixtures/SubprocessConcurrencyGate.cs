@@ -20,9 +20,10 @@ public static class SubprocessConcurrencyGate
 
     /// <summary>
     /// Wartet auf einen freien Slot und gibt ein <see cref="IDisposable"/> zurueck, das den Slot
-    /// beim Dispose wieder freigibt. Der Aufrufer haelt das Handle fuer die gesamte Laufzeit des
-    /// zugehoerigen Subprozesses (nicht nur waehrend des Starts), damit die Bremse tatsaechlich
-    /// die Zahl gleichzeitig laufender Prozesse begrenzt.
+    /// beim Dispose wieder freigibt. Wie lange der Aufrufer das Lease haelt (nur Start/Handshake
+    /// vs. gesamte Prozesslaufzeit) entscheidet er selbst — kein universeller Vertrag; siehe
+    /// <c>McpTestClient.ConnectAsync</c> (Lease nur fuer Start+Handshake) vs. <c>CliProcessRunner</c>
+    /// (Lease bis Prozessende) fuer zwei unterschiedliche, beide gueltige Nutzungsmuster.
     /// </summary>
     public static async Task<IDisposable> AcquireAsync(CancellationToken cancellationToken = default)
     {

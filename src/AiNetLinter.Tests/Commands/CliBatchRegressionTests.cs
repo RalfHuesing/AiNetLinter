@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
@@ -33,30 +32,12 @@ public sealed class CliBatchRegressionTests
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
-        var rootDir = FindSolutionRoot();
-        var linterDllPath = Path.Combine(rootDir, "src", "AiNetLinter", "bin", "Debug", "net10.0", "AiNetLinter.dll");
+        var rootDir = CliProcessRunner.FindSolutionRoot();
         var configPath = Path.Combine(rootDir, "rules.json");
 
-        Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden: {linterDllPath}");
         Assert.True(File.Exists(configPath), $"Konfiguration nicht gefunden: {configPath}");
 
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"\"{linterDllPath}\" --config \"{configPath}\" --path \"{fixture.RootPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo);
-        Assert.NotNull(process);
-
-        var output = process!.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{fixture.RootPath}\"");
 
         // SymbolGraphMini enthaelt eine deterministische Verletzung (ViolationTrigger.cs,
         // fehlendes sealed), daher erwarten wir Exit-Code 1 (= Violations gefunden) statt 0.
@@ -64,25 +45,9 @@ public sealed class CliBatchRegressionTests
         // echte Solution (clean, Exit 0) — dieser Test ist das Pendant fuer die Mini-Fixture
         // mit Verletzung.
         Assert.True(
-            process.ExitCode == 1,
-            $"Linter-CLI brach unerwartet ab (Exit {process.ExitCode}, erwartet 1 fuer Violations). "
-            + $"Output:\n{output}\nError:\n{error}");
-        Assert.Contains("ViolationTrigger", output, StringComparison.Ordinal);
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("AiNetLinter.slnx nicht im Elternverzeichnispfad gefunden.");
+            result.ExitCode == 1,
+            $"Linter-CLI brach unerwartet ab (Exit {result.ExitCode}, erwartet 1 fuer Violations). "
+            + $"Output:\n{result.Output}\nError:\n{result.Error}");
+        Assert.Contains("ViolationTrigger", result.Output, StringComparison.Ordinal);
     }
 }

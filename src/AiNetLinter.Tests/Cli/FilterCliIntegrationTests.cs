@@ -23,8 +23,8 @@ public sealed class FilterCliIntegrationTests
 
     public FilterCliIntegrationTests()
     {
-        _rootDir       = FindSolutionRoot();
-        _linterDllPath = FindLinterDll(_rootDir);
+        _rootDir       = CliProcessRunner.FindSolutionRoot();
+        _linterDllPath = CliProcessRunner.FindLinterDll(_rootDir);
         _configPath    = Path.Combine(_rootDir, "rules.json");
         _slnPath       = Path.Combine(_rootDir, "AiNetLinter.slnx");
     }
@@ -324,41 +324,7 @@ public sealed class FilterCliIntegrationTests
             CreateNoWindow        = true
         };
 
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
-        using var process = Process.Start(processInfo)
-            ?? throw new InvalidOperationException("Konnte den Linter-Prozess nicht starten.");
-
-        var output = process.StandardOutput.ReadToEnd();
-        var error  = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        return (output, error, process.ExitCode);
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-                return currentDir.FullName;
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException(
-            "Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
-
-    private static string FindLinterDll(string rootDir)
-    {
-        var binDir = Path.Combine(rootDir, "src", "AiNetLinter", "bin");
-        if (!Directory.Exists(binDir))
-            throw new DirectoryNotFoundException($"Build-Ausgabeverzeichnis nicht gefunden: {binDir}");
-
-        var files = Directory.GetFiles(binDir, "AiNetLinter.dll", SearchOption.AllDirectories);
-        if (files.Length == 0)
-            throw new FileNotFoundException("'AiNetLinter.dll' in keinem Build-Unterordner gefunden.");
-
-        return files.OrderByDescending(f => new FileInfo(f).LastWriteTimeUtc).First();
+        var result = await CliProcessRunner.RunAsync(processInfo);
+        return (result.Output, result.Error, result.ExitCode);
     }
 }

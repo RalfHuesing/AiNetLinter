@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 
 namespace AiNetLinter.Tests.Fixtures;
 
@@ -94,25 +93,10 @@ public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
             CreateNoWindow = true,
         };
 
-        using var process = Process.Start(startInfo);
-        if (process is null)
+        var result = CliProcessRunner.RunSync(startInfo);
+        if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"git-Prozess konnte nicht gestartet werden ('git {arguments}').");
-        }
-
-        process.StandardInput.Close();
-
-        var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Append(e.Data).Append('\n'); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Append(e.Data).Append('\n'); };
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"'git {arguments}' schlug fehl (Exit {process.ExitCode}): {stderr}");
+            throw new InvalidOperationException($"'git {arguments}' schlug fehl (Exit {result.ExitCode}): {result.Error}");
         }
     }
 }
