@@ -33,7 +33,7 @@ eine Zeile.>
 | step-004 | EPIC-01 | done | Test-Data-Builder statt ad-hoc-Konstruktion, Teil 1/2 (F.4) | 0/3 | 26fd08f | approved | 26fd08f, ae4d6d1 |
 | step-005 | EPIC-01 | done | Test-Data-Builder Rest-Cluster (F.4 Teil 2/2) + `#nullable enable`-Randmitnahme (F.5) | 0/3 | d744dc9 | approved | d744dc9, 0f6c2cd, fcf1d32 |
 | step-006 | EPIC-01 | done | Laufzeitmessung vorher/nachher dokumentieren (F.6) | 0/3 | 3821111 | approved | 3821111, 4e5f1dc |
-| step-007 | EPIC-02 | in_progress | Einheit-011-Abschluss: Verifikation + nachgeholtes Kritiker-Review | 0/3 | - | - | 0df112a |
+| step-007 | EPIC-02 | done (fix-01 pending) | Einheit-011-Abschluss: Verifikation + nachgeholtes Kritiker-Review | 0/3 | 7b3f193 | issues | 7b3f193, 830b513 |
 
 ## Config (optional)
 
