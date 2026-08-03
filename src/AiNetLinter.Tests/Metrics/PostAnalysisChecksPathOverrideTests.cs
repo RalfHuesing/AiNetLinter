@@ -10,7 +10,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Metrics;
 
 /// <summary>
 /// Testet, dass PathOverrides in PostAnalysisChecks korrekt aufgelöst werden,

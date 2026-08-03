@@ -6,7 +6,7 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core.Checkers;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class BlockingTaskCheckerTests
 {

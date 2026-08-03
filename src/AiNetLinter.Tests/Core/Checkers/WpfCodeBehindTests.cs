@@ -8,7 +8,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class WpfCodeBehindTests
 {

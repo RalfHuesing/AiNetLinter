@@ -5,7 +5,7 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class MethodParameterCountIgnoreTypePrefixesTests
 {

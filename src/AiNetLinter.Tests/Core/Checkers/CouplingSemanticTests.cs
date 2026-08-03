@@ -5,7 +5,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using System.Linq;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class CouplingSemanticTests
 {

@@ -158,7 +158,7 @@
     "MaxBoolParameterCountExemptMethodPrefixes": [
       "Try"
     ],
-    "MaxDirectoryChildren": 0,
+    "MaxDirectoryChildren": 30,
     "MaxDirectoryChildrenExemptNames": [
       "Migrations",
       "Generated",

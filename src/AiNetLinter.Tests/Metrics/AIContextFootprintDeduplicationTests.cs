@@ -4,7 +4,7 @@ using Xunit;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Metrics;
 
 public sealed class AIContextFootprintDeduplicationTests
 {

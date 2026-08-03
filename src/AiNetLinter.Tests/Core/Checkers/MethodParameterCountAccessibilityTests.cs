@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class MethodParameterCountAccessibilityTests
 {

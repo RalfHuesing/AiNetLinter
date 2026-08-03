@@ -6,7 +6,7 @@ using AiNetLinter.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class MaxPartialClassFilesTests
 {

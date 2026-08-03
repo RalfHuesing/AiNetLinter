@@ -6,7 +6,7 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Metrics;
 
 /// <summary>
 /// Prüft, dass die MaxLineCount-Guidance den durchschnittlichen CC der Methoden in der Datei berücksichtigt

@@ -9,7 +9,7 @@ using AiNetLinter.Core.Checkers;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.Tests.Core.Checkers;
 
 public sealed class UiFileSeparationCheckerTests : IDisposable
 {
