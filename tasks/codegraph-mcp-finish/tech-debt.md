@@ -2,7 +2,7 @@
 task: codegraph-mcp-finish
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-03
+last_updated: 2026-08-03 # TD-005 (SubprocessConcurrencyGate-Sättigung) + TD-006 (AiNetLinter.mdc BOM) aus step-007/fix-01-Review ergänzt
 ---
 
 # Tech-Debt-Log: codegraph-mcp-finish
@@ -28,6 +28,8 @@ Verweis auf die Tech-Debt-ID).
 | TD-002 | `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs:92` | niedrig | Tote, vorbestehende Variable `baselineAfter` (deklariert, nie assertet) |
 | TD-003 | `src/AiNetLinter/Cli/LinterArgs.cs:223-224` | niedrig | `--sync-agent-rules-only` fehlt in `HasStandaloneCommand()`, verlangt unnötig `--path`/`--config` |
 | TD-004 | 6 Testdateien (`Architecture/ArchitectureTests.cs`, `Core/LinterAnalyzerTests.cs`, `Core/LinterEngineCacheTests.cs`, `Core/LinterEngineTests.cs`, `Core/Checkers/MaxInheritanceDepthTests.cs`, `Core/Checkers/NamespaceDirectoryMappingTests.cs`) | niedrig | Lokale private Methode `CreateDefaultConfig()` kollidiert namentlich mit `TestHelper.CreateDefaultConfig()` |
+| TD-005 | `src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs` (4 Slots, 30s Wait-Timeout) | mittel | Last-Flake unter Volllauf — 1-2 Failures in `McpServerCommandErrorHandlingTests`, exakt am Gate-Timeout-Stack |
+| TD-006 | `.agents/rules/AiNetLinter.mdc` | niedrig | Working-Tree-vs-Index-BOM-Diskrepanz, semantisch leerer Diff, Working-Tree-Noise |
 
 ## Einträge
 
@@ -146,4 +148,76 @@ Verweis auf die Tech-Debt-ID).
 - **Vorschlag:** Bei nächster inhaltlicher Berührung einer dieser 6
   Dateien die lokale Methode umbenennen (z. B. `LocalConfig()`/
   `BaseConfig()`), inkl. aller Aufrufstellen im jeweiligen Testkörper.
+- **Status:** offen
+
+### TD-005 — `SubprocessConcurrencyGate` regelmäßig unter Volllauf-Last gesättigt [Priorität: mittel]
+
+- **Gefunden in:** step-007/fix-01 (Kritiker-Review vom 2026-08-03),
+  Beobachtung bereits vom Coder im `step-result.md` unter „Beobachtungen"
+  vorgemerkt, vom Kritiker im eigenen Volllauf reproduziert (1186
+  Tests / 1184 grün / 2 fehlgeschlagen, beide in derselben Klasse mit
+  Gate-Timeout-Stack).
+- **Ort:** `src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs:30`
+  (`AcquireAsync`, `SemaphoreSlim.WaitUntilCountOrTimeoutAsync`) — Gate
+  hat 4 Slots und 30s Wait-Timeout. Sichtbar betroffen ist primär
+  `src/AiNetLinter.Tests/Commands/McpServerCommandErrorHandlingTests.cs`
+  (zwei Tests dort mit reproduzierbarem 30s-Stack am Gate: einmal
+  exakt 30.07s, einmal 35.23s, beide Stack-Bottom
+  `SubprocessConcurrencyGate.AcquireAsync`).
+- **Befund:** Unter Volllauf-Last (`dotnet test … --no-build`, ~4-6 min
+  Wall-Clock) reichen 4 Gate-Slots + 30s Timeout für die parallel
+  laufenden Subprozess-Tests in `McpServerCommandErrorHandlingTests` nicht
+  immer aus — die Tests scheitern deterministisch am Gate-Wait-Timeout
+  mit `OperationCanceledException`, *nicht* an einem echten
+  Code-Defekt. Im leichteren `Category=Unit`-Slice tritt das Problem
+  nicht auf, im Volllauf schon. Im step-007-Lauf (1m 41s, 0 Fehler)
+  liefen dieselben Tests grün, in schwereren Läufen (4-6 min) 1-2
+  Failures. Signatur typisch für Last-Sättigung, nicht für
+  Regressionen.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von
+  step-007/fix-01 (reiner Kommentar-Text-Fix, keine
+  Test-Infrastruktur-Berührung) — und kein Blocker für die
+  Schritt-Abnahme, da `step-007` (Einheit-011-Abschluss) inhaltlich
+  approved ist und der Flake keine Funktionalausfall bedeutet, sondern
+  nur Volllauf-Ergänzungs-Lärm.
+- **Vorschlag:** Bei nächster Berührung der Test-Infrastruktur eine der
+  drei Richtungen wählen (oder kombinieren): (a) Gate-Kapazität
+  erhöhen (z. B. 6-8 Slots, gemessen an der parallel laufenden
+  Subprozess-Spitzenlast), (b) Test-Time-Out im
+  `McpServerCommandErrorHandlingTests`-Fixture anheben, (c) Retry-Logik
+  analog dem bestehenden `McpTestClient.ConnectAsync`-Pattern
+  einbauen, das genau diese Form von Last-Flake bereits sauber
+  abfängt. Vorher: Last-Profil der parallel laufenden Subprozess-Tests
+  im Volllauf messen, damit die Anpassung gezielt erfolgen kann statt
+  auf Verdacht.
+- **Status:** offen
+
+### TD-006 — UTF-8-BOM-Diskrepanz auf `.agents/rules/AiNetLinter.mdc` [Priorität: niedrig]
+
+- **Gefunden in:** step-007/fix-01 (Kritiker-Review vom 2026-08-03),
+  Beobachtung bereits vom Coder im `step-result.md` unter „Beobachtungen"
+  vorgemerkt, vom Kritiker verifiziert (`git status --short --
+  .agents/rules/AiNetLinter.mdc` zeigt ` M`, `git diff` semantisch
+  leer, Git-Warnung „LF will be replaced by CRLF the next time Git
+  touches it").
+- **Ort:** `.agents/rules/AiNetLinter.mdc` — Working-Tree-Variante trägt
+  eine UTF-8-BOM-Sequenz, die Index-Variante (HEAD) trägt sie nicht.
+- **Befund:** Reiner Working-Tree-Noise, kein Code-Schaden und keine
+  Auswirkung auf Tooling (die `.mdc`-Datei wird vom Linter als
+  Text-Quelle gelesen, BOM ist in diesem Kontext unkritisch). `git
+  diff` ist semantisch leer — nur die BOM-Bytes bzw. CRLF/LF-Bytes
+  unterscheiden sich. Stört aber die Git-Working-Tree-Sauberkeit
+  (jeder `git status` zeigt die Datei als modified) und kann bei
+  einem späteren Commit versehentlich echte Inhalts-Änderungen
+  überlagern, falls jemand die Datei editiert ohne den BOM-Stand zu
+  beachten.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von
+  step-007/fix-01 (Kommentar-Text-Fix, keine Regel-Datei-Berührung).
+  Reine Hygiene-Beobachtung, kein Funktional-Impact.
+- **Vorschlag:** Bei nächster Berührung von `.agents/rules/AiNetLinter.mdc`
+  (z. B. nach dem nächsten `dotnet run … -- --sync-agent-rules-only`)
+  die BOM-Diskrepanz mit einem einmaligen `git checkout HEAD --
+  .agents/rules/AiNetLinter.mdc` (oder einem expliziten
+  Encoding-Fix) auflösen und mit einem Mini-Hygiene-Commit abhaken.
+  Idealerweise im selben Aufwasch mit der nächsten Sync-Iteration.
 - **Status:** offen
