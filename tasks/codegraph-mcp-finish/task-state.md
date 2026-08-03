@@ -27,7 +27,7 @@ eine Zeile.>
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| step-001 | EPIC-01 | in_progress | ConsoleTestCollection-Regression beheben (F.1) | 0/3 | - | - | - |
 
 ## Config (optional)
 
