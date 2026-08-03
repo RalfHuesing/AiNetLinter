@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-002-Planung: EPIC-01-Notiz F.1/F.2 aktualisiert
+last_updated: 2026-08-03  # step-003-Planung: EPIC-01-Notiz F.2 abgehakt, F.3 in Arbeit
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -74,9 +74,9 @@ obsolet markiert) — kein starres Vorab-Dokument.
 - [ ] EPIC-01: Testsuite-Performance (Block F) — `ConsoleTestCollection`
       von 21 auf begründete Mitglieder eingrenzen (größter Laufzeit-Hebel,
       F.1, **erledigt → step-001**, approved), `CliProcessRunner`-Helper
-      für 8 Subprozess-Teststellen (F.2, **in Arbeit → step-002**),
+      für 8 Subprozess-Teststellen (F.2, **erledigt → step-002**, approved),
       `Core/`-Testordner sub-gliedern + danach `MaxDirectoryChildren`
-      aktivieren (F.3), Test-Data-Builder/Object-Mother (F.4),
+      aktivieren (F.3, **in Arbeit → step-003**), Test-Data-Builder/Object-Mother (F.4),
       `#nullable enable`-Pragma nur als Randmitnahme in ohnehin
       angefassten Dateien (F.5), Laufzeitmessung vorher/nachher
       dokumentieren (F.6). Läuft laut Konzept-Vorgabe **zuerst**, damit
@@ -85,9 +85,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (step-001): Volllauf von ~8 Min. auf ~1 m 35–41 s reduziert (informelle
       Messung, formale F.6-Dokumentation steht noch aus); neue
       `SubprocessConcurrencyGate`-Bremse (`src/AiNetLinter.Tests/Fixtures/`)
-      soll laut step-001-Notiz von F.2 als internes Detail des
-      `CliProcessRunner`-Helpers aufgenommen werden, statt eine zweite,
-      konkurrierende Bremse zu bauen.
+      wie geplant als internes Detail von `CliProcessRunner` aufgenommen
+      (step-002, kein zweiter konkurrierender Mechanismus entstanden).
+      F.2-Tech-Debt-Fund `TD-002` (tote Variable `baselineAfter` in
+      `WebBaselineTests.cs:92`) bleibt bewusst offen (Nutzer-Entscheidung,
+      kein automatischer Fix-Step).
 - [ ] EPIC-02: Einheit-011-Abschluss (Muss-Haben A) — offene
       `AiNetLinter.exe`/`testhost.exe`-Prozesse bereinigen, Volllauf
       frisch fahren (nicht nur Coder-Bericht übernehmen), Kritiker-Review
