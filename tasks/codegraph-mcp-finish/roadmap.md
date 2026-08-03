@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-004-Planung: F.3 abgehakt (approved), F.4 in Arbeit (Teilscope)
+last_updated: 2026-08-03  # step-005-Planung: F.4 Teil 1/2 (step-004) approved, F.4 Teil 2/2 + F.5-Teilfortschritt in Arbeit (step-005)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -77,27 +77,32 @@ obsolet markiert) — kein starres Vorab-Dokument.
       für 8 Subprozess-Teststellen (F.2, **erledigt → step-002**, approved),
       `Core/`-Testordner sub-gliedern + danach `MaxDirectoryChildren`
       aktivieren (F.3, **erledigt → step-003**, approved), Test-Data-Builder/
-      Object-Mother (F.4, **in Arbeit → step-004**, Teilscope: 19 Dateien
-      Kern-Testinfrastruktur — `Core/Checkers/`- und `FalsePositives/`-Cluster
-      mit 23 weiteren, bereits parametrisierten Config-Fabriken bewusst
-      zurückgestellt, siehe step-004 „Aktueller Projektzustand"/Notes),
+      Object-Mother (F.4, Teil 1/2 **erledigt → step-004**, approved: 19
+      Dateien Kern-Testinfrastruktur; Teil 2/2 **in Arbeit → step-005**:
+      restliche 19 Dateien mit lokaler `CreateConfig`/`ConfigWith`-Methode in
+      `Core/Checkers/`+`Metrics/`+`FalsePositives/` — bei erneuter
+      Code-Sichtung für step-005 auf tatsächlich 19 statt der in step-004
+      geschätzten 23 verifiziert, siehe step-005 „Aktueller Projektzustand"),
       `#nullable enable`-Pragma nur als Randmitnahme in ohnehin
-      angefassten Dateien (F.5), Laufzeitmessung vorher/nachher
-      dokumentieren (F.6). Läuft laut Konzept-Vorgabe **zuerst**, damit
-      alle nachfolgenden Einheiten von kürzeren Volllauf-Zeiten
-      profitieren. Bezug: Konzept.md „Muss-Haben F". F.1-Ergebnis
-      (step-001): Volllauf von ~8 Min. auf ~1 m 35–41 s reduziert (informelle
-      Messung, formale F.6-Dokumentation steht noch aus); neue
-      `SubprocessConcurrencyGate`-Bremse (`src/AiNetLinter.Tests/Fixtures/`)
-      wie geplant als internes Detail von `CliProcessRunner` aufgenommen
-      (step-002, kein zweiter konkurrierender Mechanismus entstanden).
-      F.2-Tech-Debt-Fund `TD-002` (tote Variable `baselineAfter` in
-      `WebBaselineTests.cs:92`) bleibt bewusst offen (Nutzer-Entscheidung,
-      kein automatischer Fix-Step). F.3-Ergebnis (step-003): `Core/` von
-      42 auf 19+27(Checkers)+7(Metrics) Dateien sub-gegliedert,
-      `MaxDirectoryChildren` = 30 aktiv, F.3-Tech-Debt-Fund `TD-003`
-      (`--sync-agent-rules-only` fehlt in `HasStandaloneCommand()`) bleibt
-      offen (Nutzer-Entscheidung).
+      angefassten Dateien (F.5, **Teilfortschritt in step-005**: 11 der 19
+      dort angefassten Dateien fehlte die Pragma-Zeile, wird im selben Step
+      nachgerüstet — keine eigene Flächenaktion, weiterhin offen für Dateien
+      außerhalb aller Block-F/A-F-Steps), Laufzeitmessung vorher/nachher
+      dokumentieren (F.6, weiterhin offen). Läuft laut Konzept-Vorgabe
+      **zuerst**, damit alle nachfolgenden Einheiten von kürzeren
+      Volllauf-Zeiten profitieren. Bezug: Konzept.md „Muss-Haben F".
+      F.1-Ergebnis (step-001): Volllauf von ~8 Min. auf ~1 m 35–41 s
+      reduziert (informelle Messung, formale F.6-Dokumentation steht noch
+      aus); neue `SubprocessConcurrencyGate`-Bremse
+      (`src/AiNetLinter.Tests/Fixtures/`) wie geplant als internes Detail
+      von `CliProcessRunner` aufgenommen (step-002, kein zweiter
+      konkurrierender Mechanismus entstanden). F.2-Tech-Debt-Fund `TD-002`
+      (tote Variable `baselineAfter` in `WebBaselineTests.cs:92`) bleibt
+      bewusst offen (Nutzer-Entscheidung, kein automatischer Fix-Step).
+      F.3-Ergebnis (step-003): `Core/` von 42 auf 19+27(Checkers)+7(Metrics)
+      Dateien sub-gegliedert, `MaxDirectoryChildren` = 30 aktiv,
+      F.3-Tech-Debt-Fund `TD-003` (`--sync-agent-rules-only` fehlt in
+      `HasStandaloneCommand()`) bleibt offen (Nutzer-Entscheidung).
 - [ ] EPIC-02: Einheit-011-Abschluss (Muss-Haben A) — offene
       `AiNetLinter.exe`/`testhost.exe`-Prozesse bereinigen, Volllauf
       frisch fahren (nicht nur Coder-Bericht übernehmen), Kritiker-Review
