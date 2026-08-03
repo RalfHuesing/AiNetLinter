@@ -26,6 +26,7 @@ Verweis auf die Tech-Debt-ID).
 |---|---|---|---|
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerConstructorTests.cs`, `McpServerOptionsFactoryTests.cs`, `McpTestClientRetryTests.cs` | niedrig | Vorbestehende XML-Doc-Kommentare brechen mitten im Satz ab |
 | TD-002 | `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs:92` | niedrig | Tote, vorbestehende Variable `baselineAfter` (deklariert, nie assertet) |
+| TD-003 | `src/AiNetLinter/Cli/LinterArgs.cs:223-224` | niedrig | `--sync-agent-rules-only` fehlt in `HasStandaloneCommand()`, verlangt unnötig `--path`/`--config` |
 
 ## Einträge
 
@@ -83,4 +84,34 @@ Verweis auf die Tech-Debt-ID).
   ob ein Assert auf `baselineAfter` fehlt (wahrscheinlicher, da die
   Methode explizit „UpdatesBaseline" im Namen trägt) oder die Variable
   ersatzlos entfernt werden kann.
+- **Status:** offen
+
+### TD-003 — `--sync-agent-rules-only` verlangt unnötig `--path`/`--config` [Priorität: niedrig]
+
+- **Gefunden in:** step-003 (Kritiker-Review vom 2026-08-03), vom Coder
+  bereits im `step-result.md` unter „Beobachtungen" vorgemerkt und vom
+  Kritiker verifiziert (`dotnet run --project src/AiNetLinter --
+  --sync-agent-rules-only` → `[ERROR]: --path ist erforderlich (außer
+  bei --docs, --list-rules, --describe-rule, --search-rules, --map,
+  --eval, --list-evals)`).
+- **Ort:** `src/AiNetLinter/Cli/LinterArgs.cs:223-224`,
+  `HasStandaloneCommand()` — listet `Docs`, `ListRules`, `DescribeRule`,
+  `SearchRules`, `MapType`, `EvalType`, `ListEvals`, `McpServer` als
+  eigenständig lauffähige Kommandos, aber nicht `SyncAgentRulesOnly`.
+- **Befund:** `--sync-agent-rules-only` ist konzeptionell ein
+  Fast-Path-Kommando ohne Audit (siehe XML-Doc an der Property, Zeile
+  70: „Fast-Path ohne Audit"), verhält sich CLI-seitig aber nicht wie
+  die anderen Standalone-Kommandos — es benötigt zusätzlich `--path .`
+  und `--config rules.json`, obwohl es inhaltlich nur `rules.json`
+  liest und `.agents/rules/*.mdc` neu schreibt, keinen Solution-Scan
+  braucht.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-003 (F.3
+  ist reines Testordner-/Grenzwert-Refactoring, kein CLI-Argument-Fix).
+  Der Workaround (`--path . --config rules.json` mitgeben) ist bekannt
+  und funktioniert.
+- **Vorschlag:** Bei nächster inhaltlicher Berührung von `LinterArgs.cs`
+  `SyncAgentRulesOnly` in `HasStandaloneCommand()` aufnehmen, damit der
+  in mehreren Step-Plänen dieses Tasks referenzierte Kurzbefehl
+  `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` ohne
+  Zusatzargumente funktioniert.
 - **Status:** offen
