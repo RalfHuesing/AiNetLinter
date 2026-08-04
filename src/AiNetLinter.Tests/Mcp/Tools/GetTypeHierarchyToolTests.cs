@@ -22,7 +22,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "irrelevant", CancellationToken.None);
 
@@ -34,7 +34,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_UnknownTypeIdentifier_ReturnsSymbolNotFoundError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", CancellationToken.None);
 
@@ -46,7 +46,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_IdentifierResolvesToMethodNotType_ReturnsInvalidArgumentError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", CancellationToken.None);
 
@@ -58,7 +58,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_ClassWithBaseAndDerived_ReturnsInterfaceAndDerivedClass()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
 
@@ -71,7 +71,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_InterfaceType_ReturnsImplementingClasses()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "IGreeting", CancellationToken.None);
 
@@ -83,7 +83,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_LeafClassWithoutDerivedTypes_ReturnsNoDerivedTypesMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "SpecialGreeting", CancellationToken.None);
 
@@ -96,7 +96,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_ClassWithImplicitObjectBase_ReturnsExternalBaseTypeInsteadOfEmptyMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
 
@@ -109,7 +109,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     [Fact]
     public async Task ExecuteAsync_TypeWithExternalInterface_ReturnsExternalInterfaceInsteadOfEmptyMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DisposableGreeting", CancellationToken.None);
 
@@ -124,7 +124,7 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ValidClassA", CancellationToken.None);
 

@@ -33,24 +33,41 @@ internal sealed record McpCodeGraphServerOptions
     public required ILinterEngineConfig Config { get; init; }
 
     /// <summary>
-    /// Factory-Methode mit identischer Parameter-Signatur wie der vorherige
-    /// <c>McpCodeGraphServer</c>-Konstruktor. Erlaubt minimal-invasive Migration
-    /// der Call-Sites (1:1-Uebersetzung) ohne neuen 5-Parameter-Record-Konstruktor.
-    /// <c>consoleOverride</c> wurde bewusst entfernt: kein einziger Call-Site
-    /// uebergibt ihn.
+    /// True, wenn <c>McpServerCommand</c> keine <c>rules.json</c> neben der aufgeloesten
+    /// Solution-Datei finden konnte und der Server mit der <see cref="Config"/>-Default-
+    /// Konfiguration laeuft. <c>get_violations</c> zeigt in diesem Fall eine sichtbare
+    /// Header-Zeile an. Siehe <see cref="McpCodeGraphServer.UsedDefaultConfig"/>.
     /// </summary>
-    public static McpCodeGraphServerOptions From(
-        SourceFileCatalog? catalog,
-        ILintConsole? console = null,
-        int maxLineCount = 700,
-        Config? config = null)
+    public bool UsedDefaultConfig { get; init; }
+
+    /// <summary>
+    /// Factory-Methode, kapselt die ehemaligen 5 Parameter in einem Record, damit
+    /// <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) nicht verletzt wird.
+    /// Existierende Call-Sites koennen <see cref="McpCodeGraphServerOptions"/> auch direkt
+    /// via <c>new McpCodeGraphServerOptions { ... }</c> konstruieren, sobald der
+    /// <c>From(...)</c>-Einstiegspunkt nicht mehr gebraucht wird.
+    /// </summary>
+    public static McpCodeGraphServerOptions From(McpCodeGraphServerOptionsFromParameters p)
     {
         return new McpCodeGraphServerOptions
         {
-            Catalog = catalog,
-            Console = console ?? LinterConsole.Instance,
-            MaxLineCount = maxLineCount,
-            Config = config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+            Catalog = p.Catalog,
+            Console = p.Console ?? LinterConsole.Instance,
+            MaxLineCount = p.MaxLineCount,
+            Config = p.Config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+            UsedDefaultConfig = p.UsedDefaultConfig,
         };
     }
 }
+
+/// <summary>
+/// Parameter-Record fuer <see cref="McpCodeGraphServerOptions.From"/>. Fasst die
+/// ehemalige 5-Parameter-Signatur zusammen, damit <c>MaxMethodParameterCount: 4</c>
+/// eingehalten wird.
+/// </summary>
+internal sealed record McpCodeGraphServerOptionsFromParameters(
+    SourceFileCatalog? Catalog,
+    ILintConsole? Console = null,
+    int MaxLineCount = 700,
+    Config? Config = null,
+    bool UsedDefaultConfig = false);

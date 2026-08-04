@@ -17,7 +17,7 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void Create_ServerInstructionsContainsScopeHint()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
         var options = McpServerOptionsFactory.Create(state);
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));

@@ -28,7 +28,13 @@ internal static class GetViolationsTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var text = await GetViolationsScanner.BuildViolationsTextAsync(
-            solution, state.Config, state.Console, scopeFilter, ct);
+            new GetViolationsScannerParameters(
+                Solution: solution,
+                Config: state.Config,
+                Console: state.Console,
+                ScopeFilter: scopeFilter,
+                CancellationToken: ct,
+                UsedDefaultConfig: state.UsedDefaultConfig));
         return McpToolResults.Text(text);
     }
 }

@@ -11,7 +11,7 @@ public sealed class McpCodeGraphServerTests
     [Fact]
     public void GetCurrentSolution_NotLoaded_ReturnsNull()
     {
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         Assert.False(server.IsLoaded);
         Assert.Null(server.GetCurrentSolution());
@@ -22,7 +22,7 @@ public sealed class McpCodeGraphServerTests
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var first = server.GetCurrentSolution();
         var second = server.GetCurrentSolution();
@@ -36,7 +36,7 @@ public sealed class McpCodeGraphServerTests
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();
 
@@ -58,7 +58,7 @@ public sealed class McpCodeGraphServerTests
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var first = server.GetCurrentSolution();
         File.SetLastWriteTimeUtc(fixture.ViolatingClassPath, DateTime.UtcNow.AddSeconds(2));
@@ -73,7 +73,7 @@ public sealed class McpCodeGraphServerTests
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();
         File.Delete(fixture.ViolatingClassPath);
@@ -89,7 +89,7 @@ public sealed class McpCodeGraphServerTests
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();
 

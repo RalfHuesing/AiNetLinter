@@ -8,7 +8,6 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
 
 namespace AiNetLinter.Mcp;
 
@@ -17,13 +16,16 @@ namespace AiNetLinter.Mcp;
 /// (bei jedem <see cref="GetCurrentSolution"/>-Aufruf) per Hash/mtime, ob bekannte Quelldateien
 /// seit dem letzten Zugriff auf der Platte geaendert wurden. Betroffene Dokumente werden
 /// inkrementell ueber <see cref="SourceFileCatalog.WithUpdatedSolution"/> aktualisiert, kein
-/// Komplett-Reload der <see cref="Microsoft.CodeAnalysis.MSBuild.MSBuildWorkspace"/>.
+/// Komplett-Reload der <see cref="Microsoft.CodeAnalysis.MSBuild.MSBuildWorkspace"/>. Die
+/// eigentliche Refresh-Logik (geloeschte Dateien raus, neue Dateien rein, modifizierte Dateien
+/// aktualisieren) liegt in <see cref="McpCodeGraphServerRefresh"/>, damit diese Klasse unter
+/// dem projektweiten <c>MaxAIContextFootprint</c>-Limit bleibt.
 /// </summary>
 internal sealed class McpCodeGraphServer : IDisposable
 {
     private readonly Lock _lock = new();
     private readonly ILintConsole _console;
-    private readonly Dictionary<string, FileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, McpFileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private SourceFileCatalog? _catalog;
 
     // Input-Record ersetzt den frueheren 5-Parameter-Konstruktor, der am
@@ -37,6 +39,7 @@ internal sealed class McpCodeGraphServer : IDisposable
         _console = options.Console;
         MaxLineCount = options.MaxLineCount;
         Config = options.Config;
+        UsedDefaultConfig = options.UsedDefaultConfig;
 
         if (_catalog is not null)
         {
@@ -62,6 +65,16 @@ internal sealed class McpCodeGraphServer : IDisposable
     /// nur die Properties ins Footprint ziehen, die sie auch tatsaechlich konsumieren.
     /// </summary>
     public ILinterEngineConfig Config { get; }
+
+    /// <summary>
+    /// True, wenn der Server ohne <c>--config</c> gestartet wurde und auch keine
+    /// <c>rules.json</c> neben der aufgeloesten Solution-Datei gefunden wurde — der Server
+    /// laeuft in diesem Fall mit der <see cref="Config"/>-Default-Konfiguration.
+    /// <c>get_violations</c> zeigt in diesem Fall eine sichtbare Header-Zeile an, damit der
+    /// Agent-LLM erkennt, dass die Lint-Ergebnisse nicht aus der projekteigenen
+    /// <c>rules.json</c> stammen.
+    /// </summary>
+    public bool UsedDefaultConfig { get; }
 
     /// <summary>
     /// Konsolen-Kanal, an den der MCP-Server selbst loggt. Wird von <c>get_violations</c> an
@@ -97,89 +110,22 @@ internal sealed class McpCodeGraphServer : IDisposable
             foreach (var document in project.Documents)
             {
                 if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                TryCacheInitialFileState(document.FilePath!);
+                McpCodeGraphServerRefresh.CacheInitialFileState(document.FilePath!, _fileState, _console.WriteError);
             }
-        }
-    }
-
-    private void TryCacheInitialFileState(string path)
-    {
-        if (!File.Exists(path)) return;
-
-        try
-        {
-            var mtime = File.GetLastWriteTimeUtc(path);
-            var hash = FileChecksumCalculator.ComputeSha256Hex(path);
-            _fileState[path] = new FileState(mtime, hash);
-        }
-        catch (IOException ex)
-        {
-            _console.WriteError($"[WARN]: Datei konnte beim MCP-Server-Start nicht gehasht werden ({path}): {ex.Message}");
         }
     }
 
     private void RefreshStaleDocuments()
     {
-        var solutionDir = Path.GetDirectoryName(_catalog!.Solution.FilePath);
-        var updated = _catalog.Solution;
-        var anyChanged = false;
-
-        foreach (var project in _catalog.Solution.Projects)
-        {
-            foreach (var document in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                if (TryRefreshDocument(document, ref updated)) anyChanged = true;
-            }
-        }
+        var (updated, anyChanged) = McpCodeGraphServerRefresh.Run(
+            _catalog!.Solution,
+            Path.GetDirectoryName(_catalog.Solution.FilePath),
+            _fileState,
+            _console.WriteError);
 
         if (anyChanged)
         {
             _catalog = _catalog.WithUpdatedSolution(updated);
         }
     }
-
-    private bool TryRefreshDocument(Document document, ref Solution updated)
-    {
-        var path = document.FilePath!;
-        if (!File.Exists(path)) return false;
-
-        var currentMtime = File.GetLastWriteTimeUtc(path);
-        if (_fileState.TryGetValue(path, out var known) && known.MtimeUtc == currentMtime)
-        {
-            return false;
-        }
-
-        return TryApplyContentChange(document, path, currentMtime, known, ref updated);
-    }
-
-    private bool TryApplyContentChange(
-        Document document,
-        string path,
-        DateTime currentMtime,
-        FileState known,
-        ref Solution updated)
-    {
-        try
-        {
-            var currentHash = FileChecksumCalculator.ComputeSha256Hex(path);
-            if (currentHash == known.Hash)
-            {
-                _fileState[path] = known with { MtimeUtc = currentMtime };
-                return false;
-            }
-
-            var text = File.ReadAllText(path);
-            updated = updated.WithDocumentText(document.Id, SourceText.From(text));
-            _fileState[path] = new FileState(currentMtime, currentHash);
-            return true;
-        }
-        catch (IOException ex)
-        {
-            _console.WriteError($"[WARN]: Datei konnte beim Staleness-Check nicht gelesen werden ({path}): {ex.Message}");
-            return false;
-        }
-    }
-
-    private readonly record struct FileState(DateTime MtimeUtc, string Hash);
 }

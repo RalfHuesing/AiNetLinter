@@ -32,9 +32,21 @@ internal static class McpServerCommand
         var solutionPath = ResolveSolutionPathOrError(args.TargetPath, c);
         if (solutionPath is null) return 1;
 
+        var resolvedConfigPath = TryResolveRulesJsonPath(args.ConfigPath, solutionPath);
+        if (resolvedConfigPath is null && string.IsNullOrWhiteSpace(args.ConfigPath))
+        {
+            var solutionDir = Path.GetDirectoryName(solutionPath);
+            c.WriteError($"[WARN]: Keine rules.json neben der Solution gefunden ({solutionDir}); get_violations laeuft mit Default-Regeln.");
+        }
+
         var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
         using var mcpState = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            catalog, c, ResolveMaxLineCount(args), ResolveConfig(args)));
+            new McpCodeGraphServerOptionsFromParameters(
+                Catalog: catalog,
+                Console: c,
+                MaxLineCount: ResolveMaxLineCount(args, resolvedConfigPath),
+                Config: ResolveConfig(args, resolvedConfigPath),
+                UsedDefaultConfig: resolvedConfigPath is null)));
 
         var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);
@@ -44,38 +56,63 @@ internal static class McpServerCommand
     }
 
     /// <summary>
-    /// Loest den konfigurierten Zeilen-Grenzwert auf — identische Logik wie
-    /// <see cref="MapCommand"/>s private Hilfsmethode gleichen Namens (1:1-Uebernahme statt
-    /// Sichtbarkeitsanhebung einer 6-Zeilen-Methode ueber Projektgrenzen). Bei gesetztem
-    /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
-    /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
-    /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt <c>private</c>,
-    /// damit die Config-Verdrahtung direkt testbar ist.
+    /// Loest den effektiven <c>rules.json</c>-Pfad auf: bei explizit gesetztem
+    /// <see cref="LinterArgs.ConfigPath"/> wird dieser 1:1 zurueckgegeben (die Existenzpruefung
+    /// uebernimmt spaeter <see cref="ConfigLoader.TryLoadConfig"/>), sonst wird neben der
+    /// aufgeloesten Solution-Datei nach <c>rules.json</c> gesucht. Liefert <see langword="null"/>,
+    /// wenn weder explizit noch per Auto-Discovery ein Pfad gefunden wurde — der Aufrufer faellt
+    /// in diesem Fall auf die Config-Defaults zurueck und signalisiert das per [WARN] auf stderr
+    /// bzw. Header-Zeile in <c>get_violations</c>.
     /// </summary>
-    internal static int ResolveMaxLineCount(LinterArgs args)
+    internal static string? TryResolveRulesJsonPath(string? configPath, string solutionPath)
     {
-        if (string.IsNullOrWhiteSpace(args.ConfigPath))
+        if (!string.IsNullOrWhiteSpace(configPath))
+        {
+            return configPath;
+        }
+
+        var solutionDir = Path.GetDirectoryName(solutionPath);
+        if (string.IsNullOrEmpty(solutionDir)) return null;
+
+        var candidate = Path.Combine(solutionDir, "rules.json");
+        return File.Exists(candidate) ? candidate : null;
+    }
+
+    /// <summary>
+    /// Loest den konfigurierten Zeilen-Grenzwert auf — bei gesetztem <paramref name="resolvedConfigPath"/>
+    /// wird die zugehoerige <c>rules.json</c> geladen (best effort), sonst der
+    /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
+    /// auf derselben Solution respektieren wuerde. <paramref name="resolvedConfigPath"/> wird von
+    /// <see cref="RunAsync"/> aus <see cref="TryResolveRulesJsonPath"/> durchgereicht, damit
+    /// Auto-Discovery und explizites <c>--config</c> strukturell gleich behandelt werden.
+    /// <see langword="internal"/> statt <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
+    /// </summary>
+    internal static int ResolveMaxLineCount(LinterArgs args, string? resolvedConfigPath = null)
+    {
+        var path = resolvedConfigPath ?? args.ConfigPath;
+        if (string.IsNullOrWhiteSpace(path))
             return new MetricsConfig().MaxLineCount;
 
-        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false);
+        var config = ConfigLoader.TryLoadConfig(path, isRequired: false);
         return config?.Metrics.MaxLineCount ?? new MetricsConfig().MaxLineCount;
     }
 
     /// <summary>
-    /// Loest die vollstaendige Linter-<see cref="Config"/> auf — identische Logik wie
-    /// <see cref="ResolveMaxLineCount"/>, nur die Entitaet ist groesser (wird fuer
-    /// <c>get_violations</c>/<see cref="McpCodeGraphServer.Config"/> gebraucht). Bei gesetztem
-    /// <see cref="LinterArgs.ConfigPath"/> wird <c>rules.json</c> geladen (best effort), sonst der
-    /// <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein CLI-Lint-Lauf
-    /// auf derselben Solution respektieren wuerde. <see langword="internal"/> statt
-    /// <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
+    /// Loest die vollstaendige Linter-<see cref="Config"/> auf — bei gesetztem
+    /// <paramref name="resolvedConfigPath"/> wird die zugehoerige <c>rules.json</c> geladen (best
+    /// effort), sonst der <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein
+    /// CLI-Lint-Lauf auf derselben Solution respektieren wuerde. <paramref name="resolvedConfigPath"/>
+    /// wird von <see cref="RunAsync"/> aus <see cref="TryResolveRulesJsonPath"/> durchgereicht, damit
+    /// Auto-Discovery und explizites <c>--config</c> strukturell gleich behandelt werden.
+    /// <see langword="internal"/> statt <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
     /// </summary>
-    internal static Config ResolveConfig(LinterArgs args)
+    internal static Config ResolveConfig(LinterArgs args, string? resolvedConfigPath = null)
     {
-        if (string.IsNullOrWhiteSpace(args.ConfigPath))
+        var path = resolvedConfigPath ?? args.ConfigPath;
+        if (string.IsNullOrWhiteSpace(path))
             return new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
 
-        return ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: false)
+        return ConfigLoader.TryLoadConfig(path, isRequired: false)
             ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
     }
 

@@ -22,7 +22,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "anything", isRegex: false, maxResults: 50, CancellationToken.None);
@@ -35,7 +35,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_PlainTextSubstring_FindsExpectedHitsInFixture()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "Greeter", isRegex: false, maxResults: 50, CancellationToken.None);
@@ -49,7 +49,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_RegexPattern_FindsExpectedHitsInFixture()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -66,7 +66,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_PlainTextTruncatesAtMaxResults_AppendsMetaLine()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "public", isRegex: false, maxResults: 2, CancellationToken.None);
@@ -94,7 +94,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_NoMatch_ReturnsZeroHitsMessage()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -118,7 +118,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
         File.WriteAllText(Path.Combine(generatedDir, "Generated.cs"), "PATTERN_ANCHOR_999 content");
 
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -135,7 +135,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_InvalidRegex_ReturnsInvalidArgumentError()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "(unclosed", isRegex: true, maxResults: 50, CancellationToken.None);
@@ -149,7 +149,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_EmptyPattern_ReturnsInvalidArgumentError()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "", isRegex: false, maxResults: 50, CancellationToken.None);
@@ -167,7 +167,7 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "ValidClass", isRegex: false, maxResults: 50, CancellationToken.None);

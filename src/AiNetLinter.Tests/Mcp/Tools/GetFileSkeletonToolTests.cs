@@ -22,7 +22,7 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(state, "irrelevant.cs", CancellationToken.None);
 
@@ -34,7 +34,7 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     [Fact]
     public async Task ExecuteAsync_UnknownFilePath_ReturnsResourceNotFoundError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/DoesNotExist.cs", CancellationToken.None);
@@ -47,7 +47,7 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     [Fact]
     public async Task ExecuteAsync_ValidRelativePath_ReturnsGreeterSkeletonWithGreetMethod()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
@@ -63,7 +63,7 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     [Fact]
     public async Task ExecuteAsync_AbsolutePath_ResolvesSameAsRelativePath()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var relativeResult = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
@@ -83,7 +83,7 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/CompileErrorMini/BrokenClassA.cs", CancellationToken.None);

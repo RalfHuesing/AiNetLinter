@@ -22,7 +22,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "irrelevant", maxResults: 50, CancellationToken.None);
 
@@ -34,7 +34,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_BothGitRefAndSymbolGiven_ReturnsInvalidArgumentError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: "HEAD~1", symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -46,7 +46,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierGiven_DelegatesToResolveSymbolAndReturnsCallSites()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
 
@@ -58,7 +58,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_UnknownSymbolIdentifier_ReturnsSymbolNotFoundError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "DoesNotExistXyz", maxResults: 50, CancellationToken.None);
 
@@ -73,7 +73,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: null, maxResults: 50, CancellationToken.None);
 
@@ -85,7 +85,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_NoGitRepository_ReturnsEmptyResultNotCrash()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: null, maxResults: 50, CancellationToken.None);
 
@@ -97,7 +97,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 2, CancellationToken.None);
@@ -115,7 +115,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: null, maxResults: 2, CancellationToken.None);
@@ -132,7 +132,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
             state, gitRef: null, symbolIdentifier: "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);

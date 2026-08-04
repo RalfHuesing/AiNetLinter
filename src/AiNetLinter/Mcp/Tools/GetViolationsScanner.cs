@@ -40,13 +40,14 @@ internal static class GetViolationsScanner
     /// ueberspringt die betroffene Datei nicht moeglich (der Fehler waere global), liefert aber
     /// stattdessen einen Fehlertext, damit der MCP-Aufruf nicht crasht.
     /// </summary>
-    internal static async Task<string> BuildViolationsTextAsync(
-        Solution solution,
-        ILinterEngineConfig config,
-        ILintConsole console,
-        string? scopeFilter,
-        CancellationToken ct)
+    internal static async Task<string> BuildViolationsTextAsync(GetViolationsScannerParameters p)
     {
+        var solution = p.Solution;
+        var config = p.Config;
+        var console = p.Console;
+        var scopeFilter = p.ScopeFilter;
+        var ct = p.CancellationToken;
+        var usedDefaultConfig = p.UsedDefaultConfig;
         // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
         // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
         // von Config implementiert, der Downcast ist daher nicht spekulativ.
@@ -75,7 +76,7 @@ internal static class GetViolationsScanner
                 hint: "LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
         }
 
-        return FormatReport(solutionDir, fileToProject, violations, scopeFilter);
+        return FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig);
     }
 
     private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
@@ -106,7 +107,8 @@ internal static class GetViolationsScanner
         string solutionDir,
         Dictionary<string, string> fileToProject,
         IReadOnlyCollection<RuleViolation> violations,
-        string? scopeFilter)
+        string? scopeFilter,
+        bool usedDefaultConfig)
     {
         var filtered = violations
             .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
@@ -120,6 +122,15 @@ internal static class GetViolationsScanner
 
         var fileCount = filtered.Select(v => v.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         var sb = new StringBuilder();
+        if (usedDefaultConfig)
+        {
+            // Sichtbarer Marker fuer den Agent-LLM: die Lint-Ergebnisse stammen NICHT aus der
+            // projekteigenen rules.json (sondern aus den Code-Defaults). Wird nur dann
+            // ausgegeben, wenn der Server ohne --config gestartet wurde und neben der Solution
+            // keine rules.json gefunden hat.
+            sb.AppendLine("Basis: Default-Regeln, keine rules.json gefunden");
+            sb.AppendLine();
+        }
         var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
         sb.AppendLine($"Lint-Violations: {filtered.Count} Verstoesse in {fileCount} Dateien{scopeSuffix}");
         sb.AppendLine();
@@ -175,3 +186,16 @@ internal static class GetViolationsScanner
         return fileToProject.TryGetValue(filePath, out var name) ? name : null;
     }
 }
+
+/// <summary>
+/// Parameter-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>. Fasst
+/// die ehemalige 6-Parameter-Signatur zusammen, damit <c>MaxMethodParameterCount: 4</c>
+/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird.
+/// </summary>
+internal sealed record GetViolationsScannerParameters(
+    Solution Solution,
+    ILinterEngineConfig Config,
+    ILintConsole Console,
+    string? ScopeFilter,
+    CancellationToken CancellationToken,
+    bool UsedDefaultConfig = false);

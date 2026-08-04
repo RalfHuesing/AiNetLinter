@@ -212,7 +212,13 @@ public sealed class SourceFileCatalog : IDisposable
         return filePath.StartsWith(solutionDir, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsGeneratedPath(string path)
+    /// <summary>
+    /// Filter fuer MSBuild-generierte Artefakte. Wird sowohl intern von
+    /// <see cref="IsValidDocument"/> als auch vom MCP-Server beim
+    /// Verzeichnis-Sweep fuer neu angelegte Dateien verwendet — der zentrale
+    /// Filter erspart eine Duplikation der Regel an anderer Stelle.
+    /// </summary>
+    internal static bool IsGeneratedPath(string path)
     {
         return path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
                path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||

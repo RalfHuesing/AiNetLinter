@@ -1,0 +1,253 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using AiNetLinter.Baseline;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
+
+namespace AiNetLinter.Mcp;
+
+/// <summary>
+/// Lazy Solution-Refresh fuer den MCP-Server: pro Aufruf wird die resident gehaltene
+/// <see cref="Solution"/> mit dem aktuellen Disk-Zustand abgeglichen. Drei Phasen laufen
+/// nacheinander — gelöschte Dateien raus, neue Dateien rein, modifizierte Dateien
+/// inkrementell aktualisiert. Bewusst als separate Klasse extrahiert, damit
+/// <see cref="McpCodeGraphServer"/> selbst unter dem projektweiten
+/// <c>MaxAIContextFootprint</c>-Limit bleibt und die einzelnen Phasen unter dem
+/// <c>MaxCognitiveComplexity</c>-Limit gehalten werden koennen.
+/// </summary>
+internal static class McpCodeGraphServerRefresh
+{
+    /// <summary>
+    /// Liefert die ggf. aktualisierte <see cref="Solution"/> und ein Flag, ob sich etwas
+    /// geaendert hat. <paramref name="fileState"/> wird bei geloeschten Dateien
+    /// bereinigt und bei neu einghaengten Dateien befuellt; der Aufrufer uebernimmt die
+    /// Anwendung ueber <see cref="SourceFileCatalog.WithUpdatedSolution"/>.
+    /// </summary>
+    public static (Solution solution, bool changed) Run(
+        Solution current,
+        string? solutionDir,
+        Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn)
+    {
+        var updated = current;
+        var anyChanged = false;
+        var removedIds = RemoveDeletedDocuments(ref updated, solutionDir, fileState, ref anyChanged);
+        anyChanged |= SweepForNewFiles(ref updated, solutionDir, fileState, writeWarn);
+        RefreshModifiedDocuments(ref updated, solutionDir, removedIds, fileState, ref anyChanged);
+        return (updated, anyChanged);
+    }
+
+    private static HashSet<DocumentId> RemoveDeletedDocuments(
+        ref Solution updated,
+        string? solutionDir,
+        Dictionary<string, McpFileState> fileState,
+        ref bool anyChanged)
+    {
+        var removedIds = new HashSet<DocumentId>();
+        foreach (var project in updated.Projects)
+        {
+            foreach (var document in project.Documents)
+            {
+                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
+                var path = document.FilePath;
+                if (string.IsNullOrEmpty(path) || File.Exists(path)) continue;
+
+                updated = updated.RemoveDocument(document.Id);
+                fileState.Remove(path);
+                removedIds.Add(document.Id);
+                anyChanged = true;
+            }
+        }
+        return removedIds;
+    }
+
+    private static bool SweepForNewFiles(
+        ref Solution updated,
+        string? solutionDir,
+        Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn)
+    {
+        if (string.IsNullOrEmpty(solutionDir) || !Directory.Exists(solutionDir)) return false;
+
+        var knownPaths = BuildKnownPathSet(updated);
+        var changed = false;
+
+        foreach (var path in EnumerateCsFilesSafe(solutionDir))
+        {
+            if (SourceFileCatalog.IsGeneratedPath(path)) continue;
+            if (knownPaths.Contains(path)) continue;
+
+            var projectId = PickProjectForNewFile(updated, path)
+                ?? updated.ProjectIds.FirstOrDefault();
+            if (projectId is null) continue;
+
+            if (TryAddDocument(ref updated, projectId, path, fileState, writeWarn))
+            {
+                knownPaths.Add(path);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private static void RefreshModifiedDocuments(
+        ref Solution updated,
+        string? solutionDir,
+        HashSet<DocumentId> removedIds,
+        Dictionary<string, McpFileState> fileState,
+        ref bool anyChanged)
+    {
+        foreach (var project in updated.Projects)
+        {
+            foreach (var document in project.Documents)
+            {
+                if (removedIds.Contains(document.Id)) continue;
+                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
+                if (TryRefreshDocument(document, ref updated, fileState)) anyChanged = true;
+            }
+        }
+    }
+
+    private static HashSet<string> BuildKnownPathSet(Solution solution)
+    {
+        return new HashSet<string>(
+            solution.Projects.SelectMany(p => p.Documents)
+                  .Where(d => d.FilePath != null)
+                  .Select(d => d.FilePath!),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool TryAddDocument(
+        ref Solution updated,
+        ProjectId projectId,
+        string path,
+        Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn)
+    {
+        try
+        {
+            // FileTextLoader liest den Inhalt on-demand von der Platte — kein eager
+            // In-Memory-Kopieren noetig; Roslyn fragt erst beim Compile/SyntaxTree ab.
+            var docInfo = DocumentInfo.Create(
+                DocumentId.CreateNewId(projectId),
+                Path.GetFileName(path),
+                loader: new FileTextLoader(path, Encoding.UTF8),
+                filePath: path);
+
+            updated = updated.AddDocument(docInfo);
+            CacheInitialFileState(path, fileState, writeWarn);
+            return true;
+        }
+        catch (IOException ex)
+        {
+            writeWarn($"[WARN]: Neue Datei konnte nicht einghaengt werden ({path}): {ex.Message}");
+            return false;
+        }
+    }
+
+    internal static void CacheInitialFileState(
+        string path,
+        Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn)
+    {
+        if (!File.Exists(path)) return;
+        try
+        {
+            var mtime = File.GetLastWriteTimeUtc(path);
+            var hash = FileChecksumCalculator.ComputeSha256Hex(path);
+            fileState[path] = new McpFileState(mtime, hash);
+        }
+        catch (IOException ex)
+        {
+            writeWarn($"[WARN]: Datei konnte beim MCP-Server-Start nicht gehasht werden ({path}): {ex.Message}");
+        }
+    }
+
+    private static bool TryRefreshDocument(
+        Document document,
+        ref Solution updated,
+        Dictionary<string, McpFileState> fileState)
+    {
+        var path = document.FilePath!;
+        if (!File.Exists(path)) return false;
+
+        var currentMtime = File.GetLastWriteTimeUtc(path);
+        if (fileState.TryGetValue(path, out var known) && known.MtimeUtc == currentMtime)
+        {
+            return false;
+        }
+
+        return TryApplyContentChange(document, path, currentMtime, known, ref updated, fileState);
+    }
+
+    private static bool TryApplyContentChange(
+        Document document,
+        string path,
+        DateTime currentMtime,
+        McpFileState known,
+        ref Solution updated,
+        Dictionary<string, McpFileState> fileState)
+    {
+        try
+        {
+            var currentHash = FileChecksumCalculator.ComputeSha256Hex(path);
+            if (known.Hash == currentHash)
+            {
+                fileState[path] = known with { MtimeUtc = currentMtime };
+                return false;
+            }
+
+            var text = File.ReadAllText(path);
+            updated = updated.WithDocumentText(document.Id, SourceText.From(text));
+            fileState[path] = new McpFileState(currentMtime, currentHash);
+            return true;
+        }
+        // ainetlinter-disable EnforceNoSilentCatch — stillschweigend: Hash-Lese-Fehler beim
+        // Staleness-Check duerfen den Server-Loop nicht abbrechen; der naechste Call liest
+        // die Datei ohnehin erneut.
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCsFilesSafe(string solutionDir)
+    {
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(solutionDir, "*.cs", SearchOption.AllDirectories);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            yield break;
+        }
+        foreach (var path in files) yield return path;
+    }
+
+    /// <summary>
+    /// Heuristik fuer die Projekt-Wahl beim Verzeichnis-Sweep: erstes Nicht-Test-Projekt,
+    /// dessen Quellpfad-Praefix die neue Datei enthaelt. Best-Effort — bewusst ohne
+    /// Resolving von <c>&lt;Compile Remove=…&gt;</c>-Ausschluessen aus .csproj-Dateien
+    /// (Konzept-Vorgabe), weil das Mitlesen der MSBuild-Syntax die Verantwortlichkeit
+    /// der Klasse sprengen wuerde. Fallback: erstes Projekt der Solution.
+    /// </summary>
+    private static ProjectId? PickProjectForNewFile(Solution solution, string newFilePath)
+    {
+        var dir = Path.GetDirectoryName(newFilePath);
+        if (string.IsNullOrEmpty(dir)) return null;
+
+        return solution.Projects
+            .Where(p => !p.Name.Contains("Test", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(p => p.FilePath != null
+                && Path.GetDirectoryName(p.FilePath) is { } pdir
+                && dir.StartsWith(pdir, StringComparison.OrdinalIgnoreCase))
+            ?.Id;
+    }
+}

@@ -23,7 +23,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -35,7 +35,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsCsCountMarkedAsGraphCovered()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -47,7 +47,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsJsRazorCssCountsViaWebFileCatalog()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -61,7 +61,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsXamlAndHtmlCountsMarkedAsNotGraphCovered()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(_fixture.Catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -82,7 +82,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
         File.WriteAllText(Path.Combine(generatedDir, "Generated.html"), "<html></html>");
 
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -97,7 +97,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 

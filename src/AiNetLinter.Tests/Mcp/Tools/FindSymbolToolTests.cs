@@ -25,7 +25,7 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(null));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var result = await FindSymbolTool.ExecuteAsync(state, "irrelevant", null, 50, CancellationToken.None);
 
@@ -119,7 +119,7 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(catalog));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await FindSymbolTool.ExecuteAsync(state, "ValidClassA", kind: null, maxResults: 50, CancellationToken.None);
 
