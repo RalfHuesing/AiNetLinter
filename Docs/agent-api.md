@@ -243,7 +243,7 @@ Konsequenz für den Agent-Loop: 7 Tools sind C#-only (find_symbol, find_referenc
 | :--- | :--- | :--- | :---: | :---: |
 | `find_symbol` | `namePattern` (Substring), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` | ja | ja |
 | `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; >1 = transitive Aufrufstellen, aggregiert) | Alle Aufrufstellen | ja | ja |
-| `get_impact` | `gitRef?` (Git-Commit-Ref; leer = uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites | ja | ja |
 | `get_type_hierarchy` | `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name) | Basisklassen, implementierte Interfaces, abgeleitete Typen, heuristische DI-Registrierungen (letzte Sektion) | ja | nein |
 | `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
 | `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
@@ -290,6 +290,15 @@ Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` 
 ### Miss-Hint (find_symbol Fallback)
 
 Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
+
+### Resource `ainetlinter://overview`
+
+Neben den 10 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+
+1. Kurzbeschreibung aller 10 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
+
+Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 

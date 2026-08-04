@@ -123,14 +123,14 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetImpactDescription =
-        "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
-        "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
-        "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Optionaler " +
-        "depth-Parameter (Default 1, hard cap 3) wirkt nur im Symbol-Branch und " +
-        "loest transitive Aufrufstellen, aggregiert. Deckt nur .cs-Dateien ab, " +
-        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
-        "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet " +
-        "die Gesamt-Trefferzahl.";
+        "Findet Aufrufstellen geaenderter C#-Signaturen. Ohne jeden Parameter aufgerufen " +
+        "prueft es uncommittete lokale Aenderungen (Standardfall). Alternativ: entweder " +
+        "gitRef (Git-Commit-Ref) ODER symbolIdentifier (Datei:Zeile:Spalte oder " +
+        "qualifizierter Name) angeben, nie beide. Optionaler depth-Parameter (Default 1, " +
+        "hard cap 3) wirkt nur im Symbol-Branch und loest transitive Aufrufstellen, " +
+        "aggregiert. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
+        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
