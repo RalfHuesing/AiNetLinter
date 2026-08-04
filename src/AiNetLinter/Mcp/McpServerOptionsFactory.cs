@@ -23,10 +23,10 @@ internal static class McpServerOptionsFactory
     // fuer Namen in Nicht-C#-Dateien (.js, .razor, .xaml, .html, .css).
     private const string ServerInstructions =
         "Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, " +
-        "get_file_skeleton, get_violations) arbeiten ausschliesslich auf C#/.cs-Quellcode. " +
-        "Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, " +
-        "ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: " +
-        "get_index_scope, get_hotspots.";
+        "get_file_skeleton, get_violations, get_symbol_body) arbeiten ausschliesslich auf " +
+        "C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder " +
+        ".css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne " +
+        "C#-Beschraenkung: get_index_scope, get_hotspots.";
 
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
@@ -54,6 +54,7 @@ internal static class McpServerOptionsFactory
         SymbolGraphToolRegistrations.Register(tools, mcpState, callLog);
         FileStructureToolRegistrations.Register(tools, mcpState, callLog);
         AnalysisToolRegistrations.Register(tools, mcpState, callLog);
+        SymbolBodyToolRegistrations.Register(tools, mcpState, callLog);
 
         return tools;
     }

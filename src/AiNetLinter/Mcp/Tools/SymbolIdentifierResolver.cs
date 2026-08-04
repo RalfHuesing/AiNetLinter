@@ -1,6 +1,12 @@
 #nullable enable
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.FindSymbols;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
 
@@ -53,5 +59,49 @@ internal static class SymbolIdentifierResolver
     {
         var parenIndex = displayString.IndexOf('(');
         return parenIndex < 0 ? displayString : displayString[..parenIndex];
+    }
+
+    /// <summary>
+    /// Loest einen stabilen Symbol-Identifikator (DocumentationCommentId, z. B. <c>M:Ns.Type.Method(System.Int32)</c>)
+    /// zu genau einem <see cref="ISymbol"/> auf. Iteriert dazu ueber alle
+    /// <see cref="Microsoft.CodeAnalysis.DeclaredSymbolInfo"/>s aller Projekte, weil
+    /// <see cref="SymbolFinder"/> keine direkte DocumentationCommentId-Suche anbietet. Wenn
+    /// <paramref name="stableId"/> kein gueltiges DocumentationCommentId-Praefix
+    /// (<c>M:</c>/<c>T:</c>/<c>P:</c>/<c>F:</c>/<c>E:</c>/<c>!:</c>) traegt, wird der Aufruf
+    /// als Fehlschlag gewertet und der Aufrufer kann auf <see cref="FindReferencesTool.ResolveSymbolAsync"/>
+    /// (Datei:Zeile:Spalte oder qualifizierter Name) zurueckfallen.
+    /// </summary>
+    internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> TryResolveByStableIdAsync(
+        Solution solution, string stableId, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(stableId) || !HasKnownDocumentationCommentIdPrefix(stableId))
+        {
+            return (null, null);
+        }
+
+        foreach (var project in solution.Projects)
+        {
+            var declared = await SymbolFinder.FindSourceDeclarationsAsync(
+                project, name => true, SymbolFilter.TypeAndMember, ct);
+            foreach (var symbol in declared)
+            {
+                if (DocumentationCommentId.CreateDeclarationId(symbol) == stableId)
+                {
+                    return (symbol, null);
+                }
+            }
+        }
+
+        return (null, null);
+    }
+
+    private static bool HasKnownDocumentationCommentIdPrefix(string id)
+    {
+        return id.StartsWith("M:", StringComparison.Ordinal)
+            || id.StartsWith("T:", StringComparison.Ordinal)
+            || id.StartsWith("P:", StringComparison.Ordinal)
+            || id.StartsWith("F:", StringComparison.Ordinal)
+            || id.StartsWith("E:", StringComparison.Ordinal)
+            || id.StartsWith("!:", StringComparison.Ordinal);
     }
 }

@@ -22,7 +22,10 @@ internal static class GetTypeHierarchyFormatter
     /// <summary>
     /// Baut den vollstaendigen Hierarchie-Text fuer <paramref name="type"/>: Basisklassen-Kette,
     /// implementierte Interfaces sowie (je nach <see cref="ITypeSymbol.TypeKind"/>) abgeleitete
-    /// Klassen bzw. implementierende Typen.
+    /// Klassen bzw. implementierende Typen. Anhaengend eine 4. Sektion mit heuristischen
+    /// DI-Registrierungs-Funden via <see cref="DiRegistrationHeuristics"/> (nur wenn Treffer
+    /// vorhanden — bei 0 Treffern wird die Sektion weggelassen, um die uebliche Antwort nicht
+    /// zu verlangern).
     /// </summary>
     internal static async Task<string> BuildHierarchyTextAsync(
         INamedTypeSymbol type, Solution solution, CancellationToken ct)
@@ -36,7 +39,19 @@ internal static class GetTypeHierarchyFormatter
             await FormatSubtypesSectionAsync(type, solution, outputRoot, ct),
         };
 
+        var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
+        if (diHits.Count > 0)
+        {
+            sections.Add(FormatDiRegistrationSection(diHits));
+        }
+
         return string.Join("\n\n", sections);
+    }
+
+    private static string FormatDiRegistrationSection(IReadOnlyList<string> hits)
+    {
+        var header = "DI-Registrierungen (heuristisch, Convention-/Factory-basiertes Scanning nicht abgedeckt):";
+        return $"{header}\n{string.Join("\n", hits)}";
     }
 
     private static IEnumerable<string> FormatBaseTypes(INamedTypeSymbol type, string outputRoot)

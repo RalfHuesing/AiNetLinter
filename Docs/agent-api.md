@@ -212,7 +212,7 @@ Fehlermeldungen sind maschinenlesbar:
 
 ## MCP-Server-Modus
 
-Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
+Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 10 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
 
 ### Server-Lifecycle
 
@@ -233,22 +233,23 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
 
-> Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+> Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 6 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Konsequenz für den Agent-Loop: 7 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 9 Tools
+### Die 10 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
 | `find_symbol` | `namePattern` (Substring), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` | ja | ja |
-| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), `maxResults?` (Default 50) | Alle Aufrufstellen | ja | ja |
-| `get_impact` | `gitRef?` (Git-Commit-Ref; leer = uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50) | Betroffene Call-Sites | ja | ja |
-| `get_type_hierarchy` | `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name) | Basisklassen, implementierte Interfaces, abgeleitete Typen | ja | nein |
-| `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies) | ja | nein |
+| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; >1 = transitive Aufrufstellen, aggregiert) | Alle Aufrufstellen | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; leer = uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites | ja | ja |
+| `get_type_hierarchy` | `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name) | Basisklassen, implementierte Interfaces, abgeleitete Typen, heuristische DI-Registrierungen (letzte Sektion) | ja | nein |
+| `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
 | `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
 | `get_hotspots` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | `.cs`-Dateien, die ihrem `MaxLineCount`-Limit nahekommen oder es überschreiten | nein | nein |
 | `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | nein |
+| `get_symbol_body` | `identifier` (stabile DocumentationCommentId oder Datei:Zeile:Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 
 Beispiel-Aufruf (JSON-RPC über stdio):
@@ -332,7 +333,7 @@ Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overh
 
 ### Compile-Fehler-Warnhinweis (EPIC-06)
 
-Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 9 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
+Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 10 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
 
 ```
 Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
@@ -351,7 +352,60 @@ Zusätzlich laufen pro Refresh zwei Erweiterungen:
 
 Beide Pfade sind „best-effort": `<Compile Remove=…>`-Ausschlüsse aus `.csproj` werden bewusst nicht gelesen (Konzept-Vorgabe).
 
-### Default-Config-Markierung in `get_violations`
+### Symbolgraph-Erweiterungen (EPIC-08)
+
+Drei neue Features erweitern den Symbolgraph um praxisrelevante Hebel:
+
+#### `get_symbol_body` und stabile Symbol-IDs (E.1)
+
+`get_symbol_body` liefert den Source-Body eines C#-Symbols per stabiler
+`DocumentationCommentId` (z. B. `M:AiNetLinter.Mcp.Tools.GetSymbolBodyTool.ExecuteAsync`)
+oder per klassischem `Datei:Zeile:Spalte`-Format. `maxBodyLines` kappt
+hart (Default 80), die Ausgabe enthaelt einen Ellipse-Indikator plus
+Voll-Laengen-Hinweis am Ende. Token-Budget: 15 Zeilen Body statt 500
+Zeilen Datei.
+
+`get_file_skeleton` rendert pro Member zusaetzlich einen `id:...`-Marker
+in derselben `DocumentationCommentId`-Notation. Damit kann der Agent:
+
+1. `get_file_skeleton` aufrufen, alle relevanten Members + stabile IDs einsammeln.
+2. `get_symbol_body` mit einer ausgewaehlten ID aufrufen, nur den Body dieses Members holen.
+
+Die ID ueberlebt Zeilenverschiebungen (solange der Symbol-FQN stabil
+bleibt — Refactorings, die den FQN aendern, generieren eine neue ID, by
+Design). Overloads werden ueber die voll-qualifizierte Parameter-Signatur
+in der ID disambiguiert (`ProcessOrder(int)` vs.
+`ProcessOrder(OrderDto)` bekommen unterschiedliche IDs).
+
+#### `depth`-Parameter fuer `find_references` / `get_impact` (E.2)
+
+Beide Tools haben einen optionalen `depth`-Parameter (Default 1, hard
+cap 3). `depth = 1` liefert direkte Aufrufstellen wie bisher. `depth > 1`
+loest transitive Aufrufstellen ueber `SymbolFinder.FindReferencesAsync`
+und aggregiert sie zu einer Top-N-Antwort mit explizitem `depth`-Marker
+in der Trunkierungs-Meta-Zeile. Separates Knotenlimit (200) verhindert
+exponentielle Explosion bei grossen Symbolgraphen.
+
+`get_impact` ignoriert `depth` im Git-Branch (es gibt keine Symboltiefe
+fuer `gitRef`-basierte Diff-Analyse).
+
+#### DI-Registrierungs-Hinweis in `get_type_hierarchy` (E.3)
+
+`get_type_hierarchy` haengt eine zusaetzliche Sektion
+
+```
+DI-Registrierungen (heuristisch, Convention-/Factory-basiertes Scanning nicht abgedeckt):
+AddScoped: IReporter, ConsoleReporter (src/Di/Program.cs:9) — AddScoped<IReporter, ConsoleReporter>
+...
+```
+
+an, sobald die Heuristik mindestens eine Registrierung findet. Die
+Heuristik scant alle `.cs`-Dateien per `\b`-Word-Boundary-Regex auf
+`AddScoped<...>`, `AddSingleton<...>`, `AddTransient<...>` und filtert
+auf Treffer, deren Typ-Parameter den voll-qualifizierten Namen des
+Hierarchie-Typs enthalten. Convention-basierte und Factory-basierte
+Registrierungen werden bewusst NICHT erkannt (Konzept-Vorgabe). Bei
+0 Treffern wird die Sektion weggelassen.
 
 Wenn der Server ohne `--config` gestartet wurde **und** keine `rules.json` neben der aufgelösten Solution-Datei findet, läuft er mit den `Config`-Defaults. `get_violations` prependet in diesem Fall vor den eigentlichen Lint-Output eine sichtbare Header-Zeile:
 

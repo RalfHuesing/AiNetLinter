@@ -71,14 +71,14 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string symbolIdentifier, int maxResults = 50, CancellationToken ct = default) =>
+            async (string symbolIdentifier, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
-                    return await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct);
+                    return await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct);
                 }
-                await using var scope = callLog.StartRecording("find_references", $"{symbolIdentifier}|{maxResults}");
-                var result = await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct);
+                await using var scope = callLog.StartRecording("find_references", $"{symbolIdentifier}|{maxResults}|{depth}");
+                var result = await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct);
                 scope.Complete(result);
                 return result;
             },
@@ -91,7 +91,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindReferencesDescription =
         "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
-        "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
+        "oder qualifizierter/teil-qualifizierter Name). Optionaler depth-Parameter (Default 1, " +
+        "hard cap 3) loest transitive Aufrufstellen und aggregiert sie. Deckt nur .cs-Dateien ab, " +
         "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
         "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die " +
         "Gesamt-Trefferzahl.";
@@ -102,14 +103,15 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, CancellationToken ct = default) =>
+            async (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
             {
+                var input = new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth);
                 if (callLog is null)
                 {
-                    return await GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct);
+                    return await GetImpactTool.ExecuteAsync(mcpState, input, ct);
                 }
-                await using var scope = callLog.StartRecording("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}");
-                var result = await GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct);
+                await using var scope = callLog.StartRecording("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}|{depth}");
+                var result = await GetImpactTool.ExecuteAsync(mcpState, input, ct);
                 scope.Complete(result);
                 return result;
             },
@@ -123,10 +125,12 @@ internal static class SymbolGraphToolRegistrations
     private const string GetImpactDescription =
         "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
         "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
-        "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
-        ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
-        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+        "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Optionaler " +
+        "depth-Parameter (Default 1, hard cap 3) wirkt nur im Symbol-Branch und " +
+        "loest transitive Aufrufstellen, aggregiert. Deckt nur .cs-Dateien ab, " +
+        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
+        "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet " +
+        "die Gesamt-Trefferzahl.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,

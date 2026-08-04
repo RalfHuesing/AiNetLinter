@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
 
@@ -90,7 +91,7 @@ internal static class WebFileCatalog
         List<WebFileEntry> entries,
         HashSet<string> seenAbsolutePaths)
     {
-        foreach (var filePath in SafeEnumerateFiles(projectDir))
+        foreach (var filePath in FileSystemExclusionHelpers.SafeEnumerateFiles(projectDir))
         {
             if (!TryClassifyFile(filePath, request, solutionDir, out var type, out var relativePath))
             {
@@ -100,16 +101,6 @@ internal static class WebFileCatalog
             if (!seenAbsolutePaths.Add(filePath)) continue;
             entries.Add(new WebFileEntry(filePath, relativePath, type));
         }
-    }
-
-    private static IEnumerable<string> SafeEnumerateFiles(string projectDir)
-    {
-        try
-        {
-            return Directory.EnumerateFiles(projectDir, "*", SearchOption.AllDirectories);
-        }
-        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
-        catch (IOException) { return Array.Empty<string>(); }
     }
 
     private static bool TryClassifyFile(
@@ -122,7 +113,7 @@ internal static class WebFileCatalog
         type = default!;
         relativePath = string.Empty;
 
-        if (IsGeneratedPath(filePath)) return false;
+        if (FileSystemExclusionHelpers.IsGeneratedPath(filePath)) return false;
         if (FileFilterEvaluator.IsExcluded(filePath, request.FileFilters)) return false;
 
         var detected = GetWebFileType(filePath);
@@ -144,14 +135,6 @@ internal static class WebFileCatalog
 
         type = detected.Value;
         return true;
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        var sep = Path.DirectorySeparatorChar;
-        return path.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static WebFileType? GetWebFileType(string path)

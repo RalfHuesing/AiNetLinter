@@ -17,7 +17,9 @@ namespace AiNetLinter.Mcp.Tools;
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (Datei:Zeile:Spalte oder
 /// qualifizierter/teil-qualifizierter Name) zu genau einem Roslyn-<see cref="ISymbol"/> auf und
 /// liefert dessen Aufrufstellen ueber <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>. Deckt
-/// nur .cs-Dateien ab (Roslyn-Symbolgraph).
+/// nur .cs-Dateien ab (Roslyn-Symbolgraph). Optionaler <c>depth</c>-Parameter (Default 1, hard
+/// cap 3) loest transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf und
+/// aggregiert sie zu einer Top-N-Antwort.
 /// </summary>
 internal static class FindReferencesTool
 {
@@ -31,7 +33,7 @@ internal static class FindReferencesTool
     /// Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string symbolIdentifier, int maxResults, CancellationToken ct)
+        McpCodeGraphServer state, string symbolIdentifier, int maxResults, int depth, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -42,19 +44,28 @@ internal static class FindReferencesTool
             var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct);
             if (error is not null) return error;
 
-            var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+            var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+            var clampedDepth = Math.Clamp(depth, 1, CallGraphTraversal.MaxRecursionDepth);
+            string body;
 
-            if (callSites.Count == 0)
+            if (clampedDepth == 1)
             {
-                return McpToolResults.Text(FindSymbolTool.PrependWarning(
-                    warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"));
+                var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
+                if (callSites.Count == 0)
+                {
+                    return McpToolResults.Text(FindSymbolTool.PrependWarning(
+                        warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"));
+                }
+                body = McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults);
+            }
+            else
+            {
+                body = await CallGraphTraversal.ExpandAndFormatAsync(
+                    solution, symbol!, clampedDepth, normalizedMaxResults, ct);
             }
 
-            var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(
-                warning,
-                McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults)));
+            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, body));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -120,6 +120,33 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     }
 
     [Fact]
+    public async Task ExecuteAsync_TypeWithDiRegistration_IncludesDiRegistrationSection()
+    {
+        using var fixture = new DiRegistrationMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ConsoleReporter", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("DI-Registrierungen (heuristisch", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("AddScoped", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TypeWithoutDiRegistration_OmitsDiRegistrationSection()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.DoesNotContain("DI-Registrierungen", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();

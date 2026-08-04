@@ -63,9 +63,9 @@ internal static class GetIndexScopeScanner
 
         foreach (var projectDir in WebFileCatalog.GetProjectDirectories(solution))
         {
-            foreach (var filePath in SafeEnumerateFiles(projectDir))
+            foreach (var filePath in FileSystemExclusionHelpers.SafeEnumerateFiles(projectDir))
             {
-                if (IsGeneratedPath(filePath)) continue;
+                if (FileSystemExclusionHelpers.IsGeneratedPath(filePath)) continue;
 
                 if (filePath.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase)) xamlCount++;
                 else if (filePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) htmlCount++;
@@ -73,24 +73,6 @@ internal static class GetIndexScopeScanner
         }
 
         return (xamlCount, htmlCount);
-    }
-
-    private static IEnumerable<string> SafeEnumerateFiles(string projectDir)
-    {
-        try
-        {
-            return Directory.EnumerateFiles(projectDir, "*", SearchOption.AllDirectories);
-        }
-        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
-        catch (IOException) { return Array.Empty<string>(); }
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        var sep = Path.DirectorySeparatorChar;
-        return path.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatBreakdown(

@@ -2,7 +2,7 @@
 task: codegraph-mcp-finish
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-04 # TD-008 (verbleibende „ehemalige 6-Parameter-Signatur" in GetViolationsScanner) aus step-010-Review ergänzt
+last_updated: 2026-08-04 # step-012: TD-008 geschlossen, TD-009..TD-012 (EPIC-07) ergänzt (TD-001, TD-002 closed; TD-004/TD-011 zurueckgestellt; TD-006/TD-012 closed via DRY-Konsolidierung)
 ---
 
 # Tech-Debt-Log: codegraph-mcp-finish
@@ -31,7 +31,11 @@ Verweis auf die Tech-Debt-ID).
 | TD-005 | `src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs` (4 Slots, 30s Wait-Timeout) | mittel | Last-Flake unter Volllauf — 1-2 Failures in `McpServerCommandErrorHandlingTests`, exakt am Gate-Timeout-Stack |
 | TD-006 | `.agents/rules/AiNetLinter.mdc` | niedrig | Working-Tree-vs-Index-BOM-Diskrepanz, semantisch leerer Diff, Working-Tree-Noise |
 | TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs:42-46, 62-64` | niedrig | Factory- und `McpCodeGraphServerOptionsFromParameters`-XML-Doc enthalten „ehemaligen 5 Parameter"/„ehemalige 5-Parameter-Signatur" (semantisch äquivalent zu „früheren") — Refactoring-Historie im Sinne von §5 |
-| TD-008 | `src/AiNetLinter/Mcp/Tools/GetViolationsScanner.cs:192` | niedrig | XML-Doc enthält „die ehemalige 6-Parameter-Signatur zusammen" — gleichartige §5-Refactoring-Historie-Variante wie TD-001/TD-007, beim Sanieren in step-010 nicht mitgenommen |
+| TD-008 | `src/AiNetLinter/Mcp/Tools/GetViolationsScanner.cs:192` | niedrig | XML-Doc enthielt „die ehemalige 6-Parameter-Signatur zusammen" — gleichartige §5-Refactoring-Historie-Variante wie TD-001/TD-007, beim Sanieren in step-010 nicht mitgenommen |
+| TD-009 | `src/AiNetLinter/AiNetLinter.csproj:17` (Paket-Referenz, EPIC-07) | niedrig | `Microsoft.Extensions.AI.Abstractions` wird transitiv ueber `ModelContextProtocol` 2.0.0 mitgezogen, im direkten Code ungenutzt — geschlossen in step-012 |
+| TD-010 | `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` (Fixture-Pool, EPIC-07) | niedrig | Subprozess-E2E-Tests starten je Testklasse einen `AiNetLinter.exe`-Prozess; `InMemoryTransport`-Eskalation ist Nice-to-Have — geschlossen in step-012 |
+| TD-011 | `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` + 2 Geschwister (EPIC-07) | mittel | Footprint-Druck auf 3 Tool-Registrar-Sammelklassen; gemeinsame Basis-Klasse wuerde das Dispatcher-Pattern verwaessern — zurueckgestellt in step-012 |
+| TD-012 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` + `src/AiNetLinter/Web/WebFileCatalog.cs` (DRY-Duplikation, EPIC-07) | niedrig | `SafeEnumerateFiles`/`IsGeneratedPath` 1:1 dupliziert, wurde in `FileSystemExclusionHelpers` konsolidiert — geschlossen in step-012 |
 
 ## Einträge
 
@@ -293,4 +297,116 @@ Verweis auf die Tech-Debt-ID).
   Anlass fuer einen Mini-Projekt-weiten Grep ueber alle
   `Mcp/`-XML-Docs an, um weitere „ehemalige"-/„frueheren"-Vorkommen
   aufzudecken.
-- **Status:** offen
+- **Status:** geschlossen (umgesetzt in `step-012`, Code-Commit siehe
+  `tasks/codegraph-mcp-finish/step-012/step-result.md` — XML-Doc am
+  `GetViolationsScannerParameters`-Record auf forward-looking Rationale
+  umgestellt, Pattern-Vorlage aus TD-007-Sanierung uebernommen; konsistent
+  zu Patch 3 in step-009/fix-01).
+
+### TD-009 — `Microsoft.Extensions.AI.Abstractions` transitiv ueber `ModelContextProtocol` [Priorität: niedrig]
+
+- **Gefunden in:** Konzept-Muss-Haben-D Z. 297-304 (EPIC-07, step-012).
+- **Ort:** `src/AiNetLinter/AiNetLinter.csproj:17` referenziert
+  `ModelContextProtocol` 2.0.0. Dieses Paket zieht
+  `Microsoft.Extensions.AI.Abstractions` als transitive Abhaengigkeit mit.
+- **Befund:** Grep-Verifikation im step-012 zeigt: keine direkten
+  `Microsoft.Extensions.AI.*`-Imports im `src/AiNetLinter/`-Baum
+  (verifiziert per ripgrep auf das gesamte Source-Verzeichnis — keine
+  Treffer). Das Abstractions-Paket ist Teil der MCP-SDK-Vertragsflaeche
+  (ModelContextProtocol 2.0.0 verweist intern darauf), kein ersetzbares
+  Add-On. Kein csproj-Eingriff sinnvoll: die Konzept-Vorgabe war „bei
+  Bedarf pruefen, ob eine gezieltere Paket-Referenz existiert" — Antwort
+  ist nein.
+- **Warum nicht sofort gefixt:** n/a — closed.
+- **Vorschlag:** keine Aktion. Die transitive Abhaengigkeit ist im
+  SDK-Vertrag begruendet und nicht vermeidbar. Bei einem kuenftigen
+  Wechsel auf eine andere MCP-SDK-Version, die das Abstractions-Paket
+  nicht mehr mitzieht, faellt das Paket automatisch weg; dann ist auch
+  keine Doku-Aktion noetig.
+- **Status:** geschlossen (verifiziert in `step-012` — Grep im
+  `src/AiNetLinter/`-Baum ohne Treffer; csproj bleibt unveraendert;
+  Entscheidung in `step-012/step-result.md` unter "Sub-Bereich 1
+  (TD-001)" dokumentiert).
+
+### TD-010 — Subprozess-E2E-Test ohne Fixture-Pool [Priorität: niedrig]
+
+- **Gefunden in:** Konzept-Muss-Haben-D Z. 305-309 (EPIC-07, step-012).
+- **Ort:** `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` ist
+  der einzige Subprozess-E2E-Test-Container mit echten
+  `AiNetLinter.exe`-Prozessen via `McpTestClient.ConnectAsync`
+  (Retry-Loop seit `step-011/TD-019`). Fixture-Pattern: zwei
+  `IClassFixture<>`-Felder (`SymbolGraphMcpFixture`,
+  `BaselineMcpFixture`) — jede Fixture startet **einen**
+  `AiNetLinter.exe`-Prozess pro Test-Klasse via `IAsyncLifetime`.
+- **Befund:** Bestandsaufnahme im step-012 zeigt: das aktuelle
+  `IClassFixture<>`-Pattern startet pro Testklasse bereits einen
+  geteilten Prozess pro Workspace; `SubprocessConcurrencyGate` (6 Slots,
+  60 s, aus `step-010`) kappt Spitzenlast; der
+  `McpTestClient.ConnectAsync`-Retry-Loop absorbiert parallele
+  Init-Flakes. Konzept-Vorgabe war „bei **weiteren** Subprozess-Tests"
+  — der Ausloeser ist bei der aktuellen 1-Klassen-Container-Situation
+  nicht gegeben.
+- **Warum nicht sofort gefixt:** n/a — closed.
+- **Vorschlag:** Bei kuenftigen Erweiterungen um mehrere neue
+  Subprozess-E2E-Testklassen den `InMemoryTransport`-Pattern des
+  `ModelContextProtocol`-SDK 2.0.0 als Eskalation pruefen, dann TD-010
+  wieder oeffnen.
+- **Status:** geschlossen (Begruendung im `step-012/step-result.md`
+  unter "Sub-Bereich 4 (TD-002)" dokumentiert; keine Code-Aenderung
+  am Test- oder Produktions-Code).
+
+### TD-011 — Footprint-Druck auf 3 Tool-Registrar-Sammelklassen [Priorität: mittel]
+
+- **Gefunden in:** Konzept-Muss-Haben-D Z. 310-315 (EPIC-07, step-012).
+- **Ort:** `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` (160
+  Z., 4 Tools, PathOverride 2850),
+  `FileStructureToolRegistrations.cs` (127 Z., 3 Tools, PathOverride
+  2810), `AnalysisToolRegistrations.cs` (104 Z., 2 Tools, PathOverride
+  2800).
+- **Befund:** Die 3 Klassen sind kategorial verschieden — eine
+  gemeinsame Basis-Klasse wuerde das etablierte Pattern (duenner
+  Dispatch + Scanner/Formatter-Datei, Konzept-Muss-Haben-C) verwaessern,
+  den Footprint durch virtuelle `BuildTool(...)`-Helfer **erhoehen**
+  statt reduzieren und die eigenstaendige Unit-Testbarkeit jeder Klasse
+  einschraenken. Der Footprint-Druck ist mit der
+  `PathOverride`-Mechanik (`rules.json` → `PathOverrides`, 4 Eintraege
+  aus `step-011`, 12 Eintraege aus `step-008`/`step-010`) beherrschbar.
+  Die `ILinterEngineConfig`-Entlastung in `step-008` hat den
+  strukturell erreichbaren Hebel bereits gehoben.
+- **Warum nicht sofort gefixt:** Die `step-008/010/011`-Pfade haben
+  gezeigt, dass der Footprint-Druck systematisch ueber
+  `ILinterEngineConfig` (C-Block) und `PathOverride`-Mechanik
+  adressierbar ist. Eine Generalisierung waere eine **Verschlechterung**
+  der Architektur.
+- **Vorschlag:** Falls ein kuenftiger Schritt zeigt, dass der
+  Footprint-Druck durch eine kategoriespezifische Konsolidierung (z. B.
+  gemeinsamer `CallLogEnabled`-Lambda-Body-Helper zwischen den
+  Registrars) reduzierbar ist **ohne** das Dispatcher-Pattern zu
+  verwaessern, TD-011 wieder aufnehmen. Bis dahin: bewusst zurueckgestellt.
+- **Status:** zurueckgestellt (Begruendung im
+  `step-012/step-result.md` unter "Sub-Bereich 5 (TD-004)"
+  dokumentiert; keine Code-Aenderung am Produktions- oder Test-Code).
+
+### TD-012 — `SafeEnumerateFiles`/`IsGeneratedPath` 1:1-Duplikation in Scanner und Web-Katalog [Priorität: niedrig]
+
+- **Gefunden in:** Konzept-Muss-Haben-D Z. 321-327 (EPIC-07, step-012).
+- **Ort:** `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs:78-94` und
+  `src/AiNetLinter/Web/WebFileCatalog.cs:105-113 + 149-155` (vor
+  step-012). Nach step-012: gemeinsame Hilfsklasse
+  `src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`.
+- **Befund:** Beide privaten statischen Methoden waren exakt 1:1
+  dupliziert (8 Z. bzw. 7 Z., kein Verhaltens-Drift). Konsolidierung in
+  `Baseline/FileSystemExclusionHelpers` macht die `Baseline/`-Namespace-
+  Konvention sichtbar (Dateisystem-Kataloge) und liefert eine
+  wiederverwendbare Hilfsklasse fuer kuenftige freie
+  Dateisystem-Scans.
+- **Warum nicht sofort gefixt:** n/a — closed.
+- **Vorschlag:** keine Aktion. Kuenftige Dateisystem-Scans greifen
+  ohne Duplikation auf `FileSystemExclusionHelpers.SafeEnumerateFiles`
+  und `FileSystemExclusionHelpers.IsGeneratedPath` zu.
+- **Status:** geschlossen (umgesetzt in `step-012` — neue Datei
+  `src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`, 2 Aufrufer
+  umgestellt, 6 Unit-Tests in
+  `src/AiNetLinter.Tests/Baseline/FileSystemExclusionHelpersTests.cs`;
+  Build + Tests gruen; Details im
+  `step-012/step-result.md` unter "Sub-Bereich 2 (TD-006)").

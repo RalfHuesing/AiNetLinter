@@ -24,7 +24,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "irrelevant", maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "irrelevant", 50, 1), CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -36,7 +36,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: "HEAD~1", symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("HEAD~1", "Greeter.Greet", 50, 1), CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -48,7 +48,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -60,7 +60,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: "DoesNotExistXyz", maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "DoesNotExistXyz", 50, 1), CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -75,7 +75,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: null, maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -87,7 +87,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetImpactTool.ExecuteAsync(state, gitRef: null, symbolIdentifier: null, maxResults: 50, CancellationToken.None);
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -100,7 +100,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
-            state, gitRef: null, symbolIdentifier: "Greeter.Greet", maxResults: 2, CancellationToken.None);
+            state, new GetImpactInput(null, "Greeter.Greet", 2, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -118,7 +118,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
-            state, gitRef: null, symbolIdentifier: null, maxResults: 2, CancellationToken.None);
+            state, new GetImpactInput(null, null, 2, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -135,11 +135,24 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(
-            state, gitRef: null, symbolIdentifier: "ValidClassA.DoWork", maxResults: 50, CancellationToken.None);
+            state, new GetImpactInput(null, "ValidClassA.DoWork", 50, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifierWithDepth2_StillReturnsCallSite()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "Greeter.Greet", 50, 2), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
     }
 }

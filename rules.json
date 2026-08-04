@@ -467,6 +467,16 @@
       "Metrics": {
         "MaxAIContextFootprint": 2650
       }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2700
+      }
+    },
+    "src/AiNetLinter/Mcp/SymbolBodyToolRegistrations.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2800
+      }
     }
   }
 }
