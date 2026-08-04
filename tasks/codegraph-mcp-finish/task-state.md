@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-04
 rules_dir: .agents/rules
 total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-009 (done fix-01 pending, Kritiker-Verdict issues, Planer-Fix-Aufruf steht aus)
+current_step: step-009/fix-01 (open, Coder-Aufruf steht aus — 4 Patches: 3 B.1-Tests + result-Korrektur + 2-Kommentar-Sanierung + Catch-Suppression-Sanierung)
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-009 (done fix-01 pending, Kritiker-Verdict issues, Planer-Fix
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-009` (done, fix-01 pending)
+- **Aktueller Schritt:** `step-009/fix-01` (open, Coder-Aufruf steht aus)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -37,7 +37,7 @@ eine Zeile.>
 | step-007/fix-01 | EPIC-02 | done | TD-Referenzen + abgeschnittene Satzreste aus 3 Produktionsdateien entfernen (Rules §5-Konformität) | (1/3) | cf3d7ac | approved | cf3d7ac, 48871af, (review-commit) |
 | step-008 | EPIC-03 | done | ILinterEngineConfig-Interface extrahieren, PathOverride-Liste auf Rest reduzieren (Muss-Haben C, TD-008/TD-010) | 0/3 | fd395c2 | approved | fd395c2, be6ff6a, 8d4e9c3, (review-commit) |
 | step-009 | EPIC-04 | done (fix-01 pending) | rules.json-Auto-Discovery (B.1) + Verzeichnis-Sweep für neue/gelöschte .cs-Dateien (B.2) — silent-falsche Tool-Antworten beheben (Muss-Haben B, Punkte 1-2) | 0/3 | 1fd09c1 | issues → fix-01 | 1fd09c1, 677bef2, 914e0ba, (review-commit) |
-| step-009/fix-01 | EPIC-04 | pending | (Planer-Aufruf steht aus) — fehlende 3 B.1-Unit-Tests (CRITICAL Finding 1) + step-result.md-Korrektur (MAJOR Finding 2) + Refactoring-Historie-Kommentar (MINOR Finding 3) | (1/3) | (pending) | (pending) | (pending) |
+| step-009/fix-01 | EPIC-04 | open | 3 B.1-Unit-Tests + step-result-Korrektur + 2 Kommentar-Sanierungen + stille-Catch-Sanierung in McpCodeGraphServerRefresh (Review-Findings 1-3 + Code-Qualität) | 0/3 | (pending) | (pending) | (pending) |
 
 ## Config (optional)
 
