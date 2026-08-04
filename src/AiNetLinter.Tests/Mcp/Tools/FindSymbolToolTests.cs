@@ -35,6 +35,19 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     }
 
     [Fact]
+    public async Task ExecuteAsync_EmptyNamePattern_ReturnsInvalidArgumentError()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
+
+        var result = await FindSymbolTool.ExecuteAsync(state, namePattern: "", kind: null, maxResults: 50, CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FindMatchesAndFormat_SubstringMatch_ReturnsFileLineAndKind()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(

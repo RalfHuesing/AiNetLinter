@@ -39,6 +39,14 @@ internal static class FindSymbolTool
         int maxResults,
         CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(namePattern))
+        {
+            return McpToolResults.Error(
+                LinterErrorCodes.InvalidArgument,
+                "namePattern darf nicht leer sein.",
+                hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
+        }
+
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
 
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
