@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-04  # step-010 abgeschlossen (EPIC-05 abgehakt, Kritiker approved mit 2 MINOR + TD-008); EPIC-06 (B.6 + B.7) als naechstes offen → step-011 (in Planung)
+last_updated: 2026-08-04  # step-011 abgeschlossen (EPIC-06 abgehakt, Kritiker approved); EPIC-07 + EPIC-08 als naechstes offen → step-012 (in Planung)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -201,11 +201,32 @@ obsolet markiert) — kein starres Vorab-Dokument.
       TD-005/TD-007-Status nicht in `tech-debt.md` geschlossen (offen —
       in step-011-Fix nachzuholen, Aufwand je 1 Min.). Bezug: Konzept.md
       „Muss-Haben B", Punkte 3-5.
-- [ ] EPIC-06: Robustheit & Observability — eigene `ILintConsole` für
+- [x] EPIC-06: Robustheit & Observability — eigene `ILintConsole` für
       den MCP-Modus, die stdout strukturell als reinen Protokollkanal
       schützt, plus E2E-Test für JSON-RPC-Framing (B.6); Opt-in
       Call-Log `--mcp-log` (B.7). Bezug: Konzept.md „Muss-Haben B",
-      Punkte 6-7. **→ step-011** (in Planung).
+      Punkte 6-7. **→ step-011** (approved, `step-011/step-review.md`):
+      B.6 liefert `McpLintConsole` in `Output/` als `internal sealed`
+      Singleton (`WriteLine`+`WriteError` → stderr) plus E2E-Framing-Test
+      mit echtem Subprozess und rohem stdout-Read (2 Tests,
+      Integration-Kategorie, `>= 2`-Schwelle begründet gelockert); B.7
+      liefert `--mcp-log` als vollständiges CLI-Pattern
+      (`LinterArgs`/`CliOptions`/`CliCommandBuilder`/`CliOptionFactory`/
+      `Program.cs`), `McpCallLog` in `Mcp/` mit JSONL-Format + Lock +
+      `IAsyncDisposable`-Scope + Auto-Delete bei 0 Einträgen, Verdrahtung
+      über `McpServerOptionsFactory.Create` und 9 mechanische
+      Lambda-Wrapper (4+3+2) in den drei `*Registrations.cs` mit
+      `if (callLog is null)`-Fast-Path. Beide B.6+B.7 mit allen 5
+      dokumentierten Abweichungen plausibel begründet (Scope-`Complete`-
+      Pattern, Sub-String-Marker statt literal-Match, Refactor für
+      `MaxMethodLineCount`, Pfad-Auflösung im Aufrufer, `>= 2`-Schwelle).
+      Build grün (0/0, 2.3 s), Volllauf 1215/1215 grün (3 m 4 s, kein
+      TD-005-Flake), 4 PathOverride-Werte in `rules.json` neu justiert
+      (SymbolGraph 2650→2850, FileStructure 2640→2810, Analysis
+      2640→2800, McpServerOptionsFactory 2640→2800) — begründet durch
+      transitiven Pull-in aus `ModelContextProtocol.Protocol.CallToolResult`
+      + `System.Text.Json` + `McpCallLog`, Selbst-Lint bestätigt 0/0
+      Violations. EPIC-06 ist inhaltlich abgeschlossen.
 - [ ] EPIC-07: Restliche Tech-Debt-Einträge (Muss-Haben D) — TD-001
       (ungenutzte transitive Paket-Referenz), TD-002 (Subprozess-E2E-Test
       ohne Fixture-Pool, deckt sich mit F.2), TD-004 (Footprint-Druck auf
@@ -218,16 +239,22 @@ obsolet markiert) — kein starres Vorab-Dokument.
       mehrere Einträge überschneiden sich mit Ansatzpunkten aus anderen
       Epics (TD-002/F.2, TD-011/E.1) und sollten dort mitgeprüft werden,
       bevor dieses Epic sie als offen führt. Bezug: Konzept.md
-      „Muss-Haben D".
+      „Muss-Haben D". **→ step-012** (in Planung, EPIC-07 + EPIC-08
+      zusammengefasst — EPIC-07 mit Footprint-Sanierung läuft vor EPIC-08,
+      damit das `get_symbol_body`-Tool der fünften Registrar-Klasse nicht
+      gegen den bereits knappen Footprint kämpft).
 - [ ] EPIC-08: Symbolgraph-Erweiterungen (Muss-Haben E, aus
       `codegraph-mcp-next` übernommen) — `get_symbol_body` + stabile
-      Symbol-IDs in `get_file_skeleton` (E.1, löst TD-011 mit, fünfte
-      Symbolgraph-Registrar-Klasse falls nötig), `depth`-Parameter an
+      Symbol-IDs in `get_file_skeleton` (E.1, löst TD-011 mit, vierte
+      Tool-Registrar-Klasse `SymbolBodyToolRegistrations` wahrscheinlich
+      nötig, da `SymbolGraphToolRegistrations` mit 4 Tools schon bei
+      2850 PathOverride hängt), `depth`-Parameter an
       `find_references`/`get_impact` mit aggregierter Ausgabe ab
       `depth > 1` (E.2), DI-Registrierungs-Hinweis als Zusatzzeile in
       `get_type_hierarchy` (E.3). Läuft laut Konzept-Vorgabe **zuletzt**,
       da alle drei von dem in EPIC-03 entlasteten Footprint profitieren.
-      Bezug: Konzept.md „Muss-Haben E".
+      Bezug: Konzept.md „Muss-Haben E". **→ step-012** (in Planung,
+      gemeinsam mit EPIC-07 in einem Schritt).
 
 **Nicht als eigenes Epic geführt, aber Teil der Definition of Done jedes
 betroffenen Epics:** laufende Doku-Pflege (`Docs/agent-api.md`,
