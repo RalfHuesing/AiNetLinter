@@ -220,7 +220,7 @@ AiNetLinter.exe --describe-rule <Id>   ← Eine Regel vollständig erklären
 
 ## MCP-Server registrieren
 
-AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitzustellen (Claude Code, Cursor, eigene Agent-Loops). Vollständige Tool-Referenz, Trunkierungs-Format und Error-Codes: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Roslyn-basierte Solution-Analyse als 10 granular abfragbare Tools für AI-Coding-Agenten bereitzustellen (Claude Code, Cursor, eigene Agent-Loops). Vollständige Tool-Referenz, Trunkierungs-Format und Error-Codes: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
 ### Registrierung im MCP-Host
 
@@ -274,7 +274,7 @@ Liegen im `cwd` mehrere `.sln`- oder `.slnx`-Dateien, bricht der Server-Start mi
 
 Wenn der MCP-Server registriert ist, sollten Agent-Loops **folgende Reihenfolge** einhalten:
 
-1. **Zuerst** symbolische Tools: `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `find_references` / `get_impact` (Aufrufstellen), `get_type_hierarchy` (Vererbung), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
+1. **Zuerst** symbolische Tools: `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `get_symbol_body` (Body eines Symbols per stabiler ID), `find_references` / `get_impact` (Aufrufstellen, optional mit `depth`-Parameter für transitive Aggregation), `get_type_hierarchy` (Vererbung inkl. heuristischer DI-Registrierungs-Hinweise), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
 2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster.
 3. **Niemals** `rg` / `grep` für **C#-Symbole** (Klassen-, Methoden-, Property-Namen). Diese Tools durchsuchen Strings und Kommentare mit, produzieren False Positives in gleichnamigen Symbolen anderswo und liefern keine Typ-/Signatur-Information.
 

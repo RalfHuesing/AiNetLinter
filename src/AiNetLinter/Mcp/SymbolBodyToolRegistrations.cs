@@ -13,10 +13,10 @@ namespace AiNetLinter.Mcp;
 /// aufgebauten Tool-Collection. Eigene Registrar-Klasse (statt Erweiterung von
 /// <see cref="SymbolGraphToolRegistrations"/>), weil die Symbolgraph-Registrar-Klasse bereits
 /// an ihrem 2850-PathOverride haengt und ein zusaetzliches Tool in derselben Klasse das
-/// TD-011-Puffer-bis-Limit-Risiko auf 0 fallen liesse. Bewusst duenner Dispatch auf
-/// <see cref="GetSymbolBodyTool.ExecuteAsync"/>. Kein DI-Container (Architektur-Verbot, siehe
-/// <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet den
-/// Tool-Aufruf auf, wenn aktiv.
+/// verbleibende Sicherheits-Polster gegen weitere Erweiterungen aufgebraucht haette. Bewusst
+/// duenner Dispatch auf <see cref="GetSymbolBodyTool.ExecuteAsync"/>. Kein DI-Container
+/// (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler
+/// <paramref name="callLog"/> zeichnet den Tool-Aufruf auf, wenn aktiv.
 /// </summary>
 internal static class SymbolBodyToolRegistrations
 {

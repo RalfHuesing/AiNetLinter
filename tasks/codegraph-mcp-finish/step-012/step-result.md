@@ -129,8 +129,19 @@ Volllauf 1241/1241 grün in 2 m 26 s.
   ServerInstructions-Text aktualisiert (7 Tools C#-only, inkl. `get_symbol_body`),
   neue `get_symbol_body`-Sektion, depth-Parameter dokumentiert, DI-Hinweis-Sektion
   dokumentiert.
-- `rules.json` (10 Zeilen geändert) — `PathOverride` für die neue
-  `SymbolBodyToolRegistrations` (Footprint-Schätzung, EPIC-03-Pattern konsistent).
+- `rules.json` (10 Zeilen geändert) — 2 neue `PathOverride`-Einträge mit
+  Begründung pro Eintrag:
+  - `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs:2700` — `GetSymbolBodyTool`
+    zieht Roslyn-SyntaxNode-API + `DocumentationCommentId` transitiv in den
+    Footprint; 2700 ist der minimal-funktionale Schwellwert (verifiziert per
+    Selbst-Lint 0/0).
+  - `src/AiNetLinter/Mcp/SymbolBodyToolRegistrations.cs:2800` — neue
+    Registrar-Klasse sammelt Roslyn-`McpServerPrimitiveCollection<Tool>`-API
+    + `GetSymbolBodyTool`-Referenz; 2800 hält die Klasse unter dem
+    Funktions-Schwellwert, vermeidet den `SymbolGraphToolRegistrations`-
+    Wachstums-Drift.
+  Beide Einträge konsistent zum EPIC-03-Pattern (`SymbolGraphToolRegistrations`
+  2650→2850 in step-011 als Referenz).
 - `tests/codegraph-mcp-finish/DiRegistrationMini/` (NEU) — Mini-Solution mit
   3 Klassen + DI-Setup für die E.3-Tests.
 
