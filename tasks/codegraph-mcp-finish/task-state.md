@@ -4,8 +4,8 @@ task: codegraph-mcp-finish
 started_at: 2026-08-03
 last_updated: 2026-08-04
 rules_dir: .agents/rules
-total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-009/fix-01 (done pending audit, Code-Commit 60429e2, Doku-Commit 6b24fe5)
+total_fix_rounds: 2  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+current_step: step-009 (done, EPIC-04 abgehakt; step-009/fix-01 approved; EPIC-05 als naechstes offen)
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-009/fix-01 (done pending audit, Code-Commit 60429e2, Doku-Com
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-009/fix-01` (done pending audit, Coder fertig)
+- **Aktueller Schritt:** `step-009` (done approved, EPIC-04 abgehakt) — bereit für EPIC-05
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -37,7 +37,7 @@ eine Zeile.>
 | step-007/fix-01 | EPIC-02 | done | TD-Referenzen + abgeschnittene Satzreste aus 3 Produktionsdateien entfernen (Rules §5-Konformität) | (1/3) | cf3d7ac | approved | cf3d7ac, 48871af, (review-commit) |
 | step-008 | EPIC-03 | done | ILinterEngineConfig-Interface extrahieren, PathOverride-Liste auf Rest reduzieren (Muss-Haben C, TD-008/TD-010) | 0/3 | fd395c2 | approved | fd395c2, be6ff6a, 8d4e9c3, (review-commit) |
 | step-009 | EPIC-04 | done (fix-01 pending) | rules.json-Auto-Discovery (B.1) + Verzeichnis-Sweep für neue/gelöschte .cs-Dateien (B.2) — silent-falsche Tool-Antworten beheben (Muss-Haben B, Punkte 1-2) | 0/3 | 1fd09c1 | issues → fix-01 | 1fd09c1, 677bef2, 914e0ba, (review-commit) |
-| step-009/fix-01 | EPIC-04 | done (pending audit) | 3 B.1-Unit-Tests + step-result-Korrektur + 2 Kommentar-Sanierungen + stille-Catch-Sanierung in McpCodeGraphServerRefresh (Review-Findings 1-3 + Code-Qualität) | 0/3 | 60429e2 | (pending) | 60429e2, 6b24fe5 |
+| step-009/fix-01 | EPIC-04 | done | 3 B.1-Unit-Tests + step-result-Korrektur + 2 Kommentar-Sanierungen + stille-Catch-Sanierung in McpCodeGraphServerRefresh (Review-Findings 1-3 + Code-Qualität) | 0/3 | 60429e2 | approved | 60429e2, 6b24fe5, (review-commit) |
 
 ## Config (optional)
 

@@ -2,7 +2,7 @@
 task: codegraph-mcp-finish
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-03 # TD-005 (SubprocessConcurrencyGate-Sättigung) + TD-006 (AiNetLinter.mdc BOM) aus step-007/fix-01-Review ergänzt
+last_updated: 2026-08-04 # TD-007 (ehemaligen-XML-Doc-Refactoring-Historie) aus step-009/fix-01-Review ergänzt
 ---
 
 # Tech-Debt-Log: codegraph-mcp-finish
@@ -30,6 +30,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-004 | 6 Testdateien (`Architecture/ArchitectureTests.cs`, `Core/LinterAnalyzerTests.cs`, `Core/LinterEngineCacheTests.cs`, `Core/LinterEngineTests.cs`, `Core/Checkers/MaxInheritanceDepthTests.cs`, `Core/Checkers/NamespaceDirectoryMappingTests.cs`) | niedrig | Lokale private Methode `CreateDefaultConfig()` kollidiert namentlich mit `TestHelper.CreateDefaultConfig()` |
 | TD-005 | `src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs` (4 Slots, 30s Wait-Timeout) | mittel | Last-Flake unter Volllauf — 1-2 Failures in `McpServerCommandErrorHandlingTests`, exakt am Gate-Timeout-Stack |
 | TD-006 | `.agents/rules/AiNetLinter.mdc` | niedrig | Working-Tree-vs-Index-BOM-Diskrepanz, semantisch leerer Diff, Working-Tree-Noise |
+| TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs:42-46, 62-64` | niedrig | Factory- und `McpCodeGraphServerOptionsFromParameters`-XML-Doc enthalten „ehemaligen 5 Parameter"/„ehemalige 5-Parameter-Signatur" (semantisch äquivalent zu „früheren") — Refactoring-Historie im Sinne von §5 |
 
 ## Einträge
 
@@ -220,4 +221,44 @@ Verweis auf die Tech-Debt-ID).
   .agents/rules/AiNetLinter.mdc` (oder einem expliziten
   Encoding-Fix) auflösen und mit einem Mini-Hygiene-Commit abhaken.
   Idealerweise im selben Aufwasch mit der nächsten Sync-Iteration.
+- **Status:** offen
+
+### TD-007 — Refactoring-Historie „ehemalige 5 Parameter" in zwei XML-Docs von `McpCodeGraphServerOptions` [Priorität: niedrig]
+
+- **Gefunden in:** step-009/fix-01 (Kritiker-Review vom 2026-08-04).
+- **Ort:**
+  - `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs:42-46`
+    (Factory-Methode `From`) — „kapselt die ehemaligen 5 Parameter in
+    einem Record".
+  - `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs:62-64`
+    (`McpCodeGraphServerOptionsFromParameters` Record) — „Fasst die
+    ehemalige 5-Parameter-Signatur zusammen".
+- **Befund:** Beide XML-Doc-Kommentare enthalten das Wort
+  „ehemaligen"/„ehemalige", das semantisch identisch zu dem im
+  Plan explizit als §5-Verbots-Beispiel genannten „frueheren" ist
+  (siehe `AiNetLinterRichtlinien.mdc` §5 Verbots-Liste: „war früher
+  private"). Der Fix-Plan `step-009/fix-01/step-plan.md` Z. 154
+  hatte diese Stellen fälschlich als „nicht betroffen (enthalten
+  kein frueheren-Wort)" eingestuft — die Plan-Annahme war
+  ungenau, weil „ehemaligen" dieselbe Refactoring-Historie
+  transportiert wie „frueheren". Der Coder hat den Plan exakt
+  befolgt (nur die Klassen-XML-Doc Z. 9-13 und der
+  `McpCodeGraphServer.cs`-Kommentar Z. 31-34 wurden saniert),
+  daher keine Coder-Schuld. Funktional folgenlos — die Aussage
+  bleibt verständlich, „ehemalige" ist aber ein „war-früher-Marker"
+  im Sinne der §5-Liste.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von
+  step-009/fix-01 (Plan hatte diese Stellen explizit ausgenommen).
+  Die Sanierung ist mechanisch (zwei Wort-Änderungen in zwei
+  XML-Doc-Absätzen, „ehemaligen"/„ehemalige" durch eine
+  forward-looking Formulierung ersetzen analog dem bereits
+  sanierten Klassen-XML-Doc). Kein Build-, Test- oder
+  Verhaltens-Impact.
+- **Vorschlag:** Bei nächster inhaltlicher Berührung von
+  `McpCodeGraphServerOptions.cs` (z. B. im Rahmen einer
+  P0/P1-Erweiterung am Server-Options-Satz) die beiden
+  XML-Docs auf forward-looking Rationale umstellen. Pattern-Vorlage:
+  „kapselt 5 Konfigurations-Eingaben in einem Record, damit
+  `MaxMethodParameterCount: 4` (public static, siehe
+  `AiNetLinter.mdc`) eingehalten wird" statt „ehemaligen 5 Parameter".
 - **Status:** offen
