@@ -248,7 +248,7 @@ Konsequenz für den Agent-Loop: 6 Tools sind C#-only (find_symbol, find_referenc
 | `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies) | ja | nein |
 | `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
 | `get_hotspots` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | `.cs`-Dateien, die ihrem `MaxLineCount`-Limit nahekommen oder es überschreiten | nein | nein |
-| `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag | ja | nein |
+| `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | nein |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 
 Beispiel-Aufruf (JSON-RPC über stdio):
@@ -303,6 +303,23 @@ Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_
 ### Staleness-Invalidierung
 
 `McpCodeGraphServer.GetCurrentSolution()` wird vor **jedem** Tool-Aufruf aufgerufen und prüft pro Document, ob die Datei auf der Platte neuer ist als der zuletzt gesehene `mtime`. Bei Abweichung wird der SHA-256-Hash verglichen, um reine `mtime`-Touchups (z. B. durch einen IDE-Save) zu ignorieren, und nur bei tatsächlicher Inhaltsänderung ein inkrementelles `WithDocumentText`-Update gefahren. **Es findet kein Komplett-Reload des MSBuildWorkspace statt.**
+
+Zusätzlich laufen pro Refresh zwei Erweiterungen:
+
+- **Verzeichnis-Sweep** hängt `.cs`-Dateien, die seit dem Solution-Load neu auf der Platte angelegt wurden, automatisch via `Solution.AddDocument` ein (Filter: `*.cs`, `IsGeneratedPath`-Ausschluss, neues Document landet im ersten passenden Nicht-Test-Projekt bzw. Fallback erstes Projekt). So liefert `find_symbol` auch für gerade erstellten Code Treffer, statt stillschweigend „keine Treffer".
+- **Document-Removal** entfernt Documents, deren Datei zwischenzeitlich von der Platte gelöscht wurde, aus dem Solution-Modell (`Solution.RemoveDocument`). So liefert `find_symbol` keine Geister-Treffer auf nicht mehr existente Dateien.
+
+Beide Pfade sind „best-effort": `<Compile Remove=…>`-Ausschlüsse aus `.csproj` werden bewusst nicht gelesen (Konzept-Vorgabe).
+
+### Default-Config-Markierung in `get_violations`
+
+Wenn der Server ohne `--config` gestartet wurde **und** keine `rules.json` neben der aufgelösten Solution-Datei findet, läuft er mit den `Config`-Defaults. `get_violations` prependet in diesem Fall vor den eigentlichen Lint-Output eine sichtbare Header-Zeile:
+
+```
+Basis: Default-Regeln, keine rules.json gefunden
+```
+
+Zusätzlich erscheint beim Server-Start ein `[WARN]: Keine rules.json neben der Solution gefunden (…)` auf `stderr`. **Empfehlung an den Agent-Loop:** beim Auftauchen dieser Header-Zeile den Nutzer darauf hinweisen, dass die Lint-Ergebnisse nicht aus der projekteigenen `rules.json` stammen — entweder `args: ["--mcp-server", "--config", "<pfad>"]` setzen oder `rules.json` neben der Solution-Datei anlegen.
 
 ### Error-Reporting
 

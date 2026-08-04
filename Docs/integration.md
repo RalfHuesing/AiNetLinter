@@ -239,9 +239,11 @@ Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleich
 
 Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter Pfad-Parameter nötig** — der Server sucht beim Start die Ziel-Solution selbst.
 
+**`args: ["--mcp-server"]` ohne `--config` ist die empfohlene Registrierung.** Der Server sucht automatisch nach `rules.json` neben der aufgelösten Solution-Datei (`McpServerCommand.TryResolveRulesJsonPath`). Wird keine gefunden, läuft er mit den `Config`-Default-Regeln und signalisiert das in `get_violations` durch eine sichtbare Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden` (siehe [Docs/agent-api.md](agent-api.md#default-config-markierung-in-get_violations)).
+
 ### cwd-Verhalten
 
-Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht.
+Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.
 
 ### Mehrdeutigkeit: mehrere Solutions im cwd
 

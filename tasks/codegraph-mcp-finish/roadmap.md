@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-04  # step-009-Planung: EPIC-03 (step-008) abgehakt, EPIC-04 (rules.json-Auto-Discovery + Verzeichnis-Sweep) → step-009
+last_updated: 2026-08-04  # step-009-abgeschlossen: EPIC-04 (rules.json-Auto-Discovery + Verzeichnis-Sweep) erledigt
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -163,11 +163,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       klassifiziert (scope-extern, keine Fix-Versuche verbraucht) — im
       `step-008/step-result.md` und `step-008/step-review.md` detailliert
       dokumentiert. EPIC-03 ist inhaltlich abgeschlossen.
-- [ ] EPIC-04: Betriebsrisiko-Fixes — `rules.json`-Auto-Discovery (B.1)
+- [x] EPIC-04: Betriebsrisiko-Fixes — `rules.json`-Auto-Discovery (B.1)
       + Verzeichnis-Sweep für neue/gelöschte `.cs`-Dateien (B.2). Beide
       beheben silent-falsche Tool-Antworten, deshalb laut Konzept-Vorgabe
-      vor den zeitbasierten Punkten (B.3-B.5). **→ step-009** (geplant,
-      siehe `tasks/codegraph-mcp-finish/step-009/step-plan.md`). Bezug:
+      vor den zeitbasierten Punkten (B.3-B.5). **→ step-009** (erledigt,
+      siehe `tasks/codegraph-mcp-finish/step-009/step-result.md`). Bezug:
       Konzept.md „Muss-Haben B", Punkte 1-2.
 - [ ] EPIC-05: Last-Fixture + Performance-Fixes — generierte
       Last-Fixture als Skalierungsnachweis inkl. Messlauf (B.3, bewusst
