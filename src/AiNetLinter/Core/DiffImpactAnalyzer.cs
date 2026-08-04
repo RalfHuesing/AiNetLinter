@@ -104,7 +104,20 @@ public sealed class DiffImpactAnalyzer
 
         process.WaitForExit();
 
-        return process.ExitCode == 0 ? stdout.ToString() : null;
+        if (process.ExitCode == 0) return stdout.ToString();
+
+        // Ein explizit angegebener gitRef, der nicht aufloest (Tippfehler, geloeschter Branch),
+        // darf nicht mit einem leeren-aber-validen Diff verwechselt werden — sonst sieht ein
+        // Tippfehler identisch aus wie "keine Aenderungen" (stiller Fehlschlag). Fehlt gitSinceRef
+        // (uncommittete-Aenderungen-Modus), bleibt das bisherige tolerante Verhalten (null =
+        // wie ein leerer Diff behandelt), weil es dort keinen vom Aufrufer waehlbaren Wert gibt,
+        // der "falsch" sein koennte.
+        if (!string.IsNullOrEmpty(gitSinceRef))
+        {
+            throw new GitDiffFailedException(gitSinceRef, stderr.ToString().Trim());
+        }
+
+        return null;
     }
 
     internal static Dictionary<string, List<int>> ParseGitDiffHunks(string gitDiffOutput)
@@ -321,4 +334,15 @@ public sealed class DiffImpactAnalyzer
 
         return callSites;
     }
+}
+
+/// <summary>
+/// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest
+/// werden konnte (Tippfehler, geloeschter Branch, unbekannte Commit-Ref). Getrennt von einem
+/// leeren-aber-validen Diff, damit Aufrufer (CLI <c>--impact</c>, MCP <c>get_impact</c>) einen
+/// falschen gitRef nicht mit "keine Aenderungen" verwechseln.
+/// </summary>
+internal sealed class GitDiffFailedException(string gitRef, string gitStdErr) : Exception(gitStdErr)
+{
+    internal string GitRef { get; } = gitRef;
 }

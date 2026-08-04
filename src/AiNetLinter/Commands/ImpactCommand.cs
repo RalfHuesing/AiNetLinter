@@ -25,7 +25,21 @@ internal static class ImpactCommand
     {
         var c = console ?? LinterConsole.Instance;
         using var catalog = await SourceFileCatalog.LoadAsync(args.TargetPath, ct);
-        var callSites = await DiffImpactAnalyzer.AnalyzeAsync(catalog.Solution, args.TargetPath, args.ImpactRef, args.Verbose);
+
+        List<string> callSites;
+        try
+        {
+            callSites = await DiffImpactAnalyzer.AnalyzeAsync(catalog.Solution, args.TargetPath, args.ImpactRef, args.Verbose);
+        }
+        catch (GitDiffFailedException ex)
+        {
+            c.WriteError(LinterErrorFormatter.Format(
+                LinterErrorCodes.AnalysisFailed,
+                $"Git-Diff fuer gitRef '{ex.GitRef}' fehlgeschlagen — Ref loest nicht auf.",
+                context: ex.Message,
+                hint: "gitRef pruefen (z. B. via 'git log'/'git branch') oder --impact ohne Ref fuer uncommittete Aenderungen."));
+            return 1;
+        }
 
         if (callSites.Count == 0)
         {

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -73,8 +74,20 @@ internal static class GetImpactTool
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input)
     {
         var targetPath = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        var callSites = await DiffImpactAnalyzer.AnalyzeAsync(
-            solution, targetPath, input.GitRef, verbose: false);
+        List<string> callSites;
+        try
+        {
+            callSites = await DiffImpactAnalyzer.AnalyzeAsync(
+                solution, targetPath, input.GitRef, verbose: false);
+        }
+        catch (GitDiffFailedException ex)
+        {
+            return McpToolResults.Error(
+                LinterErrorCodes.AnalysisFailed,
+                $"Git-Diff fuer gitRef '{ex.GitRef}' fehlgeschlagen — Ref loest nicht auf.",
+                context: ex.Message,
+                hint: "gitRef pruefen (z. B. via 'git log'/'git branch') oder ohne gitRef aufrufen fuer uncommittete Aenderungen.");
+        }
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, CancellationToken.None);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
 

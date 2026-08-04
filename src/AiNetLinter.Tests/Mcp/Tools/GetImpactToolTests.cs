@@ -83,6 +83,23 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     }
 
     [Fact]
+    public async Task ExecuteAsync_UnresolvableGitRef_ReturnsAnalysisFailedErrorNotEmptyResult()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput("does-not-exist-xyz", null, 50, 1), CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("does-not-exist-xyz", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine betroffenen Aufrufstellen", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_NoGitRepository_ReturnsEmptyResultNotCrash()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
