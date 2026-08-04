@@ -68,6 +68,38 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     }
 
     [Fact]
+    public async Task FindMatchesAndFormat_GermanKindMethode_BehavesLikeEnglishMethod()
+    {
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            _baselineFixture.Catalog.Solution, "Violating", kind: "Methode", maxResults: 50);
+
+        Assert.Contains("Keine Treffer", result);
+    }
+
+    [Fact]
+    public async Task FindMatchesAndFormat_GermanKindKlasse_BehavesLikeEnglishClass()
+    {
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            _baselineFixture.Catalog.Solution, "Violating", kind: "Klasse", maxResults: 50);
+
+        Assert.Contains("ViolatingClass.cs", result);
+        Assert.Contains("Klasse", result);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownKind_ReturnsInvalidArgumentError()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
+
+        var result = await FindSymbolTool.ExecuteAsync(state, namePattern: "Greeter", kind: "Enum", maxResults: 50, CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Enum", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FindMatchesAndFormat_NoMatch_ReturnsNoResultsText()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(

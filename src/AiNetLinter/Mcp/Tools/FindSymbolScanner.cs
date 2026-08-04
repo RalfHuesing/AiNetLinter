@@ -77,15 +77,24 @@ internal static class FindSymbolScanner
             $"(nicht Teil des Symbolgraphs — fuer Inhalte search_pattern nutzen).";
     }
 
+    /// <summary>
+    /// Wendet den Kind-Filter an. Akzeptiert sowohl die englischen internen Schluesselwoerter als
+    /// auch die in <c>Docs/agent-api.md</c> dokumentierten deutschen Werte (identisch zur eigenen
+    /// Output-Vokabular "Klasse:"/"Methode:" aus <see cref="FindSymbolTool.FormatSymbolLocations"/>).
+    /// <see cref="FindSymbolTool.ExecuteAsync"/> validiert <paramref name="kind"/> vorab gegen
+    /// genau dieselbe Wertemenge — ein unbekannter Wert erreicht diese Methode also nie; der
+    /// Default-Fall bleibt trotzdem ungefiltert (statt zu werfen), damit die Methode als reine
+    /// Funktion auch direkt (z. B. aus Tests) sicher aufrufbar bleibt.
+    /// </summary>
     private static IEnumerable<ISymbol> FilterByKind(IEnumerable<ISymbol> symbols, string? kind)
     {
         if (kind is null) return symbols;
 
         return kind.ToLowerInvariant() switch
         {
-            "class" => symbols.Where(s => s is ITypeSymbol { TypeKind: TypeKind.Class }),
+            "class" or "klasse" => symbols.Where(s => s is ITypeSymbol { TypeKind: TypeKind.Class }),
             "interface" => symbols.Where(s => s is ITypeSymbol { TypeKind: TypeKind.Interface }),
-            "method" => symbols.Where(s => s.Kind == SymbolKind.Method),
+            "method" or "methode" => symbols.Where(s => s.Kind == SymbolKind.Method),
             "property" => symbols.Where(s => s.Kind == SymbolKind.Property),
             _ => symbols,
         };

@@ -25,6 +25,17 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class FindSymbolTool
 {
     /// <summary>
+    /// Gueltige Werte fuer den optionalen <c>kind</c>-Filter — Deutsch (dokumentiertes Format
+    /// aus <c>Docs/agent-api.md</c>, identisch zur eigenen Output-Vokabular "Klasse:"/"Methode:")
+    /// und Englisch (interne <see cref="FindSymbolScanner.FilterByKind"/>-Schluesselwoerter)
+    /// gleichermassen zugelassen, case-insensitive.
+    /// </summary>
+    private static readonly HashSet<string> ValidKinds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "class", "klasse", "interface", "method", "methode", "property",
+    };
+
+    /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
     /// Stellt dem Scanner-Output einen
     /// Compile-Fehler in einzelnen Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst
@@ -45,6 +56,14 @@ internal static class FindSymbolTool
                 LinterErrorCodes.InvalidArgument,
                 "namePattern darf nicht leer sein.",
                 hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
+        }
+
+        if (kind is not null && !ValidKinds.Contains(kind))
+        {
+            return McpToolResults.Error(
+                LinterErrorCodes.InvalidArgument,
+                $"Unbekannter kind-Filter '{kind}'.",
+                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property.");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
