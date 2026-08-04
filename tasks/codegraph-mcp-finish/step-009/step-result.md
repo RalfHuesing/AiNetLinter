@@ -50,9 +50,11 @@ B.1 umgesetzt: `McpServerCommand.TryResolveRulesJsonPath` sucht ohne `--config` 
 
 ```
 dotnet build AiNetLinter.slnx  → grün (0 Warnungen, 0 Fehler, 1.95s inkrementell)
-dotnet test  AiNetLinter.slnx --no-build  → grün (1192/1192 Tests, 2 m 44 s)
+dotnet test  AiNetLinter.slnx --no-build  → grün (1192/1192 Tests, 2 m 33 s)
 dotnet run --project src/AiNetLinter -- --config rules.json --path .  → grün (0 Violations auf eigenem Code)
 ```
+
+> **Hinweis Test-Anzahl:** 1192 = 1186 Baseline (vor step-009) + 3 B.2-Unit-Tests (`McpCodeGraphServerFileDiscoveryTests.cs`, eingeführt in step-009 Code-Commit `1fd09c1`) + 3 B.1-Unit-Tests (`McpServerCommandTests.cs`, nachgereicht in step-009/fix-01 Code-Commit). Die ursprüngliche Dauer-Angabe `2 m 44 s` stammte aus dem step-009-Lauf vor dem B.1-Nachreichen; die Dauer wurde nach dem B.1-Nachreichen re-evaluiert (siehe `fix-01/step-result.md` Build-/Test-Output).
 
 ## Abweichungen vom Plan
 
