@@ -36,6 +36,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-010 | `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` (Fixture-Pool, EPIC-07) | niedrig | Subprozess-E2E-Tests starten je Testklasse einen `AiNetLinter.exe`-Prozess; `InMemoryTransport`-Eskalation ist Nice-to-Have — geschlossen in step-012 |
 | TD-011 | `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs` + 2 Geschwister (EPIC-07) | mittel | Footprint-Druck auf 3 Tool-Registrar-Sammelklassen; gemeinsame Basis-Klasse wuerde das Dispatcher-Pattern verwaessern — zurueckgestellt in step-012 |
 | TD-012 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs` + `src/AiNetLinter/Web/WebFileCatalog.cs` (DRY-Duplikation, EPIC-07) | niedrig | `SafeEnumerateFiles`/`IsGeneratedPath` 1:1 dupliziert, wurde in `FileSystemExclusionHelpers` konsolidiert — geschlossen in step-012 |
+| TD-013 | `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs:14-17`, `src/AiNetLinter/Mcp/Tools/SymbolIdentifierResolver.cs:14-19`, `src/AiNetLinter/Mcp/Tools/GetTypeHierarchyFormatter.cs:14-19` (EPIC-08-Review-Folgefund) | niedrig | Drei kaputte/ungeschlossene `<c>`-Tags in XML-Doc-Kommentaren, im Sanierungs-Zug von step-012 erneut uebersehen — neu in step-012 |
 
 ## Einträge
 
@@ -410,3 +411,53 @@ Verweis auf die Tech-Debt-ID).
   `src/AiNetLinter.Tests/Baseline/FileSystemExclusionHelpersTests.cs`;
   Build + Tests gruen; Details im
   `step-012/step-result.md` unter "Sub-Bereich 2 (TD-006)").
+
+### TD-013 — Kaputte XML-Doc-Tags in drei Mcp-Dateien [Priorität: niedrig]
+
+- **Gefunden in:** step-012 (Kritiker-Review vom 2026-08-04).
+- **Ort:**
+  - `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs:14-17` — Klassen-
+    XML-Doc: "Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit
+    dessen eigener <c>AIContextFootprint</c> (siehe <c> nicht mit jedem
+    neu registrierten Tool waechst." — das zwoete `<c>`-Tag wird
+    geoeffnet, aber nie geschlossen; der nachfolgende Text haengt im
+    Doc-String. Roslyn/`xmldoc`-Linter zeigen das nicht als Warning an
+    (kaputtes Tag im C#-Doc-Kommentar, nicht in einer cref-Referenz),
+    aber es verfaelscht den Doc-Output.
+  - `src/AiNetLinter/Mcp/Tools/SymbolIdentifierResolver.cs:14-19` —
+    gleicher Defekt: "(siehe <c> nicht durch reine Hilfslogik unnoetig
+    waechst, waehrend <see cref="McpCodeGraphServer"/> (Parameter von
+    <see cref="FindReferencesTool.ExecuteAsync"/>) bereits allein einen
+    erheblichen transitiven Anteil beitraegt." — das innere `<c>` ist
+    nie geschlossen.
+  - `src/AiNetLinter/Mcp/Tools/GetTypeHierarchyFormatter.cs:14-19` —
+    gleicher Defekt: "Reine Traversierungs-/Formatierungslogik fuer
+    <see cref="GetTypeHierarchyTool"/> — in eine eigene Datei ausgelagert,
+    damit <see cref="GetTypeHierarchyTool"/>s eigener <c>AIContextFootprint</c>
+    (siehe <c> klein bleibt, analog zu …" — das zweite `<c>` bleibt offen.
+- **Befund:** In allen drei Faellen wurde ein vor dem "siehe" eingefuegter
+  `<c>`-Tag nicht geschlossen. Sieht aus wie ein Edit-Artefakt aus
+  frueheren Refactorings, bei dem der zweite Tag durch ein anderes
+  Element (Punkt-Klammer, `</c>` o.ae.) ersetzt wurde, der Tag-Oeffner
+  aber stehen blieb. Inhaltlich bleibt die Aussage verstaendlich (der
+  Satz beginnt mit "damit" und macht klar, dass die Auslagerung den
+  Footprint klein haelt), der Tag-Defekt ist aber ein Lint-Befund und
+  verfaelscht den Doc-Output, falls jemand die XML-Doc-Dateien rendert.
+  Aehnlich wie TD-001, TD-007, TD-008 (alle §5-Refactoring-Historie bzw.
+  Doc-Artefakte), aber **ein** neues Muster (kaputtes Tag statt
+  "war-frueher"-Marker bzw. abgerissener Satz).
+- **Warum nicht sofort gefixt:** Die drei Stellen sind im Scope der
+  E.1-Beruehrung in step-012 zwar im Diff-Drift (durch verwandte Aenderungen
+  in denselben Dateien), aber keiner der drei Tags liegt in der Zeile,
+  die step-012 explizit geaendert hat — der Sanierungs-Zug im
+  step-010-/-012 hat sie erneut uebersehen, weil er auf das
+  "frueheren"/"ehemaligen"-Wort-Muster zielte, nicht auf kaputte
+  XML-Tags. Sanierung ist mechanisch (je 1 Tag-Schliessung pro Datei).
+- **Vorschlag:** Bei naechster inhaltlicher Beruehrung einer der drei
+  Dateien das jeweilige zweite `<c>`-Tag mit `</c>` schliessen. Idealerweise
+  im selben Aufwasch mit der Mini-Projekt-weiten Grep-Aktion ueber alle
+  `Mcp/`-XML-Docs, um weitere kaputte-Tag-Stellen aufzudecken (das
+  Muster "(siehe <c> …" duerfte noch an 1-2 weiteren Stellen vorkommen).
+- **Status:** neu (angelegt in `step-012` Review, Details im
+  `tasks/codegraph-mcp-finish/step-012/step-review.md` unter "Findings
+  — Rules-Konformität — §5 (kaputte XML-Doc-Tags)").

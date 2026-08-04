@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-04
 rules_dir: .agents/rules
 total_fix_rounds: 2  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-012 (done pending audit, Code-Commit 93caa8a, Smoke-Test-Fix b55b065, 1241/1241 gruen)
+current_step: step-012 (done fix-01 pending, Kritiker-Verdict issues mit 5 MAJOR + 2 MINOR + TD-013, Token-Plan-Limit blockiert fix-Planer)
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-012 (done pending audit, Code-Commit 93caa8a, Smoke-Test-Fix 
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-012` (done pending audit, Coder fertig, 1241/1241 gruen)
+- **Aktueller Schritt:** `step-012` (done fix-01 pending, Kritiker issues, 5 MAJOR + 2 MINOR + TD-013)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -40,7 +40,8 @@ eine Zeile.>
 | step-009/fix-01 | EPIC-04 | done | 3 B.1-Unit-Tests + step-result-Korrektur + 2 Kommentar-Sanierungen + stille-Catch-Sanierung in McpCodeGraphServerRefresh (Review-Findings 1-3 + Code-Qualität) | 0/3 | 60429e2 | approved | 60429e2, 6b24fe5, (review-commit) |
 | step-010 | EPIC-05 | done | Last-Fixture + Skalierungsnachweis (B.3) + Kaltstart-Entkopplung (B.4) + mtime-Cache (B.5) + TD-005-Sanity-Fix + TD-007-Mitnahme | 0/3 | 0458250 | approved | 0458250, c3f926f, 60d32db, (review-commit) |
 | step-011 | EPIC-06 | done | Robuste `McpLintConsole` für stdout-Schutz (B.6) + E2E-JSON-RPC-Framing-Test (B.6) + Opt-in `--mcp-log` Call-Log (B.7) | 0/3 | 3762e6a | approved | 3762e6a, 8a14de2, (review-commit) |
-| step-012 | EPIC-07+EPIC-08 | done (pending audit) | 4 TD-Items geschlossen (TD-001, TD-002, TD-006, TD-008) + TD-004 zurueckgestellt + 3 E-Punkte (get_symbol_body + stabile Symbol-IDs, depth-Parameter, DI-Hinweis) | 0/3 | 93caa8a | (ausstehend) | 93caa8a, b55b065 |
+| step-012 | EPIC-07+EPIC-08 | done (fix-01 pending) | 4 TD-Items geschlossen + TD-004 zurueckgestellt + 3 E-Punkte | 0/3 | 93caa8a | issues → fix-01 | 93caa8a, b55b065, fed3935, (review-commit) |
+| step-012/fix-01 | EPIC-07+EPIC-08 | pending | (Planer-Aufruf steht aus — Token-Plan-Limit blockiert) — 2 PathOverride-Begruendungen + Docs\integration.md Tool-Liste + Docs\ROADMAP.md E-Block + Commit-Subject + §5-Verstoss in SymbolBodyToolRegistrations.cs:18 (5 MAJOR) + 2 MINOR | (1/3) | (pending) | (pending) | (pending) |
 
 ## Config (optional)
 
