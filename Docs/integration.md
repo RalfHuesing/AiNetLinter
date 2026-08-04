@@ -245,6 +245,10 @@ Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder �
 
 Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.
 
+### Start-Sequenz: entkoppelter initialize-Handshake
+
+Der MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen. Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
+
 ### Mehrdeutigkeit: mehrere Solutions im cwd
 
 Liegen im `cwd` mehrere `.sln`- oder `.slnx`-Dateien, bricht der Server-Start mit einem `[ERROR]: AMBIGUOUS_SOLUTION`-Fehler ab. Abhilfe: explizit `--path <Datei>` in den `args` setzen:

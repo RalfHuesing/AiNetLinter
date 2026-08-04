@@ -355,6 +355,18 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 
 Schlägt der `SourceFileCatalog.LoadAsync` beim Server-Start fehl, wird nur ein `[WARN]: MCP-Server startet ohne geladene Solution (...)` auf `stderr` geschrieben, der Server startet trotzdem und jeder Tool-Call liefert einen `SOLUTION_NOT_LOADED`-Fehler (siehe Error-Codes-Tabelle). Der Server stürzt nicht ab.
 
+### Drei-Zustands-Lifecycle des MCP-Servers
+
+Der Server-Start entkoppelt den MCP-Transport-Handshake vom Solution-Load: `initialize` antwortet sofort, der eigentliche `MSBuildWorkspace.OpenSolutionAsync`-Aufruf läuft im Hintergrund. Dadurch gibt es drei unterscheidbare Zustände, die sich semantisch klar trennen:
+
+| Zustand | Erkennbar an | Reaktion für den Agent |
+| :--- | :--- | :--- |
+| **Loading** (transient) | `[INFO]: Server laedt die Solution noch. ...` (kein `isError`) | Kurz warten und erneut versuchen (Polling im Sekunden-Takt). Echte Tool-Ergebnisse erscheinen, sobald der Load abgeschlossen ist. |
+| **Loaded** (regulär) | Volle Tool-Antworten, `[ERROR]: ...` nur bei tatsächlichen Problemen | Normale Workflow-Schritte ausführen. |
+| **LoadFailed** (terminal) | `[ERROR]: SOLUTION_NOT_LOADED: ...` | Server-Log auf `[WARN]`-Zeilen prüfen, Pfad/Config korrigieren, Server neu starten. |
+
+Der `Loading`-Zustand ist bewusst **kein** Fehler (`isError == false`), weil der Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden für den ersten Solution-Load. MCP-Hosts (Claude Desktop, eigene Test-Harness) erkennen den Info-Text und können den Aufruf nach kurzer Pause wiederholen.
+
 ---
 
 ## Vollständige Rule-ID-Tabelle
