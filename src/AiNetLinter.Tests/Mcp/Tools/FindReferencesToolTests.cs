@@ -77,6 +77,17 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     }
 
     [Fact]
+    public async Task ResolveSymbolAsync_PositionIdentifierWithSolutionRelativePath_ReturnsSymbolAtPosition()
+    {
+        var identifier = "src/SymbolGraphMini/Greeter.cs:5:19";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(symbol);
+        Assert.Equal("Greet", symbol!.Name);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ValidQualifiedName_ReturnsCallSiteInCaller()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
