@@ -14,7 +14,7 @@ current_step: step-011 (done pending audit, Code-Commit 3762e6a, Doku-Commit 8a1
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-010` (done approved, EPIC-05 abgehakt) — bereit fuer EPIC-06
+- **Aktueller Schritt:** `step-011` (done pending audit, Coder fertig, 1215/1215 gruen)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
