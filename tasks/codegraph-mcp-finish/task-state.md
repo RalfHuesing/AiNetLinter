@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-04
 rules_dir: .agents/rules
 total_fix_rounds: 2  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-012 (done fix-01 pending, Kritiker-Verdict issues mit 5 MAJOR + 2 MINOR + TD-013, Token-Plan-Limit blockiert fix-Planer)
+current_step: step-012 (done approved, EPIC-08 abgehakt; 1241/1241 gruen; bereit fuer globalen Kritiker + task-summary)
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-012 (done fix-01 pending, Kritiker-Verdict issues mit 5 MAJOR
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-012` (done fix-01 pending, Kritiker issues, 5 MAJOR + 2 MINOR + TD-013)
+- **Aktueller Schritt:** `step-012` (done approved, EPIC-08 abgehakt) — bereit fuer globalen Kritiker + task-summary
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -41,7 +41,7 @@ eine Zeile.>
 | step-010 | EPIC-05 | done | Last-Fixture + Skalierungsnachweis (B.3) + Kaltstart-Entkopplung (B.4) + mtime-Cache (B.5) + TD-005-Sanity-Fix + TD-007-Mitnahme | 0/3 | 0458250 | approved | 0458250, c3f926f, 60d32db, (review-commit) |
 | step-011 | EPIC-06 | done | Robuste `McpLintConsole` für stdout-Schutz (B.6) + E2E-JSON-RPC-Framing-Test (B.6) + Opt-in `--mcp-log` Call-Log (B.7) | 0/3 | 3762e6a | approved | 3762e6a, 8a14de2, (review-commit) |
 | step-012 | EPIC-07+EPIC-08 | done (fix-01 pending) | 4 TD-Items geschlossen + TD-004 zurueckgestellt + 3 E-Punkte | 0/3 | 93caa8a | issues → fix-01 | 93caa8a, b55b065, fed3935, (review-commit) |
-| step-012/fix-01 | EPIC-07+EPIC-08 | pending | (Planer-Aufruf steht aus — Token-Plan-Limit blockiert) — 2 PathOverride-Begruendungen + Docs\integration.md Tool-Liste + Docs\ROADMAP.md E-Block + Commit-Subject + §5-Verstoss in SymbolBodyToolRegistrations.cs:18 (5 MAJOR) + 2 MINOR | (1/3) | (pending) | (pending) | (pending) |
+| step-012/fix-01 | EPIC-07+EPIC-08 | done | 5 MAJOR + 2 MINOR Findings selbst gefixt (PathOverride-Begruendungen, Docs\integration.md 9->10 Tools, Docs\ROADMAP.md E-Block, §5-Verstoss in SymbolBodyToolRegistrations.cs:18) | 0/3 | 2e3a756 | approved | 2e3a756 |
 
 ## Config (optional)
 
