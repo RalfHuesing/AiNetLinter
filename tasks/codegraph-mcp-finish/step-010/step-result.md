@@ -9,7 +9,7 @@ coded_by: coder
 coded_by_model: claude-sonnet-5
 coded_by_model_knowledge_cutoff: 2026-01
 coded_at: 2026-08-04T12:45:00+02:00
-code_commit_hash: <SHA>
+code_commit_hash: 0458250
 status_after: done
 blocker_category: n/a
 ---
@@ -61,7 +61,7 @@ Flake unter Last.
 
 ## Commit
 
-- **Code-Commit-Hash:** `<SHA>` (siehe `git log` nach Schritt 9)
+- **Code-Commit-Hash:** `0458250`
 - **Message:**
   ```
   fix(mcp): last-fixture-und-kaltstart-entkopplung-und-mtime-cache [codegraph-mcp-finish]
