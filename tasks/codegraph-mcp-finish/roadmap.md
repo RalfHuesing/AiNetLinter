@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-04  # step-009-abgeschlossen: EPIC-04 (rules.json-Auto-Discovery + Verzeichnis-Sweep) erledigt
+last_updated: 2026-08-04  # step-010-Plan geschrieben: EPIC-05 (Last-Fixture + Performance-Fixes) als naechstes offen, EPIC-04-Detail um step-009/fix-01 erweitert
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -166,9 +166,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
 - [x] EPIC-04: Betriebsrisiko-Fixes — `rules.json`-Auto-Discovery (B.1)
       + Verzeichnis-Sweep für neue/gelöschte `.cs`-Dateien (B.2). Beide
       beheben silent-falsche Tool-Antworten, deshalb laut Konzept-Vorgabe
-      vor den zeitbasierten Punkten (B.3-B.5). **→ step-009** (erledigt,
-      siehe `tasks/codegraph-mcp-finish/step-009/step-result.md`). Bezug:
-      Konzept.md „Muss-Haben B", Punkte 1-2.
+      vor den zeitbasierten Punkten (B.3-B.5). **→ step-009** + **→
+      step-009/fix-01**, beide approved. Bezug: Konzept.md „Muss-Haben B",
+      Punkte 1-2. `step-009` (Commit `1fd09c1`): B.1+`UsedDefaultConfig`-
+      Propagation + B.2+3 Unit-Tests (`McpCodeGraphServerFileDiscoveryTests`,
+      alle mit `[Trait("Category", "Unit")]`). `step-009/fix-01` (Commit
+      `60429e2`, `6b24fe5`): die im step-009-Review fehlenden 3
+      B.1-Unit-Tests in `McpServerCommandTests.cs` nachgereicht, plus
+      `step-result.md`-Dauer/Test-Anzahl-Korrektur, plus 2 Kommentar-
+      Sanierungen (forward-looking Rationale statt „frueheren 5-Parameter-
+      Konstruktor") und stille-Catch-Sanierung in
+      `McpCodeGraphServerRefresh.cs:188-196` (analog `TryAddDocument`,
+      `ainetlinter-disable EnforceNoSilentCatch`-Suppression entfernt).
+      Volllauf 1192/1192 grün, kein TD-005-Flake.
 - [ ] EPIC-05: Last-Fixture + Performance-Fixes — generierte
       Last-Fixture als Skalierungsnachweis inkl. Messlauf (B.3, bewusst
       **vor** B.4/B.5, damit deren Umsetzung gegen echte Zahlen erfolgt),
@@ -176,7 +186,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Hintergrund, dritter "lädt noch"-Zustand, B.4), Staleness-Sweep
       über Verzeichnis-`mtime` kurzschließen (B.5, kombinierbar mit
       B.2-Sweep-Mechanismus). Bezug: Konzept.md „Muss-Haben B", Punkte
-      3-5.
+      3-5. **→ step-010** (in Planung).
 - [ ] EPIC-06: Robustheit & Observability — eigene `ILintConsole` für
       den MCP-Modus, die stdout strukturell als reinen Protokollkanal
       schützt, plus E2E-Test für JSON-RPC-Framing (B.6); Opt-in
