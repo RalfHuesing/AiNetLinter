@@ -243,18 +243,20 @@ obsolet markiert) — kein starres Vorab-Dokument.
       zusammengefasst — EPIC-07 mit Footprint-Sanierung läuft vor EPIC-08,
       damit das `get_symbol_body`-Tool der fünften Registrar-Klasse nicht
       gegen den bereits knappen Footprint kämpft).
-- [ ] EPIC-08: Symbolgraph-Erweiterungen (Muss-Haben E, aus
-      `codegraph-mcp-next` übernommen) — `get_symbol_body` + stabile
-      Symbol-IDs in `get_file_skeleton` (E.1, löst TD-011 mit, vierte
-      Tool-Registrar-Klasse `SymbolBodyToolRegistrations` wahrscheinlich
-      nötig, da `SymbolGraphToolRegistrations` mit 4 Tools schon bei
-      2850 PathOverride hängt), `depth`-Parameter an
-      `find_references`/`get_impact` mit aggregierter Ausgabe ab
-      `depth > 1` (E.2), DI-Registrierungs-Hinweis als Zusatzzeile in
-      `get_type_hierarchy` (E.3). Läuft laut Konzept-Vorgabe **zuletzt**,
-      da alle drei von dem in EPIC-03 entlasteten Footprint profitieren.
-      Bezug: Konzept.md „Muss-Haben E". **→ step-012** (in Planung,
-      gemeinsam mit EPIC-07 in einem Schritt).
+- [x] EPIC-08: Symbolgraph-Erweiterungen (Muss-Haben E, aus
+      `codegraph-mcp-next` übernommen) — **erledigt → step-012 + step-012/fix-01**, beide
+      approved. Bezug: Konzept.md „Muss-Haben E". E.1: neue Tool-Klasse
+      `GetSymbolBodyTool` + stabile Symbol-IDs via Roslyn-`DocumentationCommentId`
+      + neue 4. Registrar-Klasse `SymbolBodyToolRegistrations`. E.2: `depth`-Parameter
+      (default 1, hard cap 3) via `CallGraphTraversal`-Helper. E.3:
+      `DiRegistrationHeuristics`-Helper, 4. Sektion in `get_type_hierarchy`. Tech-Debt-
+      Abschluss (Muss-Haben D, EPIC-07): 4 von 5 offenen TD-Items geschlossen
+      (TD-001, TD-002, TD-006, TD-008); TD-004 bewusst zurückgestellt. Volllauf
+      1241/1241 grün, 0/0 Build. step-012/fix-01 hat 5 MAJOR + 2 MINOR Findings
+      behoben (PathOverride-Begründungen, `Docs/integration.md` 9→10 Tools,
+      `Docs/ROADMAP.md` E-Block, §5-Verstoß in `SymbolBodyToolRegistrations.cs:18`).
+      Neuer TD-013 (kaputte `<c>`-Tags in 3 Mcp-Dateien, Folgefund). EPIC-08 ist
+      inhaltlich abgeschlossen.
 
 **Nicht als eigenes Epic geführt, aber Teil der Definition of Done jedes
 betroffenen Epics:** laufende Doku-Pflege (`Docs/agent-api.md`,
