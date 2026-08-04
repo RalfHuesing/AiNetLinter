@@ -2,7 +2,7 @@
 task: codegraph-mcp-finish
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-04 # TD-007 (ehemaligen-XML-Doc-Refactoring-Historie) aus step-009/fix-01-Review ergänzt
+last_updated: 2026-08-04 # TD-008 (verbleibende „ehemalige 6-Parameter-Signatur" in GetViolationsScanner) aus step-010-Review ergänzt
 ---
 
 # Tech-Debt-Log: codegraph-mcp-finish
@@ -31,6 +31,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-005 | `src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs` (4 Slots, 30s Wait-Timeout) | mittel | Last-Flake unter Volllauf — 1-2 Failures in `McpServerCommandErrorHandlingTests`, exakt am Gate-Timeout-Stack |
 | TD-006 | `.agents/rules/AiNetLinter.mdc` | niedrig | Working-Tree-vs-Index-BOM-Diskrepanz, semantisch leerer Diff, Working-Tree-Noise |
 | TD-007 | `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs:42-46, 62-64` | niedrig | Factory- und `McpCodeGraphServerOptionsFromParameters`-XML-Doc enthalten „ehemaligen 5 Parameter"/„ehemalige 5-Parameter-Signatur" (semantisch äquivalent zu „früheren") — Refactoring-Historie im Sinne von §5 |
+| TD-008 | `src/AiNetLinter/Mcp/Tools/GetViolationsScanner.cs:192` | niedrig | XML-Doc enthält „die ehemalige 6-Parameter-Signatur zusammen" — gleichartige §5-Refactoring-Historie-Variante wie TD-001/TD-007, beim Sanieren in step-010 nicht mitgenommen |
 
 ## Einträge
 
@@ -191,7 +192,7 @@ Verweis auf die Tech-Debt-ID).
   abfängt. Vorher: Last-Profil der parallel laufenden Subprozess-Tests
   im Volllauf messen, damit die Anpassung gezielt erfolgen kann statt
   auf Verdacht.
-- **Status:** offen
+- **Status:** geschlossen (umgesetzt in `step-010`, Code-Commit `0458250` — Option (a)+(b): Gate 4 → 6 Slots, expliziter 60s-Timeout; im selben Volllauf reproduziert mit 1199/1199 grün in 2:34 min, kein TD-005-Flake mehr).
 
 ### TD-006 — UTF-8-BOM-Diskrepanz auf `.agents/rules/AiNetLinter.mdc` [Priorität: niedrig]
 
@@ -261,4 +262,35 @@ Verweis auf die Tech-Debt-ID).
   „kapselt 5 Konfigurations-Eingaben in einem Record, damit
   `MaxMethodParameterCount: 4` (public static, siehe
   `AiNetLinter.mdc`) eingehalten wird" statt „ehemaligen 5 Parameter".
+- **Status:** geschlossen (umgesetzt in `step-010`, Code-Commit `0458250` — McpCodeGraphServerOptions.cs:42-46 + 62-64 saniert; konsistent zu Patch 3 in step-009/fix-01).
+
+### TD-008 — Verbleibende „ehemalige 6-Parameter-Signatur"-Refactoring-Historie in `GetViolationsScanner` [Priorität: niedrig]
+
+- **Gefunden in:** step-010 (Kritiker-Review vom 2026-08-04).
+- **Ort:** `src/AiNetLinter/Mcp/Tools/GetViolationsScanner.cs:192` — XML-Doc
+  am `Format`-Methoden-Eintrag (oder vergleichbarem Symbol; verifiziert per
+  Grep) enthält das Wort „ehemalige 6-Parameter-Signatur zusammen".
+- **Befund:** Semantisch identisch zu TD-001 / TD-007 — das Wort
+  „ehemalige" ist ein „war-früher-Marker" im Sinne der
+  `AiNetLinterRichtlinien.mdc` §5 Verbots-Liste („war früher private"). Der
+  step-010-Plan hatte explizit nur `McpCodeGraphServerOptions.cs:42-46,
+  62-64` als TD-007-Sanierungs-Scope benannt
+  (`step-010/step-plan.md` Z. 650-654); diese dritte Stelle wurde beim
+  Grep über `Mcp/` im Sanierungs-Zug übersehen, weil sie im
+  Scanner-Unterordner liegt. Funktional folgenlos — XML-Doc bleibt
+  verständlich, ist aber §5-Verstoß.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-010 (Plan
+  hatte diese Stelle nicht benannt, der Coder hat den Plan korrekt
+  befolgt). Sanierung ist mechanisch (eine Wort-Änderung analog
+  TD-007-Sanierung), aber gehört in einen eigenen Mini-Cleanup-Schritt
+  oder wird bei nächster inhaltlicher Berührung von
+  `GetViolationsScanner.cs` mitgenommen.
+- **Vorschlag:** Bei nächster Berührung von `GetViolationsScanner.cs`
+  den XML-Doc auf forward-looking Rationale umstellen
+  (Pattern-Vorlage: „kapselt 6 Konfigurations-Eingaenge in einem Record,
+  damit `MaxMethodParameterCount: 4` eingehalten wird" statt
+  „ehemalige 6-Parameter-Signatur"). Grep-Stelle bietet sich als
+  Anlass fuer einen Mini-Projekt-weiten Grep ueber alle
+  `Mcp/`-XML-Docs an, um weitere „ehemalige"-/„frueheren"-Vorkommen
+  aufzudecken.
 - **Status:** offen
