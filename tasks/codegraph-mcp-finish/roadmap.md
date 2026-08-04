@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-03  # step-007-Planung: EPIC-01 (F.1-F.6) vollständig abgehakt, EPIC-02-Push-Fund dokumentiert
+last_updated: 2026-08-04  # step-009-Planung: EPIC-03 (step-008) abgehakt, EPIC-04 (rules.json-Auto-Discovery + Verzeichnis-Sweep) → step-009
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -133,18 +133,42 @@ obsolet markiert) — kein starres Vorab-Dokument.
       `SubprocessConcurrencyGate.AcquireAsync`, außerhalb des Step-
       Scopes, als `TD-005` dokumentiert). EPIC-02 ist inhaltlich
       abgeschlossen.
-- [ ] EPIC-03: `ILinterEngineConfig`-Refactor (Muss-Haben C, TD-008/
-      TD-010) — schlankes Interface für `McpCodeGraphServer.Config`
-      extrahieren, `rules.json`-`PathOverride`-Liste (13 Einträge) auf
-      tatsächlich verbleibenden Bedarf reduzieren (mit Begründung pro
-      Rest-Override). Bewusst **vor** Block B eingeplant, damit B gegen
-      den entlasteten Footprint umgesetzt wird. Bezug: Konzept.md
-      „Muss-Haben C".
+- [x] EPIC-03: `ILinterEngineConfig`-Refactor (Muss-Haben C, TD-008/
+      TD-010) — **erledigt → step-008**, approved. Bezug: Konzept.md
+      „Muss-Haben C". Schlankes `internal interface ILinterEngineConfig`
+      mit den 11 Properties, die `LinterEngine` und die MCP-Tools
+      tatsächlich konsumieren, in
+      `src/AiNetLinter/Configuration/ILinterEngineConfig.cs` neu
+      angelegt; `Config` (`Config.cs:7`) implementiert es implizit.
+      `McpCodeGraphServer.Config` und `McpCodeGraphServerOptions.Config`
+      sind vom Interface-Typ, womit der `Configuration`-Namespace nicht
+      mehr strukturell in den Footprint der Tool-Klassen gezogen wird,
+      die `Config` nur transitiv über den `McpCodeGraphServer`-Typ
+      referenzierten. `rules.json`-`PathOverrides` von 14 Einträgen auf
+      **2 Rest-Einträge** reduziert — die verbleibenden sind
+      `FindReferencesTool` (Footprint 2529) und `FindSymbolTool`
+      (Footprint 2516), deren Symbol-Graph-Lookups strukturell an
+      `Configuration`-Sub-Typen koppeln, eine Aufspaltung gehört zu
+      EPIC-08 (E-Block). **Weg A** (Downcast am Call-Site in
+      `GetViolationsScanner.BuildViolationsTextAsync`) umgesetzt —
+      `LinterEngine` behält den konkreten `Config`-Parametertyp
+      (Record-Semantik für `with { SolutionBasePath = dir }` und
+      durchgereichte Sub-Properties); der Downcast ist strukturell
+      sicher, weil `ILinterEngineConfig` projektweit nur **einmal** von
+      `Config` implementiert wird (per Grep verifiziert). 12 Tool-Test-
+      Dateien im `Mcp/`-Bereich kompilieren ohne Test-Inhalts-Änderung
+      (`McpCodeGraphServerOptions.From(...)` bleibt 1:1 kompatibel).
+      Volllauf 1185/1186 grün reproduziert, TD-005-Last-Flake in
+      `McpServerCommandErrorHandlingTests` als `infrastructure`
+      klassifiziert (scope-extern, keine Fix-Versuche verbraucht) — im
+      `step-008/step-result.md` und `step-008/step-review.md` detailliert
+      dokumentiert. EPIC-03 ist inhaltlich abgeschlossen.
 - [ ] EPIC-04: Betriebsrisiko-Fixes — `rules.json`-Auto-Discovery (B.1)
       + Verzeichnis-Sweep für neue/gelöschte `.cs`-Dateien (B.2). Beide
       beheben silent-falsche Tool-Antworten, deshalb laut Konzept-Vorgabe
-      vor den zeitbasierten Punkten (B.3-B.5). Bezug: Konzept.md
-      „Muss-Haben B", Punkte 1-2.
+      vor den zeitbasierten Punkten (B.3-B.5). **→ step-009** (geplant,
+      siehe `tasks/codegraph-mcp-finish/step-009/step-plan.md`). Bezug:
+      Konzept.md „Muss-Haben B", Punkte 1-2.
 - [ ] EPIC-05: Last-Fixture + Performance-Fixes — generierte
       Last-Fixture als Skalierungsnachweis inkl. Messlauf (B.3, bewusst
       **vor** B.4/B.5, damit deren Umsetzung gegen echte Zahlen erfolgt),
