@@ -6,7 +6,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 
 ## 1. Projekt-Überblick & Architektur
 
-**AiNetLinter** ist eine hochperformante, Roslyn-basierte C#/.NET 9 Statische-Code-Analyse- & Linter-Engine zur Durchsetzung von Architekturregeln, Clean-Code-Standards und Konventionen.
+**AiNetLinter** ist eine Roslyn-basierte C#/.NET 9 Statische-Code-Analyse- & Linter-Engine zur Durchsetzung von Architekturregeln, Clean-Code-Standards und Konventionen.
 
 ### Schlüsselkomponenten:
 - **Engine & Core CLI**: `src/AiNetLinter/`

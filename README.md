@@ -32,7 +32,7 @@ Der Linter gibt einen Markdown-Report auf stdout aus und beendet sich mit Exit-C
 
 ## Agentische Integration
 
-AiNetLinter ist selbst-erklärend: Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explorativ zu verstehen und eigenständig in ein Projekt zu integrieren — ohne Vorab-Konfiguration durch den Entwickler.
+Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explorativ zu verstehen und eigenständig in ein Projekt zu integrieren — ohne Vorab-Konfiguration durch den Entwickler.
 
 ```bash
 # Tool erkunden (kein --path nötig):
@@ -67,16 +67,16 @@ AiNetLinter kann auch als stdio-basierter MCP-Server gestartet werden, um die Ro
 | Regel | Warum relevant |
 | :--- | :--- |
 | **Codebase-Landkarten & Evals** (`--map`, `--eval`) | Generiert strukturierte Markdown-Übersichten (vocabulary, structure, hotspots, skeleton) oder vollständig assemblierte LLM-Audit-Prompts mit frischer Evidenz für Drift-Audits. |
-| **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Macht den Linter in Legacy-Projekten mit tausenden Altlasten sofort einsetzbar. |
+| **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Ermöglicht den Einsatz in Legacy-Projekten mit bestehenden Verstößen, ohne diese vorher beheben zu müssen. |
 | **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
 | **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs — verhindert die häufigste Halluzinations-Fehlerquelle in KI-generiertem Code. |
 | **Komplexitätsgrenzen** (`MaxCyclomaticComplexity`, `MaxCognitiveComplexity`) | Jahrzehntelange Forschung (McCabe 1976, SonarSource) belegt Komplexität als stärksten Einzel-Prädiktor für Fehlerdichte und schlechte Analysierbarkeit durch KI. |
-| **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen praxistaugliche Konfigurationen ohne eine Einheitslösung für alle Projekttypen. |
+| **Project Overrides** (`ProjectOverrides`) | Projektscharfe Regelanpassungen (z. B. `*.Tests` mit lockeren Limits) ermöglichen unterschiedliche Regelwerke pro Projekttyp statt einer einzigen Konfiguration für alle Projekte. |
 | **Compound-Suppressions** (`CompoundSuppressions`) | Ermöglicht kontextabhängige Regelunterdrückung und unterstützt `SeverityOverride: "warning"` — Verstöße in Szenario A (Bedingungen erfüllt, RelaxedLimit überschritten) können auf Warning herabgestuft werden, ohne den Build zu blockieren. |
 | **LINQ-Kettenlänge** (`MaxLinqChainLength`) | Begrenzt die Anzahl verketteter LINQ-Methoden pro Ausdruckskette, um kognitive Last zu reduzieren. Durch eine konfigurierbare Whitelist werden Builder-Ketten ignoriert. |
 | **Globales Scope-Filtering** (`--project`, `--namespace`) | Ermöglicht die gezielte Eingrenzung der Analyse auf bestimmte Projekte oder C#-Namespaces (inkl. Wildcard-Unterstützung und Ausschluss-Shortcut für Test-Projekte). |
 | **Suppression-Bypass** (`--ignore-suppressions`) | Umgeht Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) dynamisch beim Linter-Lauf für konfigurierte Sprachklassen (`all`, `cs`/`c#`, `razor`, `js`, `css`). |
-| **Web-Asset-Linting** (CSS, JS, Razor) | Web-Asset-Analyse fuer CSS (ExCSS), JS (Esprima) und Razor. Begrenzt Dateigroessen, erzwingt ES6-Module, verbietet globale Zuweisungen an 'window', limitiert HTML-Verschachtelungstiefe, komplexe Inline-Lambdas, Control-Flow-Bloecke, verschachtelte Foreach-Schleifen, Komponenten-Parameter und Ternaries in HTML-Attributen — da diese Faktoren die Fehlerrate autonomer Agenten bei Web-Edits massiv erhoehen. Opt-in ueber `Web.IsEnabled = true`. |
+| **Web-Asset-Linting** (CSS, JS, Razor) | Web-Asset-Analyse fuer CSS (ExCSS), JS (Esprima) und Razor. Begrenzt Dateigroessen, erzwingt ES6-Module, verbietet globale Zuweisungen an 'window', limitiert HTML-Verschachtelungstiefe, komplexe Inline-Lambdas, Control-Flow-Bloecke, verschachtelte Foreach-Schleifen, Komponenten-Parameter und Ternaries in HTML-Attributen — da diese Faktoren die Fehlerrate autonomer Agenten bei Web-Edits erhoehen. Opt-in ueber `Web.IsEnabled = true`. |
 
 ---
 
