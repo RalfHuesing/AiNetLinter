@@ -290,6 +290,46 @@ Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` 
 
 Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
 
+### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
+
+Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Bereits ein einziger `Console.WriteLine(...)`-Call aus irgendeiner wiederverwendeten CLI-Klasse wuerde das Framing der gesamten Session zerstoeren, weil die naechste JSON-RPC-Zeile von einem nicht-JSON-Leak praefixiert waere und der MCP-Host den Frame nicht mehr parsen kann.
+
+Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird statt `LinterConsole` die `McpLintConsole`-Implementierung aktiviert (in `Program.cs` als expliziter Parameter an `McpServerCommand.RunAsync` uebergeben), die `ILintConsole.WriteLine(...)` zwingend nach `stderr` umleitet. Ein unbeabsichtigter `Console.WriteLine`-Call in einer Tool-Implementierung oder einem Helper wuerde weiterhin ein Leak sein, aber der zentrale `ILintConsole`-Pfad ist abgesichert.
+
+Regressions-Schutz: ein E2E-Framing-Test in `McpServerCommandJsonRpcFramingTests` spawnt `AiNetLinter.exe` als Subprozess, schreibt `initialize` + `tools/list` + `tools/call`-Frames manuell auf stdin und prueft **jede** Zeile auf stdout als gueltigen JSON-RPC-Frame (`jsonrpc == "2.0"`). Kein SDK-Parser zwischen Subprozess und Assertions — ein zukuenftiger Leak wuerde als nicht-JSON-Zeile sichtbar.
+
+### Call-Log (opt-in)
+
+Opt-in-Beobachtung der tatsaechlichen Tool-Nutzung in der Praxis, default deaktiviert (kein File I/O). Aktivierung ueber das Flag `--mcp-log <pfad>` (oder kurz `-mcp-log`).
+
+```bash
+ainetlinter --mcp-server --mcp-log ./.mcp-log/calls.log
+ainetlinter --mcp-server --mcp-log  # Default: <solutionDir>/.mcp-log/calls.log
+```
+
+Format: JSONL, ein Eintrag pro Tool-Call. Felder pro Zeile:
+
+| Feld | Typ | Bedeutung |
+| :--- | :--- | :--- |
+| `ts` | string (ISO 8601) | UTC-Zeitstempel des Call-Beginns |
+| `tool` | string | Tool-Name (z. B. `find_symbol`) |
+| `args` | string | Kurzform der Argumente, max. 200 Zeichen + `...` |
+| `lines` | number | Anzahl Text-Zeilen im Tool-Result |
+| `truncated` | bool | `true` wenn Trunkierungs-Meta-Zeile erkannt |
+| `duration_ms` | number | Dauer des Tool-Aufrufs in Millisekunden |
+| `empty` | bool | `true` wenn `lines == 0` und kein Fehler |
+
+Beispiel-Snippet:
+
+```json
+{"ts":"2026-08-04T11:23:45.123Z","tool":"find_symbol","args":"Greeter|null|50","lines":3,"truncated":false,"duration_ms":12.4,"empty":false}
+{"ts":"2026-08-04T11:23:46.456Z","tool":"get_index_scope","args":"","lines":7,"truncated":false,"duration_ms":1.2,"empty":false}
+```
+
+**Pfad-Aufloesung:** absoluter Pfad → wie angegeben; relativer Pfad → relativ zum Solution-Verzeichnis (analog zu `cache/` neben der Solution). Default bei `--mcp-log` ohne Wert: `<solutionDir>/.mcp-log/calls.log`. Leere Logs (kein Tool-Call aufgezeichnet) werden beim Server-Shutdown automatisch geloescht.
+
+Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overhead (kein `McpCallLogScope`-Objekt, kein `Stopwatch.StartNew()`). Siehe `Docs/configuration.md` fuer die formale CLI-Option-Spec.
+
 ### Compile-Fehler-Warnhinweis (EPIC-06)
 
 Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 9 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:

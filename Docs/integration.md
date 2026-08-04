@@ -241,6 +241,10 @@ Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder �
 
 **`args: ["--mcp-server"]` ohne `--config` ist die empfohlene Registrierung.** Der Server sucht automatisch nach `rules.json` neben der aufgelösten Solution-Datei (`McpServerCommand.TryResolveRulesJsonPath`). Wird keine gefunden, läuft er mit den `Config`-Default-Regeln und signalisiert das in `get_violations` durch eine sichtbare Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden` (siehe [Docs/agent-api.md](agent-api.md#default-config-markierung-in-get_violations)).
 
+**stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
+
+**Opt-in Call-Log:** fuer Production-Monitoring kann der registrierte `ainetlinter`-Aufruf um `--mcp-log <pfad>` ergaenzt werden — siehe [Docs/agent-api.md#call-log-opt-in](agent-api.md#call-log-opt-in) fuer Format und Pfad-Aufloesung. Default: deaktiviert, kein File I/O.
+
 ### cwd-Verhalten
 
 Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.
