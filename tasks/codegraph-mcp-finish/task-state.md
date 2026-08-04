@@ -1,24 +1,26 @@
 ---
-status: executing  # executing | done | aborted
+status: done  # executing | done | aborted
 task: codegraph-mcp-finish
 started_at: 2026-08-03
+finished_at: 2026-08-04
 last_updated: 2026-08-04
 rules_dir: .agents/rules
-total_fix_rounds: 2  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-012 (done approved, EPIC-08 abgehakt; 1241/1241 gruen; bereit fuer globalen Kritiker + task-summary)
+total_fix_rounds: 3  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+current_step: task-summary erstellt, Task done
 ---
 
 # Task State: codegraph-mcp-finish
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Fix-Runden gesamt:** 2 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-012` (done approved, EPIC-08 abgehakt) — bereit fuer globalen Kritiker + task-summary
-- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
-- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
+- **Task-Status:** `done` — alle 8 Epics abgehakt, task-summary erstellt
+- **Fix-Runden gesamt:** 3 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
+- **Aktueller Schritt:** Task abgeschlossen
+- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (alle Epics `[x]`)
+- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde (13 Einträge, 6 geschlossen, 1 zurückgestellt, 6 offen)
+- **Task-Summary:** siehe `task-summary.md` für den globalen Abschluss-Bericht
 - **Gestartet:** 2026-08-03
-- **Zuletzt aktualisiert:** 2026-08-04
+- **Abgeschlossen:** 2026-08-04
 
 ## Steps
 
