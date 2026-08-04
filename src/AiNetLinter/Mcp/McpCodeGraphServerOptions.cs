@@ -7,12 +7,10 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Eingefuehrt als
-/// Ersatz fuer den frueheren 5-Parameter-Konstruktor, der am projektweiten
-/// <c>MaxConstructorDependencies: 5</c>-Limit (siehe <c>AiNetLinter.mdc</c>)
-/// exakt angelangt war — jede weitere P0/P1-Erweiterung am Konstruktor
-/// haette den Build gebrochen. Mit diesem Record wachsen kuenftige
-/// Konfigurations-Properties additiv, ohne die Konstruktor-Signatur zu aendern.
+/// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Kapselt die Optionen in einem
+/// Record, damit <c>MaxConstructorDependencies: 5</c> eingehalten wird und kuenftige
+/// Konfigurations-Properties additiv wachsen koennen, ohne die Konstruktor-Signatur zu
+/// aendern.
 /// </summary>
 internal sealed record McpCodeGraphServerOptions
 {

@@ -28,10 +28,9 @@ internal sealed class McpCodeGraphServer : IDisposable
     private readonly Dictionary<string, McpFileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private SourceFileCatalog? _catalog;
 
-    // Input-Record ersetzt den frueheren 5-Parameter-Konstruktor, der am
-    // projektweiten MaxConstructorDependencies: 5-Limit lag (siehe
-    // McpCodeGraphServerOptions.cs). Erlaubt additive P0/P1-Erweiterungen an der
-    // Config, ohne die Konstruktor-Signatur zu aendern.
+    // Input-Record als Parameter-Object, damit MaxConstructorDependencies: 5 eingehalten wird
+    // und kuenftige Config-Properties additiv wachsen koennen, ohne die Konstruktor-Signatur
+    // zu aendern.
     public McpCodeGraphServer(McpCodeGraphServerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

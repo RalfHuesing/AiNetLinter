@@ -350,6 +350,121 @@ public sealed class McpServerCommandTests : IClassFixture<SymbolGraphMcpFixture>
         Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result.Metrics.MaxLineCount);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ResolveConfig_ExplicitConfigPath_TakesPrecedenceOverAutoDiscovered()
+    {
+        var solutionDir = CreateTempDir();
+        var explicitDir = CreateTempDir();
+        try
+        {
+            var slnxPath = Path.Combine(solutionDir, "Only.slnx");
+            File.WriteAllText(slnxPath, "");
+
+            // Auto-discovered rules.json (next to the solution) with MaxLineCount: 7
+            var autoDiscoveredConfigPath = Path.Combine(solutionDir, "rules.json");
+            File.WriteAllText(autoDiscoveredConfigPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
+
+            // Explicit rules.json in a separate dir with MaxLineCount: 5
+            var explicitConfigPath = Path.Combine(explicitDir, "rules.json");
+            File.WriteAllText(explicitConfigPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+
+            var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = slnxPath, Verbose = false };
+
+            // TryResolveRulesJsonPath returns the explicit path, not the auto-discovered one
+            var resolved = McpServerCommand.TryResolveRulesJsonPath(args.ConfigPath, slnxPath);
+            Assert.Equal(explicitConfigPath, resolved);
+
+            // ResolveConfig with the resolved path uses the explicit config (MaxLineCount: 5)
+            var config = McpServerCommand.ResolveConfig(args, resolved);
+            Assert.NotNull(config);
+            Assert.Equal(5, config.Metrics.MaxLineCount);
+        }
+        finally
+        {
+            Directory.Delete(solutionDir, recursive: true);
+            Directory.Delete(explicitDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ResolveConfig_NoExplicitConfigPath_AutoDiscoversRulesJsonInSolutionDirectory()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var slnxPath = Path.Combine(tempDir, "Only.slnx");
+            File.WriteAllText(slnxPath, "");
+
+            var rulesJsonPath = Path.Combine(tempDir, "rules.json");
+            File.WriteAllText(rulesJsonPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 11 } }""");
+
+            var args = new LinterArgs { ConfigPath = null, TargetPath = tempDir, Verbose = false };
+
+            // TryResolveRulesJsonPath auto-discovers the rules.json next to the solution
+            var resolved = McpServerCommand.TryResolveRulesJsonPath(null, slnxPath);
+            Assert.Equal(rulesJsonPath, resolved);
+
+            // ResolveConfig with the resolved path uses the auto-discovered config
+            var config = McpServerCommand.ResolveConfig(args, resolved);
+            Assert.NotNull(config);
+            Assert.Equal(11, config.Metrics.MaxLineCount);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ResolveConfig_NoExplicitConfigPath_NoRulesJsonFound_UsesDefault()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var slnxPath = Path.Combine(tempDir, "Only.slnx");
+            File.WriteAllText(slnxPath, "");
+
+            var args = new LinterArgs { ConfigPath = null, TargetPath = tempDir, Verbose = false };
+            var console = new TestLintConsole();
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            // (a) TryResolveRulesJsonPath returns null when no rules.json is found
+            var resolved = McpServerCommand.TryResolveRulesJsonPath(null, slnxPath);
+            Assert.Null(resolved);
+
+            // (b) ResolveConfig with null returns the default config
+            var config = McpServerCommand.ResolveConfig(args, resolved);
+            Assert.NotNull(config);
+            Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, config.Metrics.MaxLineCount);
+
+            // (c) RunAsync emits [WARN] to stderr before the solution load runs.
+            // Die [WARN]-Zeile wird synchron emittiert, bevor die Solution geladen wird.
+            // Im Test-Environment (kein stdin) kann RunAsync entweder normal returnen oder
+            // die OperationCanceledException durchreichen — beides ist akzeptabel;
+            // entscheidend ist, dass die [WARN]-Zeile bereits in console.Errors gelandet ist.
+            try
+            {
+                await McpServerCommand.RunAsync(args, cts.Token, console);
+            }
+            catch (OperationCanceledException)
+            {
+                // Akzeptabel: pre-cancelled Token hat sich durch RunAsync propagiert.
+            }
+
+            Assert.Contains(console.Errors, e =>
+                e.Contains("[WARN]", StringComparison.Ordinal) &&
+                e.Contains("Keine rules.json neben der Solution gefunden", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static string CreateTempDir()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-test-{Guid.NewGuid():N}");

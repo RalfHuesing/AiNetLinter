@@ -38,7 +38,7 @@ internal static class McpCodeGraphServerRefresh
         var anyChanged = false;
         var removedIds = RemoveDeletedDocuments(ref updated, solutionDir, fileState, ref anyChanged);
         anyChanged |= SweepForNewFiles(ref updated, solutionDir, fileState, writeWarn);
-        RefreshModifiedDocuments(ref updated, solutionDir, removedIds, fileState, ref anyChanged);
+        RefreshModifiedDocuments(ref updated, solutionDir, removedIds, fileState, writeWarn, ref anyChanged);
         return (updated, anyChanged);
     }
 
@@ -101,6 +101,7 @@ internal static class McpCodeGraphServerRefresh
         string? solutionDir,
         HashSet<DocumentId> removedIds,
         Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn,
         ref bool anyChanged)
     {
         foreach (var project in updated.Projects)
@@ -109,7 +110,7 @@ internal static class McpCodeGraphServerRefresh
             {
                 if (removedIds.Contains(document.Id)) continue;
                 if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                if (TryRefreshDocument(document, ref updated, fileState)) anyChanged = true;
+                if (TryRefreshDocument(document, ref updated, fileState, writeWarn)) anyChanged = true;
             }
         }
     }
@@ -172,7 +173,8 @@ internal static class McpCodeGraphServerRefresh
     private static bool TryRefreshDocument(
         Document document,
         ref Solution updated,
-        Dictionary<string, McpFileState> fileState)
+        Dictionary<string, McpFileState> fileState,
+        Action<string> writeWarn)
     {
         var path = document.FilePath!;
         if (!File.Exists(path)) return false;
@@ -183,7 +185,15 @@ internal static class McpCodeGraphServerRefresh
             return false;
         }
 
-        return TryApplyContentChange(document, path, currentMtime, known, ref updated, fileState);
+        try
+        {
+            return TryApplyContentChange(document, path, currentMtime, known, ref updated, fileState);
+        }
+        catch (IOException ex)
+        {
+            writeWarn($"[WARN]: Datei konnte beim Staleness-Check nicht gelesen werden ({path}): {ex.Message}");
+            return false;
+        }
     }
 
     private static bool TryApplyContentChange(
@@ -194,27 +204,17 @@ internal static class McpCodeGraphServerRefresh
         ref Solution updated,
         Dictionary<string, McpFileState> fileState)
     {
-        try
+        var currentHash = FileChecksumCalculator.ComputeSha256Hex(path);
+        if (known.Hash == currentHash)
         {
-            var currentHash = FileChecksumCalculator.ComputeSha256Hex(path);
-            if (known.Hash == currentHash)
-            {
-                fileState[path] = known with { MtimeUtc = currentMtime };
-                return false;
-            }
-
-            var text = File.ReadAllText(path);
-            updated = updated.WithDocumentText(document.Id, SourceText.From(text));
-            fileState[path] = new McpFileState(currentMtime, currentHash);
-            return true;
-        }
-        // ainetlinter-disable EnforceNoSilentCatch — stillschweigend: Hash-Lese-Fehler beim
-        // Staleness-Check duerfen den Server-Loop nicht abbrechen; der naechste Call liest
-        // die Datei ohnehin erneut.
-        catch (IOException)
-        {
+            fileState[path] = known with { MtimeUtc = currentMtime };
             return false;
         }
+
+        var text = File.ReadAllText(path);
+        updated = updated.WithDocumentText(document.Id, SourceText.From(text));
+        fileState[path] = new McpFileState(currentMtime, currentHash);
+        return true;
     }
 
     private static IEnumerable<string> EnumerateCsFilesSafe(string solutionDir)
@@ -224,7 +224,7 @@ internal static class McpCodeGraphServerRefresh
         {
             files = Directory.EnumerateFiles(solutionDir, "*.cs", SearchOption.AllDirectories);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ignored) when (ignored is IOException or UnauthorizedAccessException)
         {
             yield break;
         }
