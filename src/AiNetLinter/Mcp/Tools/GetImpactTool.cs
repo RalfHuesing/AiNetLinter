@@ -22,6 +22,7 @@ internal static class GetImpactTool
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string? gitRef, string? symbolIdentifier, int maxResults, CancellationToken ct)
     {
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var hasGitRef = !string.IsNullOrEmpty(gitRef);

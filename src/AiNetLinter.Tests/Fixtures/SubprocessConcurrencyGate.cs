@@ -14,7 +14,16 @@ namespace AiNetLinter.Tests.Fixtures;
 /// </summary>
 public static class SubprocessConcurrencyGate
 {
-    private const int MaxConcurrentSubprocesses = 4;
+    // Kapazitaet an die Last-Fixture-Skalierung der parallel laufenden MCP-Server-Tests angepasst;
+    // beobachtete Spitzenlast im Volllauf erfordert mehr als die urspruenglichen 4 gleichzeitigen
+    // Subprozesse, ohne dass eine einzelne Testklasse ueberlastet wird. Werte unterhalb dieser
+    // Schwelle fuehren reproduzierbar zu Wait-Stack-Traces am Gate unter Volllauf-Bedingungen.
+    private const int MaxConcurrentSubprocesses = 6;
+
+    // Zusaetzlicher expliziter Timeout am Gate selbst (zusaetzlich zum CancellationToken des
+    // Aufrufers): macht einen Last-Flake als TimeoutException sprechend sichtbar, bevor der
+    // Caller-CT in einen unbestimmten Wait-Stack laeuft.
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(60);
 
     private static readonly SemaphoreSlim Gate = new(MaxConcurrentSubprocesses, MaxConcurrentSubprocesses);
 
@@ -27,7 +36,9 @@ public static class SubprocessConcurrencyGate
     /// </summary>
     public static async Task<IDisposable> AcquireAsync(CancellationToken cancellationToken = default)
     {
-        await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await Gate.WaitAsync(cancellationToken)
+            .WaitAsync(WaitTimeout, cancellationToken)
+            .ConfigureAwait(false);
         return new Lease();
     }
 

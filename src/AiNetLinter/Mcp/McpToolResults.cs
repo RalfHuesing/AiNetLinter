@@ -116,4 +116,27 @@ internal static class McpToolResults
             context: context,
             hint: "Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.");
     }
+
+    /// <summary>
+    /// Antwort fuer den transienten Wartezustand, in dem der MCP-Server gerade die Solution
+    /// im Hintergrund laedt. Bewusst kein <see cref="CallToolResult.IsError"/>, weil der
+    /// Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden, bis die
+    /// Loesung resident ist. Clients (MCP-Hosts wie Claude Desktop, eigene Test-Harness)
+    /// erkennen den Text und koennen den Aufruf nach kurzer Pause wiederholen.
+    /// </summary>
+    internal static CallToolResult Loading()
+    {
+        return new CallToolResult
+        {
+            IsError = false,
+            Content = new List<ContentBlock>
+            {
+                new TextContentBlock
+                {
+                    Text = "[INFO]: Server laedt die Solution noch. " +
+                           "Bitte in wenigen Sekunden erneut versuchen.",
+                },
+            },
+        };
+    }
 }

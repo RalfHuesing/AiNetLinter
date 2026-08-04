@@ -21,6 +21,8 @@ namespace AiNetLinter.Tests.Commands;
 /// </summary>
 public sealed class McpServerCommandErrorHandlingTests
 {
+    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
+
     [Fact]
     public async Task RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError()
     {
@@ -46,10 +48,11 @@ public sealed class McpServerCommandErrorHandlingTests
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-            var result = await client.CallToolAsync(
+            var result = await CallToolWithLoadingRetryAsync(
+                client,
                 "find_symbol",
                 new Dictionary<string, object?> { ["namePattern"] = "Anything" },
-                cancellationToken: cts.Token);
+                cts.Token);
 
             Assert.True(result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -84,16 +87,45 @@ public sealed class McpServerCommandErrorHandlingTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
-        var result = await client.CallToolAsync(
+        var result = await CallToolWithLoadingRetryAsync(
+            client,
             "get_file_skeleton",
             new Dictionary<string, object?> { ["filePath"] = "src/CompileErrorMini/BrokenClassA.cs" },
-            cancellationToken: cts.Token);
+            cts.Token);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         // Datei-spezifischer Hinweis (NICHT Aggregate-Format).
         Assert.Contains("Diese Datei hat", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", textContent.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Ruft ein MCP-Tool auf und retryt, solange die Antwort den Loading-Info-Text enthaelt
+    /// (Hintergrund-Load des Servers ist noch nicht abgeschlossen). Wiederholt das aehnliche
+    /// Pattern aus <see cref="AiNetLinter.Tests.Mcp.McpTestClient"/>, lokal gehalten, weil
+    /// diese Testklasse den <see cref="McpClient"/> direkt verwendet.
+    /// </summary>
+    private static async Task<CallToolResult> CallToolWithLoadingRetryAsync(
+        McpClient client,
+        string toolName,
+        IReadOnlyDictionary<string, object?>? arguments,
+        CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            var result = await client.CallToolAsync(toolName, arguments, cancellationToken: ct);
+            if (result.Content?.Count > 0
+                && result.Content[0] is TextContentBlock text
+                && (text.Text?.StartsWith(LoadingMessagePrefix, StringComparison.Ordinal) != true))
+            {
+                return result;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        }
+
+        return await client.CallToolAsync(toolName, arguments, cancellationToken: ct);
     }
 
     private static string CreateTempDir()

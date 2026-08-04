@@ -17,6 +17,17 @@ namespace AiNetLinter.Tests.Mcp;
 /// </summary>
 public sealed class McpTestClient : IAsyncDisposable
 {
+    /// <summary>
+    /// Praefix des Loading-Info-Texts, den der MCP-Server waehrend des Hintergrund-Loads an
+    /// Tool-Aufrufer zurueckgibt. Per String-Match gegen den ersten Text-Content-Block
+    /// erkannt, weil das MCP-Protokoll keinen eigenen Loading-Statuscode vorsieht und die
+    /// Server-Seite <c>IsError = false</c> setzt (kein Fehler, nur transienter Wartezustand).
+    /// </summary>
+    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
+
+    /// <summary>Wie oft <see cref="CallToolAsync"/> auf eine Loading-Antwort hin retryt.</summary>
+    private const int LoadingRetryMaxAttempts = 30;
+
     private readonly McpClient _client;
 
     private McpTestClient(McpClient client)
@@ -90,7 +101,10 @@ public sealed class McpTestClient : IAsyncDisposable
     }
 
     /// <summary>
-    /// Führt ein MCP-Tool aus und gibt das rohe <see cref="CallToolResult"/> zurück.
+    /// Führt ein MCP-Tool aus und gibt das rohe <see cref="CallToolResult"/> zurück. Antwortet
+    /// der Server waehrend des Hintergrund-Loads mit <see cref="LoadingMessagePrefix"/>, wird
+    /// die Anfrage nach kurzem Backoff transparent wiederholt — Tests muessen sich nicht um
+    /// den Loading-Zustand kuemmern und sehen das erste echte Ergebnis.
     /// </summary>
     public async Task<CallToolResult> CallToolAsync(
         string toolName,
@@ -98,10 +112,36 @@ public sealed class McpTestClient : IAsyncDisposable
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        for (var attempt = 0; attempt < LoadingRetryMaxAttempts; attempt++)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
-        return await _client.CallToolAsync(toolName, arguments, cancellationToken: cts.Token);
+            var result = await _client.CallToolAsync(toolName, arguments, cancellationToken: cts.Token);
+
+            if (!IsLoadingResponse(result))
+            {
+                return result;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+        }
+
+        // Nach Erreichen des Retry-Limits die letzte Loading-Antwort zurueckgeben — der
+        // Aufrufer sieht dann den Info-Text und kann selbst entscheiden, wie er damit
+        // umgehen will (fail oder noch laenger warten).
+        using var finalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        finalCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+        return await _client.CallToolAsync(toolName, arguments, cancellationToken: finalCts.Token);
+    }
+
+    private static bool IsLoadingResponse(CallToolResult result)
+    {
+        if (result.IsError == true) return false;
+        if (result.Content is not { Count: > 0 }) return false;
+        return result.Content[0] is TextContentBlock textBlock
+            && textBlock.Text is { } text
+            && text.StartsWith(LoadingMessagePrefix, StringComparison.Ordinal);
     }
 
     /// <summary>

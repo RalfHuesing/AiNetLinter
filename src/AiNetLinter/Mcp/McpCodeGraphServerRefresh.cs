@@ -22,23 +22,29 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class McpCodeGraphServerRefresh
 {
+
     /// <summary>
     /// Liefert die ggf. aktualisierte <see cref="Solution"/> und ein Flag, ob sich etwas
-    /// geaendert hat. <paramref name="fileState"/> wird bei geloeschten Dateien
+    /// geaendert hat. <paramref name="p.FileState"/> wird bei geloeschten Dateien
     /// bereinigt und bei neu einghaengten Dateien befuellt; der Aufrufer uebernimmt die
     /// Anwendung ueber <see cref="SourceFileCatalog.WithUpdatedSolution"/>.
+    /// <paramref name="p.ShouldSweep"/> steuert Phase 2 (Verzeichnis-Sweep): liefert der
+    /// Aufrufer <see langword="false"/>, wird der aufwendige <c>Directory.EnumerateFiles</c>-Walk
+    /// uebersprungen — die uebrigen Phasen (geloeschte/modifizierte Dateien) laufen weiter,
+    /// weil sie auf den bereits gecachten <see cref="McpFileState"/>-Eintraegen arbeiten.
+    /// Parameter-Record, weil 5 Eingabewerte die projektweite <c>MaxMethodParameterCount: 4</c>-
+    /// Grenze ueberschreiten wuerden.
     /// </summary>
-    public static (Solution solution, bool changed) Run(
+    internal static (Solution solution, bool changed) Run(
         Solution current,
         string? solutionDir,
-        Dictionary<string, McpFileState> fileState,
-        Action<string> writeWarn)
+        McpCodeGraphServerRefreshParameters p)
     {
         var updated = current;
         var anyChanged = false;
-        var removedIds = RemoveDeletedDocuments(ref updated, solutionDir, fileState, ref anyChanged);
-        anyChanged |= SweepForNewFiles(ref updated, solutionDir, fileState, writeWarn);
-        RefreshModifiedDocuments(ref updated, solutionDir, removedIds, fileState, writeWarn, ref anyChanged);
+        var removedIds = RemoveDeletedDocuments(ref updated, solutionDir, p.FileState, ref anyChanged);
+        anyChanged |= SweepForNewFiles(ref updated, solutionDir, p.FileState, p.WriteWarn, p.ShouldSweep);
+        RefreshModifiedDocuments(ref updated, solutionDir, removedIds, p.FileState, p.WriteWarn, ref anyChanged);
         return (updated, anyChanged);
     }
 
@@ -70,8 +76,10 @@ internal static class McpCodeGraphServerRefresh
         ref Solution updated,
         string? solutionDir,
         Dictionary<string, McpFileState> fileState,
-        Action<string> writeWarn)
+        Action<string> writeWarn,
+        Func<bool> shouldSweep)
     {
+        if (!shouldSweep()) return false;
         if (string.IsNullOrEmpty(solutionDir) || !Directory.Exists(solutionDir)) return false;
 
         var knownPaths = BuildKnownPathSet(updated);

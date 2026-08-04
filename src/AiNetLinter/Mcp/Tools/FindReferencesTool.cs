@@ -33,6 +33,7 @@ internal static class FindReferencesTool
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string symbolIdentifier, int maxResults, CancellationToken ct)
     {
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 

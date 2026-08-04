@@ -1,5 +1,8 @@
 #nullable enable
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Output;
@@ -39,10 +42,24 @@ internal sealed record McpCodeGraphServerOptions
     public bool UsedDefaultConfig { get; init; }
 
     /// <summary>
-    /// Factory-Methode, kapselt die ehemaligen 5 Parameter in einem Record, damit
-    /// <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) nicht verletzt wird.
-    /// Existierende Call-Sites koennen <see cref="McpCodeGraphServerOptions"/> auch direkt
-    /// via <c>new McpCodeGraphServerOptions { ... }</c> konstruieren, sobald der
+    /// Optionaler Hintergrund-Loader: liefert er eine Solution, startet der Server den
+    /// Load in einem <see cref="Task"/> und beantwortet Tool-Aufrufe waehrend dieser Zeit
+    /// mit <see cref="McpToolResults.Loading"/>. <see langword="null"/> (Default)
+    /// aktiviert den klassischen synchronen Pfad fuer Tests und Backward-Compat —
+    /// <see cref="McpCodeGraphServer"/> uebernimmt dann den uebergebenen
+    /// <see cref="Catalog"/> sofort. Setzt <c>McpServerCommand</c> den Hintergrund-Pfad
+    /// aktiv, behaelt der Konstruktor die uebrigen Optionen (Config, Console, MaxLineCount)
+    /// unveraendert.
+    /// </summary>
+    public Func<CancellationToken, Task<SourceFileCatalog?>>? LoadFunc { get; init; }
+
+    /// <summary>
+    /// Factory-Methode, die die Konfigurations-Eingaenge in einem Parameter-Record bündelt,
+    /// damit <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) eingehalten wird
+    /// und kuenftige Properties additiv am Options-Record wachsen koennen, ohne die
+    /// Factory-Signatur zu aendern. Existierende Call-Sites koennen
+    /// <see cref="McpCodeGraphServerOptions"/> auch direkt via
+    /// <c>new McpCodeGraphServerOptions { ... }</c> konstruieren, sobald der
     /// <c>From(...)</c>-Einstiegspunkt nicht mehr gebraucht wird.
     /// </summary>
     public static McpCodeGraphServerOptions From(McpCodeGraphServerOptionsFromParameters p)
@@ -59,9 +76,10 @@ internal sealed record McpCodeGraphServerOptions
 }
 
 /// <summary>
-/// Parameter-Record fuer <see cref="McpCodeGraphServerOptions.From"/>. Fasst die
-/// ehemalige 5-Parameter-Signatur zusammen, damit <c>MaxMethodParameterCount: 4</c>
-/// eingehalten wird.
+/// Parameter-Record fuer <see cref="McpCodeGraphServerOptions.From"/>. Bündelt die
+/// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
+/// (siehe <c>AiNetLinter.mdc</c>) fuer die Factory eingehalten wird und kuenftige
+/// Properties additiv wachsen koennen.
 /// </summary>
 internal sealed record McpCodeGraphServerOptionsFromParameters(
     SourceFileCatalog? Catalog,

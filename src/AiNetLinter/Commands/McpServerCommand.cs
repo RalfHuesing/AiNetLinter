@@ -24,7 +24,9 @@ internal static class McpServerCommand
     /// <summary>
     /// Loest die Ziel-Solution auf, laedt sie (bester Versuch, kein Absturz bei Fehlschlag) und
     /// startet danach den MCP-Server mit dem in diesem Step registrierten Tool-Set (aktuell
-    /// nur <c>find_symbol</c>, siehe <see cref="McpServerOptionsFactory"/>).
+    /// nur <c>find_symbol</c>, siehe <see cref="McpServerOptionsFactory"/>). Der Solution-Load
+    /// laeuft im Hintergrund — der MCP-Transport antwortet auf <c>initialize</c> sofort, Tools
+    /// waehrend des Loads reagieren mit <see cref="McpToolResults.Loading"/>.
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
@@ -39,14 +41,21 @@ internal static class McpServerCommand
             c.WriteError($"[WARN]: Keine rules.json neben der Solution gefunden ({solutionDir}); get_violations laeuft mit Default-Regeln.");
         }
 
-        var catalog = await TryLoadSolutionAsync(solutionPath, ct, c);
-        using var mcpState = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(
-                Catalog: catalog,
-                Console: c,
-                MaxLineCount: ResolveMaxLineCount(args, resolvedConfigPath),
-                Config: ResolveConfig(args, resolvedConfigPath),
-                UsedDefaultConfig: resolvedConfigPath is null)));
+        // LoadFunc deferriert den synchronen Wait auf MSBuildWorkspace.OpenSolutionAsync in
+        // einen Hintergrund-Task, den McpCodeGraphServer selbst startet. So blockiert der
+        // MCP-Transport-Handshake nicht mehr auf der Loesungs-Ladezeit.
+        var maxLineCount = ResolveMaxLineCount(args, resolvedConfigPath);
+        var config = ResolveConfig(args, resolvedConfigPath);
+        var usedDefaultConfig = resolvedConfigPath is null;
+        using var mcpState = new McpCodeGraphServer(new McpCodeGraphServerOptions
+        {
+            Catalog = null,
+            Console = c,
+            MaxLineCount = maxLineCount,
+            Config = config,
+            UsedDefaultConfig = usedDefaultConfig,
+            LoadFunc = innerCt => TryLoadSolutionAsync(solutionPath, innerCt, c),
+        });
 
         var serverOptions = McpServerOptionsFactory.Create(mcpState);
         var transport = new StdioServerTransport(serverOptions);

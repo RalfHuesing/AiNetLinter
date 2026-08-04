@@ -41,6 +41,7 @@ internal static class FindSymbolTool
     {
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
 
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
