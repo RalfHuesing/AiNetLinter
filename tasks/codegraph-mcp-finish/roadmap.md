@@ -3,7 +3,7 @@ status: active  # active | done
 task: codegraph-mcp-finish
 derived_from: Konzept.md
 created_at: 2026-08-03
-last_updated: 2026-08-04  # step-010-Plan geschrieben: EPIC-05 (Last-Fixture + Performance-Fixes) als naechstes offen, EPIC-04-Detail um step-009/fix-01 erweitert
+last_updated: 2026-08-04  # step-010 abgeschlossen (EPIC-05 abgehakt, Kritiker approved mit 2 MINOR + TD-008); EPIC-06 (B.6 + B.7) als naechstes offen → step-011 (in Planung)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -179,19 +179,33 @@ obsolet markiert) — kein starres Vorab-Dokument.
       `McpCodeGraphServerRefresh.cs:188-196` (analog `TryAddDocument`,
       `ainetlinter-disable EnforceNoSilentCatch`-Suppression entfernt).
       Volllauf 1192/1192 grün, kein TD-005-Flake.
-- [ ] EPIC-05: Last-Fixture + Performance-Fixes — generierte
+- [x] EPIC-05: Last-Fixture + Performance-Fixes — generierte
       Last-Fixture als Skalierungsnachweis inkl. Messlauf (B.3, bewusst
       **vor** B.4/B.5, damit deren Umsetzung gegen echte Zahlen erfolgt),
       Kaltstart-Entkopplung (Transport zuerst, Solution-Load im
       Hintergrund, dritter "lädt noch"-Zustand, B.4), Staleness-Sweep
       über Verzeichnis-`mtime` kurzschließen (B.5, kombinierbar mit
-      B.2-Sweep-Mechanismus). Bezug: Konzept.md „Muss-Haben B", Punkte
-      3-5. **→ step-010** (in Planung).
+      B.2-Sweep-Mechanismus). **→ step-010** (approved mit 2 MINOR +
+      TD-008, Build 0/0, Volllauf 1199/1199 in 2:12, kein TD-005-Flake
+      reproduziert). B.3-Fixture-Generierung erzeugt valide
+      `MSBuildWorkspace.OpenSolutionAsync`-Targets, gemessen Cold-Start
+      0,70 s (10k-LOC) und 1k/10k-Stufen, B.4-Drei-Zustands-Lifecycle mit
+      `ServerLoadState`-Enum (Loading/Loaded/LoadFailed) und
+      `McpToolResults.Loading()`-Antwort in allen 9 Tool-Klassen, B.5
+      mtime-Cache (`HasSolutionDirChanged` + rekursives
+      `ComputeMaxDirMtimeUtc`, in B.2-Sweep integriert via
+      `shouldSweep`-Parameter). TD-005-Sanity (Gate 4→6 Slots, 60s
+      Timeout) und TD-007-Mitnahme (XML-Doc-Sanierung in
+      `McpCodeGraphServerOptions.cs:42-46 + 62-64`) erledigt. Zwei MINOR:
+      XML-Doc-Cleanup in `FindSymbolTool.cs:14-24` (offen) und
+      TD-005/TD-007-Status nicht in `tech-debt.md` geschlossen (offen —
+      in step-011-Fix nachzuholen, Aufwand je 1 Min.). Bezug: Konzept.md
+      „Muss-Haben B", Punkte 3-5.
 - [ ] EPIC-06: Robustheit & Observability — eigene `ILintConsole` für
       den MCP-Modus, die stdout strukturell als reinen Protokollkanal
       schützt, plus E2E-Test für JSON-RPC-Framing (B.6); Opt-in
       Call-Log `--mcp-log` (B.7). Bezug: Konzept.md „Muss-Haben B",
-      Punkte 6-7.
+      Punkte 6-7. **→ step-011** (in Planung).
 - [ ] EPIC-07: Restliche Tech-Debt-Einträge (Muss-Haben D) — TD-001
       (ungenutzte transitive Paket-Referenz), TD-002 (Subprozess-E2E-Test
       ohne Fixture-Pool, deckt sich mit F.2), TD-004 (Footprint-Druck auf
