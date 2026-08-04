@@ -5,7 +5,7 @@ started_at: 2026-08-03
 last_updated: 2026-08-04
 rules_dir: .agents/rules
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-009 (open, EPIC-04 geplant, rules.json-Auto-Discovery B.1 + Verzeichnis-Sweep B.2)
+current_step: step-009 (in_progress, Coder-Aufruf)
 ---
 
 # Task State: codegraph-mcp-finish
@@ -14,7 +14,7 @@ current_step: step-009 (open, EPIC-04 geplant, rules.json-Auto-Discovery B.1 + V
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 1 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-009` (open, EPIC-04 geplant)
+- **Aktueller Schritt:** `step-009` (in_progress, Coder-Aufruf)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-03
@@ -36,7 +36,7 @@ eine Zeile.>
 | step-007 | EPIC-02 | done | Einheit-011-Abschluss: Verifikation + nachgeholtes Kritiker-Review | 1/3 | 7b3f193 | issues → fix-01 approved | 7b3f193, 830b513, 831b2d3, 7f23841, cf3d7ac, 48871af, (review-commit) |
 | step-007/fix-01 | EPIC-02 | done | TD-Referenzen + abgeschnittene Satzreste aus 3 Produktionsdateien entfernen (Rules §5-Konformität) | (1/3) | cf3d7ac | approved | cf3d7ac, 48871af, (review-commit) |
 | step-008 | EPIC-03 | done | ILinterEngineConfig-Interface extrahieren, PathOverride-Liste auf Rest reduzieren (Muss-Haben C, TD-008/TD-010) | 0/3 | fd395c2 | approved | fd395c2, be6ff6a, 8d4e9c3, (review-commit) |
-| step-009 | EPIC-04 | open | rules.json-Auto-Discovery (B.1) + Verzeichnis-Sweep für neue/gelöschte .cs-Dateien (B.2) — silent-falsche Tool-Antworten beheben (Muss-Haben B, Punkte 1-2) | 0/3 | (pending) | (pending) | (pending) |
+| step-009 | EPIC-04 | in_progress | rules.json-Auto-Discovery (B.1) + Verzeichnis-Sweep für neue/gelöschte .cs-Dateien (B.2) — silent-falsche Tool-Antworten beheben (Muss-Haben B, Punkte 1-2) | 0/3 | (pending) | (pending) | (pending) |
 
 ## Config (optional)
 
