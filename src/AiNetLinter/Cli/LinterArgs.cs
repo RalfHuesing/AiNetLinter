@@ -227,7 +227,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals || McpServer;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals || McpServer || SyncAgentRulesOnly;
 
     private string? ValidateIgnoreSuppressions()
     {

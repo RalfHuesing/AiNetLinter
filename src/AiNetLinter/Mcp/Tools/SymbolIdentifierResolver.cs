@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Kleine, reine Parsing-/Aufloesungs-Helfer fuer <see cref="FindReferencesTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="FindReferencesTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c> nicht durch reine Hilfslogik unnoetig waechst, waehrend
+/// (siehe <c>AiNetLinter.mdc</c>) nicht durch reine Hilfslogik unnoetig waechst, waehrend
 /// <see cref="McpCodeGraphServer"/> (Parameter von <see cref="FindReferencesTool.ExecuteAsync"/>)
 /// bereits allein einen erheblichen transitiven Anteil beitraegt.
 /// </summary>

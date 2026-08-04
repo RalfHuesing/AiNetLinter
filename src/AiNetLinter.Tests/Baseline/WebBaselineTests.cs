@@ -90,10 +90,10 @@ public sealed class WebBaselineTests
             Assert.Equal(1, auditResult.ExitCode);
             Assert.Contains("CSS_MaxCssLineCount", auditResult.Output);
 
-            // 6. Baseline should have been updated with the new checksum
-            var baselineAfter = BaselineReader.Read(baselinePath);
-
-            // 7. Run audit again - should pass because the baseline has been updated to include the change
+            // 6. Run audit again - the updated baseline now includes the changed checksum, so
+            //    the second audit reports no violations. This implicitly verifies that the
+            //    baseline file was updated (no need to re-read the JSON for an explicit assert,
+            //    the audit-result invariant is stronger).
             var secondAuditResult = await CliProcessRunner.RunLinterAsync(
                 $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --baseline \"{baselinePath}\"");
             Assert.Equal(0, secondAuditResult.ExitCode);

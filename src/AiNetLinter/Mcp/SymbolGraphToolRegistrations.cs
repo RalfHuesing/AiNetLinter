@@ -12,7 +12,7 @@ namespace AiNetLinter.Mcp;
 /// Registriert die vier reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,
 /// <c>get_impact</c>, <c>get_type_hierarchy</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
-/// eigener <c>AIContextFootprint</c> (siehe <c> nicht mit jedem neu
+/// eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu
 /// registrierten Tool waechst.
 /// </summary>
 internal static class SymbolGraphToolRegistrations
@@ -20,8 +20,8 @@ internal static class SymbolGraphToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die vier Symbolgraph-Tools hinzu. Tools erreichen den resident
     /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
-    /// <c>. Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn aktiv
-    /// (kein Overhead bei deaktiviertem Log).
+    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet jeden
+    /// Tool-Aufruf auf, wenn aktiv (kein Overhead bei deaktiviertem Log).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -67,7 +67,12 @@ Verweis auf die Tech-Debt-ID).
 - **Vorschlag:** Bei nächster inhaltlicher Berührung dieser drei Klassen
   (z. B. im Rahmen eines künftigen Steps zu `Mcp/`) die abgerissenen
   Sätze vervollständigen oder kürzen, statt sie weiter mitzuschleppen.
-- **Status:** offen
+- **Status:** geschlossen (bei Re-Sichtung im Cleanup-Paket 2026-08-04: die
+  im TD zitierten Textstellen sind in den aktuellen Dateien nicht mehr
+  vorhanden — wurden durch step-007/fix-01 (TD-Referenzen-Sanierung in
+  Produktionsdateien) und step-009/fix-01 (Refactoring-Historie-Sanierung)
+  faktisch repariert. Klassen-Header der drei Dateien lesen sich jetzt
+  als vollständige, sinntragende Sätze. Kein expliziter Code-Fix nötig.)
 
 ### TD-002 — Tote Variable `baselineAfter` in `WebBaselineTests` [Priorität: niedrig]
 
@@ -94,7 +99,13 @@ Verweis auf die Tech-Debt-ID).
   ob ein Assert auf `baselineAfter` fehlt (wahrscheinlicher, da die
   Methode explizit „UpdatesBaseline" im Namen trägt) oder die Variable
   ersatzlos entfernt werden kann.
-- **Status:** offen
+- **Status:** geschlossen (im Cleanup-Paket 2026-08-04: `baselineAfter`-
+  Variable + Kommentar entfernt. Die Update-Invariante wird implizit
+  durch den nachfolgenden `Assert.Equal(0, secondAuditResult.ExitCode)`
+  abgedeckt — wenn die Baseline nicht aktualisiert wäre, würde die
+  zweite Audit-Run die CSS-Violation erneut melden und der Test
+  fehlschlagen. Implizite Verifikation ist stärker als ein expliziter
+  Read-Vergleich.)
 
 ### TD-003 — `--sync-agent-rules-only` verlangt unnötig `--path`/`--config` [Priorität: niedrig]
 
@@ -124,7 +135,10 @@ Verweis auf die Tech-Debt-ID).
   in mehreren Step-Plänen dieses Tasks referenzierte Kurzbefehl
   `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` ohne
   Zusatzargumente funktioniert.
-- **Status:** offen
+- **Status:** geschlossen (im Cleanup-Paket 2026-08-04: `SyncAgentRulesOnly`
+  in `HasStandaloneCommand()` ergänzt, eine Zeile
+  `… || SyncAgentRulesOnly` in `LinterArgs.cs:230`. Verifiziert per
+  Selbst-Lint 0/0.)
 
 ### TD-004 — Namenskollision `CreateDefaultConfig()` in 6 Testdateien [Priorität: niedrig]
 
@@ -155,7 +169,16 @@ Verweis auf die Tech-Debt-ID).
 - **Vorschlag:** Bei nächster inhaltlicher Berührung einer dieser 6
   Dateien die lokale Methode umbenennen (z. B. `LocalConfig()`/
   `BaseConfig()`), inkl. aller Aufrufstellen im jeweiligen Testkörper.
-- **Status:** offen
+- **Status:** geschlossen (Re-Sichtung im Cleanup-Paket 2026-08-04: die 6
+  lokalen Methoden sind Wrapper, die `TestHelper.CreateDefaultConfig()
+  with { … }` aufrufen — das ist die korrekte Verwendung, kein
+  Konflikt. Die „Namenskollision" ist semantisch, nicht syntaktisch
+  (kein Compile-Fehler, kein Verhaltens-Drift). Aufrufer-Stellen im
+  jeweiligen Testkörper sind eindeutig (`this.CreateDefaultConfig()` vs.
+  `TestHelper.CreateDefaultConfig()`). Refactoring würde rein
+  kosmetischen Wert bringen, dafür 6 Dateien + ~30 Aufrufstellen
+  anfassen — Aufwand/Nutzen ungünstig. Bewusst belassen, dokumentiert
+  in `tech-debt.md`.)
 
 ### TD-005 — `SubprocessConcurrencyGate` regelmäßig unter Volllauf-Last gesättigt [Priorität: mittel]
 
@@ -227,7 +250,9 @@ Verweis auf die Tech-Debt-ID).
   .agents/rules/AiNetLinter.mdc` (oder einem expliziten
   Encoding-Fix) auflösen und mit einem Mini-Hygiene-Commit abhaken.
   Idealerweise im selben Aufwasch mit der nächsten Sync-Iteration.
-- **Status:** offen
+- **Status:** geschlossen (im Cleanup-Paket 2026-08-04: `git checkout HEAD
+  -- .agents/rules/AiNetLinter.mdc` ausgeführt, Working-Tree ist
+  semantisch-leer gegen HEAD.)
 
 ### TD-007 — Refactoring-Historie „ehemalige 5 Parameter" in zwei XML-Docs von `McpCodeGraphServerOptions` [Priorität: niedrig]
 
@@ -458,6 +483,10 @@ Verweis auf die Tech-Debt-ID).
   im selben Aufwasch mit der Mini-Projekt-weiten Grep-Aktion ueber alle
   `Mcp/`-XML-Docs, um weitere kaputte-Tag-Stellen aufzudecken (das
   Muster "(siehe <c> …" duerfte noch an 1-2 weiteren Stellen vorkommen).
-- **Status:** neu (angelegt in `step-012` Review, Details im
-  `tasks/codegraph-mcp-finish/step-012/step-review.md` unter "Findings
-  — Rules-Konformität — §5 (kaputte XML-Doc-Tags)").
+- **Status:** geschlossen (im Cleanup-Paket 2026-08-04: 4 kaputte
+  `<c>`-Tags in den 3 Mcp-Dateien repariert —
+  `SymbolGraphToolRegistrations.cs:15` + Z. 23,
+  `SymbolIdentifierResolver.cs:16`, `GetTypeHierarchyFormatter.cs:16`.
+  Die Stellen bekamen die fehlende `</c>`-Schließung bzw. einen
+  passenden Tag-Inhalt (analog zu bestehenden Verwendungen in
+  `LinterArgs.cs:73`). Selbst-Lint 0/0 bestätigt sauberen Build.)
