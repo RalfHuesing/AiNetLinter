@@ -227,6 +227,11 @@ internal static class CliOptionFactory
         Description = "Startet einen stdio-basierten MCP-Server (Model Context Protocol) statt eines Batch-Laufs. --path optional, Default: aktuelles Arbeitsverzeichnis.",
     };
 
+    internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
+    {
+        Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: deaktiviert. Pfad-Aufloesung: absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis. Beispiel: --mcp-log ./.mcp-log/calls.log",
+    };
+
     internal static Option<string[]> CreateIgnoreSuppressionsOption()
     {
         var opt = new Option<string[]>("--ignore-suppressions")

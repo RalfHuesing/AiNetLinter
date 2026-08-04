@@ -57,11 +57,49 @@ internal static class McpServerCommand
             LoadFunc = innerCt => TryLoadSolutionAsync(solutionPath, innerCt, c),
         });
 
-        var serverOptions = McpServerOptionsFactory.Create(mcpState);
-        var transport = new StdioServerTransport(serverOptions);
-        await using var server = McpServer.Create(transport, serverOptions);
-        await server.RunAsync(ct);
+        McpCallLog? callLog = null;
+        try
+        {
+            callLog = TryCreateCallLog(args.McpLogPath, solutionPath);
+
+            var serverOptions = McpServerOptionsFactory.Create(mcpState, callLog);
+            var transport = new StdioServerTransport(serverOptions);
+            await using var server = McpServer.Create(transport, serverOptions);
+            await server.RunAsync(ct);
+        }
+        finally
+        {
+            if (callLog is not null) await callLog.DisposeAsync();
+        }
         return 0;
+    }
+
+    /// <summary>
+    /// Loest den konfigurierten <c>--mcp-log</c>-Pfad auf und instanziiert bei Bedarf ein
+    /// <see cref="McpCallLog"/>. Absoluter Pfad gewinnt 1:1; ein leerer oder relativer Pfad wird
+    /// gegen das Solution-Verzeichnis aufgeloest (analog zu <c>cache/</c> neben der Solution,
+    /// damit das Log in der Solution-Wurzel landet, nicht im Installations-Verzeichnis des
+    /// Tools). Liefert <see langword="null"/>, wenn das Flag nicht gesetzt ist.
+    /// </summary>
+    internal static McpCallLog? TryCreateCallLog(string? mcpLogPath, string solutionPath)
+    {
+        if (string.IsNullOrWhiteSpace(mcpLogPath)) return null;
+
+        var resolved = ResolveMcpLogPath(mcpLogPath, solutionPath);
+        return new McpCallLog(resolved);
+    }
+
+    /// <summary>
+    /// Aufloesung des Call-Log-Pfads: absolut -> wie angegeben; relativ -> relativ zum
+    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Datei zur Solution gehoert
+    /// und nicht in das Installations-Verzeichnis des Tools wandert). GetFullPath normalisiert
+    /// zusaetzlich Separatoren, damit das Ergebnis konsistent fuer Tests und Konsumenten ist.
+    /// </summary>
+    internal static string ResolveMcpLogPath(string mcpLogPath, string solutionPath)
+    {
+        if (Path.IsPathRooted(mcpLogPath)) return mcpLogPath;
+        var solutionDir = Path.GetDirectoryName(solutionPath) ?? string.Empty;
+        return Path.GetFullPath(Path.Combine(solutionDir, mcpLogPath));
     }
 
     /// <summary>

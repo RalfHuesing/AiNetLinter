@@ -31,24 +31,29 @@ internal static class McpServerOptionsFactory
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
     /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler
+    /// <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn aktiv (kein Overhead
+    /// bei deaktiviertem Log, weil jede Registrierung ihren Lambda-Wrapper nur dann baut, wenn
+    /// das Log auch tatsaechlich gesetzt ist).
     /// </summary>
-    internal static McpServerOptions Create(McpCodeGraphServer mcpState)
+    internal static McpServerOptions Create(McpCodeGraphServer mcpState, McpCallLog? callLog = null)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions)
-            .WithToolCollection(BuildToolCollection(mcpState))
+            .WithToolCollection(BuildToolCollection(mcpState, callLog))
             .Build();
     }
 
-    private static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(McpCodeGraphServer mcpState)
+    private static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
-        SymbolGraphToolRegistrations.Register(tools, mcpState);
-        FileStructureToolRegistrations.Register(tools, mcpState);
-        AnalysisToolRegistrations.Register(tools, mcpState);
+        SymbolGraphToolRegistrations.Register(tools, mcpState, callLog);
+        FileStructureToolRegistrations.Register(tools, mcpState, callLog);
+        AnalysisToolRegistrations.Register(tools, mcpState, callLog);
 
         return tools;
     }

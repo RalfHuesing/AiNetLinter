@@ -164,6 +164,12 @@ public sealed class LinterArgs
     public bool McpServer { get; init; }
 
     /// <summary>
+    /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). <c>null</c> = Log deaktiviert (Default).
+    /// Pfad-Aufloesung: absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis.
+    /// </summary>
+    public string? McpLogPath { get; init; }
+
+    /// <summary>
     /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
     /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()

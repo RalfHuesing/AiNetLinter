@@ -24,6 +24,7 @@ internal static class CliCommandBuilder
             options.IncludeProjects, options.ExcludeProjects, options.IncludeNamespaces, options.ExcludeNamespaces,
             options.ExcludeTests, options.TestsOnly, options.PublicOnly, options.IgnoreSuppressions,
             options.McpServer,
+            options.McpLog,
         };
 
         return (root, options);
@@ -69,7 +70,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateTestsOnlyOption(),
             CliOptionFactory.CreatePublicOnlyOption(),
             CliOptionFactory.CreateIgnoreSuppressionsOption(),
-            CliOptionFactory.CreateMcpServerOption());
+            CliOptionFactory.CreateMcpServerOption(),
+            CliOptionFactory.CreateMcpLogOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
@@ -126,7 +128,8 @@ internal static class CliCommandBuilder
             TestsOnly: parseResult.GetValue(options.TestsOnly),
             PublicOnly: parseResult.GetValue(options.PublicOnly),
             IgnoreSuppressions: ignoreSuppressions,
-            McpServer: parseResult.GetValue(options.McpServer));
+            McpServer: parseResult.GetValue(options.McpServer),
+            McpLog: parseResult.GetValue(options.McpLog));
     }
 
     private static System.Collections.Generic.IReadOnlyList<string> ParseCommaSeparated(string[]? values)

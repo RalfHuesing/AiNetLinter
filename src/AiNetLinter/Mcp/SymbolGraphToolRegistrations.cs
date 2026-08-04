@@ -1,7 +1,9 @@
 #nullable enable
 
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -17,61 +19,142 @@ internal static class SymbolGraphToolRegistrations
 {
     /// <summary>
     /// Fuegt <paramref name="tools"/> die vier Symbolgraph-Tools hinzu. Tools erreichen den resident
-    /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein DI-Container (siehe
-    /// <c>.
+    /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
+    /// <c>. Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn aktiv
+    /// (kein Overhead bei deaktiviertem Log).
     /// </summary>
-    internal static void Register(McpServerPrimitiveCollection<McpServerTool> tools, McpCodeGraphServer mcpState)
+    internal static void Register(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog = null)
+    {
+        AddFindSymbol(tools, mcpState, callLog);
+        AddFindReferences(tools, mcpState, callLog);
+        AddGetImpact(tools, mcpState, callLog);
+        AddGetTypeHierarchy(tools, mcpState, callLog);
+    }
+
+    private static void AddFindSymbol(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            (string namePattern, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
-                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct),
+            async (string namePattern, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct);
+                }
+                await using var scope = callLog.StartRecording("find_symbol", $"{namePattern}|{kind}|{maxResults}");
+                var result = await FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct);
+                scope.Complete(result);
+                return result;
+            },
             new McpServerToolCreateOptions
             {
                 Name = "find_symbol",
-                Description = "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
-                    "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-                    "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen. " +
-                    "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-                    "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.",
+                Description = FindSymbolDescription,
             }));
+    }
 
+    private const string FindSymbolDescription =
+        "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
+        "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
+        "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen. " +
+        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+
+    private static void AddFindReferences(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
         tools.Add(McpServerTool.Create(
-            (string symbolIdentifier, int maxResults = 50, CancellationToken ct = default) =>
-                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct),
+            async (string symbolIdentifier, int maxResults = 50, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct);
+                }
+                await using var scope = callLog.StartRecording("find_references", $"{symbolIdentifier}|{maxResults}");
+                var result = await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct);
+                scope.Complete(result);
+                return result;
+            },
             new McpServerToolCreateOptions
             {
                 Name = "find_references",
-                Description = "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
-                    "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
-                    "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
-                    "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die " +
-                    "Gesamt-Trefferzahl.",
+                Description = FindReferencesDescription,
             }));
+    }
 
+    private const string FindReferencesDescription =
+        "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
+        "oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
+        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
+        "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die " +
+        "Gesamt-Trefferzahl.";
+
+    private static void AddGetImpact(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
         tools.Add(McpServerTool.Create(
-            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, CancellationToken ct = default) =>
-                GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct),
+            async (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct);
+                }
+                await using var scope = callLog.StartRecording("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}");
+                var result = await GetImpactTool.ExecuteAsync(mcpState, gitRef, symbolIdentifier, maxResults, ct);
+                scope.Complete(result);
+                return result;
+            },
             new McpServerToolCreateOptions
             {
                 Name = "get_impact",
-                Description = "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
-                    "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
-                    "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
-                    ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
-                    "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-                    "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.",
+                Description = GetImpactDescription,
             }));
+    }
 
+    private const string GetImpactDescription =
+        "Findet Aufrufstellen geaenderter C#-Signaturen. Entweder gitRef " +
+        "(Git-Commit-Ref, leer = uncommittete Aenderungen) ODER symbolIdentifier " +
+        "(Datei:Zeile:Spalte oder qualifizierter Name) angeben, nie beide. Deckt nur " +
+        ".cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
+        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+
+    private static void AddGetTypeHierarchy(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
         tools.Add(McpServerTool.Create(
-            (string typeIdentifier, CancellationToken ct = default) =>
-                GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct),
+            async (string typeIdentifier, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct);
+                }
+                await using var scope = callLog.StartRecording("get_type_hierarchy", typeIdentifier);
+                var result = await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct);
+                scope.Complete(result);
+                return result;
+            },
             new McpServerToolCreateOptions
             {
                 Name = "get_type_hierarchy",
-                Description = "Liefert Basisklassen, implementierte Interfaces und (abgeleitete " +
-                    "Klassen bzw. implementierende Typen) eines C#-Typ-Identifikators (Datei:Zeile:" +
-                    "Spalte oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
-                    "keine .js/.razor/.xaml/.html/.css-Dateien.",
+                Description = GetTypeHierarchyDescription,
             }));
     }
+
+    private const string GetTypeHierarchyDescription =
+        "Liefert Basisklassen, implementierte Interfaces und (abgeleitete " +
+        "Klassen bzw. implementierende Typen) eines C#-Typ-Identifikators (Datei:Zeile:" +
+        "Spalte oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
+        "keine .js/.razor/.xaml/.html/.css-Dateien.";
 }

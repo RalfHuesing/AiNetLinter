@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Output;
 
 namespace AiNetLinter;
 
@@ -40,7 +41,7 @@ public static class Program
 
                 // Schneller Pfad: --mcp-server. Kein stdout-Header, da das JSON-RPC-Framing
                 // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
-                if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token);
+                if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
 
                 if (linterArgs.Docs == null && linterArgs.MapType == null
                     && linterArgs.EvalType == null && !linterArgs.ListEvals)
@@ -108,6 +109,7 @@ public static class Program
             PublicOnly = parsed.PublicOnly,
             IgnoreSuppressions = parsed.IgnoreSuppressions,
             McpServer = parsed.McpServer,
+            McpLogPath = parsed.McpLog,
         };
     }
 
