@@ -1,0 +1,120 @@
+#nullable enable
+
+using System.Collections.Generic;
+using System.Text;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
+namespace AiNetLinter.Mcp;
+
+/// <summary>
+/// Registriert die MCP-Resource <c>ainetlinter://overview</c>: ein kurzer, bei jedem
+/// <c>resources/read</c> frisch generierter Markdown-Ueberblick fuer Agenten, die den Server
+/// noch nicht kennen — welche Tools es gibt (Kurzbeschreibung, nicht die volle Tool-Description)
+/// und mit welcher Solution/Config-Quelle der Prozess tatsaechlich laeuft (z. B. ob eine
+/// projekteigene <c>rules.json</c> gefunden wurde oder der Server mit Default-Regeln laeuft).
+/// Ergaenzt <c>tools/list</c>, ersetzt es nicht — dort stehen die vollstaendigen
+/// Parameter-Schemas.
+/// </summary>
+internal static class OverviewResourceRegistration
+{
+    private const string OverviewUri = "ainetlinter://overview";
+
+    /// <summary>
+    /// Kurzbeschreibungen aller 10 Tools (ein Satz, keine Parameter-Details — die liefert
+    /// <c>tools/list</c>). Bewusst hier gepflegt statt aus den vollen Tool-Descriptions
+    /// abgeleitet (die sind fuer diesen Zweck zu lang) — <c>OverviewResourceRegistrationTests</c>
+    /// prueft die Namens-Parität gegen die tatsaechlich registrierten Tools, damit ein neues
+    /// oder umbenanntes Tool hier nicht stillschweigend fehlt.
+    /// </summary>
+    internal static readonly IReadOnlyList<(string Name, string Summary)> ToolSummaries =
+    [
+        ("find_symbol", "Sucht C#-Symbole (Klasse/Methode/Property/Interface) per Substring im Namen."),
+        ("find_references", "Findet Aufrufstellen eines C#-Symbols."),
+        ("get_impact", "Findet Aufrufstellen geaenderter Signaturen — per Git-Diff (Default: uncommittete Aenderungen) oder fuer ein einzelnes Symbol."),
+        ("get_type_hierarchy", "Liefert Basisklassen, Interfaces, abgeleitete Typen und heuristische DI-Registrierungen eines Typs."),
+        ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer C#-Datei."),
+        ("get_symbol_body", "Liefert den Source-Body eines C#-Symbols per stabiler ID oder Datei:Zeile:Spalte."),
+        ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
+        ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
+        ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
+        ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
+    ];
+
+    internal static void Register(McpServerResourceCollection resources, McpCodeGraphServer mcpState)
+    {
+        resources.Add(McpServerResource.Create(
+            () => BuildResult(mcpState),
+            new McpServerResourceCreateOptions
+            {
+                UriTemplate = OverviewUri,
+                Name = "overview",
+                Description = "Kurzueberblick fuer Agenten: alle Tools in einem Satz je Zeile, " +
+                    "plus aktueller Server-Status (geladene Solution, verwendete rules.json " +
+                    "oder Default-Regeln). Bei jedem Read frisch generiert.",
+                MimeType = "text/markdown",
+            }));
+    }
+
+    private static ReadResourceResult BuildResult(McpCodeGraphServer mcpState)
+    {
+        return new ReadResourceResult
+        {
+            Contents =
+            [
+                new TextResourceContents
+                {
+                    Uri = OverviewUri,
+                    MimeType = "text/markdown",
+                    Text = BuildOverviewText(mcpState),
+                },
+            ],
+        };
+    }
+
+    /// <summary>Reine Text-Bau-Funktion, direkt unit-testbar ohne MCP-Protokoll-Umweg.</summary>
+    internal static string BuildOverviewText(McpCodeGraphServer mcpState)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# AiNetLinter MCP-Server — Kurzueberblick");
+        sb.AppendLine();
+        sb.AppendLine(
+            "AiNetLinter ist ein Roslyn-basierter C#-Linter. In diesem Prozess laeuft er als " +
+            "stdio-MCP-Server und macht die geladene .NET-Solution ueber die unten gelisteten " +
+            "Tools abfragbar.");
+        sb.AppendLine();
+        sb.AppendLine("## Server-Status (dieser Prozess)");
+        sb.AppendLine();
+        sb.AppendLine($"- Solution: {DescribeSolution(mcpState)}");
+        sb.AppendLine($"- Regeln: {DescribeConfig(mcpState)}");
+        sb.AppendLine();
+        sb.AppendLine($"## Tools ({ToolSummaries.Count})");
+        sb.AppendLine();
+        foreach (var (name, summary) in ToolSummaries)
+        {
+            sb.AppendLine($"- `{name}` — {summary}");
+        }
+        sb.AppendLine();
+        sb.AppendLine(
+            "Vollstaendige Parameter-Schemas liefert `tools/list`; diese Resource ist nur die " +
+            "Kurzuebersicht.");
+        return sb.ToString().TrimEnd();
+    }
+
+    private static string DescribeSolution(McpCodeGraphServer mcpState)
+    {
+        return mcpState.LoadState switch
+        {
+            ServerLoadState.Loading => "wird noch geladen",
+            ServerLoadState.LoadFailed => "Laden fehlgeschlagen — jeder Tool-Call liefert SOLUTION_NOT_LOADED",
+            _ => mcpState.GetCurrentSolution()?.FilePath ?? "unbekannt",
+        };
+    }
+
+    private static string DescribeConfig(McpCodeGraphServer mcpState)
+    {
+        return mcpState.UsedDefaultConfig
+            ? "keine rules.json gefunden — Server laeuft mit eingebauten Default-Regeln, nicht mit einer projekteigenen Konfiguration"
+            : mcpState.ResolvedConfigPath ?? "unbekannt";
+    }
+}

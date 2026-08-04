@@ -54,6 +54,7 @@ internal static class McpServerCommand
             MaxLineCount = maxLineCount,
             Config = config,
             UsedDefaultConfig = usedDefaultConfig,
+            ResolvedConfigPath = resolvedConfigPath,
             LoadFunc = innerCt => TryLoadSolutionAsync(solutionPath, innerCt, c),
         });
 

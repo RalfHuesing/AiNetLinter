@@ -286,6 +286,10 @@ Konkret:
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
 
+### Erstorientierung: Resource `ainetlinter://overview`
+
+Ein Agent, der den Server zum ersten Mal sieht, kann per `resources/read` (`{"uri": "ainetlinter://overview"}`) einen kurzen Ueberblick abrufen: alle Tools in einem Satz sowie den aktuellen Server-Status (geladene Solution, tatsaechlich verwendete `rules.json` oder Hinweis auf Default-Regeln). Details: [Docs/agent-api.md#resource-ainetlinteroverview](agent-api.md#resource-ainetlinteroverview).
+
 ### Mehrere parallele Server-Instanzen
 
 Pro Solution ein eigener Server-Prozess — die Cache-Isolation zwischen verschiedenen Solutions ist SHA-256-basiert (siehe Konzept und `AnalysisCacheManager`), der Nutzer braucht nichts zu konfigurieren. Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache, weil `get_violations` den Disk-Cache umgeht.

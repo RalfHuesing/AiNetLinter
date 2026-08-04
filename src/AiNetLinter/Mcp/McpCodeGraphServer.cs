@@ -41,6 +41,7 @@ internal sealed class McpCodeGraphServer : IDisposable
         MaxLineCount = options.MaxLineCount;
         Config = options.Config;
         UsedDefaultConfig = options.UsedDefaultConfig;
+        ResolvedConfigPath = options.ResolvedConfigPath;
 
         if (options.LoadFunc is { } loadFunc)
         {
@@ -81,6 +82,10 @@ internal sealed class McpCodeGraphServer : IDisposable
 
     /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>rules.json</c> gefunden).</summary>
     public bool UsedDefaultConfig { get; }
+
+    /// <summary>Pfad der tatsaechlich geladenen <c>rules.json</c> (explizit oder auto-discovered),
+    /// oder <see langword="null"/> wenn <see cref="UsedDefaultConfig"/> <see langword="true"/> ist.</summary>
+    public string? ResolvedConfigPath { get; }
 
     /// <summary>Konsolen-Kanal, an den der MCP-Server selbst loggt.</summary>
     public ILintConsole Console => _console;

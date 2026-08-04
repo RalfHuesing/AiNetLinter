@@ -410,7 +410,12 @@
     },
     "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2810
+        "MaxAIContextFootprint": 2830
+      }
+    },
+    "src/AiNetLinter/Mcp/McpCodeGraphServer.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2520
       }
     },
     "src/AiNetLinter/Mcp/McpServerOptionsFactory.cs": {
@@ -418,9 +423,14 @@
         "MaxAIContextFootprint": 2800
       }
     },
+    "src/AiNetLinter/Mcp/OverviewResourceRegistration.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2650
+      }
+    },
     "src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2850
+        "MaxAIContextFootprint": 2870
       }
     },
     "src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs": {

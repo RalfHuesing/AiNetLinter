@@ -26,7 +26,9 @@ internal static class McpServerOptionsFactory
         "get_file_skeleton, get_violations, get_symbol_body) arbeiten ausschliesslich auf " +
         "C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder " +
         ".css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne " +
-        "C#-Beschraenkung: get_index_scope, get_hotspots.";
+        "C#-Beschraenkung: get_index_scope, get_hotspots. Kurzueberblick ueber alle Tools " +
+        "und den aktuellen Server-Status (geladene Solution, verwendete rules.json oder " +
+        "Default-Regeln): Resource ainetlinter://overview per resources/read.";
 
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
@@ -42,7 +44,15 @@ internal static class McpServerOptionsFactory
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions)
             .WithToolCollection(BuildToolCollection(mcpState, callLog))
+            .WithResourceCollection(BuildResourceCollection(mcpState))
             .Build();
+    }
+
+    private static McpServerResourceCollection BuildResourceCollection(McpCodeGraphServer mcpState)
+    {
+        var resources = new McpServerResourceCollection();
+        OverviewResourceRegistration.Register(resources, mcpState);
+        return resources;
     }
 
     private static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(

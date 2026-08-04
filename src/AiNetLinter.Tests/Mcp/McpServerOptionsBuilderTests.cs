@@ -88,4 +88,27 @@ public sealed class McpServerOptionsBuilderTests
 
         Assert.Equal("1.2.3", options.ServerInfo!.Version);
     }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Build_WithoutResourceCollection_ProvidesEmptyCollection()
+    {
+        var options = new McpServerOptionsBuilder().Build();
+
+        Assert.NotNull(options.ResourceCollection);
+        Assert.Empty(options.ResourceCollection);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Build_WithResourceCollection_PropagatesToServerOptions()
+    {
+        var resources = new ModelContextProtocol.Server.McpServerResourceCollection();
+
+        var options = new McpServerOptionsBuilder()
+            .WithResourceCollection(resources)
+            .Build();
+
+        Assert.Same(resources, options.ResourceCollection);
+    }
 }

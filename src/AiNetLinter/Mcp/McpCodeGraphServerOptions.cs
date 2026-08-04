@@ -42,6 +42,15 @@ internal sealed record McpCodeGraphServerOptions
     public bool UsedDefaultConfig { get; init; }
 
     /// <summary>
+    /// Absoluter oder relativer Pfad der tatsaechlich geladenen <c>rules.json</c> — entweder
+    /// explizit per <c>--config</c> angegeben oder per Auto-Discovery neben der Solution
+    /// gefunden. <see langword="null"/>, wenn <see cref="UsedDefaultConfig"/> <see langword="true"/>
+    /// ist. Rein informativ (z. B. fuer die <c>ainetlinter://overview</c>-Resource) — die
+    /// eigentliche Config-Aufloesung ist bereits in <see cref="Config"/> abgeschlossen.
+    /// </summary>
+    public string? ResolvedConfigPath { get; init; }
+
+    /// <summary>
     /// Optionaler Hintergrund-Loader: liefert er eine Solution, startet der Server den
     /// Load in einem <see cref="Task"/> und beantwortet Tool-Aufrufe waehrend dieser Zeit
     /// mit <see cref="McpToolResults.Loading"/>. <see langword="null"/> (Default)
@@ -71,6 +80,7 @@ internal sealed record McpCodeGraphServerOptions
             MaxLineCount = p.MaxLineCount,
             Config = p.Config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
             UsedDefaultConfig = p.UsedDefaultConfig,
+            ResolvedConfigPath = p.ResolvedConfigPath,
         };
     }
 }
@@ -86,4 +96,5 @@ internal sealed record McpCodeGraphServerOptionsFromParameters(
     ILintConsole? Console = null,
     int MaxLineCount = 700,
     Config? Config = null,
-    bool UsedDefaultConfig = false);
+    bool UsedDefaultConfig = false,
+    string? ResolvedConfigPath = null);

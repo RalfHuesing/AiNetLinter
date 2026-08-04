@@ -22,6 +22,7 @@ internal sealed class McpServerOptionsBuilder
     private string? _serverVersion;
     private string _serverInstructions = string.Empty;
     private McpServerPrimitiveCollection<McpServerTool>? _toolCollection;
+    private McpServerResourceCollection? _resourceCollection;
 
     public McpServerOptionsBuilder WithServerName(string name)
     {
@@ -47,6 +48,12 @@ internal sealed class McpServerOptionsBuilder
         return this;
     }
 
+    public McpServerOptionsBuilder WithResourceCollection(McpServerResourceCollection resources)
+    {
+        _resourceCollection = resources;
+        return this;
+    }
+
     internal McpServerOptions Build()
     {
         return new McpServerOptions
@@ -58,6 +65,7 @@ internal sealed class McpServerOptionsBuilder
             },
             ServerInstructions = _serverInstructions,
             ToolCollection = _toolCollection ?? new McpServerPrimitiveCollection<McpServerTool>(),
+            ResourceCollection = _resourceCollection ?? new McpServerResourceCollection(),
         };
     }
 }
