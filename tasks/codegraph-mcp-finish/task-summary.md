@@ -18,12 +18,12 @@ reviewed_by: orchestrator  # globaler Kritiker (Planer-Empfehlung in self-review
 
 - **8/8 Epics done approved** (EPIC-01..08)
 - **12 Steps** (step-001..012, davon step-007/009/012 mit je einem `fix-01`)
-- **~45 Commits** auf `main`, kein Push (lokal)
-- **1241/1241 Tests grün** (Stand 2026-08-04 nach step-012/fix-01)
+- **~46 Commits** auf `main`, kein Push (lokal)
+- **1241/1241 Tests grün** (Stand 2026-08-04 nach Cleanup-Paket)
 - **0/0 Build** (Zero-Warning-Direktive eingehalten, `TreatWarningsAsErrors=true`)
 - **Selbst-Lint 0 Violations** auf eigenem Code (`dotnet run … -- --config rules.json --path .`)
 
-**Hinweis zur Entstehung:** Der ursprüngliche Plan sah 8 Epics in 8+ Steps + globalem Kritiker + `task-summary.md` vor. Tatsächlich umgesetzt: EPIC-01..08 in 12 Steps, davon 3 Fix-Runden. Der Token-Plan-Limit hat den Coder-Aufruf für step-012 unterbrochen; der Coder-Zwischenstand (Commit `93caa8a`, 32 Dateien, +1484/-139 Zeilen) wurde vom Nutzer gesichert. Der nachfolgende Smoke-Test-Drift-Fix (`b55b065`, 1 Datei) und alle step-012/fix-01-Findings (Commit `2e3a756`, 4 Dateien) wurden vom Orchestrator direkt ausgeführt, der globale Kritiker und dieses `task-summary.md` ebenfalls.
+**Hinweis zur Entstehung:** Der ursprüngliche Plan sah 8 Epics in 8+ Steps + globalem Kritiker + `task-summary.md` vor. Tatsächlich umgesetzt: EPIC-01..08 in 12 Steps, davon 3 Fix-Runden. Der Token-Plan-Limit hat den Coder-Aufruf für step-012 unterbrochen; der Coder-Zwischenstand (Commit `93caa8a`, 32 Dateien, +1484/-139 Zeilen) wurde vom Nutzer gesichert. Der nachfolgende Smoke-Test-Drift-Fix (`b55b065`, 1 Datei) und alle step-012/fix-01-Findings (Commit `2e3a756`, 4 Dateien) wurden vom Orchestrator direkt ausgeführt, der globale Kritiker und dieses `task-summary.md` ebenfalls. Im Nachgang wurde im **Cleanup-Paket 2026-08-04** (`dee2b96`) die letzten 6 offenen TD-Items (TD-001/002/003/004/006/013) geschlossen und `tasks/test-optimierung/` als Konzept-DoD-Abschluss entfernt.
 
 ## Roadmap-Status
 
@@ -71,26 +71,13 @@ reviewed_by: orchestrator  # globaler Kritiker (Planer-Empfehlung in self-review
 
 **Insgesamt 13 TD-Einträge (TD-001..TD-013).**
 
-### Status-Verteilung
+### Status-Verteilung (Stand 2026-08-04 nach Cleanup-Paket)
 
 | Status | Anzahl | Einträge |
 |---|---|---|
-| **geschlossen** | 6 | TD-005, TD-007, TD-008, TD-009, TD-010, TD-012 |
+| **geschlossen** | 12 | TD-001, TD-002, TD-003, TD-004, TD-005, TD-006, TD-007, TD-008, TD-009, TD-010, TD-012, TD-013 |
 | **zurückgestellt** | 1 | TD-011 |
-| **offen** | 6 | TD-001, TD-002, TD-003, TD-004, TD-006, TD-013 |
-
-### Offene Einträge nach Priorität
-
-| ID | Priorität | Bereich | Kurzfassung |
-|---|---|---|---|
-| TD-001 | niedrig | 3 Mcp-Testklassen | Abgeschnittene XML-Doc-Kommentare brechen mitten im Satz ab |
-| TD-002 | niedrig | `WebBaselineTests.cs:92` | Tote Variable `baselineAfter` (deklariert, nie assertet) |
-| TD-003 | niedrig | `LinterArgs.cs:223-224` | `--sync-agent-rules-only` verlangt unnötig `--path`/`--config` |
-| TD-004 | niedrig | 6 Testdateien | `CreateDefaultConfig()`-Namenskollision (lokal vs. `TestHelper`) |
-| TD-006 | niedrig | `.agents/rules/AiNetLinter.mdc` | UTF-8-BOM-Diskrepanz (Working-Tree-vs.-Index) |
-| TD-013 | niedrig | 3 Mcp-Dateien | Kaputte `<c>`-Tags in XML-Doc-Kommentaren |
-
-**Mittel-Priorität: 0 offen** (TD-005 mittel wurde in step-010 behoben).
+| **offen** | 0 | — |
 
 ### Zurückgestellte Einträge (mit Begründung)
 
@@ -128,14 +115,14 @@ reviewed_by: orchestrator  # globaler Kritiker (Planer-Empfehlung in self-review
 - [x] **Muss-Haben A (Einheit-011-Abschluss):** 6 Einheit-011-Commits + 9-Datei-PathOverride-Erweiterung reviewt, TD-009/TD-014/TD-019 nachgeholt
 - [x] **Muss-Haben C (`ILinterEngineConfig`-Refactor):** Interface extrahiert, PathOverride von 14 auf 2 Rest-Einträge reduziert
 - [x] **Muss-Haben B (P1-7):** Auto-Discovery, Verzeichnis-Sweep, Last-Fixture, Kaltstart-Entkopplung, mtime-Cache, McpLintConsole, --mcp-log alle umgesetzt
-- [x] **Muss-Haben D (Tech-Debt-Abschluss):** 4 von 5 TD-Items geschlossen, TD-011 mit Begründung zurückgestellt
+- [x] **Muss-Haben D (Tech-Debt-Abschluss):** 4 von 5 TD-Items in step-012 geschlossen, TD-011 mit Begründung zurückgestellt; **im Cleanup-Paket 2026-08-04** zusätzlich TD-001/002/003/004/006/013 (alle 6 verbliebenen offenen TD-Items) abgeschlossen → **12 von 13 TD-Items geschlossen, 1 zurückgestellt, 0 offen**
 - [x] **Muss-Haben E (Symbolgraph-Erweiterungen):** E.1 (get_symbol_body + stabile Symbol-IDs), E.2 (depth-Parameter), E.3 (DI-Hinweis) alle umgesetzt
-- [ ] **`tasks/test-optimierung/` löschen:** Letzter verbleibender Vorgänger-Ordner — separater Commit empfohlen (Konzept DoD, Abschluss-Kriterium)
+- [x] **`tasks/test-optimierung/` löschen:** Im Cleanup-Paket 2026-08-04 (`dee2b96`) entfernt
 - [x] **`Docs/ROADMAP.md` Zeilen 478-493 von „Geplant" auf tatsächlichen Stand:** Aktualisiert in step-010, step-011, step-012/fix-01
 - [x] **E.1-E.3 in `Docs/agent-api.md` ergänzt:** Aktualisiert in step-012
 - [x] **`Docs/integration.md` aktualisiert:** 9→10 Tools in step-012/fix-01, Symbol-Tool-Liste um `get_symbol_body` ergänzt
 
-**Verdict: `done`** — 9 von 10 Abschluss-Kriterien erfüllt; das letzte (Löschen `tasks/test-optimierung/`) ist ein 1-Zeilen-Commit, der außerhalb des Code-Task-Scopes liegt und vom Nutzer selbst durchgeführt werden kann.
+**Verdict: `done`** — alle 10 Abschluss-Kriterien erfüllt. `codegraph-mcp-finish` ist vollständig abgeschlossen.
 
 ## Modell-Info
 
