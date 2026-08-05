@@ -28,6 +28,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-002 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs:87-92` (`FormatBreakdown`) | niedrig | Produktionscode hartkodiert „Dateien" (Plural) für alle sechs Datei-Typ-Zeilen, unabhängig vom tatsächlichen Count — „1 Dateien" statt „1 Datei" bei genau einer Datei. |
 | TD-003 | `src/AiNetLinter.Tests` (Volllauf, `dotnet test AiNetLinter.slnx`) | mittel | Voller Testlauf stürzt in dieser Sandbox-Umgebung intermittierend mit „Testhostprozess ist abgestürzt" ab (kein einzelner Testfehler) — reproduziert sowohl vor als auch nach dem step-002-Paket-Bump, also unabhängig von diesem Step. |
 | TD-004 | `src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs:27-35` (`ExecuteAsync` XML-Doc) | niedrig | Vorbestehender, grammatikalisch zerrissener XML-Doc-Kommentar an `ExecuteAsync` (abgebrochener Satz „…einen Dateien hat…") — unabhängig von step-003, zufällig beim Lesen der Datei aufgefallen. |
+| TD-005 | `rules.json` PathOverride `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs` + `src/AiNetLinter.Tests/CliIntegrationTests.cs` | mittel | `AIContextFootprint`-Schwellwert 2800 für `AnalysisToolRegistrations.cs` liegt auf einem Zero-Tolerance-Regime; `CliIntegrationTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` bricht bei jeder beliebigen Lint-Violation der gesamten Solution — Micro-Patches in transitiv abhängigen Dateien (z. B. `McpCodeGraphServer.cs`) treiben den Count über das Limit. |
 
 ## Einträge
 
@@ -158,4 +159,54 @@ Verweis auf die Tech-Debt-ID).
   `ExecuteAsync`-Kommentar zu einem vollständigen, kohärenten Satz
   reparieren (vermutlich sollte er den globalen Compile-Error-Rausch-
   Hinweis erklären, analog zum Warnungs-Aufbau in anderen Tools).
+- **Status:** offen
+
+### TD-005 — `AIContextFootprint`-Schwellwert 2800 für `AnalysisToolRegistrations.cs` zu knapp + fragiler `CliIntegrationTests`-Smoke-Test [Priorität: mittel]
+
+- **Gefunden in:** step-004 (Kritiker-Review vom 2026-08-05), beim
+  Reproduzieren des Build/Test-Laufs für die vier Items dieses Batches
+  sowie beim Lesen des Coder-Hinweises in `step-004/step-result.md`
+  „Beobachtungen".
+- **Ort:** 
+  - `rules.json` PathOverride `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs`
+    → `MaxAIContextFootprint: 2800` (verifiziert: derzeit exakt dieser Wert).
+  - `src/AiNetLinter.Tests/CliIntegrationTests.cs` — Test
+    `RunLinterCli_OnWholeSolution_ReturnsSuccess` mit Assertion
+    `Assert.Contains("OK", result.Output)`.
+  - Indirekt betroffen: jede Datei mit transitiver
+    `AIContextFootprint`-Abhängigkeit auf `AnalysisToolRegistrations.cs`
+    (z. B. `McpCodeGraphServer.cs`, `GetViolationsTool` → `GetViolationsScanner`).
+- **Befund:** Der CliIntegrationTest lintet die gesamte Solution und
+  prüft nur das Vorhandensein von „OK" im Linter-Self-Output — er bricht
+  bei jeder beliebigen Lint-Violation der Solution zusammen. Der
+  `MaxAIContextFootprint`-Schwellwert für `AnalysisToolRegistrations.cs`
+  liegt exakt auf 2800 (Zero-Tolerance). Im step-004-Versuch hat ein
+  +1-Logik-Zeile-Patch in `McpCodeGraphServer.cs` (LoadState-Peek) den
+  Count von 2800 auf 2801 getrieben und den CliIntegrationTest
+  gebrochen. Mitigation des Coders: den `ainetlinter-disable
+  BanBlockingTaskAccess`-Kommentar auf **eine** Zeile komprimiert, damit
+  die Datei netto nur 1 statt 4 Zeilen wächst — das ist ein
+  fragiler Workaround, kein nachhaltiger Fix. Schon eine einzige
+  weitere inhaltliche Zeile in einer transitiv abhängigen Datei
+  reißt das Limit erneut. Coder-Empfehlung in `step-result.md`:
+  Schwellwert in `rules.json` moderat anheben (z. B. auf 2820), um
+  künftige Micro-Patches in `McpCodeGraphServer.cs` (LoadState-,
+  Tool-Pattern-Änderungen) nicht in ein Zero-Tolerance-Regime zu
+  zwingen; alternativ den CliIntegrationTest robuster machen
+  (z. B. via `--scope-filter`, sodass er nicht die ganze Solution lintet).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-004
+  (betrifft die Test- und Linter-Infrastruktur projektweit, nicht die
+  vier Items dieses Batches — eine Anhebung des Schwellwerts wäre eine
+  bewusste Lockerung der Lint-Strenge mit eigenen Trade-offs, die
+  Nutzer-Entscheidung bleiben muss).
+- **Vorschlag:** Schwellwert in `rules.json` für
+  `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs` von 2800 auf
+  z. B. 2820 moderat anheben, um künftigen Micro-Patches in
+  transitiv abhängigen Dateien (insbesondere `McpCodeGraphServer.cs`)
+  Puffer zu geben. Alternativ: `CliIntegrationTests` so umbauen, dass
+  er nur den `OK`-Marker im engeren `--scope-filter`-Output prüft
+  statt der gesamten Solution, und damit die Kopplung an den
+  Schwellwert aufhebt. Beide Optionen gleichwertig — eine davon
+  reduziert die Wartungslast für künftige kleine Patches in der
+  MCP-/Catalog-Infrastruktur.
 - **Status:** offen
