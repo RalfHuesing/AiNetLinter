@@ -343,14 +343,14 @@ Beispiel-Snippet:
 | Feld | Typ | Bedeutung |
 | :--- | :--- | :--- |
 | `level` | string | Immer `"error"` fuer diese Zeilen |
-| `error_type` | string | Vollstaendiger Exception-Typ-Name (z. B. `System.InvalidOperationException`) |
+| `error_type` | string | Exception-Typ-Name ohne Namespace (z. B. `InvalidOperationException`) |
 | `error_message` | string | `Exception.Message` |
 | `stack_trace` | string | Stack-Trace, gekappt auf 4 KB + `...`-Marker bei Ueberschreitung |
 
 Beispiel-Snippet:
 
 ```json
-{"ts":"2026-08-05T09:14:22.011Z","tool":"get_file_skeleton","args":"./src/Foo.cs","level":"error","error_type":"System.InvalidOperationException","error_message":"simuliertes Hot-Reload-Race in get_file_skeleton","stack_trace":"   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.HandleGetFileSkeleton(String path) in FileStructureToolRegistrations.cs:line 142\n   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.ExecuteCallAsync(String tool, JsonElement args, McpCallLog log) in FileStructureToolRegistrations.cs:line 67\n..."}
+{"ts":"2026-08-05T09:14:22.011Z","tool":"get_file_skeleton","args":"./src/Foo.cs","level":"error","error_type":"InvalidOperationException","error_message":"simuliertes Hot-Reload-Race in get_file_skeleton","stack_trace":"   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.HandleGetFileSkeleton(String path) in FileStructureToolRegistrations.cs:line 142\n   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.ExecuteCallAsync(String tool, JsonElement args, McpCallLog log) in FileStructureToolRegistrations.cs:line 67\n..."}
 ```
 
 Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overhead (kein `McpCallLogScope`-Objekt, kein `Stopwatch.StartNew()`). Siehe `Docs/configuration.md` fuer die formale CLI-Option-Spec.

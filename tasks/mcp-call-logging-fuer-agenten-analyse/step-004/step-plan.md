@@ -92,7 +92,7 @@ Beim Lesen der drei Doku-Dateien und des Quellcodes vorgefunden:
   sind im JSONL-File identisch für `ts/tool/args`, der Error-Eintrag
   hat kein `lines/truncated/duration_ms/empty`, dafür `level/error_type/error_message/stack_trace`.
 - **Test-Stand:** `McpCallLogTests` 14/14 grün (10 alt + 4 neu aus
-  step-003), `McpServerCommandCallLogTests` 5/5 grün (1 alt gelöscht,
+  step-003), `McpServerCommandCallLogTests` 9/9 grün (1 alt gelöscht,
   3 angepasst, 4 neu aus step-001), `dotnet test`-Volllauf 1279/1279
   grün (step-003-Verifikation). Der finale Volllauf in item-06
   bestätigt nur, dass die Doku-Updates keine Lint-Regression
@@ -187,7 +187,7 @@ step-001-Planer explizit für EPIC-04 zurückgestellt hat.
   - **CLI-Option-Update:** `ArgumentArity.ZeroOrOne` für
     `--mcp-log`; Description dokumentiert Default-Pfad-Konvention.
   - **Tests:** 14 Tests in `McpCallLogTests` (10 alt + 4 ExecuteCallAsync
-    neu), 5 Tests in `McpServerCommandCallLogTests` (1 alt gelöscht,
+    neu), 9 Tests in `McpServerCommandCallLogTests` (1 alt gelöscht,
     3 angepasst, 4 neu für Default-Pfad-Konstruktion und
     Failure-Signalisierung), 4 neue `RecordError`-Tests, alle
     grün; `dotnet test` Volllauf 1279/1279 grün.
@@ -258,7 +258,7 @@ step-001-Planer explizit für EPIC-04 zurückgestellt hat.
 
 - [ ] `dotnet test` (Volllauf, alle Kategorien) — 0 Failures, 0 Errors
 - [ ] `McpCallLogTests` weiterhin 14/14 grün (Regressions-Schutz)
-- [ ] `McpServerCommandCallLogTests` weiterhin 5/5 grün (Regressions-Schutz)
+- [ ] `McpServerCommandCallLogTests` weiterhin 9/9 grün (Regressions-Schutz)
 - [ ] `CliIntegrationTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` weiterhin grün (Hund: keine Lint-Regression durch Doku-Updates; das betrifft die drei `.md`-Dateien nicht direkt, aber der Test ist Single-Point-of-Failure für Lint-Regressionen, siehe step-002-Result Beobachtung 1)
 
 ## Definition of Done

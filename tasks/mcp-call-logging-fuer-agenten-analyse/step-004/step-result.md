@@ -46,7 +46,7 @@ nun durchgaengig in `agent-api.md` (Spezifikation), `configuration.md`
 - `dotnet build` — `0 Warnung(en), 0 Fehler`, Dauer 00:00:05.27
 - `dotnet test` — `Fehler: 0, erfolgreich: 1279, uebersprungen: 0, gesamt: 1279, Dauer: 2 m 6 s`
   - `McpCallLogTests` 14/14 gruen (Regressions-Schutz bestaetigt)
-  - `McpServerCommandCallLogTests` 5/5 gruen (Regressions-Schutz bestaetigt)
+  - `McpServerCommandCallLogTests` 9/9 gruen (Regressions-Schutz bestaetigt)
   - `CliIntegrationTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` gruen (Hund-Test fuer Lint-Regression)
   - `McpTestClientParallelTests.ConnectAsync_SixteenParallelCalls_AllSucceedOrFailCleanly` Long-Running-Indicator waehrend des 16-Parallel-Laufs (kein Fehler, > 1 m 30 s Laufzeit gehoert zur Test-Charakteristik)
 
