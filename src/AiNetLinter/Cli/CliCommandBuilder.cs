@@ -129,7 +129,7 @@ internal static class CliCommandBuilder
             PublicOnly: parseResult.GetValue(options.PublicOnly),
             IgnoreSuppressions: ignoreSuppressions,
             McpServer: parseResult.GetValue(options.McpServer),
-            McpLog: parseResult.GetValue(options.McpLog));
+            McpLog: parseResult.GetResult(options.McpLog) is null ? null : (parseResult.GetValue(options.McpLog) ?? string.Empty));
     }
 
     private static System.Collections.Generic.IReadOnlyList<string> ParseCommaSeparated(string[]? values)
