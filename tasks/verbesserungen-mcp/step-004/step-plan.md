@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 type: step-plan
 task: verbesserungen-mcp
 step: 004
