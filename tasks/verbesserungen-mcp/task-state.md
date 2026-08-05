@@ -14,7 +14,7 @@ current_step: step-004
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 1 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-004`
+- **Aktueller Schritt:** `step-004` (EPIC-03 abgeschlossen, Abschluss-Check ausstehend)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-05
@@ -31,7 +31,7 @@ eine Zeile.>
 | step-002 | EPIC-01 | done | Roslyn-Paket-Versions-Bump: Razor-Source-Generator-Integration tatsächlich zum Laufen bringen | 1/3 | 7f4d6ba | approved | 7f4d6ba/a14b3cd |
 | step-002/fix-01 | EPIC-01 | done | SkeletonSyntaxWalker: semantischen Fallback für Basistyp bei fehlender Basisliste ergänzen | - | c614348 | approved | c614348/097dcea |
 | step-003 | EPIC-02 | done | Einheitlicher Symbol-Identifikator-Parser | 0/3 | 48d596c | approved | 48d596c/033f61e |
-| step-004 | EPIC-03 | in_progress | EPIC-03-Batch: get_symbol_body-ID-Korruption, get_violations-Meldung, ainetlinter://overview-Status-Race, depth-Hard-Cap-Doku | 0/3 | - | - | - |
+| step-004 | EPIC-03 | done | EPIC-03-Batch: get_symbol_body-ID-Korruption, get_violations-Meldung, ainetlinter://overview-Status-Race, depth-Hard-Cap-Doku | 0/3 | e1d0124 | approved | e1d0124/ed0e878 |
 
 ## Config (optional)
 

@@ -1,5 +1,5 @@
 ---
-status: active  # active | done
+status: done  # active | done
 task: verbesserungen-mcp
 derived_from: konzept.md
 created_at: 2026-08-05
@@ -126,7 +126,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Dopplung dafür. Ein zusätzlicher, früh-verlassener Zweig in
       `ResolveSymbolAsync` (stabile ID zuerst) schließt seither die
       Lücke für alle vier Tools gleichzeitig.
-- [ ] EPIC-03: Kleinere Tool-Konsistenz-Fixes (P2/P3-Batch) — Cluster
+- [x] EPIC-03: Kleinere Tool-Konsistenz-Fixes (P2/P3-Batch) — Cluster
       unabhängig lösbarer, jeweils kleiner Muss-Haben-Punkte aus
       `Konzept.md` Scope, die sich für Step-Modus-Micro-Batching
       eignen (`step_type: batch`, siehe `../spec.md` §10.6):
@@ -149,10 +149,14 @@ obsolet markiert) — kein starres Vorab-Dokument.
         (P3): `CallGraphTraversal.MaxRecursionNodes` (200) im
         Tool-Schema/-Beschreibungstext sichtbar machen, nicht nur in
         der Trunkierungs-Meldung.
-      - (Nice-to-Have, optional) Lesbarere ID-Darstellung für explizite
-        Interface-Implementierungen: aktuell Standard-Roslyn-
-        `#`-Encoding (kein Bug), optionale zusätzliche
-        Agenten-lesbare Darstellung neben der Standard-ID.
+      - (Nice-to-Have, optional, **außerhalb dieses Tasks**) Lesbarere
+        ID-Darstellung für explizite Interface-Implementierungen:
+        aktuell Standard-Roslyn-`#`-Encoding (kein Bug, laut
+        `Konzept.md` „Entdeckte Mängel" als Standardverhalten eingestuft),
+        optionale zusätzliche Agenten-lesbare Darstellung neben der
+        Standard-ID. Bewusst **nicht** Teil von `step-004` (kein
+        Definition-of-Done-Punkt, größerer Gestaltungsspielraum —
+        eigener Folge-Step, falls der Nutzer das angehen will).
       Bezug: `Konzept.md` Scope P2/P3 (vier Muss-Haben-Punkte) + das
       eine Nice-to-Have. Granularität bewusst als ein Epic gebündelt
       (Nutzer-Vorgabe: keine Einzel-Epics für kleine, unabhängige
@@ -160,13 +164,30 @@ obsolet markiert) — kein starres Vorab-Dokument.
       mehrere Steps werden, entscheidet der Step-Modus-Planer anhand
       des dann aktuellen Codestands und der Batch-Deckelung
       (`max_batch_items`/`max_batch_diff_lines`, `../spec.md` §10.6).
-      **In Arbeit → `step-004`** (Batch, deckt die vier
-      Muss-Haben-Punkte ab; `max_batch_diff_lines` für diesen Batch auf
-      160 angehoben, siehe `config.md` für Begründung). Das eine
-      Nice-to-Have (EII-Darstellung) bleibt bewusst außerhalb dieses
-      Batches — optional, größerer Gestaltungsspielraum, nicht
-      Definition-of-Done-relevant — und wartet auf einen eigenen
-      Folge-Step.
+      **Abgeschlossen → `step-004`** (Batch, deckte die vier
+      Muss-Haben-Punkte vollständig ab — alle Definition-of-Done-
+      Anforderungen aus `Konzept.md` erfüllt; `max_batch_diff_lines`
+      für diesen Batch auf 160 angehoben, siehe `config.md` für
+      Begründung). Item-01 vom Planer in `step-004/step-plan.md` als
+      zentrale `ResolveSymbolAsync`-Normalisierung lokalisiert (statt
+      nur in `GetSymbolBodyTool.cs` — wirkt damit einheitlich auf
+      alle vier Symbolgraph-Tools); item-03 vom Planer in der
+      `LoadState`-Race-Bedingung in `McpCodeGraphServer` lokalisiert
+      (statt in `OverviewResourceRegistration.DescribeSolution` —
+      Race zwischen abgeschlossenem Hintergrund-Load und lazy
+      `_catalog`-Adoption; Peek-Lesen ohne side-effect). Beide
+      Abweichungen per eigenem Roslyn-Repro bzw. Code-Analyse
+      verifiziert, keine Scope-Drift gegenüber `Konzept.md` (siehe
+      `step-004/step-review.md` Ebene 4). Zwei dokumentierte
+      Abweichungen vom Plan durch den Coder (item-03 Test-Pattern
+      TCS statt `Task.FromResult` wegen `Task.Run`-Scheduling-Race;
+      item-02 `ainetlinter-disable MaxMethodParameterCount` statt
+      Parameter-Record zur Vermeidung einer `AIContextFootprint`-
+      Schwellwert-Überschreitung — siehe `step-004/step-result.md`).
+      Das Nice-to-Have (EII-Darstellung) bleibt explizit außerhalb
+      dieses Tasks — wartet auf einen eigenen Folge-Step, falls
+      gewünscht (kein Muss-Haven aus `Konzept.md` Definition of
+      Done).
 
 <Reihenfolge spiegelt die Priorität aus `Konzept.md` (P1 vor P2/P3) und
 die im „Wie"-Abschnitt genannte Abhängigkeit EPIC-01 → Rausch-Hinweis;
