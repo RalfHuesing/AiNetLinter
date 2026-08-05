@@ -24,7 +24,7 @@ Verweis auf die Tech-Debt-ID).
 
 | ID | Bereich / Datei | Priorität | Kurzfassung |
 |---|---|---|---|
-| TD-001 | `tasks/mcp-call-logging-fuer-agenten-analyse/roadmap.md:61` | niedrig | Roadmap-Notiz „ersetzt/erweitert die zwei betroffenen Tests" widerspricht der im step-001-Plan korrigierten Test-Scope-Lesart (1 LÖSCHT, 4 NEU, 3 ANGEPASST); Doku-Inkonsistenz. |
+| TD-001 | `tasks/mcp-call-logging-fuer-agenten-analyse/roadmap.md:61` | niedrig | Roadmap-Notiz „ersetzt/erweitert die zwei betroffenen Tests" widerspricht der im step-001-Plan korrigierten Test-Scope-Lesart (1 LÖSCHT, 4 NEU, 3 ANGEPASST); Doku-Inkonsistenz. [erledigt 2026-08-05] |
 | TD-002 | `rules.json` PathOverrides (5 Mcp-Konsumenten) + `MetricsConfig` (396 Z. transitiv) | mittel | McpCallLog-Wachstum erzeugt transitive AIContextFootprint-Welle in 5 Konsumenten (PathOverride-Bumps in step-002 per User-Workaround A). Mittelfristige Lösung: `MetricsConfig` schlanker machen oder `McpCallLog` partial-splitten, um Transitiv-Last zu reduzieren. |
 | TD-003 | `Docs/ROADMAP.md:482` | niedrig | EPIC-09-Eintrag zählt „5 Tests in `McpServerCommandCallLogTests`" — die Aufzählung sagt 1+3+4=8, real sind es 9 (die 2 unveränderten `ResolveMcpLogPath_*`-Tests fehlen in der Aufzählung). Doku-Inkonsistenz, vom step-004-Planer in item-03 und vom fix-01-Planer explizit ausgeschlossen. |
 
@@ -58,7 +58,7 @@ Verweis auf die Tech-Debt-ID).
   bestehende Tests werden auf die neue 4-Parameter-Signatur umgestellt,
   4 neue Tests dokumentieren Default-Pfad-Konstruktion und
   Failure-Signalisierung"). Kein separater Fix-Step nötig.
-- **Status:** offen
+- **Status:** erledigt (in step-004 item-04 gefixt; Roadmap-Test-Scope-Notiz angeglichen)
 
 ### TD-002 — `McpCallLog`-Wachstum treibt 5 Konsumenten über `AIContextFootprint`-PathOverrides [Priorität: mittel]
 
