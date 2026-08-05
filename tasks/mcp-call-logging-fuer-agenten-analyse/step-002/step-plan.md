@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: done (pending audit)  # Status via Orchestrator-Workaround nach Coder-Block 2026-08-05: PathOverride-Bumps in rules.json (User-Workaround A) haben Dogfooding-Lint grün gemacht; 1275/1275 Tests grün.
 type: step-plan
 task: mcp-call-logging-fuer-agenten-analyse
 step: 002

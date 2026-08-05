@@ -2,7 +2,7 @@
 task: mcp-call-logging-fuer-agenten-analyse
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-05T12:55:00+02:00
+last_updated: 2026-08-05T14:05:00+02:00
 ---
 
 # Tech-Debt-Log: mcp-call-logging-fuer-agenten-analyse
@@ -25,6 +25,7 @@ Verweis auf die Tech-Debt-ID).
 | ID | Bereich / Datei | Priorität | Kurzfassung |
 |---|---|---|---|
 | TD-001 | `tasks/mcp-call-logging-fuer-agenten-analyse/roadmap.md:61` | niedrig | Roadmap-Notiz „ersetzt/erweitert die zwei betroffenen Tests" widerspricht der im step-001-Plan korrigierten Test-Scope-Lesart (1 LÖSCHT, 4 NEU, 3 ANGEPASST); Doku-Inkonsistenz. |
+| TD-002 | `rules.json` PathOverrides (5 Mcp-Konsumenten) + `MetricsConfig` (396 Z. transitiv) | mittel | McpCallLog-Wachstum erzeugt transitive AIContextFootprint-Welle in 5 Konsumenten (PathOverride-Bumps in step-002 per User-Workaround A). Mittelfristige Lösung: `MetricsConfig` schlanker machen oder `McpCallLog` partial-splitten, um Transitiv-Last zu reduzieren. |
 
 ## Einträge
 
@@ -56,4 +57,44 @@ Verweis auf die Tech-Debt-ID).
   bestehende Tests werden auf die neue 4-Parameter-Signatur umgestellt,
   4 neue Tests dokumentieren Default-Pfad-Konstruktion und
   Failure-Signalisierung"). Kein separater Fix-Step nötig.
+- **Status:** offen
+
+### TD-002 — `McpCallLog`-Wachstum treibt 5 Konsumenten über `AIContextFootprint`-PathOverrides [Priorität: mittel]
+
+- **Gefunden in:** step-002 (User-Workaround nach Coder-Block 2026-08-05)
+- **Ort:** `rules.json` PathOverrides für
+  `src/AiNetLinter/Mcp/{AnalysisToolRegistrations,FileStructureToolRegistrations,McpServerOptionsFactory,SymbolBodyToolRegistrations,SymbolGraphToolRegistrations}.cs`
+  + `MetricsConfig` (396 Z. transitiv pro Konsument)
+- **Befund:** `McpCallLog.cs` ist als einzige Aufruf-Stelle für
+  `RecordError`/`RecordEnd` Ausgangspunkt einer transitiven
+  `AIContextFootprint`-Welle. Jeder Konsument zieht die volle `McpCallLog`-
+  Größe + `MetricsConfig` (396 Z.) mit. Schon +45 Zeilen in `McpCallLog`
+  (step-002, `RecordError`-Methode) haben 5 PathOverrides ans Limit
+  gebracht. Konkrete Werte nach step-002:
+  - AnalysisToolRegistrations 2800 → 3050 (war 2846)
+  - FileStructureToolRegistrations 2830 → 3070 (war 2869)
+  - McpServerOptionsFactory 2800 → 3020 (war 2818)
+  - SymbolBodyToolRegistrations 2800 → 3010 (war 2802)
+  - SymbolGraphToolRegistrations 2870 → 3120 (war 2912)
+- **Warum nicht sofort gefixt:** User hat sich 2026-08-05T13:55 für
+  Workaround A (PathOverride-Bumps) entschieden — minimal-invasiv,
+  entspricht bestehender Wartungspraxis. Mittelfristige Architektur-Lösung
+  ist explizit zurückgestellt.
+- **Mittelfristige Optionen (vom User zu entscheiden, nicht selbst
+  umsetzen):**
+  1. **`MetricsConfig` schlanker machen** (396 Z. auf ~200 Z. reduzieren
+     durch Aufteilen in Sub-Configs pro Domain) — reduziert die
+     Transitiv-Last pro Konsument um ~196 Z.
+  2. **`McpCallLog` partial-splitten** (z. B. `McpCallLogWriter` für
+     IO, `McpCallLogFormatter` für Schema) — reduziert die Größe der
+     transitiv importierten Klasse.
+  3. **Interface vor Konsumenten schieben** (schlankes
+     `ICallLogSink`-Interface, `McpCallLog` ist Implementierung) —
+     bricht aber das etablierte statische Pattern und wäre invasiv.
+- **Vorschlag:** Vor EPIC-03 (Error-Hook) entscheiden, ob die Wellen
+  mit PathOverride-Bumps weiterhin tragbar sind oder ein
+  Architektur-Eingriff nötig wird. EPIC-03 wird `RecordError` aus 4
+  Tool-Registration-Klassen heraus aufrufen, was die Pfade erneut
+  anschwellen lässt. Aktuelle PathOverride-Bumps haben ~200 Z. Puffer,
+  das reicht für ~5–10 Erweiterungen in `McpCallLog.cs`.
 - **Status:** offen

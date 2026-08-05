@@ -405,12 +405,12 @@
   "PathOverrides": {
     "src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 3050
       }
     },
     "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2830
+        "MaxAIContextFootprint": 3070
       }
     },
     "src/AiNetLinter/Mcp/McpCodeGraphServer.cs": {
@@ -420,7 +420,7 @@
     },
     "src/AiNetLinter/Mcp/McpServerOptionsFactory.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 3020
       }
     },
     "src/AiNetLinter/Mcp/OverviewResourceRegistration.cs": {
@@ -430,7 +430,7 @@
     },
     "src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2870
+        "MaxAIContextFootprint": 3120
       }
     },
     "src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs": {
@@ -485,7 +485,7 @@
     },
     "src/AiNetLinter/Mcp/SymbolBodyToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 3010
       }
     }
   }
