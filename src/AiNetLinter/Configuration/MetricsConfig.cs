@@ -269,127 +269,20 @@ public sealed record MetricsConfig
 
     /// <summary>
     /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
-    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
+    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet. Die eigentliche Override-Logik
+    /// lebt in <see cref="MetricsConfigApplier"/>, damit dieser Record selbst schmaler bleibt und
+    /// die <c>AIContextFootprint</c>-Last pro transitivem Konsumenten (z. B. die
+    /// <c>*ToolRegistrations</c>-Klassen im MCP-Pfad) sinkt.
     /// </summary>
     public MetricsConfig Apply(MetricsConfigOverride? @override)
     {
         if (@override == null) return this;
-        return ApplyLineLimits(@override)
-            .ApplyComplexityLimits(@override)
-            .ApplyDependencyLimits(@override)
-            .ApplyDirectoryAndMemberLimits(@override);
+        return MetricsConfigApplier.ApplyDirectoryAndMemberLimits(
+            MetricsConfigApplier.ApplyDependencyLimits(
+                MetricsConfigApplier.ApplyComplexityLimits(
+                    MetricsConfigApplier.ApplyLineLimits(this, @override),
+                    @override),
+                @override),
+            @override);
     }
-
-    private MetricsConfig ApplyLineLimits(MetricsConfigOverride o) => this with
-    {
-        MaxLineCount = o.MaxLineCount ?? MaxLineCount,
-        MaxMethodLineCount = o.MaxMethodLineCount ?? MaxMethodLineCount,
-        MaxMethodParameterCount = o.MaxMethodParameterCount ?? MaxMethodParameterCount,
-        MaxMethodParameterCountInTestFiles = o.MaxMethodParameterCountInTestFiles ?? MaxMethodParameterCountInTestFiles,
-        MethodParameterCountIgnoreTypeNames = o.MethodParameterCountIgnoreTypeNames ?? MethodParameterCountIgnoreTypeNames,
-        MethodParameterCountIgnoreTypePrefixes = o.MethodParameterCountIgnoreTypePrefixes ?? MethodParameterCountIgnoreTypePrefixes,
-        MaxMethodParameterCountAllowPrivate = o.MaxMethodParameterCountAllowPrivate ?? MaxMethodParameterCountAllowPrivate,
-        MaxMethodParameterCountForNonPublic = o.MaxMethodParameterCountForNonPublic ?? MaxMethodParameterCountForNonPublic,
-        MaxMethodOverloads = o.MaxMethodOverloads ?? MaxMethodOverloads,
-        CompoundSuppressions = o.CompoundSuppressions ?? CompoundSuppressions,
-        MaxLinqChainLength = o.MaxLinqChainLength ?? MaxLinqChainLength,
-        LinqMethodNames = o.LinqMethodNames ?? LinqMethodNames,
-    };
-
-    private MetricsConfig ApplyComplexityLimits(MetricsConfigOverride o) => this with
-    {
-        MaxCyclomaticComplexity = o.MaxCyclomaticComplexity ?? MaxCyclomaticComplexity,
-        MaxCognitiveComplexity = o.MaxCognitiveComplexity ?? MaxCognitiveComplexity,
-        MinCognitiveComplexityForTest = o.MinCognitiveComplexityForTest ?? MinCognitiveComplexityForTest,
-        AggregatePartialClassLineCount = o.AggregatePartialClassLineCount ?? AggregatePartialClassLineCount,
-        ComplexityNearMissTolerance = o.ComplexityNearMissTolerance ?? ComplexityNearMissTolerance,
-        ExcludeSwitchDispatcherCases = o.ExcludeSwitchDispatcherCases ?? ExcludeSwitchDispatcherCases,
-        SwitchDispatcherMaxCaseBodyLines = o.SwitchDispatcherMaxCaseBodyLines ?? SwitchDispatcherMaxCaseBodyLines,
-        ExcludeNullCoalescingInitializerComplexity = o.ExcludeNullCoalescingInitializerComplexity ?? ExcludeNullCoalescingInitializerComplexity,
-        NullCoalescingInitializerMaxNonCoalescingRatio = o.NullCoalescingInitializerMaxNonCoalescingRatio ?? NullCoalescingInitializerMaxNonCoalescingRatio,
-        MaxSwitchArms = o.MaxSwitchArms ?? MaxSwitchArms,
-        MaxSwitchArmsExcludeDispatcher = o.MaxSwitchArmsExcludeDispatcher ?? MaxSwitchArmsExcludeDispatcher,
-        MaxSwitchArmsExemptTypes = o.MaxSwitchArmsExemptTypes ?? MaxSwitchArmsExemptTypes,
-    };
-
-    private MetricsConfig ApplyDependencyLimits(MetricsConfigOverride o) => this with
-    {
-        MaxConstructorDependencies = o.MaxConstructorDependencies ?? MaxConstructorDependencies,
-        ConstructorDependencyIgnoreTypePrefixes = o.ConstructorDependencyIgnoreTypePrefixes ?? ConstructorDependencyIgnoreTypePrefixes,
-        ConstructorDependencyExemptClassSuffixes = o.ConstructorDependencyExemptClassSuffixes ?? ConstructorDependencyExemptClassSuffixes,
-        MaxInheritanceDepth = o.MaxInheritanceDepth ?? MaxInheritanceDepth,
-        InheritanceDepthFrameworkPrefixes = o.InheritanceDepthFrameworkPrefixes ?? InheritanceDepthFrameworkPrefixes,
-        MaxAIContextFootprint = o.MaxAIContextFootprint ?? MaxAIContextFootprint,
-        FootprintIgnoreNamespacePrefixes = o.FootprintIgnoreNamespacePrefixes ?? FootprintIgnoreNamespacePrefixes,
-        FootprintIgnoreTypeNames = o.FootprintIgnoreTypeNames ?? FootprintIgnoreTypeNames,
-    };
-
-    private MetricsConfig ApplyDirectoryAndMemberLimits(MetricsConfigOverride o) => this with
-    {
-        MaxDirectoryDepth = o.MaxDirectoryDepth ?? MaxDirectoryDepth,
-        MaxDirectoryChildren = o.MaxDirectoryChildren ?? MaxDirectoryChildren,
-        MaxDirectoryChildrenExemptNames = o.MaxDirectoryChildrenExemptNames ?? MaxDirectoryChildrenExemptNames,
-        MaxBoolParameterCount = o.MaxBoolParameterCount ?? MaxBoolParameterCount,
-        MaxBoolParameterCountAllowPrivate = o.MaxBoolParameterCountAllowPrivate ?? MaxBoolParameterCountAllowPrivate,
-        MaxBoolParameterCountExemptMethodPrefixes = o.MaxBoolParameterCountExemptMethodPrefixes ?? MaxBoolParameterCountExemptMethodPrefixes,
-        MaxPartialClassFiles = o.MaxPartialClassFiles ?? MaxPartialClassFiles,
-        MaxPartialClassFilesExemptTypes = o.MaxPartialClassFilesExemptTypes ?? MaxPartialClassFilesExemptTypes,
-        MaxPublicMembersPerType = o.MaxPublicMembersPerType ?? MaxPublicMembersPerType,
-        MaxPublicMembersPerTypeExemptSuffixes = o.MaxPublicMembersPerTypeExemptSuffixes ?? MaxPublicMembersPerTypeExemptSuffixes,
-    };
-}
-
-/// <summary>
-/// Eine Bedingung über eine einzelne Metrik.
-/// Wird in <see cref="CompoundSuppression.WhenAllOf"/> verwendet.
-/// </summary>
-public sealed record MetricCondition
-{
-    /// <summary>
-    /// Name der Metrik. Gültige Werte: "CyclomaticComplexity", "CognitiveComplexity",
-    /// "ParameterCount", "LineCount" (Methoden); "ConstructorDependencies", "PublicMemberCount" (Klassen).
-    /// Unbekannte Namen deaktivieren die Bedingung ohne Absturz.
-    /// </summary>
-    public required string Metric { get; init; }
-
-    /// <summary>Bedingung: Metrikwert ≤ AtMost.</summary>
-    public int? AtMost { get; init; }
-
-    /// <summary>Bedingung: Metrikwert ≥ AtLeast. Für Eskalations-Szenarien.</summary>
-    public int? AtLeast { get; init; }
-}
-
-/// <summary>
-/// Unterdrückt eine Regel kontextabhängig, wenn koinzidente Metriken niedrig sind.
-/// Reduziert False Positives ohne die eigentlichen AI-Readability-Ziele zu kompromittieren.
-/// </summary>
-public sealed record CompoundSuppression
-{
-    /// <summary>
-    /// Die Rule-ID, die supprimiert werden soll (z. B. "MaxMethodLineCount").
-    /// Muss einer bekannten Rule-ID in <see cref="LinterRuleIds"/> entsprechen.
-    /// </summary>
-    public required string TargetRule { get; init; }
-
-    /// <summary>
-    /// Alle Bedingungen müssen erfüllt sein (AND-Verknüpfung) damit die Suppression aktiv wird.
-    /// </summary>
-    public required IReadOnlyList<MetricCondition> WhenAllOf { get; init; }
-
-    /// <summary>
-    /// Wenn gesetzt: Statt des konfigurierten Limits gilt dieser Wert.
-    /// Wenn null: Violation wird vollständig unterdrückt.
-    /// </summary>
-    public int? RelaxedLimit { get; init; }
-
-    /// <summary>
-    /// Optionale Severity-Herabstufung wenn Bedingungen erfüllt aber RelaxedLimit überschritten.
-    /// Erlaubte Werte: "warning", "error". Wirkt nur in Kombination mit RelaxedLimit.
-    /// </summary>
-    public string? SeverityOverride { get; init; }
-
-    /// <summary>
-    /// Optionaler Freitext-Grund. Wird in .mdc-Output und Violation-Guidance wiedergegeben.
-    /// </summary>
-    public string? Reason { get; init; }
 }
