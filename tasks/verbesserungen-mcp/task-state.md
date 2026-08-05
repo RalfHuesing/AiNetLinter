@@ -1,8 +1,9 @@
 ---
-status: executing  # executing | done | aborted
+status: done  # executing | done | aborted
 task: verbesserungen-mcp
 started_at: 2026-08-05
 last_updated: 2026-08-05
+completed_at: 2026-08-05
 rules_dir: .agents/rules
 total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-004
@@ -12,13 +13,14 @@ current_step: step-004
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `done` — globaler Kritiker hat `done` verdictiert, alle Muss-Haben-Punkte aus `konzept.md` addressiert, keine ausstehenden Fixes
 - **Fix-Runden gesamt:** 1 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-004` (EPIC-03 abgeschlossen, Abschluss-Check ausstehend)
-- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
-- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
+- **Aktueller Schritt:** `step-004` (EPIC-03 abgeschlossen, Abschluss-Check durchgeführt)
+- **Roadmap:** siehe `roadmap.md` (Status `done`, alle drei Epics `[x]`)
+- **Task-Summary:** siehe `task-summary.md` (Pflicht-Abschluss-Doku)
+- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde (5 Einträge, alle `offen`)
 - **Gestartet:** 2026-08-05
-- **Zuletzt aktualisiert:** 2026-08-05
+- **Abgeschlossen:** 2026-08-05
 
 ## Steps
 
