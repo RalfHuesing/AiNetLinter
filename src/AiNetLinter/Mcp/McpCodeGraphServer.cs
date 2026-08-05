@@ -68,7 +68,8 @@ internal sealed class McpCodeGraphServer : IDisposable
     public ServerLoadState LoadState => _loadTask switch
     {
         null => _catalog is null ? ServerLoadState.LoadFailed : ServerLoadState.Loaded,
-        { IsCompletedSuccessfully: true } => _catalog is null ? ServerLoadState.LoadFailed : ServerLoadState.Loaded,
+        // ainetlinter-disable BanBlockingTaskAccess — IsCompletedSuccessfully: true garantiert, dass GetAwaiter().GetResult() nicht blockiert; ohne diesen Peek meldet LoadState fälschlich LoadFailed vor dem ersten GetCurrentSolution()-Aufruf.
+        { IsCompletedSuccessfully: true } => (_catalog ?? _loadTask.GetAwaiter().GetResult()) is null ? ServerLoadState.LoadFailed : ServerLoadState.Loaded,
         { IsFaulted: true } => ServerLoadState.LoadFailed,
         { IsCanceled: true } => ServerLoadState.LoadFailed,
         _ => ServerLoadState.Loading,

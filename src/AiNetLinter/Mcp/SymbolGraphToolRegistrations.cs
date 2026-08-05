@@ -94,9 +94,10 @@ internal static class SymbolGraphToolRegistrations
         "(DocumentationCommentId, ueberlebt Zeilenverschiebungen, disambiguiert Overloads) oder " +
         "Datei:Zeile:Spalte bzw. qualifiziertem/teil-qualifiziertem Namen. Optionaler " +
         "depth-Parameter (Default 1, hard cap 3) loest transitive Aufrufstellen und aggregiert " +
-        "sie. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
-        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile " +
-        "meldet die Gesamt-Trefferzahl.";
+        "sie. Traversierung zusaetzlich hart begrenzt auf 200 besuchte Knoten (unabhaengig von " +
+        "maxResults). Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
+        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
+        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -130,9 +131,11 @@ internal static class SymbolGraphToolRegistrations
         "akzeptiert stabile ID (DocumentationCommentId, ueberlebt Zeilenverschiebungen, " +
         "disambiguiert Overloads) oder Datei:Zeile:Spalte bzw. qualifiziertem/teil-" +
         "qualifiziertem Namen. Optionaler depth-Parameter (Default 1, hard cap 3) wirkt nur im " +
-        "Symbol-Branch und loest transitive Aufrufstellen, aggregiert. Deckt nur .cs-Dateien ab, " +
-        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 Treffer, " +
-        "ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+        "Symbol-Branch und loest transitive Aufrufstellen, aggregiert. Traversierung " +
+        "zusaetzlich hart begrenzt auf 200 besuchte Knoten (unabhaengig von maxResults). Deckt " +
+        "nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
+        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile " +
+        "meldet die Gesamt-Trefferzahl.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,

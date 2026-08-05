@@ -103,7 +103,15 @@ internal static class GetViolationsScanner
         return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string FormatReport(
+    // ainetlinter-disable MaxMethodParameterCount — FormatReport kapselt einen Report-Bau
+    // aus 5 unabhaengigen Eingaben (Verzeichnis, File-Map, Violations, Filter, Config-Source).
+    // Ein Parameter-Record wuerde die AIContextFootprint-Abhaengigkeiten von
+    // AnalysisToolRegistrations ueber das projektweite 2800-Limit treiben, weil die
+    // Aufrufstelle in BuildViolationsTextAsync bereits eine zentrale Parameter-Bundelung
+    // (GetViolationsScannerParameters) besitzt — die hier gebuendelt wuerde, ohne semantischen
+    // Mehrwert. Direkter Test-Zugriff erfordert internal-Sichtbarkeit, die wiederum die
+    // private-Relaxation (MaxMethodParameterCountForNonPublic) verliert.
+    internal static string FormatReport(
         string solutionDir,
         Dictionary<string, string> fileToProject,
         IReadOnlyCollection<RuleViolation> violations,
@@ -115,12 +123,14 @@ internal static class GetViolationsScanner
                         && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
             .ToList();
 
-        if (filtered.Count == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
+        var matchingFileCount = fileToProject
+            .Count(kvp => MatchesScope(kvp.Key, kvp.Value, solutionDir, scopeFilter));
+
+        if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
             return $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.";
         }
 
-        var fileCount = filtered.Select(v => v.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         var sb = new StringBuilder();
         if (usedDefaultConfig)
         {
@@ -132,7 +142,7 @@ internal static class GetViolationsScanner
             sb.AppendLine();
         }
         var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
-        sb.AppendLine($"Lint-Violations: {filtered.Count} Verstoesse in {fileCount} Dateien{scopeSuffix}");
+        sb.AppendLine($"Lint-Violations: {filtered.Count} Verstoesse in {matchingFileCount} Dateien im Scope{scopeSuffix}");
         sb.AppendLine();
 
         if (filtered.Count == 0)

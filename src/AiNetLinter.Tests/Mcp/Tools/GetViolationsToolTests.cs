@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Models;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -94,5 +96,43 @@ public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFix
         Assert.DoesNotContain("CS1513", text, StringComparison.Ordinal);
         Assert.DoesNotContain("CS0246", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Hinweis:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatReport_FilesInScopeButZeroViolations_DistinguishesFromNoFilesInScope()
+    {
+        var fileToProject = new Dictionary<string, string>
+        {
+            [@"C:\Proj\src\Mini\Foo.cs"] = "SymbolGraphMini",
+        };
+
+        var text = GetViolationsScanner.FormatReport(
+            solutionDir: @"C:\Proj",
+            fileToProject: fileToProject,
+            violations: Array.Empty<RuleViolation>(),
+            scopeFilter: "SymbolGraphMini",
+            usedDefaultConfig: false);
+
+        Assert.DoesNotContain("Keine Dateien im Scope", text, StringComparison.Ordinal);
+        Assert.Contains("Dateien im Scope", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatReport_NoFileMatchesScope_ReturnsExplicitNoFilesMessage()
+    {
+        var fileToProject = new Dictionary<string, string>
+        {
+            [@"C:\Proj\src\Mini\Foo.cs"] = "OtherProject",
+        };
+
+        var text = GetViolationsScanner.FormatReport(
+            solutionDir: @"C:\Proj",
+            fileToProject: fileToProject,
+            violations: Array.Empty<RuleViolation>(),
+            scopeFilter: "SymbolGraphMini",
+            usedDefaultConfig: false);
+
+        Assert.Contains("Keine Dateien im Scope", text, StringComparison.Ordinal);
+        Assert.Contains("SymbolGraphMini", text, StringComparison.Ordinal);
     }
 }

@@ -5,6 +5,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Tests.Fixtures;
+using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -74,6 +75,19 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
         Assert.Null(error);
         Assert.NotNull(symbol);
         Assert.Equal("Greet", symbol!.Name);
+    }
+
+    [Fact]
+    public async Task ResolveSymbolAsync_PositionOnPropertyAccessorKeyword_ReturnsPropertySymbolNotAccessor()
+    {
+        var identifier = $"{_fixture.Workspace.GreeterPath}:7:28";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(symbol);
+        Assert.Equal("Prefix", symbol!.Name);
+        Assert.IsAssignableFrom<IPropertySymbol>(symbol);
+        Assert.IsNotAssignableFrom<IMethodSymbol>(symbol);
     }
 
     [Fact]

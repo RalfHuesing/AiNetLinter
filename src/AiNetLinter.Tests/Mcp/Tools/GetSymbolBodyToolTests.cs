@@ -89,4 +89,18 @@ public sealed class GetSymbolBodyToolTests : IClassFixture<SymbolGraphCatalogFix
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_PositionOnPropertyAccessorKeyword_ReturnsPropertyIdNotAccessorId()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var identifier = $"{_fixture.Workspace.GreeterPath}:7:28";
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, identifier, 80, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("id: `P:SymbolGraphMini.Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
+    }
 }

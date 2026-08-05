@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -17,8 +18,15 @@ namespace AiNetLinter.Tests.Commands;
 /// sind ueber das Test-Subprozess-Protokoll (kein Mocking) abgesichert.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpServerCommandLoadingStateTests
+public sealed class McpServerCommandLoadingStateTests : IClassFixture<SymbolGraphCatalogFixture>
 {
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public McpServerCommandLoadingStateTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public void RunAsync_LoadFuncStillRunning_ToolReturnsLoadingInfo()
     {
@@ -99,6 +107,46 @@ public sealed class McpServerCommandLoadingStateTests
         // (kein Faulted) aber kein Catalog geliefert wurde.
         Assert.Equal(ServerLoadState.LoadFailed, server.LoadState);
         Assert.False(server.IsLoaded);
+    }
+
+    [Fact]
+    public void LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately()
+    {
+        // Zeitfenster "Load bereits erfolgreich abgeschlossen, aber _catalog noch nicht
+        // adoptiert": sobald der Load-Task erfolgreich war, muss LoadState Loaded melden,
+        // ohne dass GetCurrentSolution() aufgerufen wurde — sonst sieht die
+        // ainetlinter://overview-Resource unmittelbar nach Serverstart fälschlich LoadFailed.
+        // TCS-Pattern (statt Task.FromResult) noetig, weil McpCodeGraphServer den LoadFunc
+        // via Task.Run auf den Thread-Pool schedulet; Task.FromResult waere im Fenster
+        // zwischen Konstruktor und Thread-Pool-Dispatch noch nicht IsCompletedSuccessfully.
+        var release = new TaskCompletionSource<AiNetLinter.Baseline.SourceFileCatalog?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var server = new McpCodeGraphServer(new McpCodeGraphServerOptions
+        {
+            Catalog = null,
+            Console = AiNetLinter.Output.LinterConsole.Instance,
+            MaxLineCount = 700,
+            Config = new AiNetLinter.Configuration.Config
+            {
+                Global = new AiNetLinter.Configuration.GlobalConfig(),
+                Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+            },
+            UsedDefaultConfig = false,
+            LoadFunc = _ => release.Task,
+        });
+
+        Assert.Equal(ServerLoadState.Loading, server.LoadState);
+
+        release.SetResult(_fixture.Catalog);
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (server.LoadState == ServerLoadState.Loading && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(25);
+        }
+
+        Assert.Equal(ServerLoadState.Loaded, server.LoadState);
     }
 }
 

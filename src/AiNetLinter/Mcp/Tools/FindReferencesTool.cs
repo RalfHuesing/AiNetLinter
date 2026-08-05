@@ -81,9 +81,19 @@ internal static class FindReferencesTool
     /// Datei:Zeile:Spalte-Angabe oder einen qualifizierten/teil-qualifizierten Namen zu genau
     /// einem Symbol auf — gemeinsamer Einstiegspunkt fuer alle drei dokumentierten Formate. Reine
     /// Funktion (Solution rein, Symbol/Fehler raus) ohne Abhaengigkeit von
-    /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
+    /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Normalisiert Accessor-Symbole
+    /// (Property/Event) auf den zugrunde liegenden Owner, damit eine Position auf einem
+    /// <c>get</c>/<c>set</c>/<c>add</c>/<c>remove</c>-Keyword konsistent dieselbe ID liefert
+    /// wie eine Position auf dem Property-/Event-Namen.
     /// </summary>
     internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolAsync(
+        Solution solution, string identifier, CancellationToken ct)
+    {
+        var (symbol, error) = await ResolveSymbolCoreAsync(solution, identifier, ct);
+        return (NormalizeToOwningMember(symbol), error);
+    }
+
+    private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolCoreAsync(
         Solution solution, string identifier, CancellationToken ct)
     {
         var (stableSymbol, stableError) =
@@ -98,6 +108,9 @@ internal static class FindReferencesTool
 
         return await ResolveByNameAsync(solution, identifier, ct);
     }
+
+    private static ISymbol? NormalizeToOwningMember(ISymbol? symbol) =>
+        symbol is IMethodSymbol { AssociatedSymbol: { } owner } ? owner : symbol;
 
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByPositionAsync(
         Solution solution, string identifier, string path, int line, int column, CancellationToken ct)
