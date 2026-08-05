@@ -314,7 +314,7 @@ Opt-in-Beobachtung der tatsaechlichen Tool-Nutzung in der Praxis, default deakti
 
 ```bash
 ainetlinter --mcp-server --mcp-log ./.mcp-log/calls.log
-ainetlinter --mcp-server --mcp-log  # Default: <solutionDir>/.mcp-log/calls.log
+ainetlinter --mcp-server --mcp-log  # Default-Pfad: <exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl
 ```
 
 Format: JSONL, ein Eintrag pro Tool-Call. Felder pro Zeile:
@@ -336,7 +336,22 @@ Beispiel-Snippet:
 {"ts":"2026-08-04T11:23:46.456Z","tool":"get_index_scope","args":"","lines":7,"truncated":false,"duration_ms":1.2,"empty":false}
 ```
 
-**Pfad-Aufloesung:** absoluter Pfad → wie angegeben; relativer Pfad → relativ zum Solution-Verzeichnis (analog zu `cache/` neben der Solution). Default bei `--mcp-log` ohne Wert: `<solutionDir>/.mcp-log/calls.log`. Leere Logs (kein Tool-Call aufgezeichnet) werden beim Server-Shutdown automatisch geloescht.
+**Pfad-Aufloesung:** absoluter Pfad → wie angegeben; relativer Pfad → relativ zum Solution-Verzeichnis (analog zu `cache/` neben der Solution). Default bei `--mcp-log` ohne Wert: `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` (lokales Server-Datum; `<solutionName>` ist der Dateiname der Solution ohne Extension). Wenn keine Solution auflösbar ist, bricht der Server mit Fehlermeldung auf stderr und Exit-Code 1 ab, es wird keine Log-Datei angelegt. Leere Logs (kein Tool-Call aufgezeichnet) werden beim Server-Shutdown automatisch geloescht.
+
+**Error-Schema (Tool-Handler-Exceptions):** Unbehandelte Exceptions in Tool-Handlern werden in derselben JSONL-Datei als zusaetzliche Zeile mit `level=error` persistiert. Die Felder `ts`, `tool` und `args` sind identisch zum Call-Schema; statt `lines`/`truncated`/`duration_ms`/`empty` traegt der Eintrag:
+
+| Feld | Typ | Bedeutung |
+| :--- | :--- | :--- |
+| `level` | string | Immer `"error"` fuer diese Zeilen |
+| `error_type` | string | Vollstaendiger Exception-Typ-Name (z. B. `System.InvalidOperationException`) |
+| `error_message` | string | `Exception.Message` |
+| `stack_trace` | string | Stack-Trace, gekappt auf 4 KB + `...`-Marker bei Ueberschreitung |
+
+Beispiel-Snippet:
+
+```json
+{"ts":"2026-08-05T09:14:22.011Z","tool":"get_file_skeleton","args":"./src/Foo.cs","level":"error","error_type":"System.InvalidOperationException","error_message":"simuliertes Hot-Reload-Race in get_file_skeleton","stack_trace":"   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.HandleGetFileSkeleton(String path) in FileStructureToolRegistrations.cs:line 142\n   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.ExecuteCallAsync(String tool, JsonElement args, McpCallLog log) in FileStructureToolRegistrations.cs:line 67\n..."}
+```
 
 Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overhead (kein `McpCallLogScope`-Objekt, kein `Stopwatch.StartNew()`). Siehe `Docs/configuration.md` fuer die formale CLI-Option-Spec.
 
