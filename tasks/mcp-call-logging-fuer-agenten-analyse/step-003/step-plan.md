@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done  # final nach Kritiker-approved
 type: step-plan
 task: mcp-call-logging-fuer-agenten-analyse
 step: 003
