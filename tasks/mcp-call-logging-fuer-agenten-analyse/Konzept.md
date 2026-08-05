@@ -1,3 +1,5 @@
+# mcp call logging
+
 um analysieren zu können ob und wie gut der mcp server funktioniert brauchen wir logging.
 log relativ zur .exe von ainetlinter (haben wir ja schon)
 unterverzeichnis pro projekt in dem ainetlinter gestartet wurde
@@ -13,3 +15,12 @@ der quellcode des code projektes kann in der zwischenzeit einen ganz anderen sta
 verzeichnis / datei struktur sinnvoll wählen
 
 vermutlich kommen da sehr viele log informationen bei raus
+
+# allgemein logging verbessern
+
+haben wir überhaupt logging integriert?
+
+wenn nein: serilog relativ zur .exe "log" (oder logs? wie man es machen würde)
+
+wir brauchen auch allgemeines projekt spezifisches logging .. tool geladen, kann nicht laden weil xyz usw. usf.
+kann ich aktuell überhaupt nicht diagnostizieren
