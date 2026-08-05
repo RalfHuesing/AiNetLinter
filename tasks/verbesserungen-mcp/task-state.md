@@ -5,7 +5,7 @@ started_at: 2026-08-05
 last_updated: 2026-08-05
 rules_dir: .agents/rules
 total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-002
+current_step: step-003
 ---
 
 # Task State: verbesserungen-mcp
@@ -30,6 +30,7 @@ eine Zeile.>
 | step-001 | EPIC-01 | done | Blazor-Partial-Fixture anlegen und Symbolgraph-Diskrepanz reproduzieren | 0/3 | fbc399f | approved | fbc399f/ea60a32 |
 | step-002 | EPIC-01 | done | Roslyn-Paket-Versions-Bump: Razor-Source-Generator-Integration tatsächlich zum Laufen bringen | 1/3 | 7f4d6ba | approved | 7f4d6ba/a14b3cd |
 | step-002/fix-01 | EPIC-01 | done | SkeletonSyntaxWalker: semantischen Fallback für Basistyp bei fehlender Basisliste ergänzen | - | c614348 | approved | c614348/097dcea |
+| step-003 | EPIC-02 | done | Einheitlicher Symbol-Identifikator-Parser | 0/3 | 48d596c | approved | 48d596c/033f61e |
 
 ## Config (optional)
 

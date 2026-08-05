@@ -27,6 +27,7 @@ Verweis auf die Tech-Debt-ID).
 | TD-001 | `src/AiNetLinter.Tests/Mcp/Tools/*ToolTests.cs` (Aggregat-Warnung-Regex) | mittel | Regex `Dateien?` in mehreren bestehenden Aggregat-Warnung-Tests matcht Plural, nicht Singular „1 Datei" — aktuell durch Mehrfach-Datei-Fixtures maskiert. |
 | TD-002 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs:87-92` (`FormatBreakdown`) | niedrig | Produktionscode hartkodiert „Dateien" (Plural) für alle sechs Datei-Typ-Zeilen, unabhängig vom tatsächlichen Count — „1 Dateien" statt „1 Datei" bei genau einer Datei. |
 | TD-003 | `src/AiNetLinter.Tests` (Volllauf, `dotnet test AiNetLinter.slnx`) | mittel | Voller Testlauf stürzt in dieser Sandbox-Umgebung intermittierend mit „Testhostprozess ist abgestürzt" ab (kein einzelner Testfehler) — reproduziert sowohl vor als auch nach dem step-002-Paket-Bump, also unabhängig von diesem Step. |
+| TD-004 | `src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs:27-35` (`ExecuteAsync` XML-Doc) | niedrig | Vorbestehender, grammatikalisch zerrissener XML-Doc-Kommentar an `ExecuteAsync` (abgebrochener Satz „…einen Dateien hat…") — unabhängig von step-003, zufällig beim Lesen der Datei aufgefallen. |
 
 ## Einträge
 
@@ -131,4 +132,30 @@ Verweis auf die Tech-Debt-ID).
   `McpTestClientParallelTests`/`SourceFileCatalogRegisterMSBuildTests`);
   ggf. `AiNetLinterRichtlinien.mdc` §4 „Testsuite-Parallelität bewahren"
   gezielt anwenden (Semaphore/Retry statt Collection-Serialisierung).
+- **Status:** offen
+
+### TD-004 — Zerrissener XML-Doc-Kommentar an `FindReferencesTool.ExecuteAsync` [Priorität: niedrig]
+
+- **Gefunden in:** step-003 (Kritiker-Review vom 2026-08-05), beim Lesen
+  der vollständigen Datei zur Verifikation des Stable-ID-Zweigs.
+- **Ort:** `src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs:27-35`
+  (`ExecuteAsync`-Summary). Wortlaut aktuell: „…liefert dessen
+  Aufrufstellen als Text. Stellt dem Aufrufstellen-Output einen\nDateien
+  hat (Roslyn toleriert sie, aber der Agent weiss sonst nicht, dass die
+  Antwort unvollstaendig sein kann). Defensiver try/catch-Wrapper…" — der
+  Satz bricht mitten im Gedanken ab und ein Fragment („Dateien hat…")
+  hängt ohne erkennbaren Bezugspunkt in der Luft.
+- **Befund:** Verifiziert per `git show 48d596c~1:...FindReferencesTool.cs`
+  — der Kommentar war bereits vor step-003 in genau diesem zerrissenen
+  Zustand, dieser Step hat ihn nicht angefasst (nur Klassen- und
+  `ResolveSymbolAsync`-Doc wurden in diesem Step geändert). Vermutlich ein
+  Editier-Unfall aus einem früheren Schritt (Passage zum globalen
+  Compile-Error-Hinweis wurde offenbar mittendrin gekürzt).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-003 (Plan
+  sah für diese Datei nur den Klassen- und `ResolveSymbolAsync`-Kommentar
+  vor, nicht `ExecuteAsync`s Doc).
+- **Vorschlag:** Bei nächster Berührung von `FindReferencesTool.cs` den
+  `ExecuteAsync`-Kommentar zu einem vollständigen, kohärenten Satz
+  reparieren (vermutlich sollte er den globalen Compile-Error-Rausch-
+  Hinweis erklären, analog zum Warnungs-Aufbau in anderen Tools).
 - **Status:** offen
