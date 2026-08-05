@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: mcp-call-logging-fuer-agenten-analyse
 started_at: 2026-08-05T11:53:13+02:00
-last_updated: 2026-08-05T12:45:00+02:00
+last_updated: 2026-08-05T12:50:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-001
@@ -27,7 +27,7 @@ eine Zeile.>
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| step-001 | EPIC-01 | open | Default-Pfad-Konvention + harter Error-Exit bei fehlender Solution (kein Fallback) | 0/3 | - | - | - |
+| step-001 | EPIC-01 | in_progress | Default-Pfad-Konvention + harter Error-Exit bei fehlender Solution (kein Fallback) | 0/3 | - | - | - |
 
 ## Config (optional)
 
