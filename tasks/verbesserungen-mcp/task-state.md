@@ -4,7 +4,7 @@ task: verbesserungen-mcp
 started_at: 2026-08-05
 last_updated: 2026-08-05
 rules_dir: .agents/rules
-total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+total_fix_rounds: 1  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-002
 ---
 
@@ -13,7 +13,7 @@ current_step: step-002
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
+- **Fix-Runden gesamt:** 1 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
 - **Aktueller Schritt:** `step-002`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
@@ -28,6 +28,7 @@ eine Zeile.>
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Blazor-Partial-Fixture anlegen und Symbolgraph-Diskrepanz reproduzieren | 0/3 | fbc399f | approved | fbc399f/ea60a32 |
+| step-002 | EPIC-01 | done (fix-01 pending) | Roslyn-Paket-Versions-Bump: Razor-Source-Generator-Integration tatsächlich zum Laufen bringen | 1/3 | 7f4d6ba | issues | 7f4d6ba/a14b3cd |
 
 ## Config (optional)
 

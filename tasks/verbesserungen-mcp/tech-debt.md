@@ -2,7 +2,7 @@
 task: verbesserungen-mcp
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-05
+last_updated: 2026-08-05T09:45:00Z
 ---
 
 # Tech-Debt-Log: verbesserungen-mcp
@@ -25,6 +25,8 @@ Verweis auf die Tech-Debt-ID).
 | ID | Bereich / Datei | Priorität | Kurzfassung |
 |---|---|---|---|
 | TD-001 | `src/AiNetLinter.Tests/Mcp/Tools/*ToolTests.cs` (Aggregat-Warnung-Regex) | mittel | Regex `Dateien?` in mehreren bestehenden Aggregat-Warnung-Tests matcht Plural, nicht Singular „1 Datei" — aktuell durch Mehrfach-Datei-Fixtures maskiert. |
+| TD-002 | `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs:87-92` (`FormatBreakdown`) | niedrig | Produktionscode hartkodiert „Dateien" (Plural) für alle sechs Datei-Typ-Zeilen, unabhängig vom tatsächlichen Count — „1 Dateien" statt „1 Datei" bei genau einer Datei. |
+| TD-003 | `src/AiNetLinter.Tests` (Volllauf, `dotnet test AiNetLinter.slnx`) | mittel | Voller Testlauf stürzt in dieser Sandbox-Umgebung intermittierend mit „Testhostprozess ist abgestürzt" ab (kein einzelner Testfehler) — reproduziert sowohl vor als auch nach dem step-002-Paket-Bump, also unabhängig von diesem Step. |
 
 ## Einträge
 
@@ -64,4 +66,69 @@ Verweis auf die Tech-Debt-ID).
   `\d+\s+Datei(en)?\s+haben` (oder gleichwertig) korrigieren — ggf. auch
   auf eine gemeinsame Test-Hilfsmethode/Konstante auslagern, um die
   Duplikation über sieben Testklassen zu vermeiden.
+- **Status:** offen
+
+### TD-002 — `GetIndexScopeScanner.FormatBreakdown` pluralisiert „Datei" nie [Priorität: niedrig]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-05), beim
+  Verifizieren der neuen Assertion
+  `GetIndexScope_BlazorPartialFixture_ShowsNoCompileErrorHint` (prüft
+  `Assert.Contains(".cs: 1 Dateien (voll vom Symbolgraph abgedeckt)", ...)`).
+- **Ort:** `src/AiNetLinter/Mcp/Tools/GetIndexScopeScanner.cs:85-93`
+  (`FormatBreakdown`) — alle sechs Zeilen (`.cs`, `.css`, `.html`, `.js`,
+  `.razor`, `.xaml`) verwenden fest das Wort „Dateien", z. B.
+  `$".cs: {csCount} Dateien (voll vom Symbolgraph abgedeckt)"`, unabhängig
+  vom Wert von `csCount`/`cssCount`/etc.
+- **Befund:** Bei genau einer Datei eines Typs zeigt `get_index_scope`
+  grammatikalisch falsch „1 Dateien" statt „1 Datei" an. Diese Datei war
+  nicht Teil des step-002-Diffs (nur `AiNetLinter.csproj` und
+  `SourceFileCatalogBlazorPartialTests.cs` wurden geändert) — reiner
+  Zufallsfund beim Nachvollziehen der neuen `BlazorPartialMini`-Fixture-
+  Assertion (die genau 1 `.cs`-Datei hat und damit den Singular-Fall
+  auslöst). Verwandt mit TD-001 (gleiche Pluralisierungs-Kategorie), hier
+  aber im tatsächlichen Produktionscode statt nur in einer Test-Regex —
+  reine Kosmetik, keine funktionale Auswirkung.
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-002 (Datei
+  nicht Teil der geplanten Änderungen; ein Fix hier hätte die neue
+  Assertion selbst ändern müssen, was der Plan nicht vorsah).
+- **Vorschlag:** `FormatBreakdown` um einfache Singular/Plural-Unterscheidung
+  ergänzen (analog zu `McpCompileDiagnostics.FormatAggregateWarning`, die
+  das laut TD-001 bereits korrekt macht).
+- **Status:** offen
+
+### TD-003 — Voller `dotnet test`-Lauf stürzt in dieser Sandbox intermittierend ab [Priorität: mittel]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-05), beim
+  Nachvollziehen des Coder-Ergebnisses „`dotnet test` → grün (1257 Tests,
+  0 Fehler)".
+- **Ort:** Kein einzelner Testfall — `dotnet test AiNetLinter.slnx` als
+  Ganzes. Betroffen wirken v. a. stark parallele MSBuildWorkspace-/
+  Subprozess-Tests (`AiNetLinter.Tests.Mcp.McpTestClientParallelTests.
+  ConnectAsync_SixteenParallelCalls_AllSucceedOrFailCleanly`,
+  `AiNetLinter.Tests.Baseline.SourceFileCatalogRegisterMSBuildTests.
+  LoadAsync_TwentyParallelCallsAcrossFixtures_AllSucceed`) liefen kurz vor
+  den beiden beobachteten Abstürzen.
+- **Befund:** Drei Volllauf-Versuche auf dem aktuellen Stand (Commit
+  `a14b3cd`) ergaben: Absturz bei 663/1257, Absturz bei 1205/1257, dann
+  grün bei 1257/1257 — jeweils „Der aktive Testlauf wurde abgebrochen.
+  Grund: Der Testhostprozess ist abgestürzt.", ohne dass ein einzelner
+  Test als fehlgeschlagen gemeldet wurde. Zur Abgrenzung vom step-002-
+  Paket-Bump wurde per temporärem Git-Worktree derselbe Volllauf gegen
+  Commit `25b9f7a` (Stand unmittelbar **vor** dem Bump) wiederholt: dort
+  einmal grün (1257/1257), einmal ebenfalls Absturz (bei 1217/1257). Der
+  Absturz ist damit **nicht** auf den Paket-Bump dieses Steps
+  zurückzuführen (reproduziert identisch auf dem Vorgänger-Commit) —
+  echtes, umgebungsabhängiges Infrastruktur-/Nebenläufigkeits-Problem
+  dieser Sandbox, kein Code-Defekt aus step-002. Genug Arbeitsspeicher
+  war vorhanden (~95 GB frei von ~126 GB), 32 logische Kerne.
+- **Warum nicht sofort gefixt:** Nicht reproduzierbar auf einen
+  einzelnen, deterministischen Testfall eingrenzbar innerhalb des
+  Prüfaufwands dieses Reviews; betrifft die gesamte Testsuite
+  projektübergreifend, nicht step-002 spezifisch.
+- **Vorschlag:** Bei Gelegenheit gezielt nachstellen (z. B. wiederholte
+  Einzelläufe der stark parallelen MSBuildWorkspace-/Subprozess-Tests),
+  ob ein bestimmter Test unter Last einen nativen Crash auslöst (Kandidat:
+  `McpTestClientParallelTests`/`SourceFileCatalogRegisterMSBuildTests`);
+  ggf. `AiNetLinterRichtlinien.mdc` §4 „Testsuite-Parallelität bewahren"
+  gezielt anwenden (Semaphore/Retry statt Collection-Serialisierung).
 - **Status:** offen

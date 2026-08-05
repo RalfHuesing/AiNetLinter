@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done (fix-01 pending)
 type: step-plan
 task: verbesserungen-mcp
 step: 002
