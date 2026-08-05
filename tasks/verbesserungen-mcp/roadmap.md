@@ -87,6 +87,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
       `Konzept.md` Scope P1 „Blazor-Partials" + P2 „Globaler
       Rausch-Hinweis eindämmen" (funktional zusammenhängend — Rausch-
       Hinweis-Fix hängt von P1-Ergebnis ab, siehe „Wie").
+      **In Arbeit → step-001 (Fixture, done/approved), step-002 (Fix,
+      geplant).** Root Cause in step-002-Planung empirisch verifiziert
+      (siehe `step-002/step-plan.md`): kein Bug in
+      `SourceFileCatalog.cs`/`LinterEngine.cs` selbst — Ursache ist eine
+      Versions-Diskrepanz zwischen den in `AiNetLinter.csproj`
+      referenzierten `Microsoft.CodeAnalysis.*`-NuGet-Paketen (5.3.0)
+      und der vom lokal installierten .NET-SDK gebündelten
+      Razor-Source-Generator-Assembly (referenziert 5.5.0), wodurch
+      Roslyn den Generator-Typ prozessintern nicht laden kann
+      (`FileLoadException`, von Roslyns Analyzer-Loader verschluckt).
+      Fix testweise verifiziert: Versions-Bump auf 5.6.0 behebt CS0115
+      **und** den Rausch-Hinweis im Fixture-Fall vollständig, ganz ohne
+      Code-Änderung an `SourceFileCatalog.cs`/`McpCompileDiagnostics.cs`.
 - [ ] EPIC-02: Einheitlicher Symbol-Identifikator-Parser (P1) —
       `src/AiNetLinter/Mcp/Tools/SymbolIdentifierResolver.cs` (aktuell
       laut Dateikommentar nur für `FindReferencesTool` ausgelagert) als
