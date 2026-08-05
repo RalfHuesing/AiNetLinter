@@ -24,3 +24,8 @@ wenn nein: serilog relativ zur .exe "log" (oder logs? wie man es machen würde)
 
 wir brauchen auch allgemeines projekt spezifisches logging .. tool geladen, kann nicht laden weil xyz usw. usf.
 kann ich aktuell überhaupt nicht diagnostizieren
+
+im agenten verlauf sehe ich zBspl. sowas: "An error occurred invoking 'get_file_skeleton'." .. kann ich überhaupt nicht diagnostizieren.
+das passiert während der code ändert .. vermutlich haben wir noch unzulänglichkeiten mit hot reload oder so
+der agent rennt drüber und ändert sehr viele dateien .. evtl. braucht ainetlinter hier etwas .. wäre gut wenn der auch was sinnvolles zurück gibt.
+wenn klar ist das das tool aktuell nicht verwendet werden kann (weil die solution lädt oder so) könnte man ja eine sinnvolle info zurückgeben .. "busy, call later" (oder so). bitte prüfen ob sinnvoll.
