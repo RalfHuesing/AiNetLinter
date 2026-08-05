@@ -2,7 +2,7 @@
 task: mcp-call-logging-fuer-agenten-analyse
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-05T14:05:00+02:00
+last_updated: 2026-08-05T15:25:00+02:00
 ---
 
 # Tech-Debt-Log: mcp-call-logging-fuer-agenten-analyse
@@ -26,6 +26,7 @@ Verweis auf die Tech-Debt-ID).
 |---|---|---|---|
 | TD-001 | `tasks/mcp-call-logging-fuer-agenten-analyse/roadmap.md:61` | niedrig | Roadmap-Notiz „ersetzt/erweitert die zwei betroffenen Tests" widerspricht der im step-001-Plan korrigierten Test-Scope-Lesart (1 LÖSCHT, 4 NEU, 3 ANGEPASST); Doku-Inkonsistenz. |
 | TD-002 | `rules.json` PathOverrides (5 Mcp-Konsumenten) + `MetricsConfig` (396 Z. transitiv) | mittel | McpCallLog-Wachstum erzeugt transitive AIContextFootprint-Welle in 5 Konsumenten (PathOverride-Bumps in step-002 per User-Workaround A). Mittelfristige Lösung: `MetricsConfig` schlanker machen oder `McpCallLog` partial-splitten, um Transitiv-Last zu reduzieren. |
+| TD-003 | `Docs/ROADMAP.md:482` | niedrig | EPIC-09-Eintrag zählt „5 Tests in `McpServerCommandCallLogTests`" — die Aufzählung sagt 1+3+4=8, real sind es 9 (die 2 unveränderten `ResolveMcpLogPath_*`-Tests fehlen in der Aufzählung). Doku-Inkonsistenz, vom step-004-Planer in item-03 und vom fix-01-Planer explizit ausgeschlossen. |
 
 ## Einträge
 
@@ -97,4 +98,16 @@ Verweis auf die Tech-Debt-ID).
   Tool-Registration-Klassen heraus aufrufen, was die Pfade erneut
   anschwellen lässt. Aktuelle PathOverride-Bumps haben ~200 Z. Puffer,
   das reicht für ~5–10 Erweiterungen in `McpCallLog.cs`.
+- **Status:** offen
+
+### TD-003 — `Docs/ROADMAP.md:482` Test-Count-Inkonsistenz im EPIC-09-Eintrag [Priorität: niedrig]
+
+- **Gefunden in:** Globaler Audit (Kritiker, Modus `global`) am 2026-08-05T15:25:00+02:00
+- **Vorgemerkt in:** `step-004/fix-01/step-review.md` §"Beobachtung (für globalen Audit Spec §6.3)" durch den fix-01-Reviewer, dort als „neues MINOR item-07" empfohlen
+- **Ort:** `Docs/ROADMAP.md:482`, im EPIC-09-Eintrag (`## MCP-Codegraph-Server (EPIC-01..08)`-Sektion)
+- **Befund:** Die Zeile lautet:
+  > **Tests:** 14 Tests in `McpCallLogTests` (10 alt + 4 `ExecuteCallAsync` neu), **5 Tests in `McpServerCommandCallLogTests` (1 obsoleter Test geloescht, 3 auf neue 4-Parameter-Signatur umgestellt, 4 neue Tests** fuer Default-Pfad-Konstruktion inkl. `BuildDefaultLogPath`-Helper), 4 neue `RecordError`-Tests (Schema, Lock-Reihenfolge, 4-KB-Stack-Trace-Cap), alle gruen
+- **Inkonsistenz:** Die Aufzählung nennt 1 gelöscht + 3 angepasst + 4 neu = **8**, nicht 5. Der reale Test-Count in `McpServerCommandCallLogTests.cs` ist **9** (`git grep -c "\[Fact\]"` = 9, durch laufenden Test verifiziert: 9/9 grün), weil die 2 unveränderten `ResolveMcpLogPath_*`-Tests (Zeilen 166-184 der Test-Datei) in der Roadmap-Aufzählung fehlen. Dieselbe Fehlerklasse wie der fix-01-item-06-Bug (5/5 → 9/9 in Step-Doku), nur an anderer Stelle.
+- **Warum nicht sofort gefixt:** Der step-004-Planer hat das beim Anlegen des EPIC-09-Eintrags nicht bemerkt; der step-004-Original-Reviewer hat es nicht im Findings-Block geflaggt; der fix-01-Planer hat es explizit aus dem Scope ausgeschlossen (Plan: „Keine Änderung an `Docs/ROADMAP.md` (item-03 — bereits approved; MINOR EPIC-09-vs-EPIC-20 ist „Sonstige Beobachtung", nicht Scope)"). Der fix-01-Reviewer hat die Beobachtung dokumentiert und für den globalen Audit vorgemerkt.
+- **Vorschlag:** Bei Gelegenheit (z. B. nächster Doku-Pass oder zusammen mit TD-001-Korrektur) den EPIC-09-Tests-Substring angleichen auf z. B. „9 Tests in `McpServerCommandCallLogTests` (1 obsoleter Test geloescht, 3 auf neue 4-Parameter-Signatur umgestellt, 4 neue fuer Default-Pfad-Konstruktion, 2 unveraenderte `ResolveMcpLogPath_*`)". 1 Zeile, kein Risiko.
 - **Status:** offen
