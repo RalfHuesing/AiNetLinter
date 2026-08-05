@@ -5,11 +5,7 @@ project_kind: brownfield
 estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-05
-open_questions:
-  - "P1 Razor-Fix: volle Source-Generator-Integration in den MSBuildWorkspace-Load, oder pragmatischer Workaround (Rausch-Hinweis gezielt unterdruecken/praezisieren, echte Generator-Integration als Tech-Debt verschieben)?"
-  - "Task-Zuschnitt: alle 6 Muss-Haben-Punkte (P1-P3) in einem Task, oder Priorisierung/Aufteilung in mehrere Tasks (z. B. P1 zuerst, P2/P3 als Folge-Task)?"
-  - "Verifikation von P1 (Blazor-Partials): Zugriff auf San.smart.Planner.Platform fuer manuellen Vergleich vorhanden, oder soll eine synthetische .razor/.razor.cs-Fixture in src/AiNetLinter.Tests entstehen?"
-  - "Non-Goals: gibt es Punkte aus dem urspruenglichen Bug-Report, die bewusst NICHT in diesem Task behoben werden sollen?"
+open_questions: []
 audience: implementierender-agent
 solution_referenz: San.smart.Planner.Platform.slnx
 config_referenz: San.smart.Planner.Platform.Tests.Logic/AiNetLinter/rules/platform-default.rules.json
@@ -54,7 +50,8 @@ Produktions-Repo:
 
 - **P1 — Blazor-Partials:** Razor-Source-Generator-Output beim
   Solution-Load einbeziehen, sodass der Symbolgraph mit `dotnet build`
-  übereinstimmt (Tiefe abhängig von offener Frage 1).
+  exakt übereinstimmt — **volle Integration**, kein Workaround (siehe
+  „Verworfene Alternativen").
 - **P1 — Einheitlicher Symbol-Identifikator-Parser:** Alle drei
   dokumentierten Formate (qualifizierter Name, `Datei:Zeile:Spalte`,
   DocumentationCommentId) funktionieren für **dasselbe** Symbol in
@@ -87,7 +84,9 @@ Produktions-Repo:
 
 ### Non-Goals (bewusst NICHT Teil davon)
 
-- Wird in Runde 2 anhand offener Frage 4 ergänzt.
+- Keine expliziten Non-Goals — alle sechs Muss-Haben-Punkte aus dem
+  Original-Bug-Report werden in diesem Task adressiert (Nutzer-
+  Entscheidung, keine Priorisierungs-/Split-Wünsche).
 
 ## Zielplattformen / Technischer Rahmen
 
@@ -99,8 +98,19 @@ vorgesehen; alle Fixes bauen auf bestehenden Roslyn-APIs und dem
 
 ## Verworfene Alternativen
 
-- Noch keine besprochen — betrifft insbesondere die Lösungstiefe für P1
-  (siehe offene Frage 1), wird nach der ersten Antwortrunde ergänzt.
+- **P1 als pragmatischer Workaround** (Rausch-Hinweis nur gezielt
+  unterdrücken/präzisieren, ohne die Razor-Source-Generator-Lücke selbst
+  zu schließen, echte Integration als Tech-Debt-Eintrag): verworfen —
+  Nutzer will die architektonisch saubere Lösung (volle Generator-
+  Integration), damit der Symbolgraph tatsächlich mit `dotnet build`
+  übereinstimmt statt nur die Symptom-Meldung zu kaschieren.
+- **P1 zuerst, P2/P3 als separater Folge-Task**: verworfen — alle sechs
+  Muss-Haben-Punkte werden in einem Task bearbeitet (kleiner-mittlerer
+  Umfang je Einzelpunkt, teils zusammenhängend).
+- **Verifikation ausschließlich manuell gegen San.smart.Planner.Platform**:
+  verworfen — externe Solution nicht reproduzierbar/CI-fähig; stattdessen
+  synthetische `.razor`/`.razor.cs`-Fixture in `src/AiNetLinter.Tests`
+  (siehe „Wie" und Definition of Done).
 
 ## Wo im Projekt
 
@@ -143,8 +153,8 @@ Planer im `drift-loop` prüft den dann aktuellen Code-Stand selbst nach.
 - [`src/AiNetLinter.Tests/Web/RazorAnalyzerTests.cs`](../../src/AiNetLinter.Tests/Web/RazorAnalyzerTests.cs) /
   `RazorAnalyzerTests.Extended.cs` — bestehende Razor-Testinfrastruktur
   deckt nur Markup-Linting ab, keine Fixture mit `.razor`+`.razor.cs`-
-  Partial-Klasse für den Symbolgraph-Anwendungsfall — relevant für die
-  Verifikationsfrage (offene Frage 3).
+  Partial-Klasse für den Symbolgraph-Anwendungsfall — diese Fixture
+  entsteht neu als Teil dieses Tasks (siehe „Wie").
 - `src/AiNetLinter.Tests/Mcp/**`, `src/AiNetLinter.Tests/Commands/Mcp*` —
   bestehende Test-Suiten-Struktur, an die neue Regressionstests je
   behobenem Punkt anknüpfen sollten (siehe Definition of Done).
@@ -186,9 +196,42 @@ Planer im `drift-loop` prüft den dann aktuellen Code-Stand selbst nach.
 
 ## Wie (grober Ansatz)
 
-Folgt nach Klärung der offenen Fragen — insbesondere Lösungstiefe für P1
-(volle Source-Generator-Integration vs. pragmatischer Workaround) und
-Task-Zuschnitt (offene Fragen 1 und 2).
+Grobe Skizze — datei-/zeilengenaue Planung macht der Planer im
+`drift-loop`:
+
+- **P1 Blazor-Symbolgraph:** Solution-Load in `SourceFileCatalog.cs` so
+  erweitern, dass die vom Razor-SDK generierten Partial-Class-Dokumente
+  (Basisklasse, Lifecycle-Overrides) Teil der Roslyn-`Compilation` werden
+  — analog dem, was `dotnet build` ohnehin tut. Dafür zunächst eine neue
+  synthetische Test-Fixture (Projekt mit `Microsoft.NET.Sdk.Razor`, einer
+  `.razor`-Komponente + zugehöriger `.razor.cs`-Partial-Klasse mit
+  `override`-Lifecycle-Methoden) in `src/AiNetLinter.Tests` anlegen, die
+  das Symptom reproduzierbar macht, bevor der eigentliche Fix beginnt.
+- **P1 Identifikator-Parser:** `SymbolIdentifierResolver` als
+  gemeinsamen Einstiegspunkt für alle drei Identifikator-Formate
+  etablieren und von `find_references`, `get_symbol_body` **und**
+  `get_impact` einheitlich nutzen (aktuell laut Code-Kommentar nur für
+  `FindReferencesTool` ausgelagert).
+- **P2 `get_symbol_body`-ID-Korruption:** Ursache der verschachtelten
+  DocumentationCommentId in `GetSymbolBodyTool.cs` lokalisieren (vermutlich
+  Rückgabetyp-Auflösung bei generischen Methoden) und auf denselben Pfad
+  wie `get_file_skeleton` (`SkeletonSyntaxWalker.TryCreateDeclarationId`)
+  angleichen.
+- **P2 `get_violations`-Meldung:** `GetViolationsScanner.FormatReport` um
+  eine Unterscheidung „Dateien im Scope, aber 0 Violations" vs. „keine
+  Datei im Scope" ergänzen (kleiner, gezielter Fix, keine Änderung an
+  `MatchesScope`).
+- **P2 Rausch-Hinweis:** Nach P1 erneut prüfen, ob der globale Hinweis
+  weiterhin bei unrelated Dateien erscheint (`McpCompileDiagnostics.cs`)
+  — falls ja, zusätzlich auf tatsächlich fehlgeschlagenen Solution-Load
+  eingrenzen.
+- **P3 Overview-Status:** `OverviewResourceRegistration.DescribeSolution`
+  gegen den tatsächlichen `McpCodeGraphServer.LoadState` zu jedem
+  Zeitpunkt (insbesondere unmittelbar nach Serverstart) verifizieren und
+  ggf. die Zustandsermittlung selbst korrigieren.
+- **P3 depth-Hard-Cap:** `CallGraphTraversal.MaxRecursionNodes` (200) im
+  Tool-Schema/-Beschreibungstext von `find_references`/`get_impact`
+  dokumentieren, nicht nur in der Trunkierungs-Meldung.
 
 ## Definition of Done / Erfolgskriterien
 
@@ -198,8 +241,9 @@ Task-Zuschnitt (offene Fragen 1 und 2).
   an bestehende Suiten unter `src/AiNetLinter.Tests/Mcp/**` bzw.
   `src/AiNetLinter.Tests/Commands/Mcp*`.
 - Der „Schnell-Check nach Fix" aus dem ursprünglichen Bug-Report ist die
-  konkrete Abnahme-Checkliste (gegen San.smart.Planner.Platform, sofern
-  laut offener Frage 3 verfügbar — sonst gegen die neue Fixture):
+  konkrete Abnahme-Checkliste, ausgeführt gegen die neue synthetische
+  Test-Fixture (nicht gegen San.smart.Planner.Platform — externe Solution
+  bewusst nicht Teil der Verifikation, siehe „Verworfene Alternativen"):
   1. `get_index_scope` → kein 1322-Errors-Hinweis mehr
   2. `get_file_skeleton(SiteView.razor.cs)` → kein `CS0115`, Basisklasse
      `ComponentBase` sichtbar
@@ -218,6 +262,5 @@ Task-Zuschnitt (offene Fragen 1 und 2).
 
 ## Offene Punkte
 
-Siehe `open_questions` im Frontmatter — vier Punkte, die die weitere
-Konkretisierung (Scope-Grenzen, Lösungstiefe P1, Verifikationsstrategie)
-steuern.
+Keine — alle vier Runde-1-Fragen (P1-Lösungstiefe, Task-Zuschnitt,
+Verifikationsstrategie, Non-Goals) sind geklärt.
