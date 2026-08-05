@@ -4,8 +4,12 @@ type: konzept
 project_kind: brownfield
 estimated_scope: small
 rules_dir: .agents/rules
-last_updated: 2026-08-05T11:46:00+02:00
+last_updated: 2026-08-05T12:30:00+02:00
 open_questions: []  # ready: alle Annahmen akzeptiert, Drift-loop kann starten
+revision_history:
+  - 2026-08-05T12:30:00+02:00: User-Entscheidung im Drift-Loop — kein Fallback-Pfad,
+    bei nicht auflösbarer Solution bricht `--mcp-server` mit Fehlermeldung und Exit ≠ 0 ab.
+    Betrifft Muss-Habe 2 und DoD 1.
 ---
 
 # Konzept: MCP-Call-Log um Pfad-Konvention und Error-Sink erweitern
@@ -34,7 +38,7 @@ Error-Lücke: `McpCallLog` loggt nur erfolgreiche Calls (`scope.Complete(result)
 ### Muss-Haben
 
 - **Default-Pfad bei Opt-in**: Wenn `--mcp-log` ohne Wert gesetzt wird, konstruiert `McpServerCommand` automatisch `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl`. Verzeichnisse werden automatisch angelegt. Wenn `--mcp-log <pfad>` explizit gesetzt wird, gilt wie bisher die Pfad-Auflösung (absolut oder relativ zur Solution-Wurzel).
-- **`<solutionName>`-Token**: Dateiname der Solution ohne Extension (`MyApp.slnx` → `MyApp`). Fallback: `ainetlinter-no-solution-<yyyy-MM-dd>`, wenn keine Solution auflösbar (z. B. Server ohne gültigen Solution-Pfad gestartet).
+- **`<solutionName>`-Token**: Dateiname der Solution ohne Extension (`MyApp.slnx` → `MyApp`). **Kein Fallback-Pfad**: wenn keine Solution auflösbar (z. B. Server ohne gültigen Solution-Pfad gestartet), bricht `--mcp-server` mit Fehlermeldung auf stderr und Exit-Code ≠ 0 ab. Es wird keine Log-Datei angelegt, der Server startet nicht. Begründung: ein "still laufender" Server ohne zugeordnetes Log-Verzeichnis erzeugt schwer auffindbare Folgeprobleme bei der späteren Diagnose; ein harter Abbruch zwingt zur expliziten Klärung.
 - **Datum lokal**: `yyyy-MM-dd` in der lokalen Zeitzone des Servers (nicht UTC), damit "heute" intuitiv ist.
 - **`McpCallLog.RecordError(tool, args, exception)`**: neue Methode, schreibt JSONL-Zeile mit `level=error`, `error_type` (Exception-Typ-Name), `error_message`, `stack_trace`. Selber Lock wie `RecordEnd` (`McpCallLog.cs:29`), damit Call- und Error-Einträge in zeitlicher Reihenfolge erscheinen. Stack-Trace auf 4 KB gekappt, damit eine einzelne Exception das Log nicht aufbläht.
 - **Error-Hook im MCP-Server-Lifecycle**: an der SDK-Stelle, wo aktuell JSON-RPC-Errors entstehen, wird `McpCallLog.RecordError` aufgerufen, sofern `callLog != null`. Bei `callLog == null` (Opt-in nicht aktiv) kein Overhead. Konkrete SDK-Punkte im Planer-Schritt verifizieren.
@@ -127,7 +131,7 @@ Während der Konzeption aktiv gefundene Funde. Jeder Fund unabhängig von der Nu
 
 ## Definition of Done / Erfolgskriterien
 
-- **DoD 1**: `ainetlinter --mcp-server` ohne `--mcp-log`-Flag erzeugt KEINE Log-Datei. `ainetlinter --mcp-server --mcp-log` (ohne Wert) erzeugt nach Server-Lauf eine Datei `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` mit ≥1 Eintrag pro Tool-Call. `ainetlinter --mcp-server --mcp-log <pfad>` benutzt den expliziten Pfad (Backward-Compat).
+- **DoD 1**: `ainetlinter --mcp-server` ohne `--mcp-log`-Flag erzeugt KEINE Log-Datei. `ainetlinter --mcp-server --mcp-log` (ohne Wert) erzeugt nach Server-Lauf eine Datei `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` mit ≥1 Eintrag pro Tool-Call. `ainetlinter --mcp-server --mcp-log <pfad>` benutzt den expliziten Pfad (Backward-Compat). `ainetlinter --mcp-server --mcp-log` ohne auflösbare Solution bricht mit Fehlermeldung ab, Exit-Code ≠ 0, keine Log-Datei.
 - **DoD 2**: Mit aktivem `--mcp-log` löst eine künstlich ausgelöste Exception in einem Tool-Handler (z. B. via Test-Harness simuliertes Hot-Reload-Race in `get_file_skeleton`) eine zusätzliche JSONL-Zeile mit `level=error`, `error_type`, `error_message`, `stack_trace` in derselben Datei aus. Aus dem Agent-Verlauf "An error occurred invoking 'get_file_skeleton'" lässt sich im Log die zugehörigen Args + Stack-Trace nachschlagen.
 - **DoD 3**: Reihenfolge der Einträge folgt zeitlicher Abfolge (Lock serialisiert).
 - **DoD 4**: Stack-Trace-Cap funktioniert (4 KB); eine Exception mit 100 KB Stack-Trace erzeugt einen 4 KB langen `stack_trace`-Eintrag, nicht mehr.
