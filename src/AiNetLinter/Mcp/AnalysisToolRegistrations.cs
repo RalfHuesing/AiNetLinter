@@ -50,10 +50,8 @@ internal static class AnalysisToolRegistrations
                 {
                     return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, ct);
                 }
-                await using var scope = callLog.StartRecording("get_violations", scopeFilter ?? "");
-                var result = await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_violations", scopeFilter ?? "",
+                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -82,10 +80,8 @@ internal static class AnalysisToolRegistrations
                 {
                     return await SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct);
                 }
-                await using var scope = callLog.StartRecording("search_pattern", $"{pattern}|{isRegex}|{maxResults}");
-                var result = await SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("search_pattern", $"{pattern}|{isRegex}|{maxResults}",
+                    () => SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct));
             },
             new McpServerToolCreateOptions
             {

@@ -48,10 +48,8 @@ internal static class FileStructureToolRegistrations
                 {
                     return await GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct);
                 }
-                await using var scope = callLog.StartRecording("get_file_skeleton", filePath);
-                var result = await GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_file_skeleton", filePath,
+                    () => GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -77,10 +75,8 @@ internal static class FileStructureToolRegistrations
                 {
                     return await GetIndexScopeTool.ExecuteAsync(mcpState, ct);
                 }
-                await using var scope = callLog.StartRecording("get_index_scope", "");
-                var result = await GetIndexScopeTool.ExecuteAsync(mcpState, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_index_scope", "",
+                    () => GetIndexScopeTool.ExecuteAsync(mcpState, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -107,10 +103,8 @@ internal static class FileStructureToolRegistrations
                 {
                     return await GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct);
                 }
-                await using var scope = callLog.StartRecording("get_hotspots", scopeFilter ?? "");
-                var result = await GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_hotspots", scopeFilter ?? "",
+                    () => GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct));
             },
             new McpServerToolCreateOptions
             {

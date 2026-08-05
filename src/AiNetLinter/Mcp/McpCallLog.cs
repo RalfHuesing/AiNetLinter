@@ -133,6 +133,39 @@ internal sealed class McpCallLog : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Zentrale try/catch-Huelle fuer die Tool-Handler in den
+    /// <c>*ToolRegistrations</c>-Klassen. Startet einen Aufzeichnungs-Scope, ruft
+    /// das Tool auf, schliesst den Scope bei Erfolg (schreibt regulaeren
+    /// Call-Eintrag via <see cref="RecordEnd"/>) und persistiert bei unbehandelter
+    /// Exception einen Error-Eintrag (level=error) via <see cref="RecordError"/>.
+    /// Re-Throw der Exception nach dem Logging, damit das SDK sie wie ueblich als
+    /// JSON-RPC-Error zurueckgeben kann. <see cref="OperationCanceledException"/>
+    /// wird herausgefiltert, damit Shutdown-/Cancellation-Signale nicht als
+    /// Tool-Fehler ins Call-Log laufen.
+    /// </summary>
+    internal async Task<CallToolResult> ExecuteCallAsync(
+        string toolName, string args, Func<Task<CallToolResult>> toolFn)
+    {
+        ArgumentNullException.ThrowIfNull(toolFn);
+        var scope = StartRecording(toolName, args);
+        try
+        {
+            var result = await toolFn().ConfigureAwait(false);
+            scope.Complete(result);
+            return result;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            RecordError(toolName, args, ex);
+            throw;
+        }
+        finally
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
     private static int CountLines(string text)
     {
         if (string.IsNullOrEmpty(text)) return 0;

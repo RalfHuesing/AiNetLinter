@@ -40,10 +40,8 @@ internal static class SymbolBodyToolRegistrations
                 {
                     return await GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct);
                 }
-                await using var scope = callLog.StartRecording("get_symbol_body", $"{identifier}|{maxBodyLines}");
-                var result = await GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_symbol_body", $"{identifier}|{maxBodyLines}",
+                    () => GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct));
             },
             new McpServerToolCreateOptions
             {

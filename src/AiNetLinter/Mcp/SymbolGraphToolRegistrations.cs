@@ -46,10 +46,8 @@ internal static class SymbolGraphToolRegistrations
                 {
                     return await FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct);
                 }
-                await using var scope = callLog.StartRecording("find_symbol", $"{namePattern}|{kind}|{maxResults}");
-                var result = await FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("find_symbol", $"{namePattern}|{kind}|{maxResults}",
+                    () => FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -77,10 +75,8 @@ internal static class SymbolGraphToolRegistrations
                 {
                     return await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct);
                 }
-                await using var scope = callLog.StartRecording("find_references", $"{symbolIdentifier}|{maxResults}|{depth}");
-                var result = await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("find_references", $"{symbolIdentifier}|{maxResults}|{depth}",
+                    () => FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -112,10 +108,8 @@ internal static class SymbolGraphToolRegistrations
                 {
                     return await GetImpactTool.ExecuteAsync(mcpState, input, ct);
                 }
-                await using var scope = callLog.StartRecording("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}|{depth}");
-                var result = await GetImpactTool.ExecuteAsync(mcpState, input, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}|{depth}",
+                    () => GetImpactTool.ExecuteAsync(mcpState, input, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -149,10 +143,8 @@ internal static class SymbolGraphToolRegistrations
                 {
                     return await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct);
                 }
-                await using var scope = callLog.StartRecording("get_type_hierarchy", typeIdentifier);
-                var result = await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct);
-                scope.Complete(result);
-                return result;
+                return await callLog.ExecuteCallAsync("get_type_hierarchy", typeIdentifier,
+                    () => GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct));
             },
             new McpServerToolCreateOptions
             {

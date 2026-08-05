@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
@@ -316,6 +317,111 @@ public sealed class McpCallLogTests
         {
             TryDelete(logPath);
         }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteCallAsync_SuccessCall_WritesCallEntryAndReturnsResult()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            await using (var log = new McpCallLog(logPath))
+            {
+                var result = await log.ExecuteCallAsync("get_file_skeleton", "src/Foo.cs",
+                    () => Task.FromResult(McpToolResults.Text("hit")));
+                Assert.Equal("hit", ((TextContentBlock)result.Content[0]).Text);
+            }
+            var entry = ParseSingleEntry(await File.ReadAllLinesAsync(logPath));
+            Assert.Equal("get_file_skeleton", entry.GetProperty("tool").GetString());
+            Assert.Equal("src/Foo.cs", entry.GetProperty("args").GetString());
+            Assert.False(entry.TryGetProperty("level", out _));
+            Assert.True(entry.GetProperty("duration_ms").GetDouble() >= 0);
+        }
+        finally { TryDelete(logPath); }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteCallAsync_ThrowingCall_WritesErrorEntryAndRethrows()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            var ex = new InvalidOperationException("simuliertes Hot-Reload-Race in get_file_skeleton");
+            await using (var log = new McpCallLog(logPath))
+            {
+                var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    log.ExecuteCallAsync("get_file_skeleton", "src/Foo.cs",
+                        () => Task.FromException<CallToolResult>(ex)));
+                Assert.Same(ex, thrown);
+            }
+            var entry = ParseSingleEntry(await File.ReadAllLinesAsync(logPath));
+            Assert.Equal("error", entry.GetProperty("level").GetString());
+            Assert.Equal("InvalidOperationException", entry.GetProperty("error_type").GetString());
+            Assert.Equal("simuliertes Hot-Reload-Race in get_file_skeleton",
+                entry.GetProperty("error_message").GetString());
+            Assert.Equal("get_file_skeleton", entry.GetProperty("tool").GetString());
+            Assert.Equal("src/Foo.cs", entry.GetProperty("args").GetString());
+            Assert.False(string.IsNullOrEmpty(entry.GetProperty("stack_trace").GetString()));
+        }
+        finally { TryDelete(logPath); }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteCallAsync_OperationCanceled_NotLoggedAndRethrown()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            await using (var log = new McpCallLog(logPath))
+            {
+                await Assert.ThrowsAsync<TaskCanceledException>(() =>
+                    log.ExecuteCallAsync("find_symbol", "Foo|null|50",
+                        () => Task.FromCanceled<CallToolResult>(new CancellationToken(canceled: true))));
+            }
+            // OCE darf weder Call- noch Error-Eintrag erzeugen - File leer, beim Dispose geloescht.
+            Assert.False(File.Exists(logPath), "Log-File wurde fuer OCE-Call angelegt");
+        }
+        finally { TryDelete(logPath); }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteCallAsync_ParallelThrowingCallsDoNotInterleaveJsonLines()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            const int parallel = 50;
+            await using (var log = new McpCallLog(logPath))
+            {
+                var tasks = new List<Task>(parallel);
+                for (var i = 0; i < parallel; i++)
+                {
+                    var idx = i;
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        try { await log.ExecuteCallAsync("parallel_throw", $"arg|{idx}",
+                            () => Task.FromException<CallToolResult>(new InvalidOperationException($"err {idx}"))); }
+                        catch (InvalidOperationException) { /* expected */ }
+                    }));
+                }
+                await Task.WhenAll(tasks);
+            }
+            var lines = await File.ReadAllLinesAsync(logPath);
+            Assert.Equal(parallel, lines.Length);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                using var doc = JsonDocument.Parse(lines[i]);
+                var entry = doc.RootElement;
+                Assert.True(entry.TryGetProperty("tool", out _));
+                Assert.Equal("error", entry.GetProperty("level").GetString());
+                Assert.Equal("parallel_throw", entry.GetProperty("tool").GetString());
+            }
+        }
+        finally { TryDelete(logPath); }
     }
 
     private static string CreateTempLogPath()
