@@ -1,11 +1,11 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: small
 rules_dir: .agents/rules
-last_updated: 2026-08-05T11:42:00+02:00
-open_questions: []
+last_updated: 2026-08-05T11:46:00+02:00
+open_questions: []  # ready: alle Annahmen akzeptiert, Drift-loop kann starten
 ---
 
 # Konzept: MCP-Call-Log um Pfad-Konvention und Error-Sink erweitern
