@@ -230,6 +230,7 @@ internal static class CliOptionFactory
     internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
     {
         Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: deaktiviert. Pfad-Aufloesung: absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis. Beispiel: --mcp-log ./.mcp-log/calls.log",
+        Arity = ArgumentArity.ZeroOrOne,
     };
 
     internal static Option<string[]> CreateIgnoreSuppressionsOption()

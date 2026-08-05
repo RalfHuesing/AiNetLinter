@@ -164,8 +164,9 @@ public sealed class LinterArgs
     public bool McpServer { get; init; }
 
     /// <summary>
-    /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). <c>null</c> = Log deaktiviert (Default).
-    /// Pfad-Aufloesung: absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis.
+    /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). <c>null</c> = Log deaktiviert (Default). Wert = expliziter
+    /// Pfad (absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis). Leerer/Whitespace-Wert = Default-Pfad unter
+    /// <c>&lt;exeDir&gt;/logs/&lt;solutionName&gt;/&lt;yyyy-MM-dd&gt;/calls.jsonl</c>; erfordert eine aufloesbare Solution, sonst Abbruch mit Exit ungleich 0.
     /// </summary>
     public string? McpLogPath { get; init; }
 

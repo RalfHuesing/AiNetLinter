@@ -52,6 +52,8 @@ internal sealed class McpCallLog : IAsyncDisposable
 
     internal int EntryCount => _entryCount;
 
+    internal string LogPath => _logPath;
+
     internal void RecordEnd(McpCallLogScope scope, CallToolResult result)
     {
         scope.Stopwatch.Stop();

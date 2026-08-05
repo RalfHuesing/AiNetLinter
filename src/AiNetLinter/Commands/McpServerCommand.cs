@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -61,7 +62,10 @@ internal static class McpServerCommand
         McpCallLog? callLog = null;
         try
         {
-            callLog = TryCreateCallLog(args.McpLogPath, solutionPath);
+            var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory;
+            var wasOptedIn = args.McpLogPath is not null;
+            callLog = TryCreateCallLog(args.McpLogPath, solutionPath, exeDir, c);
+            if (wasOptedIn && callLog is null) return 1;
 
             var serverOptions = McpServerOptionsFactory.Create(mcpState, callLog);
             var transport = new StdioServerTransport(serverOptions);
@@ -77,24 +81,61 @@ internal static class McpServerCommand
 
     /// <summary>
     /// Loest den konfigurierten <c>--mcp-log</c>-Pfad auf und instanziiert bei Bedarf ein
-    /// <see cref="McpCallLog"/>. Absoluter Pfad gewinnt 1:1; ein leerer oder relativer Pfad wird
-    /// gegen das Solution-Verzeichnis aufgeloest (analog zu <c>cache/</c> neben der Solution,
-    /// damit das Log in der Solution-Wurzel landet, nicht im Installations-Verzeichnis des
-    /// Tools). Liefert <see langword="null"/>, wenn das Flag nicht gesetzt ist.
+    /// <see cref="McpCallLog"/>. Drei Faelle: <see langword="null"/> = Opt-in nicht aktiv, kein
+    /// Log; <c>IsNullOrWhiteSpace</c> = Default-Pfad via <see cref="BuildDefaultLogPath"/> unter
+    /// <c>&lt;exeDir&gt;/logs/&lt;solutionName&gt;/&lt;yyyy-MM-dd&gt;/calls.jsonl</c> (bricht
+    /// sauber ab, wenn keine Solution aufloesbar); konkreter Wert = expliziter Pfad, Aufloesung
+    /// ueber <see cref="ResolveMcpLogPath"/>. Liefert <see langword="null"/>, wenn das Flag
+    /// nicht gesetzt ist oder der Default-Pfad mangels Solution scheitert — der Aufrufer
+    /// unterscheidet die beiden Faelle ueber das zusaetzliche Opt-in-Signal.
     /// </summary>
-    internal static McpCallLog? TryCreateCallLog(string? mcpLogPath, string solutionPath)
+    internal static McpCallLog? TryCreateCallLog(string? mcpLogPath, string? solutionPath, string exeDir, ILintConsole console)
     {
-        if (string.IsNullOrWhiteSpace(mcpLogPath)) return null;
+        if (mcpLogPath is null) return null;
 
-        var resolved = ResolveMcpLogPath(mcpLogPath, solutionPath);
-        return new McpCallLog(resolved);
+        if (string.IsNullOrWhiteSpace(mcpLogPath))
+        {
+            var defaultPath = BuildDefaultLogPath(solutionPath, exeDir, console);
+            return defaultPath is null ? null : new McpCallLog(defaultPath);
+        }
+
+        return new McpCallLog(ResolveMcpLogPath(mcpLogPath, solutionPath ?? string.Empty));
     }
 
     /// <summary>
-    /// Aufloesung des Call-Log-Pfads: absolut -> wie angegeben; relativ -> relativ zum
-    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Datei zur Solution gehoert
-    /// und nicht in das Installations-Verzeichnis des Tools wandert). GetFullPath normalisiert
-    /// zusaetzlich Separatoren, damit das Ergebnis konsistent fuer Tests und Konsumenten ist.
+    /// Baut den vorhersagbaren Default-Pfad
+    /// <c>&lt;exeDir&gt;/logs/&lt;solutionName&gt;/&lt;yyyy-MM-dd&gt;/calls.jsonl</c>. Wenn
+    /// <paramref name="solutionPath"/> leer ist oder keinen Dateinamen-Anteil liefert (z. B.
+    /// <c>".slnx"</c>), scheitert der Helper mit einer strukturierten <c>RESOURCE_NOT_FOUND</c>-
+    /// Meldung auf stderr und liefert <see langword="null"/> — kein stiller Fallback-Pfad, damit
+    /// ein Server-Start ohne zuordenbares Log-Verzeichnis hart abgebrochen wird.
+    /// </summary>
+    internal static string? BuildDefaultLogPath(string? solutionPath, string exeDir, ILintConsole console)
+    {
+        var solutionName = string.IsNullOrWhiteSpace(solutionPath)
+            ? null
+            : Path.GetFileNameWithoutExtension(solutionPath);
+
+        if (string.IsNullOrWhiteSpace(solutionName))
+        {
+            console.WriteError(LinterErrorFormatter.Format(
+                LinterErrorCodes.ResourceNotFound,
+                "Keine Solution fuer --mcp-log aufloesbar; ohne sie ist kein Default-Log-Verzeichnis ableitbar.",
+                hint: "Server aus einem Verzeichnis mit genau einer .sln/.slnx starten oder --path auf eine konkrete Solution-Datei setzen."));
+            return null;
+        }
+
+        var dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+        return Path.Combine(exeDir, "logs", solutionName, dateStr, "calls.jsonl");
+    }
+
+    /// <summary>
+    /// Aufloesung des expliziten Call-Log-Pfads: absolut -> wie angegeben; relativ -> relativ zum
+    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Datei zur Solution gehoert und nicht
+    /// in das Installations-Verzeichnis des Tools wandert). Wird nur fuer explizit angegebene
+    /// Pfade aufgerufen — der Whitespace-Fall geht in <see cref="BuildDefaultLogPath"/>.
+    /// GetFullPath normalisiert zusaetzlich Separatoren, damit das Ergebnis konsistent fuer
+    /// Tests und Konsumenten ist.
     /// </summary>
     internal static string ResolveMcpLogPath(string mcpLogPath, string solutionPath)
     {
