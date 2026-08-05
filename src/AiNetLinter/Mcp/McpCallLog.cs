@@ -23,6 +23,8 @@ internal sealed class McpCallLog : IAsyncDisposable
 {
     private const int MaxArgsLength = 200;
     private const string ArgsEllipsis = "...";
+    private const int MaxStackTraceLength = 4096;
+    private const string StackTraceTruncationMarker = "...";
 
     private readonly StreamWriter _writer;
     private readonly string _logPath;
@@ -75,6 +77,50 @@ internal sealed class McpCallLog : IAsyncDisposable
             truncated,
             duration_ms = scope.Stopwatch.Elapsed.TotalMilliseconds,
             empty,
+        };
+        var json = JsonSerializer.Serialize(entry);
+
+        lock (_writeLock)
+        {
+            if (_disposed) return;
+            _writer.WriteLine(json);
+            _writer.Flush();
+            _entryCount++;
+        }
+    }
+
+    /// <summary>
+    /// Persistiert einen Fehler-Eintrag in derselben JSONL-Datei wie <see cref="RecordEnd"/>.
+    /// Schema erweitert den Call-Eintrag um level/error_type/error_message/stack_trace;
+    /// gemeinsame Felder (ts/tool/args) bleiben identisch. Selber Lock wie RecordEnd
+    /// serialisiert die zeitliche Reihenfolge; der Stack-Trace wird auf 4 KB gekappt,
+    /// damit eine einzelne Exception das Log nicht aufblaet.
+    /// </summary>
+    internal void RecordError(string toolName, string args, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var argsTruncated = args.Length > MaxArgsLength
+            ? args[..MaxArgsLength] + ArgsEllipsis
+            : args;
+
+        var stackTrace = exception.StackTrace ?? string.Empty;
+        if (stackTrace.Length > MaxStackTraceLength)
+        {
+            stackTrace = string.Concat(
+                stackTrace.AsSpan(0, MaxStackTraceLength - StackTraceTruncationMarker.Length),
+                StackTraceTruncationMarker);
+        }
+
+        var entry = new
+        {
+            ts = DateTime.UtcNow.ToString("O"),
+            tool = toolName,
+            args = argsTruncated,
+            level = "error",
+            error_type = exception.GetType().Name,
+            error_message = exception.Message,
+            stack_trace = stackTrace,
         };
         var json = JsonSerializer.Serialize(entry);
 

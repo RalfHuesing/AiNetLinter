@@ -147,6 +147,177 @@ public sealed class McpCallLogTests
         }
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RecordError_BasicException_WritesJsonLineWithAllFields()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            var ex = new TestException("something went wrong");
+            ex.SetStackTrace("at Foo.Bar() in C:\\\\Foo.cs:line 42");
+            await using (var log = new McpCallLog(logPath))
+            {
+                log.RecordError("get_file_skeleton", "args|42", ex);
+            }
+
+            var lines = await File.ReadAllLinesAsync(logPath);
+            var entry = ParseSingleEntry(lines);
+
+            Assert.Equal("error", entry.GetProperty("level").GetString());
+            Assert.Equal("TestException", entry.GetProperty("error_type").GetString());
+            Assert.Equal("something went wrong", entry.GetProperty("error_message").GetString());
+            Assert.Contains("Foo.Bar()", entry.GetProperty("stack_trace").GetString());
+            Assert.Equal("get_file_skeleton", entry.GetProperty("tool").GetString());
+            Assert.Equal("args|42", entry.GetProperty("args").GetString());
+            Assert.False(string.IsNullOrEmpty(entry.GetProperty("ts").GetString()));
+            Assert.False(entry.TryGetProperty("lines", out _));
+            Assert.False(entry.TryGetProperty("truncated", out _));
+            Assert.False(entry.TryGetProperty("duration_ms", out _));
+            Assert.False(entry.TryGetProperty("empty", out _));
+        }
+        finally
+        {
+            TryDelete(logPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RecordError_StackTraceExceeds4KB_TruncatesToCap()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            var ex = new TestException("boom");
+            ex.SetStackTrace(new string('a', 100_000));
+            await using (var log = new McpCallLog(logPath))
+            {
+                log.RecordError("find_symbol", "X", ex);
+            }
+
+            var lines = await File.ReadAllLinesAsync(logPath);
+            var entry = ParseSingleEntry(lines);
+            var stackTrace = entry.GetProperty("stack_trace").GetString();
+
+            Assert.NotNull(stackTrace);
+            Assert.True(stackTrace!.Length <= 4096, $"stack_trace.Length = {stackTrace.Length} > 4096");
+            Assert.EndsWith("...", stackTrace);
+        }
+        finally
+        {
+            TryDelete(logPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RecordError_AfterRecordEnd_PreservesOrderInJsonl()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            var ex = new InvalidOperationException("late failure");
+            await using (var log = new McpCallLog(logPath))
+            {
+                var scope = log.StartRecording("find_symbol", "args");
+                scope.Complete(McpToolResults.Text("hit"));
+                await scope.DisposeAsync();
+                log.RecordError("find_symbol", "args", ex);
+            }
+
+            var lines = await File.ReadAllLinesAsync(logPath);
+            Assert.Equal(2, lines.Length);
+
+            using var doc0 = JsonDocument.Parse(lines[0]);
+            using var doc1 = JsonDocument.Parse(lines[1]);
+            Assert.Equal("find_symbol", doc0.RootElement.GetProperty("tool").GetString());
+            Assert.False(doc0.RootElement.TryGetProperty("level", out _));
+            Assert.Equal("error", doc1.RootElement.GetProperty("level").GetString());
+        }
+        finally
+        {
+            TryDelete(logPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RecordError_BeforeRecordEnd_PreservesOrderInJsonl()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            var ex = new InvalidOperationException("early failure");
+            await using (var log = new McpCallLog(logPath))
+            {
+                log.RecordError("find_symbol", "args", ex);
+                await using var scope = log.StartRecording("find_symbol", "args");
+                scope.Complete(McpToolResults.Text("hit"));
+            }
+
+            var lines = await File.ReadAllLinesAsync(logPath);
+            Assert.Equal(2, lines.Length);
+
+            using var doc0 = JsonDocument.Parse(lines[0]);
+            using var doc1 = JsonDocument.Parse(lines[1]);
+            Assert.Equal("error", doc0.RootElement.GetProperty("level").GetString());
+            Assert.False(doc1.RootElement.TryGetProperty("level", out _));
+            Assert.Equal("find_symbol", doc1.RootElement.GetProperty("tool").GetString());
+        }
+        finally
+        {
+            TryDelete(logPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RecordError_ParallelCallsDoNotInterleaveJsonLines()
+    {
+        var logPath = CreateTempLogPath();
+        try
+        {
+            const int pairs = 50;
+            await using (var log = new McpCallLog(logPath))
+            {
+                var tasks = new List<Task>(pairs * 2);
+                for (var i = 0; i < pairs; i++)
+                {
+                    var idx = i;
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        await using var scope = log.StartRecording("parallel_tool", $"arg|{idx}");
+                        scope.Complete(McpToolResults.Text($"hit{idx}"));
+                    }));
+                    tasks.Add(Task.Run(() =>
+                    {
+                        log.RecordError(
+                            "parallel_tool",
+                            $"arg|{idx}",
+                            new InvalidOperationException($"err {idx}"));
+                    }));
+                }
+                await Task.WhenAll(tasks);
+            }
+
+            var lines = await File.ReadAllLinesAsync(logPath);
+            Assert.Equal(pairs * 2, lines.Length);
+
+            // Ohne atomaren _writeLock wuerden halbe Zeilen entstehen, die JsonDocument.Parse
+            // scheitern lassen. Jede Zeile muss als eigenstaendiges JSONL-Record parsebar sein.
+            for (var i = 0; i < lines.Length; i++)
+            {
+                using var doc = JsonDocument.Parse(lines[i]);
+                Assert.True(doc.RootElement.TryGetProperty("tool", out _));
+            }
+        }
+        finally
+        {
+            TryDelete(logPath);
+        }
+    }
+
     private static string CreateTempLogPath()
     {
         var dir = Path.Combine(Path.GetTempPath(), "mcp-call-log-tests-" + Guid.NewGuid().ToString("N"));
@@ -173,5 +344,31 @@ public sealed class McpCallLogTests
         Assert.Single(lines);
         using var doc = JsonDocument.Parse(lines[0]);
         return doc.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Synthetische Exception mit kontrollierbarem <see cref="Exception.StackTrace"/>.
+    /// In aktuellen .NET-Versionen ist <c>StackTrace</c> get-only und ohne
+    /// ueberschreibbaren Setter; der interne Cache-Field <c>_stackTraceString</c>
+    /// wird daher per Reflection beschrieben, damit Tests Strings jenseits der
+    /// 4 KB Cap (bzw. beliebige Sub-Strings) einspeisen koennen.
+    /// </summary>
+    private sealed class TestException : Exception
+    {
+        private static readonly System.Reflection.FieldInfo StackTraceStringField =
+            typeof(Exception).GetField(
+                "_stackTraceString",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Exception._stackTraceString field not found");
+
+        public TestException(string message)
+            : base(message)
+        {
+        }
+
+        public void SetStackTrace(string stackTrace)
+        {
+            StackTraceStringField.SetValue(this, stackTrace);
+        }
     }
 }
