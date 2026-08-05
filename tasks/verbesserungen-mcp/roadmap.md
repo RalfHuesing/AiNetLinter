@@ -107,7 +107,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       mit einem semantischen Fallback (`typeSymbol?.BaseType`, wenn
       `node.BaseList == null`) vollständig behoben — beide Hälften von
       Konzept.md DoD-Punkt 2 sind seither erfüllt und verifiziert.
-- [ ] EPIC-02: Einheitlicher Symbol-Identifikator-Parser (P1) —
+- [x] EPIC-02: Einheitlicher Symbol-Identifikator-Parser (P1) —
       `src/AiNetLinter/Mcp/Tools/SymbolIdentifierResolver.cs` (aktuell
       laut Dateikommentar nur für `FindReferencesTool` ausgelagert) als
       gemeinsamen Einstiegspunkt für alle drei dokumentierten
@@ -117,6 +117,15 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (`GetSymbolBodyTool.cs`) **und** `get_impact` (`GetImpactTool.cs`)
       nutzen lassen. Bezug: `Konzept.md` Scope P1 „Einheitlicher
       Symbol-Identifikator-Parser".
+      **Abgeschlossen → `step-003` (approved, kein Fix-Round nötig).**
+      Tatsächlicher Befund beim Planen war kleiner als der Konzept-Text
+      vermuten ließ: `FindReferencesTool.ResolveSymbolAsync` war bereits
+      der gemeinsame Einstiegspunkt für drei von vier Tools (auch
+      `get_type_hierarchy`), es fehlte nur der stabile-ID-Zweig dort
+      selbst — `GetSymbolBodyTool` hatte eine eigene, jetzt entfernte
+      Dopplung dafür. Ein zusätzlicher, früh-verlassener Zweig in
+      `ResolveSymbolAsync` (stabile ID zuerst) schließt seither die
+      Lücke für alle vier Tools gleichzeitig.
 - [ ] EPIC-03: Kleinere Tool-Konsistenz-Fixes (P2/P3-Batch) — Cluster
       unabhängig lösbarer, jeweils kleiner Muss-Haben-Punkte aus
       `Konzept.md` Scope, die sich für Step-Modus-Micro-Batching
@@ -151,6 +160,13 @@ obsolet markiert) — kein starres Vorab-Dokument.
       mehrere Steps werden, entscheidet der Step-Modus-Planer anhand
       des dann aktuellen Codestands und der Batch-Deckelung
       (`max_batch_items`/`max_batch_diff_lines`, `../spec.md` §10.6).
+      **In Arbeit → `step-004`** (Batch, deckt die vier
+      Muss-Haben-Punkte ab; `max_batch_diff_lines` für diesen Batch auf
+      160 angehoben, siehe `config.md` für Begründung). Das eine
+      Nice-to-Have (EII-Darstellung) bleibt bewusst außerhalb dieses
+      Batches — optional, größerer Gestaltungsspielraum, nicht
+      Definition-of-Done-relevant — und wartet auf einen eigenen
+      Folge-Step.
 
 <Reihenfolge spiegelt die Priorität aus `Konzept.md` (P1 vor P2/P3) und
 die im „Wie"-Abschnitt genannte Abhängigkeit EPIC-01 → Rausch-Hinweis;
