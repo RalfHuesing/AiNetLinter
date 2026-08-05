@@ -13,13 +13,15 @@ current_step: step-004
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-001` (noch nicht geplant)
-- **Roadmap:** `roadmap.md` wird im ersten Planer-Aufruf (Roadmap-Modus) erzeugt
-- **Tech-Debt:** `tech-debt.md` (existiert noch nicht — wird vom Kritiker angelegt, sobald ein erster Fund vorliegt)
+- **Task-Status:** `done`
+- **Fix-Runden gesamt:** 1 (Not-Anker 12 nicht erreicht; siehe Config)
+- **Aktueller Schritt:** `step-004` (alle Epics approved, inkl. fix-01)
+- **Roadmap:** `roadmap.md` — alle 4 Epics abgehakt
+- **Tech-Debt:** `tech-debt.md` — 3 Einträge (TD-001 niedrig, TD-002 mittel, TD-003 niedrig)
+- **Task-Summary:** `task-summary.md` (globaler Audit Verdict `done`)
 - **Gestartet:** 2026-08-05T11:53:13+02:00
-- **Zuletzt aktualisiert:** 2026-08-05T11:53:13+02:00
+- **Abgeschlossen:** 2026-08-05T15:30:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-05T15:30:00+02:00
 
 ## Steps
 
