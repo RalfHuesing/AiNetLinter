@@ -110,8 +110,8 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
     private SkeletonTypeInfo BuildTypeInfo(string typeKind, TypeDeclarationSyntax node)
     {
         var fullName = node.Identifier.Text + (node.TypeParameterList?.ToString() ?? "");
-        var baseTypes = node.BaseList != null ? ": " + node.BaseList.Types.ToString() : null;
         var typeSymbol = _semanticModel.GetDeclaredSymbol(node);
+        var baseTypes = BuildBaseTypesDisplay(node, typeSymbol);
         var typeId = TryCreateDeclarationId(typeSymbol);
         var memberInfos = ExtractMembers(node, node.Members, typeSymbol);
 
@@ -145,6 +145,17 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
     private bool IsNamespaceAllowed()
     {
         return NamespaceFilter.IsNamespaceAllowed(_currentNamespace, _includeNamespaces, _excludeNamespaces);
+    }
+
+    private static string? BuildBaseTypesDisplay(TypeDeclarationSyntax node, ISymbol? typeSymbol)
+    {
+        if (node.BaseList != null)
+            return ": " + node.BaseList.Types.ToString();
+
+        if (typeSymbol is INamedTypeSymbol { BaseType.SpecialType: not (SpecialType.System_Object or SpecialType.System_ValueType) } named)
+            return $": {named.BaseType!.ToDisplayString()} (aus anderer Partial-Deklaration)";
+
+        return null;
     }
 
     private static SyntaxTokenList GetModifiers(MemberDeclarationSyntax member)

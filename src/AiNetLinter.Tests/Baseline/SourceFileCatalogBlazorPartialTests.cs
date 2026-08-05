@@ -16,8 +16,8 @@ namespace AiNetLinter.Tests.Baseline;
 /// SourceFileCatalog.LoadAsync geladene Compilation einfliesst. Die .razor.cs-Codebehind-Klasse
 /// hat dadurch einen Basistyp, und ihre override-Lifecycle-Methoden matchen gegen die
 /// entsprechenden virtuellen Methoden von ComponentBase — kein CS0115. get_file_skeleton zeigt
-/// den Basistyp fuer diese Datei weiterhin nicht an: die Extraktion liest je Datei nur die dort
-/// syntaktisch deklarierte Basisliste, unabhaengig vom tatsaechlich aufgeloesten Symbol.
+/// den Basistyp jetzt ebenfalls an, semantisch aufgeloest ueber das gemergte Partial-Symbol, mit
+/// einem Hinweis, dass er aus einer anderen Partial-Deklaration stammt.
 /// </summary>
 public sealed class SourceFileCatalogBlazorPartialTests
 {
@@ -52,7 +52,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
     }
 
     [Fact]
-    public async Task GetFileSkeleton_SiteViewRazorCs_NoLongerReportsCompileError()
+    public async Task GetFileSkeleton_SiteViewRazorCs_ShowsComponentBaseAndNoCompileError()
     {
         using var fixture = new BlazorPartialMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
@@ -65,5 +65,6 @@ public sealed class SourceFileCatalogBlazorPartialTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("Compile-Fehler", text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("CS0115", text, System.StringComparison.Ordinal);
+        Assert.Contains("ComponentBase", text, System.StringComparison.Ordinal);
     }
 }
