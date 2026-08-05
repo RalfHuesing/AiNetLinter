@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: verbesserungen-mcp
 step: 002/fix-01
