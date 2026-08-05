@@ -5,7 +5,7 @@ started_at: 2026-08-05
 last_updated: 2026-08-05
 rules_dir: .agents/rules
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
-current_step: step-001
+current_step: step-002
 ---
 
 # Task State: verbesserungen-mcp
@@ -14,7 +14,7 @@ current_step: step-001
 
 - **Task-Status:** `executing`
 - **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
-- **Aktueller Schritt:** `step-001`
+- **Aktueller Schritt:** `step-002`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-05
@@ -27,7 +27,7 @@ eine Zeile.>
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| step-001 | EPIC-01 | done | Blazor-Partial-Fixture anlegen und Symbolgraph-Diskrepanz reproduzieren | 0/3 | fbc399f | approved | fbc399f/ea60a32 |
 
 ## Config (optional)
 
