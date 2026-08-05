@@ -1,14 +1,11 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: small
 rules_dir: .agents/rules
-last_updated: 2026-08-05T11:30:00+02:00
-open_questions:
-  - "Backward-Compat: --mcp-log bleibt Override (Annahme) oder wird deprecated/ersetzt?"
-  - "solutionName-Token bei nicht auflösbarer Solution: Fallback 'default' (Annahme) oder exe-Name oder Fehler?"
-  - "Greift Default-Logik auch in anderen Modi (Lint, Audit) oder nur MCP-Server (Annahme: nur MCP)?"
+last_updated: 2026-08-05T11:36:00+02:00
+open_questions: []  # ready: alle Annahmen akzeptiert, Drift-loop kann starten
 ---
 
 # Konzept: Default-MCP-Call-Logging mit Pro-Solution/Pro-Tag-Pfadstruktur
