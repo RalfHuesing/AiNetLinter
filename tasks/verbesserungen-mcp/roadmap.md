@@ -72,7 +72,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: Blazor-Symbolgraph-Integration (P1) — Razor-Source-
+- [x] EPIC-01: Blazor-Symbolgraph-Integration (P1) — Razor-Source-
       Generator-Output beim Solution-Load in
       `src/AiNetLinter/Baseline/SourceFileCatalog.cs` einbeziehen,
       sodass der Roslyn-Symbolgraph mit `dotnet build` exakt
@@ -87,19 +87,26 @@ obsolet markiert) — kein starres Vorab-Dokument.
       `Konzept.md` Scope P1 „Blazor-Partials" + P2 „Globaler
       Rausch-Hinweis eindämmen" (funktional zusammenhängend — Rausch-
       Hinweis-Fix hängt von P1-Ergebnis ab, siehe „Wie").
-      **In Arbeit → step-001 (Fixture, done/approved), step-002 (Fix,
-      geplant).** Root Cause in step-002-Planung empirisch verifiziert
-      (siehe `step-002/step-plan.md`): kein Bug in
-      `SourceFileCatalog.cs`/`LinterEngine.cs` selbst — Ursache ist eine
-      Versions-Diskrepanz zwischen den in `AiNetLinter.csproj`
-      referenzierten `Microsoft.CodeAnalysis.*`-NuGet-Paketen (5.3.0)
-      und der vom lokal installierten .NET-SDK gebündelten
+      **Abgeschlossen → `step-001` (Fixture angelegt, done/approved),
+      `step-002` (Roslyn-Paket-Versions-Bump 5.3.0 → 5.6.0, done/approved
+      nach Fix-Runde), `step-002/fix-01` (semantischer Basistyp-Fallback
+      in `SkeletonSyntaxWalker.BuildTypeInfo` für
+      `get_file_skeleton`, done/approved).** Root Cause: Versions-
+      Diskrepanz zwischen den in `AiNetLinter.csproj` referenzierten
+      `Microsoft.CodeAnalysis.*`-NuGet-Paketen (5.3.0) und der vom
+      lokal installierten .NET-SDK gebündelten
       Razor-Source-Generator-Assembly (referenziert 5.5.0), wodurch
-      Roslyn den Generator-Typ prozessintern nicht laden kann
+      Roslyn den Generator-Typ prozessintern nicht laden konnte
       (`FileLoadException`, von Roslyns Analyzer-Loader verschluckt).
-      Fix testweise verifiziert: Versions-Bump auf 5.6.0 behebt CS0115
-      **und** den Rausch-Hinweis im Fixture-Fall vollständig, ganz ohne
-      Code-Änderung an `SourceFileCatalog.cs`/`McpCompileDiagnostics.cs`.
+      `step-002` behob den `CS0115`/Rausch-Hinweis-Teil per
+      Paket-Bump auf 5.6.0; der Kritiker fand dabei ein MAJOR-Finding
+      (Ebene 4, Konzept-Treue): `get_file_skeleton` zeigte die
+      Basisklasse `ComponentBase` weiterhin nicht an, weil
+      `SkeletonSyntaxWalker.BuildTypeInfo` den Basistyp rein syntaktisch
+      aus der jeweils einzelnen Datei liest. `step-002/fix-01` hat das
+      mit einem semantischen Fallback (`typeSymbol?.BaseType`, wenn
+      `node.BaseList == null`) vollständig behoben — beide Hälften von
+      Konzept.md DoD-Punkt 2 sind seither erfüllt und verifiziert.
 - [ ] EPIC-02: Einheitlicher Symbol-Identifikator-Parser (P1) —
       `src/AiNetLinter/Mcp/Tools/SymbolIdentifierResolver.cs` (aktuell
       laut Dateikommentar nur für `FindReferencesTool` ausgelagert) als
