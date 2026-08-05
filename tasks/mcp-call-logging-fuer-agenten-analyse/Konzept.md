@@ -120,7 +120,7 @@ Während der Konzeption aktiv gefundene Funde. Jeder Fund unabhängig von der Nu
 
 ## Wie (grober Ansatz)
 
-1. **Default-Pfad-Builder** in `McpServerCommand`: neue private Methode `BuildDefaultLogPath(solutionPath, exeDir)`, die `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` konstruiert. Fallback `ainetlinter-no-solution-<yyyy-MM-dd>` bei fehlender Solution. Lokales Datum.
+1. **Default-Pfad-Builder** in `McpServerCommand`: neue private Methode `BuildDefaultLogPath(solutionPath, exeDir)`, die `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` konstruiert. Bei `null`/leerer/whitespace `solutionPath`: `null` zurückgeben, Fehlermeldung auf stderr, Server bricht mit Exit-Code ≠ 0 ab (kein Fallback-Pfad, per User-Entscheidung 2026-08-05; siehe `revision_history`). Lokales Datum.
 2. **`TryCreateCallLog` erweitern** ODER neue Methode `TryCreateCallLogOrDefault`: bei `mcpLogPath` null/leer/whitespace wird `BuildDefaultLogPath` aufgerufen. Andernfalls wie bisher `ResolveMcpLogPath`. Konkrete Form (Methode ersetzen oder neue hinzufügen) entscheidet der Planer; Verhalten muss sein: leerer Wert = Default-Pfad, nicht `null`.
 3. **`McpCallLog.RecordError`** implementieren: JSONL-Zeile mit `level/error_type/error_message/stack_trace`. Stack-Trace-Cap 4 KB. Selber Lock wie `RecordEnd`.
 4. **Error-Hook in `McpServerOptionsFactory`**: SDK-Stelle, wo aktuell JSON-RPC-Errors entstehen (zu verifizieren via MCP-SDK-Inspektion), ruft `callLog?.RecordError(tool, args, ex)`. Bei `callLog == null` (Opt-in nicht aktiv) kein Overhead, kein `if`-Check im Hot-Path.
