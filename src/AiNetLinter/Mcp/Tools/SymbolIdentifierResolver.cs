@@ -11,11 +11,14 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools;
 
 /// <summary>
-/// Kleine, reine Parsing-/Aufloesungs-Helfer fuer <see cref="FindReferencesTool"/> — in eine eigene
-/// Datei ausgelagert, damit <see cref="FindReferencesTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) nicht durch reine Hilfslogik unnoetig waechst, waehrend
-/// <see cref="McpCodeGraphServer"/> (Parameter von <see cref="FindReferencesTool.ExecuteAsync"/>)
-/// bereits allein einen erheblichen transitiven Anteil beitraegt.
+/// Kleine, reine Parsing-/Aufloesungs-Helfer fuer <see cref="FindReferencesTool.ResolveSymbolAsync"/>
+/// — in eine eigene Datei ausgelagert, damit <see cref="FindReferencesTool"/>s eigener
+/// <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht durch reine Hilfslogik unnoetig
+/// waechst, waehrend <see cref="McpCodeGraphServer"/> (Parameter von
+/// <see cref="FindReferencesTool.ExecuteAsync"/>) bereits allein einen erheblichen transitiven
+/// Anteil beitraegt. Da <see cref="FindReferencesTool.ResolveSymbolAsync"/> der gemeinsame
+/// Einstiegspunkt fuer <c>find_references</c>, <c>get_impact</c>, <c>get_type_hierarchy</c> und
+/// <c>get_symbol_body</c> ist, gelten diese Helfer transitiv fuer alle vier Tools.
 /// </summary>
 internal static class SymbolIdentifierResolver
 {

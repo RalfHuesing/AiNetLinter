@@ -56,6 +56,21 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     }
 
     [Fact]
+    public async Task ExecuteAsync_StableSymbolIdentifierGiven_ReturnsCallSites()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, stableId, 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnknownSymbolIdentifier_ReturnsSymbolNotFoundError()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));

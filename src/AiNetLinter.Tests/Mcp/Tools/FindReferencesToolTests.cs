@@ -88,11 +88,42 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
     }
 
     [Fact]
+    public async Task ResolveSymbolAsync_StableId_ReturnsSymbolAtId()
+    {
+        var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+        Assert.NotNull(resolved);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
+        Assert.NotNull(stableId);
+
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, stableId!, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(symbol);
+        Assert.Equal("Greet", symbol!.Name);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ValidQualifiedName_ReturnsCallSiteInCaller()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 1, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StableId_ReturnsCallSiteInCaller()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
+
+        var result = await FindReferencesTool.ExecuteAsync(state, stableId!, maxResults: 50, depth: 1, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

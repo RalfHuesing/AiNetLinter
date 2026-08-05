@@ -14,12 +14,13 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools;
 
 /// <summary>
-/// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (Datei:Zeile:Spalte oder
-/// qualifizierter/teil-qualifizierter Name) zu genau einem Roslyn-<see cref="ISymbol"/> auf und
-/// liefert dessen Aufrufstellen ueber <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>. Deckt
-/// nur .cs-Dateien ab (Roslyn-Symbolgraph). Optionaler <c>depth</c>-Parameter (Default 1, hard
-/// cap 3) loest transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf und
-/// aggregiert sie zu einer Top-N-Antwort.
+/// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
+/// DocumentationCommentId, Datei:Zeile:Spalte oder qualifizierter/teil-qualifizierter Name) zu
+/// genau einem Roslyn-<see cref="ISymbol"/> auf und liefert dessen Aufrufstellen ueber
+/// <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>. Deckt nur .cs-Dateien ab
+/// (Roslyn-Symbolgraph). Optionaler <c>depth</c>-Parameter (Default 1, hard cap 3) loest
+/// transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf und aggregiert sie zu
+/// einer Top-N-Antwort.
 /// </summary>
 internal static class FindReferencesTool
 {
@@ -76,14 +77,20 @@ internal static class FindReferencesTool
     }
 
     /// <summary>
-    /// Loest <paramref name="identifier"/> entweder ueber eine Datei:Zeile:Spalte-Angabe oder ueber
-    /// einen qualifizierten/teil-qualifizierten Namen zu genau einem Symbol auf. Reine Funktion
-    /// (Solution rein, Symbol/Fehler raus) ohne Abhaengigkeit von <see cref="McpCodeGraphServer"/> —
-    /// direkt unit-testbar.
+    /// Loest <paramref name="identifier"/> ueber eine stabile DocumentationCommentId, eine
+    /// Datei:Zeile:Spalte-Angabe oder einen qualifizierten/teil-qualifizierten Namen zu genau
+    /// einem Symbol auf — gemeinsamer Einstiegspunkt fuer alle drei dokumentierten Formate. Reine
+    /// Funktion (Solution rein, Symbol/Fehler raus) ohne Abhaengigkeit von
+    /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
     /// </summary>
     internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolAsync(
         Solution solution, string identifier, CancellationToken ct)
     {
+        var (stableSymbol, stableError) =
+            await SymbolIdentifierResolver.TryResolveByStableIdAsync(solution, identifier, ct);
+        if (stableError is not null) return (null, stableError);
+        if (stableSymbol is not null) return (stableSymbol, null);
+
         if (SymbolIdentifierResolver.TryParsePosition(identifier, out var path, out var line, out var column))
         {
             return await ResolveByPositionAsync(solution, identifier, path, line, column, ct);

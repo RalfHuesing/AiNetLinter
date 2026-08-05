@@ -32,14 +32,8 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            var (symbol, error) = await TryResolveByStableIdAsync(solution, identifier, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
             if (error is not null) return error;
-            if (symbol is null)
-            {
-                var fallback = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
-                if (fallback.Error is not null) return fallback.Error;
-                symbol = fallback.Symbol;
-            }
             if (symbol is null) return McpToolResults.SymbolNotFound(identifier);
 
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -61,15 +55,6 @@ internal static class GetSymbolBodyTool
                 $"Unerwarteter Fehler in get_symbol_body: {ex.Message}",
                 context: identifier);
         }
-    }
-
-    private static async Task<(ISymbol? Symbol, CallToolResult? Error)> TryResolveByStableIdAsync(
-        Solution solution, string identifier, CancellationToken ct)
-    {
-        var (stable, stableError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(solution, identifier, ct);
-        if (stableError is not null) return (null, stableError);
-        if (stable is not null) return (stable, null);
-        return (null, null);
     }
 
     private static string? TryGetDeclarationId(ISymbol symbol)

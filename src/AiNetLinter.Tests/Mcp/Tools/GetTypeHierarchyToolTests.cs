@@ -69,6 +69,22 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     }
 
     [Fact]
+    public async Task ExecuteAsync_StableTypeIdentifier_ReturnsInterfaceAndDerivedClass()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Catalog.Solution, "BaseGreeting", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, stableId!, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("IGreeting", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("SpecialGreeting", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_InterfaceType_ReturnsImplementingClasses()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));

@@ -90,12 +90,13 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindReferencesDescription =
-        "Findet alle Aufrufstellen eines C#-Symbols (Datei:Zeile:Spalte " +
-        "oder qualifizierter/teil-qualifizierter Name). Optionaler depth-Parameter (Default 1, " +
-        "hard cap 3) loest transitive Aufrufstellen und aggregiert sie. Deckt nur .cs-Dateien ab, " +
-        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 " +
-        "Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die " +
-        "Gesamt-Trefferzahl.";
+        "Findet alle Aufrufstellen eines C#-Symbols anhand stabiler ID " +
+        "(DocumentationCommentId, ueberlebt Zeilenverschiebungen, disambiguiert Overloads) oder " +
+        "Datei:Zeile:Spalte bzw. qualifiziertem/teil-qualifiziertem Namen. Optionaler " +
+        "depth-Parameter (Default 1, hard cap 3) loest transitive Aufrufstellen und aggregiert " +
+        "sie. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
+        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile " +
+        "meldet die Gesamt-Trefferzahl.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -125,12 +126,13 @@ internal static class SymbolGraphToolRegistrations
     private const string GetImpactDescription =
         "Findet Aufrufstellen geaenderter C#-Signaturen. Ohne jeden Parameter aufgerufen " +
         "prueft es uncommittete lokale Aenderungen (Standardfall). Alternativ: entweder " +
-        "gitRef (Git-Commit-Ref) ODER symbolIdentifier (Datei:Zeile:Spalte oder " +
-        "qualifizierter Name) angeben, nie beide. Optionaler depth-Parameter (Default 1, " +
-        "hard cap 3) wirkt nur im Symbol-Branch und loest transitive Aufrufstellen, " +
-        "aggregiert. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+        "gitRef (Git-Commit-Ref) ODER symbolIdentifier angeben, nie beide — symbolIdentifier " +
+        "akzeptiert stabile ID (DocumentationCommentId, ueberlebt Zeilenverschiebungen, " +
+        "disambiguiert Overloads) oder Datei:Zeile:Spalte bzw. qualifiziertem/teil-" +
+        "qualifiziertem Namen. Optionaler depth-Parameter (Default 1, hard cap 3) wirkt nur im " +
+        "Symbol-Branch und loest transitive Aufrufstellen, aggregiert. Deckt nur .cs-Dateien ab, " +
+        "keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert standardmaessig auf 50 Treffer, " +
+        "ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -158,7 +160,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetTypeHierarchyDescription =
         "Liefert Basisklassen, implementierte Interfaces und (abgeleitete " +
-        "Klassen bzw. implementierende Typen) eines C#-Typ-Identifikators (Datei:Zeile:" +
-        "Spalte oder qualifizierter/teil-qualifizierter Name). Deckt nur .cs-Dateien ab, " +
-        "keine .js/.razor/.xaml/.html/.css-Dateien.";
+        "Klassen bzw. implementierende Typen) eines C#-Typ-Identifikators anhand stabiler ID " +
+        "(DocumentationCommentId, ueberlebt Zeilenverschiebungen, disambiguiert Overloads) oder " +
+        "Datei:Zeile:Spalte bzw. qualifiziertem/teil-qualifiziertem Namen. Deckt nur .cs-Dateien " +
+        "ab, keine .js/.razor/.xaml/.html/.css-Dateien.";
 }
