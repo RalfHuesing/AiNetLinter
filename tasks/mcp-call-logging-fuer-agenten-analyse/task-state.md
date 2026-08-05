@@ -2,7 +2,7 @@
 status: done  # executing | done | aborted
 task: mcp-call-logging-fuer-agenten-analyse
 started_at: 2026-08-05T11:53:13+02:00
-last_updated: 2026-08-05T15:30:00+02:00
+last_updated: 2026-08-05T15:45:00+02:00
 finished_at: 2026-08-05T15:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_fix_rounds: 1  # 1 Fix-Runde (step-004/fix-01), Not-Anker 12 nicht erreicht
@@ -34,6 +34,7 @@ eine Zeile.>
 | step-002 | EPIC-02 | done | McpCallLog.RecordError (Schema, Lock, 4 KB Stack-Trace-Cap) | 0/3 | c3fe3c5f | 9d87c7ff | b2088d2 |
 | step-003 | EPIC-03 | done | McpCallLog.ExecuteCallAsync Shared-Helper + 10 Tool-Wrapper-Refactor | 0/3 | d1642df4 | d38b0820 | 2d6d687 |
 | step-004 | EPIC-04 | done | Doku-Sammel-Step (6 Items) + finaler Test-Volllauf | 1/3 | fc550f2 | e625caa | e0b6ac2 |
+| step-005 | (post) | done | Tech-Debt-Aufräumaktion: TD-001 Status, TD-002 MetricsConfig-Refactor + PathOverride-Rollback, TD-003 ROADMAP-Korrektur | 0/3 | 643b884 | 3bfd19d | - |
 
 ## Config (optional)
 

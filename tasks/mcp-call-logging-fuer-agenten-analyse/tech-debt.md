@@ -98,7 +98,7 @@ Verweis auf die Tech-Debt-ID).
   Tool-Registration-Klassen heraus aufrufen, was die Pfade erneut
   anschwellen lässt. Aktuelle PathOverride-Bumps haben ~200 Z. Puffer,
   das reicht für ~5–10 Erweiterungen in `McpCallLog.cs`.
-- **Status:** offen
+- **Status:** erledigt (in step-005 refaktoriert; `MetricsConfig.cs` 395→288 Z. via Helper-Klasse + Sub-Records, PathOverrides auf Originalwerte 2800/2830/2800/2800/2870 zurückgerollt, Lint-Dogfooding 0 Violations, 1279/1279 grün, alle 5 Konsumenten-Footprints 32–74 Z. unter Original-Limits). Pragmatische Variante statt der wörtlichen 4-5-Sub-Config-Aufteilung — begründet im step-005-step-result.md. Vollständige Sub-Config-Aufteilung bleibt optional für eine separate Story.
 
 ### TD-003 — `Docs/ROADMAP.md:482` Test-Count-Inkonsistenz im EPIC-09-Eintrag [Priorität: niedrig]
 
@@ -110,4 +110,4 @@ Verweis auf die Tech-Debt-ID).
 - **Inkonsistenz:** Die Aufzählung nennt 1 gelöscht + 3 angepasst + 4 neu = **8**, nicht 5. Der reale Test-Count in `McpServerCommandCallLogTests.cs` ist **9** (`git grep -c "\[Fact\]"` = 9, durch laufenden Test verifiziert: 9/9 grün), weil die 2 unveränderten `ResolveMcpLogPath_*`-Tests (Zeilen 166-184 der Test-Datei) in der Roadmap-Aufzählung fehlen. Dieselbe Fehlerklasse wie der fix-01-item-06-Bug (5/5 → 9/9 in Step-Doku), nur an anderer Stelle.
 - **Warum nicht sofort gefixt:** Der step-004-Planer hat das beim Anlegen des EPIC-09-Eintrags nicht bemerkt; der step-004-Original-Reviewer hat es nicht im Findings-Block geflaggt; der fix-01-Planer hat es explizit aus dem Scope ausgeschlossen (Plan: „Keine Änderung an `Docs/ROADMAP.md` (item-03 — bereits approved; MINOR EPIC-09-vs-EPIC-20 ist „Sonstige Beobachtung", nicht Scope)"). Der fix-01-Reviewer hat die Beobachtung dokumentiert und für den globalen Audit vorgemerkt.
 - **Vorschlag:** Bei Gelegenheit (z. B. nächster Doku-Pass oder zusammen mit TD-001-Korrektur) den EPIC-09-Tests-Substring angleichen auf z. B. „9 Tests in `McpServerCommandCallLogTests` (1 obsoleter Test geloescht, 3 auf neue 4-Parameter-Signatur umgestellt, 4 neue fuer Default-Pfad-Konstruktion, 2 unveraenderte `ResolveMcpLogPath_*`)". 1 Zeile, kein Risiko.
-- **Status:** offen
+- **Status:** erledigt (in step-005 korrigiert; `Docs/ROADMAP.md:482` substring „5 Tests in `McpServerCommandCallLogTests`" durch „9 Tests ... (1 geloescht, 3 umgestellt, 4 neue, 2 unveraenderte `ResolveMcpLogPath_*`)" ersetzt).
