@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: mcp-call-logging-fuer-agenten-analyse
 started_at: 2026-08-05T11:53:13+02:00
-last_updated: 2026-08-05T14:10:00+02:00
+last_updated: 2026-08-05T14:25:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
 current_step: step-001
@@ -28,7 +28,7 @@ eine Zeile.>
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Default-Pfad-Konvention + harter Error-Exit bei fehlender Solution (kein Fallback) | 0/3 | 1cefdce0 | f66eaba | b87ee95 |
-| step-002 | EPIC-02 | in_progress | McpCallLog.RecordError (Schema, Lock, 4 KB Stack-Trace-Cap) | 0/3 | c3fe3c5f | 9d87c7ff | - |
+| step-002 | EPIC-02 | done | McpCallLog.RecordError (Schema, Lock, 4 KB Stack-Trace-Cap) | 0/3 | c3fe3c5f | 9d87c7ff | b2088d2 |
 
 ## Config (optional)
 
