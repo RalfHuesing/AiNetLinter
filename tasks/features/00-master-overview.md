@@ -18,7 +18,7 @@ purpose: Master-Übersicht aller Erkenntnisse aus dem 360-Grad-Überblick
 | 2 | `02-ainetlinter-mcp-current.md` | AiNetLinter MCP-Stand: 10 Tools, 1 Resource, ~10K LOC, Stärken/Schwächen, Quick-Wins | 57 KB |
 | 3 | `03-market-research.md` | Roslyn-MCP-Markt, MCP-Spec 2026, Token-Optimierung, Konkurrenz, Top-Features | 65 KB |
 | 4 | `04-explore-vs-flow-tools.md` | Detaillvergleich `codegraph_explore` ↔ AiNetLinter, `trace_flow`-Vorschlag | 41 KB |
-| 5 | `05-recommendations-roadmap.md` | Konsolidierte Empfehlungen, priorisierte Roadmap, Epics | (separat) |
+| 5 | `05-roadmap.md` | Konsolidierte Empfehlungen, priorisierte Roadmap, Epics | (separat) |
 
 ---
 
@@ -284,7 +284,7 @@ PowerShell-Skript `ainetlinter install` (oder `--install-agent <target>`) das:
 ## 8. Konkrete nächste Schritte (für die Diskussion)
 
 1. **Review dieser Synthese** + der 4 Sub-Reports mit dem User
-2. **Roadmap-Priorisierung** festlegen in `05-recommendations-roadmap.md` (separater Schritt)
+2. **Roadmap-Priorisierung** festlegen in `05-roadmap.md` (separater Schritt)
 3. **Konzept-Dokument** erstellen für die ersten 3-5 Epics (analog zum Drift-Loop-Format)
 4. **Drift-Loop** starten mit Epic 1: `trace_flow` MVP (M1) + Sufficiency-Hinweise (M2) + `isError: true`-Audit (M7)
 5. **CI-Integration** sicherstellen: Tests müssen grün, Footprint-Limits einhalten, Doku synchron
@@ -300,7 +300,7 @@ PowerShell-Skript `ainetlinter install` (oder `--install-agent <target>`) das:
 | `tasks/features/02-ainetlinter-mcp-current.md` | AiNetLinter IST-Zustand, Stärken/Schwächen, Quick-Wins | ✅ |
 | `tasks/features/03-market-research.md` | Roslyn-MCP-Markt, MCP-Spec 2026, Token-Opt | ✅ |
 | `tasks/features/04-explore-vs-flow-tools.md` | Detaillvergleich explore vs find_references, trace_flow-Vorschlag | ✅ |
-| `tasks/features/05-recommendations-roadmap.md` | Konsolidierte Roadmap, priorisiert, Epics | 📝 in Arbeit |
+| `tasks/features/05-roadmap.md` | Konsolidierte Roadmap, priorisiert, Epics | 📝 in Arbeit |
 
 ## Anhang B — Quellen für Detail-Tiefe
 
