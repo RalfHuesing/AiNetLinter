@@ -408,6 +408,11 @@
         "MaxAIContextFootprint": 2870
       }
     },
+    "src/AiNetLinter/Mcp/Tools/SafeguardTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2800
+      }
+    },
     "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2890

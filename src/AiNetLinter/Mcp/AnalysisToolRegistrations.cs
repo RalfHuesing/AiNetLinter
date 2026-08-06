@@ -35,6 +35,7 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog = null)
     {
         AddGetViolations(tools, mcpState, callLog);
+        AddSafeguard(tools, mcpState, callLog);
         AddSearchPattern(tools, mcpState, callLog);
     }
 
@@ -64,6 +65,35 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
         "erneut aufrufbar, kein Disk-Cache. scopeFilter (Projekt-Name oder Pfad-Substring) " +
         "grenzt auf einen Teilbereich ein.";
+
+    private static void AddSafeguard(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct);
+                }
+                return await callLog.ExecuteCallAsync("safeguard", $"{scopeFilter}|{minScore}|{maxViolations}",
+                    () => SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "safeguard",
+                Description = SafeguardDescription,
+            }));
+    }
+
+    private const string SafeguardDescription =
+        "Wann nutzen: Quality-Gate-Wert vor CI-Merge pruefen — deterministischer " +
+        "0-10-Score + Pass/Fail-Threshold + Top-Violations + Remediation-Hints fuer " +
+        "die geladene Solution. scopeFilter (Projekt-Name oder Pfad-Substring) " +
+        "grenzt auf einen Teilbereich ein, minScore ueberschreibt den Default-Threshold " +
+        "(8.0), maxViolations begrenzt die Top-Violations-Liste (Default 20).";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
