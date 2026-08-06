@@ -60,7 +60,7 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 
 ## MCP-Server-Modus
 
-AiNetLinter kann auch als stdio-basierter MCP-Server gestartet werden, um die Roslyn-basierte Solution-Analyse als 10 granular abfragbare Tools für AI-Coding-Agenten bereitzustellen. Details und Registrierungs-Anleitung in [Docs/agent-api.md#mcp-server-modus](Docs/agent-api.md#mcp-server-modus) und [Docs/integration.md#mcp-server-registrieren](Docs/integration.md#mcp-server-registrieren).
+AiNetLinter kann auch als stdio-basierter MCP-Server gestartet werden, um die Roslyn-basierte Solution-Analyse als 13 granular abfragbare Tools für AI-Coding-Agenten bereitzustellen. Details und Registrierungs-Anleitung in [Docs/agent-api.md#mcp-server-modus](Docs/agent-api.md#mcp-server-modus) und [Docs/integration.md#mcp-server-registrieren](Docs/integration.md#mcp-server-registrieren).
 
 ## Ausgewählte Regeln — aus ca. 35 konfigurierbaren Einstellungen
 

@@ -90,8 +90,16 @@ internal static class McpCodeGraphServerRefresh
             if (SourceFileCatalog.IsGeneratedPath(path)) continue;
             if (knownPaths.Contains(path)) continue;
 
-            var projectId = PickProjectForNewFile(updated, path)
-                ?? updated.ProjectIds.FirstOrDefault();
+            // Kein Directory-Praefix-Treffer auf ein bekanntes Projekt bedeutet: die Datei
+            // gehoert erkennbar zu keinem der geladenen Projekte (z. B. ein unabhaengiges
+            // Test-Fixture-Projekt an anderer Stelle im selben Solution-Verzeichnis-Baum,
+            // ausserhalb jeder Projekt-Ordnerstruktur). Frueher fiel dieser Fall auf "erstes
+            // Projekt der Solution" zurueck — das haengte projektfremde Dateien (inkl. bewusst
+            // regelverletzender Test-Fixtures) lautlos an ein beliebiges Projekt und machte
+            // Lint-/Safeguard-Ergebnisse nicht-deterministisch, sobald der Sweep unter Last
+            // (Directory-mtime-Aenderungen irgendwo im Repo) auslöste. Ohne Praefix-Treffer wird
+            // die Datei jetzt uebersprungen statt willkuerlich zugeordnet.
+            var projectId = PickProjectForNewFile(updated, path);
             if (projectId is null) continue;
 
             if (TryAddDocument(ref updated, projectId, path, fileState, writeWarn))
@@ -242,9 +250,11 @@ internal static class McpCodeGraphServerRefresh
     /// <summary>
     /// Heuristik fuer die Projekt-Wahl beim Verzeichnis-Sweep: erstes Nicht-Test-Projekt,
     /// dessen Quellpfad-Praefix die neue Datei enthaelt. Best-Effort — bewusst ohne
-    /// Resolving von <c>&lt;Compile Remove=…&gt;</c>-Ausschluessen aus .csproj-Dateien
-    /// (Konzept-Vorgabe), weil das Mitlesen der MSBuild-Syntax die Verantwortlichkeit
-    /// der Klasse sprengen wuerde. Fallback: erstes Projekt der Solution.
+    /// Resolving von <c>&lt;Compile Remove=…&gt;</c>-Ausschluessen aus .csproj-Dateien,
+    /// weil das Mitlesen der MSBuild-Syntax die Verantwortlichkeit der Klasse sprengen
+    /// wuerde. Liefert <see langword="null"/>, wenn keine Projekt-Verzeichnis dem Pfad der
+    /// neuen Datei als Praefix entspricht — der Aufrufer ueberspringt die Datei dann
+    /// (kein Fallback auf "erstes Projekt der Solution" mehr, siehe <see cref="SweepForNewFiles"/>).
     /// </summary>
     private static ProjectId? PickProjectForNewFile(Solution solution, string newFilePath)
     {

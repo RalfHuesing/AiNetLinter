@@ -75,10 +75,32 @@ internal static class SafeguardScanner
     internal const double SealedBonusPerQuarterOverHalf = 0.5;
 
     /// <summary>
+    /// Anzahl Gesamt-Versuche (inkl. Erstversuch) fuer <c>Project.GetCompilationAsync</c> pro Projekt,
+    /// bevor ein kompilierbares Projekt (<c>SupportsCompilation == true</c>) als echte Malfunction statt
+    /// stillschweigend uebersprungen gilt. Unter paralleler Prozess-Last (z. B. mehrere gleichzeitig
+    /// ladende MSBuild-Workspaces) kann <c>GetCompilationAsync</c> transient fehlschlagen — ohne Retry
+    /// wuerde das Projekt dann lautlos aus der Klassen-Aggregation fallen, was <c>avgCC</c>/<c>avgFootprint</c>
+    /// nicht-deterministisch ueber eine zufaellige Teilmenge der Klassen berechnet.
+    /// </summary>
+    internal const int CompilationRetryAttempts = 3;
+
+    /// <summary>
+    /// Basis-Verzoegerung zwischen Compilation-Retries in Millisekunden, linear skaliert mit der
+    /// Versuchsnummer (200ms vor Versuch 2, 400ms vor Versuch 3). Reines Backoff-Timing — beeinflusst
+    /// nicht die Score-Formel selbst (die bleibt frei von Zeit-/Zufalls-Operatoren), sondern nur, wie
+    /// lange auf eine erfolgreiche Compilation gewartet wird, bevor eine Malfunction gemeldet wird.
+    /// </summary>
+    internal const int CompilationRetryBaseDelayMs = 200;
+
+    /// <summary>
     /// Berechnet den deterministischen Safeguard-Score fuer die uebergebene Solution.
-    /// Defensive <c>try/catch</c> nur fuer LinterEngine-Malfunctions — der Roslyn-Walk fuer die
-    /// Klassen-Aggregation ist robust (ueberspringt nicht-kompilierbare Dokumente stillschweigend
-    /// via <c>GetSemanticModelAsync</c> null-check, ohne die Score-Berechnung zu blockieren).
+    /// Defensive <c>try/catch</c> um LinterEngine-Lauf UND Klassen-Aggregation: beides sind echte
+    /// Malfunctions, wenn sie fehlschlagen. Projekte mit <c>SupportsCompilation == false</c> (z. B.
+    /// echte Nicht-C#-Projekte) werden weiterhin normal uebersprungen — das ist kein Fehler. Ein
+    /// Projekt mit <c>SupportsCompilation == true</c>, dessen Compilation auch nach Retries
+    /// fehlschlaegt (siehe <see cref="TryGetCompilationAsync"/>), wird dagegen NICHT mehr
+    /// stillschweigend uebersprungen, sondern als Malfunction gemeldet — lieber ehrlich "konnte
+    /// nicht zuverlaessig scoren" als ein Score aus einer zufaelligen Teilmenge der Klassen.
     /// </summary>
     internal static async Task<SafeguardScoreResult> ComputeScoreAsync(SafeguardScannerParameters p)
     {
@@ -94,6 +116,7 @@ internal static class SafeguardScanner
         var concreteConfig = (Config)config;
 
         IReadOnlyCollection<RuleViolation> violations;
+        IReadOnlyList<ScannedClass> classes;
         try
         {
             var engine = new LinterEngine(
@@ -103,6 +126,12 @@ internal static class SafeguardScanner
                 console: console,
                 args: null);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
+
+            // Im selben try/catch wie die LinterEngine: ein kompilierbares Projekt, das auch nach
+            // Retries (siehe TryGetCompilationAsync) keine Compilation liefert, ist genauso eine
+            // echte Malfunction wie eine LinterEngine-Exception — beides wuerde sonst entweder den
+            // Score verfaelschen (stilles Ueberspringen) oder inkonsistent behandelt werden.
+            classes = await EnumerateConcreteClassesAsync(solution, scopeFilter, concreteConfig, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -110,7 +139,6 @@ internal static class SafeguardScanner
                 Score: null, IsMalfunction: true, Context: ex.Message);
         }
 
-        var classes = await EnumerateConcreteClassesAsync(solution, scopeFilter, concreteConfig, ct);
         var score = BuildScoreResult(new BuildScoreResultParameters(
             Violations: violations,
             Classes: classes,
@@ -334,14 +362,62 @@ internal static class SafeguardScanner
         return collected;
     }
 
-    /// <summary>Liefert die Compilation oder null, wenn das Projekt nicht kompilierbar ist
-    /// oder fehlschlaegt. Compilation-Fehler fuehren per Design nicht zum Scanner-Abbruch.</summary>
-    private static async Task<Compilation?> TryGetCompilationAsync(Project project, CancellationToken ct)
+    /// <summary>
+    /// Liefert die Compilation oder null, wenn das Projekt grundsaetzlich nicht kompilierbar ist
+    /// (<c>SupportsCompilation == false</c> — legitimer, erwartbarer Fall, z. B. echtes
+    /// Nicht-C#-Projekt). Fuer kompilierbare Projekte wird <see cref="GetCompilationWithRetryAsync"/>
+    /// aufgerufen, die transiente Fehlschlaege per Retry abfaengt und einen dauerhaften Fehlschlag
+    /// als <see cref="SafeguardCompilationException"/> wirft (von <see cref="ComputeScoreAsync"/>
+    /// als Malfunction behandelt).
+    /// </summary>
+    private static Task<Compilation?> TryGetCompilationAsync(Project project, CancellationToken ct)
     {
-        if (!project.SupportsCompilation) return null;
-        try { return await project.GetCompilationAsync(ct); }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ignored) { _ = ignored; return null; }
+        if (!project.SupportsCompilation) return Task.FromResult<Compilation?>(null);
+        return GetCompilationWithRetryAsync(project.GetCompilationAsync, project.Name, ct);
+    }
+
+    /// <summary>
+    /// Retried eine Compilation-Beschaffungsfunktion bis zu <see cref="CompilationRetryAttempts"/> mal
+    /// (linearer Backoff via <see cref="CompilationRetryBaseDelayMs"/>), um transiente Fehlschlaege
+    /// (z. B. MSBuild-/Ressourcen-Kontention unter paralleler Last) von echten, dauerhaften
+    /// Compile-Problemen zu unterscheiden. <paramref name="getCompilation"/> statt direkt
+    /// <c>Project.GetCompilationAsync</c>, damit die Retry-/Backoff-Logik isoliert von einer echten
+    /// Roslyn-<c>Project</c>-Instanz testbar ist (Pattern konsistent mit <see cref="BuildScoreResult"/>).
+    /// Wirft nach dem letzten erfolglosen Versuch eine <see cref="SafeguardCompilationException"/>
+    /// statt still <c>null</c> zurueckzugeben — ein kompilierbares Projekt, das dauerhaft nicht
+    /// kompiliert, darf nicht lautlos aus der Klassen-Aggregation fallen (siehe Determinismus-Hinweis
+    /// an <see cref="TryGetCompilationAsync"/>).
+    /// </summary>
+    internal static async Task<Compilation?> GetCompilationWithRetryAsync(
+        Func<CancellationToken, Task<Compilation?>> getCompilation, string projectName, CancellationToken ct)
+    {
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= CompilationRetryAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                var compilation = await getCompilation(ct);
+                if (compilation is not null) return compilation;
+                lastError = null;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
+
+            if (attempt < CompilationRetryAttempts)
+            {
+                await Task.Delay(CompilationRetryBaseDelayMs * attempt, ct);
+            }
+        }
+
+        throw new SafeguardCompilationException(
+            $"Compilation fuer Projekt '{projectName}' schlug nach {CompilationRetryAttempts} " +
+            "Versuchen fehl (SupportsCompilation=true, aber GetCompilationAsync lieferte wiederholt " +
+            "keine Compilation).",
+            lastError);
     }
 
     private static bool ShouldIncludeDocument(Document document, Project project, string? scopeFilter)
@@ -396,89 +472,3 @@ internal static class SafeguardScanner
             IsSealed: symbol.IsSealed);
     }
 }
-
-/// <summary>Parameter-Record fuer <see cref="SafeguardScanner.BuildScoreResult"/> — Pattern
-/// konsistent mit <see cref="SafeguardScannerParameters"/>. Records sind vom
-/// <c>MaxMethodParameterCount: 4</c>-Limit ausgenommen.</summary>
-internal sealed record BuildScoreResultParameters(
-    IReadOnlyCollection<RuleViolation> Violations,
-    IReadOnlyList<ScannedClass> Classes,
-    Config Config,
-    double Threshold,
-    int MaxRemediationEntries);
-
-/// <summary>
-/// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
-/// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
-/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird. <see cref="MinScoreThreshold"/> und
-/// <see cref="MaxRemediationEntries"/> haben Defaults aus <see cref="SafeguardScanner.DefaultMinScoreThreshold"/>
-/// / <see cref="SafeguardScanner.DefaultMaxRemediationEntries"/>.
-/// </summary>
-internal sealed record SafeguardScannerParameters(
-    Solution Solution,
-    ILinterEngineConfig Config,
-    ILintConsole Console,
-    string? ScopeFilter,
-    CancellationToken CancellationToken,
-    double MinScoreThreshold = SafeguardScanner.DefaultMinScoreThreshold,
-    int MaxRemediationEntries = SafeguardScanner.DefaultMaxRemediationEntries);
-
-/// <summary>
-/// Ergebnis-Container fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. <see cref="IsMalfunction"/>
-/// unterscheidet eine echte LinterEngine-Malfunction (<see cref="Context"/> non-null) von einem
-/// normal berechneten Score (selbst bei 0 Verstoessen kein Malfunction).
-/// </summary>
-internal sealed record SafeguardScoreResult(
-    ScoreResult? Score,
-    bool IsMalfunction,
-    string? Context = null);
-
-/// <summary>
-/// Score-Aggregat-Container mit den vier Score-Komponenten (Violations/CC/Footprint/Sealed-Bonus)
-/// aggregiert in <see cref="Score"/>, der <see cref="Threshold"/> als Pass-Grenze, den
-/// top-relevanten <see cref="Violations"/>, einem strukturierten <see cref="Remediation"/>-Hint
-/// und einer kompakten <see cref="Summary"/>-Zeile.
-/// </summary>
-internal sealed record ScoreResult(
-    bool Passed,
-    double Score,
-    double Threshold,
-    IReadOnlyList<ViolationEntry> Violations,
-    RemediationHint Remediation,
-    string Summary);
-
-/// <summary>
-/// 1:1-Mapping aus <see cref="RuleViolation"/> fuer den JSON-Schema-Output (EPIC-02):
-/// sortier- und vergleichbar nach <c>(FilePath, LineNumber)</c>.
-/// </summary>
-internal sealed record ViolationEntry(
-    string FilePath,
-    int LineNumber,
-    string RuleName,
-    string Details,
-    string Severity,
-    string Guidance);
-
-/// <summary>
-/// Strukturierte Remediation statt freier Text, damit EPIC-02 das in einen strukturierten
-/// JSON-Schema-Output mappen kann. <see cref="TopIssue"/> ist die haeufigste Regel unter den
-/// Top-Violations, <see cref="ActionableSteps"/> ist die nach Haeufigkeit sortierte Liste der
-/// kontextspezifischen Empfehlungen, <see cref="DocumentationHint"/> verweist auf die zentrale
-/// Konfigurationsdokumentation.
-/// </summary>
-internal sealed record RemediationHint(
-    string TopIssue,
-    IReadOnlyList<string> ActionableSteps,
-    string DocumentationHint);
-
-/// <summary>
-/// Interner Daten-Container fuer die von <see cref="SafeguardScanner.EnumerateConcreteClassesAsync"/>
-/// gesammelten Klassen-Metriken. Wird intern zwischen Scanner und <see cref="SafeguardScanner.BuildScoreResult"/>
-/// weitergereicht; bewusst kein <c>INamedTypeSymbol</c>, damit <see cref="SafeguardScanner.BuildScoreResult"/>
-/// ohne Roslyn-Symbols testbar bleibt (Plan: BuildScoreResult fuer isolierte Tests).
-/// </summary>
-internal sealed record ScannedClass(
-    string Name,
-    int MaxCognitiveComplexity,
-    int AIContextFootprint,
-    bool IsSealed);

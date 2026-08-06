@@ -237,6 +237,90 @@ public class Greeter { public string Hello() => ""hi""; }";
     }
 
     [Fact]
+    public async Task GetCompilationWithRetryAsync_TransientFailuresThenSuccess_ReturnsCompilation()
+    {
+        // Regressionstest fuer den urspruenglichen Live-Repo-Determinismus-Bug: unter paralleler
+        // Last kann GetCompilationAsync transient fehlschlagen. Die ersten (CompilationRetryAttempts
+        // - 1) Aufrufe simulieren das per Exception, der letzte Versuch liefert eine echte Compilation.
+        var expected = CSharpCompilation.Create("RetrySuccess");
+        var callCount = 0;
+
+        Func<CancellationToken, Task<Compilation?>> flaky = _ =>
+        {
+            callCount++;
+            if (callCount < SafeguardScanner.CompilationRetryAttempts)
+            {
+                throw new InvalidOperationException($"Simulierter transienter Fehlschlag #{callCount}.");
+            }
+            return Task.FromResult<Compilation?>(expected);
+        };
+
+        var result = await SafeguardScanner.GetCompilationWithRetryAsync(flaky, "FlakyProject", CancellationToken.None);
+
+        Assert.Same(expected, result);
+        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+    }
+
+    [Fact]
+    public async Task GetCompilationWithRetryAsync_AlwaysThrows_ThrowsSafeguardCompilationExceptionWithInnerException()
+    {
+        // Dauerhafter Fehlschlag (kein transientes Problem) muss NICHT mehr lautlos null liefern
+        // (das wuerde die Klasse still aus der Score-Aggregation ausschliessen), sondern als echte
+        // Malfunction durchgereicht werden.
+        var callCount = 0;
+        var innerException = new InvalidOperationException("Dauerhafter Compile-Fehler.");
+
+        Func<CancellationToken, Task<Compilation?>> alwaysFails = _ =>
+        {
+            callCount++;
+            throw innerException;
+        };
+
+        var ex = await Assert.ThrowsAsync<SafeguardCompilationException>(
+            () => SafeguardScanner.GetCompilationWithRetryAsync(alwaysFails, "PermanentlyBrokenProject", CancellationToken.None));
+
+        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+        Assert.Same(innerException, ex.InnerException);
+        Assert.Contains("PermanentlyBrokenProject", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(SafeguardScanner.CompilationRetryAttempts.ToString(), ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetCompilationWithRetryAsync_AlwaysReturnsNullWithoutException_ThrowsSafeguardCompilationException()
+    {
+        // Laut Roslyn-Vertrag liefert GetCompilationAsync bei SupportsCompilation == true nie null,
+        // aber die Retry-Logik behandelt diesen theoretischen Fall defensiv genauso wie eine Exception
+        // (kein stilles Uebergehen), statt sich auf den Vertrag blind zu verlassen.
+        var callCount = 0;
+        Func<CancellationToken, Task<Compilation?>> alwaysNull = _ =>
+        {
+            callCount++;
+            return Task.FromResult<Compilation?>(null);
+        };
+
+        var ex = await Assert.ThrowsAsync<SafeguardCompilationException>(
+            () => SafeguardScanner.GetCompilationWithRetryAsync(alwaysNull, "NullReturningProject", CancellationToken.None));
+
+        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+        Assert.Null(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task GetCompilationWithRetryAsync_CancellationRequested_ThrowsOperationCanceledExceptionNotMalfunction()
+    {
+        // Cancellation ist kein Malfunction-Fall — muss durchgereicht werden, nicht in eine
+        // SafeguardCompilationException uebersetzt werden (Konsistenz mit dem bestehenden
+        // OperationCanceledException-Passthrough in ComputeScoreAsync).
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        Func<CancellationToken, Task<Compilation?>> neverCalled = _ =>
+            throw new InvalidOperationException("Sollte wegen Cancellation nicht aufgerufen werden.");
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => SafeguardScanner.GetCompilationWithRetryAsync(neverCalled, "CancelledProject", cts.Token));
+    }
+
+    [Fact]
     public void BuildRemediation_UnknownRuleName_FallsBackToDefaultHint()
     {
         var unknown = new ViolationEntry(

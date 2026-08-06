@@ -36,6 +36,7 @@ internal static class OverviewResourceRegistration
         ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer C#-Datei."),
         ("get_symbol_body", "Liefert den Source-Body eines C#-Symbols per stabiler ID oder Datei:Zeile:Spalte."),
         ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
+        ("safeguard", "Liefert einen deterministischen 0-10-Quality-Score inkl. Pass/Fail-Threshold, Top-Violations und Remediation-Hint."),
         ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
         ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),

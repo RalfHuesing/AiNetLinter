@@ -88,7 +88,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
-| [ ]* | S1.2 | **`safeguard` (Quality-Contract-Pattern)** | 95 | 3-5 Tage | Recon C §5.1 F2, Recon B §6.3 |
+| [x] | S1.2 | **`safeguard` (Quality-Contract-Pattern)** | 95 | 3-5 Tage | Recon C §5.1 F2, Recon B §6.3 |
 | [ ] | S1.3 | **Structured-Output-Mode** (zentraler JSON-Wrapper) | 70 | 2-3h | Recon B §8.1 Q1+Q16 |
 | [ ] | S1.4 | **`get_call_tree`-Tool** (echter Baum, ASCII/Mermaid) | 65 | 1 Tag | Recon B §8.2 Q5 |
 
@@ -174,14 +174,13 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 **Abhängigkeiten:** Existierende `LinterEngine`, `get_violations`-Logik
 **Aufwand:** 3-5 Tage
-**Status:** in Arbeit — Plan: `tasks/safeguard/konzept.md`. Abhaken in dieser Roadmap erfolgt erst nach Abschluss (Step 3 des Plans); bis dahin sind die Akzeptanzkriterien noch offen.
 **Akzeptanzkriterien:**
-- [ ] Tool-Definition mit structured output (JSON Schema 2020-12)
-- [ ] Score-Berechnung deterministisch (gleicher Code → gleicher Score)
-- [ ] 10+ Unit-Tests (verschiedene Score-Klassen, Threshold-Logik)
-- [ ] 1 Integration-Test (Live-Repo: AiNetLinter-Repo selbst)
-- [ ] Doku: Use-Cases + Beispiel-Score-Berechnung
-- [ ] Migration: ServerInstructions erwähnt safeguard als Quality-Gate
+- [x] Tool-Definition mit structured output (JSON Schema 2020-12)
+- [x] Score-Berechnung deterministisch (gleicher Code → gleicher Score) — Determinismus-Bug behoben: der Verzeichnis-Sweep im MCP-Server (`McpCodeGraphServerRefresh.SweepForNewFiles`) konnte unter Last projektfremde `.cs`-Dateien (z. B. andere Test-Fixture-Projekte im selben Solution-Verzeichnis-Baum) lautlos an das erste Projekt der Solution haengen und damit die Lint-Violations verfaelschen; Fallback entfernt, nur noch Dateien innerhalb eines tatsaechlichen Projekt-Verzeichnisses werden uebernommen. Zusaetzlich haertet `SafeguardScanner` transiente `GetCompilationAsync`-Fehlschlaege unter Last per Retry ab und meldet einen dauerhaften Compile-Fehlschlag als Malfunction statt eines stillschweigend unvollstaendigen Scores.
+- [x] 10+ Unit-Tests (verschiedene Score-Klassen, Threshold-Logik) — 23 Unit-Tests in `SafeguardScannerTests`/`SafeguardToolTests`
+- [x] 1 Integration-Test (Live-Repo: AiNetLinter-Repo selbst) — `LiveDogfood_Safeguard_ReturnsResults`, stabil unter wiederholten Last-Reproduktionslaeufen
+- [x] Doku: Use-Cases + Beispiel-Score-Berechnung — `Docs/agent-api.md#mcp-server-modus`
+- [x] Migration: ServerInstructions erwähnt safeguard als Quality-Gate
 
 **Risiko:** Niedrig (deterministisch, gut testbar)
 **Quelle:** Recon C §5.1 F2, Recon B §6.3, Recon C §4.6 (CodeScene)
