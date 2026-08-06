@@ -63,11 +63,11 @@ depends-on:
 
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
-| [ ] | Q1 | **`isError: true`-Audit + Policy** | 70 | 2-3 Tage | Recon A §2.2 K5, Recon B §3.5 |
+| [x] | Q1 | **`isError: true`-Audit + Policy** | 70 | 2-3 Tage | Recon A §2.2 K5, Recon B §3.5 |
 | [ ] | Q2 | **`reload_config`-Tool** | 55 | 1h | Recon B §8.1 Q2 |
 | [ ] | Q3 | **`get_server_health`-Tool** | 50 | 1h | Recon B §8.1 Q3 |
-| [ ] | Q4 | **ServerInstructions als Single-Source-of-Truth** | 60 | 0.5-1 Tag | Recon A §2.2 K6, Recon D §7.2 |
-| [ ] | Q5 | **Sufficiency-Hinweise in Tool-Outputs** | 65 | 1 Tag | Recon A §2.2 K2+K5, Recon D §2.4 |
+| [x] | Q4 | **ServerInstructions als Single-Source-of-Truth** | 60 | 0.5-1 Tag | Recon A §2.2 K6, Recon D §7.2 |
+| [x] | Q5 | **Sufficiency-Hinweise in Tool-Outputs** | 65 | 1 Tag | Recon A §2.2 K2+K5, Recon D §2.4 |
 | [ ] | Q6 | **Tool-Description mit Few-Shot-Examples** | 50 | 0.5 Tag pro Tool | Recon B §8.4 Q15 |
 | [ ] | Q7 | **Compact-Output-Defaults** (kürzere Standard-Outputs) | 55 | 1 Tag | Recon C §3.3 |
 
