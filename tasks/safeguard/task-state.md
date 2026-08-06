@@ -2,7 +2,7 @@
 status: executing
 task: safeguard
 started_at: 2026-08-06T13:40:00+02:00
-last_updated: 2026-08-06T16:15:00+02:00
+last_updated: 2026-08-06T16:30:00+02:00
 rules_dir: .agents/rules
 total_fix_rounds: 0
 current_step: step-001
@@ -18,13 +18,14 @@ current_step: step-001
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-06T13:40:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-06T16:15:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-06T16:30:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | SafeguardScanner mit deterministischer Score-Berechnung | 1/3 | `afb6146` (+ `7e4e37e` fix) | Verdict: `approved` (nach fix-01) | see commits |
+| step-002 | EPIC-02 | in_progress | safeguard-Tool-Wrapper, Registrierung, ServerInstructions, Unit-Tests | 0/3 | - | - | - |
 
 ## Config (optional)
 

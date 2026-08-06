@@ -30,7 +30,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: SafeguardScanner (deterministische Score-Berechnung) — Reine Funktion
+- [x] EPIC-01: SafeguardScanner (deterministische Score-Berechnung) — Reine Funktion
       `SafeguardScanner.ComputeScoreAsync(solution, config, scope, ct) → ScoreResult`
       mit gewichteten Komponenten (Violations/CC-Durchschnitt/Footprint/Sealed-Quote),
       deterministisch und ohne MCP-Abhängigkeit; Score-Records
@@ -41,10 +41,15 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Remediation-Generator, 10+ Unit-Tests) und §"Wie" Schritt 1. Beobachtung
       `AIContextFootprint` an `AnalysisToolRegistrations` (siehe konzept.md
       §"Entdeckte Mängel"): in einem der Steps entscheiden, ob Konsolidierung oder
-      PathOverride — Entscheidung ad-hoc, kein Vorab-Block. **Geplante Schritt-Anzahl:
-      2-4** (Richtwert — Step-Modus entscheidet JIT auf Basis des tatsächlichen
-      `Mcp/Tools/GetViolationsScanner.cs`-Patterns, z. B. Scanner-Grundgerüst →
-      Score-Komponenten → Remediation → Scanner-Tests).
+      PathOverride — Entscheidung ad-hoc, kein Vorab-Block. **Tatsächliche Umsetzung
+      in 1 Step + 1 Fix-Runde** (→ `step-001` + `step-001/fix-01`): Scanner-Grundgerüst
+      + Score-Komponenten + Remediation-Generator + 13 Unit-Tests in einem Brocken
+      (statt der geplanten 2-4); `fix-01` behob 6 MAJOR-Linter-Verstöße (Parameter-Record
+      für `BuildScoreResult`, Extract-Method für `EnumerateConcreteClassesAsync`,
+      Async-Migration statt blockierender Task-Zugriffe, Dictionary-Lookup statt
+      11-Arm-Switch, `catch (Exception ignored)` statt leerer Catch). Aktueller
+      Stand: 433 Zeilen, alle 141 Unit-Tests grün, AiNetLinter-Linter 0 Verstöße in
+      der Datei.
 - [ ] EPIC-02: safeguard-Tool (MCP-Wrapper, Registrierung, Live-Repo-Integration) —
       `SafeguardTool.ExecuteAsync` als dünner Dispatcher auf den Scanner; neue
       `AddSafeguard(...)` in `AnalysisToolRegistrations.Register`; Input/Output als
