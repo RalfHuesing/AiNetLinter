@@ -62,3 +62,13 @@ Dieses Konzept bündelt alle verbleibenden, offenen Tech-Debt-Einträge aus den 
 - **Betroffene Dateien:** `src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs`, `FileStructureToolRegistrations.cs`, `AnalysisToolRegistrations.cs`
 - **Befund:** Die Registrar-Klassen wachsen bei jedem neuen MCP-Tool weiter an. Eine naive Vererbung würde das Dispatcher-Pattern verfälschen und den Footprint sogar erhöhen.
 - **Handlungsempfehlung:** Prüfung von kategoriespezifischen Helper-Klassen (z. B. gemeinsamer Lambda-Body-Helper für Call-Log-Dispatching), um den Footprint der Registrars schlank zu halten.
+
+### TD-006 — Status nach Umsetzungsversuch (tech-debt-konsolidierung)
+- **Ergebnis:** **Nicht lösbar mit aktueller MCP-SDK-Version.**
+- **Befund aus Implementierungsversuch:** Das MCP-SDK (`ModelContextProtocol.Server.McpServerTool.Create`) verwendet die **Lambda-Parameternamen direkt als JSON-Property-Namen** des Tool-Input-Schemas. Sobald ein Helper die Caller-Lambdas umschließt, gehen die semantisch wichtigen Namen (`filePath`, `scopeFilter`, `symbolIdentifier`, `maxResults`, `depth`, …) verloren. Das resultierende Schema bricht alle Live-Tests (`McpLiveRepositoryTests`, `McpServerAllToolsE2ETests`, `McpServerCommandTests`).
+- **Workaround-Versuche (alle verworfen):**
+  - Helper mit konkreten Overloads (0-arg, 1-string, 1-string?, string+int, string+int+int): Lambdas müssen im Helper neu deklariert werden, Parameternamen gehen verloren.
+  - `McpServerToolCreateOptions` bietet nur `OutputSchema`, kein `InputSchema` — keine Möglichkeit, das Schema unabhängig zu setzen.
+  - `Expression<Func<…>>`-basierte Reflection: würde starke Typisierung oder Signatur-Korrektheit kosten.
+- **Möglicher Zukunfts-Lösungsansatz:** Migration auf `AIFunctionMcpServerTool.Create(Delegate, options)` (Delegate direkt, kein Schema-Verlust) — dann muss die `if (callLog is null)`-Verzweigung jedoch in den Delegate-Body zurückwandern, was den Helper-Charakter wieder aufhebt.
+- **Folge:** TD-006 bleibt als **dokumentierte, nicht lösbare Tech-Schuld** bestehen. Die `if (callLog is null) … else …`-Boilerplate bleibt 10× im Code. Sollte bei zukünftigem SDK-Upgrade erneut evaluiert werden.

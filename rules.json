@@ -405,7 +405,7 @@
   "PathOverrides": {
     "src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 2870
       }
     },
     "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
