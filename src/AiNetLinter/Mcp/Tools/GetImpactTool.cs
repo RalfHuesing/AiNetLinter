@@ -82,7 +82,10 @@ internal static class GetImpactTool
         }
         catch (GitDiffFailedException ex)
         {
-            return McpToolResults.Error(
+            // Recoverable statt Error: eine nicht aufloesende gitRef ist ein behebbarer
+            // Nutzereingabe-Fehler (Tippfehler, falscher Branch-Name), kein Tool-Malfunction —
+            // siehe IsErrorPolicy.md.
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.AnalysisFailed,
                 $"Git-Diff fuer gitRef '{ex.GitRef}' fehlgeschlagen — Ref loest nicht auf.",
                 context: ex.Message,

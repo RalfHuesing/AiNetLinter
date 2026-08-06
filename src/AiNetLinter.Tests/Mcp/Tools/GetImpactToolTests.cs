@@ -32,13 +32,13 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     }
 
     [Fact]
-    public async Task ExecuteAsync_BothGitRefAndSymbolGiven_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_BothGitRefAndSymbolGiven_ReturnsRecoverableInvalidArgument()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("HEAD~1", "Greeter.Greet", 50, 1), CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -71,13 +71,13 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownSymbolIdentifier_ReturnsSymbolNotFoundError()
+    public async Task ExecuteAsync_UnknownSymbolIdentifier_ReturnsRecoverableSymbolNotFound()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "DoesNotExistXyz", 50, 1), CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
@@ -98,8 +98,10 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnresolvableGitRef_ReturnsAnalysisFailedErrorNotEmptyResult()
+    public async Task ExecuteAsync_UnresolvableGitRef_ReturnsRecoverableAnalysisFailedNotEmptyResult()
     {
+        // isError-Policy: eine nicht aufloesende gitRef ist ein behebbarer Nutzereingabe-Fehler
+        // (Tippfehler, falscher Branch-Name) — IsError bleibt false, siehe GetImpactTool.
         using var fixture = new GitImpactMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
@@ -107,7 +109,7 @@ public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture
         var result = await GetImpactTool.ExecuteAsync(
             state, new GetImpactInput("does-not-exist-xyz", null, 50, 1), CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("does-not-exist-xyz", textContent.Text, StringComparison.Ordinal);

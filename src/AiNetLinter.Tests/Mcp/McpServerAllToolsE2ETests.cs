@@ -49,19 +49,20 @@ public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixt
     }
 
     [Fact]
-    public async Task FindReferences_UnknownSymbol_ReturnsErrorResult()
+    public async Task FindReferences_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
     {
         var result = await _fixture.Client.CallToolAsync(
             "find_references",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "NonExistent.Symbol" });
 
-        Assert.True(result.IsError);
+        // isError-Policy: SYMBOL_NOT_FOUND ist recoverable — IsError bleibt false.
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GetImpact_BothArgumentsProvided_ReturnsErrorMessage()
+    public async Task GetImpact_BothArgumentsProvided_ReturnsRecoverableInvalidArgumentMessage()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_impact",
@@ -71,7 +72,11 @@ public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixt
                 ["symbolIdentifier"] = "Greeter.Greet"
             });
 
-        Assert.True(result.IsError, "get_impact muss einen Fehler liefern, wenn gitRef UND symbolIdentifier angegeben sind.");
+        // isError-Policy: INVALID_ARGUMENT ist recoverable — IsError bleibt false, der Text
+        // traegt die Handlungsanleitung (gitRef ODER symbolIdentifier, nie beide).
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -85,13 +90,13 @@ public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixt
     }
 
     [Fact]
-    public async Task GetTypeHierarchy_UnknownType_ReturnsErrorResult()
+    public async Task GetTypeHierarchy_UnknownType_ReturnsRecoverableSymbolNotFound()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy",
             new Dictionary<string, object?> { ["typeIdentifier"] = "UnknownClass123" });
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -107,13 +112,13 @@ public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixt
     }
 
     [Fact]
-    public async Task GetFileSkeleton_NonCsFile_ReturnsErrorResult()
+    public async Task GetFileSkeleton_NonCsFile_ReturnsRecoverableResourceNotFound()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton",
             new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/wwwroot/Page.xaml" });
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }

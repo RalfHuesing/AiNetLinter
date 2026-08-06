@@ -37,7 +37,7 @@ internal static class SearchPatternTool
     {
         if (string.IsNullOrEmpty(pattern))
         {
-            return McpToolResults.Error(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "pattern darf nicht leer sein.",
                 hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
@@ -58,7 +58,7 @@ internal static class SearchPatternTool
         }
         catch (ArgumentException ex)
         {
-            return McpToolResults.Error(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 $"Ungueltige Regex: {ex.Message}",
                 hint: "Pruefe pattern auf gueltige Regex-Syntax.");

@@ -1,0 +1,66 @@
+# isError-Policy fuer AiNetLinter MCP-Tools
+
+**Kontext:** CodeGraphs empirisch validierte Lehre (siehe `tasks/features/01-codegraph-recon.md`
+und `tasks/features/05-roadmap.md` §3 Q1): 1-2 `isError: true`-Antworten am Session-Anfang und
+ein Agent gibt das betroffene Tool auf, selbst wenn die Bedingung trivial behebbar gewesen waere
+(Tippfehler im Symbolnamen, mehrdeutiger Identifikator, leeres Argument). Das MCP-Protokollflag
+`CallToolResult.IsError` ist das Signal, das den Agenten diese Entscheidung treffen laesst — nicht
+der Text-Inhalt. Diese Policy legt fest, wann `IsError=true` gerechtfertigt ist und wann eine
+erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im Text liefert.
+
+## Policy-Tabelle
+
+| Bedingung | isError | Begruendung |
+|---|:---:|---|
+| `SOLUTION_NOT_LOADED` (Server-Start ist fehlgeschlagen, `LoadState == LoadFailed`) | **true** | Ohne resident geladene Solution kann kein Tool sinnvoll antworten — kein Argument des Aufrufers kann das beheben, das ist ein Server-/Umgebungsproblem. |
+| Path-Traversal- / Sicherheits-Verweigerung | **true** | Sicherheitsrelevant — ein Agent soll diesen Zustand nicht stillschweigend als normales Ergebnis behandeln. *(Aktuell kein solcher Fall im Code: Dateipfad-Aufloesung laeuft ausschliesslich ueber `DiffImpactAnalyzer.FindDocumentByPath` gegen Dokumente, die bereits Teil der geladenen Solution sind — ein Pfad ausserhalb der Solution matcht schlicht kein Dokument und faellt unter `RESOURCE_NOT_FOUND`, siehe unten. Falls kuenftig ein Tool direkten Dateisystemzugriff ausserhalb der Solution bekommt, gehoert die Verweigerung hierher.)* |
+| Echte Malfunction (unerwartete Exception im defensiven `try/catch`, `WORKSPACE_DIAGNOSTIC`/`ANALYSIS_FAILED` bei internem Fehler) | **true** | Kein durch praezisere Argumente vermeidbarer Nutzerfehler, sondern ein Grenzfall/Bug. Hint enthaelt den Retry-once-Hinweis ("Einmal erneut versuchen") — ein einmaliger erneuter Versuch klaert transiente Faelle, bevor die Datei/das Symbol manuell inspiziert werden muss. |
+| `SYMBOL_NOT_FOUND` (Identifikator loest zu keinem Symbol auf) | **false** | Erwartbar (Tippfehler, falscher Scope) und direkt behebbar — Hint verweist auf `find_symbol`. |
+| `AMBIGUOUS_SYMBOL` (Identifikator loest zu mehreren Symbolen auf) | **false** | Erwartbar bei kurzen/ueberladenen Namen — die mitgelieferte Kandidatenliste ist selbst die Handlungsanleitung (Identifikator praezisieren). |
+| `INVALID_ARGUMENT` (leeres Pflichtfeld, unbekannter `kind`-Filter, ungueltige Regex, gegenseitig exklusive Parameter beide gesetzt, Identifikator loest zu falschem Symbol-Kind auf) | **false** | Nutzer-/Agentenfehler bei den Argumenten, kein Tool-Ausfall — der Hint nennt die korrekte Form. |
+| `RESOURCE_NOT_FOUND` (Dateipfad matcht kein Dokument in der Solution) | **false** | Pfadfehler ist erwartbar (Tippfehler, falscher Separator) — Hint verweist auf Pfad-Konvention und `find_symbol` zur Orientierung. |
+| `ANALYSIS_FAILED` bei nicht aufloesender `gitRef` (`get_impact`) | **false** | Ein falscher/erfundener Git-Ref ist ein behebbarer Nutzereingabe-Fehler (Tippfehler, falscher Branch-Name) — Hint verweist auf `git log`/`git branch` oder den Aufruf ohne `gitRef`. |
+| Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
+| Solution wird noch im Hintergrund geladen (`McpToolResults.Loading()`) | **false** | Transienter Wartezustand, kein Fehler — der Text ist ein `[INFO]`-Hinweis, Client kann nach kurzer Pause retryn. |
+
+## Audit-Ergebnis pro Tool (10 Tools)
+
+Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je Tool, siehe
+`src/AiNetLinter/Mcp/Tools/*.cs`.
+
+| Tool | isError=true Faelle | isError=false Faelle (recoverable) |
+|---|---|---|
+| `find_symbol` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`, catch-Block) | `INVALID_ARGUMENT` (leeres `namePattern`, unbekannter `kind`) |
+| `find_references` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL` (ueber `ResolveSymbolAsync`); leere Treffermenge |
+| `get_impact` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (beide Parameter gesetzt); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (Symbol-Branch, wiederverwendet von `find_references`); `ANALYSIS_FAILED` (unaufloesbare `gitRef`); leere Treffermenge |
+| `get_type_hierarchy` | `SOLUTION_NOT_LOADED` | `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet); `INVALID_ARGUMENT` (Identifikator ist kein Typ) |
+| `get_file_skeleton` | `SOLUTION_NOT_LOADED` | `RESOURCE_NOT_FOUND` (Pfad matcht kein Dokument) |
+| `get_index_scope` | `SOLUTION_NOT_LOADED` | *(keine — Tool hat keine Argumente, daher keine erwartbare Fehlerbedingung ausser dem Solution-Zustand)* |
+| `get_hotspots` | `SOLUTION_NOT_LOADED` | leere Treffermenge (Scope-Filter matched keine Datei — eigene Textmeldung, kein `[ERROR]`-Code noetig) |
+| `get_violations` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in `LinterEngine.RunAsync`) | leere Treffermenge (0 Violations); Scope-Filter matched keine Datei |
+| `get_symbol_body` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
+| `search_pattern` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (leeres `pattern`, ungueltige Regex); leere Treffermenge (eigene "0 Treffer"-Textmeldung) |
+
+**Vor diesem Audit abweichend von der Policy** (jetzt korrigiert):
+`SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT` und `RESOURCE_NOT_FOUND` liefen ueber
+`McpToolResults.Error(...)` und setzten damit `IsError=true`, obwohl es sich in allen Faellen um
+erwartbare, durch praezisere Argumente behebbare Bedingungen handelt. Ebenso lief
+`get_impact`s `ANALYSIS_FAILED` bei unaufloesbarer `gitRef` ueber `Error(...)`. Fix: neue
+`McpToolResults.Recoverable(...)`-Methode (identisches Textformat, `IsError=false`), die
+`SymbolNotFound`/`AmbiguousSymbol`/`InvalidArgument`/`FileNotFound` intern nutzen; die direkten
+`Error(InvalidArgument, ...)`-Aufrufe in `FindSymbolTool` und `SearchPatternTool` sowie der
+`Error(AnalysisFailed, ...)`-Aufruf in `GetImpactTool` wurden auf `Recoverable(...)` umgestellt.
+`get_violations`s bisheriger Malfunction-Pfad lief ohne `IsError`-Flag ueberhaupt durch
+`McpToolResults.Text(...)` (also faktisch `IsError=false` fuer einen echten internen Fehler) —
+korrigiert auf `Error(...)` mit Retry-once-Hinweis, siehe `GetViolationsScanner.GetViolationsResult
+.IsMalfunction`.
+
+## Verwendung
+
+- `McpToolResults.Error(...)` — nur fuer die drei `isError=true`-Kategorien oben.
+- `McpToolResults.Recoverable(...)` — fuer alle anderen strukturierten `[ERROR]:`-Texte; identisches
+  Format wie `Error(...)`, aber `IsError=false`.
+- `McpToolResults.SolutionNotLoaded()`, `SymbolNotFound(...)`, `AmbiguousSymbol(...)`,
+  `InvalidArgument(...)`, `FileNotFound(...)`, `CompilationError(...)` — vordefinierte Kurzformen,
+  die die richtige Wahl bereits treffen (siehe XML-Doc auf der jeweiligen Methode in
+  `McpToolResults.cs`).

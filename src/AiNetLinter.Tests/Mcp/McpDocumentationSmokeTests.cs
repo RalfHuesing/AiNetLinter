@@ -76,7 +76,8 @@ public sealed class McpDocumentationSmokeTests : IClassFixture<McpLiveRepository
         // Erwartung: Docs/agent-api.md#mcp-server-modus Z. 238 nennt 6 C#-only-Tools und hebt
         // search_pattern als Nicht-C#-only-Fallback heraus. Doku-Drift zwischen Fliesstext,
         // Tabelle (Z. 242-252) und dem wortwoertlich zitierten ServerInstructions-Block
-        // (Quelle: McpServerOptionsFactory.cs:26-31) wird durch diese Assertion gefangen.
+        // (Quelle: ServerInstructions.cs, Q4-Umzug aus McpServerOptionsFactory.cs) wird durch
+        // diese Assertion gefangen.
         //
         // Strategie: File-Read auf Docs/agent-api.md (statt hartkodierter Erwartungs-String
         // wie in Plan-Variante). Begruendung: ein A3-Pfad "Doku manipulieren -> Test rot"

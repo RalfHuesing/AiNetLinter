@@ -23,6 +23,11 @@ internal static class GetSymbolBodyTool
 {
     internal const int DefaultMaxBodyLines = 80;
 
+    /// <summary>Textmarker, den <see cref="ExtractSymbolBody"/> nur bei tatsaechlicher
+    /// maxBodyLines-Kappung anhaengt — Grundlage fuer die Sufficiency-Hinweis-Entscheidung in
+    /// <see cref="ExecuteAsync"/> (siehe <see cref="McpSufficiencyHints"/>).</summary>
+    private const string TruncationMarker = "// ... truncated, total ";
+
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string identifier, int maxBodyLines, CancellationToken ct)
     {
@@ -40,6 +45,7 @@ internal static class GetSymbolBodyTool
             var idSuffix = TryGetDeclarationId(symbol);
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
+            var isTruncated = body.Contains(TruncationMarker, StringComparison.Ordinal);
 
             var markdown = $"### {symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`\n\n" +
                            (idSuffix is null ? "" : $"id: `{idSuffix}`\n\n") +
@@ -47,7 +53,11 @@ internal static class GetSymbolBodyTool
                            body +
                            "\n```";
 
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, markdown));
+            // Sufficiency-Hinweis nur fuer den vollstaendigen Body — ein per maxBodyLines
+            // gekappter Body traegt bereits seinen eigenen "truncated, maxBodyLines erhoehen"-
+            // Hinweis (siehe ExtractSymbolBody), der widerspruechlich waere neben "vollstaendig".
+            var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
+            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, final));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

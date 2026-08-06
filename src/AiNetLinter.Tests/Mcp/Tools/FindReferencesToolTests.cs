@@ -51,6 +51,21 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
         Assert.NotNull(error);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
+        // isError-Policy: SYMBOL_NOT_FOUND ist recoverable (naechster Schritt: find_symbol) —
+        // IsError bleibt false, damit der Agent das Tool nicht aufgibt.
+        Assert.NotEqual(true, error.IsError);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await FindReferencesTool.ExecuteAsync(state, "DoesNotExistXyz", maxResults: 50, depth: 1, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -127,6 +142,8 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+        // Q5 Sufficiency-Hinweis: nicht-trunkiertes Ergebnis ist vollstaendig, kein Read/Grep noetig.
+        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -156,6 +173,9 @@ public sealed class FindReferencesToolTests : IClassFixture<SymbolGraphCatalogFi
         Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern verfeinern oder maxResults erhöhen", textContent.Text, StringComparison.Ordinal);
+        // Q5: ein trunkiertes Ergebnis bekommt NICHT den "vollstaendig"-Sufficiency-Hinweis —
+        // die Meta-Zeile selbst signalisiert "weitere Calls noetig".
+        Assert.DoesNotContain("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

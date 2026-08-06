@@ -33,14 +33,17 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class GetViolationsScanner
 {
     /// <summary>
-    /// Baut den vollstaendigen Lint-Violations-Report fuer <paramref name="solution"/> als Text. Ist
+    /// Baut den vollstaendigen Lint-Violations-Report fuer <paramref name="solution"/>. Ist
     /// <paramref name="scopeFilter"/> gesetzt, aber matched keine Datei, wird eine explizite
     /// "Keine Dateien im Scope"-Meldung geliefert statt der sonst irrefuehrenden "keine Violations"-
     /// Aussage. Defensive <c>try/catch</c> defensiv fuer unerwartete Lint-Errors —
-    /// ueberspringt die betroffene Datei nicht moeglich (der Fehler waere global), liefert aber
-    /// stattdessen einen Fehlertext, damit der MCP-Aufruf nicht crasht.
+    /// ueberspringt die betroffene Datei nicht moeglich (der Fehler waere global). Der
+    /// <see cref="GetViolationsResult.IsMalfunction"/>-Flag signalisiert
+    /// <see cref="GetViolationsTool"/>, dass dieser Fall (anders als "Keine Dateien im Scope" oder
+    /// "0 Violations") eine echte Malfunction ist und laut IsErrorPolicy.md mit IsError=true
+    /// beantwortet werden muss.
     /// </summary>
-    internal static async Task<string> BuildViolationsTextAsync(GetViolationsScannerParameters p)
+    internal static async Task<GetViolationsResult> BuildViolationsTextAsync(GetViolationsScannerParameters p)
     {
         var solution = p.Solution;
         var config = p.Config;
@@ -69,14 +72,18 @@ internal static class GetViolationsScanner
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return LinterErrorFormatter.Format(
-                LinterErrorCodes.AnalysisFailed,
+            // Message + separates Context-Feld statt String-Verkettung — konsistent mit dem
+            // etablierten Muster in FindSymbolTool/FindReferencesTool/GetSymbolBodyTool/
+            // GetImpactTool (siehe deren catch-Bloecke bzw. GitDiffFailedException-Handling).
+            return new GetViolationsResult(
                 "Unerwarteter Fehler bei der Lint-Analyse.",
-                context: ex.Message,
-                hint: "LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
+                IsMalfunction: true,
+                Context: ex.Message);
         }
 
-        return FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig);
+        return new GetViolationsResult(
+            FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig),
+            IsMalfunction: false);
     }
 
     private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
@@ -209,3 +216,15 @@ internal sealed record GetViolationsScannerParameters(
     string? ScopeFilter,
     CancellationToken CancellationToken,
     bool UsedDefaultConfig = false);
+
+/// <summary>
+/// Ergebnis-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>.
+/// <paramref name="IsMalfunction"/> unterscheidet eine echte Malfunction (unerwartete Exception
+/// in der LinterEngine — <see cref="GetViolationsTool"/> antwortet dafuer mit IsError=true, siehe
+/// IsErrorPolicy.md) von einem normalen Report-Text (auch "Keine Dateien im Scope" oder "0
+/// Violations" zaehlen als normal, nicht als Malfunction). <paramref name="Context"/> traegt bei
+/// einer Malfunction die rohe Exception-Message (analog zum <c>context:</c>-Parameter von
+/// <see cref="McpToolResults.Error"/>/<see cref="McpToolResults.Recoverable"/> in den anderen
+/// Tools) — bleibt <see langword="null"/> fuer normale Reports.
+/// </summary>
+internal sealed record GetViolationsResult(string Text, bool IsMalfunction, string? Context = null);

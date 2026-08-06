@@ -133,28 +133,28 @@ public sealed class SearchPatternToolTests : IClassFixture<SymbolGraphCatalogFix
     }
 
     [Fact]
-    public async Task ExecuteAsync_InvalidRegex_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_InvalidRegex_ReturnsRecoverableInvalidArgument()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "(unclosed", isRegex: true, maxResults: 50, CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pruefe pattern auf gueltige Regex-Syntax", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_EmptyPattern_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_EmptyPattern_ReturnsRecoverableInvalidArgument()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "", isRegex: false, maxResults: 50, CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);

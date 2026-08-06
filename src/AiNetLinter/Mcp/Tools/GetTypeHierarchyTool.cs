@@ -35,6 +35,9 @@ internal static class GetTypeHierarchyTool
 
         var text = await GetTypeHierarchyFormatter.BuildHierarchyTextAsync(type, solution, ct);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
+        // GetTypeHierarchyFormatter trunkiert nie (vollstaendige Basisklassen-/Interface-/
+        // Subtyp-Ketten) — Sufficiency-Hinweis gilt daher immer, nicht bedingt wie bei
+        // find_references/get_symbol_body.
+        return McpToolResults.Text(McpSufficiencyHints.Append(FindSymbolTool.PrependWarning(warning, text)));
     }
 }

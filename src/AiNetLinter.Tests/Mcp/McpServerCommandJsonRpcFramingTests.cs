@@ -126,6 +126,44 @@ public sealed class McpServerCommandJsonRpcFramingTests
         }
     }
 
+    [Fact]
+    public async Task Initialize_ResponseInstructionsField_ContainsServerInstructionsDoctrine()
+    {
+        // Q4-Nachweis (05-roadmap.md §3): die ServerInstructions.Text-Doctrine muss tatsaechlich
+        // im initialize-Response auf dem Wire ankommen — nicht nur auf McpServerOptions-Ebene
+        // (siehe McpServerOptionsFactoryTests fuer den Options-Ebenen-Test). Roher JSON-Parse
+        // gegen das "instructions"-Feld (JSON-Property-Name laut ModelContextProtocol.Core
+        // InitializeResult), bewusst ohne SDK-Client, analog zu den anderen Framing-Tests in
+        // dieser Klasse.
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+
+        var frames = new[]
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"" + ProtocolVersion + "\"," +
+                "\"capabilities\":{}," +
+                "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+        };
+
+        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+
+        string? instructions = null;
+        foreach (var line in observedLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var doc = JsonDocument.Parse(line);
+            if (!doc.RootElement.TryGetProperty("id", out var id) || id.GetInt32() != 1) continue;
+            instructions = doc.RootElement.GetProperty("result").GetProperty("instructions").GetString();
+            break;
+        }
+
+        Assert.False(string.IsNullOrEmpty(instructions));
+        Assert.Contains("search_pattern", instructions, StringComparison.Ordinal);
+        Assert.Contains("Sufficiency-Doctrine", instructions, StringComparison.Ordinal);
+        Assert.Contains("isError-Policy", instructions, StringComparison.Ordinal);
+    }
+
     private static async Task<System.Collections.Generic.List<string>> RunAndCollectStdoutAsync(
         string targetDirectory, string[] frames)
     {

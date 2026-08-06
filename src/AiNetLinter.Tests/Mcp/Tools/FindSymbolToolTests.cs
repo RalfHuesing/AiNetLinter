@@ -35,13 +35,15 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     }
 
     [Fact]
-    public async Task ExecuteAsync_EmptyNamePattern_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_EmptyNamePattern_ReturnsRecoverableInvalidArgument()
     {
+        // isError-Policy: INVALID_ARGUMENT ist ein erwartbarer/recoverable Nutzerfehler, kein
+        // Tool-Malfunction — IsError bleibt false, der Text traegt die Handlungsanleitung.
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
 
         var result = await FindSymbolTool.ExecuteAsync(state, namePattern: "", kind: null, maxResults: 50, CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);
@@ -87,13 +89,13 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>,
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownKind_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_UnknownKind_ReturnsRecoverableInvalidArgument()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
 
         var result = await FindSymbolTool.ExecuteAsync(state, namePattern: "Greeter", kind: "Enum", maxResults: 50, CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Enum", textContent.Text, StringComparison.Ordinal);

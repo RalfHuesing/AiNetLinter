@@ -52,7 +52,7 @@ internal static class FindSymbolTool
     {
         if (string.IsNullOrEmpty(namePattern))
         {
-            return McpToolResults.Error(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "namePattern darf nicht leer sein.",
                 hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
@@ -60,7 +60,7 @@ internal static class FindSymbolTool
 
         if (kind is not null && !ValidKinds.Contains(kind))
         {
-            return McpToolResults.Error(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 $"Unbekannter kind-Filter '{kind}'.",
                 hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property.");

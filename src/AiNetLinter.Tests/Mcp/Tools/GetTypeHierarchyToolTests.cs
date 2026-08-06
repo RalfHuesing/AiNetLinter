@@ -32,25 +32,25 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownTypeIdentifier_ReturnsSymbolNotFoundError()
+    public async Task ExecuteAsync_UnknownTypeIdentifier_ReturnsRecoverableSymbolNotFound()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
 
     [Fact]
-    public async Task ExecuteAsync_IdentifierResolvesToMethodNotType_ReturnsInvalidArgumentError()
+    public async Task ExecuteAsync_IdentifierResolvesToMethodNotType_ReturnsRecoverableInvalidArgument()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -66,6 +66,8 @@ public sealed class GetTypeHierarchyToolTests : IClassFixture<SymbolGraphCatalog
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("IGreeting", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("SpecialGreeting", textContent.Text, StringComparison.Ordinal);
+        // Q5 Sufficiency-Hinweis: get_type_hierarchy trunkiert nie, Hinweis gilt immer.
+        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

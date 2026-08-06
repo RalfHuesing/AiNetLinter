@@ -32,14 +32,14 @@ public sealed class GetFileSkeletonToolTests : IClassFixture<SymbolGraphCatalogF
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownFilePath_ReturnsResourceNotFoundError()
+    public async Task ExecuteAsync_UnknownFilePath_ReturnsRecoverableResourceNotFound()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/DoesNotExist.cs", CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text);
     }

@@ -48,24 +48,37 @@ internal static class FindReferencesTool
             var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
             var clampedDepth = Math.Clamp(depth, 1, CallGraphTraversal.MaxRecursionDepth);
             string body;
+            bool isTruncated;
 
             if (clampedDepth == 1)
             {
                 var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
                 if (callSites.Count == 0)
                 {
-                    return McpToolResults.Text(FindSymbolTool.PrependWarning(
-                        warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"));
+                    // Zero Treffer ist ein vollstaendiges, definitives Ergebnis (kein Aufrufer
+                    // existiert) — Sufficiency-Hinweis gilt.
+                    return McpToolResults.Text(McpSufficiencyHints.Append(FindSymbolTool.PrependWarning(
+                        warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'")));
                 }
+                isTruncated = callSites.Count > normalizedMaxResults;
                 body = McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults);
             }
             else
             {
                 body = await CallGraphTraversal.ExpandAndFormatAsync(
                     solution, symbol!, clampedDepth, normalizedMaxResults, ct);
+                // ExpandAndFormatAsync liefert keine getrennte Truncated-Flag; die eigene
+                // Meta-Zeile enthaelt "hard-cap" nur bei tatsaechlicher Kappung (siehe
+                // CallGraphTraversal.AggregateAndTruncate) — Marker statt Signatur-Aenderung,
+                // um den bestehenden String-Vertrag von ExpandAndFormatAsync nicht zu brechen.
+                isTruncated = body.Contains("hard-cap", StringComparison.Ordinal);
             }
 
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, body));
+            // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse (Q5) — ein trunkiertes
+            // Ergebnis traegt bereits seine eigene Meta-Zeile ("depth reduzieren oder maxResults
+            // erhoehen"), die implizit "weitere Calls noetig" signalisiert.
+            var finalBody = isTruncated ? body : McpSufficiencyHints.Append(body);
+            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalBody));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

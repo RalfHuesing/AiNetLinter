@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools;
@@ -28,7 +29,7 @@ internal static class GetViolationsTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var text = await GetViolationsScanner.BuildViolationsTextAsync(
+        var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(
                 Solution: solution,
                 Config: state.Config,
@@ -36,6 +37,18 @@ internal static class GetViolationsTool
                 ScopeFilter: scopeFilter,
                 CancellationToken: ct,
                 UsedDefaultConfig: state.UsedDefaultConfig));
-        return McpToolResults.Text(text);
+
+        // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
+        // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder
+        // "Keine Dateien im Scope") sind kein Malfunction und bekommen stattdessen den
+        // Sufficiency-Hinweis, weil der Report immer vollstaendig fuer den Scope ist (kein
+        // Trunkierungs-Parameter existiert fuer get_violations).
+        return result.IsMalfunction
+            ? McpToolResults.Error(
+                LinterErrorCodes.AnalysisFailed,
+                result.Text,
+                context: result.Context,
+                hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).")
+            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text));
     }
 }

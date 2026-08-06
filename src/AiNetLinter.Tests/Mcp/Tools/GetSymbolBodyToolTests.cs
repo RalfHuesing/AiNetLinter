@@ -47,6 +47,8 @@ public sealed class GetSymbolBodyToolTests : IClassFixture<SymbolGraphCatalogFix
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("id:", textContent.Text, System.StringComparison.Ordinal);
+        // Q5 Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
+        Assert.Contains("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -63,6 +65,8 @@ public sealed class GetSymbolBodyToolTests : IClassFixture<SymbolGraphCatalogFix
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("truncated", textContent.Text, System.StringComparison.OrdinalIgnoreCase);
+        // Q5: ein per maxBodyLines gekappter Body bekommt NICHT den "vollstaendig"-Hinweis.
+        Assert.DoesNotContain("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,13 +83,13 @@ public sealed class GetSymbolBodyToolTests : IClassFixture<SymbolGraphCatalogFix
     }
 
     [Fact]
-    public async Task ExecuteAsync_InvalidStableId_AndFileLineColNotFound_ReturnsSymbolNotFound()
+    public async Task ExecuteAsync_InvalidStableId_AndFileLineColNotFound_ReturnsRecoverableSymbolNotFound()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetSymbolBodyTool.ExecuteAsync(state, "DoesNotExistXyz", 80, CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
