@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done (fix-01 pending)
 type: step-plan
 task: safeguard
 step: 001
@@ -12,7 +12,7 @@ created_by: planer
 created_by_model: MiniMax-M3
 created_by_model_knowledge_cutoff: 2026-01
 created_at: 2026-08-06T14:10:00+02:00
-last_updated: 2026-08-06T14:10:00+02:00
+last_updated: 2026-08-06T15:30:00+02:00
 related_to:
   - konzept.md#muss-haven-punkte-4-6-8
 ---
