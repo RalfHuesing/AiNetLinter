@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: blocked
 type: step-plan
 task: safeguard
 step: 003
@@ -12,7 +12,7 @@ created_by: planer
 created_by_model: MiniMax-M3
 created_by_model_knowledge_cutoff: 2026-01
 created_at: 2026-08-06T17:30:00+02:00
-last_updated: 2026-08-06T17:30:00+02:00
+last_updated: 2026-08-06T18:00:00+02:00
 related_to:
   - konzept.md#muss-haven-punkt-9
   - konzept.md#steps-step-2-dod
