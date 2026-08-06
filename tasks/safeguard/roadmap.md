@@ -62,7 +62,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
       AiNetLinter-Repo selbst (Live-Score im erwarteten Korridor ≥ 5.0 — sonst Bug
       in Score-Formel). Bezieht sich auf `konzept.md` §"Muss-Haven" Punkte 1-3+7+9
       (Tool-Registrierung, Input/Output, structured JSON, ServerInstructions,
-      Integration-Test) und §"Wie" Schritt 2. **Geplante Schritt-Anzahl: 2-3**.
+      Integration-Test) und §"Wie" Schritt 2. **In Arbeit → step-002 done, step-003
+      pending.** Tatsächliche Umsetzung: **step-002** hat den Tool-Layer komplett
+      geliefert (`SafeguardTool.cs` 90 Z. + `AddSafeguard` in
+      `AnalysisToolRegistrations.cs` + `ServerInstructions`-Erweiterung + 6 Unit-Tests
+      in `SafeguardToolTests.cs` + `PathOverride` für `SafeguardTool.cs: 2800` in
+      `rules.json`); step-003 muss den Live-Repo-Integration-Test nachziehen. **Real
+      gemessener Live-Score (vom Planer per Probe-Test auf AiNetLinter-Repo
+      verifiziert): 10.00/10** bei Threshold 8.0, 0 Violations, 376-377 Klassen
+      analysiert — Konzept-Korridor "≥ 5.0" ist konservativ; der Test sollte
+      `score >= 5.0` assertieren, mit Hinweis an den Coder, dass ein Test-Fail
+      (= Score < 5.0) **nicht** im step-003-Scope zu fixen ist, sondern einen
+      EPIC-01-Score-Formel-Bug signalisiert. **Geplante Schritt-Anzahl: 2-3, real
+      2 (step-002 + step-003).**
 - [ ] EPIC-03: Verifikation, Doku, Roadmap-Abschluss — Volllauf `dotnet test` grün
       (alle 200+ bestehenden Tests weiterhin grün, keine Regressionen); Volllauf
       `dotnet build` mit `TreatWarningsAsErrors` grün; `Docs/agent-api.md` um
