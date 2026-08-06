@@ -57,7 +57,7 @@ depends-on:
 
 ## 2. Roadmap-Übersicht
 
-> **Status-Konvention:** `[ ]` offen · `[x]` erledigt. Beim Umsetzen eines Epics hier in der Übersichtstabelle abhaken — die feingranularen Akzeptanzkriterien je Epic stehen in §3.
+> **Status-Konvention:** `[ ]` offen · `[x]` erledigt. Beim Umsetzen eines Epics hier in der Übersichtstabelle abhaken — die feingranularen Akzeptanzkriterien je Epic stehen in §3. `[ ]*` bedeutet: in Arbeit, Plan existiert (siehe §3 unter dem jeweiligen Epic) — wird erst nach Abschluss des Plans auf `[x]` gesetzt.
 
 ### Phase Q — Quick Wins (parallel in 1-2 Tagen, 1 Sprint)
 
@@ -88,7 +88,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
-| [ ] | S1.2 | **`safeguard` (Quality-Contract-Pattern)** | 95 | 3-5 Tage | Recon C §5.1 F2, Recon B §6.3 |
+| [ ]* | S1.2 | **`safeguard` (Quality-Contract-Pattern)** | 95 | 3-5 Tage | Recon C §5.1 F2, Recon B §6.3 |
 | [ ] | S1.3 | **Structured-Output-Mode** (zentraler JSON-Wrapper) | 70 | 2-3h | Recon B §8.1 Q1+Q16 |
 | [ ] | S1.4 | **`get_call_tree`-Tool** (echter Baum, ASCII/Mermaid) | 65 | 1 Tag | Recon B §8.2 Q5 |
 
@@ -174,6 +174,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 **Abhängigkeiten:** Existierende `LinterEngine`, `get_violations`-Logik
 **Aufwand:** 3-5 Tage
+**Status:** in Arbeit — Plan: `tasks/safeguard/konzept.md`. Abhaken in dieser Roadmap erfolgt erst nach Abschluss (Step 3 des Plans); bis dahin sind die Akzeptanzkriterien noch offen.
 **Akzeptanzkriterien:**
 - [ ] Tool-Definition mit structured output (JSON Schema 2020-12)
 - [ ] Score-Berechnung deterministisch (gleicher Code → gleicher Score)
