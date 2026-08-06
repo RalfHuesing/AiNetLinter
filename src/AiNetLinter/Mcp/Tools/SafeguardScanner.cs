@@ -1,0 +1,460 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Configuration;
+using AiNetLinter.Core;
+using AiNetLinter.Metrics;
+using AiNetLinter.Models;
+using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+namespace AiNetLinter.Mcp.Tools;
+
+/// <summary>
+/// Reine Score-Berechnungs- und Remediation-Logik fuer die Safeguard-Auswertung (EPIC-01) — in eine
+/// eigene Datei ausgelagert, damit der spaetere Tool-Wrapper (EPIC-02) nur noch ein duenner Dispatch
+/// bleibt. Delegiert die Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
+/// (mit <c>noCache: true</c> analog zu <see cref="GetViolationsScanner"/>), sammelt zusaetzlich
+/// Klassenmetriken (Cognitive Complexity, AI-Context-Footprint, Sealed-Quote) ueber einen direkten
+/// Roslyn-Walk und aggregiert alles zu einem deterministischen 0-10-Score.
+///
+/// Determinismus: keine Zeit-/Zufalls-/Externer-IO-Operatoren, Sortierung der Top-Violations nach
+/// (Severity, FilePath, LineNumber, RuleName), symmetrische Rundung der Komponenten-Scores. Ein
+/// defensiver <c>try/catch</c> faengt LinterEngine-Malfunctions ab und liefert
+/// <see cref="SafeguardScoreResult.IsMalfunction"/>=true mit <see cref="SafeguardScoreResult.Context"/>
+/// (Pattern analog <see cref="GetViolationsScanner"/>). Score-Gewichte sind benannte Konstanten, damit
+/// Tests und Dokumentation dieselben Werte sehen — Anpassung nur bei offensichtlich unplausiblen
+/// Test-Scores (siehe Tech-Stack-Notiz / "Bekannte Ausnahmen" des Step-Plans).
+/// </summary>
+internal static class SafeguardScanner
+{
+    /// <summary>Standard-Mindest-Score fuer <c>Passed</c> (siehe Konzept §"Muss-Haven").</summary>
+    internal const double DefaultMinScoreThreshold = 8.0;
+
+    /// <summary>Standard-Obergrenze fuer Top-Remediation-Eintraege.</summary>
+    internal const int DefaultMaxRemediationEntries = 20;
+
+    /// <summary>
+    /// Severity-Gewicht fuer eine Lint-Error-Verletzung. Plan-Wert 0.1 wuerde 20 Errors brauchen,
+    /// um den Score unter 8.0 zu druecken — fuer den Test "SingleViolation_LowersScoreBelowThreshold"
+    /// unplausibel. Auf 1.5 angehoben: 1 Error senkt den Score um 3.0 (Severity 2 * 1.5), liegt
+    /// damit klar unter 8.0. Anpassung im Commit-Body dokumentiert.
+    /// </summary>
+    internal const double ViolationPenaltyUnit = 1.5;
+
+    /// <summary>Severity-Stufe fuer eine Lint-Error-Verletzung (siehe Konzept §"Wie").</summary>
+    internal const double ViolationErrorSeverity = 2.0;
+
+    /// <summary>Severity-Stufe fuer eine Lint-Warning (siehe Konzept §"Wie").</summary>
+    internal const double ViolationWarningSeverity = 1.0;
+
+    /// <summary>Severity-Stufe fuer einen Lint-Info-Hinweis (siehe Konzept §"Wie").</summary>
+    internal const double ViolationInfoSeverity = 0.25;
+
+    /// <summary>
+    /// Penalty pro Cognitive-Complexity-Einheit ueber <c>Metrics.MaxCognitiveComplexity</c>, gemittelt
+    /// ueber alle Klassen. Plan-Default beibehalten (0.05).
+    /// </summary>
+    internal const double CcPenaltyPerUnitOverThreshold = 0.05;
+
+    /// <summary>
+    /// Penalty pro AI-Context-Footprint-Einheit ueber <c>Metrics.MaxAIContextFootprint</c>, gemittelt
+    /// ueber alle Klassen. Plan-Default beibehalten (0.02).
+    /// </summary>
+    internal const double FootprintPenaltyPerUnitOverLimit = 0.02;
+
+    /// <summary>
+    /// Sealed-Bonus pro Viertel ueber 50 % versiegelter Klassen. Bei 75 % sealed = +0.5, bei 100 %
+    /// sealed = +1.0. Wird deaktiviert, wenn <c>Global.EnforceSealedClasses</c> false ist (dann 0).
+    /// </summary>
+    internal const double SealedBonusPerQuarterOverHalf = 0.5;
+
+    /// <summary>
+    /// Berechnet den deterministischen Safeguard-Score fuer die uebergebene Solution.
+    /// Defensive <c>try/catch</c> nur fuer LinterEngine-Malfunctions — der Roslyn-Walk fuer die
+    /// Klassen-Aggregation ist robust (ueberspringt nicht-kompilierbare Dokumente stillschweigend
+    /// via <c>GetSemanticModelAsync</c> null-check, ohne die Score-Berechnung zu blockieren).
+    /// </summary>
+    internal static async Task<SafeguardScoreResult> ComputeScoreAsync(SafeguardScannerParameters p)
+    {
+        var solution = p.Solution;
+        var config = p.Config;
+        var console = p.Console;
+        var scopeFilter = p.ScopeFilter;
+        var ct = p.CancellationToken;
+
+        // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
+        // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
+        // von Config implementiert, der Downcast ist daher nicht spekulativ.
+        var concreteConfig = (Config)config;
+
+        IReadOnlyCollection<RuleViolation> violations;
+        try
+        {
+            var engine = new LinterEngine(
+                config: concreteConfig,
+                rulesJsonContent: null,
+                profiler: null,
+                console: console,
+                args: null);
+            violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new SafeguardScoreResult(
+                Score: null, IsMalfunction: true, Context: ex.Message);
+        }
+
+        var classes = EnumerateConcreteClasses(solution, scopeFilter, concreteConfig, ct);
+        var score = BuildScoreResult(violations, classes, concreteConfig, p.MinScoreThreshold, p.MaxRemediationEntries);
+        return new SafeguardScoreResult(Score: score, IsMalfunction: false);
+    }
+
+    /// <summary>
+    /// Deterministische Score-Berechnung. Getrennt von <see cref="ComputeScoreAsync"/> fuer
+    /// isolierte Tests (Klemmverhalten, Threshold-Logik, Sealed-Bonus-Berechnung) ohne
+    /// LinterEngine-Setup.
+    /// </summary>
+    internal static ScoreResult BuildScoreResult(
+        IReadOnlyCollection<RuleViolation> violations,
+        IReadOnlyList<ScannedClass> classes,
+        Config config,
+        double threshold,
+        int maxRemediationEntries)
+    {
+        var violationPenalty = ComputeViolationPenalty(violations);
+        var ccPenalty = ComputeCcPenalty(classes, config.Metrics.MaxCognitiveComplexity);
+        var footprintPenalty = ComputeFootprintPenalty(classes, config.Metrics.MaxAIContextFootprint);
+        var sealedBonus = ComputeSealedBonus(classes, config.Global.EnforceSealedClasses);
+
+        var raw = 10.0 - violationPenalty - ccPenalty - footprintPenalty + sealedBonus;
+        var score = Math.Clamp(raw, 0.0, 10.0);
+        var passed = score >= threshold;
+
+        // Sortierung: Errors zuerst, dann Warnings, dann Info; innerhalb gleicher Severity
+        // stabil nach (FilePath, LineNumber, RuleName) — garantiert Byte-fuer-Byte-Identitaet
+        // fuer zwei aufeinanderfolgende Aufrufe mit identischem Input (Determinismus-Test).
+        var sortedViolations = violations
+            .OrderBy(SeverityRank)
+            .ThenBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(v => v.LineNumber)
+            .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Max(0, maxRemediationEntries))
+            .Select(v => new ViolationEntry(
+                FilePath: v.FilePath,
+                LineNumber: v.LineNumber,
+                RuleName: v.RuleName,
+                Details: v.Details,
+                Severity: ResolveSeverity(v),
+                Guidance: v.Guidance))
+            .ToList();
+
+        var remediation = BuildRemediation(sortedViolations, config);
+        var summary = BuildSummary(score, threshold, passed, sortedViolations, classes, config);
+
+        return new ScoreResult(
+            Passed: passed,
+            Score: score,
+            Threshold: threshold,
+            Violations: sortedViolations,
+            Remediation: remediation,
+            Summary: summary);
+    }
+
+    /// <summary>
+    /// Erzeugt einen strukturierten Remediation-Hint auf Basis der Top-Violations.
+    /// Mapping-Tabelle pro <c>RuleName</c>; unbekannte RuleNames erhalten einen generischen
+    /// Default-Hinweis. Aufgeteilt in "TopIssue" (die haeufigste Regel unter den Top-Violations)
+    /// und "ActionableSteps" (eine Empfehlung pro vorkommender Regel).
+    /// </summary>
+    internal static RemediationHint BuildRemediation(
+        IReadOnlyList<ViolationEntry> topViolations,
+        Config config)
+    {
+        if (topViolations.Count == 0)
+        {
+            return new RemediationHint(
+                TopIssue: "Keine Lint-Verstoesse im Scope.",
+                ActionableSteps: Array.Empty<string>(),
+                DocumentationHint: "Docs/configuration.md");
+        }
+
+        var grouped = topViolations
+            .GroupBy(v => v.RuleName, StringComparer.Ordinal)
+            .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var topIssue = grouped[0].Key;
+        var steps = grouped
+            .Select(g => ResolveHintForRule(g.Key, config))
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToList();
+
+        return new RemediationHint(
+            TopIssue: topIssue,
+            ActionableSteps: steps,
+            DocumentationHint: "Docs/configuration.md");
+    }
+
+    private static double ComputeViolationPenalty(IReadOnlyCollection<RuleViolation> violations)
+    {
+        if (violations.Count == 0) return 0.0;
+
+        double penalty = 0.0;
+        foreach (var v in violations)
+        {
+            var severity = ResolveSeverity(v);
+            if (string.Equals(severity, "error", StringComparison.OrdinalIgnoreCase))
+            {
+                penalty += ViolationErrorSeverity * ViolationPenaltyUnit;
+            }
+            else if (string.Equals(severity, "warning", StringComparison.OrdinalIgnoreCase))
+            {
+                penalty += ViolationWarningSeverity * ViolationPenaltyUnit;
+            }
+            else
+            {
+                penalty += ViolationInfoSeverity * ViolationPenaltyUnit;
+            }
+        }
+        return penalty;
+    }
+
+    private static double ComputeCcPenalty(IReadOnlyList<ScannedClass> classes, int ccThreshold)
+    {
+        if (classes.Count == 0) return 0.0;
+        var avgCc = classes.Average(c => (double)c.MaxCognitiveComplexity);
+        var overage = Math.Max(0, avgCc - ccThreshold);
+        return overage * CcPenaltyPerUnitOverThreshold;
+    }
+
+    private static double ComputeFootprintPenalty(IReadOnlyList<ScannedClass> classes, int footprintLimit)
+    {
+        if (classes.Count == 0) return 0.0;
+        var avgFootprint = classes.Average(c => (double)c.AIContextFootprint);
+        var overage = Math.Max(0, avgFootprint - footprintLimit);
+        return overage * FootprintPenaltyPerUnitOverLimit;
+    }
+
+    private static double ComputeSealedBonus(IReadOnlyList<ScannedClass> classes, bool enforceSealed)
+    {
+        if (!enforceSealed || classes.Count == 0) return 0.0;
+        var sealedCount = classes.Count(c => c.IsSealed);
+        var sealedQuote = (double)sealedCount / classes.Count;
+        var quartersOverHalf = Math.Max(0.0, (sealedQuote - 0.5) / 0.25);
+        return quartersOverHalf * SealedBonusPerQuarterOverHalf;
+    }
+
+    private static int SeverityRank(RuleViolation v)
+    {
+        var severity = ResolveSeverity(v);
+        if (string.Equals(severity, "error", StringComparison.OrdinalIgnoreCase)) return 0;
+        if (string.Equals(severity, "warning", StringComparison.OrdinalIgnoreCase)) return 1;
+        return 2;
+    }
+
+    private static string ResolveSeverity(RuleViolation v)
+    {
+        if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
+        return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
+    }
+
+    private static string BuildSummary(
+        double score,
+        double threshold,
+        bool passed,
+        IReadOnlyList<ViolationEntry> topViolations,
+        IReadOnlyList<ScannedClass> classes,
+        Config config)
+    {
+        var classCount = classes.Count;
+        var violationCount = topViolations.Count;
+        var verdict = passed ? "PASS" : "FAIL";
+        return $"Safeguard-Score: {score:F2}/10 (Threshold {threshold:F2}) — {verdict}. " +
+               $"{violationCount} Top-Verstoesse, {classCount} Klassen analysiert.";
+    }
+
+    private static string ResolveHintForRule(string ruleName, Config config)
+    {
+        return ruleName switch
+        {
+            LinterRuleIds.MaxLineCount =>
+                "Datei aufteilen — Klassen/Methoden extrahieren, Partial-Klassen pruefen.",
+            LinterRuleIds.MaxMethodLineCount =>
+                "Methode aufteilen — Hilfsmethoden extrahieren, Verantwortlichkeit aufspalten.",
+            LinterRuleIds.MaxMethodParameterCount =>
+                "Parameter-Record einfuehren — verwandte Argumente in einem Werteobjekt buendeln.",
+            LinterRuleIds.MaxCyclomaticComplexity or LinterRuleIds.MaxCognitiveComplexity =>
+                "Komplexitaet reduzieren — fruehe Returns, kleinere Methoden, Polymorphie statt Switch.",
+            LinterRuleIds.AIContextFootprint =>
+                "Footprint reduzieren — Abhaengigkeiten aufsloesen, kleine Typen favorisieren.",
+            LinterRuleIds.EnforceSealedClasses =>
+                "Klasse versiegeln (`sealed`) — Vererbungsabsicht klaeren oder Blatt-Klasse markieren.",
+            LinterRuleIds.MaxConstructorDependencies =>
+                "DI-Law-of-Demeter pruefen — Aggregate-Fassade einfuehren, Konstruktor-Injektion reduzieren.",
+            LinterRuleIds.BanAsyncVoid =>
+                "Async void durch `async Task` ersetzen — Ausnahmen werden sonst verschluckt.",
+            LinterRuleIds.BanBlockingTaskAccess =>
+                "Blocking-Calls (.Wait/.Result/.GetAwaiter().GetResult()) durch `await` ersetzen.",
+            LinterRuleIds.EnforceNoSilentCatch =>
+                "Catch-Block sichtbar machen — Log schreiben oder Exception re-throwen.",
+            _ => $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.",
+        };
+    }
+
+    private static IReadOnlyList<ScannedClass> EnumerateConcreteClasses(
+        Solution solution, string? scopeFilter, Config config, CancellationToken ct)
+    {
+        var collected = new List<ScannedClass>();
+        foreach (var project in solution.Projects)
+        {
+            if (!project.SupportsCompilation) continue;
+            Compilation? compilation;
+            try
+            {
+                compilation = project.GetCompilationAsync(ct).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // Kompilierungs-Fehler fuehren nicht zum Abbruch — die zugehoerigen Dokumente
+                // liefern null-SemanticModel und werden uebersprungen.
+                continue;
+            }
+            if (compilation is null) continue;
+
+            foreach (var document in project.Documents)
+            {
+                if (!string.IsNullOrEmpty(scopeFilter)
+                    && document.FilePath is { } filePath
+                    && !filePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)
+                    && !project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var syntaxTree = document.GetSyntaxTreeAsync(ct).GetAwaiter().GetResult();
+                if (syntaxTree is null) continue;
+
+                var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                var root = syntaxTree.GetRoot(ct);
+                foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+                {
+                    var symbol = semanticModel.GetDeclaredSymbol(classDecl, ct) as INamedTypeSymbol;
+                    if (symbol is null) continue;
+                    if (symbol.TypeKind != TypeKind.Class) continue;
+                    if (symbol.IsAbstract) continue;
+
+                    collected.Add(BuildScannedClass(symbol, classDecl, config));
+                }
+            }
+        }
+        return collected;
+    }
+
+    private static ScannedClass BuildScannedClass(
+        INamedTypeSymbol symbol, ClassDeclarationSyntax classDecl, Config config)
+    {
+        var maxCc = 0;
+        foreach (var method in classDecl.DescendantNodes().OfType<MethodDeclarationSyntax>())
+        {
+            maxCc = Math.Max(maxCc, ComplexityCalculator.GetCognitiveComplexity(method));
+        }
+
+        var footprint = AIContextFootprintCalculator.Calculate(
+            symbol,
+            config.Metrics.FootprintIgnoreNamespacePrefixes,
+            config.Metrics.FootprintIgnoreTypeNames);
+
+        return new ScannedClass(
+            Name: symbol.Name,
+            MaxCognitiveComplexity: maxCc,
+            AIContextFootprint: footprint,
+            IsSealed: symbol.IsSealed);
+    }
+}
+
+/// <summary>
+/// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
+/// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
+/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird. <see cref="MinScoreThreshold"/> und
+/// <see cref="MaxRemediationEntries"/> haben Defaults aus <see cref="SafeguardScanner.DefaultMinScoreThreshold"/>
+/// / <see cref="SafeguardScanner.DefaultMaxRemediationEntries"/>.
+/// </summary>
+internal sealed record SafeguardScannerParameters(
+    Solution Solution,
+    ILinterEngineConfig Config,
+    ILintConsole Console,
+    string? ScopeFilter,
+    CancellationToken CancellationToken,
+    double MinScoreThreshold = SafeguardScanner.DefaultMinScoreThreshold,
+    int MaxRemediationEntries = SafeguardScanner.DefaultMaxRemediationEntries);
+
+/// <summary>
+/// Ergebnis-Container fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. <see cref="IsMalfunction"/>
+/// unterscheidet eine echte LinterEngine-Malfunction (<see cref="Context"/> non-null) von einem
+/// normal berechneten Score (selbst bei 0 Verstoessen kein Malfunction).
+/// </summary>
+internal sealed record SafeguardScoreResult(
+    ScoreResult? Score,
+    bool IsMalfunction,
+    string? Context = null);
+
+/// <summary>
+/// Score-Aggregat-Container mit den vier Score-Komponenten (Violations/CC/Footprint/Sealed-Bonus)
+/// aggregiert in <see cref="Score"/>, der <see cref="Threshold"/> als Pass-Grenze, den
+/// top-relevanten <see cref="Violations"/>, einem strukturierten <see cref="Remediation"/>-Hint
+/// und einer kompakten <see cref="Summary"/>-Zeile.
+/// </summary>
+internal sealed record ScoreResult(
+    bool Passed,
+    double Score,
+    double Threshold,
+    IReadOnlyList<ViolationEntry> Violations,
+    RemediationHint Remediation,
+    string Summary);
+
+/// <summary>
+/// 1:1-Mapping aus <see cref="RuleViolation"/> fuer den JSON-Schema-Output (EPIC-02):
+/// sortier- und vergleichbar nach <c>(FilePath, LineNumber)</c>.
+/// </summary>
+internal sealed record ViolationEntry(
+    string FilePath,
+    int LineNumber,
+    string RuleName,
+    string Details,
+    string Severity,
+    string Guidance);
+
+/// <summary>
+/// Strukturierte Remediation statt freier Text, damit EPIC-02 das in einen strukturierten
+/// JSON-Schema-Output mappen kann. <see cref="TopIssue"/> ist die haeufigste Regel unter den
+/// Top-Violations, <see cref="ActionableSteps"/> ist die nach Haeufigkeit sortierte Liste der
+/// kontextspezifischen Empfehlungen, <see cref="DocumentationHint"/> verweist auf die zentrale
+/// Konfigurationsdokumentation.
+/// </summary>
+internal sealed record RemediationHint(
+    string TopIssue,
+    IReadOnlyList<string> ActionableSteps,
+    string DocumentationHint);
+
+/// <summary>
+/// Interner Daten-Container fuer die von <see cref="SafeguardScanner.EnumerateConcreteClasses"/>
+/// gesammelten Klassen-Metriken. Wird intern zwischen Scanner und <see cref="SafeguardScanner.BuildScoreResult"/>
+/// weitergereicht; bewusst kein <c>INamedTypeSymbol</c>, damit <see cref="SafeguardScanner.BuildScoreResult"/>
+/// ohne Roslyn-Symbols testbar bleibt (Plan: BuildScoreResult fuer isolierte Tests).
+/// </summary>
+internal sealed record ScannedClass(
+    string Name,
+    int MaxCognitiveComplexity,
+    int AIContextFootprint,
+    bool IsSealed);
