@@ -23,7 +23,7 @@ erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im
 | Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
 | Solution wird noch im Hintergrund geladen (`McpToolResults.Loading()`) | **false** | Transienter Wartezustand, kein Fehler — der Text ist ein `[INFO]`-Hinweis, Client kann nach kurzer Pause retryn. |
 
-## Audit-Ergebnis pro Tool (10 Tools)
+## Audit-Ergebnis pro Tool (12 Tools)
 
 Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je Tool, siehe
 `src/AiNetLinter/Mcp/Tools/*.cs`.
@@ -40,6 +40,8 @@ Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je To
 | `get_violations` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in `LinterEngine.RunAsync`) | leere Treffermenge (0 Violations); Scope-Filter matched keine Datei |
 | `get_symbol_body` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
 | `search_pattern` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (leeres `pattern`, ungueltige Regex); leere Treffermenge (eigene "0 Treffer"-Textmeldung) |
+| `reload_config` (Q2) | `SOLUTION_NOT_LOADED` | `CONFIG_NOT_FOUND` (Pfad existiert nicht); `CONFIG_INVALID` (ungueltiges JSON) — bisherige Config bleibt in beiden Faellen aktiv |
+| `get_server_health` (Q3) | `SOLUTION_NOT_LOADED` (nur bei `LoadState == LoadFailed`) | *(keine — reine Diagnose ohne Argumente, `Loading`-Zustand wird im Report selbst als Solution-Status "wird noch geladen" angezeigt statt als Loading-Antwort)* |
 
 **Vor diesem Audit abweichend von der Policy** (jetzt korrigiert):
 `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT` und `RESOURCE_NOT_FOUND` liefen ueber

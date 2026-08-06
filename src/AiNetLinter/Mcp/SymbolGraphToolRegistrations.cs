@@ -57,11 +57,9 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindSymbolDescription =
-        "Sucht C#-Symbole (Klassen, Methoden, Properties, Interfaces) per " +
-        "Substring im Namen. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-        "Bei 0 Treffern wird auf Textvorkommen in Nicht-C#-Dateien hingewiesen. " +
-        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+        "Wann nutzen: Fundstelle(n) eines C#-Symbols per Namens-Substring finden, wenn der " +
+        "exakte Ort unbekannt ist. Beispiel: namePattern: \"Greeter\", kind: \"Class\". Bei 0 " +
+        "C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -86,14 +84,10 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindReferencesDescription =
-        "Findet alle Aufrufstellen eines C#-Symbols anhand stabiler ID " +
-        "(DocumentationCommentId, ueberlebt Zeilenverschiebungen, disambiguiert Overloads) oder " +
-        "Datei:Zeile:Spalte bzw. qualifiziertem/teil-qualifiziertem Namen. Optionaler " +
-        "depth-Parameter (Default 1, hard cap 3) loest transitive Aufrufstellen und aggregiert " +
-        "sie. Traversierung zusaetzlich hart begrenzt auf 200 besuchte Knoten (unabhaengig von " +
-        "maxResults). Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-        "Trunkiert standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; " +
-        "Trunkierungs-Meta-Zeile meldet die Gesamt-Trefferzahl.";
+        "Wann nutzen: alle Aufrufstellen eines C#-Symbols finden, optional transitiv. " +
+        "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
+        "\"Klasse.Methode\". depth>1 (hard cap 3) loest transitive Aufrufstellen auf, " +
+        "Traversierung hart begrenzt auf 200 Knoten.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -119,17 +113,11 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetImpactDescription =
-        "Findet Aufrufstellen geaenderter C#-Signaturen. Ohne jeden Parameter aufgerufen " +
-        "prueft es uncommittete lokale Aenderungen (Standardfall). Alternativ: entweder " +
-        "gitRef (Git-Commit-Ref) ODER symbolIdentifier angeben, nie beide — symbolIdentifier " +
-        "akzeptiert stabile ID (DocumentationCommentId, ueberlebt Zeilenverschiebungen, " +
-        "disambiguiert Overloads) oder Datei:Zeile:Spalte bzw. qualifiziertem/teil-" +
-        "qualifiziertem Namen. Optionaler depth-Parameter (Default 1, hard cap 3) wirkt nur im " +
-        "Symbol-Branch und loest transitive Aufrufstellen, aggregiert. Traversierung " +
-        "zusaetzlich hart begrenzt auf 200 besuchte Knoten (unabhaengig von maxResults). Deckt " +
-        "nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. Trunkiert " +
-        "standardmaessig auf 50 Treffer, ueberschreibbar via maxResults; Trunkierungs-Meta-Zeile " +
-        "meldet die Gesamt-Trefferzahl.";
+        "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
+        "Ohne Parameter: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
+        "ODER symbolIdentifier angeben, nie beide — Identifikator-Format wie find_references. " +
+        "depth>1 (hard cap 3, Traversierung hart begrenzt auf 200 Knoten) wirkt nur im " +
+        "Symbol-Branch.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -154,9 +142,7 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetTypeHierarchyDescription =
-        "Liefert Basisklassen, implementierte Interfaces und (abgeleitete " +
-        "Klassen bzw. implementierende Typen) eines C#-Typ-Identifikators anhand stabiler ID " +
-        "(DocumentationCommentId, ueberlebt Zeilenverschiebungen, disambiguiert Overloads) oder " +
-        "Datei:Zeile:Spalte bzw. qualifiziertem/teil-qualifiziertem Namen. Deckt nur .cs-Dateien " +
-        "ab, keine .js/.razor/.xaml/.html/.css-Dateien.";
+        "Wann nutzen: Vererbungs-/Interface-Baum eines C#-Typs sehen (Basisklassen, " +
+        "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
+        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Klasse\".";
 }

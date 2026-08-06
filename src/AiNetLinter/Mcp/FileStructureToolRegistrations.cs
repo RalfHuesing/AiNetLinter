@@ -59,9 +59,8 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetFileSkeletonDescription =
-        "Liefert das Struktur-Skelett (Typen, Signaturen ohne " +
-        "Bodies) einer einzelnen C#-Datei per relativem Dateipfad. " +
-        "Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.";
+        "Wann nutzen: Ueberblick ueber Typen/Signaturen einer C#-Datei ohne die Bodies zu " +
+        "lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body.";
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -86,10 +85,9 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetIndexScopeDescription =
-        "Liefert eine Dateityp-Aufschluesselung der geladenen Solution: " +
-        ".cs (voll vom Symbolgraph abgedeckt) sowie .css/.html/.js/.razor/.xaml " +
-        "(jeweils nicht vom Symbolgraph abgedeckt, mit Anzahl) - Orientierung, bevor " +
-        "andere Tools wie find_symbol/search_pattern aufgerufen werden.";
+        "Wann nutzen: als ersten Call vor find_symbol/search_pattern — Dateityp-" +
+        "Aufschluesselung der Solution (.cs vom Symbolgraph abgedeckt, .css/.html/.js/.razor/" +
+        ".xaml nicht, jeweils mit Anzahl).";
 
     private static void AddGetHotspots(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -114,8 +112,7 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetHotspotsDescription =
-        "Liefert .cs-Dateien der geladenen Solution, die sich ihrem " +
-        "konfigurierten Zeilen-Limit (MaxLineCount aus rules.json/Default) naehern " +
-        "oder es ueberschreiten - Drift-Signal vor einem geplanten Edit. Optionaler " +
-        "scopeFilter matched gegen Projekt-Name oder solution-relativen Dateipfad.";
+        "Wann nutzen: vor einem geplanten Edit pruefen, ob eine Datei/ein Projekt sich dem " +
+        "Zeilen-Limit (MaxLineCount) naehert. scopeFilter grenzt auf Projekt-Name oder " +
+        "Pfad-Substring ein.";
 }

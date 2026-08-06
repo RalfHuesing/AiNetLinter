@@ -21,7 +21,7 @@ internal static class OverviewResourceRegistration
     private const string OverviewUri = "ainetlinter://overview";
 
     /// <summary>
-    /// Kurzbeschreibungen aller 10 Tools (ein Satz, keine Parameter-Details — die liefert
+    /// Kurzbeschreibungen aller 12 Tools (ein Satz, keine Parameter-Details — die liefert
     /// <c>tools/list</c>). Bewusst hier gepflegt statt aus den vollen Tool-Descriptions
     /// abgeleitet (die sind fuer diesen Zweck zu lang) — <c>OverviewResourceRegistrationTests</c>
     /// prueft die Namens-Parität gegen die tatsaechlich registrierten Tools, damit ein neues
@@ -39,6 +39,8 @@ internal static class OverviewResourceRegistration
         ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
         ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
+        ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
+        ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-Aggregate."),
     ];
 
     internal static void Register(McpServerResourceCollection resources, McpCodeGraphServer mcpState)
@@ -113,8 +115,12 @@ internal static class OverviewResourceRegistration
 
     private static string DescribeConfig(McpCodeGraphServer mcpState)
     {
-        return mcpState.UsedDefaultConfig
+        // Atomarer Schnappschuss statt zweier getrennter Property-Zugriffe: sonst koennte ein
+        // gleichzeitiger reload_config-Aufruf eine zerrissene Kombination liefern (siehe
+        // McpCodeGraphServer.GetConfigSnapshot).
+        var (_, usedDefaultConfig, resolvedConfigPath) = mcpState.GetConfigSnapshot();
+        return usedDefaultConfig
             ? "keine rules.json gefunden — Server laeuft mit eingebauten Default-Regeln, nicht mit einer projekteigenen Konfiguration"
-            : mcpState.ResolvedConfigPath ?? "unbekannt";
+            : resolvedConfigPath ?? "unbekannt";
     }
 }

@@ -61,12 +61,9 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetViolationsDescription =
-        "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution - dieselbe " +
-        "Kennzahl wie 'ainetlinter --config rules.json --path .', aber granular gegen die " +
-        "resident gehaltene Solution. Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien. " +
-        "Kein Disk-Cache, laeuft direkt gegen die resident gehaltene Solution - die " +
-        "Cache-Isolation zu parallelen CLI-Lint-Laeufen auf derselben Solution ist garantiert. " +
-        "Optionaler scopeFilter matched gegen Projekt-Name oder solution-relativen Dateipfad.";
+        "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
+        "erneut aufrufbar, kein Disk-Cache. scopeFilter (Projekt-Name oder Pfad-Substring) " +
+        "grenzt auf einen Teilbereich ein.";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -91,10 +88,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string SearchPatternDescription =
-        "Plain-Text- oder Regex-Suche ueber den Solution-Dateibestand (alle Dateitypen, " +
-        "nicht nur C#) - Fallback fuer Namen, die kein C#-Symbol sind (z. B. JS-Funktion in " +
-        ".js, Razor-Komponente in .razor, WPF-Element in .xaml). Optionaler isRegex-Flag " +
-        "(default false = case-insensitive Substring). Trunkiert standardmaessig auf 50 " +
-        "Treffer, ueberschreibbar via maxResults. Trunkierungs-Meta-Zeile informiert ueber " +
-        "Gesamt-Trefferzahl.";
+        "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
+        "JS-Funktion, Razor-Komponente, WPF-Element) oder allgemeine Textsuche. isRegex=true " +
+        "fuer Regex statt case-insensitive Substring.";
 }

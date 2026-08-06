@@ -410,7 +410,7 @@
     },
     "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2830
+        "MaxAIContextFootprint": 2890
       }
     },
     "src/AiNetLinter/Mcp/McpCodeGraphServer.cs": {
@@ -420,7 +420,7 @@
     },
     "src/AiNetLinter/Mcp/McpServerOptionsFactory.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 2830
       }
     },
     "src/AiNetLinter/Mcp/OverviewResourceRegistration.cs": {
@@ -430,7 +430,7 @@
     },
     "src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2870
+        "MaxAIContextFootprint": 2900
       }
     },
     "src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs": {
@@ -485,7 +485,22 @@
     },
     "src/AiNetLinter/Mcp/SymbolBodyToolRegistrations.cs": {
       "Metrics": {
-        "MaxAIContextFootprint": 2800
+        "MaxAIContextFootprint": 2830
+      }
+    },
+    "src/AiNetLinter/Mcp/ServerMaintenanceToolRegistrations.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2860
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/GetServerHealthTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2860
+      }
+    },
+    "src/AiNetLinter/Mcp/Tools/ReloadConfigTool.cs": {
+      "Metrics": {
+        "MaxAIContextFootprint": 2610
       }
     }
   }

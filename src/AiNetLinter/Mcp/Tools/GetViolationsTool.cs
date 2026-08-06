@@ -29,14 +29,18 @@ internal static class GetViolationsTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
+        // Config + UsedDefaultConfig als atomarer Schnappschuss (state.GetConfigSnapshot()) statt
+        // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
+        // sonst eine zerrissene Kombination liefern (Config schon neu, UsedDefaultConfig noch alt).
+        var configSnapshot = state.GetConfigSnapshot();
         var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(
                 Solution: solution,
-                Config: state.Config,
+                Config: configSnapshot.Config,
                 Console: state.Console,
                 ScopeFilter: scopeFilter,
                 CancellationToken: ct,
-                UsedDefaultConfig: state.UsedDefaultConfig));
+                UsedDefaultConfig: configSnapshot.UsedDefaultConfig));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder

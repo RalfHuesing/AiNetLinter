@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -29,7 +30,9 @@ internal sealed class McpCallLog : IAsyncDisposable
     private readonly StreamWriter _writer;
     private readonly string _logPath;
     private readonly Lock _writeLock = new();
+    private readonly Dictionary<string, int> _callCountByTool = new(StringComparer.Ordinal);
     private int _entryCount;
+    private int _errorCount;
     private bool _disposed;
 
     internal McpCallLog(string logPath)
@@ -55,6 +58,22 @@ internal sealed class McpCallLog : IAsyncDisposable
     internal int EntryCount => _entryCount;
 
     internal string LogPath => _logPath;
+
+    /// <summary>Gesamtzahl der als <c>IsError=true</c> abgeschlossenen Aufrufe (<see cref="RecordEnd"/>)
+    /// plus aller unerwarteten Exceptions (<see cref="RecordError"/>) seit Start — Aggregat fuer
+    /// <c>get_server_health</c> (Q3), damit ein Agent ohne manuelles JSONL-Parsing sieht, ob in
+    /// der laufenden Session ueberhaupt Fehler aufgetreten sind.</summary>
+    internal int ErrorCount { get { lock (_writeLock) { return _errorCount; } } }
+
+    /// <summary>Anzahl abgeschlossener Aufrufe je Tool-Name seit Start (nur <see cref="RecordEnd"/>,
+    /// nicht <see cref="RecordError"/> — ein unerwarteter Fehler hat keinen zugeordneten Tool-Namen-
+    /// Erfolgspfad). Verwendet von <c>get_server_health</c> (Q3) fuer die Pro-Tool-Aggregation.
+    /// Kopie statt Live-Referenz, damit der Aufrufer nicht versehentlich mit dem internen Dictionary
+    /// unter Lock interagiert.</summary>
+    internal IReadOnlyDictionary<string, int> CallCountsByTool
+    {
+        get { lock (_writeLock) { return new Dictionary<string, int>(_callCountByTool, StringComparer.Ordinal); } }
+    }
 
     internal void RecordEnd(McpCallLogScope scope, CallToolResult result)
     {
@@ -86,6 +105,8 @@ internal sealed class McpCallLog : IAsyncDisposable
             _writer.WriteLine(json);
             _writer.Flush();
             _entryCount++;
+            _callCountByTool[scope.ToolName] = _callCountByTool.GetValueOrDefault(scope.ToolName) + 1;
+            if (result.IsError == true) _errorCount++;
         }
     }
 
@@ -130,6 +151,7 @@ internal sealed class McpCallLog : IAsyncDisposable
             _writer.WriteLine(json);
             _writer.Flush();
             _entryCount++;
+            _errorCount++;
         }
     }
 

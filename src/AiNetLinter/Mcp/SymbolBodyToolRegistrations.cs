@@ -51,8 +51,7 @@ internal static class SymbolBodyToolRegistrations
     }
 
     private const string GetSymbolBodyDescription =
-        "Liefert den Body eines C#-Symbols per stabiler ID (DocumentationCommentId, ueberlebt " +
-        "Zeilenverschiebungen, disambiguiert Overloads) oder Datei:Zeile:Spalte bzw. qualifiziertem " +
-        "Namen. Hart gekappt bei maxBodyLines (Default 80), mit Ellipse-Indikator und Voll-Laengen-Hinweis. " +
-        "Deckt nur .cs-Dateien ab, keine .js/.razor/.xaml/.html/.css-Dateien.";
+        "Wann nutzen: Source-Body eines C#-Symbols lesen, wenn Fundstelle/Signatur schon " +
+        "bekannt ist. identifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
+        "\"Klasse.Methode\". Hart gekappt bei maxBodyLines (Default 80).";
 }

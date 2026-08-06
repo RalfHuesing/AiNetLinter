@@ -28,8 +28,10 @@ internal sealed class McpCodeGraphServer : IDisposable
     private readonly ILintConsole _console;
     private readonly Dictionary<string, McpFileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private readonly Task<SourceFileCatalog?>? _loadTask;
+    private readonly DateTime _startedAtUtc = DateTime.UtcNow;
     private SourceFileCatalog? _catalog;
     private DateTime? _lastSolutionDirMtimeUtc;
+    private int _refreshCount;
 
     // Input-Record als Parameter-Object, damit MaxConstructorDependencies: 5 eingehalten wird
     // und kuenftige Config-Properties additiv wachsen koennen, ohne die Konstruktor-Signatur
@@ -78,18 +80,67 @@ internal sealed class McpCodeGraphServer : IDisposable
     /// <summary>Zeilen-Grenzwert aus <c>rules.json</c> bzw. <see cref="MetricsConfig"/>-Default.</summary>
     public int MaxLineCount { get; }
 
-    /// <summary>Vollstaendige Linter-Konfiguration (aus <c>rules.json</c> via <c>--config</c> oder Default).</summary>
-    public ILinterEngineConfig Config { get; }
+    /// <summary>Vollstaendige Linter-Konfiguration (aus <c>rules.json</c> via <c>--config</c> oder Default).
+    /// Privates Setter statt <see langword="init"/>, weil <see cref="ReloadConfig"/> diese zur
+    /// Laufzeit austauscht (Q2, <c>reload_config</c>-Tool). Isolierter Zugriff auf NUR dieses
+    /// Property ist unkritisch; zusammen mit <see cref="UsedDefaultConfig"/>/<see cref="ResolvedConfigPath"/>
+    /// immer <see cref="GetConfigSnapshot"/> nutzen (Begruendung dort).</summary>
+    public ILinterEngineConfig Config { get; private set; }
 
-    /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>rules.json</c> gefunden).</summary>
-    public bool UsedDefaultConfig { get; }
+    /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>rules.json</c> gefunden).
+    /// Kombinierte Lesezugriffe: siehe <see cref="GetConfigSnapshot"/>.</summary>
+    public bool UsedDefaultConfig { get; private set; }
 
-    /// <summary>Pfad der tatsaechlich geladenen <c>rules.json</c> (explizit oder auto-discovered),
-    /// oder <see langword="null"/> wenn <see cref="UsedDefaultConfig"/> <see langword="true"/> ist.</summary>
-    public string? ResolvedConfigPath { get; }
+    /// <summary>Pfad der tatsaechlich geladenen <c>rules.json</c>, oder <see langword="null"/> wenn
+    /// <see cref="UsedDefaultConfig"/> <see langword="true"/> ist. Kombinierte Lesezugriffe: siehe
+    /// <see cref="GetConfigSnapshot"/>.</summary>
+    public string? ResolvedConfigPath { get; private set; }
 
     /// <summary>Konsolen-Kanal, an den der MCP-Server selbst loggt.</summary>
     public ILintConsole Console => _console;
+
+    /// <summary>Zeit seit Konstruktion dieser Instanz — Proxy fuer die Server-Uptime, verwendet von
+    /// <c>get_server_health</c> (Q3).</summary>
+    public TimeSpan Uptime => DateTime.UtcNow - _startedAtUtc;
+
+    /// <summary>Anzahl der <see cref="GetCurrentSolution"/>-Aufrufe seit Start, bei denen
+    /// <see cref="RefreshStaleDocuments"/> tatsaechlich eine Aenderung (neue/geloeschte/modifizierte
+    /// Datei) in die resident gehaltene <see cref="Solution"/> uebernommen hat. Verwendet von
+    /// <c>get_server_health</c> (Q3) als Signal, wie oft der Staleness-Check seit Start gegriffen hat.
+    /// Unter <see cref="_lock"/> gelesen, konsistent mit dem uebrigen Zugriffsmuster auf
+    /// <see cref="_catalog"/>/<see cref="_fileState"/> in dieser Klasse.</summary>
+    public int RefreshCount { get { lock (_lock) { return _refreshCount; } } }
+
+    /// <summary>
+    /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (Q2, <c>reload_config</c>-Tool).
+    /// <paramref name="newConfig"/> ist bereits erfolgreich geladen/validiert. Unter <see cref="_lock"/>
+    /// wie <see cref="GetConfigSnapshot"/> — NICHT weil das <see cref="GetCurrentSolution"/> schuetzt
+    /// (der liest Config gar nicht), sondern damit Snapshot-Leser nie eine halb ausgetauschte
+    /// Kombination der drei Felder sehen.
+    /// </summary>
+    internal void ReloadConfig(ILinterEngineConfig newConfig, bool usedDefaultConfig, string? resolvedConfigPath)
+    {
+        lock (_lock)
+        {
+            Config = newConfig;
+            UsedDefaultConfig = usedDefaultConfig;
+            ResolvedConfigPath = resolvedConfigPath;
+        }
+    }
+
+    /// <summary>
+    /// Atomarer Schnappschuss von <see cref="Config"/>/<see cref="UsedDefaultConfig"/>/
+    /// <see cref="ResolvedConfigPath"/> unter <see cref="_lock"/>. Pflicht fuer jeden Aufrufer, der
+    /// mehr als eines der drei Felder zusammen braucht — sonst kann ein gleichzeitiger
+    /// <see cref="ReloadConfig"/>-Aufruf eine zerrissene Kombination liefern.
+    /// </summary>
+    internal (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath) GetConfigSnapshot()
+    {
+        lock (_lock)
+        {
+            return (Config, UsedDefaultConfig, ResolvedConfigPath);
+        }
+    }
 
     /// <summary>Liefert die aktuelle <see cref="Solution"/> oder <see langword="null"/>, wenn der
     /// Server noch laedt (<see cref="LoadState"/> == <see cref="ServerLoadState.Loading"/>) oder
@@ -167,7 +218,11 @@ internal sealed class McpCodeGraphServer : IDisposable
                 FileState: _fileState,
                 WriteWarn: _console.WriteError,
                 ShouldSweep: () => HasSolutionDirChanged(Path.GetDirectoryName(_catalog!.Solution.FilePath))));
-        if (anyChanged) _catalog = _catalog.WithUpdatedSolution(updated);
+        if (anyChanged)
+        {
+            _catalog = _catalog.WithUpdatedSolution(updated);
+            _refreshCount++;
+        }
     }
 
     /// <summary>Vergleicht die maximale mtime ueber alle Verzeichnisse unterhalb <paramref name="solutionDir"/>

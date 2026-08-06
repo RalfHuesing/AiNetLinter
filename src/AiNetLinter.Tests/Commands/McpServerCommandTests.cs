@@ -141,11 +141,11 @@ public sealed class McpServerCommandTests : IClassFixture<SymbolGraphMcpFixture>
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithTenTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithTwelveTools()
     {
         var tools = await _baselineMcpFixture.Client.ListToolsAsync();
 
-        Assert.Equal(10, tools.Count);
+        Assert.Equal(12, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");
@@ -156,6 +156,8 @@ public sealed class McpServerCommandTests : IClassFixture<SymbolGraphMcpFixture>
         Assert.Contains(tools, t => t.Name == "get_violations");
         Assert.Contains(tools, t => t.Name == "search_pattern");
         Assert.Contains(tools, t => t.Name == "get_symbol_body");
+        Assert.Contains(tools, t => t.Name == "reload_config");
+        Assert.Contains(tools, t => t.Name == "get_server_health");
     }
 
     [Fact]

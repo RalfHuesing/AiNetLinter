@@ -41,7 +41,10 @@ internal static class ServerInstructions
         "- get_symbol_body: Liefert den Source-Body eines C#-Symbols per stabiler ID oder " +
         "Datei:Zeile:Spalte.\n" +
         "- search_pattern: Text- oder Regex-Suche ueber den gesamten Dateibestand, alle " +
-        "Dateitypen.\n\n" +
+        "Dateitypen.\n" +
+        "- reload_config: Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart.\n" +
+        "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-" +
+        "Aggregate.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_impact, get_type_hierarchy, " +
         "get_file_skeleton, get_violations und get_symbol_body arbeiten ausschliesslich auf " +
         ".cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +

@@ -51,6 +51,7 @@ internal static class McpServerOptionsFactory
         FileStructureToolRegistrations.Register(tools, mcpState, callLog);
         AnalysisToolRegistrations.Register(tools, mcpState, callLog);
         SymbolBodyToolRegistrations.Register(tools, mcpState, callLog);
+        ServerMaintenanceToolRegistrations.Register(tools, mcpState, callLog);
 
         return tools;
     }
