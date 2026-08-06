@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
@@ -141,5 +143,58 @@ public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixt
         Assert.NotNull(text);
         Assert.NotEmpty(text);
         Assert.Contains("AiNetLinter", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_Safeguard_ReturnsResults()
+    {
+        // End-to-end-Verifikation: das safeguard-Tool liefert auf dem echten
+        // AiNetLinter-Repo einen Score >= 5.0 und einen gueltigen JSON-Schema-2020-12-
+        // Structured-Content. Score-Aufruf gegen den Live-Subprozess via _fixture.Client
+        // (geteilter MCP-Server pro Testklasse, startet einmal in IAsyncLifetime).
+        // minScore wird bewusst auf 0.0 gesetzt, damit der Korridor-Assert die
+        // Score-Berechnung isoliert prueft, ohne die Passed-Logik des Tools mit dem
+        // Korridor zu vermischen.
+        var result = await _fixture.Client.CallToolAsync(
+            "safeguard",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = null,
+                ["minScore"] = 0.0,
+                ["maxViolations"] = 20,
+            });
+
+        // Tool-Layer-Invariante: kein Malfunction-/Loading-/SolutionNotLoaded-Fehler
+        // auf einem geladenen Live-Repo. Fixture garantiert Load via IAsyncLifetime
+        // plus 60s Timeout plus Retry-Schleife (siehe McpLiveRepositoryFixture).
+        Assert.False(result.IsError);
+        Assert.NotNull(result.StructuredContent);
+
+        // StructuredContent ist JsonElement?; Deserialisierung zur JsonObject-Form
+        // folgt dem Pattern aus SafeguardToolTests.
+        var json = JsonSerializer.Deserialize<JsonObject>(
+            result.StructuredContent!.Value.GetRawText())!;
+        Assert.NotNull(json);
+
+        // Pflicht-Felder gemaess konzept.md (JSON-Schema 2020-12 Vertrag): passed,
+        // score, threshold, violations, remediation, summary. Nur Existenz und Typ
+        // werden geprueft; konkrete Werte separat.
+        Assert.True(json.ContainsKey("passed"));
+        Assert.True(json.ContainsKey("score"));
+        Assert.True(json.ContainsKey("threshold"));
+        Assert.True(json.ContainsKey("violations"));
+        Assert.True(json.ContainsKey("remediation"));
+        Assert.True(json.ContainsKey("summary"));
+        Assert.IsType<JsonArray>(json["violations"]);
+
+        // Korridor-Assert: score >= 5.0. Real gemessener Wert auf dem AiNetLinter-
+        // Repo: 10.00/10 (deutlich ueber dem Konzept-Korridor). Bei Verletzung
+        // dieser Schwelle liegt der Bug in der Score-Formel (EPIC-01-Scope),
+        // nicht im Tool-Layer — dann ist blocked mit Verweis auf SafeguardScanner
+        // zu setzen, nicht der Schwellwert im Test anzupassen.
+        var score = (double)json["score"]!;
+        Assert.True(score >= 5.0,
+            $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0 — " +
+            "moeglicher Bug in der Score-Formel (EPIC-01-Scope), nicht im step-003 zu fixen.");
     }
 }
