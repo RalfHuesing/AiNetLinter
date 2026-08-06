@@ -110,8 +110,13 @@ internal static class SafeguardScanner
                 Score: null, IsMalfunction: true, Context: ex.Message);
         }
 
-        var classes = EnumerateConcreteClasses(solution, scopeFilter, concreteConfig, ct);
-        var score = BuildScoreResult(violations, classes, concreteConfig, p.MinScoreThreshold, p.MaxRemediationEntries);
+        var classes = await EnumerateConcreteClassesAsync(solution, scopeFilter, concreteConfig, ct);
+        var score = BuildScoreResult(new BuildScoreResultParameters(
+            Violations: violations,
+            Classes: classes,
+            Config: concreteConfig,
+            Threshold: p.MinScoreThreshold,
+            MaxRemediationEntries: p.MaxRemediationEntries));
         return new SafeguardScoreResult(Score: score, IsMalfunction: false);
     }
 
@@ -120,31 +125,26 @@ internal static class SafeguardScanner
     /// isolierte Tests (Klemmverhalten, Threshold-Logik, Sealed-Bonus-Berechnung) ohne
     /// LinterEngine-Setup.
     /// </summary>
-    internal static ScoreResult BuildScoreResult(
-        IReadOnlyCollection<RuleViolation> violations,
-        IReadOnlyList<ScannedClass> classes,
-        Config config,
-        double threshold,
-        int maxRemediationEntries)
+    internal static ScoreResult BuildScoreResult(BuildScoreResultParameters p)
     {
-        var violationPenalty = ComputeViolationPenalty(violations);
-        var ccPenalty = ComputeCcPenalty(classes, config.Metrics.MaxCognitiveComplexity);
-        var footprintPenalty = ComputeFootprintPenalty(classes, config.Metrics.MaxAIContextFootprint);
-        var sealedBonus = ComputeSealedBonus(classes, config.Global.EnforceSealedClasses);
+        var violationPenalty = ComputeViolationPenalty(p.Violations);
+        var ccPenalty = ComputeCcPenalty(p.Classes, p.Config.Metrics.MaxCognitiveComplexity);
+        var footprintPenalty = ComputeFootprintPenalty(p.Classes, p.Config.Metrics.MaxAIContextFootprint);
+        var sealedBonus = ComputeSealedBonus(p.Classes, p.Config.Global.EnforceSealedClasses);
 
         var raw = 10.0 - violationPenalty - ccPenalty - footprintPenalty + sealedBonus;
         var score = Math.Clamp(raw, 0.0, 10.0);
-        var passed = score >= threshold;
+        var passed = score >= p.Threshold;
 
         // Sortierung: Errors zuerst, dann Warnings, dann Info; innerhalb gleicher Severity
         // stabil nach (FilePath, LineNumber, RuleName) — garantiert Byte-fuer-Byte-Identitaet
         // fuer zwei aufeinanderfolgende Aufrufe mit identischem Input (Determinismus-Test).
-        var sortedViolations = violations
+        var sortedViolations = p.Violations
             .OrderBy(SeverityRank)
             .ThenBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.LineNumber)
             .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
-            .Take(Math.Max(0, maxRemediationEntries))
+            .Take(Math.Max(0, p.MaxRemediationEntries))
             .Select(v => new ViolationEntry(
                 FilePath: v.FilePath,
                 LineNumber: v.LineNumber,
@@ -154,13 +154,13 @@ internal static class SafeguardScanner
                 Guidance: v.Guidance))
             .ToList();
 
-        var remediation = BuildRemediation(sortedViolations, config);
-        var summary = BuildSummary(score, threshold, passed, sortedViolations, classes, config);
+        var remediation = BuildRemediation(sortedViolations, p.Config);
+        var summary = BuildSummary(score, p.Threshold, passed, sortedViolations, p.Classes, p.Config);
 
         return new ScoreResult(
             Passed: passed,
             Score: score,
-            Threshold: threshold,
+            Threshold: p.Threshold,
             Violations: sortedViolations,
             Remediation: remediation,
             Summary: summary);
@@ -280,85 +280,99 @@ internal static class SafeguardScanner
                $"{violationCount} Top-Verstoesse, {classCount} Klassen analysiert.";
     }
 
-    private static string ResolveHintForRule(string ruleName, Config config)
-    {
-        return ruleName switch
+    /// <summary>Lookup-Tabelle pro bekannter Regel-ID; vermeidet <c>MaxSwitchArms</c>-Verstoss
+    /// und ermoeglicht das Hinzufuegen weiterer Regeln ohne Steuerungslogik-Aenderung.
+    /// Unbekannte RuleNames erhalten einen generischen Default-Hinweis.</summary>
+    private static readonly IReadOnlyDictionary<string, string> RuleHints =
+        new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            LinterRuleIds.MaxLineCount =>
+            [LinterRuleIds.MaxLineCount] =
                 "Datei aufteilen — Klassen/Methoden extrahieren, Partial-Klassen pruefen.",
-            LinterRuleIds.MaxMethodLineCount =>
+            [LinterRuleIds.MaxMethodLineCount] =
                 "Methode aufteilen — Hilfsmethoden extrahieren, Verantwortlichkeit aufspalten.",
-            LinterRuleIds.MaxMethodParameterCount =>
+            [LinterRuleIds.MaxMethodParameterCount] =
                 "Parameter-Record einfuehren — verwandte Argumente in einem Werteobjekt buendeln.",
-            LinterRuleIds.MaxCyclomaticComplexity or LinterRuleIds.MaxCognitiveComplexity =>
+            [LinterRuleIds.MaxCyclomaticComplexity] =
                 "Komplexitaet reduzieren — fruehe Returns, kleinere Methoden, Polymorphie statt Switch.",
-            LinterRuleIds.AIContextFootprint =>
+            [LinterRuleIds.MaxCognitiveComplexity] =
+                "Komplexitaet reduzieren — fruehe Returns, kleinere Methoden, Polymorphie statt Switch.",
+            [LinterRuleIds.AIContextFootprint] =
                 "Footprint reduzieren — Abhaengigkeiten aufsloesen, kleine Typen favorisieren.",
-            LinterRuleIds.EnforceSealedClasses =>
+            [LinterRuleIds.EnforceSealedClasses] =
                 "Klasse versiegeln (`sealed`) — Vererbungsabsicht klaeren oder Blatt-Klasse markieren.",
-            LinterRuleIds.MaxConstructorDependencies =>
+            [LinterRuleIds.MaxConstructorDependencies] =
                 "DI-Law-of-Demeter pruefen — Aggregate-Fassade einfuehren, Konstruktor-Injektion reduzieren.",
-            LinterRuleIds.BanAsyncVoid =>
+            [LinterRuleIds.BanAsyncVoid] =
                 "Async void durch `async Task` ersetzen — Ausnahmen werden sonst verschluckt.",
-            LinterRuleIds.BanBlockingTaskAccess =>
+            [LinterRuleIds.BanBlockingTaskAccess] =
                 "Blocking-Calls (.Wait/.Result/.GetAwaiter().GetResult()) durch `await` ersetzen.",
-            LinterRuleIds.EnforceNoSilentCatch =>
+            [LinterRuleIds.EnforceNoSilentCatch] =
                 "Catch-Block sichtbar machen — Log schreiben oder Exception re-throwen.",
-            _ => $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.",
         };
-    }
 
-    private static IReadOnlyList<ScannedClass> EnumerateConcreteClasses(
+    private static string ResolveHintForRule(string ruleName, Config config)
+        => RuleHints.TryGetValue(ruleName, out var hint)
+            ? hint
+            : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.";
+
+    private static async Task<IReadOnlyList<ScannedClass>> EnumerateConcreteClassesAsync(
         Solution solution, string? scopeFilter, Config config, CancellationToken ct)
     {
         var collected = new List<ScannedClass>();
         foreach (var project in solution.Projects)
         {
-            if (!project.SupportsCompilation) continue;
-            Compilation? compilation;
-            try
-            {
-                compilation = project.GetCompilationAsync(ct).GetAwaiter().GetResult();
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                // Kompilierungs-Fehler fuehren nicht zum Abbruch — die zugehoerigen Dokumente
-                // liefern null-SemanticModel und werden uebersprungen.
-                continue;
-            }
+            var compilation = await TryGetCompilationAsync(project, ct);
             if (compilation is null) continue;
 
             foreach (var document in project.Documents)
             {
-                if (!string.IsNullOrEmpty(scopeFilter)
-                    && document.FilePath is { } filePath
-                    && !filePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)
-                    && !project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var syntaxTree = document.GetSyntaxTreeAsync(ct).GetAwaiter().GetResult();
-                if (syntaxTree is null) continue;
-
-                var semanticModel = compilation.GetSemanticModel(syntaxTree);
-                var root = syntaxTree.GetRoot(ct);
-                foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
-                {
-                    var symbol = semanticModel.GetDeclaredSymbol(classDecl, ct) as INamedTypeSymbol;
-                    if (symbol is null) continue;
-                    if (symbol.TypeKind != TypeKind.Class) continue;
-                    if (symbol.IsAbstract) continue;
-
-                    collected.Add(BuildScannedClass(symbol, classDecl, config));
-                }
+                if (!ShouldIncludeDocument(document, project, scopeFilter)) continue;
+                collected.AddRange(
+                    await CollectClassDeclarationsAsync(document, compilation, config, ct));
             }
         }
         return collected;
+    }
+
+    /// <summary>Liefert die Compilation oder null, wenn das Projekt nicht kompilierbar ist
+    /// oder fehlschlaegt. Compilation-Fehler fuehren per Design nicht zum Scanner-Abbruch.</summary>
+    private static async Task<Compilation?> TryGetCompilationAsync(Project project, CancellationToken ct)
+    {
+        if (!project.SupportsCompilation) return null;
+        try { return await project.GetCompilationAsync(ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ignored) { _ = ignored; return null; }
+    }
+
+    private static bool ShouldIncludeDocument(Document document, Project project, string? scopeFilter)
+    {
+        if (string.IsNullOrEmpty(scopeFilter)) return true;
+        if (document.FilePath is { } p && p.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
+        return project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<IReadOnlyList<ScannedClass>> CollectClassDeclarationsAsync(
+        Document document, Compilation compilation, Config config, CancellationToken ct)
+    {
+        var syntaxTree = await document.GetSyntaxTreeAsync(ct);
+        if (syntaxTree is null) return Array.Empty<ScannedClass>();
+
+        var semanticModel = compilation.GetSemanticModel(syntaxTree);
+        var root = await syntaxTree.GetRootAsync(ct);
+        var result = new List<ScannedClass>();
+        foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+        {
+            if (TryBuildScannedClass(classDecl, semanticModel, config) is { } scanned) result.Add(scanned);
+        }
+        return result;
+    }
+
+    private static ScannedClass? TryBuildScannedClass(
+        ClassDeclarationSyntax classDecl, SemanticModel semanticModel, Config config)
+    {
+        var symbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+        if (symbol is null || symbol.TypeKind != TypeKind.Class || symbol.IsAbstract) return null;
+        return BuildScannedClass(symbol, classDecl, config);
     }
 
     private static ScannedClass BuildScannedClass(
@@ -382,6 +396,16 @@ internal static class SafeguardScanner
             IsSealed: symbol.IsSealed);
     }
 }
+
+/// <summary>Parameter-Record fuer <see cref="SafeguardScanner.BuildScoreResult"/> — Pattern
+/// konsistent mit <see cref="SafeguardScannerParameters"/>. Records sind vom
+/// <c>MaxMethodParameterCount: 4</c>-Limit ausgenommen.</summary>
+internal sealed record BuildScoreResultParameters(
+    IReadOnlyCollection<RuleViolation> Violations,
+    IReadOnlyList<ScannedClass> Classes,
+    Config Config,
+    double Threshold,
+    int MaxRemediationEntries);
 
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
@@ -448,7 +472,7 @@ internal sealed record RemediationHint(
     string DocumentationHint);
 
 /// <summary>
-/// Interner Daten-Container fuer die von <see cref="SafeguardScanner.EnumerateConcreteClasses"/>
+/// Interner Daten-Container fuer die von <see cref="SafeguardScanner.EnumerateConcreteClassesAsync"/>
 /// gesammelten Klassen-Metriken. Wird intern zwischen Scanner und <see cref="SafeguardScanner.BuildScoreResult"/>
 /// weitergereicht; bewusst kein <c>INamedTypeSymbol</c>, damit <see cref="SafeguardScanner.BuildScoreResult"/>
 /// ohne Roslyn-Symbols testbar bleibt (Plan: BuildScoreResult fuer isolierte Tests).

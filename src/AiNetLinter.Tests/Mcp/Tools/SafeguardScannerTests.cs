@@ -279,12 +279,12 @@ public class Greeter { public string Hello() => ""hi""; }";
         var manySealed = Enumerable.Range(0, 50)
             .Select(i => new ScannedClass($"C{i}", MaxCognitiveComplexity: 1, AIContextFootprint: 1, IsSealed: true))
             .ToList();
-        var highRaw = SafeguardScanner.BuildScoreResult(
-            violations: Array.Empty<RuleViolation>(),
-            classes: manySealed,
-            config: config,
-            threshold: 8.0,
-            maxRemediationEntries: 20);
+        var highRaw = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+            Violations: Array.Empty<RuleViolation>(),
+            Classes: manySealed,
+            Config: config,
+            Threshold: 8.0,
+            MaxRemediationEntries: 20));
         Assert.InRange(highRaw.Score, 0.0, 10.0);
 
         // Roh < 0: keine Klassen (Sealed-Bonus = 0), viele Errors, die den Score unter 0 druecken.
@@ -299,12 +299,12 @@ public class Greeter { public string Hello() => ""hi""; }";
                 EffectiveSeverity = "error",
             })
             .ToList();
-        var lowRaw = SafeguardScanner.BuildScoreResult(
-            violations: manyErrors,
-            classes: Array.Empty<ScannedClass>(),
-            config: config,
-            threshold: 8.0,
-            maxRemediationEntries: 20);
+        var lowRaw = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+            Violations: manyErrors,
+            Classes: Array.Empty<ScannedClass>(),
+            Config: config,
+            Threshold: 8.0,
+            MaxRemediationEntries: 20));
         Assert.InRange(lowRaw.Score, 0.0, 10.0);
         Assert.False(lowRaw.Passed);
     }
