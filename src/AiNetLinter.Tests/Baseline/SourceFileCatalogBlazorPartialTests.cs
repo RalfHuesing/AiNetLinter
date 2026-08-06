@@ -48,7 +48,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("Hinweis:", text, System.StringComparison.Ordinal);
-        Assert.Contains(".cs: 1 Dateien (voll vom Symbolgraph abgedeckt)", text, System.StringComparison.Ordinal);
+        Assert.Contains(".cs: 1 Datei (voll vom Symbolgraph abgedeckt)", text, System.StringComparison.Ordinal);
     }
 
     [Fact]

@@ -84,14 +84,25 @@ internal static class GetIndexScopeScanner
 
         var lines = new[]
         {
-            $".cs: {csCount} Dateien (voll vom Symbolgraph abgedeckt)",
-            $".css: {cssCount} Dateien (nicht vom Symbolgraph abgedeckt)",
-            $".html: {htmlCount} Dateien (nicht vom Symbolgraph abgedeckt)",
-            $".js: {jsCount} Dateien (nicht vom Symbolgraph abgedeckt)",
-            $".razor: {razorCount} Dateien (nicht vom Symbolgraph abgedeckt)",
-            $".xaml: {xamlCount} Dateien (nicht vom Symbolgraph abgedeckt)",
+            FormatFileCountLine(csCount, ".cs", " (voll vom Symbolgraph abgedeckt)"),
+            FormatFileCountLine(cssCount, ".css", " (nicht vom Symbolgraph abgedeckt)"),
+            FormatFileCountLine(htmlCount, ".html", " (nicht vom Symbolgraph abgedeckt)"),
+            FormatFileCountLine(jsCount, ".js", " (nicht vom Symbolgraph abgedeckt)"),
+            FormatFileCountLine(razorCount, ".razor", " (nicht vom Symbolgraph abgedeckt)"),
+            FormatFileCountLine(xamlCount, ".xaml", " (nicht vom Symbolgraph abgedeckt)"),
         };
 
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// Pluralisierung in eine eigene Zeile extrahiert, damit Singular ("1 Datei") und Plural
+    /// ("N Dateien") konsistent zu <see cref="McpCompileDiagnostics.FormatAggregateWarning"/>
+    /// bleiben und Test-Assertions Singular/Plural gleichermassen matchen koennen.
+    /// </summary>
+    private static string FormatFileCountLine(int count, string extension, string suffix)
+    {
+        var fileLabel = count == 1 ? "Datei" : "Dateien";
+        return $"{extension}: {count} {fileLabel}{suffix}";
     }
 }

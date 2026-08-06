@@ -95,7 +95,7 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
@@ -105,7 +105,20 @@ public sealed class GetHotspotsToolTests : IClassFixture<SymbolGraphCatalogFixtu
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
-        Assert.Matches(@"\b\d+\s+Dateien?\s+haben\s+Compile-Fehler", text);
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
+    {
+        using var fixture = new SingleCompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
     }
 }

@@ -97,15 +97,20 @@ internal static class McpCompileDiagnostics
     /// Baut eine aggregierte Header-Zeile fuer Tools ohne direkten Datei-Bezug im Output
     /// (<c>find_symbol</c>, <c>find_references</c>, <c>get_impact</c>, <c>get_type_hierarchy</c>,
     /// <c>search_pattern</c> sowie die drei Aggregate-Tools). Format:
-    /// "Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe
-    /// get_file_skeleton fuer die betroffenen Dateien."
+    /// "Hinweis: 1 Datei hat Compile-Fehler" bzw. "Hinweis: N Dateien haben Compile-Fehler
+    /// (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien."
     /// </summary>
     internal static string FormatAggregateWarning(int fileCount, int totalErrors)
     {
         if (fileCount == 0 || totalErrors == 0) return string.Empty;
 
-        var fileLabel = fileCount == 1 ? "Datei" : "Dateien";
-        return $"Hinweis: {fileCount} {fileLabel} haben Compile-Fehler " +
+        if (fileCount == 1)
+        {
+            return $"Hinweis: 1 Datei hat Compile-Fehler " +
+                   $"({totalErrors} Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.";
+        }
+
+        return $"Hinweis: {fileCount} Dateien haben Compile-Fehler " +
                $"({totalErrors} Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.";
     }
 

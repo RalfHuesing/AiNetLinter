@@ -41,7 +41,7 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains(".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".cs", 5, "(voll vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,9 +53,9 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains(".css: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains(".js: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains(".razor: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".css", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".js", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".razor", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -67,8 +67,8 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains(".xaml: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains(".html: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".xaml", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".html", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -88,12 +88,12 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains(".xaml: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains(".html: 1 Dateien (nicht vom Symbolgraph abgedeckt)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".xaml", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(BuildBreakdownLine(".html", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
@@ -103,7 +103,30 @@ public sealed class GetIndexScopeToolTests : IClassFixture<SymbolGraphCatalogFix
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
-        Assert.Matches(@"\b\d+\s+Dateien?\s+haben\s+Compile-Fehler", text);
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
+    {
+        using var fixture = new SingleCompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
+    }
+
+    /// <summary>
+    /// Singular/Plural an einer Stelle gehalten, damit jede Datei-Typ-Zeile konsistent zur
+    /// tatsaechlichen Engine-Ausgabe prueft (count == 1 -> "Datei", sonst "Dateien").
+    /// </summary>
+    private static string BuildBreakdownLine(string extension, int count, string suffix)
+    {
+        var label = count == 1 ? "Datei" : "Dateien";
+        return $"{extension}: {count} {label} {suffix}";
     }
 }
