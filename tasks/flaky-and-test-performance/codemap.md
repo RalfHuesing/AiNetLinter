@@ -92,7 +92,7 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 
 Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; konkrete Step-Planung ist Sache der jeweiligen Planer-Aufrufe.
 
-- **`src/AiNetLinter.Tests/Web/`** — 5 Klassen (`CssAnalyzerTests`, `JsAnalyzerTests`, `RazorAnalyzerTests`, `RazorAnalyzerExtendedTests` in `RazorAnalyzerTests.Extended.cs`, `WebSuppressionDetectorTests`); rein Unit, geplant für Batch „Reine-Unit-Ordner, klein" (zuletzt: step-002; Korrektur in step-004 — die in step-002 angelegte Aufzählung hatte `RazorAnalyzerExtendedTests` vergessen)
+- **`src/AiNetLinter.Tests/Web/`** — 5 Klassen (`CssAnalyzerTests`, `JsAnalyzerTests`, `RazorAnalyzerTests`, `RazorAnalyzerExtendedTests` in `RazorAnalyzerTests.Extended.cs`, `WebSuppressionDetectorTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-004)
 - **`src/AiNetLinter.Tests/Architecture/`** — 1 Klasse (`ArchitectureTests`); rein Unit, dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Diagnostics/`** — 1 Klasse (`PerformanceProfilerTests`); rein Unit, dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/FalsePositives/`** — 2 Klassen; rein Unit, dito (zuletzt: step-002)
