@@ -2,12 +2,12 @@
 task: flaky-and-test-performance
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-07T16:45:00+02:00
+last_updated: 2026-08-07T18:22:00+02:00
 ---
 
 # Tech-Debt-Log: flaky-and-test-performance
 
-Append-only. Jeder Eintrag ist eine vom Kritiker während eines
+Append-only für offene Einträge. Jeder Eintrag ist eine vom Kritiker während eines
 Step-Reviews beobachtete, aber bewusst **nicht** gefixte Auffälligkeit
 außerhalb des Scopes des jeweiligen Steps (Architektur, Anti-Pattern,
 Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
@@ -18,25 +18,11 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 
 | ID | Bereich / Datei | Priorität | Kurzfassung |
 |---|---|---|---|
-| TD-001 | `src/AiNetLinter/Cli/` + `konzept.md` | mittel | Konzept-/roadmap.md verweisen auf `--self-lint` als Self-Lint-Befehl, CLI-Option existiert nicht. |
 | TD-002 | `tasks/.../step-*` + `.agents/.../coder/SKILL.md` §Schritt-5 | niedrig | Subject-Längen-/Typ-Disziplin: 72-Grenze und irreführende `test:`-Subjects für Doku-Commits (u. a. step-012 `7deeff1`). |
-| TD-003 | `Output/McpLintConsoleTests.cs` + `Maps/Skeleton/SkeletonStableIdTests.cs` | niedrig | **erledigt** — EOL auf CRLF renormalisiert. |
-| TD-004 | `Output/` + `Core/` (u. a. 7/17 in step-012) | niedrig | **erledigt** — `#nullable enable` am Dateianfang der 5 Output/-Testdateien ergänzt. |
-| TD-005 | `src/AiNetLinter.Tests/Configuration/` (4 von 8 Test-Dateien) | niedrig | UTF-8-BOM-Inhomogenität in `Configuration/`: 4 von 8 `.cs`-Dateien mit BOM, 4 ohne — Repository-weite Konsistenz-Frage ohne funktionale Auswirkung, byte-genau konserviert in step-009. |
+| TD-005 | `src/AiNetLinter.Tests/Configuration/` (4 von 8 Test-Dateien) | niedrig | UTF-8-BOM-Inhomogenität in `Configuration/`: 4 von 8 `.cs`-Dateien mit BOM, 4 ohne — Repository-weite Konsistenz-Frage ohne funktionale Auswirkung. |
 | TD-006 | `Core/Checkers/` + `Core/` (BOM) | niedrig | UTF-8-BOM-Inhomogenität: `Core/Checkers/` 10/27 + `Core/`-Rest step-012 4/11 mit BOM; byte-genau konserviert. |
-| TD-007 | `tasks/.../step-012/_insert_trait_skeleton.py` + `_code_commit_msg.txt` | niedrig | **erledigt (step-013)** — Coder-Hilfsdateien-Leichen im Doku-Commit `7deeff1` mitcommitted; rein mechanisch löschbar. |
 
 ## Einträge
-
-### TD-001 — Fehlende CLI-Option `--self-lint` (Konzept-/CLI-Diskrepanz) [Priorität: mittel]
-
-- **Gefunden in:** step-001 (Kritiker-Review vom 2026-08-07T10:00:00+02:00)
-- **Ort:** `tasks/flaky-and-test-performance/roadmap.md:26`, `tasks/flaky-and-test-performance/step-001/step-plan.md:60,131,151` (Plan/DoD-Referenz), `src/AiNetLinter/Cli/CliOptionFactory.cs` (fehlend — verifiziert per `grep "--self-lint"` über `src/AiNetLinter/Cli/`, kein Treffer)
-- **Befund:** Sowohl das Konzept des Tasks (`konzept.md` implizit über die `roadmap.md`-Linie 26) als auch der `step-001/step-plan.md` (Definition of Done) referenzieren `dotnet run --project src/AiNetLinter -- --self-lint` als Self-Lint-Verifikation. Die aktuelle CLI in `CliOptionFactory.cs` kennt diese Option nicht (vorhandene Optionen reichen von `--config` über `--playbook` bis `--mcp-server` — kein `--self-lint`). Der Coder hat im `step-result.md` korrekt dokumentiert und mit `dotnet run --project src/AiNetLinter -- --config rules.json --path .` (Ausgabe `OK`) semantisch identisch ersetzt. Die **Konzept-Spec ist also veraltet** (oder die CLI-Option wurde bei einem früheren Refactoring vergessen).
-- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-001 (Spike zur Fixture-Sharing-Mechanik). Die Diskrepanz betrifft zwei Ebenen — eine CLI-Option nachrüsten *und* das Konzept/roadmap/Plan-DoD korrigieren — beides ist Orchestrator-/Nutzer-Entscheidung, kein Spike-Fix.
-- **Vorschlag:** Nutzer entscheidet eine der beiden Richtungen: (a) CLI-Option `--self-lint` als Convenience-Alias für `--config rules.json --path .` (oder mit hartcodiertem Self-Path) in `CliOptionFactory.cs` nachrüsten und in `Docs/configuration.md` dokumentieren; oder (b) Verweise in `roadmap.md` und ggf. Konzept/Plan-DoD auf den existierenden Befehl korrigieren. Variante (a) ist die weniger invasive (Spec-treu) — die Spec war vermutlich Absicht, nicht Versehen.
-- **Status:** offen
-- **Nutzer**: NICHT UMSETZEN! OUT OF SCOPE!
 
 ### TD-002 — Subject-Längen-Disziplin bei Code-/Doku-Commits (Skills/Plan-Genauigkeit) [Priorität: niedrig]
 
@@ -49,47 +35,11 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - `step-003` Doku-Commit `03b04f4` (`docs(tasks): step-003 Result und Status 'done (pending audit)' [flaky-and-test-performance]`): **91 Zeichen, 19 über Grenze** — approved mit MINOR, da Coder keine Korrektur-Möglichkeit hat.
   - **Zusatzbefund (sekundär):** Mehrere step-001/step-002/step-003-Planungs- und Review-Commits haben Subject + Body **ohne Leerzeile** als einen einzigen Long-Line committet (z. B. `4e3044d` = 413 Zeichen in `%s`, `1aafb19` = 519 Zeichen) — `git log --oneline` zeigt dann den ganzen Text inkl. Bullet-Liste; das ist ein separates Commit-Format-Issue (fehlende Trennung Subject/Body) und wird hier nur als Beobachtung vermerkt.
 - **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-003 (rein additives Attribut auf Klassen-Ebene, Subject-Länge ist eine Commit-Message-Frage). Eine nachträgliche Korrektur der bereits committeten Subjects ist per `spec.md` §10.7 absolut verboten (`git commit --amend`, `git rebase`, `git reset --hard/--soft` auf bereits committete Commits, `git filter-branch`/`filter-repo`, Force-Push — alle ausnahmslos verboten). Die Korrektur kann erst beim nächsten Code-Commit desselben Tasks oder in einem separaten Rule-Update-Step erfolgen.
-- **Vorschlag (zwei alternative Richtungen — Orchestrator-/Nutzer-Entscheidung):**
+- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
   - **(a) Planer-Disziplin + Skill-Präzisierung:** Planer gibt in `step-plan.md` DoD einen **konkreten Subject-String** mit korrekter Längenangabe vor (z. B. `chore(tests): Metrics-Traits [flaky-and-test-performance]` = 56 Zeichen) und verzichtet auf Body-Daten, die der Coder selbst gut formulieren kann. `skills/coder/SKILL.md` §Schritt-5 könnte um die explizite Empfehlung "bei absehbarer Subject-Länge >60 Zeichen, im Plan-DoD alternative kürzere Subject-Vorschläge auflisten" ergänzt werden. Coder akzeptiert den Subject-Vorschlag, ggf. mit leichter Anpassung.
   - **(b) Regel-Lockerung für Doku-Commits:** `AiNetLinterRichtlinien.mdc` §4 könnte um eine explizite Ausnahme "Für `docs(...)`- und `chore(task)`-Commits gilt eine gelockerte Obergrenze von 100 Zeichen, da der Subject hier primär Doku-/Audit-Funktion hat und keine Code-Änderung beschreibt" ergänzt werden. Vorteil: pragmatisch, kein zusätzlicher Planer-Aufwand, keine künstlich verkürzten Subject-Strings. Nachteil: Regel-Ausnahme → schwerer zu merken, könnte für Nicht-Doku-Commits als Präzedenz missbraucht werden.
   - **Empfehlung:** Variante (a) — sie ist Spec-treu, ändert die Regel nicht und verlagert die Disziplin in den Planer-Aufruf, wo sie hingehört (Längenvorgabe ist Planer-Wissen, nicht Coder-Wissen).
 - **Erweiterung step-012 (Kritiker-Review 2026-08-07T15:35:00+02:00):** Doku-Commit `7deeff1` verwendet **identisches Subject** wie Code-Commit `b2477f5` (`test: Core+Maps-Tests Kategorie-taggen [flaky-and-test-performance]`, 67 Zeichen — Länge ok, aber Conventional-Commit-Typ `test:` für rein dokumentierende Änderungen inkl. Hilfsdateien). Plan-DoD hatte `docs(tasks): step-012 Result dokumentieren […]` (66 Zeichen) als Beispiel empfohlen. Kein neuer TD-Eintrag — gleicher Mechanismus.
-- **Status:** offen
-
-### TD-003 — EOL-Inhomogenität in `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` (LF-only statt CRLF) [Priorität: niedrig]
-
-- **Gefunden in:** step-007 (Kritiker-Review vom 2026-08-07T14:55:00+02:00), vom Coder in `step-007/step-result.md` §"Abweichungen vom Plan" / §"Beobachtungen" als out-of-scope-Hinweis bereits benannt.
-- **Ort:** `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` (EOL-Status: `CR=0 LF=63`, kein UTF-8-BOM, erste Bytes `23 6E 75 6C 6C 61 62 6C 65 20 65 6E 61 62 6C 65 0A` = `#nullable enable\n` ohne vorausgehendes `0D` — per PowerShell `[System.IO.File]::ReadAllBytes` verifiziert)
-- **Befund:** Im `Output/`-Ordner sind 9 von 10 Dateien uniform CRLF + Trailing-NL + kein BOM (`DebtReportBuilderHeaderTests`, `DebtReportBuilderTests`, `LinterErrorFormatterTests`, `OutputRootResolverTests`, `PathNormalizerTests`, `RuleLegendRegistryTests`, `TestLintConsole`, `ViolationMarkdownFormatterTests`, `ViolationSummaryBuilderTests` — alle `CR==LF`, kein gemischter Status). **Einzige Ausnahme:** `McpLintConsoleTests.cs` ist **LF-only** (`CR=0`). Vermutlich `core.autocrlf=true` und Sonderverhalten dieser einen Datei beim Checkout (Index = `i/lf`, Working Copy = `w/lf` statt `w/crlf` wie die 9 Schwestern). Im step-007-Plan war die Datei fälschlich als CRLF verifiziert worden (`CR=62 LF=62`) — der Coder hat das durch eigenen Byte-Scan vor dem Edit korrekt als LF-only erkannt und mit byte-genauem Python-Helper (analog step-004-Pattern) konserviert. Kompiliert und testet sauber (voller Lauf 1325/1325 grün, Unit-Filter 368/368 grün) — **kein** funktionaler Schaden. Inkonsistenz jedoch sichtbar in jedem `git status` (`LF will be replaced by CRLF`-Hinweis) und in jedem `git diff` über die Datei.
-- **Warum nicht sofort gefixt:** Außerhalb des step-007-Scopes (rein additives Attribut auf Klassen-Ebene, kein EOL-Cleanup-Auftrag). Die Frage "CRLF beibehalten wie 9 Schwestern oder LF als moderner Standard etablieren" ist eine **Nutzer-/Repo-Konvention-Entscheidung**, nicht rein mechanisch. Eine Renormalisierung auf CRLF setzt den `core.autocrlf=true`-Default des Repos fort; eine Umstellung auf LF (z. B. via `.gitattributes` `* text=auto eol=lf`) ist eine breitere Konvention-Frage mit Auswirkungen auf alle 1000+ Repo-Dateien.
-- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
-  - **(a) Lokale Renormalisierung auf CRLF:** `git add --renormalize .` über `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` + Commit mit Subject wie `chore(tests): Output/-EOL normalisieren [flaky-and-test-performance]`. Greift die Datei auf den Ordner-Standard zurück, kein Verhaltens-Effekt. Erfordert keinen weiteren Mechanik-Schritt; passt als `auto_fixable: ja`-Bündel in einen ohnehin laufenden EPIC-02-Folge-Step.
-  - **(b) Repo-weite Umstellung auf LF:** `.gitattributes` mit `* text=auto eol=lf` (oder pro Datei-Endung) + `git add --renormalize .` + Commit. Konsistent mit modernen Cross-Plattform-Repos (Linux/macOS/Container-CI), entfernt die Windows-only-CRLF-Inhomogenität global. Hat aber Auswirkungen auf den gesamten `Output/`-Ordner und viele weitere Dateien — eigenständiger Step mit Vorab-Bestandsaufnahme sinnvoll.
-  - **Empfehlung:** Variante (a) — minimal-invasiv, passt zur etablierten Output/-Ordnung, kann als gebündeltes Aufräum-Item in step-008 oder einen späteren `Output/`-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring.
-- **Erweiterung step-012 (Kritiker-Review 2026-08-07T15:35:00+02:00):** gleiches Muster in `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonStableIdTests.cs` — Blob `b2477f5` verifiziert `CR=0 LF=43` (nach Trait-Insert; Pre `CR=0 LF=42`), `git ls-files --eol` = `i/lf`; Working Tree unter `core.autocrlf=true` oft `w/crlf`. Planer/Coder haben es als Maps-TD-003-Analogon bewusst konserviert (Python-Helper). Kein neuer TD — Ort hier mitgeführt.
-- **auto_fixable:** nein
-- **Status:** erledigt — auf CRLF renormalisiert.
-
-### TD-004 — `#nullable enable`-Inkonsistenz in 5 von 10 `Output/`-Test-Dateien (Pre-Existing, Regel-Verstoß gegen `EnforceNullableEnable`) [Priorität: niedrig]
-
-- **Gefunden in:** step-008 (Kritiker-Review vom 2026-08-07T16:25:00+02:00), vom Coder in `step-008/step-result.md` §"Bekannte Unschärfen" als out-of-scope-Hinweis bereits benannt.
-- **Ort:** `src/AiNetLinter.Tests/Output/`-Ordner, 5 von 10 `.cs`-Dateien ohne `#nullable enable` am Dateianfang:
-  - `DebtReportBuilderHeaderTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
-  - `DebtReportBuilderTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
-  - `OutputRootResolverTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
-  - `PathNormalizerTests.cs` (Z. 1 = `using AiNetLinter.Output;`, step-008-tagged)
-  - `ViolationSummaryBuilderTests.cs` (Z. 1 = `using AiNetLinter.Models;`, step-008-tagged)
-  - **5 mit Direktive:** `LinterErrorFormatterTests.cs`, `McpLintConsoleTests.cs`, `RuleLegendRegistryTests.cs`, `ViolationMarkdownFormatterTests.cs`, `TestLintConsole.cs` (Helper). Verifiziert per `Get-Content -Encoding UTF8 <file> -TotalCount 1`-Scan.
-- **Befund:** Die auto-generierte Regel `AiNetLinter.mdc:70` (`EnforceNullableEnable` — `#nullable enable` am Dateianfang jeder `.cs`-Datei) ist in 5 von 10 `Output/`-Test-Dateien verletzt. **Pre-existing** (die Inkonsistenz existierte bereits vor step-007 und step-008 — die EPIC-02-Trait-Batches haben den Status weder eingeführt noch verändert). step-008 schreibt 2 dieser 5 Dateien (PathNormalizerTests, ViolationSummaryBuilderTests) an — die `#nullable enable`-Direktive wird dabei nicht berührt (reiner Trait-Insert in der Klassen-Deklaration). step-007 hat entsprechend 3 dieser 5 Dateien (DebtReportBuilderHeaderTests, DebtReportBuilderTests, OutputRootResolverTests) angetastet — gleiche Konstellation. **Funktional** wirkt sich die fehlende Direktive nur auf die Nullability-Analyse (nullable-Warnings statt nullable-Errors) aus; der `dotnet build` mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` läuft in allen 4 step-008-Dateien (und allen 5 step-007-Dateien) grün — d. h. die Regel-Verletzung wird vom Linter **nicht** als Build-Error gehoben. Wahrscheinlichste Erklärung: die `AiNetLinter.Tests`-Projekt-Konfiguration (`rules.json → ProjectSpecific` o. ä.) hebt `EnforceNullableEnable` für `*.Tests` auf, analog zu `EnforceSealedClasses` (siehe `AiNetLinter.mdc:83`).
-- **Status:** erledigt — `#nullable enable` am Dateianfang der 5 betroffenen Testdateien ergänzt.
-- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-008 (rein additives Attribut auf Klassen-Ebene, kein Nullable-Konsistenz-Auftrag). Die Frage "5 Dateien nachziehen oder 5 Dateien als Ordner-Standard etablieren" ist eine projektweite Konsistenz-Frage mit Implikationen auf den gesamten `Output/`-Ordner und potenziell weitere Test-Ordner — kein mechanischer Ein-Zeilen-Fix im step-008-Scope.
-- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
-  - **(a) Konsolidierung auf mit-Direktive (5 Dateien nachziehen):** die 5 betroffenen Dateien um `#nullable enable` Z. 1 ergänzen, im `Output/`-Ordner den Status vereinheitlichen. `auto_fixable: ja` (rein mechanisch, kein Verhaltens-Effekt, keine Architektur-Ermessen) — passt als gebündeltes Aufräum-Item in einen ohnehin laufenden EPIC-02-Folge-Step. Voraussetzung: vorher verifizieren, dass die Linter-Regel im `AiNetLinter.Tests`-Profil tatsächlich nicht greift (oder bewusst ignoriert wird) — sonst Build-Bruch.
-  - **(b) Konsolidierung auf ohne-Direktive (5 Dateien als Ordner-Standard):** die 5 Direktive-tragenden Dateien um die Z. 1 ergänzen entfernen — Ordner-Standard "Test-Klassen ohne `#nullable enable`" etablieren. `auto_fixable: ja` (rein mechanisch), aber invasiver (entfernt vorhandene Direktiven) und semantisch rückschrittlich (verliert die strengere Nullability-Analyse für die 5 sauberen Dateien). Empfehlung: nicht.
-  - **(c) Klärung mit den Tests-Profil-Overrides:** erst prüfen, ob `*.Tests`-Override für `EnforceNullableEnable` existiert oder gesetzt werden soll (analog zu `EnforceSealedClasses`); falls die Regel sowieso nicht greift, ist TD-004 obsolet — der "Verstoß" ist nur ein Doku-Konflikt zwischen `AiNetLinter.mdc` und `rules.json`. Vorgehensweise: `rules.json` inspizieren, Override-Status klären, ggf. `AiNetLinter.mdc` regenerieren.
-  - **Empfehlung:** Variante (c) zuerst (Klärung, kein Coden), dann ggf. Variante (a) (Konsolidierung) als `auto_fixable: ja`-Bündel im nächsten `Output/`-Aufräum-Step.
-- **Erweiterung step-012 (Kritiker-Review 2026-08-07T15:35:00+02:00):** 7/17 Batch-Dateien ohne `#nullable enable` am Dateianfang (`LinterEngineTests`, `NamespaceFilterTests`, `ResultPatternNamespaceTests`, `ScopeImmutabilityTests`, `TestCoverageResolverTests`, `TestProjectDetectorSuffixTests`, `SkeletonStableIdTests`) — Trait-Insertion hat die Direktive bewusst nicht ergänzt (DoD-Disziplin). Gleiches Muster wie `Output/` / `LinterAnalyzerTests` step-011; kein neuer TD.
-- **auto_fixable:** nein (zuerst Klärungs-Frage c, dann mechanisch — kein direkter Schritt-Scope für step-008; Variante (a) wäre zwar rein mechanisch, aber wir wissen noch nicht, ob die Regel überhaupt greift)
 - **Status:** offen
 
 ### TD-005 — UTF-8-BOM-Inhomogenität in `src/AiNetLinter.Tests/Configuration/` (4 von 8 mit BOM, 4 ohne) [Priorität: niedrig]
@@ -106,7 +56,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - **(b) Repo-weite `.gitattributes`-Regel:** `.gitattributes` mit `*.cs text=auto eol=crlf` (oder `eol=lf`) + projektweite Konsolidierung. Konsistent mit modernen Cross-Plattform-Repos, entfernt die Windows-only-Inhomogenität global. Hat aber Auswirkungen auf den gesamten `Configuration/`-Ordner, viele weitere Dateien in `Output/`, `Evals/` etc. — eigenständiger Step mit Vorab-Bestandsaufnahme sinnvoll.
   - **(c) Status quo belassen, Beobachtung dokumentiert:** wenn der Nutzer die Inhomogenität toleriert (z. B. weil jeder Editor die BOM korrekt verarbeitet und das Team keine Probleme hat), bleibt TD-005 als offene Beobachtung stehen und beeinflusst keine Folge-Steps. Aktuell favorisiert, weil in `Configuration/` (anders als in `Output/`) die BOM-Lage keine funktionalen, sondern rein stilistische Auswirkungen hat.
   - **Empfehlung:** Variante (a) zuerst, wenn überhaupt — minimal-invasiv, passt zur etablierten Konvention „1 Ordner = 1 Standard", kann als gebündeltes Aufräum-Item in einem EPIC-02-Folge-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring. Variante (c) ist die sichere Default-Entscheidung, falls der Nutzer keinen Konsolidierungs-Wunsch äußert.
-- **auto_fixable:** nein (Konsolidierungs-Wunsch und Ziel-Richtung „mit oder ohne BOM" sind Nutzer-Sache und nicht im Schritt-Scope eines Trait-Batches; Variante (a) ist zwar rein mechanisch, aber die Zielrichtungs-Entscheidung selbst ist nicht im Schritt-Scope)
+- **auto_fixable:** nein
 - **Status:** offen
 
 ### TD-006 — UTF-8-BOM-Inhomogenität in `src/AiNetLinter.Tests/Core/Checkers/` (10 von 27 mit BOM, 17 ohne) [Priorität: niedrig]
@@ -124,15 +74,5 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - **(c) Status quo belassen, Beobachtung dokumentiert:** wenn der Nutzer die Inhomogenität toleriert (z. B. weil jeder Editor die BOM korrekt verarbeitet und das Team keine Probleme hat), bleibt TD-006 als offene Beobachtung stehen und beeinflusst keine Folge-Steps. Aktuell favorisiert, weil in `Core/Checkers/` (anders als in `Output/`) die BOM-Lage keine funktionalen, sondern rein stilistische Auswirkungen hat.
   - **Empfehlung:** Variante (a) zuerst, wenn überhaupt — minimal-invasiv, passt zur etablierten Konvention „1 Ordner = 1 Standard", kann als gebündeltes Aufräum-Item in einem EPIC-02-Folge-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring. Variante (c) ist die sichere Default-Entscheidung, falls der Nutzer keinen Konsolidierungs-Wunsch äußert.
 - **Erweiterung step-012 (Kritiker-Review 2026-08-07T15:35:00+02:00):** BOM auch im `Core/`-Rest (nicht nur `Core/Checkers/`): 4/11 mit BOM (`NullCoalescingInitializerClassifierTests`, `ResultPatternNamespaceTests`, `ScopeImmutabilityTests`, `StaticTestSentinelExemptionTests`), Blob-Verify `EF BB BF` erhalten; `Maps/` 0/6 mit BOM. Kein neuer TD — Ort um `Core/`-Rest ergänzt.
-- **auto_fixable:** nein (Konsolidierungs-Wunsch und Ziel-Richtung „mit oder ohne BOM" sind Nutzer-Sache und nicht im Schritt-Scope eines Trait-Batches; Variante (a) ist zwar rein mechanisch, aber die Zielrichtungs-Entscheidung selbst ist nicht im Schritt-Scope)
+- **auto_fixable:** nein
 - **Status:** offen
-
-### TD-007 — Coder-Hilfsdateien-Leichen in `step-012/` (Doku-Commit) [Priorität: niedrig] [Auto-Fixable: ja]
-
-- **Gefunden in:** step-012 (Kritiker-Review vom 2026-08-07T15:35:00+02:00)
-- **Ort:** `tasks/flaky-and-test-performance/step-012/_insert_trait_skeleton.py`, `tasks/flaky-and-test-performance/step-012/_code_commit_msg.txt` (Commit `7deeff1`)
-- **Befund:** Der Doku-Commit enthält neben `step-plan.md`/`step-result.md` zwei Coder-Arbeitsartefakte (Python-Helper für LF-only-Insert + Commit-Message-Rohtext). Coder-Skill Schritt 7 erlaubt für den Doku-Commit nur Task-Doku (`step-plan`/`step-result`/`codemap`); step-011-Review lobte explizit die Abwesenheit solcher Leichen. Funktional harmlos, verschmutzt aber den Task-Ordner und die Historie.
-- **Warum nicht sofort gefixt:** Außerhalb der Kritiker-Rolle (keine Code-/Repo-Änderungen, keine Commits). Löschen ist trivial, war aber nicht Teil der Review-Artefakte-Pflicht.
-- **Vorschlag:** Beide Dateien löschen und in einem späteren Doku-/Aufräum-Commit entfernen (Subject z. B. `docs(tasks): step-012 Hilfsdateien entfernen [flaky-and-test-performance]`).
-- **Auto-Fixable:** ja — rein mechanische Löschung ohne Architektur-Ermessen und ohne Verhaltensänderung.
-- **Status:** erledigt — als item-18 (`auto_fixable: ja`) im Doku-Commit `5c4600c` von step-013 umgesetzt (beide Dateien gelöscht, verifiziert per Kritiker-Review); Verdict `approved`.

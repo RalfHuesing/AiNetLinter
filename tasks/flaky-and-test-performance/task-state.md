@@ -26,8 +26,7 @@ current_step: step-018  # done (approved), EPIC-07 abgeschlossen.
   bewusster Halt, **kein** Guard-Abbruch, **kein** Blocker. Bei Resume
   (Fall B, `status: executing`) macht der Loop normal bei EPIC-04
   weiter, sobald der Nutzer das anstößt.
-- **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
-  TD-007 durch step-013 erledigt)
+- **Tech-Debt:** siehe `tech-debt.md` (offen: TD-002, TD-005, TD-006; alle erledigten/abgelehnten Einträge gelöscht)
 - **Gestartet:** 2026-08-07
 - **Zuletzt aktualisiert:** 2026-08-07 (step-013 approved, Modellwahl pro
   Rolle auf Sonnet 5 High/Medium/Medium gesetzt)
