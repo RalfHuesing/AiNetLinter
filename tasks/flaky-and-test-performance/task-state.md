@@ -4,8 +4,8 @@ task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
 last_updated: 2026-08-07T12:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 4  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-004 (in Planung/Implementierung)
-current_step: step-004  # step-004 ist in Umsetzung; Orchestrator setzt beim Coder-Start auf in_progress, beim Plan-Commit auf done (pending audit)
+total_steps: 4  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-004 (done/approved)
+current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus plant step-005
 ---
 
 # Task State: flaky-and-test-performance
@@ -13,10 +13,12 @@ current_step: step-004  # step-004 ist in Umsetzung; Orchestrator setzt beim Cod
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-004` (in Planung/Implementierung; dritter
-  EPIC-02-Batch — `Web/`-Tests, 5 Klassen)
+- **Aktueller Schritt:** `null` (zwischen Steps, letzter abgeschlossener
+  war `step-004` EPIC-02 — done/approved, 0/3 Fix-Runden; nächster
+  Schritt wird vom Planer im Step-Modus geplant — voraussichtlich
+  `step-005`, nächster EPIC-02-Batch)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
