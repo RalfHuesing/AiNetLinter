@@ -26,7 +26,13 @@ open_questions:
 - <Punkt 1>
 - <Punkt 2>
 
-### Nice-to-Have (optional, spätere Iteration)
+### Nice-to-Have (Zwischenspeicher — vor `status: ready` aufgelöst)
+
+<Nur ein Arbeits-Zwischenstand während des Dialogs. Vor Abschluss (siehe
+`../orchestrator.md` Schritt 6) muss jeder Punkt hier entweder nach
+„Muss-Haben" hochgestuft oder nach „Non-Goals" verschoben sein — diese
+Sektion ist bei `status: ready` immer leer, sonst wird der Punkt von
+keinem Subagenten in `../../drift-loop/` je umgesetzt.>
 
 - <Punkt 1>
 

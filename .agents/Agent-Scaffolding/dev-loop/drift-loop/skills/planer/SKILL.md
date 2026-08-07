@@ -42,7 +42,8 @@ Vom Orchestrator, in jedem Modus:
   `../../spec.md` §3.1) — du erkennst es nicht selbst
 
 Zusätzlich im Step-Modus: Auftrag „Plane den nächsten Step" oder im
-Fix-Modus „Plane einen Fix für `step-NNN/step-review.md`".
+Fix-Modus „Plane eine Korrektur für `step-NNN/step-review.md`" (Nummer
+der neuen, flachen `step-MMM` gibt der Orchestrator vor).
 
 ## Roadmap-Modus
 
@@ -76,6 +77,17 @@ isolierte Session ohne Erinnerung an diesen Aufruf hier — sie kann
 der Mechanismus, der ihr trotzdem erlaubt, gezielt nur die 1-2 zum Step
 passenden Dateien zu lesen, statt entweder alles (teuer) oder nichts
 (riskant) zu lesen — siehe Step-Modus Schritt 4a.
+
+### Schritt 2b — CodeMap initial befüllen
+
+Aus demselben Grobüberblick über den Bestandscode, den du gerade für
+Schritt 1 gelesen hast: lege `<task-dir>/codemap.md` an (Template
+`../../templates/codemap.md`) — ein Eintrag pro Bereich/Modul, das für
+diesen Task relevant ist. **Pointer-Prinzip, identisch zum Regel-Index:**
+Ort + ein Satz, was dort ist und wozu relevant — keine
+Verhaltensbeschreibung. Coder und du selbst (im Step-Modus) pflegen die
+Karte über den ganzen Task weiter fort, siehe `../../spec.md` §5 und
+Step-Modus Schritt 1a unten.
 
 ### Schritt 3 — Epics ableiten
 
@@ -117,11 +129,31 @@ Bevor du irgendetwas Neues planst:
      selbst (welcher `konzept.md`-Punkt, wo aufgefallen).
    - **Nicht** wegen Tech-Debt-Einträgen (`tech-debt.md`) ein neues Epic
      anlegen — das bleibt dem Nutzer vorbehalten (siehe Schritt 3 unten).
-3. Prüfe, ob **alle** Epics abgehakt/obsolet sind und **kein**
-   `issues`-Verdict ohne Fix-Step offen ist. Falls ja: melde dem
-   Orchestrator „keine offenen Epics mehr, kein Fix ausstehend" statt
-   einen Step zu planen — das beendet den Loop (siehe
-   `../../orchestrator.md` Schritt 3b).
+3. Prüfe, ob **alle** Epics abgehakt/obsolet sind und **keine**
+   `issues`-Korrektur offen ist. Falls ja: melde dem Orchestrator „keine
+   offenen Epics mehr, keine Korrektur ausstehend" statt einen Step zu
+   planen — das beendet den Loop (siehe `../../orchestrator.md`
+   Schritt 3b).
+
+### Schritt 1a — CodeMap konsultieren, Anti-Loop-Check
+
+Lies `<task-dir>/codemap.md` (Template `../../templates/codemap.md`).
+Zwei Zwecke:
+
+- **Schneller finden:** welche Bereiche wurden schon angelegt/geändert —
+  ersetzt nicht Schritt 2 (Ist-Zustand selbst lesen), verkürzt nur, wo du
+  zuerst hinschaust.
+- **Anti-Loop-Check:** Würde dein Vorhaben einer hier festgehaltenen,
+  bereits umgesetzten Entscheidung widersprechen (z. B. ein früherer Step
+  hat Struktur X bewusst so gebaut, und du planst gerade, sie wieder
+  umzudrehen)? Dann entweder im Step-Plan unter „Aktueller
+  Projektzustand" explizit als bewusste Erweiterung begründen, oder den
+  alten CodeMap-Eintrag als „obsolet — <Grund>" markieren (nicht
+  löschen) — nie stillschweigend widersprechen.
+
+Entdeckst du beim Lesen des Ist-Zustands (Schritt 2) einen für den Task
+relevanten Bereich, der in der Karte fehlt: ergänze ihn dort, bevor du
+den Step-Plan schreibst — gleiche Pflege-Pflicht wie beim Regel-Index.
 
 ### Schritt 2 — Tatsächlichen Projektzustand lesen
 
@@ -155,11 +187,19 @@ Eintrag mehr im Volltext lesen als eine echte Vorbelastung übersehen.
 Zweck des Ganzen: Kontext, ob es im Bereich, den du jetzt planst, bereits
 eine bekannte, dokumentierte Schwachstelle gibt — das kann deine
 Entscheidung „bestehende Struktur wiederverwenden vs. neu bauen"
-informieren. **Plane niemals automatisch einen Step, um einen
-Tech-Debt-Eintrag zu beheben** — das ist ausschließlich Nutzer-Sache
+informieren. **Plane niemals automatisch einen eigenen Step, um einen
+Tech-Debt-Eintrag zu beheben** — das ist grundsätzlich Nutzer-Sache
 (siehe `../../spec.md` §8.3). Ausnahme: Der Nutzer hat explizit ein neues
 Epic dafür in `roadmap.md` ergänzt — dann ist es ein normales Epic wie
 jedes andere.
+
+**Enge Ausnahme — `auto_fixable: ja`-Einträge opportunistisch anhängen
+(`../../spec.md` §9.1, §10.6):** Trifft ein Eintrag mit `auto_fixable: ja`
+auf denselben Bereich/dieselbe Datei wie der Step, den du gerade planst
+(auch epic-übergreifend, das ist die einzige bewusste Lockerung von
+§10.6) — häng ihn als zusätzliches `step_type: batch`-Item an, mit
+eigener Unterüberschrift, eigenem `estimated_risk: low`. Kein Treffer in
+der Nähe: einfach liegen lassen, keinen eigenen Step dafür erfinden.
 
 ### Schritt 4 — Risiko einschätzen, Step bilden
 
@@ -200,16 +240,21 @@ Regelsatz nicht bei jedem Step-Modus-Aufruf neu lesen zu müssen.
 
 ### Schritt 5 — Step-Plan schreiben
 
-- Datei: `<task-dir>/step-NNN/step-plan.md` (im Fix-Modus:
-  `<task-dir>/step-NNN/fix-XX/step-plan.md`)
+- Datei: `<task-dir>/step-NNN/step-plan.md` — **flach, kein Unterordner**,
+  auch nicht im Fix-Modus (siehe `../../spec.md` §6.2.1)
 - `NNN` = nächste freie dreistellige Nummer, fortlaufend über den ganzen
-  Task (nicht pro Epic neu bei 001)
+  Task (nicht pro Epic neu bei 001, auch nicht pro Korrektur-Kette)
 - Template: `../../templates/step-plan.md`
 - `epic`-Feld im Frontmatter: welches Epic aus `roadmap.md` dieser Step
-  bedient
+  bedient (im Fix-Modus: vom korrigierten Step übernommen)
+- `corrects`-Feld: nur im Fix-Modus gesetzt, Zeiger auf den korrigierten
+  bzw. bei einer weiteren Korrektur auf den unmittelbar vorherigen
+  Korrektur-Step
 - Status: `open`
 - `created_by_model`/`created_by_model_knowledge_cutoff` ausfüllen (aus
   deinem eigenen System-Prompt)
+- **Anleitungstext (`<...>`-Blöcke) im Template beim Ausfüllen ersetzen,
+  nicht daneben stehen lassen** — siehe `../../spec.md` §10.7
 
 **`related_to`:** identisches Pointer-Prinzip wie bei Batch-Planung —
 Verweis, keine Inhaltsangabe, siehe `../../spec.md` §10.6.
@@ -226,37 +271,55 @@ Verweis, keine Inhaltsangabe, siehe `../../spec.md` §10.6.
 ## Fix-Modus (Sonderfall des Step-Modus)
 
 Wenn dich der Orchestrator im Fix-Modus aufruft (nach einem
-`issues`-Verdict des Kritikers):
+`issues`-Verdict des Kritikers) — das passiert nur, wenn der
+Eindeutigkeits-Check des Orchestrators negativ ausfiel, also mindestens
+ein Finding Ermessen braucht (siehe `../../orchestrator.md` Schritt 4,
+`../../spec.md` §6.2.1). Bei rein mechanischen, eindeutigen Findings
+schreibt der Orchestrator den Korrektur-Plan selbst und ruft dich gar
+nicht erst — landest du hier, ist per Definition Interpretation gefragt.
 
 - **Input:** `step-NNN/step-review.md` (Abschnitt „Findings") +
   `step-NNN/step-plan.md` (ursprünglicher Scope) + `step-NNN/step-result.md`
   — **nicht** `konzept.md`/`roadmap.md` neu durchgehen.
-- **Output:** `step-NNN/fix-XX/step-plan.md`. Nummer `XX` gibt der
-  Orchestrator vor.
+- **Output:** `step-MMM/step-plan.md` — flach, nächste freie Nummer der
+  Task-weiten Sequenz (Orchestrator gibt sie vor), **nicht** unter
+  `step-NNN/`. Frontmatter trägt `corrects: step-NNN` (bzw. bei einer
+  weiteren Korrektur derselben Kette: `corrects: <letzter
+  Korrektur-Step>`) und übernimmt `epic` vom korrigierten Step.
 - **Scope-Disziplin:** Plane **ausschließlich** die in „Findings"
   gelisteten Punkte — unabhängig davon, ob sie aus Ebene 1-3 (Plan/
   Rules/Logik) oder Ebene 4 (Konzept-Treue) stammen. „Sonstige
-  Beobachtungen" und `tech-debt.md`-Einträge sind **nicht** Scope.
+  Beobachtungen" sind **nicht** Scope. `tech-debt.md`-Einträge mit
+  `auto_fixable: ja` dürfen als zusätzliches Batch-Item angehängt werden,
+  identisch zum regulären Step-Modus (Schritt 3 oben) — alles andere aus
+  `tech-debt.md` bleibt außen vor.
 - **War der ursprüngliche Step ein Batch:** item-genaue Scope-Disziplin —
   plane ausschließlich die konkret beanstandeten Items neu, nie den
   ganzen Batch. Bereits `approved` Items desselben Batches bleiben
   unangetastet (siehe `../../spec.md` §6.2.1).
-- `related_to` zeigt auf `step-NNN/step-review.md`.
-- **Roadmap wird in diesem Modus nicht angefasst** — ein Fix-Step ändert
-  nichts an den Epics, er korrigiert nur einen bestehenden Step.
+- `related_to` zeigt zusätzlich auf `step-NNN/step-review.md`
+  (`corrects` ist das primäre, budget-relevante Feld, `related_to` bleibt
+  der allgemeine Pointer-Mechanismus für alles Weitere).
+- **Roadmap wird in diesem Modus nicht angefasst** — eine Korrektur
+  ändert nichts an den Epics, sie korrigiert nur einen bestehenden Step.
 
 ## Was du NICHT tun darfst
 
 - **Keine Code-Änderungen am Projekt.** Du schreibst nur Pläne.
 - **Keine Commits.** Du berührst Git nicht.
 - **Keine Epics für Tech-Debt-Einträge automatisch anlegen.** Nur der
-  Nutzer entscheidet das (siehe Step-Modus Schritt 3).
+  Nutzer entscheidet das (siehe Step-Modus Schritt 3). Die einzige
+  Ausnahme ist das opportunistische Anhängen von `auto_fixable: ja`-
+  Einträgen als Batch-Item (Schritt 3) — das ist kein neuer Step/kein
+  neues Epic, sondern eine Ergänzung an einem ohnehin geplanten Step.
+- **CodeMap-Widersprüche nicht stillschweigend übergehen** (Schritt 1a) —
+  entweder begründen oder den alten Eintrag als obsolet markieren.
 - **Kein Vorausplanen mehrerer Steps auf einmal.** Auch wenn dir das
   nächste Epic trivial vorkommt und du „eigentlich schon den übernächsten
   Step mitplanen könntest" — genau das JIT-Prinzip verbietet das. Ein
   Aufruf, ein Step (Ausnahme: Micro-Batch innerhalb eines Epics, siehe
   Schritt 4).
-- **Keine Fix-Steps vorausplanen.** Entstehen erst durch ein
+- **Keine Korrektur-Steps vorausplanen.** Entstehen erst durch ein
   `issues`-Verdict.
 
 ## Edge-Cases

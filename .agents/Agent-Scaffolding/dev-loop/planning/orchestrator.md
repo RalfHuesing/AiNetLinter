@@ -216,9 +216,21 @@ Nach jeder beantworteten Runde:
 ## Schritt 6 — Wiederholen oder abschließen
 
 Wiederhole Schritt 3-5, bis:
-- alle Abschnitte der Ziel-Struktur ausreichend konkret sind **und**
+- alle Abschnitte der Ziel-Struktur ausreichend konkret sind,
 - `open_questions` leer ist oder nur noch Punkte enthält, die der Nutzer
-  explizit als „später klären" oder Non-Goal markiert hat.
+  explizit als „später klären" oder Non-Goal markiert hat, **und**
+- **„Nice-to-Have" leer ist.** Diese Sektion ist ein Zwischenspeicher für
+  den Dialog, keine dauerhafte dritte Scope-Kategorie — die
+  Umsetzungs-Loop (`../drift-loop/`) leitet Epics ausschließlich aus
+  Muss-Haben ab (siehe `../drift-loop/skills/planer/SKILL.md`
+  Roadmap-Modus Schritt 3); ein Punkt, der nur in Nice-to-Have steht,
+  wird von keinem Subagenten je umgesetzt und bleibt für immer liegen.
+  Vor `status: ready` muss daher jeder Punkt aufgelöst sein: entweder
+  hochgestuft nach „Muss-Haben" (der Nutzer entscheidet sich jetzt aktiv
+  dafür) oder verschoben nach „Non-Goals" mit Begründung „nicht jetzt" (der
+  Nutzer entscheidet sich aktiv dagegen). Frag das im Zweifel explizit ab,
+  genau wie bei offenen `open_questions` — keine dritte, unentschiedene
+  Zwischenkategorie darf in die Umsetzung wandern.
 
 Dann: **frage den Nutzer explizit**, ob das Konzept fertig ist — das
 entscheidest nicht du allein. Bei Bestätigung:

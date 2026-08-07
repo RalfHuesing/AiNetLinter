@@ -25,13 +25,13 @@ weiter, wenn `<task-dir>/task-state.md` schon existiert.
 
 - **`orchestrator.md`** — die ausführbare Orchestrator-Anleitung
 - **`spec.md`** — die volle Spezifikation: Rollen, Roadmap-Mechanik,
-  Kritiker-Ebenen, Tech-Debt-Kanal, Fix-Step-Mechanik, Git-Strategie,
+  Kritiker-Ebenen, Tech-Debt-Kanal, Korrektur-Step-Mechanik, Git-Strategie,
   Loop-Guard, Edge-Cases
 - **`skills/`** — Rollen-Definitionen für Planer (zwei Modi:
   Roadmap/Step), Coder, Kritiker
 - **`templates/`** — Ziel-Struktur der Dateien in `<task-dir>/`:
-  `roadmap.md`, `tech-debt.md`, `step-plan.md`, `step-result.md`,
-  `step-review.md`, `task-state.md`, `task-summary.md`
+  `roadmap.md`, `codemap.md`, `tech-debt.md`, `step-plan.md`,
+  `step-result.md`, `step-review.md`, `task-state.md`, `task-summary.md`
 
 ## Output
 

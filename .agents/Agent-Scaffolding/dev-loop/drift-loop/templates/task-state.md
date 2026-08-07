@@ -4,7 +4,7 @@ task: <TASK-NAME>
 started_at: <ISO-8601>
 last_updated: <ISO-8601>
 rules_dir: <.agents/rules | .cursor/rules | <custom-pfad> | keins>  # einmalig erkannt (siehe ../spec.md §3.1), von konzept.md übernommen falls vorhanden
-total_fix_rounds: 0  # Summe aller Fix-Runden über alle Steps (Task-weiter Not-Anker, siehe Config)
+total_steps: 0  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-001
 ---
 
@@ -13,7 +13,8 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Fix-Runden gesamt:** 0 (Not-Anker bei `max_total_fix_rounds`, siehe Config)
+- **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
+  jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
 - **Aktueller Schritt:** `step-001`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
@@ -22,12 +23,16 @@ current_step: step-001
 
 ## Steps
 
-<Diese Tabelle wächst mit jedem Planer-Aufruf im Step-Modus um genau
-eine Zeile.>
+<Diese Tabelle wächst mit jedem Planer-Aufruf (oder Orchestrator-
+Transkript bei eindeutigen Korrekturen, siehe `../spec.md` §6.2.1) um
+genau eine Zeile. Die Spalte „Corrects" bleibt bei regulären Steps leer,
+bei Korrekturen steht dort der Step, den sie korrigieren — daraus ergibt
+sich die Kettenlänge fürs Fix-Budget (§10.5), keine separate Zählung
+mehr nötig.>
 
-| Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
-|------|------|--------|-------|------------|-------|----------|--------|
-| step-001 | EPIC-01 | open | <Titel> | 0/3 | - | - | - |
+| Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
+|------|------|--------|-------|----------|-------|----------|--------|
+| step-001 | EPIC-01 | open | <Titel> | - | - | - | - |
 | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ## Config (optional)
@@ -36,8 +41,8 @@ Falls `<task-dir>/config.md` existiert, hier die Overrides dokumentieren.
 Andernfalls gelten die Defaults aus `../spec.md`.
 
 ```
-max_fix_rounds_per_step: 3
-max_total_fix_rounds: 12
+max_fix_rounds_per_step: 3        # Kettenlänge über `corrects`, siehe ../spec.md §10.5
+soft_step_checkin_interval: 40    # weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
 max_batch_items: 8          # siehe ../spec.md §10.6 (Micro-Batches innerhalb eines Epics)
 max_batch_diff_lines: 40    # siehe ../spec.md §10.6
 build_command: <aus roadmap.md Tech-Stack-Notiz>
@@ -58,14 +63,19 @@ sonst liefen die Subagenten nach einem Resume still auf dem
 Default-Modell. Nicht gesetzt = keine Vorgabe, der Orchestrator fragt
 auch nicht nach. Siehe `../spec.md` §10.8.>
 
-## Abbruch-Bedingungen
+## Abbruch-/Pause-Bedingungen
 
-- **Fix-Budget eines Steps erreicht** (`max_fix_rounds_per_step`, Default
-  3, ohne `approved`): dieser eine Step → `blocked`, Loop pausiert,
-  Nutzer klärt.
-- **Task-weiter Not-Anker erreicht** (`max_total_fix_rounds`, Default 12,
-  über alle Steps summiert): Task → `aborted`, siehe `task-summary.md`.
+- **Kettenbudget erreicht** (`max_fix_rounds_per_step`, Default 3, über
+  die `corrects`-Kette gezählt, ohne `approved`): der zuletzt korrigierte
+  Step → `blocked`, Loop pausiert für diese Kette, Nutzer klärt. **Kein**
+  Task-Abbruch dadurch.
+- **Weicher Deckel erreicht** (`soft_step_checkin_interval`, Default 40,
+  bei jedem Vielfachen der Gesamt-Step-Zahl): Zwischenfrage an den
+  Nutzer, kein automatischer Abbruch. Nur eine ausdrückliche Ablehnung →
+  Task `aborted`, siehe `task-summary.md`.
 - **Blocker aufgetreten** (Step mit Status `blocked`): Loop pausiert,
   Nutzer klärt.
 - **Tech-Debt-Einträge lösen NIE einen Abbruch oder Blocker aus** — sie
   sind reine Beobachtung, kein Steuerungssignal (siehe `../spec.md` §9).
+  Auch `auto_fixable: ja`-Einträge lösen nichts eigenständig aus, sie
+  werden nur an ohnehin laufende Steps angehängt.

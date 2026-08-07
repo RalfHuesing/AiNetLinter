@@ -137,7 +137,7 @@ gegen genau diese Angaben.
 | **Orchestrator** | Root-Session | Führt Loop aus, ruft Subagents, pflegt Task-State |
 | **Planer** | Subagent | Zwei Modi: **Roadmap-Modus** (einmalig, leitet Epics aus `konzept.md` ab) und **Step-Modus** (JIT, plant genau den nächsten Step) |
 | **Coder** | Subagent | Setzt genau einen Step um, schreibt `step-result.md`, committet |
-| **Kritiker** | Subagent | Prüft letzten Coder-Output gegen Plan, Rules, Logik **und Konzept-Treue** — vermerkt zusätzlich Architektur-/Anti-Pattern-Beobachtungen als Tech-Debt (nie als Fix-Step) |
+| **Kritiker** | Subagent | Prüft letzten Coder-Output gegen Plan, Rules, Logik **und Konzept-Treue** — vermerkt zusätzlich Architektur-/Anti-Pattern-Beobachtungen als Tech-Debt (nie als Korrektur-Step) |
 
 Die drei Subagent-Rollen (Planer/Coder/Kritiker) werden vom Orchestrator
 per Agent-Aufruf mit jeweils eigenem Prompt gestartet (siehe
@@ -170,12 +170,24 @@ normalen Kritiker: eine Rolle prüft in einem Durchgang alle vier Ebenen
   Step erneut alle Regeldateien komplett zu lesen, siehe §7.2. Siehe §7.
 - **`<task-dir>/tech-debt.md`** — Append-only-Log für Architektur-/
   Anti-Pattern-Beobachtungen, die der Kritiker sieht, aber bewusst nicht
-  in einen Fix-Step umwandelt. Einziger Schreiber: der **Kritiker**. Wird
-  vom Planer bei jedem Step-Modus-Aufruf gelesen (Kontext, keine
-  automatische Umsetzung). Siehe §9.
+  in einen Korrektur-Step umwandelt. Einziger Schreiber: der **Kritiker**. Wird
+  vom Planer bei jedem Step-Modus-Aufruf gelesen (Kontext, ggf. Grundlage
+  für opportunistisches Bündeln, siehe §9). Enthält je Eintrag ein Feld
+  `auto_fixable` (§9).
+- **`<task-dir>/codemap.md`** — Task-scoped, laufend gepflegte Landkarte
+  relevanter Module/Bereiche (Pointer-Prinzip, wie Regel-Index und
+  Tech-Debt-Index). Schreiber: Planer (Initialbefüllung im Roadmap-Modus,
+  Ergänzungen im Step-Modus), **Coder** (Update vor jedem Doku-Commit),
+  Kritiker (Stichprobenprüfung). Existiert nur für die Dauer des Tasks,
+  wird mit `<task-dir>` gelöscht. Siehe Template
+  `templates/codemap.md` für Pflegeregeln und Anti-Loop-Nutzen.
 - **`<task-dir>/step-NNN/{step-plan,step-result,step-review}.md`** —
-  je Step; bei Nachbesserungen zusätzlich `step-NNN/fix-XX/…` mit
-  denselben drei Dateien (§6.2.1). Schreiber: Planer (`step-plan.md`),
+  je Step, **flach durchnummeriert über den ganzen Task** (kein
+  Unterordner für Korrekturen mehr — siehe §6.2.1). Ein Step, der eine
+  Korrektur an einem früheren ist, trägt `corrects: step-MMM` im
+  Frontmatter von `step-plan.md` statt in einem eigenen Namensraum zu
+  liegen. Schreiber: Planer (`step-plan.md`) — bei eindeutigen
+  Korrekturen ausnahmsweise der **Orchestrator** selbst (§6.2.1) —,
   Coder (`step-result.md` + Status im Plan), Kritiker (`step-review.md`).
 - **`<task-dir>/task-summary.md`** — Abschlussbericht des globalen
   Kritikers (§8.4).
@@ -199,8 +211,9 @@ jeden Subagenten vollständig ab, bevor der nächste startet.
   (inkl. erkanntem `rules_dir`, siehe §3.1)
 - Orchestrator ruft Planer im **Roadmap-Modus** auf: liest `konzept.md` +
   Projekt-Anker, leitet grobe Epics ab, schreibt `<task-dir>/roadmap.md`
-  (inkl. Tech-Stack-Notiz und Regel-Index — siehe Template)
-- Orchestrator committet `roadmap.md`
+  (inkl. Tech-Stack-Notiz und Regel-Index — siehe Template) sowie die
+  Initialbefüllung von `<task-dir>/codemap.md` (§5, §7.1)
+- Orchestrator committet `roadmap.md` + `codemap.md` zusammen
 
 ### 6.2 Loop (JIT, ein Step nach dem anderen)
 
@@ -220,52 +233,73 @@ Solange `roadmap.md` offene Epics enthält oder ein Fix aussteht:
      Tech-Debt-Einträge sind bereits in `tech-debt.md` (Kritiker-Output),
      Orchestrator committet `step-review.md` + `tech-debt.md`-Diff +
      Status-Update zusammen.
-   - **`issues`** → Fix-Step `step-NNN/fix-XX/`, siehe §6.2.1. Der äußere
-     Step geht dabei auf `done (fix-XX pending)`.
+   - **`issues`** → Korrektur-Step (neuer, flacher `step-MMM` mit
+     `corrects: step-NNN`), siehe §6.2.1. Der korrigierte Step bleibt
+     dabei auf `done (Korrektur ausstehend)`.
    - **`blocked`** → Loop pausiert, Nutzer klärt.
 5. Zurück zu Punkt 1, bis Planer im Step-Modus meldet: keine offenen
    Epics mehr, kein Fix ausstehend.
 
-### 6.2.1 Fix-Steps (Nachbesserung innerhalb eines Steps)
+### 6.2.1 Korrektur-Steps (Nachbesserung nach `issues`)
 
-Ein `issues`-Verdict erzeugt **keinen neuen Top-Level-Step**, sondern
-einen Fix-Step *innerhalb* des betroffenen Steps: `step-NNN/fix-XX/`, mit
-denselben drei Dateien (`step-plan.md`, `step-result.md`,
-`step-review.md`) wie ein normaler Step.
+Ein `issues`-Verdict erzeugt einen **normalen, flach durchnummerierten
+neuen Step** (`step-MMM`, nächste freie Nummer der Task-weiten Sequenz)
+— **keinen** Unterordner mehr. Der einzige Unterschied zu einem
+regulären Step: sein `step-plan.md` trägt im Frontmatter
+`corrects: step-NNN` (Zeiger auf den korrigierten Step; korrigiert diese
+Korrektur wiederum eine frühere Korrektur, zeigt `corrects` auf die
+**unmittelbar vorherige** Korrektur — die Kette ergibt sich durchs
+Zurückverfolgen, siehe §10.5). `epic` wird vom korrigierten Step
+übernommen, `roadmap.md` selbst wird **nicht** angefasst — eine
+Korrektur ändert nichts an den Epics.
 
-**Warum ein eigener Namensraum statt `step-(N+1)`:** `step-(N+1)` ist in
-diesem Workflow der Platz für den **nächsten geplanten Step** aus der
-Roadmap. Eine Nachbesserung dort einzuhängen würde zwei verschiedene
-Dinge vermischen — „Epic-Fortschritt" und „Korrektur an step-NNN" — und
-die Step-Nummerierung gegenüber `roadmap.md`/`task-state.md`
-unleserlich machen. Der eigene Unterordner hält beides getrennt und
-macht außerdem das **pro Step** gezählte Fix-Budget (§10.5) direkt
-ablesbar.
+**Warum flach statt eigener Namensraum (Revision dieser Entscheidung):**
+Frühere Version dieses Workflows nutzte `step-NNN/fix-XX/`, um
+„Epic-Fortschritt" und „Korrektur" in der Nummerierung zu trennen. In der
+Praxis erzeugte das für jede noch so kleine Korrektur (z. B. eine
+einzelne Doku-Zeile) denselben vollen Drei-Rollen-Zyklus wie einen neuen
+Step — spürbarer Overhead ohne Gegenwert. Die flache Nummerierung plus
+`corrects`-Zeiger liefert dieselbe Nachvollziehbarkeit (welche Steps
+gehören zusammen), ohne die Struktur zu verdoppeln. Das **Fix-Budget**
+(§10.5) zählt jetzt die `corrects`-Kettenlänge statt Unterordner.
+
+**Planer-Skip bei eindeutigen Findings:** Sind **alle** Findings im
+auslösenden `step-review.md` Datei+Zeile-genau und tragen bereits eine
+konkrete Fix-Anweisung ohne Ermessensspielraum (reine Mechanik — das
+Review-Template verlangt „Was + Wie fixen" ohnehin für jedes Finding),
+schreibt der **Orchestrator selbst** mechanisch `step-MMM/step-plan.md`
+aus den Findings (keine Interpretation, keine Umformulierung — Transkript
+mit `corrects`-Feld) und **überspringt den Planer-Aufruf** für diese
+Korrektur. Sobald **ein** Finding Ermessen braucht (Architektur-Entscheidung,
+mehrere plausible Lösungswege, unklare Ursache): normaler **Planer im
+Fix-Modus** (siehe `skills/planer/SKILL.md`), Input ist der
+`step-review.md`-Befund (Abschnitt „Findings"), nicht `konzept.md`/
+`roadmap.md` als Ganzes. Der **Kritiker bleibt in jedem Fall Pflicht** —
+das Skip gilt ausschließlich für den Planer-Schritt, nie für die Prüfung.
 
 Ablauf:
-1. Orchestrator ermittelt die nächste freie `fix-XX` unter `step-NNN/`
-   (höchste vorhandene + 1, Start bei `01`).
-2. Orchestrator ruft den **Planer im Fix-Modus** auf (siehe
-   `skills/planer/SKILL.md`): Input ist der `step-review.md`-Befund
-   (Abschnitt „Findings"), nicht `konzept.md`/`roadmap.md` als Ganzes.
-   Output: `step-NNN/fix-XX/step-plan.md`. **`roadmap.md` wird in diesem
-   Modus nicht angefasst** — ein Fix ändert nichts an den Epics.
+1. Orchestrator ermittelt die nächste freie `step-MMM` (Task-weite
+   Sequenz, nicht pro Step neu).
+2. Eindeutigkeits-Check (oben): Planer-Aufruf oder Orchestrator-Transkript.
 3. Danach normaler Coder → Kritiker-Zyklus, Ergebnisse landen in
-   `step-NNN/fix-XX/step-result.md` / `step-review.md`.
-4. `approved` → gesamter `step-NNN` (inkl. aller Fix-Runden) geht auf
-   `done`. `issues` → nächste `fix-XX`, sofern Budget nicht erschöpft
-   (§10.5). `blocked` → Loop pausiert, Nutzer klärt.
+   `step-MMM/step-result.md` / `step-review.md` wie bei jedem Step.
+4. `approved` → sowohl `step-MMM` als auch der korrigierte `step-NNN`
+   gelten als `done`. `issues` → nächste Korrektur (`corrects: step-MMM`),
+   sofern Kettenbudget nicht erschöpft (§10.5). `blocked` → Loop pausiert,
+   Nutzer klärt.
 
-Ein Fix-Step betrifft ausschließlich den Scope des ursprünglichen
-Findings — keine Ausweitung auf andere Teile des Steps oder des Tasks.
-„Sonstige Beobachtungen" und `tech-debt.md`-Einträge sind **nicht**
-Scope einer Fix-Runde.
+Eine Korrektur betrifft ausschließlich den Scope des ursprünglichen
+Findings — keine Ausweitung auf andere Teile des korrigierten Steps oder
+des Tasks, **außer** opportunistisch gebündeltes `auto_fixable`-Tech-Debt
+aus der unmittelbaren Nähe (§9, §10.6) — das ist die einzige zulässige
+Scope-Erweiterung, und sie ist explizit als Batch-Item auszuweisen, nicht
+stillschweigend mitgemacht.
 
 **Sonderfall Batch-Step (`step_type: batch`, siehe §10.6):** Betrifft das
 `issues`-Verdict nur eines oder mehrere, aber nicht alle Items eines
-Batches, plant der Fix-Step **ausschließlich die konkret beanstandeten
+Batches, plant die Korrektur **ausschließlich die konkret beanstandeten
 Item(s)** — nicht den gesamten Batch neu. Bereits `approved` Items
-desselben Batches sind für die Fix-Runde nicht im Scope; die
+desselben Batches sind für die Korrektur nicht im Scope; die
 Kritiker-Findings referenzieren dafür die Item-ID zusätzlich zu
 Datei:Zeile.
 
@@ -300,7 +334,11 @@ Step", der sie sonst tragen würde, und Coder wie Kritiker bekommen sie
 bei jedem Aufruf von dort. Aus derselben Lektüre von `<rules_dir>/**`
 entsteht zusätzlich der **Regel-Index** (Kurzbeschreibung pro Datei,
 siehe `skills/planer/SKILL.md` Schritt 2a) — Grundlage für die gezielte
-Regel-Lektüre im Step-Modus (§7.2).
+Regel-Lektüre im Step-Modus (§7.2). Aus demselben Grobüberblick über den
+Bestandscode entsteht außerdem die Initialbefüllung von `codemap.md`
+(§5, Template `templates/codemap.md`) — statt diesen Überblick nach dem
+Aufruf zu verwerfen, wird er als Ausgangspunkt für die Karte festgehalten,
+die Coder und Planer über den ganzen Task hinweg weiterpflegen.
 
 ### 7.2 Step-Modus (JIT, jeder weitere Aufruf)
 
@@ -329,7 +367,15 @@ Vor dem eigentlichen Planen eines neuen Steps, in dieser Reihenfolge:
    statt bei jedem isolierten Step-Modus-Aufruf `<rules_dir>/**`
    komplett neu zu lesen (Kosten) oder ganz zu überspringen (Risiko).
    Details: `skills/planer/SKILL.md` Schritt 4a.
-5. Nächsten Step planen: entweder das nächste offene Epic aus
+5. **`codemap.md` konsultieren** (siehe §5, Template `templates/codemap.md`):
+   welche Bereiche wurden schon angelegt/geändert, was ist laut Karte der
+   aktuelle Stand. Dient zwei Zwecken: schnelleres Auffinden relevanter
+   Stellen (ersetzt nicht Punkt 2 oben) **und** Anti-Loop-Check — würde
+   der neue Step einer hier festgehaltenen, bereits umgesetzten
+   Entscheidung widersprechen, muss der Step-Plan das explizit als
+   Erweiterung begründen oder den alten Eintrag als „obsolet" markieren,
+   statt stillschweigend zu widersprechen.
+6. Nächsten Step planen: entweder das nächste offene Epic aus
    `roadmap.md` (oder ein Teil davon, falls das Epic zu groß für einen
    Step ist — Epic bleibt dann offen, bis ein späterer Step-Modus-Aufruf
    es abschließt) — **oder**, falls ein `issues`-Verdict vorliegt, der
@@ -366,7 +412,7 @@ einen weiteren Step zu planen — das ist das Signal für §6.3.
 - **`MINOR` / `NITPICK`:** Kosmetische Punkte, Stilfragen.
 
 Verdict-Regel: `issues` **ausschließlich** bei mindestens einem
-`CRITICAL`- oder `MAJOR`-Finding; das löst einen Fix-Step aus (§6.2.1).
+`CRITICAL`- oder `MAJOR`-Finding; das löst einen Korrektur-Step aus (§6.2.1).
 `MINOR`/`NITPICK` führt nie zu `issues`, sondern wandert in „Sonstige
 Beobachtungen" eines `approved`-Reviews.
 
@@ -380,7 +426,7 @@ Zusätzliche Prüfung: Weicht die Umsetzung erkennbar von `konzept.md` ab —
 Scope überschritten, ein explizites Non-Goal umgesetzt, ein Muss-Haben-
 Punkt trotz Gelegenheit ausgelassen? Ein Fund auf dieser Ebene wird
 **genauso behandelt wie ein Fund auf Ebene 1-3**: `CRITICAL`/`MAJOR` →
-`issues` → Fix-Step, `MINOR` → „Sonstige Beobachtungen". Das ist die
+`issues` → Korrektur-Step, `MINOR` → „Sonstige Beobachtungen". Das ist die
 zentrale Anti-Drift-Prüfung dieses Workflows — sie blockiert bewusst,
 anders als die Tech-Debt-Beobachtungen unten.
 
@@ -390,7 +436,7 @@ Sieht der Kritiker während der Prüfung ein Architektur-/Anti-Pattern-
 Problem, das **außerhalb des Scopes dieses Steps** liegt (z. B. eine neu
 gebaute Struktur dupliziert eine bereits bestehende, die stattdessen
 hätte wiederverwendet/generalisiert werden sollen) — das ist **kein**
-Finding, löst **keinen** Fix-Step aus, unabhängig davon wie gravierend es
+Finding, löst **keinen** Korrektur-Step aus, unabhängig davon wie gravierend es
 aussieht. Stattdessen: ein Eintrag in `<task-dir>/tech-debt.md` (Template
 siehe `templates/tech-debt.md`), mit einer **Priorität** (`hoch`/
 `mittel`/`niedrig` — bewusst deutsch und nicht `CRITICAL`/`MAJOR`/`MINOR`,
@@ -407,10 +453,20 @@ perfektionieren"-Risiko, siehe `../README.md` für die Einordnung) und
 hält die Entscheidung „jetzt fixen oder liegen lassen" beim Nutzer.
 
 **Sichtbarkeit statt Automatik:** `tech-debt.md`-Einträge werden vom
-Planer gelesen (§7.2 Schritt 3), aber **nie** automatisch in ein Epic
-oder einen Step verwandelt. Will der Nutzer einen Eintrag angehen: manuell
-ein neues Epic in `roadmap.md` ergänzen (mit Verweis auf die Tech-Debt-ID)
-oder einen neuen Task starten.
+Planer gelesen (§7.2 Schritt 3), aber **nie automatisch in ein eigenes
+Epic oder einen eigenen Step verwandelt.** Will der Nutzer einen Eintrag
+angehen: manuell ein neues Epic in `roadmap.md` ergänzen (mit Verweis auf
+die Tech-Debt-ID) oder einen neuen Task starten.
+
+**Eine eng gefasste Ausnahme** existiert für Einträge mit
+`auto_fixable: ja` (§9.1) — rein mechanische, entscheidungsfreie Fixes
+ohne Architektur-Ermessen. Die werden weiterhin nicht als eigener
+Step erzeugt, dürfen aber **opportunistisch an einen bereits laufenden
+Step angehängt** werden (§10.6). Das ist keine Aufweichung von „Sichtbarkeit
+statt Automatik" im Kern — der Kritiker entscheidet nicht selbst, *ob*
+etwas behoben wird, sondern nur, dass ein bereits als entscheidungsfrei
+eingestuftes Aufräumen nicht auf einen eigenen, separat orchestrierten
+Zyklus warten muss.
 
 ### 8.4 Global-Modus (Abschluss, §6.3)
 
@@ -432,7 +488,42 @@ passiert kontinuierlich schon pro Step (§8.3), ein zusätzlicher globaler
 - Pflichtfelder pro Eintrag: Fundort (Step + Datei:Zeile), Befund, Warum
   nicht sofort gefixt, Priorität (`hoch`/`mittel`/`niedrig`), Vorschlag
   (grobe Richtung, kein Detailplan), Status (`offen` — Änderung auf
-  `erledigt`/`verworfen` ist **manuell**, macht kein Subagent automatisch)
+  `erledigt`/`verworfen` ist **manuell**, macht kein Subagent automatisch
+  — **einzige Ausnahme:** ein `auto_fixable: ja`-Eintrag, der als
+  gebündeltes Batch-Item umgesetzt und `approved` wurde, setzt der
+  Kritiker beim entsprechenden Step-Review selbst auf `erledigt`, siehe
+  §9.1), **`auto_fixable`** (`ja`/`nein`, siehe unten)
+
+### 9.1 `auto_fixable` — enge, mechanische Ausnahme vom „Nutzer entscheidet"
+
+Der Kritiker markiert einen Eintrag `auto_fixable: ja` **nur**, wenn
+**beide** Bedingungen zutreffen:
+- **Rein mechanische Korrektur ohne Architektur-Ermessen** — z. B. toter
+  Code, eine eindeutige, unstrittige Regelverletzung mit offensichtlichem
+  Fix, eine fehlende Prüfung nach einem bereits etablierten Muster in
+  derselben Datei. Keine Bewertungsfrage, kein „eigentlich sollte man
+  X grundsätzlich anders bauen".
+- **Keine Verhaltensänderung, kein Scope-Zuwachs** — reines Aufräumen,
+  nichts, das eine Nutzer-Entscheidung voraussetzt.
+
+Alles, was nicht eindeutig beide Kriterien erfüllt: `auto_fixable: nein`
+(Default bei Unsicherheit) — bleibt wie bisher vollständig
+Nutzer-Sache, kein Subagent wandelt es um.
+
+`ja`-Einträge werden **nicht automatisch zu einem eigenen Step** — sie
+werden vom Planer im Step-Modus **opportunistisch an einen ohnehin
+laufenden Step angehängt**, der bereits in der Nähe unterwegs ist
+(§10.6, dort auch die bewusste Lockerung der Epic-Grenze für genau diesen
+Fall). Kein separater Sweep, kein Einzelpäckchen pro Fund — siehe §10.6.
+`nein`-Einträge lösen wie bisher **nie** automatisch Arbeit aus (§8.3).
+
+Wird ein `auto_fixable: ja`-Eintrag so gebündelt und das Batch-Item beim
+folgenden Kritiker-Review `approved`: der Kritiker setzt den
+`tech-debt.md`-Status dieses Eintrags selbst auf `erledigt` (Verweis auf
+den Step, der es umgesetzt hat) — die einzige Stelle im ganzen Workflow,
+an der ein Subagent den Status eines Tech-Debt-Eintrags automatisch
+ändert, und bewusst eng gefasst: nur nach tatsächlich bestätigter
+Umsetzung, nie vorab.
 - **Index-Tabelle am Dateianfang** (ID, Bereich/Datei, Priorität,
   Kurzfassung in einem Halbsatz): Der Kritiker schreibt Index-Zeile und
   Volltext-Eintrag immer zusammen; der Planer liest im Step-Modus nur den
@@ -550,31 +641,53 @@ Sie sind **nicht** im Workflow hartcodiert. Festgehalten werden sie in
 der Tech-Stack-Notiz in `roadmap.md` (§7.1) — Coder und Kritiker
 bekommen sie von dort bei jedem Aufruf mitgegeben.
 
-### 10.5 Loop-Guard (Fix-Budget)
+### 10.5 Loop-Guard (Korrektur-Kettenbudget + weicher Task-Deckel)
 
-- **Max 3 Fix-Runden pro Step** (`step-NNN/fix-01` .. `fix-03`). Der
-  Guard ist bewusst **pro Step**, nicht pro Task: dass über einen langen
-  Task hinweg mehrere Steps je einmal nachgebessert werden müssen, ist
-  normal und kein Alarmsignal. Ein einzelner Step, der auch nach 3
-  Fix-Runden nicht grün wird, ist das eigentliche Alarmsignal — meist
-  stimmt dann der Step-Scope oder der Ansatz nicht.
-- Bei Erreichen des Limits für einen Step: dieser Step → `blocked` (Loop
-  pausiert, Nutzer klärt).
-- **Zusätzlicher Task-weiter Not-Anker:** Bei insgesamt mehr als
-  `max_total_fix_rounds` (Default 12) Fix-Runden über alle Steps des
-  Tasks hinweg → gesamter Task auf `aborted`, unabhängig vom Status der
-  Einzel-Steps. Schutz gegen systemische Probleme (z. B. eine falsche
-  Tech-Stack-Notiz), die sich durch viele Steps zieht.
+Zwei getrennte Mechanismen für zwei unterschiedliche Risiken — seit der
+Umstellung auf flache Korrektur-Steps (§6.2.1) beide **berechnet, nicht
+mehr per Ordnerzählung**:
+
+**a) Kettenbudget pro Korrektur-Kette (ersetzt das alte „pro Step"):**
+Der Orchestrator verfolgt vor jeder neuen Korrektur die `corrects`-Zeiger
+rückwärts bis zum ursprünglichen Step und zählt die Kettenlänge. Bei
+**3 Korrekturen in derselben Kette** (`max_fix_rounds_per_step`, Default
+3, konfigurierbar) ohne `approved`: der zuletzt korrigierte Step →
+`blocked`, keine weitere Korrektur in dieser Kette, Loop pausiert,
+Nutzer klärt. Der Guard ist bewusst **pro Kette**, nicht pro Task: dass
+über einen langen Task hinweg mehrere Steps je einmal nachgebessert
+werden müssen, ist normal. Eine einzelne Kette, die auch nach 3 Runden
+nicht grün wird, ist das eigentliche Alarmsignal — meist stimmt dann der
+Step-Scope oder der Ansatz nicht.
+
+**b) Weicher Task-Deckel (ersetzt den alten Hard-Abort):** Statt eines
+festen Fix-Runden-Kontingents über den ganzen Task hinweg, das je nach
+Task-Größe entweder viel zu eng oder bedeutungslos weit wäre, prüft der
+Orchestrator bei jedem Vielfachen von `soft_step_checkin_interval`
+(Default **40**, konfigurierbar) erreichten Steps insgesamt (reguläre
+Steps + Korrekturen zusammengezählt): **kein automatischer Abbruch**,
+sondern eine explizite Zwischenmeldung an den Nutzer („Task hat jetzt
+`<N>` Steps, `<M>` Epics noch offen — weitermachen?"). Erst eine
+ausdrückliche Ablehnung setzt den Task auf `aborted`; sonst läuft der
+Loop normal weiter bis zum nächsten Vielfachen. Grund für „weich" statt
+Zahl-Deckel: ein kleiner Bugfix-Task und ein großes Greenfield-Vorhaben
+brauchen strukturell unterschiedlich viele Steps — eine feste Zahl trifft
+für keins von beiden gut, ein Check-in-Rhythmus schon.
 - Konfigurierbar pro Task via `<task-dir>/config.md` (Felder
-  `max_fix_rounds_per_step`, Default 3; `max_total_fix_rounds`,
-  Default 12).
-- Das Budget bezieht sich ausschließlich auf Fix-Steps aus
-  `issues`-Verdicts (§8.1/8.2). Der Tech-Debt-Kanal (§8.3/§9) hat kein
-  eigenes Budget, weil er nie automatisch in Arbeit überführt wird.
-  `blocked` aus Infrastruktur-/Tooling-Gründen (§11) verbraucht ebenfalls
-  nichts.
+  `max_fix_rounds_per_step`, Default 3; `soft_step_checkin_interval`,
+  Default 40).
+- Beide Mechanismen beziehen sich ausschließlich auf reguläre Steps und
+  Korrekturen aus `issues`-Verdicts (§8.1/8.2). Der Tech-Debt-Kanal
+  (§8.3/§9) hat kein eigenes Budget und zählt nicht mit, weil er nie
+  automatisch in Arbeit überführt wird — auch `auto_fixable`-Bündelungen
+  (§9.1, §10.6) zählen als Teil des Steps, an den sie angehängt sind,
+  nicht separat. `blocked` aus Infrastruktur-/Tooling-Gründen (§11)
+  verbraucht ebenfalls nichts.
 
-### 10.6 Step-Referenzen (`related_to`) und Micro-Batches
+### 10.6 Step-Referenzen (`related_to`, `corrects`) und Micro-Batches
+
+**`corrects` — eigenes Feld, eigene Semantik.** Zeigt auf den Step, den
+dieser Step korrigiert (§6.2.1) — treibt das Kettenbudget (§10.5), ist
+also mehr als ein loser Verweis. Nicht mit `related_to` vermischen.
 
 **`related_to` — Pointer, kein Cache.** `related_to` im Frontmatter von
 `step-plan.md` verweist auf andere Steps, von denen dieser Step abhängt —
@@ -617,26 +730,64 @@ der in keinem Verhältnis zur Änderung steht.
 - **Fix-Budget bleibt geteilt, nicht pro Item:** ein Batch-Step hat
   dasselbe Budget wie jeder andere Step (§10.5), unabhängig von der
   Item-Zahl. Ein Batch, der ungewöhnlich viele verschiedene Items durch
-  Fix-Runden schleift, ist selbst ein Signal, dass der Batch (oder die
-  Risiko-Einstufung dahinter) fragwürdig war.
+  Korrektur-Runden schleift, ist selbst ein Signal, dass der Batch (oder
+  die Risiko-Einstufung dahinter) fragwürdig war.
+
+**Carve-out: `auto_fixable`-Tech-Debt opportunistisch anhängen (§9.1).**
+Einzige bewusste Lockerung der obigen Epic-Grenze: Ein Tech-Debt-Eintrag
+mit `auto_fixable: ja` darf als zusätzliches Batch-Item an **jeden**
+gerade geplanten oder korrigierenden Step angehängt werden, der ohnehin
+in der Nähe der betroffenen Datei/des Moduls unterwegs ist — auch wenn
+Step und Tech-Debt-Eintrag zu unterschiedlichen Epics gehören. Das Item
+selbst bleibt an die normale Batch-Eligibility gebunden
+(`estimated_risk: low`, eigene Unterüberschrift, eigene Prüfung durch
+alle vier Kritiker-Ebenen) — gelockert wird ausschließlich die
+Epic-Zugehörigkeit, nicht die Sorgfalt. Kein separater Sweep-Step nur für
+Tech-Debt, kein Einzelpäckchen pro Fund: Findet der Planer im Step-Modus
+gerade **keinen** passenden Step in der Nähe, bleibt der Eintrag einfach
+liegen, bis einer vorbeikommt — kein künstlicher Anlass wird dafür
+geschaffen.
 
 ### 10.7 Artefakt-Umfang — Darstellung kürzen, nie die Prüfung
 
-Die Task-Artefakte werden überwiegend von **Agenten** gelesen, nicht vom
-Menschen: `step-result.md` vom Kritiker und vom Planer, `step-review.md`
-vom Planer beim nächsten Step-Modus-Aufruf — und am Task-Ende lädt der
-globale Kritiker (§6.3) `konzept.md` + `roadmap.md` + `tech-debt.md` +
-**alle** Step-Results und -Reviews gleichzeitig. Das ist der größte
-Einzel-Kontext des ganzen Workflows; jeder überflüssige Absatz wird dort
-noch einmal vollständig mitbezahlt.
+Die Task-Artefakte werden überwiegend von **Agenten** gelesen, praktisch
+nie vom Menschen im Volltext (der Nutzer fragt bei Bedarf das LLM statt
+selbst die Markdown-Dateien zu lesen): `step-result.md` vom Kritiker und
+vom Planer, `step-review.md` vom Planer beim nächsten Step-Modus-Aufruf —
+und am Task-Ende lädt der globale Kritiker (§6.3) `konzept.md` +
+`roadmap.md` + `tech-debt.md` + **alle** Step-Results und -Reviews
+gleichzeitig. Das ist der größte Einzel-Kontext des ganzen Workflows;
+jeder überflüssige Absatz wird dort noch einmal vollständig mitbezahlt.
 
-Daraus zwei Regeln:
+**Wichtige Klarstellung, keine Format-Frage:** Das Problem ist nicht
+Markdown als solches — Markdown/Prosa ist für ein LLM der günstigste,
+robusteste Ausdrucksweg (native Trainingsverteilung), ein Wechsel zu
+z. B. JSON/YAML für Textabschnitte spart in der Praxis meist **keine**
+Tokens (Klammern/Anführungszeichen/Keys pro Eintrag) und macht Dateien
+nur fragiler. Der Hebel ist **Informationsdichte innerhalb** des
+Formats, nicht die Format-Familie. Struktur/Überschriften bleiben —
+sie sind die Grundlage für gezieltes Teil-Lesen (Regel-Index,
+Tech-Debt-Index, CodeMap, §5).
 
+Daraus drei Regeln — die ersten zwei gelten **projektweit für alle
+generierten Artefakte**, nicht nur für `step-review.md`:
+
+- **Prosa nur, wenn sie eine spätere Agenten-Entscheidung ändert.**
+  Beschreibendes Füllmaterial, das kein Subagent je unterschiedlich
+  behandeln würde, entfällt — das betrifft `step-result.md`,
+  `task-summary.md`, Tech-Debt-Einträge und Roadmap-Epic-Zeilen genauso
+  wie `step-review.md`. Leere Abschnitte weglassen statt „Keine."
+  schreiben.
+- **Anleitungstext wird ersetzt, nie stehen gelassen.** Die
+  `<...>`-Blöcke in den Templates (`templates/**`) sind Anleitung für die
+  **schreibende** Rolle, kein Bestandteil des Ergebnisses — beim
+  Ausfüllen werden sie durch den eigentlichen Inhalt ersetzt, nicht
+  daneben oder darunter belassen „zur Sicherheit". Ein fertiges Artefakt
+  enthält keine eckigen Platzhalter-Blöcke mehr.
 - **Verdict-abhängiger Umfang bei `step-review.md`:** Bei `approved` je
-  Prüfebene ein Satz, leere Abschnitte weglassen statt „Keine."
-  schreiben. Bei `issues`/`blocked` unverändert ausführlich — dort führt
-  der Inhalt zu einer Handlung (Fix-Step bzw. Nutzer-Entscheidung), dort
-  ist Kürze schädlich.
+  Prüfebene ein Satz. Bei `issues`/`blocked` unverändert ausführlich —
+  dort führt der Inhalt zu einer Handlung (Korrektur-Step bzw.
+  Nutzer-Entscheidung), dort ist Kürze schädlich.
 - **Grüne Build-/Test-Outputs einzeilig** in `step-result.md` und
   `step-review.md` (Command + Ergebnis, ggf. Testzahl). Bei rot:
   gekürzter Fehler-Output, denn der wird tatsächlich gelesen.
@@ -650,7 +801,9 @@ Entscheidungsrelevantes wegfallen, war es kein `approved`-Fall.
 Nicht betroffen ist `step-plan.md`: Der Plan ist die Leitplanke für den
 Coder (der bewusst nicht selbst plant, §4) und darf ruhig ausführlich
 sein — bis hin zur optionalen Code-Skizze. Ein unpräziser Plan kostet
-eine Fix-Runde, und die ist teurer als jeder dort eingesparte Absatz.
+eine Korrektur-Runde, und die ist teurer als jeder dort eingesparte
+Absatz. Auch hier gilt aber: Anleitungstext aus dem Template wird
+ersetzt, nicht zusätzlich zum eigentlichen Plan-Inhalt stehen gelassen.
 
 ### 10.8 Modell-Zuweisung pro Rolle (optional)
 
@@ -676,11 +829,11 @@ Orchestrator keine Vorgabe und fragt auch nicht nach.
 |---|---|
 | Coder schreibt kein `step-result.md` | Step bleibt auf `in_progress`, nach Timeout → `blocked` |
 | Coder committet nicht | `step-result.md` fehlt der Commit-Hash → `blocked` |
-| Kritiker findet Verstoß gegen `<rules_dir>` oder `konzept.md` | Fix-Step mit konkretem Fix-Plan (§8.1/8.2, §6.2.1) |
-| Kritiker sieht Architektur-/Anti-Pattern-Problem außerhalb des Step-Scopes | **Kein** Fix-Step — Eintrag in `tech-debt.md` (§8.3), Loop läuft ungebremst weiter |
+| Kritiker findet Verstoß gegen `<rules_dir>` oder `konzept.md` | Korrektur-Step mit konkretem Fix-Plan (§8.1/8.2, §6.2.1) |
+| Kritiker sieht Architektur-/Anti-Pattern-Problem außerhalb des Step-Scopes | **Kein** Korrektur-Step — Eintrag in `tech-debt.md` (§8.3), Loop läuft ungebremst weiter |
 | Kritiker will einen größeren Umbau vorschlagen | **Nicht erlaubt** — entweder Tech-Debt-Eintrag (§8.3) oder `blocked`, der Nutzer entscheidet |
 | Build/Test schlägt fehl (Code-Ursache) | Coder fixt im selben Step; falls nicht möglich → `blocked` |
-| Build/Test schlägt fehl wegen fehlender/nicht erreichbarer Infrastruktur oder Tooling (DB down, Tool fehlt, …) | Sofort `blocked` (Blocker-Art: `infrastructure`), **kein** Fix-Versuch verbraucht — siehe `skills/coder/SKILL.md` Schritt 4a. Wie jedes `blocked`: kein Fix-Step, keine Anrechnung aufs Fix-Budget (§10.5) |
+| Build/Test schlägt fehl wegen fehlender/nicht erreichbarer Infrastruktur oder Tooling (DB down, Tool fehlt, …) | Sofort `blocked` (Blocker-Art: `infrastructure`), **kein** Versuch des Build/Test-Budgets verbraucht — siehe `skills/coder/SKILL.md` Schritt 4a. Wie jedes `blocked`: kein Korrektur-Step, keine Anrechnung aufs Kettenbudget (§10.5) |
 | Planer erkennt beim Roadmap-Abgleich: Epic ist durch frühere Steps bereits obsolet | Epic in `roadmap.md` als „obsolet — <Grund>" markieren statt löschen (Nachvollziehbarkeit), nicht mehr weiterplanen |
 | Planer erkennt: `konzept.md` selbst ist zu vage für Roadmap-Modus | Blockt sofort mit Begründung (§3.2) |
 | Rules-Verzeichnis mehrdeutig oder keins gefunden | Nutzer wird gefragt, siehe §3.1 |
@@ -691,11 +844,14 @@ Orchestrator keine Vorgabe und fragt auch nicht nach.
 
 Am Ende eines erfolgreichen Loops existieren:
 - `<task-dir>/roadmap.md` — vollständig abgehakt
+- `<task-dir>/codemap.md` — Landkarte der im Task berührten Bereiche
+  (wird mit `<task-dir>` gelöscht, kein projektweites Artefakt)
 - `<task-dir>/tech-debt.md` — alle während des Loops gesammelten,
-  bewusst nicht gefixten Beobachtungen
+  bewusst nicht gefixten Beobachtungen (inkl. `auto_fixable`-Markierung)
 - `<task-dir>/task-summary.md`, `<task-dir>/task-state.md`
-- `<task-dir>/step-NNN/{step-plan,step-result,step-review}.md` je Step
-  (plus `fix-XX/…` bei Nachbesserungen)
+- `<task-dir>/step-NNN/{step-plan,step-result,step-review}.md` je Step —
+  flach durchnummeriert, Korrekturen tragen `corrects: step-MMM` im
+  Frontmatter statt in einem eigenen Unterordner zu liegen
 - Mehrere Commits in Git pro Step (Code, Doku, Planung, Review — siehe
   §10.3), alle lokal, nicht gepusht — zusammen eine vollständige,
-  lesbare Historie aller Step-Zustände und Fix-Runden
+  lesbare Historie aller Step-Zustände und Korrektur-Runden

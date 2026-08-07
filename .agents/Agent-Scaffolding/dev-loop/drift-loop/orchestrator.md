@@ -70,6 +70,8 @@ Prüfe, ob `<task-dir>/task-state.md` existiert.
      Empfehlung.
 3. Prüfe, ob `<task-dir>/roadmap.md` schon existiert (z. B. Resume nach
    Abbruch direkt nach Roadmap-Erzeugung, aber vor dem ersten Step).
+   `<task-dir>/codemap.md` entsteht im selben Planer-Aufruf (Schritt 3),
+   wird hier nicht separat geprüft.
    - **Fehlt sie:** Rufe den Planer im **Roadmap-Modus** auf (Schritt 3).
    - **Existiert schon:** überspringen, direkt zu Schritt 4.
 4. Fahre fort mit Schritt 4 (Loop).
@@ -141,11 +143,16 @@ Subagent-Typen**:
 
 | Was | Wer | Wann |
 |---|---|---|
-| `roadmap.md` (Roadmap-Modus) | **Orchestrator (du)** | direkt nach dem ersten Planer-Aufruf |
+| `roadmap.md` + `codemap.md` (Roadmap-Modus) | **Orchestrator (du)** | direkt nach dem ersten Planer-Aufruf |
 | Code + Tests (+ Produkt-Doku) | **Coder** | direkt nach erfolgreichem Build/Test |
-| `step-plan.md` (Status) + `step-result.md` | **Coder** | direkt danach |
+| `step-plan.md` (Status) + `step-result.md` + `codemap.md`-Update | **Coder** | direkt danach |
 | Neuer `step-plan.md` + `roadmap.md`-Update vom Planer (Step-Modus) | **Orchestrator (du)** | direkt nach jedem Planer-Aufruf (ein Commit für beides, siehe `spec.md` §10.3) |
 | `step-review.md` + Status-Update in `step-plan.md` + `tech-debt.md`-Update | **Orchestrator (du)** | direkt nach jedem Kritiker-Aufruf (ein Commit für alle drei) |
+
+**Bei eindeutigen Korrekturen (Planer-Skip, siehe Schritt 4 unten):** Der
+Orchestrator schreibt in diesem Fall `step-plan.md` selbst (mechanisches
+Transkript der Findings, keine eigene Planung) und committet es allein —
+es gibt keinen Planer-Aufruf, dessen Ergebnis sonst committet würde.
 
 Planer und Kritiker committen selbst **nichts**. `git add` dabei immer
 **gezielt**, nie breit (`-A`/`.`).
@@ -162,27 +169,32 @@ formatiert.
 
 Auftrag: „Leite aus `konzept.md` eine grobe Roadmap ab." Nach Rückkehr:
 - `<task-dir>/roadmap.md` sollte existieren (Template
-  `templates/roadmap.md`), inkl. Tech-Stack-Notiz.
-- **Committe `roadmap.md`** (Message z. B. `docs(task): Roadmap für
-  feature-x ableiten [feature-x]`).
+  `templates/roadmap.md`), inkl. Tech-Stack-Notiz, sowie
+  `<task-dir>/codemap.md` (Template `templates/codemap.md`) mit der
+  Initialbefüllung aus dem Grobüberblick des Planers.
+- **Committe `roadmap.md` + `codemap.md` zusammen** (Message z. B.
+  `docs(task): Roadmap + CodeMap für feature-x ableiten [feature-x]`).
 - Falls der Planer blockiert hat (z. B. `konzept.md` zu vage): Status
   `blocked`, Nutzer informieren, Loop pausiert hier.
 
 ### 3b. Step-Modus (jeder weitere Aufruf, aus Schritt 4)
 
-Auftrag: „Plane den nächsten Step" (oder im Fix-Modus: „Plane einen
-Fix-Step für die Findings in `step-NNN/step-review.md`" — Nummer `fix-XX`
-gibst du vor, siehe `spec.md` §6.2.1). Input immer: `konzept.md`,
-`roadmap.md`, `tech-debt.md`, `rules_dir`, Tech-Stack-Notiz aus
-`roadmap.md`. Nach Rückkehr, zwei mögliche Ergebnisse:
+Auftrag: „Plane den nächsten Step" (oder im Fix-Modus, nur wenn der
+Eindeutigkeits-Check in Schritt 4 negativ ausfällt: „Plane eine Korrektur
+für die Findings in `step-NNN/step-review.md`" — Nummer `step-MMM` (flach,
+Task-weite Sequenz) gibst du vor, siehe `spec.md` §6.2.1). Input immer:
+`konzept.md`, `roadmap.md`, `codemap.md`, `tech-debt.md`, `rules_dir`,
+Tech-Stack-Notiz aus `roadmap.md`. Nach Rückkehr, zwei mögliche
+Ergebnisse:
 
-- **Neuer Step-Plan** (`step-NNN/step-plan.md` bzw. `fix-XX/step-plan.md`)
-  plus ggf. aktualisiertes `roadmap.md`: Trage den Step in die
-  Steps-Tabelle von `task-state.md` ein (Status `open`), **committe
-  `roadmap.md`-Diff + neuen Step-Plan zusammen** (ein Commit, Message z. B.
+- **Neuer Step-Plan** (`step-MMM/step-plan.md`, im Fix-Modus mit
+  `corrects: step-NNN` im Frontmatter) plus ggf. aktualisiertes
+  `roadmap.md`: Trage den Step in die Steps-Tabelle von `task-state.md`
+  ein (Status `open`), **committe `roadmap.md`-Diff + neuen Step-Plan
+  zusammen** (ein Commit, Message z. B.
   `docs(task): plane step-004 (Epic „Auth-Refactor") [feature-x]`).
-- **„Keine offenen Epics mehr, kein Fix ausstehend":** Das ist das Signal
-  für den Abschluss-Check — weiter zu Schritt 6.
+- **„Keine offenen Epics mehr, keine Korrektur ausstehend":** Das ist das
+  Signal für den Abschluss-Check — weiter zu Schritt 6.
 
 ## Schritt 4 — Loop (pro Step)
 
@@ -191,48 +203,76 @@ Step-Plan liefert:
 
 1. Setze Step auf `in_progress` in `task-state.md`, `current_step`
    aktualisieren.
-2. Rufe **Coder** auf (Schritt 2) mit dem Step-Plan als Auftrag. Der
-   Coder macht dabei selbst zwei Commits (Code + Doku) — du committest
-   hier nichts.
-3. Werte Ergebnis aus:
-   - `step-result.md` mit Status `done (pending audit)` → weiter zu 4.
+2. **Weicher Deckel-Check** (Schritt 5 unten): Hat die Gesamtzahl aller
+   Steps (regulär + Korrekturen) gerade ein Vielfaches von
+   `soft_step_checkin_interval` erreicht → Nutzer-Check-in **vor**
+   diesem Step, nicht danach.
+3. Rufe **Coder** auf (Schritt 2) mit dem Step-Plan als Auftrag. Der
+   Coder macht dabei selbst zwei Commits (Code + Doku, inkl.
+   `codemap.md`-Update) — du committest hier nichts.
+4. Werte Ergebnis aus:
+   - `step-result.md` mit Status `done (pending audit)` → weiter zu 5.
    - Status `blocked` → `task-state.md` auf `blocked`, Nutzer
      informieren, **Loop stoppt hier**.
-4. Rufe **Kritiker** auf (Modus `step`) mit Step-Plan + Result.
-5. Werte Verdict aus und **committe** `step-review.md` +
+5. Rufe **Kritiker** auf (Modus `step`) mit Step-Plan + Result.
+6. Werte Verdict aus und **committe** `step-review.md` +
    `tech-debt.md`-Diff (falls vorhanden) + Status-Update in
    `step-plan.md` (ein Commit, siehe Tabelle oben):
    - `approved` → Step-Status `done`. Commit-Message z. B.
      `chore(task): step-NNN Review dokumentieren (Verdict: approved) [feature-x]`.
-     Kurze Statusmeldung an Nutzer, zurück zu Schritt 3b für den
-     nächsten Step.
-   - `issues` → **Fix-Step** (Mechanismus: `spec.md` §6.2.1, Budget:
+     War dies eine Korrektur (`corrects` gesetzt): auch der korrigierte
+     Step gilt jetzt als `done`. Kurze Statusmeldung an Nutzer, zurück zu
+     Schritt 3b für den nächsten Step.
+   - `issues` → **Korrektur-Step** (Mechanismus: `spec.md` §6.2.1, Budget:
      §10.5):
-     1. Ermittle die nächste freie `fix-XX` unter `step-NNN/`.
-     2. **Prüfe zuerst das Fix-Budget** (Schritt 5 unten). Limit erreicht
-        → Step-Status `blocked` statt neuen Fix-Step, committe das,
-        Loop stoppt hier für diesen Step.
-     3. Sonst: Step-Status `done (fix-XX pending)`, committe Review +
-        Status-Update.
-     4. Rufe Planer im **Fix-Modus** auf (Schritt 3b-Variante) mit
-        `fix-XX` als Zielpfad. Danach normaler Coder → Kritiker-Zyklus
-        für `step-NNN/fix-XX/` — wieder ab Punkt 2, eine Ebene tiefer.
+     1. **Prüfe zuerst das Kettenbudget** (Schritt 5 unten): `corrects`-
+        Zeiger rückwärts bis zum Ursprung verfolgen, Kettenlänge zählen.
+        Limit erreicht → Step-Status `blocked` statt neuer Korrektur,
+        committe das, Loop stoppt hier für diese Kette.
+     2. Sonst: Step-Status `done (Korrektur ausstehend)`, committe
+        Review + Status-Update.
+     3. Ermittle die nächste freie `step-MMM` (Task-weite Sequenz).
+     4. **Eindeutigkeits-Check:** Sind alle Findings in `step-review.md`
+        Datei+Zeile-genau mit konkreter Fix-Anweisung ohne
+        Ermessensspielraum?
+        - **Ja:** Schreibe `step-MMM/step-plan.md` selbst — mechanisches
+          Transkript der Findings (`corrects: step-NNN`, `epic` vom
+          korrigierten Step übernommen), **kein** Planer-Aufruf. Committe
+          es allein.
+        - **Nein:** Rufe Planer im **Fix-Modus** auf (Schritt 3b-Variante)
+          mit dem `step-review.md`-Befund als Input. Committe Ergebnis
+          wie gewohnt (Tabelle oben).
+     5. Danach normaler Coder → Kritiker-Zyklus für `step-MMM` — wieder
+        ab Punkt 3.
    - `blocked` → Step-Status `blocked`, committe Review + Status-Update,
      Nutzer informieren, Loop stoppt hier.
-6. Kurze Statusmeldung an den Nutzer nach **jedem** Step-Abschluss —
-   Format: *"step-NNN[/fix-XX]: <Titel> → `approved`/`issues`/`blocked`.
-   Commit `<hash>`. Tech-Debt: <N neue Einträge, falls welche>."*
+7. Kurze Statusmeldung an den Nutzer nach **jedem** Step-Abschluss —
+   Format: *"step-NNN[, corrects step-MMM]: <Titel> →
+   `approved`/`issues`/`blocked`. Commit `<hash>`. Tech-Debt: <N neue
+   Einträge, falls welche>."*
 
 Wenn der Planer im Step-Modus meldet, dass keine offenen Epics mehr da
-sind und kein Fix aussteht: weiter zu Schritt 6.
+sind und keine Korrektur aussteht: weiter zu Schritt 6.
 
-## Schritt 5 — Fix-Budget (Loop-Guard)
+## Schritt 5 — Loop-Guard (Kettenbudget + weicher Deckel)
 
-Siehe `spec.md` §10.5: max. 3 Fix-Runden pro Step (konfigurierbar), Not-Anker
-bei `max_total_fix_rounds` (Default 12) über den ganzen Task → `aborted`.
+Siehe `spec.md` §10.5 für die volle Begründung. Kurzfassung:
 
-Bei Task-Abbruch (`aborted`): alle noch offenen/blockierten Punkte in
-`task-summary.md` auflisten, Nutzer informieren, Loop stoppt.
+- **Kettenbudget:** max. `max_fix_rounds_per_step` (Default 3)
+  Korrekturen in derselben `corrects`-Kette, konfigurierbar. Erreicht →
+  der zuletzt korrigierte Step → `blocked`, Loop pausiert für diese
+  Kette, Nutzer klärt. **Kein** automatischer Task-Abbruch dadurch.
+- **Weicher Task-Deckel:** bei jedem Vielfachen von
+  `soft_step_checkin_interval` (Default 40) erreichten Steps insgesamt
+  (regulär + Korrekturen) — **kein** automatischer Abbruch, sondern eine
+  explizite Zwischenfrage an den Nutzer („Task hat jetzt `<N>` Steps,
+  `<M>` Epics offen — weitermachen?"). Nur eine ausdrückliche Ablehnung
+  setzt `task-state.md` auf `aborted`; sonst läuft der Loop normal
+  weiter bis zum nächsten Vielfachen.
+
+Bei Task-Abbruch (`aborted`, egal aus welchem der beiden Gründe): alle
+noch offenen/blockierten Punkte in `task-summary.md` auflisten, Nutzer
+informieren, Loop stoppt.
 
 ## Schritt 6 — Abschluss-Check
 
@@ -267,7 +307,12 @@ Zusammenfassung an den Nutzer:
 - **Niemals zwei Subagenten gleichzeitig laufen lassen.**
 - **Keinen Push.**
 - **Bei `blocked` nicht selbst entscheiden und weitermachen.**
-- **Fix-Budget nicht umgehen.**
+- **Loop-Guard nicht umgehen** (weder Kettenbudget noch weichen Deckel).
+- **Beim mechanischen Transkript eines Korrektur-Plans (Schritt 4) nichts
+  über die Findings hinaus ergänzen oder umformulieren** — das ist
+  bewusst kein eigener Planungsschritt, nur eine Formalie. Sobald auch
+  nur ein Finding Interpretation braucht: normaler Planer-Aufruf im
+  Fix-Modus, kein Transkript.
 - **Tech-Debt-Einträge nicht selbst in Steps/Epics umwandeln** — das ist
   explizit dem Nutzer vorbehalten (`spec.md` §8.3). Fällt dir ein
   Tech-Debt-Eintrag besonders dringend auf: erwähne es in der

@@ -2,21 +2,22 @@
 status: open
 type: step-plan
 task: <TASK-NAME>
-step: <NNN>              # im Fix-Modus: <NNN>/fix-<XX>
+step: <NNN>               # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner
+corrects: null             # <null | step-NNN> — nur gesetzt, wenn dieser Step eine Korrektur ist (treibt das Kettenbudget, siehe ../spec.md §10.5/§10.6)
 title: "<Titel des Steps>"
-epic: <EPIC-NN>          # Bezug zum Epic in roadmap.md, dem dieser Step zuarbeitet
+epic: <EPIC-NN>          # Bezug zum Epic in roadmap.md, dem dieser Step zuarbeitet (bei corrects: vom korrigierten Step übernommen)
 estimated_risk: <low|medium|high>  # Einschätzung des Planers, siehe skills/planer/SKILL.md
 step_type: single  # single (Default) | batch — siehe ../spec.md §10.6. Bei batch: items-Liste unten füllen.
-items: []  # nur bei step_type: batch. Ein Eintrag pro gebündeltem Mini-Befund innerhalb des Epics:
+items: []  # nur bei step_type: batch. Ein Eintrag pro gebündeltem Mini-Befund innerhalb des Epics (oder pro opportunistisch angehängtem auto_fixable-Tech-Debt, siehe ../spec.md §9.1/§10.6):
 # items:
 #   - id: item-01
 #     title: "<Kurztitel des Befunds>"
-#     source: "<Quelle, z. B. konzept.md-Referenz>"
-created_by: planer
+#     source: "<Quelle, z. B. konzept.md-Referenz oder tech-debt.md#TD-NNN>"
+created_by: planer  # planer | orchestrator (nur bei mechanischem Korrektur-Transkript ohne Ermessen, siehe ../spec.md §6.2.1)
 created_by_model: <Modell-ID deiner eigenen LLM-Instanz>
 created_by_model_knowledge_cutoff: <Knowledge-Cutoff-Datum, z. B. 2026-01>
 created_at: <ISO-8601>
-related_to: []  # Pointer auf andere step-NNN (Task-interne Abhängigkeiten) oder auf step-review.md (Fix-Modus) — nie Fakten cachen, nur verweisen. Siehe ../spec.md §10.6.
+related_to: []  # Pointer auf andere step-NNN (Task-interne Abhängigkeiten) oder auf step-review.md (Fix-Modus) — nie Fakten cachen, nur verweisen. Siehe ../spec.md §10.6. Nicht zu verwechseln mit `corrects` oben (eigene, budget-relevante Semantik).
 ---
 
 # Step <NNN>: <Titel>
