@@ -6,7 +6,8 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
 
-public sealed class McpServerCommandFindReferencesTests : IClassFixture<SymbolGraphMcpFixture>
+[Collection("SymbolGraphMcp")]
+public sealed class McpServerCommandFindReferencesTests
 {
     private readonly SymbolGraphMcpFixture _fixture;
 

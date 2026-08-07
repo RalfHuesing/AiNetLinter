@@ -9,7 +9,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 [Trait("Category", "Integration")]
-public sealed class McpServerCommandMissHintTests : IClassFixture<SymbolGraphMcpFixture>
+[Collection("SymbolGraphMcp")]
+public sealed class McpServerCommandMissHintTests
 {
     private readonly SymbolGraphMcpFixture _fixture;
 

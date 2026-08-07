@@ -15,7 +15,8 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
 
-public sealed class McpServerCommandTests : IClassFixture<SymbolGraphMcpFixture>, IClassFixture<BaselineMcpFixture>
+[Collection("SymbolGraphMcp")]
+public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
 {
     private readonly SymbolGraphMcpFixture _symbolGraphMcpFixture;
     private readonly BaselineMcpFixture _baselineMcpFixture;

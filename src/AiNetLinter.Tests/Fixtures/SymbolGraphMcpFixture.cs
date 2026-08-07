@@ -10,7 +10,8 @@ namespace AiNetLinter.Tests.Fixtures;
 /// <summary>
 /// Erstellt einmalig pro Testklasse ein temporaeres <see cref="SymbolGraphMiniFixtureWorkspace"/>
 /// und verbindet einen <see cref="McpTestClient"/>.
-/// Wird in Read-Only E2E-Tests via <see cref="IClassFixture{SymbolGraphMcpFixture}"/> verwendet.
+/// Wird in Read-Only E2E-Tests via <see cref="CollectionAttribute"/> auf
+/// <see cref="SymbolGraphMcpCollection"/> geteilt verwendet.
 /// </summary>
 public sealed class SymbolGraphMcpFixture : IAsyncLifetime
 {

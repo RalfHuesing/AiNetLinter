@@ -10,7 +10,8 @@ namespace AiNetLinter.Tests.Commands;
 /// <summary>
 /// E2E-Tests fuer <c>get_impact</c> ausgelagert aus <c>McpServerCommandTests.cs</c>.
 /// </summary>
-public sealed class McpServerCommandGetImpactTests : IClassFixture<SymbolGraphMcpFixture>
+[Collection("SymbolGraphMcp")]
+public sealed class McpServerCommandGetImpactTests
 {
     private readonly SymbolGraphMcpFixture _fixture;
 

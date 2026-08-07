@@ -15,7 +15,8 @@ namespace AiNetLinter.Tests.Mcp;
 /// Nutzt <see cref="SymbolGraphMcpFixture"/> zur einmaligen Fixture- und Client-Instanziierung pro Testklasse.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpServerAllToolsE2ETests : IClassFixture<SymbolGraphMcpFixture>
+[Collection("SymbolGraphMcp")]
+public sealed class McpServerAllToolsE2ETests
 {
     private readonly SymbolGraphMcpFixture _fixture;
 
