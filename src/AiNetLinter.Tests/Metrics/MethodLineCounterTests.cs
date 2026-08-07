@@ -8,6 +8,7 @@ using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Tests.Metrics;
 
+[Trait("Category", "Unit")]
 public sealed class MethodLineCounterTests
 {
     private static MethodDeclarationSyntax ParseMethod(string source)

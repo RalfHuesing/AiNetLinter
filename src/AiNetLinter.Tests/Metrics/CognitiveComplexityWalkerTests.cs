@@ -5,6 +5,7 @@ using AiNetLinter.Metrics;
 
 namespace AiNetLinter.Tests.Metrics;
 
+[Trait("Category", "Unit")]
 public sealed class CognitiveComplexityWalkerTests
 {
     [Fact]

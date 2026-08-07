@@ -10,6 +10,7 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Metrics;
 
+[Trait("Category", "Unit")]
 public sealed class MaxDirectoryChildrenTests : IDisposable
 {
     private readonly string _tempDir;

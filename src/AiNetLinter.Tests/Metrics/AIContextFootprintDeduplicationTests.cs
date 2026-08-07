@@ -6,6 +6,7 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Metrics;
 
+[Trait("Category", "Unit")]
 public sealed class AIContextFootprintDeduplicationTests
 {
     private static ClassInfo MakePartial(string name, string filePath, string? project = null) =>

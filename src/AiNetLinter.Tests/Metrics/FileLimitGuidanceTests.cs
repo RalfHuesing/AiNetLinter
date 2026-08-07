@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Metrics;
 /// Prüft, dass die MaxLineCount-Guidance den durchschnittlichen CC der Methoden in der Datei berücksichtigt
 /// und zwischen "strukturell flach" und "lang UND komplex" unterscheidet.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class FileLimitGuidanceTests
 {
     private static Config LowLineLimitConfig(int maxLineCount = 10)
