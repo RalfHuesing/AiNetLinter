@@ -50,7 +50,7 @@ aktuellen Step passen.
 
 ## Epics
 
-- [ ] EPIC-01: Spike — Fixture-Sharing validieren (Vorarbeit) — 2-3 der am stärksten duplizierten Fixtures (`SymbolGraphCatalogFixture` 18×, `SymbolGraphMcpFixture` 6×) probeweise auf `ICollectionFixture` umstellen, Vorher-/Nachher-Laufzeit messen (isoliert + unter Volllast) und auf Isolationsbrüche prüfen. Spike-Ergebnis entscheidet Umfang von EPIC-03 (Sharing reicht) bzw. ob zusätzlich EPIC-05 (Produktionscode-mockbare Lade-Pfade) nötig wird. Konzept §"Wie" Schritt 1, §"Muss-Haben" Punkt 3.
+- [x] EPIC-01: Spike — Fixture-Sharing validieren (Vorarbeit) — `SymbolGraphMcpFixture` probeweise auf `ICollectionFixture` umgestellt, Vorher/Nachher gemessen. **Spike-Befund:** Sharing bringt keinen Performance-Gewinn (isoliert +5,3 %, voll +8,1 %); Sequenzialisierung innerhalb der Collection überkompensiert die Subprozess-Start-Einsparung. Empfehlung: EPIC-05 (mockbarer Lade-Pfad im Produktionscode) vermutlich nötig; finale Entscheidung in EPIC-03. → `step-001` (approved, Commit `bf5de7e`).
 
 - [ ] EPIC-02: Category-Traits flächendeckend nachziehen — alle ~1000 ungetraggten Testmethoden mit `[Trait("Category", ...)]` versehen (Taxonomie: `Unit` vs. `Integration`/`Subprocess`/`Live`; genaue Aufteilung JIT in EPIC-01, falls Sharing Tests in andere Klassen verschiebt). Voraussetzung für EPIC-04 (Fast-Path per `--filter`). Kann parallel zu EPIC-01 begonnen werden, Konzept §"Wie" Schritt 2.
 
