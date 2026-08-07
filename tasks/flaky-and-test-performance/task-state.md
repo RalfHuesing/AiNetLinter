@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T15:35:00+02:00
+last_updated: 2026-08-07T16:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 8  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-008 (in Planung/Implementierung)
-current_step: step-008  # step-008 ist in Umsetzung
+total_steps: 8  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); step-008 done/approved
+current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus plant step-009
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,9 +15,11 @@ current_step: step-008  # step-008 ist in Umsetzung
 - **Task-Status:** `executing`
 - **Steps gesamt:** 8 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-008` (in Planung/Implementierung; achter
-  EPIC-02-Batch — `Output/`-Tests Teil 2 (4 Klassen P–V);
-  schließt `Output/`-Ordner vollständig ab)
+- **Aktueller Schritt:** `null` (zwischen Steps, letzter abgeschlossener
+  war `step-008` EPIC-02 — done/approved, 0/3 Fix-Runden; **EPIC-02 in
+  Arbeit, `Output/`-Ordner mit step-008 vollständig abgeschlossen**;
+  nächster Schritt wird vom Planer im Step-Modus geplant —
+  voraussichtlich `step-009`, `Configuration/`-Tests (8 Klassen))
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
@@ -38,7 +40,7 @@ current_step: step-008  # step-008 ist in Umsetzung
 | step-005 | EPIC-02 | done | Category-Traits für Arch/Diag/FalsePositives/Cache nachziehen (Batch 4 von N) | - | MiniMax-M3 | MiniMax-M3 | b15a198 / fe95a08 |
 | step-006 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Evals/ nachziehen (Batch 5 von N) | - | MiniMax-M3 | MiniMax-M3 | f88c223 / 5d7df9b |
 | step-007 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Output/ nachziehen Teil 1 (Batch 6a, 5 Klassen D-O) | - | MiniMax-M3 | MiniMax-M3 | 9c4269f / a2e9b3f |
-| step-008 | EPIC-02 | in_progress | Category-Traits für src/AiNetLinter.Tests/Output/ nachziehen Teil 2 (Batch 6b, 4 Klassen P-V) | - | - | - | - |
+| step-008 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Output/ nachziehen Teil 2 (Batch 6b, 4 Klassen P-V) | - | MiniMax-M3 | MiniMax-M3 | 95ab4d5 / b23a4cf |
 
 ## Config
 

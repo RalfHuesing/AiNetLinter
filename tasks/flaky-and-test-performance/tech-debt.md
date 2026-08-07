@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-07T14:55:00+02:00
+last_updated: 2026-08-07T16:25:00+02:00
 ---
 
 # Tech-Debt-Log: flaky-and-test-performance
@@ -21,6 +21,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 | TD-001 | `src/AiNetLinter/Cli/` + `konzept.md` | mittel | Konzept-/roadmap.md verweisen auf `--self-lint` als Self-Lint-Befehl, CLI-Option existiert nicht. |
 | TD-002 | `tasks/.../step-*` + `.agents/.../coder/SKILL.md` §Schritt-5 | niedrig | Subject-Längen-Disziplin: 72-Zeichen-Grenze wird in mehreren Schritten überschritten; Plan-DoD-Vorgaben teilweise ungenau. |
 | TD-003 | `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` | niedrig | EOL-Inhomogenität im sonst uniform CRLF geführten `Output/`-Ordner: diese eine Datei ist LF-only (`CR=0`); Konsolidierung als separater Aufräum-Schritt denkbar. |
+| TD-004 | `src/AiNetLinter.Tests/Output/` (5 von 10 Test-Dateien) | niedrig | `#nullable enable`-Inkonsistenz im `Output/`-Ordner: 5 von 10 `.cs`-Dateien ohne Direktive am Dateianfang, entgegen `AiNetLinter.mdc` Z. 70 (`EnforceNullableEnable`). |
 
 ## Einträge
 
@@ -62,4 +63,24 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - **(b) Repo-weite Umstellung auf LF:** `.gitattributes` mit `* text=auto eol=lf` (oder pro Datei-Endung) + `git add --renormalize .` + Commit. Konsistent mit modernen Cross-Plattform-Repos (Linux/macOS/Container-CI), entfernt die Windows-only-CRLF-Inhomogenität global. Hat aber Auswirkungen auf den gesamten `Output/`-Ordner und viele weitere Dateien — eigenständiger Step mit Vorab-Bestandsaufnahme sinnvoll.
   - **Empfehlung:** Variante (a) — minimal-invasiv, passt zur etablierten Output/-Ordnung, kann als gebündeltes Aufräum-Item in step-008 oder einen späteren `Output/`-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring.
 - **auto_fixable:** nein (EOL-Repo-Konvention-Frage; Variante (a) ist zwar rein mechanisch, aber die Entscheidung "CRLF ja/nein" selbst ist Nutzer-Sache und nicht im Schritt-Scope eines Trait-Batches)
+- **Status:** offen
+
+### TD-004 — `#nullable enable`-Inkonsistenz in 5 von 10 `Output/`-Test-Dateien (Pre-Existing, Regel-Verstoß gegen `EnforceNullableEnable`) [Priorität: niedrig]
+
+- **Gefunden in:** step-008 (Kritiker-Review vom 2026-08-07T16:25:00+02:00), vom Coder in `step-008/step-result.md` §"Bekannte Unschärfen" als out-of-scope-Hinweis bereits benannt.
+- **Ort:** `src/AiNetLinter.Tests/Output/`-Ordner, 5 von 10 `.cs`-Dateien ohne `#nullable enable` am Dateianfang:
+  - `DebtReportBuilderHeaderTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
+  - `DebtReportBuilderTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
+  - `OutputRootResolverTests.cs` (Z. 1 ≠ `#nullable enable`, step-007-tagged)
+  - `PathNormalizerTests.cs` (Z. 1 = `using AiNetLinter.Output;`, step-008-tagged)
+  - `ViolationSummaryBuilderTests.cs` (Z. 1 = `using AiNetLinter.Models;`, step-008-tagged)
+  - **5 mit Direktive:** `LinterErrorFormatterTests.cs`, `McpLintConsoleTests.cs`, `RuleLegendRegistryTests.cs`, `ViolationMarkdownFormatterTests.cs`, `TestLintConsole.cs` (Helper). Verifiziert per `Get-Content -Encoding UTF8 <file> -TotalCount 1`-Scan.
+- **Befund:** Die auto-generierte Regel `AiNetLinter.mdc:70` (`EnforceNullableEnable` — `#nullable enable` am Dateianfang jeder `.cs`-Datei) ist in 5 von 10 `Output/`-Test-Dateien verletzt. **Pre-existing** (die Inkonsistenz existierte bereits vor step-007 und step-008 — die EPIC-02-Trait-Batches haben den Status weder eingeführt noch verändert). step-008 schreibt 2 dieser 5 Dateien (PathNormalizerTests, ViolationSummaryBuilderTests) an — die `#nullable enable`-Direktive wird dabei nicht berührt (reiner Trait-Insert in der Klassen-Deklaration). step-007 hat entsprechend 3 dieser 5 Dateien (DebtReportBuilderHeaderTests, DebtReportBuilderTests, OutputRootResolverTests) angetastet — gleiche Konstellation. **Funktional** wirkt sich die fehlende Direktive nur auf die Nullability-Analyse (nullable-Warnings statt nullable-Errors) aus; der `dotnet build` mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` läuft in allen 4 step-008-Dateien (und allen 5 step-007-Dateien) grün — d. h. die Regel-Verletzung wird vom Linter **nicht** als Build-Error gehoben. Wahrscheinlichste Erklärung: die `AiNetLinter.Tests`-Projekt-Konfiguration (`rules.json → ProjectSpecific` o. ä.) hebt `EnforceNullableEnable` für `*.Tests` auf, analog zu `EnforceSealedClasses` (siehe `AiNetLinter.mdc:83`).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-008 (rein additives Attribut auf Klassen-Ebene, kein Nullable-Konsistenz-Auftrag). Die Frage "5 Dateien nachziehen oder 5 Dateien als Ordner-Standard etablieren" ist eine projektweite Konsistenz-Frage mit Implikationen auf den gesamten `Output/`-Ordner und potenziell weitere Test-Ordner — kein mechanischer Ein-Zeilen-Fix im step-008-Scope.
+- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
+  - **(a) Konsolidierung auf mit-Direktive (5 Dateien nachziehen):** die 5 betroffenen Dateien um `#nullable enable` Z. 1 ergänzen, im `Output/`-Ordner den Status vereinheitlichen. `auto_fixable: ja` (rein mechanisch, kein Verhaltens-Effekt, keine Architektur-Ermessen) — passt als gebündeltes Aufräum-Item in einen ohnehin laufenden EPIC-02-Folge-Step. Voraussetzung: vorher verifizieren, dass die Linter-Regel im `AiNetLinter.Tests`-Profil tatsächlich nicht greift (oder bewusst ignoriert wird) — sonst Build-Bruch.
+  - **(b) Konsolidierung auf ohne-Direktive (5 Dateien als Ordner-Standard):** die 5 Direktive-tragenden Dateien um die Z. 1 ergänzen entfernen — Ordner-Standard "Test-Klassen ohne `#nullable enable`" etablieren. `auto_fixable: ja` (rein mechanisch), aber invasiver (entfernt vorhandene Direktiven) und semantisch rückschrittlich (verliert die strengere Nullability-Analyse für die 5 sauberen Dateien). Empfehlung: nicht.
+  - **(c) Klärung mit den Tests-Profil-Overrides:** erst prüfen, ob `*.Tests`-Override für `EnforceNullableEnable` existiert oder gesetzt werden soll (analog zu `EnforceSealedClasses`); falls die Regel sowieso nicht greift, ist TD-004 obsolet — der "Verstoß" ist nur ein Doku-Konflikt zwischen `AiNetLinter.mdc` und `rules.json`. Vorgehensweise: `rules.json` inspizieren, Override-Status klären, ggf. `AiNetLinter.mdc` regenerieren.
+  - **Empfehlung:** Variante (c) zuerst (Klärung, kein Coden), dann ggf. Variante (a) (Konsolidierung) als `auto_fixable: ja`-Bündel im nächsten `Output/`-Aufräum-Step.
+- **auto_fixable:** nein (zuerst Klärungs-Frage c, dann mechanisch — kein direkter Schritt-Scope für step-008; Variante (a) wäre zwar rein mechanisch, aber wir wissen noch nicht, ob die Regel überhaupt greift)
 - **Status:** offen
