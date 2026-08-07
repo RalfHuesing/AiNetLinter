@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T11:00:00+02:00
+last_updated: 2026-08-07T11:30:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -93,10 +93,10 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; konkrete Step-Planung ist Sache der jeweiligen Planer-Aufrufe.
 
 - **`src/AiNetLinter.Tests/Web/`** — 5 Klassen (`CssAnalyzerTests`, `JsAnalyzerTests`, `RazorAnalyzerTests`, `RazorAnalyzerExtendedTests` in `RazorAnalyzerTests.Extended.cs`, `WebSuppressionDetectorTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-004)
-- **`src/AiNetLinter.Tests/Architecture/`** — 1 Klasse (`ArchitectureTests`); rein Unit, dito (zuletzt: step-002)
-- **`src/AiNetLinter.Tests/Diagnostics/`** — 1 Klasse (`PerformanceProfilerTests`); rein Unit, dito (zuletzt: step-002)
-- **`src/AiNetLinter.Tests/FalsePositives/`** — 2 Klassen; rein Unit, dito (zuletzt: step-002)
-- **`src/AiNetLinter.Tests/Cache/`** — 3 Klassen (`AnalysisCacheManagerTests`, `AnalysisCacheManagerIsolationTests`, `CacheEntryMapperTests`); rein Unit, dito (zuletzt: step-002)
+- **`src/AiNetLinter.Tests/Architecture/`** — 1 Klasse (`ArchitectureTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
+- **`src/AiNetLinter.Tests/Diagnostics/`** — 1 Klasse (`PerformanceProfilerTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
+- **`src/AiNetLinter.Tests/FalsePositives/`** — 2 Klassen; mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
+- **`src/AiNetLinter.Tests/Cache/`** — 3 Klassen (`AnalysisCacheManagerTests`, `AnalysisCacheManagerIsolationTests`, `CacheEntryMapperTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `AnalysisCacheManagerIsolationTests` zudem 4× method-level `Unit` (additiv, unverändert seit step-005) (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); `ListEvalsCommandTests` möglicherweise Integration via Subprozess, JIT zu prüfen; dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Output/`** — 10 Klassen; rein Unit, dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen; rein Unit, geplant für Batch „Reine-Unit-Ordner, groß" (zuletzt: step-002)
