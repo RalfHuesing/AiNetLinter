@@ -6,6 +6,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Architecture;
 
+[Trait("Category", "Unit")]
 public sealed class ArchitectureTests
 {
     private static Config CreateDefaultConfig()

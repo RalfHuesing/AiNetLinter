@@ -15,6 +15,7 @@ namespace AiNetLinter.Tests.FalsePositives;
 /// Tests für die False-Positive-Erweiterungen: AllowOutParametersInPrivateMethods,
 /// SemanticNamingExemptMethodNames, FootprintIgnoreTypeNames, SemanticNamingAllowSubstringOfMethodName.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class FalsePositiveExtensionsTests
 {
     private static Config CreateBaseConfig() => TestHelper.CreateDefaultConfig() with

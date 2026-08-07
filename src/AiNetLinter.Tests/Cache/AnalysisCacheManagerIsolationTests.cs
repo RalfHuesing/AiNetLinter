@@ -18,6 +18,7 @@ namespace AiNetLinter.Tests.Cache;
 /// Diese Tests beweisen die Isolations-Eigenschaft ueber die neu eingefuehrte
 /// <see cref="AnalysisCacheManager.CachePath"/>-Property (internal, fuer Test-Sichtbarkeit).
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class AnalysisCacheManagerIsolationTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cache-iso-");

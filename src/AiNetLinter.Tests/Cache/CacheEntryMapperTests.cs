@@ -11,6 +11,7 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Cache;
 
+[Trait("Category", "Unit")]
 public sealed class CacheEntryMapperTests
 {
     [Fact]

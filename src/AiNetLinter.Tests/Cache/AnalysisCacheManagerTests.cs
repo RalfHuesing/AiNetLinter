@@ -11,6 +11,7 @@ using AiNetLinter.Tests.Fixtures;
 
 namespace AiNetLinter.Tests.Cache;
 
+[Trait("Category", "Unit")]
 public sealed class AnalysisCacheManagerTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cachetests-");
