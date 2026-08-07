@@ -15,10 +15,13 @@ current_step: step-015  # geplant, wartet auf Coder
 - **Task-Status:** `executing`
 - **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-015` (geplant — letzter EPIC-02-Schritt,
-  20 method-level Traits in `McpServerCommandTests.cs`)
-- **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 nach
-  step-015 vollständig; übrige Epics offen)
+- **Aktueller Schritt:** `step-015` (done, approved — letzter
+  EPIC-02-Schritt; Unit 1193 + Integration 132 = Total 1325, Kritiker
+  hat projektweit verifiziert: 0 ungetaggte `[Fact]`/`[Theory]` im
+  gesamten `src/AiNetLinter.Tests/`-Baum)
+- **Roadmap:** siehe `roadmap.md` (EPIC-01+EPIC-02 abgehakt; übrige
+  Epics offen). **Nutzer-Vorgabe: Task pausiert hier nach EPIC-02,
+  kein automatisches Weiterlaufen zu EPIC-03.**
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
@@ -43,7 +46,7 @@ current_step: step-015  # geplant, wartet auf Coder
 | step-012 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | MiniMax-M3 | Cursor Grok 4.5 | b2477f5 / 7deeff1 |
 | step-013 | EPIC-02 | done | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | Sonnet 5 | Sonnet 5 | 0d5cee2 / 5c4600c |
 | step-014 | EPIC-02 | done | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | Sonnet 5 | Sonnet 5 | c46d839 / 98e2e9a |
-| step-015 | EPIC-02 | open | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | - | - | - |
+| step-015 | EPIC-02 | done | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | Sonnet 5 | Sonnet 5 | 2cf236f / e1d316b |
 
 ## Config
 
