@@ -2,6 +2,7 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
+[Trait("Category", "Unit")]
 public sealed class OutputRootResolverTests
 {
     [Fact]

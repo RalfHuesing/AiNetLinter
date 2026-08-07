@@ -5,6 +5,7 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Tests.Output;
 
 // @covers DebtReportBuilder
+[Trait("Category", "Unit")]
 public sealed class DebtReportBuilderHeaderTests
 {
     [Fact]

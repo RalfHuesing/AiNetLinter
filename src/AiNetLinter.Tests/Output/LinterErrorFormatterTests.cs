@@ -8,6 +8,7 @@ namespace AiNetLinter.Tests.Output;
 /// <summary>
 /// Tests fuer <see cref="LinterErrorFormatter"/> und <see cref="LinterErrorCodes"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class LinterErrorFormatterTests
 {
     [Fact]

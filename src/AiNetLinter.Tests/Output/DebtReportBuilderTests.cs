@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Output;
 
+[Trait("Category", "Unit")]
 public sealed class DebtReportBuilderTests
 {
     [Fact]

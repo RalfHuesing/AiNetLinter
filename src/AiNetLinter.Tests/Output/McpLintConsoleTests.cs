@@ -13,6 +13,7 @@ namespace AiNetLinter.Tests.Output;
 /// <c>McpServerCommandJsonRpcFramingTests</c>: der E2E-Test prueft das Verhalten am echten
 /// Subprozess, dieser Unit-Test das Verhalten der Implementierung selbst.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpLintConsoleTests
 {
     [Fact]
