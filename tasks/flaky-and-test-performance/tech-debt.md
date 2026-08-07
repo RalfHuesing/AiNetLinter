@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-07T16:25:00+02:00
+last_updated: 2026-08-07T14:02:00+02:00
 ---
 
 # Tech-Debt-Log: flaky-and-test-performance
@@ -22,6 +22,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 | TD-002 | `tasks/.../step-*` + `.agents/.../coder/SKILL.md` §Schritt-5 | niedrig | Subject-Längen-Disziplin: 72-Zeichen-Grenze wird in mehreren Schritten überschritten; Plan-DoD-Vorgaben teilweise ungenau. |
 | TD-003 | `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` | niedrig | EOL-Inhomogenität im sonst uniform CRLF geführten `Output/`-Ordner: diese eine Datei ist LF-only (`CR=0`); Konsolidierung als separater Aufräum-Schritt denkbar. |
 | TD-004 | `src/AiNetLinter.Tests/Output/` (5 von 10 Test-Dateien) | niedrig | `#nullable enable`-Inkonsistenz im `Output/`-Ordner: 5 von 10 `.cs`-Dateien ohne Direktive am Dateianfang, entgegen `AiNetLinter.mdc` Z. 70 (`EnforceNullableEnable`). |
+| TD-005 | `src/AiNetLinter.Tests/Configuration/` (4 von 8 Test-Dateien) | niedrig | UTF-8-BOM-Inhomogenität in `Configuration/`: 4 von 8 `.cs`-Dateien mit BOM, 4 ohne — Repository-weite Konsistenz-Frage ohne funktionale Auswirkung, byte-genau konserviert in step-009. |
 
 ## Einträge
 
@@ -83,4 +84,21 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - **(c) Klärung mit den Tests-Profil-Overrides:** erst prüfen, ob `*.Tests`-Override für `EnforceNullableEnable` existiert oder gesetzt werden soll (analog zu `EnforceSealedClasses`); falls die Regel sowieso nicht greift, ist TD-004 obsolet — der "Verstoß" ist nur ein Doku-Konflikt zwischen `AiNetLinter.mdc` und `rules.json`. Vorgehensweise: `rules.json` inspizieren, Override-Status klären, ggf. `AiNetLinter.mdc` regenerieren.
   - **Empfehlung:** Variante (c) zuerst (Klärung, kein Coden), dann ggf. Variante (a) (Konsolidierung) als `auto_fixable: ja`-Bündel im nächsten `Output/`-Aufräum-Step.
 - **auto_fixable:** nein (zuerst Klärungs-Frage c, dann mechanisch — kein direkter Schritt-Scope für step-008; Variante (a) wäre zwar rein mechanisch, aber wir wissen noch nicht, ob die Regel überhaupt greift)
+- **Status:** offen
+
+### TD-005 — UTF-8-BOM-Inhomogenität in `src/AiNetLinter.Tests/Configuration/` (4 von 8 mit BOM, 4 ohne) [Priorität: niedrig]
+
+- **Gefunden in:** step-009 (Kritiker-Review vom 2026-08-07T14:02:00+02:00), vom Coder in `step-009/step-result.md` §"Beobachtungen" als Heuristik-Punkt 7 (in spe, neu beobachtet) bereits benannt, vom Planer in `step-009/step-plan.md` §"Aktueller Projektzustand" / §"Notes" ausdrücklich als „nicht TD-Eintrag angelegt (Beobachtung ohne Konsolidierungs-Auftrag)" markiert — der Kritiker elevated die Beobachtung wegen struktureller Analogie zu TD-003 (EOL-Inhomogenität in `Output/`) und TD-004 (Nullable-Inhomogenität in `Output/`).
+- **Ort:** `src/AiNetLinter.Tests/Configuration/`-Ordner, 4 von 8 `.cs`-Dateien mit UTF-8-BOM (`EF BB BF` als erste 3 Bytes), 4 ohne (erste 3 Bytes = `using` oder `#nu`):
+  - **MIT BOM:** `ConfigLoaderRulesJsonTests.cs`, `ConfigNormalizerTests.cs`, `ConfigSyncerTests.cs`, `PathOverridesTests.cs` (4/8 = 50 %)
+  - **OHNE BOM:** `AgentFeaturesTests.cs`, `DeveloperExperienceTests.cs`, `FileFilterEvaluatorTests.cs`, `RuleMetadataRegistryTests.cs` (4/8 = 50 %)
+  - Verifiziert per `[System.IO.File]::ReadAllBytes(...)` über alle 8 Dateien (erste 3 Bytes-Vergleich).
+- **Befund:** Im `Configuration/`-Ordner ist die UTF-8-BOM-Verteilung 4/8 mit und 4/8 ohne BOM — eine **neue Inhomogenitäts-Dimension** (Encoding/BOM), die in `Output/` (TD-003 EOL und TD-004 Nullable sind dort die beobachteten Dimensionen) so nicht existiert. Die BOM-Teilmenge ist **nicht** deckungsgleich mit der `#nullable enable`-Teilmenge (Configuration/ hat 5/8 **mit** Direktive, 3/8 **ohne** — umgekehrte Mehrheit als Output/, und eine **andere** Datei-Teilmenge als die BOM-Teilmenge) und auch nicht mit EOL (alle 8 Configuration/-Dateien uniform CRLF, also TD-003 dort nicht reproduziert). Es handelt sich also um **3 unabhängige Inhomogenitäts-Dimensionen** (BOM, EOL, Nullable) mit gemeinsamer wahrscheinlicher Wurzel (Repository-/Editor-/Checkout-Spezialverhalten, vermutlich `core.autocrlf` + Encoding-Defaults). **Funktional** wirkt sich die fehlende oder vorhandene BOM nicht aus: `dotnet build` (TreatWarningsAsErrors) ist grün, alle 1325/1325 Tests grün, Self-Lint `OK`. Inkonsistenz jedoch sichtbar in jedem `git status` über die 4 BOM-tragenden Dateien und in jedem `git diff` (z. B. `LF will be replaced by CRLF`-Hinweis beim Checkout, sofern Git die BOM als Encoding-Marker bewertet).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-009 (rein additives Attribut auf Klassen-Ebene, kein BOM-Konsistenz-Auftrag). Die Frage „CRLF beibehalten wie 9 Schwestern oder LF als moderner Standard etablieren" (TD-003-Analogie hier: „BOM in allen 8 Dateien oder in keiner") ist eine **Nutzer-/Repo-Konvention-Entscheidung**, nicht rein mechanisch. Eine Renormalisierung auf „alle 8 mit BOM" oder „alle 8 ohne BOM" setzt den `core.autocrlf`-Default des Repos bzw. eine `.gitattributes`-Regel fort; die Entscheidung ist mit TD-003/TD-004 symmetrisch.
+- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
+  - **(a) Lokale Renormalisierung Configuration/-BOM vereinheitlichen:** `git add --renormalize .` über `src/AiNetLinter.Tests/Configuration/` (oder nur die 4 abweichenden Dateien) + Commit mit Subject wie `chore(tests): Configuration/-BOM normalisieren [flaky-and-test-performance]`. Greift die Dateien auf den Ordner-Standard zurück, kein Verhaltens-Effekt. Erfordert vorher die Entscheidung „mit oder ohne BOM" (z. B. „alle 8 mit BOM, weil 4/8 schon so sind" = default-konservativ). Erfordert keinen weiteren Mechanik-Schritt; passt als `auto_fixable: ja`-Bündel in einen ohnehin laufenden EPIC-02-Folge-Step (analog TD-003-Variante-a-Empfehlung).
+  - **(b) Repo-weite `.gitattributes`-Regel:** `.gitattributes` mit `*.cs text=auto eol=crlf` (oder `eol=lf`) + projektweite Konsolidierung. Konsistent mit modernen Cross-Plattform-Repos, entfernt die Windows-only-Inhomogenität global. Hat aber Auswirkungen auf den gesamten `Configuration/`-Ordner, viele weitere Dateien in `Output/`, `Evals/` etc. — eigenständiger Step mit Vorab-Bestandsaufnahme sinnvoll.
+  - **(c) Status quo belassen, Beobachtung dokumentiert:** wenn der Nutzer die Inhomogenität toleriert (z. B. weil jeder Editor die BOM korrekt verarbeitet und das Team keine Probleme hat), bleibt TD-005 als offene Beobachtung stehen und beeinflusst keine Folge-Steps. Aktuell favorisiert, weil in `Configuration/` (anders als in `Output/`) die BOM-Lage keine funktionalen, sondern rein stilistische Auswirkungen hat.
+  - **Empfehlung:** Variante (a) zuerst, wenn überhaupt — minimal-invasiv, passt zur etablierten Konvention „1 Ordner = 1 Standard", kann als gebündeltes Aufräum-Item in einem EPIC-02-Folge-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring. Variante (c) ist die sichere Default-Entscheidung, falls der Nutzer keinen Konsolidierungs-Wunsch äußert.
+- **auto_fixable:** nein (Konsolidierungs-Wunsch und Ziel-Richtung „mit oder ohne BOM" sind Nutzer-Sache und nicht im Schritt-Scope eines Trait-Batches; Variante (a) ist zwar rein mechanisch, aber die Zielrichtungs-Entscheidung selbst ist nicht im Schritt-Scope)
 - **Status:** offen
