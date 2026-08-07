@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-08T09:45:00+02:00
+last_updated: 2026-08-07T15:40:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-012 (in Planung/Implementierung)
-current_step: step-012  # step-012 ist in Umsetzung
+total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: null  # step-012 approved; nächster Step kommt vom Planer (Step-Modus)
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,14 +15,12 @@ current_step: step-012  # step-012 ist in Umsetzung
 - **Task-Status:** `executing`
 - **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-012` (in Planung/Implementierung; zwölfter
-  EPIC-02-Batch — **Mega-Batch** mit 17 Klassen per gelockerten
-  `config.md`-Deckeln: 11 restliche `Core/` L–V + 6 `Maps/`+`Maps/Skeleton/`;
-  mit step-013+ geht EPIC-02 in Mcp/Tools/ + Mcp/ + Baseline/ + Commands/ + Cli/)
+- **Aktueller Schritt:** keiner (step-012 approved; Planer plant als
+  Nächstes step-013 — EPIC-02 Rest: Mcp/Tools/, Mcp/, Baseline/, Commands/, Cli/)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
-- **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
-  TD-002 niedrig)
+- **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-007 niedrig;
+  TD-007 neu aus step-012, `auto_fixable: ja`)
 - **Gestartet:** 2026-08-07
 - **Zuletzt aktualisiert:** 2026-08-07 (Schema-Update auf neues
   `total_steps`-/`Corrects`-Layout aus `drift-loop/spec.md` §10.1+§5; alle
@@ -43,18 +41,18 @@ current_step: step-012  # step-012 ist in Umsetzung
 | step-009 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Configuration/ nachziehen (Batch 7, 8 Klassen) | - | MiniMax-M3 | MiniMax-M3 | b484627 / b4a8c59 |
 | step-010 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/ nachziehen Teil 1 (Batch 8a, 8 Klassen A-MethodParameterCountAccessibility) | - | MiniMax-M3 | MiniMax-M3 | 44956b7 / 2674a46 |
 | step-011 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/+Core/ nachziehen (Batch 8b, Mega-Batch 20 Klassen) | - | MiniMax-M3 | MiniMax-M3 | bb39619 / 2a4067a / daad777 (3 Commits, Hash-Korrektur) |
-| step-012 | EPIC-02 | in_progress | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | - | - | - |
+| step-012 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | MiniMax-M3 | Cursor Grok 4.5 | b2477f5 / 7deeff1 |
 
 ## Config
 
-Defaults aus `../../.agents/Agent-Scaffolding/dev-loop/drift-loop/spec.md`
-(kein `config.md` vorhanden):
+Overrides aus `config.md` (Stand 2026-08-08), Rest Defaults aus
+`../../.agents/Agent-Scaffolding/dev-loop/drift-loop/spec.md`:
 
 ```
 max_fix_rounds_per_step: 3
 soft_step_checkin_interval: 40
-max_batch_items: 8
-max_batch_diff_lines: 40
+max_batch_items: 20
+max_batch_diff_lines: 80
 build_command: dotnet build
 test_command: dotnet test
 target_branch: main
