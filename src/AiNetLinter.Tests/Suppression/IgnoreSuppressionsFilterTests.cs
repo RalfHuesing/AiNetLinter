@@ -5,6 +5,7 @@ using AiNetLinter.Web;
 namespace AiNetLinter.Tests.Suppression;
 
 // @covers IgnoreSuppressionsFilter
+[Trait("Category", "Unit")]
 public sealed class IgnoreSuppressionsFilterTests
 {
     [Fact]

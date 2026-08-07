@@ -3,6 +3,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
 
+[Trait("Category", "Unit")]
 public sealed class DisableAllCommentRemoverTests
 {
     [Fact]

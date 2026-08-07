@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
 
+[Trait("Category", "Integration")]
 public sealed class DisableAllCliTests
 {
     [Fact]

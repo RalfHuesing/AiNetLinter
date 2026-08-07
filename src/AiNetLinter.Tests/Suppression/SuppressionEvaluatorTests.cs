@@ -2,6 +2,7 @@ using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Tests.Suppression;
 
+[Trait("Category", "Unit")]
 public sealed class SuppressionEvaluatorTests
 {
     [Fact]
