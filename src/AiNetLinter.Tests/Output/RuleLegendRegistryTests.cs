@@ -10,6 +10,7 @@ namespace AiNetLinter.Tests.Output;
 /// Legende-Eintrag in RuleLegendRegistry hat. Schlägt an wenn eine neue Regel hinzugefügt
 /// wird ohne gleichzeitig Warum-Text und Fix-Alternativen zu ergänzen.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class RuleLegendRegistryTests
 {
     public static IEnumerable<object[]> AllKnownRuleNames =>

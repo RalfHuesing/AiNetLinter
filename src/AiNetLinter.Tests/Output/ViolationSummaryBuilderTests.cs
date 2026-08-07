@@ -3,6 +3,7 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
 
+[Trait("Category", "Unit")]
 public sealed class ViolationSummaryBuilderTests
 {
     private static readonly string OutputRoot = Path.GetFullPath(@"C:\Projects\MyApp");
