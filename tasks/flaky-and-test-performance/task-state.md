@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T17:30:00+02:00
+last_updated: 2026-08-07T20:15:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_steps: 16  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-016  # geplant, wartet auf Coder (EPIC-03)
+current_step: step-016  # done (approved), letzter EPIC-03-Step. Task pausiert (Nutzer-Vorgabe), kein Step in_progress.
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,17 +15,17 @@ current_step: step-016  # geplant, wartet auf Coder (EPIC-03)
 - **Task-Status:** `executing`
 - **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-015` (done, approved — letzter
-  EPIC-02-Schritt; Unit 1193 + Integration 132 = Total 1325, Kritiker
-  hat projektweit verifiziert: 0 ungetaggte `[Fact]`/`[Theory]` im
-  gesamten `src/AiNetLinter.Tests/`-Baum)
-- **Roadmap:** siehe `roadmap.md` (EPIC-01 + EPIC-02 abgehakt; EPIC-03
-  bis EPIC-08 offen, unangetastet für eine spätere Session).
-- **Nutzer-Vorgabe (2026-08-07):** „setze EPIC-03 um, dann stop" — Loop
-  läuft weiter bis EPIC-03 abgeschlossen, danach erneuter bewusster Halt.
-- **step-016 (geplant):** deckt EPIC-03 vollständig ab — Korrektur einer
-  step-001-Fehleinschätzung entdeckt (`SymbolGraphCatalogFixture`
-  tatsächlich 18× statt 1× verwendet), inkl. aktivem Dispose-Risiko-Fix.
+- **Aktueller Schritt:** `step-016` (done, approved — einziger und
+  letzter EPIC-03-Schritt; `SymbolGraphCatalogFixture` 18× +
+  `McpLiveRepositoryFixture` 2× auf `ICollectionFixture` umgestellt,
+  Dispose-Risiko aktiv behoben, 3+3 Wiederholungsläufe grün)
+- **Roadmap:** siehe `roadmap.md` (EPIC-01 + EPIC-02 + EPIC-03
+  abgehakt; EPIC-04 bis EPIC-08 offen, unangetastet für eine spätere
+  Session).
+- **Pause-Grund:** Nutzer-Vorgabe „setze EPIC-03 um, dann stop" —
+  bewusster Halt, **kein** Guard-Abbruch, **kein** Blocker. Bei Resume
+  (Fall B, `status: executing`) macht der Loop normal bei EPIC-04
+  weiter, sobald der Nutzer das anstößt.
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
