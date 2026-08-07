@@ -9,6 +9,7 @@ namespace AiNetLinter.Tests.Commands;
 /// <summary>
 /// Tests fuer <see cref="ListRulesCommand"/>.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class ListRulesCommandTests
 {
     [Fact]

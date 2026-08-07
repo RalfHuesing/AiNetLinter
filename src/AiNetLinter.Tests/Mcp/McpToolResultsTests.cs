@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
+[Trait("Category", "Unit")]
 public sealed class McpToolResultsTests
 {
     [Fact]

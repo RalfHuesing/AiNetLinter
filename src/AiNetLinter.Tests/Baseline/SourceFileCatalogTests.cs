@@ -6,6 +6,7 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Tests.Baseline;
 
+[Trait("Category", "Unit")]
 public sealed class SourceFileCatalogTests
 {
     [Fact]

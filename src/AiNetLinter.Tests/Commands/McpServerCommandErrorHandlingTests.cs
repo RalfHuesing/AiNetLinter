@@ -19,6 +19,7 @@ namespace AiNetLinter.Tests.Commands;
 /// Datei den
 /// 006-Erweiterung.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class McpServerCommandErrorHandlingTests
 {
     private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";

@@ -9,6 +9,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Baseline;
 
+[Trait("Category", "Integration")]
 public sealed class WebBaselineTests
 {
     [Fact]

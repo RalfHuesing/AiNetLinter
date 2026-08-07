@@ -15,6 +15,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// sonst sieht ein Agent das Limit erst in der Trunkierungs-Meta-Zeile, nachdem der Cap
 /// bereits erreicht wurde.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class SymbolGraphToolRegistrationsTests
 {
     [Fact]

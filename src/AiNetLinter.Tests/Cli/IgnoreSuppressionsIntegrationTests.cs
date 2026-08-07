@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Cli;
 // @covers IgnoreSuppressionsFilter
 // @covers SuppressionEvaluator
 // @covers WebSuppressionDetector
+[Trait("Category", "Unit")]
 public sealed class IgnoreSuppressionsIntegrationTests
 {
     [Fact]

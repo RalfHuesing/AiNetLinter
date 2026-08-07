@@ -18,6 +18,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// Parität der gepflegten Tool-Kurzbeschreibungen gegen die tatsaechlich registrierten Tools —
 /// damit ein neues oder umbenanntes Tool hier nicht stillschweigend fehlt.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class OverviewResourceRegistrationTests
 {
     private static Config CreateConfig() => new() { Global = new GlobalConfig(), Metrics = new MetricsConfig() };

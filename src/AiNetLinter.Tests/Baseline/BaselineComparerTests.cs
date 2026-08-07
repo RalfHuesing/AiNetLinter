@@ -3,6 +3,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Baseline;
 
+[Trait("Category", "Unit")]
 public sealed class BaselineComparerTests
 {
     [Fact]

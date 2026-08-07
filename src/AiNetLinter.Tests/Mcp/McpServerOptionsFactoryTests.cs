@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// weil diese Datei bereits am <c>MaxLineCount</c>-Limit (500) liegt und das Hinzufuegen
 /// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpServerOptionsFactoryTests
 {
     [Fact]

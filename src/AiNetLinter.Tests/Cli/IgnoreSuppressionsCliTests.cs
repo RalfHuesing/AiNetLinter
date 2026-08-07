@@ -5,6 +5,7 @@ using AiNetLinter.Cli;
 namespace AiNetLinter.Tests.Cli;
 
 // @covers LinterArgs
+[Trait("Category", "Unit")]
 public sealed class IgnoreSuppressionsCliTests
 {
     [Fact]
