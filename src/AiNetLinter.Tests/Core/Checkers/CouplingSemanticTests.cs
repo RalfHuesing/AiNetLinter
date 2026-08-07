@@ -9,6 +9,7 @@ using System.Linq;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class CouplingSemanticTests
 {
     private static Config CreateConfig(int maxConstructorDeps)

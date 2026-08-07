@@ -7,6 +7,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class AsciiIdentifiersTests
 {
     [Fact]

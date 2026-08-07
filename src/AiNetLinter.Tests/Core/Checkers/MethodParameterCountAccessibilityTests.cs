@@ -9,6 +9,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MethodParameterCountAccessibilityTests
 {
     private static Config CreateConfig(

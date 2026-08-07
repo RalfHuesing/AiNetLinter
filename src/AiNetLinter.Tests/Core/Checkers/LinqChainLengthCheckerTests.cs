@@ -9,6 +9,7 @@ using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class LinqChainLengthCheckerTests
 {
     // --- Positiv-Tests (Violation erwartet) ---

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MaxPartialClassFilesTests
 {
     private static Config CreateConfig(int limit = 2, string[]? exemptTypes = null) =>
