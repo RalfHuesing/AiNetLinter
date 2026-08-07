@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Web;
 /// Unit-Tests fuer CssAnalyzer. Implementiert die Test-Szenarien A-H aus
 /// Research/Extend-Web-Features/01_CSS_Linting.md Abschnitt 5.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class CssAnalyzerTests
 {
     // Szenario A — CSS unter Limit, einfache Selektoren → keine Violations

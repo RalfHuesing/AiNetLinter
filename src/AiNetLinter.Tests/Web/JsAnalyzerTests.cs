@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Web;
 /// Unit-Tests fuer JsAnalyzer. Implementiert die Test-Szenarien A-H aus
 /// Research/Extend-Web-Features/02_JS_Linting.md Abschnitt 5.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class JsAnalyzerTests
 {
     // Szenario A — Sauberes ES6-Modul unter 150 Zeilen mit export function → keine Violations

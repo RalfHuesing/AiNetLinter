@@ -11,6 +11,7 @@ namespace AiNetLinter.Tests.Web;
 /// und direkte Tests der internen Helper-Methoden. Aufgeteilt in eigene Datei, um die
 /// Haupt-Test-Datei unter MaxLineCount (500) zu halten.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class RazorAnalyzerExtendedTests
 {
     // Zusatztest — Leere Datei liefert keine Violations.

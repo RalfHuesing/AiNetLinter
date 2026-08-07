@@ -9,6 +9,7 @@ namespace AiNetLinter.Tests.Web;
 /// Unit-Tests fuer WebSuppressionDetector. Verifiziert dateiweite und regel-spezifische
 /// Suppression-Kommentare in Web-Dateien.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class WebSuppressionDetectorTests
 {
     [Fact]

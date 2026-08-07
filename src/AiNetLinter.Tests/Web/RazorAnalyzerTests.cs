@@ -14,6 +14,7 @@ namespace AiNetLinter.Tests.Web;
 /// Weitere Tests (Edge-Cases, Helper-Methoden, Szenarien-Kombinationen) sind in
 /// <see cref="RazorAnalyzerExtendedTests"/> ausgelagert, um die Datei unter MaxLineCount (500) zu halten.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class RazorAnalyzerTests
 {
     // Szenario A — Saubere Komponente unter 300 Zeilen, flaches Markup,
