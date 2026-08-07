@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
