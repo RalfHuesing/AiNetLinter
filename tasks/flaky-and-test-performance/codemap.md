@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T16:37:00+02:00
+last_updated: 2026-08-07T18:15:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -76,9 +76,9 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — NEU in step-001, leere xUnit-v3-`[CollectionDefinition]`-Klasse als Marker für geteilte `SymbolGraphMcpFixture`-Instanz; Spike-Empfehlung war negativ (kein Performance-Gewinn), finale Entscheidung in EPIC-03 (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpFixture.cs`** — XML-Doc-Kommentar in Z. 13 in step-001 an neue Verwendungsform `[Collection("SymbolGraphMcp")]` angepasst; teure Subprozess-Start-Logik (MCP-Client + Retry-Backoff) im Konstruktor (zuletzt: step-001)
-- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — laut step-001-Code-Inspektion **nur 1× verwendet** (`McpServerCommandLoadingStateTests`); entgegen der Konzept-Annahme „18×" gilt das Sharing-Hebel-Potenzial heute praktisch nicht; in Mini-Solution + `SourceFileCatalog.LoadAsync`, in-process (zuletzt: step-001)
-- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — 2× verwendet (`McpDocumentationSmokeTests`, `McpLiveRepositoryTests`); startet Subprozess auf **echtem** `AiNetLinter.slnx` — laut Konzept die schwersten Einzel-Loads im Lauf; EPIC-03-Kandidat mit ähnlichem Profil wie `SymbolGraphMcpFixture`-Spike (zuletzt: step-001)
-- **`src/AiNetLinter.Tests/Fixtures/BaselineMcpFixture.cs`** + **`BaselineCatalogFixture.cs`** — je 1× verwendet, kein Sharing-Hebel; bleiben voraussichtlich `IClassFixture` (zuletzt: step-001)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — **KORREKTUR ggü. step-001 (obsolet — Prognose war falsch):** step-001 hatte per Code-Inspektion „nur 1× verwendet" (`McpServerCommandLoadingStateTests`) dokumentiert. Der step-016-Planer hat per vollständigem `grep -rn "IClassFixture" src/AiNetLinter.Tests/` verifiziert: **tatsächlich 18× verwendet** — deckungsgleich mit der ursprünglichen `konzept.md`-Prognose ("18×"), die step-001 fälschlich für „nicht mehr anwendbar" erklärt hatte. Grund der Lücke: step-001 hat nur `Commands/` und `Mcp/`-Root gescannt, nicht `Mcp/Tools/` (17 der 18 Verwendungen sitzen dort + 1× `Maps/Skeleton/SkeletonStableIdTests` + 1× `Commands/McpServerCommandLoadingStateTests`). In Mini-Solution + `SourceFileCatalog.LoadAsync`, in-process (kein Subprozess). `Catalog`/`Solution` sind Roslyn-immutable (get-only, `WithUpdatedSolution` liefert neue Instanz) — read-only-sicher für Sharing. **Ausnahme gefunden:** 14 Testmethoden über 3 Klassen (`GetViolationsToolTests`, `SafeguardToolTests`, `SearchPatternToolTests`) disposen die Fixture aktuell aktiv via `using var state = new McpCodeGraphServer(...(_fixture.Catalog)...)` → `McpCodeGraphServer.Dispose()` → `SourceFileCatalog.Dispose()` → `MSBuildWorkspace.Dispose()`; das ist heute pro Klasse mit eigener `IClassFixture`-Instanz unschädlich (wiederholtes Dispose auf der eigenen Instanz, Solution-Snapshot bleibt lesbar), wird aber beim Sharing zum echten Risiko (eine der 18 Klassen disposed die für alle 18 geteilte Instanz) — Fix in step-016 vorgesehen (zuletzt: step-016-Planung, korrigiert step-001)
+- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — 2× verwendet (`McpDocumentationSmokeTests`, `McpLiveRepositoryTests`); startet Subprozess auf **echtem** `AiNetLinter.slnx` — laut Konzept die schwersten Einzel-Loads im Lauf; beide Verwendungen rein lesend über `_fixture.Client.CallTool*Async(...)`; EPIC-03-Kandidat mit ähnlichem Profil wie `SymbolGraphMcpFixture`-Spike (zuletzt: step-001, verifiziert step-016)
+- **`src/AiNetLinter.Tests/Fixtures/BaselineMcpFixture.cs`** + **`BaselineCatalogFixture.cs`** — je 1× verwendet, kein Sharing-Hebel; bleiben voraussichtlich `IClassFixture` (zuletzt: step-001, verifiziert step-016)
 
 ### Test-Fixtures — zentrale Infrastruktur für die Performance-Story
 

@@ -4,8 +4,8 @@ task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
 last_updated: 2026-08-07T17:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-015  # done (approved), letzter EPIC-02-Step. Task pausiert (Nutzer-Vorgabe), kein Step in_progress.
+total_steps: 16  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-016  # geplant, wartet auf Coder (EPIC-03)
 ---
 
 # Task State: flaky-and-test-performance
@@ -21,10 +21,11 @@ current_step: step-015  # done (approved), letzter EPIC-02-Step. Task pausiert (
   gesamten `src/AiNetLinter.Tests/`-Baum)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 + EPIC-02 abgehakt; EPIC-03
   bis EPIC-08 offen, unangetastet für eine spätere Session).
-- **Pause-Grund:** Nutzer-Vorgabe „EPIC-02 abschließen, danach stop" —
-  bewusster Halt, **kein** Guard-Abbruch, **kein** Blocker. Bei Resume
-  (Fall B, `status: executing`) macht der Loop normal bei EPIC-03
-  weiter, sobald der Nutzer das anstößt.
+- **Nutzer-Vorgabe (2026-08-07):** „setze EPIC-03 um, dann stop" — Loop
+  läuft weiter bis EPIC-03 abgeschlossen, danach erneuter bewusster Halt.
+- **step-016 (geplant):** deckt EPIC-03 vollständig ab — Korrektur einer
+  step-001-Fehleinschätzung entdeckt (`SymbolGraphCatalogFixture`
+  tatsächlich 18× statt 1× verwendet), inkl. aktivem Dispose-Risiko-Fix.
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
@@ -50,6 +51,7 @@ current_step: step-015  # done (approved), letzter EPIC-02-Step. Task pausiert (
 | step-013 | EPIC-02 | done | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | Sonnet 5 | Sonnet 5 | 0d5cee2 / 5c4600c |
 | step-014 | EPIC-02 | done | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | Sonnet 5 | Sonnet 5 | c46d839 / 98e2e9a |
 | step-015 | EPIC-02 | done | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | Sonnet 5 | Sonnet 5 | 2cf236f / e1d316b |
+| step-016 | EPIC-03 | open | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | - | - | - |
 
 ## Config
 
