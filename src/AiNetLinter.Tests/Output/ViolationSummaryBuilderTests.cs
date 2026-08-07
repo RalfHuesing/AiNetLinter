@@ -1,3 +1,5 @@
+#nullable enable
+
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 

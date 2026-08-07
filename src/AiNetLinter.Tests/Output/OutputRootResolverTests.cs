@@ -1,3 +1,5 @@
+#nullable enable
+
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Tests.Output;
