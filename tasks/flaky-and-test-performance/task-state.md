@@ -51,7 +51,7 @@ current_step: step-016  # geplant, wartet auf Coder (EPIC-03)
 | step-013 | EPIC-02 | done | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | Sonnet 5 | Sonnet 5 | 0d5cee2 / 5c4600c |
 | step-014 | EPIC-02 | done | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | Sonnet 5 | Sonnet 5 | c46d839 / 98e2e9a |
 | step-015 | EPIC-02 | done | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | Sonnet 5 | Sonnet 5 | 2cf236f / e1d316b |
-| step-016 | EPIC-03 | open | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | - | - | - |
+| step-016 | EPIC-03 | done | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | Sonnet 5 | Sonnet 5 | 6dfd588 / 39991a2 |
 
 ## Config
 
