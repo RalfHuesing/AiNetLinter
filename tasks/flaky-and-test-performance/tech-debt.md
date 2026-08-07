@@ -31,6 +31,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-001 (Spike zur Fixture-Sharing-Mechanik). Die Diskrepanz betrifft zwei Ebenen — eine CLI-Option nachrüsten *und* das Konzept/roadmap/Plan-DoD korrigieren — beides ist Orchestrator-/Nutzer-Entscheidung, kein Spike-Fix.
 - **Vorschlag:** Nutzer entscheidet eine der beiden Richtungen: (a) CLI-Option `--self-lint` als Convenience-Alias für `--config rules.json --path .` (oder mit hartcodiertem Self-Path) in `CliOptionFactory.cs` nachrüsten und in `Docs/configuration.md` dokumentieren; oder (b) Verweise in `roadmap.md` und ggf. Konzept/Plan-DoD auf den existierenden Befehl korrigieren. Variante (a) ist die weniger invasive (Spec-treu) — die Spec war vermutlich Absicht, nicht Versehen.
 - **Status:** offen
+- **Nutzer**: NICHT UMSETZEN! OUT OF SCOPE!
 
 ### TD-002 — Subject-Längen-Disziplin bei Code-/Doku-Commits (Skills/Plan-Genauigkeit) [Priorität: niedrig]
 
