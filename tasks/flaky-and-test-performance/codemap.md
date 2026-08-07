@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T14:45:00+02:00
+last_updated: 2026-08-07T16:15:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -98,7 +98,7 @@ Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; k
 - **`src/AiNetLinter.Tests/FalsePositives/`** — 2 Klassen; mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/Cache/`** — 3 Klassen (`AnalysisCacheManagerTests`, `AnalysisCacheManagerIsolationTests`, `CacheEntryMapperTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `AnalysisCacheManagerIsolationTests` zudem 4× method-level `Unit` (additiv, unverändert seit step-005) (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); **alle 3 Unit (ListEvalsCommandTests-Subprozess-Hypothese in step-006 widerlegt)** mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-006)
-- **`src/AiNetLinter.Tests/Output/`** — 9 Test-Klassen + 1 Helper (`TestLintConsole.cs`, ausgenommen — Helper-Klasse ohne `[Fact]`/`[Theory]`, Heuristik-Punkt 6); step-007 = erste 5 Klassen (alphabetisch D–O: `DebtReportBuilderHeaderTests`, `DebtReportBuilderTests`, `LinterErrorFormatterTests`, `McpLintConsoleTests`, `OutputRootResolverTests`) mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; step-008 = restliche 4 Klassen (alphabetisch P–V: `PathNormalizerTests`, `RuleLegendRegistryTests`, `ViolationMarkdownFormatterTests`, `ViolationSummaryBuilderTests`) noch ausstehend (zuletzt: step-007)
+- **`src/AiNetLinter.Tests/Output/`** — 9 Test-Klassen + 1 Helper (`TestLintConsole.cs`, ausgenommen — Helper-Klasse ohne `[Fact]`/`[Theory]`, Heuristik-Punkt 6); `Output/`-Schnitt vollständig abgeschlossen (step-007 = 5 Klassen D–O + step-008 = 4 Klassen P–V = 9 Klassen, alle mit `[Trait("Category", "Unit")]` auf Klassen-Ebene; Heuristik-Punkt 6 in 2 Anwendungen ohne Ausnahme bestätigt = vollständig abgehakt) (zuletzt: step-008)
 - **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen; rein Unit, geplant für Batch „Reine-Unit-Ordner, groß" (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Core/Checkers/`** — 27 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Core/`** — 19 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
