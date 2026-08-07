@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T10:37:00+02:00
+last_updated: 2026-08-07T11:35:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 3  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); Stand nach step-003 done
-current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus plant step-004
+total_steps: 4  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-004 (in Planung/Implementierung)
+current_step: step-004  # step-004 ist in Umsetzung; Orchestrator setzt beim Coder-Start auf in_progress, beim Plan-Commit auf done (pending audit)
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,9 +15,8 @@ current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus pla
 - **Task-Status:** `executing`
 - **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `null` (zwischen Steps, letzter abgeschlossener
-  war `step-003` EPIC-02; nächster Schritt wird vom Planer im Step-Modus
-  geplant — voraussichtlich `step-004`, nächster EPIC-02-Batch)
+- **Aktueller Schritt:** `step-004` (in Planung/Implementierung; dritter
+  EPIC-02-Batch — `Web/`-Tests, 5 Klassen)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
@@ -34,6 +33,7 @@ current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus pla
 | step-001 | EPIC-01 | done | Spike — SymbolGraphMcpFixture auf ICollectionFixture umstellen, Vorher/Nachher messen | - | MiniMax-M3 | MiniMax-M3 | bf5de7e / cc395d0 |
 | step-002 | EPIC-02 | done | Category-Traits für alle Tests in src/AiNetLinter.Tests/Suppression/ nachziehen (Batch 1 von N) | - | MiniMax-M3 | MiniMax-M3 | 3ae94c2 / 79d3d6d |
 | step-003 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Metrics/ nachziehen (Batch 2 von N) | - | MiniMax-M3 | MiniMax-M3 | 67fb86b / 03b04f4 |
+| step-004 | EPIC-02 | in_progress | Category-Traits für src/AiNetLinter.Tests/Web/ nachziehen (Batch 3 von N) | - | - | - | - |
 
 ## Config
 
