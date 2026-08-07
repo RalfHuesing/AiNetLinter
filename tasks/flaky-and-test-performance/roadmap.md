@@ -3,7 +3,7 @@ status: active  # active | done
 task: flaky-and-test-performance
 derived_from: konzept.md
 created_at: 2026-08-07T08:58:29+02:00
-last_updated: 2026-08-07T08:58:29+02:00
+last_updated: 2026-08-07T13:10:00+02:00
 created_by_model: MiniMax-M3
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -52,7 +52,7 @@ aktuellen Step passen.
 
 - [x] EPIC-01: Spike — Fixture-Sharing validieren (Vorarbeit) — `SymbolGraphMcpFixture` probeweise auf `ICollectionFixture` umgestellt, Vorher/Nachher gemessen. **Spike-Befund:** Sharing bringt keinen Performance-Gewinn (isoliert +5,3 %, voll +8,1 %); Sequenzialisierung innerhalb der Collection überkompensiert die Subprozess-Start-Einsparung. Empfehlung: EPIC-05 (mockbarer Lade-Pfad im Produktionscode) vermutlich nötig; finale Entscheidung in EPIC-03. → `step-001` (approved, Commit `bf5de7e`).
 
-- [ ] EPIC-02: Category-Traits flächendeckend nachziehen — alle ~1000 ungetraggten Testmethoden mit `[Trait("Category", ...)]` versehen (Taxonomie: `Unit` vs. `Integration`/`Subprocess`/`Live`; genaue Aufteilung JIT in EPIC-01, falls Sharing Tests in andere Klassen verschiebt). Voraussetzung für EPIC-04 (Fast-Path per `--filter`). Kann parallel zu EPIC-01 begonnen werden, Konzept §"Wie" Schritt 2. **In Arbeit — Batches `step-002` (Suppression, 8 Klassen, 7 Unit + 1 Integration) + `step-003` (Metrics, 7 Klassen, alle Unit) + `step-004` (Web/, 5 Klassen, alle Unit) done; `step-005` (4 kleine Unit-Ordner Arch/Diag/FP/Cache gebündelt, 7 Klassen, alle Unit) in Planung. Stand nach step-004: 20 Klassen / 391 getaggte Tests (278 Unit + 113 Integration) von 1325 Gesamt, 934 ungetaggte Methoden. Erwartet nach step-005: 27 Klassen / 445 getaggte Tests (332 Unit + 113 Integration), Rest-Bestand ca. 141 Klassen / 12+ Batches geschätzt.**
+- [ ] EPIC-02: Category-Traits flächendeckend nachziehen — alle ~1000 ungetraggten Testmethoden mit `[Trait("Category", ...)]` versehen (Taxonomie: `Unit` vs. `Integration`/`Subprocess`/`Live`; genaue Aufteilung JIT in EPIC-01, falls Sharing Tests in andere Klassen verschiebt). Voraussetzung für EPIC-04 (Fast-Path per `--filter`). Kann parallel zu EPIC-01 begonnen werden, Konzept §"Wie" Schritt 2. **In Arbeit — Batches `step-002` (Suppression, 8 Klassen, 7 Unit + 1 Integration) + `step-003` (Metrics, 7 Klassen, alle Unit) + `step-004` (Web/, 5 Klassen, alle Unit) + `step-005` (4 kleine Unit-Ordner Arch/Diag/FP/Cache gebündelt, 7 Klassen, alle Unit) done; `step-006` (`Evals/`, 3 Klassen, alle Unit — `ListEvalsCommandTests`-Subprozess-Hypothese aus codemap.md step-002 in step-006 widerlegt: ruft `ListEvalsCommand.Run(console)` mit `TestLintConsole`-Mock aus `AiNetLinter.Tests.Output` direkt in-process auf, kein Subprozess) in Planung. Stand nach step-005: 27 Klassen / 445 getaggte Tests (332 Unit + 113 Integration) von 1325 Gesamt, 880 ungetaggte Methoden. Erwartet nach step-006: 30 Klassen / 468 getaggte Tests (355 Unit + 113 Integration), Rest-Bestand ca. 138 Klassen / 11+ Batches geschätzt.**
 
 - [ ] EPIC-03: Fixture-Sharing im großen Stil umsetzen — geleitet vom Spike aus EPIC-01, die identifizierten Testklassen auf `ICollectionFixture` (mit expliziten `[CollectionDefinition]`-Klassen) umstellen; Reihenfolge so, dass bestehende `parallelizeTestCollections: true` erhalten bleibt; Tests, die Fixture-State mutieren, ggf. durch Reset-Hooks oder eigene (nicht-geteilte) Fixtures ausnehmen. Konzept §"Wie" Schritt 3.
 
