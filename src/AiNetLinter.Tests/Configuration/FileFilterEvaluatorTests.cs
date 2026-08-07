@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace AiNetLinter.Tests.Configuration;
 
+[Trait("Category", "Unit")]
 public sealed class FileFilterEvaluatorTests
 {
     private static Config CreateTestConfig(FileFiltersConfig filters)

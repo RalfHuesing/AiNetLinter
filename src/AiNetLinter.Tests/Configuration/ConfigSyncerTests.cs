@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Configuration;
 
+[Trait("Category", "Unit")]
 public sealed class ConfigSyncerTests
 {
     private static readonly JsonSerializerOptions ReadOptions = new()

@@ -5,6 +5,7 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Tests.Configuration;
 
+[Trait("Category", "Unit")]
 public sealed class PathOverridesTests
 {
     private static Config CreateBaseConfig(int maxMethodLines = 42) => TestHelper.CreateDefaultConfig() with

@@ -13,6 +13,7 @@ namespace AiNetLinter.Tests.Configuration;
 // @covers TestCoverageCollector
 // @covers PartialClassLineAggregator
 // @covers GitChangedFilesResolver
+[Trait("Category", "Unit")]
 public sealed class AgentFeaturesTests
 {
     private static Config CreateConfig(Func<GlobalConfig, GlobalConfig>? configureGlobal = null)

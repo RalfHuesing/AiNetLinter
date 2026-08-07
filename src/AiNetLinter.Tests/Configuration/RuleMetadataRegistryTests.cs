@@ -7,6 +7,7 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Configuration;
 
+[Trait("Category", "Unit")]
 public sealed class RuleMetadataRegistryTests
 {
     [Fact]

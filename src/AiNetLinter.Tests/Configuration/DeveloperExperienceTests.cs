@@ -29,6 +29,7 @@ namespace AiNetLinter.Tests.Configuration;
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class DeveloperExperienceTests
 {
     private static (SyntaxTree, SemanticModel) GetSemanticContext(string source, string assemblyName = "TestAssembly")
