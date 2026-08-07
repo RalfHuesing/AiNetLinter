@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T15:40:00+02:00
+last_updated: 2026-08-07T15:45:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: null  # step-012 approved; nächster Step kommt vom Planer (Step-Modus)
+total_steps: 13  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-013  # geplant, wartet auf Coder
 ---
 
 # Task State: flaky-and-test-performance
@@ -13,10 +13,10 @@ current_step: null  # step-012 approved; nächster Step kommt vom Planer (Step-M
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** keiner (step-012 approved; Planer plant als
-  Nächstes step-013 — EPIC-02 Rest: Mcp/Tools/, Mcp/, Baseline/, Commands/, Cli/)
+- **Aktueller Schritt:** `step-013` (geplant — Mcp/Tools/ Mega-Batch 17
+  Klassen + TD-007 Cleanup)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-007 niedrig;
@@ -42,6 +42,7 @@ current_step: null  # step-012 approved; nächster Step kommt vom Planer (Step-M
 | step-010 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/ nachziehen Teil 1 (Batch 8a, 8 Klassen A-MethodParameterCountAccessibility) | - | MiniMax-M3 | MiniMax-M3 | 44956b7 / 2674a46 |
 | step-011 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/+Core/ nachziehen (Batch 8b, Mega-Batch 20 Klassen) | - | MiniMax-M3 | MiniMax-M3 | bb39619 / 2a4067a / daad777 (3 Commits, Hash-Korrektur) |
 | step-012 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | MiniMax-M3 | Cursor Grok 4.5 | b2477f5 / 7deeff1 |
+| step-013 | EPIC-02 | open | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | - | - | - |
 
 ## Config
 
