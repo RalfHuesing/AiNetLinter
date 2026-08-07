@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T18:15:00+02:00
+last_updated: 2026-08-07T19:40:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -72,13 +72,24 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 - **`src/AiNetLinter.Tests/Commands/McpServerCommandLoadingStateTests.cs`** — enthält den pre-existing Flaky-Test `LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately` (Z. 112-150, Poll-Loop mit fixer 5s-Deadline, Thread-Pool-abhängig); Ziel von EPIC-06; `IClassFixture<SymbolGraphCatalogFixture>` (1×-Verwendung, kein Sharing-Hebel) (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/Mcp/McpServerAllToolsE2ETests.cs`** — `IClassFixture<SymbolGraphMcpFixture>` durch `[Collection("SymbolGraphMcp")]` ersetzt; **NITPICK aus step-001-Review:** XML-Doc-Kommentar in Z. 15 spricht weiterhin von „einmaliger Fixture- und Client-Instanziierung pro Testklasse", formal unzutreffend (kosmetisch, kein Rule-Verstoß) (zuletzt: step-001)
 
-### Test-Fixtures — im Plan-Scope, noch nicht umgestellt (EPIC-03)
+### Test-Fixtures — EPIC-03 (Fixture-Sharing)
 
-- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — NEU in step-001, leere xUnit-v3-`[CollectionDefinition]`-Klasse als Marker für geteilte `SymbolGraphMcpFixture`-Instanz; Spike-Empfehlung war negativ (kein Performance-Gewinn), finale Entscheidung in EPIC-03 (zuletzt: step-001)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — NEU in step-001, leere xUnit-v3-`[CollectionDefinition]`-Klasse als Marker für geteilte `SymbolGraphMcpFixture`-Instanz; Spike-Empfehlung war negativ (kein Performance-Gewinn); Spike-Code unverändert belassen, EPIC-03 in step-016 stattdessen auf die beiden neuen Kandidaten angewendet (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpFixture.cs`** — XML-Doc-Kommentar in Z. 13 in step-001 an neue Verwendungsform `[Collection("SymbolGraphMcp")]` angepasst; teure Subprozess-Start-Logik (MCP-Client + Retry-Backoff) im Konstruktor (zuletzt: step-001)
-- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — **KORREKTUR ggü. step-001 (obsolet — Prognose war falsch):** step-001 hatte per Code-Inspektion „nur 1× verwendet" (`McpServerCommandLoadingStateTests`) dokumentiert. Der step-016-Planer hat per vollständigem `grep -rn "IClassFixture" src/AiNetLinter.Tests/` verifiziert: **tatsächlich 18× verwendet** — deckungsgleich mit der ursprünglichen `konzept.md`-Prognose ("18×"), die step-001 fälschlich für „nicht mehr anwendbar" erklärt hatte. Grund der Lücke: step-001 hat nur `Commands/` und `Mcp/`-Root gescannt, nicht `Mcp/Tools/` (17 der 18 Verwendungen sitzen dort + 1× `Maps/Skeleton/SkeletonStableIdTests` + 1× `Commands/McpServerCommandLoadingStateTests`). In Mini-Solution + `SourceFileCatalog.LoadAsync`, in-process (kein Subprozess). `Catalog`/`Solution` sind Roslyn-immutable (get-only, `WithUpdatedSolution` liefert neue Instanz) — read-only-sicher für Sharing. **Ausnahme gefunden:** 14 Testmethoden über 3 Klassen (`GetViolationsToolTests`, `SafeguardToolTests`, `SearchPatternToolTests`) disposen die Fixture aktuell aktiv via `using var state = new McpCodeGraphServer(...(_fixture.Catalog)...)` → `McpCodeGraphServer.Dispose()` → `SourceFileCatalog.Dispose()` → `MSBuildWorkspace.Dispose()`; das ist heute pro Klasse mit eigener `IClassFixture`-Instanz unschädlich (wiederholtes Dispose auf der eigenen Instanz, Solution-Snapshot bleibt lesbar), wird aber beim Sharing zum echten Risiko (eine der 18 Klassen disposed die für alle 18 geteilte Instanz) — Fix in step-016 vorgesehen (zuletzt: step-016-Planung, korrigiert step-001)
-- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — 2× verwendet (`McpDocumentationSmokeTests`, `McpLiveRepositoryTests`); startet Subprozess auf **echtem** `AiNetLinter.slnx` — laut Konzept die schwersten Einzel-Loads im Lauf; beide Verwendungen rein lesend über `_fixture.Client.CallTool*Async(...)`; EPIC-03-Kandidat mit ähnlichem Profil wie `SymbolGraphMcpFixture`-Spike (zuletzt: step-001, verifiziert step-016)
-- **`src/AiNetLinter.Tests/Fixtures/BaselineMcpFixture.cs`** + **`BaselineCatalogFixture.cs`** — je 1× verwendet, kein Sharing-Hebel; bleiben voraussichtlich `IClassFixture` (zuletzt: step-001, verifiziert step-016)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogCollection.cs`** — NEU in step-016, `[CollectionDefinition("SymbolGraphCatalog")]`-Marker für geteilte `SymbolGraphCatalogFixture`-Instanz, analog `SymbolGraphMcpCollection.cs` (zuletzt: step-016)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — in step-016 auf `ICollectionFixture<T>` umgestellt (18 Verwender, `Mcp/Tools/` + `Maps/Skeleton/SkeletonStableIdTests` + `Commands/McpServerCommandLoadingStateTests`); XML-Doc an `[Collection("SymbolGraphCatalog")]` angepasst. In-process `MSBuildWorkspace`-Load (Mini-Solution), `Catalog`/`Solution` Roslyn-immutable. Dispose-Risiko (14 Testmethoden über `GetViolationsToolTests`/`SafeguardToolTests`/`SearchPatternToolTests` disposten den Catalog aktiv via `using var state = new McpCodeGraphServer(...)`) im selben Step behoben — `using` entfernt, lokale (nicht-geteilte) Catalog-Instanzen in denselben Dateien bewusst unverändert gelassen. 3 aufeinanderfolgende volle Testläufe grün, kein Folgefehler beobachtet (zuletzt: step-016)
+- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryCollection.cs`** — NEU in step-016, `[CollectionDefinition("McpLiveRepository")]`-Marker für geteilte `McpLiveRepositoryFixture`-Instanz (zuletzt: step-016)
+- **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — in step-016 auf `ICollectionFixture<T>` umgestellt (2 Verwender: `McpDocumentationSmokeTests`, `McpLiveRepositoryTests`, beide rein lesend über `_fixture.Client.CallTool*Async(...)`, kein Dispose-Risiko); startet Subprozess auf echtem `AiNetLinter.slnx`; XML-Doc an `[Collection("McpLiveRepository")]` angepasst (zuletzt: step-016)
+- **`src/AiNetLinter.Tests/Fixtures/BaselineMcpFixture.cs`** + **`BaselineCatalogFixture.cs`** — je 1× verwendet, kein Sharing-Hebel; bleiben `IClassFixture` (`FindSymbolToolTests` behält `IClassFixture<BaselineCatalogFixture>` zusätzlich zum neuen `[Collection("SymbolGraphCatalog")]`-Attribut) (zuletzt: step-001, verifiziert step-016)
+
+### EPIC-03 — Abschluss
+
+**EPIC-03 (Fixture-Sharing) inhaltlich abgeschlossen mit step-016.** Alle 20 Verwender von
+`SymbolGraphCatalogFixture` (18×) und `McpLiveRepositoryFixture` (2×) auf `ICollectionFixture<T>`
+umgestellt; Messergebnis gemischt dokumentiert in `step-016/step-result.md` (Gruppe A isoliert
++85% langsamer, Gruppe B isoliert neutral, voller Lauf −4,8% leicht schneller) — kein
+Abbruchkriterium (Nutzer-Vorgabe). `SymbolGraphMcpFixture` (step-001-Spike) bleibt unverändert.
+`BaselineMcpFixture`/`BaselineCatalogFixture` bleiben `IClassFixture` (kein Sharing-Hebel).
 
 ### Test-Fixtures — zentrale Infrastruktur für die Performance-Story
 
