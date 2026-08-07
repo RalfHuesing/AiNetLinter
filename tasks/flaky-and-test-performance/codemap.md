@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T13:42:00+02:00
+last_updated: 2026-08-07T14:15:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -100,7 +100,7 @@ Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; k
 - **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); **alle 3 Unit (ListEvalsCommandTests-Subprozess-Hypothese in step-006 widerlegt)** mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-006)
 - **`src/AiNetLinter.Tests/Output/`** — 9 Test-Klassen + 1 Helper (`TestLintConsole.cs`, ausgenommen — Helper-Klasse ohne `[Fact]`/`[Theory]`, Heuristik-Punkt 6); `Output/`-Schnitt vollständig abgeschlossen (step-007 = 5 Klassen D–O + step-008 = 4 Klassen P–V = 9 Klassen, alle mit `[Trait("Category", "Unit")]` auf Klassen-Ebene; Heuristik-Punkt 6 in 2 Anwendungen ohne Ausnahme bestätigt = vollständig abgehakt) (zuletzt: step-008)
 - **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen, alle Unit, mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `Configuration/`-Ordner vollständig abgeschlossen in step-009 (zuletzt: step-009)
-- **`src/AiNetLinter.Tests/Core/Checkers/`** — 27 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
+- **`src/AiNetLinter.Tests/Core/Checkers/`** — 27 Klassen total, davon 7 bereits getaggt (`MaxInheritanceDepthTests`, `MaxConstructorDependenciesTests`, `MaxBoolParameterCountTests`, `MaxPublicMembersPerTypeTests`, `MaxSwitchArmsTests`, `NamespaceDirectoryMappingTests`, `NestedTypesCheckerTests`); 20 ungetaggte Klassen in 3 alphabetischen Batches 8+8+4 = step-010 (8 Klassen A–MethodParamA: AsciiIdentifiersTests, AsyncVoidCheckerTests, BlockingTaskCheckerTests, CouplingSemanticTests, DynamicTypeCheckerTests, LinqChainLengthCheckerTests, MaxPartialClassFilesTests, MethodParameterCountAccessibilityTests; alle mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen) + step-011 (8 Klassen MethodParamI–SilentCatch) + step-012 (4 Klassen SwitchDispatch–Wpf) (zuletzt: step-010)
 - **`src/AiNetLinter.Tests/Core/`** — 19 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Maps/`** + **`Maps/Skeleton/`** — 6 Klassen; rein Unit, dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Mcp/Tools/`** — 17 Klassen (Tool-Registrierungs-/Scanner-Tests); fast alle Unit über Mini-Fixture-Workspaces, 2-3 Batches (zuletzt: step-002)
