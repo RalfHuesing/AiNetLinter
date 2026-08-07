@@ -57,9 +57,9 @@ max_batch_diff_lines: 80
 build_command: dotnet build
 test_command: dotnet test
 target_branch: main
-model_planer: nicht festgelegt
-model_coder: nicht festgelegt (Hinweis: Coder ohne Thinking-Mode)
-model_kritiker: nicht festgelegt
+model_planer: Sonnet 5, Reasoning-Stufe High (Nutzer-Vorgabe 2026-08-07)
+model_coder: Sonnet 5, Reasoning-Stufe Medium (Nutzer-Vorgabe 2026-08-07)
+model_kritiker: Sonnet 5, Reasoning-Stufe Medium (Nutzer-Vorgabe 2026-08-07)
 ```
 
 ## Abbruch-/Pause-Bedingungen

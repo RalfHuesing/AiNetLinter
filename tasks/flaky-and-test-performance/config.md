@@ -23,9 +23,9 @@ max_batch_diff_lines: 80             # 2x spec-Default (40)   — Konservativ be
 build_command: dotnet build          # aus roadmap.md Tech-Stack-Notiz
 test_command: dotnet test            # aus roadmap.md Tech-Stack-Notiz
 target_branch: main                  # aktueller Branch, nicht hartcodiert
-model_planer: nicht festgelegt       # Nutzer hat keine Modellwahl getroffen, kein Default
-model_coder: nicht festgelegt        # dito
-model_kritiker: nicht festgelegt     # dito
+model_planer: Sonnet 5, Reasoning-Stufe High     # Nutzer-Vorgabe 2026-08-07
+model_coder: Sonnet 5, Reasoning-Stufe Medium    # Nutzer-Vorgabe 2026-08-07
+model_kritiker: Sonnet 5, Reasoning-Stufe Medium # Nutzer-Vorgabe 2026-08-07
 ```
 
 ## Begründung der Batch-Aufweichung
