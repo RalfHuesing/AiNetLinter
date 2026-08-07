@@ -17,7 +17,6 @@ namespace AiNetLinter.Tests.Commands;
 /// im Check-Modus ohne vorhandene .mdc-Datei zu prüfen — parallel laufende Tests würden sich die
 /// globale Konsolenumleitung gegenseitig überschreiben.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class SyncAgentRulesCommandTests
 {

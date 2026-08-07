@@ -15,7 +15,6 @@ namespace AiNetLinter.Tests.Commands;
 /// zu prüfen — parallel laufende Tests würden sich die globale Konsolenumleitung gegenseitig
 /// überschreiben.
 /// </summary>
-[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class PlaybookCheckCommandTests
 {

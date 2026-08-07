@@ -4,8 +4,8 @@ task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
 last_updated: 2026-08-07T20:15:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 16  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-016  # done (approved), letzter EPIC-03-Step. Task pausiert (Nutzer-Vorgabe), kein Step in_progress.
+total_steps: 18  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-018  # done (approved), EPIC-07 abgeschlossen.
 ---
 
 # Task State: flaky-and-test-performance
@@ -52,6 +52,8 @@ current_step: step-016  # done (approved), letzter EPIC-03-Step. Task pausiert (
 | step-014 | EPIC-02 | done | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | Sonnet 5 | Sonnet 5 | c46d839 / 98e2e9a |
 | step-015 | EPIC-02 | done | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | Sonnet 5 | Sonnet 5 | 2cf236f / e1d316b |
 | step-016 | EPIC-03 | done | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | Sonnet 5 | Sonnet 5 | 6dfd588 / 39991a2 |
+| step-017 | EPIC-04 | done | Fast-Path-Befehl etablieren + Doku | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
+| step-018 | EPIC-07 | done | Tote ConsoleTestCollection-Infrastruktur entfernen | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
 
 ## Config
 
