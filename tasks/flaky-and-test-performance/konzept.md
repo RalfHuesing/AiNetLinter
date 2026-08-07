@@ -5,10 +5,7 @@ project_kind: brownfield
 estimated_scope: medium
 rules_dir: .agents/rules
 last_updated: 2026-08-06
-open_questions:
-  - "Scope: Nur Test-Infrastruktur umbauen, oder auch Produktionscode anfassen, wenn das die Testbarkeit/Performance handfest verbessert?"
-  - "Ist ein bewusster Split 'schneller Feedback-Loop' vs. 'vollständiger/CI-Lauf' akzeptabel, oder muss der EINE `dotnet test`-Befehl insgesamt schnell werden?"
-  - "Gibt es ein ungefähres Zeitbudget als Zielgröße (z. B. Sekunden für den schnellen Loop, akzeptable Obergrenze für den vollen Lauf)?"
+open_questions: []
 ---
 
 # Konzept: Testsuite-Performance + Flaky-Test-Fix
@@ -30,20 +27,28 @@ Der Nutzer ist ausdrücklich offen für strukturelle Umbauten ("wir können gern
 
 ## Scope
 
+**Entscheidungen aus Runde 1:** Produktionscode darf angefasst werden, wenn es Testbarkeit/Performance handfest verbessert (kein reiner Test-Infrastruktur-Zwang). Ein bewusster Split „schneller Feedback-Loop" (Alltag) vs. „vollständiger Lauf" (seltener/CI) ist akzeptabel — der eine `dotnet test`-Befehl über alle ~1300 Tests muss nicht selbst durchgängig schnell werden. Kein festes Zeitbudget als Zielzahl — „deutlich besser als jetzt" ist das Kriterium.
+
 ### Muss-Haben
 
-- Voller Testlauf spürbar schneller, ohne Verlust an Testabdeckung (kein Streichen von Tests, um Zeit zu sparen).
-- Der bekannte Flaky Test (`McpServerCommandLoadingStateTests.LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately`, siehe „Wo im Projekt") läuft zuverlässig durch — auch unter der vollen Last des restlichen Testlaufs, nicht nur isoliert.
-- <Rest hängt von den offenen Fragen ab — wird nach Runde 1 präzisiert.>
+- Ein spürbar schnellerer Feedback-Loop-Pfad für die tägliche Arbeit (z. B. gefilterter Lauf über die überwiegende Mehrheit der Tests, ohne echte Subprozess-/Solution-Ladevorgänge) — ohne Verlust an Testabdeckung (kein Streichen von Tests, um Zeit zu sparen; ausgelagerte/geskippte Tests laufen weiterhin im vollen Lauf).
+- Konsequente Category-Traits (`Unit`/`Integration`, ggf. weitere Kategorie für "startet echten Subprozess/lädt echte Solution") auf **allen** Tests — aktuell nur 86 von ~1087 Testmethoden getraggt. Das ist Voraussetzung für einen gezielt filterbaren Fast-Path, nicht nur Aufräumarbeit.
+- Reduktion der ~60-80 unabhängigen, nie geteilten Lade-/Subprozessvorgänge — mindestens für die Fälle mit eindeutig identischer Fixture (`SymbolGraphCatalogFixture` 18×, `SymbolGraphMcpFixture` 6×) auf geteilte Instanzen umstellen (`ICollectionFixture` oder gleichwertig), soweit das ohne Aufgabe der Test-Isolation möglich ist.
+- Der volle Testlauf (aktuell ~90s) wird spürbar kürzer, auch wenn kein Split genutzt wird.
+- Der bekannte Flaky Test (`McpServerCommandLoadingStateTests.LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately`, siehe „Wo im Projekt") läuft zuverlässig durch — auch unter der vollen Last des restlichen Testlaufs, nicht nur isoliert. Fix strukturell (z. B. Event-/Continuation-basiertes Warten statt Poll-Loop mit fixer 5s-Deadline), nicht durch Hochsetzen der Deadline oder Ausklammern aus dem Volllauf.
+- Produktionscode-seitige Verbesserungen an `SourceFileCatalog`/`McpCodeGraphServer` (o. ä.) sind erlaubt, wenn sie Ladevorgänge testbarer oder wiederverwendbarer machen — dürfen aber das für Nutzer/Agenten sichtbare Verhalten des MCP-Servers/CLI nicht verändern (siehe Non-Goals).
 
 ### Nice-to-Have (optional, spätere Iteration)
 
-- Konsequente Category-Traits (`Unit`/`Integration`) auf allen Tests, damit gezielt gefiltert werden kann (aktuell >90 % der Tests ungetraggt, siehe „Entdeckte Mängel").
-- CI-Workflow, der Tests tatsächlich ausführt (aktuell führt `.github/workflows/release.yml` keine Tests aus).
+- CI-Workflow, der Tests tatsächlich ausführt (aktuell führt `.github/workflows/release.yml` keine Tests aus) — naheliegende Folge, sobald ein schneller/voller Split etabliert ist, aber nicht Teil dieser Aufgabe.
+- Entfernen der toten `ConsoleTestCollection`-Infrastruktur (siehe „Entdeckte Mängel") — falls es sich im Zuge des Fixture-Umbaus ergibt, sonst eigener Kleinst-Task.
 
 ### Non-Goals (bewusst NICHT Teil davon)
 
-- <noch offen — hängt von der Antwort auf die Scope-Frage oben ab>
+- Wechsel des Test-Frameworks (bleibt xUnit v3) — reine Struktur-/Sharing-Frage, kein Tooling-Wechsel.
+- Sichtbares Verhalten des MCP-Servers/CLI ändern — Produktionscode-Änderungen sind nur im Rahmen von Testbarkeit/Performance erlaubt, nicht als Gelegenheit für Feature-Änderungen.
+- Ein festes, verhandeltes Zeitbudget als Abnahmekriterium (siehe Scope-Entscheidung oben) — Erfolg wird qualitativ ("deutlich besser") plus den konkreten Muss-Haben-Punkten gemessen, nicht an einer Sekundenzahl.
+- Einführung eines tatsächlichen CI-Test-Workflows in dieser Aufgabe (siehe Nice-to-Have) — die Testsuite muss dafür bereit sein, der Workflow selbst ist ein Folge-Task.
 
 ## Zielplattformen / Technischer Rahmen
 
@@ -103,20 +108,25 @@ Ergebnis einer gezielten Recherche (Pointer-Prinzip — Fundstellen, keine Verha
 
 ## Wie (grober Ansatz)
 
-<Bewusst noch nicht ausgearbeitet — der Nutzer hat explizit gesagt, dass eine Exploration Teil des Plans sein soll, falls die Lösung nicht feststeht. Grobe Kandidaten, die zur Diskussion stehen (keine Vorfestlegung):
-1. Fixture-Sharing einführen (`ICollectionFixture` statt `IClassFixture` wo möglich) — reduziert Zahl unabhängiger Ladevorgänge, ohne Testabdeckung zu ändern.
-2. Category-Traits konsequent nachziehen + Doku/Skript für "schneller Loop" (`--filter Category=Unit`) vs. "voller Lauf".
-3. Getrenntes, bewusst kleines/schnelles Testprojekt oder Test-Segment für die Aspekte, die aktuell nur über schwere Subprozess-/Workspace-Fixtures abgedeckt sind (Nutzer-Vorschlag) — vs. bestehende Struktur behalten und nur Sharing/Traits verbessern. Diese Weichenstellung ist der Kern der ersten offenen Frage.
-4. Flaky-Test-Fix: entweder das Timing-Problem strukturell lösen (z. B. `TaskCompletionSource`/Event statt Poll-Loop mit fixer Deadline) oder — falls das Grundproblem (Thread-Pool-Kontention) durch 1-3 entschärft wird — beobachten, ob der Flake dadurch bereits verschwindet, und nur bei Bedarf zusätzlich am Test selbst nachschärfen.
-Die konkrete Auswahl/Kombination folgt nach der ersten Fragerunde.>
+Reihenfolge/Kombination ist Sache des Planers im drift-loop (Datei-/Zeilen-genau), hier nur die grobe Richtung inkl. eines empfohlenen Explorations-Schritts vorab:
+
+1. **Explorations-/Spike-Schritt zuerst** (vom Nutzer explizit gewünscht, falls die Lösung nicht feststeht): 2-3 der am stärksten duplizierten Fixtures (`SymbolGraphCatalogFixture`, `SymbolGraphMcpFixture`) probeweise auf `ICollectionFixture` umstellen und die tatsächliche Zeitersparnis + eventuelle Isolationsprobleme (Tests, die den Fixture-State mutieren und sich dadurch gegenseitig stören) messen, **bevor** der große Umbau über alle ~28 betroffenen Klassen committed wird. Ergebnis entscheidet, ob Sharing im bestehenden Projekt reicht oder ob zusätzlich ein separates schnelles Testsegment (Nutzer-Ausgangsidee) nötig ist.
+2. **Category-Traits nachziehen** — alle ~1000 ungetraggten Tests einordnen (`Unit` vs. `Integration`/„startet Subprozess"), damit ein Fast-Path per `--filter` überhaupt möglich wird. Kann parallel/unabhängig von Schritt 1 laufen.
+3. **Fixture-Sharing umsetzen**, geleitet vom Spike-Ergebnis aus Schritt 1 — vermutlich `ICollectionFixture` für die klar duplizierten Fälle, ggf. mit expliziten `[Collection]`-Zuweisungen, um die bestehende Parallelität (`parallelizeTestCollections: true`) nicht zu zerstören.
+4. **Fast-Path etablieren** — dokumentierter/skriptierter Befehl (z. B. `dotnet test --filter Category!=Integration`) für den Alltag; voller Lauf bleibt verfügbar und grün, wird aber seltener gebraucht.
+5. **Produktionscode-Seite prüfen** — ob `SourceFileCatalog`/`McpCodeGraphServer` einen leichteren, mockbaren Lade-Pfad für Tests bekommen können, die keinen echten `.exe`-Subprozess brauchen (z. B. für Tests, die aktuell nur wegen Testbarkeit einen Subprozess starten, nicht weil sie das Subprozess-Verhalten selbst prüfen wollen).
+6. **Flaky-Test-Fix**, unabhängig von 1-5 möglich, aber vermutlich einfacher zu verifizieren, sobald die allgemeine Systemlast durch 1-5 sinkt: Poll-Loop mit fixer Deadline durch ein `TaskCompletionSource`/Event-basiertes Warten auf den `LoadState`-Übergang ersetzen (kein Raten über Sleep-Intervalle), damit der Test nicht mehr von Thread-Pool-Timing abhängt.
+7. Tote `ConsoleTestCollection`-Infrastruktur entfernen, falls im Zuge von 3 ohnehin angefasst.
 
 ## Definition of Done / Erfolgskriterien
 
-<Wird nach Klärung der offenen Fragen (insbesondere Zeitbudget) präzisiert. Fest steht bereits:
-- Kein Testabdeckungsverlust (Testanzahl bleibt mindestens gleich, keine Assertions ersatzlos gestrichen, um Zeit zu sparen).
-- `LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately` läuft in mindestens 10 aufeinanderfolgenden vollen Testläufen (nicht isoliert) fehlerfrei durch.
-- `dotnet build` (TreatWarningsAsErrors) und der volle Testlauf bleiben grün.>
+- Kein Testabdeckungsverlust — Testanzahl bleibt mindestens gleich, keine Assertions ersatzlos gestrichen, um Zeit zu sparen.
+- Voller Testlauf spürbar kürzer als die aktuelle ~90s-Baseline (kein festes Zahlenziel, siehe Non-Goals — aber messbar besser, mit Vorher/Nachher-Zahl im Ergebnis dokumentiert).
+- Ein dokumentierter, spürbar schnellerer Fast-Path-Befehl existiert und deckt weiterhin alle `Unit`-Aspekte ab.
+- `LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately` läuft in mindestens 10 aufeinanderfolgenden **vollen** Testläufen (nicht isoliert) fehlerfrei durch.
+- Alle Tests tragen einen Category-Trait (keine ungetraggten Tests mehr).
+- `dotnet build` (TreatWarningsAsErrors) und der volle Testlauf bleiben grün; Self-Lint bleibt `OK`.
 
 ## Offene Punkte
 
-Siehe `open_questions` im Frontmatter — erste Fragerunde noch ausständig.
+Keine — Runde 1 hat die drei Grundsatzfragen geklärt (Scope, Split, Zeitbudget). Feindetails (genaue Trait-Taxonomie, welche Fixtures im Detail umgestellt werden) sind Sache des Planers im drift-loop, kein Blocker für `status: ready`.
