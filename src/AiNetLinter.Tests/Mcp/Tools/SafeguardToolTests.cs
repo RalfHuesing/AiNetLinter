@@ -20,14 +20,15 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="SafeguardTool"/>. Pattern 1:1 von <see cref="GetViolationsToolTests"/>:
-/// <c>IClassFixture&lt;SymbolGraphCatalogFixture&gt;</c>, ein eigener <see cref="McpCodeGraphServer"/>
+/// <c>[Collection("SymbolGraphCatalog")]</c>, ein eigener <see cref="McpCodeGraphServer"/>
 /// je Test, Test-Naming <c>ExecuteAsync_&lt;Bedingung&gt;_&lt;Erwartung&gt;</c>. Zusaetzlicher
 /// Fokus: <c>passed=false</c> ist explizit NICHT <c>isError=true</c> (Anti-Pattern-Falle aus
 /// <c>IsErrorPolicy.md</c> und Konzept §"Zielplattformen") — der entsprechende Test ist als
 /// Regressionsschutz fuer genau diese Falle benannt.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class SafeguardToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 
@@ -52,7 +53,7 @@ public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_LoadedSolution_ReturnsCallToolResultWithScore()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
@@ -78,7 +79,7 @@ public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture
         // realer Score erreicht diesen Wert) ist explizit KEIN isError=true, sondern der
         // erwartete Output des Quality-Gate-Tools. Beide Flags muessen getrennt geprueft
         // werden, damit eine spaetere Refactoring-Welle, die das koppelt, sofort auffliegt.
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 100.0, 20, CancellationToken.None);
 
@@ -93,7 +94,7 @@ public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_ScopeFilter_PassesToScanner()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SafeguardTool.ExecuteAsync(state, "SymbolGraphMini", 8.0, 20, CancellationToken.None);
 
@@ -108,7 +109,7 @@ public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture
     [Fact]
     public async Task ExecuteAsync_MinScoreAndMaxViolationsOverrides_AreHonored()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 0.0, 1, CancellationToken.None);
 

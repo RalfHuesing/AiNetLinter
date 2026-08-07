@@ -9,7 +9,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Maps.Skeleton;
 
 [Trait("Category", "Unit")]
-public sealed class SkeletonStableIdTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class SkeletonStableIdTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

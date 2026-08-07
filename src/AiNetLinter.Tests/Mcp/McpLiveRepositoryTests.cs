@@ -13,10 +13,11 @@ namespace AiNetLinter.Tests.Mcp;
 /// <summary>
 /// Live-Integrationstests fuer alle 9 MCP-Tools direkt gegen das eigene Repository.
 /// Ersetzt ad-hoc Python-Dogfooding-Skripte durch saubere, automatisierte C# xUnit-Tests.
-/// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Testklasse.
+/// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Collection.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixture>
+[Collection("McpLiveRepository")]
+public sealed class McpLiveRepositoryTests
 {
     private readonly McpLiveRepositoryFixture _fixture;
 
@@ -151,7 +152,7 @@ public sealed class McpLiveRepositoryTests : IClassFixture<McpLiveRepositoryFixt
         // End-to-end-Verifikation: das safeguard-Tool liefert auf dem echten
         // AiNetLinter-Repo einen Score >= 5.0 und einen gueltigen JSON-Schema-2020-12-
         // Structured-Content. Score-Aufruf gegen den Live-Subprozess via _fixture.Client
-        // (geteilter MCP-Server pro Testklasse, startet einmal in IAsyncLifetime).
+        // (geteilter MCP-Server pro Collection, startet einmal in IAsyncLifetime).
         // minScore wird bewusst auf 0.0 gesetzt, damit der Korridor-Assert die
         // Score-Berechnung isoliert prueft, ohne die Passed-Logik des Tools mit dem
         // Korridor zu vermischen.

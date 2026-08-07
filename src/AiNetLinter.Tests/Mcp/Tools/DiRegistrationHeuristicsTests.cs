@@ -11,7 +11,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
-public sealed class DiRegistrationHeuristicsTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class DiRegistrationHeuristicsTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

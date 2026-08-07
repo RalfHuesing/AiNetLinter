@@ -11,7 +11,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
-public sealed class GetImpactToolTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class GetImpactToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

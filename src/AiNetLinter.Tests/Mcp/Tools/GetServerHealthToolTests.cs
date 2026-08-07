@@ -16,7 +16,8 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// (aktiv vs. nicht aktiv).
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class GetServerHealthToolTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class GetServerHealthToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

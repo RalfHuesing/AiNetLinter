@@ -18,7 +18,8 @@ namespace AiNetLinter.Tests.Commands;
 /// sind ueber das Test-Subprozess-Protokoll (kein Mocking) abgesichert.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpServerCommandLoadingStateTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class McpServerCommandLoadingStateTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

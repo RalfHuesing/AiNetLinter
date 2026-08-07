@@ -10,7 +10,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
-public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>, IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>
 {
     private readonly BaselineCatalogFixture _baselineFixture;
     private readonly SymbolGraphCatalogFixture _symbolGraphFixture;

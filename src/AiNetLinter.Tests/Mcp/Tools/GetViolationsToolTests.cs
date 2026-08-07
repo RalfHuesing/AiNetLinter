@@ -16,7 +16,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
-public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class GetViolationsToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 
@@ -40,7 +41,7 @@ public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionNoScopeFilter_ReturnsViolationForKnownFixture()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetViolationsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -55,7 +56,7 @@ public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_RestrictsViolations()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 
@@ -67,7 +68,7 @@ public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetViolationsTool.ExecuteAsync(state, "DoesNotExistAnywhere", CancellationToken.None);
 
@@ -79,7 +80,7 @@ public sealed class GetViolationsToolTests : IClassFixture<SymbolGraphCatalogFix
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionWithViolation_FormatsViolationsAsMarkdownTable()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 

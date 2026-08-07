@@ -8,7 +8,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
-public sealed class CallGraphTraversalTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class CallGraphTraversalTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 

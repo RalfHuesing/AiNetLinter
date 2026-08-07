@@ -24,7 +24,8 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// deterministischen Score-Pfad, Threshold-Logik, Edge-Cases und den Malfunction-Pfad ab.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class SafeguardScannerTests : IClassFixture<SymbolGraphCatalogFixture>
+[Collection("SymbolGraphCatalog")]
+public sealed class SafeguardScannerTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
 
