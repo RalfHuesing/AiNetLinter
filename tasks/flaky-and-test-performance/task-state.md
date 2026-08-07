@@ -2,7 +2,7 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T12:00:00+02:00
+last_updated: 2026-08-07T12:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_fix_rounds: 0
 current_step: step-003
@@ -28,7 +28,7 @@ current_step: step-003
 |------|------|--------|-------|------------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Spike — SymbolGraphMcpFixture auf ICollectionFixture umstellen, Vorher/Nachher messen | 0/3 | MiniMax-M3 | MiniMax-M3 | bf5de7e / cc395d0 |
 | step-002 | EPIC-02 | done | Category-Traits für alle Tests in src/AiNetLinter.Tests/Suppression/ nachziehen (Batch 1 von N) | 0/3 | MiniMax-M3 | MiniMax-M3 | 3ae94c2 / 79d3d6d |
-| step-003 | EPIC-02 | in_progress | Category-Traits für src/AiNetLinter.Tests/Metrics/ nachziehen (Batch 2 von N) | 0/3 | - | - | - |
+| step-003 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Metrics/ nachziehen (Batch 2 von N) | 0/3 | MiniMax-M3 | MiniMax-M3 | 67fb86b / 03b04f4 |
 
 ## Config
 
