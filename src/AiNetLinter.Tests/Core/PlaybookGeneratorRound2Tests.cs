@@ -19,6 +19,7 @@ namespace AiNetLinter.Tests.Core;
 /// Tests für die in Round 2 eingeführten Playbook-Features:
 /// BuildContentAsync, --playbook --check, Ordner-Slices, projektinternes Result.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class PlaybookGeneratorRound2Tests
 {
     private static Solution BuildSolution(string source, string projectName = "TestProj", string docName = "Doc.cs")

@@ -6,6 +6,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class LinterEngineTests
 {
     private static Config CreateDefaultConfig()

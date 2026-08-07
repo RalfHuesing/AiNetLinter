@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class NamespaceFilterTests
 {
     [Fact]

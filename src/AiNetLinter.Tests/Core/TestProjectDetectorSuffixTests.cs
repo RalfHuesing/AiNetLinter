@@ -5,6 +5,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class TestProjectDetectorSuffixTests
 {
     private static Project CreateProjectWithName(string projectName)

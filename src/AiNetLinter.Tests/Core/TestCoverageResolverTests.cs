@@ -3,6 +3,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class TestCoverageResolverTests
 {
     [Fact]

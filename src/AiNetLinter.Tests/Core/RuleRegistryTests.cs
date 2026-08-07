@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class RuleRegistryTests
 {
     [Fact]

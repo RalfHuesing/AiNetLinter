@@ -7,6 +7,7 @@ using AiNetLinter.Maps.Skeleton;
 
 namespace AiNetLinter.Tests.Maps.Skeleton;
 
+[Trait("Category", "Unit")]
 public sealed class SkeletonSyntaxWalkerTests
 {
     private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(

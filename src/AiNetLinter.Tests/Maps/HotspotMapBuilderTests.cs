@@ -9,6 +9,7 @@ using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps;
 
+[Trait("Category", "Unit")]
 public sealed class HotspotMapBuilderTests : IDisposable
 {
     private readonly string _tempDir;

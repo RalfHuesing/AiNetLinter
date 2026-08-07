@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class StaticTestSentinelExemptionTests
 {
     private static Config CreateSentinelConfig(TestSentinelConfig? sentinel = null)

@@ -9,6 +9,7 @@ using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps.Skeleton;
 
+[Trait("Category", "Unit")]
 public sealed class SkeletonMapBuilderTests
 {
     [Fact]

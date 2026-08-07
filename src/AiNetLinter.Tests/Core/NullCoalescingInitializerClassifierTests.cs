@@ -11,6 +11,7 @@ using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class NullCoalescingInitializerClassifierTests
 {
     private static SemanticModel CreateSemanticModel(string source)
