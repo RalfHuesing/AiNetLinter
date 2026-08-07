@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T12:35:00+02:00
+last_updated: 2026-08-07T13:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 5  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-005 (in Planung/Implementierung)
-current_step: step-005  # step-005 ist in Umsetzung; Orchestrator setzt beim Coder-Start auf in_progress, beim Plan-Commit auf done (pending audit)
+total_steps: 5  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); step-005 done/approved
+current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus plant step-006
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,9 +15,10 @@ current_step: step-005  # step-005 ist in Umsetzung; Orchestrator setzt beim Cod
 - **Task-Status:** `executing`
 - **Steps gesamt:** 5 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-005` (in Planung/Implementierung; vierter
-  EPIC-02-Batch — `Architecture/`+`Diagnostics/`+`FalsePositives/`+`Cache/`,
-  7 Klassen in 4 Ordnern gebündelt)
+- **Aktueller Schritt:** `null` (zwischen Steps, letzter abgeschlossener
+  war `step-005` EPIC-02 — done/approved, 0/3 Fix-Runden; nächster
+  Schritt wird vom Planer im Step-Modus geplant — voraussichtlich
+  `step-006`, nächster EPIC-02-Batch)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
@@ -35,7 +36,7 @@ current_step: step-005  # step-005 ist in Umsetzung; Orchestrator setzt beim Cod
 | step-002 | EPIC-02 | done | Category-Traits für alle Tests in src/AiNetLinter.Tests/Suppression/ nachziehen (Batch 1 von N) | - | MiniMax-M3 | MiniMax-M3 | 3ae94c2 / 79d3d6d |
 | step-003 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Metrics/ nachziehen (Batch 2 von N) | - | MiniMax-M3 | MiniMax-M3 | 67fb86b / 03b04f4 |
 | step-004 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Web/ nachziehen (Batch 3 von N) | - | MiniMax-M3 | MiniMax-M3 | 57f7f03 / ecd9dfa |
-| step-005 | EPIC-02 | in_progress | Category-Traits für Arch/Diag/FalsePositives/Cache nachziehen (Batch 4 von N) | - | - | - | - |
+| step-005 | EPIC-02 | done | Category-Traits für Arch/Diag/FalsePositives/Cache nachziehen (Batch 4 von N) | - | MiniMax-M3 | MiniMax-M3 | b15a198 / fe95a08 |
 
 ## Config
 
