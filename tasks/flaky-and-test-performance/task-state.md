@@ -4,8 +4,8 @@ task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
 last_updated: 2026-08-07T17:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 13  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-013  # done (approved), wartet auf nächsten Planer-Aufruf
+total_steps: 14  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-014  # geplant, wartet auf Coder
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,10 +15,10 @@ current_step: step-013  # done (approved), wartet auf nächsten Planer-Aufruf
 - **Task-Status:** `executing`
 - **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-013` (done, approved — Mcp/Tools/ 17/17
-  + TD-007 erledigt; Unit-Filter 984→1130, Total 1325±0)
+- **Aktueller Schritt:** `step-014` (geplant — Rest-EPIC-02 Mega-Batch 20
+  Klassen; danach nur noch `McpServerCommandTests.cs` method-level offen)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit —
-  Rest: `Mcp/`-Root, `Baseline/`, `Commands/`, `Cli/`; übrige Epics offen)
+  nach step-014 nur noch `McpServerCommandTests.cs` offen; übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
@@ -42,6 +42,7 @@ current_step: step-013  # done (approved), wartet auf nächsten Planer-Aufruf
 | step-011 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/+Core/ nachziehen (Batch 8b, Mega-Batch 20 Klassen) | - | MiniMax-M3 | MiniMax-M3 | bb39619 / 2a4067a / daad777 (3 Commits, Hash-Korrektur) |
 | step-012 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | MiniMax-M3 | Cursor Grok 4.5 | b2477f5 / 7deeff1 |
 | step-013 | EPIC-02 | done | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | Sonnet 5 | Sonnet 5 | 0d5cee2 / 5c4600c |
+| step-014 | EPIC-02 | open | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | - | - | - |
 
 ## Config
 
