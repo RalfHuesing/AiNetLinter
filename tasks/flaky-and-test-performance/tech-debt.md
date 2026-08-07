@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-07T15:35:00+02:00
+last_updated: 2026-08-07T16:45:00+02:00
 ---
 
 # Tech-Debt-Log: flaky-and-test-performance
@@ -24,7 +24,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 | TD-004 | `Output/` + `Core/` (u. a. 7/17 in step-012) | niedrig | `#nullable enable`-Inkonsistenz in Test-Ordnern (`Output/` 5/10, `Core/`-L–V 7/11 ohne Direktive). |
 | TD-005 | `src/AiNetLinter.Tests/Configuration/` (4 von 8 Test-Dateien) | niedrig | UTF-8-BOM-Inhomogenität in `Configuration/`: 4 von 8 `.cs`-Dateien mit BOM, 4 ohne — Repository-weite Konsistenz-Frage ohne funktionale Auswirkung, byte-genau konserviert in step-009. |
 | TD-006 | `Core/Checkers/` + `Core/` (BOM) | niedrig | UTF-8-BOM-Inhomogenität: `Core/Checkers/` 10/27 + `Core/`-Rest step-012 4/11 mit BOM; byte-genau konserviert. |
-| TD-007 | `tasks/.../step-012/_insert_trait_skeleton.py` + `_code_commit_msg.txt` | niedrig | Coder-Hilfsdateien-Leichen im Doku-Commit `7deeff1` mitcommitted; rein mechanisch löschbar. |
+| TD-007 | `tasks/.../step-012/_insert_trait_skeleton.py` + `_code_commit_msg.txt` | niedrig | **erledigt (step-013)** — Coder-Hilfsdateien-Leichen im Doku-Commit `7deeff1` mitcommitted; rein mechanisch löschbar. |
 
 ## Einträge
 
@@ -134,4 +134,4 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** Außerhalb der Kritiker-Rolle (keine Code-/Repo-Änderungen, keine Commits). Löschen ist trivial, war aber nicht Teil der Review-Artefakte-Pflicht.
 - **Vorschlag:** Beide Dateien löschen und in einem späteren Doku-/Aufräum-Commit entfernen (Subject z. B. `docs(tasks): step-012 Hilfsdateien entfernen [flaky-and-test-performance]`).
 - **Auto-Fixable:** ja — rein mechanische Löschung ohne Architektur-Ermessen und ohne Verhaltensänderung.
-- **Status:** offen
+- **Status:** erledigt — als item-18 (`auto_fixable: ja`) im Doku-Commit `5c4600c` von step-013 umgesetzt (beide Dateien gelöscht, verifiziert per Kritiker-Review); Verdict `approved`.

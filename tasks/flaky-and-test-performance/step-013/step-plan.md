@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: flaky-and-test-performance
 step: 013
