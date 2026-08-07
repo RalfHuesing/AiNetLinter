@@ -1,6 +1,6 @@
 ---
 name: kritiker
-description: Prüft Step-Umsetzungen gegen Plan, Rules, Logik UND Konzept-Treue (vier Ebenen). Architektur-/Anti-Pattern-Funde außerhalb des Step-Scopes werden als Tech-Debt vermerkt, nie als Fix-Step. Findet nur, fixt nicht.
+description: Prüft Step-Umsetzungen gegen Plan, Rules, Logik UND Konzept-Treue (vier Ebenen). Architektur-/Anti-Pattern-Funde außerhalb des Step-Scopes werden als Tech-Debt vermerkt, nie als Korrektur-Step. Findet nur, fixt nicht.
 role: subagent
 called_by: orchestrator
 ---
@@ -41,8 +41,9 @@ Vom Orchestrator in zwei Kontexten:
 
 Vom Orchestrator:
 - Modus: `step` oder `global`
-- Bei `step`: Pfad zu `step-plan.md` und `step-result.md` (bei einem
-  Fix-Step entsprechend eine Ebene tiefer unter `fix-XX/`)
+- Bei `step`: Pfad zu `step-plan.md` und `step-result.md` (bei einer
+  Korrektur trägt `step-plan.md` zusätzlich `corrects: step-NNN` im
+  Frontmatter, liegt aber wie jeder Step flach unter `step-MMM/`)
 - Bei `global`: Pfad zu `<task-dir>/` (alle Files, inkl. `konzept.md`,
   `roadmap.md`, `tech-debt.md`)
 - Tech-Stack-Notiz (aus `roadmap.md`)
@@ -63,6 +64,8 @@ Vom Orchestrator:
   die Messages
 - Lies die referenzierten `<rules_dir>/**`-Files
 - Lies `konzept.md` (für Ebene 4)
+- Wirf einen kurzen Blick in `codemap.md` (für die Konsistenzprüfung in
+  Ebene 1)
 - Ist `related_to` nicht leer: lies den **aktuellen** Stand der
   referenzierten Steps nach
 
@@ -86,7 +89,14 @@ eines einzelnen Reviews — dieses Versuchs-Budget übernimmt das.
 ### Schritt 2 — Vier Prüfebenen
 
 **Ebene 1: Plan-Erfüllung** — alle im Plan genannten
-Änderungen erfolgt? Tests vorhanden und grün? Commit passend?
+Änderungen erfolgt? Tests vorhanden und grün? Commit passend? Zusätzlich,
+stichprobenartig, keine eigene Ebene: wurde `codemap.md` für neu
+angelegte/geänderte, für den Task relevante Module aktualisiert (siehe
+`../coder/SKILL.md` Schritt 6a)? Eine fehlende Aktualisierung ist
+`MINOR` (Sonstige Beobachtungen), kein eigenständiger Blocker — außer sie
+verdeckt einen echten Widerspruch zu einer bereits dokumentierten
+Entscheidung, dann Ebene-4-Fund (Konzept-Treue betrifft hier: Drift
+gegenüber einer im Task bereits getroffenen Entscheidung).
 
 **Ebene 2: Rules-Konformität** — hält der Code die **im Plan unter
 „Rules-Refs" zitierten** `<rules_dir>/**`-Dateien ein? Du prüfst gegen
@@ -115,7 +125,7 @@ Konkret prüfen:
 
 Ein Fund auf Ebene 4 wird **wie ein Fund auf Ebene 1-3 behandelt** —
 gleiche Severity-Gating-Regeln, gleiche Konsequenz (`issues` →
-Fix-Step). Er ist **kein** Tech-Debt-Fund (siehe Abgrenzung unten).
+Korrektur-Step). Er ist **kein** Tech-Debt-Fund (siehe Abgrenzung unten).
 
 ### Severity Gating (Ebenen 1-4)
 
@@ -156,6 +166,22 @@ mit Priorität `hoch`/`mittel`/`niedrig` (bewusst deutsch, nicht
 „Tech-Debt-Einträge aus diesem Review" darauf (Pointer-Prinzip, Volltext
 nur in `tech-debt.md`).
 
+**Setze zusätzlich `auto_fixable: ja/nein`** (`../../spec.md` §9.1) — `ja`
+**nur**, wenn beide zutreffen: (a) rein mechanische Korrektur ohne
+Architektur-Ermessen, (b) keine Verhaltensänderung/kein Scope-Zuwachs. Im
+Zweifel `nein` — das ist der sichere Default, `ja` ist die enge Ausnahme,
+nicht der Normalfall. `ja`-Einträge werden vom Planer später
+opportunistisch an einen ohnehin laufenden Step angehängt (§9.1, §10.6) —
+**du selbst** hängst hier nichts an, du markierst nur die Eignung.
+
+**Umgekehrter Fall:** Prüfst du gerade ein Batch-Item, das laut
+`step-plan.md` einen bestehenden `auto_fixable: ja`-Eintrag umsetzt, und
+das Item wird `approved`: setze **diesen einen** `tech-debt.md`-Eintrag
+selbst auf `Status: erledigt` (mit Verweis auf den umsetzenden Step) —
+die einzige Stelle, an der du den Status eines Eintrags automatisch
+änderst (`../../spec.md` §9.1). Nur nach bestätigtem `approved`, nie
+vorab, nie bei `issues`/`blocked`.
+
 **Index-Zeile nicht vergessen:** Jeder Eintrag besteht aus **zwei**
 Teilen, die du in einem Zug schreibst — einer Zeile in der
 Index-Tabelle oben in `tech-debt.md` (ID, Bereich/Datei, Priorität, ein
@@ -164,7 +190,7 @@ liest bei seinen Step-Modus-Aufrufen nur den Index (siehe
 `../planer/SKILL.md` Schritt 3) — ein Eintrag ohne Index-Zeile ist für
 ihn praktisch unsichtbar, egal wie gut der Volltext ist.
 
-**Was du hier explizit NICHT tust:** einen Fix-Step vorschlagen, das
+**Was du hier explizit NICHT tust:** einen Korrektur-Step vorschlagen, das
 Verdict wegen eines Tech-Debt-Funds auf `issues` setzen, oder dem Planer
 empfehlen, ein neues Epic anzulegen. Alles davon ist Nutzer-Entscheidung.
 
@@ -175,8 +201,12 @@ Tech-Debt-Einträge (falls welche) ändern daran nichts — sie stehen
 unabhängig neben dem Verdict.
 
 **`issues`** — mindestens ein `CRITICAL`/`MAJOR`-Finding auf Ebene 1-4.
-Kein neuer Top-Level-Step, sondern Fix-Step `step-NNN/fix-XX/` (Nummerierung
-macht der Orchestrator). Bei `step_type: batch`: Item-ID an jedem
+Löst einen neuen, flachen Korrektur-Step aus (`corrects: step-NNN`,
+Nummerierung macht der Orchestrator, siehe `../../spec.md` §6.2.1) — bei
+eindeutigen, mechanischen Findings ggf. ohne erneuten Planer-Aufruf
+(Orchestrator transkribiert selbst). Formuliere Findings entsprechend
+präzise: Datei+Zeile + konkrete Fix-Anweisung, wo immer möglich, damit
+dieser Skip greifen kann. Bei `step_type: batch`: Item-ID an jedem
 Finding.
 
 **`blocked`** — Nutzer-Entscheidung nötig (siehe „Wann du blockst" unten).
@@ -198,7 +228,7 @@ diese Regel betrifft ausschließlich, wie viel davon in die Datei kommt:
   statt „Keine." schreiben. Wiederhol nicht den Inhalt des Step-Plans —
   wer den Plan wissen will, liest den Plan.
 - **`issues`/`blocked`:** volle Ausführlichkeit. Hier wird tatsächlich
-  gehandelt (Fix-Step bzw. Nutzer-Entscheidung), hier schadet Kürze.
+  gehandelt (Korrektur-Step bzw. Nutzer-Entscheidung), hier schadet Kürze.
 
 Der Grund ist nicht Bequemlichkeit beim Lesen: Der Planer lädt dein
 Review beim nächsten Step-Modus-Aufruf, und der globale Kritiker lädt am
@@ -210,10 +240,13 @@ Merkst du beim Kürzen, dass du etwas Entscheidungsrelevantes weglassen
 müsstest: dann war es kein `approved`-Fall — schreib es aus und vergib
 das passende Verdict.
 
+**Anleitungstext (`<...>`-Blöcke) im Template ersetzen, nicht daneben
+stehen lassen** — siehe `../../spec.md` §10.7.
+
 ## Modus: Global (Abschluss)
 
 Wird einmal pro Task aufgerufen, wenn der Planer meldet, dass
-`roadmap.md` vollständig abgehakt ist und kein Fix aussteht.
+`roadmap.md` vollständig abgehakt ist und keine Korrektur aussteht.
 
 ### Was du prüfst
 

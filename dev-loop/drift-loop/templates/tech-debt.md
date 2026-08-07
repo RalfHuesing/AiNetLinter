@@ -16,9 +16,15 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 Bewusst `hoch`/`mittel`/`niedrig` (deutsch) statt `CRITICAL`/`MAJOR`/
 `MINOR`, um jede Verwechslung mit den blockierenden Findings in
 `step-review.md` auszuschließen — kein Eintrag hier führt automatisch zu
-einem Fix-Step oder einem neuen Epic. Das entscheidet ausschließlich der
-Nutzer (manuell, z. B. durch Ergänzen eines Epics in `roadmap.md` mit
-Verweis auf die Tech-Debt-ID).
+einem eigenen Korrektur-Step oder einem neuen Epic. Das entscheidet
+grundsätzlich der Nutzer (manuell, z. B. durch Ergänzen eines Epics in
+`roadmap.md` mit Verweis auf die Tech-Debt-ID).
+
+**`auto_fixable` (`ja`/`nein`, siehe `../spec.md` §9.1) ist die einzige
+Ausnahme:** rein mechanische, entscheidungsfreie Fixes ohne
+Architektur-Ermessen dürfen vom Planer opportunistisch an einen ohnehin
+laufenden Step angehängt werden (§10.6) — kein eigener Step, kein
+eigener Sweep. Default bei Unsicherheit ist `nein`.
 
 ## Index
 
@@ -35,13 +41,13 @@ Der Kritiker pflegt Index-Zeile und Volltext-Eintrag **immer zusammen**
 (ein Fund = eine Zeile hier + ein Abschnitt unten) — ein Eintrag ohne
 Index-Zeile ist für den Planer praktisch unsichtbar.>
 
-| ID | Bereich / Datei | Priorität | Kurzfassung |
-|---|---|---|---|
-| TD-001 | `pfad/zu/modul` | mittel | <ein Halbsatz, worum es geht> |
+| ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
+|---|---|---|---|---|
+| TD-001 | `pfad/zu/modul` | mittel | nein | <ein Halbsatz, worum es geht> |
 
 ## Einträge
 
-### TD-001 — <Kurztitel> [Priorität: hoch|mittel|niedrig]
+### TD-001 — <Kurztitel> [Priorität: hoch|mittel|niedrig] [Auto-Fixable: ja|nein]
 
 - **Gefunden in:** step-NNN (Kritiker-Review vom <ISO-8601>)
 - **Ort:** `pfad/zu/datei.ext:Zeile` (ggf. weitere Fundstellen)
@@ -50,7 +56,14 @@ Index-Zeile ist für den Planer praktisch unsichtbar.>
   beträfe z. B. mehrere frühere Steps>
 - **Vorschlag:** <grobe Fix-Richtung, kein Detailplan — das wäre Aufgabe
   eines künftigen Epics/Steps, falls der Nutzer sich dafür entscheidet>
+- **Auto-Fixable:** ja|nein — `ja` nur bei rein mechanischer Korrektur
+  ohne Architektur-Ermessen und ohne Verhaltensänderung (siehe `../spec.md`
+  §9.1). Bei `ja`: darf vom Planer opportunistisch an einen ohnehin
+  laufenden Step angehängt werden, statt auf eine Nutzer-Entscheidung zu
+  warten.
 - **Status:** offen  # offen | erledigt | verworfen — Änderung ist
-  manuell (Nutzer), kein Subagent aktualisiert dieses Feld selbst
+  manuell (Nutzer) bzw. automatisch auf „erledigt" nach erfolgreicher
+  Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
+  Status eines `nein`-Eintrags selbst
 
 ### TD-002 — ...

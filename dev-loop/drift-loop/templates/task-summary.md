@@ -76,6 +76,6 @@ lassen", …>
 - **Davon approved:** <N>
 - **Davon blocked:** <N>
 - **Anzahl Commits:** <N>
-- **Anzahl Tech-Debt-Einträge:** <N>
-- **Loop-Iterationen (Fix-Runden):** <N> / 12 (Task-Not-Anker)
+- **Anzahl Tech-Debt-Einträge:** <N> (davon `auto_fixable: ja`: <N>)
+- **Davon Korrektur-Steps:** <N> (längste `corrects`-Kette: <N> / 3)
 - **Laufzeit:** <von started_at bis completed_at>

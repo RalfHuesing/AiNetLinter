@@ -2,7 +2,7 @@
 status: done
 type: step-result
 task: <TASK-NAME>
-step: <NNN>              # im Fix-Modus: <NNN>/fix-<XX>
+step: <NNN>              # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner
 epic: <EPIC-NN>
 step_type: single  # single | batch — aus step-plan.md übernehmen
 coded_by: coder

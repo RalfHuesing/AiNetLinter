@@ -123,16 +123,36 @@ nächsten Step — schreib für die, nicht fürs Archiv.
   „Bekannte Unschärfen" — das sind die Abschnitte, wegen derer die Datei
   überhaupt existiert. Lieber dort konkret werden als anderswo
   ausführlich.
+- **Anleitungstext (`<...>`-Blöcke) im Template ersetzen, nicht daneben
+  stehen lassen** — siehe `../../spec.md` §10.7.
 
 Aktualisiere danach `status` in `step-plan.md` von `in_progress` auf
 `done (pending audit)`.
 
+### Schritt 6a — CodeMap aktualisieren
+
+Datei: `<task-dir>/codemap.md` (Template `../../templates/codemap.md`).
+**Vor** dem Doku-Commit (Schritt 7): trag für jedes Modul/jeden Bereich,
+den du in diesem Step angelegt oder strukturell verändert hast, einen
+Eintrag ein oder aktualisiere den bestehenden — Ort + **ein Satz**, was
+dort ist (Pointer-Prinzip, keine Verhaltensbeschreibung, siehe Template).
+Kein Eintrag für rein kosmetische Änderungen, die niemand als „neuer
+relevanter Bereich" nachschlagen würde.
+
+**Warum das nicht optional ist:** Der Planer verlässt sich beim nächsten
+Step-Modus-Aufruf auf diese Karte, um nicht wieder blind suchen zu
+müssen (`../../spec.md` §5, §7.2) — und auf sie, um zu erkennen, ob ein
+neuer Step einer bereits getroffenen Entscheidung widerspricht
+(Anti-Loop-Check). Ein vergessenes Update macht dich zur Lücke in
+genau dem Mechanismus, der das verhindern soll.
+
 ### Schritt 7 — Doku-Commit machen
 
 Zweiter, kleiner Commit — nur Task-Doku (`step-plan.md` +
-`step-result.md`). Subject wie in Schritt 5 mit Suffix `[<kurzname>]`.
-Kein Push. Grund für zwei Commits: der Doku-Commit referenziert den Hash
-des Code-Commits, kann also erst danach entstehen.
+`step-result.md` + `codemap.md`-Diff, falls vorhanden). Subject wie in
+Schritt 5 mit Suffix `[<kurzname>]`. Kein Push. Grund für zwei Commits:
+der Doku-Commit referenziert den Hash des Code-Commits, kann also erst
+danach entstehen.
 
 ## Was du NICHT tun darfst
 
@@ -149,6 +169,9 @@ des Code-Commits, kann also erst danach entstehen.
 - **Keine Änderung an anderen Steps.**
 - **Keine eigenen Tech-Debt-Einträge anlegen** — `tech-debt.md` gehört
   ausschließlich dem Kritiker.
+- **In `codemap.md` nur eintragen, was du tatsächlich gebaut/geändert
+  hast** — keine Verhaltensbeschreibungen, keine Vermutungen über Bereiche,
+  die du nicht angefasst hast.
 
 ## Wann du blockst (Status `blocked`)
 

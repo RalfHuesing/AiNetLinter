@@ -2,7 +2,7 @@
 status: done
 type: step-review
 task: <TASK-NAME>
-step: <NNN>              # im Fix-Modus: <NNN>/fix-<XX>
+step: <NNN>              # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner
 epic: <EPIC-NN>
 step_type: single  # single | batch — aus step-plan.md übernehmen
 reviewed_by: kritiker
@@ -25,7 +25,7 @@ Schritt 5, `../spec.md` §10.7. Dieser Hinweis-Block gehört wie alle
 ## Verdict
 
 - [x] **approved** — alle vier Prüfebenen ok
-- [ ] **issues** — Fix-Step `step-<NNN>/fix-<XX>` angelegt mit Fix-Plan
+- [ ] **issues** — Korrektur-Step `step-<MMM>` angelegt (`corrects: step-<NNN>`)
 - [ ] **blocked** — Nutzer-Entscheidung nötig (siehe Frage unten)
 
 ## Geprüft
@@ -87,6 +87,12 @@ sein: Datei:Zeile + Schweregrad + Ebene (Plan/Rules/Logik/Konzept) + Was
 1. `pfad/zu/datei.cs:42` — [CRITICAL|MAJOR] [Konzept-Treue] <Befund>. **Fix:** <konkret>.
 2. ...
 
+<Je präziser „Fix" (konkrete Anweisung statt vager Richtung), desto eher
+kann der Orchestrator den Korrektur-Plan mechanisch selbst schreiben und
+den Planer-Aufruf überspringen — siehe `../spec.md` §6.2.1. Ist bei einem
+Finding Ermessen nötig: das ruhig so benennen statt eine falsche
+Eindeutigkeit vorzutäuschen.>
+
 <Bei `step_type: batch`: jedem Finding zusätzlich die Item-ID voranstellen.>
 
 ## Frage an Nutzer (nur bei `blocked` — Abschnitt sonst weglassen)
@@ -104,7 +110,7 @@ weglassen, nicht „Keine." schreiben.>
 ## Tech-Debt-Einträge aus diesem Review (weglassen, wenn keine)
 
 <Nur Architektur-/Anti-Pattern-/Duplikations-Beobachtungen AUSSERHALB des
-Step-Scopes, die NICHT zu einem Fix-Step führen sollen — siehe
+Step-Scopes, die NICHT zu einem Korrektur-Step führen sollen — siehe
 `../spec.md` §8.3. Pro Fund **eine Zeile**: ID + ein Satz. Volltext steht
 ausschließlich in `tech-debt.md` (Pointer-Prinzip, nicht doppelt
 pflegen).>
