@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T17:00:00+02:00
+last_updated: 2026-08-07T17:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-015  # geplant, wartet auf Coder
+current_step: step-015  # done (approved), letzter EPIC-02-Step. Task pausiert (Nutzer-Vorgabe), kein Step in_progress.
 ---
 
 # Task State: flaky-and-test-performance
@@ -19,9 +19,12 @@ current_step: step-015  # geplant, wartet auf Coder
   EPIC-02-Schritt; Unit 1193 + Integration 132 = Total 1325, Kritiker
   hat projektweit verifiziert: 0 ungetaggte `[Fact]`/`[Theory]` im
   gesamten `src/AiNetLinter.Tests/`-Baum)
-- **Roadmap:** siehe `roadmap.md` (EPIC-01+EPIC-02 abgehakt; übrige
-  Epics offen). **Nutzer-Vorgabe: Task pausiert hier nach EPIC-02,
-  kein automatisches Weiterlaufen zu EPIC-03.**
+- **Roadmap:** siehe `roadmap.md` (EPIC-01 + EPIC-02 abgehakt; EPIC-03
+  bis EPIC-08 offen, unangetastet für eine spätere Session).
+- **Pause-Grund:** Nutzer-Vorgabe „EPIC-02 abschließen, danach stop" —
+  bewusster Halt, **kein** Guard-Abbruch, **kein** Blocker. Bei Resume
+  (Fall B, `status: executing`) macht der Loop normal bei EPIC-03
+  weiter, sobald der Nutzer das anstößt.
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
