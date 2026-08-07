@@ -9,6 +9,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class MethodParameterCountIgnoreTypePrefixesTests
 {
     private static Config CreateConfig(int maxParams = 4) => TestHelper.CreateDefaultConfig() with

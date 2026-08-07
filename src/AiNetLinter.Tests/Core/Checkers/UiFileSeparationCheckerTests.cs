@@ -11,6 +11,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class UiFileSeparationCheckerTests : IDisposable
 {
     private readonly string _tempDir;

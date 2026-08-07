@@ -19,6 +19,7 @@ namespace AiNetLinter.Tests.Core;
 /// <summary>
 /// Unit-Tests für den LinterAutoFixer zur Verifizierung der Korrektur-Operationen.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class AutoFixerTests
 {
     private static Solution CreateTestSolution(Dictionary<string, string> files)

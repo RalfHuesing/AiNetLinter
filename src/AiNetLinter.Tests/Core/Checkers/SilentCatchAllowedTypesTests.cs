@@ -9,6 +9,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class SilentCatchAllowedTypesTests
 {
     private static Config CreateConfig(string[]? allowedTypes = null) => TestHelper.CreateDefaultConfig() with

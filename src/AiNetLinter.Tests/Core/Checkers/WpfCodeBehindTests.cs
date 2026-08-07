@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class WpfCodeBehindTests
 {
     private static Config CreateConfig(

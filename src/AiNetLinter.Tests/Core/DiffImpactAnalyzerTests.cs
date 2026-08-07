@@ -11,6 +11,7 @@ namespace AiNetLinter.Tests.Core;
 /// <summary>
 /// Unit-Tests für den DiffImpactAnalyzer zur Verifizierung des Git-Diff-Hunk-Parsers.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class DiffImpactAnalyzerTests
 {
     [Fact]

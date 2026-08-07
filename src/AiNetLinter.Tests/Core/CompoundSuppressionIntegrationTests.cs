@@ -11,6 +11,7 @@ using AiNetLinter.Models;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class CompoundSuppressionIntegrationTests
 {
     private static string GenerateMethodCode(int lineCount, int parameterCount, int cc)

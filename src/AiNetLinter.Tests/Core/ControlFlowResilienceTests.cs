@@ -7,6 +7,7 @@ using System.Linq;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class ControlFlowResilienceTests
 {
     private static Config CreateConfig(bool enabled)

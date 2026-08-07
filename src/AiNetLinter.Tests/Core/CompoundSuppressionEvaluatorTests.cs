@@ -7,6 +7,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class CompoundSuppressionEvaluatorTests
 {
     private const int NoSuppressionSentinel = -1;

@@ -9,6 +9,7 @@ using AiNetLinter.Core.Checkers;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class ClassInfoCollectorTests
 {
     [Fact]

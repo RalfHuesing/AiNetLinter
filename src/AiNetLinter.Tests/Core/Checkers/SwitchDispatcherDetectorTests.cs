@@ -9,6 +9,7 @@ using AiNetLinter.Core;
 
 namespace AiNetLinter.Tests.Core.Checkers;
 
+[Trait("Category", "Unit")]
 public sealed class SwitchDispatcherDetectorTests
 {
     private static SemanticModel CreateSemanticModel(string source)

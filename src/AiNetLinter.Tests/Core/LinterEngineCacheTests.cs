@@ -14,6 +14,7 @@ using AiNetLinter.Cache;
 
 namespace AiNetLinter.Tests.Core;
 
+[Trait("Category", "Unit")]
 public sealed class LinterEngineCacheTests : IDisposable
 {
     private readonly string _tempDir;
