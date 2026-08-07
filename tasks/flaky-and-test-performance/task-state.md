@@ -4,8 +4,8 @@ task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
 last_updated: 2026-08-07T17:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 14  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-014  # geplant, wartet auf Coder
+total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-015  # geplant, wartet auf Coder
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,10 +15,10 @@ current_step: step-014  # geplant, wartet auf Coder
 - **Task-Status:** `executing`
 - **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-014` (done, approved — Rest-EPIC-02
-  20/20 Klassen; Unit-Filter 1130→1184, Integration 113→121, Total 1325±0)
-- **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit —
-  nur noch `McpServerCommandTests.cs` method-level offen; übrige Epics offen)
+- **Aktueller Schritt:** `step-015` (geplant — letzter EPIC-02-Schritt,
+  20 method-level Traits in `McpServerCommandTests.cs`)
+- **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 nach
+  step-015 vollständig; übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (TD-001 mittel; TD-002..TD-006 niedrig;
   TD-007 durch step-013 erledigt)
 - **Gestartet:** 2026-08-07
@@ -43,6 +43,7 @@ current_step: step-014  # geplant, wartet auf Coder
 | step-012 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/+Maps/ nachziehen (Batch 9, Mega-Batch 17 Klassen) | - | MiniMax-M3 | Cursor Grok 4.5 | b2477f5 / 7deeff1 |
 | step-013 | EPIC-02 | done | Category-Traits für Mcp/Tools/ (17 Klassen) + TD-007 Hilfsdateien löschen (Mega-Batch) | - | Sonnet 5 | Sonnet 5 | 0d5cee2 / 5c4600c |
 | step-014 | EPIC-02 | done | Category-Traits für Rest-EPIC-02 (Mcp/-Root + Baseline/ + Commands/-Teil + Cli/, 20 Klassen, Mega-Batch) | - | Sonnet 5 | Sonnet 5 | c46d839 / 98e2e9a |
+| step-015 | EPIC-02 | open | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | - | - | - |
 
 ## Config
 
