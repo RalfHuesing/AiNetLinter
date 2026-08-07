@@ -30,6 +30,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
     {
         var tempDir = CreateTempDir();
@@ -54,6 +55,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_NoSolutionFound_ReportsResourceNotFound()
     {
         var tempDir = CreateTempDir();
@@ -73,6 +75,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_SingleCandidate_ReturnsIt()
     {
         var tempDir = CreateTempDir();
@@ -94,6 +97,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_MissingPath_UsesCurrentDirectory()
     {
         var tempDir = CreateTempDir();
@@ -118,6 +122,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public async Task TryLoadSolutionAsync_BrokenSlnx_LogsWarningWithoutThrowing()
     {
         var tempDir = CreateTempDir();
@@ -142,6 +147,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_ServerRespondsWithThirteenTools()
     {
         var tools = await _baselineMcpFixture.Client.ListToolsAsync();
@@ -163,6 +169,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetHotspotsReturnsAllGreenForSmallFixture()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -175,6 +182,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetIndexScopeReturnsFileTypeBreakdown()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -189,6 +197,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetViolationsReturnsAtLeastOneViolation()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -201,6 +210,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_SearchPatternReturnsExpectedHit()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -213,6 +223,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_FindSymbolReturnsMatch()
     {
         var result = await _baselineMcpFixture.Client.CallToolAsync(
@@ -225,6 +236,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_FindReferencesReturnsCallSite()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -237,6 +249,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetImpactWithGitRefReturnsCallSite()
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
@@ -253,6 +266,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetImpactWithoutGitRefUncommittedReturnsCallSite()
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
@@ -269,6 +283,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -281,6 +296,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy()
     {
         var result = await _symbolGraphMcpFixture.Client.CallToolAsync(
@@ -294,6 +310,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveMaxLineCount_ConfigWithCustomMaxLineCount_ReturnsConfiguredValue()
     {
         var tempDir = CreateTempDir();
@@ -314,6 +331,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveMaxLineCount_NoConfigPath_ReturnsMetricsConfigDefault()
     {
         var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
@@ -324,6 +342,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveConfig_ConfigWithCustomMaxLineCount_UsesConfigFromArgs()
     {
         var tempDir = CreateTempDir();
@@ -345,6 +364,7 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ResolveConfig_NoConfigPath_ReturnsDefaultConfig()
     {
         var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
