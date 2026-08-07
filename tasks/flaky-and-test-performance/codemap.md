@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T13:10:00+02:00
+last_updated: 2026-08-07T13:25:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -97,7 +97,7 @@ Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; k
 - **`src/AiNetLinter.Tests/Diagnostics/`** — 1 Klasse (`PerformanceProfilerTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/FalsePositives/`** — 2 Klassen; mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/Cache/`** — 3 Klassen (`AnalysisCacheManagerTests`, `AnalysisCacheManagerIsolationTests`, `CacheEntryMapperTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `AnalysisCacheManagerIsolationTests` zudem 4× method-level `Unit` (additiv, unverändert seit step-005) (zuletzt: step-005)
-- **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); **alle 3 Unit** (verifiziert in step-006 — Subprozess-Marker-Grep 0/0/0/0, `Process\.Start` 0/0/0, `IClassFixture` 0/0/0); die in step-002/005 notierte **Hypothese "ListEvalsCommandTests möglicherweise Integration via Subprozess" ist widerlegt** — `ListEvalsCommand.Run(console)` ist ein direkter in-process-Aufruf mit `TestLintConsole`-Mock aus `AiNetLinter.Tests.Output`, kein `dotnet AiNetLinter.dll`-Subprozess; in Planung für `step-006` (zuletzt: step-005)
+- **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); **alle 3 Unit (ListEvalsCommandTests-Subprozess-Hypothese in step-006 widerlegt)** mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-006)
 - **`src/AiNetLinter.Tests/Output/`** — 10 Klassen; rein Unit, dito (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen; rein Unit, geplant für Batch „Reine-Unit-Ordner, groß" (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Core/Checkers/`** — 27 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
