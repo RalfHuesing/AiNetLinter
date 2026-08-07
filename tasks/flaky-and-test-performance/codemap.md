@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T16:15:00+02:00
+last_updated: 2026-08-07T13:42:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -99,7 +99,7 @@ Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; k
 - **`src/AiNetLinter.Tests/Cache/`** — 3 Klassen (`AnalysisCacheManagerTests`, `AnalysisCacheManagerIsolationTests`, `CacheEntryMapperTests`); mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `AnalysisCacheManagerIsolationTests` zudem 4× method-level `Unit` (additiv, unverändert seit step-005) (zuletzt: step-005)
 - **`src/AiNetLinter.Tests/Evals/`** — 3 Klassen (`EvalAssemblerTests`, `SpecLoaderTests`, `ListEvalsCommandTests`); **alle 3 Unit (ListEvalsCommandTests-Subprozess-Hypothese in step-006 widerlegt)** mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen (zuletzt: step-006)
 - **`src/AiNetLinter.Tests/Output/`** — 9 Test-Klassen + 1 Helper (`TestLintConsole.cs`, ausgenommen — Helper-Klasse ohne `[Fact]`/`[Theory]`, Heuristik-Punkt 6); `Output/`-Schnitt vollständig abgeschlossen (step-007 = 5 Klassen D–O + step-008 = 4 Klassen P–V = 9 Klassen, alle mit `[Trait("Category", "Unit")]` auf Klassen-Ebene; Heuristik-Punkt 6 in 2 Anwendungen ohne Ausnahme bestätigt = vollständig abgehakt) (zuletzt: step-008)
-- **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen; rein Unit, geplant für Batch „Reine-Unit-Ordner, groß" (zuletzt: step-002)
+- **`src/AiNetLinter.Tests/Configuration/`** — 8 Klassen, alle Unit, mit `[Trait("Category", "Unit")]` auf Klassen-Ebene versehen; `Configuration/`-Ordner vollständig abgeschlossen in step-009 (zuletzt: step-009)
 - **`src/AiNetLinter.Tests/Core/Checkers/`** — 27 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Core/`** — 19 Klassen; rein Unit, mehrere Batches (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/Maps/`** + **`Maps/Skeleton/`** — 6 Klassen; rein Unit, dito (zuletzt: step-002)

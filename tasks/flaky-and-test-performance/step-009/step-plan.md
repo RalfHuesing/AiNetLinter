@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: flaky-and-test-performance
 step: 009               # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner
