@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-07T10:35:00+02:00
+last_updated: 2026-08-07T14:55:00+02:00
 ---
 
 # Tech-Debt-Log: flaky-and-test-performance
@@ -20,6 +20,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 |---|---|---|---|
 | TD-001 | `src/AiNetLinter/Cli/` + `konzept.md` | mittel | Konzept-/roadmap.md verweisen auf `--self-lint` als Self-Lint-Befehl, CLI-Option existiert nicht. |
 | TD-002 | `tasks/.../step-*` + `.agents/.../coder/SKILL.md` §Schritt-5 | niedrig | Subject-Längen-Disziplin: 72-Zeichen-Grenze wird in mehreren Schritten überschritten; Plan-DoD-Vorgaben teilweise ungenau. |
+| TD-003 | `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` | niedrig | EOL-Inhomogenität im sonst uniform CRLF geführten `Output/`-Ordner: diese eine Datei ist LF-only (`CR=0`); Konsolidierung als separater Aufräum-Schritt denkbar. |
 
 ## Einträge
 
@@ -48,4 +49,17 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
   - **(a) Planer-Disziplin + Skill-Präzisierung:** Planer gibt in `step-plan.md` DoD einen **konkreten Subject-String** mit korrekter Längenangabe vor (z. B. `chore(tests): Metrics-Traits [flaky-and-test-performance]` = 56 Zeichen) und verzichtet auf Body-Daten, die der Coder selbst gut formulieren kann. `skills/coder/SKILL.md` §Schritt-5 könnte um die explizite Empfehlung "bei absehbarer Subject-Länge >60 Zeichen, im Plan-DoD alternative kürzere Subject-Vorschläge auflisten" ergänzt werden. Coder akzeptiert den Subject-Vorschlag, ggf. mit leichter Anpassung.
   - **(b) Regel-Lockerung für Doku-Commits:** `AiNetLinterRichtlinien.mdc` §4 könnte um eine explizite Ausnahme "Für `docs(...)`- und `chore(task)`-Commits gilt eine gelockerte Obergrenze von 100 Zeichen, da der Subject hier primär Doku-/Audit-Funktion hat und keine Code-Änderung beschreibt" ergänzt werden. Vorteil: pragmatisch, kein zusätzlicher Planer-Aufwand, keine künstlich verkürzten Subject-Strings. Nachteil: Regel-Ausnahme → schwerer zu merken, könnte für Nicht-Doku-Commits als Präzedenz missbraucht werden.
   - **Empfehlung:** Variante (a) — sie ist Spec-treu, ändert die Regel nicht und verlagert die Disziplin in den Planer-Aufruf, wo sie hingehört (Längenvorgabe ist Planer-Wissen, nicht Coder-Wissen).
+- **Status:** offen
+
+### TD-003 — EOL-Inhomogenität in `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` (LF-only statt CRLF) [Priorität: niedrig]
+
+- **Gefunden in:** step-007 (Kritiker-Review vom 2026-08-07T14:55:00+02:00), vom Coder in `step-007/step-result.md` §"Abweichungen vom Plan" / §"Beobachtungen" als out-of-scope-Hinweis bereits benannt.
+- **Ort:** `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` (EOL-Status: `CR=0 LF=63`, kein UTF-8-BOM, erste Bytes `23 6E 75 6C 6C 61 62 6C 65 20 65 6E 61 62 6C 65 0A` = `#nullable enable\n` ohne vorausgehendes `0D` — per PowerShell `[System.IO.File]::ReadAllBytes` verifiziert)
+- **Befund:** Im `Output/`-Ordner sind 9 von 10 Dateien uniform CRLF + Trailing-NL + kein BOM (`DebtReportBuilderHeaderTests`, `DebtReportBuilderTests`, `LinterErrorFormatterTests`, `OutputRootResolverTests`, `PathNormalizerTests`, `RuleLegendRegistryTests`, `TestLintConsole`, `ViolationMarkdownFormatterTests`, `ViolationSummaryBuilderTests` — alle `CR==LF`, kein gemischter Status). **Einzige Ausnahme:** `McpLintConsoleTests.cs` ist **LF-only** (`CR=0`). Vermutlich `core.autocrlf=true` und Sonderverhalten dieser einen Datei beim Checkout (Index = `i/lf`, Working Copy = `w/lf` statt `w/crlf` wie die 9 Schwestern). Im step-007-Plan war die Datei fälschlich als CRLF verifiziert worden (`CR=62 LF=62`) — der Coder hat das durch eigenen Byte-Scan vor dem Edit korrekt als LF-only erkannt und mit byte-genauem Python-Helper (analog step-004-Pattern) konserviert. Kompiliert und testet sauber (voller Lauf 1325/1325 grün, Unit-Filter 368/368 grün) — **kein** funktionaler Schaden. Inkonsistenz jedoch sichtbar in jedem `git status` (`LF will be replaced by CRLF`-Hinweis) und in jedem `git diff` über die Datei.
+- **Warum nicht sofort gefixt:** Außerhalb des step-007-Scopes (rein additives Attribut auf Klassen-Ebene, kein EOL-Cleanup-Auftrag). Die Frage "CRLF beibehalten wie 9 Schwestern oder LF als moderner Standard etablieren" ist eine **Nutzer-/Repo-Konvention-Entscheidung**, nicht rein mechanisch. Eine Renormalisierung auf CRLF setzt den `core.autocrlf=true`-Default des Repos fort; eine Umstellung auf LF (z. B. via `.gitattributes` `* text=auto eol=lf`) ist eine breitere Konvention-Frage mit Auswirkungen auf alle 1000+ Repo-Dateien.
+- **Vorschlag (zwei alternative Richtungen — Nutzer-/Orchestrator-Entscheidung):**
+  - **(a) Lokale Renormalisierung auf CRLF:** `git add --renormalize .` über `src/AiNetLinter.Tests/Output/McpLintConsoleTests.cs` + Commit mit Subject wie `chore(tests): Output/-EOL normalisieren [flaky-and-test-performance]`. Greift die Datei auf den Ordner-Standard zurück, kein Verhaltens-Effekt. Erfordert keinen weiteren Mechanik-Schritt; passt als `auto_fixable: ja`-Bündel in einen ohnehin laufenden EPIC-02-Folge-Step.
+  - **(b) Repo-weite Umstellung auf LF:** `.gitattributes` mit `* text=auto eol=lf` (oder pro Datei-Endung) + `git add --renormalize .` + Commit. Konsistent mit modernen Cross-Plattform-Repos (Linux/macOS/Container-CI), entfernt die Windows-only-CRLF-Inhomogenität global. Hat aber Auswirkungen auf den gesamten `Output/`-Ordner und viele weitere Dateien — eigenständiger Step mit Vorab-Bestandsaufnahme sinnvoll.
+  - **Empfehlung:** Variante (a) — minimal-invasiv, passt zur etablierten Output/-Ordnung, kann als gebündeltes Aufräum-Item in step-008 oder einen späteren `Output/`-Step mitlaufen, **ohne** die Repo-Konvention global in Frage zu stellen. Variante (b) wäre ein eigenständiges, vom Nutzer angefordertes Cross-Plattform-Refactoring.
+- **auto_fixable:** nein (EOL-Repo-Konvention-Frage; Variante (a) ist zwar rein mechanisch, aber die Entscheidung "CRLF ja/nein" selbst ist Nutzer-Sache und nicht im Schritt-Scope eines Trait-Batches)
 - **Status:** offen
