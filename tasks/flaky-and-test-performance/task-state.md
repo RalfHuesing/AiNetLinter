@@ -2,7 +2,7 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T08:55:00+02:00
+last_updated: 2026-08-07T09:02:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
 total_fix_rounds: 0
 current_step: step-001
@@ -26,7 +26,7 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Fix-Runden | Coded | Reviewed | Commit |
 |------|------|--------|-------|------------|-------|----------|--------|
-| _noch keine_ | - | - | - | - | - | - | - |
+| step-001 | EPIC-01 | in_progress | Spike — SymbolGraphMcpFixture auf ICollectionFixture umstellen, Vorher/Nachher messen | 0/3 | - | - | - |
 
 ## Config
 
