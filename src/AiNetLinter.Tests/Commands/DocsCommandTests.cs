@@ -15,6 +15,7 @@ namespace AiNetLinter.Tests.Commands;
 /// Dokumentnamen zu prüfen — parallel laufende Tests würden sich die globale Konsolenumleitung
 /// gegenseitig überschreiben.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class DocsCommandTests
 {

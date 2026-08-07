@@ -62,6 +62,6 @@ aktuellen Step passen.
 
 - [ ] EPIC-06: Flaky-Test strukturell fixen — `McpServerCommandLoadingStateTests.LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately` (Test-Datei Zeile ~112-150) vom Poll-Loop mit fixer 5s-Deadline auf `TaskCompletionSource`/Event-basiertes Warten auf den `LoadState`-Übergang umstellen; Thread-Pool-Timing-Abhängigkeit eliminieren. Verifikation: 10 aufeinanderfolgende **volle** Testläufe grün (nicht isoliert). Konzept §"Wie" Schritt 6, §"Muss-Haven" Flaky-Punkt, §"Definition of Done" Flaky-Kriterium.
 
-- [x] EPIC-07: Tote `ConsoleTestCollection`-Infrastruktur entfernen (Nice-to-Have) — verwaiste `ConsoleTestCollection.cs` gelöscht und `[Collection("ConsoleTestCollection")]`-Attribute aus 5 Testklassen entfernt. Abgeschlossen in `step-018`.
+- [ ] EPIC-07: Tote `ConsoleTestCollection`-Infrastruktur entfernen — **Nicht umsetzbar / verworfen:** `ConsoleTestCollection` mit `DisableParallelization = true` wird von 5 Testklassen zwingend benötigt, da sie `Console.SetOut`/`Console.SetError` prozessweit umleiten und ohne Zwangsserialisierung im parallelen Testlauf kollidieren. In step-018-Korrektur vollständig wiederhergestellt.
 
 - [ ] EPIC-08: Abschluss-Validierung & Vorher/Nachher-Doku — vollen Testlauf mit optimiertem Setup mehrfach laufen lassen, Median bilden und mit der ~90s-Baseline aus Konzept vergleichen; DoD-Punkte aus Konzept §"Definition of Done" vollständig durchgehen und im Task-Ergebnis dokumentieren (kein festes Zeitziel, nur "spürbar besser"); Self-Lint grün. Konzept §"Definition of Done".

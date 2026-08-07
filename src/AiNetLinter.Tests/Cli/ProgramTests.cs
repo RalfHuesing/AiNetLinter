@@ -11,6 +11,7 @@ namespace AiNetLinter.Tests.Cli;
 /// ("# Run: ") zu pruefen — parallel laufende Tests wuerden sich die globale
 /// Konsolenumleitung gegenseitig ueberschreiben.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class ProgramTests
 {

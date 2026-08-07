@@ -16,6 +16,7 @@ namespace AiNetLinter.Tests.Commands;
 /// auf <see cref="StringWriter"/> um, um die Fehlerausgabe bei fehlender Config-Datei zu prüfen —
 /// parallel laufende Tests würden sich die globale Konsolenumleitung gegenseitig überschreiben.
 /// </summary>
+[Collection("ConsoleTestCollection")]
 [Trait("Category", "Integration")]
 public sealed class AuditCommandTests
 {

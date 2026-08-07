@@ -27,7 +27,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensiv sein kann, sind die Tests in `Unit` und `Integration` kategorisiert. Agenten sollen Testkategorien während der Entwicklung gezielt auswählen:
 
 1. **Schnelle Iteration (während der Entwicklung)**:
-   Verwende gefilterte Läufe für schnelles Feedback (z. B. Unit-Tests in ~1 Sekunde):
+   Verwende gefilterte Läufe für schnelles Feedback (z. B. Unit-Tests in ~23-24 Sekunden):
    ```bash
    dotnet test --filter Category=Unit
    ```

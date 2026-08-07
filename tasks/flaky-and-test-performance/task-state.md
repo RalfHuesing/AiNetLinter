@@ -52,7 +52,7 @@ current_step: step-018  # done (approved), EPIC-07 abgeschlossen.
 | step-015 | EPIC-02 | done | Category-Traits für McpServerCommandTests.cs — letzter EPIC-02-Schritt (20 method-level Items) | - | Sonnet 5 | Sonnet 5 | 2cf236f / e1d316b |
 | step-016 | EPIC-03 | done | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | Sonnet 5 | Sonnet 5 | 6dfd588 / 39991a2 |
 | step-017 | EPIC-04 | done | Fast-Path-Befehl etablieren + Doku | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
-| step-018 | EPIC-07 | done | Tote ConsoleTestCollection-Infrastruktur entfernen | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
+| step-018 | EPIC-07 | reverted | Tote ConsoleTestCollection-Infrastruktur entfernen (wiederhergestellt: Console.SetOut-Parallelisierungsschutz erforderlich) | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
 
 ## Config
 
