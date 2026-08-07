@@ -106,7 +106,15 @@ Reihenfolge und Aufteilung wie in `step-002/step-plan.md` §"Notes" skizziert; k
 - **`src/AiNetLinter.Tests/Mcp/Tools/`** — 17 Klassen, alle Unit mit `[Trait("Category", "Unit")]` auf Klassen-Ebene (Catalog-/Mini-Fixtures, kein Subprozess); 2 LF-only byte-genau erhalten (`GetServerHealthToolTests`, `ReloadConfigToolTests`); Helper `DiRegistrationMiniFixtureWorkspace` und String-Literal-Klassen in `SafeguardScannerTests` bewusst ungetaggt (Heuristik-Punkt 6); **Ordner vollständig abgehakt 17/17** (zuletzt: step-013)
 - **`src/AiNetLinter.Tests/Mcp/`** (Root, ohne `Mcp/Tools/`) — 19 Klassen, alle mit `[Trait("Category", ...)]` auf Klassen-Ebene versehen (14 Unit + 2 Integration bereits vorab getaggt, 5 Unit in step-014 nachgezogen); 3 Helper ohne `[Fact]`/`[Theory]` bewusst ausgenommen (`CompileErrorHeaderAssertions`, `McpTestClient`, `McpTestClientRetryOptions`); `OverviewResourceRegistrationTests.cs` LF-only (byte-genau erhalten); **Ordner vollständig abgehakt 19/19** (zuletzt: step-014)
 - **`src/AiNetLinter.Tests/Baseline/`** — 10 Klassen, alle mit `[Trait("Category", ...)]` auf Klassen-Ebene versehen (2 bereits vorab getaggt + 7 Unit + 1 Integration `WebBaselineTests` in step-014 nachgezogen); **Korrektur ggü. früherer Notiz:** `SourceFileCatalogRegisterMSBuildTests.cs` ist entgegen der alten „Integration wegen 20 paralleler Aufrufe ohne Gate"-Prognose bereits **method-level vollständig als Unit** getaggt (auf allen 3 Methoden) — kein Handlungsbedarf; **Ordner vollständig abgehakt 10/10** (zuletzt: step-014)
-- **`src/AiNetLinter.Tests/Commands/`** — 17 Klassen, 16 davon mit `[Trait("Category", ...)]` auf Klassen-Ebene versehen (11 bereits vorab getaggt + 1 Unit + 4 Integration in step-014 nachgezogen); **`McpServerCommandTests.cs` bewusst ausgeklammert** (23 `[Fact]`, 3 bereits method-level Unit getaggt, 20 method-level gemischt — 9 weitere Unit + 11 Integration je nach Methode — braucht eigenen Folge-Step, letzter verbleibender EPIC-02-Schritt); **Ordner 16/17 abgehakt, Rest = `McpServerCommandTests`** (zuletzt: step-014)
+- **`src/AiNetLinter.Tests/Commands/`** — 17 Klassen, alle mit `[Trait("Category", ...)]` versehen (16 klassen-weit bereits ab step-014 + `McpServerCommandTests.cs` method-level in step-015: 23 `[Fact]` = 3 bereits vorab + 9 Unit + 11 Integration neu getaggt); **Ordner vollständig abgehakt 17/17** (zuletzt: step-015)
+
+### EPIC-02 — Abschluss
+
+**EPIC-02 (Category-Traits flächendeckend) vollständig abgeschlossen mit
+step-015.** Alle Testverzeichnisse aus dieser CodeMap sind durchgetaggt;
+`dotnet test --filter Category=Unit` (1193) + `Category=Integration` (132)
+= 1325 = Total, kein ungetaggter Test mehr im Projekt. Nächster Planer-Aufruf
+geht direkt zu EPIC-03 (Fixture-Sharing) über.
 - **`src/AiNetLinter.Tests/Cli/`** — 6 Klassen (`CliIntegrationTests`, `FilterCliIntegrationTests`, `IgnoreSuppressionsCliTests`, `IgnoreSuppressionsIntegrationTests`, `ProgramTests`, `CliCommandBuilderMcpLogTests`); alle mit `[Trait("Category", ...)]` versehen (4 bereits vorab getaggt + 2 Unit in step-014 nachgezogen — `IgnoreSuppressionsCliTests`/`IgnoreSuppressionsIntegrationTests` trotz „Cli"/„Integration" im Namen beide Unit, Namens-Fehlschluss analog step-006); **Ordner vollständig abgehakt 6/6** (zuletzt: step-014)
 
 ### Produktionscode — relevant für EPIC-04, EPIC-05, EPIC-06
