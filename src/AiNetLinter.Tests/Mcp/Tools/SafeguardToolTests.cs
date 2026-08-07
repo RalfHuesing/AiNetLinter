@@ -26,6 +26,7 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// <c>IsErrorPolicy.md</c> und Konzept §"Zielplattformen") — der entsprechende Test ist als
 /// Regressionsschutz fuer genau diese Falle benannt.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class SafeguardToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
     private readonly SymbolGraphCatalogFixture _fixture;

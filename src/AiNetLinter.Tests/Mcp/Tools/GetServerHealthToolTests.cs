@@ -15,6 +15,7 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// LoadState/Solution/Config-Anzeige, Uptime/Refresh-Aggregate und die Call-Log-Aggregation
 /// (aktiv vs. nicht aktiv).
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class GetServerHealthToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
     private readonly SymbolGraphCatalogFixture _fixture;

@@ -19,6 +19,7 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// geteilten Fixture, weil die Tests rules.json-Dateien auf der Platte schreiben und die
 /// Server-Config zur Laufzeit mutieren.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class ReloadConfigToolTests
 {
     private static Config CreateConfig() => new() { Global = new GlobalConfig(), Metrics = new MetricsConfig() };

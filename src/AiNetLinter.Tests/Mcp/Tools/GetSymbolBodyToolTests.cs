@@ -9,6 +9,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
 
+[Trait("Category", "Unit")]
 public sealed class GetSymbolBodyToolTests : IClassFixture<SymbolGraphCatalogFixture>
 {
     private readonly SymbolGraphCatalogFixture _fixture;
