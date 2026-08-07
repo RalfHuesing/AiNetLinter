@@ -9,6 +9,7 @@ using AiNetLinter.Tests.Fixtures;
 
 namespace AiNetLinter.Tests.Evals;
 
+[Trait("Category", "Unit")]
 public sealed class SpecLoaderTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir;

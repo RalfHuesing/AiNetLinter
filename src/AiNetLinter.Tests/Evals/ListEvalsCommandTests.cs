@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Evals;
 
+[Trait("Category", "Unit")]
 public sealed class ListEvalsCommandTests
 {
     [Fact]
