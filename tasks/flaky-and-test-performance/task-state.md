@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-08T09:00:00+02:00
+last_updated: 2026-08-08T09:25:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 11  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); +1 für step-011 (in Planung/Implementierung)
-current_step: step-011  # step-011 ist in Umsetzung
+total_steps: 11  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5); step-011 done/approved
+current_step: null  # kein Step aktiv; nächstes Planer-Aufruf im Step-Modus plant step-012
 ---
 
 # Task State: flaky-and-test-performance
@@ -15,11 +15,11 @@ current_step: step-011  # step-011 ist in Umsetzung
 - **Task-Status:** `executing`
 - **Steps gesamt:** 11 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-011` (in Planung/Implementierung; elfter
-  EPIC-02-Batch — **Mega-Batch** mit 20 Klassen per gelockerten
-  `config.md`-Deckeln: restliche 12 `Core/Checkers/` M–W + erste 8
-  `Core/` A–`LinterEngineCacheTests`; step-012 verbleibend mit 11
-  `Core/`-Klassen)
+- **Aktueller Schritt:** `null` (zwischen Steps, letzter abgeschlossener
+  war `step-011` EPIC-02 — done/approved, 0/3 Fix-Runden; **MEGA-BATCH
+  20 Klassen in 1 Step erfolgreich**: restliche 12 `Core/Checkers/` +
+  erste 8 `Core/`; nächster Schritt wird vom Planer im Step-Modus geplant
+  — `step-012` mit 11 verbleibenden `Core/`-Klassen)
 - **Roadmap:** siehe `roadmap.md` (EPIC-01 abgehakt, EPIC-02 in Arbeit,
   übrige Epics offen)
 - **Tech-Debt:** siehe `tech-debt.md` (2 Einträge: TD-001 mittel,
@@ -43,7 +43,7 @@ current_step: step-011  # step-011 ist in Umsetzung
 | step-008 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Output/ nachziehen Teil 2 (Batch 6b, 4 Klassen P-V) | - | MiniMax-M3 | MiniMax-M3 | 95ab4d5 / b23a4cf |
 | step-009 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Configuration/ nachziehen (Batch 7, 8 Klassen) | - | MiniMax-M3 | MiniMax-M3 | b484627 / b4a8c59 |
 | step-010 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/ nachziehen Teil 1 (Batch 8a, 8 Klassen A-MethodParameterCountAccessibility) | - | MiniMax-M3 | MiniMax-M3 | 44956b7 / 2674a46 |
-| step-011 | EPIC-02 | in_progress | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/+Core/ nachziehen (Batch 8b, Mega-Batch 20 Klassen) | - | - | - | - |
+| step-011 | EPIC-02 | done | Category-Traits für src/AiNetLinter.Tests/Core/Checkers/+Core/ nachziehen (Batch 8b, Mega-Batch 20 Klassen) | - | MiniMax-M3 | MiniMax-M3 | bb39619 / 2a4067a / daad777 (3 Commits, Hash-Korrektur) |
 
 ## Config
 
