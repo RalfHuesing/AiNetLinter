@@ -5,6 +5,7 @@
       "args": [
         "--mcp-server",
         "--path", "C:/Daten/Entwicklung/Ralf/AiNetLinter/AiNetLinter.slnx",
+        "--config", "C:/Daten/Entwicklung/Ralf/AiNetLinter/rules.json",
         "--mcp-log"
       ]
     }
