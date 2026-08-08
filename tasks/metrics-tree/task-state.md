@@ -1,8 +1,8 @@
 ---
-status: executing  # executing | done | aborted
+status: done  # executing | done | aborted
 task: metrics-tree
 started_at: 2026-08-08T17:31:45Z
-last_updated: 2026-08-08T20:10:00Z
+last_updated: 2026-08-08T20:30:00Z
 rules_dir: .agents/rules
 total_steps: 3
 current_step: step-003
@@ -12,14 +12,15 @@ current_step: step-003
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
+- **Task-Status:** `done`
+- **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-001`
-- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
-- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
+- **Aktueller Schritt:** `step-003` (letzter)
+- **Roadmap:** siehe `roadmap.md` — beide Epics `[x]` abgehakt
+- **Tech-Debt:** siehe `tech-debt.md` — TD-001 offen (mittel), TD-002 erledigt
 - **Gestartet:** 2026-08-08T17:31:45Z
-- **Zuletzt aktualisiert:** 2026-08-08T17:31:45Z
+- **Zuletzt aktualisiert:** 2026-08-08T20:30:00Z
+- **Abschluss:** siehe `task-summary.md`, Verdict `done`
 
 ## Steps
 
