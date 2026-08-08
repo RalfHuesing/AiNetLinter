@@ -19,6 +19,9 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 - **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `rules.json`, Linter-Metriken) und `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt). Details siehe Abschnitt 6.
 - **Dokumentation**: `Docs/` enthält Systemdokumentation, CLI-Referenzen und Anleitungen.
 
+> [!IMPORTANT]
+> Dieses Repository registriert sich selbst als **MCP-Server `ainetlinter`** (`.mcp.json`) — für C#-Symbol-/Violation-Abfragen (`find_symbol`, `find_references`, `get_impact`, `get_violations`, `safeguard`, `get_hotspots`, …) **vor** `rg`/`grep` verwenden, siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §1 und `Docs/integration.md` Abschnitt „Tool-vs-`rg`-Empfehlung für Agent-Loops".
+
 ---
 
 ## 2. Entwicklungs- & Test-Workflow
