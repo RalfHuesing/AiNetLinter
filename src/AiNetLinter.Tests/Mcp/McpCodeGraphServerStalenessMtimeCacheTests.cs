@@ -17,7 +17,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// (neue Datei oder mtime-Touch auf dem Verzeichnis) wird der Sweep wieder ausgefuehrt,
 /// sodass neu angelegte Dateien in die Solution einghaengt werden.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class McpCodeGraphServerStalenessMtimeCacheTests
 {
     [Fact]

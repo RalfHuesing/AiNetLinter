@@ -46,7 +46,7 @@ public sealed class SourceFileCatalogRegisterMSBuildTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
+    [Trait("Category", "Integration")]
     public async Task LoadAsync_TwentyParallelCallsAcrossFixtures_AllSucceed()
     {
         // Funktionaler A3-Nachweis: 20 parallele LoadAsync-Aufrufe auf unterschiedliche
@@ -97,7 +97,7 @@ public sealed class SourceFileCatalogRegisterMSBuildTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
+    [Trait("Category", "Integration")]
     public async Task LoadAsync_SecondSequentialCall_DoesNotRepatchBuildHost()
     {
         // Idempotenz: ein zweiter sequentieller LoadAsync darf RegisterMSBuild nicht

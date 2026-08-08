@@ -9,10 +9,10 @@ using AiNetLinter.Tests.Output;
 
 namespace AiNetLinter.Tests.Maps.Skeleton;
 
-[Trait("Category", "Unit")]
 public sealed class SkeletonMapBuilderTests
 {
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task BuildAsync_WithSolution_ReturnsZeroAndContainsMarkdown()
     {
         var slnPath = FindSlnxFile();
@@ -34,6 +34,7 @@ public sealed class SkeletonMapBuilderTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public async Task BuildAsync_InvalidPath_ReturnsOne()
     {
         var console = new TestLintConsole();

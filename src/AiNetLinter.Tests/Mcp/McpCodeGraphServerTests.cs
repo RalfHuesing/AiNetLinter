@@ -6,7 +6,7 @@ using Xunit;
 
 namespace AiNetLinter.Tests.Mcp;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class McpCodeGraphServerTests
 {
     [Fact]

@@ -19,7 +19,7 @@ namespace AiNetLinter.Tests.Baseline;
 /// den Basistyp jetzt ebenfalls an, semantisch aufgeloest ueber das gemergte Partial-Symbol, mit
 /// einem Hinweis, dass er aus einer anderen Partial-Deklaration stammt.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class SourceFileCatalogBlazorPartialTests
 {
     [Fact]

@@ -6,10 +6,10 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Tests.Baseline;
 
-[Trait("Category", "Unit")]
 public sealed class SourceFileCatalogTests
 {
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task LoadAsync_MiniFixture_ReturnsSourceFiles()
     {
         var fixtureRoot = Path.Combine(FindSolutionRoot(), "tests", "Fixtures", "BaselineMini");
@@ -21,6 +21,7 @@ public sealed class SourceFileCatalogTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void ShouldIncludeProject_FiltersCorrectly()
     {
         using var workspace = new AdhocWorkspace();

@@ -17,7 +17,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// <c>.cs</c>-Dateien werden automatisch in die Solution einghaengt, geloeschte Dateien werden aus
 /// dem Solution-Modell entfernt. Generierte Dateien (obj/, bin/, .g.cs) werden ignoriert.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class McpCodeGraphServerFileDiscoveryTests
 {
     [Fact]
