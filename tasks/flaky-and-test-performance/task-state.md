@@ -2,10 +2,10 @@
 status: executing
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-07T20:15:00+02:00
+last_updated: 2026-08-08T21:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 18  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-018  # done (approved), EPIC-07 abgeschlossen.
+total_steps: 19  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-019  # open (geplant), EPIC-06 — Planer-Aufruf abgeschlossen, Coder steht als Nächstes an.
 ---
 
 # Task State: flaky-and-test-performance
@@ -53,6 +53,7 @@ current_step: step-018  # done (approved), EPIC-07 abgeschlossen.
 | step-016 | EPIC-03 | done | Fixture-Sharing: SymbolGraphCatalogFixture (18×) + McpLiveRepositoryFixture (2×) auf ICollectionFixture | - | Sonnet 5 | Sonnet 5 | 6dfd588 / 39991a2 |
 | step-017 | EPIC-04 | done | Fast-Path-Befehl etablieren + Doku | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
 | step-018 | EPIC-07 | reverted | Tote ConsoleTestCollection-Infrastruktur entfernen (wiederhergestellt: Console.SetOut-Parallelisierungsschutz erforderlich) | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
+| step-019 | EPIC-06 | open | Flaky-Test strukturell fixen — LoadState-Übergang event-/await-basiert statt Poll-Loop | - | - | - | - |
 
 ## Config
 
