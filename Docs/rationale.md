@@ -17,7 +17,7 @@ Wenn KI-Agenten Code nicht mehr nur vervollständigen, sondern ihn autonom editi
 ## Wissenschaftliche Grundlagen der AI-Readability
 
 #### 1. Begrenzung der Dateigröße (`MaxLineCount` / Max. 500 Zeilen)
-*   **Wissenschaftlicher Hintergrund:** Die Forschung zum Phänomen **"Lost in the Middle"** (Liu et al., 2023) belegt, dass LLMs Informationen am Anfang und am Ende ihres Kontextfensters hervorragend verarbeiten, in der Mitte jedoch signifikant an Aufmerksamkeit verlieren.
+*   **Wissenschaftlicher Hintergrund:** Die Forschung zum Phänomen **"Lost in the Middle"** (Liu et al., 2023) belegt, dass LLMs Informationen am Anfang und am Ende ihres Kontextfensters zuverlässiger verarbeiten als in der Mitte, wo die Aufmerksamkeit messbar abnimmt.
 *   **Konsequenz:** In langen C#-Dateien sinkt die Genauigkeit des KI-Agenten drastisch. Beim Generieren von Code-Diffs neigt die KI dazu, mittlere Abschnitte fehlerhaft zu überschreiben oder bestehende Logik stillschweigend zu löschen.
 *   **Referenz:** *Liu, N. F. et al. (2023). "Lost in the Middle: How Language Models Use Long Contexts". arXiv:2307.03172.*
 

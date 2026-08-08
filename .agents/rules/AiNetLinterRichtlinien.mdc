@@ -21,8 +21,12 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
   - `Docs/configuration.md`: Sämtliche CLI-Optionen, Konfigurationsschemata und Linter-Regeln.
   - `Docs/agent-api.md`: Spezifikation der Agenten-Schnittstellen und Formate.
   - `Docs/integration.md`: Integrationsleitfaden für IDEs und externe Tools.
-  - `Docs/ROADMAP.md`: Geplante Features, Architektur-Entscheidungen und Fortschritt.
+  - `Docs/ROADMAP.md`: Entwicklungshistorie und Fortschritt (abgeschlossene Epics).
   - `Docs/rationale.md`: Hintergründe und Motive zu Architektur-Entscheidungen.
+- **Dokumentations-Objektivität (verbindlich für README.md, `Docs/*.md`, `.agents/rules/*.mdc`):**
+  - **Nur Implementiertes dokumentieren.** Geplante, entfernte oder abgebrochene Features werden nicht als aktiv beschrieben. Ein Feature, das laut `ROADMAP.md` „(Entfernt)" ist, darf in keiner anderen Doku-Datei mehr als vorhanden referenziert werden (auch nicht als Pfad-Link auf eine nicht mehr existierende Datei).
+  - **Sachlich, nicht wertend — in beide Richtungen.** Keine Qualitäts- oder Wirkungsurteile ohne Beleg, weder positiv noch negativ. Verboten: unbelegte Superlative und Marketing-Adjektive („mächtig", „hervorragend", „extrem hoch", „bahnbrechend", „state-of-the-art"), aber auch abwertende Formulierungen. Erlaubt: messbare, nachprüfbare Aussagen (Zahlen, Zitate mit Quellenangabe wie in `rationale.md`, Verhalten das der Code tatsächlich zeigt).
+  - **Prüfpflicht bei Doku-Änderungen:** Wer eine CLI-Option, ein Config-Feld, eine Regel-ID oder ein MCP-Tool in der Doku beschreibt, verifiziert die Beschreibung gegen den aktuellen Code (Grep/Read), nicht gegen die eigene Erinnerung oder eine ältere Doku-Version.
 
 ## 2. Architektur-Verbote (Constraints)
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
@@ -88,7 +92,6 @@ dotnet run            # Starten
   Begründung, warum die gezielte Lösung nicht reicht.
 - **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur (`McpLiveRepositoryTests` und `McpTestClient` in `AiNetLinter.Tests`) in `dotnet test` umgesetzt. Das Anlegen von ad-hoc Python-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
-- **Architektur-Orientierung:** Unter [codegraph.md](Docs/codegraph.md) befindet sich ein automatisch generierter Abhängigkeitsgraph (Mermaid), der die Klassenstruktur und Beziehungen visualisiert. Er dient als Orientierungshilfe.
 - **Commit-Vorschlag Pflicht:** Bei jeder Änderung an Dateien, die im Git versioniert werden, muss die Antwort des Agenten immer mit einem konkreten `### Commit-Vorschlag` abschließen. Dieser enthält ausschließlich den reinen Commit-Text (Conventional Commit auf Deutsch, imperativ, z. B. `refactor: CLI-Optionen auf --sync-agent-rules umgestellt`) ohne Shell-Befehle (`git commit ...`), damit er direkt in das Git-Feld der IDE kopiert werden kann.
 
 ## 5. Qualitätsdrift-Prävention

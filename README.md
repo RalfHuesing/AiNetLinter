@@ -48,7 +48,7 @@ ainetlinter --eval naming-drift --path ./src/ --spec README.md > prompt.md
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
 # Auto-Fix für triviale Verstöße (sealed, nullable, PascalCase):
-ainetlinter --config rules.json --path ./src/ --fix --dry-run
+ainetlinter --config rules.json --path ./src/ --fix --check   # Dry-Run: zeigt Anzahl, schreibt nichts
 ainetlinter --config rules.json --path ./src/ --fix
 ```
 

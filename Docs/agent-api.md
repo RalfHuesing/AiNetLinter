@@ -75,8 +75,8 @@ ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
 # Schritt 2: Violations pruefen, auto-fixbare erkennen ([auto-fix] im Output)
 
-# Schritt 3: Dry-Run des Auto-Fixers
-ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix --dry-run
+# Schritt 3: Dry-Run des Auto-Fixers (--check kombiniert mit --fix simuliert, ohne Dateien zu schreiben)
+ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix --check
 
 # Schritt 4: Fix anwenden
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix
@@ -94,10 +94,9 @@ ainetlinter --config rules.json --path ./src/ --create-baseline baseline.json
 
 # Schritt 2: Lint mit Baseline (nur Neu-Verstösse)
 ainetlinter --config rules.json --path ./src/ --baseline baseline.json
-
-# Schritt 3: Baseline aktualisieren nach Behebungen
-ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 ```
+
+Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `baseline.json` automatisch neu — kein separater Update-Befehl nötig.
 
 ---
 
@@ -108,11 +107,21 @@ ainetlinter --config rules.json --path ./src/ --update-baseline baseline.json
 | `--config <pfad>` | string | Pfad zur `rules.json` (erforderlich für Audit) |
 | `--path <pfad>` | string | Pfad zur `.slnx`/`.sln`/Verzeichnis |
 | `--fix` | bool | Auto-Fixer aktivieren |
-| `--dry-run` | bool | Fix simulieren, keine Dateien schreiben |
-| `--baseline <pfad>` | string | Baseline-Datei für Ratchet-Modus |
+| `--baseline <pfad>` | string | Baseline-Datei für Ratchet-Modus. Bei erkannter Checksum-Abweichung wird die Datei automatisch neu geschrieben (kein separater Update-Befehl nötig) |
 | `--create-baseline <pfad>` | string | Neue Baseline anlegen |
-| `--update-baseline <pfad>` | string | Baseline nach Behebungen aktualisieren |
 | `--verbose` | bool | Detaillierte Ausgabe aktivieren |
+| `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung). Kombiniert mit `--fix`: simuliert den Auto-Fixer, ohne Dateien zu schreiben (`[DRY-RUN]`-Ausgabe statt tatsächlicher Änderung) |
+| `--add-disable-all` | bool | Fügt `// ainetlinter-disable all` in allen Dateien mit Verstößen ein |
+| `--remove-disable-all` | bool | Entfernt alle `// ainetlinter-disable all`-Zeilen unter `--path` |
+| `--debt-report` | bool | Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten) |
+| `--wave-ready` | bool | Zeigt nur Verstöße in Dateien ohne `// ainetlinter-disable all` |
+| `--only-changed` | bool | Nur Verstöße in gegenüber der Baseline geänderten Dateien (erfordert `--baseline`) |
+| `--git-since <ref>` | string | Beschränkt die Analyse auf seit `<ref>` geänderte Dateien (Git) |
+| `--footprint <Klasse>` | string | Detaillierte AI-Context-Footprint-Auswertung für eine Klasse (Top-3-Abhängigkeiten) |
+| `--no-cache` | bool | Deaktiviert den Analyse-Cache für diesen Lauf |
+| `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
+| `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
+| `--mcp-log [pfad]` | string | Aktiviert das opt-in Call-Log im MCP-Server-Modus |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
@@ -317,9 +326,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 12 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 13 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 12 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 13 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
@@ -381,7 +390,7 @@ Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overh
 
 ### Compile-Fehler-Warnhinweis (EPIC-06)
 
-Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 12 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
+Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 13 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
 
 ```
 Hinweis: 1 Datei hat Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.

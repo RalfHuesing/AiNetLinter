@@ -61,12 +61,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von \*ValueObject Suffix)
 - [x] **Traceability-Graphen (Entfernt):** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
 - [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
-- [ ] **Granularer Bypass-Modus für Suppressions (`--ignore-suppressions`):**
-  Neuer CLI-Schalter zur Deaktivierung der Suppression-Auswertung während des Analyse-Laufs.
-  - *CLI-Syntax:* `--ignore-suppressions` (ohne Wert = `all`) oder mit kommagetrennter Sprach-/Dateityp-Liste, z. B. `--ignore-suppressions c#,razor` bzw. `--ignore-suppressions=c#,razor`.
-  - *Zulässige Werte:* `all` (Default), `c#` (oder `cs`), `razor`, `js`, `css`.
-  - *Wirkungsweise:* Ignoriert in allen betroffenen Dateien der ausgewählten Sprachklassen **vollständig** sämtliche Suppressions – sowohl dateiweite (`// ainetlinter-disable all`) als auch gezielte Inline-Kommentare (`// ainetlinter-disable RuleName`, `@* ... *@`, `/* ... */`).
-  - *Report-Transparenz:* Berichte und CLI-Outputs weisen im Header transparent den aktiven Ignore-Modus aus (z. B. `[Ignore-Suppressions: c#, razor]`), um Verwechslungen mit Standard-Baseline-Runs zu vermeiden.
+- [x] **Granularer Bypass-Modus für Suppressions (`--ignore-suppressions`):** umgesetzt, siehe Epic 12.
 
 ---
 
@@ -90,7 +85,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 - [x] **ClassMap Namespace-Awareness:** Erweitere die Klassen- und Vererbungserkennung so, dass Klassen anhand ihres vollqualifizierten Namens (Namespace + Klassenname) eindeutig identifiziert werden. Löst den Absturz-Bug (`Duplicate Key Exception` im `ToDictionary`) bei gleichnamigen Klassen in unterschiedlichen Namespaces auf.
 - [x] **Konfigurierbarer Sentinel-Schwellenwert:** Mache den Kognitiven Komplexitäts-Schwellenwert (bisher hartcodiert auf `3`) in der `MetricsConfig` (z. B. `MinCognitiveComplexityForTest`) konfigurierbar, statt ihn fest im Code zu verankern.
-- [x] **Robuste globale Nullable-Erkennung:** Erweitere die Erkennung globaler Nullable-Einstellungen so, dass sie rekursiv nach oben in `Directory.Build.props` und `.csproj` Dateien sucht und nicht beim ersten Fund einer leeren csproj die Suche abbricht.
+- [x] **Rekursive globale Nullable-Erkennung:** Erweitere die Erkennung globaler Nullable-Einstellungen so, dass sie rekursiv nach oben in `Directory.Build.props` und `.csproj` Dateien sucht und nicht beim ersten Fund einer leeren csproj die Suche abbricht.
 - [x] **Laufzeit-Fehlerbehandlung für Dateizugriffe:** Reiche IO-Exceptions beim Lesen von Quellcodedateien als fatalen CLI-Fehler nach oben (Exit-Code `2` / stderr) anstatt sie als Regelverstöße im Ergebnisbericht unterzubringen.
 
 ### Architektur-Pflege (Code-Audit 2026-06)
@@ -125,8 +120,8 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 - [x] **Semantische Testerkennung:** Nutze `SemanticModel.GetSymbolInfo(attr).Symbol` in `LinterAnalyzer.cs`, um echten Namespace/Typ von Test-Attributen (`Xunit`, `NUnit`, `Microsoft.VisualStudio.TestTools.UnitTesting`) zu prüfen statt unzuverlässiger Textsuche.
 - [x] **Consolidated Syntax Walk (Performance):** Führe `ClassCollector` und `LinterAnalyzer` zusammen, um Klasseninfos direkt beim ersten Syntax-Walk zu erheben und redundantes Syntax-Walking zu verhindern. Lösche die obsolete Klasse `ClassCollector.cs`.
-- [x] **System.CommandLine Integration:** Ersetze das fragile manuelle CLI-Argument-Parsing durch die offizielle `System.CommandLine`-Bibliothek zur robusten Parameter- und Flag-Validierung.
-- [x] **Robuste dynamic-Erkennung:** Überprüfe `dynamic` über das `SemanticModel` (`TypeKind.Dynamic`), um unberechtigte Fehlermeldungen bei lokalen Variablen namens `dynamic` zu vermeiden.
+- [x] **System.CommandLine Integration:** Ersetze das manuelle CLI-Argument-Parsing durch die offizielle `System.CommandLine`-Bibliothek zur Parameter- und Flag-Validierung.
+- [x] **Semantische dynamic-Erkennung:** Überprüfe `dynamic` über das `SemanticModel` (`TypeKind.Dynamic`), um Fehlermeldungen bei lokalen Variablen namens `dynamic` zu vermeiden.
 - [x] **Unterstützung für ainetlinter-disable:** Erlaube das Unterdrücken von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]` oder dateiweit.
 - [x] **Dateiweites Disable-all (`// ainetlinter-disable all`):** Deaktiviert alle Regeln für eine gesamte Quelldatei.
 - [x] **CLI Bulk-Suppression (`--add-disable-all`):** Fügt den Disable-all-Kommentar nur in Dateien mit Audit-Verstößen ein.
@@ -142,8 +137,8 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ## GitHub Release
 
 - [x] **Release-Infrastruktur & ZIP-Archive reparieren:**
-  - **Ziel:** Nur noch 3 saubere Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `rules.json` daneben.
-  - **Status:** Erfolgreich abgeschlossen. Der Release-Prozess über GitHub Actions funktioniert einwandfrei und die BuildHost-DLLs sind korrekt im ZIP enthalten.
+  - **Ziel:** Nur noch 3 Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `rules.json` daneben.
+  - **Status:** Abgeschlossen. Der Release-Prozess über GitHub Actions erzeugt 3 Plattform-ZIP-Archive inkl. BuildHost-DLLs.
 
 ---
 
@@ -175,7 +170,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
 
 - [x] **Efferent Coupling limitieren (Constructor Dependencies):**
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
-  - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster massiv.
+  - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
 - [x] **Vermeidung von Magic Values (Numbers & Strings):**
   - Finde literale Werte (Magic Numbers/Strings wie `status == 4` oder `role == "Admin"`) direkt in Methodenkörpern.
@@ -226,7 +221,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 18: Performance-Optimierungen (Parallelisierung & Caching)
 
-- [x] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution zur optimalen Core-Auslastung.
+- [x] **Parallele Kompilierung laden:** Parallele Ausführung von `GetCompilationAsync()` über alle Projekte der Solution.
 - [x] **Short-Circuiting für Namespace-Checks:** Vermeidung von teuren Roslyn Semantik-Lookups für Identifiers, falls keine Namespace-Kopplungsregeln definiert sind.
 - [x] **In-Memory Suppression-Prüfung:** Verwendung der bereits geladenen Roslyn Document Source-Texte im Speicher für die Suppression-Prüfung statt redundanter synchroner Disk-Lesezugriffe.
 - [x] **Performance-Profiling & Zeitmessung:** Integriertes Profiling-System zur Erfassung der Ausführungszeiten von Linter-Phasen und Generierung von performance.log & performance.json unter `measurements/` zur Analyse von Flaschenhälsen.
@@ -236,30 +231,12 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 19: AI-Developer Experience (AI-DX) & Tooling
 
-- [x] **AI-Context-Footprint (Metrik):**
-  - _Beschreibung:_ Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten, um die Token-Belastung für KIs zu messen.
-  - _LLM-Impact:_ Sehr hoch. Zeigt an, wie hoch die Wahrscheinlichkeit für Attention Dilution (Aufmerksamkeitsverlust) bei Codeänderungen in einer bestimmten Klasse ist.
-  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir traversieren die Symbolabhängigkeiten über das semantische Modell und summieren die Zeilenlängen der Quelldateien.
-- [x] **Automatisch generiertes Repo-Playbook:**
-  - _Beschreibung:_ Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.agents/rules/playbook.md`.
-  - _LLM-Impact:_ Hoch. Ermöglicht es der KI, sich sofort an ungeschriebene Projekt-Konventionen anzupassen, ohne erst durch fehlgeschlagene Compiles zu lernen.
-  - _Machbarkeit:_ 100% machbar. Wir werten die Suppression-Häufigkeiten und genutzte Syntaxpatterns (wie Vorhandensein des Result-Patterns) global aus und schreiben eine Markdown-Datei.
-- [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):**
-  - _Beschreibung:_ Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI.
-  - _LLM-Impact:_ Extrem hoch. Spart der KI zeit- und tokenaufwendige Edit-Zyklen für triviale syntaktische Anpassungen.
-  - _Machbarkeit:_ 100% machbar. Roslyn bietet über `CodeFixProvider` standardisierte Transformations-APIs. Die CLI kann diese über `Workspace.TryApplyChanges` direkt anwenden.
-- [x] **Semantische Diff-Impact-Analyse:**
-  - _Beschreibung:_ Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten.
-  - _LLM-Impact:_ Sehr hoch. Dient als Fahrplan für die KI, um bei Signatur-Änderungen sofort alle Referenzen fehlerfrei mit anzupassen.
-  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir lesen den Git Diff (haben wir bereits in `GitChangedFilesResolver`), holen die betroffenen Symbole und suchen mit `SymbolFinder.FindReferencesAsync` alle Verweise in der Solution.
-- [x] **Dynamischer, LLM-orientierter Codegraph (Entfernt):**
-  - _Beschreibung:_ Dynamische Generierung eines Software-Abhängigkeitsgraphen im Mermaid-Format zur schnellen Orientierung für KI-Agenten.
-  - _LLM-Impact:_ Sehr hoch. Ermöglicht ein schnelles Verständnis der Gesamtarchitektur (Klassen, Interfaces, Vererbung und Abhängigkeiten), ohne dass die KI Hunderte von Dateien einzeln einlesen muss.
-  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld/Konstruktor-Abhängigkeiten und rendern daraus eine Markdown-Datei mit einem Mermaid-Klassendiagramm.
-- [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):**
-  - _Beschreibung:_ Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
-  - _LLM-Impact:_ Hoch. Erlaubt es, die LLM-Abstraktionsregeln im Produktivcode streng zu halten, während Testcode pragmatisch konfiguriert werden kann.
-  - _Machbarkeit:_ 100% machbar mit Roslyn. Wir ermitteln das Projekt des aktuellen Dokuments und wenden die entsprechenden konfigurierten Regel-Überschreibungen an, bevor wir die Analyse durchführen.
+- [x] **AI-Context-Footprint (Metrik):** Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten. Traversiert die Symbolabhängigkeiten über das semantische Modell und summiert die Zeilenlängen der Quelldateien.
+- [x] **Automatisch generiertes Repo-Playbook:** Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.agents/rules/playbook.md`. Wertet Suppression-Häufigkeiten und genutzte Syntaxpatterns (z. B. Vorhandensein des Result-Patterns) global aus.
+- [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI, via `CodeFixProvider`/`Workspace.TryApplyChanges`.
+- [x] **Semantische Diff-Impact-Analyse:** Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten, via `GitChangedFilesResolver` und `SymbolFinder.FindReferencesAsync`.
+- [x] **Dynamischer, LLM-orientierter Codegraph (Entfernt):** Generierte einen Software-Abhängigkeitsgraphen im Mermaid-Format aus Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld-/Konstruktor-Abhängigkeiten.
+- [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
 
 ---
 
@@ -340,14 +317,14 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 27: Feature-Audit 2026-06 — Default-Kalibrierung
 
-Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026).
+Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026). Die Kalibrierung wurde in der projekteigenen `rules.json` (Dogfooding-Config dieses Repos) umgesetzt. Die eingebauten Code-Defaults in `MetricsConfig.cs`/`GlobalConfig.cs` (das, was ein Nutzer ohne eigene `rules.json` erhält) tragen weiterhin die alten Werte — dieser Teil der Kalibrierung steht noch aus.
 
-- [x] **M01 — MaxLineCount: 700 → 500** — Industriestandard-Mitte (Ardito et al. 2020); „Lost in the Middle"-Sweetspot bei 200–500 LOC.
-- [x] **M06 — MaxInheritanceDepth: 2 → 3** — Wert 2 erzeugt False Positives für ASP.NET-Controller, EF-Entities, xUnit-Testklassen ohne korrekte `InheritanceDepthFrameworkPrefixes`.
-- [x] **M07 — MaxMethodOverloads: 3 → 5** — Standard-.NET-Async-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress`) erzeugen regulär 3–5 Overloads.
-- [x] **M14 — MaxAIContextFootprint: 5000 → 2500** — Empirisch belegter Aufmerksamkeitsabfall bei LLMs ab ~2.000–3.000 transitiven Zeilen (Liu et al. 2023, „Lost in the Middle").
-- [x] **M16 — MinCognitiveComplexityForTest: 3 → 5** — Wert 3 erzeugt Warnungs-Flut für triviale Methoden; 5 trifft tatsächlich risikorelevante Komplexität.
-- [x] **F09 — EnablePerformanceProfiling: true → false** — Profiling ist eine Entwickler-Debug-Funktion; dauerhaft aktiv erzeugt es `measurements/`-Artefakte im Projektverzeichnis (störend für LLM-Agenten und CI).
+- [x] **M01 — MaxLineCount: 500 statt Code-Default 700** — Industriestandard-Mitte (Ardito et al. 2020); „Lost in the Middle"-Sweetspot bei 200–500 LOC.
+- [x] **M06 — MaxInheritanceDepth: 3 statt Code-Default 2** — Wert 2 erzeugt False Positives für ASP.NET-Controller, EF-Entities, xUnit-Testklassen ohne korrekte `InheritanceDepthFrameworkPrefixes`.
+- [x] **M07 — MaxMethodOverloads: 5 statt Code-Default 3** — Standard-.NET-Async-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress`) erzeugen regulär 3–5 Overloads.
+- [x] **M14 — MaxAIContextFootprint: 2500 statt Code-Default 5000** — Empirisch belegter Aufmerksamkeitsabfall bei LLMs ab ~2.000–3.000 transitiven Zeilen (Liu et al. 2023, „Lost in the Middle").
+- [x] **M16 — MinCognitiveComplexityForTest: 5 statt Code-Default 3** — Wert 3 erzeugt Warnungs-Flut für triviale Methoden; 5 trifft tatsächlich risikorelevante Komplexität.
+- [x] **F09 — EnablePerformanceProfiling: false statt Code-Default true** — Profiling ist eine Entwickler-Debug-Funktion; dauerhaft aktiv erzeugt es `measurements/`-Artefakte im Projektverzeichnis.
 - [x] Guidance-Updates — Fehlermeldungen für `BanAsyncVoid`, `BanBlockingTaskAccess`, `MaxInheritanceDepth`, `AIContextFootprint`, `MaxMethodLineCount` und `MaxMethodOverloads` mit Audit-Erkenntnissen ergänzt.
 
 ---
@@ -392,7 +369,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ### Phase 3 — Razor (umgesetzt)
 
-- [x] **NuGet-Abhaengigkeit:** Keine (gestrichen — textbasierter Ansatz gewaehlt. Da die Regeln auf einfachem Pattern-Counting wie Block-Anzahl, Verschachtelung und Attributen basieren, ist kein voller AST-Parser noetig. Dies ist robuster, schneller und vermeidet NuGet-Versionierungs- und BuildHost-Komplexitaeten).
+- [x] **NuGet-Abhaengigkeit:** Keine (gestrichen — textbasierter Ansatz gewaehlt. Da die Regeln auf einfachem Pattern-Counting wie Block-Anzahl, Verschachtelung und Attributen basieren, ist kein voller AST-Parser noetig. Vermeidet NuGet-Versionierungs- und BuildHost-Komplexitaeten).
 - [x] **Konfigurations-Sektion `Web.Razor`:** `MaxRazorLineCount`, `MaxRazorCodeBlockLines`, `BanInlineEventLambdas`, `MaxMarkupNestingDepth`, `MaxControlFlowBlocks`, `MaxForeachNestingDepth`, `MaxComponentParameterCount`, `BanInlineTernaryInAttributes` in `rules.json` integriert und per `WebConfig` unterstuetzt.
 - [x] **`RazorAnalyzer`:** Textbasierter Analyzer, der Razor-Markup effizient auf Dateigroesse, HTML-Verschachtelungstiefe, Event-Lambdas, Control-Flow-Komplexitaet (Schleifen und Verzweigungen) sowie Inline-Ternaries in Attributen scannt.
 - [x] **Regel-IDs:** Die acht Regeln (`RAZOR_MaxRazorLineCount`, `RAZOR_MaxRazorCodeBlockLines`, `RAZOR_MaxMarkupNestingDepth`, `RAZOR_BanInlineEventLambdas`, `RAZOR_MaxControlFlowBlocks`, `RAZOR_MaxForeachNestingDepth`, `RAZOR_MaxComponentParameterCount`, `RAZOR_BanInlineTernaryInAttributes`) sind in `LinterRuleIds` deklariert und in der Rule-Registry registriert.
@@ -462,7 +439,7 @@ Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projek
 
 ## MCP-Codegraph-Server (EPIC-01..08)
 
-Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als 9 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus.
+Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitstellt (Stand nach EPIC-08: 13 Tools). Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus. EPIC-01 bis EPIC-07 wurden mit dem damaligen Stand von 9 Tools umgesetzt; EPIC-08 erweiterte den Symbolgraphen um `get_symbol_body` sowie `depth`/DI-Hinweis-Erweiterungen, EPIC-09 um das Call-Log. Vollständige, aktuelle Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
 ### Abgeschlossen
 
@@ -471,9 +448,9 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 - [x] **EPIC-03 — 5/9 Symbolgraph-Tools:** `find_symbol`, `find_references`, `get_impact`, `get_type_hierarchy`, `get_file_skeleton`.
 - [x] **EPIC-04 — 4/4 Struktur-/Qualitäts-Tools:** `get_index_scope`, `get_hotspots`, `get_violations`, `search_pattern` (alle reviewt, approved).
 - [x] **EPIC-05 — Scope-Kommunikation + Miss-Hint:** `McpServerOptionsFactory.ServerInstructions` sendet den C#-only-Scope zentral beim `initialize`-Handshake; `find_symbol` liefert bei 0 C#-Treffern eine trunkierte Datei-Liste der Nicht-C#-Treffer als Fallback-Hinweis auf `search_pattern`.
-- [x] **EPIC-06 — Robustheit:** 8/9 Tools prependieren einen aggregierten Compile-Fehler-Warnhinweis; `get_file_skeleton` nutzt einen datei-spezifischen Warnhinweis; nicht-ladbare Solution führt zu Server-Start mit `[WARN]` und Tool-Calls liefern `SOLUTION_NOT_LOADED` statt Crash; Defensiv-Wrapper fangen unerwartete Roslyn-Exceptions ab.
+- [x] **EPIC-06 — Fehlerbehandlung:** 8 der damals 9 Tools prependieren einen aggregierten Compile-Fehler-Warnhinweis; `get_file_skeleton` nutzt einen datei-spezifischen Warnhinweis; nicht-ladbare Solution führt zu Server-Start mit `[WARN]` und Tool-Calls liefern `SOLUTION_NOT_LOADED` statt Crash; Defensiv-Wrapper fangen unerwartete Roslyn-Exceptions ab.
 - [x] **EPIC-07 — Test-Infrastruktur:** 9 neue Test-Klassen + Erweiterung der `McpLiveRepositoryTests`/`McpTestClient`-Harness + neue Fixtures (`CompileErrorMiniFixture`, `McpLiveRepositoryFixture`, u. a.); Volllauf 1161/1161 grün.
-- [ ] **EPIC-08 — Doku:** **in Umsetzung (Einheit 008)** — neue Sektion „MCP-Server-Modus" in `agent-api.md`, „MCP-Server registrieren" in `integration.md` inkl. Tool-vs-`rg`-Empfehlung, dieser Roadmap-Status-Block, README-Hinweis; A3-verifiziert durch `McpDocumentationSmokeTests` (3 Tests gegen den laufenden Server).
+- [x] **EPIC-08 — Doku & Symbolgraph-Erweiterungen:** Sektion „MCP-Server-Modus" in `agent-api.md`, „MCP-Server registrieren" in `integration.md` inkl. Tool-vs-`rg`-Empfehlung, README-Hinweis; verifiziert durch `McpDocumentationSmokeTests`. Zusätzlich: `get_symbol_body` mit stabilen Symbol-IDs, `depth`-Parameter für `find_references`/`get_impact`, DI-Registrierungs-Hinweis in `get_type_hierarchy` (siehe „Nächste Phase" unten für Details).
 - [x] **EPIC-09 — MCP-Call-Log-Erweiterung (Default-Pfad-Konvention + Error-Sink):** Erweitert das in EPIC-06 (B.7) eingeführte `--mcp-log` Opt-in-Feature um eine stabile Default-Pfad-Konvention, einen strukturierten Error-Sink fuer unbehandelte Tool-Handler-Exceptions und eine zentrale Wrapper-Huelle.
   - **Default-Pfad-Konvention fuer `--mcp-log`:** Bei Opt-in ohne Wert automatisch `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` (lokales Server-Datum, `<solutionName>` = Solution-Dateiname ohne Extension). Kein Fallback-Pfad: ist keine Solution auflösbar, bricht `--mcp-server` mit Fehlermeldung auf stderr und Exit-Code 1 ab, es wird keine Log-Datei angelegt.
   - **Error-Sink in `McpCallLog`:** Neue Methode `RecordError(tool, args, exception)` persistiert unbehandelte Tool-Handler-Exceptions als JSONL-Zeile mit `level=error`, `error_type` (Exception-Typ-Name), `error_message` (Message) und `stack_trace` (4 KB Cap + `...`-Marker) unter demselben `_writeLock` wie `RecordEnd`, damit Call- und Error-Eintraege zeitlich geordnet erscheinen.
