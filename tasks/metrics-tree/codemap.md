@@ -62,20 +62,45 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 
 - **`src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs`** —
   Registrierungspunkt der dateistruktur-orientierten Tools
-  (`get_file_skeleton`, `get_index_scope`, `get_hotspots`); `metrics_tree`
-  reiht sich hier als viertes Tool ein (Delegate-Closure auf
-  `McpCodeGraphServer`, kein DI-Container). `AIContextFootprint` bereits
-  bewusst klein gehalten — neue Tool-Registrierung dünn halten
-  (Thin-Dispatch-Pattern siehe unten).
+  (`get_file_skeleton`, `get_index_scope`, `get_hotspots`, `metrics_tree`
+  — Step 001, EPIC-01 umgesetzt); `AddMetricsTree` reiht sich als viertes
+  Tool ein (Delegate-Closure auf `McpCodeGraphServer`, kein DI-Container,
+  identisches Muster zu `AddGetHotspots`). **Achtung:** `get_violations`
+  meldet nach Step 001 eine `AIContextFootprint`-Warnung auf dieser Klasse
+  (2894 > 2890, knapp über dem Limit) — Top-Treiber sind bereits vor
+  Step 001 vorhandene Config-Ketten, nicht die neuen `MetricsTree*`-Typen
+  selbst, siehe `step-001/step-result.md` „Beobachtungen". Baut nicht rot
+  (Warnung), aber bei weiteren Tool-Ergänzungen hier im Auge behalten.
+- **`src/AiNetLinter/Mcp/Tools/SolutionFileWalker.cs`** (Step 001, neu) —
+  generalisierter Datei-Walk-Kern (`CollectFiles`/`MatchesScope`/
+  `TryReadAllLines`), extrahiert aus `GetHotspotsScanner`. Gemeinsame
+  Datenquelle für `GetHotspotsScanner` UND `MetricsTreeScanner` — keine
+  zweite unabhängige Walk-Implementierung mehr im Projekt. Zusätzlich zum
+  ursprünglichen `scopeFilter` jetzt ein optionaler Regex-`fileFilter` auf
+  den relativen Pfad.
 - **`src/AiNetLinter/Mcp/Tools/GetHotspotsTool.cs` +
   `GetHotspotsScanner.cs`** — Referenz-Pattern für Tool/Scanner-Split:
   Tool ist dünner Dispatch (Loading-/Solution-Checks + Aufruf), Scanner
   trägt die eigentliche Walk-/Formatierungslogik, keine Abhängigkeit auf
-  `McpCodeGraphServer` (direkt unit-testbar). `CollectFiles`/
-  `MatchesScope`/`TryCountLines` in `GetHotspotsScanner` sind der
-  Walk-Kern, den `konzept.md` für die Datei-Walk-Modi von `metrics_tree`
-  generalisiert/wiederverwendet sehen will (statt zweiter unabhängiger
-  Walk-Implementierung) — Ziel von EPIC-01.
+  `McpCodeGraphServer` (direkt unit-testbar). `GetHotspotsScanner` nutzt
+  seit Step 001 `SolutionFileWalker` statt eigener `CollectFiles`/
+  `MatchesScope`/`TryCountLines` (Verhalten unverändert, Regression über
+  bestehende `GetHotspotsToolTests` abgesichert).
+- **`src/AiNetLinter/Mcp/Tools/MetricsTreeTool.cs` +
+  `MetricsTreeScanner.cs` + `MetricsTreeRenderer.cs` +
+  `MetricsTreeMode.cs`** (Step 001, alle neu) — MCP-Tool `metrics_tree`:
+  Tool = dünner Dispatch (Validierung `mode`/`depth`/`top_n`/
+  `file_filter`, analog `FindSymbolTool`); Scanner = Walk über
+  `SolutionFileWalker` + Verzeichnis-Aggregation bis `depth` für die
+  Datei-Modi `code_size`/`comment_density`; Renderer = modus-agnostischer
+  ASCII-Tree-Formatierer über `MetricsTreeNode` (kennt weder Solution
+  noch Modus-Herkunft — von EPIC-02s Roslyn-Modi ohne Änderung
+  wiederverwendbar); Mode = Enum + Parser, aktuell nur die zwei
+  Datei-Modi, EPIC-02 erweitert um `violation_density`/`complexity`.
+- **`src/AiNetLinter/Mcp/McpDrillDownHints.cs`** (Step 001, neu) —
+  Gegenstück zu `McpSufficiencyHints`: Hinweistext für
+  `metrics_tree`-Output, der per Definition nie vollständig ist (immer
+  Top-N, nie alle Kinder).
 - **`src/AiNetLinter/Mcp/Tools/GetViolationsScanner.cs` +
   `GetViolationsTool.cs`** — Referenz-Pattern für den
   `violation_density`-Modus (EPIC-02): ruft `LinterEngine.RunAsync(...,
