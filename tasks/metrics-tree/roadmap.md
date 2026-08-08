@@ -78,7 +78,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-01: Datei-Walk-Modi (`code_size`, `comment_density`) +
+- [x] EPIC-01: Datei-Walk-Modi (`code_size`, `comment_density`) +
       gemeinsamer ASCII-Tree-Renderer + Input-Parameter + Tool —
       ein grosser Block: neues Tool `metrics_tree` in
       `FileStructureToolRegistrations.cs`, generalisierter Walk-Kern
@@ -91,7 +91,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (`McpSufficiencyHints`-Pattern), Tool-Registrierung, Tests
       (1 pro Modus + Edge-Cases: leeres Verzeichnis, single File,
       depth=5). Bezug: `konzept.md` Muss-Haben + "Hinweis zur
-      Umsetzungsgranularitaet" Block 1.
+      Umsetzungsgranularitaet" Block 1. **Umgesetzt in `step-001`
+      (Erst-Umsetzung) + `step-002` (Korrektur: 2×
+      `MaxMethodParameterCount`-Verstoß per Parameter-Records behoben,
+      TD-002 `BanPublicNestedTypes` auf `WalkedFile` mechanisch
+      gefixt) — `step-002/step-review.md` verdict `approved`.**
 - [ ] EPIC-02: Roslyn-Modi (`violation_density`, `complexity`) auf
       demselben Renderer — zweiter grosser Block: `violation_density`
       über `LinterEngine` (analog `GetViolationsScanner`-Pattern:
@@ -107,7 +111,10 @@ obsolet markiert) — kein starres Vorab-Dokument.
       als `[x]` abhaken — gehört inhaltlich zu diesem Block, da erst nach
       Fertigstellung aller 4 Modi sinnvoll dokumentierbar. Bezug:
       `konzept.md` Muss-Haben + "Hinweis zur Umsetzungsgranularitaet"
-      Block 2 + Definition of Done.
+      Block 2 + Definition of Done. **In Arbeit → `step-003`** (inkl.
+      Registrierungs-Umzug `metrics_tree` von `FileStructureToolRegistrations`
+      nach `AnalysisToolRegistrations` wegen des neuen
+      `LinterEngine`-Pull-ins, siehe TD-001).
 
 **Explizite User-Vorgabe zum Zuschnitt (`konzept.md` "Hinweis zur
 Umsetzungsgranularitaet"):** genau diese 2 Epics, keine feinere
