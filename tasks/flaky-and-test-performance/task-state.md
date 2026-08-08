@@ -54,7 +54,7 @@ current_step: step-019  # open (geplant), EPIC-06 — Planer-Aufruf abgeschlosse
 | step-017 | EPIC-04 | done | Fast-Path-Befehl etablieren + Doku | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
 | step-018 | EPIC-07 | reverted | Tote ConsoleTestCollection-Infrastruktur entfernen (wiederhergestellt: Console.SetOut-Parallelisierungsschutz erforderlich) | - | Gemini 3.6 Flash | Gemini 3.6 Flash | local |
 | step-019 | EPIC-06 | done (approved) | Flaky-Test strukturell fixen — LoadState-Übergang event-/await-basiert statt Poll-Loop | - | Sonnet 5 | Sonnet 5 | 6ee3bbe / a47774f |
-| step-020 | EPIC-08 | open | Abschluss-Validierung — Vorher/Nachher-Messung + DoD-Checkliste | - | - | - | - |
+| step-020 | EPIC-08 | done (approved) | Abschluss-Validierung — Vorher/Nachher-Messung + DoD-Checkliste | - | Sonnet 5 | Sonnet 5 | a41d910 |
 
 ## Config
 
