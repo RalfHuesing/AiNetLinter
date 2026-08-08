@@ -1,35 +1,30 @@
 ---
-status: executing
+status: done
 task: flaky-and-test-performance
 started_at: 2026-08-07T08:55:00+02:00
-last_updated: 2026-08-08T21:30:00+02:00
+last_updated: 2026-08-08T13:45:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen
-total_steps: 19  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
-current_step: step-019  # open (geplant), EPIC-06 — Planer-Aufruf abgeschlossen, Coder steht als Nächstes an.
+total_steps: 20  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe ../spec.md §10.5)
+current_step: step-020  # done (approved) — letzter Step, alle Epics abgeschlossen.
 ---
 
 # Task State: flaky-and-test-performance
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
-  jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-016` (done, approved — einziger und
-  letzter EPIC-03-Schritt; `SymbolGraphCatalogFixture` 18× +
-  `McpLiveRepositoryFixture` 2× auf `ICollectionFixture` umgestellt,
-  Dispose-Risiko aktiv behoben, 3+3 Wiederholungsläufe grün)
-- **Roadmap:** siehe `roadmap.md` (EPIC-01 + EPIC-02 + EPIC-03
-  abgehakt; EPIC-04 bis EPIC-08 offen, unangetastet für eine spätere
-  Session).
-- **Pause-Grund:** Nutzer-Vorgabe „setze EPIC-03 um, dann stop" —
-  bewusster Halt, **kein** Guard-Abbruch, **kein** Blocker. Bei Resume
-  (Fall B, `status: executing`) macht der Loop normal bei EPIC-04
-  weiter, sobald der Nutzer das anstößt.
-- **Tech-Debt:** siehe `tech-debt.md` (offen: TD-002, TD-005, TD-006; alle erledigten/abgelehnten Einträge gelöscht)
+- **Task-Status:** `done` — siehe `task-summary.md` für den vollständigen
+  Abschlussbericht.
+- **Steps gesamt:** 20 (regulär, keine Korrektur-Kette nötig).
+- **Letzter Schritt:** `step-020` (done, approved — EPIC-08
+  Abschluss-Validierung; frische Median-Messung 200s, methodisch nicht
+  vergleichbar mit den Referenzwerten, da auf anderer Hardware gemessen
+  — vom Nutzer akzeptiert, keine weitere Messung).
+- **Roadmap:** siehe `roadmap.md` — alle 8 Epics abgehakt/obsolet/verworfen.
+- **Tech-Debt:** siehe `tech-debt.md` (offen: TD-002, TD-005, TD-006,
+  TD-008, TD-009, TD-010, TD-011, TD-012 — TD-010 als wichtigster Punkt,
+  Priorität hoch).
 - **Gestartet:** 2026-08-07
-- **Zuletzt aktualisiert:** 2026-08-07 (step-013 approved, Modellwahl pro
-  Rolle auf Sonnet 5 High/Medium/Medium gesetzt)
+- **Abgeschlossen:** 2026-08-08
 
 ## Steps
 
