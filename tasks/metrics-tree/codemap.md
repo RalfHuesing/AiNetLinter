@@ -78,6 +78,11 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
   zweite unabhängige Walk-Implementierung mehr im Projekt. Zusätzlich zum
   ursprünglichen `scopeFilter` jetzt ein optionaler Regex-`fileFilter` auf
   den relativen Pfad.
+- **`src/AiNetLinter/Mcp/Tools/WalkedFile.cs`** (Step 002, neu, TD-002) —
+  `internal readonly record struct WalkedFile(RelativePath, AbsolutePath)`,
+  aus `SolutionFileWalker.cs` auf Namespace-Ebene extrahiert (war
+  `internal` genestet, verletzte `BanPublicNestedTypes`); rein mechanische
+  Verschiebung, keine Verhaltensänderung.
 - **`src/AiNetLinter/Mcp/Tools/GetHotspotsTool.cs` +
   `GetHotspotsScanner.cs`** — Referenz-Pattern für Tool/Scanner-Split:
   Tool ist dünner Dispatch (Loading-/Solution-Checks + Aufruf), Scanner
@@ -97,6 +102,14 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
   noch Modus-Herkunft — von EPIC-02s Roslyn-Modi ohne Änderung
   wiederverwendbar); Mode = Enum + Parser, aktuell nur die zwei
   Datei-Modi, EPIC-02 erweitert um `violation_density`/`complexity`.
+  **Seit Step 002:** `MetricsTreeScanner.BuildTree` nimmt statt 6
+  Einzelparametern einen `MetricsTreeQuery`-Record (validierte Werte,
+  auf Namespace-Ebene in `MetricsTreeScanner.cs`); `MetricsTreeTool.
+  ExecuteAsync` analog einen `MetricsTreeToolArgs`-Record (rohe,
+  ungeparste Werte, auf Namespace-Ebene in `MetricsTreeTool.cs`) — beide
+  bewusst nicht in ihrer jeweiligen `static class` genestet
+  (`BanPublicNestedTypes`). `MetricsTreeTool` baut aus `args` intern den
+  validierten `query` und ruft damit `MetricsTreeScanner.BuildTree` auf.
 - **`src/AiNetLinter/Mcp/McpDrillDownHints.cs`** (Step 001, neu) —
   Gegenstück zu `McpSufficiencyHints`: Hinweistext für
   `metrics_tree`-Output, der per Definition nie vollständig ist (immer

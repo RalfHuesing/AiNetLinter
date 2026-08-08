@@ -31,7 +31,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
 | TD-001 | `src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs` + `MetricsTreeTool.cs` | mittel | nein | `AIContextFootprint` auf zwei Klassen knapp über/nahe dem Limit — Config-Override-Kette via `McpCodeGraphServer` als gemeinsame Ursache, Facade-Extraktion prüfen. |
-| TD-002 | `src/AiNetLinter/Mcp/Tools/SolutionFileWalker.cs:23` | niedrig | ja | `WalkedFile`-Record-Struct verletzt `BanPublicNestedTypes` (internal nested Type) — Extraktion in eigene Datei. |
+| TD-002 | `src/AiNetLinter/Mcp/Tools/SolutionFileWalker.cs:23` | niedrig | ja | `WalkedFile`-Record-Struct verletzt `BanPublicNestedTypes` (internal nested Type) — Extraktion in eigene Datei. **Status: erledigt (step-002)** |
 
 ## Einträge
 
@@ -80,4 +80,6 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   `SolutionFileWalker.WalkedFile.cs` (oder `WalkedFile.cs` auf Namespace-Ebene) extrahieren — reine
   Verschiebung, keine Verhaltensänderung.
 - **Auto-Fixable:** ja — mechanische Extraktion ohne Architektur-Ermessen, keine Verhaltensänderung.
-- **Status:** offen
+- **Status:** erledigt (step-002) — `WalkedFile` in eigene Datei
+  `src/AiNetLinter/Mcp/Tools/WalkedFile.cs` extrahiert, `get_violations` bestätigt keinen
+  `BanPublicNestedTypes`-Verstoß mehr.
