@@ -46,7 +46,11 @@ public sealed class McpServerCommandErrorHandlingTests
                 Arguments = ["--mcp-server", "--path", brokenSln],
             });
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            // 60s statt 30s: das Budget deckt Gate-Wartezeit + echten Subprozess-Start +
+            // MCP-Handshake + bis zu 30 Tool-Call-Retries a 500ms ab — unter Volllauf-Last
+            // (viele parallele Threads/Subprozesse gleichzeitig) reichten 30s nicht immer,
+            // beobachtet als TaskCanceledException in SendRequestAsync.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
             var result = await CallToolWithLoadingRetryAsync(
@@ -85,7 +89,8 @@ public sealed class McpServerCommandErrorHandlingTests
             Arguments = ["--mcp-server", "--path", fixture.RootPath],
         });
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        // 60s statt 30s, siehe Begruendung in RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var result = await CallToolWithLoadingRetryAsync(
