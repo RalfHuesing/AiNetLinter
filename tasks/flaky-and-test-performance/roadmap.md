@@ -3,7 +3,7 @@ status: active  # active | done
 task: flaky-and-test-performance
 derived_from: konzept.md
 created_at: 2026-08-07T08:58:29+02:00
-last_updated: 2026-08-07T20:15:00+02:00
+last_updated: 2026-08-08T22:00:00+02:00
 created_by_model: MiniMax-M3
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -64,4 +64,4 @@ aktuellen Step passen.
 
 - [ ] EPIC-07: Tote `ConsoleTestCollection`-Infrastruktur entfernen — **Nicht umsetzbar / verworfen:** `ConsoleTestCollection` mit `DisableParallelization = true` wird von 5 Testklassen zwingend benötigt, da sie `Console.SetOut`/`Console.SetError` prozessweit umleiten und ohne Zwangsserialisierung im parallelen Testlauf kollidieren. In step-018-Korrektur vollständig wiederhergestellt.
 
-- [ ] EPIC-08: Abschluss-Validierung & Vorher/Nachher-Doku — vollen Testlauf mit optimiertem Setup mehrfach laufen lassen, Median bilden und mit der ~90s-Baseline aus Konzept vergleichen; DoD-Punkte aus Konzept §"Definition of Done" vollständig durchgehen und im Task-Ergebnis dokumentieren (kein festes Zeitziel, nur "spürbar besser"); Self-Lint grün. Konzept §"Definition of Done".
+- [ ] EPIC-08: Abschluss-Validierung & Vorher/Nachher-Doku — vollen Testlauf mit optimiertem Setup mehrfach laufen lassen, Median bilden und mit der ~90s-Baseline aus Konzept vergleichen; DoD-Punkte aus Konzept §"Definition of Done" vollständig durchgehen und im Task-Ergebnis dokumentieren (kein festes Zeitziel, nur "spürbar besser"); Self-Lint grün. Konzept §"Definition of Done". **In Arbeit → `step-020`.** Wichtiger Kontext für die Messung: `step-016` (nach EPIC-03) maß 97,75s Median, die 10 vollen Läufe aus `step-019` (nach EPIC-06, selbes Setup, andere Session) zeigten dagegen 169-185s pro Lauf — deutlich über beiden bisherigen Referenzpunkten (Konzept-Baseline ~90s und step-016-Zwischenmessung). `step-020` misst frisch nach, dokumentiert die Diskrepanz transparent statt sie aufzulösen, und behandelt TD-010 (reproduzierbare Hänger bei unabhängigen MCP-Integrationstests unter Last, 3× in step-019 beobachtet) als robust einzuplanenden Ausreißer-Fall bei der Median-Bildung (mind. 5 valide Läufe, Deckel bei 8, Ausreißer dokumentiert statt verschwiegen).
