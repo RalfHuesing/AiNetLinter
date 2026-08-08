@@ -21,8 +21,8 @@ internal static class OverviewResourceRegistration
     private const string OverviewUri = "ainetlinter://overview";
 
     /// <summary>
-    /// Kurzbeschreibungen aller 12 Tools (ein Satz, keine Parameter-Details — die liefert
-    /// <c>tools/list</c>). Bewusst hier gepflegt statt aus den vollen Tool-Descriptions
+    /// Kurzbeschreibungen aller registrierten Tools (ein Satz, keine Parameter-Details — die
+    /// liefert <c>tools/list</c>). Bewusst hier gepflegt statt aus den vollen Tool-Descriptions
     /// abgeleitet (die sind fuer diesen Zweck zu lang) — <c>OverviewResourceRegistrationTests</c>
     /// prueft die Namens-Parität gegen die tatsaechlich registrierten Tools, damit ein neues
     /// oder umbenanntes Tool hier nicht stillschweigend fehlt.
@@ -39,6 +39,7 @@ internal static class OverviewResourceRegistration
         ("safeguard", "Liefert einen deterministischen 0-10-Quality-Score inkl. Pass/Fail-Threshold, Top-Violations und Remediation-Hint."),
         ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
         ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
+        ("metrics_tree", "Liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (z. B. Code-Groesse, Kommentaranteil) zur Ebene-fuer-Ebene-Exploration."),
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
         ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-Aggregate."),

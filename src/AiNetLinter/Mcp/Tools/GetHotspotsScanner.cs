@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using AiNetLinter.Baseline;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools;
@@ -52,44 +51,15 @@ internal static class GetHotspotsScanner
     {
         var result = new List<HotspotFileInfo>();
 
-        foreach (var project in solution.Projects)
+        foreach (var walked in SolutionFileWalker.CollectFiles(solution, solutionDir, scopeFilter))
         {
-            foreach (var document in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                if (!MatchesScope(document, solutionDir, scopeFilter)) continue;
+            var lines = SolutionFileWalker.TryReadAllLines(walked.AbsolutePath)?.Length;
+            if (lines is null) continue;
 
-                var lines = TryCountLines(document.FilePath!);
-                if (lines is null) continue;
-
-                var relativePath = Path.GetRelativePath(solutionDir, document.FilePath!).Replace('\\', '/');
-                result.Add(new HotspotFileInfo(relativePath, lines.Value));
-            }
+            result.Add(new HotspotFileInfo(walked.RelativePath, lines.Value));
         }
 
         return result;
-    }
-
-    private static bool MatchesScope(Document document, string solutionDir, string? scopeFilter)
-    {
-        if (string.IsNullOrEmpty(scopeFilter)) return true;
-
-        if (document.Project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
-
-        var relativePath = Path.GetRelativePath(solutionDir, document.FilePath!);
-        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static int? TryCountLines(string path)
-    {
-        try
-        {
-            return File.ReadAllLines(path).Length;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
     }
 
     private static string FormatReport(
