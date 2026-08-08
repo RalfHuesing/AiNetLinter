@@ -1,6 +1,9 @@
 using System.Threading.Tasks;
+using AiNetLinter.Cli;
+using AiNetLinter.Commands;
 using AiNetLinter.Suppression;
 using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.Tests.Output;
 using Xunit;
 
 namespace AiNetLinter.Tests.Suppression;
@@ -13,11 +16,18 @@ public sealed class DisableAllCliTests
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
 
-        var result = await CliProcessRunner.RunLinterAsync(
-            $"--config \"{workspace.ConfigPath}\" --path \"{workspace.RootPath}\" --add-disable-all");
+        var args = new LinterArgs
+        {
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            ConfigPath = workspace.ConfigPath,
+            AddDisableAll = true,
+        };
+        var console = new TestLintConsole();
+        var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("OK", result.Output);
+        Assert.Equal(0, exitCode);
+        Assert.Contains("OK", console.OutputText);
         Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(workspace.ViolatingClassPath));
     }
 
@@ -28,9 +38,16 @@ public sealed class DisableAllCliTests
         var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
         File.WriteAllText(workspace.ViolatingClassPath, DisableAllCommentInjector.PrependDisableAll(originalContent));
 
-        var result = await CliProcessRunner.RunLinterAsync($"--path \"{workspace.RootPath}\" --remove-disable-all");
+        var args = new LinterArgs
+        {
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            RemoveDisableAll = true,
+        };
+        var console = new TestLintConsole();
+        var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(0, exitCode);
         Assert.Equal(originalContent, File.ReadAllText(workspace.ViolatingClassPath));
     }
 

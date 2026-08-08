@@ -3,7 +3,10 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using AiNetLinter.Cli;
+using AiNetLinter.Commands;
 using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.Tests.Output;
 using Xunit;
 
 namespace AiNetLinter.Tests.Commands;
@@ -37,7 +40,14 @@ public sealed class CliBatchRegressionTests
 
         Assert.True(File.Exists(configPath), $"Konfiguration nicht gefunden: {configPath}");
 
-        var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{fixture.RootPath}\"");
+        var args = new LinterArgs
+        {
+            TargetPath = fixture.RootPath,
+            Verbose = false,
+            ConfigPath = configPath,
+        };
+        var console = new TestLintConsole();
+        var exitCode = await AuditCommand.RunAsync(args, default, console);
 
         // SymbolGraphMini enthaelt eine deterministische Verletzung (ViolationTrigger.cs,
         // fehlendes sealed), daher erwarten wir Exit-Code 1 (= Violations gefunden) statt 0.
@@ -45,9 +55,9 @@ public sealed class CliBatchRegressionTests
         // echte Solution (clean, Exit 0) — dieser Test ist das Pendant fuer die Mini-Fixture
         // mit Verletzung.
         Assert.True(
-            result.ExitCode == 1,
-            $"Linter-CLI brach unerwartet ab (Exit {result.ExitCode}, erwartet 1 fuer Violations). "
-            + $"Output:\n{result.Output}\nError:\n{result.Error}");
-        Assert.Contains("ViolationTrigger", result.Output, StringComparison.Ordinal);
+            exitCode == 1,
+            $"Linter-Audit brach unerwartet ab (Exit {exitCode}, erwartet 1 fuer Violations). "
+            + $"Output:\n{console.OutputText}\nError:\n{console.ErrorText}");
+        Assert.Contains("ViolationTrigger", console.OutputText, StringComparison.Ordinal);
     }
 }
