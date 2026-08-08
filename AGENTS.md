@@ -27,7 +27,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 ## 2. Entwicklungs- & Test-Workflow
 
 ### Verifikation & Test-Kategorien
-Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensiv sein kann, sind die Tests in `Unit` und `Integration` kategorisiert. Agenten sollen Testkategorien während der Entwicklung gezielt auswählen:
+Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensiv sein kann, sind die Tests in `Unit`, `Integration` und `Stress` kategorisiert. Agenten sollen Testkategorien während der Entwicklung gezielt auswählen:
 
 1. **Schnelle Iteration (während der Entwicklung)**:
    Verwende gefilterte Läufe für schnelles Feedback (z. B. Unit-Tests in ~23-24 Sekunden):
@@ -37,9 +37,9 @@ Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensi
    (oder alternativ `dotnet test --filter Category!=Integration`)
 
 2. **Abschluss-Verifikation (vor Task-Beendigung)**:
-   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf grün durchgeführt werden:
+   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf grün durchgeführt werden — das schließt `Unit` und `Integration` ein, NICHT `Stress` (siehe Punkt 4):
    ```bash
-   dotnet test
+   dotnet test --filter Category!=Stress
    ```
 
 3. **Build prüfen**:
@@ -47,11 +47,18 @@ Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensi
    dotnet build
    ```
 
-4. **Test-Ergebnisse & Logging**:
+4. **`Stress`-Kategorie (nur gezielt/manuell, nie automatisch)**:
+   Tests, die absichtlich hohe parallele Last erzeugen (z. B. `McpTestClientParallelTests` mit 16 gleichzeitigen Server-Subprozessen, ~150s) sind `[Trait("Category", "Stress")]` statt `Integration` getaggt. Sie laufen NICHT im normalen Volllauf (Punkt 2) und NICHT im Unit-Slice (Punkt 1) mit, sondern nur auf explizite Anforderung:
+   ```bash
+   dotnet test --filter Category=Stress
+   ```
+   Neue absichtlich lastintensive/parallele Tests (nicht einfach nur "langsam", sondern gezielt Last/Nebenläufigkeit prüfend) gehören ebenfalls in diese Kategorie, nicht in `Integration`.
+
+5. **Test-Ergebnisse & Logging**:
    Das Ergebnis wird in `TestResults/latest.trx` geloggt (Details & Diagnose-Workflow siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §3).
 
 > [!IMPORTANT]
-> Beende einen Task erst, wenn `dotnet test` (Volllauf) grün durchgelaufen ist!
+> Beende einen Task erst, wenn `dotnet test --filter Category!=Stress` (Volllauf ohne Stress-Tests) grün durchgelaufen ist!
 
 ---
 
