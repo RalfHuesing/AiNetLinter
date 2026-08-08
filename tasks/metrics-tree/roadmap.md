@@ -96,7 +96,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       `MaxMethodParameterCount`-Verstoß per Parameter-Records behoben,
       TD-002 `BanPublicNestedTypes` auf `WalkedFile` mechanisch
       gefixt) — `step-002/step-review.md` verdict `approved`.**
-- [ ] EPIC-02: Roslyn-Modi (`violation_density`, `complexity`) auf
+- [x] EPIC-02: Roslyn-Modi (`violation_density`, `complexity`) auf
       demselben Renderer — zweiter grosser Block: `violation_density`
       über `LinterEngine` (analog `GetViolationsScanner`-Pattern:
       Severity-Mix + Aggregation pro Hierarchie-Ebene statt flacher
@@ -111,10 +111,11 @@ obsolet markiert) — kein starres Vorab-Dokument.
       als `[x]` abhaken — gehört inhaltlich zu diesem Block, da erst nach
       Fertigstellung aller 4 Modi sinnvoll dokumentierbar. Bezug:
       `konzept.md` Muss-Haben + "Hinweis zur Umsetzungsgranularitaet"
-      Block 2 + Definition of Done. **In Arbeit → `step-003`** (inkl.
+      Block 2 + Definition of Done. **Umgesetzt in `step-003`** (inkl.
       Registrierungs-Umzug `metrics_tree` von `FileStructureToolRegistrations`
       nach `AnalysisToolRegistrations` wegen des neuen
-      `LinterEngine`-Pull-ins, siehe TD-001).
+      `LinterEngine`-Pull-ins, siehe TD-001) — `step-003/step-review.md`
+      verdict `approved`.
 
 **Explizite User-Vorgabe zum Zuschnitt (`konzept.md` "Hinweis zur
 Umsetzungsgranularitaet"):** genau diese 2 Epics, keine feinere
