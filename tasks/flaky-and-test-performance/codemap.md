@@ -2,7 +2,7 @@
 task: flaky-and-test-performance
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-07T19:40:00+02:00
+last_updated: 2026-08-08T10:45:00+02:00
 ---
 
 # CodeMap: flaky-and-test-performance
@@ -69,7 +69,7 @@ wenigstens sichtbar und begründungspflichtig statt stillschweigend.
 - **`src/AiNetLinter.Tests/Commands/McpServerCommandGetImpactTests.cs`** — dito; 2 Tests, read-only, lokal zusätzlich `GitImpactMiniFixtureWorkspace` (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/Commands/McpServerCommandMissHintTests.cs`** — dito, einziger Test, read-only (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs`** — `SymbolGraphMcpFixture`-Anteil auf Collection umgestellt, `BaselineMcpFixture` (1× verwendet) bleibt `IClassFixture`; 18 Tests, davon 15 lesend über die Collection-Fixture (zuletzt: step-001)
-- **`src/AiNetLinter.Tests/Commands/McpServerCommandLoadingStateTests.cs`** — enthält den pre-existing Flaky-Test `LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately` (Z. 112-150, Poll-Loop mit fixer 5s-Deadline, Thread-Pool-abhängig); Ziel von EPIC-06; `IClassFixture<SymbolGraphCatalogFixture>` (1×-Verwendung, kein Sharing-Hebel) (zuletzt: step-001)
+- **`src/AiNetLinter.Tests/Commands/McpServerCommandLoadingStateTests.cs`** — EPIC-06 (step-019) abgeschlossen: die beiden vormals Poll-Loop-basierten Facts (`RunAsync_LoadFuncCompletes_ServerLeavesLoadingState`, `LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately`, letztere jetzt `async Task`) warten deterministisch über `Task.WhenAny(server.LoadTask!, Task.Delay(20s))` statt zu pollen; `IClassFixture<SymbolGraphCatalogFixture>` (1×-Verwendung, kein Sharing-Hebel) unverändert (zuletzt: step-019)
 - **`src/AiNetLinter.Tests/Mcp/McpServerAllToolsE2ETests.cs`** — `IClassFixture<SymbolGraphMcpFixture>` durch `[Collection("SymbolGraphMcp")]` ersetzt; **NITPICK aus step-001-Review:** XML-Doc-Kommentar in Z. 15 spricht weiterhin von „einmaliger Fixture- und Client-Instanziierung pro Testklasse", formal unzutreffend (kosmetisch, kein Rule-Verstoß) (zuletzt: step-001)
 
 ### Test-Fixtures — EPIC-03 (Fixture-Sharing)
@@ -131,7 +131,8 @@ geht direkt zu EPIC-03 (Fixture-Sharing) über.
 ### Produktionscode — relevant für EPIC-04, EPIC-05, EPIC-06
 
 - **`src/AiNetLinter/Cli/CliOptionFactory.cs`** — fehlende `--self-lint`-Option, siehe TD-001 in `tech-debt.md`; wird in `roadmap.md` und `konzept.md` als Self-Lint-Befehl referenziert, existiert aber nicht; EPIC-04-relevant (Fast-Path-Befehls-Etablierung hängt indirekt daran) (zuletzt: step-001)
-- **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — Hauptimplementierung des MCP-Servers; laut Konzept §"Wie" Schritt 5 und Konzept §"Muss-Haven" letzter Punkt potenzielles Ziel für einen leichteren/mockbaren In-Process-Lade-Pfad (EPIC-05, obsolet markiert siehe `roadmap.md`); `LoadState`-Property (Z. 70-78) und `_loadTask`-Feld (Z. 30, gesetzt via `Task.Run` in Z. 48-53) sind der Ansatzpunkt für EPIC-06 (step-019 in Planung): geplanter interner, test-only Zugriffspunkt auf den laufenden Load-`Task`, damit der Flaky-Test in `Commands/McpServerCommandLoadingStateTests.cs` `await` statt Poll-Loop nutzen kann; `InternalsVisibleTo("AiNetLinter.Tests")` bereits vorhanden (`Core/LinterEngine.cs:18`) (zuletzt: step-002, Planungsnotiz step-019)
+- **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — Hauptimplementierung des MCP-Servers; laut Konzept §"Wie" Schritt 5 und Konzept §"Muss-Haven" letzter Punkt potenzielles Ziel für einen leichteren/mockbaren In-Process-Lade-Pfad (EPIC-05, obsolet markiert siehe `roadmap.md`); EPIC-06 (step-019) abgeschlossen: neue `internal Task<SourceFileCatalog?>? LoadTask => _loadTask;` (nach `LoadState`, ohne XML-Doc — siehe AIContextFootprint-Hinweis unten) als test-only Zugriffspunkt, damit `Commands/McpServerCommandLoadingStateTests.cs` deterministisch `await`et statt zu pollen; `InternalsVisibleTo("AiNetLinter.Tests")` bereits vorhanden (`Core/LinterEngine.cs:18`) (zuletzt: step-019)
+- **`src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs`** — `AIContextFootprint`-`PathOverride` in `rules.json` steht bei 2870, in step-019 verifiziert **exakt ohne Headroom** (Ist-Wert vor step-019 bereits 2870); jede weitere Zeile in `McpCodeGraphServer.cs` (oder anderen transitiven Abhängigkeiten dieser Klasse) reißt das Limit sofort — Tech-Debt-Kandidat für den Kritiker (zuletzt: step-019)
 - **`src/AiNetLinter/Mcp/`** (ohne `Mcp/Tools/`) — enthält u. a. `McpCallLog`, `McpFileState`, `McpServerOptionsFactory`, `ServerLoadState` u. a.; Bereich, in dem EPIC-05 ansetzen würde, falls `SourceFileCatalog`/`McpCodeGraphServer` einen in-process-Pfad bekommen (zuletzt: step-002)
 - **`src/AiNetLinter/Mcp/Tools/`** — Tool-Implementierungen (Scanner, Formatter, Resolver); Berührung mit EPIC-05 eher nachgelagert, falls Tool-Aufrufe umgehängt werden (zuletzt: step-002)
 - **`src/AiNetLinter/Baseline/SourceFileCatalog.cs`** — In-Process-Loader (MSBuildWorkspace), laut Konzept §"Wie" Schritt 5 Kandidat für einen mockbaren Lade-Pfad (EPIC-05) (zuletzt: step-002)
