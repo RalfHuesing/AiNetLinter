@@ -7,7 +7,7 @@ Das Tool läuft in zwei unabhängigen Modi:
 | Modus | Was es tut |
 | :--- | :--- |
 | **CLI-Batch-Modus** | Ein Lint-Lauf gegen eine Solution: Markdown-Report auf stdout, CI-tauglicher Exit-Code, optionaler Auto-Fixer für triviale Verstöße. |
-| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 13 einzeln abfragbare Tools (Symbolsuche, Referenzen, Impact-Analyse, Lint-Status u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
+| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 14 einzeln abfragbare Tools (Symbolsuche, Referenzen, Impact-Analyse, Lint-Status u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
 
 Beide Modi teilen sich dieselbe Analyse-Engine und dieselbe `rules.json`-Konfiguration.
 
@@ -84,6 +84,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `get_symbol_body` | Source-Body eines einzelnen Symbols per stabiler ID |
 | `get_index_scope` | Dateityp-Aufschlüsselung der geladenen Solution |
 | `get_hotspots` | Dateien nahe oder über dem `MaxLineCount`-Limit |
+| `metrics_tree` | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (Code-Größe, Kommentaranteil, Lint-Verstöße, Komplexität), Ebene für Ebene explorierbar |
 | `get_violations` | Aktuelle Lint-Verstöße für einen Scope |
 | `safeguard` | Deterministischer 0–10-Qualitätsscore inkl. Pass/Fail gegen einen Schwellenwert |
 | `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer) |

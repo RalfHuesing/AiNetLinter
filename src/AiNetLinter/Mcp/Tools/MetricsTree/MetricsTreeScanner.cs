@@ -2,23 +2,53 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>Gebuendelte, bereits validierte Parameter fuer <see cref="MetricsTreeScanner.BuildTree"/>.</summary>
 internal sealed record MetricsTreeQuery(
     string? Root, MetricsTreeMode Mode, int Depth, int TopN, Regex? FileFilter);
 
 /// <summary>
+/// Pro-Datei-Metrik, gemeinsam fuer alle vier <c>metrics_tree</c>-Modi. Die zwei Datei-Modi
+/// (<c>code_size</c>/<c>comment_density</c>) fuellen nur <see cref="CommentLines"/>/
+/// <see cref="CodeLines"/>/<see cref="Bytes"/>, die zwei Roslyn-Modi (<see cref="MetricsTreeRoslynScanner"/>)
+/// nur die Violation-/Complexity-Felder — die jeweils andere Gruppe bleibt beim Default 0. Top-Level
+/// statt nested (obwohl nur von <see cref="MetricsTreeScanner"/>/<see cref="MetricsTreeRoslynScanner"/>
+/// verwendet), weil <c>BanPublicNestedTypes</c> auch <c>internal nested</c> Typen verbietet
+/// (<c>BanPublicNestedTypesAllowPrivate</c> erlaubt nur <c>private nested</c>).
+/// </summary>
+internal sealed record FileMetric(
+    string RelativePath, int CommentLines, int CodeLines, long Bytes,
+    int ViolationCount = 0, int ErrorCount = 0, int WarningCount = 0,
+    int MethodCount = 0, int SumCyclomatic = 0, int MaxCyclomatic = 0, int MaxCognitive = 0);
+
+/// <summary>
+/// Aggregierter Baum-Knoten waehrend des Baus, gemeinsam fuer alle vier Modi — siehe
+/// <see cref="FileMetric"/>. <see cref="MaxCyclomatic"/>/<see cref="MaxCognitive"/> sind die
+/// einzigen Felder, die per <c>Math.Max</c> statt Summe aggregiert werden. Top-Level statt nested —
+/// siehe Begruendung bei <see cref="FileMetric"/>.
+/// </summary>
+internal sealed record BuilderNode(
+    string Name, string RelativePath, int FileCount, int CommentLines, int CodeLines, long Bytes,
+    int ViolationCount, int ErrorCount, int WarningCount,
+    int MethodCount, int SumCyclomatic, int MaxCyclomatic, int MaxCognitive,
+    IReadOnlyList<BuilderNode> Children);
+
+/// <summary>
 /// Walk + Aggregation fuer die zwei Datei-Modi von <c>metrics_tree</c> (<c>code_size</c>,
 /// <c>comment_density</c>) — nutzt <see cref="SolutionFileWalker"/> als Datenquelle und
 /// <see cref="MetricsTreeRenderer"/> zur Ausgabe. Keine Abhaengigkeit von
 /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar (identisches Muster zu
-/// <see cref="GetHotspotsScanner"/>).
+/// <see cref="GetHotspotsScanner"/>). Der Aggregations-Kern (<see cref="BuildNode"/>/
+/// <see cref="ToMetricsTreeNode"/>/<see cref="NormalizeRoot"/>/<see cref="ComputeRootName"/>) ist
+/// <c>internal</c>, damit <see cref="MetricsTreeRoslynScanner"/> (EPIC-02) dieselbe Baum-Aggregation
+/// fuer die zwei Roslyn-Modi wiederverwendet, statt eine zweite unabhaengige Implementierung zu bauen.
 /// </summary>
 internal static class MetricsTreeScanner
 {
@@ -47,19 +77,29 @@ internal static class MetricsTreeScanner
             return $"Keine lesbaren Dateien unter root='{rootRelative}' — Dateien pruefen (evtl. gesperrt/geloescht).";
         }
 
-        var rootName = rootRelative.Length == 0 ? (Path.GetFileName(solutionDir) is { Length: > 0 } n ? n : ".") : rootRelative.Split('/')[^1];
+        var rootName = ComputeRootName(solutionDir, rootRelative);
         var builderRoot = BuildNode(rootName, rootRelative, metrics, level: 0, query.Depth);
         var treeRoot = ToMetricsTreeNode(builderRoot, query.Mode);
         var sortDescending = query.Mode == MetricsTreeMode.CodeSize;
         return MetricsTreeRenderer.Render(treeRoot, query.TopN, sortDescending);
     }
 
-    private static string NormalizeRoot(string? root)
+    /// <summary>Normalisiert den <c>root</c>-Parameter (Backslashes, fuehrende/folgende Slashes) —
+    /// gemeinsam genutzt von den Datei- und den Roslyn-Modi (<see cref="MetricsTreeRoslynScanner"/>).</summary>
+    internal static string NormalizeRoot(string? root)
     {
         return string.IsNullOrWhiteSpace(root) ? "" : root.Replace('\\', '/').Trim('/');
     }
 
-    private sealed record FileMetric(string RelativePath, int CommentLines, int CodeLines, long Bytes);
+    /// <summary>Leitet den Anzeigenamen des Wurzelknotens aus dem normalisierten <paramref name="rootRelative"/>
+    /// ab (Solution-Verzeichnisname als Fallback bei leerem Root) — gemeinsam genutzt von den Datei- und
+    /// den Roslyn-Modi.</summary>
+    internal static string ComputeRootName(string solutionDir, string rootRelative)
+    {
+        return rootRelative.Length == 0
+            ? (Path.GetFileName(solutionDir) is { Length: > 0 } n ? n : ".")
+            : rootRelative.Split('/')[^1];
+    }
 
     private static FileMetric? ComputeCodeSizeMetric(WalkedFile f)
     {
@@ -131,11 +171,15 @@ internal static class MetricsTreeScanner
         return (commentLines, codeLines);
     }
 
-    private sealed record BuilderNode(
-        string Name, string RelativePath, int FileCount, int CommentLines, int CodeLines, long Bytes,
-        IReadOnlyList<BuilderNode> Children);
-
-    private static BuilderNode BuildNode(string name, string nodeRelativePath, List<FileMetric> metrics, int level, int depth)
+    // ainetlinter-disable MaxMethodParameterCount — BuildNode kapselt den rekursiven Baum-Bau aus
+    // 5 unabhaengigen, semantisch verschiedenen Eingaben (Knotenname, relativer Pfad,
+    // Metrik-Zeilen, aktuelle/max. Rekursionstiefe). Ein Parameter-Object braechte hier keinen
+    // semantischen Mehrwert (die Werte sind keine zusammengehoerige Konfiguration, sondern pro
+    // Rekursionsstufe unterschiedliche Werte) und die relaxierte Nicht-Public-Grenze
+    // (MaxMethodParameterCountForNonPublic: 6) greift fuer diese Methode nicht, weil sie
+    // `internal` (nicht `private`/`protected`) sein muss, damit MetricsTreeRoslynScanner sie
+    // wiederverwenden kann (siehe Klassen-Doku).
+    internal static BuilderNode BuildNode(string name, string nodeRelativePath, List<FileMetric> metrics, int level, int depth)
     {
         var isFileLeaf = metrics.Count == 1 && metrics[0].RelativePath.Equals(nodeRelativePath, StringComparison.OrdinalIgnoreCase);
         if (isFileLeaf || level >= depth)
@@ -156,6 +200,10 @@ internal static class MetricsTreeScanner
         return new BuilderNode(
             name, relativePath, metrics.Count,
             metrics.Sum(m => m.CommentLines), metrics.Sum(m => m.CodeLines), metrics.Sum(m => m.Bytes),
+            metrics.Sum(m => m.ViolationCount), metrics.Sum(m => m.ErrorCount), metrics.Sum(m => m.WarningCount),
+            metrics.Sum(m => m.MethodCount), metrics.Sum(m => m.SumCyclomatic),
+            metrics.Count == 0 ? 0 : metrics.Max(m => m.MaxCyclomatic),
+            metrics.Count == 0 ? 0 : metrics.Max(m => m.MaxCognitive),
             Array.Empty<BuilderNode>());
     }
 
@@ -164,6 +212,10 @@ internal static class MetricsTreeScanner
         return new BuilderNode(
             name, relativePath, children.Sum(c => c.FileCount),
             children.Sum(c => c.CommentLines), children.Sum(c => c.CodeLines), children.Sum(c => c.Bytes),
+            children.Sum(c => c.ViolationCount), children.Sum(c => c.ErrorCount), children.Sum(c => c.WarningCount),
+            children.Sum(c => c.MethodCount), children.Sum(c => c.SumCyclomatic),
+            children.Count == 0 ? 0 : children.Max(c => c.MaxCyclomatic),
+            children.Count == 0 ? 0 : children.Max(c => c.MaxCognitive),
             children);
     }
 
@@ -199,10 +251,10 @@ internal static class MetricsTreeScanner
         return nodeRelativePath.Length == 0 ? segment : $"{nodeRelativePath}/{segment}";
     }
 
-    private static MetricsTreeNode ToMetricsTreeNode(BuilderNode node, MetricsTreeMode mode)
+    internal static MetricsTreeNode ToMetricsTreeNode(BuilderNode node, MetricsTreeMode mode)
     {
-        var sortValue = ComputeSortValue(mode, node.CommentLines, node.CodeLines);
-        var displayLine = FormatDisplayLine(mode, node.FileCount, sortValue, node.CommentLines, node.CodeLines, node.Bytes);
+        var sortValue = ComputeSortValue(mode, node);
+        var displayLine = FormatDisplayLine(mode, node, sortValue);
         var children = node.Children.Select(c => ToMetricsTreeNode(c, mode)).ToList();
         return new MetricsTreeNode(node.Name, node.RelativePath, node.FileCount, sortValue, displayLine, children);
     }
@@ -210,26 +262,42 @@ internal static class MetricsTreeScanner
     // comment_density sortiert AUFSTEIGEND nach Kommentar-Ratio (niedrigste Ratio zuerst): eine
     // niedrige Ratio ist das eigentliche Risiko-Signal (schlecht dokumentierter Code), ein Knoten
     // mit hoher Ratio ist unauffaellig — umgekehrt zu code_size, wo grosse Knoten das Signal sind.
-    private static double ComputeSortValue(MetricsTreeMode mode, int commentLines, int codeLines)
+    // violation_density/complexity sortieren beide ABSTEIGEND (siehe MetricsTreeRoslynScanner,
+    // das sortDescending: true fest an MetricsTreeRenderer.Render uebergibt).
+    private static double ComputeSortValue(MetricsTreeMode mode, BuilderNode node)
     {
-        if (mode == MetricsTreeMode.CodeSize) return codeLines;
-
-        var total = commentLines + codeLines;
-        return total == 0 ? 0 : (double)commentLines / total;
+        switch (mode)
+        {
+            case MetricsTreeMode.CodeSize:
+                return node.CodeLines;
+            case MetricsTreeMode.ViolationDensity:
+                return node.ViolationCount;
+            case MetricsTreeMode.Complexity:
+                return node.MethodCount == 0 ? 0 : (double)node.SumCyclomatic / node.MethodCount;
+            default:
+                var total = node.CommentLines + node.CodeLines;
+                return total == 0 ? 0 : (double)node.CommentLines / total;
+        }
     }
 
-    private static string FormatDisplayLine(
-        MetricsTreeMode mode, int fileCount, double sortValue, int commentLines, int codeLines, long bytes)
+    private static string FormatDisplayLine(MetricsTreeMode mode, BuilderNode node, double sortValue)
     {
-        var fileWord = fileCount == 1 ? "Datei" : "Dateien";
-        if (mode == MetricsTreeMode.CodeSize)
+        var fileWord = node.FileCount == 1 ? "Datei" : "Dateien";
+        switch (mode)
         {
-            return $"{fileCount} {fileWord} | {codeLines:N0} LoC | {FormatBytes(bytes)}";
+            case MetricsTreeMode.CodeSize:
+                return $"{node.FileCount} {fileWord} | {node.CodeLines:N0} LoC | {FormatBytes(node.Bytes)}";
+            case MetricsTreeMode.ViolationDensity:
+                return $"{node.FileCount} {fileWord} | {node.ViolationCount} Violations " +
+                       $"({node.ErrorCount} Fehler, {node.WarningCount} Warnungen)";
+            case MetricsTreeMode.Complexity:
+                return $"{node.FileCount} {fileWord} | Ø CC {sortValue.ToString("F1", CultureInfo.InvariantCulture)} | " +
+                       $"max CC {node.MaxCyclomatic} | max CogC {node.MaxCognitive}";
+            default:
+                var total = node.CommentLines + node.CodeLines;
+                var percent = sortValue * 100;
+                return $"{node.FileCount} {fileWord} | {percent:F0}% Kommentaranteil ({node.CommentLines:N0}/{total:N0} Zeilen)";
         }
-
-        var total = commentLines + codeLines;
-        var percent = sortValue * 100;
-        return $"{fileCount} {fileWord} | {percent:F0}% Kommentaranteil ({commentLines:N0}/{total:N0} Zeilen)";
     }
 
     private static string FormatBytes(long bytes)

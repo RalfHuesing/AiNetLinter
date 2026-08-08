@@ -147,6 +147,38 @@ public sealed class McpLiveRepositoryTests
     }
 
     [Fact]
+    public async Task LiveDogfood_MetricsTreeViolationDensity_ReturnsResults()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "metrics_tree",
+            new Dictionary<string, object?>
+            {
+                ["root"] = null,
+                ["mode"] = "violation_density",
+                ["depth"] = 2,
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_MetricsTreeComplexity_ReturnsResults()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "metrics_tree",
+            new Dictionary<string, object?>
+            {
+                ["root"] = null,
+                ["mode"] = "complexity",
+                ["depth"] = 2,
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+    }
+
+    [Fact]
     public async Task LiveDogfood_Safeguard_ReturnsResults()
     {
         // End-to-end-Verifikation: das safeguard-Tool liefert auf dem echten

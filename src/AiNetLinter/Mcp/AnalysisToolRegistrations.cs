@@ -3,14 +3,15 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.MetricsTree;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c> und
-/// <c>search_pattern</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
+/// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>search_pattern</c>
+/// und <c>metrics_tree</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
 /// Tool-Collection. Aus <see cref="FileStructureToolRegistrations"/> ausgelagert, weil
 /// <c>get_violations</c> durch den transitiven Pull-in aus <c>LinterEngine</c> +
 /// <c>LinterAnalyzer</c> + allen Checkern den <c>AIContextFootprint</c> (siehe
@@ -19,7 +20,11 @@ namespace AiNetLinter.Mcp;
 /// Limit). <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
 /// datei-inhalts-basiert arbeitet (wie <c>get_violations</c>) und damit semantisch nicht zu
 /// <see cref="SymbolGraphToolRegistrations"/> (C#-Symbolgraph) oder
-/// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt.
+/// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt. <c>metrics_tree</c> ist in
+/// EPIC-02 hierher gewandert, weil seine zwei neuen Roslyn-Modi (<c>violation_density</c>,
+/// <c>complexity</c>) denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> haben —
+/// derselbe Grund, aus dem <c>get_violations</c> hier registriert ist statt in
+/// <see cref="FileStructureToolRegistrations"/>.
 /// </summary>
 internal static class AnalysisToolRegistrations
 {
@@ -37,6 +42,7 @@ internal static class AnalysisToolRegistrations
         AddGetViolations(tools, mcpState, callLog);
         AddSafeguard(tools, mcpState, callLog);
         AddSearchPattern(tools, mcpState, callLog);
+        AddMetricsTree(tools, mcpState, callLog);
     }
 
     private static void AddGetViolations(
@@ -121,4 +127,34 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
         "JS-Funktion, Razor-Komponente, WPF-Element) oder allgemeine Textsuche. isRegex=true " +
         "fuer Regex statt case-insensitive Substring.";
+
+    private static void AddMetricsTree(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string? root, string mode, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+            {
+                var args = new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter);
+                if (callLog is null)
+                {
+                    return await MetricsTreeTool.ExecuteAsync(mcpState, args, ct);
+                }
+                return await callLog.ExecuteCallAsync("metrics_tree", $"{root}|{mode}|{depth}|{topN}|{fileFilter}",
+                    () => MetricsTreeTool.ExecuteAsync(mcpState, args, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "metrics_tree",
+                Description = MetricsTreeDescription,
+            }));
+    }
+
+    private const string MetricsTreeDescription =
+        "Wann nutzen: Verzeichnishierarchie einer unbekannten/grossen Codebase Ebene fuer Ebene " +
+        "erkunden statt Komplett-Dump zu lesen — aggregierte Werte pro Knoten + sortierte " +
+        "Top-N-Kinder. mode: code_size, comment_density, violation_density, complexity. " +
+        "root grenzt auf einen Teilbaum ein (Default: Solution-Root), depth (1-5) begrenzt die " +
+        "Baumtiefe, top_n die sichtbaren Kinder pro Ebene, file_filter (Regex) auf den Pfad.";
 }

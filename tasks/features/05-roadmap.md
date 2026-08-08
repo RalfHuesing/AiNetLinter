@@ -100,7 +100,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 |:--:|:--:|------|------:|--------:|--------|
 | [ ] | S2.2 | **`pattern_detect` (God-Classes, async-void, etc.)** | 90 | 1 Wo | Recon C §5.2 F6, Recon A §3.1 K12 |
 | [ ] | S2.3 | **`metrics_lookup` (One-Shot-Metriken)** | 70 | 3-5 Tage | Recon C §5.3 F9 |
-| [ ] | S2.5 | **`metrics_tree` (interaktive Codebase-Landkarte / Heatmap-Tree-Walk)** | 85 | 2-3 Tage | User-Idee 2026-08-06, Recon C §4.3 (Aider), Recon A §5.1 |
+| [x] | S2.5 | **`metrics_tree` (interaktive Codebase-Landkarte / Heatmap-Tree-Walk)** | 85 | 2-3 Tage | User-Idee 2026-08-06, Recon C §4.3 (Aider), Recon A §5.1 |
 
 **Gesamt Sprint 2:** ~2-3 Wochen. Sofort-ROI: Solution-übergreifende Pattern-Audits, deterministische Codebase-Exploration.
 
@@ -269,15 +269,25 @@ LLM identifiziert: "Tools/ hat 41% Comment-Ratio — überprüfen". Nächster Ca
 **Abhängigkeiten:** Existierende `LinterEngine`, `ComplexityCalculator`, File-Walk-Patterns aus `get_hotspots`
 **Aufwand:** 2-3 Tage
 **Akzeptanzkriterien:**
-- [ ] Tool `metrics_tree` mit 5 Modi
-- [ ] ASCII-Tree-Renderer mit Aggregat-Werten pro Knoten
-- [ ] Top-N-Sortierung pro Mode (korrekt: code_size → LoC desc, comment_density → Ratio desc, etc.)
-- [ ] `root` + `depth` + `top_n` + `file_filter` Parameter funktionieren
-- [ ] Sufficiency-Hinweis im Output
-- [ ] 5+ Unit-Tests (1 pro Mode + Edge-Cases: leeres Verzeichnis, single File, depth=5)
-- [ ] 1 Integration-Test auf Live-Repo
-- [ ] Doku: `Docs/agent-api.md` mit Beispielen pro Mode
-- [ ] Bestehende `--map`-Subcommands beibehalten (CLI-Kompatibilität), `metrics_tree` ist die MCP-Variante
+- [x] Tool `metrics_tree` mit **4** (nicht 5) Modi — `method_count` wurde bewusst weggelassen, siehe
+      `tasks/metrics-tree/konzept.md` „Verworfene Alternativen" (Redundanz zu `complexity`, das
+      Methodenzahl bereits implizit über `MethodCount` mitliefert)
+- [x] ASCII-Tree-Renderer mit Aggregat-Werten pro Knoten
+- [x] Top-N-Sortierung pro Mode (korrekt: code_size → LoC desc, comment_density → Ratio asc,
+      violation_density → Violation-Count desc, complexity → Ø CC desc)
+- [x] `root` + `depth` + `top_n` + `file_filter` Parameter funktionieren
+- [x] Drill-Down-Hinweis im Output (statt Sufficiency-Hinweis — `metrics_tree` ist strukturell
+      trunkiert (Top-N pro Ebene), daher `McpDrillDownHints` statt `McpSufficiencyHints`,
+      analog zu anderen trunkierenden Tools wie `find_symbol`)
+- [ ] 5+ Unit-Tests (1 pro Mode + Edge-Cases: leeres Verzeichnis, single File, depth=5) — **21**
+      Unit-Tests ueber beide Steps (deutlich mehr als 5), aber nur 4 statt 5 Modi abgedeckt
+- [x] 1 Integration-Test auf Live-Repo — 2 (`violation_density`, `complexity`) in
+      `McpLiveRepositoryTests` ergaenzt
+- [ ] Doku: `Docs/agent-api.md` mit Beispielen pro Mode — `Docs/agent-api.md` enthaelt eine
+      Tabellenzeile mit allen 4 Modi (konsistent zum Stil der uebrigen Tool-Zeilen dort), aber
+      keine dedizierten Beispiel-Bloecke pro Mode wie in diesem Dokument oben skizziert
+- [x] Bestehende `--map`-Subcommands beibehalten (CLI-Kompatibilität), `metrics_tree` ist die
+      MCP-Variante — unveraendert, nicht Teil dieses Tasks
 
 **Risiko:** Niedrig (grossteil Datei-Walk + Tree-Renderer, gut testbar)
 **Quelle:** User-Idee 2026-08-06, Recon C §4.3 (Aider Repo-Map), Recon A §5.1, Recon B §6.3 (bestehende `--map`-Subcommands)

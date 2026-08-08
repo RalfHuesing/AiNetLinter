@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;

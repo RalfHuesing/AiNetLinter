@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>
 /// Modus-agnostischer Baum-Knoten fuer <c>metrics_tree</c>. Kennt weder <see cref="Microsoft.CodeAnalysis.Solution"/>

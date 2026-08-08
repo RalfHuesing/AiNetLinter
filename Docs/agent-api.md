@@ -246,7 +246,7 @@ Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstru
 
 Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 13 Tools
+### Die 14 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
@@ -257,6 +257,7 @@ Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_referenc
 | `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
 | `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
 | `get_hotspots` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | `.cs`-Dateien, die ihrem `MaxLineCount`-Limit nahekommen oder es überschreiten | nein | nein |
+| `metrics_tree` | `root?` (Teilbaum, Default Solution-Root), `mode` (`code_size`, `comment_density`, `violation_density`, `complexity`), `depth?` (1-5, Default 1), `top_n?` (Default 10), `file_filter?` (Regex auf den Pfad) | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten und sortierten Top-N-Kindern je Ebene — `code_size`/`comment_density` sind reiner Datei-Walk (LoC/Bytes bzw. Kommentar-Ratio), `violation_density`/`complexity` laufen über `LinterEngine` bzw. Roslyn-Syntaxbäume (Lint-Verstöße bzw. zyklomatische/kognitive Komplexität je Methode) | nein (zwei der vier Modi sind reiner Datei-Walk) | ja (Top-N pro Ebene) |
 | `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | nein |
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
 | `get_symbol_body` | `identifier` (stabile DocumentationCommentId oder Datei:Zeile:Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
@@ -326,9 +327,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 13 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 14 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 13 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 14 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
@@ -390,7 +391,7 @@ Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overh
 
 ### Compile-Fehler-Warnhinweis (EPIC-06)
 
-Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **8 von 13 Tools** einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
+Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **9 von 14 Tools** (inkl. `metrics_tree`) einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
 
 ```
 Hinweis: 1 Datei hat Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
@@ -399,7 +400,7 @@ Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_
 
 Bei genau einer betroffenen Datei wechselt die Zeile in den Singular (`1 Datei hat`), bei mehreren bleibt es beim Plural (`N Dateien haben`).
 
-`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` prependet keinen Compile-Warnhinweis **und** surfaced Compile-Fehler auch nicht als eigene Violations — der Lint-Lauf ignoriert sie schlicht. Wer wissen will, ob Compile-Fehler vorliegen, muss eines der anderen 8 Tools nutzen (z. B. `get_index_scope` fuer den aggregierten oder `get_file_skeleton` fuer den datei-spezifischen Warnhinweis).
+`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` prependet keinen Compile-Warnhinweis **und** surfaced Compile-Fehler auch nicht als eigene Violations — der Lint-Lauf ignoriert sie schlicht. Wer wissen will, ob Compile-Fehler vorliegen, muss eines der anderen 9 Tools nutzen (z. B. `get_index_scope` fuer den aggregierten oder `get_file_skeleton` fuer den datei-spezifischen Warnhinweis).
 
 ### Staleness-Invalidierung
 

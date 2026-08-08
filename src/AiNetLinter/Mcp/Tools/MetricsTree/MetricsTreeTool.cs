@@ -5,9 +5,10 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>Rohe, noch ungeparste <c>metrics_tree</c>-Toolargumente vor der Validierung in <see cref="MetricsTreeTool.ExecuteAsync"/>.</summary>
 internal sealed record MetricsTreeToolArgs(
@@ -16,10 +17,11 @@ internal sealed record MetricsTreeToolArgs(
 /// <summary>
 /// MCP-Tool <c>metrics_tree</c>: liefert einen ASCII-Baum mit aggregierten Werten pro
 /// Verzeichnisknoten und sortierten Top-N-Kindern — Ebene-fuer-Ebene-Exploration einer Solution statt
-/// Komplett-Dump. Deckt in dieser Version die zwei Datei-Walk-Modi <c>code_size</c>/
-/// <c>comment_density</c> ab (EPIC-02 ergaenzt die Roslyn-Modi). Bewusst duenner Dispatch: Validierung
-/// hier (analog <see cref="FindSymbolTool.ExecuteAsync"/>), Scan-/Aggregationslogik in
-/// <see cref="MetricsTreeScanner"/> — keine eigene Logik, damit dieser Klasse eigener
+/// Komplett-Dump. Deckt alle vier Modi ab: die zwei Datei-Walk-Modi <c>code_size</c>/
+/// <c>comment_density</c> (synchron, <see cref="MetricsTreeScanner"/>) und die zwei Roslyn-Modi
+/// <c>violation_density</c>/<c>complexity</c> (async, <see cref="MetricsTreeRoslynScanner"/>). Bewusst
+/// duenner Dispatch: Validierung hier (analog <see cref="FindSymbolTool.ExecuteAsync"/>), Scan-/
+/// Aggregationslogik in den zwei Scanner-Klassen — keine eigene Logik, damit dieser Klasse eigener
 /// <c>AIContextFootprint</c> klein bleibt.
 /// </summary>
 internal static class MetricsTreeTool
@@ -36,7 +38,7 @@ internal static class MetricsTreeTool
         {
             return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
                 $"Unbekannter mode '{args.Mode}'.",
-                hint: "Gueltige Werte in dieser Version: code_size, comment_density.");
+                hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity.");
         }
 
         if (args.Depth is < 1 or > 5)
@@ -55,10 +57,27 @@ internal static class MetricsTreeTool
         if (filterResult.Error is not null) return filterResult.Error;
 
         var query = new MetricsTreeQuery(args.Root, parsedMode.Value, args.Depth, args.TopN, filterResult.Regex);
-        var text = MetricsTreeScanner.BuildTree(solution, query);
+        var text = await BuildTreeTextAsync(state, solution, query, ct);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var withHint = McpDrillDownHints.Append(text, args.Depth);
         return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, withHint));
+    }
+
+    /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne
+    /// Config/Console-Overhead, die zwei Roslyn-Modi brauchen <see cref="McpCodeGraphServer.GetConfigSnapshot"/>
+    /// (fuer <c>LinterEngine</c>) und <see cref="McpCodeGraphServer.Console"/> (damit <c>LinterEngine</c>
+    /// auf demselben Kanal loggt wie der MCP-Server selbst, analog <see cref="GetViolationsTool"/>).</summary>
+    private static async Task<string> BuildTreeTextAsync(
+        McpCodeGraphServer state, Solution solution, MetricsTreeQuery query, CancellationToken ct)
+    {
+        if (query.Mode is MetricsTreeMode.CodeSize or MetricsTreeMode.CommentDensity)
+        {
+            return MetricsTreeScanner.BuildTree(solution, query);
+        }
+
+        var configSnapshot = state.GetConfigSnapshot();
+        return await MetricsTreeRoslynScanner.BuildTreeAsync(
+            new MetricsTreeRoslynScanParameters(solution, configSnapshot.Config, state.Console, ct), query);
     }
 
     private static (Regex? Regex, CallToolResult? Error) TryBuildFileFilter(string? fileFilter)

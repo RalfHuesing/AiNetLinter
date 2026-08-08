@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
 namespace AiNetLinter.Tests.Mcp.Tools;
