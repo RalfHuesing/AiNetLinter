@@ -4,7 +4,7 @@
       "command": "C:/Daten/AiNetLinter-win-x64/AiNetLinter.exe",
       "args": [
         "--mcp-server",
-        "--path", "${CLAUDE_PROJECT_DIR:-.}/AiNetLinter.slnx",
+        "--path", "C:/Daten/Entwicklung/Ralf/AiNetLinter/AiNetLinter.slnx",
         "--mcp-log"
       ]
     }
