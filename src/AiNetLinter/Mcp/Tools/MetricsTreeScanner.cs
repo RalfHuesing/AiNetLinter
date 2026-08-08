@@ -9,6 +9,10 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools;
 
+/// <summary>Gebuendelte, bereits validierte Parameter fuer <see cref="MetricsTreeScanner.BuildTree"/>.</summary>
+internal sealed record MetricsTreeQuery(
+    string? Root, MetricsTreeMode Mode, int Depth, int TopN, Regex? FileFilter);
+
 /// <summary>
 /// Walk + Aggregation fuer die zwei Datei-Modi von <c>metrics_tree</c> (<c>code_size</c>,
 /// <c>comment_density</c>) — nutzt <see cref="SolutionFileWalker"/> als Datenquelle und
@@ -18,23 +22,22 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class MetricsTreeScanner
 {
-    internal static string BuildTree(
-        Solution solution, string? root, MetricsTreeMode mode, int depth, int topN, Regex? fileFilter)
+    internal static string BuildTree(Solution solution, MetricsTreeQuery query)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var rootRelative = NormalizeRoot(root);
+        var rootRelative = NormalizeRoot(query.Root);
 
-        var walked = SolutionFileWalker.CollectFiles(solution, solutionDir, scopeFilter: null, fileFilter);
+        var walked = SolutionFileWalker.CollectFiles(solution, solutionDir, scopeFilter: null, query.FileFilter);
         var scoped = walked.Where(f => f.RelativePath.StartsWith(rootRelative, StringComparison.OrdinalIgnoreCase)).ToList();
 
         if (scoped.Count == 0)
         {
             return $"Keine Dateien unter root='{rootRelative}'" +
-                   (fileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.";
+                   (query.FileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.";
         }
 
         var metrics = scoped
-            .Select(f => mode == MetricsTreeMode.CodeSize ? ComputeCodeSizeMetric(f) : ComputeCommentDensityMetric(f))
+            .Select(f => query.Mode == MetricsTreeMode.CodeSize ? ComputeCodeSizeMetric(f) : ComputeCommentDensityMetric(f))
             .Where(m => m is not null)
             .Select(m => m!)
             .ToList();
@@ -45,10 +48,10 @@ internal static class MetricsTreeScanner
         }
 
         var rootName = rootRelative.Length == 0 ? (Path.GetFileName(solutionDir) is { Length: > 0 } n ? n : ".") : rootRelative.Split('/')[^1];
-        var builderRoot = BuildNode(rootName, rootRelative, metrics, level: 0, depth);
-        var treeRoot = ToMetricsTreeNode(builderRoot, mode);
-        var sortDescending = mode == MetricsTreeMode.CodeSize;
-        return MetricsTreeRenderer.Render(treeRoot, topN, sortDescending);
+        var builderRoot = BuildNode(rootName, rootRelative, metrics, level: 0, query.Depth);
+        var treeRoot = ToMetricsTreeNode(builderRoot, query.Mode);
+        var sortDescending = query.Mode == MetricsTreeMode.CodeSize;
+        return MetricsTreeRenderer.Render(treeRoot, query.TopN, sortDescending);
     }
 
     private static string NormalizeRoot(string? root)
@@ -58,14 +61,14 @@ internal static class MetricsTreeScanner
 
     private sealed record FileMetric(string RelativePath, int CommentLines, int CodeLines, long Bytes);
 
-    private static FileMetric? ComputeCodeSizeMetric(SolutionFileWalker.WalkedFile f)
+    private static FileMetric? ComputeCodeSizeMetric(WalkedFile f)
     {
         var lines = SolutionFileWalker.TryReadAllLines(f.AbsolutePath);
         if (lines is null) return null;
         return new FileMetric(f.RelativePath, CommentLines: 0, CodeLines: lines.Length, Bytes: TryGetFileSize(f.AbsolutePath));
     }
 
-    private static FileMetric? ComputeCommentDensityMetric(SolutionFileWalker.WalkedFile f)
+    private static FileMetric? ComputeCommentDensityMetric(WalkedFile f)
     {
         var lines = SolutionFileWalker.TryReadAllLines(f.AbsolutePath);
         if (lines is null) return null;

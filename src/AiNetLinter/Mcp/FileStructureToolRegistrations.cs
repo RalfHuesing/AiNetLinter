@@ -125,12 +125,13 @@ internal static class FileStructureToolRegistrations
         tools.Add(McpServerTool.Create(
             async (string? root, string mode, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
             {
+                var args = new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter);
                 if (callLog is null)
                 {
-                    return await MetricsTreeTool.ExecuteAsync(mcpState, root, mode, depth, topN, fileFilter, ct);
+                    return await MetricsTreeTool.ExecuteAsync(mcpState, args, ct);
                 }
                 return await callLog.ExecuteCallAsync("metrics_tree", $"{root}|{mode}|{depth}|{topN}|{fileFilter}",
-                    () => MetricsTreeTool.ExecuteAsync(mcpState, root, mode, depth, topN, fileFilter, ct));
+                    () => MetricsTreeTool.ExecuteAsync(mcpState, args, ct));
             },
             new McpServerToolCreateOptions
             {

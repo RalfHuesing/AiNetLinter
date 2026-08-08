@@ -19,9 +19,6 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class SolutionFileWalker
 {
-    /// <summary>Relativer und absoluter Pfad einer per Walk gefundenen Datei.</summary>
-    internal readonly record struct WalkedFile(string RelativePath, string AbsolutePath);
-
     /// <summary>
     /// Sammelt alle gueltigen Quelldateien der <paramref name="solution"/>, gefiltert ueber
     /// <see cref="MatchesScope"/> (Projekt-Name/Pfad-Substring) und optional zusaetzlich ueber

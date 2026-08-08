@@ -30,7 +30,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", 1, 10, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -42,7 +43,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "unknown_mode", 1, 10, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "unknown_mode", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -56,7 +58,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", depth, 10, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", depth, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -69,7 +72,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", 1, 0, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 1, 0, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -82,7 +86,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", 1, 10, "[", CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 1, 10, "["), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -96,7 +101,7 @@ public sealed class MetricsTreeToolTests
         var state = NewState();
 
         var result = await MetricsTreeTool.ExecuteAsync(
-            state, "src/SymbolGraphMini", "code_size", 1, 10, null, CancellationToken.None);
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -112,7 +117,7 @@ public sealed class MetricsTreeToolTests
         var state = NewState();
 
         var result = await MetricsTreeTool.ExecuteAsync(
-            state, "src/SymbolGraphMini", "comment_density", 1, 10, null, CancellationToken.None);
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "comment_density", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -129,7 +134,7 @@ public sealed class MetricsTreeToolTests
         var state = NewState();
 
         var result = await MetricsTreeTool.ExecuteAsync(
-            state, "DoesNotExistAnywhere", "code_size", 1, 10, null, CancellationToken.None);
+            state, new MetricsTreeToolArgs("DoesNotExistAnywhere", "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -142,7 +147,7 @@ public sealed class MetricsTreeToolTests
         var state = NewState();
 
         var result = await MetricsTreeTool.ExecuteAsync(
-            state, "src/SymbolGraphMini/Greeter.cs", "code_size", 1, 10, null, CancellationToken.None);
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini/Greeter.cs", "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -156,7 +161,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", 5, 10, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 5, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -169,7 +175,7 @@ public sealed class MetricsTreeToolTests
         var state = NewState();
 
         var result = await MetricsTreeTool.ExecuteAsync(
-            state, "src/SymbolGraphMini", "code_size", 1, 10, "Greeter", CancellationToken.None);
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, "Greeter"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -184,7 +190,8 @@ public sealed class MetricsTreeToolTests
     {
         var state = NewState();
 
-        var result = await MetricsTreeTool.ExecuteAsync(state, null, "code_size", 1, 10, null, CancellationToken.None);
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
