@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-plan
 task: metrics-tree
 step: 001
