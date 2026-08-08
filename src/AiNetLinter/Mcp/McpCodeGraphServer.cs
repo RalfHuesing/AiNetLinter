@@ -77,6 +77,7 @@ internal sealed class McpCodeGraphServer : IDisposable
         _ => ServerLoadState.Loading,
     };
 
+    internal Task<SourceFileCatalog?>? LoadTask => _loadTask;
     /// <summary>Zeilen-Grenzwert aus <c>rules.json</c> bzw. <see cref="MetricsConfig"/>-Default.</summary>
     public int MaxLineCount { get; }
 

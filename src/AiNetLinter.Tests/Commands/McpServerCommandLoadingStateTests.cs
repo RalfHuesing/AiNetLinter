@@ -95,14 +95,14 @@ public sealed class McpServerCommandLoadingStateTests
         var loadingText = Assert.IsType<TextContentBlock>(Assert.Single(loading!.Content!)).Text;
         Assert.Contains("Server laedt", loadingText, StringComparison.Ordinal);
 
-        // Load-Abschluss freigeben und auf den Uebergang warten.
+        // Load-Abschluss freigeben und deterministisch auf den Abschluss des Load-Task
+        // warten (statt auf LoadState zu pollen) — der Timeout ist ein reines
+        // Sicherheitsnetz gegen einen echten Hänger, nicht die Wartebedingung selbst.
         release.SetResult(null);
 
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (server.LoadState == ServerLoadState.Loading && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(25);
-        }
+        var safetyTimeout = Task.Delay(TimeSpan.FromSeconds(20));
+        var winner = await Task.WhenAny(server.LoadTask!, safetyTimeout);
+        Assert.Same(server.LoadTask, winner);
 
         // Terminaler Zustand erreicht; konkret LoadFailed, weil der Load erfolgreich war
         // (kein Faulted) aber kein Catalog geliefert wurde.
@@ -111,7 +111,7 @@ public sealed class McpServerCommandLoadingStateTests
     }
 
     [Fact]
-    public void LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately()
+    public async Task LoadState_LoadFuncCompletesSynchronouslyWithCatalog_ReportsLoadedImmediately()
     {
         // Zeitfenster "Load bereits erfolgreich abgeschlossen, aber _catalog noch nicht
         // adoptiert": sobald der Load-Task erfolgreich war, muss LoadState Loaded melden,
@@ -141,11 +141,9 @@ public sealed class McpServerCommandLoadingStateTests
 
         release.SetResult(_fixture.Catalog);
 
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (server.LoadState == ServerLoadState.Loading && DateTime.UtcNow < deadline)
-        {
-            Thread.Sleep(25);
-        }
+        var safetyTimeout = Task.Delay(TimeSpan.FromSeconds(20));
+        var winner = await Task.WhenAny(server.LoadTask!, safetyTimeout);
+        Assert.Same(server.LoadTask, winner);
 
         Assert.Equal(ServerLoadState.Loaded, server.LoadState);
     }
