@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: metrics-tree
 started_at: 2026-08-08T17:31:45Z
-last_updated: 2026-08-08T17:31:45Z
+last_updated: 2026-08-08T18:10:00Z
 rules_dir: .agents/rules
-total_steps: 0
-current_step: step-001
+total_steps: 1
+current_step: step-002
 ---
 
 # Task State: metrics-tree
@@ -25,7 +25,7 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| step-001 | EPIC-01 | done (Korrektur ausstehend) | metrics_tree: Walk-Kern-Extraktion + code_size/comment_density-Modi + ASCII-Renderer + Tool | - | ja | issues | 92251cb / 8cfddc6 |
 
 ## Config (optional)
 
