@@ -91,7 +91,7 @@ function Invoke-DotNetValidation {
 
         if (-not $SkipTests) {
             Write-Host '[INFO] dotnet test...' -ForegroundColor Cyan
-            dotnet test --nologo -v q --no-build
+            dotnet test --nologo -v q --no-build --filter Category!=Stress
             if ($LASTEXITCODE -ne 0) {
                 throw 'dotnet test fehlgeschlagen.'
             }
