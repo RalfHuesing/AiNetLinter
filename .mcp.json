@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ainetlinter": {
+      "command": "C:/Daten/AiNetLinter-win-x64/AiNetLinter.exe",
+      "args": ["--mcp-server", "--mcp-log"]
+    }
+  }
+}
