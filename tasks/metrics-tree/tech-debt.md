@@ -2,7 +2,7 @@
 task: metrics-tree
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-08
+last_updated: 2026-08-08 (step-003)
 ---
 
 # Tech-Debt-Log: metrics-tree
@@ -30,7 +30,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
-| TD-001 | `src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs` + `MetricsTreeTool.cs` | mittel | nein | `AIContextFootprint` auf zwei Klassen knapp über/nahe dem Limit — Config-Override-Kette via `McpCodeGraphServer` als gemeinsame Ursache, Facade-Extraktion prüfen. |
+| TD-001 | `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs` + `Mcp/Tools/MetricsTree/MetricsTreeTool.cs` | mittel | nein | `AIContextFootprint` auf zwei Klassen knapp über/nahe dem Limit — Config-Override-Kette via `McpCodeGraphServer` als gemeinsame Ursache, Facade-Extraktion prüfen. Betroffene Dateien seit step-003 verschoben, Druck unverändert/leicht gestiegen. |
 | TD-002 | `src/AiNetLinter/Mcp/Tools/SolutionFileWalker.cs:23` | niedrig | ja | `WalkedFile`-Record-Struct verletzt `BanPublicNestedTypes` (internal nested Type) — Extraktion in eigene Datei. **Status: erledigt (step-002)** |
 
 ## Einträge
@@ -60,6 +60,21 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   für den nächsten Step vermerkt) relevant.
 - **Auto-Fixable:** nein — Facade-Design ist Architektur-Ermessen, keine mechanische Korrektur.
 - **Status:** offen
+- **Update (step-003, Kritiker-Review vom 2026-08-08):** Registrierung von `metrics_tree` von
+  `FileStructureToolRegistrations` nach `AnalysisToolRegistrations` verschoben (EPIC-02, gleicher
+  Grund wie bei `get_violations`). Selbst verifiziert per `get_violations` (voller Scope): aktuell
+  **keine** `AIContextFootprint`-Warnungen mehr, weil beide betroffenen Klassen frische
+  `PathOverrides` in `rules.json` bekommen haben. Der Befund selbst ist dadurch **nicht entschärft,
+  sondern verlagert und in der Tendenz verschärft**: `FileStructureToolRegistrations.cs` ist raus
+  aus der Betroffenheit (kein Override mehr nötig, echter Fortschritt), aber
+  `AnalysisToolRegistrations.cs`s Override musste bereits von 2870 auf 2910 angehoben werden
+  (tatsächlicher Footprint jetzt 2905) und die neue `Mcp/Tools/MetricsTree/MetricsTreeTool.cs`
+  braucht jetzt ebenfalls einen Override (2910, tatsächlicher Footprint 2897) — beide Werte liegen
+  nur noch ca. 5-13 Zeilen unter ihrem jeweiligen Override, praktisch keine Reserve mehr für
+  künftiges Wachstum in diesem Codebereich. Die zugrunde liegende Ursache (drei
+  Config-Override-Typen `GlobalConfigOverride`/`MetricsConfigOverride`/`TestSentinelConfigOverride`,
+  transitiv über `McpCodeGraphServer`) ist unverändert offen — der Facade-Vorschlag bleibt gültig,
+  Priorität weiterhin `mittel`, jetzt mit geringerer Restreserve als zuvor.
 
 ### TD-002 — `WalkedFile` verletzt BanPublicNestedTypes [Priorität: niedrig] [Auto-Fixable: ja]
 

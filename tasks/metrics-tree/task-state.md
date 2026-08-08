@@ -2,9 +2,9 @@
 status: executing  # executing | done | aborted
 task: metrics-tree
 started_at: 2026-08-08T17:31:45Z
-last_updated: 2026-08-08T18:40:00Z
+last_updated: 2026-08-08T20:10:00Z
 rules_dir: .agents/rules
-total_steps: 2
+total_steps: 3
 current_step: step-003
 ---
 
@@ -27,6 +27,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | metrics_tree: Walk-Kern-Extraktion + code_size/comment_density-Modi + ASCII-Renderer + Tool | - | ja | issues | 92251cb / 8cfddc6 |
 | step-002 | EPIC-01 | done | Korrektur: MaxMethodParameterCount + TD-002 (WalkedFile-Extraktion) | step-001 | ja | approved | 2cdaa7f / bc5cb01 |
+| step-003 | EPIC-02 | done | Roslyn-Modi violation_density/complexity + Doku-Updates + Roadmap-Abschluss | - | ja | approved | 58a6aa5 / a292aab |
 
 ## Config (optional)
 
