@@ -3,10 +3,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.CallTree;
 
 /// <summary>
 /// MCP-Tool <c>get_call_tree</c>: loest einen Symbol-Identifikator wie <see cref="FindReferencesTool"/>

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.CallTree;
 
 /// <summary>
 /// Rendert dieselbe <see cref="MetricsTreeNode"/>-Baumstruktur, die <see cref="CallGraphTraversal.BuildTreeAsync"/>

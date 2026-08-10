@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
