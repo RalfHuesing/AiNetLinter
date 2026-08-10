@@ -48,35 +48,34 @@ internal static class GetHotspotsScanner
         var warning = files.Where(f => (double)f.Lines / maxLineCount is >= WarnThreshold and < CriticalThreshold).ToList();
 
         var text = FormatReport(files, critical, warning, maxLineCount, scopeFilter);
-        var entries = BuildEntries(files, critical, warning, maxLineCount);
+        var entries = BuildEntries(critical, warning, maxLineCount);
         return (text, entries);
     }
 
     /// <summary>
-    /// Mappt <paramref name="files"/> auf <see cref="HotspotEntry"/>, Kategorie-Zuordnung ueber
-    /// Mengen-Zugehoerigkeit zu <paramref name="critical"/>/<paramref name="warning"/> — dieselben
-    /// Listen, die auch <see cref="FormatReport"/> fuer die Text-Sektionen verwendet, damit Text
-    /// und StructuredContent nie in der Kategorisierung auseinanderdriften.
+    /// Baut <see cref="HotspotEntry"/>s nur fuer <paramref name="critical"/>/<paramref name="warning"/>
+    /// — dieselben Listen, die auch <see cref="FormatReport"/> fuer die Text-Sektionen verwendet,
+    /// damit Text und StructuredContent nie in der Kategorisierung auseinanderdriften. Dateien im
+    /// gruenen Bereich ("ok") werden bewusst NICHT aufgenommen: fruehere Fassung listete alle
+    /// gescannten Dateien (auch "ok") in StructuredContent, was bei einer grossen Solution die
+    /// Antwort auf mehrere zehntausend Zeichen aufblaehte und den Client-Token-Guard sprengte —
+    /// genau das Gegenteil vom Zweck eines Hotspot-Reports (nur die Dateien nahe/ueber dem Limit).
     /// </summary>
     private static IReadOnlyList<HotspotEntry> BuildEntries(
-        IReadOnlyList<HotspotFileInfo> files,
         IReadOnlyList<HotspotFileInfo> critical,
         IReadOnlyList<HotspotFileInfo> warning,
         int maxLineCount)
     {
-        var criticalPaths = new HashSet<string>(critical.Select(f => f.RelativePath), StringComparer.OrdinalIgnoreCase);
-        var warningPaths = new HashSet<string>(warning.Select(f => f.RelativePath), StringComparer.OrdinalIgnoreCase);
-
-        return files
-            .Select(f => new HotspotEntry(
-                f.RelativePath,
-                f.Lines,
-                Math.Round((double)f.Lines / maxLineCount * 100, 1),
-                criticalPaths.Contains(f.RelativePath) ? "critical" : warningPaths.Contains(f.RelativePath) ? "warning" : "ok"))
+        return critical
+            .Select(f => BuildEntry(f, maxLineCount, "critical"))
+            .Concat(warning.Select(f => BuildEntry(f, maxLineCount, "warning")))
             .OrderByDescending(e => e.Lines)
             .ThenBy(e => e.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private static HotspotEntry BuildEntry(HotspotFileInfo file, int maxLineCount, string category) =>
+        new(file.RelativePath, file.Lines, Math.Round((double)file.Lines / maxLineCount * 100, 1), category);
 
     private static List<HotspotFileInfo> CollectFiles(Solution solution, string solutionDir, string? scopeFilter)
     {
@@ -152,7 +151,8 @@ internal static class GetHotspotsScanner
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>get_hotspots</c> (S1.3) — ein Objekt je Datei mit Pfad, Zeilen
-/// und Auslastung. <see cref="Category"/> spiegelt dieselbe Schwellwert-Klassifizierung wie die
-/// Text-Sektionen ("critical" >=95%, "warning" >=80%, sonst "ok").
+/// und Auslastung, nur fuer <see cref="Category"/> <c>"critical"</c> (>=95%) oder <c>"warning"</c>
+/// (>=80%) — Dateien im gruenen Bereich tauchen bewusst nicht auf (siehe
+/// <see cref="GetHotspotsScanner.BuildEntries"/>).
 /// </summary>
 internal sealed record HotspotEntry(string RelativePath, int Lines, double UtilizationPercent, string Category);
