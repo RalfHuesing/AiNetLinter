@@ -483,7 +483,7 @@ Details und Reihenfolge der geplanten Punkte: `tasks/codegraph-mcp-server/konzep
 
 ## MCP-Tool `metrics_tree`
 
-Eigener Task (`tasks/metrics-tree/`, separat von den oben gelisteten MCP-Codegraph-Server-EPICs, eigene EPIC-Zählung). Neues MCP-Tool `metrics_tree` liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten und sortierten Top-N-Kindern je Ebene — Ebene-für-Ebene-Exploration einer Solution statt Komplett-Dump.
+Eigener, mittlerweile abgeschlossener Task (separat von den oben gelisteten MCP-Codegraph-Server-EPICs, eigene EPIC-Zählung; Task-Ordner nach Abschluss entfernt). Neues MCP-Tool `metrics_tree` liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten und sortierten Top-N-Kindern je Ebene — Ebene-für-Ebene-Exploration einer Solution statt Komplett-Dump.
 
 - [x] **EPIC-01 — Datei-Walk-Modi:** `code_size` (LoC + Bytes, absteigend sortiert) und `comment_density` (Kommentar-Ratio, aufsteigend sortiert), reiner `SolutionFileWalker`-basierter Datei-Walk ohne Roslyn-Overhead; modus-agnostischer ASCII-Tree-Renderer.
 - [x] **EPIC-02 — Roslyn-Modi:** `violation_density` (Lint-Verstöße pro Datei via `LinterEngine`, Total/Fehler/Warnungen) und `complexity` (Ø/max. zyklomatische und max. kognitive Komplexität pro Datei über `ComplexityCalculator`, nur `MethodDeclarationSyntax`); Tool-Registrierung nach `AnalysisToolRegistrations` verschoben (gleicher Grund wie bei `get_violations`: `LinterEngine`-Pull-in). Vollständige Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).

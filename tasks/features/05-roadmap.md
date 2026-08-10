@@ -269,9 +269,8 @@ LLM identifiziert: "Tools/ hat 41% Comment-Ratio — überprüfen". Nächster Ca
 **Abhängigkeiten:** Existierende `LinterEngine`, `ComplexityCalculator`, File-Walk-Patterns aus `get_hotspots`
 **Aufwand:** 2-3 Tage
 **Akzeptanzkriterien:**
-- [x] Tool `metrics_tree` mit **4** (nicht 5) Modi — `method_count` wurde bewusst weggelassen, siehe
-      `tasks/metrics-tree/konzept.md` „Verworfene Alternativen" (Redundanz zu `complexity`, das
-      Methodenzahl bereits implizit über `MethodCount` mitliefert)
+- [x] Tool `metrics_tree` mit **4** (nicht 5) Modi — `method_count` wurde bewusst weggelassen
+      (Redundanz zu `complexity`, das Methodenzahl bereits implizit über `MethodCount` mitliefert)
 - [x] ASCII-Tree-Renderer mit Aggregat-Werten pro Knoten
 - [x] Top-N-Sortierung pro Mode (korrekt: code_size → LoC desc, comment_density → Ratio asc,
       violation_density → Violation-Count desc, complexity → Ø CC desc)
