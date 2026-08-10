@@ -90,7 +90,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 |:--:|:--:|------|------:|--------:|--------|
 | [x] | S1.2 | **`safeguard` (Quality-Contract-Pattern)** | 95 | 3-5 Tage | Recon C §5.1 F2, Recon B §6.3 |
 | [x] | S1.3 | **Structured-Output-Mode** (zentraler JSON-Wrapper) | 70 | 2-3h | Recon B §8.1 Q1+Q16 |
-| [ ] | S1.4 | **`get_call_tree`-Tool** (echter Baum, ASCII/Mermaid) | 65 | 1 Tag | Recon B §8.2 Q5 |
+| [x] | S1.4 | **`get_call_tree`-Tool** (echter Baum, ASCII/Mermaid) | 65 | 1 Tag | Recon B §8.2 Q5 |
 
 **Gesamt Sprint 1:** 4-6 Tage. Sofort-ROI: `safeguard` als Differentiator + Grundlage für eine echte Baseline-Messung (siehe §7), bevor weiter investiert wird.
 

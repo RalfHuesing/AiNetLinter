@@ -31,6 +31,7 @@ internal static class OverviewResourceRegistration
     [
         ("find_symbol", "Sucht C#-Symbole (Klasse/Methode/Property/Interface) per Substring im Namen."),
         ("find_references", "Findet Aufrufstellen eines C#-Symbols."),
+        ("get_call_tree", "Liefert den echten Caller-Baum eines C#-Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid)."),
         ("get_impact", "Findet Aufrufstellen geaenderter Signaturen — per Git-Diff (Default: uncommittete Aenderungen) oder fuer ein einzelnes Symbol."),
         ("get_type_hierarchy", "Liefert Basisklassen, Interfaces, abgeleitete Typen und heuristische DI-Registrierungen eines Typs."),
         ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer C#-Datei."),

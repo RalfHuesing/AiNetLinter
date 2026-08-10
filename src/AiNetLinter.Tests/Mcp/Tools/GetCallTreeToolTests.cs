@@ -1,0 +1,139 @@
+#nullable enable
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Baseline;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Tests.Fixtures;
+using ModelContextProtocol.Protocol;
+using Xunit;
+
+namespace AiNetLinter.Tests.Mcp.Tools;
+
+[Trait("Category", "Unit")]
+[Collection("SymbolGraphCatalog")]
+public sealed class GetCallTreeToolTests
+{
+    private readonly SymbolGraphCatalogFixture _fixture;
+
+    public GetCallTreeToolTests(SymbolGraphCatalogFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("irrelevant", 2, null, 10), CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("DoesNotExistXyz", 2, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AmbiguousSimpleName_ReturnsAmbiguousSymbol()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Run", 2, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("AMBIGUOUS_SYMBOL", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AsciiFormatDefault_ReturnsTreeWithCallerNames()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 1, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.Run", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+        // ASCII-Baum: Kindzeilen tragen den Renderer-eigenen Praefix.
+        Assert.Contains("├──", textContent.Text, StringComparison.Ordinal);
+        // Q5 Sufficiency-Hinweis fuer nicht-trunkierte Ergebnisse.
+        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MermaidFormat_ReturnsFlowchartBlock()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 1, "mermaid", 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("flowchart TD", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("-->", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Caller.Run", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TopNBelowCallerCount_AppendsRemainingCountLine()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 1, null, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        // Greeter.Greet hat 3 distinkte Aufrufer (Run/RunTwice/RunThrice) — topN=1 zeigt 1,
+        // der Renderer haengt die "... und N weitere"-Zeile an.
+        Assert.Contains("... und 2 weitere", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DepthAboveCap_ClampsAndStillReturnsResult()
+    {
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 99, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    {
+        using var fixture = new CompileErrorMiniFixtureWorkspace();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("ValidClassA.DoWork", 1, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
+}
