@@ -47,7 +47,18 @@ internal static class GetCallTreeTool
             var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(solution, symbol!, input.Depth, topN, ct);
 
             var body = RenderTree(root, input.Format, topN);
-            var finalBody = truncated ? body + "\n\n" + BuildTruncationMeta() : McpSufficiencyHints.Append(body);
+            // "truncated" deckt nur den 250-Knoten-Hardcap von BuildTreeAsync ab. Der Renderer
+            // kappt zusaetzlich pro Ebene auf topN und haengt bei Ueberschuss eine eigene
+            // "... und N weitere"-Zeile an (MetricsTreeRenderer/CallTreeMermaidRenderer) — ohne
+            // diesen Fall zeigte der Sufficiency-Hinweis faelschlich "vollstaendig" an, obwohl der
+            // Baum sichtbar gekappt war. Marker-String-Erkennung analog zum "hard-cap"-Muster in
+            // FindReferencesTool.
+            var topNTruncated = body.Contains("... und ", StringComparison.Ordinal);
+            var finalBody = truncated
+                ? body + "\n\n" + BuildTruncationMeta()
+                : topNTruncated
+                    ? body + "\n\n" + BuildTopNTruncationMeta()
+                    : McpSufficiencyHints.Append(body);
 
             return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalBody));
         }
@@ -67,6 +78,10 @@ internal static class GetCallTreeTool
     private static string BuildTruncationMeta() =>
         $"[Baum trunkiert — hard-cap {CallGraphTraversal.MaxCallTreeNodes} Knoten erreicht, " +
         "depth oder topN reduzieren fuer einen vollstaendigeren Teilbaum]";
+
+    private static string BuildTopNTruncationMeta() =>
+        "[Baum trunkiert — mindestens eine Ebene hat mehr Kinder als topN, siehe " +
+        "\"... und N weitere\"-Zeilen; topN erhoehen fuer einen vollstaendigeren Teilbaum]";
 }
 
 /// <summary>

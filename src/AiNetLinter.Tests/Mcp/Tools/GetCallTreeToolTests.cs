@@ -109,6 +109,12 @@ public sealed class GetCallTreeToolTests
         // Greeter.Greet hat 3 distinkte Aufrufer (Run/RunTwice/RunThrice) — topN=1 zeigt 1,
         // der Renderer haengt die "... und N weitere"-Zeile an.
         Assert.Contains("... und 2 weitere", textContent.Text, StringComparison.Ordinal);
+        // Regression: eine reine Renderer-Top-N-Kappung (kein 250-Knoten-Hardcap) muss trotzdem
+        // als trunkiert erkannt werden — sonst behauptet der Sufficiency-Hinweis faelschlich
+        // Vollstaendigkeit, obwohl sichtbar Kinder fehlen.
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("trunkiert", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("topN erhoehen", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
