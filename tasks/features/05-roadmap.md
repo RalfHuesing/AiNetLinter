@@ -112,6 +112,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | [ ] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
+| [ ] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
 
 **Gesamt M-Phase:** 4-6 Wochen. Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
 
@@ -120,13 +121,16 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 > finden" durchgetestet wurde (siehe Session-Notizen), ist **M2 `dependency_graph` die naechste
 > sinnvolle Prioritaet** — die konkret erlebte Luecke war "welche Dateien haengen an Datei/Modul X"
 > zu beantworten, ohne vorher ein einzelnes Symbol zu kennen; aktuell nur muehsam ueber mehrere
-> `find_symbol`/`find_references`-Runden rekonstruierbar. **M5 `test_coverage_context` danach** —
-> sinnvoller Folgeschritt, aber weniger dringend, weil `find_references` bereits einen Teil des
-> Bedarfs abdeckt (findet Unit-Tests, die eine Methode direkt aufrufen). M1 (eigenstaendiges
-> Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt) bleiben unveraendert nachrangig — siehe
-> aktualisiertes Sequenzierungsdiagramm in §4. Zwei zusaetzlich diskutierte Ideen wurden bewusst
-> NICHT in die Roadmap aufgenommen: Git-Historie/Blame als eigenes Tool und semantische/Fuzzy-Suche
-> — Begruendung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9/§10.
+> `find_symbol`/`find_references`-Runden rekonstruierbar. **Direkt danach M8** (`--eval`/`--map`
+> streichen, Details siehe §3) — Nutzer-Entscheidung 2026-08-11 nach Diskussion, ob das
+> Audit-Prompt-Feature (Epic 31, 2026-08-03) durch die MCP-Tools ueberholt ist. **M5
+> `test_coverage_context` danach** — sinnvoller Folgeschritt, aber weniger dringend, weil
+> `find_references` bereits einen Teil des Bedarfs abdeckt (findet Unit-Tests, die eine Methode
+> direkt aufrufen). M1 (eigenstaendiges Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt)
+> bleiben unveraendert nachrangig — siehe aktualisiertes Sequenzierungsdiagramm in §4. Zwei
+> zusaetzlich diskutierte Ideen wurden bewusst NICHT in die Roadmap aufgenommen: Git-Historie/Blame
+> als eigenes Tool und semantische/Fuzzy-Suche — Begruendung in
+> [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9/§10.
 
 > **Hinweis zu M1:** Betrifft ausschließlich die ASP.NET-Core-Request-Pipeline (Controller-Routes, Minimal-API-Endpoints, Middleware-Reihenfolge, DI-Registrierungen, gRPC-Services, Route-Konflikte) — **nicht** Blazor (dafür existieren bereits eigene Checker, `BlazorRequireCodeBehind`/`BlazorRequireCssIsolation`) und **nicht** Kestrel (Server-Hosting, TLS, Ports — bisher nirgends spezifiziert). Das sind 6 neue Linter-*Regeln*, kein MCP-Interface-Thema — sollte als eigenständiges Vorhaben/eigener Drift-Loop-Task laufen, getrennt von der MCP-Aufwertung.
 
@@ -342,10 +346,44 @@ Plus 1-2 MCP-Tools:
 - [ ] 2 MCP-Tools optional
 - [ ] 30+ Unit-Tests (alle 6 Rules + 2 Tools)
 - [ ] 1 Integration-Test: ASP.NET-Sample-Repo mit allen 6 Rules auslöst
-- [ ] Doku: `Docs/configuration.md` + neuer Eval-typ `aspnet-audit`
+- [ ] Doku: `Docs/configuration.md` (kein neuer Eval-Typ mehr — das `--eval`-Feature ist mit M8 gestrichen, siehe unten)
 
 **Risiko:** Mittel (Pipeline-Analyse ist neu, ASP.NET-Varianten)
 **Quelle:** Recon A §7.2, Recon C §4.7 (Differentiator)
+
+---
+
+### M8 — `--eval`/`--map` ersatzlos streichen (Audit-Prompts + Codebase-Maps)
+
+**Warum:** `--eval` (`naming-drift`/`architecture-intent`, Epic 31, gebaut 2026-08-03) assembliert einen statischen Markdown-Prompt (Spec + Vocabulary-/Structure-Map) zum Copy-Paste in eine beliebige LLM-Session. Das Feature taucht nirgends in der aktiven Drift-Loop-Scaffolding (`.agents/`) auf — kein Beleg fuer aktive Nutzung im echten Workflow. Inhaltlich loest es "gib einer LLM Audit-Kontext als einen grossen statischen Blob" — genau das Muster, das die MCP-Investition (safeguard, pattern_detect, metrics_tree, get_violations) gerade abgeloest hat: ein Agent mit Live-MCP-Zugriff kann sich dieselbe Evidenz gezielt, aktuell und praeziser selbst zusammenstellen. Eine Integration ins MCP ergibt architektonisch keinen Sinn — ein MCP-Tool bedient dieselbe Session, die schon Live-Tool-Zugriff hat, und wuerde sich keinen "Prompt fuer sich selbst" bauen. Nutzer-Entscheidung 2026-08-11 nach Diskussion (siehe Session-Notizen): ersatzlos streichen statt in MCP integrieren.
+
+**Wichtige Abgrenzung — was NICHT betroffen ist:** `HotspotMapBuilder` und `SkeletonMapBuilder` (zwei der vier `--map`-Modi) werden von den MCP-Tools `get_hotspots` bzw. `get_file_skeleton` weiterverwendet (siehe `GetHotspotsScanner`/`GetFileSkeletonTool`) — diese Klassen bleiben als interne Implementierung bestehen, nur ihre CLI-Exposition ueber `--map hotspots`/`--map skeleton` entfaellt zusammen mit dem gesamten `--map`-Flag. `VocabularyMapBuilder`/`StructureMapBuilder` haben dagegen keinen anderen Konsumenten ausser `EvalAssembler`/`MapCommand` (verifiziert 2026-08-11) und koennen vollstaendig geloescht werden. **Vor Umsetzung nochmal bestaetigen:** dass der ersatzlose Wegfall von `--map hotspots`/`--map skeleton` als eigenstaendige CLI-Faehigkeit (nur noch ueber MCP erreichbar) tatsaechlich gewuenscht ist.
+
+**Scope:**
+1. `--eval`, `--list-evals`, `--spec` CLI-Optionen entfernen (`CliOptionFactory`, `LinterArgs`, Parse-Wiring)
+2. `Evals/`-Namespace komplett loeschen: `EvalRegistry`, `EvalDefinition`, `EvalAssembler`, `SpecLoader`
+3. `EvalCommand`, `ListEvalsCommand` loeschen
+4. `Docs/Evals/naming-drift.md`, `Docs/Evals/architecture-intent.md` loeschen, `EmbeddedResource`-Eintrag im `.csproj` entfernen
+5. `--map` CLI-Option entfernen, `MapCommand` loeschen
+6. `VocabularyMapBuilder`, `StructureMapBuilder` loeschen (kein anderer Konsument)
+7. Alle zugehoerigen Tests entfernen
+8. Doku bereinigen: `Docs/agent-api.md`, `Docs/integration.md`, `Docs/ROADMAP.md` (Epic-31-Eintrag auf "entfernt, siehe M8" aktualisieren statt kommentarlos loeschen — Historie bleibt nachvollziehbar), README falls vorhanden
+
+**Wichtiger Hinweis zum Fehlerverhalten (Nutzer-Anforderung 2026-08-11):** Ruft jemand die `.exe` nach der Entfernung noch mit `--eval`/`--map`/`--list-evals`/`--spec` auf, muss das ein harter Fehler sein (klare Meldung + Exit-Code ≠ 0), kein stiller No-Op. **Das ist kein Extra-Code:** System.CommandLine liefert dieses Verhalten bereits automatisch fuer jede unbekannte Option — empirisch verifiziert am 2026-08-11 (`ainetlinter --this-flag-does-not-exist` → `Befehl oder Argument '--this-flag-does-not-exist' nicht erkannt.` + Usage-Hilfetext + Exit-Code 1). Reines Loeschen der Options-Registrierung reicht; **kein** Soft-Deprecation-Pfad ("--eval wurde entfernt, nutze stattdessen X") einbauen — das wuerde unnoetigen Code fuer ein bewusst gestrichenes Feature bedeuten. Damit ist auch die allgemeinere Nutzerfrage beantwortet, ob unbekannte Parameter grundsaetzlich einen harten Fehler liefern: **ja, bereits heute der Fall**, kein separates Akzeptanzkriterium noetig.
+
+**Abhängigkeiten:** Keine (reine Entfernung)
+**Aufwand:** 2-3 Tage (Loeschen + Doku-Bereinigung + Test-Anpassung)
+**Akzeptanzkriterien:**
+- [ ] `--eval`/`--list-evals`/`--spec` vollstaendig entfernt (Code + Tests + Doku)
+- [ ] `--map` vollstaendig entfernt (Code + Tests + Doku)
+- [ ] `VocabularyMapBuilder`/`StructureMapBuilder` geloescht
+- [ ] `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben bestehen, MCP-Tools (`get_hotspots`, `get_file_skeleton`) unveraendert funktionsfaehig
+- [ ] Verifiziert: `ainetlinter --eval ...` und `ainetlinter --map ...` liefern "nicht erkannt"-Fehlermeldung + Exit-Code ≠ 0 (kein Extra-Code, folgt automatisch aus der Entfernung)
+- [ ] `Docs/ROADMAP.md` Epic-31-Eintrag aktualisiert (nicht geloescht) mit Verweis auf die Streichung
+- [ ] `dotnet build`/`dotnet test` (Volllauf) gruen
+
+**Risiko:** Niedrig (reine Entfernung, keine neue Logik)
+**Quelle:** Nutzer-Entscheidung 2026-08-11, Dogfooding-Session 2026-08-10/11
 
 ---
 
@@ -377,6 +415,7 @@ Sprint 2 (2-3 Wo)
 
 Mid-Term (4-6 Wo) — Reihenfolge aktualisiert nach Dogfooding-Session 2026-08-10/11 (siehe §2)
 ├── M2 dependency_graph         ← unabhängig, HÖCHSTE PRIORITÄT (größte Navigationslücke laut Dogfooding)
+├── M8 --eval/--map streichen   ← unabhängig, direkt danach (Nutzer-Entscheidung 2026-08-11)
 ├── M5 test_coverage_context    ← unabhängig, danach
 ├── M1 ASP.NET-Analyzer-Suite   ← eigenständiges Linting-Vorhaben, siehe Hinweis oben, nachrangig
 └── M3 feature_context           ← hängt an S2.2 (jetzt entsperrt), nachrangig
@@ -536,6 +575,8 @@ User-Anweisung 2026-08-06: „entscheide du bitte (was macht codegraph bzw. was 
 | **D8** | `context_bundle` umbenennen? | **Ja, `feature_context`** | "Bundle" ist vage, "feature_context" macht klar: alles für ein Feature. |
 | **D10** | Output-Format-Standard? | **Primär Markdown, ASCII-Tree nur für Hierarchien, Plain-Text für Listen** | Konsistent mit bestehendem AiNetLinter-Standard (`get_violations`/`get_symbol_body` = Markdown, `find_references` = Plain-Text). CodeGraph nutzt dasselbe. |
 | **D12** | Reihenfolge? | **Quick-Wins zuerst, dann Sprint 1, dann Sprint 2, dann M-Phase** | Quick-Wins = sofortige Token-Save + Foundation. Sprints = Killer-Feature + Audit-Tools. M = strategische Investitionen (ASP.NET-Suite als eigenes Vorhaben). |
-| **D13** | M-Phase-Reihenfolge nach Q/S1/S2-Abschluss? | **M2 `dependency_graph` vor M5 `test_coverage_context` vor M1/M3** | Dogfooding-Session 2026-08-10/11 (siehe Session-Notizen): systematischer Live-Test aller Tools gegen das eigene Repo aus Sicht "großer Task, Code-Stellen selbst finden" ergab die Datei-/Modul-Abhängigkeitsfrage als größte verbleibende Navigationslücke — aktuell nur über mehrere `find_symbol`/`find_references`-Runden mühsam rekonstruierbar. Test-Coverage-Bedarf ist teilweise schon durch `find_references` gedeckt (findet direkte Unit-Test-Aufrufer), daher nachrangig. |
+| **D13** | M-Phase-Reihenfolge nach Q/S1/S2-Abschluss? | **M2 `dependency_graph` vor M8 `--eval`/`--map`-Streichung vor M5 `test_coverage_context` vor M1/M3** | Dogfooding-Session 2026-08-10/11 (siehe Session-Notizen): systematischer Live-Test aller Tools gegen das eigene Repo aus Sicht "großer Task, Code-Stellen selbst finden" ergab die Datei-/Modul-Abhängigkeitsfrage als größte verbleibende Navigationslücke — aktuell nur über mehrere `find_symbol`/`find_references`-Runden mühsam rekonstruierbar. M8 direkt danach eingeschoben (Nutzer-Entscheidung 2026-08-11, kleiner Aufwand, reine Bereinigung). Test-Coverage-Bedarf ist teilweise schon durch `find_references` gedeckt (findet direkte Unit-Test-Aufrufer), daher nachrangig. |
 | **D14** | Git-Historie/Blame als eigenes MCP-Tool bauen? | **Nein** | Gleiches Argument wie bei `search_pattern`/grep: der Host-Agent hat bereits nativen Zugriff auf `git log`/`git blame`/`git show` per Bash-Tool — ein reiner Wrapper liefert keinen Mehrwert. Volle Begründung inkl. Revival-Bedingung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9. |
 | **D15** | Semantische/Fuzzy-Codesuche (Embeddings) bauen? | **Nein** | Widerspricht der strategischen Positionierung (§0: deterministisch, Roslyn-präzise, kein Modell-/Cloud-Abhängigkeit). Volle Begründung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §10. |
+| **D16** | `--eval`/`--map` (Audit-Prompts + Codebase-Maps) behalten, streichen oder in MCP integrieren? | **Ersatzlos streichen (M8)** | Nutzer-Entscheidung 2026-08-11 nach Diskussion: kein Beleg für aktive Nutzung (nicht in `.agents/`-Drift-Loop-Scaffolding referenziert), inhaltlich vom MCP-Ansatz überholt (statischer Evidenz-Blob vs. gezielte Live-Tool-Calls), Integration in MCP architektonisch sinnlos (MCP-Tool bedient dieselbe Session, die schon Live-Zugriff hat). `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben intern bestehen (Wiederverwendung durch `get_hotspots`/`get_file_skeleton`), nur die CLI-Fläche entfällt. Details in §3 M8. |
+| **D17** | Müssen unbekannte CLI-Parameter einen harten Fehler liefern (allgemeine Anforderung, nicht nur für `--eval`/`--map`)? | **Bereits der Fall, kein Handlungsbedarf** | Empirisch verifiziert 2026-08-11: `ainetlinter --this-flag-does-not-exist` liefert automatisch `Befehl oder Argument '...' nicht erkannt.` + Usage-Hilfetext + Exit-Code 1, via System.CommandLine-Standardverhalten. Gilt automatisch auch für `--eval`/`--map` nach deren Entfernung in M8 — kein Soft-Deprecation-Sonderfall nötig. |
