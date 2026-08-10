@@ -127,6 +127,27 @@ Diese Epics/Ideen wurden in den Recon-Berichten bzw. der ursprünglichen Roadmap
 
 ---
 
-## 9. Revidierte frühere Planungs-Philosophie
+## 9. Git-Historie/Blame als eigenes MCP-Tool
+
+**Ursprünglich als Idee vorhanden:** XL8 "History-Intelligence (git-blame + Churn-Analyse)", siehe Punkt 7 oben — dort nur als vage Vision-Idee ohne konkrete Prüfung.
+**Quelle:** Dogfooding-Session 2026-08-10/11 gegen das eigene Repo (Nutzer-Nachfrage 2026-08-11: "gibt doch git command line tools — macht es sinn das nachzubauen? wäre das gleiche argument wie search_pattern mit grep?!").
+
+**Begründung:** Ja — genau dasselbe Argument wie bei `search_pattern` (das bewusst als dünner Fallback für Nicht-C#-Inhalte existiert, aber keinen strukturellen Mehrwert gegenüber grep bietet): der Host-Agent (Claude Code) hat bereits nativen Zugriff auf `git log`/`git blame`/`git show` per Bash-Tool — ausgereifte, ubiquitäre CLI-Werkzeuge, die AiNetLinter nicht neu erfinden muss. Ein reiner MCP-Wrapper um diese Befehle würde keinen Mehrwert liefern, den der Agent nicht schon hat. Die einzige denkbare Rechtfertigung wäre eine ECHTE Kombination aus Git-Historie und Roslyn-Symbolauflösung (z. B. "zeige alle Commits, die den Body dieser spezifischen Methode geändert haben — robust über Refactorings/Verschiebungen hinweg, nicht nur über Zeilennummern wie `git log -L`"). Das ist technisch nicht trivial (Symbol-Tracking über Commit-Historie), aktuell nicht als konkreter Bedarf belegt, und würde inhaltlich eher unter M2 `dependency_graph`/M3 `feature_context` fallen als ein eigenes Tool zu rechtfertigen.
+
+**Revival-Bedingung:** Nur falls sich im Drift-Loop wiederholt zeigt, dass reines `git log`/`git blame` (ohne Symbolbezug) für einen Agenten-Task nicht ausreicht UND eine symbolbewusste Variante nachweislich einen Unterschied macht — bisher unbelegt.
+
+---
+
+## 10. Semantische/Fuzzy-Codesuche (Embeddings-basiert)
+
+**Quelle:** Dogfooding-Session 2026-08-10/11, Nutzer-Nachfrage 2026-08-11.
+
+**Begründung:** "Finde den Code, der Authentifizierung macht" ohne bekannten Namen/String ist mit dem aktuellen Tool-Set (exakte Roslyn-Symbolauflösung + Substring-/Regex-Textsuche) nicht abbildbar — das würde Embeddings/Vector-Search erfordern. Widerspricht der strategischen Positionierung (§0: deterministisch, Roslyn-präzise, kein Modell-/Cloud-Abhängigkeit) und dem Anti-Ziel "kein weiterer Code-Intelligence-Server, sondern Verifikations-Gatekeeper". Es gibt bereits spezialisierte Werkzeuge für semantische Codesuche (IDE-Plugins, dedizierte RAG-Systeme) — AiNetLinters Differenzierung liegt woanders (siehe §0).
+
+**Revival-Bedingung:** Keine vorgesehen — würde die Kern-Positionierung des Tools verändern, nicht nur erweitern.
+
+---
+
+## 11. Revidierte frühere Planungs-Philosophie
 
 Die ursprüngliche Roadmap-Fassung folgte der Prämisse "perspektivisch alles drin" — jede aus den Recons abgeleitete Idee wurde in eine Phase (Q/S/M/L/XL) einsortiert, mit dem Ziel, möglichst vollständig zu sein. Nach Review wurde das umgekehrt: **die Roadmap enthält nur noch, was wir aktiv bauen wollen.** Grund: Die Recon-Dokumente selbst identifizieren als Kernlehre aus CodeGraph "5-15 Tools ideal, Single-Tool-Doctrine, Progressive Disclosure" — eine Roadmap, die auf 17+ Tools plus Cloud-Infrastruktur plus einer zehnteiligen Vision-Liste zusteuert, widerspricht dieser eigenen Erkenntnis. Konsolidieren vor Erweitern, und nur bauen, was Speed, Fokus, Audit-Fähigkeit oder Kosten-/Token-Effizienz direkt verbessert.

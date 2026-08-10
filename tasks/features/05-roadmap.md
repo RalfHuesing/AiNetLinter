@@ -115,6 +115,19 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 **Gesamt M-Phase:** 4-6 Wochen. Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
 
+> **Priorisierungs-Update (Dogfooding-Session 2026-08-10/11):** Nach einer Session, in der der
+> MCP-Server systematisch als Navigations-Werkzeug für einen "großen Task, Code-Stellen selbst
+> finden" durchgetestet wurde (siehe Session-Notizen), ist **M2 `dependency_graph` die naechste
+> sinnvolle Prioritaet** — die konkret erlebte Luecke war "welche Dateien haengen an Datei/Modul X"
+> zu beantworten, ohne vorher ein einzelnes Symbol zu kennen; aktuell nur muehsam ueber mehrere
+> `find_symbol`/`find_references`-Runden rekonstruierbar. **M5 `test_coverage_context` danach** —
+> sinnvoller Folgeschritt, aber weniger dringend, weil `find_references` bereits einen Teil des
+> Bedarfs abdeckt (findet Unit-Tests, die eine Methode direkt aufrufen). M1 (eigenstaendiges
+> Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt) bleiben unveraendert nachrangig — siehe
+> aktualisiertes Sequenzierungsdiagramm in §4. Zwei zusaetzlich diskutierte Ideen wurden bewusst
+> NICHT in die Roadmap aufgenommen: Git-Historie/Blame als eigenes Tool und semantische/Fuzzy-Suche
+> — Begruendung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9/§10.
+
 > **Hinweis zu M1:** Betrifft ausschließlich die ASP.NET-Core-Request-Pipeline (Controller-Routes, Minimal-API-Endpoints, Middleware-Reihenfolge, DI-Registrierungen, gRPC-Services, Route-Konflikte) — **nicht** Blazor (dafür existieren bereits eigene Checker, `BlazorRequireCodeBehind`/`BlazorRequireCssIsolation`) und **nicht** Kestrel (Server-Hosting, TLS, Ports — bisher nirgends spezifiziert). Das sind 6 neue Linter-*Regeln*, kein MCP-Interface-Thema — sollte als eigenständiges Vorhaben/eigener Drift-Loop-Task laufen, getrennt von der MCP-Aufwertung.
 
 ---
@@ -362,11 +375,11 @@ Sprint 2 (2-3 Wo)
 ├── S2.3 metrics_lookup         ← unabhängig, klein
 └── S2.5 metrics_tree (Heatmap-Tree)  ← unabhängig
 
-Mid-Term (4-6 Wo)
-├── M1 ASP.NET-Analyzer-Suite   ← eigenständiges Linting-Vorhaben, siehe Hinweis oben
-├── M2 dependency_graph         ← unabhängig
-├── M3 feature_context           ← hängt an S2.2
-└── M5 test_coverage_context    ← unabhängig
+Mid-Term (4-6 Wo) — Reihenfolge aktualisiert nach Dogfooding-Session 2026-08-10/11 (siehe §2)
+├── M2 dependency_graph         ← unabhängig, HÖCHSTE PRIORITÄT (größte Navigationslücke laut Dogfooding)
+├── M5 test_coverage_context    ← unabhängig, danach
+├── M1 ASP.NET-Analyzer-Suite   ← eigenständiges Linting-Vorhaben, siehe Hinweis oben, nachrangig
+└── M3 feature_context           ← hängt an S2.2 (jetzt entsperrt), nachrangig
 ```
 
 **Optimaler Start für den ersten Drift-Loop-Task** (Q-Phase + S1.2 als ein Block):
@@ -523,3 +536,6 @@ User-Anweisung 2026-08-06: „entscheide du bitte (was macht codegraph bzw. was 
 | **D8** | `context_bundle` umbenennen? | **Ja, `feature_context`** | "Bundle" ist vage, "feature_context" macht klar: alles für ein Feature. |
 | **D10** | Output-Format-Standard? | **Primär Markdown, ASCII-Tree nur für Hierarchien, Plain-Text für Listen** | Konsistent mit bestehendem AiNetLinter-Standard (`get_violations`/`get_symbol_body` = Markdown, `find_references` = Plain-Text). CodeGraph nutzt dasselbe. |
 | **D12** | Reihenfolge? | **Quick-Wins zuerst, dann Sprint 1, dann Sprint 2, dann M-Phase** | Quick-Wins = sofortige Token-Save + Foundation. Sprints = Killer-Feature + Audit-Tools. M = strategische Investitionen (ASP.NET-Suite als eigenes Vorhaben). |
+| **D13** | M-Phase-Reihenfolge nach Q/S1/S2-Abschluss? | **M2 `dependency_graph` vor M5 `test_coverage_context` vor M1/M3** | Dogfooding-Session 2026-08-10/11 (siehe Session-Notizen): systematischer Live-Test aller Tools gegen das eigene Repo aus Sicht "großer Task, Code-Stellen selbst finden" ergab die Datei-/Modul-Abhängigkeitsfrage als größte verbleibende Navigationslücke — aktuell nur über mehrere `find_symbol`/`find_references`-Runden mühsam rekonstruierbar. Test-Coverage-Bedarf ist teilweise schon durch `find_references` gedeckt (findet direkte Unit-Test-Aufrufer), daher nachrangig. |
+| **D14** | Git-Historie/Blame als eigenes MCP-Tool bauen? | **Nein** | Gleiches Argument wie bei `search_pattern`/grep: der Host-Agent hat bereits nativen Zugriff auf `git log`/`git blame`/`git show` per Bash-Tool — ein reiner Wrapper liefert keinen Mehrwert. Volle Begründung inkl. Revival-Bedingung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9. |
+| **D15** | Semantische/Fuzzy-Codesuche (Embeddings) bauen? | **Nein** | Widerspricht der strategischen Positionierung (§0: deterministisch, Roslyn-präzise, kein Modell-/Cloud-Abhängigkeit). Volle Begründung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §10. |
