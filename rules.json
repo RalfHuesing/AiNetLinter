@@ -403,26 +403,6 @@
     }
   },
   "PathOverrides": {
-    "src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs": {
-      "Metrics": {
-        "MaxAIContextFootprint": 2910
-      }
-    },
-    "src/AiNetLinter/Mcp/Tools/SafeguardTool.cs": {
-      "Metrics": {
-        "MaxAIContextFootprint": 2800
-      }
-    },
-    "src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeTool.cs": {
-      "Metrics": {
-        "MaxAIContextFootprint": 2910
-      }
-    },
-    "src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs": {
-      "Metrics": {
-        "MaxAIContextFootprint": 2890
-      }
-    },
     "src/AiNetLinter/Mcp/McpCodeGraphServer.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2520

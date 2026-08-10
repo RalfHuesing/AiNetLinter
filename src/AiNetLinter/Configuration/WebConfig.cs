@@ -27,21 +27,6 @@ public sealed record WebConfig
     /// Konfigurations-Subbereich fuer Razor/Blazor-Komponenten (Phase 3 der Extend-Web-Features-Epic).
     /// </summary>
     public RazorConfig Razor { get; init; } = new();
-
-    /// <summary>
-    /// Wendet Projekt-Overrides an (siehe WebConfigOverride).
-    /// </summary>
-    public WebConfig Apply(WebConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            IsEnabled = @override.IsEnabled ?? IsEnabled,
-            Css = Css.Apply(@override.Css),
-            Js = Js.Apply(@override.Js),
-            Razor = Razor.Apply(@override.Razor),
-        };
-    }
 }
 
 // Test-Sentinel: CssConfig ist ueber CssAnalyzerTests.cs mit // @covers abgedeckt
@@ -86,22 +71,6 @@ public sealed record CssConfig
         "**/node_modules/**",
         "**/*.min.css",
     };
-
-    /// <summary>
-    /// Wendet Css-spezifische Projekt-Overrides an.
-    /// </summary>
-    public CssConfig Apply(CssConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            MaxCssLineCount = @override.MaxCssLineCount ?? MaxCssLineCount,
-            PreferScopedCss = @override.PreferScopedCss ?? PreferScopedCss,
-            PreferScopedCssMinRuleCount = @override.PreferScopedCssMinRuleCount ?? PreferScopedCssMinRuleCount,
-            MaxCssSelectorComplexity = @override.MaxCssSelectorComplexity ?? MaxCssSelectorComplexity,
-            ExemptPaths = @override.ExemptPaths ?? ExemptPaths,
-        };
-    }
 }
 
 // Test-Sentinel: JsConfig ist ueber JsAnalyzerTests.cs mit // @covers abgedeckt
@@ -135,20 +104,6 @@ public sealed record JsConfig
         "**/node_modules/**",
         "**/*.min.js",
     };
-
-    /// <summary>
-    /// Wendet JS-spezifische Projekt-Overrides an.
-    /// </summary>
-    public JsConfig Apply(JsConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            MaxJsLineCount = @override.MaxJsLineCount ?? MaxJsLineCount,
-            EnforceJsModules = @override.EnforceJsModules ?? EnforceJsModules,
-            ExemptPaths = @override.ExemptPaths ?? ExemptPaths,
-        };
-    }
 }
 
 // Test-Sentinel: RazorConfig ist ueber RazorAnalyzerTests.cs mit // @covers abgedeckt
@@ -208,23 +163,4 @@ public sealed record RazorConfig
     /// (`class="base @(flag ? 'a' : 'b')"`) gemeldet. Mixed-Context zwischen HTML und C#.
     /// </summary>
     public bool BanInlineTernaryInAttributes { get; init; } = true;
-
-    /// <summary>
-    /// Wendet Razor-spezifische Projekt-Overrides an.
-    /// </summary>
-    public RazorConfig Apply(RazorConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            MaxRazorLineCount = @override.MaxRazorLineCount ?? MaxRazorLineCount,
-            MaxRazorCodeBlockLines = @override.MaxRazorCodeBlockLines ?? MaxRazorCodeBlockLines,
-            MaxMarkupNestingDepth = @override.MaxMarkupNestingDepth ?? MaxMarkupNestingDepth,
-            BanInlineEventLambdas = @override.BanInlineEventLambdas ?? BanInlineEventLambdas,
-            MaxControlFlowBlocks = @override.MaxControlFlowBlocks ?? MaxControlFlowBlocks,
-            MaxForeachNestingDepth = @override.MaxForeachNestingDepth ?? MaxForeachNestingDepth,
-            MaxComponentParameterCount = @override.MaxComponentParameterCount ?? MaxComponentParameterCount,
-            BanInlineTernaryInAttributes = @override.BanInlineTernaryInAttributes ?? BanInlineTernaryInAttributes,
-        };
-    }
 }

@@ -57,24 +57,6 @@ public sealed record UiSeparationConfig
     /// Reine Komponenten-Komposition (nur PascalCase-Tags wie &lt;MudButton&gt;) wird nicht beanstandet.
     /// </summary>
     public bool BlazorCssIsolationOnlyWhenStylesNeeded { get; init; } = true;
-
-    /// <summary>
-    /// Wendet Projekt-Overrides an.
-    /// </summary>
-    public UiSeparationConfig Apply(UiSeparationConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            BlazorRequireCodeBehind = @override.BlazorRequireCodeBehind ?? BlazorRequireCodeBehind,
-            BlazorRequireCssIsolation = @override.BlazorRequireCssIsolation ?? BlazorRequireCssIsolation,
-            WpfRequireMinimalCodeBehind = @override.WpfRequireMinimalCodeBehind ?? WpfRequireMinimalCodeBehind,
-            WpfCodeBehindBaseTypes = @override.WpfCodeBehindBaseTypes ?? WpfCodeBehindBaseTypes,
-            BlazorExcludeFileNames = @override.BlazorExcludeFileNames ?? BlazorExcludeFileNames,
-            WpfExcludeClassNames = @override.WpfExcludeClassNames ?? WpfExcludeClassNames,
-            BlazorCssIsolationOnlyWhenStylesNeeded = @override.BlazorCssIsolationOnlyWhenStylesNeeded ?? BlazorCssIsolationOnlyWhenStylesNeeded,
-        };
-    }
 }
 
 /// <summary>

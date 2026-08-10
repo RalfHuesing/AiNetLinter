@@ -266,23 +266,4 @@ public sealed record MetricsConfig
             Reason = "Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC≤3 ist nicht mit Fehleranfälligkeit korreliert (Palomba et al., 2018)."
         }
     ];
-
-    /// <summary>
-    /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
-    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet. Die eigentliche Override-Logik
-    /// lebt in <see cref="MetricsConfigApplier"/>, damit dieser Record selbst schmaler bleibt und
-    /// die <c>AIContextFootprint</c>-Last pro transitivem Konsumenten (z. B. die
-    /// <c>*ToolRegistrations</c>-Klassen im MCP-Pfad) sinkt.
-    /// </summary>
-    public MetricsConfig Apply(MetricsConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return MetricsConfigApplier.ApplyDirectoryAndMemberLimits(
-            MetricsConfigApplier.ApplyDependencyLimits(
-                MetricsConfigApplier.ApplyComplexityLimits(
-                    MetricsConfigApplier.ApplyLineLimits(this, @override),
-                    @override),
-                @override),
-            @override);
-    }
 }

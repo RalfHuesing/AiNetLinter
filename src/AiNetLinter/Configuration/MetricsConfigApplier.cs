@@ -11,6 +11,22 @@ namespace AiNetLinter.Configuration;
 /// </summary>
 internal static class MetricsConfigApplier
 {
+    /// <summary>
+    /// Einstiegspunkt: wendet alle Override-Sektionen nacheinander an.
+    /// Nur gesetzte (nicht-null) Override-Felder werden angewendet.
+    /// </summary>
+    public static MetricsConfig Apply(MetricsConfig config, MetricsConfigOverride? @override)
+    {
+        if (@override == null) return config;
+        return ApplyDirectoryAndMemberLimits(
+            ApplyDependencyLimits(
+                ApplyComplexityLimits(
+                    ApplyLineLimits(config, @override),
+                    @override),
+                @override),
+            @override);
+    }
+
     public static MetricsConfig ApplyLineLimits(MetricsConfig config, MetricsConfigOverride o) => config with
     {
         MaxLineCount = o.MaxLineCount ?? config.MaxLineCount,

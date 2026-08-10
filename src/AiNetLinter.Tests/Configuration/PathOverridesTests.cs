@@ -67,7 +67,8 @@ public sealed class PathOverridesTests
             }
         };
 
-        var effectiveMetrics = config.Metrics.Apply(
+        var effectiveMetrics = MetricsConfigApplier.Apply(
+            config.Metrics,
             config.PathOverrides["src/MyApp/Handlers/**"].Metrics);
 
         Assert.Equal(80, effectiveMetrics.MaxMethodLineCount);
@@ -96,11 +97,11 @@ public sealed class PathOverridesTests
         };
 
         // After ProjectOverride: 60
-        var afterProject = global.Metrics.Apply(global.ProjectOverrides["MyApp"].Metrics);
+        var afterProject = MetricsConfigApplier.Apply(global.Metrics, global.ProjectOverrides["MyApp"].Metrics);
         Assert.Equal(60, afterProject.MaxMethodLineCount);
 
         // After PathOverride: 80 (wins)
-        var afterPath = afterProject.Apply(global.PathOverrides["src/MyApp/Handlers/**"].Metrics);
+        var afterPath = MetricsConfigApplier.Apply(afterProject, global.PathOverrides["src/MyApp/Handlers/**"].Metrics);
         Assert.Equal(80, afterPath.MaxMethodLineCount);
     }
 

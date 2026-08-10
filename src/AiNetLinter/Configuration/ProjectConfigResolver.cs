@@ -125,11 +125,11 @@ public static class ProjectConfigResolver
     {
         return global with
         {
-            Global = global.Global.Apply(overrides.Global),
-            Metrics = global.Metrics.Apply(overrides.Metrics),
-            TestSentinel = global.TestSentinel.Apply(overrides.TestSentinel),
-            UiSeparation = global.UiSeparation.Apply(overrides.UiSeparation),
-            Web = global.Web.Apply(overrides.Web),
+            Global = GlobalConfigApplier.Apply(global.Global, overrides.Global),
+            Metrics = MetricsConfigApplier.Apply(global.Metrics, overrides.Metrics),
+            TestSentinel = TestSentinelConfigApplier.Apply(global.TestSentinel, overrides.TestSentinel),
+            UiSeparation = UiSeparationConfigApplier.Apply(global.UiSeparation, overrides.UiSeparation),
+            Web = WebConfigApplier.Apply(global.Web, overrides.Web),
         };
     }
 }

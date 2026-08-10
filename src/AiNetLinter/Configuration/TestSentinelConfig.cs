@@ -44,19 +44,4 @@ public sealed record TestSentinelConfig
     /// </summary>
     public IReadOnlyList<string> TestProjectNameSuffixes { get; init; }
         = ["Tests", "Test", "IntegrationTests", "Specs", "Spec"];
-
-    /// <summary>
-    /// Wendet Projekt-Overrides an und gibt eine neue Instanz mit den überschriebenen Werten zurück.
-    /// </summary>
-    public TestSentinelConfig Apply(TestSentinelConfigOverride? @override)
-    {
-        if (@override == null) return this;
-        return this with
-        {
-            ExemptClassNameSuffixes = @override.ExemptClassNameSuffixes ?? ExemptClassNameSuffixes,
-            ExemptWhenInheritsFrom = @override.ExemptWhenInheritsFrom ?? ExemptWhenInheritsFrom,
-            ExemptStaticClasses = @override.ExemptStaticClasses ?? ExemptStaticClasses,
-            TestProjectNameSuffixes = @override.TestProjectNameSuffixes ?? TestProjectNameSuffixes,
-        };
-    }
 }
