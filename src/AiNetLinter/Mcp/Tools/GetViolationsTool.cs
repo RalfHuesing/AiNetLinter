@@ -47,12 +47,14 @@ internal static class GetViolationsTool
         // "Keine Dateien im Scope") sind kein Malfunction und bekommen stattdessen den
         // Sufficiency-Hinweis, weil der Report immer vollstaendig fuer den Scope ist (kein
         // Trunkierungs-Parameter existiert fuer get_violations).
+        // StructuredContent (S1.3) additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
+        // Malfunction keine sinnvolle Teil-Violations-Liste hat (result.Violations ist dann null).
         return result.IsMalfunction
             ? McpToolResults.Error(
                 LinterErrorCodes.AnalysisFailed,
                 result.Text,
                 context: result.Context,
                 hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).")
-            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text));
+            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text), result.Violations!);
     }
 }

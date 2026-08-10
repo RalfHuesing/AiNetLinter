@@ -74,10 +74,10 @@ internal static class FindSymbolTool
 
         try
         {
-            var text = await FindSymbolScanner.FindMatchesAndFormat(
+            var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
                 solution, namePattern, kind, normalizedMaxResults);
             var warning = await BuildAggregateWarningAsync(solution, ct);
-            return McpToolResults.Text(PrependWarning(warning, text));
+            return McpToolResults.Text(PrependWarning(warning, text), entries);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -96,15 +96,33 @@ internal static class FindSymbolTool
     /// </summary>
     internal static IEnumerable<string> FormatSymbolLocations(ISymbol symbol, string outputRoot)
     {
+        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot))
+        {
+            yield return FormatEntry(entry);
+        }
+    }
+
+    /// <summary>
+    /// Strukturierte Variante von <see cref="FormatSymbolLocations"/> — eine
+    /// <see cref="SymbolLocationEntry"/> je Quell-Fundstelle von <paramref name="symbol"/>.
+    /// Einzige Quelle der Wahrheit fuer beide Formen (Text via <see cref="FormatEntry"/>,
+    /// JSON via <see cref="FindSymbolScanner.FindMatchesWithEntriesAsync"/>s
+    /// <c>StructuredContent</c>, S1.3), damit Text und JSON nie auseinanderdriften.
+    /// </summary>
+    internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(ISymbol symbol, string outputRoot)
+    {
         var kindLabel = DescribeKind(symbol);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
             var relativePath = PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
             var line = lineSpan.StartLinePosition.Line + 1;
-            yield return $"{relativePath}:{line} - {kindLabel}: {symbol.ToDisplayString()}";
+            yield return new SymbolLocationEntry(relativePath, line, kindLabel, symbol.ToDisplayString());
         }
     }
+
+    private static string FormatEntry(SymbolLocationEntry entry) =>
+        $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}";
 
     private static string DescribeKind(ISymbol symbol)
     {
@@ -136,3 +154,11 @@ internal static class FindSymbolTool
         return string.IsNullOrEmpty(warning) ? text : warning + "\n\n" + text;
     }
 }
+
+/// <summary>
+/// StructuredContent-Eintrag fuer <c>find_symbol</c> (S1.3) — eine Quell-Fundstelle eines Symbols
+/// (Pfad, Zeile, Kind, voll qualifizierter Name). Ein Symbol mit mehreren Deklarationen (z. B.
+/// <c>partial class</c>) liefert einen Eintrag je Fundstelle, konsistent zu
+/// <see cref="FindSymbolTool.FormatSymbolLocations"/>s Text-Zeilen.
+/// </summary>
+internal sealed record SymbolLocationEntry(string FilePath, int Line, string Kind, string Name);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -63,6 +64,24 @@ public sealed class GetViolationsToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFilterMatchesProjectName_StructuredContentDeserializesToRuleViolations()
+    {
+        // S1.3 Structured-Output-Mode: StructuredContent ergaenzt den Text additiv, ohne ihn zu
+        // aendern (siehe die unveraenderten Text-Assertions in den anderen Tests dieser Klasse).
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var violations = JsonSerializer.Deserialize<List<RuleViolation>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(violations);
+        Assert.NotEmpty(violations!);
+        Assert.Contains(violations!, v => v.RuleName is not null && v.FilePath.Contains("ViolationTrigger", StringComparison.Ordinal));
     }
 
     [Fact]

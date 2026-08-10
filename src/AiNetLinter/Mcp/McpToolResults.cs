@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Text.Json;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -133,6 +134,23 @@ internal static class McpToolResults
         return new CallToolResult
         {
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+        };
+    }
+
+    /// <summary>
+    /// Wie <see cref="Text(string)"/>, ergaenzt zusaetzlich <see cref="CallToolResult.StructuredContent"/>
+    /// (MCP-Protokoll-Feature) — additiv, ohne den bisherigen Text-Vertrag zu aendern (S1.3
+    /// Structured-Output-Mode). <paramref name="payload"/> wird ueber <see cref="McpJsonOptions.Default"/>
+    /// serialisiert, damit alle Tools dieselben CamelCase-/Kompakt-Optionen teilen (Pattern von
+    /// <see cref="Tools.SafeguardTool"/> uebernommen, dort urspruenglich als Erstes eingefuehrt).
+    /// Clients, die nur Text konsumieren, ignorieren das zusaetzliche Feld einfach.
+    /// </summary>
+    internal static CallToolResult Text<T>(string text, T payload)
+    {
+        return new CallToolResult
+        {
+            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
     }
 

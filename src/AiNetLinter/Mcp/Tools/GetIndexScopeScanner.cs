@@ -23,16 +23,31 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class GetIndexScopeScanner
 {
     /// <summary>
-    /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> als Text.
+    /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> — Text
+    /// (bisheriges Format unveraendert) plus <see cref="FileTypeBreakdownEntry"/>-Liste fuer
+    /// <c>StructuredContent</c> (S1.3).
     /// </summary>
-    internal static string BuildBreakdownText(Solution solution)
+    internal static (string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries) BuildBreakdown(Solution solution)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var csCount = CountCsFiles(solution, solutionDir);
         var webCounts = CountWebFiles(solution, solutionDir);
         var (xamlCount, htmlCount) = CountXamlAndHtmlFiles(solution);
+        var cssCount = webCounts.GetValueOrDefault(WebFileType.Css);
+        var jsCount = webCounts.GetValueOrDefault(WebFileType.Js);
+        var razorCount = webCounts.GetValueOrDefault(WebFileType.Razor);
 
-        return FormatBreakdown(csCount, webCounts, xamlCount, htmlCount);
+        var text = FormatBreakdown(csCount, cssCount, htmlCount, jsCount, razorCount, xamlCount);
+        var entries = new List<FileTypeBreakdownEntry>
+        {
+            new(".cs", csCount, SymbolGraphCovered: true),
+            new(".css", cssCount, SymbolGraphCovered: false),
+            new(".html", htmlCount, SymbolGraphCovered: false),
+            new(".js", jsCount, SymbolGraphCovered: false),
+            new(".razor", razorCount, SymbolGraphCovered: false),
+            new(".xaml", xamlCount, SymbolGraphCovered: false),
+        };
+        return (text, entries);
     }
 
     private static int CountCsFiles(Solution solution, string solutionDir)
@@ -75,13 +90,12 @@ internal static class GetIndexScopeScanner
         return (xamlCount, htmlCount);
     }
 
+    // 6 Parameter: innerhalb MaxMethodParameterCountForNonPublic (rules.json: 6) fuer private
+    // Methoden — kein Parameter-Object noetig, BuildBreakdown baut aus denselben 6 Werten direkt
+    // danach ohnehin schon die FileTypeBreakdownEntry-Liste.
     private static string FormatBreakdown(
-        int csCount, IReadOnlyDictionary<WebFileType, int> webCounts, int xamlCount, int htmlCount)
+        int csCount, int cssCount, int htmlCount, int jsCount, int razorCount, int xamlCount)
     {
-        var cssCount = webCounts.GetValueOrDefault(WebFileType.Css);
-        var jsCount = webCounts.GetValueOrDefault(WebFileType.Js);
-        var razorCount = webCounts.GetValueOrDefault(WebFileType.Razor);
-
         var lines = new[]
         {
             FormatFileCountLine(csCount, ".cs", " (voll vom Symbolgraph abgedeckt)"),
@@ -106,3 +120,10 @@ internal static class GetIndexScopeScanner
         return $"{extension}: {count} {fileLabel}{suffix}";
     }
 }
+
+/// <summary>
+/// StructuredContent-Eintrag fuer <c>get_index_scope</c> (S1.3) — ein Objekt je Dateityp mit Anzahl
+/// und ob er vom Roslyn-Symbolgraph abgedeckt ist (nur <c>.cs</c>; siehe Scope-Hinweis-Text der
+/// anderen C#-only-Tools).
+/// </summary>
+internal sealed record FileTypeBreakdownEntry(string Extension, int Count, bool SymbolGraphCovered);

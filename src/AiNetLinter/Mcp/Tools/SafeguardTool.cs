@@ -2,7 +2,6 @@
 
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Output;
@@ -27,13 +26,6 @@ namespace AiNetLinter.Mcp.Tools;
 /// </summary>
 internal static class SafeguardTool
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     internal static Task<CallToolResult> ExecuteAsync(SafeguardToolParameters p)
         => ExecuteAsync(p.State, p.ScopeFilter, p.MinScore, p.MaxViolations, p.CancellationToken);
 
@@ -72,7 +64,7 @@ internal static class SafeguardTool
         {
             IsError = false,
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(score, SerializerOptions),
+            StructuredContent = JsonSerializer.SerializeToElement(score, McpJsonOptions.Default),
         };
     }
 }

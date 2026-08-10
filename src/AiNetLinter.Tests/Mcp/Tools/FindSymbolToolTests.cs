@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -49,6 +52,23 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern angeben", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_KnownSymbol_StructuredContentDeserializesToSymbolLocationEntries()
+    {
+        // S1.3: StructuredContent ergaenzt den Text additiv — dieselbe Fundstelle wie die
+        // Text-Zeile "Greeter.cs:... - Klasse: ...".
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
+
+        var result = await FindSymbolTool.ExecuteAsync(state, "Greeter", kind: "class", maxResults: 50, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = JsonSerializer.Deserialize<List<SymbolLocationEntry>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        Assert.Contains(entries!, e => e.FilePath.Contains("Greeter.cs", StringComparison.Ordinal) && e.Kind == "Klasse");
     }
 
     [Fact]

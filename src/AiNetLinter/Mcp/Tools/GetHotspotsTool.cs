@@ -12,7 +12,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// dieselbe Kennzahl wie der bestehende CLI-Map-Typ <c>--map hotspots</c>
 /// (<see cref="AiNetLinter.Maps.HotspotMapBuilder"/>), aber granular gegen die geladene Solution statt
 /// eines Einmal-Filesystem-Scans, inkl. optionalem Namespace-/Projekt-Filter. Bewusst
-/// duenner Dispatch auf <see cref="GetHotspotsScanner.BuildHotspotsText"/> — keine eigene Scan-/
+/// duenner Dispatch auf <see cref="GetHotspotsScanner.BuildHotspots"/> — keine eigene Scan-/
 /// Formatierungslogik, damit dieser Klasse
 /// eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt.
 /// </summary>
@@ -25,8 +25,8 @@ internal static class GetHotspotsTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var text = GetHotspotsScanner.BuildHotspotsText(solution, state.MaxLineCount, scopeFilter);
+        var (text, entries) = GetHotspotsScanner.BuildHotspots(solution, state.MaxLineCount, scopeFilter);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), entries);
     }
 }

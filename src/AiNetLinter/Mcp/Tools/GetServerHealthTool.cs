@@ -33,7 +33,30 @@ internal static class GetServerHealthTool
         sb.AppendLine();
         sb.Append(DescribeCallLog(callLog));
 
-        return Task.FromResult(McpToolResults.Text(sb.ToString().TrimEnd()));
+        var text = sb.ToString().TrimEnd();
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, callLog)));
+    }
+
+    /// <summary>
+    /// StructuredContent (S1.3) mit denselben Rohwerten wie die Text-Sektionen oben — additiv,
+    /// keine eigene Formatierungslogik (Text bleibt die bestehende Quelle der Wahrheit fuer
+    /// Sonderfaelle wie "wird noch geladen").
+    /// </summary>
+    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, McpCallLog? callLog)
+    {
+        var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
+        var callLogPayload = callLog is null
+            ? null
+            : new CallLogPayload(callLog.LogPath, callLog.EntryCount, callLog.ErrorCount, callLog.CallCountsByTool);
+
+        return new ServerHealthPayload(
+            LoadState: state.LoadState.ToString(),
+            SolutionPath: state.LoadState == ServerLoadState.Loading ? null : state.GetCurrentSolution()?.FilePath,
+            UsedDefaultConfig: usedDefaultConfig,
+            ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
+            UptimeSeconds: state.Uptime.TotalSeconds,
+            RefreshCount: state.RefreshCount,
+            CallLog: callLogPayload);
     }
 
     private static string DescribeSolution(McpCodeGraphServer state)

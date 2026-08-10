@@ -11,7 +11,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// Solution — .cs (voll vom Symbolgraph abgedeckt) sowie .css/.html/.js/.razor/.xaml (jeweils nicht
 /// vom Symbolgraph abgedeckt, mit Anzahl). Orientierungspunkt, den ein Agent laut konzept.md aufrufen
 /// soll, bevor er ueberhaupt mit find_symbol/search_pattern zu suchen beginnt. Bewusst
-/// duenner Dispatch auf <see cref="GetIndexScopeScanner.BuildBreakdownText"/> — keine eigene Zaehl-/
+/// duenner Dispatch auf <see cref="GetIndexScopeScanner.BuildBreakdown"/> — keine eigene Zaehl-/
 /// Formatierungslogik, damit dieser
 /// Klasse eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt.
 /// </summary>
@@ -23,8 +23,8 @@ internal static class GetIndexScopeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var text = GetIndexScopeScanner.BuildBreakdownText(solution);
+        var (text, entries) = GetIndexScopeScanner.BuildBreakdown(solution);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), entries);
     }
 }

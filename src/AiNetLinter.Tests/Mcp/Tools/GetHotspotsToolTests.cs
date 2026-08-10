@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -44,6 +47,24 @@ public sealed class GetHotspotsToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Kritische Dateien", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Greeter.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SmallMaxLineCount_StructuredContentDeserializesToHotspotEntries()
+    {
+        // S1.3: StructuredContent ergaenzt den Text additiv — Category spiegelt dieselbe
+        // Schwellwert-Klassifizierung wie die Text-Sektion "Kritische Dateien".
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, MaxLineCount: 1)));
+
+        var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = JsonSerializer.Deserialize<List<HotspotEntry>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        var greeter = entries!.Single(e => e.RelativePath.Contains("Greeter.cs", StringComparison.Ordinal));
+        Assert.Equal("critical", greeter.Category);
     }
 
     [Fact]

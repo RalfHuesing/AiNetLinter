@@ -34,6 +34,19 @@ public sealed class DiffImpactAnalyzer
     /// <returns>Eine Liste von formatierten Aufrufstellen (Call-Sites).</returns>
     public static async Task<List<string>> AnalyzeAsync(Solution solution, string targetPath, string? gitSinceRef, bool verbose)
     {
+        var entries = await AnalyzeEntriesAsync(solution, targetPath, gitSinceRef, verbose);
+        return entries.Select(FormatCallSite).ToList();
+    }
+
+    /// <summary>
+    /// Wie <see cref="AnalyzeAsync"/>, liefert die <see cref="CallSiteEntry"/>-Liste statt fertig
+    /// formatierter Strings — Grundlage fuer <c>get_impact</c>s <c>StructuredContent</c> (S1.3,
+    /// Git-Diff-Zweig). <see cref="AnalyzeAsync"/> ist ein duenner Wrapper darauf (bestehende
+    /// Signatur/bestehendes Verhalten fuer den CLI-Aufrufer <c>ImpactCommand</c> unveraendert).
+    /// </summary>
+    internal static async Task<List<CallSiteEntry>> AnalyzeEntriesAsync(
+        Solution solution, string targetPath, string? gitSinceRef, bool verbose)
+    {
         var repoRoot = FindGitRoot(targetPath);
         if (repoRoot == null)
         {
@@ -50,7 +63,7 @@ public sealed class DiffImpactAnalyzer
         var hunks = ParseGitDiffHunks(diffOutput);
         var changedSymbols = await GetChangedSymbolsFromHunksAsync(solution, repoRoot, hunks);
 
-        return await FindAllCallSitesAsync(changedSymbols, solution);
+        return await FindAllCallSiteEntriesAsync(changedSymbols, solution);
     }
 
     private static void LogGitWarning(bool verbose)
@@ -227,13 +240,13 @@ public sealed class DiffImpactAnalyzer
         return changedSymbols;
     }
 
-    private static async Task<List<string>> FindAllCallSitesAsync(List<ISymbol> symbols, Solution solution)
+    private static async Task<List<CallSiteEntry>> FindAllCallSiteEntriesAsync(List<ISymbol> symbols, Solution solution)
     {
-        var result = new List<string>();
+        var result = new List<CallSiteEntry>();
         foreach (var symbol in symbols.Distinct<ISymbol>(SymbolEqualityComparer.Default))
         {
-            var callSites = await FindCallSitesAsync(symbol, solution);
-            result.AddRange(callSites);
+            var entries = await FindCallSiteEntriesAsync(symbol, solution);
+            result.AddRange(entries);
         }
         return result;
     }
@@ -310,11 +323,24 @@ public sealed class DiffImpactAnalyzer
     /// Findet alle Aufrufstellen von <paramref name="symbol"/> ueber
     /// <see cref="SymbolFinder.FindReferencesAsync(ISymbol, Solution, System.Threading.CancellationToken)"/>
     /// und formatiert sie als "Datei:Zeile - Aufruf von ...". Wird auch von
-    /// <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/> (MCP) wiederverwendet.
+    /// <see cref="AiNetLinter.Mcp.Tools.FindReferencesTool"/> (MCP) wiederverwendet. Duenner
+    /// Wrapper um <see cref="FindCallSiteEntriesAsync"/> (bestehende Signatur/bestehendes
+    /// Verhalten unveraendert).
     /// </summary>
     internal static async Task<List<string>> FindCallSitesAsync(ISymbol symbol, Solution solution)
     {
-        var callSites = new List<string>();
+        var entries = await FindCallSiteEntriesAsync(symbol, solution);
+        return entries.Select(FormatCallSite).ToList();
+    }
+
+    /// <summary>
+    /// Wie <see cref="FindCallSitesAsync"/>, liefert die strukturierten <see cref="CallSiteEntry"/>
+    /// statt fertig formatierter Strings — Grundlage fuer <c>find_references</c>/<c>get_impact</c>s
+    /// <c>StructuredContent</c> (S1.3, depth=1-Flachfall bzw. Symbol-Branch).
+    /// </summary>
+    internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(ISymbol symbol, Solution solution)
+    {
+        var entries = new List<CallSiteEntry>();
         var references = await SymbolFinder.FindReferencesAsync(symbol, solution);
 
         foreach (var reference in references)
@@ -328,13 +354,27 @@ public sealed class DiffImpactAnalyzer
                 var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
                 var relativePath = PathNormalizer.ToRelative(outputRoot, filePath);
 
-                callSites.Add($"{relativePath}:{line} - Aufruf von '{symbol.ContainingType?.Name}.{symbol.Name}' in Projekt '{location.Document.Project.Name}'");
+                entries.Add(new CallSiteEntry(
+                    relativePath, line, $"{symbol.ContainingType?.Name}.{symbol.Name}", location.Document.Project.Name));
             }
         }
 
-        return callSites;
+        return entries;
     }
+
+    /// <summary>Formatiert <see cref="CallSiteEntry"/> identisch zum bisherigen Text-Format von
+    /// <see cref="FindCallSitesAsync"/> — einzige Quelle der Wahrheit, damit Text und
+    /// <c>StructuredContent</c> nie auseinanderdriften.</summary>
+    internal static string FormatCallSite(CallSiteEntry entry) =>
+        $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
 }
+
+/// <summary>
+/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> (S1.3) — eine Aufrufstelle
+/// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
+/// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
+/// </summary>
+internal sealed record CallSiteEntry(string FilePath, int Line, string SymbolName, string ProjectName);
 
 /// <summary>
 /// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest

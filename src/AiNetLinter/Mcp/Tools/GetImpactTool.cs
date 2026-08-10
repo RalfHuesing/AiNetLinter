@@ -51,16 +51,24 @@ internal static class GetImpactTool
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
         var clampedDepth = Math.Clamp(input.Depth, 1, CallGraphTraversal.MaxRecursionDepth);
         string body;
+        // StructuredContent (S1.3) nur fuer den depth=1-Flachfall — siehe FindReferencesTool fuer
+        // die identische, dort ausfuehrlicher begruendete Entscheidung (CallGraphTraversal baut
+        // depth>1-Locations intern als reine Strings ohne strukturiertes Zwischenmodell).
+        IReadOnlyList<CallSiteEntry>? entries = null;
 
         if (clampedDepth == 1)
         {
-            var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
-            if (callSites.Count == 0)
+            var callSiteEntries = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol!, solution);
+            if (callSiteEntries.Count == 0)
             {
                 return McpToolResults.Text(FindSymbolTool.PrependWarning(
                     warning, $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'"));
             }
+            var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
             body = McpTruncation.TruncateLines(callSites, callSites.Count, effectiveMax);
+            entries = callSiteEntries.Count <= effectiveMax
+                ? callSiteEntries
+                : callSiteEntries.Take(effectiveMax).ToList();
         }
         else
         {
@@ -68,16 +76,17 @@ internal static class GetImpactTool
                 solution, symbol!, clampedDepth, effectiveMax, ct);
         }
 
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, body));
+        var finalText = FindSymbolTool.PrependWarning(warning, body);
+        return entries is null ? McpToolResults.Text(finalText) : McpToolResults.Text(finalText, entries);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input)
     {
         var targetPath = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        List<string> callSites;
+        List<CallSiteEntry> callSiteEntries;
         try
         {
-            callSites = await DiffImpactAnalyzer.AnalyzeAsync(
+            callSiteEntries = await DiffImpactAnalyzer.AnalyzeEntriesAsync(
                 solution, targetPath, input.GitRef, verbose: false);
         }
         catch (GitDiffFailedException ex)
@@ -94,15 +103,20 @@ internal static class GetImpactTool
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, CancellationToken.None);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
 
-        if (callSites.Count == 0)
+        if (callSiteEntries.Count == 0)
         {
             var refLabel = string.IsNullOrEmpty(input.GitRef) ? "uncommittete Aenderungen" : input.GitRef;
             return McpToolResults.Text(FindSymbolTool.PrependWarning(
                 warning, $"Keine betroffenen Aufrufstellen gefunden fuer '{refLabel}'"));
         }
 
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(
-            warning, McpTruncation.TruncateLines(callSites, callSites.Count, effectiveMax)));
+        var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
+        var finalText = FindSymbolTool.PrependWarning(
+            warning, McpTruncation.TruncateLines(callSites, callSites.Count, effectiveMax));
+        var shownEntries = callSiteEntries.Count <= effectiveMax
+            ? callSiteEntries
+            : callSiteEntries.Take(effectiveMax).ToList();
+        return McpToolResults.Text(finalText, shownEntries);
     }
 }
 
