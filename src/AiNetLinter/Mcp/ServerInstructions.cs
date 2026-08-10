@@ -37,6 +37,9 @@ internal static class ServerInstructions
         "guter erster Call vor find_symbol/search_pattern.\n" +
         "- get_hotspots: Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es " +
         "ueberschreiten.\n" +
+        "- metrics_tree: Liefert einen ASCII-Baum mit aggregierten Werten pro " +
+        "Verzeichnisknoten (Modi code_size/comment_density/violation_density/complexity) " +
+        "und sortierten Top-N-Kindern je Ebene.\n" +
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
         "- safeguard: Liefert einen deterministischen 0-10-Quality-Score + Pass/Fail-Threshold " +
         "+ Top-Violations + Remediation-Hints fuer die geladene Solution (Quality-Gate).\n" +
