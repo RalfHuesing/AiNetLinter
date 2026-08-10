@@ -17,8 +17,10 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// </summary>
 internal static class GetTypeHierarchyTool
 {
+    internal const int DefaultMaxResults = 50;
+
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string typeIdentifier, CancellationToken ct)
+        McpCodeGraphServer state, string typeIdentifier, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -33,11 +35,15 @@ internal static class GetTypeHierarchyTool
                 $"'{typeIdentifier}' loest zu '{symbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
         }
 
-        var text = await GetTypeHierarchyFormatter.BuildHierarchyTextAsync(type, solution, ct);
+        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        var (text, isTruncated) = await GetTypeHierarchyFormatter.BuildHierarchyTextAsync(type, solution, normalizedMaxResults, ct);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        // GetTypeHierarchyFormatter trunkiert nie (vollstaendige Basisklassen-/Interface-/
-        // Subtyp-Ketten) — Sufficiency-Hinweis gilt daher immer, nicht bedingt wie bei
-        // find_references/get_symbol_body.
-        return McpToolResults.Text(McpSufficiencyHints.Append(FindSymbolTool.PrependWarning(warning, text)));
+        // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
+        // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution
+        // aufgeloest und koennen bei weit verbreiteten Basistypen/Interfaces (z. B. IDisposable)
+        // das maxResults-Limit ueberschreiten — Sufficiency-Hinweis daher nur im nicht-trunkierten
+        // Fall (Q5-Muster, analog zu FindReferencesTool/GetViolationsTool).
+        var finalText = isTruncated ? text : McpSufficiencyHints.Append(text);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalText));
     }
 }

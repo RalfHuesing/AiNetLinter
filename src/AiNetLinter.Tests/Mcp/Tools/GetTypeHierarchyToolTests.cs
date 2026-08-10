@@ -27,7 +27,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "irrelevant", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "irrelevant", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -39,7 +39,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -51,7 +51,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -63,14 +63,35 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("IGreeting", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("SpecialGreeting", textContent.Text, StringComparison.Ordinal);
-        // Q5 Sufficiency-Hinweis: get_type_hierarchy trunkiert nie, Hinweis gilt immer.
+        // Q5 Sufficiency-Hinweis: Basisklassen/Interfaces trunkieren nie, aber die
+        // abgeleiteten/implementierenden Typen koennten es bei Ueberschreitung von maxResults —
+        // hier unter dem Default-Limit, also gilt der Hinweis.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InterfaceWithMultipleImplementers_MaxResultsBelowCount_TruncatesAndSuppressesSufficiencyHint()
+    {
+        // Regression: get_type_hierarchy trunkierte "Abgeleitete Klassen:"/"Implementierende
+        // Typen:" frueher nie — bei einem weit implementierten Interface (z. B. IDisposable in
+        // einem fremden Projekt) konnte das den Client-Token-Guard sprengen (dieselbe Bug-Klasse
+        // wie get_violations/get_hotspots). IGreeting hat in dieser Fixture zwei transitive
+        // Implementierer (BaseGreeting direkt, SpecialGreeting via Vererbung von BaseGreeting).
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "IGreeting", 1, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Typen gesamt, 1 gezeigt", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("maxResults erhoehen", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,7 +102,7 @@ public sealed class GetTypeHierarchyToolTests
             _fixture.Catalog.Solution, "BaseGreeting", CancellationToken.None);
         var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, stableId!, CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, stableId!, GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -94,7 +115,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "IGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "IGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -106,7 +127,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "SpecialGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "SpecialGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -119,7 +140,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -132,7 +153,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DisposableGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DisposableGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -147,7 +168,7 @@ public sealed class GetTypeHierarchyToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ConsoleReporter", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ConsoleReporter", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -160,7 +181,7 @@ public sealed class GetTypeHierarchyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -174,7 +195,7 @@ public sealed class GetTypeHierarchyToolTests
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
-        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ValidClassA", CancellationToken.None);
+        var result = await GetTypeHierarchyTool.ExecuteAsync(state, "ValidClassA", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

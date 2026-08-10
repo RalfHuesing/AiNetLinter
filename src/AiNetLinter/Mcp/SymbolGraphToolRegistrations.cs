@@ -158,14 +158,14 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string typeIdentifier, CancellationToken ct = default) =>
+            async (string typeIdentifier, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
-                    return await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct);
+                    return await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct);
                 }
-                return await callLog.ExecuteCallAsync("get_type_hierarchy", typeIdentifier,
-                    () => GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, ct));
+                return await callLog.ExecuteCallAsync("get_type_hierarchy", $"{typeIdentifier}|{maxResults}",
+                    () => GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -177,5 +177,6 @@ internal static class SymbolGraphToolRegistrations
     private const string GetTypeHierarchyDescription =
         "Wann nutzen: Vererbungs-/Interface-Baum eines C#-Typs sehen (Basisklassen, " +
         "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Klasse\".";
+        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Klasse\". " +
+        "maxResults begrenzt die abgeleiteten/implementierenden Typen (Default 50).";
 }
