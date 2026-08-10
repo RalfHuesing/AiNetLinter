@@ -148,10 +148,10 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithFourteenTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithFifteenTools()
     {
         var tools = await _baselineMcpFixture.Client.ListToolsAsync();
-        Assert.Equal(14, tools.Count);
+        Assert.Equal(15, tools.Count);
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "find_references");
         Assert.Contains(tools, t => t.Name == "get_impact");

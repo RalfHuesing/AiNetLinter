@@ -58,6 +58,42 @@ public sealed class McpLiveRepositoryTests
     }
 
     [Fact]
+    public async Task LiveDogfood_GetCallTree_ReturnsTreeStructure()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "LinterEngine",
+                ["depth"] = 2,
+                ["topN"] = 5,
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+        // Ein echter Baum traegt entweder Kind-Praefixe (ASCII-Renderer) oder — falls das
+        // Symbol keine Aufrufer im Solution-Scope hat — nur die Root-Zeile; beide Faelle sind
+        // gueltige "echte Baum"-Ergebnisse, daher wird hier nur Nicht-Leere geprueft und dass
+        // kein Malfunction-Fehlercode zurueckkommt.
+        Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_GetCallTreeMermaid_ReturnsFlowchartBlock()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "LinterEngine",
+                ["format"] = "mermaid",
+            });
+
+        Assert.NotNull(text);
+        Assert.Contains("flowchart TD", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LiveDogfood_GetImpact_ReturnsResults()
     {
         var text = await _fixture.Client.CallToolGetTextAsync(

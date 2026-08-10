@@ -9,19 +9,19 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die vier reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,
-/// <c>get_impact</c>, <c>get_type_hierarchy</c>) an der von <see cref="McpServerOptionsFactory"/>
-/// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
-/// eigener <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu
-/// registrierten Tool waechst.
+/// Registriert die fuenf reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,
+/// <c>get_impact</c>, <c>get_type_hierarchy</c>, <c>get_call_tree</c>) an der von
+/// <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
+/// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
+/// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst.
 /// </summary>
 internal static class SymbolGraphToolRegistrations
 {
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die vier Symbolgraph-Tools hinzu. Tools erreichen den resident
-    /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
-    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet jeden
-    /// Tool-Aufruf auf, wenn aktiv (kein Overhead bei deaktiviertem Log).
+    /// Fuegt <paramref name="tools"/> die fuenf Symbolgraph-Tools hinzu. Tools erreichen den
+    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
+    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet
+    /// jeden Tool-Aufruf auf, wenn aktiv (kein Overhead bei deaktiviertem Log).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -30,6 +30,7 @@ internal static class SymbolGraphToolRegistrations
     {
         AddFindSymbol(tools, mcpState, callLog);
         AddFindReferences(tools, mcpState, callLog);
+        AddGetCallTree(tools, mcpState, callLog);
         AddGetImpact(tools, mcpState, callLog);
         AddGetTypeHierarchy(tools, mcpState, callLog);
     }
@@ -88,6 +89,36 @@ internal static class SymbolGraphToolRegistrations
         "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
         "\"Klasse.Methode\". depth>1 (hard cap 3) loest transitive Aufrufstellen auf, " +
         "Traversierung hart begrenzt auf 200 Knoten.";
+
+    private static void AddGetCallTree(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string symbolIdentifier, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
+            {
+                var input = new GetCallTreeInput(symbolIdentifier, depth, format, topN);
+                if (callLog is null)
+                {
+                    return await GetCallTreeTool.ExecuteAsync(mcpState, input, ct);
+                }
+                return await callLog.ExecuteCallAsync("get_call_tree", $"{symbolIdentifier}|{depth}|{format}|{topN}",
+                    () => GetCallTreeTool.ExecuteAsync(mcpState, input, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "get_call_tree",
+                Description = GetCallTreeDescription,
+            }));
+    }
+
+    private const string GetCallTreeDescription =
+        "Wann nutzen: echten Caller-Baum eines C#-Symbols sehen (wer ruft dieses Symbol auf, " +
+        "transitiv, als Eltern-Kind-Struktur statt flacher Liste). symbolIdentifier wie " +
+        "find_references. depth Default 2 (hard cap 5). format: \"ascii\" (Default) oder " +
+        "\"mermaid\" (flowchart TD). topN (Default 10) begrenzt Fan-Out pro Ebene, " +
+        "Traversierung hart begrenzt auf 250 Knoten.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,

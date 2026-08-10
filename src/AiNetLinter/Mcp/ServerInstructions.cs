@@ -31,6 +31,8 @@ internal static class ServerInstructions
         "uncommittete Aenderungen) oder fuer ein einzelnes Symbol.\n" +
         "- get_type_hierarchy: Liefert Basisklassen, Interfaces, abgeleitete Typen und " +
         "heuristische DI-Registrierungen eines Typs.\n" +
+        "- get_call_tree: Liefert den echten Caller-Baum eines C#-Symbols (Eltern-Kind-Struktur, " +
+        "ASCII oder Mermaid), transitiv bis depth 5.\n" +
         "- get_file_skeleton: Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) " +
         "einer C#-Datei.\n" +
         "- get_index_scope: Liefert eine Dateityp-Aufschluesselung der geladenen Solution — " +
@@ -50,9 +52,9 @@ internal static class ServerInstructions
         "- reload_config: Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart.\n" +
         "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-" +
         "Aggregate.\n\n" +
-        "C#-only-Grenze: find_symbol, find_references, get_impact, get_type_hierarchy, " +
-        "get_file_skeleton, get_violations, safeguard und get_symbol_body arbeiten ausschliesslich auf " +
-        ".cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
+        "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
+        "get_type_hierarchy, get_file_skeleton, get_violations, safeguard und get_symbol_body " +
+        "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
         "(deckt alle Dateitypen ab). get_index_scope und get_hotspots arbeiten ohne diese " +
         "C#-Beschraenkung.\n\n" +
