@@ -83,7 +83,10 @@ internal static class GetViolationsScanner
 
         return new GetViolationsResult(
             FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig),
-            IsMalfunction: false);
+            IsMalfunction: false,
+            // Gleiche Filter-/Sortierlogik wie FormatReport (ueber FilterAndSortViolations geteilt) —
+            // StructuredContent zeigt exakt die Violations, die auch im Text-Report auftauchen.
+            Violations: FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter));
     }
 
     private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
@@ -125,10 +128,7 @@ internal static class GetViolationsScanner
         string? scopeFilter,
         bool usedDefaultConfig)
     {
-        var filtered = violations
-            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
-                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
-            .ToList();
+        var filtered = FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
 
         var matchingFileCount = fileToProject
             .Count(kvp => MatchesScope(kvp.Key, kvp.Value, solutionDir, scopeFilter));
@@ -202,6 +202,27 @@ internal static class GetViolationsScanner
     {
         return fileToProject.TryGetValue(filePath, out var name) ? name : null;
     }
+
+    /// <summary>
+    /// Gemeinsame Filter-/Sortierlogik fuer <see cref="FormatReport"/> (Text-Tabelle) und
+    /// <see cref="BuildViolationsTextAsync"/>s <c>StructuredContent</c> (S1.3) — eine Quelle der
+    /// Wahrheit, damit Text und JSON nie auseinanderdriften. Sortierung identisch zu
+    /// <see cref="AppendSection"/>s Pro-Sektion-Sortierung (FilePath, LineNumber, RuleName); da
+    /// <see cref="AppendSection"/> ohnehin nochmal je Fehler-/Warnungs-Teilmenge sortiert, aendert
+    /// die hier bereits sortierte Reihenfolge nichts am bisherigen Text-Output.
+    /// </summary>
+    internal static IReadOnlyList<RuleViolation> FilterAndSortViolations(
+        string solutionDir, Dictionary<string, string> fileToProject,
+        IReadOnlyCollection<RuleViolation> violations, string? scopeFilter)
+    {
+        return violations
+            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
+                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
+            .OrderBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(v => v.LineNumber)
+            .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
 }
 
 /// <summary>
@@ -225,6 +246,9 @@ internal sealed record GetViolationsScannerParameters(
 /// Violations" zaehlen als normal, nicht als Malfunction). <paramref name="Context"/> traegt bei
 /// einer Malfunction die rohe Exception-Message (analog zum <c>context:</c>-Parameter von
 /// <see cref="McpToolResults.Error"/>/<see cref="McpToolResults.Recoverable"/> in den anderen
-/// Tools) — bleibt <see langword="null"/> fuer normale Reports.
+/// Tools) — bleibt <see langword="null"/> fuer normale Reports. <paramref name="Violations"/>
+/// traegt die gefilterten/sortierten Violations fuer <c>StructuredContent</c> (S1.3) — bleibt
+/// <see langword="null"/> bei einer Malfunction (kein sinnvoller Teil-Payload).
 /// </summary>
-internal sealed record GetViolationsResult(string Text, bool IsMalfunction, string? Context = null);
+internal sealed record GetViolationsResult(
+    string Text, bool IsMalfunction, string? Context = null, IReadOnlyList<RuleViolation>? Violations = null);

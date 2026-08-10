@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Tests.Fixtures;
@@ -55,6 +58,41 @@ public sealed class GetImpactToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifierGivenDepth1_StructuredContentDeserializesToCallSiteEntries()
+    {
+        // S1.3: Symbol-Branch depth=1 bekommt StructuredContent, analog find_references.
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = JsonSerializer.Deserialize<List<CallSiteEntry>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_GitRefUncommittedChange_StructuredContentDeserializesToCallSiteEntries()
+    {
+        // S1.3: Git-Diff-Branch bekommt ebenfalls StructuredContent (ueber DiffImpactAnalyzer.AnalyzeEntriesAsync).
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.ChangeCalculatorAddBodyWithoutCommitting();
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = JsonSerializer.Deserialize<List<CallSiteEntry>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        Assert.Contains(entries!, e => e.FilePath.Contains("CalculatorCaller.cs", StringComparison.Ordinal));
     }
 
     [Fact]

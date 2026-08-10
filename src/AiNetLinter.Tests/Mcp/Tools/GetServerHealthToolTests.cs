@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -52,6 +53,26 @@ public sealed class GetServerHealthToolTests
         Assert.Contains(_fixture.Workspace.RootPath, text, System.StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Uptime", text);
         Assert.Contains("Solution-Refreshes seit Start: 0", text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Loaded_StructuredContentDeserializesToServerHealthPayload()
+    {
+        // S1.3: StructuredContent ergaenzt den Text additiv — dieselben Rohwerte wie die
+        // Text-Zeilen "LoadState"/"Solution-Refreshes seit Start" oben.
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<ServerHealthPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("Loaded", payload!.LoadState);
+        Assert.Equal(0, payload.RefreshCount);
+        Assert.Null(payload.CallLog);
     }
 
     [Fact]

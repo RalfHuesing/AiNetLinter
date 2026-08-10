@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -44,6 +47,28 @@ public sealed class GetIndexScopeToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains(BuildBreakdownLine(".cs", 5, "(voll vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MixedFixture_StructuredContentDeserializesToFileTypeBreakdownEntries()
+    {
+        // S1.3: StructuredContent ergaenzt den Text additiv — dieselben Zaehlwerte wie die
+        // Text-Zeile ".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)".
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+
+        var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = JsonSerializer.Deserialize<List<FileTypeBreakdownEntry>>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        var csEntry = entries!.Single(e => e.Extension == ".cs");
+        Assert.Equal(5, csEntry.Count);
+        Assert.True(csEntry.SymbolGraphCovered);
+        var cssEntry = entries.Single(e => e.Extension == ".css");
+        Assert.Equal(1, cssEntry.Count);
+        Assert.False(cssEntry.SymbolGraphCovered);
     }
 
     [Fact]

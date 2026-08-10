@@ -27,24 +27,55 @@ internal static class GetHotspotsScanner
     private const double CriticalThreshold = 0.95;
 
     /// <summary>
-    /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> als Text. Ist
-    /// <paramref name="scopeFilter"/> gesetzt, aber matched keine Datei, wird eine explizite
-    /// "Keine Dateien im Scope"-Meldung geliefert statt der sonst irrefuehrenden "alles gruen"-Aussage.
+    /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> — Text (Markdown-
+    /// Tabellen, bisheriges Format unveraendert) plus <see cref="HotspotEntry"/>-Liste fuer
+    /// <c>StructuredContent</c> (S1.3). Ist <paramref name="scopeFilter"/> gesetzt, aber matched
+    /// keine Datei, wird eine explizite "Keine Dateien im Scope"-Meldung geliefert statt der sonst
+    /// irrefuehrenden "alles gruen"-Aussage (Entries dann leer).
     /// </summary>
-    internal static string BuildHotspotsText(Solution solution, int maxLineCount, string? scopeFilter)
+    internal static (string Text, IReadOnlyList<HotspotEntry> Entries) BuildHotspots(
+        Solution solution, int maxLineCount, string? scopeFilter)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var files = CollectFiles(solution, solutionDir, scopeFilter);
 
         if (files.Count == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
-            return $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.";
+            return ($"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.", Array.Empty<HotspotEntry>());
         }
 
         var critical = files.Where(f => (double)f.Lines / maxLineCount >= CriticalThreshold).ToList();
         var warning = files.Where(f => (double)f.Lines / maxLineCount is >= WarnThreshold and < CriticalThreshold).ToList();
 
-        return FormatReport(files, critical, warning, maxLineCount, scopeFilter);
+        var text = FormatReport(files, critical, warning, maxLineCount, scopeFilter);
+        var entries = BuildEntries(files, critical, warning, maxLineCount);
+        return (text, entries);
+    }
+
+    /// <summary>
+    /// Mappt <paramref name="files"/> auf <see cref="HotspotEntry"/>, Kategorie-Zuordnung ueber
+    /// Mengen-Zugehoerigkeit zu <paramref name="critical"/>/<paramref name="warning"/> — dieselben
+    /// Listen, die auch <see cref="FormatReport"/> fuer die Text-Sektionen verwendet, damit Text
+    /// und StructuredContent nie in der Kategorisierung auseinanderdriften.
+    /// </summary>
+    private static IReadOnlyList<HotspotEntry> BuildEntries(
+        IReadOnlyList<HotspotFileInfo> files,
+        IReadOnlyList<HotspotFileInfo> critical,
+        IReadOnlyList<HotspotFileInfo> warning,
+        int maxLineCount)
+    {
+        var criticalPaths = new HashSet<string>(critical.Select(f => f.RelativePath), StringComparer.OrdinalIgnoreCase);
+        var warningPaths = new HashSet<string>(warning.Select(f => f.RelativePath), StringComparer.OrdinalIgnoreCase);
+
+        return files
+            .Select(f => new HotspotEntry(
+                f.RelativePath,
+                f.Lines,
+                Math.Round((double)f.Lines / maxLineCount * 100, 1),
+                criticalPaths.Contains(f.RelativePath) ? "critical" : warningPaths.Contains(f.RelativePath) ? "warning" : "ok"))
+            .OrderByDescending(e => e.Lines)
+            .ThenBy(e => e.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static List<HotspotFileInfo> CollectFiles(Solution solution, string solutionDir, string? scopeFilter)
@@ -118,3 +149,10 @@ internal static class GetHotspotsScanner
 
     private sealed record HotspotFileInfo(string RelativePath, int Lines);
 }
+
+/// <summary>
+/// StructuredContent-Eintrag fuer <c>get_hotspots</c> (S1.3) — ein Objekt je Datei mit Pfad, Zeilen
+/// und Auslastung. <see cref="Category"/> spiegelt dieselbe Schwellwert-Klassifizierung wie die
+/// Text-Sektionen ("critical" >=95%, "warning" >=80%, sonst "ok").
+/// </summary>
+internal sealed record HotspotEntry(string RelativePath, int Lines, double UtilizationPercent, string Category);

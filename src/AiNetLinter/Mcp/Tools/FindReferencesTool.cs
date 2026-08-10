@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -49,19 +50,28 @@ internal static class FindReferencesTool
             var clampedDepth = Math.Clamp(depth, 1, CallGraphTraversal.MaxRecursionDepth);
             string body;
             bool isTruncated;
+            // StructuredContent (S1.3) nur fuer den depth=1-Flachfall — CallGraphTraversal
+            // (depth>1) baut Locations intern als reine Strings ohne strukturiertes Zwischenmodell;
+            // eine strukturierte Erweiterung dort waere ein groesserer Umbau (bewusst ausgelassen,
+            // siehe Abschlussbericht).
+            IReadOnlyList<CallSiteEntry>? entries = null;
 
             if (clampedDepth == 1)
             {
-                var callSites = await DiffImpactAnalyzer.FindCallSitesAsync(symbol!, solution);
-                if (callSites.Count == 0)
+                var callSiteEntries = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol!, solution);
+                if (callSiteEntries.Count == 0)
                 {
                     // Zero Treffer ist ein vollstaendiges, definitives Ergebnis (kein Aufrufer
                     // existiert) — Sufficiency-Hinweis gilt.
                     return McpToolResults.Text(McpSufficiencyHints.Append(FindSymbolTool.PrependWarning(
                         warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'")));
                 }
-                isTruncated = callSites.Count > normalizedMaxResults;
+                isTruncated = callSiteEntries.Count > normalizedMaxResults;
+                var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
                 body = McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults);
+                entries = callSiteEntries.Count <= normalizedMaxResults
+                    ? callSiteEntries
+                    : callSiteEntries.Take(normalizedMaxResults).ToList();
             }
             else
             {
@@ -78,7 +88,8 @@ internal static class FindReferencesTool
             // Ergebnis traegt bereits seine eigene Meta-Zeile ("depth reduzieren oder maxResults
             // erhoehen"), die implizit "weitere Calls noetig" signalisiert.
             var finalBody = isTruncated ? body : McpSufficiencyHints.Append(body);
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalBody));
+            var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
+            return entries is null ? McpToolResults.Text(finalText) : McpToolResults.Text(finalText, entries);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

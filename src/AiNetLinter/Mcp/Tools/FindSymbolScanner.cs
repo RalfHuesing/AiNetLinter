@@ -42,6 +42,24 @@ internal static class FindSymbolScanner
         string? kind,
         int maxResults)
     {
+        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults);
+        return text;
+    }
+
+    /// <summary>
+    /// Wie <see cref="FindMatchesAndFormat"/>, liefert zusaetzlich die <see cref="SymbolLocationEntry"/>-
+    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c> (S1.3) — dieselbe Symbolsuche/
+    /// Filterung einmal ausgefuehrt statt dupliziert, <see cref="FindMatchesAndFormat"/> ist ein
+    /// duenner Wrapper darauf (bestehende Signatur/bestehendes Verhalten unveraendert, siehe dessen
+    /// direkte Tests in FindSymbolScannerTests/FindSymbolToolTests). Die Entries sind auf
+    /// <paramref name="maxResults"/> gekappt, konsistent zur Text-Trunkierung.
+    /// </summary>
+    internal static async Task<(string Text, IReadOnlyList<SymbolLocationEntry> Entries)> FindMatchesWithEntriesAsync(
+        Solution solution,
+        string namePattern,
+        string? kind,
+        int maxResults)
+    {
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
             solution,
             name => name.Contains(namePattern, StringComparison.OrdinalIgnoreCase),
@@ -53,12 +71,15 @@ internal static class FindSymbolScanner
         {
             var kindSuffix = kind is null ? "" : $" (Kind-Filter: {kind})";
             var baseText = $"Keine Treffer fuer '{namePattern}'{kindSuffix}";
-            return AppendMissHint(solution, namePattern, baseText);
+            return (AppendMissHint(solution, namePattern, baseText), Array.Empty<SymbolLocationEntry>());
         }
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var lines = filtered.SelectMany(symbol => FindSymbolTool.FormatSymbolLocations(symbol, outputRoot)).ToList();
-        return McpTruncation.TruncateLines(lines, lines.Count, maxResults);
+        var allEntries = filtered.SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot)).ToList();
+        var lines = allEntries.Select(e => $"{e.FilePath}:{e.Line} - {e.Kind}: {e.Name}").ToList();
+        var text = McpTruncation.TruncateLines(lines, lines.Count, maxResults);
+        var shownEntries = allEntries.Count <= maxResults ? allEntries : allEntries.Take(maxResults).ToList();
+        return (text, shownEntries);
     }
 
     private static string AppendMissHint(Solution solution, string namePattern, string baseText)

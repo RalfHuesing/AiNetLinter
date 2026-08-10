@@ -265,6 +265,10 @@ Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_referenc
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Call-Log-Aggregation (falls `--mcp-log` aktiv) | nein | nein |
 
+### Structured Output
+
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`) und `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`) zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den bisherigen Text zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) war das urspruengliche Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt.
+
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
 ```json
