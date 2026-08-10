@@ -1,5 +1,7 @@
 #nullable enable
 
+using System.Collections.Generic;
+using System.Text.Json;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -37,6 +39,21 @@ public sealed class McpToolResultsTests
         Assert.True(result.IsError is null or false);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Equal("Hallo", textContent.Text);
+    }
+
+    [Fact]
+    public void Text_WithListPayload_StructuredContentIsJsonObjectNotArray()
+    {
+        // Regression: das MCP-Protokoll verlangt structuredContent als JSON-Objekt. Ein nacktes
+        // Array (z. B. eine Liste direkt als payload) liess reale MCP-Clients den gesamten
+        // Tool-Call schema-seitig ablehnen (betraf get_violations, get_hotspots,
+        // get_index_scope, find_symbol, find_references, get_impact bis zum Fix) — siehe
+        // McpToolResults.Text``1-Doc-Kommentar. Payload hier bewusst gewrappt, wie es alle
+        // Tool-Call-Sites seit dem Fix tun.
+        var result = McpToolResults.Text("Hallo", new { Items = new List<int> { 1, 2, 3 } });
+
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
     }
 
     [Fact]

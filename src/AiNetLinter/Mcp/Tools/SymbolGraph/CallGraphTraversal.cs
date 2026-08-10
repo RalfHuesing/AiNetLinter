@@ -280,8 +280,28 @@ internal static class CallGraphTraversal
         state.Enqueue(child, nextLevel);
     }
 
-    private static string FormatSymbolName(ISymbol symbol) =>
-        symbol.ContainingType is { } containingType ? $"{containingType.Name}.{symbol.Name}" : symbol.Name;
+    private static string FormatSymbolName(ISymbol symbol)
+    {
+        // Lambdas/anonyme Methoden (z. B. Aufrufer innerhalb Task.Run(() => ...)) haben ein leeres
+        // ISymbol.Name — ohne Sonderbehandlung entsteht ein nichtssagendes "Klasse." Label. Statt
+        // dessen entlang ContainingSymbol zum naechsten benannten einschliessenden Member laufen.
+        var effectiveName = string.IsNullOrEmpty(symbol.Name)
+            ? DescribeAnonymousMethod(symbol)
+            : symbol.Name;
+        return symbol.ContainingType is { } containingType
+            ? $"{containingType.Name}.{effectiveName}"
+            : effectiveName;
+    }
+
+    private static string DescribeAnonymousMethod(ISymbol symbol)
+    {
+        var current = symbol.ContainingSymbol;
+        while (current is not null && string.IsNullOrEmpty(current.Name))
+        {
+            current = current.ContainingSymbol;
+        }
+        return current is null ? "<lambda>" : $"<lambda in {current.Name}>";
+    }
 
     private static string FormatGroupDisplay(CallerGroup group, Solution solution)
     {

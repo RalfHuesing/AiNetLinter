@@ -28,6 +28,8 @@ internal static class GetHotspotsTool
 
         var (text, entries) = GetHotspotsScanner.BuildHotspots(solution, state.MaxLineCount, scopeFilter);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), entries);
+        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
+        // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), new { Hotspots = entries });
     }
 }

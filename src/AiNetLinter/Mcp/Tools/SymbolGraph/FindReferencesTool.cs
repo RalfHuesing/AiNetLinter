@@ -89,7 +89,11 @@ internal static class FindReferencesTool
             // erhoehen"), die implizit "weitere Calls noetig" signalisiert.
             var finalBody = isTruncated ? body : McpSufficiencyHints.Append(body);
             var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-            return entries is null ? McpToolResults.Text(finalText) : McpToolResults.Text(finalText, entries);
+            // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
+            // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
+            return entries is null
+                ? McpToolResults.Text(finalText)
+                : McpToolResults.Text(finalText, new { CallSites = entries });
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

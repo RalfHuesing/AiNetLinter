@@ -77,7 +77,9 @@ internal static class FindSymbolTool
             var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
                 solution, namePattern, kind, normalizedMaxResults);
             var warning = await BuildAggregateWarningAsync(solution, ct);
-            return McpToolResults.Text(PrependWarning(warning, text), entries);
+            // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
+            // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
+            return McpToolResults.Text(PrependWarning(warning, text), new { Matches = entries });
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

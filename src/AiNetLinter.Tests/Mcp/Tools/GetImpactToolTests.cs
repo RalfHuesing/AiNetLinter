@@ -71,8 +71,8 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = JsonSerializer.Deserialize<List<CallSiteEntry>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var entries = result.StructuredContent!.Value.GetProperty("callSites")
+            .Deserialize<List<CallSiteEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
     }
@@ -90,8 +90,8 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = JsonSerializer.Deserialize<List<CallSiteEntry>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var entries = result.StructuredContent!.Value.GetProperty("callSites")
+            .Deserialize<List<CallSiteEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         Assert.Contains(entries!, e => e.FilePath.Contains("CalculatorCaller.cs", StringComparison.Ordinal));
     }

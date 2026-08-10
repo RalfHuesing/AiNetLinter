@@ -49,12 +49,15 @@ internal static class GetViolationsTool
         // Trunkierungs-Parameter existiert fuer get_violations).
         // StructuredContent (S1.3) additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
         // Malfunction keine sinnvolle Teil-Violations-Liste hat (result.Violations ist dann null).
+        // In ein Objekt gewrappt (nicht das nackte Array), weil MCP-Clients structuredContent
+        // schema-seitig als JSON-Objekt validieren — ein Top-Level-Array liess den gesamten
+        // Tool-Call clientseitig fehlschlagen (siehe McpToolResultsTests fuer die Regression).
         return result.IsMalfunction
             ? McpToolResults.Error(
                 LinterErrorCodes.AnalysisFailed,
                 result.Text,
                 context: result.Context,
                 hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).")
-            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text), result.Violations!);
+            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text), new { Violations = result.Violations! });
     }
 }

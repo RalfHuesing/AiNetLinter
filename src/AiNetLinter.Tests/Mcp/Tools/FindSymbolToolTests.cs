@@ -66,8 +66,8 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = JsonSerializer.Deserialize<List<SymbolLocationEntry>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var entries = result.StructuredContent!.Value.GetProperty("matches")
+            .Deserialize<List<SymbolLocationEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         Assert.Contains(entries!, e => e.FilePath.Contains("Greeter.cs", StringComparison.Ordinal) && e.Kind == "Klasse");
     }

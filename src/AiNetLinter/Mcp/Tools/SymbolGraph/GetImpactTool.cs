@@ -77,7 +77,11 @@ internal static class GetImpactTool
         }
 
         var finalText = FindSymbolTool.PrependWarning(warning, body);
-        return entries is null ? McpToolResults.Text(finalText) : McpToolResults.Text(finalText, entries);
+        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
+        // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
+        return entries is null
+            ? McpToolResults.Text(finalText)
+            : McpToolResults.Text(finalText, new { CallSites = entries });
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input)
@@ -116,7 +120,7 @@ internal static class GetImpactTool
         var shownEntries = callSiteEntries.Count <= effectiveMax
             ? callSiteEntries
             : callSiteEntries.Take(effectiveMax).ToList();
-        return McpToolResults.Text(finalText, shownEntries);
+        return McpToolResults.Text(finalText, new { CallSites = shownEntries });
     }
 }
 

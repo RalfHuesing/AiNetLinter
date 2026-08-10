@@ -144,6 +144,11 @@ internal static class McpToolResults
     /// serialisiert, damit alle Tools dieselben CamelCase-/Kompakt-Optionen teilen (Pattern von
     /// <see cref="Tools.SafeguardTool"/> uebernommen, dort urspruenglich als Erstes eingefuehrt).
     /// Clients, die nur Text konsumieren, ignorieren das zusaetzliche Feld einfach.
+    /// WICHTIG: <paramref name="payload"/> muss zu einem JSON-Objekt serialisieren, niemals zu
+    /// einem Top-Level-Array/einer nackten Liste — das MCP-Protokoll verlangt
+    /// <c>structuredContent</c> als Objekt, reale Clients lehnen den kompletten Tool-Call
+    /// schema-seitig ab, wenn ein Array ankommt. Eine Liste immer in ein benanntes Objekt wrappen,
+    /// z. B. <c>new { Violations = list }</c> statt <c>list</c> direkt zu uebergeben.
     /// </summary>
     internal static CallToolResult Text<T>(string text, T payload)
     {

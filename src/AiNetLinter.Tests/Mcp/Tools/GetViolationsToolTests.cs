@@ -78,8 +78,8 @@ public sealed class GetViolationsToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var violations = JsonSerializer.Deserialize<List<RuleViolation>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var violations = result.StructuredContent!.Value.GetProperty("violations")
+            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
         Assert.NotNull(violations);
         Assert.NotEmpty(violations!);
         Assert.Contains(violations!, v => v.RuleName is not null && v.FilePath.Contains("ViolationTrigger", StringComparison.Ordinal));

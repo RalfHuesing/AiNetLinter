@@ -61,8 +61,8 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = JsonSerializer.Deserialize<List<FileTypeBreakdownEntry>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var entries = result.StructuredContent!.Value.GetProperty("breakdown")
+            .Deserialize<List<FileTypeBreakdownEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         var csEntry = entries!.Single(e => e.Extension == ".cs");
         Assert.Equal(5, csEntry.Count);

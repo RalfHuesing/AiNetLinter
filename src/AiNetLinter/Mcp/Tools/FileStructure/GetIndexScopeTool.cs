@@ -26,6 +26,8 @@ internal static class GetIndexScopeTool
 
         var (text, entries) = GetIndexScopeScanner.BuildBreakdown(solution);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), entries);
+        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
+        // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), new { Breakdown = entries });
     }
 }

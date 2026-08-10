@@ -61,8 +61,8 @@ public sealed class GetHotspotsToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = JsonSerializer.Deserialize<List<HotspotEntry>>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        var entries = result.StructuredContent!.Value.GetProperty("hotspots")
+            .Deserialize<List<HotspotEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         var greeter = entries!.Single(e => e.RelativePath.Contains("Greeter.cs", StringComparison.Ordinal));
         Assert.Equal("critical", greeter.Category);
