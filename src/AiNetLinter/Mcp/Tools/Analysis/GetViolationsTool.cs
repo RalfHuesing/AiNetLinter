@@ -23,7 +23,7 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 internal static class GetViolationsTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? scopeFilter, CancellationToken ct)
+        McpCodeGraphServer state, string? scopeFilter, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -33,6 +33,7 @@ internal static class GetViolationsTool
         // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
         // sonst eine zerrissene Kombination liefern (Config schon neu, UsedDefaultConfig noch alt).
         var configSnapshot = state.GetConfigSnapshot();
+        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
         var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(
                 Solution: solution,
@@ -40,24 +41,30 @@ internal static class GetViolationsTool
                 Console: state.Console,
                 ScopeFilter: scopeFilter,
                 CancellationToken: ct,
-                UsedDefaultConfig: configSnapshot.UsedDefaultConfig));
+                UsedDefaultConfig: configSnapshot.UsedDefaultConfig,
+                MaxResults: normalizedMaxResults));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder
-        // "Keine Dateien im Scope") sind kein Malfunction und bekommen stattdessen den
-        // Sufficiency-Hinweis, weil der Report immer vollstaendig fuer den Scope ist (kein
-        // Trunkierungs-Parameter existiert fuer get_violations).
+        // "Keine Dateien im Scope") sind kein Malfunction. Sufficiency-Hinweis nur fuer
+        // nicht-trunkierte Ergebnisse (result.IsTruncated) — ein trunkiertes Ergebnis traegt
+        // bereits seine eigene Meta-Zeile aus GetViolationsScanner.FormatReport ("scopeFilter
+        // verfeinern oder maxResults erhoehen"), die implizit "weitere Violations vorhanden"
+        // signalisiert (Q5-Muster, analog zu FindReferencesTool/GetCallTreeTool).
         // StructuredContent (S1.3) additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
         // Malfunction keine sinnvolle Teil-Violations-Liste hat (result.Violations ist dann null).
         // In ein Objekt gewrappt (nicht das nackte Array), weil MCP-Clients structuredContent
         // schema-seitig als JSON-Objekt validieren — ein Top-Level-Array liess den gesamten
         // Tool-Call clientseitig fehlschlagen (siehe McpToolResultsTests fuer die Regression).
-        return result.IsMalfunction
-            ? McpToolResults.Error(
+        if (result.IsMalfunction)
+        {
+            return McpToolResults.Error(
                 LinterErrorCodes.AnalysisFailed,
                 result.Text,
                 context: result.Context,
-                hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).")
-            : McpToolResults.Text(McpSufficiencyHints.Append(result.Text), new { Violations = result.Violations! });
+                hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
+        }
+        var text = result.IsTruncated ? result.Text : McpSufficiencyHints.Append(result.Text);
+        return McpToolResults.Text(text, new { Violations = result.Violations! });
     }
 }

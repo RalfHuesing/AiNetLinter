@@ -32,12 +32,24 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 internal static class GetViolationsScanner
 {
     /// <summary>
-    /// Baut den vollstaendigen Lint-Violations-Report fuer <paramref name="solution"/>. Ist
-    /// <paramref name="scopeFilter"/> gesetzt, aber matched keine Datei, wird eine explizite
-    /// "Keine Dateien im Scope"-Meldung geliefert statt der sonst irrefuehrenden "keine Violations"-
-    /// Aussage. Defensive <c>try/catch</c> defensiv fuer unerwartete Lint-Errors —
-    /// ueberspringt die betroffene Datei nicht moeglich (der Fehler waere global). Der
-    /// <see cref="GetViolationsResult.IsMalfunction"/>-Flag signalisiert
+    /// Default-Obergrenze fuer die Anzahl gezeigter Violations (Text-Tabellen und
+    /// StructuredContent gleichermassen) — analog zu <c>find_symbol</c>/<c>find_references</c>
+    /// und <see cref="PatternDetect.PatternDetectScanner.DefaultMaxResultsPerPattern"/>. Vor
+    /// Einfuehrung dieses Limits gab <c>get_violations</c> auf einer Solution mit vielen
+    /// bestehenden Verstoessen (z. B. beim Erstlauf gegen ein fremdes Projekt) die komplette,
+    /// unbegrenzte Liste zurueck — konnte den Client-Token-Guard sprengen und den gesamten
+    /// Tool-Call zum Scheitern bringen (dieselbe Bug-Klasse wie bei <c>get_hotspots</c> vor dessen
+    /// Fix, siehe Commit-Historie).
+    /// </summary>
+    internal const int DefaultMaxResults = 50;
+
+    /// <summary>
+    /// Baut den Lint-Violations-Report fuer <paramref name="solution"/>, trunkiert auf
+    /// <paramref name="p.MaxResults"/>. Ist <paramref name="scopeFilter"/> gesetzt, aber matched
+    /// keine Datei, wird eine explizite "Keine Dateien im Scope"-Meldung geliefert statt der sonst
+    /// irrefuehrenden "keine Violations"-Aussage. Defensive <c>try/catch</c> defensiv fuer
+    /// unerwartete Lint-Errors — ueberspringt die betroffene Datei nicht moeglich (der Fehler waere
+    /// global). Der <see cref="GetViolationsResult.IsMalfunction"/>-Flag signalisiert
     /// <see cref="GetViolationsTool"/>, dass dieser Fall (anders als "Keine Dateien im Scope" oder
     /// "0 Violations") eine echte Malfunction ist und laut IsErrorPolicy.md mit IsError=true
     /// beantwortet werden muss.
@@ -50,6 +62,7 @@ internal static class GetViolationsScanner
         var scopeFilter = p.ScopeFilter;
         var ct = p.CancellationToken;
         var usedDefaultConfig = p.UsedDefaultConfig;
+        var maxResults = p.MaxResults < 1 ? 1 : p.MaxResults;
         // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
         // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
         // von Config implementiert, der Downcast ist daher nicht spekulativ.
@@ -80,12 +93,19 @@ internal static class GetViolationsScanner
                 Context: ex.Message);
         }
 
+        // Einmal gefiltert/sortiert, um IsTruncated hier UND in FormatReport (das dieselbe Logik
+        // fuer seinen eigenen, direkt getesteten Vertrag erneut ausfuehrt) konsistent zu halten —
+        // die zweite Ausfuehrung ist ein reines In-Memory Where/OrderBy, kein zweiter Lint-Lauf.
+        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
+        var isTruncated = filtered.Count > maxResults;
+
         return new GetViolationsResult(
-            FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig),
+            FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig, maxResults),
             IsMalfunction: false,
-            // Gleiche Filter-/Sortierlogik wie FormatReport (ueber ViolationScopeFilter geteilt) —
-            // StructuredContent zeigt exakt die Violations, die auch im Text-Report auftauchen.
-            Violations: ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter));
+            IsTruncated: isTruncated,
+            // Gleiche Trunkierung wie FormatReport — StructuredContent zeigt exakt die Violations,
+            // die auch im Text-Report auftauchen.
+            Violations: isTruncated ? filtered.Take(maxResults).ToList() : filtered);
     }
 
     // ainetlinter-disable MaxMethodParameterCount — FormatReport kapselt einen Report-Bau
@@ -101,7 +121,8 @@ internal static class GetViolationsScanner
         Dictionary<string, string> fileToProject,
         IReadOnlyCollection<RuleViolation> violations,
         string? scopeFilter,
-        bool usedDefaultConfig)
+        bool usedDefaultConfig,
+        int maxResults = DefaultMaxResults)
     {
         var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
         var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, scopeFilter);
@@ -131,11 +152,23 @@ internal static class GetViolationsScanner
             return sb.ToString().TrimEnd();
         }
 
-        var errors = filtered.Where(v => ResolveSeverity(v) == "error").ToList();
-        var warnings = filtered.Where(v => ResolveSeverity(v) != "error").ToList();
+        // Trunkierung VOR der Fehler-/Warnungs-Aufteilung, damit beide Sektionen zusammen nie
+        // mehr als maxResults Zeilen zeigen — ohne dieses Limit gab eine Solution mit vielen
+        // bestehenden Verstoessen (typisch beim Erstlauf gegen ein fremdes Projekt) die komplette
+        // Liste zurueck und konnte den Client-Token-Guard sprengen (siehe DefaultMaxResults-Doc).
+        var isTruncated = filtered.Count > maxResults;
+        var shown = isTruncated ? filtered.Take(maxResults).ToList() : filtered;
+
+        var errors = shown.Where(v => ResolveSeverity(v) == "error").ToList();
+        var warnings = shown.Where(v => ResolveSeverity(v) != "error").ToList();
 
         AppendSection(sb, "Fehler", errors, solutionDir);
         AppendSection(sb, "Warnungen", warnings, solutionDir);
+
+        if (isTruncated)
+        {
+            sb.AppendLine($"[{filtered.Count} Verstoesse gesamt, {maxResults} gezeigt — scopeFilter verfeinern oder maxResults erhoehen]");
+        }
 
         return sb.ToString().TrimEnd();
     }
@@ -175,7 +208,7 @@ internal static class GetViolationsScanner
 
 /// <summary>
 /// Parameter-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>. Kapselt
-/// 6 Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
+/// 7 Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
 /// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird.
 /// </summary>
 internal sealed record GetViolationsScannerParameters(
@@ -184,7 +217,8 @@ internal sealed record GetViolationsScannerParameters(
     ILintConsole Console,
     string? ScopeFilter,
     CancellationToken CancellationToken,
-    bool UsedDefaultConfig = false);
+    bool UsedDefaultConfig = false,
+    int MaxResults = GetViolationsScanner.DefaultMaxResults);
 
 /// <summary>
 /// Ergebnis-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>.
@@ -194,9 +228,17 @@ internal sealed record GetViolationsScannerParameters(
 /// Violations" zaehlen als normal, nicht als Malfunction). <paramref name="Context"/> traegt bei
 /// einer Malfunction die rohe Exception-Message (analog zum <c>context:</c>-Parameter von
 /// <see cref="McpToolResults.Error"/>/<see cref="McpToolResults.Recoverable"/> in den anderen
-/// Tools) — bleibt <see langword="null"/> fuer normale Reports. <paramref name="Violations"/>
-/// traegt die gefilterten/sortierten Violations fuer <c>StructuredContent</c> (S1.3) — bleibt
-/// <see langword="null"/> bei einer Malfunction (kein sinnvoller Teil-Payload).
+/// Tools) — bleibt <see langword="null"/> fuer normale Reports. <paramref name="IsTruncated"/>
+/// zeigt an, ob die Gesamtzahl der Violations das <c>maxResults</c>-Limit ueberschritten hat —
+/// steuert in <see cref="GetViolationsTool"/> die Wahl zwischen Sufficiency-Hinweis und
+/// Trunkierungs-Meta (analog zum <c>isTruncated</c>-Muster in <c>FindReferencesTool</c>).
+/// <paramref name="Violations"/> traegt die gefilterten/sortierten/trunkierten Violations fuer
+/// <c>StructuredContent</c> (S1.3) — bleibt <see langword="null"/> bei einer Malfunction (kein
+/// sinnvoller Teil-Payload).
 /// </summary>
 internal sealed record GetViolationsResult(
-    string Text, bool IsMalfunction, string? Context = null, IReadOnlyList<RuleViolation>? Violations = null);
+    string Text,
+    bool IsMalfunction,
+    bool IsTruncated = false,
+    string? Context = null,
+    IReadOnlyList<RuleViolation>? Violations = null);

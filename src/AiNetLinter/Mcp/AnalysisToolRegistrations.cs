@@ -57,14 +57,14 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string? scopeFilter = null, CancellationToken ct = default) =>
+            async (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
-                    return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, ct);
+                    return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, ct);
                 }
-                return await callLog.ExecuteCallAsync("get_violations", scopeFilter ?? "",
-                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, ct));
+                return await callLog.ExecuteCallAsync("get_violations", $"{scopeFilter}|{maxResults}",
+                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -76,7 +76,7 @@ internal static class AnalysisToolRegistrations
     private const string GetViolationsDescription =
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
         "erneut aufrufbar, kein Disk-Cache. scopeFilter (Projekt-Name oder Pfad-Substring) " +
-        "grenzt auf einen Teilbereich ein.";
+        "grenzt auf einen Teilbereich ein, maxResults begrenzt die Trefferliste (Default 50).";
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
