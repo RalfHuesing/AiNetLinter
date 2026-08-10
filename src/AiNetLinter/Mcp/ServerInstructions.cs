@@ -45,6 +45,9 @@ internal static class ServerInstructions
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
         "- safeguard: Liefert einen deterministischen 0-10-Quality-Score + Pass/Fail-Threshold " +
         "+ Top-Violations + Remediation-Hints fuer die geladene Solution (Quality-Gate).\n" +
+        "- pattern_detect: Gruppiert Lint-Regelverstoesse nach Pattern-Kategorie (god-class, " +
+        "async-void, long-method, public-without-doc, empty-catch, feature-envy) statt " +
+        "flacher Datei-Liste — Solution-weite Audit-Sicht.\n" +
         "- get_symbol_body: Liefert den Source-Body eines C#-Symbols per stabiler ID oder " +
         "Datei:Zeile:Spalte.\n" +
         "- search_pattern: Text- oder Regex-Suche ueber den gesamten Dateibestand, alle " +
@@ -53,7 +56,8 @@ internal static class ServerInstructions
         "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-" +
         "Aggregate.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
-        "get_type_hierarchy, get_file_skeleton, get_violations, safeguard und get_symbol_body " +
+        "get_type_hierarchy, get_file_skeleton, get_violations, safeguard, pattern_detect " +
+        "und get_symbol_body " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
         "(deckt alle Dateitypen ab). get_index_scope und get_hotspots arbeiten ohne diese " +

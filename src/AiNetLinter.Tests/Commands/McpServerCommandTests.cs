@@ -148,24 +148,18 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithFifteenTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithSixteenTools()
     {
         var tools = await _baselineMcpFixture.Client.ListToolsAsync();
-        Assert.Equal(15, tools.Count);
-        Assert.Contains(tools, t => t.Name == "find_symbol");
-        Assert.Contains(tools, t => t.Name == "find_references");
-        Assert.Contains(tools, t => t.Name == "get_impact");
-        Assert.Contains(tools, t => t.Name == "get_file_skeleton");
-        Assert.Contains(tools, t => t.Name == "get_type_hierarchy");
-        Assert.Contains(tools, t => t.Name == "get_index_scope");
-        Assert.Contains(tools, t => t.Name == "get_hotspots");
-        Assert.Contains(tools, t => t.Name == "get_violations");
-        Assert.Contains(tools, t => t.Name == "safeguard");
-        Assert.Contains(tools, t => t.Name == "search_pattern");
-        Assert.Contains(tools, t => t.Name == "get_symbol_body");
-        Assert.Contains(tools, t => t.Name == "reload_config");
-        Assert.Contains(tools, t => t.Name == "get_server_health");
-        Assert.Contains(tools, t => t.Name == "metrics_tree");
+        Assert.Equal(16, tools.Count);
+        string[] expectedNames =
+        [
+            "find_symbol", "find_references", "get_call_tree", "get_impact", "get_file_skeleton",
+            "get_type_hierarchy", "get_index_scope", "get_hotspots", "get_violations", "safeguard",
+            "search_pattern", "get_symbol_body", "reload_config", "get_server_health", "metrics_tree",
+            "pattern_detect",
+        ];
+        foreach (var name in expectedNames) Assert.Contains(tools, t => t.Name == name);
     }
 
     [Fact]

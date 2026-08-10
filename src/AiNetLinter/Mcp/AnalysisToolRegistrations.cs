@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Tools.PatternDetect;
+using AiNetLinter.Mcp.Tools.Safeguard;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -24,7 +26,10 @@ namespace AiNetLinter.Mcp;
 /// EPIC-02 hierher gewandert, weil seine zwei neuen Roslyn-Modi (<c>violation_density</c>,
 /// <c>complexity</c>) denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> haben —
 /// derselbe Grund, aus dem <c>get_violations</c> hier registriert ist statt in
-/// <see cref="FileStructureToolRegistrations"/>.
+/// <see cref="FileStructureToolRegistrations"/>. <c>pattern_detect</c> ist in S2.2 hierher
+/// gewandert, weil es denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> hat (reine
+/// Aggregation bereits erzeugter <c>RuleViolation</c>-Objekte nach Pattern-Kategorie, siehe
+/// <see cref="PatternCatalog"/>).
 /// </summary>
 internal static class AnalysisToolRegistrations
 {
@@ -43,6 +48,7 @@ internal static class AnalysisToolRegistrations
         AddSafeguard(tools, mcpState, callLog);
         AddSearchPattern(tools, mcpState, callLog);
         AddMetricsTree(tools, mcpState, callLog);
+        AddPatternDetect(tools, mcpState, callLog);
     }
 
     private static void AddGetViolations(
@@ -157,4 +163,35 @@ internal static class AnalysisToolRegistrations
         "Top-N-Kinder. mode: code_size, comment_density, violation_density, complexity. " +
         "root grenzt auf einen Teilbaum ein (Default: Solution-Root), depth (1-5) begrenzt die " +
         "Baumtiefe, top_n die sichtbaren Kinder pro Ebene, file_filter (Regex) auf den Pfad.";
+
+    private static void AddPatternDetect(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct);
+                }
+                return await callLog.ExecuteCallAsync("pattern_detect", $"{string.Join(",", patterns ?? [])}|{scopeFilter}|{maxResultsPerPattern}",
+                    () => PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "pattern_detect",
+                Description = PatternDetectDescription,
+            }));
+    }
+
+    private const string PatternDetectDescription =
+        "Wann nutzen: Solution-weite Audit-Suche nach Code-Patterns (God-Classes, async-void, " +
+        "lange Methoden, Public-API ohne Doc, leere Catch-Bloecke, Feature-Envy/Middle-Man) " +
+        "statt der flachen Datei-Liste von get_violations — nach Pattern-Kategorie gruppiert. " +
+        "patterns (Default: alle 6) grenzt auf Pattern-IDs ein (god-class, async-void, " +
+        "long-method, public-without-doc, empty-catch, feature-envy), scopeFilter " +
+        "(Projekt-Name oder Pfad-Substring) grenzt auf einen Teilbereich ein, " +
+        "maxResultsPerPattern begrenzt die Trefferliste je Pattern (Default 20).";
 }

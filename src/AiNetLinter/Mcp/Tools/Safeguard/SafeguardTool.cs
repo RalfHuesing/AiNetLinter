@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Safeguard;
 
 /// <summary>
 /// MCP-Tool <c>safeguard</c>: liefert einen deterministischen 0-10-Quality-Score plus Pass/Fail-Threshold,

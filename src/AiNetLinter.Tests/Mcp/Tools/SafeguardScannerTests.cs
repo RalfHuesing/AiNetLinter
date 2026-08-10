@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Models;
 using AiNetLinter.Tests;
 using AiNetLinter.Tests.Fixtures;

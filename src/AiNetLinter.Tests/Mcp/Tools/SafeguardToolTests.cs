@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Tests.Fixtures;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;

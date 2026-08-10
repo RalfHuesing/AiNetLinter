@@ -13,7 +13,7 @@ using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Safeguard;
 
 /// <summary>
 /// Reine Score-Berechnungs- und Remediation-Logik fuer die Safeguard-Auswertung (EPIC-01) — in eine

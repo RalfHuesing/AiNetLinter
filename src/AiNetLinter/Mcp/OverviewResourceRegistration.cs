@@ -38,6 +38,7 @@ internal static class OverviewResourceRegistration
         ("get_symbol_body", "Liefert den Source-Body eines C#-Symbols per stabiler ID oder Datei:Zeile:Spalte."),
         ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
         ("safeguard", "Liefert einen deterministischen 0-10-Quality-Score inkl. Pass/Fail-Threshold, Top-Violations und Remediation-Hint."),
+        ("pattern_detect", "Gruppiert Lint-Regelverstoesse nach Pattern-Kategorie (god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy)."),
         ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
         ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
         ("metrics_tree", "Liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (z. B. Code-Groesse, Kommentaranteil) zur Ebene-fuer-Ebene-Exploration."),
