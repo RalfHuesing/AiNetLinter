@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;

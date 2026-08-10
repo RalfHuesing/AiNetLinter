@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;

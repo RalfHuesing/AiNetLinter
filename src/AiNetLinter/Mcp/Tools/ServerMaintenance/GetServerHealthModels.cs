@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 // Ergebnis-Records fuer GetServerHealthTools StructuredContent (S1.3) — aus der Tool-Datei
 // ausgelagert, Pattern 1:1 von SafeguardModels.cs. Reine Datentraeger ohne eigenes Verhalten.

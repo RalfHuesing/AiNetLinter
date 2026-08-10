@@ -9,7 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
 /// Reine Zaehl-/Formatierungslogik fuer <see cref="GetIndexScopeTool"/> — in eine eigene Datei

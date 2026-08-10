@@ -7,6 +7,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;

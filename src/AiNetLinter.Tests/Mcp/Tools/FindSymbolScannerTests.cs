@@ -3,6 +3,7 @@
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Tests.Fixtures;
 using Xunit;
 

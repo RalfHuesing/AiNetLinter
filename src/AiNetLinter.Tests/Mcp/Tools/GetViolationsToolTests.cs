@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Models;
 using AiNetLinter.Tests.Fixtures;
 using Microsoft.CodeAnalysis;

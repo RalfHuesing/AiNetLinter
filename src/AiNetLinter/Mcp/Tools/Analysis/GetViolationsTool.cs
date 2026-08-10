@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// MCP-Tool <c>get_violations</c>: liefert alle aktuellen Lint-Regelverstoesse der resident gehaltenen

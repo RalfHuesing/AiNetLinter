@@ -10,7 +10,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 /// <summary>
 /// MCP-Tool <c>reload_config</c> (Q2, <c>tasks/features/05-roadmap.md</c> §3): liest die

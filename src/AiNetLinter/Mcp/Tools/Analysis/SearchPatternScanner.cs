@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// Reine Datei-Inhalts-Scan- und Format-Logik fuer <see cref="SearchPatternTool"/> — in eine eigene

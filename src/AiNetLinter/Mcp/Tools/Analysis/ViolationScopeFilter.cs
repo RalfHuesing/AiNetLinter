@@ -8,7 +8,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Models;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// Gemeinsame Scope-Filter-/Sortierlogik fuer MCP-Tools, die auf bereits von der
