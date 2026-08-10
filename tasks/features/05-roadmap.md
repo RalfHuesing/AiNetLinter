@@ -113,8 +113,9 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
 | [ ] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
+| [ ] | M9 | **Drift-Audit (Naming-Drift + DRY)** — noch nicht spezifiziert, siehe [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md) | TBD | TBD | Nutzer-Anliegen 2026-08-11 |
 
-**Gesamt M-Phase:** 4-6 Wochen. Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
+**Gesamt M-Phase:** 4-6 Wochen (M9 noch ohne Aufwandsschätzung, da unspezifiziert). Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
 
 > **Priorisierungs-Update (Dogfooding-Session 2026-08-10/11):** Nach einer Session, in der der
 > MCP-Server systematisch als Navigations-Werkzeug für einen "großen Task, Code-Stellen selbst
@@ -123,14 +124,20 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 > zu beantworten, ohne vorher ein einzelnes Symbol zu kennen; aktuell nur muehsam ueber mehrere
 > `find_symbol`/`find_references`-Runden rekonstruierbar. **Direkt danach M8** (`--eval`/`--map`
 > streichen, Details siehe §3) — Nutzer-Entscheidung 2026-08-11 nach Diskussion, ob das
-> Audit-Prompt-Feature (Epic 31, 2026-08-03) durch die MCP-Tools ueberholt ist. **M5
-> `test_coverage_context` danach** — sinnvoller Folgeschritt, aber weniger dringend, weil
-> `find_references` bereits einen Teil des Bedarfs abdeckt (findet Unit-Tests, die eine Methode
-> direkt aufrufen). M1 (eigenstaendiges Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt)
-> bleiben unveraendert nachrangig — siehe aktualisiertes Sequenzierungsdiagramm in §4. Zwei
-> zusaetzlich diskutierte Ideen wurden bewusst NICHT in die Roadmap aufgenommen: Git-Historie/Blame
-> als eigenes Tool und semantische/Fuzzy-Suche — Begruendung in
-> [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9/§10.
+> Audit-Prompt-Feature (Epic 31, 2026-08-03) durch die MCP-Tools ueberholt ist. **Danach M9**
+> (Drift-Audit fuer Naming-Drift/DRY-Verstoesse bei autonomer agentischer Entwicklung) — dem
+> Nutzer wichtig genug, um direkt nach der Bereinigung (M8) zu kommen, aber noch nicht
+> spezifiziert; nur eine grobe Ideensammlung in
+> [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md), muss vor Umsetzung erst ausgearbeitet
+> werden (Score/Aufwand fehlen bewusst). **M5 `test_coverage_context` danach** — sinnvoller
+> Folgeschritt, aber weniger dringend, weil `find_references` bereits einen Teil des Bedarfs
+> abdeckt (findet Unit-Tests, die eine Methode direkt aufrufen). M1 (eigenstaendiges
+> Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt) bleiben unveraendert nachrangig —
+> siehe aktualisiertes Sequenzierungsdiagramm in §4. Zwei zusaetzlich diskutierte Ideen wurden
+> bewusst NICHT in die Roadmap aufgenommen: Git-Historie/Blame als eigenes Tool und
+> semantische/Fuzzy-Suche allgemein — Begruendung in
+> [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §9/§10 (§10 ist auch fuer die RAG/Qdrant-Frage
+> zu M9 relevant, siehe `07-drift-audit-ideen.md`).
 
 > **Hinweis zu M1:** Betrifft ausschließlich die ASP.NET-Core-Request-Pipeline (Controller-Routes, Minimal-API-Endpoints, Middleware-Reihenfolge, DI-Registrierungen, gRPC-Services, Route-Konflikte) — **nicht** Blazor (dafür existieren bereits eigene Checker, `BlazorRequireCodeBehind`/`BlazorRequireCssIsolation`) und **nicht** Kestrel (Server-Hosting, TLS, Ports — bisher nirgends spezifiziert). Das sind 6 neue Linter-*Regeln*, kein MCP-Interface-Thema — sollte als eigenständiges Vorhaben/eigener Drift-Loop-Task laufen, getrennt von der MCP-Aufwertung.
 
@@ -416,6 +423,7 @@ Sprint 2 (2-3 Wo)
 Mid-Term (4-6 Wo) — Reihenfolge aktualisiert nach Dogfooding-Session 2026-08-10/11 (siehe §2)
 ├── M2 dependency_graph         ← unabhängig, HÖCHSTE PRIORITÄT (größte Navigationslücke laut Dogfooding)
 ├── M8 --eval/--map streichen   ← unabhängig, direkt danach (Nutzer-Entscheidung 2026-08-11)
+├── M9 Drift-Audit              ← noch nicht spezifiziert, muss erst ausgearbeitet werden (siehe 07-drift-audit-ideen.md)
 ├── M5 test_coverage_context    ← unabhängig, danach
 ├── M1 ASP.NET-Analyzer-Suite   ← eigenständiges Linting-Vorhaben, siehe Hinweis oben, nachrangig
 └── M3 feature_context           ← hängt an S2.2 (jetzt entsperrt), nachrangig
@@ -580,3 +588,4 @@ User-Anweisung 2026-08-06: „entscheide du bitte (was macht codegraph bzw. was 
 | **D15** | Semantische/Fuzzy-Codesuche (Embeddings) bauen? | **Nein** | Widerspricht der strategischen Positionierung (§0: deterministisch, Roslyn-präzise, kein Modell-/Cloud-Abhängigkeit). Volle Begründung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §10. |
 | **D16** | `--eval`/`--map` (Audit-Prompts + Codebase-Maps) behalten, streichen oder in MCP integrieren? | **Ersatzlos streichen (M8)** | Nutzer-Entscheidung 2026-08-11 nach Diskussion: kein Beleg für aktive Nutzung (nicht in `.agents/`-Drift-Loop-Scaffolding referenziert), inhaltlich vom MCP-Ansatz überholt (statischer Evidenz-Blob vs. gezielte Live-Tool-Calls), Integration in MCP architektonisch sinnlos (MCP-Tool bedient dieselbe Session, die schon Live-Zugriff hat). `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben intern bestehen (Wiederverwendung durch `get_hotspots`/`get_file_skeleton`), nur die CLI-Fläche entfällt. Details in §3 M8. |
 | **D17** | Müssen unbekannte CLI-Parameter einen harten Fehler liefern (allgemeine Anforderung, nicht nur für `--eval`/`--map`)? | **Bereits der Fall, kein Handlungsbedarf** | Empirisch verifiziert 2026-08-11: `ainetlinter --this-flag-does-not-exist` liefert automatisch `Befehl oder Argument '...' nicht erkannt.` + Usage-Hilfetext + Exit-Code 1, via System.CommandLine-Standardverhalten. Gilt automatisch auch für `--eval`/`--map` nach deren Entfernung in M8 — kein Soft-Deprecation-Sonderfall nötig. |
+| **D18** | Drift-Audit (Naming-Drift + DRY) als neues Epic aufnehmen — mit welchem Detailgrad? | **Nur als offene Ideensammlung (M9), noch nicht spezifiziert** | Nutzer-Anliegen 2026-08-11: typische Drift-Probleme bei autonomer agentischer Entwicklung (Naming-Drift-Beispiel "A" → "A23456", DRY-Beispiel JsonSerializerOptions-Duplikation aus dieser Session). Direkt nach M8 priorisiert, aber absichtlich ohne Score/Aufwand/Akzeptanzkriterien in die Roadmap aufgenommen — muss erst ausgearbeitet werden. Ideen (Duplicate-Detection via AST-Vergleich, Naming-Familien via String-Ähnlichkeit, Self-Audit-Skill) in [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md). Im selben Gespräch RAG/Vektor-Suche (Qdrant) diskutiert und für die beiden konkreten Beispiele als falsches Werkzeug eingeschätzt (lexikalisches bzw. strukturelles Problem, kein semantisches) — Details ebenfalls in `07-drift-audit-ideen.md`, keine endgültige Entscheidung, nur vorläufige Einschätzung. |
