@@ -3,10 +3,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// MCP-Tool <c>search_pattern</c>: Plain-Text- oder Regex-Suche ueber den Solution-Dateibestand

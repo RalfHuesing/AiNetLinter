@@ -2,9 +2,10 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
 /// MCP-Tool <c>get_index_scope</c>: liefert eine Dateityp-Aufschluesselung der resident gehaltenen

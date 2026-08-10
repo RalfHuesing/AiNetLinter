@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;

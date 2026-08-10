@@ -9,7 +9,7 @@ using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 /// <summary>
 /// MCP-Tool <c>find_symbol</c>: durchsucht die resident gehaltene Solution per Substring auf

@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -161,7 +162,7 @@ internal static class McpServerCommandLoadingStateHarness
         // ainetlinter-disable BanBlockingTaskAccess — der Harness muss synchron bleiben,
         // damit der Test-State direkt nach dem Aufruf beobachtbar ist; das hier ist ein
         // expliziter Sync-Adapter, kein async-faehiger Kontext.
-        return AiNetLinter.Mcp.Tools.FindSymbolTool.ExecuteAsync(
+        return AiNetLinter.Mcp.Tools.SymbolGraph.FindSymbolTool.ExecuteAsync(
             server,
             namePattern: "Anything",
             kind: null,

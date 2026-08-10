@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile

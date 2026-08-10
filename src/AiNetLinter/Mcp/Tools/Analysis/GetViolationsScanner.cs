@@ -14,7 +14,7 @@ using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// Reine Formatierungs-/Filter-Logik fuer <see cref="GetViolationsTool"/> — in eine eigene Datei

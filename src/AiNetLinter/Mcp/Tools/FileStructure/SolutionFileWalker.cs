@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using AiNetLinter.Baseline;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
 /// Gemeinsamer Datei-Walk-Kern gegen eine resident gehaltene <see cref="Solution"/> — extrahiert aus

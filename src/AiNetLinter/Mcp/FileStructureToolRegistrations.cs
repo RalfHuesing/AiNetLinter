@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 

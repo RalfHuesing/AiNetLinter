@@ -8,7 +8,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Maps.Skeleton;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
 /// MCP-Tool <c>get_file_skeleton</c>: liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies)

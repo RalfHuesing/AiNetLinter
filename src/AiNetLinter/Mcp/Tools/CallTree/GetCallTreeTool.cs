@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;

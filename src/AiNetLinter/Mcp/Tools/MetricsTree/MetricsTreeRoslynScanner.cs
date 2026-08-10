@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using AiNetLinter.Output;

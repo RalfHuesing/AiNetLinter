@@ -11,7 +11,7 @@ using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 /// <summary>
 /// Iterativer BFS ueber <see cref="SymbolFinder.FindReferencesAsync"/> mit konfigurierbarer

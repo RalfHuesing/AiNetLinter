@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 

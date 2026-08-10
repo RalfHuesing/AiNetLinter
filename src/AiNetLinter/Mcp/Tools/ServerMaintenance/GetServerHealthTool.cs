@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools;
+namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 /// <summary>
 /// MCP-Tool <c>get_server_health</c> (Q3, <c>tasks/features/05-roadmap.md</c> §3): Diagnose-
