@@ -49,13 +49,13 @@ public sealed class OverviewResourceRegistrationTests
     }
 
     [Fact]
-    public void BuildOverviewText_ListsAllFourteenTools()
+    public void BuildOverviewText_ListsAllFifteenTools()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
         var text = OverviewResourceRegistration.BuildOverviewText(state);
 
-        Assert.Contains("Tools (14)", text, StringComparison.Ordinal);
+        Assert.Contains("Tools (15)", text, StringComparison.Ordinal);
         foreach (var (name, _) in OverviewResourceRegistration.ToolSummaries)
         {
             Assert.Contains($"`{name}`", text, StringComparison.Ordinal);

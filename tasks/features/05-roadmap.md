@@ -98,7 +98,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
-| [ ] | S2.2 | **`pattern_detect` (God-Classes, async-void, etc.)** | 90 | 1 Wo | Recon C §5.2 F6, Recon A §3.1 K12 |
+| [x] | S2.2 | **`pattern_detect` (God-Classes, async-void, etc.)** | 90 | 1 Wo | Recon C §5.2 F6, Recon A §3.1 K12 |
 | [ ] | S2.3 | **`metrics_lookup` (One-Shot-Metriken)** | 70 | 3-5 Tage | Recon C §5.3 F9 |
 | [x] | S2.5 | **`metrics_tree` (interaktive Codebase-Landkarte / Heatmap-Tree-Walk)** | 85 | 2-3 Tage | User-Idee 2026-08-06, Recon C §4.3 (Aider), Recon A §5.1 |
 
@@ -198,12 +198,26 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 **Abhängigkeiten:** Existierende Checkers (z. T. wiederverwendbar: `AsyncVoidChecker`, `PublicMembersChecker`, `ComplexityChecker`, `NestedTypesChecker`)
 **Aufwand:** 1 Woche
 **Akzeptanzkriterien:**
-- [ ] Mindestens 6 Patterns implementiert
-- [ ] Pattern-Konfiguration in `rules.json` (gleiche Struktur wie Bool-Rules)
-- [ ] Structured Output
-- [ ] 10+ Unit-Tests (1 pro Pattern + Edge-Cases)
-- [ ] 1 Integration-Test auf Live-Repo
-- [ ] Doku mit Pattern-Beispielen
+- [x] Mindestens 6 Patterns implementiert — genau 6 von 10: `god-class`, `async-void`,
+      `long-method`, `public-without-doc`, `empty-catch`, `feature-envy`. Die anderen 4
+      (`deep-nesting`, `disposable-not-disposed`, `static-state`, `magic-numbers`) sind bewusst
+      zurückgestellt (analog zum `method_count`-Präzedenzfall bei `metrics_tree`, siehe S2.5
+      Akzeptanzkriterien oben): keine existierende Linter-Regel/Checker, würden komplett neue
+      Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern (z. B. sinnvolle
+      Magic-Number-Allowlist, Disposal-Tracking über Scopes) — deutlich größerer, eigener Scope.
+- [x] Pattern-Konfiguration in `rules.json` (gleiche Struktur wie Bool-Rules) — **bewusst nicht
+      umgesetzt**: alle 6 zugrunde liegenden Regeln (`BanAsyncVoid`, `EnforceNoSilentCatch`, ...)
+      sind bereits einzeln über die bestehende `rules.json` ein-/ausschaltbar; ein zweiter,
+      paralleler Ein-/Ausschalter für dieselbe Sache in `pattern_detect` wäre Config-Drift-Risiko
+      (zwei Schalter für dasselbe Verhalten können auseinanderlaufen). Ist eine Regel deaktiviert,
+      zeigt das zugehörige Pattern automatisch 0 Treffer.
+- [x] Structured Output — `StructuredContent` mit `{ patterns: [{ id, description, occurrences,
+      items: [...] }], summary: { patternsWithHits, totalOccurrences } }`, kein Ranking nach
+      numerischem Schweregrad (siehe `konzept`-Notiz zu `RuleViolation.Details` als bereits
+      formatiertem String).
+- [x] 10+ Unit-Tests (1 pro Pattern + Edge-Cases)
+- [x] 1 Integration-Test auf Live-Repo
+- [x] Doku mit Pattern-Beispielen — `Docs/agent-api.md#mcp-server-modus`.
 
 **Risiko:** Niedrig-Mittel (Reuse existierender Checker)
 **Quelle:** Recon C §5.2 F6, Recon A §7.3, Recon B §6.3

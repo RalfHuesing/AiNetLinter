@@ -490,4 +490,12 @@ Eigener, mittlerweile abgeschlossener Task (separat von den oben gelisteten MCP-
 
 ---
 
+## MCP-Tool `pattern_detect`
+
+Umgesetzt als S2.2 aus `tasks/features/05-roadmap.md`. Neues MCP-Tool `pattern_detect` gruppiert die von der bereits residenten `LinterEngine` erzeugten Lint-Verstöße nach Pattern-Kategorie (god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy) statt der flachen Datei-für-Datei-Liste von `get_violations` — Solution-weite Audit-Sicht in Sekunden.
+
+- [x] **6 von 10 in der Roadmap genannten Patterns umgesetzt** (`god-class`, `async-void`, `long-method`, `public-without-doc`, `empty-catch`, `feature-envy`) — reine Aggregation bereits existierender, produktiver Linter-Regeln (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`, `BanAsyncVoid`, `MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`, `EnforceXmlDocumentation`, `EnforceNoSilentCatch`, `AvoidExcessiveMiddleMen`), kein neuer Detection-Code. Die anderen 4 (`deep-nesting`, `disposable-not-disposed`, `static-state`, `magic-numbers`) sind bewusst zurückgestellt — keine existierende Erkennung, würden neue Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern (analog zum `method_count`-Präzedenzfall bei `metrics_tree`). Vollständige Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

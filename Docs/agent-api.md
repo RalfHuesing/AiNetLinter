@@ -221,7 +221,7 @@ Fehlermeldungen sind maschinenlesbar:
 
 ## MCP-Server-Modus
 
-Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 13 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
+Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 15 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
 
 ### Server-Lifecycle
 
@@ -242,11 +242,11 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
 
-> Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+> Symbolgraph-Tools (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Konsequenz für den Agent-Loop: 9 Tools sind C#-only (find_symbol, find_references, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 14 Tools
+### Die 15 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
@@ -260,6 +260,7 @@ Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_referenc
 | `metrics_tree` | `root?` (Teilbaum, Default Solution-Root), `mode` (`code_size`, `comment_density`, `violation_density`, `complexity`), `depth?` (1-5, Default 1), `top_n?` (Default 10), `file_filter?` (Regex auf den Pfad) | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten und sortierten Top-N-Kindern je Ebene — `code_size`/`comment_density` sind reiner Datei-Walk (LoC/Bytes bzw. Kommentar-Ratio), `violation_density`/`complexity` laufen über `LinterEngine` bzw. Roslyn-Syntaxbäume (Lint-Verstöße bzw. zyklomatische/kognitive Komplexität je Methode) | nein (zwei der vier Modi sind reiner Datei-Walk) | ja (Top-N pro Ebene) |
 | `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | nein |
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
+| `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste (siehe unten) | ja | ja (je Pattern) |
 | `get_symbol_body` | `identifier` (stabile DocumentationCommentId oder Datei:Zeile:Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
@@ -285,6 +286,26 @@ Konsequenz für den Agent-Loop: 8 Tools sind C#-only (find_symbol, find_referenc
 ```
 
 `IsError` ist ausschließlich bei einer echten Malfunction `true` (LinterEngine-Fehler oder ein Projekt, das trotz `SupportsCompilation == true` auch nach internen Retries keine Compilation liefert) — ein normaler Score-Output mit `passed: false` ist kein Fehler, sondern das erwartete Quality-Gate-Ergebnis.
+
+**`pattern_detect` — Structured Output im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`), `feature-envy` (`AvoidExcessiveMiddleMen` — die nächste existierende Näherung, kein 1:1-Match zum klassischen Feature-Envy-Begriff). Die anderen 4 der ursprünglich 10 in der Roadmap genannten Patterns (`deep-nesting`, `disposable-not-disposed`, `static-state`, `magic-numbers`) sind bewusst **nicht** Teil dieser Version — sie haben keine existierende Erkennung und würden komplett neue Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern (eigener, größerer Scope). `StructuredContent` liefert:
+
+```json
+{
+  "patterns": [
+    {
+      "id": "god-class",
+      "description": "...",
+      "occurrences": 3,
+      "items": [
+        { "filePath": "...", "line": 42, "ruleName": "AIContextFootprint", "details": "..." }
+      ]
+    }
+  ],
+  "summary": { "patternsWithHits": 2, "totalOccurrences": 5 }
+}
+```
+
+Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen überschneiden sich nicht); trifft bei `god-class` mehr als eine Regel auf dieselbe Klasse zu, sind das separate Items (keine Dedupe-Logik, identisch zu `get_violations`). `items` ist je Pattern auf `maxResultsPerPattern` gekappt (Default 20), `occurrences` bleibt die volle Trefferzahl. Ist eine zugrunde liegende Regel (z. B. `BanAsyncVoid`) in `rules.json` deaktiviert, zeigt das zugehörige Pattern automatisch 0 Treffer — kein separater Ein-/Ausschalter in `pattern_detect` selbst (Config-Drift-Vermeidung).
 
 Beispiel-Aufruf (JSON-RPC über stdio):
 
@@ -327,9 +348,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 14 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 15 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 14 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 15 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
@@ -391,7 +412,7 @@ Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overh
 
 ### Compile-Fehler-Warnhinweis (EPIC-06)
 
-Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **9 von 14 Tools** (inkl. `metrics_tree`) einen aggregierten Warnhinweis vor das eigentliche Ergebnis:
+Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **9 von 15 Tools** (inkl. `metrics_tree`) einen aggregierten Warnhinweis vor das eigentliche Ergebnis. `pattern_detect` prependet diesen Warnhinweis bewusst nicht (Pattern 1:1 von `get_violations` übernommen, siehe unten):
 
 ```
 Hinweis: 1 Datei hat Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
@@ -400,7 +421,7 @@ Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_
 
 Bei genau einer betroffenen Datei wechselt die Zeile in den Singular (`1 Datei hat`), bei mehreren bleibt es beim Plural (`N Dateien haben`).
 
-`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` prependet keinen Compile-Warnhinweis **und** surfaced Compile-Fehler auch nicht als eigene Violations — der Lint-Lauf ignoriert sie schlicht. Wer wissen will, ob Compile-Fehler vorliegen, muss eines der anderen 9 Tools nutzen (z. B. `get_index_scope` fuer den aggregierten oder `get_file_skeleton` fuer den datei-spezifischen Warnhinweis).
+`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` und `pattern_detect` prependen keinen Compile-Warnhinweis **und** surfacen Compile-Fehler auch nicht als eigene Violations/Pattern-Treffer — der zugrunde liegende Lint-Lauf ignoriert sie schlicht. Wer wissen will, ob Compile-Fehler vorliegen, muss eines der anderen 9 Tools nutzen (z. B. `get_index_scope` fuer den aggregierten oder `get_file_skeleton` fuer den datei-spezifischen Warnhinweis).
 
 ### Staleness-Invalidierung
 

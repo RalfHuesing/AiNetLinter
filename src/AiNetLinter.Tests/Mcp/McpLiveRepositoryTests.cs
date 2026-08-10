@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp;
 
 /// <summary>
-/// Live-Integrationstests fuer alle 9 MCP-Tools direkt gegen das eigene Repository.
+/// Live-Integrationstests fuer alle 10 MCP-Tools direkt gegen das eigene Repository.
 /// Ersetzt ad-hoc Python-Dogfooding-Skripte durch saubere, automatisierte C# xUnit-Tests.
 /// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Collection.
 /// </summary>
@@ -229,5 +230,38 @@ public sealed class McpLiveRepositoryTests
         Assert.True(score >= 5.0,
             $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0 — " +
             "moeglicher Bug in der Score-Formel (EPIC-01-Scope), nicht im step-003 zu fixen.");
+    }
+
+    [Fact]
+    public async Task LiveDogfood_PatternDetect_ReturnsStructuredResultsForAllSixPatterns()
+    {
+        // Live-Repo hat EnforceXmlDocumentation=false (rules.json-Default in diesem Repo) —
+        // "public-without-doc" liefert daher vermutlich 0 Treffer. Das ist KEIN Bug: geprueft
+        // wird nur, dass der Report syntaktisch/strukturell korrekt ist (alle 6 Pattern-Eintraege
+        // vorhanden, gueltiges JSON-Schema), nicht dass jedes Pattern > 0 Treffer hat.
+        var result = await _fixture.Client.CallToolAsync(
+            "pattern_detect",
+            new Dictionary<string, object?>
+            {
+                ["patterns"] = null,
+                ["scopeFilter"] = null,
+                ["maxResultsPerPattern"] = 20,
+            });
+
+        Assert.False(result.IsError);
+        Assert.NotNull(result.StructuredContent);
+
+        var json = JsonSerializer.Deserialize<JsonObject>(
+            result.StructuredContent!.Value.GetRawText())!;
+        Assert.True(json.ContainsKey("patterns"));
+        Assert.True(json.ContainsKey("summary"));
+
+        var patterns = json["patterns"]!.AsArray();
+        Assert.Equal(6, patterns.Count);
+        var ids = patterns.Select(p => (string)p!["id"]!).ToHashSet(StringComparer.Ordinal);
+        foreach (var expected in new[] { "god-class", "async-void", "long-method", "public-without-doc", "empty-catch", "feature-envy" })
+        {
+            Assert.Contains(expected, ids);
+        }
     }
 }
