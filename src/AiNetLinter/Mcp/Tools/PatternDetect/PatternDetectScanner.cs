@@ -20,10 +20,10 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// Baut den <c>pattern_detect</c>-Report: gruppiert die von der bereits laufenden
 /// <see cref="LinterEngine"/> erzeugten <see cref="RuleViolation"/>-Objekte nach
 /// <see cref="PatternCatalog"/>-Eintrag statt der flachen Datei-für-Datei-Liste von
-/// <c>get_violations</c>. Referenzmuster 1:1 von <c>GetViolationsScanner</c> übernommen
-/// (<see cref="LinterEngine.RunAsync"/> mit <c>noCache: true</c>, gleiche Scope-Filter-Semantik,
-/// gleiche Sortierung Datei→Zeile→Regel) — bewusst dupliziert statt <c>GetViolationsScanner</c>
-/// zu ändern/erweitern (eigene, unveränderte Zuständigkeit dort).
+/// <c>get_violations</c>. Scope-Filter-/Sortierlogik gemeinsam mit <c>GetViolationsScanner</c>
+/// über <see cref="ViolationScopeFilter"/> (urspruenglich bei der S2.2-Einfuehrung dupliziert,
+/// nachtraeglich extrahiert, da ein zweiter Konsument die Duplikation zur echten Wartungslast
+/// gemacht hat) — nur die Pattern-Gruppierung selbst ist <c>pattern_detect</c>-spezifisch.
 /// </summary>
 internal static class PatternDetectScanner
 {
@@ -40,7 +40,7 @@ internal static class PatternDetectScanner
         var concreteConfig = (Config)p.Config;
 
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var fileToProject = BuildFileToProjectMap(solution, solutionDir);
+        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
 
         IReadOnlyCollection<RuleViolation> violations;
         try
@@ -58,13 +58,8 @@ internal static class PatternDetectScanner
             return new PatternDetectResult(null, null, IsMalfunction: true, Context: ex.Message);
         }
 
-        var scoped = violations
-            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
-                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
-            .ToList();
-
-        var matchingFileCount = fileToProject
-            .Count(kvp => MatchesScope(kvp.Key, kvp.Value, solutionDir, scopeFilter));
+        var scoped = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
+        var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, scopeFilter);
 
         if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
@@ -142,35 +137,6 @@ internal static class PatternDetectScanner
         }
 
         return sb.ToString().TrimEnd();
-    }
-
-    private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var project in solution.Projects)
-        {
-            foreach (var document in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                if (document.FilePath is null) continue;
-                map[document.FilePath] = project.Name;
-            }
-        }
-        return map;
-    }
-
-    private static bool MatchesScope(string filePath, string projectName, string solutionDir, string? scopeFilter)
-    {
-        if (string.IsNullOrEmpty(scopeFilter)) return true;
-        if (projectName.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
-
-        var relativePath = Path.GetRelativePath(solutionDir, filePath);
-        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? LookupProjectName(Dictionary<string, string> fileToProject, string filePath)
-    {
-        return fileToProject.TryGetValue(filePath, out var name) ? name : null;
     }
 
     /// <summary>Interner Baustein zwischen Report-Aufbau und Formatierung: <see cref="Entry"/> ist

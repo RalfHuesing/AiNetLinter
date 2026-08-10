@@ -19,16 +19,15 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// Reine Formatierungs-/Filter-Logik fuer <see cref="GetViolationsTool"/> — in eine eigene Datei
 /// ausgelagert, damit <see cref="GetViolationsTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c> klein bleibt.
+/// <c>AiNetLinter.mdc</c>) klein bleibt.
 /// Delegiert die eigentliche Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
 /// mit <c>noCache: true</c> — bewusst KEIN Neubau einer eigenen Lint-Loop, weil
 /// <c>konzept.md</c> fuer <c>get_violations</c> explizit die <see cref="LinterEngine"/> als Basis
 /// vorsieht und der Disk-Cache fuer den resident laufenden Server irrelevant ist (Muss-Haven "Cache
 /// umgehen": Cache dient der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
 /// Post-Filter auf den fertigen <see cref="RuleViolation"/>s (case-insensitive <c>Contains</c> auf
-/// Projekt-Name oder solution-relativem Pfad), kein Pre-Filter ueber <see cref="LinterArgs"/> — siehe
-/// "Bekannte Ausnahmen" im
-/// unit-testbar.
+/// Projekt-Name oder solution-relativem Pfad), kein Pre-Filter ueber <see cref="LinterArgs"/> —
+/// reine Funktionen ohne <see cref="McpCodeGraphServer"/>-Abhaengigkeit, direkt unit-testbar.
 /// </summary>
 internal static class GetViolationsScanner
 {
@@ -57,7 +56,7 @@ internal static class GetViolationsScanner
         var concreteConfig = (Config)config;
 
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var fileToProject = BuildFileToProjectMap(solution, solutionDir);
+        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
 
         IReadOnlyCollection<RuleViolation> violations;
         try
@@ -84,33 +83,9 @@ internal static class GetViolationsScanner
         return new GetViolationsResult(
             FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig),
             IsMalfunction: false,
-            // Gleiche Filter-/Sortierlogik wie FormatReport (ueber FilterAndSortViolations geteilt) —
+            // Gleiche Filter-/Sortierlogik wie FormatReport (ueber ViolationScopeFilter geteilt) —
             // StructuredContent zeigt exakt die Violations, die auch im Text-Report auftauchen.
-            Violations: FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter));
-    }
-
-    private static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var project in solution.Projects)
-        {
-            foreach (var document in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
-                if (document.FilePath is null) continue;
-                map[document.FilePath] = project.Name;
-            }
-        }
-        return map;
-    }
-
-    private static bool MatchesScope(string filePath, string projectName, string solutionDir, string? scopeFilter)
-    {
-        if (string.IsNullOrEmpty(scopeFilter)) return true;
-        if (projectName.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
-
-        var relativePath = Path.GetRelativePath(solutionDir, filePath);
-        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
+            Violations: ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter));
     }
 
     // ainetlinter-disable MaxMethodParameterCount — FormatReport kapselt einen Report-Bau
@@ -128,10 +103,8 @@ internal static class GetViolationsScanner
         string? scopeFilter,
         bool usedDefaultConfig)
     {
-        var filtered = FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
-
-        var matchingFileCount = fileToProject
-            .Count(kvp => MatchesScope(kvp.Key, kvp.Value, solutionDir, scopeFilter));
+        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
+        var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, scopeFilter);
 
         if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
@@ -198,31 +171,6 @@ internal static class GetViolationsScanner
         sb.AppendLine();
     }
 
-    private static string? LookupProjectName(Dictionary<string, string> fileToProject, string filePath)
-    {
-        return fileToProject.TryGetValue(filePath, out var name) ? name : null;
-    }
-
-    /// <summary>
-    /// Gemeinsame Filter-/Sortierlogik fuer <see cref="FormatReport"/> (Text-Tabelle) und
-    /// <see cref="BuildViolationsTextAsync"/>s <c>StructuredContent</c> (S1.3) — eine Quelle der
-    /// Wahrheit, damit Text und JSON nie auseinanderdriften. Sortierung identisch zu
-    /// <see cref="AppendSection"/>s Pro-Sektion-Sortierung (FilePath, LineNumber, RuleName); da
-    /// <see cref="AppendSection"/> ohnehin nochmal je Fehler-/Warnungs-Teilmenge sortiert, aendert
-    /// die hier bereits sortierte Reihenfolge nichts am bisherigen Text-Output.
-    /// </summary>
-    internal static IReadOnlyList<RuleViolation> FilterAndSortViolations(
-        string solutionDir, Dictionary<string, string> fileToProject,
-        IReadOnlyCollection<RuleViolation> violations, string? scopeFilter)
-    {
-        return violations
-            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
-                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
-            .OrderBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(v => v.LineNumber)
-            .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
 }
 
 /// <summary>

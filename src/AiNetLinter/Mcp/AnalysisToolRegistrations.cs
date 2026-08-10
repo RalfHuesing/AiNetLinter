@@ -17,9 +17,8 @@ namespace AiNetLinter.Mcp;
 /// Tool-Collection. Aus <see cref="FileStructureToolRegistrations"/> ausgelagert, weil
 /// <c>get_violations</c> durch den transitiven Pull-in aus <c>LinterEngine</c> +
 /// <c>LinterAnalyzer</c> + allen Checkern den <c>AIContextFootprint</c> (siehe
-/// <c> der <see cref="FileStructureToolRegistrations"/>-Klasse ueber das
-/// 2500-Limit getrieben hat
-/// Limit). <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
+/// <c>AiNetLinter.mdc</c>) der <see cref="FileStructureToolRegistrations"/>-Klasse ueber das
+/// 2500-Limit getrieben hat. <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
 /// datei-inhalts-basiert arbeitet (wie <c>get_violations</c>) und damit semantisch nicht zu
 /// <see cref="SymbolGraphToolRegistrations"/> (C#-Symbolgraph) oder
 /// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt. <c>metrics_tree</c> ist in
@@ -36,7 +35,7 @@ internal static class AnalysisToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
-    /// (siehe <c>. Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn
+    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn
     /// aktiv (kein Overhead bei deaktiviertem Log).
     /// </summary>
     internal static void Register(
