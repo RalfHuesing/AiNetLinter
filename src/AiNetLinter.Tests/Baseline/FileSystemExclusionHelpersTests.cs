@@ -43,6 +43,22 @@ public sealed class FileSystemExclusionHelpersTests
     }
 
     [Fact]
+    public void IsGeneratedPath_ClaudeWorktreesSubdir_ReturnsTrue()
+    {
+        var path = Path.Combine("repo", ".claude", "worktrees", "agent-x", "src", "Foo.cs");
+
+        Assert.True(FileSystemExclusionHelpers.IsGeneratedPath(path));
+    }
+
+    [Fact]
+    public void IsGeneratedPath_DotWorktreesSubdir_ReturnsTrue()
+    {
+        var path = Path.Combine("repo", ".worktrees", "pre-step-010", "src", "Foo.cs");
+
+        Assert.True(FileSystemExclusionHelpers.IsGeneratedPath(path));
+    }
+
+    [Fact]
     public void SafeEnumerateFiles_NonExistentDir_ReturnsEmpty()
     {
         var nonExistent = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

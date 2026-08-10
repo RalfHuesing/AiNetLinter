@@ -213,15 +213,23 @@ public sealed class SourceFileCatalog : IDisposable
     }
 
     /// <summary>
-    /// Filter fuer MSBuild-generierte Artefakte. Wird sowohl intern von
-    /// <see cref="IsValidDocument"/> als auch vom MCP-Server beim
-    /// Verzeichnis-Sweep fuer neu angelegte Dateien verwendet — der zentrale
-    /// Filter erspart eine Duplikation der Regel an anderer Stelle.
+    /// Filter fuer MSBuild-generierte Artefakte und verschachtelte Git-Worktrees. Wird sowohl
+    /// intern von <see cref="IsValidDocument"/> als auch vom MCP-Server beim Verzeichnis-Sweep
+    /// fuer neu angelegte Dateien (<c>McpCodeGraphServerRefresh.SweepForNewFiles</c>) verwendet —
+    /// der zentrale Filter erspart eine Duplikation der Regel an anderer Stelle. Der
+    /// Worktree-Ausschluss verhindert, dass parallel angelegte Git-Worktrees (z. B.
+    /// <c>.claude/worktrees/&lt;agent&gt;/</c> fuer isolierte Subagenten-Laeufe, oder
+    /// <c>.worktrees/&lt;name&gt;/</c> aus dem Drift-Loop) beim Sweep als "neue" Dateien
+    /// erkannt und Projekten angehaengt werden — sie enthalten volle Kopien des Repos inkl.
+    /// absichtlich regelverletzender Test-Fixtures (z. B. <c>AllowDynamic</c> in
+    /// <c>DiRegistrationMini</c>), was sonst zu vervielfachten Lint-Ergebnissen fuehrt.
     /// </summary>
     internal static bool IsGeneratedPath(string path)
     {
         return path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
                path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
+               path.Contains($"{Path.DirectorySeparatorChar}worktrees{Path.DirectorySeparatorChar}") ||
+               path.Contains($"{Path.DirectorySeparatorChar}.worktrees{Path.DirectorySeparatorChar}") ||
                path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
                path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }

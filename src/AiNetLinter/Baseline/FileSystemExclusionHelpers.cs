@@ -33,8 +33,11 @@ internal static class FileSystemExclusionHelpers
     }
 
     /// <summary>
-    /// Prueft, ob <paramref name="path"/> in einem generierten Verzeichnis liegt
-    /// (<c>obj/</c>, <c>bin/</c>, <c>node_modules/</c>). Vergleich ist case-insensitive und
+    /// Prueft, ob <paramref name="path"/> in einem generierten Verzeichnis oder einem
+    /// verschachtelten Git-Worktree liegt (<c>obj/</c>, <c>bin/</c>, <c>node_modules/</c>,
+    /// <c>worktrees/</c>, <c>.worktrees/</c> — Worktrees enthalten volle Repo-Kopien und
+    /// wuerden sonst Treffer vervielfachen, siehe <see cref="SourceFileCatalog.IsGeneratedPath"/>
+    /// fuer denselben Ausschluss auf dem Roslyn-Walk-Pfad). Vergleich ist case-insensitive und
     /// verwendet <see cref="Path.DirectorySeparatorChar"/>, damit sowohl Windows- als auch
     /// forward-slash-Pfade korrekt erkannt werden.
     /// </summary>
@@ -43,6 +46,8 @@ internal static class FileSystemExclusionHelpers
         var sep = Path.DirectorySeparatorChar;
         return path.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
             || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase);
+            || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase)
+            || path.Contains($"{sep}worktrees{sep}", StringComparison.OrdinalIgnoreCase)
+            || path.Contains($"{sep}.worktrees{sep}", StringComparison.OrdinalIgnoreCase);
     }
 }

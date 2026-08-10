@@ -59,6 +59,28 @@ public sealed class SourceFileCatalogTests
         Assert.False(SourceFileCatalog.ShouldIncludeProject(project2, argsExcludeProject, config));
     }
 
+    [Theory]
+    [Trait("Category", "Unit")]
+    [InlineData("obj")]
+    [InlineData("bin")]
+    [InlineData("worktrees")]
+    [InlineData(".worktrees")]
+    public void IsGeneratedPath_ExcludedSubdir_ReturnsTrue(string excludedSegment)
+    {
+        var path = Path.Combine("repo", "src", excludedSegment, "agent-x", "Foo.cs");
+
+        Assert.True(SourceFileCatalog.IsGeneratedPath(path));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void IsGeneratedPath_NormalPath_ReturnsFalse()
+    {
+        var path = Path.Combine("repo", "src", "Project", "Foo.cs");
+
+        Assert.False(SourceFileCatalog.IsGeneratedPath(path));
+    }
+
     private static string FindSolutionRoot()
     {
         var currentDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
