@@ -44,20 +44,20 @@ im Index fehlende Regeldatei auf, wird sie hier ergänzt.>
 
 <Ein Epic = grober Cluster mehrerer Steps, kein einzelner Step. Format:>
 
-- [ ] EPIC-01: <Kurztitel> — <1-2 Sätze Ziel, Bezug zu `konzept.md`
+- [ ] <EPIC-ID-1>: <Kurztitel> — <1-2 Sätze Ziel, Bezug zu `konzept.md`
       Abschnitt X>
-- [ ] EPIC-02: <Kurztitel> — <...>
-- [x] EPIC-00: <Kurztitel> — <...> (→ step-001, step-002)
+- [ ] <EPIC-ID-2>: <Kurztitel> — <...>
+- [x] <EPIC-ID-0>: <Kurztitel> — <...> (→ <step-id-1>, <step-id-2>)
 
 <Bei teilweise erledigten Epics: Notiz statt Haken, z. B.
-„- [ ] EPIC-03: ... (in Arbeit → step-004; noch offen: Teil B)".>
+„- [ ] <EPIC-ID-3>: ... (in Arbeit → <step-id>; noch offen: Teil B)".>
 
 <Bei obsolet gewordenen Epics (siehe `../spec.md` §11): nicht löschen,
-sondern markieren, z. B. „- [ ] ~~EPIC-05: ...~~ obsolet — <Grund>,
-siehe step-007".>
+sondern markieren, z. B. „- [ ] ~~<EPIC-ID-5>: ...~~ obsolet — <Grund>,
+siehe <step-id>".>
 
 <Begründungen gehören **an das Epic**, nicht in eine Liste darunter: Ein
 Epic, das der Planer nachträglich ergänzt hat, trägt den Grund in seiner
-eigenen Zeile, z. B. „- [ ] EPIC-03: ... (Muss-Haben aus `konzept.md`
+eigenen Zeile, z. B. „- [ ] <EPIC-ID-3>: ... (Muss-Haben aus `konzept.md`
 §X, ohne Entsprechung in der ursprünglichen Roadmap — erkannt in
-step-004)". Wann das passiert ist, steht in `git log`.>
+<step-id>)". Wann das passiert ist, steht in `git log`.>
