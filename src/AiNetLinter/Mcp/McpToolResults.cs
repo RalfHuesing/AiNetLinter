@@ -139,10 +139,10 @@ internal static class McpToolResults
 
     /// <summary>
     /// Wie <see cref="Text(string)"/>, ergaenzt zusaetzlich <see cref="CallToolResult.StructuredContent"/>
-    /// (MCP-Protokoll-Feature) — additiv, ohne den bisherigen Text-Vertrag zu aendern (S1.3
-    /// Structured-Output-Mode). <paramref name="payload"/> wird ueber <see cref="McpJsonOptions.Default"/>
-    /// serialisiert, damit alle Tools dieselben CamelCase-/Kompakt-Optionen teilen (Pattern von
-    /// <see cref="Tools.SafeguardTool"/> uebernommen, dort urspruenglich als Erstes eingefuehrt).
+    /// (MCP-Protokoll-Feature) — additiv, ohne den Text-Vertrag zu aendern (Structured-Output-Mode).
+    /// <paramref name="payload"/> wird ueber <see cref="McpJsonOptions.Default"/> serialisiert, damit
+    /// alle Tools dieselben CamelCase-/Kompakt-Optionen teilen (Pattern mit
+    /// <see cref="Tools.SafeguardTool"/>).
     /// Clients, die nur Text konsumieren, ignorieren das zusaetzliche Feld einfach.
     /// WICHTIG: <paramref name="payload"/> muss zu einem JSON-Objekt serialisieren, niemals zu
     /// einem Top-Level-Array/einer nackten Liste — das MCP-Protokoll verlangt
