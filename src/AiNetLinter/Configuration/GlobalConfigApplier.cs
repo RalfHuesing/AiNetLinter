@@ -17,12 +17,11 @@ namespace AiNetLinter.Configuration;
 /// einem <c>with</c>-Ausdruck, damit <see cref="MethodClassifier.IsNullCoalescingInitializer"/>
 /// weiterhin greift: der Klassifikator verlangt exakt dieses Muster (letzte/einzige Anweisung ist
 /// <c>return X with {...}</c>), sonst zaehlen die vielen <c>??</c>-Fallbacks faelschlich als echte
-/// Verzweigung fuer <c>MaxCyclomaticComplexity</c>/<c>MaxCognitiveComplexity</c> (siehe
-/// Live-Dogfood-Befund 2026-08-11, M9). Ein zwischengeschalteter Methodenaufruf INNERHALB einer
-/// Sektions-Methode wuerde dasselbe Problem reproduzieren — <see cref="Apply"/> selbst bleibt daher
-/// bewusst trivial (nur die Verkettung, keine eigene Koaleszenz) und braucht die Ausnahme gar nicht.
-/// Einheitlich fuer ALLE Sektionen (nicht nur Duplicate-Detection), auf Wunsch von Ralf 2026-08-11
-/// nach Sichtung der urspruenglich nur teilweise aufgeteilten Version.
+/// Verzweigung fuer <c>MaxCyclomaticComplexity</c>/<c>MaxCognitiveComplexity</c>. Ein
+/// zwischengeschalteter Methodenaufruf INNERHALB einer Sektions-Methode wuerde dasselbe Problem
+/// reproduzieren — <see cref="Apply"/> selbst bleibt daher bewusst trivial (nur die Verkettung,
+/// keine eigene Koaleszenz) und braucht die Ausnahme gar nicht. Einheitlich fuer ALLE Sektionen
+/// (nicht nur Duplicate-Detection).
 /// </summary>
 internal static class GlobalConfigApplier
 {
