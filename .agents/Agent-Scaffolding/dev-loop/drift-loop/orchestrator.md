@@ -192,7 +192,7 @@ Ergebnisse:
   `roadmap.md`: Trage den Step in die Steps-Tabelle von `task-state.md`
   ein (Status `open`), **committe `roadmap.md`-Diff + neuen Step-Plan
   zusammen** (ein Commit, Message z. B.
-  `docs(task): plane step-004 (Epic „Auth-Refactor") [feature-x]`).
+  `docs(task): plane (Epic „Auth-Refactor") [feature-x]`).
 - **„Keine offenen Epics mehr, keine Korrektur ausstehend":** Das ist das
   Signal für den Abschluss-Check — weiter zu Schritt 6.
 
