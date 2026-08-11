@@ -19,9 +19,9 @@ public readonly record struct CliProcessResult(int ExitCode, string Output, stri
 
 /// <summary>
 /// Konsolidiert Solution-Root-/Linter-DLL-Auflösung sowie Prozessstart-/Output-Capture-/
-/// <see cref="SubprocessConcurrencyGate"/>-Boilerplate für CLI-Subprozess-Tests. Ersetzt die
-/// vormals in mehreren Testklassen fast identisch dupliierten
-/// <c>FindSolutionRoot</c>/<c>FindLinterDll</c>/<c>RunLinter</c>-Implementierungen (Konzept F.2).
+/// <see cref="SubprocessConcurrencyGate"/>-Boilerplate für CLI-Subprozess-Tests. Eine einzige
+/// Stelle fuer die <c>FindSolutionRoot</c>/<c>FindLinterDll</c>/<c>RunLinter</c>-Implementierungen,
+/// die sonst in jeder Testklasse identisch dupliziert waeren.
 /// </summary>
 public static class CliProcessRunner
 {
