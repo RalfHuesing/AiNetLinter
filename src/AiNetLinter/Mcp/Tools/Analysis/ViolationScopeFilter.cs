@@ -13,11 +13,10 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// <summary>
 /// Gemeinsame Scope-Filter-/Sortierlogik fuer MCP-Tools, die auf bereits von der
 /// <see cref="AiNetLinter.Core.LinterEngine"/> erzeugten <see cref="RuleViolation"/>-Objekten
-/// aufsetzen (<c>get_violations</c>, <c>pattern_detect</c>) — vorher 1:1 dupliziert in
-/// <see cref="GetViolationsScanner"/> und <see cref="PatternDetect.PatternDetectScanner"/>
-/// (bewusst dupliziert bei der Einfuehrung von <c>pattern_detect</c> in S2.2, um
-/// <see cref="GetViolationsScanner"/> nicht risikoreich anzufassen — hier nachtraeglich
-/// extrahiert, weil ein zweiter Konsument die Duplikation zur echten Wartungslast macht).
+/// aufsetzen (<c>get_violations</c>, <c>pattern_detect</c>). Frueher 1:1 dupliziert in
+/// <see cref="GetViolationsScanner"/> und <see cref="PatternDetect.PatternDetectScanner"/> — als
+/// zweite Konsumentenstelle die Duplikation zur Wartungslast wurde, hier extrahiert, damit
+/// Aenderungen an Filter-/Sortierlogik nur an einer Stelle noetig sind.
 /// </summary>
 internal static class ViolationScopeFilter
 {
