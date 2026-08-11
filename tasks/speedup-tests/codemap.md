@@ -17,7 +17,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.UnitTests/`** — vorgesehene neue schnelle Assembly fuer Unit- und In-Memory-Component-Tests. (zuletzt: planning)
 - **`src/AiNetLinter.IntegrationTests/`** — vorgesehene neue Infrastruktur-Assembly fuer Integration, Dogfood, Performance und Stress. (zuletzt: planning)
 - **`src/AiNetLinter.TestKit/`** — vorgesehene gemeinsame Testbibliothek fuer deklarative Builder und guenstige Hilfen ohne teure Hosts. (zuletzt: planning)
-- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status- und Abdeckungsindex fuer die Strangler-Migration des Legacy-Testprojekts. (zuletzt: planning)
+- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status-, Abdeckungs- und Loeschindex fuer die Strangler-Migration des Legacy-Testprojekts. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/xunit.runner.json`** — steuert Collection-Parallelitaet, Threadzahl und Long-Running-Diagnostik. (zuletzt: planning)
 - **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche. (zuletzt: planning)
 - **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates. (zuletzt: planning)

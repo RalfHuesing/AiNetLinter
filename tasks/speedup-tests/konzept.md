@@ -6,8 +6,7 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-11
 open_questions:
-  - Q5-legacy-quarantaene
-  - Q6-legacy-slice-baseline
+  - Q7-ready-freigabe
 ---
 
 # Konzept: Tests beschleunigen, ohne Leitplanken abzubauen
@@ -50,6 +49,15 @@ veraenderlichen Workspace.
 - Die heutige Anzahl und Identitaet einzelner Testmethoden ist keine Invariante. Redundante oder
   triviale Tests duerfen konsolidiert bzw. entfernt werden; alle nicht-trivialen fachlichen,
   technischen und regressionsrelevanten Vertraege muessen lueckenlos abgedeckt bleiben.
+- Das Legacy-Projekt wird nach Aufbau des neuen Safety-Smokes aus dem normalen Solution-/Gate-Pfad
+  entfernt. Migrierte Tests werden im selben Kohorten-Step physisch geloescht, nicht
+  auskommentiert; die Git-Historie ist das Archiv.
+- Vor der Uebernahme einer Kohorte darf ihr engster Legacy-Filter einmal als Verhaltensbaseline
+  laufen, wenn vorhandene TRX-Daten nicht ausreichen. Ein Legacy-Volllauf findet waehrend der
+  Migration nicht statt.
+- Die Migration ist zugleich ein Coverage-Audit: neue Tests sind ausdruecklich erwuenscht, wenn
+  bislang ungeschuetzte nicht-triviale Vertraege entdeckt werden; redundante oder falsch
+  geschnittene Tests werden konsolidiert.
 - Die spaetere Drift-Loop-Umsetzung verwendet wenige grosse, vertikale Steps. Dokuzeilen,
   Einzelklassen oder einzelne Testverschiebungen werden nicht als eigene Steps geplant, sondern
   zusammen mit einem vollstaendigen Architektur-/Testkohorten-Ergebnis geliefert.
@@ -97,6 +105,9 @@ ersten Refactoring eine reproduzierbare Median-Baseline auf der Zielmaschine erf
   Strangler-Muster; das Altprojekt ist Migrationsquelle, nicht Zielarchitektur.
 - Ein versioniertes Migrationsledger, das jede bisherige Testklasse bzw. jeden Testvertrag als
   `pending`, `migrated`, `consolidated` oder `removed-trivial` mit neuem Abdeckungsort fuehrt.
+- Ein produktseitiger Coverage-Audit pro Kohorte, der nicht nur alte Tests uebernimmt, sondern
+  oeffentliche/technische Vertraege, Branches, bekannte Regressionen und bislang fehlende
+  Negativfaelle gegen den neuen Bestand abgleicht.
 - Trennung zwischen immutable/read-only Fixtures und mutierenden, exklusiven Test-Workspaces.
 - Wiederverwendbare, bereits geladene `Solution`-/`SourceFileCatalog`-Objekte fuer Scanner,
   Renderer, Filter- und Analyse-Tests.
@@ -296,6 +307,12 @@ Vorgesehener Vertrag:
 6. Erst wenn `pending = 0`, die Architekturguards gruen und alle finalen Profile nachgewiesen sind,
    wird das Legacy-Projekt vollstaendig geloescht.
 
+Auskommentierte Testklassen oder dauerhaft deaktivierte Testmethoden sind kein zulaessiger
+Migrationszustand. Sobald ein Vertrag uebernommen ist, verschwindet seine Legacy-Implementierung
+physisch; falls spaeter Details benoetigt werden, stehen sie in der Git-Historie. Fuer kurzfristig
+nicht migrierbare Vertraege bleibt der Test als `pending` aktiv im Legacy-Bestand, statt als
+Kommentar-Duplikat herumzuliegen.
+
 Das Ledger verhindert, dass "alt nicht mehr laufen lassen" zu "alt vergessen" wird. Es zaehlt
 nicht nur Dateien oder Methoden, sondern beschreibt bei nicht-trivialen Faellen den geschuetzten
 Vertrag: Erfolgsweg, Branch, Fehlerweg, Regression, Konfiguration oder Systemgrenze.
@@ -311,6 +328,12 @@ Nicht-trivial und damit zwingend testpflichtig sind insbesondere:
 
 Reine Konstruktor-/Property-Durchreichung, Compiler-verifizierte Record-Semantik oder echte
 Duplikate ohne zusaetzlichen Vertrag koennen als trivial bzw. konsolidiert eingestuft werden.
+
+Der Audit bleibt nicht auf die heutigen Tests beschraenkt. Pro Kohorte werden die zugehoerigen
+Produkt-Einstiegspunkte, Verzweigungen, Fehlercodes, Konfigurationsoptionen und dokumentierten
+Regressionen gelesen. Fehlt ein nicht-trivialer Fall, wird ein neuer Test in der guenstigsten
+passenden Ebene ergaenzt. Code-Coverage-Zahlen koennen als Suchsignal dienen, sind aber weder
+alleiniger Vollstaendigkeitsnachweis noch Ziel fuer kuenstliche Zeilenabdeckung.
 
 ### 9. Grosse Drift-Loop-Steps
 
@@ -427,7 +450,8 @@ Aenderungsbereiche sind vor allem:
    einfuehren.
 4. Produktive Lade-/Ausfuehrungs-Seams dort ergaenzen, wo Tests heute nur deshalb MSBuild nutzen.
 5. Tests in grossen fachlichen Kohorten bewerten, konsolidieren und in die passende Assembly bzw.
-   Ebene migrieren; erledigte Quellen und Ledger-Eintraege im selben Step bereinigen.
+   Ebene migrieren; dabei produktseitige Abdeckungsluecken schliessen und erledigte Legacy-Quellen
+   sowie Ledger-Eintraege im selben Step bereinigen.
 6. Dogfood-, Performance- und Stressprofile inklusive Parallelitaetsbudgets und CI-Cadence
    festziehen.
 7. Die Umsetzung pro Step nur mit dem jeweils kleinsten ausreichenden Filter verifizieren und
@@ -445,6 +469,10 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
   zugeordnet.
 - Das Migrationsledger enthaelt keinen `pending`-Eintrag; jede Konsolidierung bzw. Entfernung ist
   mit Abdeckungsort oder Trivialitaetsbegruendung nachvollziehbar.
+- Migrierte Legacy-Tests sind physisch geloescht; es existieren keine auskommentierten oder
+  dauerhaft geskippten Alt-Kopien als vermeintliche Migrationshilfe.
+- Jede Kohorte enthaelt neben der Legacy-Zuordnung einen produktseitigen Coverage-Audit; neu
+  entdeckte nicht-triviale Luecken besitzen neue Tests in der guenstigsten korrekten Ebene.
 - Fuer jede migrierte/ersetzte teure Assertion ist der neue Abdeckungsort nachvollziehbar; es gibt
   keine stillschweigende Schutzluecke.
 - Unit- und Component-Tests koennen technisch weder MSBuild-Solutions noch externe Prozesse oder
@@ -482,17 +510,9 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
 
 ## Offene Punkte
 
-### Q5 — Legacy-Projekt wirklich aus dem normalen Gate quarantinieren?
+### Q7 — Abschliessende Ready-Freigabe
 
-Empfehlung: **ja**. Sobald neue Zielprojekte, Ledger und ein erster repraesentativer Safety-Smoke
-stehen, wird `AiNetLinter.Tests` aus `AiNetLinter.slnx` bzw. dem normalen Testpfad genommen und nur
-noch als Migrationsquelle im Repository gehalten. Dadurch bremst es den Neubau nicht, kann aber
-auch nicht versehentlich als weiterhin gepruefte Leitplanke missverstanden werden.
-
-### Q6 — Darf eine gerade migrierte Legacy-Kohorte einmal gezielt laufen?
-
-Empfehlung: **ja, aber nur als gezielte Ausnahme**. Kein alter Volllauf waehrend der Migration.
-Wenn fuer eine Kohorte kein verlaessliches vorhandenes TRX-Ergebnis reicht, darf ihr engster alter
-Filter unmittelbar vor der Uebernahme einmal als Verhaltensbaseline laufen. Danach werden nur die
-neuen Tests ausgefuehrt. Ein striktes "Legacy niemals mehr starten" ist schneller, erhoeht aber das
-Risiko, bereits heute rote oder umgebungsabhaengige Erwartungen ungeprueft zu kopieren.
+Sind Zielbild, Strangler-Migration, Coverage-Invariante, grosse Step-Groesse und sparsamer
+Verifikationsvertrag in dieser Form freigegeben? Nach expliziter Bestaetigung wird der Status auf
+`ready` gesetzt; danach ist das Konzept direkt fuer
+`.agents/Agent-Scaffolding/dev-loop/drift-loop/orchestrator.md` verwendbar.
