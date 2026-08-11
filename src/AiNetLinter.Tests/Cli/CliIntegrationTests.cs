@@ -46,8 +46,12 @@ public sealed class CliIntegrationTests
         var result = await CliProcessRunner.RunLinterAsync($"--config \"{configPath}\" --path \"{targetPath}\"");
 
         Assert.Null(result.Error == "" ? null : result.Error);
+        // ExitCode 0 ist der eigentliche Packaging-Sanity-Beweis (kein Error-severity-Verstoss,
+        // siehe AuditCommand.WriteViolationsAndExit) — der literale "OK"-Marker (nur bei
+        // violations.Count == 0) ist seit M9 (DuplicateCode, Severity "info") kein verlaesslicher
+        // Dauerzustand mehr: das eigene Repo hat inzwischen legitime, niedrigschwellige
+        // Duplicate-Code-Kandidaten, die den Linter nicht scheitern lassen sollen.
         Assert.True(result.ExitCode == 0, $"Linter schlug mit Exit-Code {result.ExitCode} fehl. Output:\n{result.Output}\nError:\n{result.Error}");
-        Assert.Contains("OK", result.Output);
     }
 
     [Fact]
