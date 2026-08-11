@@ -9,11 +9,11 @@ namespace AiNetLinter.Core.DuplicateDetection;
 // Datentraeger aufgeblaeht wird (Pattern konsistent mit DependencyGraphModels.cs/SafeguardModels.cs).
 
 /// <summary>
-/// Gestaffelte Aehnlichkeits-Klassifikation eines <see cref="DuplicateCluster"/> (jscpd-Pattern,
-/// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A.4). Statt eines harten Cut wird jeder
-/// Cluster einem von drei Buckets zugeordnet — <see cref="Fuzzy"/> ist die niedrigste noch
-/// gemeldete Stufe, unterhalb von <c>FuzzyThreshold</c> wird nichts ausgegeben (Signal-Rauschen).
-/// Deklarationsreihenfolge = Aufsteigende Aehnlichkeit, nutzbar fuer Vergleiche
+/// Gestaffelte Aehnlichkeits-Klassifikation eines <see cref="DuplicateCluster"/> (jscpd-Pattern).
+/// Statt eines harten Cut wird jeder Cluster einem von drei Buckets zugeordnet —
+/// <see cref="Fuzzy"/> ist die niedrigste noch gemeldete Stufe, unterhalb von
+/// <c>FuzzyThreshold</c> wird nichts ausgegeben (Signal-Rauschen). Deklarationsreihenfolge =
+/// Aufsteigende Aehnlichkeit, nutzbar fuer Vergleiche
 /// (<c>Bucket &gt;= DuplicateSimilarityBucket.Near</c>).
 /// </summary>
 internal enum DuplicateSimilarityBucket
@@ -41,8 +41,7 @@ internal sealed record DuplicateDetectionOptions(
     bool NormalizeIdentifiers,
     string? PathScopeFilter = null);
 
-/// <summary>Vom Ground-Truth-Beispiel abgeleitete Default-Werte (siehe
-/// <c>tasks/features/07-drift-audit-ideen.md</c> §A.3/A.5) — Quelle der Wahrheit fuer
+/// <summary>Vom Ground-Truth-Beispiel abgeleitete Default-Werte — Quelle der Wahrheit fuer
 /// <see cref="Configuration.GlobalConfig"/>s <c>DuplicateCode*</c>-Property-Defaults und fuer
 /// Tests/Tool-Aufrufe ohne explizite Config.</summary>
 internal static class DuplicateDetectionDefaults
@@ -69,10 +68,9 @@ internal sealed record DuplicateClusterMember(
     int TokenCount);
 
 /// <summary>
-/// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare,
-/// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A.2 Schritt 7 / §A.6). <see cref="Score"/>
-/// ist das Minimum aller innerhalb des Clusters tatsaechlich berechneten paarweisen
-/// Jaccard-Scores (konservativ — "mindestens so aehnlich", siehe
+/// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare).
+/// <see cref="Score"/> ist das Minimum aller innerhalb des Clusters tatsaechlich berechneten
+/// paarweisen Jaccard-Scores (konservativ — "mindestens so aehnlich", siehe
 /// <see cref="DuplicateDetectionEngine.BuildClusters"/>), <see cref="Bucket"/> daraus abgeleitet.
 /// </summary>
 internal sealed record DuplicateCluster(
@@ -88,11 +86,11 @@ internal sealed record DuplicateDetectionScanResult(
     IReadOnlyList<DuplicateCluster> Clusters,
     int MethodsScanned);
 
-// ── Teil C: Refactoring-Drift (absence-of-calls-Heuristik, Murphy-Hill 2005) ─────────────────
-// Siehe tasks/features/07-drift-audit-ideen.md §C. Eigene Records statt Wiederverwendung von
-// DuplicateCluster/DuplicateClusterMember: Teil C hat keine Buckets/Cluster (nur "aehnlich zu
-// genau einem Helper H"), und die Ausgabe muss explizit als "Kandidaten" erkennbar sein, nicht
-// als "Duplikat-Cluster" (hoeheres False-Positive-Budget, siehe Roadmap-Akzeptanzkriterien).
+// ── Refactoring-Drift (absence-of-calls-Heuristik, Murphy-Hill 2005) ───────────────────────────
+// Eigene Records statt Wiederverwendung von DuplicateCluster/DuplicateClusterMember:
+// Refactoring-Drift hat keine Buckets/Cluster (nur "aehnlich zu genau einem Helper H"), und die
+// Ausgabe muss explizit als "Kandidaten" erkennbar sein, nicht als "Duplikat-Cluster"
+// (hoeheres False-Positive-Budget).
 
 /// <summary>Ein Kandidat fuer Teil C: eine Methode, die strukturell aehnlich zu einem Helper
 /// <c>H</c> ist (Jaccard-Score ≥ <see cref="DuplicateDetectionOptions.NearThreshold"/>), <c>H</c>
