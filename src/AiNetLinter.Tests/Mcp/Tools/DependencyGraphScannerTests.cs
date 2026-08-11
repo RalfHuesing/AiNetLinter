@@ -64,6 +64,30 @@ public sealed class DependencyGraphScannerTests
     }
 
     [Fact]
+    public async Task ScanFileAsync_ProductionAndTestReferencers_ProductionEdgeSortsBeforeTestEdgeWhenTruncated()
+    {
+        // Regression: "MyProject.Tests/..." sortiert ordinal VOR "ZZZProd.cs" ('.' < 'Z' as
+        // Zeichen ist hier nicht der Punkt, sondern dass Testpfade zufaellig alphabetisch frueher
+        // liegen koennen als Produktionscode) — ohne die Test-Projekt-Nachrangigkeit wuerde
+        // maxResults=1 die alphabetisch fruehere Test-Kante zeigen statt der fuer die
+        // Blast-Radius-Frage relevanteren Produktionscode-Kante.
+        using var dir = new TempSourceDirectory();
+        Directory.CreateDirectory(Path.Combine(dir.Path, "MyProject.Tests"));
+        var solution = CreateAdhocSolution(dir.Path,
+            ("FileA.cs", "public class A {}"),
+            ("ZZZProd.cs", "public class ZZZProd { public A? Other; }"),
+            ("MyProject.Tests/AAATest.cs", "public class AAATest { public A? Other; }"));
+        var docA = GetDocument(solution, "FileA.cs");
+
+        var result = await DependencyGraphScanner.ScanFileAsync(
+            docA, new DependencyGraphScanRequest(solution, false, true, 1, 1), CancellationToken.None);
+
+        var edge = Assert.Single(result.Edges);
+        Assert.Equal("ZZZProd.cs", edge.From);
+        Assert.True(result.Truncated);
+    }
+
+    [Fact]
     public async Task ScanFileAsync_BothDirections_ReturnsBothEdgeSets()
     {
         using var dir = new TempSourceDirectory();

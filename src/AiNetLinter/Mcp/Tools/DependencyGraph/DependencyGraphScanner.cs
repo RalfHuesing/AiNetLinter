@@ -302,6 +302,13 @@ internal static class DependencyGraphScanner
 
     private static bool IsDeclaredInSource(INamedTypeSymbol type) => type.Locations.Any(l => l.IsInSource);
 
+    /// <summary>Heuristik ueber den Solution-relativen Pfad — Test-Projekte folgen der Konvention
+    /// <c>&lt;ProjektName&gt;.Tests</c> (siehe <c>AiNetLinter.Tests</c>), erkennbar am Pfadsegment
+    /// <c>.Tests/</c>. Nur fuer die Truncation-Sortierreihenfolge relevant, siehe
+    /// <see cref="BuildResult"/>.</summary>
+    private static bool IsTestProjectFile(string relativePath) =>
+        relativePath.Contains(".Tests/", StringComparison.Ordinal);
+
     /// <summary>
     /// Liefert den Solution-relativen Pfad der primaeren Deklaration von <paramref name="type"/>.
     /// Bei partiellen Typen (mehrere Quell-Locations) wird deterministisch die erste nach
@@ -393,8 +400,18 @@ internal static class DependencyGraphScanner
         bool nodeCapReached)
     {
         var effectiveMax = request.MaxResults < 1 ? 1 : request.MaxResults;
+        // Test-Projekt-Kanten NACH Produktionscode-Kanten einsortieren (nicht rein alphabetisch):
+        // "src/AiNetLinter.Tests/..." sortiert ordinal VOR "src/AiNetLinter/..." ('.' < '/'), weil
+        // .Tests alphabetisch zufaellig zuerst kommt. Bei einer stark referenzierten Datei (z. B.
+        // McpCodeGraphServer.cs: 30 Test- + 38 Produktions-Kanten) fraesste die reine
+        // Ordinal-Sortierung sonst zuerst ALLE Test-Kanten in die maxResults-Kappung, bevor
+        // ueberhaupt Produktionscode-Kanten drankommen — genau umgekehrt zur eigentlichen
+        // Blast-Radius-Frage, bei der Produktionscode-Kopplung die relevantere ist. Test-Kopplung
+        // ist erwartet/risikoarm, Produktionscode-Kopplung ist das, was beim Aendern der Zieldatei
+        // tatsaechlich bricht.
         var allEdges = edgeMap
             .OrderBy(kv => kv.Key.Direction == "outgoing" ? 0 : 1)
+            .ThenBy(kv => IsTestProjectFile(kv.Key.Direction == "outgoing" ? kv.Key.To : kv.Key.From) ? 1 : 0)
             .ThenBy(kv => kv.Key.From, StringComparer.Ordinal)
             .ThenBy(kv => kv.Key.To, StringComparer.Ordinal)
             .Select(kv => new DependencyEdge(
