@@ -259,9 +259,9 @@ public sealed class McpLiveRepositoryTests
 
         // Korridor-Assert: score >= 5.0. Real gemessener Wert auf dem AiNetLinter-
         // Repo: 10.00/10 (deutlich ueber dem Konzept-Korridor). Bei Verletzung
-        // dieser Schwelle liegt der Bug in der Score-Formel (EPIC-01-Scope),
-        // nicht im Tool-Layer — dann ist blocked mit Verweis auf SafeguardScanner
-        // zu setzen, nicht der Schwellwert im Test anzupassen.
+        // dieser Schwelle liegt der Bug in der Score-Formel, nicht im Tool-Layer —
+        // dann ist blocked mit Verweis auf SafeguardScanner zu setzen, nicht der
+        // Schwellwert im Test anzupassen.
         var score = (double)json["score"]!;
         Assert.True(score >= 5.0,
             $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0 — " +
