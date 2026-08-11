@@ -13,13 +13,12 @@ namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// MCP-Tool <c>find_duplicates</c>: Token-basierte Code-Clone-Detection (Jaccard-N-Gram,
-/// Method-Granularitaet) ueber die geladene Solution, siehe
-/// <c>tasks/features/07-drift-audit-ideen.md</c> §A "Idee A". Bewusst duenner Dispatch ohne
-/// eigene Scan-Logik — die eigentliche Engine-Arbeit steckt in
+/// Method-Granularitaet) ueber die geladene Solution. Bewusst duenner Dispatch ohne eigene
+/// Scan-Logik — die eigentliche Engine-Arbeit steckt in
 /// <see cref="Core.DuplicateDetection.DuplicateDetectionEngine"/> (geteilt mit
 /// <c>DuplicateCodeChecker</c>), die Argument-Aufloesung/Trunkierung in
 /// <see cref="DuplicateDetectionScanner"/> (<c>mode="clone"</c>, Default) bzw.
-/// <see cref="RefactoringDriftScanner"/> (<c>mode="refactoring-drift"</c>, Teil C), hier nur
+/// <see cref="RefactoringDriftScanner"/> (<c>mode="refactoring-drift"</c>), hier nur
 /// Mode-Dispatch, Validierung + Text-/JSON-Formatierung.
 /// </summary>
 internal static class DuplicateDetectionTool
@@ -120,7 +119,7 @@ internal static class DuplicateDetectionTool
                 ShownClusters: result.ShownClusters.Count,
                 Truncated: result.Truncated));
 
-        // In ein Objekt gewrappt statt eines nackten Arrays (M2-Regressionslehre, siehe
+        // In ein Objekt gewrappt statt eines nackten Arrays (siehe
         // McpToolResults.Text<T>-Doc-Kommentar).
         return McpToolResults.Text(finalText, payload);
     }
