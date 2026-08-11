@@ -5,8 +5,7 @@ namespace AiNetLinter.Tests.Fixtures;
 /// <summary>
 /// Isolierte Temp-Kopie des GitImpactMini-Fixtures mit einem echten, lokal initialisierten
 /// Git-Repository (initialer Commit ueber den Ausgangszustand) — fuer Tests des Git-Ref-Zweigs von
-/// <see cref="AiNetLinter.Core.DiffImpactAnalyzer.AnalyzeAsync"/> (siehe
-/// <c>tasks/codegraph-mcp/. Wiederverwendbares Muster fuer
+/// <see cref="AiNetLinter.Core.DiffImpactAnalyzer.AnalyzeAsync"/>. Wiederverwendbares Muster fuer
 /// kuenftige Tests, die ebenfalls den Git-Ref-Zweig brauchen.
 /// </summary>
 public sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspaceBase
