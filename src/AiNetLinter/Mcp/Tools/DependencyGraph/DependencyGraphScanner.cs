@@ -160,14 +160,23 @@ internal static class DependencyGraphScanner
 
             foreach (var referencedType in CollectReferencedTypes(node, semanticModel, ct))
             {
-                if (SymbolEqualityComparer.Default.Equals(referencedType, targetType)) continue;
-                if (!IsDeclaredInSource(referencedType)) continue;
-                var declFile = GetRelativeFilePath(solution, referencedType);
-                if (declFile is null) continue;
-                AddEdge(edges, declFile, referencedType.Name);
+                AddOutgoingTypeEdgeIfEligible(solution, edges, targetType, referencedType);
             }
         }
         return edges;
+    }
+
+    /// <summary>Ausgelagert aus <see cref="ScanTypeOutgoingAsync"/> — reine Filter-/Edge-Logik pro
+    /// referenziertem Typ, hielt die Schleife sonst unter zwei verschachtelten Ebenen bei
+    /// <c>MaxCognitiveComplexity</c>.</summary>
+    private static void AddOutgoingTypeEdgeIfEligible(
+        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol targetType, INamedTypeSymbol referencedType)
+    {
+        if (SymbolEqualityComparer.Default.Equals(referencedType, targetType)) return;
+        if (!IsDeclaredInSource(referencedType)) return;
+        var declFile = GetRelativeFilePath(solution, referencedType);
+        if (declFile is null) return;
+        AddEdge(edges, declFile, referencedType.Name);
     }
 
     private static async Task<Dictionary<string, EdgeAccumulator>> ScanTypeIncomingAsync(
@@ -229,19 +238,29 @@ internal static class DependencyGraphScanner
         foreach (var type in types)
         {
             var refs = await SymbolFinder.FindReferencesAsync(type, solution, ct);
-            foreach (var reference in refs)
-            {
-                foreach (var referenceLocation in reference.Locations)
-                {
-                    var location = referenceLocation.Location;
-                    if (!location.IsInSource || location.SourceTree is null) continue;
-                    var file = ToRelativePath(solution, location.SourceTree.FilePath);
-                    if (string.Equals(file, selfFile, StringComparison.OrdinalIgnoreCase)) continue;
-                    AddEdge(edges, file, type.Name);
-                }
-            }
+            AddIncomingTypeEdges(solution, edges, type, refs, selfFile);
         }
         return edges;
+    }
+
+    /// <summary>Ausgelagert aus <see cref="ScanFileIncomingAsync"/> — die doppelt verschachtelte
+    /// Referenz-/Location-Traversierung hielt die aufrufende Methode sonst ueber
+    /// <c>MaxCognitiveComplexity</c> (drei verschachtelte Schleifen statt zwei).</summary>
+    private static void AddIncomingTypeEdges(
+        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol type,
+        IEnumerable<ReferencedSymbol> refs, string selfFile)
+    {
+        foreach (var reference in refs)
+        {
+            foreach (var referenceLocation in reference.Locations)
+            {
+                var location = referenceLocation.Location;
+                if (!location.IsInSource || location.SourceTree is null) continue;
+                var file = ToRelativePath(solution, location.SourceTree.FilePath);
+                if (string.Equals(file, selfFile, StringComparison.OrdinalIgnoreCase)) continue;
+                AddEdge(edges, file, type.Name);
+            }
+        }
     }
 
     private static async Task<List<INamedTypeSymbol>> GetTypesDeclaredInDocumentAsync(Document document, CancellationToken ct)
