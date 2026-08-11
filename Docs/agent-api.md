@@ -261,7 +261,7 @@ Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations
 
 `IsError` ist ausschließlich bei einer echten Malfunction `true` (LinterEngine-Fehler oder ein Projekt, das trotz `SupportsCompilation == true` auch nach internen Retries keine Compilation liefert) — ein normaler Score-Output mit `passed: false` ist kein Fehler, sondern das erwartete Quality-Gate-Ergebnis.
 
-**`pattern_detect` — Structured Output im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`), `feature-envy` (`AvoidExcessiveMiddleMen` — die nächste existierende Näherung, kein 1:1-Match zum klassischen Feature-Envy-Begriff). Die anderen 4 der ursprünglich 10 in der Roadmap genannten Patterns (`deep-nesting`, `disposable-not-disposed`, `static-state`, `magic-numbers`) sind bewusst **nicht** Teil dieser Version — sie haben keine existierende Erkennung und würden komplett neue Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern (eigener, größerer Scope). `StructuredContent` liefert:
+**`pattern_detect` — Structured Output im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`), `feature-envy` (`AvoidExcessiveMiddleMen` — die nächste existierende Näherung, kein 1:1-Match zum klassischen Feature-Envy-Begriff). Die anderen 4 Patterns (`deep-nesting`, `disposable-not-disposed`, `static-state`, `magic-numbers`) sind bewusst **nicht** Teil dieser Version — sie haben keine existierende Erkennung und würden komplett neue Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern (eigener, größerer Scope). `StructuredContent` liefert:
 
 ```json
 {
@@ -295,9 +295,9 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 }
 ```
 
-`maxResults` kappt die angezeigten Kanten (Default 50); die Traversierung selbst ist unabhängig davon hart auf 150 besuchte Dateien begrenzt (Scan-Kosten-Grenze bei großen Solutions) — beide Kappungsarten setzen `truncated: true` und unterdrücken den Sufficiency-Hinweis. Projekt-Referenzen (`Project.ProjectReferences` des Zielprojekts) sind eine günstige Zusatz-Sicht, keine vollständige Projekt-Graph-Traversierung; NuGet-Vulnerability-Scanning ist bewusst nicht Teil dieses Tools (siehe `tasks/features/05-roadmap.md` M2).
+`maxResults` kappt die angezeigten Kanten (Default 50); die Traversierung selbst ist unabhängig davon hart auf 150 besuchte Dateien begrenzt (Scan-Kosten-Grenze bei großen Solutions) — beide Kappungsarten setzen `truncated: true` und unterdrücken den Sufficiency-Hinweis. Projekt-Referenzen (`Project.ProjectReferences` des Zielprojekts) sind eine günstige Zusatz-Sicht, keine vollständige Projekt-Graph-Traversierung; NuGet-Vulnerability-Scanning ist bewusst nicht Teil dieses Tools.
 
-**`find_duplicates` — Structured Output im Detail:** Token-basiertes Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularität, siehe `tasks/features/07-drift-audit-ideen.md` §A) über dieselbe `DuplicateDetectionEngine`, die auch der Linter-Checker `DuplicateCode` nutzt. Transitiv ähnliche Methoden (A~B, B~C) werden zu einem Cluster gruppiert statt als isolierte Paare gemeldet, gestaffelt nach `exact` (≥0.95), `near` (≥0.80) und `fuzzy` (≥0.65) Jaccard-Similarity — `similarityThreshold` bestimmt die niedrigste noch angezeigte Stufe (Default `fuzzy` zeigt alles). `StructuredContent` liefert:
+**`find_duplicates` — Structured Output im Detail:** Token-basiertes Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularität) über dieselbe `DuplicateDetectionEngine`, die auch der Linter-Checker `DuplicateCode` nutzt. Transitiv ähnliche Methoden (A~B, B~C) werden zu einem Cluster gruppiert statt als isolierte Paare gemeldet, gestaffelt nach `exact` (≥0.95), `near` (≥0.80) und `fuzzy` (≥0.65) Jaccard-Similarity — `similarityThreshold` bestimmt die niedrigste noch angezeigte Stufe (Default `fuzzy` zeigt alles). `StructuredContent` liefert:
 
 ```json
 {
@@ -433,7 +433,7 @@ Beispiel-Snippet:
 
 Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overhead (kein `McpCallLogScope`-Objekt, kein `Stopwatch.StartNew()`). Siehe `Docs/configuration.md` fuer die formale CLI-Option-Spec.
 
-### Compile-Fehler-Warnhinweis (EPIC-06)
+### Compile-Fehler-Warnhinweis
 
 Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **9 von 15 Tools** (inkl. `metrics_tree`) einen aggregierten Warnhinweis vor das eigentliche Ergebnis. `pattern_detect` prependet diesen Warnhinweis bewusst nicht (Pattern 1:1 von `get_violations` übernommen, siehe unten):
 
@@ -457,7 +457,7 @@ Zusätzlich laufen pro Refresh zwei Erweiterungen:
 
 Beide Pfade sind „best-effort": `<Compile Remove=…>`-Ausschlüsse aus `.csproj` werden bewusst nicht gelesen (Konzept-Vorgabe).
 
-### Symbolgraph-Erweiterungen (EPIC-08)
+### Symbolgraph-Erweiterungen
 
 Drei neue Features erweitern den Symbolgraph um praxisrelevante Hebel:
 
@@ -485,7 +485,7 @@ in der ID disambiguiert (`ProcessOrder(int)` vs.
 #### `depth`-Parameter fuer `find_references` / `get_impact` (E.2)
 
 Beide Tools haben einen optionalen `depth`-Parameter (Default 1, hard
-cap 3). `depth = 1` liefert direkte Aufrufstellen wie bisher. `depth > 1`
+cap 3). `depth = 1` liefert direkte Aufrufstellen. `depth > 1`
 loest transitive Aufrufstellen ueber `SymbolFinder.FindReferencesAsync`
 und aggregiert sie zu einer Top-N-Antwort mit explizitem `depth`-Marker
 in der Trunkierungs-Meta-Zeile. Separates Knotenlimit (200) verhindert
