@@ -495,4 +495,40 @@ Umgesetzt als M2 aus `tasks/features/05-roadmap.md`, priorisiert nach der Dogfoo
 
 ---
 
+## MCP-Tool `find_duplicates` / Linter-Regel `DuplicateCode` (Drift-Audit — DRY-Erkennung)
+
+Umgesetzt als M9 aus `tasks/features/05-roadmap.md`, priorisiert direkt nach M8. Token-basiertes
+Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, siehe
+`tasks/features/07-drift-audit-ideen.md` §A) — der urspruengliche Nutzer-Anlass war die
+`JsonSerializerOptions`-Duplikation aus der Dogfooding-Session 2026-08-10/11, die vor S1.3 in
+4 MCP-Tools separat instanziiert war.
+
+- [x] **`DuplicateDetectionEngine`** (`Core/DuplicateDetection/`): Token-Extraktion, N-Gram-
+  Shingling, Inverted Index, Jaccard-Similarity, transitive Cluster-Bildung (Union-Find),
+  gestaffelte Schwellwerte `exact`/`near`/`fuzzy` (0.95/0.80/0.65) statt hartem Cut. Geteilt
+  zwischen Linter-Checker und MCP-Tool (eine Engine, zwei Konsumenten).
+- [x] **MCP-Tool `find_duplicates`** (18. Tool, `Mcp/Tools/DuplicateDetection/`): `mode="clone"`
+  (Default) liefert Cluster gestaffelt nach Aehnlichkeit; `mode="refactoring-drift"` (Idee C,
+  "absence-of-calls"-Heuristik, Murphy-Hill 2005) findet Methoden, die einen per `helperSymbol`
+  benannten Helper strukturell nachbauen statt ihn aufzurufen — als Kandidaten gelistet, fliesst
+  nicht in Lint/`safeguard` ein (On-Demand-only).
+- [x] **Linter-Checker `DuplicateCodeChecker`**: solution-weite Nachpruefung (via
+  `PostAnalysisChecks`, nicht Datei-Node-Walker wie die meisten anderen Checker). Meldet nur
+  `exact`-Cluster (Severity `info`), ein Regelverstoss pro Cluster (repraesentatives Mitglied,
+  `Details` listet alle Mitglieder) — `near`/`fuzzy` bleiben ueber das Tool/den Skill einsehbar,
+  waeren aber zu viel Rauschen fuer automatisches Lint (Live-Dogfood-Befund: `near` allein erzeugte
+  ~23 Einzel-Funde auf diesem Repo). Respektiert die dateiweite `// ainetlinter-disable
+  DuplicateCode`-Suppression-Konvention ueber alle Cluster-Mitglieder.
+- [x] **Self-Audit-Skill** `.agents/skills/drift-audit/SKILL.md` (Idee F, projekteigen, nicht Teil
+  des generischen `Agent-Scaffolding`-Pakets) — Vier-Schritte-Playbook, Cadence pro Epic
+  verpflichtend / pro Step optional (Hinweis in `AGENTS.md`).
+- [x] `rules.json`-Config (`Global.DuplicateCode*`, 9 Keys) + `RuleRegistry`-Eintrag
+  (`--list-rules`/`--describe-rule`/`--search-rules`).
+- [x] 75+ neue Unit-/Integrationstests (Engine, Checker, Tool, Refactoring-Drift, Suppression) +
+  Live-Repo-Tests. Vollstaendige Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+- [x] Naming-Drift (Idee E), AST-CPD (Idee B) und Pattern-Cluster-Detection (Idee D) bewusst nicht
+  umgesetzt — siehe `tasks/features/07-drift-audit-ideen.md`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

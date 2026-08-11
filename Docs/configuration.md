@@ -189,7 +189,7 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
 | `BanBlockingTaskAccess`                          | Global  | Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`).                                                                                                                                                                                                                                                                                                                                                                          |
 | `BanBlockingTaskAccessAllowInMain`               | Global  | Erlaubt blockierende Task-Zugriffe in statischen `Main` Methoden.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `BanBlockingTaskAccessAllowInTests`              | Global  | Erlaubt blockierende Task-Zugriffe in Test-Projekten.                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `EnableDuplicateCodeCheck`                       | Global  | Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, siehe eigener Abschnitt `DuplicateCode` unten). Meldet `exact`-/`near`-Cluster als Regelverstoß `DuplicateCode`.                                                                                                                                                                                                                                                                               |
+| `EnableDuplicateCodeCheck`                       | Global  | Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, siehe eigener Abschnitt `DuplicateCode` unten). Meldet `exact`-Cluster als Regelverstoß `DuplicateCode` (ein Fund pro Cluster).                                                                                                                                                                                                                                                               |
 | `EnforceResultPatternOverExceptions`             | Global  | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt.                                                                                                                                                                                                                                                                                                                           |
 | `ResultPatternAllowThrowInNamespaceSuffixes`     | Global  | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `["Infrastructure", "Endpoints", "Middleware", "Program"]`.                                                                                                                                                                                                                                                                   |
 | `ResultPatternAllowCatchRethrow`                 | Global  | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`.                                                                                                                                                                                                                                                                                                                                          |
@@ -350,9 +350,14 @@ zusammengefasst statt als isolierte Paare gemeldet.
 
 **Gestaffelte Schwellwerte statt hartem Cut:** `exact` (≥ `DuplicateCodeExactThreshold`, fast
 identisch), `near` (≥ `DuplicateCodeNearThreshold`, sehr ähnlich) und `fuzzy` (≥
-`DuplicateCodeFuzzyThreshold`, grenzwertig). Nur `exact`- und `near`-Cluster erzeugen einen
-Regelverstoß (`DuplicateCode`) — `fuzzy` wäre zu viel Rauschen für automatisches Lint, ist aber
-über das MCP-Tool `find_duplicates` abrufbar.
+`DuplicateCodeFuzzyThreshold`, grenzwertig). **Nur `exact`-Cluster erzeugen einen Regelverstoß**
+(`DuplicateCode`, Severity `info` — Kandidaten-Befund, kein hartes Anti-Pattern) — `near`/`fuzzy`
+wären zu viel Rauschen für automatisches Lint (Live-Dogfood-Befund 2026-08-11: `near`-Cluster
+allein erzeugten auf diesem Repo ~23 Einzel-Funde), bleiben aber über das MCP-Tool
+`find_duplicates` und den Skill `.agents/skills/drift-audit/SKILL.md` voll einsehbar. Pro Cluster
+wird genau **ein** Regelverstoß gemeldet (repräsentatives Mitglied, analog dem
+`MaxPartialClassFiles`-Muster) — `Details` listet trotzdem alle beteiligten Methoden vollständig,
+nicht eine Violation pro Mitglied.
 
 **False-Positive-Disziplin:** `bin/`, `obj/`, `.ainetlinter/` und `tests/Fixtures/`-Verzeichnisse
 sind fest ausgeschlossen; Methoden mit `[GeneratedCode]`-Attribut (an der Methode oder am
@@ -367,6 +372,13 @@ Klon markieren würde.
 
 **`DuplicateCodeMaxResults`** begrenzt die als Verstoß gemeldeten Cluster (Top-N nach
 Jaccard-Score absteigend) — kein unbegrenzter Dump bei großen Solutions.
+
+**Gezielte Unterdrückung statt globaler Deaktivierung:** Ist eine Ähnlichkeit beabsichtigt (z. B.
+strukturell gleiche, aber fachlich unterschiedliche Methoden), unterstützt `DuplicateCode` die
+projektübliche dateiweite Suppression-Konvention (`// ainetlinter-disable DuplicateCode`, siehe
+Abschnitt „Suppressions" unten) — ein Kommentar in **einer** der am Cluster beteiligten Dateien
+reicht, um den gesamten Cluster-Fund zu unterdrücken (der Fund ist eine Aussage über die Beziehung
+zwischen den Methoden, keine pro Datei unabhängige).
 
 > Evidenz: Roy & Cordy (2007), Bellon et al. (2007) für die Token-CPD-Methodik; Manning, Raghavan,
 > Schütze (2008) für Jaccard/N-Gram/Inverted-Index. Details und Referenz-Tools (CCFinder, PMD CPD,
