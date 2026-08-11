@@ -56,6 +56,10 @@ internal static class LinterRuleIds
     internal const string PreventContextDependentOverloads = nameof(GlobalConfig.PreventContextDependentOverloads);
     internal const string EnforceExplicitStateImmutability = nameof(GlobalConfig.EnforceExplicitStateImmutability);
 
+    // RuleId weicht vom Property-Namen ab (EnableDuplicateCodeCheck → DuplicateCode, analog
+    // EnableTestSentinel → StaticTestSentinel)
+    internal const string DuplicateCode = "DuplicateCode";
+
     // RuleId weicht vom Property-Namen ab (EnableTestSentinel → StaticTestSentinel)
     internal const string StaticTestSentinel = "StaticTestSentinel";
 

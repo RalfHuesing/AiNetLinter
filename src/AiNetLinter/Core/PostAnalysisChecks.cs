@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Diagnostics;
 using AiNetLinter.Models;
@@ -20,11 +21,16 @@ namespace AiNetLinter.Core;
 internal static class PostAnalysisChecks
 {
     /// <summary>
-    /// Startet die post-analytischen Prüfungen für die gesamte Solution.
+    /// Startet die post-analytischen Prüfungen für die gesamte Solution. Async (statt der
+    /// synchronen Vorgaenger-Signatur), weil <see cref="Checkers.DuplicateCodeChecker.RunAsync"/>
+    /// echte Roslyn-<c>Task</c>-APIs (<c>Project.GetCompilationAsync</c>) verwendet — sync-over-async
+    /// per <c>GetAwaiter().GetResult()</c> waere hier ein Workaround, der genau das umgeht, was
+    /// <c>BanBlockingTaskAccess</c> verhindern soll. Alle anderen Schritte bleiben synchron und
+    /// laufen einfach inline vor dem einzigen echten <see langword="await"/>.
     /// </summary>
     /// <param name="state">Der aktuelle Zustand der Analyse.</param>
     /// <param name="config">Die globale Konfiguration.</param>
-    public static void Run(AnalysisState state, Config config, IPerformanceProfiler? profiler = null)
+    public static async Task RunAsync(AnalysisState state, Config config, IPerformanceProfiler? profiler = null)
     {
         var p = profiler ?? NullPerformanceProfiler.Instance;
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -61,6 +67,11 @@ internal static class PostAnalysisChecks
         RunMaxDirectoryChildrenCheck(state.Violations, config);
         sw.Stop();
         p.RecordPostAnalysisStep("MaxDirectoryChildren", sw.Elapsed.TotalMilliseconds);
+
+        sw.Restart();
+        await DuplicateCodeChecker.RunAsync(state, config).ConfigureAwait(false);
+        sw.Stop();
+        p.RecordPostAnalysisStep("DuplicateCode", sw.Elapsed.TotalMilliseconds);
 
         if (config.Web.IsEnabled)
         {

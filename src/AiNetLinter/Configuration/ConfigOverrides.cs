@@ -175,6 +175,60 @@ public sealed record GlobalConfigOverride
     /// Erlaubt blockierende Zugriffe in Testdateien.
     /// </summary>
     public bool? BanBlockingTaskAccessAllowInTests { get; init; }
+
+    /// <summary>
+    /// Aktiviert die solution-weite Duplicate-Code-Erkennung (Override fuer
+    /// Global.EnableDuplicateCodeCheck).
+    /// </summary>
+    public bool? EnableDuplicateCodeCheck { get; init; }
+
+    /// <summary>
+    /// Mindestanzahl Tokens im Methoden-Body fuer die Duplicate-Code-Erkennung (Override fuer
+    /// Global.DuplicateCodeMinTokens).
+    /// </summary>
+    public int? DuplicateCodeMinTokens { get; init; }
+
+    /// <summary>
+    /// N-Gram-Fenstergroesse fuer die Duplicate-Code-Erkennung (Override fuer
+    /// Global.DuplicateCodeNgramSize).
+    /// </summary>
+    public int? DuplicateCodeNgramSize { get; init; }
+
+    /// <summary>
+    /// Mindestanzahl gemeinsamer N-Gramme fuer ein Kandidaten-Paar (Override fuer
+    /// Global.DuplicateCodeMinSharedNgrams).
+    /// </summary>
+    public int? DuplicateCodeMinSharedNgrams { get; init; }
+
+    /// <summary>
+    /// Jaccard-Schwellwert fuer den <c>exact</c>-Bucket (Override fuer
+    /// Global.DuplicateCodeExactThreshold).
+    /// </summary>
+    public double? DuplicateCodeExactThreshold { get; init; }
+
+    /// <summary>
+    /// Jaccard-Schwellwert fuer den <c>near</c>-Bucket (Override fuer
+    /// Global.DuplicateCodeNearThreshold).
+    /// </summary>
+    public double? DuplicateCodeNearThreshold { get; init; }
+
+    /// <summary>
+    /// Jaccard-Schwellwert fuer den <c>fuzzy</c>-Bucket (Override fuer
+    /// Global.DuplicateCodeFuzzyThreshold).
+    /// </summary>
+    public double? DuplicateCodeFuzzyThreshold { get; init; }
+
+    /// <summary>
+    /// Identifier-/Literal-Normalisierung vor dem N-Gram-Shingling (Override fuer
+    /// Global.DuplicateCodeNormalizeIdentifiers).
+    /// </summary>
+    public bool? DuplicateCodeNormalizeIdentifiers { get; init; }
+
+    /// <summary>
+    /// Obergrenze der als Lint-Verstoss gemeldeten Duplicate-Code-Cluster (Override fuer
+    /// Global.DuplicateCodeMaxResults).
+    /// </summary>
+    public int? DuplicateCodeMaxResults { get; init; }
 }
 
 /// <summary>
