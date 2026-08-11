@@ -4,9 +4,9 @@ namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>
 /// Modi des <c>metrics_tree</c>-Tools. Die zwei Datei-Walk-Modi (<c>code_size</c>,
-/// <c>comment_density</c>, EPIC-01) laufen synchron ueber <see cref="MetricsTreeScanner"/> ohne
+/// <c>comment_density</c>) laufen synchron ueber <see cref="MetricsTreeScanner"/> ohne
 /// <see cref="Microsoft.CodeAnalysis.Solution"/>-Overhead; die zwei Roslyn-Modi
-/// (<c>violation_density</c>, <c>complexity</c>, EPIC-02) laufen ueber
+/// (<c>violation_density</c>, <c>complexity</c>) laufen ueber
 /// <see cref="MetricsTreeRoslynScanner"/> und nutzen <c>LinterEngine</c> bzw. Syntax-Baeume.
 /// </summary>
 internal enum MetricsTreeMode
