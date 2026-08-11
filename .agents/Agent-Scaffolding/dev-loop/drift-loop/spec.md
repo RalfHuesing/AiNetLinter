@@ -347,8 +347,8 @@ Vor dem eigentlichen Planen eines neuen Steps, in dieser Reihenfolge:
 1. **Roadmap abgleichen:** letzten `step-result.md`/`step-review.md`
    lesen, `roadmap.md` entsprechend aktualisieren (Epic abhaken, falls
    der letzte Step es abgeschlossen hat; neues Epic ergänzen, falls der
-   Kritiker oder der Coder in „Beobachtungen"/Findings einen bisher
-   fehlenden Muss-Haben-Punkt aus `konzept.md` identifiziert hat —
+   Kritiker oder der Coder in „Beobachtungen"/Findings einen fehlenden
+   Muss-Haben-Punkt aus `konzept.md` identifiziert hat —
    **nicht** aber wegen Tech-Debt-Einträgen, siehe §9).
 2. **Tatsächlichen Projektzustand lesen** — nicht auf den Stand von vor
    dem letzten Step verlassen. Das ist der eigentliche Zweck von JIT: der
@@ -507,15 +507,15 @@ Der Kritiker markiert einen Eintrag `auto_fixable: ja` **nur**, wenn
   nichts, das eine Nutzer-Entscheidung voraussetzt.
 
 Alles, was nicht eindeutig beide Kriterien erfüllt: `auto_fixable: nein`
-(Default bei Unsicherheit) — bleibt wie bisher vollständig
-Nutzer-Sache, kein Subagent wandelt es um.
+(Default bei Unsicherheit) — bleibt vollständig Nutzer-Sache, kein
+Subagent wandelt es um.
 
 `ja`-Einträge werden **nicht automatisch zu einem eigenen Step** — sie
 werden vom Planer im Step-Modus **opportunistisch an einen ohnehin
 laufenden Step angehängt**, der bereits in der Nähe unterwegs ist
 (§10.6, dort auch die bewusste Lockerung der Epic-Grenze für genau diesen
 Fall). Kein separater Sweep, kein Einzelpäckchen pro Fund — siehe §10.6.
-`nein`-Einträge lösen wie bisher **nie** automatisch Arbeit aus (§8.3).
+`nein`-Einträge lösen **nie** automatisch Arbeit aus (§8.3).
 
 Wird ein `auto_fixable: ja`-Eintrag so gebündelt und das Batch-Item beim
 folgenden Kritiker-Review `approved`: der Kritiker setzt den
