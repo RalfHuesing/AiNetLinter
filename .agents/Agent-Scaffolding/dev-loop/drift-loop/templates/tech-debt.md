@@ -43,11 +43,11 @@ Index-Zeile ist für den Planer praktisch unsichtbar.>
 
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
-| TD-001 | `pfad/zu/modul` | mittel | nein | <ein Halbsatz, worum es geht> |
+| TD-XXX | `pfad/zu/modul` | mittel | nein | <ein Halbsatz, worum es geht> |
 
 ## Einträge
 
-### TD-001 — <Kurztitel> [Priorität: hoch|mittel|niedrig] [Auto-Fixable: ja|nein]
+### TD-XXX — <Kurztitel> [Priorität: hoch|mittel|niedrig] [Auto-Fixable: ja|nein]
 
 - **Gefunden in:** step-NNN (Kritiker-Review vom <ISO-8601>)
 - **Ort:** `pfad/zu/datei.ext:Zeile` (ggf. weitere Fundstellen)
@@ -66,4 +66,4 @@ Index-Zeile ist für den Planer praktisch unsichtbar.>
   Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
   Status eines `nein`-Eintrags selbst
 
-### TD-002 — ...
+### TD-YYY — ...
