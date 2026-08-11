@@ -23,7 +23,7 @@ public sealed class PlaybookCheckCommandTests
     public async Task RunAsync_WhenPlaybookFileNotExists_ReturnsOne()
     {
         // Für diesen Test brauchen wir eine echte Solution-Datei
-        var slnxPath = FindSlnxFile();
+        var slnxPath = TestHelper.FindSlnxFile();
         if (slnxPath == null)
         {
             // Kein .slnx im Testumfeld gefunden — Test überspringen
@@ -54,15 +54,4 @@ public sealed class PlaybookCheckCommandTests
         }
     }
 
-    private static string? FindSlnxFile()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var files = dir.GetFiles("*.slnx");
-            if (files.Length > 0) return files[0].FullName;
-            dir = dir.Parent;
-        }
-        return null;
-    }
 }

@@ -12,15 +12,7 @@ namespace AiNetLinter.Tests.Core.Checkers;
 [Trait("Category", "Unit")]
 public sealed class SwitchDispatcherDetectorTests
 {
-    private static SemanticModel CreateSemanticModel(string source)
-    {
-        var tree = CSharpSyntaxTree.ParseText(source);
-        var compilation = CSharpCompilation.Create("TestAssembly")
-            .AddSyntaxTrees(tree)
-            .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
-            .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        return compilation.GetSemanticModel(tree);
-    }
+    private static SemanticModel CreateSemanticModel(string source) => TestHelper.CreateSemanticModel(source);
 
     private static Config CreateConfig(
         int maxComplexity,

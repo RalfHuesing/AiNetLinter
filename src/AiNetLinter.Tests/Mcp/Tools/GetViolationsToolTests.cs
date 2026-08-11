@@ -137,26 +137,9 @@ public sealed class GetViolationsToolTests
         // TextLoader-Fake, statt auf einen fragilen realen Timing-Race zu warten.
         var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-malfunction-probe-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(probeDir);
-        var faultyPath = Path.Combine(probeDir, "Faulty.cs");
         try
         {
-            // Die Datei muss real auf der Platte existieren, sonst entfernt
-            // McpCodeGraphServerRefresh.RemoveDeletedDocuments sie beim GetCurrentSolution()-Aufruf
-            // schon vor der Analyse (File.Exists-Check) — der reale Dateiinhalt ist irrelevant,
-            // weil der untenstehende ThrowingTextLoader den Text-Zugriff uebernimmt, nicht Roslyns
-            // Standard-Dateisystem-Loader.
-            File.WriteAllText(faultyPath, "class Faulty {}");
-
-            var workspace = new AdhocWorkspace();
-            var projectId = ProjectId.CreateNewId();
-            var projectInfo = ProjectInfo.Create(
-                projectId, VersionStamp.Create(), "FaultyProject", "FaultyProject", LanguageNames.CSharp);
-            var solution = workspace.CurrentSolution.AddProject(projectInfo);
-
-            var documentId = DocumentId.CreateNewId(projectId);
-            var documentInfo = DocumentInfo.Create(
-                documentId, "Faulty.cs", filePath: faultyPath, loader: new ThrowingTextLoader());
-            solution = solution.AddDocument(documentInfo);
+            var solution = TestHelper.CreateFaultySolution(probeDir);
 
             var catalog = new SourceFileCatalog(solution, hasLoadingErrors: false);
             using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
@@ -173,25 +156,6 @@ public sealed class GetViolationsToolTests
         finally
         {
             Directory.Delete(probeDir, recursive: true);
-        }
-    }
-
-    /// <summary>
-    /// Test-Fake: wirft beim Textzugriff eine IOException, um eine echte LinterEngine-Malfunction
-    /// deterministisch zu simulieren (statt auf einen fragilen realen Race zu warten, in dem eine
-    /// Quelldatei zwischen Indexierung und Analyse vom Dateisystem verschwindet).
-    /// </summary>
-    private sealed class ThrowingTextLoader : TextLoader
-    {
-        public override Task<TextAndVersion> LoadTextAndVersionAsync(
-            LoadTextOptions options, CancellationToken cancellationToken)
-        {
-            // Bewusst kein IOException/UnauthorizedAccessException: Roslyns TextDocumentState
-            // faengt diese beiden Typen intern ab (Workspace-Resilienz gegen verschwundene
-            // Quelldateien) und ersetzt sie durch leeren Text statt die Exception zu propagieren
-            // — das wuerde diesen Test zum Erfolgsfall statt zur Malfunction machen (empirisch
-            // verifiziert). Ein unspezifischer Exception-Typ hat keine solche Sonderbehandlung.
-            throw new InvalidOperationException("Simulierter Lesefehler fuer Malfunction-Regressionstest.");
         }
     }
 

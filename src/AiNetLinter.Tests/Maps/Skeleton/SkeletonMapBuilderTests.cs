@@ -15,7 +15,7 @@ public sealed class SkeletonMapBuilderTests
     [Trait("Category", "Integration")]
     public async Task BuildAsync_WithSolution_ReturnsZeroAndContainsMarkdown()
     {
-        var slnPath = FindSlnxFile();
+        var slnPath = TestHelper.FindSlnxFile();
         if (slnPath == null) return; // kein .slnx im CI — überspringen
 
         var console = new TestLintConsole();
@@ -49,15 +49,4 @@ public sealed class SkeletonMapBuilderTests
             () => SkeletonMapBuilder.BuildAsync("/nonexistent/path", config, console, args));
     }
 
-    private static string? FindSlnxFile()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var files = dir.GetFiles("*.slnx");
-            if (files.Length > 0) return files[0].FullName;
-            dir = dir.Parent;
-        }
-        return null;
-    }
 }

@@ -207,21 +207,9 @@ public class Greeter { public string Hello() => ""hi""; }";
         // und liefert IsMalfunction=true mit der rohen Exception-Message im Context-Feld.
         var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-safeguard-malfunction-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(probeDir);
-        var faultyPath = Path.Combine(probeDir, "Faulty.cs");
         try
         {
-            File.WriteAllText(faultyPath, "class Faulty {}");
-
-            var workspace = new AdhocWorkspace();
-            var projectId = ProjectId.CreateNewId();
-            var projectInfo = ProjectInfo.Create(
-                projectId, VersionStamp.Create(), "FaultyProject", "FaultyProject", LanguageNames.CSharp);
-            var solution = workspace.CurrentSolution.AddProject(projectInfo);
-
-            var documentId = DocumentId.CreateNewId(projectId);
-            var documentInfo = DocumentInfo.Create(
-                documentId, "Faulty.cs", filePath: faultyPath, loader: new ThrowingTextLoader());
-            solution = solution.AddDocument(documentInfo);
+            var solution = TestHelper.CreateFaultySolution(probeDir);
 
             var config = CreateConfig();
             var parameters = CreateParameters(solution, config);
@@ -464,20 +452,5 @@ public class Greeter { public string Hello() => ""hi""; }";
         public static readonly NullConsole Instance = new();
         public void WriteLine(string message) { }
         public void WriteError(string message) { }
-    }
-
-    /// <summary>
-    /// Test-Fake: wirft beim Textzugriff eine unspezifische Exception, um eine echte
-    /// LinterEngine-Malfunction deterministisch zu simulieren (analog zum
-    /// <c>ThrowingTextLoader</c> in <c>GetViolationsToolTests</c>). IOException/UnauthorizedAccess
-    /// werden von Roslyn intern abgefangen — daher der unspezifische Exception-Typ.
-    /// </summary>
-    private sealed class ThrowingTextLoader : TextLoader
-    {
-        public override Task<TextAndVersion> LoadTextAndVersionAsync(
-            LoadTextOptions options, CancellationToken cancellationToken)
-        {
-            throw new InvalidOperationException("Simulierter Lesefehler fuer Malfunction-Regressionstest.");
-        }
     }
 }

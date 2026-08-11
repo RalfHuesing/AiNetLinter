@@ -82,15 +82,8 @@ public sealed class DisableAllCommentRemoverTests
         }
         finally
         {
-            DeleteIfExists(filePath);
+            TestHelper.DeleteFileIfExists(filePath);
         }
     }
 
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-        }
-    }
 }

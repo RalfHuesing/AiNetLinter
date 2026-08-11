@@ -61,7 +61,7 @@ public sealed class WebBaselineTests
         }
         finally
         {
-            DeleteIfExists(baselinePath);
+            TestHelper.DeleteFileIfExists(baselinePath);
         }
     }
 
@@ -124,15 +124,8 @@ public sealed class WebBaselineTests
         }
         finally
         {
-            DeleteIfExists(baselinePath);
+            TestHelper.DeleteFileIfExists(baselinePath);
         }
     }
 
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-        }
-    }
 }

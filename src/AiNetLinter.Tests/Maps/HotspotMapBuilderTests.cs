@@ -20,11 +20,7 @@ public sealed class HotspotMapBuilderTests : IDisposable
         Directory.CreateDirectory(_tempDir);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
-    }
+    public void Dispose() => TestHelper.DeleteDirectoryIfExists(_tempDir);
 
     private string CreateTempFiles(params (string FileName, string Content)[] files)
     {

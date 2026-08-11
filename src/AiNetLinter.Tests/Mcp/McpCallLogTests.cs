@@ -431,19 +431,7 @@ public sealed class McpCallLogTests
         return Path.Combine(dir, "calls.log");
     }
 
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-            var dir = Path.GetDirectoryName(path);
-            if (dir is not null && Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
-        }
-        catch
-        {
-            // best-effort cleanup, kein Test-Fail
-        }
-    }
+    private static void TryDelete(string path) => TestHelper.TryDeleteLogFileAndDirectory(path);
 
     private static JsonElement ParseSingleEntry(string[] lines)
     {

@@ -240,21 +240,9 @@ public sealed class Foo{i}
     {
         var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-patterndetect-malfunction-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(probeDir);
-        var faultyPath = Path.Combine(probeDir, "Faulty.cs");
         try
         {
-            File.WriteAllText(faultyPath, "class Faulty {}");
-
-            var workspace = new AdhocWorkspace();
-            var projectId = ProjectId.CreateNewId();
-            var projectInfo = ProjectInfo.Create(
-                projectId, VersionStamp.Create(), "FaultyProject", "FaultyProject", LanguageNames.CSharp);
-            var solution = workspace.CurrentSolution.AddProject(projectInfo);
-
-            var documentId = DocumentId.CreateNewId(projectId);
-            var documentInfo = DocumentInfo.Create(
-                documentId, "Faulty.cs", filePath: faultyPath, loader: new ThrowingTextLoader());
-            solution = solution.AddDocument(documentInfo);
+            var solution = TestHelper.CreateFaultySolution(probeDir);
 
             var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
                 Solution: solution,
@@ -378,12 +366,4 @@ public sealed class Foo{i}
         }
     }
 
-    private sealed class ThrowingTextLoader : TextLoader
-    {
-        public override Task<TextAndVersion> LoadTextAndVersionAsync(
-            LoadTextOptions options, CancellationToken cancellationToken)
-        {
-            throw new InvalidOperationException("Simulierter Lesefehler fuer Malfunction-Regressionstest.");
-        }
-    }
 }

@@ -36,24 +36,8 @@ public sealed class DuplicateDetectionScannerTests : IDisposable
         try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort cleanup */ }
     }
 
-    private static readonly string[] BaseStatements =
-    [
-        "int a = x + 1;", "int b = x + 2;", "int c = x + 3;", "int d = x + 4;", "int e = x + 5;",
-        "int f = a + b;", "int g = c + d;", "int h = e + f;", "int i = g + h;", "int j = i - a;",
-        "int k = j - b;", "int l = k - c;", "int m = l - d;", "int n = m - e;", "int o = n * 2;",
-        "int p = o / 2;", "int q = p + 1;", "int r = q + 2;", "int s = r + 3;", "int t = s + 4;",
-    ];
-
-    private static string BuildMethod(string className, string methodName) => $$"""
-        public static class {{className}}
-        {
-            public static int {{methodName}}(int x)
-            {
-                {{string.Join("\n            ", BaseStatements)}}
-                return t;
-            }
-        }
-        """;
+    private static string BuildMethod(string className, string methodName) =>
+        TestHelper.BuildCalibratedMethod(className, methodName);
 
     private Solution CreateAdhocSolution(params (string FileName, string Content)[] files)
     {
@@ -115,7 +99,7 @@ public sealed class DuplicateDetectionScannerTests : IDisposable
         // Sechs weit auseinanderliegende Swaps -> Score klar unter fuzzy (kein Cluster ueberhaupt,
         // siehe DuplicateDetectionEngineTests-Kalibrierung) -> der near-Filter aendert daran nichts,
         // belegt aber denselben Fall auf Scanner-Ebene mit striktem Filter.
-        var variantStatements = (string[])BaseStatements.Clone();
+        var variantStatements = (string[])TestHelper.CalibratedBaseStatements.Clone();
         variantStatements[0] = "int a = x * 11;";
         variantStatements[3] = "int d = x * 12;";
         variantStatements[6] = "int g = a * 13;";

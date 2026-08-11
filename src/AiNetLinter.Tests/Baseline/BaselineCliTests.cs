@@ -36,7 +36,7 @@ public sealed class BaselineCliTests
         }
         finally
         {
-            DeleteIfExists(baselinePath);
+            TestHelper.DeleteFileIfExists(baselinePath);
         }
     }
 
@@ -72,7 +72,7 @@ public sealed class BaselineCliTests
         }
         finally
         {
-            DeleteIfExists(baselinePath);
+            TestHelper.DeleteFileIfExists(baselinePath);
         }
     }
 
@@ -118,7 +118,7 @@ public sealed class BaselineCliTests
         }
         finally
         {
-            DeleteIfExists(baselinePath);
+            TestHelper.DeleteFileIfExists(baselinePath);
         }
     }
 
@@ -141,11 +141,4 @@ public sealed class BaselineCliTests
         return Path.Combine(root, "tests", "Fixtures", "BaselineMini");
     }
 
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-        }
-    }
 }

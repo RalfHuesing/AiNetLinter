@@ -132,21 +132,9 @@ public sealed class SafeguardToolTests
         // und die rohe Exception-Message im Text.
         var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-safeguard-tool-malfunction-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(probeDir);
-        var faultyPath = Path.Combine(probeDir, "Faulty.cs");
         try
         {
-            File.WriteAllText(faultyPath, "class Faulty {}");
-
-            var workspace = new AdhocWorkspace();
-            var projectId = ProjectId.CreateNewId();
-            var projectInfo = ProjectInfo.Create(
-                projectId, VersionStamp.Create(), "FaultyProject", "FaultyProject", LanguageNames.CSharp);
-            var solution = workspace.CurrentSolution.AddProject(projectInfo);
-
-            var documentId = DocumentId.CreateNewId(projectId);
-            var documentInfo = DocumentInfo.Create(
-                documentId, "Faulty.cs", filePath: faultyPath, loader: new ThrowingTextLoader());
-            solution = solution.AddDocument(documentInfo);
+            var solution = TestHelper.CreateFaultySolution(probeDir);
 
             var catalog = new AiNetLinter.Baseline.SourceFileCatalog(solution, hasLoadingErrors: false);
             using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
@@ -163,22 +151,6 @@ public sealed class SafeguardToolTests
         finally
         {
             Directory.Delete(probeDir, recursive: true);
-        }
-    }
-
-    /// <summary>
-    /// Test-Fake: wirft beim Textzugriff eine unspezifische Exception, um eine echte
-    /// LinterEngine-Malfunction deterministisch zu simulieren. IOException/UnauthorizedAccess
-    /// werden von Roslyn intern abgefangen — daher der unspezifische Exception-Typ
-    /// (Pattern 1:1 von <c>SafeguardScannerTests.ThrowingTextLoader</c> und
-    /// <c>GetViolationsToolTests.ThrowingTextLoader</c>).
-    /// </summary>
-    private sealed class ThrowingTextLoader : TextLoader
-    {
-        public override Task<TextAndVersion> LoadTextAndVersionAsync(
-            LoadTextOptions options, CancellationToken cancellationToken)
-        {
-            throw new InvalidOperationException("Simulierter Lesefehler fuer Malfunction-Regressionstest.");
         }
     }
 }
