@@ -13,7 +13,7 @@ total_tech_debt_entries: <N>
 ## Ergebnis
 
 <2-5 Sätze: Was wurde durch diesen Loop erreicht? Passt es zur
-ursprünglichen Intention aus `konzept.md`?>
+Intention aus `konzept.md`?>
 
 ## Roadmap-Status
 
@@ -33,8 +33,7 @@ Zusammenfassung, kein Duplikat.>
 
 ### Konzept erfüllt?
 
-<Passt das Ergebnis zur ursprünglichen `konzept.md`? Was fehlt
-möglicherweise?>
+<Passt das Ergebnis zu `konzept.md`? Was fehlt möglicherweise?>
 
 ### Seiteneffekte / Regressionen
 
