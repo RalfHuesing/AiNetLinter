@@ -58,7 +58,7 @@ public sealed class FindSymbolToolTests : IClassFixture<BaselineCatalogFixture>
     [Fact]
     public async Task ExecuteAsync_KnownSymbol_StructuredContentDeserializesToSymbolLocationEntries()
     {
-        // S1.3: StructuredContent ergaenzt den Text additiv — dieselbe Fundstelle wie die
+        // StructuredContent ergaenzt den Text additiv — dieselbe Fundstelle wie die
         // Text-Zeile "Greeter.cs:... - Klasse: ...".
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_symbolGraphFixture.Catalog)));
 
