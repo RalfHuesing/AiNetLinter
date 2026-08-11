@@ -13,9 +13,8 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
-/// Tests fuer <see cref="GetServerHealthTool"/> (Q3, <c>tasks/features/05-roadmap.md</c> §3):
-/// LoadState/Solution/Config-Anzeige, Uptime/Refresh-Aggregate und die Call-Log-Aggregation
-/// (aktiv vs. nicht aktiv).
+/// Tests fuer <see cref="GetServerHealthTool"/>: LoadState/Solution/Config-Anzeige,
+/// Uptime/Refresh-Aggregate und die Call-Log-Aggregation (aktiv vs. nicht aktiv).
 /// </summary>
 [Trait("Category", "Unit")]
 [Collection("SymbolGraphCatalog")]
@@ -59,7 +58,7 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_Loaded_StructuredContentDeserializesToServerHealthPayload()
     {
-        // S1.3: StructuredContent ergaenzt den Text additiv — dieselben Rohwerte wie die
+        // StructuredContent ergaenzt den Text additiv — dieselben Rohwerte wie die
         // Text-Zeilen "LoadState"/"Solution-Refreshes seit Start" oben.
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
