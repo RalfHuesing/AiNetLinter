@@ -10,7 +10,7 @@ reviewed_by_model: <Modell-ID deiner eigenen LLM-Instanz>
 reviewed_by_model_knowledge_cutoff: <Knowledge-Cutoff-Datum, z. B. 2026-01>
 reviewed_at: <ISO-8601>
 verdict: approved  # approved | issues | blocked
-tech_debt_ids: []  # z. B. [TD-003, TD-004] — welche tech-debt.md-Einträge dieser Review-Durchgang erzeugt hat, falls welche
+tech_debt_ids: []  # z. B. [TD-XXX, TD-YYY] — welche tech-debt.md-Einträge dieser Review-Durchgang erzeugt hat, falls welche
 ---
 
 # Review Step <NNN>: <Titel>
@@ -115,4 +115,4 @@ Step-Scopes, die NICHT zu einem Korrektur-Step führen sollen — siehe
 ausschließlich in `tech-debt.md` (Pointer-Prinzip, nicht doppelt
 pflegen).>
 
-- `TD-003` (siehe `tech-debt.md`) — <ein Satz Kurzfassung>
+- `TD-XXX` (siehe `tech-debt.md`) — <ein Satz Kurzfassung>
