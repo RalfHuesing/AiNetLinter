@@ -46,6 +46,7 @@ internal static class OverviewResourceRegistration
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
         ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-Aggregate."),
+        ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
     ];
 
     internal static void Register(McpServerResourceCollection resources, McpCodeGraphServer mcpState)

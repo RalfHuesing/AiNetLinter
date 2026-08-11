@@ -1,0 +1,54 @@
+#nullable enable
+
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Configuration;
+using AiNetLinter.Core.DuplicateDetection;
+using Microsoft.CodeAnalysis;
+
+namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
+
+/// <summary>
+/// Duenner Adapter zwischen <c>find_duplicates</c> und der gemeinsamen
+/// <see cref="DuplicateDetectionEngine"/> (Core/DuplicateDetection/, geteilt mit
+/// <c>DuplicateCodeChecker</c>) — loest Tool-Argumente + <see cref="GlobalConfig"/>-Defaults zu
+/// <see cref="DuplicateDetectionOptions"/> auf, ruft die Engine, filtert das Ergebnis auf den
+/// gewuenschten <see cref="DuplicateSimilarityBucket"/>-Mindestwert und kappt auf
+/// <c>maxResults</c>. Keine Text-/JSON-Formatierung hier (macht <see cref="DuplicateDetectionTool"/>),
+/// analog <c>DependencyGraphScanner</c>/<c>DependencyGraphTool</c>.
+/// </summary>
+internal static class DuplicateDetectionScanner
+{
+    internal static async Task<DuplicateDetectionScanResultForTool> ScanAsync(
+        Solution solution, GlobalConfig config, DuplicateDetectionInput input, DuplicateSimilarityBucket minBucket,
+        CancellationToken ct)
+    {
+        var options = new DuplicateDetectionOptions(
+            MinTokens: input.MinTokens ?? config.DuplicateCodeMinTokens,
+            NgramSize: config.DuplicateCodeNgramSize,
+            MinSharedNgrams: config.DuplicateCodeMinSharedNgrams,
+            ExactThreshold: config.DuplicateCodeExactThreshold,
+            NearThreshold: config.DuplicateCodeNearThreshold,
+            FuzzyThreshold: config.DuplicateCodeFuzzyThreshold,
+            NormalizeIdentifiers: input.NormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
+            PathScopeFilter: NormalizeScopeDir(input.ScopeDir));
+
+        var scanResult = await DuplicateDetectionEngine.ScanAsync(solution, options, ct);
+
+        var filtered = scanResult.Clusters.Where(c => c.Bucket >= minBucket).ToList();
+        var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);
+        var shown = filtered.Count <= effectiveMax ? filtered : filtered.Take(effectiveMax).ToList();
+        var truncated = filtered.Count > effectiveMax;
+
+        return new DuplicateDetectionScanResultForTool(shown, filtered.Count, scanResult.MethodsScanned, truncated);
+    }
+
+    /// <summary>Wandelt Forward-Slashes in <paramref name="scopeDir"/> in den plattform-eigenen
+    /// Trennzeichen um, damit der Substring-Abgleich gegen absolute Dateipfade
+    /// (<see cref="DuplicateDetectionEngine"/>) unabhaengig davon funktioniert, mit welcher
+    /// Slash-Konvention der Aufrufer <paramref name="scopeDir"/> angibt.</summary>
+    private static string? NormalizeScopeDir(string? scopeDir) =>
+        string.IsNullOrEmpty(scopeDir) ? null : scopeDir.Replace('/', System.IO.Path.DirectorySeparatorChar);
+}

@@ -57,10 +57,13 @@ internal static class ServerInstructions
         "Dateitypen.\n" +
         "- reload_config: Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart.\n" +
         "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-" +
-        "Aggregate.\n\n" +
+        "Aggregate.\n" +
+        "- find_duplicates: Findet Code-Duplikate (Token-basiertes Clone-Detection, " +
+        "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
+        "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
         "get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, " +
-        "pattern_detect und get_symbol_body " +
+        "pattern_detect, get_symbol_body und find_duplicates " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
         "(deckt alle Dateitypen ab). get_index_scope und get_hotspots arbeiten ohne diese " +
