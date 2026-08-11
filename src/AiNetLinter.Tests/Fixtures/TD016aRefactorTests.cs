@@ -23,7 +23,7 @@ public sealed class TD016aRefactorTests
     {
         Assert.True(
             typeof(FixtureWorkspaceBase).IsAssignableFrom(workspaceType),
-            $"{workspaceType.Name} erbt nicht von FixtureWorkspaceBase — TD-016a-Regression.");
+            $"{workspaceType.Name} erbt nicht von FixtureWorkspaceBase — Fixture-Helper-Regression.");
     }
 
     [Theory]
@@ -43,6 +43,6 @@ public sealed class TD016aRefactorTests
         Assert.False(
             hasOwnDefinition,
             $"{workspaceType.Name} definiert immer noch eine eigene {helperName}-Methode " +
-            "\u2014 TD-016a-Regression, Fixture-Helper dupliziert statt aus FixtureWorkspaceBase geerbt.");
+            "\u2014 Fixture-Helper dupliziert statt aus FixtureWorkspaceBase geerbt.");
     }
 }
