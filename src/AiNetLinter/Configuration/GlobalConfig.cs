@@ -214,10 +214,9 @@ public sealed record GlobalConfig
     public bool BanBlockingTaskAccessAllowInTests { get; init; } = false;
 
     /// <summary>
-    /// Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, Method-Granularitaet,
-    /// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A). Meldet <c>exact</c>- und
-    /// <c>near</c>-Cluster als Lint-Verstoesse (<c>fuzzy</c> bleibt reine MCP-Auskunft, zu viel
-    /// Rauschen fuer automatisches Lint). Standard: <c>true</c>.
+    /// Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, Method-Granularitaet).
+    /// Meldet <c>exact</c>- und <c>near</c>-Cluster als Lint-Verstoesse (<c>fuzzy</c> bleibt
+    /// reine MCP-Auskunft, zu viel Rauschen fuer automatisches Lint). Standard: <c>true</c>.
     /// </summary>
     public bool EnableDuplicateCodeCheck { get; init; } = true;
 
