@@ -85,4 +85,4 @@ sollte.>
 
 **Brauche von Nutzer:** <klare Frage oder Entscheidung>
 
-**Bisher erreicht:** <was bereits umgesetzt ist, was noch offen ist>
+**Aktueller Stand:** <was bereits umgesetzt ist, was noch offen ist>
