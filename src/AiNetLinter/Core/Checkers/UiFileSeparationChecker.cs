@@ -84,14 +84,7 @@ internal static class UiFileSeparationChecker
     }
 
     private static RuleViolation CreateViolation(string filePath, string ruleName, string details, string guidance) =>
-        new RuleViolation
-        {
-            FilePath = filePath,
-            LineNumber = 1,
-            RuleName = ruleName,
-            Details = details,
-            Guidance = guidance
-        };
+        RuleViolationFactory.Create(filePath, ruleName, details, guidance);
 
     /// <summary>
     /// Prüft, ob die Regel in der Razor-Datei unterdrückt wird.

@@ -42,8 +42,8 @@ internal static class HotspotMapBuilder
         sb.AppendLine($"Gescannt: {files.Count} .cs-Dateien | MaxLineCount: {maxLineCount} | Pfad: {root.Replace('\\', '/')}");
         sb.AppendLine();
 
-        AppendSection(sb, "🔴 Kritische Dateien (>95% des Limits)", critical, maxLineCount);
-        AppendSection(sb, "⚠ Warnungs-Dateien (>80% des Limits)", warning, maxLineCount);
+        HotspotSectionFormatter.AppendSection(sb, "🔴 Kritische Dateien (>95% des Limits)", critical.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
+        HotspotSectionFormatter.AppendSection(sb, "⚠ Warnungs-Dateien (>80% des Limits)", warning.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
 
         if (critical.Count == 0 && warning.Count == 0)
         {
@@ -84,30 +84,4 @@ internal static class HotspotMapBuilder
             .ToList();
     }
 
-    private static void AppendSection(
-        StringBuilder sb,
-        string heading,
-        System.Collections.Generic.IReadOnlyList<StructureFileInfo> files,
-        int maxLineCount)
-    {
-        sb.AppendLine($"## {heading}");
-        sb.AppendLine();
-
-        if (files.Count == 0)
-        {
-            sb.AppendLine("Keine.");
-            sb.AppendLine();
-            return;
-        }
-
-        sb.AppendLine("| Datei | Zeilen | Auslastung | Verbleibend |");
-        sb.AppendLine("|:---|---:|---:|---:|");
-        foreach (var f in files.OrderByDescending(x => x.Lines).ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
-        {
-            var pct = (double)f.Lines / maxLineCount * 100;
-            var remaining = maxLineCount - f.Lines;
-            sb.AppendLine($"| {f.RelativePath} | {f.Lines} | {pct:F0} % | {remaining} Zeilen |");
-        }
-        sb.AppendLine();
-    }
 }

@@ -178,7 +178,7 @@ internal static class SafeguardScanner
                 LineNumber: v.LineNumber,
                 RuleName: v.RuleName,
                 Details: v.Details,
-                Severity: ResolveSeverity(v),
+                Severity: RuleRegistry.ResolveSeverity(v),
                 Guidance: v.Guidance))
             .ToList();
 
@@ -237,7 +237,7 @@ internal static class SafeguardScanner
         double penalty = 0.0;
         foreach (var v in violations)
         {
-            var severity = ResolveSeverity(v);
+            var severity = RuleRegistry.ResolveSeverity(v);
             if (string.Equals(severity, "error", StringComparison.OrdinalIgnoreCase))
             {
                 penalty += ViolationErrorSeverity * ViolationPenaltyUnit;
@@ -281,16 +281,10 @@ internal static class SafeguardScanner
 
     private static int SeverityRank(RuleViolation v)
     {
-        var severity = ResolveSeverity(v);
+        var severity = RuleRegistry.ResolveSeverity(v);
         if (string.Equals(severity, "error", StringComparison.OrdinalIgnoreCase)) return 0;
         if (string.Equals(severity, "warning", StringComparison.OrdinalIgnoreCase)) return 1;
         return 2;
-    }
-
-    private static string ResolveSeverity(RuleViolation v)
-    {
-        if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
-        return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
     }
 
     private static string BuildSummary(

@@ -71,20 +71,12 @@ public static class SuppressionFileResolver
 
         foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
         {
-            if (!IsGeneratedPath(file))
+            if (!SourceFileCatalog.IsGeneratedPath(file))
             {
                 files.Add(file);
             }
         }
 
         return files;
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        return path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
-               path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
-               path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
-               path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
     }
 }

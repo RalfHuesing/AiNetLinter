@@ -54,7 +54,7 @@ internal static class JsAnalyzer
     {
         if (config.MaxJsLineCount <= 0) return;
 
-        var lineCount = CountLines(jsContent);
+        var lineCount = WebTextMetrics.CountLines(jsContent);
         if (lineCount <= config.MaxJsLineCount) return;
 
         violations.Add(CreateViolation(
@@ -192,24 +192,6 @@ internal static class JsAnalyzer
                 "ungueltige Statements). Nach Korrektur wird die volle Analyse ausgefuehrt.",
         };
 
-    private static int CountLines(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return 0;
-        var n = 1;
-        for (int i = 0; i < content.Length; i++)
-        {
-            if (content[i] == '\n') n++;
-        }
-        return n;
-    }
-
     internal static RuleViolation CreateViolation(string filePath, string ruleName, string details, string guidance) =>
-        new RuleViolation
-        {
-            FilePath = filePath,
-            LineNumber = 1,
-            RuleName = ruleName,
-            Details = details,
-            Guidance = guidance,
-        };
+        RuleViolationFactory.Create(filePath, ruleName, details, guidance);
 }

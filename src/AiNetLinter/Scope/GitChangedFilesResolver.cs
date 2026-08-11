@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AiNetLinter.Core;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Scope;
@@ -13,7 +14,7 @@ public static class GitChangedFilesResolver
     /// </summary>
     public static IReadOnlyCollection<string> ResolveSince(string targetPath, string gitSinceRef)
     {
-        var repoRoot = FindGitRoot(targetPath);
+        var repoRoot = GitRepositoryLocator.FindRoot(targetPath);
         if (repoRoot == null)
         {
             return [];
@@ -21,22 +22,6 @@ public static class GitChangedFilesResolver
 
         var output = RunGitDiff(repoRoot, gitSinceRef);
         return output == null ? [] : ParseCsFiles(output, repoRoot, targetPath);
-    }
-
-    private static string? FindGitRoot(string startPath)
-    {
-        var current = File.Exists(startPath) ? Path.GetDirectoryName(startPath) : startPath;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (Directory.Exists(Path.Combine(current, ".git")))
-            {
-                return current;
-            }
-
-            current = Path.GetDirectoryName(current);
-        }
-
-        return null;
     }
 
     private static string? RunGitDiff(string repoRoot, string gitSinceRef)

@@ -159,8 +159,8 @@ internal static class GetViolationsScanner
         var isTruncated = filtered.Count > maxResults;
         var shown = isTruncated ? filtered.Take(maxResults).ToList() : filtered;
 
-        var errors = shown.Where(v => ResolveSeverity(v) == "error").ToList();
-        var warnings = shown.Where(v => ResolveSeverity(v) != "error").ToList();
+        var errors = shown.Where(v => RuleRegistry.ResolveSeverity(v) == "error").ToList();
+        var warnings = shown.Where(v => RuleRegistry.ResolveSeverity(v) != "error").ToList();
 
         AppendSection(sb, "Fehler", errors, solutionDir);
         AppendSection(sb, "Warnungen", warnings, solutionDir);
@@ -171,12 +171,6 @@ internal static class GetViolationsScanner
         }
 
         return sb.ToString().TrimEnd();
-    }
-
-    private static string ResolveSeverity(RuleViolation v)
-    {
-        if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
-        return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
     }
 
     private static void AppendSection(

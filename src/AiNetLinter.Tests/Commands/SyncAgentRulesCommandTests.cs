@@ -111,7 +111,7 @@ public sealed class SyncAgentRulesCommandTests
         Directory.CreateDirectory(tmpDir);
         try
         {
-            var result = SyncAgentRulesCommand.ResolveBaseDirectory(tmpDir);
+            var result = AgentRulesGenerator.ResolveBaseDirectory(tmpDir);
             Assert.Equal(tmpDir, result);
         }
         finally
@@ -126,7 +126,7 @@ public sealed class SyncAgentRulesCommandTests
         var tmpFile = Path.GetTempFileName();
         try
         {
-            var result = SyncAgentRulesCommand.ResolveBaseDirectory(tmpFile);
+            var result = AgentRulesGenerator.ResolveBaseDirectory(tmpFile);
             Assert.Equal(Path.GetDirectoryName(tmpFile), result);
         }
         finally

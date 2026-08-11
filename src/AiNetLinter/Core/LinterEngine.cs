@@ -221,27 +221,7 @@ public sealed class LinterEngine
 
         var isTestProject = TestProjectDetector.IsTestProject(project, testSuffixes);
         return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>(
-            CollectValidDocuments(project, solutionDir, isTestProject));
-    }
-
-    private static List<CatalogDocumentWorkItem> CollectValidDocuments(
-        Project project,
-        string? solutionDir,
-        bool isTestProject)
-    {
-        var workItems = new List<CatalogDocumentWorkItem>();
-
-        foreach (var document in project.Documents)
-        {
-            if (!SourceFileCatalog.IsValidDocument(document, solutionDir))
-            {
-                continue;
-            }
-
-            workItems.Add(new CatalogDocumentWorkItem(document, isTestProject));
-        }
-
-        return workItems;
+            SourceFileCatalog.CollectValidDocuments(project, solutionDir, isTestProject));
     }
 
     private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state, AnalysisCacheManager? cache, IReadOnlySet<ProjectId> projectsNeedingRestore, CancellationToken ct)

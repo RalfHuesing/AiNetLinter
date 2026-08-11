@@ -47,7 +47,7 @@ public sealed class DiffImpactAnalyzer
     internal static async Task<List<CallSiteEntry>> AnalyzeEntriesAsync(
         Solution solution, string targetPath, string? gitSinceRef, bool verbose)
     {
-        var repoRoot = FindGitRoot(targetPath);
+        var repoRoot = GitRepositoryLocator.FindRoot(targetPath);
         if (repoRoot == null)
         {
             LogGitWarning(verbose);
@@ -72,20 +72,6 @@ public sealed class DiffImpactAnalyzer
         {
             Console.WriteLine("[WARNING]: Kein Git-Repository gefunden.");
         }
-    }
-
-    private static string? FindGitRoot(string startPath)
-    {
-        var current = File.Exists(startPath) ? Path.GetDirectoryName(startPath) : startPath;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (Directory.Exists(Path.Combine(current, ".git")))
-            {
-                return current;
-            }
-            current = Path.GetDirectoryName(current);
-        }
-        return null;
     }
 
     private static string? RunGitDiff(string repoRoot, string? gitSinceRef)

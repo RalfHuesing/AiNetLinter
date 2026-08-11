@@ -259,17 +259,6 @@ internal static partial class RazorAnalyzer
         return content.Length;
     }
 
-    private static int CountLines(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return 0;
-        var n = 1;
-        for (int i = 0; i < content.Length; i++)
-        {
-            if (content[i] == '\n') n++;
-        }
-        return n;
-    }
-
     private static int GetLineNumber(string content, int position)
     {
         if (position <= 0) return 1;

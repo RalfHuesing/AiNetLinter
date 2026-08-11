@@ -128,7 +128,7 @@ public static class AgentRulesGenerator
         return false;
     }
 
-    private static string ResolveBaseDirectory(string targetPath)
+    internal static string ResolveBaseDirectory(string targetPath)
     {
         if (Directory.Exists(targetPath))
         {

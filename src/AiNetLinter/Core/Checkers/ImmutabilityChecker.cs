@@ -69,7 +69,7 @@ internal static class ImmutabilityChecker
         if (HasImmutabilityExemptSuffix(className, ctx)) return true;
         if (HasImmutabilityExemptPattern(className, ctx)) return true;
         if (IsConfigurationBindingOrJsonSerializable(node, ctx)) return true;
-        if (HasExemptBaseType(node, ctx)) return true;
+        if (ExemptBaseTypeResolver.HasExemptBaseType(node, ctx, ctx.Config.Global.ImmutabilityExemptBaseTypes)) return true;
         return HasDtoOrEntityAttribute(node, ctx);
     }
 
@@ -141,27 +141,6 @@ internal static class ImmutabilityChecker
             var name = a.AttributeClass?.Name;
             return name != null && (name.Contains("Dto") || name.Contains("Entity"));
         });
-    }
-
-    private static bool HasExemptBaseType(ClassDeclarationSyntax node, CheckerContext ctx)
-    {
-        var exemptTypes = ctx.Config.Global.ImmutabilityExemptBaseTypes;
-        if (exemptTypes == null || exemptTypes.Count == 0) return false;
-
-        var symbol = ctx.SemanticModel.GetDeclaredSymbol(node);
-        if (symbol == null) return false;
-
-        var current = symbol.BaseType;
-        while (current != null && current.SpecialType != SpecialType.System_Object)
-        {
-            if (exemptTypes.Contains(current.Name, StringComparer.OrdinalIgnoreCase)) return true;
-            current = current.BaseType;
-        }
-
-        foreach (var iface in symbol.AllInterfaces)
-            if (exemptTypes.Contains(iface.Name, StringComparer.OrdinalIgnoreCase)) return true;
-
-        return false;
     }
 
     private static bool IsPrivateBackingField(FieldDeclarationSyntax fieldDecl)

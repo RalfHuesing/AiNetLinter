@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -18,8 +19,8 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// aber gegen die resident gehaltene <see cref="Solution"/> statt eines Einmal-Filesystem-Scans, damit
 /// z. B. Test-Fixtures im selben Verzeichnisbaum nicht faelschlich mitgezaehlt werden 
 /// JIT-Kontext). Die zwei Schwellwert-Konstanten sind bewusst aus <see cref="AiNetLinter.Maps.HotspotMapBuilder"/>
-/// dupliziert (dessen Formatierungs-Methoden sind <c>private</c>, eine Abhaengigkeit dorthin wuerde
-/// keinen echten Wiederverwendungs-Gewinn bringen).
+/// dupliziert (beide Klassen bleiben so unabhaengig voneinander instanziierbar); die reine
+/// Tabellen-Formatierung teilen sich beide ueber <see cref="AiNetLinter.Output.HotspotSectionFormatter"/>.
 /// </summary>
 internal static class GetHotspotsScanner
 {
@@ -104,8 +105,8 @@ internal static class GetHotspotsScanner
         sb.AppendLine($"Gescannt: {files.Count} .cs-Dateien | MaxLineCount: {maxLineCount}{scopeSuffix}");
         sb.AppendLine();
 
-        AppendSection(sb, "Kritische Dateien (>=95% des Limits)", critical, maxLineCount);
-        AppendSection(sb, "Warnungs-Dateien (>=80% des Limits)", warning, maxLineCount);
+        HotspotSectionFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", critical.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
+        HotspotSectionFormatter.AppendSection(sb, "Warnungs-Dateien (>=80% des Limits)", warning.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
 
         if (critical.Count == 0 && warning.Count == 0)
         {
@@ -120,30 +121,6 @@ internal static class GetHotspotsScanner
         }
 
         return sb.ToString().TrimEnd();
-    }
-
-    private static void AppendSection(
-        StringBuilder sb, string heading, IReadOnlyList<HotspotFileInfo> files, int maxLineCount)
-    {
-        sb.AppendLine($"## {heading}");
-        sb.AppendLine();
-
-        if (files.Count == 0)
-        {
-            sb.AppendLine("Keine.");
-            sb.AppendLine();
-            return;
-        }
-
-        sb.AppendLine("| Datei | Zeilen | Auslastung | Verbleibend |");
-        sb.AppendLine("|:---|---:|---:|---:|");
-        foreach (var f in files.OrderByDescending(x => x.Lines).ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
-        {
-            var pct = (double)f.Lines / maxLineCount * 100;
-            var remaining = maxLineCount - f.Lines;
-            sb.AppendLine($"| {f.RelativePath} | {f.Lines} | {pct:F0} % | {remaining} Zeilen |");
-        }
-        sb.AppendLine();
     }
 
     private sealed record HotspotFileInfo(string RelativePath, int Lines);

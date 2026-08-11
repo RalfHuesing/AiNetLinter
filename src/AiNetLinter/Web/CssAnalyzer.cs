@@ -68,7 +68,7 @@ internal static class CssAnalyzer
     {
         if (config.MaxCssLineCount <= 0) return;
 
-        var lineCount = CountLines(cssContent);
+        var lineCount = WebTextMetrics.CountLines(cssContent);
         if (lineCount <= config.MaxCssLineCount) return;
 
         violations.Add(CreateViolation(
@@ -134,17 +134,6 @@ internal static class CssAnalyzer
             "Korrigiere den Syntaxfehler im CSS (z. B. fehlende geschweifte Klammern, " +
             "ungueltige Selektor-Syntax). Nach Korrektur wird die volle Analyse ausgefuehrt.");
 
-    private static int CountLines(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return 0;
-        var n = 1;
-        for (int i = 0; i < content.Length; i++)
-        {
-            if (content[i] == '\n') n++;
-        }
-        return n;
-    }
-
     private static int CountStyleRules(Stylesheet stylesheet)
     {
         var count = 0;
@@ -183,12 +172,5 @@ internal static class CssAnalyzer
         string ruleName,
         string details,
         string guidance) =>
-        new RuleViolation
-        {
-            FilePath = filePath,
-            LineNumber = 1,
-            RuleName = ruleName,
-            Details = details,
-            Guidance = guidance,
-        };
+        RuleViolationFactory.Create(filePath, ruleName, details, guidance);
 }

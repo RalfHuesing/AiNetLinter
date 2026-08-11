@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AiNetLinter.Baseline;
 using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
@@ -60,9 +61,9 @@ internal static class SearchPatternScanner
 
         foreach (var projectDir in WebFileCatalog.GetProjectDirectories(solution).OrderBy(d => d, StringComparer.Ordinal))
         {
-            foreach (var filePath in SafeEnumerateFiles(projectDir).OrderBy(f => f, StringComparer.Ordinal))
+            foreach (var filePath in FileSystemExclusionHelpers.SafeEnumerateFiles(projectDir).OrderBy(f => f, StringComparer.Ordinal))
             {
-                if (IsGeneratedPath(filePath)) continue;
+                if (FileSystemExclusionHelpers.IsGeneratedPath(filePath)) continue;
 
                 var relativePath = Path.GetRelativePath(solutionDir, filePath).Replace('\\', '/');
                 CollectFileHits(filePath, relativePath, pattern, regex, hitLines, ref totalMatches);
@@ -97,9 +98,9 @@ internal static class SearchPatternScanner
 
         foreach (var projectDir in WebFileCatalog.GetProjectDirectories(solution).OrderBy(d => d, StringComparer.Ordinal))
         {
-            foreach (var filePath in SafeEnumerateFiles(projectDir).OrderBy(f => f, StringComparer.Ordinal))
+            foreach (var filePath in FileSystemExclusionHelpers.SafeEnumerateFiles(projectDir).OrderBy(f => f, StringComparer.Ordinal))
             {
-                if (IsGeneratedPath(filePath)) continue;
+                if (FileSystemExclusionHelpers.IsGeneratedPath(filePath)) continue;
                 if (FileMatches(filePath, pattern, regex))
                 {
                     var relativePath = Path.GetRelativePath(solutionDir, filePath).Replace('\\', '/');
@@ -158,21 +159,4 @@ internal static class SearchPatternScanner
             : line.Contains(pattern, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static IEnumerable<string> SafeEnumerateFiles(string projectDir)
-    {
-        try
-        {
-            return Directory.EnumerateFiles(projectDir, "*", SearchOption.AllDirectories);
-        }
-        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
-        catch (IOException) { return Array.Empty<string>(); }
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        var sep = Path.DirectorySeparatorChar;
-        return path.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase);
-    }
 }

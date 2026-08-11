@@ -9,16 +9,16 @@ namespace AiNetLinter.Core.Checkers;
 
 internal static class BoolParameterChecker
 {
-    internal static void CheckMethod(MethodDeclarationSyntax node, CheckerContext ctx)
-    {
-        if (IsPrivateOrProtected(node.Modifiers) && ctx.Config.Metrics.MaxBoolParameterCountAllowPrivate) return;
-        Check(node.ParameterList, node.Identifier.Text, node, ctx);
-    }
+    internal static void CheckMethod(MethodDeclarationSyntax node, CheckerContext ctx) =>
+        CheckMember(node, node.Identifier.Text, ctx);
 
-    internal static void CheckConstructor(ConstructorDeclarationSyntax node, CheckerContext ctx)
+    internal static void CheckConstructor(ConstructorDeclarationSyntax node, CheckerContext ctx) =>
+        CheckMember(node, node.Identifier.Text, ctx);
+
+    private static void CheckMember(BaseMethodDeclarationSyntax node, string identifierText, CheckerContext ctx)
     {
         if (IsPrivateOrProtected(node.Modifiers) && ctx.Config.Metrics.MaxBoolParameterCountAllowPrivate) return;
-        Check(node.ParameterList, node.Identifier.Text, node, ctx);
+        Check(node.ParameterList, identifierText, node, ctx);
     }
 
     private static void Check(ParameterListSyntax paramList, string memberName, SyntaxNode node, CheckerContext ctx)

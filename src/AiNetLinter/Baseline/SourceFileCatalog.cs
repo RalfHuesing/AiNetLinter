@@ -186,7 +186,7 @@ public sealed class SourceFileCatalog : IDisposable
         return CollectValidDocuments(project, solutionDir, isTestProject);
     }
 
-    private static List<CatalogDocumentWorkItem> CollectValidDocuments(
+    internal static List<CatalogDocumentWorkItem> CollectValidDocuments(
         Project project,
         string? solutionDir,
         bool isTestProject)

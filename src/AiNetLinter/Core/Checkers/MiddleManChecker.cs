@@ -62,7 +62,7 @@ internal static class MiddleManChecker
         if (HasExemptSuffix(className, ctx)) return true;
 
         // Basisklassen-Ausnahme prüfen
-        if (HasExemptBaseType(node, ctx)) return true;
+        if (ExemptBaseTypeResolver.HasExemptBaseType(node, ctx, ctx.Config.Global.MiddleManExemptBaseTypes)) return true;
 
         return false;
     }
@@ -252,24 +252,4 @@ internal static class MiddleManChecker
         return true;
     }
 
-    private static bool HasExemptBaseType(ClassDeclarationSyntax node, CheckerContext ctx)
-    {
-        var exemptTypes = ctx.Config.Global.MiddleManExemptBaseTypes;
-        if (exemptTypes == null || exemptTypes.Count == 0) return false;
-
-        var symbol = ctx.SemanticModel.GetDeclaredSymbol(node);
-        if (symbol == null) return false;
-
-        var current = symbol.BaseType;
-        while (current != null && current.SpecialType != SpecialType.System_Object)
-        {
-            if (exemptTypes.Contains(current.Name, StringComparer.OrdinalIgnoreCase)) return true;
-            current = current.BaseType;
-        }
-
-        foreach (var iface in symbol.AllInterfaces)
-            if (exemptTypes.Contains(iface.Name, StringComparer.OrdinalIgnoreCase)) return true;
-
-        return false;
-    }
 }

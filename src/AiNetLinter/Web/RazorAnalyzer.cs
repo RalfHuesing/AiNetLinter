@@ -101,7 +101,7 @@ internal static partial class RazorAnalyzer
         string content, string filePath, RazorConfig config, List<RuleViolation> violations)
     {
         if (config.MaxRazorLineCount <= 0) return;
-        var lineCount = CountLines(content);
+        var lineCount = WebTextMetrics.CountLines(content);
         if (lineCount <= config.MaxRazorLineCount) return;
 
         violations.Add(new RuleViolation

@@ -60,16 +60,6 @@ internal sealed class LinterAutoFixer
                ruleName == NullableRule;
     }
 
-    private static Document? FindDocumentByPath(Solution solution, string filePath)
-    {
-        foreach (var project in solution.Projects)
-        {
-            var doc = project.Documents.FirstOrDefault(d => string.Equals(d.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
-            if (doc != null) return doc;
-        }
-        return null;
-    }
-
     private static async Task<HashSet<INamedTypeSymbol>> CollectBaseTypesAsync(Solution solution)
     {
         var baseTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
@@ -107,7 +97,7 @@ internal sealed class LinterAutoFixer
         List<RuleViolation> fileViolations,
         FixContext context)
     {
-        var document = FindDocumentByPath(solution, filePath);
+        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, filePath);
         if (document?.FilePath == null) return (solution, 0);
 
         var (updatedDoc, fixedCount) = await FixDocumentAsync(document, fileViolations, context.BaseTypes);

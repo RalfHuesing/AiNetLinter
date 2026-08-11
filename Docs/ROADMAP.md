@@ -625,4 +625,40 @@ gemeinsame Einstiegspunkt fuer `find_references`, `get_impact`, `get_type_hierar
 
 ---
 
+## DRY-Konsolidierung (Drift-Audit via `find_duplicates`)
+
+`find_duplicates(scopeDir="src", minTokens=20)` fand 188 Cluster (13 `exact`, 24 `near`, 151
+`fuzzy`) ueber die gesamte Solution. Nach Konsolidierung: 165 Cluster (0 `exact`, 16 `near`,
+149 `fuzzy`) — die verbleibenden `near`-Cluster sind geprueft und als fachlich legitime,
+strukturell nur zufaellig aehnliche Testmethoden (parametrisierte Szenario-Varianten) eingestuft.
+
+- [x] Produktionscode: `SyncAgentRulesCommand`/`AgentRulesGenerator.ResolveBaseDirectory`,
+  `BoolParameterChecker.CheckMethod`/`CheckConstructor`, `DiffImpactAnalyzer`/
+  `GitChangedFilesResolver.FindGitRoot` (neu: `GitRepositoryLocator`), `DiffImpactAnalyzer`/
+  `LinterAutoFixer.FindDocumentByPath`, `HotspotMapBuilder`/`GetHotspotsScanner.AppendSection`
+  (neu: `Output.HotspotSectionFormatter`), `GetViolationsScanner`/`MetricsTreeRoslynScanner`/
+  `SafeguardScanner.ResolveSeverity` (neu: `RuleRegistry.ResolveSeverity`), `CssAnalyzer`/
+  `JsAnalyzer`/`RazorAnalyzer.CountLines` (neu: `Web.WebTextMetrics`) konsolidiert.
+- [x] `near`-Cluster mit produktivem Befund konsolidiert: `ImmutabilityChecker`/
+  `MiddleManChecker.HasExemptBaseType` (neu: `Core.Checkers.ExemptBaseTypeResolver`),
+  `UiFileSeparationChecker`/`CssAnalyzer`/`JsAnalyzer.CreateViolation` (neu:
+  `Models.RuleViolationFactory`), `SourceFileCatalog`/`LinterEngine.CollectValidDocuments`,
+  `StateChecker.CheckConstructorDependencies`/`CheckPrimaryConstructorDependencies` (gemeinsamer
+  `ReportIfExceedsDependencyLimit`-Kern).
+- [x] Refactoring-Drift gefunden und gefixt: `SearchPatternScanner.IsGeneratedPath` und
+  `SuppressionFileResolver.IsGeneratedPath` bauten den bereits zentralisierten
+  `Baseline.FileSystemExclusionHelpers`/`SourceFileCatalog.IsGeneratedPath`-Filter partiell nach
+  und liessen dabei den Worktree-Ausschluss aus — beide auf die zentrale Implementierung
+  umgestellt (behebt einen latenten Bug: vervielfachte Treffer bei `search_pattern`/
+  Suppression-Sync innerhalb von `.claude/worktrees/`).
+- [x] Test-Helper: `TestHelper` um `DeleteFileIfExists`, `DeleteDirectoryIfExists`,
+  `TryDeleteLogFileAndDirectory`, `FindSlnxFile`, `BuildCalibratedMethod`/
+  `CalibratedBaseStatements`, `CreateSemanticModel`, `CreateFaultySolution` ergaenzt (jeweils
+  mehrfach dupliziert in Testklassen); `ThrowingTextLoader` (4x als private Nested-Klasse
+  dupliziert) in eine eigene Top-Level-Datei extrahiert; `McpMiniFixtureBase<TWorkspace>` fuer
+  `BaselineMcpFixture`/`SymbolGraphMcpFixture` (analog zum bestehenden `FixtureWorkspaceBase`-
+  Muster fuer die zugehoerigen Workspaces).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

@@ -27,7 +27,7 @@ internal static class SyncAgentRulesCommand
             return 1;
         }
 
-        string baseDir = ResolveBaseDirectory(args.TargetPath);
+        string baseDir = AgentRulesGenerator.ResolveBaseDirectory(args.TargetPath);
         var mdcPath = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, args.AgentRulesPath);
         var agentRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
@@ -83,18 +83,5 @@ internal static class SyncAgentRulesCommand
         File.WriteAllText(mdcPath, content, Encoding.UTF8);
         c.WriteLine($"[INFO]: Agent-Regeldatei erfolgreich synchronisiert unter: {mdcPath}");
         return 0;
-    }
-
-    internal static string ResolveBaseDirectory(string targetPath)
-    {
-        if (Directory.Exists(targetPath))
-        {
-            return targetPath;
-        }
-        if (File.Exists(targetPath))
-        {
-            return Path.GetDirectoryName(targetPath) ?? targetPath;
-        }
-        return targetPath;
     }
 }

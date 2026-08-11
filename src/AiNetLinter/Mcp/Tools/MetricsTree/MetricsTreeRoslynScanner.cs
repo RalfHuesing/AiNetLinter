@@ -85,18 +85,12 @@ internal static class MetricsTreeRoslynScanner
         return scoped.Select(f =>
         {
             var fileViolations = byFile.TryGetValue(f.AbsolutePath, out var list) ? list : new List<RuleViolation>();
-            var errorCount = fileViolations.Count(v => ResolveSeverity(v) == "error");
+            var errorCount = fileViolations.Count(v => RuleRegistry.ResolveSeverity(v) == "error");
             return new FileMetric(
                 f.RelativePath, CommentLines: 0, CodeLines: 0, Bytes: 0,
                 ViolationCount: fileViolations.Count, ErrorCount: errorCount,
                 WarningCount: fileViolations.Count - errorCount);
         }).ToList();
-    }
-
-    private static string ResolveSeverity(RuleViolation v)
-    {
-        if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
-        return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
     }
 
     private static async Task<List<FileMetric>> ComputeComplexityMetricsAsync(
