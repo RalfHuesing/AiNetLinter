@@ -112,7 +112,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | [x] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
-| [ ] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
+| [x] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
 | [ ] | M9 | **Drift-Audit (Naming-Drift + DRY)** — noch nicht spezifiziert, siehe [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md) | TBD | TBD | Nutzer-Anliegen 2026-08-11 |
 
 **Gesamt M-Phase:** 4-6 Wochen (M9 noch ohne Aufwandsschätzung, da unspezifiziert). Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
@@ -467,13 +467,13 @@ Plus 1-2 MCP-Tools:
 **Abhängigkeiten:** Keine (reine Entfernung)
 **Aufwand:** 2-3 Tage (Loeschen + Doku-Bereinigung + Test-Anpassung)
 **Akzeptanzkriterien:**
-- [ ] `--eval`/`--list-evals`/`--spec` vollstaendig entfernt (Code + Tests + Doku)
-- [ ] `--map` vollstaendig entfernt (Code + Tests + Doku)
-- [ ] `VocabularyMapBuilder`/`StructureMapBuilder` geloescht
-- [ ] `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben bestehen, MCP-Tools (`get_hotspots`, `get_file_skeleton`) unveraendert funktionsfaehig
-- [ ] Verifiziert: `ainetlinter --eval ...` und `ainetlinter --map ...` liefern "nicht erkannt"-Fehlermeldung + Exit-Code ≠ 0 (kein Extra-Code, folgt automatisch aus der Entfernung)
-- [ ] `Docs/ROADMAP.md` Epic-31-Eintrag aktualisiert (nicht geloescht) mit Verweis auf die Streichung
-- [ ] `dotnet build`/`dotnet test` (Volllauf) gruen
+- [x] `--eval`/`--list-evals`/`--spec` vollstaendig entfernt (Code + Tests + Doku)
+- [x] `--map` vollstaendig entfernt (Code + Tests + Doku)
+- [x] `VocabularyMapBuilder`/`StructureMapBuilder` geloescht
+- [x] `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben bestehen, MCP-Tools (`get_hotspots`, `get_file_skeleton`) unveraendert funktionsfaehig — verifiziert per `GetFileSkeletonToolTests`/`GetHotspotsToolTests`/`HotspotMapBuilderTests` (17/17 gruen)
+- [x] Verifiziert: `ainetlinter --eval naming-drift` und `ainetlinter --map hotspots` liefern "nicht erkannt"-Fehlermeldung + Exit-Code 1 (kein Extra-Code, folgt automatisch aus der Entfernung) — empirisch am 2026-08-11 bestaetigt
+- [x] `Docs/ROADMAP.md` Epic-30/31-Eintraege aktualisiert (nicht geloescht) mit Verweis auf die Streichung
+- [x] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) gruen — 1399/1399
 
 **Risiko:** Niedrig (reine Entfernung, keine neue Logik)
 **Quelle:** Nutzer-Entscheidung 2026-08-11, Dogfooding-Session 2026-08-10/11
