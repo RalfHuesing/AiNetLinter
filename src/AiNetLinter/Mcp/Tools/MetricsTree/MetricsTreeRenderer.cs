@@ -9,8 +9,8 @@ namespace AiNetLinter.Mcp.Tools.MetricsTree;
 /// <summary>
 /// Modus-agnostischer Baum-Knoten fuer <c>metrics_tree</c>. Kennt weder <see cref="Microsoft.CodeAnalysis.Solution"/>
 /// noch die Modus-Herkunft der Werte — <see cref="DisplayLine"/> ist bereits vorformatiert, damit
-/// derselbe Typ sowohl von den Datei-Walk-Modi (EPIC-01) als auch von den Roslyn-Modi (EPIC-02)
-/// produziert werden kann.
+/// derselbe Typ sowohl von den Datei-Walk-Modi als auch von den Roslyn-Modi produziert werden
+/// kann.
 /// </summary>
 internal sealed record MetricsTreeNode(
     string Name,
