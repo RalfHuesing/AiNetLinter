@@ -279,7 +279,7 @@ schreibt der Orchestrator den Korrektur-Plan selbst und ruft dich gar
 nicht erst — landest du hier, ist per Definition Interpretation gefragt.
 
 - **Input:** `step-NNN/step-review.md` (Abschnitt „Findings") +
-  `step-NNN/step-plan.md` (ursprünglicher Scope) + `step-NNN/step-result.md`
+  `step-NNN/step-plan.md` (Scope) + `step-NNN/step-result.md`
   — **nicht** `konzept.md`/`roadmap.md` neu durchgehen.
 - **Output:** `step-MMM/step-plan.md` — flach, nächste freie Nummer der
   Task-weiten Sequenz (Orchestrator gibt sie vor), **nicht** unter
@@ -293,7 +293,7 @@ nicht erst — landest du hier, ist per Definition Interpretation gefragt.
   `auto_fixable: ja` dürfen als zusätzliches Batch-Item angehängt werden,
   identisch zum regulären Step-Modus (Schritt 3 oben) — alles andere aus
   `tech-debt.md` bleibt außen vor.
-- **War der ursprüngliche Step ein Batch:** item-genaue Scope-Disziplin —
+- **War der korrigierte Step ein Batch:** item-genaue Scope-Disziplin —
   plane ausschließlich die konkret beanstandeten Items neu, nie den
   ganzen Batch. Bereits `approved` Items desselben Batches bleiben
   unangetastet (siehe `../../spec.md` §6.2.1).
