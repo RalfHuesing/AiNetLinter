@@ -14,6 +14,10 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 
 - **`AiNetLinter.slnx`** — enthaelt derzeit Produkt- und einziges Testprojekt und ist fuer eine moegliche physische Testtrennung relevant. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz. (zuletzt: planning)
+- **`src/AiNetLinter.UnitTests/`** — vorgesehene neue schnelle Assembly fuer Unit- und In-Memory-Component-Tests. (zuletzt: planning)
+- **`src/AiNetLinter.IntegrationTests/`** — vorgesehene neue Infrastruktur-Assembly fuer Integration, Dogfood, Performance und Stress. (zuletzt: planning)
+- **`src/AiNetLinter.TestKit/`** — vorgesehene gemeinsame Testbibliothek fuer deklarative Builder und guenstige Hilfen ohne teure Hosts. (zuletzt: planning)
+- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status- und Abdeckungsindex fuer die Strangler-Migration des Legacy-Testprojekts. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/xunit.runner.json`** — steuert Collection-Parallelitaet, Threadzahl und Long-Running-Diagnostik. (zuletzt: planning)
 - **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche. (zuletzt: planning)
 - **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates. (zuletzt: planning)
@@ -70,4 +74,3 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 
 - **`TestResults/final-run.trx`** — vorhandener 1.471-Test-Snapshot mit 228,38 Sekunden Wall Clock fuer die Ausgangsdiagnose. (zuletzt: planning)
 - **`TestResults/fulltest.trx`** — aelterer 1.349-Test-Snapshot mit 158,18 Sekunden Wall Clock als Hinweis auf Laufzeitdrift. (zuletzt: planning)
-

@@ -6,10 +6,8 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-11
 open_questions:
-  - Q1-gate-und-dogfood
-  - Q2-testprojekt-grenzen
-  - Q3-performance-ziel
-  - Q4-abdeckungs-invariante
+  - Q5-legacy-quarantaene
+  - Q6-legacy-slice-baseline
 ---
 
 # Konzept: Tests beschleunigen, ohne Leitplanken abzubauen
@@ -37,6 +35,24 @@ guenstigsten Ebene ausgefuehrt, die ihren eigentlichen Vertrag noch real prueft.
 derselben Solution wird ueber langlebige Fixtures und injizierbare `Solution`-/`SourceFileCatalog`-
 Einstiegspunkte vermieden. Mutable Datei- und Refresh-Szenarien bleiben isoliert und teilen keinen
 veraenderlichen Workspace.
+
+## Verbindliche Entscheidungen aus der Konzeptklaerung
+
+- Der normale Entwickler-/PR-Lauf umfasst `Unit + Component + hermetische Integration`.
+  Vollstaendiges Dogfood, Performance und Stress bleiben verpflichtend, laufen aber in eigenen
+  Profilen/Cadences; am Ende dieses Refactoring-Tasks werden alle Profile einmal nachgewiesen.
+- Die Testgrenzen werden physisch getrennt: eine schnelle Test-Assembly fuer Unit/Component und
+  eine Infrastruktur-Test-Assembly fuer Integration/Dogfood/Performance/Stress. Gemeinsame
+  Builder und Fixtures erhalten eine kleine TestKit-Heimat ohne eigene Testsammlung.
+- Es gibt kein hartes absolutes Sekunden-SLO, weil Fremdlast auf der Maschine das Ergebnis
+  verfaelschen kann. Abnahmegrundlage sind strukturelle Invarianten und ein wiederholter relativer
+  Vorher-/Nachher-Nachweis unter dokumentierten Bedingungen.
+- Die heutige Anzahl und Identitaet einzelner Testmethoden ist keine Invariante. Redundante oder
+  triviale Tests duerfen konsolidiert bzw. entfernt werden; alle nicht-trivialen fachlichen,
+  technischen und regressionsrelevanten Vertraege muessen lueckenlos abgedeckt bleiben.
+- Die spaetere Drift-Loop-Umsetzung verwendet wenige grosse, vertikale Steps. Dokuzeilen,
+  Einzelklassen oder einzelne Testverschiebungen werden nicht als eigene Steps geplant, sondern
+  zusammen mit einem vollstaendigen Architektur-/Testkohorten-Ergebnis geliefert.
 
 ## Ziel (Was & Warum)
 
@@ -77,6 +93,10 @@ ersten Refactoring eine reproduzierbare Median-Baseline auf der Zielmaschine erf
   `Component`, `Integration`, `Dogfood`, `Performance` und `Stress`.
 - Eine gemeinsame Testplattform fuer deklarativ aufgebaute In-Memory-Solutions und fuer einmalig
   geladene Mini-Solutions.
+- Aufbau der neuen Testarchitektur parallel zum bisherigen Testprojekt nach einem kontrollierten
+  Strangler-Muster; das Altprojekt ist Migrationsquelle, nicht Zielarchitektur.
+- Ein versioniertes Migrationsledger, das jede bisherige Testklasse bzw. jeden Testvertrag als
+  `pending`, `migrated`, `consolidated` oder `removed-trivial` mit neuem Abdeckungsort fuehrt.
 - Trennung zwischen immutable/read-only Fixtures und mutierenden, exklusiven Test-Workspaces.
 - Wiederverwendbare, bereits geladene `Solution`-/`SourceFileCatalog`-Objekte fuer Scanner,
   Renderer, Filter- und Analyse-Tests.
@@ -218,9 +238,18 @@ Mindestens folgende Drift-Guards sind vorgesehen:
 - Eine kleine Inventardatei oder ein generierter Report ordnet migrierte teure Klassen ihrem
   eigentlichen Vertrag und dem neuen Abdeckungsort zu.
 
-Die technische Durchsetzung haengt von der noch offenen Projektgrenzen-Entscheidung ab: separate
-Test-Assemblies koennen einen Teil per Referenzgrenze erzwingen; bei einer Assembly uebernimmt ein
-Architekturtest den groesseren Anteil.
+Die technische Durchsetzung nutzt die beschlossene physische Grenze:
+
+- **`AiNetLinter.UnitTests`** enthaelt Unit- und Component-Tests und kann keine
+  MSBuild-/Prozess-Testinfrastruktur referenzieren.
+- **`AiNetLinter.IntegrationTests`** enthaelt Integration, Dogfood, Performance und Stress mit
+  expliziten Kategorien und Laufprofilen.
+- **`AiNetLinter.TestKit`** enthaelt nur gemeinsam benoetigte deklarative Solution-Builder,
+  Fixture-Definitionen, Temp-/Output-Helfer und Coverage-Ledger-Unterstuetzung; teure Hosts bleiben
+  in der Integration-Assembly, damit die schnelle Assembly sie nicht versehentlich konsumiert.
+
+Die Namen sind Zielnamen; falls der Drift-Loop anhand von Projektregeln einen gleichwertigen Namen
+begruendet, bleibt die Abhaengigkeitsrichtung massgeblich.
 
 ### 7. Sparsame Verifikation waehrend der Umsetzung
 
@@ -246,6 +275,63 @@ Jeder spaetere Step-Plan nennt deshalb vor der Umsetzung explizit seinen gezielt
 warum dieser den betroffenen Vertrag abdeckt. Der Coder darf den heutigen allgemeinen
 `Category!=Stress`-Lauf nicht als Standardkommando pro Step verwenden. Die Pflicht zum finalen
 Vollnachweis bleibt davon unberuehrt.
+
+### 8. Strangler-Migration des bisherigen Testprojekts
+
+Das bestehende `AiNetLinter.Tests` wird als **Legacy-Testbestand** behandelt. Ein Neubau parallel
+dazu ist hier sinnvoller als eine In-place-Mischphase, weil Projektgrenzen, Abhaengigkeiten und
+Laufprofile andernfalls waehrend fast der gesamten Migration unscharf blieben.
+
+Vorgesehener Vertrag:
+
+1. Neue Zielprojekte und Guards werden zuerst arbeitsfaehig aufgebaut.
+2. Das Legacy-Projekt wird aus dem normalen Solution-/PR-Testpfad quarantiniert und nicht mehr als
+   allgemeines Gate ausgefuehrt.
+3. Tests werden in fachlich zusammenhaengenden Kohorten gelesen, bewertet und in die passende neue
+   Ebene uebernommen; dabei darf Testcode neu geschrieben statt blind verschoben werden.
+4. Nach erfolgreicher Uebernahme wird der entsprechende Test aus dem Legacy-Projekt geloescht und
+   das Migrationsledger im selben Step aktualisiert.
+5. Konsolidierung ist erlaubt, wenn das Ledger benennt, welche alten Vertraege durch welchen neuen
+   Test abgedeckt sind. `removed-trivial` braucht eine kurze Begruendung.
+6. Erst wenn `pending = 0`, die Architekturguards gruen und alle finalen Profile nachgewiesen sind,
+   wird das Legacy-Projekt vollstaendig geloescht.
+
+Das Ledger verhindert, dass "alt nicht mehr laufen lassen" zu "alt vergessen" wird. Es zaehlt
+nicht nur Dateien oder Methoden, sondern beschreibt bei nicht-trivialen Faellen den geschuetzten
+Vertrag: Erfolgsweg, Branch, Fehlerweg, Regression, Konfiguration oder Systemgrenze.
+
+Nicht-trivial und damit zwingend testpflichtig sind insbesondere:
+
+- fachliche Verzweigungen, Grenz- und Fehlerfaelle,
+- oeffentliche bzw. agenten-/CLI-/MCP-sichtbare Vertraege,
+- Konfigurations-, Filter-, Suppression- und Severity-Verhalten,
+- Roslyn-/MSBuild-/Dateisystem-/Prozessgrenzen,
+- jede ehemals wegen eines konkreten Bugs eingefuehrte Regression,
+- Parallelitaet, Cancellation, Loading, Refresh und deterministisches Fehlerverhalten.
+
+Reine Konstruktor-/Property-Durchreichung, Compiler-verifizierte Record-Semantik oder echte
+Duplikate ohne zusaetzlichen Vertrag koennen als trivial bzw. konsolidiert eingestuft werden.
+
+### 9. Grosse Drift-Loop-Steps
+
+Der spaetere Drift-Loop soll keine Armada fuer Mikroaenderungen starten. Ziel sind ungefaehr fuenf
+bis sieben grosse, reviewbare Vertikalschnitte. Ein Step liefert jeweils eine vollstaendige
+Testkohorte inklusive benoetigter Produkt-Seams, Infrastruktur, Migration, gezielter Verifikation,
+Ledger-Update und zugehoeriger Dokumentation.
+
+Sinnvolle Kohorten sind beispielsweise:
+
+- Zielprojekte, TestKit, Architekturguards, Ledger und Legacy-Quarantaene als ein Fundament-Step.
+- Reine Checker-/Parser-/Renderer-Tests als grosse Fast-Test-Kohorte.
+- In-Memory-Roslyn-, Filter-, Scanner- und Tooltests samt objektbasierten Produkt-Seams.
+- MSBuild-, Fixture-, Baseline-, Datei- und Refresh-Vertraege.
+- CLI-, MCP-Prozess-, Dogfood-, Performance- und Stressvertraege.
+- Restmigration, Legacy-Loeschung, finale Laufprofile, Messbericht und Dokumentation.
+
+Die Aufzaehlung ist eine Groessen-/Schnittvorgabe, keine vorweggenommene Step-Planung. Der Planer
+im Drift-Loop schneidet anhand des dann aktuellen Codes. Verboten sind eigenstaendige Steps nur
+fuer eine Dokuzeile, eine Trait-Aenderung, eine einzelne Testklasse oder einen mechanischen Move,
+wenn diese Arbeit Bestandteil derselben Kohorte sein kann.
 
 ## Zielbild
 
@@ -335,22 +421,19 @@ Aenderungsbereiche sind vor allem:
 
 ## Grober Loesungsansatz
 
-1. Verbindliche Baseline und Inventar aller teuren Testklassen erstellen.
-2. Laufprofile, Projektgrenzen und verbotene Abhaengigkeiten festlegen und zuerst technisch
-   absichern.
-3. Gemeinsame In-Memory-Solution-Factory und read-only Fixture-Lebensdauer einfuehren.
+1. Einmalige Ausgangsbaseline, vollstaendiges Migrationsledger und neue Projektgrenzen aufbauen.
+2. Legacy-Projekt nach der noch offenen Quarantaene-Entscheidung aus dem normalen Gate nehmen.
+3. Gemeinsame In-Memory-Solution-Factory, read-only Fixture-Lebensdauer und Architekturguards
+   einfuehren.
 4. Produktive Lade-/Ausfuehrungs-Seams dort ergaenzen, wo Tests heute nur deshalb MSBuild nutzen.
-5. Breite Filter-, Tool-, Scanner- und Renderer-Matrizen auf Component-Tests migrieren.
-6. Mini-Solution-Integrationstests auf einmalig geladene Hosts umstellen; mutable Szenarien ueber
-   isolierte Leases fuehren.
-7. CLI-/MCP-E2E-Matrizen auf direkte Komponentenvertraege plus repraesentative Adaptertests
-   aufteilen.
-8. Dogfood-, Performance- und Stressprofile inklusive Parallelitaetsbudgets und CI-Cadence
+5. Tests in grossen fachlichen Kohorten bewerten, konsolidieren und in die passende Assembly bzw.
+   Ebene migrieren; erledigte Quellen und Ledger-Eintraege im selben Step bereinigen.
+6. Dogfood-, Performance- und Stressprofile inklusive Parallelitaetsbudgets und CI-Cadence
    festziehen.
-9. Die Umsetzung pro Step nur mit dem jeweils kleinsten ausreichenden Filter verifizieren und
+7. Die Umsetzung pro Step nur mit dem jeweils kleinsten ausreichenden Filter verifizieren und
    breitere Profilgates nur an den festgelegten Meilensteinen ausfuehren.
-10. Abdeckungsinventar, Dokumentation und Vorher-/Nachher-Messung abschliessen; erst dann alte,
-   redundant gewordene Ausfuehrungspfade aus Tests entfernen.
+8. Bei `pending = 0` das Legacy-Projekt loeschen, Dokumentation und relativen
+   Vorher-/Nachher-Messbericht abschliessen und danach einmal alle Profile final verifizieren.
 
 Die konkrete Step-Zerlegung erfolgt spaeter im Drift-Loop anhand des dann tatsaechlichen
 Projektzustands. Dieses Konzept schreibt Architektur, Invarianten und Abnahmekriterien fest, nicht
@@ -360,6 +443,8 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
 
 - Jede heute vorhandene Testklasse ist einem Laufprofil und einem konkreten getesteten Vertrag
   zugeordnet.
+- Das Migrationsledger enthaelt keinen `pending`-Eintrag; jede Konsolidierung bzw. Entfernung ist
+  mit Abdeckungsort oder Trivialitaetsbegruendung nachvollziehbar.
 - Fuer jede migrierte/ersetzte teure Assertion ist der neue Abdeckungsort nachvollziehbar; es gibt
   keine stillschweigende Schutzluecke.
 - Unit- und Component-Tests koennen technisch weder MSBuild-Solutions noch externe Prozesse oder
@@ -384,45 +469,30 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
   Testfilter; der heutige Volltest wird nicht nach jedem Step wiederholt.
 - Nach Abschluss aller Refactoring-Steps wird genau der vereinbarte vollstaendige Endnachweis
   ausgefuehrt, auch wenn alle gezielten Step-Tests zuvor gruen waren.
-- Vorher-/Nachher-Protokoll dokumentiert Median, Streuung, Testanzahl und Profilzeiten. Das konkrete
-  Zeit-SLO entspricht Q3.
+- Vorher-/Nachher-Protokoll dokumentiert Median, Streuung, Testanzahl, Profilzeiten und erkennbare
+  Fremdlast. Eine Verbesserung muss ueber mehrere Laeufe konsistent sichtbar sein; kein absoluter
+  Sekundenwert und kein einzelner Bestlauf entscheidet ueber die Abnahme.
+- Der schnelle Lauf ist strukturell frei von MSBuild, externen Prozessen und echtem Repository;
+  der normale PR-Lauf enthaelt keine Dogfood-, Performance- oder Stressmatrix.
+- Das Legacy-Testprojekt ist am Ende geloescht und wird von keinem Solution-, CI- oder
+  Dokumentationsvertrag mehr referenziert.
 - Dokumentation und Befehle in `AGENTS.md`/relevanten Docs beschreiben den neuen Standard.
 - Commits sind klein, Conventional Commits auf Deutsch und tragen den Task-Suffix
   `[speedup-tests]`; kein Amend/Rebase und kein Push durch den Loop.
 
 ## Offene Punkte
 
-### Q1 — Normaler Gate-Lauf und Dogfood
+### Q5 — Legacy-Projekt wirklich aus dem normalen Gate quarantinieren?
 
-Soll der verpflichtende Entwickler-/PR-Lauf nur `Unit + Component + hermetische Integration`
-enthalten und `Dogfood + Performance + Stress` in eigenen verpflichtenden Zeitplaenen laufen?
-Empfehlung: **ja**, mit einem sehr kleinen echten Adapter-Smoke im PR-Gate und vollstaendigem
-Dogfood mindestens nightly bzw. vor Release. "Alles testen" bedeutet dann alle Profile mit
-expliziter Cadence, nicht alles bei jedem lokalen Edit.
+Empfehlung: **ja**. Sobald neue Zielprojekte, Ledger und ein erster repraesentativer Safety-Smoke
+stehen, wird `AiNetLinter.Tests` aus `AiNetLinter.slnx` bzw. dem normalen Testpfad genommen und nur
+noch als Migrationsquelle im Repository gehalten. Dadurch bremst es den Neubau nicht, kann aber
+auch nicht versehentlich als weiterhin gepruefte Leitplanke missverstanden werden.
 
-### Q2 — Testprojekt-Grenzen
+### Q6 — Darf eine gerade migrierte Legacy-Kohorte einmal gezielt laufen?
 
-Soll die Trennung auch physisch ueber Testprojekte erzwungen werden?
-Empfehlung: **zwei Test-Assemblies**: eine schnelle Assembly fuer Unit/Component und eine
-Infrastruktur-Assembly fuer Integration/Dogfood/Performance/Stress; gemeinsame Builder bleiben in
-einem kleinen TestKit oder werden so verortet, dass keine zyklische Referenz entsteht. Alternative
-ist eine Assembly mit Architekturtests, aber schwacherer Compile-Time-Grenze.
-
-### Q3 — Messbares Performance-Ziel
-
-Welches SLO soll verbindlich werden? Empfehlung auf Basis des vorhandenen 228-Sekunden-Laufs:
-
-- schneller `Unit + Component`-Loop: Median maximal 10 Sekunden,
-- normales PR-Gate inklusive hermetischer Integration: Median maximal 60 Sekunden,
-- zusaetzlich mindestens 60 % schneller als die zu Beginn der Umsetzung frisch gemessene Baseline.
-
-Die Messung sollte jeweils aus mindestens drei vergleichbaren Laeufen auf derselben Maschine
-bestehen; der Median entscheidet, nicht ein einzelner Bestwert.
-
-### Q4 — Was ist die Abdeckungsinvariante?
-
-Empfehlung: Nicht die absolute Anzahl heutiger Tests konservieren, sondern jeden fachlichen und
-technischen Vertrag in einer Coverage-Matrix. Redundante E2E-Ausfuehrungen duerfen durch
-gleichwertige Component-Assertions plus repraesentativen Adaptertest ersetzt werden. Wenn du
-stattdessen jede heutige Testmethode als unveraenderliche Invariante erhalten willst, schraenkt das
-die moegliche Beschleunigung deutlich ein.
+Empfehlung: **ja, aber nur als gezielte Ausnahme**. Kein alter Volllauf waehrend der Migration.
+Wenn fuer eine Kohorte kein verlaessliches vorhandenes TRX-Ergebnis reicht, darf ihr engster alter
+Filter unmittelbar vor der Uebernahme einmal als Verhaltensbaseline laufen. Danach werden nur die
+neuen Tests ausgefuehrt. Ein striktes "Legacy niemals mehr starten" ist schneller, erhoeht aber das
+Risiko, bereits heute rote oder umgebungsabhaengige Erwartungen ungeprueft zu kopieren.
