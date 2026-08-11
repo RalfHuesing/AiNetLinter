@@ -10,12 +10,12 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die server-eigenen Wartungs-/Diagnose-Tools (<c>reload_config</c>, Q2;
-/// <c>get_server_health</c>, Q3 — <c>tasks/features/05-roadmap.md</c> §3) an der von
-/// <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Eigene Registrar-Klasse statt
-/// Anhaengen an eine bestehende Gruppe, weil beide Tools semantisch den Server-Prozess selbst
-/// betreffen (Config-Reload, Health-Snapshot) statt die Solution/den Symbolgraph zu befragen —
-/// passt zu keiner der bestehenden Gruppen (Symbolgraph, Dateistruktur, Analyse, Symbol-Body).
+/// Registriert die server-eigenen Wartungs-/Diagnose-Tools (<c>reload_config</c>,
+/// <c>get_server_health</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
+/// Tool-Collection. Eigene Registrar-Klasse statt Anhaengen an eine bestehende Gruppe, weil beide
+/// Tools semantisch den Server-Prozess selbst betreffen (Config-Reload, Health-Snapshot) statt die
+/// Solution/den Symbolgraph zu befragen — passt zu keiner der bestehenden Gruppen (Symbolgraph,
+/// Dateistruktur, Analyse, Symbol-Body).
 /// </summary>
 internal static class ServerMaintenanceToolRegistrations
 {
