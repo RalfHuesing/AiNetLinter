@@ -97,8 +97,14 @@ public sealed class LinterEngine
     {
         var state = CreateAnalysisState(solution);
 
+        // Rein dateisystembasiert (kein MSBuildWorkspace-Diagnostics-Parsing) und deshalb sowohl
+        // fuer den Catalog-Pfad (CLI) als auch fuer den reinen Solution-Pfad (residente MCP-Tools,
+        // die nie einen SourceFileCatalog sehen) einheitlich verfuegbar — siehe rationale.md.
+        var projectsNeedingRestore = ProjectRestoreState.ComputeProjectsNeedingRestore(solution);
+        ReportRestoreDiagnostics(solution, projectsNeedingRestore);
+
         _profiler.StartPhase("DocumentAnalysis");
-        await AnalyzeSolutionAsync(state, catalog, cache, ct);
+        await AnalyzeSolutionAsync(state, catalog, cache, projectsNeedingRestore, ct);
         _profiler.StopPhase("DocumentAnalysis");
 
         _profiler.StartPhase("PostAnalysis");
@@ -119,6 +125,26 @@ public sealed class LinterEngine
         return state.Violations.ToArray();
     }
 
+    /// <summary>
+    /// Meldet nicht restorete Projekte EINMAL pro Projekt statt tausender Einzel-Violations pro
+    /// unaufloesbarem using (siehe <see cref="Checkers.PhantomDependencyChecker"/>) — die
+    /// eigentliche Ursache ist der fehlende Restore, nicht einzelne "using"-Zeilen.
+    /// </summary>
+    private void ReportRestoreDiagnostics(Solution solution, IReadOnlySet<ProjectId> projectsNeedingRestore)
+    {
+        if (projectsNeedingRestore.Count == 0) return;
+
+        foreach (var project in solution.Projects)
+        {
+            if (!projectsNeedingRestore.Contains(project.Id)) continue;
+
+            _console.WriteError(LinterErrorFormatter.Format(
+                LinterErrorCodes.ProjectNotRestored,
+                $"Projekt '{project.Name}' ist nicht restored (obj/project.assets.json fehlt oder ist aelter als die .csproj) — NuGet-Referenzen bleiben im Workspace unaufgeloest.",
+                hint: $"Fuehre 'dotnet restore \"{project.FilePath}\"' aus, bevor sinnvolle Linter-/MCP-Ergebnisse fuer dieses Projekt moeglich sind."));
+        }
+    }
+
     private static AnalysisState CreateAnalysisState(Solution solution)
     {
         return new AnalysisState(
@@ -136,14 +162,14 @@ public sealed class LinterEngine
         CancellationToken = ct,
     };
 
-    private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache, CancellationToken ct)
+    private async Task AnalyzeSolutionAsync(AnalysisState state, SourceFileCatalog? catalog, AnalysisCacheManager? cache, IReadOnlySet<ProjectId> projectsNeedingRestore, CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
         var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
         var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes, _args, _config);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(ct), (item, token) =>
-            AnalyzeWorkItemAsync(item, state, cache, token));
+            AnalyzeWorkItemAsync(item, state, cache, projectsNeedingRestore, token));
     }
 
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> ResolveWorkItemsAsync(
@@ -218,9 +244,9 @@ public sealed class LinterEngine
         return workItems;
     }
 
-    private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state, AnalysisCacheManager? cache, CancellationToken ct)
+    private async ValueTask AnalyzeWorkItemAsync(CatalogDocumentWorkItem item, AnalysisState state, AnalysisCacheManager? cache, IReadOnlySet<ProjectId> projectsNeedingRestore, CancellationToken ct)
     {
-        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state, cache, ct);
+        await AnalyzeDocumentAsync(item.Document, item.IsTestProject, state, cache, projectsNeedingRestore, ct);
     }
 
 
@@ -241,7 +267,7 @@ public sealed class LinterEngine
             ? Path.GetFileName(filePath)
             : AiNetLinter.Output.PathNormalizer.ToRelative(solutionDir, filePath);
 
-    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state, AnalysisCacheManager? cache, CancellationToken ct)
+    private async Task AnalyzeDocumentAsync(Document document, bool isTestProj, AnalysisState state, AnalysisCacheManager? cache, IReadOnlySet<ProjectId> projectsNeedingRestore, CancellationToken ct)
     {
         var filePath = document.FilePath ?? document.Name;
         if (FileFilterEvaluator.IsExcluded(filePath, _config.FileFilters)) return;
@@ -270,9 +296,10 @@ public sealed class LinterEngine
         state.FileContents[filePath] = sourceText.ToString();
 
         var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, _config, solutionDir);
-        var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name);
+        var projectHasLoadDiagnostics = projectsNeedingRestore.Contains(document.Project.Id);
+        var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name, projectHasLoadDiagnostics);
 
-        var analyzer = new LinterAnalyzer(new AnalyzerArgs(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName), _args);
+        var analyzer = new LinterAnalyzer(new AnalyzerArgs(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName, context.ProjectHasLoadDiagnostics), _args);
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 

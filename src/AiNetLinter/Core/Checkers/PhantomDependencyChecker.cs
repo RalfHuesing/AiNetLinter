@@ -13,6 +13,10 @@ internal static class PhantomDependencyChecker
     {
         if (!ctx.Config.Global.DetectAndBanPhantomDependencies) return;
         if (ctx.IsTestFile) return;
+        // Ein Projekt mit Lade-Problemen (z. B. fehlender Restore) hat unaufgeloeste Referenzen,
+        // die JEDES using unresolvable machen koennen — das sind Folgefehler eines Lade-Problems,
+        // keine echten, isoliert entdeckten Phantom-Abhaengigkeiten.
+        if (ctx.ProjectHasLoadDiagnostics) return;
         if (node.Name == null) return;
 
         var symbolInfo = ctx.SemanticModel.GetSymbolInfo(node.Name);

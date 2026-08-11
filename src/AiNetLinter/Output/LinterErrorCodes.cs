@@ -14,6 +14,7 @@ internal static class LinterErrorCodes
     internal const string BaselineNotFound    = "BASELINE_NOT_FOUND";
     internal const string BaselineInvalid     = "BASELINE_INVALID";
     internal const string WorkspaceDiagnostic = "WORKSPACE_DIAGNOSTIC";
+    internal const string ProjectNotRestored  = "PROJECT_NOT_RESTORED";
     internal const string AnalysisFailed      = "ANALYSIS_FAILED";
     internal const string ResourceNotFound    = "RESOURCE_NOT_FOUND";
     internal const string DriftDetected       = "DRIFT_DETECTED";

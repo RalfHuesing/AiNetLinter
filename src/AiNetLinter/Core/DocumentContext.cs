@@ -13,5 +13,6 @@ internal sealed record DocumentContext(
     SemanticModel SemanticModel,
     bool IsTestFile,
     Config EffectiveConfig,
-    string ProjectName
+    string ProjectName,
+    bool ProjectHasLoadDiagnostics = false
 );

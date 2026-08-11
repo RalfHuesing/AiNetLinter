@@ -26,7 +26,8 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     internal LinterAnalyzer(AnalyzerArgs args, LinterArgs? linterArgs = null)
         : base(SyntaxWalkerDepth.Node)
     {
-        _ctx = new CheckerContext(args.FilePath, args.Config, args.SemanticModel, args.IsTestFile, args.ProjectName);
+        _ctx = new CheckerContext(args.FilePath, args.Config, args.SemanticModel, args.ProjectName,
+            new DocumentLoadState(args.IsTestFile, args.ProjectHasLoadDiagnostics));
         _tree = args.SemanticModel.SyntaxTree;
         _args = linterArgs;
     }
@@ -363,5 +364,6 @@ public sealed record AnalyzerArgs(
     SemanticModel SemanticModel,
     Config Config,
     bool IsTestFile = false,
-    string? ProjectName = null
+    string? ProjectName = null,
+    bool ProjectHasLoadDiagnostics = false
 );

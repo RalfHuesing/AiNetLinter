@@ -136,6 +136,7 @@ Fehlermeldungen sind maschinenlesbar:
 | `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
 | `BASELINE_INVALID` | Baseline-Datei nicht parsebar |
 | `WORKSPACE_DIAGNOSTIC` | MSBuild-Fehler beim Laden des Workspaces |
+| `PROJECT_NOT_RESTORED` | Projekt ohne frischen `dotnet restore` (`obj/project.assets.json` fehlt/veraltet) — einmal pro betroffenem Projekt statt tausender Phantom-Dependency-Folgefehler, siehe `rationale.md` §13 |
 | `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
 | `RESOURCE_NOT_FOUND` | Referenzierte Datei nicht gefunden |
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
@@ -541,6 +542,7 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
 | `BASELINE_INVALID` | Baseline-Datei nicht parsebar |
 | `WORKSPACE_DIAGNOSTIC` | Roslyn/MSBuild-Compile-Fehler (auch Defensiv-Wrapper der Tools) |
+| `PROJECT_NOT_RESTORED` | Projekt ohne frischen `dotnet restore` — `get_violations`/`safeguard`/`pattern_detect`/`metrics_tree` melden dafür eine Diagnose pro Projekt statt tausender Phantom-Dependency-Folgefehler (`DetectAndBanPhantomDependencies` wird für dieses Projekt unterdrückt), siehe `rationale.md` §13 |
 | `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
 | `RESOURCE_NOT_FOUND` | Datei/Solution-Pfad nicht gefunden (Server-Start oder `get_file_skeleton`) |
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |

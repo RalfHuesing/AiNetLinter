@@ -73,6 +73,37 @@ internal static class TestHelper
             semanticModel = model;
         }
 
-        return new CheckerContext(filePath, config, semanticModel, isTestFile, projectName);
+        return new CheckerContext(filePath, config, semanticModel, projectName, new DocumentLoadState(isTestFile, ProjectHasLoadDiagnostics: false));
+    }
+
+    /// <summary>
+    /// Wie <see cref="CreateContext"/>, aber mit explizitem <see cref="DocumentLoadState.ProjectHasLoadDiagnostics"/> —
+    /// eigener Overload statt eines zweiten bool-Parameters auf <see cref="CreateContext"/>, um dessen
+    /// <c>MaxBoolParameterCount</c>-Limit (1) nicht zu ueberschreiten.
+    /// </summary>
+    public static CheckerContext CreateContextWithLoadDiagnostics(
+        Config config,
+        SemanticModel semanticModel,
+        bool projectHasLoadDiagnostics,
+        string filePath = "Test.cs",
+        string? projectName = null)
+    {
+        return new CheckerContext(filePath, config, semanticModel, projectName,
+            new DocumentLoadState(IsTestFile: false, projectHasLoadDiagnostics));
+    }
+
+    /// <summary>
+    /// Best-effort-Aufraeumen eines Test-Temp-Verzeichnisses fuer <c>IDisposable</c>-Test-Fixtures —
+    /// zentral statt in jeder Fixture-Klasse dupliziert (IOException/UnauthorizedAccessException
+    /// sind erwartbar, wenn der Handle noch kurz haengt, z. B. unter Windows-Datei-Locking).
+    /// </summary>
+    public static void TryDeleteDirectoryRecursive(string path)
+    {
+        try
+        {
+            if (System.IO.Directory.Exists(path)) System.IO.Directory.Delete(path, true);
+        }
+        catch (System.IO.IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 }

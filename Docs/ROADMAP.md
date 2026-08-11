@@ -531,4 +531,31 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
 
 ---
 
+## Restore-Erkennung (`ProjectRestoreState`) — Phantom-Dependency-Folgefehler bei fehlendem `dotnet restore`
+
+Bug-Report aus einer Dogfooding-Session gegen ein fremdes, per `ainetlinter`-MCP-Server gelintetes
+Projekt: `MSBuildWorkspace` fuehrt (anders als `dotnet build`) keinen impliziten NuGet-Restore aus —
+ein nicht restoretes Zielprojekt liess `DetectAndBanPhantomDependencies` tausende Einzel-Violations
+pro unaufloesbarem `using` melden und den `safeguard`-Score auf 0,00/10 einbrechen, obwohl `dotnet
+build` fuer dasselbe Projekt fehlerfrei lief. Architektur-Entscheidung (Erkennen statt Auto-Restore)
+und Begruendung: `rationale.md` §13.
+
+- [x] **`ProjectRestoreState`** (`Baseline/`): dateisystembasierte Erkennung (`obj/project.assets.json`
+  fehlt oder ist aelter als die `.csproj`), kein Netzwerk-/Prozess-Seiteneffekt.
+- [x] **`LinterEngine.ReportRestoreDiagnostics`**: meldet nicht restorete Projekte EINMAL pro Projekt
+  (`PROJECT_NOT_RESTORED`) statt tausender Einzel-Violations — greift fuer alle `RunAsync`-Ueberladungen
+  (Pfad, `SourceFileCatalog`, nackte `Solution`), erreicht damit auch die MCP-Tools (`get_violations`,
+  `safeguard`, `pattern_detect`, `metrics_tree`), die `LinterEngine.RunAsync(Solution, …)` ohne
+  Catalog aufrufen.
+- [x] **`CheckerContext.ProjectHasLoadDiagnostics`** (ueber neues `DocumentLoadState`-Parameter-Object,
+  haelt den Konstruktor unter dem Bool-Parameter-/Dependency-Limit): pro Dokument granular, gespeist
+  aus `ProjectRestoreState.ComputeProjectsNeedingRestore`. `PhantomDependencyChecker.CheckPhantomNamespace`
+  unterdrueckt Funde nur fuer Dokumente eines betroffenen Projekts — ein sauber geladenes Projekt B
+  in derselben Solution wie ein nicht restoretes Projekt A wird weiterhin normal gelintet.
+- [x] Neue Unit-/Integrationstests: `ProjectRestoreStateTests`, `LinterEngineProjectRestoreTests`
+  (End-to-End ueber `LinterEngine.RunAsync(Solution, …)`), erweiterte `PhantomDependencyCheckerTests`
+  (Suppression nur bei Lade-Problem, echte isolierte Phantome weiterhin gemeldet).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

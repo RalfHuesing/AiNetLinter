@@ -21,18 +21,30 @@ internal sealed class CheckerContext
     internal SemanticModel SemanticModel { get; }
     internal bool IsTestFile { get; }
     internal string? ProjectName { get; }
+
+    /// <summary>
+    /// <see langword="true"/>, wenn das Projekt dieses Dokuments beim Solution-Load erkennbare
+    /// Lade-Probleme hatte (aktuell: fehlender/veralteter <c>dotnet restore</c>, siehe
+    /// <see cref="AiNetLinter.Baseline.ProjectRestoreState"/>). Checker, die auf vollstaendig
+    /// aufgeloeste Referenzen angewiesen sind (z. B. <see cref="PhantomDependencyChecker"/>),
+    /// nutzen dieses Flag, um Folgefehler eines Lade-Problems nicht als eigenstaendige Verstoesse
+    /// zu melden.
+    /// </summary>
+    internal bool ProjectHasLoadDiagnostics { get; }
+
     internal string CurrentNamespace { get; set; } = "";
 
     internal List<ClassInfo> Classes { get; } = new();
     internal List<PartialClassPart> PartialClassParts { get; } = new();
 
-    internal CheckerContext(string filePath, Config config, SemanticModel semanticModel, bool isTestFile, string? projectName)
+    internal CheckerContext(string filePath, Config config, SemanticModel semanticModel, string? projectName, DocumentLoadState loadState)
     {
         FilePath = filePath;
         Config = config;
         SemanticModel = semanticModel;
-        IsTestFile = isTestFile;
         ProjectName = projectName;
+        IsTestFile = loadState.IsTestFile;
+        ProjectHasLoadDiagnostics = loadState.ProjectHasLoadDiagnostics;
     }
 
     internal void AddViolation(RuleViolation violation) => _violations.Add(violation);
@@ -91,4 +103,12 @@ internal sealed record ViolationDescription(
     string Details,
     string Guidance,
     string? EffectiveSeverity = null);
+
+/// <summary>
+/// Buendelt die beiden Lade-Zustands-Flags eines Dokuments (Test-Datei? Projekt mit Lade-Problemen?)
+/// in einem Parameter-Object — haelt den <see cref="CheckerContext"/>-Konstruktor unter dem
+/// projektweiten Bool-Parameter-Limit (siehe AiNetLinter.mdc), statt zwei rohe bool-Parameter
+/// nebeneinander zu fuehren.
+/// </summary>
+internal sealed record DocumentLoadState(bool IsTestFile, bool ProjectHasLoadDiagnostics);
 
