@@ -25,8 +25,8 @@ Zusammenfassung, kein Duplikat.>
 
 | Step | Epic | Status | Title | Commit | Notiz |
 |------|------|--------|-------|--------|-------|
-| step-001 | EPIC-01 | done | <Titel> | `<SHA>` | approved |
-| step-002 | EPIC-01 | blocked | <Titel> | - | Nutzer-Entscheidung ausstehend |
+| <step-id-1> | <EPIC-ID-1> | done | <Titel> | `<SHA>` | approved |
+| <step-id-2> | <EPIC-ID-1> | blocked | <Titel> | - | Nutzer-Entscheidung ausstehend |
 | ... | ... | ... | ... | ... | ... |
 
 ## Globale Audit-Befunde (Kritiker, Modus `global`)
@@ -65,7 +65,7 @@ Hinweis, worauf sich ein Blick lohnt.>
 
 ## Empfehlungen
 
-<Was als nächstes zu tun ist — z. B. „TD-002 als eigenes Epic in einem
+<Was als nächstes zu tun ist — z. B. „TD-XXX als eigenes Epic in einem
 Folge-Task aufnehmen", „Vor dem Push nochmal lokalen Smoke-Test laufen
 lassen", …>
 
