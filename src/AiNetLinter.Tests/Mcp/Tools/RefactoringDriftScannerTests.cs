@@ -15,13 +15,12 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
-/// Tests fuer <see cref="RefactoringDriftScanner"/> (Teil C) — Symbol-Aufloesung ueber
+/// Tests fuer <see cref="RefactoringDriftScanner"/> — Symbol-Aufloesung ueber
 /// <c>FindReferencesTool.ResolveSymbolAsync</c> (wiederverwendet), Aufrufer-Aufloesung ueber
 /// <c>DiffImpactAnalyzer.FindCallSiteEntriesAsync</c> + Positions-Resolution auf die umschliessende
 /// Methode, und die eigentliche Kandidatensuche via
 /// <see cref="Core.DuplicateDetection.DuplicateDetectionEngine.FindSimilarToAsync"/>. Nutzt dieselbe
-/// "Optionen-Objekt mit mehreren Properties"-Fixture wie
-/// <c>tasks/features/05-roadmap.md</c> "Teil C" fordert (nachgebildet nach <c>McpJsonOptions.Default</c>).
+/// "Optionen-Objekt mit mehreren Properties"-Fixture (nachgebildet nach <c>McpJsonOptions.Default</c>).
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class RefactoringDriftScannerTests : IDisposable
