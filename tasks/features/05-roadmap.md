@@ -329,6 +329,74 @@ LLM identifiziert: "Tools/ hat 41% Comment-Ratio — überprüfen". Nächster Ca
 **Risiko:** Niedrig (grossteil Datei-Walk + Tree-Renderer, gut testbar)
 **Quelle:** User-Idee 2026-08-06, Recon C §4.3 (Aider Repo-Map), Recon A §5.1, Recon B §6.3 (bestehende `--map`-Subcommands)
 
+---
+
+### M2 — `dependency_graph` (Datei-/Typ- und Projekt-Abhängigkeiten)
+
+**Warum:** Dogfooding-Session 2026-08-10/11 (siehe Session-Notizen, D13) hat als größte
+verbleibende Navigationslücke identifiziert: "welche Dateien/Typen hängen an Datei/Modul X" lässt
+sich aktuell nur mühsam über mehrere `find_symbol`/`find_references`-Runden rekonstruieren. Der
+ursprüngliche F10-Vorschlag (Recon C §5.3) zielte auf Projekt-/NuGet-Ebene (Projekt-Referenzen +
+NuGet-Vulnerabilities) — das deckt aber NICHT den beim Dogfooding tatsächlich erlebten Bedarf ab,
+der auf Datei-/Typ-Ebene liegt (feinkörniger als Projekt-Referenzen).
+
+**Scope-Entscheidung (klärt Spannung zwischen ursprünglichem Recon-Vorschlag und validiertem
+Bedarf):**
+- **Kern (muss):** Datei-/Typ-Ebene — "welche Dateien/Typen verwendet Datei/Typ X" (ausgehende
+  Abhängigkeiten) und "wer verwendet Datei/Typ X" (eingehende Abhängigkeiten), abgeleitet aus
+  tatsächlichen Typ-Referenzen via Roslyn `SemanticModel` (nicht nur `using`-Direktiven — die
+  sagen nichts darüber, ob ein importierter Namespace auch wirklich benutzt wird). Das ist der
+  Teil, der die Dogfooding-Lücke schließt.
+- **Sinnvoll, falls günstig (kann):** Projekt-Ebene (`Solution.Projects` + `ProjectReferences`)
+  als grobe Zusatz-Sicht — billig über die Roslyn-Project-API, kein NuGet-API-Call nötig.
+- **Explizit NICHT im Scope:** NuGet-Vulnerability-/CVE-Scanning aus dem ursprünglichen
+  F10-Vorschlag — erfordert externe Netzwerk-/API-Calls zu einer Vulnerability-Datenbank,
+  widerspricht dem Anti-Ziel "kein Modell-/Cloud-Abhängigkeit" (§0). Falls später gewünscht:
+  eigenes, separates Epic — nicht mit diesem vermischen.
+
+**Vorschlag Tool-Design (an bestehende Konventionen anlehnen, siehe `find_references`/
+`get_call_tree` als Vorbild):**
+- Name: `dependency_graph` (wie in der Roadmap benannt)
+- Input: `filePath` oder `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name/Pfad, wie
+  bei anderen Tools), `direction` (`incoming`/`outgoing`/`both`, Default `both`), optional
+  `depth` (transitiv, hard cap analog `find_references`/`get_call_tree`), `maxResults` (Default
+  50 — **zwingend von Anfang an**, siehe Akzeptanzkriterien)
+- Output: Text (kompakte Liste/kleiner Baum) + `StructuredContent` als **Objekt**
+  (`{ nodes: [...], edges: [...] }` o. ä.) — niemals ein nacktes Array (siehe
+  `McpToolResultsTests`-Regressionstest als Vorbild, betraf diese Session 3x als echter Bug)
+- Eigener Unterordner `src/AiNetLinter/Mcp/Tools/DependencyGraph/` (Tool.cs + Scanner.cs-Split,
+  wie alle anderen Tools)
+
+**Abhängigkeiten:** Keine harte Abhängigkeit; kann bestehende Muster (`FindReferencesTool`,
+`CallGraphTraversal`) als Vorlage für Traversierung/Truncation wiederverwenden
+**Aufwand:** 1-2 Wochen (Kern Datei-/Typ-Ebene realistisch 3-5 Tage, Projekt-Ebene als Zusatz
++1-2 Tage falls Zeit)
+**Akzeptanzkriterien:**
+- [ ] Datei-/Typ-Ebene-Abhängigkeiten funktionieren für `incoming`/`outgoing`/`both`
+- [ ] `maxResults` + Trunkierungs-Meta von Anfang an (kein unbounded Output — siehe die
+      `get_violations`/`get_hotspots`/`get_type_hierarchy`-Bugfixes aus der Dogfooding-Session
+      2026-08-10/11 als Warnung: alle drei hatten genau diesen Fehler)
+- [ ] `StructuredContent` ist immer ein Objekt, nie ein nacktes Array
+- [ ] Sufficiency-Hinweis korrekt (nur bei echter Vollständigkeit, nicht bei Trunkierung — siehe
+      `get_call_tree`-Bugfix derselben Session als Vorbild)
+- [ ] Registrierung in einer `*ToolRegistrations.cs`-Datei (bestehendes Muster), Tool-Beschreibung
+      inkl. Parameter-Doku
+- [ ] Projekt-Ebene (optional) nur falls ohne großen Mehraufwand über `Solution.Projects`/
+      `ProjectReferences` möglich
+- [ ] Keine NuGet-Vulnerability-Abfrage (bewusst out of scope)
+- [ ] 15+ Unit-Tests (Scanner direkt + Tool-Ebene, Edge-Cases: Datei ohne Abhängigkeiten,
+      zyklische Abhängigkeiten, Trunkierung)
+- [ ] 1 Integration-/Live-Repo-Test
+- [ ] Doku: `Docs/agent-api.md` Tool-Tabelle + `Docs/ROADMAP.md` Epic-Eintrag
+- [ ] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) grün
+
+**Risiko:** Mittel (Datei-/Typ-Abhängigkeits-Analyse aus `SemanticModel` ist neu, Zyklen-Erkennung
+braucht sorgfältige Traversierung analog `CallGraphTraversal`)
+**Quelle:** Recon C §5.3 F10 (Ausgangsidee), Dogfooding-Session 2026-08-10/11 (validierter Bedarf,
+Scope präzisiert)
+
+---
+
 ### M1 — ASP.NET-Framework-Analyzer-Suite
 
 **Warum:** **Größte Differenzierung gegenüber CodeGraphs Regex-Approach.** Mit Roslyn strukturelle ASP.NET-Analyse statt Pattern-Matching. 6 neue Linter-Rules + 1-2 MCP-Tools. Betrifft die ASP.NET-Core-Request-Pipeline (siehe Hinweis in §2) — nicht Blazor oder Kestrel.
