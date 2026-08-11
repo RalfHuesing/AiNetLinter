@@ -75,8 +75,8 @@ public sealed class McpDocumentationSmokeTests
     public void AgentApi_CountsCsharpOnlyToolsCorrectly()
     {
         // Erwartung: Docs/agent-api.md#mcp-server-modus nennt 12 C#-only-Tools (inkl. get_call_tree,
-        // pattern_detect, dependency_graph und find_duplicates, seit deren Einfuehrung in
-        // S1.4/S2.2/M2/M9-Teil-A) und hebt search_pattern als Nicht-C#-only-Fallback heraus.
+        // pattern_detect, dependency_graph und find_duplicates) und hebt search_pattern als
+        // Nicht-C#-only-Fallback heraus.
         // Doku-Drift zwischen Fliesstext, Tabelle und dem zitierten ServerInstructions-Block
         // (Quelle: ServerInstructions.cs) wird durch diese Assertion gefangen.
         //
