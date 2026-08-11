@@ -6,6 +6,8 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-11
 open_questions:
+  - Q8-projektnamen-vs-projectoverrides
+  - Q9-sentinel-rauschen-waehrend-migration
   - Q7-ready-freigabe
 ---
 
@@ -114,6 +116,33 @@ unvollstaendig und sind mit dieser Runde verbindlich korrigiert:
     Component-Tests und heisst deshalb `AiNetLinter.FastTests`; die feinere Ebene bleibt ueber
     Kategorien bzw. Namespaces sichtbar.
 
+Eine zweite, unabhaengige Gegenpruefung gegen den tatsaechlichen Code hat folgende weitere
+Fehlannahmen aufgedeckt; sie sind mit dieser Runde ebenfalls verbindlich korrigiert:
+
+13. **Das eigene Repository ist selbst eine Testfixture.** Neue Testprojekte veraendern die
+    Solution, die von Dogfood, Selbstlint, Test Sentinel und CLI-Filtertests analysiert wird. Die
+    Projektstruktur ist damit kein reines Testinfrastruktur-Thema, sondern greift in produktive
+    Konfigurations- und Regelvertraege ein. Siehe Leitplanke 0.
+14. **Legacy-Quarantaene darf nicht "aus der Solution entfernen" heissen.** Sonst verschwinden die
+    Testabdeckungssignale des `StaticTestSentinel` und die Legacy-Tests sind nicht mehr baubar —
+    genau dann, wenn sie als gezielter Impact-Filter noch gebraucht werden. Quarantaene ist ein
+    Ausfuehrungsfilter, kein Solution-Ausschluss.
+15. **Ein nicht ausgefuehrtes Legacy-Projekt verrottet still.** Ohne Build-Gate merkt niemand, dass
+    eine Produkt-Seam die pending Legacy-Tests nicht mehr kompilierbar macht. Das Sicherheitsnetz
+    waere dann nur noch auf dem Papier vorhanden.
+16. **Ein Ledger, das nur ein Dokument ist, driftet.** Das Ledger braucht einen maschinellen
+    Konsistenzguard, sonst ist es genau die Dokumentation, die es ersetzen sollte.
+17. **In-Memory ist nicht automatisch schnell.** Ohne geteilte, gecachte `MetadataReference`-Saetze
+    und ohne lazy Materialisierung zahlt jede Component-Testklasse erneut Referenz-IO, und jeder
+    gefilterte Einzeltestlauf zahlt die komplette Fixture-Matrix.
+18. **Geteilte Fixtures verschlechtern die Diagnose, wenn sie fehlschlagen.** Eine fehlerhafte
+    Assembly-Fixture faerbt die gesamte Assembly rot und verdeckt die Ursache.
+19. **`internal`-Seams sind ueber drei Assemblies hinweg nicht gratis.** `InternalsVisibleTo` gilt
+    heute nur fuer `AiNetLinter.Tests`, und ein TestKit kann interne Produkttypen nicht oeffentlich
+    exponieren (CS0050). Das ist eine Compile-Randbedingung, kein Stilthema.
+20. **Getrennte Assemblies zerlegen prozessglobale Schutzmechanismen.** `SubprocessConcurrencyGate`
+    ist ein statisches Semaphor und wirkt nur innerhalb eines Testhost-Prozesses.
+
 ## Ziel (Was & Warum)
 
 ### Fachliches Ziel
@@ -182,8 +211,14 @@ ersten Refactoring eine reproduzierbare Median-Baseline auf der Zielmaschine erf
   Lebensabschnitt abdeckt.
 - Getrennte Runner-/Parallelitaetspolitik pro Test-Assembly; ein gemeinsames Runner-JSON fuer
   CPU-lastige Fast-Tests und ressourcenlastige Integrationstests ist nicht ausreichend.
-- Aktualisierung von `AGENTS.md`, Testdokumentation, Filterbefehlen und CI-Laufprofilen auf den
-  neuen Vertrag.
+- Anpassung der produktiven Konfigurationsvertraege an die neue Projektstruktur:
+  `rules.json`-`ProjectOverrides`, ggf. `TestSentinel.TestProjectNameSuffixes` und
+  `InternalsVisibleTo` je neuer Assembly (Begruendung in Leitplanke 0).
+- Eine gemeinsame `Directory.Build.props` fuer die Testprojekte, die MSBuild-Paketpinning,
+  `TreatWarningsAsErrors`, Nullable und Runsettings-Bindung an einer Stelle haelt.
+- Ein Ledger-Konsistenzguard und ein Build-Gate fuer das quarantinierte Legacy-Projekt.
+- Aktualisierung von `AGENTS.md`, Testdokumentation, Filterbefehlen, TRX-Diagnoseregel und
+  CI-Laufprofilen auf den neuen Vertrag.
 - Vorher-/Nachher-Messung mit denselben Kommandos und mehreren Laeufen; Ergebnisse werden im Task
   dokumentiert.
 - Eine sparsame Verifikationsstrategie fuer die Umsetzung: pro Drift-Loop-Step nur die direkt
@@ -211,6 +246,56 @@ ersten Refactoring eine reproduzierbare Median-Baseline auf der Zielmaschine erf
   umorganisieren.
 
 ## Technische Leitplanken
+
+### 0. Rueckkopplung: Das eigene Repository ist selbst Testfixture
+
+AiNetLinter analysiert sich selbst. `AiNetLinter.slnx` enthaelt heute genau zwei Projekte; jede
+Aenderung an der Projektstruktur veraendert damit gleichzeitig die *Eingabe* von Dogfood,
+Selbstlint, `StaticTestSentinel`, Skeleton-/Filter-CLI-Tests und MCP-Live-Tests. Diese Kopplung ist
+verbindlich mitzuplanen; sie ist der Hauptgrund, warum der Fundament-Step nicht nur Testinfrastruktur
+anfasst.
+
+Konkrete, im Code verifizierte Randbedingungen:
+
+- **`rules.json` `ProjectOverrides`**: Der Schluessel `*.Tests` wird in
+  `ProjectConfigResolver.IsMatch` zu `^.*\.Tests$` uebersetzt. Weder `AiNetLinter.FastTests` noch
+  `AiNetLinter.IntegrationTests` noch `AiNetLinter.TestKit` matchen dieses Muster. Ohne Anpassung
+  gelten fuer den neuen Testcode die vollen Produktionsregeln (u. a. `EnforceSealedClasses`,
+  `MaxMethodLineCount`, `MaxPublicMembersPerType`) und der Selbstlint wird ohne fachlichen Grund rot.
+  Die Overrides sind im selben Step zu erweitern; ein Test belegt, dass jedes Testprojekt auf den
+  Test-Override aufloest.
+- **`TestProjectDetector`**: erkennt Testprojekte primaer ueber Metadatenreferenzen
+  (`xunit`, `nunit`, `testplatform`, `unittesting`), sekundaer ueber Namenssuffixe
+  (`Tests`, `Test`, `IntegrationTests`, `Specs`, `Spec`). `AiNetLinter.FastTests` und
+  `AiNetLinter.IntegrationTests` greifen ueber den Suffix-Fallback, `AiNetLinter.TestKit` dagegen
+  ausschliesslich ueber die xunit-Metadatenreferenz. Ein TestKit ohne xunit-Referenz waere
+  Produktionscode im Sinne aller Checker inklusive `StaticTestSentinel`. Entweder referenziert das
+  TestKit xunit, oder `TestSentinel.TestProjectNameSuffixes` wird explizit erweitert — die
+  Entscheidung gehoert in den Fundament-Step, nicht in einen spaeteren Bugfix.
+- **`StaticTestSentinel`**: Der Abdeckungsindex entsteht aus den Testprojekten *der geladenen
+  Solution* (`TestCoverageCollector` sammelt Testklassennamen, `typeof`/`nameof`-Referenzen und
+  `@covers`-Kommentare). Wird das Legacy-Testprojekt aus `AiNetLinter.slnx` entfernt, verlieren
+  schlagartig alle Produktklassen ihr Abdeckungssignal, deren einziger Nachweis dort liegt.
+  Daraus folgt die Quarantaene-Definition in Leitplanke 8.
+- **Dogfood-Kosten steigen zwischenzeitlich**: Waehrend der Migration enthaelt die Solution bis zu
+  fuenf statt zwei Projekte. MSBuild-Evaluierung, Selbstlint und jeder Real-Repo-MCP-Start werden
+  dadurch messbar teurer, bevor die Legacy-Loeschung das teilweise zurueckgibt. Das Dogfood-Profil
+  wird deshalb getrennt vorher/nachher gemessen und nicht in die Fast-Zahl hineingerechnet.
+- **`InternalsVisibleTo`**: existiert heute genau einmal (`[assembly: InternalsVisibleTo(
+  "AiNetLinter.Tests")]` in `src/AiNetLinter/Core/LinterEngine.cs`). Jede neue Assembly, die
+  `internal` Seams nutzt, braucht einen eigenen Eintrag. Zusaetzlich gilt: ein TestKit kann interne
+  Produkttypen **nicht** in seiner oeffentlichen API fuehren (CS0050, inkonsistente
+  Zugreifbarkeit). Konsequenz: TestKit-Typen, die Produkt-Interna beruehren, sind selbst `internal`
+  und das TestKit vergibt seinerseits `InternalsVisibleTo` an die beiden Test-Assemblies.
+- **MSBuild-Paketpinning**: Produkt- und Testprojekt pinnen heute beide
+  `Microsoft.Build.Framework` und `Microsoft.NET.StringTools` mit gesetzten
+  `IncludeAssets`/`ExcludeAssets`. Dieses Pinning muss in allen neuen Testprojekten identisch
+  gelten. Es wird nicht dreifach kopiert, sondern gehoert in eine gemeinsame `Directory.Build.props`
+  fuer Testprojekte (zusammen mit `TreatWarningsAsErrors`, `RunSettingsFilePath` und Nullable).
+- **Worktree-Falle**: Ein Selbstlint- bzw. Dogfood-Lauf aus einem Git-Worktree-Pfad heraus kann
+  strukturell falsch-gruen sein (keine Typen gefunden statt keine Verletzungen). Das Dogfood-Profil
+  wird deshalb ausschliesslich im Hauptarbeitsverzeichnis als Nachweis akzeptiert; ein Dogfood-Lauf
+  aus einem Worktree gilt nicht als Evidenz.
 
 ### 1. Testebenen und erlaubte Abhaengigkeiten
 
@@ -250,6 +335,26 @@ Die Testplattform besteht konzeptionell aus vier klar getrennten Bausteinen:
 Eine `Solution` ist ein immutable Roslyn-Snapshot und kann fuer read-only Analysen geteilt werden.
 Der besitzende `Workspace`, MCP-Serverzustand und das Dateisystem sind dagegen Ressourcen mit
 Lebensdauer bzw. Mutation und werden von der Fixture explizit kontrolliert.
+
+Damit In-Memory tatsaechlich guenstig ist, gelten drei zusaetzliche Pflichten:
+
+- **Geteilte, gecachte `MetadataReference`n.** Ein `MetadataReference.CreateFromFile` pro Projekt
+  pro Testklasse liest die Referenz-Assemblies immer wieder neu ein. Der Referenzsatz wird einmal
+  aufgebaut und ueber alle In-Memory-Solutions wiederverwendet. Ohne diesen Cache ist "Component
+  statt MSBuild" nur eine Umschichtung der Kosten, keine Einsparung.
+- **Lazy Materialisierung pro Szenario.** Eine Assembly-Fixture haelt kein eagerly aufgebautes
+  Gesamtportfolio, sondern pro Szenario einen thread-safen, einmalig materialisierenden Zugriff.
+  Sonst zahlt ausgerechnet der gefilterte Einzeltestlauf aus Leitplanke 7 die volle Fixture-Matrix
+  und der sparsame Verifikationsvertrag laeuft ins Leere.
+- **Der geteilte Workspace ist write-once.** Nach der Snapshot-Entnahme darf niemand mehr
+  `TryApplyChanges` oder `OnDocumentChanged` auf dem geteilten `AdhocWorkspace` aufrufen. Tests, die
+  Dokumente veraendern wollen, arbeiten auf einem abgeleiteten `Solution`-Snapshot oder auf einer
+  eigenen Fixture-Instanz.
+
+Geteilte Fixtures verschieben ausserdem den Fehlerradius: eine fehlschlagende Assembly-Fixture
+faerbt die ganze Assembly rot. Deshalb gilt: der Fixture-Aufbau meldet die Ursache selbst
+diagnostisch (welches Szenario, welcher Baustein), und die lazy Materialisierung sorgt dafuer, dass
+ein defektes Szenario nur seine tatsaechlichen Konsumenten trifft statt alle Tests der Assembly.
 
 Die Wahl der xUnit-Lebensdauer ist Teil des Performancevertrags:
 
@@ -317,6 +422,23 @@ fachliche Erwartung wird einmal gegen eine explizit konfigurierte In-Memory-Solu
 gegen eine echte kleine MSBuild-Solution belegt. Das ist kein Verdoppeln der Vollmatrix, sondern
 ein Vertragstest fuer die Testplattform selbst.
 
+Fidelity-Tests laden MSBuild und wohnen deshalb zwingend in `AiNetLinter.IntegrationTests`; sie
+konsumieren dieselbe TestKit-Spezifikation wie die Fast-Assembly. Sie bestehen aus zwei Teilen:
+
+1. **Struktureller Formvergleich (primaer):** Die MSBuild-geladene Mini-Solution und die aus
+   derselben Spezifikation materialisierte In-Memory-Solution werden auf eine normalisierte Form
+   reduziert und verglichen — Projektanzahl und -namen, Dokumentanzahl, `LanguageVersion`,
+   Nullable-Kontext, Praeprozessor-Symbole, `OutputKind`, Vorhandensein der fachlich relevanten
+   Referenzen und das Ergebnis von `TestProjectDetector.IsTestProject`. Weicht die Form ab, ist
+   jede darauf aufbauende Component-Assertion wertlos — dieser Test faengt das frueh und mit
+   praeziser Diagnose.
+2. **Verhaltensparitaet (sekundaer, wenige Faelle):** ein bis zwei fachliche Erwartungen pro
+   gemeinsamem Vertrag, ausgefuehrt gegen beide Welten.
+
+Reine MSBuild-Eigenheiten (Razor-SDK, Generatoren, partielle Klassen ueber Build-Artefakte,
+Ladefehler) sind ausdruecklich **nicht** Gegenstand der Paritaet; sie bleiben ausschliesslich in
+echten Integrationstests und werden gar nicht erst in-memory nachgebaut.
+
 ### 5. MCP- und Prozessstrategie
 
 - Tool-Scanner und Formatter werden breit direkt gegen vorbereitete Solutions getestet.
@@ -359,13 +481,56 @@ beiden Ziel-Assemblies, ein stabiler kleiner Vertrag und die Einhaltung der Fast
 bleibt er beim fachlichen Testbereich.
 
 Die Namen sind Zielnamen; falls der Drift-Loop anhand von Projektregeln einen gleichwertigen Namen
-begruendet, bleibt die Abhaengigkeitsrichtung massgeblich.
+begruendet, bleibt die Abhaengigkeitsrichtung massgeblich. Wird ein Name geaendert, sind die in
+Leitplanke 0 genannten Konfigurationsvertraege (`ProjectOverrides`, `TestProjectNameSuffixes`,
+`InternalsVisibleTo`) mitzufuehren.
+
+#### Was die Guards wirklich koennen
+
+Eine Projektgrenze allein erzwingt nichts: `FastTests` erreicht ueber die Produktreferenz weiterhin
+MSBuild-Typen, und der Repository-Root ist von jedem Testassembly-Ausgabeverzeichnis aus per
+Verzeichnis-Aufstieg erreichbar — genau so arbeitet der heutige `FindSolutionRoot`. Die Guards
+muessen deshalb explizit sein und auf drei Ebenen greifen:
+
+- **Statisch ueber die kompilierte Assembly**, nicht ueber Quelltext-Grep: eine Deny-Liste wird
+  gegen die Typ-/Member-Referenzen von `AiNetLinter.FastTests` und `AiNetLinter.TestKit` geprueft
+  (Metadaten-Reader oder gleichwertig). Verboten sind mindestens `Microsoft.Build.*`,
+  `Microsoft.CodeAnalysis.MSBuild.*`, `MSBuildWorkspace`, `SourceFileCatalog.LoadAsync`,
+  `System.Diagnostics.Process`. Das faengt auch indirekte Nutzung ueber eigene Helfer, die ein
+  Grep uebersieht.
+- **Zur Laufzeit am Ende des Fast-Laufs**: es darf keine `Microsoft.Build*`- bzw.
+  MSBuild-Workspace-Assembly in den Prozess geladen worden sein. .NET laedt Assemblies erst bei
+  tatsaechlicher Nutzung; dieser Check erkennt also echte Ausfuehrung, nicht nur Referenzen.
+- **Kategorien-/Profilguard**: jede Testklasse besitzt genau ein gueltiges Laufprofil, Hilfs- und
+  Fixtureklassen sind ausgenommen, Performance/Stress koennen nicht im normalen Gate landen.
+
+Die Definition of Done formuliert diesen Anspruch deshalb als "durch Guards erkannt und rot", nicht
+als "technisch unmoeglich" — Letzteres waere ohne eigene Prozessisolation nicht ehrlich.
+
+Bereits vorhanden ist `src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs`; diese Klasse testet
+trotz ihres Namens ausschliesslich `LinterAnalyzer`-Regeln und ist **kein** Architekturguard. Die
+neuen Guards duerfen weder dort angehaengt noch mit ihr verwechselt werden.
+
+#### Runner- und Prozessparallelitaet
 
 Jede Assembly erhaelt eine eigene Runner-Konfiguration. Die Fast-Assembly darf read-only
 Collections CPU-orientiert parallel ausfuehren; die Integration-Assembly verwendet einen
-ressourcenorientierten Cap und explizite Exklusiv-Collections. Assembly-Parallelitaet zwischen
-Fast- und Integrationstest wird nicht unbesehen aktiviert, weil sonst zwei getrennte Scheduler
-gemeinsam MSBuild-/CPU-/Speicherdruck erzeugen koennen.
+ressourcenorientierten Cap und explizite Exklusiv-Collections.
+
+Dabei sind zwei verschiedene Stellschrauben sauber zu trennen:
+
+- `xunit.runner.json` steuert die Parallelitaet **innerhalb** einer Assembly (Collections,
+  `maxParallelThreads`).
+- Ob mehrere Test-Assemblies **gleichzeitig** laufen, entscheidet der Testrunner
+  (`.runsettings` `RunConfiguration/MaxCpuCount` bzw. mehrere parallel gestartete
+  `dotnet test`-Kommandos) — nicht `parallelizeAssembly`. Diese Ebene wird bewusst nicht aktiviert,
+  weil sonst zwei Scheduler gemeinsam MSBuild-/CPU-/Speicherdruck erzeugen.
+
+Das ist kein Kosmetikpunkt: `SubprocessConcurrencyGate` ist ein **statisches** Semaphor und wirkt
+nur innerhalb eines Testhost-Prozesses. Daraus folgt verbindlich: alle prozessstartenden Tests
+leben in genau einer Assembly, und die Laufprofile werden nicht nebenlaeufig zueinander gestartet.
+Waere beides irgendwann gewuenscht, muesste das Budget vorher auf einen systemweiten (benannten)
+Mechanismus umgestellt werden.
 
 ### 7. Sparsame Verifikation waehrend der Umsetzung
 
@@ -407,8 +572,12 @@ Vorgesehener Vertrag:
 2. Eine Minimum Safety Envelope wird aufgebaut: lauffaehige neue Gates, repraesentative Tests fuer
    die High-Risk-Einstiegspunkte sowie ein Ledger, das alle pending Tests einem Produktbereich und
    einem gezielten Legacy-Filter zuordnet.
-3. Erst danach wird das Legacy-Projekt aus dem normalen Solution-/PR-Testpfad quarantiniert und
-   nicht mehr als allgemeines Gate ausgefuehrt.
+3. Erst danach wird das Legacy-Projekt quarantiniert. **Quarantaene bedeutet ausschliesslich: es
+   wird im normalen PR-/Gate-Lauf nicht mehr ausgefuehrt.** Es bleibt Bestandteil von
+   `AiNetLinter.slnx`, wird weiter gebaut und bleibt gezielt ausfuehrbar. Ein Entfernen aus der
+   Solution ist verboten, solange `pending > 0` — es wuerde die Testabdeckungssignale des
+   `StaticTestSentinel` schlagartig entwerten (Leitplanke 0) und den Legacy-Impact-Filter
+   unbenutzbar machen.
 4. Tests werden in fachlich zusammenhaengenden Kohorten gelesen, bewertet und in die passende neue
    Ebene uebernommen; dabei darf Testcode neu geschrieben statt blind verschoben werden.
 5. Nach erfolgreicher Uebernahme wird der entsprechende Test aus dem Legacy-Projekt geloescht und
@@ -434,6 +603,31 @@ Kommentar-Duplikat herumzuliegen.
 Das Ledger verhindert, dass "alt nicht mehr laufen lassen" zu "alt vergessen" wird. Es zaehlt
 nicht nur Dateien oder Methoden, sondern beschreibt bei nicht-trivialen Faellen den geschuetzten
 Vertrag: Erfolgsweg, Branch, Fehlerweg, Regression, Konfiguration oder Systemgrenze.
+
+#### Zwei Mechanismen, die das Ledger von Dokumentation zu Schutz machen
+
+Ein reines Markdown-Ledger driftet gegenueber dem Code. Es bekommt deshalb zwei technische
+Verankerungen:
+
+- **Legacy-Build-Gate.** Solange `pending > 0`, muss `AiNetLinter.Tests` in jedem Step
+  **kompilierbar** bleiben, auch wenn es nicht ausgefuehrt wird. Das ist der eigentliche Schutz
+  hinter dem gezielten Impact-Filter: ein nicht mehr baubares Legacy-Projekt ist ein Sicherheitsnetz,
+  das nur noch im Dokument existiert. Aendert eine Produkt-Seam die Legacy-Kompilierbarkeit, ist die
+  betroffene Kohorte im selben Step zu migrieren — nicht der Legacy-Test wegzukommentieren oder
+  auszuschliessen.
+- **Ledger-Konsistenzguard.** Ein billiger Test parst das Ledger und die Legacy-Verzeichnisstruktur
+  und schlaegt fehl bei: (a) einer Legacy-Testdatei ohne Ledger-Eintrag, (b) einem `migrated`- oder
+  `consolidated`-Eintrag, dessen Legacy-Datei noch existiert, (c) einem Eintrag, dessen neuer
+  Abdeckungsort nicht existiert, (d) `removed-trivial` ohne Begruendungstext. Damit ist die
+  zentrale Behauptung des Konzepts — "keine stillschweigende Schutzluecke" — maschinell gepruefte
+  Invariante statt Absichtserklaerung.
+
+Zusaetzlich existiert im Produkt bereits ein nutzbares Suchsignal: der `StaticTestSentinel` meldet
+Produktklassen relevanter Komplexitaet ohne Abdeckungssignal (Testklassenname, `typeof`/`nameof`
+oder `// @covers`). Sein Delta vor und nach einer Kohorte ist ein guenstiger, mechanischer
+Kandidatenfinder fuer den Coverage-Audit. Er ersetzt die inhaltliche Vertragspruefung nicht — ein
+`typeof`-Vorkommen ist kein Vertragsnachweis —, aber ein neu auftauchender Sentinel-Treffer ist ein
+belastbares Signal fuer eine tatsaechlich entstandene Luecke.
 
 Ein vorhandener Legacy-Test ist dabei Evidenz, aber nicht automatisch Wahrheit. Bereits rote,
 flaky, umgebungsabhaengige oder nur implementation-detailorientierte Erwartungen werden vor der
@@ -483,6 +677,42 @@ Die Aufzaehlung ist eine Groessen-/Schnittvorgabe, keine vorweggenommene Step-Pl
 im Drift-Loop schneidet anhand des dann aktuellen Codes. Verboten sind eigenstaendige Steps nur
 fuer eine Dokuzeile, eine Trait-Aenderung, eine einzelne Testklasse oder einen mechanischen Move,
 wenn diese Arbeit Bestandteil derselben Kohorte sein kann.
+
+Grosse Steps brauchen dafuer eine harte Austrittsbedingung, sonst wird aus "gross" ein halb
+migrierter Zwischenzustand. Verbindlich gilt:
+
+- **Step-Exit-Invariante:** Am Ende eines Steps ist das Ledger konsistent (Guard gruen), das
+  Legacy-Projekt baut, und keine Kohorte ist halb migriert. Reicht der Step nicht aus, wird die
+  Kohorte **verkleinert** — nicht der Ledger-Zustand unscharf gelassen.
+- Der Umfang ist real betraechtlich: heute rund 1.471 Tests in etwa 254 mit Kategorie versehenen
+  Testklassen. Fuenf bis sieben Steps bedeuten Groessenordnung 30-50 Klassen pro Step. Zeigt sich
+  bei der Umsetzung, dass ein Step diese Menge nicht in einem kohaerenten Durchlauf schafft, ist
+  das Aufteilen entlang der Kohortengrenze ausdruecklich erlaubt und kein Verstoss gegen die
+  Step-Groessenvorgabe.
+
+### 10. Messmethodik
+
+Ohne belastbare Methodik ist der relative Vorher-/Nachher-Nachweis wertlos, weil er die einzige
+Abnahmegrundlage fuer das Performanceziel ist. Verbindlich:
+
+- **Baseline vor dem ersten Refactoring**, auf derselben Maschine, mit denselben Kommandos, die am
+  Ende wiederholt werden. Die vorhandenen TRX-Dateien sind Diagnose, nicht Baseline.
+- **Build von Messung trennen:** zuerst ein `dotnet build`, dann die Messlaeufe mit `--no-build`.
+  Zusaetzlich wird die Build-Zeit einmal separat erfasst, weil die Aufteilung in mehrere
+  Testprojekte sie veraendert und der Entwickler sie im Alltag mitbezahlt.
+- **Verschachtelt messen (A/B/A)** statt "erst alle Alt-, dann alle Neulaeufe": Maschinen-Drift,
+  Thermik und Fremdlast wirken sonst systematisch auf nur eine der beiden Seiten.
+- **Median und Streuung** ueber mindestens drei Laeufe je Profil; ein einzelner Bestlauf ist kein
+  Nachweis. Auffaellige Ausreisser werden als moegliche Fremdlast dokumentiert, nicht stillschweigend
+  entfernt.
+- **Pro Profil eine eigene TRX-Datei.** `.runsettings` schreibt heute fix `TestResults/latest.trx`;
+  mehrere nacheinander laufende Profile wuerden sich gegenseitig ueberschreiben und die Evidenz
+  vernichten. Die Profilkommandos setzen deshalb einen eigenen `LogFileName`; `AGENTS.md` und die
+  Diagnoseregel in `.agents/rules/AiNetLinterRichtlinien.mdc` §3 werden entsprechend aktualisiert.
+- **Vergleichsgroessen** sind Wall Clock je Profil und aggregierte Testzeit. Kennzahlen, die die
+  Testanzahl im Nenner tragen, sind ungeeignet, weil die Testanzahl bewusst keine Invariante ist.
+- **Dogfood getrennt ausweisen.** Die Solution waechst waehrend der Migration (Leitplanke 0); die
+  Dogfood-Zeit darf nicht in der Fast-Kennzahl untergehen.
 
 ## Zielbild
 
@@ -569,12 +799,29 @@ Aenderungsbereiche sind vor allem:
 9. **Hilfsinfrastruktur ist organisch gewachsen.** `TestHelper`, Workspace-Kopien, Katalogfixtures,
    MCP-Fixtures, Load-Builder und Prozessrunner bilden noch kein zusammenhaengendes Framework mit
    einem eindeutigen Einstieg fuer neue Tests.
+10. **`SymbolGraphCatalogFixture` entsorgt ihren `SourceFileCatalog` nicht.** `DisposeAsync`
+    entsorgt nur den Fixture-Workspace; der besitzende `MSBuildWorkspace` im Katalog bleibt bis
+    Prozessende bestehen. Bei der Migration ist Fixture-Disposal explizit Teil des
+    Lebensdauervertrags, nicht optional.
+11. **`Architecture/ArchitectureTests.cs` traegt einen irrefuehrenden Namen.** Die Klasse prueft
+    ausschliesslich `LinterAnalyzer`-Regeln und ist kein Architekturguard; der Name suggeriert
+    einen Schutz, den es heute nicht gibt.
+12. **Konfigurationsvertraege sind an den heutigen Projektnamen gebunden.** `ProjectOverrides`,
+    `TestProjectNameSuffixes` und `InternalsVisibleTo` kennen genau `AiNetLinter.Tests`
+    (Details und Konsequenzen in Leitplanke 0).
+13. **Die Ergebnisablage ist nicht profilfaehig.** `.runsettings` schreibt fix
+    `TestResults/latest.trx`; getrennte Laufprofile ueberschreiben einander.
+14. **Das Dogfood-Profil assertiert ueberwiegend "nicht leer".** `McpLiveRepositoryTests` prueft
+    weitgehend `NotNull`/`NotEmpty`/`Contains`. Als verpflichtendes eigenes Profil muss Dogfood
+    strukturelle Invarianten belegen (z. B. Konsistenz zwischen Tools, Stabilitaet der
+    Selbstanwendung, keine Ladefehler), nicht nur Nicht-Absturz.
 
 ## Grober Loesungsansatz
 
-1. Einmalige Ausgangsbaseline, vollstaendiges Migrationsledger, neue Projektgrenzen und Minimum
-   Safety Envelope aufbauen.
-2. Legacy-Projekt danach aus dem normalen Gate nehmen; gezielte Impact-Filter fuer pending Bereiche
+1. Einmalige Ausgangsbaseline, vollstaendiges Migrationsledger, neue Projektgrenzen samt
+   angepasster Konfigurationsvertraege (Leitplanke 0) und Minimum Safety Envelope aufbauen.
+2. Legacy-Projekt danach aus dem normalen Gate nehmen — als Ausfuehrungsfilter, nicht als
+   Solution-Ausschluss; Build-Gate, Ledger-Guard und gezielte Impact-Filter fuer pending Bereiche
    bleiben verfuegbar.
 3. Gemeinsame In-Memory-Solution-Factory, read-only Fixture-Lebensdauer und Architekturguards
    einfuehren.
@@ -609,8 +856,19 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
   entdeckte nicht-triviale Luecken besitzen neue Tests in der guenstigsten korrekten Ebene.
 - Fuer jede migrierte/ersetzte teure Assertion ist der neue Abdeckungsort nachvollziehbar; es gibt
   keine stillschweigende Schutzluecke.
-- Unit- und Component-Tests koennen technisch weder MSBuild-Solutions noch externe Prozesse oder
-  das echte Repository laden.
+- Nutzt ein Unit- oder Component-Test MSBuild, einen externen Prozess oder das echte Repository,
+  schlaegt ein Guard fehl: statisch ueber die Deny-Liste gegen die kompilierte Fast-/TestKit-Assembly
+  und zur Laufzeit ueber die Pruefung, dass keine MSBuild-Assembly in den Fast-Lauf geladen wurde.
+- Die neuen Testprojekte loesen nachweislich auf den Test-`ProjectOverride` auf und werden von
+  `TestProjectDetector` als Testprojekte erkannt; ein Test belegt beides.
+- Solange `pending > 0` ist, bleibt `AiNetLinter.Tests` Teil von `AiNetLinter.slnx` und
+  kompilierbar; ein Build-Gate stellt das sicher.
+- Der Ledger-Konsistenzguard laeuft im normalen Gate mit und schlaegt bei Datei-/Eintrags-Drift
+  fehl.
+- Die gemeinsamen `MetadataReference`-Saetze werden einmal aufgebaut und geteilt; Fixture-Szenarien
+  materialisieren lazy, sodass ein gefilterter Einzeltestlauf nicht die volle Fixture-Matrix zahlt.
+- Fixtures entsorgen ihre besitzenden Ressourcen vollstaendig; nach einem Fast- oder
+  Integrationslauf bleiben keine Workspaces, Subprozesse oder Temp-Verzeichnisse zurueck.
 - Read-only Solution-Fixtures werden einmal je definierter Lebensdauer aufgebaut; mutierende Tests
   besitzen isolierte Workspaces.
 - Breites read-only Fixture-Sharing serialisiert Testklassen nicht: Assembly-Fixtures sind
@@ -622,7 +880,8 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
 - MCP-Toolverhalten ist breit ohne Prozess getestet; echte Prozess-E2E-Tests decken weiterhin
   Toolregistrierung, Binding, Framing, Loading, Retry, Refresh und Fehlergrenzen repraesentativ ab.
 - Dogfood prueft weiterhin die echte `AiNetLinter.slnx` und `rules.json` nach dem vereinbarten
-  Laufvertrag.
+  Laufvertrag und belegt dabei strukturelle Invarianten, nicht nur "Ergebnis nicht leer". Der
+  Dogfood-Nachweis wird im Hauptarbeitsverzeichnis erbracht, nicht aus einem Git-Worktree.
 - Performance- und Stressnachweise sind weiterhin vorhanden, reproduzierbar und aus dem normalen
   Korrektheitslauf ausgeschlossen; beide werden als getrennte verpflichtende Profile ausgefuehrt.
 - Automatische Guards schlagen fehl, wenn ein schneller Test eine teure Grenze nutzt oder eine
@@ -637,8 +896,10 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
 - Nach Abschluss aller Refactoring-Steps werden die vereinbarten Profile getrennt vollstaendig
   ausgefuehrt, auch wenn alle gezielten Step-Tests zuvor gruen waren.
 - Vorher-/Nachher-Protokoll dokumentiert Median, Streuung, Testanzahl, Profilzeiten und erkennbare
-  Fremdlast. Eine Verbesserung muss ueber mehrere Laeufe konsistent sichtbar sein; kein absoluter
-  Sekundenwert und kein einzelner Bestlauf entscheidet ueber die Abnahme.
+  Fremdlast nach der Messmethodik aus Leitplanke 10 (verschachtelte Laeufe, `--no-build`, eigene
+  TRX-Datei je Profil, separat ausgewiesene Build- und Dogfood-Zeit). Eine Verbesserung muss ueber
+  mehrere Laeufe konsistent sichtbar sein; kein absoluter Sekundenwert und kein einzelner Bestlauf
+  entscheidet ueber die Abnahme.
 - Der schnelle Lauf ist strukturell frei von MSBuild, externen Prozessen und echtem Repository;
   der normale PR-Lauf enthaelt keine Dogfood-, Performance- oder Stressmatrix.
 - Das Legacy-Testprojekt ist am Ende geloescht und wird von keinem Solution-, CI- oder
@@ -649,6 +910,22 @@ die spaetere Zeile-fuer-Zeile-Implementierung.
   Amend/Rebase und kein Push durch den Loop.
 
 ## Offene Punkte
+
+### Q8 — Projektnamen vs. bestehende Konfigurationsvertraege
+
+`ProjectOverrides` kennt heute nur `*.Tests`; weder `AiNetLinter.FastTests` noch
+`AiNetLinter.IntegrationTests` noch `AiNetLinter.TestKit` matchen. Zwei Wege:
+(a) Namen beibehalten und `rules.json` erweitern (empfohlen — der Override-Schluessel ist ohnehin
+zu grob und die Zielnamen sind sprechender), oder (b) Projekte `AiNetLinter.Fast.Tests` /
+`AiNetLinter.Integration.Tests` nennen, damit das vorhandene Muster greift.
+
+### Q9 — Umgang mit `StaticTestSentinel`-Rauschen waehrend der Migration
+
+Waehrend der Migration wandern Abdeckungssignale von Legacy nach Neu. Empfehlung: den Sentinel
+unveraendert lassen und sein Delta bewusst als Coverage-Audit-Signal pro Kohorte auswerten, statt
+ihn temporaer abzuschalten — ein abgeschalteter Sentinel ist genau die Schutzluecke, die dieses
+Konzept vermeiden will. Voraussetzung ist, dass das Legacy-Projekt in der Solution bleibt
+(Leitplanke 8), sonst entsteht das Rauschen schlagartig statt kohortenweise.
 
 ### Q7 — Abschliessende Ready-Freigabe
 
