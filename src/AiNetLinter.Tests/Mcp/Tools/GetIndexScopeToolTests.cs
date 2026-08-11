@@ -53,7 +53,7 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_StructuredContentDeserializesToFileTypeBreakdownEntries()
     {
-        // S1.3: StructuredContent ergaenzt den Text additiv — dieselben Zaehlwerte wie die
+        // StructuredContent ergaenzt den Text additiv — dieselben Zaehlwerte wie die
         // Text-Zeile ".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)".
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
