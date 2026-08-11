@@ -340,7 +340,7 @@ Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetRe
 | `DuplicateCodeMaxResults`           | `int`    | `20`     |
 
 Solution-weite DRY-Erkennung (Token-basiertes Clone-Detection, CCFinder/Jaccard-N-Gram-Ansatz,
-Method-Granularität — siehe `tasks/features/07-drift-audit-ideen.md` §A). Für jede Methode/lokale
+Method-Granularität). Für jede Methode/lokale
 Funktion mit mindestens `DuplicateCodeMinTokens` Tokens im Body wird der Token-Stream in
 überlappende N-Gramme der Größe `DuplicateCodeNgramSize` zerlegt und über einen Inverted Index mit
 allen anderen Methoden der Solution verglichen. Methoden-Paare mit mindestens
@@ -382,7 +382,7 @@ zwischen den Methoden, keine pro Datei unabhängige).
 
 > Evidenz: Roy & Cordy (2007), Bellon et al. (2007) für die Token-CPD-Methodik; Manning, Raghavan,
 > Schütze (2008) für Jaccard/N-Gram/Inverted-Index. Details und Referenz-Tools (CCFinder, PMD CPD,
-> jscpd) in `tasks/features/07-drift-audit-ideen.md` §A.
+> jscpd) sind in der wissenschaftlichen Literatur dokumentiert.
 
 ### MaxLinqChainLength
 
