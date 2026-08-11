@@ -53,7 +53,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_SmallMaxLineCount_StructuredContentDeserializesToHotspotEntries()
     {
-        // S1.3: StructuredContent ergaenzt den Text additiv — Category spiegelt dieselbe
+        // StructuredContent ergaenzt den Text additiv — Category spiegelt dieselbe
         // Schwellwert-Klassifizierung wie die Text-Sektion "Kritische Dateien".
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, MaxLineCount: 1)));
 
