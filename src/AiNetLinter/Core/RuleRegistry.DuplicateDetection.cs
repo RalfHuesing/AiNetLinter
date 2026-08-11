@@ -12,7 +12,7 @@ internal static partial class RuleRegistry
             RuleId: LinterRuleIds.DuplicateCode,
             DisplayName: "Duplicate Code",
             GetShortDescription: c => $"Methode ist ein fast identischer Klon einer anderen Methode (min. {c.Global.DuplicateCodeMinTokens} Tokens, Jaccard >= {c.Global.DuplicateCodeExactThreshold:F2}).",
-            Warum: "Code-Duplikation entsteht, wenn eine bereits existierende Loesung nicht wiedergefunden wird — bei autonomer agentischer Entwicklung ein systematisches Muster, weil der Agent den vorhandenen Code nicht vollstaendig ueberblickt. Anders als die meisten Regeln hier ist dies ein Kandidaten-Befund, kein hartes Anti-Pattern: manuelle/LLM-Bewertung vor einer Konsolidierung bleibt noetig (siehe tasks/features/07-drift-audit-ideen.md).",
+            Warum: "Code-Duplikation entsteht, wenn eine bereits existierende Loesung nicht wiedergefunden wird — bei autonomer agentischer Entwicklung ein systematisches Muster, weil der Agent den vorhandenen Code nicht vollstaendig ueberblickt. Anders als die meisten Regeln hier ist dies ein Kandidaten-Befund, kein hartes Anti-Pattern: manuelle/LLM-Bewertung vor einer Konsolidierung bleibt noetig.",
             Alternativen:
             [
                 "**Gemeinsame Methode extrahieren**: Die geteilte Logik in eine wiederverwendbare Methode/Klasse auslagern und von allen beteiligten Stellen aufrufen.",
