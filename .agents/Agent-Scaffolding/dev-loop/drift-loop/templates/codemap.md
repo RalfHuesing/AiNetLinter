@@ -51,8 +51,8 @@ Nachschauen selbst.
 Bevor der Planer im Step-Modus einen neuen Step plant, gleicht er sein
 Vorhaben gegen die hier verzeichneten, bereits getroffenen Entscheidungen
 ab. Widerspricht der neue Plan erkennbar einem hier festgehaltenen,
-bereits umgesetzten Stand (z. B. Step-234 würde zurückdrehen, was Step-123
-laut Map bewusst so gebaut hat): entweder im neuen Step-Plan explizit als
+bereits umgesetzten Stand (z. B. ein späterer Step würde zurückdrehen, was ein
+früherer Schritt laut Map bewusst so gebaut hat): entweder im neuen Step-Plan explizit als
 Erweiterung begründen, oder den alten Eintrag hier als „obsolet —
 <Grund>" markieren (nicht löschen) — nie stillschweigend widersprechen.
 Das verhindert kein Kreisen zu 100 %, macht ein Hin-und-Her aber
