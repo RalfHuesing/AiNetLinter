@@ -499,4 +499,19 @@ Umgesetzt als S2.2 aus `tasks/features/05-roadmap.md`. Neues MCP-Tool `pattern_d
 
 ---
 
+## MCP-Tool `dependency_graph`
+
+Umgesetzt als M2 aus `tasks/features/05-roadmap.md`, priorisiert nach der Dogfooding-Session 2026-08-10/11 als groesste verbleibende Navigationsluecke ("welche Dateien/Typen haengen an Datei/Modul X"). Neues MCP-Tool `dependency_graph` (17. Tool) beantwortet das direkt statt mehrerer `find_symbol`/`find_references`-Umwege.
+
+- [x] **Datei-/Typ-Ebene ueber echte `SemanticModel`-Typreferenzen** (nicht nur `using`-Direktiven), gefiltert auf in der Solution deklarierte Typen (BCL-/NuGet-Rauschen ausgeschlossen). Knoten sind Dateien, Kanten Datei-zu-Datei annotiert mit den ueberquerenden Typnamen; `typeIdentifier` scoped enger als `filePath` (nur die Deklaration des einen Typs statt der ganzen Datei).
+- [x] **`incoming`/`outgoing`/`both`** ueber `direction`-Parameter, `depth` (Default 1, hard cap 3) traversiert transitiv auf Datei-Ebene, zyklensicher per Visited-Set (schliessende Kante bleibt sichtbar statt verworfen zu werden), hart begrenzt auf 150 besuchte Dateien.
+- [x] **`maxResults`** (Default 50) von Anfang an, mit Trunkierungs-Meta-Zeile und korrekt unterdruecktem Sufficiency-Hinweis bei Trunkierung (durch `maxResults` oder den Traversierungs-Hard-Cap) — genau die Bug-Klasse aus der Dogfooding-Session (`get_violations`/`get_hotspots`/`get_type_hierarchy`/`get_call_tree`), die hier von Anfang an vermieden wurde.
+- [x] **`StructuredContent` als Objekt**, nie ein nacktes Array — bleibt (anders als `find_references`/`get_impact`) auch bei `depth > 1` gefuellt, weil die BFS ihre Kanten durchgehend als strukturierte Records haelt statt wie bei der transitiven Caller-Traversierung nur Strings zu akkumulieren.
+- [x] **Projekt-Ebene als guenstige Zusatz-Sicht** (`Project.ProjectReferences` des Zielprojekts, kein NuGet-Aufruf) — kein vollstaendiger Projektgraph, wie im Scope vorgesehen.
+- [x] **NuGet-Vulnerability-Scanning bewusst nicht umgesetzt** (widerspricht dem Cloud-Abhaengigkeits-Anti-Ziel, siehe `tasks/features/05-roadmap.md` §0) — deckt sich mit der urspruenglichen Scope-Entscheidung.
+- [x] Registrierung als sechstes Symbolgraph-Tool in `SymbolGraphToolRegistrations.cs` (nicht als eigene Registrations-Datei) — reuse von `FindReferencesTool.ResolveSymbolAsync` und demselben Visited-Set-Traversierungsmuster wie `CallGraphTraversal`.
+- [x] 25 neue Unit-Tests (Scanner + Tool, inkl. Zyklen-Fall, Typ-Scope-Praezision, Trunkierung, Depth-Clamping) + 1 Live-Repo-Test. Vollstaendige Tool-Referenz inkl. Structured-Output-Beispiel: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

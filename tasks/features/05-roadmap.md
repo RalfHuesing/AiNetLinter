@@ -109,7 +109,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
 | [ ] | M1 | **ASP.NET-Framework-Analyzer-Suite** (6 Rules) — siehe Hinweis unten | 95 | 2 Wo | Recon A §7.2 |
-| [ ] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
+| [x] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
 | [ ] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
@@ -372,23 +372,41 @@ Bedarf):**
 **Aufwand:** 1-2 Wochen (Kern Datei-/Typ-Ebene realistisch 3-5 Tage, Projekt-Ebene als Zusatz
 +1-2 Tage falls Zeit)
 **Akzeptanzkriterien:**
-- [ ] Datei-/Typ-Ebene-Abhängigkeiten funktionieren für `incoming`/`outgoing`/`both`
-- [ ] `maxResults` + Trunkierungs-Meta von Anfang an (kein unbounded Output — siehe die
+- [x] Datei-/Typ-Ebene-Abhängigkeiten funktionieren für `incoming`/`outgoing`/`both` — Knoten sind
+      Dateien (Solution-relative Pfade), Kanten Datei-zu-Datei annotiert mit den ueberquerenden
+      Typnamen. `typeIdentifier` scoped enger als `filePath` (nur die Deklaration des einen Typs
+      statt der ganzen Datei) — direkt getestet in
+      `ScanTypeAsync_Incoming_NarrowerThanFile_ExcludesOtherTypeReferences`.
+- [x] `maxResults` + Trunkierungs-Meta von Anfang an (kein unbounded Output — siehe die
       `get_violations`/`get_hotspots`/`get_type_hierarchy`-Bugfixes aus der Dogfooding-Session
-      2026-08-10/11 als Warnung: alle drei hatten genau diesen Fehler)
-- [ ] `StructuredContent` ist immer ein Objekt, nie ein nacktes Array
-- [ ] Sufficiency-Hinweis korrekt (nur bei echter Vollständigkeit, nicht bei Trunkierung — siehe
-      `get_call_tree`-Bugfix derselben Session als Vorbild)
-- [ ] Registrierung in einer `*ToolRegistrations.cs`-Datei (bestehendes Muster), Tool-Beschreibung
-      inkl. Parameter-Doku
-- [ ] Projekt-Ebene (optional) nur falls ohne großen Mehraufwand über `Solution.Projects`/
-      `ProjectReferences` möglich
-- [ ] Keine NuGet-Vulnerability-Abfrage (bewusst out of scope)
-- [ ] 15+ Unit-Tests (Scanner direkt + Tool-Ebene, Edge-Cases: Datei ohne Abhängigkeiten,
-      zyklische Abhängigkeiten, Trunkierung)
-- [ ] 1 Integration-/Live-Repo-Test
-- [ ] Doku: `Docs/agent-api.md` Tool-Tabelle + `Docs/ROADMAP.md` Epic-Eintrag
-- [ ] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) grün
+      2026-08-10/11 als Warnung: alle drei hatten genau diesen Fehler) — zusaetzlich ein eigener
+      Scan-Kosten-Hard-Cap (`MaxVisitedFiles` = 150 besuchte Dateien waehrend der BFS), unabhaengig
+      von `maxResults` (das nur die angezeigten Kanten begrenzt).
+- [x] `StructuredContent` ist immer ein Objekt, nie ein nacktes Array — eigener Regressionstest
+      `ExecuteAsync_StructuredContent_IsJsonObjectNotArray` analog `McpToolResultsTests`.
+- [x] Sufficiency-Hinweis korrekt (nur bei echter Vollständigkeit, nicht bei Trunkierung — siehe
+      `get_call_tree`-Bugfix derselben Session als Vorbild) — `Truncated` ist ein echtes Bool-Feld
+      (nicht wie bei `find_references`/`get_impact` eine String-Heuristik), gesetzt bei
+      `maxResults`-Kappung ODER erreichtem Traversierungs-Hard-Cap; der Sufficiency-Hinweis wird
+      nur bei `Truncated == false` angehaengt.
+- [x] Registrierung in einer `*ToolRegistrations.cs`-Datei (bestehendes Muster), Tool-Beschreibung
+      inkl. Parameter-Doku — als sechstes Tool in `SymbolGraphToolRegistrations.cs` (nicht als
+      eigene Registrations-Datei), da `dependency_graph` `FindReferencesTool.ResolveSymbolAsync`
+      und dasselbe Visited-Set-Traversierungsmuster wie `CallGraphTraversal` wiederverwendet.
+- [x] Projekt-Ebene (optional) nur falls ohne großen Mehraufwand über `Solution.Projects`/
+      `ProjectReferences` möglich — umgesetzt: ein Eintrag (Zielprojekt + seine direkten
+      Projekt-Referenzen), kein vollstaendiger Projektgraph.
+- [x] Keine NuGet-Vulnerability-Abfrage (bewusst out of scope)
+- [x] 15+ Unit-Tests (Scanner direkt + Tool-Ebene, Edge-Cases: Datei ohne Abhängigkeiten,
+      zyklische Abhängigkeiten, Trunkierung) — 25 Unit-Tests (`DependencyGraphScannerTests`:
+      14, `DependencyGraphToolTests`: 11), deutlich mehr als gefordert.
+- [x] 1 Integration-/Live-Repo-Test — `LiveDogfood_DependencyGraph_ReturnsResults` in
+      `McpLiveRepositoryTests`.
+- [x] Doku: `Docs/agent-api.md` Tool-Tabelle + `Docs/ROADMAP.md` Epic-Eintrag — zusaetzlich
+      eigenes Structured-Output-Beispiel in `agent-api.md` analog `safeguard`/`pattern_detect`,
+      `ServerInstructions.cs` und `OverviewResourceRegistration.ToolSummaries` (Tool-Zaehler
+      ueberall auf 17 aktualisiert) nachgezogen.
+- [x] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) grün
 
 **Risiko:** Mittel (Datei-/Typ-Abhängigkeits-Analyse aus `SemanticModel` ist neu, Zyklen-Erkennung
 braucht sorgfältige Traversierung analog `CallGraphTraversal`)
