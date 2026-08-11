@@ -234,7 +234,7 @@ Konsequenz für den Agent-Loop: 12 Tools sind C#-only (find_symbol, find_referen
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Call-Log-Aggregation (falls `--mcp-log` aktiv) | nein | nein |
-| `find_duplicates` | `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe), `normalizeIdentifiers?` (Default `false`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20) | Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit | ja | ja |
+| `find_duplicates` | `mode?` (`clone` Default oder `refactoring-drift`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, nur `mode=clone`), `normalizeIdentifiers?` (Default `false`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit. `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten | ja | ja |
 
 ### Structured Output
 
@@ -316,6 +316,19 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 ```
 
 `minTokens` filtert triviale Methoden (leere `Dispose`/`ToString`-Overrides) heraus; `bin/`, `obj/`, `.ainetlinter/` und `tests/Fixtures/`-Verzeichnisse sowie Methoden mit `[GeneratedCode]`-Attribut sind fest ausgeschlossen. `normalizeIdentifiers` (Default `false`) schaltet die Erkennung umbenannter Klone (Type-2) an, indem Identifier-/Literal-Tokens vor dem Vergleich normalisiert werden. `scopeDir` grenzt auf einen Teilbereich ein (case-insensitiver Substring-Abgleich auf den Dateipfad, wie `scopeFilter` bei `get_violations`). `maxResults` kappt die gezeigten Cluster (Default 20, aus `rules.json` überschreibbar) — `truncated: true` unterdrückt den Sufficiency-Hinweis und ergänzt stattdessen eine Trunkierungs-Meta-Zeile.
+
+**`find_duplicates mode=refactoring-drift` — Structured Output im Detail:** Eigenes Response-Schema (nicht `clusters`/`bucket`, siehe `tasks/features/07-drift-audit-ideen.md` §C) — findet Methoden, die strukturell einem per `helperSymbol` benannten Helfer `H` ähneln (Jaccard-Score ≥ `near`-Schwellwert aus `rules.json`, `DuplicateCodeNearThreshold`), ihn aber nachweislich nicht aufrufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005). `helperSymbol` wird wie bei `find_references` aufgelöst (Datei:Zeile:Spalte, stabile DocumentationCommentId oder qualifizierter Name); löst der Identifikator nicht auf ein Symbol oder mehrdeutig auf, liefert das Tool denselben `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL`-Fehler wie `find_references`. Nur gewöhnliche Methoden/lokale Funktionen sind als Helfer zulässig (Konstruktoren/Properties/Felder werden von der zugrunde liegenden Engine nicht fingerprinted) — `similarityThreshold` wird in diesem Modus ignoriert. `StructuredContent` liefert:
+
+```json
+{
+  "candidates": [
+    { "filePath": "...", "line": 42, "signatureName": "MyNamespace.DriftedA.Build()", "tokenCount": 36, "score": 1.0 }
+  ],
+  "summary": { "helperSymbol": "MyNamespace.OptionsHelper.BuildDefault()", "methodsScanned": 240, "totalCandidates": 2, "shownCandidates": 2, "truncated": false }
+}
+```
+
+Feldname bewusst `candidates`, nicht `violations` — False-Positive-Budget ist höher als bei `mode=clone` (Ziel < 25 %), weil strukturelle Ähnlichkeit nicht zwingend Refactoring-Drift bedeutet (z. B. mehrere legitime, ähnlich aufgebaute `Dispose()`-Implementierungen). Text und `StructuredContent` benennen das Ergebnis konsistent als Kandidaten zur manuellen Prüfung, nie als automatisch gemeldete Verstöße — anders als `mode=clone` fließt dieser Modus **nicht** in `DuplicateCodeChecker`/`safeguard` ein (On-Demand-only, kein Lint-Gate).
 
 Beispiel-Aufruf (JSON-RPC über stdio):
 
