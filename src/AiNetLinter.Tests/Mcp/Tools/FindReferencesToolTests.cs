@@ -148,14 +148,14 @@ public sealed class FindReferencesToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
-        // Q5 Sufficiency-Hinweis: nicht-trunkiertes Ergebnis ist vollstaendig, kein Read/Grep noetig.
+        // Sufficiency-Hinweis: nicht-trunkiertes Ergebnis ist vollstaendig, kein Read/Grep noetig.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_ValidQualifiedNameDepth1_StructuredContentDeserializesToCallSiteEntries()
     {
-        // S1.3: nur der depth=1-Flachfall bekommt StructuredContent (siehe Kommentar in
+        // Nur der depth=1-Flachfall bekommt StructuredContent (siehe Kommentar in
         // FindReferencesTool.ExecuteAsync — depth>1 laesst CallGraphTraversal unveraendert).
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
@@ -210,7 +210,7 @@ public sealed class FindReferencesToolTests
         Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Pattern verfeinern oder maxResults erhöhen", textContent.Text, StringComparison.Ordinal);
-        // Q5: ein trunkiertes Ergebnis bekommt NICHT den "vollstaendig"-Sufficiency-Hinweis —
+        // Ein trunkiertes Ergebnis bekommt NICHT den "vollstaendig"-Sufficiency-Hinweis —
         // die Meta-Zeile selbst signalisiert "weitere Calls noetig".
         Assert.DoesNotContain("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
