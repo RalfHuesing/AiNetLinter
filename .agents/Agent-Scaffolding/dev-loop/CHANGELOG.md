@@ -51,7 +51,7 @@ praktischen Betrieb von `planning/` + `drift-loop/`). Fünf zusammenhängende
    umgesetzte `auto_fixable`-Einträge selbst als `erledigt` — einzige
    Stelle, an der ein Subagent den Tech-Debt-Status automatisch ändert.
 
-5. **Terseness-Regel ausgeweitet** (`spec.md` §10.7): Die bisher nur für
+5. **Terseness-Regel ausgeweitet** (`spec.md` §10.7): Die nur für
    `step-review.md` geltende Kürzungsregel („Prosa nur, wenn sie
    Verhalten ändert") gilt jetzt projektweit für alle generierten
    Artefakte (`step-result.md`, `task-summary.md`, Tech-Debt-Einträge,
