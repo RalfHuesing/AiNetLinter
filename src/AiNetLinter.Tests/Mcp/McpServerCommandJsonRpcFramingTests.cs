@@ -237,12 +237,21 @@ public sealed class McpServerCommandJsonRpcFramingTests
         // Producer-Task sauber beenden.
         try { await writerTask; } catch { /* Pipe-Close-Fehler ist hier OK */ }
 
-        // Auf graceful exit warten, falls noch nicht beendet (kurzer Timeout).
+        // Auf graceful exit warten, falls noch nicht beendet (kurzer Timeout). Reagiert der
+        // Subprozess unter Last (z. B. konkurrierende Solution-Loads anderer parallel laufender
+        // Tests/Prozesse) nicht rechtzeitig, wird er hart beendet, statt den Test unbegrenzt
+        // haengen zu lassen — vorher konnte ein nie beendeter Subprozess das nachfolgende
+        // stderrTask.ReadToEndAsync() (blockiert bis stderr-EOF, also bis der Prozess beendet
+        // ist) auf unbestimmte Zeit blockieren, empirisch beobachtet als Volllauf-Haenger
+        // 2026-08-11.
         if (!process.HasExited)
         {
             try
             {
-                process.WaitForExit(TimeSpan.FromSeconds(10));
+                if (!process.WaitForExit(TimeSpan.FromSeconds(10)) && !process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
             }
             catch
             {
@@ -250,7 +259,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 // lassen, wenn der eigentliche Befund (stdout-Frames) schon erhoben ist.
             }
         }
-        await stderrTask;
+
+        // stderrTask kann nach einem erzwungenen Kill kurzzeitig offen bleiben (Pipe-Handle-
+        // Teardown ist nicht synchron mit dem Kill) — eigener Timeout statt unbegrenztem await,
+        // damit ein Edge-Case hier nie wieder den ganzen Testlauf blockieren kann.
+        await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10)));
 
         return observed;
     }
