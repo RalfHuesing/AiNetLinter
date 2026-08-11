@@ -14,7 +14,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 
 - **`AiNetLinter.slnx`** — enthaelt derzeit Produkt- und einziges Testprojekt und ist fuer eine moegliche physische Testtrennung relevant. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz. (zuletzt: planning)
-- **`src/AiNetLinter.UnitTests/`** — vorgesehene neue schnelle Assembly fuer Unit- und In-Memory-Component-Tests. (zuletzt: planning)
+- **`src/AiNetLinter.FastTests/`** — vorgesehene neue schnelle Assembly fuer Unit- und In-Memory-Component-Tests. (zuletzt: planning)
 - **`src/AiNetLinter.IntegrationTests/`** — vorgesehene neue Infrastruktur-Assembly fuer Integration, Dogfood, Performance und Stress. (zuletzt: planning)
 - **`src/AiNetLinter.TestKit/`** — vorgesehene gemeinsame Testbibliothek fuer deklarative Builder und guenstige Hilfen ohne teure Hosts. (zuletzt: planning)
 - **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status-, Abdeckungs- und Loeschindex fuer die Strangler-Migration des Legacy-Testprojekts. (zuletzt: planning)
@@ -39,6 +39,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.Tests/Fixtures/*MiniFixtureWorkspace.cs`** — typisierte Zugriffe auf die vorhandenen kleinen Solution-Fixtures. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/BaselineCatalogFixture.cs`** — laedt `BaselineMini` bereits einmal fuer eine xUnit-Lebensdauer. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — laedt `SymbolGraphMini` bereits einmal fuer read-only Tooltests. (zuletzt: planning)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogCollection.cs`** — teilt die Catalog-Fixture heute ueber eine Collection und serialisiert dadurch zahlreiche Tooltestklassen. (zuletzt: planning)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — teilt einen MCP-Prozess ueber eine bewusst serielle Collection und ist fuer die kuenftige Zustands-/Exklusivitaetspruefung relevant. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/McpMiniFixtureBase.cs`** — im parallelen DRY-Refactoring entstehende gemeinsame Basis fuer Mini-Fixture-MCP-Clients. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — haelt einen echten Repository-MCP-Prozess collection-weit am Leben. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs`** — begrenzt Subprozessstarts und ist fuer kuenftige Start-/Load-/Lifetime-Budgets relevant. (zuletzt: planning)
