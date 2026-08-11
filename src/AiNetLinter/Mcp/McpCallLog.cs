@@ -61,13 +61,13 @@ internal sealed class McpCallLog : IAsyncDisposable
 
     /// <summary>Gesamtzahl der als <c>IsError=true</c> abgeschlossenen Aufrufe (<see cref="RecordEnd"/>)
     /// plus aller unerwarteten Exceptions (<see cref="RecordError"/>) seit Start — Aggregat fuer
-    /// <c>get_server_health</c> (Q3), damit ein Agent ohne manuelles JSONL-Parsing sieht, ob in
+    /// <c>get_server_health</c>, damit ein Agent ohne manuelles JSONL-Parsing sieht, ob in
     /// der laufenden Session ueberhaupt Fehler aufgetreten sind.</summary>
     internal int ErrorCount { get { lock (_writeLock) { return _errorCount; } } }
 
     /// <summary>Anzahl abgeschlossener Aufrufe je Tool-Name seit Start (nur <see cref="RecordEnd"/>,
     /// nicht <see cref="RecordError"/> — ein unerwarteter Fehler hat keinen zugeordneten Tool-Namen-
-    /// Erfolgspfad). Verwendet von <c>get_server_health</c> (Q3) fuer die Pro-Tool-Aggregation.
+    /// Erfolgspfad). Verwendet von <c>get_server_health</c> fuer die Pro-Tool-Aggregation.
     /// Kopie statt Live-Referenz, damit der Aufrufer nicht versehentlich mit dem internen Dictionary
     /// unter Lock interagiert.</summary>
     internal IReadOnlyDictionary<string, int> CallCountsByTool
