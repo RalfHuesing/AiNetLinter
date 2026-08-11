@@ -42,7 +42,7 @@ internal static class GetTypeHierarchyTool
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution
         // aufgeloest und koennen bei weit verbreiteten Basistypen/Interfaces (z. B. IDisposable)
         // das maxResults-Limit ueberschreiten — Sufficiency-Hinweis daher nur im nicht-trunkierten
-        // Fall (Q5-Muster, analog zu FindReferencesTool/GetViolationsTool).
+        // Fall (analog zu FindReferencesTool/GetViolationsTool).
         var finalText = isTruncated ? text : McpSufficiencyHints.Append(text);
         return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalText));
     }
