@@ -129,12 +129,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
     [Fact]
     public async Task Initialize_ResponseInstructionsField_ContainsServerInstructionsDoctrine()
     {
-        // Q4-Nachweis (05-roadmap.md §3): die ServerInstructions.Text-Doctrine muss tatsaechlich
-        // im initialize-Response auf dem Wire ankommen — nicht nur auf McpServerOptions-Ebene
-        // (siehe McpServerOptionsFactoryTests fuer den Options-Ebenen-Test). Roher JSON-Parse
-        // gegen das "instructions"-Feld (JSON-Property-Name laut ModelContextProtocol.Core
-        // InitializeResult), bewusst ohne SDK-Client, analog zu den anderen Framing-Tests in
-        // dieser Klasse.
+        // Die ServerInstructions.Text-Doctrine muss tatsaechlich im initialize-Response auf dem
+        // Wire ankommen — nicht nur auf McpServerOptions-Ebene (siehe McpServerOptionsFactoryTests
+        // fuer den Options-Ebenen-Test). Roher JSON-Parse gegen das "instructions"-Feld
+        // (JSON-Property-Name laut ModelContextProtocol.Core InitializeResult), bewusst ohne
+        // SDK-Client, analog zu den anderen Framing-Tests in dieser Klasse.
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
         var frames = new[]
