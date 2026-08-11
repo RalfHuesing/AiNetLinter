@@ -265,7 +265,7 @@ public sealed class McpLiveRepositoryTests
         var score = (double)json["score"]!;
         Assert.True(score >= 5.0,
             $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0 — " +
-            "moeglicher Bug in der Score-Formel (EPIC-01-Scope), nicht im step-003 zu fixen.");
+            "moeglicher Bug in der Score-Formel, nicht im aktuellen Schritt zu fixen.");
     }
 
     [Fact]
