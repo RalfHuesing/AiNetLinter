@@ -3,6 +3,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Xunit;
 using AiNetLinter.Configuration;
@@ -68,40 +69,40 @@ public sealed class PostAnalysisChecksPathOverrideTests
     };
 
     [Fact]
-    public void AIContextFootprint_WithPathOverride_NoViolationWhenUnderOverrideLimit()
+    public async Task AIContextFootprint_WithPathOverride_NoViolationWhenUnderOverrideLimit()
     {
         // footprint 7000 > global 5000 but ≤ override 12000 → no violation
         var state = CreateState(MakeClass("DataTablePage", TestFilePath, footprint: 7000));
 
-        PostAnalysisChecks.Run(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
+        await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
 
         Assert.Empty(state.Violations.Where(v => v.RuleName == "AIContextFootprint"));
     }
 
     [Fact]
-    public void AIContextFootprint_WithPathOverride_ViolationWhenAboveOverrideLimit()
+    public async Task AIContextFootprint_WithPathOverride_ViolationWhenAboveOverrideLimit()
     {
         // footprint 13000 > override 12000 → violation even with override
         var state = CreateState(MakeClass("DataTablePage", TestFilePath, footprint: 13000));
 
-        PostAnalysisChecks.Run(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
+        await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
 
         Assert.Contains(state.Violations, v => v.RuleName == "AIContextFootprint");
     }
 
     [Fact]
-    public void AIContextFootprint_FileOutsideOverridePath_UsesGlobalLimit()
+    public async Task AIContextFootprint_FileOutsideOverridePath_UsesGlobalLimit()
     {
         // Production file is NOT under the PathOverride glob → global limit (5000) applies
         var state = CreateState(MakeClass("ProdPage", OtherFilePath, footprint: 7000));
 
-        PostAnalysisChecks.Run(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
+        await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
 
         Assert.Contains(state.Violations, v => v.RuleName == "AIContextFootprint");
     }
 
     [Fact]
-    public void AIContextFootprint_PartialClass_UsesRepresentativeFileForPathOverride()
+    public async Task AIContextFootprint_PartialClass_UsesRepresentativeFileForPathOverride()
     {
         // Partial class with one file under the override path → override applies, no violation
         var state = CreateState(new ClassInfo
@@ -117,13 +118,13 @@ public sealed class PostAnalysisChecksPathOverrideTests
             ProjectName = null,
         });
 
-        PostAnalysisChecks.Run(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
+        await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
 
         Assert.Empty(state.Violations.Where(v => v.RuleName == "AIContextFootprint"));
     }
 
     [Fact]
-    public void AIContextFootprint_WildcardPattern_MatchesNestedPaths()
+    public async Task AIContextFootprint_WildcardPattern_MatchesNestedPaths()
     {
         // Ensure ** glob correctly matches nested path segments
         var state = CreateState(MakeClass("Nested", @"C:\Solution\App\Pages\Test\Sub\Deep\Page.cs", footprint: 7000));
@@ -141,7 +142,7 @@ public sealed class PostAnalysisChecksPathOverrideTests
             }
         };
 
-        PostAnalysisChecks.Run(state, config);
+        await PostAnalysisChecks.RunAsync(state, config);
 
         Assert.Empty(state.Violations.Where(v => v.RuleName == "AIContextFootprint"));
     }

@@ -102,7 +102,7 @@ public sealed class LinterEngine
         _profiler.StopPhase("DocumentAnalysis");
 
         _profiler.StartPhase("PostAnalysis");
-        PostAnalysisChecks.Run(state, ResolvePostAnalysisConfig(solution), _profiler);
+        await PostAnalysisChecks.RunAsync(state, ResolvePostAnalysisConfig(solution), _profiler);
         _profiler.StopPhase("PostAnalysis");
 
         if (catalog != null && catalog.HasLoadingErrors)

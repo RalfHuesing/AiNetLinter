@@ -188,7 +188,7 @@ Fehlermeldungen sind maschinenlesbar:
 
 ## MCP-Server-Modus
 
-Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 16 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
+Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 18 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
 
 ### Server-Lifecycle
 
@@ -209,11 +209,11 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
 
-> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body, find_duplicates) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 11 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Konsequenz für den Agent-Loop: 12 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body, find_duplicates), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 17 Tools
+### Die 18 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
@@ -234,10 +234,11 @@ Konsequenz für den Agent-Loop: 11 Tools sind C#-only (find_symbol, find_referen
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Call-Log-Aggregation (falls `--mcp-log` aktiv) | nein | nein |
+| `find_duplicates` | `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe), `normalizeIdentifiers?` (Default `false`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20) | Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit | ja | ja |
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`) und `dependency_graph` (alle `depth`-Werte) zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den bisherigen Text zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) war das urspruengliche Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`), `dependency_graph` (alle `depth`-Werte) und `find_duplicates` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den bisherigen Text zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) war das urspruengliche Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
 
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
@@ -296,6 +297,26 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 
 `maxResults` kappt die angezeigten Kanten (Default 50); die Traversierung selbst ist unabhängig davon hart auf 150 besuchte Dateien begrenzt (Scan-Kosten-Grenze bei großen Solutions) — beide Kappungsarten setzen `truncated: true` und unterdrücken den Sufficiency-Hinweis. Projekt-Referenzen (`Project.ProjectReferences` des Zielprojekts) sind eine günstige Zusatz-Sicht, keine vollständige Projekt-Graph-Traversierung; NuGet-Vulnerability-Scanning ist bewusst nicht Teil dieses Tools (siehe `tasks/features/05-roadmap.md` M2).
 
+**`find_duplicates` — Structured Output im Detail:** Token-basiertes Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularität, siehe `tasks/features/07-drift-audit-ideen.md` §A) über dieselbe `DuplicateDetectionEngine`, die auch der Linter-Checker `DuplicateCode` nutzt. Transitiv ähnliche Methoden (A~B, B~C) werden zu einem Cluster gruppiert statt als isolierte Paare gemeldet, gestaffelt nach `exact` (≥0.95), `near` (≥0.80) und `fuzzy` (≥0.65) Jaccard-Similarity — `similarityThreshold` bestimmt die niedrigste noch angezeigte Stufe (Default `fuzzy` zeigt alles). `StructuredContent` liefert:
+
+```json
+{
+  "clusters": [
+    {
+      "bucket": "exact",
+      "score": 1.0,
+      "members": [
+        { "filePath": "...", "line": 42, "signatureName": "MyNamespace.HandlerA.BuildOptions()", "tokenCount": 36 },
+        { "filePath": "...", "line": 18, "signatureName": "MyNamespace.HandlerB.BuildOptions()", "tokenCount": 36 }
+      ]
+    }
+  ],
+  "summary": { "methodsScanned": 240, "totalClusters": 3, "shownClusters": 3, "truncated": false }
+}
+```
+
+`minTokens` filtert triviale Methoden (leere `Dispose`/`ToString`-Overrides) heraus; `bin/`, `obj/`, `.ainetlinter/` und `tests/Fixtures/`-Verzeichnisse sowie Methoden mit `[GeneratedCode]`-Attribut sind fest ausgeschlossen. `normalizeIdentifiers` (Default `false`) schaltet die Erkennung umbenannter Klone (Type-2) an, indem Identifier-/Literal-Tokens vor dem Vergleich normalisiert werden. `scopeDir` grenzt auf einen Teilbereich ein (case-insensitiver Substring-Abgleich auf den Dateipfad, wie `scopeFilter` bei `get_violations`). `maxResults` kappt die gezeigten Cluster (Default 20, aus `rules.json` überschreibbar) — `truncated: true` unterdrückt den Sufficiency-Hinweis und ergänzt stattdessen eine Trunkierungs-Meta-Zeile.
+
 Beispiel-Aufruf (JSON-RPC über stdio):
 
 ```json
@@ -337,9 +358,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 17 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 18 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 17 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 18 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.

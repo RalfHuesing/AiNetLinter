@@ -52,6 +52,7 @@ internal static class McpServerOptionsFactory
         AnalysisToolRegistrations.Register(tools, mcpState, callLog);
         SymbolBodyToolRegistrations.Register(tools, mcpState, callLog);
         ServerMaintenanceToolRegistrations.Register(tools, mcpState, callLog);
+        DuplicateDetectionToolRegistrations.Register(tools, mcpState, callLog);
 
         return tools;
     }

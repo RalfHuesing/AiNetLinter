@@ -212,4 +212,66 @@ public sealed record GlobalConfig
     /// Standard: <c>false</c> (Tests sollten async sein).
     /// </summary>
     public bool BanBlockingTaskAccessAllowInTests { get; init; } = false;
+
+    /// <summary>
+    /// Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, Method-Granularitaet,
+    /// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A). Meldet <c>exact</c>- und
+    /// <c>near</c>-Cluster als Lint-Verstoesse (<c>fuzzy</c> bleibt reine MCP-Auskunft, zu viel
+    /// Rauschen fuer automatisches Lint). Standard: <c>true</c>.
+    /// </summary>
+    public bool EnableDuplicateCodeCheck { get; init; } = true;
+
+    /// <summary>
+    /// Mindestanzahl Tokens im Methoden-Body, ab der eine Methode ueberhaupt in die
+    /// Duplicate-Code-Erkennung einfliesst. Verhindert, dass triviale Methoden (leere
+    /// <c>Dispose</c>/<c>ToString</c>-Overrides) als Klone markiert werden. Standard: <c>30</c>
+    /// (konservativer Start, PMD CPD nutzt 100, jscpd 50).
+    /// </summary>
+    public int DuplicateCodeMinTokens { get; init; } = 30;
+
+    /// <summary>
+    /// Groesse des Sliding-Window (Token-Anzahl) fuer das N-Gram-Shingling (Broder 1997).
+    /// Standard: <c>5</c>.
+    /// </summary>
+    public int DuplicateCodeNgramSize { get; init; } = 5;
+
+    /// <summary>
+    /// Mindestanzahl gemeinsamer N-Gramme, ab der zwei Methoden ueberhaupt als Kandidaten-Paar
+    /// fuer den exakten Jaccard-Vergleich gelten (Vorfilter ueber den Inverted Index).
+    /// Standard: <c>3</c>.
+    /// </summary>
+    public int DuplicateCodeMinSharedNgrams { get; init; } = 3;
+
+    /// <summary>
+    /// Jaccard-Schwellwert (inklusive), ab der ein Cluster als <c>exact</c> gilt (fast identisch,
+    /// Konsolidierung dringend). Standard: <c>0.95</c>.
+    /// </summary>
+    public double DuplicateCodeExactThreshold { get; init; } = 0.95;
+
+    /// <summary>
+    /// Jaccard-Schwellwert (inklusive), ab der ein Cluster als <c>near</c> gilt (sehr aehnlich,
+    /// lohnt den Blick). Standard: <c>0.80</c>.
+    /// </summary>
+    public double DuplicateCodeNearThreshold { get; init; } = 0.80;
+
+    /// <summary>
+    /// Jaccard-Schwellwert (inklusive), ab der ein Cluster ueberhaupt noch als <c>fuzzy</c>
+    /// gemeldet wird (Grenzwertig, evtl. Pattern-Klone). Unterhalb wird nichts ausgegeben.
+    /// Standard: <c>0.65</c>.
+    /// </summary>
+    public double DuplicateCodeFuzzyThreshold { get; init; } = 0.65;
+
+    /// <summary>
+    /// Wenn <c>true</c>: Identifier-Tokens werden vor dem N-Gram-Shingling auf <c>$ID$</c> und
+    /// Literal-Tokens auf <c>$LIT$</c> normalisiert — schaltet Type-2-Klon-Erkennung (umbenannte
+    /// Klone) an. Standard: <c>false</c> (sonst wuerden z. B. <c>CalculateOrderTotal</c> und
+    /// <c>CalculateInvoiceTotal</c> faelschlich als Klon markiert).
+    /// </summary>
+    public bool DuplicateCodeNormalizeIdentifiers { get; init; } = false;
+
+    /// <summary>
+    /// Obergrenze der als Lint-Verstoss gemeldeten Duplicate-Code-Cluster (Top-N nach
+    /// Jaccard-Score absteigend) — kein unbegrenzter Dump. Standard: <c>20</c>.
+    /// </summary>
+    public int DuplicateCodeMaxResults { get; init; } = 20;
 }

@@ -77,6 +77,16 @@ internal static class GlobalConfigApplier
             MiddleManExemptSuffixes                     = o.MiddleManExemptSuffixes                     ?? config.MiddleManExemptSuffixes,
             MiddleManExemptBaseTypes                    = o.MiddleManExemptBaseTypes                    ?? config.MiddleManExemptBaseTypes,
             MiddleManIncludePrivateMembers              = o.MiddleManIncludePrivateMembers              ?? config.MiddleManIncludePrivateMembers,
+
+            EnableDuplicateCodeCheck                    = o.EnableDuplicateCodeCheck                    ?? config.EnableDuplicateCodeCheck,
+            DuplicateCodeMinTokens                      = o.DuplicateCodeMinTokens                      ?? config.DuplicateCodeMinTokens,
+            DuplicateCodeNgramSize                      = o.DuplicateCodeNgramSize                      ?? config.DuplicateCodeNgramSize,
+            DuplicateCodeMinSharedNgrams                = o.DuplicateCodeMinSharedNgrams                ?? config.DuplicateCodeMinSharedNgrams,
+            DuplicateCodeExactThreshold                 = o.DuplicateCodeExactThreshold                 ?? config.DuplicateCodeExactThreshold,
+            DuplicateCodeNearThreshold                  = o.DuplicateCodeNearThreshold                  ?? config.DuplicateCodeNearThreshold,
+            DuplicateCodeFuzzyThreshold                 = o.DuplicateCodeFuzzyThreshold                 ?? config.DuplicateCodeFuzzyThreshold,
+            DuplicateCodeNormalizeIdentifiers            = o.DuplicateCodeNormalizeIdentifiers            ?? config.DuplicateCodeNormalizeIdentifiers,
+            DuplicateCodeMaxResults                     = o.DuplicateCodeMaxResults                     ?? config.DuplicateCodeMaxResults,
         };
     }
 }
