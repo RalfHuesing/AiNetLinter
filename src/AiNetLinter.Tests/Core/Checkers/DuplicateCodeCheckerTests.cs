@@ -19,9 +19,10 @@ namespace AiNetLinter.Tests.Core.Checkers;
 /// <summary>
 /// Tests fuer <see cref="DuplicateCodeChecker"/> — solution-weite Nachpruefung, die
 /// <see cref="DuplicateDetection.DuplicateDetectionEngine"/> auf <see cref="AnalysisState.Solution"/>
-/// aufruft und <c>exact</c>/<c>near</c>-Cluster (nicht <c>fuzzy</c>) als <see cref="RuleViolation"/>
-/// meldet. Nutzt dieselbe 20-Statement-Basismethode/Kalibrierung wie
-/// <see cref="DuplicateDetection.DuplicateDetectionEngineTests"/> fuer den exact-Klon-Fall.
+/// aufruft und nur <c>exact</c>-Cluster (nicht <c>near</c>/<c>fuzzy</c>) als je eine
+/// <see cref="RuleViolation"/> pro Cluster meldet. Nutzt dieselbe 20-Statement-Basismethode/
+/// Kalibrierung wie <see cref="DuplicateDetection.DuplicateDetectionEngineTests"/> fuer die
+/// exact-/near-Faelle.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class DuplicateCodeCheckerTests : IDisposable
@@ -93,8 +94,12 @@ public sealed class DuplicateCodeCheckerTests : IDisposable
     private static Config CreateConfig(GlobalConfig global) => TestHelper.CreateDefaultConfig() with { Global = global };
 
     [Fact]
-    public async Task RunAsync_TwoExactClones_ReportsViolationForBothMethods()
+    public async Task RunAsync_TwoExactClones_ReportsOneViolationForCluster()
     {
+        // Ein Duplikat-Fund ist EIN Befund (repraesentatives Cluster-Mitglied, analog
+        // PostAnalysisChecks.RunMaxPartialClassFilesCheck), nicht eine Violation pro Mitglied —
+        // siehe Klassen-Doc-Kommentar von DuplicateCodeChecker (Live-Dogfood-Befund 2026-08-11:
+        // eine Violation pro Mitglied blies den Safeguard-Score auf dem eigenen Repo auf 0).
         var solution = CreateAdhocSolution(_tempDir,
             ("A.cs", BuildMethod("A", "ComputeOne")),
             ("B.cs", BuildMethod("B", "ComputeTwo")));
@@ -102,9 +107,36 @@ public sealed class DuplicateCodeCheckerTests : IDisposable
 
         await DuplicateCodeChecker.RunAsync(state, CreateConfig(new GlobalConfig()));
 
-        var violations = state.Violations.Where(v => v.RuleName == LinterRuleIds.DuplicateCode).ToList();
-        Assert.Equal(2, violations.Count);
-        Assert.All(violations, v => Assert.Contains("exact", v.Details, StringComparison.OrdinalIgnoreCase));
+        var violation = Assert.Single(state.Violations.Where(v => v.RuleName == LinterRuleIds.DuplicateCode));
+        Assert.Contains("exact", violation.Details, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RunAsync_NearClusterOnly_ReportsNoViolations()
+    {
+        // Ein ersetztes Statement (gleiche Token-Anzahl) -> Jaccard ~0.85, sicher im near-Bucket
+        // [0.80, 0.95) -- dieselbe Kalibrierung wie
+        // DuplicateDetectionEngineTests.ScanAsync_OneStatementChanged_ClassifiesAsNear (identische
+        // BaseStatements). near-Cluster werden bewusst NICHT mehr automatisch gemeldet (siehe
+        // Klassen-Doc-Kommentar) -- weiterhin ueber find_duplicates/den Drift-Audit-Skill sichtbar.
+        var variantStatements = (string[])BaseStatements.Clone();
+        variantStatements[8] = "int i = a * 7;";
+        var variantBody = $$"""
+            public static class B
+            {
+                public static int ComputeNear(int x)
+                {
+                    {{string.Join("\n            ", variantStatements)}}
+                    return t;
+                }
+            }
+            """;
+        var solution = CreateAdhocSolution(_tempDir, ("A.cs", BuildMethod("A", "ComputeOne")), ("B.cs", variantBody));
+        var state = CreateState(solution);
+
+        await DuplicateCodeChecker.RunAsync(state, CreateConfig(new GlobalConfig()));
+
+        Assert.Empty(state.Violations.Where(v => v.RuleName == LinterRuleIds.DuplicateCode));
     }
 
     [Fact]
@@ -193,8 +225,8 @@ public sealed class DuplicateCodeCheckerTests : IDisposable
     public async Task RunAsync_MaxResults_CapsNumberOfReportedClusters()
     {
         // Zwei unabhaengige exakte Klon-Paare aus unterschiedlichen Bezeichner-/Operator-Familien
-        // (4 Dateien) -> 2 getrennte Cluster. MaxResults=1 kappt auf genau 1 Cluster (2 statt 4
-        // Violations).
+        // (4 Dateien) -> 2 getrennte Cluster. MaxResults=1 kappt auf genau 1 Cluster -> genau
+        // 1 Violation (ein Fund pro Cluster, nicht pro Mitglied).
         var solution = CreateAdhocSolution(_tempDir,
             ("A1.cs", BuildMethod("A1", "F1")),
             ("A2.cs", BuildMethod("A2", "F2")),
@@ -205,7 +237,26 @@ public sealed class DuplicateCodeCheckerTests : IDisposable
         await DuplicateCodeChecker.RunAsync(state, CreateConfig(new GlobalConfig { DuplicateCodeMaxResults = 1 }));
 
         var violations = state.Violations.Where(v => v.RuleName == LinterRuleIds.DuplicateCode).ToList();
-        Assert.Equal(2, violations.Count);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public async Task RunAsync_SuppressCommentInEitherFile_ReportsNoViolations()
+    {
+        // '// ainetlinter-disable DuplicateCode' in EINER der beiden beteiligten Dateien reicht
+        // (nicht zwingend in der Datei des repraesentativen Cluster-Mitglieds) — siehe
+        // DuplicateCodeChecker.IsClusterSuppressed-Doc-Kommentar: der Fund ist eine Aussage ueber
+        // die Beziehung zwischen den Methoden, keine pro Datei unabhaengige.
+        var suppressedB = "// ainetlinter-disable DuplicateCode -- bewusst strukturell gleich\n"
+            + BuildMethod("B", "ComputeTwo");
+        var solution = CreateAdhocSolution(_tempDir,
+            ("A.cs", BuildMethod("A", "ComputeOne")),
+            ("B.cs", suppressedB));
+        var state = CreateState(solution);
+
+        await DuplicateCodeChecker.RunAsync(state, CreateConfig(new GlobalConfig()));
+
+        Assert.Empty(state.Violations.Where(v => v.RuleName == LinterRuleIds.DuplicateCode));
     }
 
     [Fact]

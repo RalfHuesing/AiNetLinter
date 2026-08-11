@@ -71,6 +71,7 @@ Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind
 - **AllowTryPatternOutParameters** — `out` in `Try*`-Methoden erlaubt.
 - **AllowCancellationShutdownCatch** — `OperationCanceledException` beim Shutdown abfangen erlaubt.
 - **EnforceValueObjectContracts** — Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.
+- **DuplicateCode** — Fast identische Methode gefunden — konsolidieren oder Aehnlichkeit bewusst begruenden.
 
 Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.
 

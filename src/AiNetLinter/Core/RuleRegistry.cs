@@ -49,6 +49,7 @@ internal static partial class RuleRegistry
         ..BuildArchitectureRules(),      // EnforceNamespaceDirectoryMapping, DetectAndBanPhantomDependencies (2)
         ..BuildTestCoverageRules(),      // StaticTestSentinel (1)
         ..BuildGeneralRules(),           // Sealed, PascalCase, Naming, Nullable, Allow-Rules, Advanced, UI-Separation (20+)
+        ..BuildDuplicateDetectionRules(), // DuplicateCode (1)
     ];
 
     private static RuleMetadata[] BuildMetricsSizeRules() =>
