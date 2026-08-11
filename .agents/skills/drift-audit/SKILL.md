@@ -9,10 +9,9 @@ description: Vier-Schritte-Playbook, um vor Epic-Abschluss aktiv nach DRY-Verst�
 
 Code-Duplikation entsteht bei autonomer agentischer Entwicklung häufig, weil eine
 bereits existierende Lösung nicht wiedergefunden wird — keine einzelne Lint-Regel
-fängt das, weil es erst im Vergleich über die ganze Codebase sichtbar wird (siehe
-`tasks/features/05-roadmap.md` "M9 — Drift-Audit"). Dieser Skill leitet gezielt an,
-mit `find_duplicates` aktiv danach zu suchen, statt darauf zu warten, dass es zufällig
-auffällt.
+fängt das, weil es erst im Vergleich über die ganze Codebase sichtbar wird. Dieser
+Skill leitet gezielt an, mit `find_duplicates` aktiv danach zu suchen, statt darauf zu
+warten, dass es zufällig auffällt.
 
 **Cadence:** Vor Abschluss eines Epics oder eines größeren Tasks einmal ausführen.
 Für einzelne Steps innerhalb eines Tasks ist die Ausführung optional.
