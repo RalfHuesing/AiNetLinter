@@ -8,7 +8,7 @@ using Xunit;
 namespace AiNetLinter.Tests.Commands;
 
 /// <summary>
-/// E2E-Tests fuer <c>get_impact</c> ausgelagert aus <c>McpServerCommandTests.cs</c>.
+/// E2E-Tests fuer <c>get_impact</c>.
 /// </summary>
 [Collection("SymbolGraphMcp")]
 [Trait("Category", "Integration")]
