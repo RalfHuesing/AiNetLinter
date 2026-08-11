@@ -13,28 +13,27 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Core.DuplicateDetection;
 
 /// <summary>
-/// Token-basiertes Code-Clone-Detection auf Method-Granularitaet (CCFinder/Jaccard-N-Gram-Ansatz,
-/// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A "Idee A"). Reine Domain-Logik ohne
-/// Kenntnis von <c>RuleViolation</c> oder <c>CallToolResult</c> — Solution rein,
-/// <see cref="DuplicateCluster"/>-Records raus, analog
+/// Token-basiertes Code-Clone-Detection auf Method-Granularitaet (CCFinder/Jaccard-N-Gram-Ansatz).
+/// Reine Domain-Logik ohne Kenntnis von <c>RuleViolation</c> oder <c>CallToolResult</c> —
+/// Solution rein, <see cref="DuplicateCluster"/>-Records raus, analog
 /// <see cref="Mcp.Tools.DependencyGraph.DependencyGraphScanner"/>. Beide Konsumenten
 /// (<c>DuplicateCodeChecker</c> fuer Lint, <c>find_duplicates</c> fuer MCP) rufen dieselbe
 /// <see cref="ScanAsync"/>-Methode auf, deshalb liegt diese Klasse bewusst unter <c>Core/</c> statt
 /// <c>Mcp/Tools/</c> (Mcp/Tools/* haengt von Core/ ab, nicht umgekehrt).
 ///
-/// Pipeline (Details siehe Ideensammlung §A.2): 1) Token-Extraktion pro Methode via
-/// <see cref="SyntaxNode.DescendantTokens()"/> (Whitespace/Kommentare sind Trivia, nicht Teil des
-/// Token-Streams). 2) N-Gram-Shingling (Sliding-Window, Default k=5) zu deterministischen
-/// FNV-1a-Hashes. 3) Inverted Index (Hash → Methoden-Indizes). 4) Kandidaten-Paare ueber
-/// gemeinsame N-Gramme (Mindestanzahl <see cref="DuplicateDetectionOptions.MinSharedNgrams"/>).
-/// 5) Exakter Jaccard-Score je Kandidaten-Paar. 6) Transitive Cluster-Bildung (Union-Find).
-/// 7) Schwellwert-Staffelung (<see cref="DuplicateSimilarityBucket"/>) statt hartem Cut.
+/// Pipeline: 1) Token-Extraktion pro Methode via <see cref="SyntaxNode.DescendantTokens()"/>
+/// (Whitespace/Kommentare sind Trivia, nicht Teil des Token-Streams). 2) N-Gram-Shingling
+/// (Sliding-Window, Default k=5) zu deterministischen FNV-1a-Hashes. 3) Inverted Index
+/// (Hash → Methoden-Indizes). 4) Kandidaten-Paare ueber gemeinsame N-Gramme (Mindestanzahl
+/// <see cref="DuplicateDetectionOptions.MinSharedNgrams"/>). 5) Exakter Jaccard-Score je
+/// Kandidaten-Paar. 6) Transitive Cluster-Bildung (Union-Find). 7) Schwellwert-Staffelung
+/// (<see cref="DuplicateSimilarityBucket"/>) statt hartem Cut.
 ///
-/// <c>partial</c>, weil Teil C (Refactoring-Drift, <c>tasks/features/07-drift-audit-ideen.md</c>
-/// §C) dieselbe Fingerprint-Sammlung + Jaccard-Berechnung wiederverwendet ("1 gegen alle" statt
-/// "alle gegen alle") — Erweiterung liegt in <c>DuplicateDetectionEngine.RefactoringDrift.cs</c>
-/// (Datei-Split-Konvention wie <c>RuleRegistry.Architecture.cs</c>/<c>RuleRegistry.General.cs</c>),
-/// damit diese Verhaltens-Datei nicht ueber <c>MaxLineCount</c> waechst.
+/// <c>partial</c>, weil die Refactoring-Drift-Erweiterung dieselbe Fingerprint-Sammlung und
+/// Jaccard-Berechnung wiederverwendet ("1 gegen alle" statt "alle gegen alle") — Erweiterung liegt
+/// in <c>DuplicateDetectionEngine.RefactoringDrift.cs</c> (Datei-Split-Konvention wie
+/// <c>RuleRegistry.Architecture.cs</c>/<c>RuleRegistry.General.cs</c>), damit diese
+/// Verhaltens-Datei nicht ueber <c>MaxLineCount</c> waechst.
 /// </summary>
 internal static partial class DuplicateDetectionEngine
 {
