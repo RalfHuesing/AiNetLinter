@@ -166,9 +166,9 @@ internal static class DependencyGraphScanner
         return edges;
     }
 
-    /// <summary>Ausgelagert aus <see cref="ScanTypeOutgoingAsync"/> — reine Filter-/Edge-Logik pro
-    /// referenziertem Typ, hielt die Schleife sonst unter zwei verschachtelten Ebenen bei
-    /// <c>MaxCognitiveComplexity</c>.</summary>
+    /// <summary>Reine Filter-/Edge-Logik pro referenziertem Typ. Eigene Methode, damit
+    /// <see cref="ScanTypeOutgoingAsync"/> unter <c>MaxCognitiveComplexity</c> bleibt (sonst zwei
+    /// verschachtelte Ebenen).</summary>
     private static void AddOutgoingTypeEdgeIfEligible(
         Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol targetType, INamedTypeSymbol referencedType)
     {
@@ -243,9 +243,9 @@ internal static class DependencyGraphScanner
         return edges;
     }
 
-    /// <summary>Ausgelagert aus <see cref="ScanFileIncomingAsync"/> — die doppelt verschachtelte
-    /// Referenz-/Location-Traversierung hielt die aufrufende Methode sonst ueber
-    /// <c>MaxCognitiveComplexity</c> (drei verschachtelte Schleifen statt zwei).</summary>
+    /// <summary>Doppelt verschachtelte Referenz-/Location-Traversierung als eigene Methode, damit
+    /// <see cref="ScanFileIncomingAsync"/> unter <c>MaxCognitiveComplexity</c> bleibt (drei
+    /// verschachtelte Schleifen statt zwei).</summary>
     private static void AddIncomingTypeEdges(
         Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol type,
         IEnumerable<ReferencedSymbol> refs, string selfFile)
