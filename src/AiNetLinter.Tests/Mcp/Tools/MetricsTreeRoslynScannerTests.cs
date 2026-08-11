@@ -15,7 +15,7 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer die zwei Roslyn-Modi <c>violation_density</c>/<c>complexity</c> von
-/// <c>metrics_tree</c> (EPIC-02) — ueber <see cref="MetricsTreeTool.ExecuteAsync"/>, analog
+/// <c>metrics_tree</c> — ueber <see cref="MetricsTreeTool.ExecuteAsync"/>, analog
 /// <see cref="MetricsTreeToolTests"/> fuer die Datei-Modi. Nutzt fuer <c>violation_density</c> die
 /// geteilte <see cref="SymbolGraphCatalogFixture"/> (ViolationTrigger.cs traegt bereits einen
 /// bekannten Verstoss). Fuer <c>complexity</c> braucht es zusaetzlich eine verzweigungsreiche
