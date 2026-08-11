@@ -15,10 +15,9 @@ using Xunit;
 namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
-/// Tests fuer <see cref="ReloadConfigTool"/> (Q2, <c>tasks/features/05-roadmap.md</c> §3). Jeder
-/// Test nutzt eine frische <see cref="SymbolGraphMiniFixtureWorkspace"/>-Kopie statt einer
-/// geteilten Fixture, weil die Tests rules.json-Dateien auf der Platte schreiben und die
-/// Server-Config zur Laufzeit mutieren.
+/// Tests fuer <see cref="ReloadConfigTool"/>. Jeder Test nutzt eine frische
+/// <see cref="SymbolGraphMiniFixtureWorkspace"/>-Kopie statt einer geteilten Fixture, weil die
+/// Tests rules.json-Dateien auf der Platte schreiben und die Server-Config zur Laufzeit mutieren.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class ReloadConfigToolTests
@@ -150,7 +149,7 @@ public sealed class ReloadConfigToolTests
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 
-        // Server lief bisher mit Default-Regeln (keine rules.json beim Start); Nutzer legt jetzt eine an.
+        // Server lief mit Default-Regeln (keine rules.json beim Start); Nutzer legt jetzt eine an.
         var discoveredPath = Path.Combine(fixture.RootPath, "rules.json");
         await File.WriteAllTextAsync(discoveredPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
 
