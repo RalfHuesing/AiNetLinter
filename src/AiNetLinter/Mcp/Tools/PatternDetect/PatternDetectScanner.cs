@@ -22,9 +22,8 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// <see cref="LinterEngine"/> erzeugten <see cref="RuleViolation"/>-Objekte nach
 /// <see cref="PatternCatalog"/>-Eintrag statt der flachen Datei-für-Datei-Liste von
 /// <c>get_violations</c>. Scope-Filter-/Sortierlogik gemeinsam mit <c>GetViolationsScanner</c>
-/// über <see cref="ViolationScopeFilter"/> (urspruenglich bei der S2.2-Einfuehrung dupliziert,
-/// nachtraeglich extrahiert, da ein zweiter Konsument die Duplikation zur echten Wartungslast
-/// gemacht hat) — nur die Pattern-Gruppierung selbst ist <c>pattern_detect</c>-spezifisch.
+/// über <see cref="ViolationScopeFilter"/> — nur die Pattern-Gruppierung selbst ist
+/// <c>pattern_detect</c>-spezifisch.
 /// </summary>
 internal static class PatternDetectScanner
 {
@@ -169,7 +168,7 @@ internal sealed record PatternDetectScannerParameters(
 /// </summary>
 internal sealed record PatternDetectResult(string? Text, PatternDetectPayload? Payload, bool IsMalfunction, string? Context = null);
 
-/// <summary>Structured-Content-Wurzel fuer <c>pattern_detect</c> (S1.3-Praezedenzfall, siehe
+/// <summary>Structured-Content-Wurzel fuer <c>pattern_detect</c> (Praezedenzfall, siehe
 /// <c>SafeguardTool</c>): ein Eintrag je <see cref="PatternCatalog"/>-Pattern plus Gesamt-Summary.</summary>
 internal sealed record PatternDetectPayload(IReadOnlyList<PatternResultEntry> Patterns, PatternDetectSummary Summary);
 
