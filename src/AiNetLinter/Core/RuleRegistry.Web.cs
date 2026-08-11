@@ -6,7 +6,7 @@ namespace AiNetLinter.Core;
 
 /// <summary>
 /// Web-Asset-Regeln (Phase 1: CSS, Phase 2: JS, Phase 3: Razor). Opt-in via Web.IsEnabled.
-/// Ausgelagert in eigene Datei, damit RuleRegistry.General.cs unter MaxLineCount bleibt.
+/// Eigene Datei, damit RuleRegistry.General.cs unter MaxLineCount bleibt.
 /// </summary>
 internal static partial class RuleRegistry
 {
