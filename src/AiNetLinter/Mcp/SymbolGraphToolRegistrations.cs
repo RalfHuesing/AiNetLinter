@@ -91,7 +91,9 @@ internal static class SymbolGraphToolRegistrations
     private const string FindReferencesDescription =
         "Wann nutzen: alle Aufrufstellen eines C#-Symbols finden, optional transitiv. " +
         "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
-        "\"Klasse.Methode\". depth>1 (hard cap 3) loest transitive Aufrufstellen auf, " +
+        "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
+        "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
+        "depth>1 (hard cap 3) loest transitive Aufrufstellen auf, " +
         "Traversierung hart begrenzt auf 200 Knoten.";
 
     private static void AddGetCallTree(
@@ -179,7 +181,8 @@ internal static class SymbolGraphToolRegistrations
     private const string GetTypeHierarchyDescription =
         "Wann nutzen: Vererbungs-/Interface-Baum eines C#-Typs sehen (Basisklassen, " +
         "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Klasse\". " +
+        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Datei.cs:10\" " +
+        "(Zeile ohne Spalte, siehe find_references) oder \"Klasse\". " +
         "maxResults begrenzt die abgeleiteten/implementierenden Typen (Default 50).";
 
     private static void AddDependencyGraph(

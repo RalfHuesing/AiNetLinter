@@ -1,11 +1,14 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -52,6 +55,56 @@ internal static class SymbolIdentifierResolver
 
         path = string.Join(":", segments[..^2]);
         return true;
+    }
+
+    /// <summary>
+    /// Prueft, ob <paramref name="identifier"/> dem Fallback-Format <c>Datei:Zeile</c> (ohne
+    /// Spalte) entspricht. Wie <see cref="TryParsePosition"/> von hinten geparst: das letzte
+    /// ':'-getrennte Segment muss eine Ganzzahl (Zeile) sein, alle vorangehenden Segmente werden
+    /// (inkl. enthaltener ':') wieder zum Pfad zusammengesetzt. Das deckt sowohl relative Pfade
+    /// (<c>src/Foo.cs:42</c>, zwei Segmente) als auch absolute Windows-Laufwerksbuchstaben-Pfade
+    /// (<c>C:\Foo.cs:42</c>, drei Segmente durch den Doppelpunkt nach dem Laufwerksbuchstaben) ab —
+    /// eine Beschraenkung auf exakt zwei Segmente wuerde Laufwerksbuchstaben-Pfade grundsaetzlich
+    /// ausschliessen. Nur relevant, wenn <see cref="TryParsePosition"/> bereits fehlgeschlagen ist
+    /// (Aufrufer prueft das Datei:Zeile:Spalte-Format zuerst).
+    /// </summary>
+    internal static bool TryParseLineOnlyPosition(string identifier, out string path, out int line)
+    {
+        path = string.Empty;
+        line = 0;
+
+        var segments = identifier.Split(':');
+        if (segments.Length < 2) return false;
+        if (!int.TryParse(segments[^1], out line)) return false;
+
+        path = string.Join(":", segments[..^1]);
+        return true;
+    }
+
+    /// <summary>
+    /// Ermittelt alle eindeutigen Symbole, die auf einer Zeile deklariert oder referenziert
+    /// werden (Grundlage fuer das <c>Datei:Zeile</c>-Fallback ohne Spalte). Iteriert alle Tokens
+    /// der Zeile, loest jedes ueber <see cref="ResolveSymbolAtToken"/> auf und dedupliziert per
+    /// <see cref="SymbolEqualityComparer"/>. Beschraenkt auf Symbole mit Quelltext-Fundstelle
+    /// (<see cref="Location.IsInSource"/>) — Metadata-/BCL-Symbole (z. B. das <c>string</c>-Schluesselwort
+    /// eines Rueckgabetyps) sind fuer eine Zeilen-Aufloesung reines Rauschen und wuerden sonst
+    /// jede Zeile mit einem primitiven Typ faelschlich mehrdeutig machen.
+    /// </summary>
+    internal static List<ISymbol> ResolveSymbolsOnLine(SyntaxNode root, TextSpan lineSpan, SemanticModel semanticModel)
+    {
+        var seen = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+        var symbols = new List<ISymbol>();
+
+        foreach (var token in root.DescendantTokens(lineSpan))
+        {
+            if (!lineSpan.Contains(token.Span)) continue;
+
+            var symbol = ResolveSymbolAtToken(token, semanticModel);
+            if (symbol is null || !symbol.Locations.Any(l => l.IsInSource)) continue;
+            if (seen.Add(symbol)) symbols.Add(symbol);
+        }
+
+        return symbols;
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -141,33 +142,76 @@ internal static class FindReferencesTool
             return await ResolveByPositionAsync(solution, identifier, path, line, column, ct);
         }
 
+        if (SymbolIdentifierResolver.TryParseLineOnlyPosition(identifier, out var linePath, out var lineOnly))
+        {
+            return await ResolveByLineAsync(solution, identifier, linePath, lineOnly, ct);
+        }
+
         return await ResolveByNameAsync(solution, identifier, ct);
     }
 
     private static ISymbol? NormalizeToOwningMember(ISymbol? symbol) =>
         symbol is IMethodSymbol { AssociatedSymbol: { } owner } ? owner : symbol;
 
-    private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByPositionAsync(
-        Solution solution, string identifier, string path, int line, int column, CancellationToken ct)
+    /// <summary>
+    /// Loest Dokument, Syntaxbaum, Quelltext und SemanticModel fuer eine Datei:Zeile-Angabe auf
+    /// und validiert die Zeilennummer — gemeinsame Vorstufe fuer <see cref="ResolveByPositionAsync"/>
+    /// (Datei:Zeile:Spalte) und <see cref="ResolveByLineAsync"/> (Datei:Zeile-Fallback), damit
+    /// Dateiauflösung und Zeilen-Validierung nicht dupliziert werden.
+    /// </summary>
+    private static async Task<(SyntaxNode? Root, SourceText? Text, SemanticModel? SemanticModel, CallToolResult? Error)>
+        ResolveDocumentForLineAsync(Solution solution, string identifier, string path, int line, CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, path));
         var document = DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
-        if (document is null) return (null, McpToolResults.SymbolNotFound(identifier));
+        if (document is null) return (null, null, null, McpToolResults.SymbolNotFound(identifier));
 
         var root = await document.GetSyntaxRootAsync(ct);
         var text = await document.GetTextAsync(ct);
         var semanticModel = await document.GetSemanticModelAsync(ct);
         if (root is null || text is null || semanticModel is null || line < 1 || line > text.Lines.Count)
         {
-            return (null, McpToolResults.SymbolNotFound(identifier));
+            return (null, null, null, McpToolResults.SymbolNotFound(identifier));
         }
 
-        var position = text.Lines[line - 1].Start + (column - 1);
-        var token = root.FindToken(position);
-        var symbol = SymbolIdentifierResolver.ResolveSymbolAtToken(token, semanticModel);
+        return (root, text, semanticModel, null);
+    }
+
+    private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByPositionAsync(
+        Solution solution, string identifier, string path, int line, int column, CancellationToken ct)
+    {
+        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(solution, identifier, path, line, ct);
+        if (error is not null) return (null, error);
+
+        var position = text!.Lines[line - 1].Start + (column - 1);
+        var token = root!.FindToken(position);
+        var symbol = SymbolIdentifierResolver.ResolveSymbolAtToken(token, semanticModel!);
 
         return symbol is null ? (null, McpToolResults.SymbolNotFound(identifier)) : (symbol, null);
+    }
+
+    /// <summary>
+    /// Loest den Datei:Zeile-Fallback (ohne Spalte) auf: sammelt alle eindeutigen Symbole der
+    /// Zeile ueber <see cref="SymbolIdentifierResolver.ResolveSymbolsOnLine"/> und liefert bei
+    /// genau einem Treffer das Symbol, sonst <see cref="McpToolResults.AmbiguousSymbol"/> bzw.
+    /// <see cref="McpToolResults.SymbolNotFound"/> — analog zu <see cref="ResolveByNameAsync"/>s
+    /// Mehrdeutigkeitsbehandlung.
+    /// </summary>
+    private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByLineAsync(
+        Solution solution, string identifier, string path, int line, CancellationToken ct)
+    {
+        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(solution, identifier, path, line, ct);
+        if (error is not null) return (null, error);
+
+        var symbols = SymbolIdentifierResolver.ResolveSymbolsOnLine(root!, text!.Lines[line - 1].Span, semanticModel!);
+
+        if (symbols.Count == 0) return (null, McpToolResults.SymbolNotFound(identifier));
+        if (symbols.Count == 1) return (symbols[0], null);
+
+        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));
+        return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
     }
 
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByNameAsync(

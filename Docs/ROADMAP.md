@@ -588,4 +588,41 @@ Erreichen des Tool-Codes, bevor die eigene `INVALID_ARGUMENT`-Behandlung greifen
 
 ---
 
+## Symbolgraph-Positionsauflösung: `Datei:Zeile`-Fallback ohne Spalte
+
+Bug-Report aus einer anderen Session (gegen ein fremdes Projekt getestet): laut Tool-Beschreibung
+soll ein Identifikator im Format `Datei:Zeile` funktionieren, schlug in der Praxis aber immer mit
+`SYMBOL_NOT_FOUND` fehl — nur `Datei:Zeile:Spalte` (mit expliziter Spalte) funktionierte.
+Root Cause: `SymbolIdentifierResolver.TryParsePosition` verlangte strikt mindestens drei durch `:`
+getrennte Segmente; bei nur zwei Segmenten interpretierte `FindReferencesTool.ResolveByNameAsync`
+den kompletten String faelschlich als qualifizierten Namen. `ResolveSymbolAsync` ist der
+gemeinsame Einstiegspunkt fuer `find_references`, `get_impact`, `get_type_hierarchy` und
+`get_symbol_body` — der Fix wirkt transitiv fuer alle vier Tools.
+
+- [x] **`SymbolIdentifierResolver.TryParseLineOnlyPosition`**: parst wie `TryParsePosition` von
+  hinten (letztes Segment = Zeile, Rest inkl. enthaltener `:` wieder zum Pfad zusammengesetzt) —
+  deckt sowohl relative Pfade (zwei Segmente) als auch absolute Windows-Laufwerksbuchstaben-Pfade
+  (drei Segmente durch den Doppelpunkt nach dem Laufwerksbuchstaben, z. B. `C:\Datei.cs:91`) ab.
+  Eine anfangs erwogene Beschraenkung auf exakt zwei Segmente haette Laufwerksbuchstaben-Pfade
+  grundsaetzlich ausgeschlossen — auf einem reinen Windows-Projekt der Normalfall, kein Sonderfall.
+- [x] **`SymbolIdentifierResolver.ResolveSymbolsOnLine`**: sammelt alle eindeutigen, quelltext-
+  eigenen Symbole einer Zeile (Tokens iterieren, `ResolveSymbolAtToken` je Token, Dedup per
+  `SymbolEqualityComparer`, gefiltert auf `Location.IsInSource` — Metadata-/BCL-Symbole wie das
+  `string`-Schluesselwort eines Rueckgabetyps waeren sonst reines Rauschen).
+- [x] **`FindReferencesTool.ResolveByLineAsync`**: neuer Aufloesungspfad neben
+  `ResolveByPositionAsync`, teilt sich mit diesem die Dokument-/Zeilen-Validierung
+  (`ResolveDocumentForLineAsync`, keine Duplikation). Genau ein Symbol auf der Zeile → Treffer;
+  mehrere → `AMBIGUOUS_SYMBOL` mit Kandidatenliste (analog zur Namensaufloesung); keins →
+  `SYMBOL_NOT_FOUND`.
+- [x] Neue Unit-Tests: reine Parsing-Tests fuer `TryParsePosition`/`TryParseLineOnlyPosition`
+  (inkl. Windows-Laufwerksbuchstaben-Regression), `find_references`-Integrationstests
+  (eindeutige Zeile = identisches Ergebnis zu Datei:Zeile:Spalte, mehrdeutige Zeile,
+  Zeile ohne Symbole) sowie je ein Test, der den transitiven Effekt fuer `get_type_hierarchy`
+  und `get_symbol_body` belegt.
+- [x] Doku aktualisiert: Tool-Beschreibungen in `SymbolGraphToolRegistrations.cs` /
+  `SymbolBodyToolRegistrations.cs`, `Docs/agent-api.md` (Tool-Tabelle + `get_symbol_body`-Detail-
+  Abschnitt).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

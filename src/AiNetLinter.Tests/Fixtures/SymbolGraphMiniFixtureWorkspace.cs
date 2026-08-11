@@ -17,4 +17,6 @@ public sealed class SymbolGraphMiniFixtureWorkspace : FixtureWorkspaceBase
     public string GreeterPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "Greeter.cs");
 
     public string CallerPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "Caller.cs");
+
+    public string OtherCallerPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "OtherCaller.cs");
 }

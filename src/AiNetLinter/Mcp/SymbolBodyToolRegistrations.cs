@@ -53,5 +53,7 @@ internal static class SymbolBodyToolRegistrations
     private const string GetSymbolBodyDescription =
         "Wann nutzen: Source-Body eines C#-Symbols lesen, wenn Fundstelle/Signatur schon " +
         "bekannt ist. identifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
-        "\"Klasse.Methode\". Hart gekappt bei maxBodyLines (Default 80).";
+        "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
+        "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
+        "Hart gekappt bei maxBodyLines (Default 80).";
 }
