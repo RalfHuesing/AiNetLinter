@@ -16,13 +16,18 @@
 .PARAMETER DryRun
     Zeigt geplante Schritte ohne Aenderungen, Commit, Push oder Tag.
 
-.PARAMETER SkipTests
-    Ueberspringt dotnet test (nicht empfohlen).
+.PARAMETER FullTests
+    Fuehrt die vollstaendige Test-Suite inkl. Integrationstests (Category!=Stress) aus.
+
+.PARAMETER TestFilter
+    Benutzerdefinierter xUnit-Filter fuer dotnet test (Standard: Category=Unit).
 #>
 [CmdletBinding()]
 param(
     [switch]$DryRun,
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$FullTests,
+    [string]$TestFilter = 'Category=Unit'
 )
 
 Set-StrictMode -Version Latest
@@ -90,8 +95,9 @@ function Invoke-DotNetValidation {
         }
 
         if (-not $SkipTests) {
-            Write-Host '[INFO] dotnet test...' -ForegroundColor Cyan
-            dotnet test --nologo -v q --no-build --filter Category!=Stress
+            $effectiveFilter = if ($FullTests) { 'Category!=Stress' } else { $TestFilter }
+            Write-Host "[INFO] dotnet test (Filter: $effectiveFilter)..." -ForegroundColor Cyan
+            dotnet test --nologo -v q --no-build --filter $effectiveFilter
             if ($LASTEXITCODE -ne 0) {
                 throw 'dotnet test fehlgeschlagen.'
             }
