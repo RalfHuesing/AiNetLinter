@@ -2,7 +2,7 @@
 task: speedup-tests
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-11
+last_updated: 2026-08-12
 ---
 
 # CodeMap: speedup-tests
@@ -22,7 +22,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche. (zuletzt: planning)
 - **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates. (zuletzt: planning)
 - **`.agents/rules/AiNetLinterRichtlinien.mdc`** — enthaelt die projektspezifischen Test-, Parallelitaets-, MCP- und Commitregeln, u. a. die TRX-Diagnoseregel auf `TestResults/latest.trx`. (zuletzt: planning)
-- **`Directory.Build.props`** — existiert noch nicht; vorgesehener gemeinsamer Ort fuer Testprojekt-Eigenschaften und MSBuild-Paketpinning. (zuletzt: planning)
+- **`tests/AiNetLinter.TestProject.props`** — vorgesehene explizit importierte gemeinsame Eigenschaften und MSBuild-Paketpins der drei Zielprojekte ohne implizite Wirkung auf Produkt- oder Fixture-Projekte. (zuletzt: planning)
 
 ## Produktive Konfigurationsvertraege mit Bezug zur Projektstruktur
 
