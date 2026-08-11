@@ -50,7 +50,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("id:", textContent.Text, System.StringComparison.Ordinal);
-        // Q5 Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
+        // Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
         Assert.Contains("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -68,7 +68,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("truncated", textContent.Text, System.StringComparison.OrdinalIgnoreCase);
-        // Q5: ein per maxBodyLines gekappter Body bekommt NICHT den "vollstaendig"-Hinweis.
+        // Ein per maxBodyLines gekappter Body bekommt NICHT den "vollstaendig"-Hinweis.
         Assert.DoesNotContain("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
