@@ -50,8 +50,8 @@ internal static class GetViolationsTool
         // nicht-trunkierte Ergebnisse (result.IsTruncated) — ein trunkiertes Ergebnis traegt
         // bereits seine eigene Meta-Zeile aus GetViolationsScanner.FormatReport ("scopeFilter
         // verfeinern oder maxResults erhoehen"), die implizit "weitere Violations vorhanden"
-        // signalisiert (Q5-Muster, analog zu FindReferencesTool/GetCallTreeTool).
-        // StructuredContent (S1.3) additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
+        // signalisiert (analog zu FindReferencesTool/GetCallTreeTool).
+        // StructuredContent additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
         // Malfunction keine sinnvolle Teil-Violations-Liste hat (result.Violations ist dann null).
         // In ein Objekt gewrappt (nicht das nackte Array), weil MCP-Clients structuredContent
         // schema-seitig als JSON-Objekt validieren — ein Top-Level-Array liess den gesamten
