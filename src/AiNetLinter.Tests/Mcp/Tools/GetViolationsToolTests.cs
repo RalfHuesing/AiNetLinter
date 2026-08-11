@@ -52,7 +52,7 @@ public sealed class GetViolationsToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Lint-Violations:", textContent.Text, StringComparison.Ordinal);
-        // Q5 Sufficiency-Hinweis: get_violations liefert immer den vollstaendigen Report fuer den Scope.
+        // Sufficiency-Hinweis: get_violations liefert immer den vollstaendigen Report fuer den Scope.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
@@ -71,7 +71,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_StructuredContentDeserializesToRuleViolations()
     {
-        // S1.3 Structured-Output-Mode: StructuredContent ergaenzt den Text additiv, ohne ihn zu
+        // Structured-Output-Mode: StructuredContent ergaenzt den Text additiv, ohne ihn zu
         // aendern (siehe die unveraenderten Text-Assertions in den anderen Tests dieser Klasse).
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
@@ -129,7 +129,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_LinterEngineThrows_ReturnsMalfunctionWithIsErrorTrueAndRetryHint()
     {
-        // Regressionstest fuer den Q1-Fix in GetViolationsScanner/GetViolationsTool: vor diesem
+        // Regressionstest fuer den Fix in GetViolationsScanner/GetViolationsTool: vor diesem
         // Epic lief eine echte LinterEngine-Malfunction (unerwartete Exception) unmarkiert als
         // Erfolg durch McpToolResults.Text(...) — IsError blieb faelschlich false. Simuliert
         // wird eine realistische Malfunction (Quelldatei zwischen Indexierung und Analyse vom
