@@ -29,8 +29,14 @@ namespace AiNetLinter.Core.DuplicateDetection;
 /// gemeinsame N-Gramme (Mindestanzahl <see cref="DuplicateDetectionOptions.MinSharedNgrams"/>).
 /// 5) Exakter Jaccard-Score je Kandidaten-Paar. 6) Transitive Cluster-Bildung (Union-Find).
 /// 7) Schwellwert-Staffelung (<see cref="DuplicateSimilarityBucket"/>) statt hartem Cut.
+///
+/// <c>partial</c>, weil Teil C (Refactoring-Drift, <c>tasks/features/07-drift-audit-ideen.md</c>
+/// §C) dieselbe Fingerprint-Sammlung + Jaccard-Berechnung wiederverwendet ("1 gegen alle" statt
+/// "alle gegen alle") — Erweiterung liegt in <c>DuplicateDetectionEngine.RefactoringDrift.cs</c>
+/// (Datei-Split-Konvention wie <c>RuleRegistry.Architecture.cs</c>/<c>RuleRegistry.General.cs</c>),
+/// damit diese Verhaltens-Datei nicht ueber <c>MaxLineCount</c> waechst.
 /// </summary>
-internal static class DuplicateDetectionEngine
+internal static partial class DuplicateDetectionEngine
 {
     /// <summary>
     /// Obergrenze fuer die Anzahl Methoden, die ein einzelnes N-Gram im Inverted Index zur
@@ -150,7 +156,7 @@ internal static class DuplicateDetectionEngine
         if (ngramHashes.Count == 0) return null;
 
         var lineNumber = candidate.Declaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-        return new MethodFingerprint(filePath, lineNumber, symbol.ToDisplayString(), tokens.Count, ngramHashes);
+        return new MethodFingerprint(filePath, lineNumber, symbol.ToDisplayString(), tokens.Count, ngramHashes, symbol);
     }
 
     private static bool IsGenerated(IMethodSymbol symbol) =>
@@ -363,8 +369,16 @@ internal static class DuplicateDetectionEngine
 
     private readonly record struct MethodCandidate(SyntaxNode Declaration, SyntaxNode Body);
 
+    /// <summary><see cref="Symbol"/> ist zusaetzlich zu den bereits fuer den <c>clone</c>-Modus
+    /// (Teil A) benoetigten Feldern gehalten — reine In-Process-Identitaet fuer Teil C
+    /// (Refactoring-Drift, <see cref="FindSimilarToAsync"/>), die per <see cref="ReferenceEquals"/>
+    /// bzw. <see cref="SymbolEqualityComparer"/> einen konkreten Fingerprint zu einem per
+    /// <c>helperSymbol</c> aufgeloesten <see cref="IMethodSymbol"/> zurueckfindet, ohne eine zweite
+    /// Symbol-Aufloesung zu brauchen. Verlaesst die Engine nie (kein Export in <see cref="DuplicateCluster"/>/
+    /// <see cref="DuplicateClusterMember"/>) — reine interne Fingerprint-Kohaerenz.</summary>
     private sealed record MethodFingerprint(
-        string FilePath, int LineNumber, string SignatureName, int TokenCount, HashSet<ulong> NgramHashes);
+        string FilePath, int LineNumber, string SignatureName, int TokenCount, HashSet<ulong> NgramHashes,
+        IMethodSymbol Symbol);
 
     private readonly record struct FingerprintEdge(int A, int B, double Jaccard);
 

@@ -18,7 +18,9 @@ namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
 /// eigene Scan-Logik — die eigentliche Engine-Arbeit steckt in
 /// <see cref="Core.DuplicateDetection.DuplicateDetectionEngine"/> (geteilt mit
 /// <c>DuplicateCodeChecker</c>), die Argument-Aufloesung/Trunkierung in
-/// <see cref="DuplicateDetectionScanner"/>, hier nur Validierung + Text-/JSON-Formatierung.
+/// <see cref="DuplicateDetectionScanner"/> (<c>mode="clone"</c>, Default) bzw.
+/// <see cref="RefactoringDriftScanner"/> (<c>mode="refactoring-drift"</c>, Teil C), hier nur
+/// Mode-Dispatch, Validierung + Text-/JSON-Formatierung.
 /// </summary>
 internal static class DuplicateDetectionTool
 {
@@ -29,9 +31,12 @@ internal static class DuplicateDetectionTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var (minBucket, thresholdError) = ParseSimilarityThreshold(input.SimilarityThreshold);
-        if (thresholdError is not null) return thresholdError;
-
+        var mode = DuplicateDetectionModeParser.TryParse(input.Mode);
+        if (mode is null)
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger mode-Wert '{input.Mode}' — gueltig sind 'clone', 'refactoring-drift'.");
+        }
         if (input.MinTokens is < 1)
         {
             return McpToolResults.InvalidArgument("minTokens muss mindestens 1 sein.");
@@ -46,13 +51,42 @@ internal static class DuplicateDetectionTool
 
         try
         {
-            var result = await DuplicateDetectionScanner.ScanAsync(solution, config, input, minBucket, ct);
-            return BuildResponse(solution, result);
+            return mode.Value == DuplicateDetectionMode.RefactoringDrift
+                ? await ExecuteRefactoringDriftAsync(solution, config, input, ct)
+                : await ExecuteCloneAsync(solution, config, input, ct);
         }
         catch (System.Exception ex) when (ex is not System.OperationCanceledException)
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in find_duplicates: {ex.Message}");
         }
+    }
+
+    private static async Task<CallToolResult> ExecuteCloneAsync(
+        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
+        CancellationToken ct)
+    {
+        var (minBucket, thresholdError) = ParseSimilarityThreshold(input.SimilarityThreshold);
+        if (thresholdError is not null) return thresholdError;
+
+        var result = await DuplicateDetectionScanner.ScanAsync(solution, config, input, minBucket, ct);
+        return BuildResponse(solution, result);
+    }
+
+    private static async Task<CallToolResult> ExecuteRefactoringDriftAsync(
+        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(input.HelperSymbol))
+        {
+            return McpToolResults.InvalidArgument(
+                "helperSymbol ist bei mode='refactoring-drift' Pflicht (Datei:Zeile:Spalte, stabile " +
+                "DocumentationCommentId oder qualifizierter Name — Format wie bei find_references).");
+        }
+
+        var (result, error) = await RefactoringDriftScanner.ScanAsync(solution, config, input, ct);
+        if (error is not null) return error;
+
+        return RefactoringDriftResponseBuilder.Build(solution, result!);
     }
 
     /// <summary>Case-insensitiv, leer/<see langword="null"/> = Default <c>fuzzy</c> (niedrigste
