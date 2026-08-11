@@ -9,12 +9,12 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 /// <summary>
-/// MCP-Tool <c>get_server_health</c> (Q3, <c>tasks/features/05-roadmap.md</c> §3): Diagnose-
-/// Schnappschuss des laufenden MCP-Server-Prozesses — <see cref="ServerLoadState"/>, geladene
-/// Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start und (falls <c>--mcp-log</c>
-/// aktiv) eine Call-Log-Aggregation. Reine Diagnose ohne Recoverable-Pfad; einzige Ausnahme
+/// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss des laufenden MCP-Server-Prozesses —
+/// <see cref="ServerLoadState"/>, geladene Solution/Config-Quelle, Uptime, Anzahl
+/// Solution-Refreshes seit Start und (falls <c>--mcp-log</c> aktiv) eine Call-Log-Aggregation.
+/// Reine Diagnose ohne Recoverable-Pfad; einzige Ausnahme
 /// <see cref="ServerLoadState.LoadFailed"/>, konsistent mit den anderen Tools' SOLUTION_NOT_LOADED-
-/// Kurzform. Schliesst Recon-B-Schwaeche #10 (kein Server-Health-Tool).
+/// Kurzform.
 /// </summary>
 internal static class GetServerHealthTool
 {
@@ -38,9 +38,9 @@ internal static class GetServerHealthTool
     }
 
     /// <summary>
-    /// StructuredContent (S1.3) mit denselben Rohwerten wie die Text-Sektionen oben — additiv,
-    /// keine eigene Formatierungslogik (Text bleibt die bestehende Quelle der Wahrheit fuer
-    /// Sonderfaelle wie "wird noch geladen").
+    /// StructuredContent mit denselben Rohwerten wie die Text-Sektionen oben — additiv,
+    /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
+    /// wie "wird noch geladen").
     /// </summary>
     private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, McpCallLog? callLog)
     {
