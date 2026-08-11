@@ -59,7 +59,7 @@ internal static class PatternDetectTool
 
         // "Keine Dateien im Scope" hat keinen strukturierten Payload (kein Report gebaut) —
         // Text-only, analog get_violations. Der normale Report traegt sowohl Text als auch
-        // StructuredContent (S1.3-Praezedenzfall, siehe SafeguardTool).
+        // StructuredContent (Praezedenzfall, siehe SafeguardTool).
         if (result.Payload is null)
         {
             return McpToolResults.Text(result.Text!);
