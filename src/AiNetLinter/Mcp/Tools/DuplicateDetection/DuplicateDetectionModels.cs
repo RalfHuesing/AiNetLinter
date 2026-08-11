@@ -52,8 +52,8 @@ internal sealed record DuplicateDetectionSummary(
     bool Truncated);
 
 /// <summary>StructuredContent-Wurzel fuer <c>find_duplicates</c> — in ein benanntes Objekt
-/// gewrappt statt eines nackten Arrays (siehe <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar,
-/// M2-Regressionslehre).</summary>
+/// gewrappt statt eines nackten Arrays (siehe <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar).
+/// </summary>
 internal sealed record DuplicateDetectionPayload(
     IReadOnlyList<DuplicateClusterPayloadEntry> Clusters,
     DuplicateDetectionSummary Summary);
