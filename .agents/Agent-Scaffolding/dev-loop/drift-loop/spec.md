@@ -106,7 +106,7 @@ unterschiedliche Konventionen. Geprüft werden zwei Kandidaten
   `<task-dir>/task-state.md` (`rules_dir`) — einmal ermittelt, gilt es
   für den gesamten Task, auch über Resumes hinweg.
 - **Weitergabe an Subagenten:** Planer/Coder/Kritiker laufen isoliert
-  (kein Zugriff auf den ursprünglichen Nutzer-Prompt oder die
+  (kein Zugriff auf den Nutzer-Prompt oder die
   Orchestrator-Session) — der Orchestrator **muss** `rules_dir` explizit
   in jeden Subagent-Prompt aufnehmen (siehe `orchestrator.md` Schritt 2).
   Ohne diese explizite Weitergabe hat kein Subagent eine Chance, das
@@ -288,8 +288,8 @@ Ablauf:
    sofern Kettenbudget nicht erschöpft (§10.5). `blocked` → Loop pausiert,
    Nutzer klärt.
 
-Eine Korrektur betrifft ausschließlich den Scope des ursprünglichen
-Findings — keine Ausweitung auf andere Teile des korrigierten Steps oder
+Eine Korrektur betrifft ausschließlich den Scope des Findings — keine
+Ausweitung auf andere Teile des korrigierten Steps oder
 des Tasks, **außer** opportunistisch gebündeltes `auto_fixable`-Tech-Debt
 aus der unmittelbaren Nähe (§9, §10.6) — das ist die einzige zulässige
 Scope-Erweiterung, und sie ist explizit als Batch-Item auszuweisen, nicht
@@ -472,8 +472,8 @@ Zyklus warten muss.
 
 Am Ende des Tasks bekommt der Kritiker `konzept.md`, `roadmap.md`,
 `tech-debt.md` und **alle** Step-Results/-Reviews plus den Projekt-Code
-als Input. Er prüft: Passt das Gesamtergebnis zur ursprünglichen
-Intention aus `konzept.md`? Sind Seiteneffekte übersehen worden? Läuft
+als Input. Er prüft: Passt das Gesamtergebnis zur Intention aus
+`konzept.md`? Sind Seiteneffekte übersehen worden? Läuft
 Build/Test? Ist `roadmap.md` vollständig abgehakt?
 
 Er fasst außerdem `tech-debt.md` im Summary zusammen (Anzahl Einträge
@@ -649,7 +649,7 @@ mehr per Ordnerzählung**:
 
 **a) Kettenbudget pro Korrektur-Kette (ersetzt das alte „pro Step"):**
 Der Orchestrator verfolgt vor jeder neuen Korrektur die `corrects`-Zeiger
-rückwärts bis zum ursprünglichen Step und zählt die Kettenlänge. Bei
+rückwärts bis zum ersten Step der Kette und zählt die Kettenlänge. Bei
 **3 Korrekturen in derselben Kette** (`max_fix_rounds_per_step`, Default
 3, konfigurierbar) ohne `approved`: der zuletzt korrigierte Step →
 `blocked`, keine weitere Korrektur in dieser Kette, Loop pausiert,
@@ -697,7 +697,7 @@ nachschauen*, nie *was dort steht* — er behauptet nichts über den Inhalt
 des referenzierten Steps. Coder und Kritiker lesen bei nicht-leerem
 `related_to` deshalb den **aktuellen** Stand nach (`step-result.md` + die
 tatsächlichen Dateien), bevor sie sich darauf verlassen — nie die
-ursprüngliche Plan-Beschreibung ungeprüft übernehmen.
+Plan-Beschreibung ungeprüft übernehmen.
 
 **Micro-Batches.** Mehrere einzeln triviale Änderungen würden bei
 strikter 1-Step-pro-Änderung-Regel jede für sich einen vollen
@@ -816,8 +816,8 @@ gibt sie bei jedem Subagenten-Aufruf mit (`orchestrator.md` Schritt 2).
 
 Persistiert wird sie, weil ein Task in einer **neuen Session** fortgesetzt
 werden kann und `orchestrator.md` Schritt 1 Fall B dabei ohne Rückfrage
-weiterläuft — stünde die Zuweisung nur im ursprünglichen Prompt, liefen
-die Subagenten nach einem Resume still auf dem Default-Modell.
+weiterläuft — stünde die Zuweisung nur im Start-Prompt, liefen die
+Subagenten nach einem Resume still auf dem Default-Modell.
 
 Die Werte sind **freier Text** und werden nie validiert: welche Modelle
 existieren, weiß nur der Nutzer und sein Werkzeug. Ohne Angabe macht der
