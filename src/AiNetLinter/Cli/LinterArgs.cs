@@ -104,20 +104,6 @@ public sealed class LinterArgs
 
     public string? SearchRules { get; init; }
 
-    public string? MapType { get; init; }
-
-    public string? EvalType { get; init; }
-
-    /// <summary>
-    /// Gibt an ob alle verfügbaren Eval-Typen aufgelistet werden sollen.
-    /// </summary>
-    public bool ListEvals { get; init; }
-
-    /// <summary>
-    /// Spezifikations-Quellen für --eval (Dateien oder Verzeichnisse).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> SpecPaths { get; init; } = [];
-
     /// <summary>
     /// Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt).
     /// </summary>
@@ -206,7 +192,7 @@ public sealed class LinterArgs
     {
         if (IsPathMissing())
         {
-            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules, --map, --eval, --list-evals).";
+            return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules).";
         }
 
         if (HasConflictingModeOptions())
@@ -228,7 +214,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || MapType != null || EvalType != null || ListEvals || McpServer || SyncAgentRulesOnly;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || SyncAgentRulesOnly;
 
     private string? ValidateIgnoreSuppressions()
     {

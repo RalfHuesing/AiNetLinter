@@ -1,12 +1,18 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Maps;
+
+/// <summary>
+/// Ein Eintrag für eine gescannte .cs-Datei (Pfad, Zeilenzahl, Verzeichnis).
+/// </summary>
+internal sealed record StructureFileInfo(string RelativePath, int Lines, string Directory);
 
 /// <summary>
 /// Erzeugt eine Hotspot Map: Dateien die sich ihrem konfigurierten Limit nähern.
@@ -26,7 +32,7 @@ internal static class HotspotMapBuilder
             return 1;
         }
 
-        var files = StructureMapBuilder.CollectFileInfos(root);
+        var files = CollectFileInfos(root);
         var critical = files.Where(f => (double)f.Lines / maxLineCount >= CriticalThreshold).ToList();
         var warning  = files.Where(f => (double)f.Lines / maxLineCount is >= WarnThreshold and < CriticalThreshold).ToList();
 
@@ -53,6 +59,29 @@ internal static class HotspotMapBuilder
 
         c.WriteLine(sb.ToString().TrimEnd());
         return 0;
+    }
+
+    internal static IReadOnlyList<StructureFileInfo> CollectFileInfos(string root)
+    {
+        if (!Directory.Exists(root))
+            return Array.Empty<StructureFileInfo>();
+
+        return Directory
+            .EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                     && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .Select(f => {
+                var dirPath = Path.GetDirectoryName(f) ?? root;
+                var relativeDir = Path.GetRelativePath(root, dirPath).Replace('\\', '/');
+                if (relativeDir == ".") relativeDir = "";
+                return new StructureFileInfo(
+                    RelativePath: Path.GetRelativePath(root, f).Replace('\\', '/'),
+                    Lines: File.ReadAllLines(f).Length,
+                    Directory: relativeDir);
+            })
+            .OrderByDescending(f => f.Lines)
+            .ThenBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static void AppendSection(

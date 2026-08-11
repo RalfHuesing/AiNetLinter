@@ -382,38 +382,19 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ---
 
-## Epic 30: Codebase-Landkarten (`--map`)
+## Epic 30: Codebase-Landkarten (`--map`) — ENTFERNT
 
-Ergänzt den Linter um drei neue Discovery-Befehle die strukturierte Markdown-Ausgaben für Drift-Audits und Eval-Prompts erzeugen — ohne manuelles PowerShell-saripting.
-
-- [x] **`--map vocabulary`:** Scannt alle `.cs`-Dateien und gruppiert Typ-Deklarationen nach Suffix-Muster (`*Checker`, `*Detector`, `*Builder` usw.). Dient als direkter Input für E02 Naming-Drift-Audits. Erkennt gemischte Prüf-Klassen-Patterns als Hinweis auf potenziellen Naming-Drift.
-- [x] **`--map structure`:** Verzeichnisbaum mit Dateigrößen (LOC), sortiert nach Größe. Markiert Dateien ab 80 % (⚠) und 95 % (🔴) des konfigurierten `MaxLineCount`-Limits. Dient als direkter Input für E03 Architecture-Intent-Audits.
-- [x] **`--map hotspots`:** Fokussierte Ansicht: Nur Dateien die das `MaxLineCount`-Limit annähern. Proaktives Drift-Signal bevor ein Regelverstoß entsteht. Nutzt `--config` für projektspezifische Limits.
-- [x] **`--map skeleton`:** Semantisches Code-Skelett für LLM-Audits (Signaturen + Throws + Uses). Reduziert das RAG-Kontextvolumen um ~70–85 % durch das Verbergen von Methodenrümpfen bei gleichzeitigem Erhalt von Abhängigkeiten und Fehlerflüssen.
-- [x] **Keine Roslyn-Abhängigkeit bei v1-Maps:** Die ersten drei Maps basieren auf reinem Dateisystem-Scan — kein MSBuild-Load, Ausführung in <1 Sekunde; `skeleton` nutzt Roslyn MSBuildWorkspace für semantische Auflösung.
-- [x] **Discovery:** Alle Maps in `--docs agent-api` und `--docs configuration` dokumentiert. Kein Timestamp-Header bei v1-Maps.
-- [x] **Test-Suite:** `VocabularyMapBuilderTests`, `StructureMapBuilderTests`, `HotspotMapBuilderTests` und `SkeletonMapBuilderTests` / `SkeletonSyntaxWalkerTests`.
+> **Entfernt am 2026-08-11** (ersatzlos, siehe M8 in `tasks/features/05-roadmap.md`). Die CLI-Exposition (`--map vocabulary`, `--map structure`, `--map hotspots`, `--map skeleton`) sowie `VocabularyMapBuilder` und `StructureMapBuilder` wurden entfernt, da die MCP-Tools (`get_hotspots`, `get_file_skeleton` u. a.) den gleichen Nutzen strukturierter bieten. `HotspotMapBuilder` und `SkeletonMapBuilder` bestehen intern weiter, da die MCP-Tools sie referenzieren.
+>
+> Ursprünglich ergänzte dieses Epic vier Discovery-Befehle für strukturierte Markdown-Ausgaben (Vokabular-Gruppierung nach Typ-Suffix, Verzeichnisbaum mit Dateigrößen, Hotspot-Fokusansicht nahe am `MaxLineCount`-Limit, semantisches Code-Skelett für LLM-Audits).
 
 ---
 
-## Epic 31: Eval-Audit-Prompt-Feature (`--eval`)
+## Epic 31: Eval-Audit-Prompt-Feature (`--eval`) — ENTFERNT
 
-Assembliert vollständige LLM-Audit-Prompts aus eingebetteten Templates, Spezifikations-Quellen und frisch generierter Codebase-Evidenz.
-
-- [x] **`EvalDefinition` + `EvalRegistry`:** Repräsentiert und verwaltet die Eval-Typen (`naming-drift`, `architecture-intent`)
-- [x] **`SpecLoader`:** Lädt Dateien + Verzeichnisse (erste Ebene, .md) und stellt Fallback-Text bereit
-- [x] **`EvalAssembler`:** Lädt eingebettete Templates, ersetzt Platzhalter `{{...}}` und generiert Codebase-Evidenz automatisch
-- [x] **`EvalCommand` + `ListEvalsCommand`:** Implementiert Befehls-Ausführungen für prompt Generierung und Listing
-- [x] **CLI-Integration:** Unterstützung für `--eval`, `--list-evals`, `--spec` Optionen; Header-Unterdrückung bei Programmausgabe
-- [x] **Templates:** `Docs/Evals/naming-drift.md` und `Docs/Evals/architecture-intent.md` angelegt
-- [x] **csproj-Konfiguration:** EmbeddedResource-Einträge für beide Templates ergänzt
-- [x] **Test-Suite:** Unit-Tests in `SpecLoaderTests`, `EvalAssemblerTests` und `ListEvalsCommandTests` abgedeckt
-- [x] **Aufräumarbeiten:** `Research/Evals/` Ordner gelöscht (vollständig durch eingebettete Templates ersetzt)
-- [x] **Dokumentation:** Aktualisierung von `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`
-- [x] **Prompt-Qualität Phase 2 — XML-Spec-Isolation:** `SpecLoader` bettet jede Spec-Datei in `<doc name="DATEINAME">…</doc>` ein; Template umschließt `{{SPEC}}` mit `<specs>…</specs>`. Löst Heading-Kollision und `---`-Trennzeichen-Konflikt zwischen Spec-Inhalt und Template-Rahmen.
-- [x] **Prompt-Qualität Phase 2 — Task-First-Ordering:** Beide Eval-Templates umstrukturiert: Aufgaben-Instruktion steht jetzt VOR den Daten-Abschnitten (Anthropic Best Practice für lange Kontexte).
-- [x] **Prompt-Qualität Phase 2 — Token-Budget-Warnung:** `EvalAssembler` gibt Warnung auf `stderr` aus wenn der assemblierte Prompt ~15.000 Tokens überschreitet (Schätzung: Zeichenanzahl / 4). Kein Hard-Fail — Nutzer entscheidet.
-- [x] **Prompt-Qualität Phase 2 — P1/P2/P3-Output-Format:** Beide Templates enden mit einem Pflicht-Abschnitt der das LLM zu strukturierten, priorisierten Empfehlungen (Tabelle mit Priorität/Befund/Empfehlung/Aufwand) zwingt.
+> **Entfernt am 2026-08-11** (ersatzlos, siehe M8 in `tasks/features/05-roadmap.md`). `--eval`, `--list-evals`, `--spec` sowie der komplette `Evals`-Namespace (`EvalDefinition`, `EvalRegistry`, `SpecLoader`, `EvalAssembler`, `EvalCommand`, `ListEvalsCommand`) und die Templates unter `Docs/Evals/` wurden entfernt.
+>
+> Ursprünglich assemblierte dieses Feature vollständige LLM-Audit-Prompts aus eingebetteten Templates, Spezifikations-Quellen und frisch generierter Codebase-Evidenz (naming-drift, architecture-intent) inkl. XML-Spec-Isolation, Task-First-Ordering und Token-Budget-Warnung.
 
 ---
 

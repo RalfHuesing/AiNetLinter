@@ -1524,94 +1524,7 @@ Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `A
 
 ---
 
-## 13. Map-Ausgaben
-
-Die `--map`-Befehle erzeugen Markdown-Landkarten der Codebase ohne Lint-Lauf. Sie benötigen kein `--config` (außer `--map hotspots` für präzise Grenzwerte). Die ersten drei Maps arbeiten rein dateibasiert; `--map skeleton` führt eine vollständige semantische Analyse über MSBuildWorkspace aus.
-
-| Befehl | Zweck | Eval-Input |
-|---|---|---|
-| `--map vocabulary` | Typ-Namen nach Suffix gruppiert | E02 Naming-Drift |
-| `--map structure`  | Verzeichnisstruktur + Dateigrößen | E03 Architecture-Intent |
-| `--map hotspots`   | Dateien nahe am Limit | Proaktiv |
-| `--map skeleton`   | Semantisches Code-Skelett mit Signaturen + Throws + Uses | LLM-Audits, Code-Reviews |
-
-#### `--map skeleton`
-
-Erzeugt eine vollständige **Skeleton Map** der Solution: Für jeden Typ werden Namespace, Modifikatoren, Basistypen und alle Member-Signaturen ausgegeben. Methoden-Rümpfe werden durch Inline-Kommentare ersetzt:
-
-- `// Throws: X` — geworfene Exception-Typen (aus `throw new X()`-Statements)
-- `// Uses: IRepo, IService` — injizierte Abhängigkeiten, auf die die Methode zugreift
-
-**Erfordert:** `--path` zu einer `.sln`- oder `.slnx`-Datei (oder Verzeichnis mit einer davon).
-**Ausgabe:** stdout (Markdown). Empfehlung: in Datei umleiten und als Kontext für LLM-Audit nutzen.
-
-**Geschätzte Token-Ersparnis:** ~70–85% gegenüber rohem Quellcode bei vollem Erhalt der Architektur-Information.
-
-**Anwendungsfälle:** Code-Duplikat-Erkennung, Naming-Drift-Audit, Abhängigkeitsanalyse, Architektur-Review durch LLM-Agenten.
-
-```bash
-ainetlinter --map skeleton --path ./src/MySolution.sln > skeleton.md
-```
-
----
-
-## 14. Eval-Prompts (`--eval`)
-
-`--eval` assembliert einen vollständigen LLM-Audit-Prompt aus drei Quellen:
-
-1. **Template** — eingebettet im Binary (`Docs/Evals/`)
-2. **Spezifikation** — aus `--spec` Quellen (oder LLM-Fallback-Instruktion)
-3. **Evidenz** — frisch generiert (vocabulary map oder structure map)
-
-| Eval-Typ | Evidenz | --spec empfohlen |
-|:---|:---|:---|
-| `naming-drift` | VocabularyMap | README.md, Domain-Dokumentation |
-| `architecture-intent` | StructureMap | Architektur-Beschreibung, Designentscheidungen |
-
-`--spec` kann mehrfach angegeben werden. Verzeichnisse: nur erste Ebene, nur .md-Dateien.
-
-### Prompt-Aufbau
-
-Jede per `--spec` übergebene Datei wird automatisch in einen XML-Container
-eingebettet:
-
-```xml
-<specs>
-<doc name="README.md">
-...Dateiinhalt...
-</doc>
-<doc name="architecture.md">
-...Dateiinhalt...
-</doc>
-</specs>
-```
-
-Das verhindert Konflikte zwischen Heading-Hierarchien (`#`, `##`) und
-Trennzeichen (`---`) in Spec-Dateien und dem Template-Rahmen.
-
-### Token-Budget-Warnung
-
-Überschreitet der assemblierte Prompt ~15.000 Tokens (Schätzung: `Zeichen / 4`),
-gibt das Tool eine Warnung auf `stderr` aus:
-
-```
-[WARN] Eval-Prompt ist sehr groß (~18 500 Tokens geschätzt). Erwäge --spec auf die wichtigsten Dateien zu reduzieren.
-```
-
-Der Prompt wird trotzdem ausgegeben — der Nutzer entscheidet ob er ihn verwendet.
-
-### Output-Format
-
-Beide Eval-Templates enden mit einem Pflicht-Abschnitt der das LLM anweist,
-seine Empfehlungen als priorisierte Tabelle auszugeben:
-
-| Priorität | Befund | Empfehlung | Aufwand |
-|-----------|--------|------------|---------|
-| P1 – Sofort | Aktives Problem | Sofortmaßnahme | Klein/Mittel/Groß |
-| P2 – Bald | Wichtig | Kurzfristige Maßnahme | ... |
-| P3 – Später | Nice-to-have | Langfristige Optimierung | ... |
-
-## 15. Eingrenzung des Analyse-Scopes (Filtering)
+## 13. Eingrenzung des Analyse-Scopes (Filtering)
 
 Bei großen Software-Systemen (Enterprise-Solutions) kann der Analysebereich gezielt eingeschränkt werden, um Token-Budget-Überschreitungen bei LLMs zu verhindern und die Performance zu verbessern.
 
@@ -1649,7 +1562,7 @@ ainetlinter --config rules.json --path ./Solution.sln --exclude-tests
 
 ### Sichtbarkeits-Filter
 
-- `--public-only`: Blendet private und protected Member aus generierten Skeleton Maps (`--map skeleton`) aus, um Token zu sparen.
+- `--public-only`: Blendet private und protected Member aus, um Token zu sparen.
 
 ### Suppression-Bypass (--ignore-suppressions)
 

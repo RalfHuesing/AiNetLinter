@@ -44,12 +44,8 @@ Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explo
 ```bash
 # Tool erkunden (kein --path nötig):
 ainetlinter --list-rules
-ainetlinter --list-evals
 ainetlinter --describe-rule EnforceSealedClasses
 ainetlinter --docs configuration
-
-# Eval-Audit-Prompts assemblieren (inkl. frischer Evidenz und Spezifikation):
-ainetlinter --eval naming-drift --path ./src/ --spec README.md > prompt.md
 
 # Lint-Lauf:
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
@@ -112,7 +108,6 @@ Vollständige Tool-Referenz (Parameter, Trunkierung, Error-Codes, Call-Log): [Do
 
 | Regel/Feature | Zweck |
 | :--- | :--- |
-| **Codebase-Landkarten & Evals** (`--map`, `--eval`) | Generiert strukturierte Markdown-Übersichten (vocabulary, structure, hotspots, skeleton) oder vollständig assemblierte LLM-Audit-Prompts mit frischer Evidenz für Drift-Audits. |
 | **Baseline / Ratchet** (`--baseline`) | Friert bestehende Verstöße per SHA-256 ein — nur geänderte Dateien werden geprüft. Ermöglicht den Einsatz in Legacy-Projekten mit bestehenden Verstößen, ohne diese vorher beheben zu müssen. |
 | **AI-Context-Footprint** (`MaxAIContextFootprint`) | Misst die transitiven Codezeilen, die ein KI-Modell für eine Klasse laden müsste. Direkte Metrik für Kontextbudget-Verbrauch im agentischen Workflow. |
 | **Phantom-Dependency-Ban** (`DetectAndBanPhantomDependencies`) | Verbietet nicht auflösbare Namespaces und Reflection-Lade-APIs. |

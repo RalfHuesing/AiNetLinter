@@ -26,36 +26,7 @@ ainetlinter --search-rules "agent"
 
 # Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
 ainetlinter --docs configuration
-
-# Codebase-Landkarten generieren:
-ainetlinter --map vocabulary --path <pfad>
-ainetlinter --map structure --path <pfad>
-ainetlinter --map hotspots --path <pfad> [--config <rules.json>]
-ainetlinter --map skeleton --path <pfad>
 ```
-
-### Eval-Befehle (Assembled Audit Prompts)
-
-Generieren vollständige, sofort nutzbare LLM-Audit-Prompts inkl. Evidenz. Erfordern `--path`.
-
-```bash
-ainetlinter --list-evals
-ainetlinter --eval naming-drift        --path <pfad> [--spec <pfad>...]
-ainetlinter --eval architecture-intent --path <pfad> [--spec <pfad>...]
-```
-
-**Prompt-Aufbau:** Jede per `--spec` übergebene Datei wird in einen XML-Container
-eingebettet (`<doc name="DATEINAME">…</doc>`), sodass Heading-Hierarchien und
-`---`-Trennzeichen in Spec-Dateien nicht mit dem Template-Rahmen kollidieren.
-Der `{{SPEC}}`-Block im Template ist mit `<specs>…</specs>` ummantelt.
-
-**Token-Warnung:** Überschreitet der assemblierte Prompt ~15.000 Tokens
-(Schätzung: `Zeichenanzahl / 4`), gibt das Tool eine Warnung auf `stderr` aus.
-Der Prompt wird trotzdem auf `stdout` ausgegeben.
-
-**Output-Format:** Beide Templates enden mit einem Pflicht-Abschnitt der das
-Modell zu einer P1/P2/P3-Empfehlungstabelle (Spalten: Priorität, Befund,
-Empfehlung, Aufwand) zwingt.
 
 ---
 
@@ -133,10 +104,6 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--impact <typ>` | string | Impact-Analyse für einen Typ |
 | `--debt-report` | bool | Tech-Debt-Report generieren |
 | `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung) |
-| `--map <typ>` | string | Codebase-Landkarte generieren (`vocabulary`, `structure`, `hotspots`, `skeleton`) |
-| `--eval <name>` | string | Assemblierten Eval-Prompt ausgeben (`naming-drift`, `architecture-intent`) |
-| `--list-evals` | bool | Verfügbare Eval-Typen auflisten |
-| `--spec <pfad>` | string[] | Spezifikationsquelle für `--eval`: Datei oder Verzeichnis (erste Ebene, nur .md). Mehrfach angebbar. |
 | `--project <muster>` | string[] | Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Core,*.Domain`) |
 | `--exclude-project <muster>` | string[] | Schließt bestimmte Projekte aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Tests`) |
 | `--namespace <muster>` | string[] | Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. `San.Auth*`) |

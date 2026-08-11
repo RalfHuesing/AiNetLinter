@@ -43,8 +43,7 @@ public static class Program
                 // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
                 if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
 
-                if (linterArgs.Docs == null && linterArgs.MapType == null
-                    && linterArgs.EvalType == null && !linterArgs.ListEvals)
+                if (linterArgs.Docs == null)
                 {
                     var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
@@ -96,10 +95,6 @@ public static class Program
             ListRules = parsed.ListRules,
             DescribeRule = parsed.DescribeRule,
             SearchRules = parsed.SearchRules,
-            MapType = parsed.MapType,
-            EvalType = parsed.EvalType,
-            ListEvals = parsed.ListEvals,
-            SpecPaths = parsed.SpecPaths,
             IncludeProjects = parsed.IncludeProjects,
             ExcludeProjects = parsed.ExcludeProjects,
             IncludeNamespaces = parsed.IncludeNamespaces,
@@ -115,8 +110,8 @@ public static class Program
 
     private static async Task<int> ExecuteLinterAsync(LinterArgs args, CancellationToken ct)
     {
-        var specialResult = await TryExecuteSpecialCommandAsync(args, ct);
-        if (specialResult.HasValue) return specialResult.Value;
+        var standaloneResult = TryRunStandaloneCommand(args);
+        if (standaloneResult.HasValue) return standaloneResult.Value;
 
         var validationError = ValidateArgs(args);
         if (validationError.HasValue) return validationError.Value;
@@ -138,24 +133,12 @@ public static class Program
         return await AuditCommand.RunAsync(args, ct);
     }
 
-    private static async Task<int?> TryExecuteSpecialCommandAsync(LinterArgs args, CancellationToken ct)
-    {
-        var standaloneResult = TryRunStandaloneCommand(args);
-        if (standaloneResult.HasValue) return standaloneResult.Value;
-
-        if (args.MapType != null) return await MapCommand.RunAsync(args, ct);
-        if (args.EvalType != null) return await EvalCommand.RunAsync(args, ct);
-
-        return null;
-    }
-
     private static int? TryRunStandaloneCommand(LinterArgs args)
     {
         if (args.Docs != null) return DocsCommand.Run(args.Docs);
         if (args.ListRules) return ListRulesCommand.ListAll();
         if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);
         if (args.SearchRules != null) return ListRulesCommand.Search(args.SearchRules);
-        if (args.ListEvals) return ListEvalsCommand.Run();
         return null;
     }
 

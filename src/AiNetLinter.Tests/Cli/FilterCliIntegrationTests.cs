@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
-using AiNetLinter.Maps;
 using AiNetLinter.Maps.Skeleton;
 using AiNetLinter.Tests.Fixtures;
 using AiNetLinter.Tests.Output;
@@ -45,19 +44,6 @@ public sealed class FilterCliIntegrationTests
         Assert.DoesNotContain("AiNetLinter.Tests", output, StringComparison.Ordinal);
         // Produktionstypen müssen vorhanden sein
         Assert.Contains("AiNetLinter", output, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void VocabularyMap_ExcludeTests_OutputContainsNoTestSuffix()
-    {
-        var console = new TestLintConsole();
-        var exitCode = VocabularyMapBuilder.Build(_slnPath, console);
-        var output = console.OutputText;
-
-        Assert.Equal(0, exitCode);
-        // Tests-only Dateipfade dürfen nicht erscheinen
-        Assert.DoesNotContain(".Tests/", output, StringComparison.Ordinal);
-        Assert.DoesNotContain(".Tests\\", output, StringComparison.Ordinal);
     }
 
     // ─── --tests-only ───────────────────────────────────────────────────────────
@@ -337,38 +323,6 @@ public sealed class FilterCliIntegrationTests
         Assert.Equal(0, exitCode);
         // Kein Crash, kein stderr
         Assert.Empty(console.Errors);
-    }
-
-    // ─── Andere Map-Typen mit Filtern ───────────────────────────────────────────
-
-    [Fact]
-    public void VocabularyMap_ExcludeProject_ExcludesProjectFromOutput()
-    {
-        var console = new TestLintConsole();
-        var exitCode = VocabularyMapBuilder.Build(_slnPath, console);
-        var output = console.OutputText;
-
-        Assert.Equal(0, exitCode);
-        // In Vocabulary-Maps erscheint der relative Pfad der Datei
-        Assert.DoesNotContain("AiNetLinter.Tests/", output, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void StructureMap_ProductionSrcOnly_ExcludesTestFiles()
-    {
-        // StructureMapBuilder ist verzeichnisbasiert und kennt keine MSBuild-Projekte.
-        // Filter per --exclude-project wirken nur bei Skeleton (Solution-basiert).
-        // Für den StructureMap-Test übergeben wir direkt das Produktionsverzeichnis.
-        var productionDir = Path.Combine(_rootDir, "src", "AiNetLinter");
-        var console = new TestLintConsole();
-        var exitCode = StructureMapBuilder.Build(productionDir, new MetricsConfig().MaxLineCount, console);
-        var output = console.OutputText;
-
-        Assert.Equal(0, exitCode);
-        // Nur Produktionsdateien sind im src/AiNetLinter-Verzeichnis
-        Assert.DoesNotContain("AiNetLinter.Tests", output, StringComparison.Ordinal);
-        // Produktionstypen müssen vorhanden sein
-        Assert.Contains("AiNetLinter", output, StringComparison.Ordinal);
     }
 
     // ─── Hilfsinfrastruktur ─────────────────────────────────────────────────────
