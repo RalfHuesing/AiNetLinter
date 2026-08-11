@@ -242,11 +242,11 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
 
-> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 10 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Konsequenz für den Agent-Loop: 11 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 16 Tools
+### Die 17 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
@@ -255,6 +255,7 @@ Konsequenz für den Agent-Loop: 10 Tools sind C#-only (find_symbol, find_referen
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene) | Echter Caller-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; Traversierung hart begrenzt auf 250 Knoten | ja | ja |
 | `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites | ja | ja |
 | `get_type_hierarchy` | `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name), `maxResults?` (Default 50, nur für abgeleitete/implementierende Typen) | Basisklassen, implementierte Interfaces (untrunkiert), abgeleitete/implementierende Typen (trunkiert), heuristische DI-Registrierungen (letzte Sektion) | ja | ja (nur abgeleitete/implementierende Typen) |
+| `dependency_graph` | `filePath?` (ganze Datei) **oder** `typeIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
 | `get_file_skeleton` | `filePath` (relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
 | `get_index_scope` | — | Dateityp-Aufschlüsselung der geladenen Solution | nein | nein |
 | `get_hotspots` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad) | `.cs`-Dateien, die ihrem `MaxLineCount`-Limit nahekommen oder es überschreiten; `StructuredContent` enthält nur `critical`/`warning`-Dateien (kein `ok`-Eintrag pro Datei — das würde bei einer großen Solution die Antwort unnötig aufblähen) | nein | nein (Text-Report ist per Threshold ohnehin klein) |
@@ -269,7 +270,7 @@ Konsequenz für den Agent-Loop: 10 Tools sind C#-only (find_symbol, find_referen
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`) und `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`) zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den bisherigen Text zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) war das urspruengliche Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`) und `dependency_graph` (alle `depth`-Werte) zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den bisherigen Text zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) war das urspruengliche Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
 
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
@@ -312,6 +313,22 @@ Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations
 
 Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen überschneiden sich nicht); trifft bei `god-class` mehr als eine Regel auf dieselbe Klasse zu, sind das separate Items (keine Dedupe-Logik, identisch zu `get_violations`). `items` ist je Pattern auf `maxResultsPerPattern` gekappt (Default 20), `occurrences` bleibt die volle Trefferzahl. Ist eine zugrunde liegende Regel (z. B. `BanAsyncVoid`) in `rules.json` deaktiviert, zeigt das zugehörige Pattern automatisch 0 Treffer — kein separater Ein-/Ausschalter in `pattern_detect` selbst (Config-Drift-Vermeidung).
 
+**`dependency_graph` — Structured Output im Detail:** Knoten sind Dateien (Solution-relative Pfade), Kanten sind Datei-zu-Datei, annotiert mit den Typnamen, die den Übergang ausgelöst haben — abgeleitet aus echten `SemanticModel`-Typreferenzen (nicht nur `using`-Direktiven), gefiltert auf Typen, die in der geladenen Solution deklariert sind (BCL-/NuGet-Rauschen ausgeschlossen). `filePath` scannt die ganze Datei (Union aller darin deklarierten Typen), `typeIdentifier` scannt nur die Deklaration dieses einen Typs — enger als die ganze Datei. Ab `depth > 1` traversiert die BFS ausschließlich auf Datei-Ebene (kein Typ-Scope mehr ab Hop 2), zyklische Abhängigkeiten werden über ein Visited-Set abgefangen: eine bereits besuchte Datei wird nicht erneut expandiert, die schließende Kante bleibt aber im Ergebnis sichtbar. `StructuredContent` liefert:
+
+```json
+{
+  "target": { "kind": "file", "path": "src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs", "typeName": null },
+  "direction": "both",
+  "edges": [
+    { "from": "...", "to": "...", "direction": "outgoing", "typeNames": ["SymbolIdentifierResolver"], "referenceCount": 2 }
+  ],
+  "projectReferences": [ { "project": "AiNetLinter.Tests", "references": ["AiNetLinter"] } ],
+  "truncated": false
+}
+```
+
+`maxResults` kappt die angezeigten Kanten (Default 50); die Traversierung selbst ist unabhängig davon hart auf 150 besuchte Dateien begrenzt (Scan-Kosten-Grenze bei großen Solutions) — beide Kappungsarten setzen `truncated: true` und unterdrücken den Sufficiency-Hinweis. Projekt-Referenzen (`Project.ProjectReferences` des Zielprojekts) sind eine günstige Zusatz-Sicht, keine vollständige Projekt-Graph-Traversierung; NuGet-Vulnerability-Scanning ist bewusst nicht Teil dieses Tools (siehe `tasks/features/05-roadmap.md` M2).
+
 Beispiel-Aufruf (JSON-RPC über stdio):
 
 ```json
@@ -353,9 +370,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 15 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 17 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 15 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 17 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.

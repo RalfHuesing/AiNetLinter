@@ -148,14 +148,14 @@ public sealed class McpServerCommandTests : IClassFixture<BaselineMcpFixture>
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithSixteenTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithSeventeenTools()
     {
         var tools = await _baselineMcpFixture.Client.ListToolsAsync();
-        Assert.Equal(16, tools.Count);
+        Assert.Equal(17, tools.Count);
         string[] expectedNames =
         [
             "find_symbol", "find_references", "get_call_tree", "get_impact", "get_file_skeleton",
-            "get_type_hierarchy", "get_index_scope", "get_hotspots", "get_violations", "safeguard",
+            "get_type_hierarchy", "dependency_graph", "get_index_scope", "get_hotspots", "get_violations", "safeguard",
             "search_pattern", "get_symbol_body", "reload_config", "get_server_health", "metrics_tree",
             "pattern_detect",
         ];

@@ -34,6 +34,7 @@ internal static class OverviewResourceRegistration
         ("get_call_tree", "Liefert den echten Caller-Baum eines C#-Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid)."),
         ("get_impact", "Findet Aufrufstellen geaenderter Signaturen — per Git-Diff (Default: uncommittete Aenderungen) oder fuer ein einzelnes Symbol."),
         ("get_type_hierarchy", "Liefert Basisklassen, Interfaces, abgeleitete Typen und heuristische DI-Registrierungen eines Typs."),
+        ("dependency_graph", "Liefert die Datei-/Typ-Abhaengigkeiten einer Datei oder eines Typs (eingehend/ausgehend/beides, echte SemanticModel-Typreferenzen)."),
         ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer C#-Datei."),
         ("get_symbol_body", "Liefert den Source-Body eines C#-Symbols per stabiler ID oder Datei:Zeile:Spalte."),
         ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
