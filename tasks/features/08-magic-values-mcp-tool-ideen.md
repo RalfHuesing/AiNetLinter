@@ -4,12 +4,12 @@ type: ideen-sammlung
 status: draft
 created: 2026-08-12
 updated: 2026-08-12
-purpose: Ideensammlung für ein Roslyn-basiertes MCP-Server-Tool zur Erkennung von Magic Values (Strings, Zahlen, Pfade, Timeouts) und automatischen Refactoring-Empfehlungen (Constants vs. appsettings.json vs. Enums vs. Localization).
+purpose: Ideensammlung für ein Roslyn-basiertes MCP-Server-Tool zur Erkennung von Magic Values (Strings, Zahlen, Pfade, Timeouts), automatischen Refactoring-Empfehlungen (Constants vs. appsettings.json vs. Enums vs. Localization) und kritische technische Machbarkeitsanalyse.
 ---
 
-# Magic Values Detection MCP Tool — Ideensammlung
+# Magic Values Detection MCP Tool — Ideensammlung & Machbarkeitsanalyse
 
-> **Status:** Erstes Brainstorming / Ideensammlung (12.08.2026). Noch nicht spezifiziert oder priorisiert.
+> **Status:** Ideensammlung & kritische Machbarkeitsanalyse (12.08.2026).
 > **Ziel:** Ein gezieltes MCP-Tool (`find_magic_values` / `analyze_magic_values`), das die Codebase nach festen Werten (Literalen) durchsucht, Duplikate identifiziert und Handlungsempfehlungen gibt (z. B. Verschieben in Konstanten-Klasse, `appsettings.json`, Enums oder Lokalisierung).
 
 ---
@@ -28,7 +28,16 @@ Ein dediziertes MCP-Tool soll dem Agenten (und dem Entwickler) auf Anforderung A
 
 ---
 
-## 2. Kategorisierung & Ziel-Empfehlungen (Mitgedachte Erweiterungen)
+## 2. Strategische Beurteilung & Mehrwert
+
+### 🥇 Warum diese Idee hervorragend ist
+- **Kuriert "Lazy Agent Habits":** KI-Agenten wählen beim Schreiben von neuem Code oft den "Weg des geringsten Widerstands" und fügen Literale direkt inline ein. `find_magic_values` gibt dem Agenten ein Werkzeug zur Selbstkorrektur vor Commits.
+- **Konstruktiv statt meckernd:** Klassische Linter (Sonar, StyleCop) sagen nur pauschal "Avoid Magic Number". Dieses MCP-Tool klassifiziert den Wert und gibt **konkrete Ziel-Empfehlungen** (`appsettings.json`, `Constants.cs`, `enum`, `.resx`).
+- **Token- & Cost-Saver:** Ein einziger Tool-Call (~300 Tokens Output) ersetzt das Scannen von Dutzenden Quellcodedateien im Context.
+
+---
+
+## 3. Kategorisierung & Ziel-Empfehlungen
 
 Ein einfaches "String/Number Grep" erzeugt enorm viel Noise. Das Tool muss über Roslyn-Semantik und Musterschablonen **intelligente Kategorien** bilden:
 
@@ -56,9 +65,9 @@ Ein einfaches "String/Number Grep" erzeugt enorm viel Noise. Das Tool muss über
 
 ---
 
-## 3. Rausch-Filterung (False Positives Vermeiden)
+## 4. Rausch-Filterung (False Positives Vermeiden)
 
-Damit das MCP-Tool im Agent-Loop nützlich ist und das Token-Budget schont, müssen irrelevante Literale gefiltered werden:
+Damit das MCP-Tool im Agent-Loop nützlich ist und das Token-Budget schont, müssen irrelevante Literale gefilterd werden:
 
 1. **Triviale Werte ignorieren (standardmäßig):**
    - Zahlen: `0`, `1`, `-1` (oft Schleifenindizes oder Initialisierungen).
@@ -73,19 +82,28 @@ Damit das MCP-Tool im Agent-Loop nützlich ist und das Token-Budget schont, müs
 
 ---
 
-## 4. Kontext-Sensitivität via Roslyn SemanticModel
+## 5. Kritische technische Machbarkeitsanalyse (Roslyn-Check)
 
-Roslyn bietet gegenüber einfachen Regex-Tools den entscheidenden Vorteil, den **Semantik-Kontext** zu kennen:
-- **Parameter-Namen analysieren:** `Thread.Sleep(5000)` $\rightarrow$ Roslyn kennt den Parameter `millisecondsTimeout`. Das Tool erkennt sofort: "5000" ist ein Zeit-Timeout!
-- **Variablen-Zuweisung:** `var connectionString = "..."` $\rightarrow$ Variable-Name liefert den Hinweis auf Konfiguration.
-- **Vorkommens-Reichweite (Scope):**
-  - *File-lokal* (nur in 1 Methode/Datei)
-  - *Projekt-weit* (in mehreren Klassen derselben Assembly)
-  - *Solution-weit* (über mehrere Projekte hinweg)
+Kann Roslyn alle vorgeschlagenen Heuristiken und Kontext-Analysen überhaupt technisch verlässlich umsetzen?
+
+| Feature / Vorschlag | Technischer Roslyn-Mechanismus | Umsetzbarkeit & Grenzen |
+| :--- | :--- | :--- |
+| **Literal-Erkennung & AST-Scan** | `SyntaxWalker` über `LiteralExpressionSyntax` (`StringLiteralExpression`, `NumericLiteralExpression`). | 🟢 **100% machbar.** Sehr schnell & trivial. |
+| **Attribut-Filtern** | Prüfen, ob `node.FirstAncestorOrSelf<AttributeSyntax>() != null`. | 🟢 **100% machbar.** Reine AST-Prüfung ohne Semantik. |
+| **Ausschluss von `const` / `static readonly`** | Prüfen auf `FieldDeclarationSyntax` / `PropertyDeclarationSyntax` mit `const` / `readonly` Modifier. | 🟢 **100% machbar.** Reine AST-Prüfung. |
+| **Parameter-Kontext (z. B. `Thread.Sleep(5000)`)** | `SemanticModel.GetSymbolInfo(invocation)` $\rightarrow$ `IMethodSymbol.Parameters[idx].Name`. | 🟢 **Gut machbar.** `millisecondsTimeout`, `timeout` oder `delay` lassen sich verlässlich identifizieren. Setzt geladenes `SemanticModel` voraus. |
+| **Variablenzuweisung (`var port = 8080`)** | `EqualsValueClauseSyntax` $\rightarrow$ `VariableDeclaratorSyntax.Identifier.Text`. | 🟢 **Gut machbar.** Variablenname (z. B. `port`, `connectionString`, `secret`) gibt Aufschluss auf Config-Charakter. |
+| **Enum-Kandidaten** | `SwitchStatementSyntax`, `SwitchExpressionSyntax` & `IfStatementSyntax` nach Mehrfachvergleichen durchsuchen. | 🟡 **Mittel.** AST-Vergleich von Variablen-Identifiern gegen Literale in Verzweigungen ist machbar, erfordert aber sauberes Pattern-Matching für komplexe Bools. |
+| **Sektionen-Namen in Config (`ApiSettings:BaseUrl`)** | Namen aus Klasse (`UserService`) + Parameter/Variable (`baseUrl`) zusammensetzen. | 🟡 **Heuristisch.** Roslyn liefert den AST-Kontext, die Pfadstruktur (`ApiSettings:BaseUrl`) ist aber ein synthetischer *Vorschlag*. Das LLM nutzt diesen Vorschlag als Orientierung. |
+| **Lokalisierung / User-Facing Strings** | Check auf Konstruktoren von Exceptions (`ArgumentException(message)`), UI-Methoden & String-Länge (> 15 Zeichen mit Leerzeichen). | 🟡 **Heuristisch.** Roslyn identifiziert den Methoden-Konstruktor verlässlich. Ob eine Meldung übersetzt werden muss, bleibt eine textuelle Heuristik. |
+| **Cross-Project Duplikats-Aggregation** | In-Memory `Solution`-Workspace durchlaufen und Literale in einem `Dictionary<string, List<Location>>` bündeln. | 🟢 **Gut machbar.** AiNetLinter hält die Solution im Speicher. Aggregation ist in $\mathcal{O}(N)$ über alle Literale extrem schnell. |
+
+### Fazit der Machbarkeitsprüfung:
+Alle Kernfunktionen sind **zu 100% mit der Roslyn-API im bestehenden AiNetLinter-Server umsetzbar**. Roslyn liefert die exakte AST- und Semantik-Grundlage. Wo Roslyn aufhört (z. B. Wunschnamen in `appsettings.json` oder Lokalisierungsnotwendigkeit), greifen einfache, transparente Heuristiken, die dem KI-Agenten als strukturierte Empfehlungen übergeben werden.
 
 ---
 
-## 5. Entwurf der MCP-Tool-Schnittstelle (`find_magic_values`)
+## 6. Entwurf der MCP-Tool-Schnittstelle (`find_magic_values`)
 
 ```json
 {
@@ -134,7 +152,7 @@ Roslyn bietet gegenüber einfachen Regex-Tools den entscheidenden Vorteil, den *
 
 ---
 
-## 6. Synergien im AiNetLinter-Ökosystem
+## 7. Synergien im AiNetLinter-Ökosystem
 
 - **Ergänzung zu `find_duplicates`:** `find_duplicates` sucht nach redundanten Codeblöcken/AST-Strukturen; `find_magic_values` fokussiert sich auf atomare Datenliterale und deren fachlichen Bestimmungsort.
 - **Integration in `safeguard` / `rules.json`:** Optional können schwere Magic-Value-Verstöße (z. B. hardcoded Connection Strings oder Passwörter) als Roslyn-Regeln in `rules.json` eingebunden werden.
