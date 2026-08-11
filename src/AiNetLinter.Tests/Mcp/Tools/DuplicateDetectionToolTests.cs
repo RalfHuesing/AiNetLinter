@@ -17,7 +17,7 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/> — Argument-Validierung, Fehlerbehandlung,
-/// <c>StructuredContent</c>-ist-Objekt-Regressionstest (M2-Lehre, siehe
+/// <c>StructuredContent</c>-ist-Objekt-Regressionstest (siehe
 /// <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar) und End-zu-End-Wiring gegen eine
 /// selbst gebaute In-Memory-Solution mit einem echten exact-Klon-Paar.
 /// </summary>
