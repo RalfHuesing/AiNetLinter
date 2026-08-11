@@ -59,5 +59,5 @@ siehe <step-id>".>
 <Begründungen gehören **an das Epic**, nicht in eine Liste darunter: Ein
 Epic, das der Planer nachträglich ergänzt hat, trägt den Grund in seiner
 eigenen Zeile, z. B. „- [ ] <EPIC-ID-3>: ... (Muss-Haben aus `konzept.md`
-§X, ohne Entsprechung in der ursprünglichen Roadmap — erkannt in
+§X, ohne Entsprechung in der Roadmap — erkannt in
 <step-id>)". Wann das passiert ist, steht in `git log`.>
