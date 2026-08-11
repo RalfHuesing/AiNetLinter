@@ -136,6 +136,31 @@ public sealed class SearchPatternToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WorktreeSubdirectory_ExcludedFromHits()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var projectDir = Path.GetDirectoryName(fixture.GreeterPath)!;
+        var worktreeDir = Path.Combine(projectDir, "worktrees", "agent-x", "src");
+        Directory.CreateDirectory(worktreeDir);
+        File.WriteAllText(Path.Combine(worktreeDir, "Duplicate.cs"), "PATTERN_ANCHOR_WORKTREE_777 content");
+
+        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            pattern: "PATTERN_ANCHOR_WORKTREE_777",
+            isRegex: false,
+            maxResults: 50,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("0 Treffer", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Duplicate.cs", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_InvalidRegex_ReturnsRecoverableInvalidArgument()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));

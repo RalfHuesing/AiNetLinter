@@ -23,7 +23,7 @@ erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im
 | Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
 | Solution wird noch im Hintergrund geladen (`McpToolResults.Loading()`) | **false** | Transienter Wartezustand, kein Fehler — der Text ist ein `[INFO]`-Hinweis, Client kann nach kurzer Pause retryn. |
 
-## Audit-Ergebnis pro Tool (15 Tools; deckt nicht `dependency_graph`, `pattern_detect`, `safeguard` ab)
+## Audit-Ergebnis pro Tool (18 Tools)
 
 Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je Tool, siehe
 `src/AiNetLinter/Mcp/Tools/*.cs`.
@@ -45,6 +45,9 @@ Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je To
 | `find_duplicates` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes `helperSymbol` bei `mode=refactoring-drift`, ungueltiger `mode`/`similarityThreshold`, `minTokens`/`maxResults` < 1) |
 | `reload_config` (Q2) | `SOLUTION_NOT_LOADED` | `CONFIG_NOT_FOUND` (Pfad existiert nicht); `CONFIG_INVALID` (ungueltiges JSON) — bisherige Config bleibt in beiden Faellen aktiv |
 | `get_server_health` (Q3) | `SOLUTION_NOT_LOADED` (nur bei `LoadState == LoadFailed`) | *(keine — reine Diagnose ohne Argumente, `Loading`-Zustand wird im Report selbst als Solution-Status "wird noch geladen" angezeigt statt als Loading-Antwort)* |
+| `dependency_graph` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC` via `CompilationError`, catch-Block) | `INVALID_ARGUMENT` (`filePath`/`typeIdentifier` gegenseitig exklusiv, ungueltiger `direction`-Wert, Identifikator loest zu Nicht-Typ ohne einschliessenden Typ auf); `RESOURCE_NOT_FOUND` (`filePath` matcht kein Dokument); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (ueber `FindReferencesTool.ResolveSymbolAsync`, wiederverwendet); leere Treffermenge (0 Kanten) |
+| `pattern_detect` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in der `LinterEngine`) | `INVALID_ARGUMENT` (unbekannte `patterns`-ID(s), Hint nennt gueltige Werte); leere Treffermenge (Scope-Filter matched keine Datei — Text-only ohne `StructuredContent`) |
+| `safeguard` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in der Score-Berechnung) | *(keine dedizierte `INVALID_ARGUMENT`-Bedingung — `minScore`/`maxViolations` werden geclamped statt abgelehnt; ein normaler Score-Output ist auch bei `Passed=false` kein Fehler, sondern das erwartete Quality-Gate-Ergebnis)* |
 
 **Vor diesem Audit abweichend von der Policy** (jetzt korrigiert):
 `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT` und `RESOURCE_NOT_FOUND` liefen ueber

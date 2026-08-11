@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.Tests.Mcp.Tools.SymbolGraph;
 
 [Trait("Category", "Unit")]
 [Collection("SymbolGraphCatalog")]
