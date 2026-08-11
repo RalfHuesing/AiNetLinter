@@ -550,7 +550,22 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `SOLUTION_NOT_LOADED` | Server startete ohne geladene Solution; Tool-Calls liefern diesen Fehler |
 | `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
 | `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
-| `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`) |
+| `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt |
+
+### Verhalten bei fehlendem oder falsch benanntem Pflichtparameter
+
+Jedes Tool mit einem Pflicht-Identifikator/-Pfad-Parameter (`find_symbol.namePattern`,
+`find_references`/`get_call_tree.symbolIdentifier`, `get_type_hierarchy.typeIdentifier`,
+`get_symbol_body.identifier`, `get_file_skeleton.filePath`, `search_pattern.pattern`,
+`metrics_tree.mode`, `find_duplicates`-`mode=refactoring-drift`s `helperSymbol`) deklariert diesen
+Parameter auf SDK-Ebene als optional (Default `null`), damit ein fehlender oder falsch benannter
+Parameter im JSON-RPC-Aufruf (z. B. `symbolIdentifier` statt des von `get_type_hierarchy`
+erwarteten `typeIdentifier`) nicht schon vor Erreichen des Tool-Codes an der Argument-Bindung
+scheitert. Der Tool-Code selbst prüft den Parameter danach explizit auf `null`/leer und liefert bei
+Verletzung ein reguläres `[ERROR]: INVALID_ARGUMENT`-Ergebnis (`isError = false`, siehe
+Error-Codes-Tabelle) mit einem Hint, der den korrekten Parameternamen und das erwartete Format
+nennt — kein Server-Crash und keine rohe SDK-Fehlermeldung. Die je Tool bewusst unterschiedlichen
+Parameternamen (semantisch passend zum jeweiligen Identifikator-Typ) bleiben davon unberührt.
 
 ### Verhalten bei nicht-ladbarer Solution
 

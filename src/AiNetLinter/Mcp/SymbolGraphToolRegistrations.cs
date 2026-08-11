@@ -45,7 +45,7 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string namePattern, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+            async (string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
@@ -72,7 +72,7 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string symbolIdentifier, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+            async (string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
@@ -100,7 +100,7 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string symbolIdentifier, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
+            async (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
             {
                 var input = new GetCallTreeInput(symbolIdentifier, depth, format, topN);
                 if (callLog is null)
@@ -160,7 +160,7 @@ internal static class SymbolGraphToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string typeIdentifier, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+            async (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {

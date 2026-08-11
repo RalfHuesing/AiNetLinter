@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -30,11 +31,19 @@ internal static class GetSymbolBodyTool
     private const string TruncationMarker = "// ... truncated, total ";
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string identifier, int maxBodyLines, CancellationToken ct)
+        McpCodeGraphServer state, string? identifier, int maxBodyLines, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        if (string.IsNullOrEmpty(identifier))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'identifier' fehlt oder ist leer.",
+                hint: "identifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+        }
 
         try
         {

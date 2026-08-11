@@ -20,7 +20,7 @@ internal enum MetricsTreeMode
 /// <summary>Parst den <c>mode</c>-Parameter von <c>metrics_tree</c> in ein <see cref="MetricsTreeMode"/>.</summary>
 internal static class MetricsTreeModeParser
 {
-    internal static MetricsTreeMode? TryParse(string mode) => mode switch
+    internal static MetricsTreeMode? TryParse(string? mode) => mode switch
     {
         "code_size" => MetricsTreeMode.CodeSize,
         "comment_density" => MetricsTreeMode.CommentDensity,

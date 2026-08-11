@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -20,11 +21,19 @@ internal static class GetTypeHierarchyTool
     internal const int DefaultMaxResults = 50;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string typeIdentifier, int maxResults, CancellationToken ct)
+        McpCodeGraphServer state, string? typeIdentifier, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        if (string.IsNullOrEmpty(typeIdentifier))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'typeIdentifier' fehlt oder ist leer.",
+                hint: "typeIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
+        }
 
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, typeIdentifier, ct);
         if (error is not null) return error;

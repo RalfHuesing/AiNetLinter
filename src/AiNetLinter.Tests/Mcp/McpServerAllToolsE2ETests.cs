@@ -185,4 +185,135 @@ public sealed class McpServerAllToolsE2ETests
     {
         await Assert.ThrowsAsync<McpProtocolException>(() => _fixture.Client.CallToolAsync("unknown_tool_name"));
     }
+
+    // Die folgenden Tests decken die SDK-Argument-Bindungsebene ab (ModelContextProtocol.Server),
+    // nicht nur die interne ExecuteAsync-Methode: fehlt ein Pflichtparameter im JSON-RPC-Aufruf
+    // ganz oder wird er falsch benannt uebergeben, muss die SDK-Bindung den Delegate trotzdem
+    // erreichen (Parameter optional mit Default null) statt vor dem Tool-Code mit einer rohen,
+    // nicht hilfreichen Fehlermeldung zu scheitern. Ein Unit-Test auf ExecuteAsync direkt wuerde
+    // das nicht abdecken, weil die interne Methode den Parameter ohnehin typisiert bekommt.
+
+    [Fact]
+    public async Task FindSymbol_MissingNamePattern_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_symbol", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FindReferences_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_references", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetCallTree_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetTypeHierarchy_MissingTypeIdentifier_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_type_hierarchy", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("typeIdentifier", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetTypeHierarchy_WrongParameterName_ReturnsRecoverableInvalidArgumentInsteadOfCrashing()
+    {
+        // Reproduziert den gemeldeten Bug: ein Aufrufer uebergibt "symbolIdentifier" (der Name,
+        // den find_references/get_call_tree nutzen) statt get_type_hierarchys eigenem
+        // "typeIdentifier". Vor dem Fix scheiterte die SDK-Argument-Bindung mit einer rohen
+        // "An error occurred invoking..."-Meldung statt eines strukturierten [ERROR]-Ergebnisses.
+        var result = await _fixture.Client.CallToolAsync(
+            "get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter" });
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("typeIdentifier", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetSymbolBody_MissingIdentifier_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_symbol_body", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("identifier", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetFileSkeleton_MissingFilePath_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_file_skeleton", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("filePath", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SearchPattern_MissingPattern_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "search_pattern", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MetricsTree_MissingMode_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "metrics_tree", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("mode", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FindDuplicates_RefactoringDriftModeWithoutHelperSymbol_ReturnsRecoverableInvalidArgument()
+    {
+        // find_duplicates' helperSymbol war schon vor dem SDK-Bindungs-Fix optional deklariert
+        // (kein Crash-Risiko) — Regressionstest auf SDK-Ebene, damit das so bleibt.
+        var result = await _fixture.Client.CallToolAsync(
+            "find_duplicates", new Dictionary<string, object?> { ["mode"] = "refactoring-drift" });
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
+    }
 }

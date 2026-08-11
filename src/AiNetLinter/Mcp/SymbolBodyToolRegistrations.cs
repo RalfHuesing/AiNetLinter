@@ -34,7 +34,7 @@ internal static class SymbolBodyToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string identifier, int maxBodyLines = 80, CancellationToken ct = default) =>
+            async (string? identifier = null, int maxBodyLines = 80, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {

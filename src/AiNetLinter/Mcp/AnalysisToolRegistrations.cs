@@ -113,7 +113,7 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string pattern, bool isRegex = false, int maxResults = 50, CancellationToken ct = default) =>
+            async (string? pattern = null, bool isRegex = false, int maxResults = 50, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
@@ -140,7 +140,7 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string? root, string mode, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+            async (string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
             {
                 var args = new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter);
                 if (callLog is null)

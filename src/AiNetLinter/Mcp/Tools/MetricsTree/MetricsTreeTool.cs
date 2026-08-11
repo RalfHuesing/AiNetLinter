@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>Rohe, noch ungeparste <c>metrics_tree</c>-Toolargumente vor der Validierung in <see cref="MetricsTreeTool.ExecuteAsync"/>.</summary>
 internal sealed record MetricsTreeToolArgs(
-    string? Root, string Mode, int Depth, int TopN, string? FileFilter);
+    string? Root, string? Mode, int Depth, int TopN, string? FileFilter);
 
 /// <summary>
 /// MCP-Tool <c>metrics_tree</c>: liefert einen ASCII-Baum mit aggregierten Werten pro
@@ -33,6 +33,13 @@ internal static class MetricsTreeTool
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        if (string.IsNullOrWhiteSpace(args.Mode))
+        {
+            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'mode' fehlt oder ist leer.",
+                hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity.");
+        }
 
         var parsedMode = MetricsTreeModeParser.TryParse(args.Mode);
         if (parsedMode is null)

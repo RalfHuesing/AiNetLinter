@@ -558,4 +558,34 @@ und Begruendung: `rationale.md` §13.
 
 ---
 
+## MCP-Tool-Robustheit: fehlender/falsch benannter Pflichtparameter crasht nicht mehr
+
+Bug-Report aus einer anderen Session: `get_type_hierarchy` und weitere MCP-Tools stuerzten intern
+ab ("An error occurred invoking...") statt eines sauberen `[ERROR]`-Ergebnisses, wenn ein Aufrufer
+den falschen Parameter-Namen uebergab (z. B. `symbolIdentifier` statt des von `get_type_hierarchy`
+erwarteten `typeIdentifier`). Ursache: die Identifier-/Pattern-Parameter waren in den
+`McpServerTool.Create`-Registrierungen (`Mcp/*ToolRegistrations.cs`) als Pflicht-Parameter ohne
+Default deklariert — die `ModelContextProtocol.Server`-SDK-Argument-Bindung scheiterte damit vor
+Erreichen des Tool-Codes, bevor die eigene `INVALID_ARGUMENT`-Behandlung greifen konnte.
+
+- [x] Betroffene Parameter auf optional (`string? x = null`) umgestellt: `find_symbol.namePattern`,
+  `find_references`/`get_call_tree.symbolIdentifier`, `get_type_hierarchy.typeIdentifier`,
+  `get_symbol_body.identifier`, `get_file_skeleton.filePath`, `search_pattern.pattern`,
+  `metrics_tree.mode`/`root`. `find_duplicates` (inkl. `helperSymbol`) war bereits vollstaendig
+  optional deklariert — kein Aenderungsbedarf, per Test abgesichert.
+  Die bewusst unterschiedlichen Parameter-Namen je Tool (dokumentieren das jeweils erwartete
+  Format) bleiben unveraendert.
+- [x] Jede betroffene Tool-Execute-Methode prueft den Parameter jetzt explizit auf `null`/leer und
+  liefert `McpToolResults.Recoverable(INVALID_ARGUMENT, ...)` mit einem Hint, der den korrekten
+  Parameternamen und das erwartete Format nennt — wiederverwendeter, bereits vorhandener
+  `INVALID_ARGUMENT`-Code statt eines neuen.
+- [x] Neue E2E-Tests auf echter SDK-Bindungsebene (`McpTestClient` ueber `StdioClientTransport`,
+  nicht nur Unit-Tests auf `ExecuteAsync`) in `McpServerAllToolsE2ETests`: fehlender Parameter je
+  betroffenem Tool sowie eine direkte Reproduktion des gemeldeten Bugs (`get_type_hierarchy` mit
+  `symbolIdentifier` statt `typeIdentifier`).
+- [x] Doku aktualisiert: `Docs/agent-api.md` (neuer Abschnitt zum Verhalten bei fehlendem/falsch
+  benanntem Pflichtparameter), `Mcp/IsErrorPolicy.md` (Policy-Zeile + Audit-Tabelle ergaenzt).
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

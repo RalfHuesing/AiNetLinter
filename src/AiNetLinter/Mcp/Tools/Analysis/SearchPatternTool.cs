@@ -31,7 +31,7 @@ internal static class SearchPatternTool
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string pattern,
+        string? pattern,
         bool isRegex,
         int maxResults,
         CancellationToken ct)

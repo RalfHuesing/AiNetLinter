@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Core;
 using AiNetLinter.Maps.Skeleton;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -20,11 +21,19 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 internal static class GetFileSkeletonTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string filePath, CancellationToken ct)
+        McpCodeGraphServer state, string? filePath, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'filePath' fehlt oder ist leer.",
+                hint: "filePath relativ zum Solution-Verzeichnis angeben (Forward- oder Backslash).");
+        }
 
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, filePath));

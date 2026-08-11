@@ -42,13 +42,13 @@ internal static class FileStructureToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string filePath, CancellationToken ct = default) =>
+            async (string? filePath = null, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
                     return await GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct);
                 }
-                return await callLog.ExecuteCallAsync("get_file_skeleton", filePath,
+                return await callLog.ExecuteCallAsync("get_file_skeleton", filePath ?? "",
                     () => GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct));
             },
             new McpServerToolCreateOptions

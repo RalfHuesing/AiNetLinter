@@ -7,6 +7,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
@@ -36,6 +37,14 @@ internal static class GetCallTreeTool
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        if (string.IsNullOrEmpty(input.SymbolIdentifier))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+        }
 
         try
         {
@@ -89,4 +98,4 @@ internal static class GetCallTreeTool
 /// Record, damit <c>MaxMethodParameterCount: 4</c> auf <see cref="GetCallTreeTool.ExecuteAsync"/>
 /// eingehalten wird — Solution wird separat ueber <c>state</c> aufgeloest.
 /// </summary>
-internal sealed record GetCallTreeInput(string SymbolIdentifier, int Depth, string? Format, int TopN);
+internal sealed record GetCallTreeInput(string? SymbolIdentifier, int Depth, string? Format, int TopN);

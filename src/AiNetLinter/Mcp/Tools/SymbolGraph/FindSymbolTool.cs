@@ -45,7 +45,7 @@ internal static class FindSymbolTool
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string namePattern,
+        string? namePattern,
         string? kind,
         int maxResults,
         CancellationToken ct)
