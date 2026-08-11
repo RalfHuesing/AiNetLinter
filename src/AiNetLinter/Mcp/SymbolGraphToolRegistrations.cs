@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
+using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -11,16 +12,16 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die fuenf reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,
-/// <c>get_impact</c>, <c>get_type_hierarchy</c>, <c>get_call_tree</c>) an der von
-/// <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
+/// Registriert die sechs reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,
+/// <c>get_impact</c>, <c>get_type_hierarchy</c>, <c>get_call_tree</c>, <c>dependency_graph</c>) an
+/// der von <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
 /// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
 /// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst.
 /// </summary>
 internal static class SymbolGraphToolRegistrations
 {
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die fuenf Symbolgraph-Tools hinzu. Tools erreichen den
+    /// Fuegt <paramref name="tools"/> die sechs Symbolgraph-Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
     /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet
     /// jeden Tool-Aufruf auf, wenn aktiv (kein Overhead bei deaktiviertem Log).
@@ -35,6 +36,7 @@ internal static class SymbolGraphToolRegistrations
         AddGetCallTree(tools, mcpState, callLog);
         AddGetImpact(tools, mcpState, callLog);
         AddGetTypeHierarchy(tools, mcpState, callLog);
+        AddDependencyGraph(tools, mcpState, callLog);
     }
 
     private static void AddFindSymbol(
@@ -179,4 +181,38 @@ internal static class SymbolGraphToolRegistrations
         "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
         "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Klasse\". " +
         "maxResults begrenzt die abgeleiteten/implementierenden Typen (Default 50).";
+
+    private static void AddDependencyGraph(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string? filePath = null, string? typeIdentifier = null, string? direction = null,
+                int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
+            {
+                var input = new DependencyGraphInput(filePath, typeIdentifier, direction, depth, maxResults);
+                if (callLog is null)
+                {
+                    return await DependencyGraphTool.ExecuteAsync(mcpState, input, ct);
+                }
+                return await callLog.ExecuteCallAsync(
+                    "dependency_graph", $"{filePath}|{typeIdentifier}|{direction}|{depth}|{maxResults}",
+                    () => DependencyGraphTool.ExecuteAsync(mcpState, input, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "dependency_graph",
+                Description = DependencyGraphDescription,
+            }));
+    }
+
+    private const string DependencyGraphDescription =
+        "Wann nutzen: welche Dateien/Typen von einer Datei oder einem Typ abhaengen (echte " +
+        "SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
+        "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
+        "typeIdentifier (ein Typ, engerer Scope) angeben, nie beide — typeIdentifier-Format wie " +
+        "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth " +
+        "(Default 1, hard cap 3) traversiert transitiv auf Datei-Ebene, hart begrenzt auf 150 " +
+        "besuchte Dateien. maxResults begrenzt die angezeigten Kanten (Default 50).";
 }

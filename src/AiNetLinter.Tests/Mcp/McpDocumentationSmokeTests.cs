@@ -74,9 +74,9 @@ public sealed class McpDocumentationSmokeTests
     [Fact]
     public void AgentApi_CountsCsharpOnlyToolsCorrectly()
     {
-        // Erwartung: Docs/agent-api.md#mcp-server-modus nennt 10 C#-only-Tools (inkl. get_call_tree
-        // und pattern_detect, seit deren Einfuehrung in S1.4/S2.2) und hebt search_pattern als
-        // Nicht-C#-only-Fallback heraus.
+        // Erwartung: Docs/agent-api.md#mcp-server-modus nennt 11 C#-only-Tools (inkl. get_call_tree,
+        // pattern_detect und dependency_graph, seit deren Einfuehrung in S1.4/S2.2/M2) und hebt
+        // search_pattern als Nicht-C#-only-Fallback heraus.
         // Doku-Drift zwischen Fliesstext, Tabelle und dem zitierten ServerInstructions-Block
         // (Quelle: ServerInstructions.cs) wird durch diese Assertion gefangen.
         //
@@ -85,8 +85,8 @@ public sealed class McpDocumentationSmokeTests
         // funktioniert nur, wenn der Test die Doku tatsaechlich liest. Hartkodierte Strings
         // wuerden jeden Doku-Drift verschweigen (Test waere immer gruen).
         //
-        // A3-Pfad: Doku enthaelt "9 Tools sind C#-only" (Stand vor pattern_detect) ->
-        // Assert.DoesNotContain("9 Tools") wird rot. Doku enthaelt "10 Tools sind C#-only" ->
+        // A3-Pfad: Doku enthaelt "10 Tools sind C#-only" (Stand vor dependency_graph) ->
+        // Assert.DoesNotContain("10 Tools") wird rot. Doku enthaelt "11 Tools sind C#-only" ->
         // beide Assertions gruen.
         //
         // Pfad-Aufloesung: bin/Debug/net10.0/ ist 5 Ebenen unter dem Repo-Root
@@ -100,8 +100,8 @@ public sealed class McpDocumentationSmokeTests
 
         var docText = System.IO.File.ReadAllText(docPath);
 
-        Assert.Contains("10 Tools sind C#-only", docText, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("9 Tools sind C#-only", docText, System.StringComparison.Ordinal);
+        Assert.Contains("11 Tools sind C#-only", docText, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("10 Tools sind C#-only", docText, System.StringComparison.Ordinal);
         Assert.Contains("`search_pattern` ist der vorgesehene Fallback", docText, System.StringComparison.Ordinal);
         Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, System.StringComparison.Ordinal);
     }

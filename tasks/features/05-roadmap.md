@@ -109,7 +109,7 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | Status | # | Epic | Score | Aufwand | Quelle |
 |:--:|:--:|------|------:|--------:|--------|
 | [ ] | M1 | **ASP.NET-Framework-Analyzer-Suite** (6 Rules) — siehe Hinweis unten | 95 | 2 Wo | Recon A §7.2 |
-| [ ] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
+| [x] | M2 | **`dependency_graph` (NuGet + Projects)** | 75 | 1-2 Wo | Recon C §5.3 F10 |
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
 | [ ] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
@@ -328,6 +328,92 @@ LLM identifiziert: "Tools/ hat 41% Comment-Ratio — überprüfen". Nächster Ca
 
 **Risiko:** Niedrig (grossteil Datei-Walk + Tree-Renderer, gut testbar)
 **Quelle:** User-Idee 2026-08-06, Recon C §4.3 (Aider Repo-Map), Recon A §5.1, Recon B §6.3 (bestehende `--map`-Subcommands)
+
+---
+
+### M2 — `dependency_graph` (Datei-/Typ- und Projekt-Abhängigkeiten)
+
+**Warum:** Dogfooding-Session 2026-08-10/11 (siehe Session-Notizen, D13) hat als größte
+verbleibende Navigationslücke identifiziert: "welche Dateien/Typen hängen an Datei/Modul X" lässt
+sich aktuell nur mühsam über mehrere `find_symbol`/`find_references`-Runden rekonstruieren. Der
+ursprüngliche F10-Vorschlag (Recon C §5.3) zielte auf Projekt-/NuGet-Ebene (Projekt-Referenzen +
+NuGet-Vulnerabilities) — das deckt aber NICHT den beim Dogfooding tatsächlich erlebten Bedarf ab,
+der auf Datei-/Typ-Ebene liegt (feinkörniger als Projekt-Referenzen).
+
+**Scope-Entscheidung (klärt Spannung zwischen ursprünglichem Recon-Vorschlag und validiertem
+Bedarf):**
+- **Kern (muss):** Datei-/Typ-Ebene — "welche Dateien/Typen verwendet Datei/Typ X" (ausgehende
+  Abhängigkeiten) und "wer verwendet Datei/Typ X" (eingehende Abhängigkeiten), abgeleitet aus
+  tatsächlichen Typ-Referenzen via Roslyn `SemanticModel` (nicht nur `using`-Direktiven — die
+  sagen nichts darüber, ob ein importierter Namespace auch wirklich benutzt wird). Das ist der
+  Teil, der die Dogfooding-Lücke schließt.
+- **Sinnvoll, falls günstig (kann):** Projekt-Ebene (`Solution.Projects` + `ProjectReferences`)
+  als grobe Zusatz-Sicht — billig über die Roslyn-Project-API, kein NuGet-API-Call nötig.
+- **Explizit NICHT im Scope:** NuGet-Vulnerability-/CVE-Scanning aus dem ursprünglichen
+  F10-Vorschlag — erfordert externe Netzwerk-/API-Calls zu einer Vulnerability-Datenbank,
+  widerspricht dem Anti-Ziel "kein Modell-/Cloud-Abhängigkeit" (§0). Falls später gewünscht:
+  eigenes, separates Epic — nicht mit diesem vermischen.
+
+**Vorschlag Tool-Design (an bestehende Konventionen anlehnen, siehe `find_references`/
+`get_call_tree` als Vorbild):**
+- Name: `dependency_graph` (wie in der Roadmap benannt)
+- Input: `filePath` oder `typeIdentifier` (Datei:Zeile:Spalte oder qualifizierter Name/Pfad, wie
+  bei anderen Tools), `direction` (`incoming`/`outgoing`/`both`, Default `both`), optional
+  `depth` (transitiv, hard cap analog `find_references`/`get_call_tree`), `maxResults` (Default
+  50 — **zwingend von Anfang an**, siehe Akzeptanzkriterien)
+- Output: Text (kompakte Liste/kleiner Baum) + `StructuredContent` als **Objekt**
+  (`{ nodes: [...], edges: [...] }` o. ä.) — niemals ein nacktes Array (siehe
+  `McpToolResultsTests`-Regressionstest als Vorbild, betraf diese Session 3x als echter Bug)
+- Eigener Unterordner `src/AiNetLinter/Mcp/Tools/DependencyGraph/` (Tool.cs + Scanner.cs-Split,
+  wie alle anderen Tools)
+
+**Abhängigkeiten:** Keine harte Abhängigkeit; kann bestehende Muster (`FindReferencesTool`,
+`CallGraphTraversal`) als Vorlage für Traversierung/Truncation wiederverwenden
+**Aufwand:** 1-2 Wochen (Kern Datei-/Typ-Ebene realistisch 3-5 Tage, Projekt-Ebene als Zusatz
++1-2 Tage falls Zeit)
+**Akzeptanzkriterien:**
+- [x] Datei-/Typ-Ebene-Abhängigkeiten funktionieren für `incoming`/`outgoing`/`both` — Knoten sind
+      Dateien (Solution-relative Pfade), Kanten Datei-zu-Datei annotiert mit den ueberquerenden
+      Typnamen. `typeIdentifier` scoped enger als `filePath` (nur die Deklaration des einen Typs
+      statt der ganzen Datei) — direkt getestet in
+      `ScanTypeAsync_Incoming_NarrowerThanFile_ExcludesOtherTypeReferences`.
+- [x] `maxResults` + Trunkierungs-Meta von Anfang an (kein unbounded Output — siehe die
+      `get_violations`/`get_hotspots`/`get_type_hierarchy`-Bugfixes aus der Dogfooding-Session
+      2026-08-10/11 als Warnung: alle drei hatten genau diesen Fehler) — zusaetzlich ein eigener
+      Scan-Kosten-Hard-Cap (`MaxVisitedFiles` = 150 besuchte Dateien waehrend der BFS), unabhaengig
+      von `maxResults` (das nur die angezeigten Kanten begrenzt).
+- [x] `StructuredContent` ist immer ein Objekt, nie ein nacktes Array — eigener Regressionstest
+      `ExecuteAsync_StructuredContent_IsJsonObjectNotArray` analog `McpToolResultsTests`.
+- [x] Sufficiency-Hinweis korrekt (nur bei echter Vollständigkeit, nicht bei Trunkierung — siehe
+      `get_call_tree`-Bugfix derselben Session als Vorbild) — `Truncated` ist ein echtes Bool-Feld
+      (nicht wie bei `find_references`/`get_impact` eine String-Heuristik), gesetzt bei
+      `maxResults`-Kappung ODER erreichtem Traversierungs-Hard-Cap; der Sufficiency-Hinweis wird
+      nur bei `Truncated == false` angehaengt.
+- [x] Registrierung in einer `*ToolRegistrations.cs`-Datei (bestehendes Muster), Tool-Beschreibung
+      inkl. Parameter-Doku — als sechstes Tool in `SymbolGraphToolRegistrations.cs` (nicht als
+      eigene Registrations-Datei), da `dependency_graph` `FindReferencesTool.ResolveSymbolAsync`
+      und dasselbe Visited-Set-Traversierungsmuster wie `CallGraphTraversal` wiederverwendet.
+- [x] Projekt-Ebene (optional) nur falls ohne großen Mehraufwand über `Solution.Projects`/
+      `ProjectReferences` möglich — umgesetzt: ein Eintrag (Zielprojekt + seine direkten
+      Projekt-Referenzen), kein vollstaendiger Projektgraph.
+- [x] Keine NuGet-Vulnerability-Abfrage (bewusst out of scope)
+- [x] 15+ Unit-Tests (Scanner direkt + Tool-Ebene, Edge-Cases: Datei ohne Abhängigkeiten,
+      zyklische Abhängigkeiten, Trunkierung) — 25 Unit-Tests (`DependencyGraphScannerTests`:
+      14, `DependencyGraphToolTests`: 11), deutlich mehr als gefordert.
+- [x] 1 Integration-/Live-Repo-Test — `LiveDogfood_DependencyGraph_ReturnsResults` in
+      `McpLiveRepositoryTests`.
+- [x] Doku: `Docs/agent-api.md` Tool-Tabelle + `Docs/ROADMAP.md` Epic-Eintrag — zusaetzlich
+      eigenes Structured-Output-Beispiel in `agent-api.md` analog `safeguard`/`pattern_detect`,
+      `ServerInstructions.cs` und `OverviewResourceRegistration.ToolSummaries` (Tool-Zaehler
+      ueberall auf 17 aktualisiert) nachgezogen.
+- [x] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) grün
+
+**Risiko:** Mittel (Datei-/Typ-Abhängigkeits-Analyse aus `SemanticModel` ist neu, Zyklen-Erkennung
+braucht sorgfältige Traversierung analog `CallGraphTraversal`)
+**Quelle:** Recon C §5.3 F10 (Ausgangsidee), Dogfooding-Session 2026-08-10/11 (validierter Bedarf,
+Scope präzisiert)
+
+---
 
 ### M1 — ASP.NET-Framework-Analyzer-Suite
 
