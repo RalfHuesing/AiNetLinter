@@ -48,8 +48,8 @@ internal sealed record BuilderNode(
 /// <see cref="McpCodeGraphServer"/> — direkt unit-testbar (identisches Muster zu
 /// <see cref="GetHotspotsScanner"/>). Der Aggregations-Kern (<see cref="BuildNode"/>/
 /// <see cref="ToMetricsTreeNode"/>/<see cref="NormalizeRoot"/>/<see cref="ComputeRootName"/>) ist
-/// <c>internal</c>, damit <see cref="MetricsTreeRoslynScanner"/> (EPIC-02) dieselbe Baum-Aggregation
-/// fuer die zwei Roslyn-Modi wiederverwendet, statt eine zweite unabhaengige Implementierung zu bauen.
+/// <c>internal</c>, damit <see cref="MetricsTreeRoslynScanner"/> dieselbe Baum-Aggregation fuer
+/// die zwei Roslyn-Modi wiederverwendet, statt eine zweite unabhaengige Implementierung zu bauen.
 /// </summary>
 internal static class MetricsTreeScanner
 {
@@ -131,7 +131,7 @@ internal static class MetricsTreeScanner
 
     /// <summary>
     /// Einfache Zeilen-Heuristik statt vollstaendigem C#-Tokenizer (bewusst schneller Datei-Walk,
-    /// kein Roslyn-Parse noetig — der ist den zwei EPIC-02-Modi vorbehalten). Block-Kommentar-Status
+    /// kein Roslyn-Parse noetig — der ist den zwei Roslyn-Modi vorbehalten). Block-Kommentar-Status
     /// wird ueber die Datei hinweg mitgefuehrt. Leerzeilen zaehlen weder als Code- noch als
     /// Kommentarzeile.
     /// </summary>
