@@ -40,8 +40,8 @@ public sealed class DiffImpactAnalyzer
 
     /// <summary>
     /// Wie <see cref="AnalyzeAsync"/>, liefert die <see cref="CallSiteEntry"/>-Liste statt fertig
-    /// formatierter Strings — Grundlage fuer <c>get_impact</c>s <c>StructuredContent</c> (S1.3,
-    /// Git-Diff-Zweig). <see cref="AnalyzeAsync"/> ist ein duenner Wrapper darauf (bestehende
+    /// formatierter Strings — Grundlage fuer <c>get_impact</c>s <c>StructuredContent</c>
+    /// (Git-Diff-Zweig). <see cref="AnalyzeAsync"/> ist ein duenner Wrapper darauf (bestehende
     /// Signatur/bestehendes Verhalten fuer den CLI-Aufrufer <c>ImpactCommand</c> unveraendert).
     /// </summary>
     internal static async Task<List<CallSiteEntry>> AnalyzeEntriesAsync(
@@ -336,7 +336,7 @@ public sealed class DiffImpactAnalyzer
     /// <summary>
     /// Wie <see cref="FindCallSitesAsync"/>, liefert die strukturierten <see cref="CallSiteEntry"/>
     /// statt fertig formatierter Strings — Grundlage fuer <c>find_references</c>/<c>get_impact</c>s
-    /// <c>StructuredContent</c> (S1.3, depth=1-Flachfall bzw. Symbol-Branch).
+    /// <c>StructuredContent</c> (depth=1-Flachfall bzw. Symbol-Branch).
     /// </summary>
     internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(ISymbol symbol, Solution solution)
     {
@@ -370,7 +370,7 @@ public sealed class DiffImpactAnalyzer
 }
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> (S1.3) — eine Aufrufstelle
+/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
 /// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
 /// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
 /// </summary>
