@@ -233,7 +233,7 @@ internal sealed record GetViolationsScannerParameters(
 /// steuert in <see cref="GetViolationsTool"/> die Wahl zwischen Sufficiency-Hinweis und
 /// Trunkierungs-Meta (analog zum <c>isTruncated</c>-Muster in <c>FindReferencesTool</c>).
 /// <paramref name="Violations"/> traegt die gefilterten/sortierten/trunkierten Violations fuer
-/// <c>StructuredContent</c> (S1.3) — bleibt <see langword="null"/> bei einer Malfunction (kein
+/// <c>StructuredContent</c> — bleibt <see langword="null"/> bei einer Malfunction (kein
 /// sinnvoller Teil-Payload).
 /// </summary>
 internal sealed record GetViolationsResult(
