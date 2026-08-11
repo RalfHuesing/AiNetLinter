@@ -49,9 +49,9 @@ internal static class FindSymbolScanner
 
     /// <summary>
     /// Wie <see cref="FindMatchesAndFormat"/>, liefert zusaetzlich die <see cref="SymbolLocationEntry"/>-
-    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c> (S1.3) — dieselbe Symbolsuche/
-    /// Filterung einmal ausgefuehrt statt dupliziert, <see cref="FindMatchesAndFormat"/> ist ein
-    /// duenner Wrapper darauf (bestehende Signatur/bestehendes Verhalten unveraendert, siehe dessen
+    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c> — dieselbe Symbolsuche/Filterung
+    /// einmal ausgefuehrt statt dupliziert, <see cref="FindMatchesAndFormat"/> ist ein duenner
+    /// Wrapper darauf (bestehende Signatur/bestehendes Verhalten unveraendert, siehe dessen
     /// direkte Tests in FindSymbolScannerTests/FindSymbolToolTests). Die Entries sind auf
     /// <paramref name="maxResults"/> gekappt, konsistent zur Text-Trunkierung.
     /// </summary>
