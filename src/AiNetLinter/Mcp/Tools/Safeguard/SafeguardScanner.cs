@@ -16,9 +16,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.Safeguard;
 
 /// <summary>
-/// Reine Score-Berechnungs- und Remediation-Logik fuer die Safeguard-Auswertung (EPIC-01) — in eine
-/// eigene Datei ausgelagert, damit der spaetere Tool-Wrapper (EPIC-02) nur noch ein duenner Dispatch
-/// bleibt. Delegiert die Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
+/// Reine Score-Berechnungs- und Remediation-Logik fuer die Safeguard-Auswertung — eigene Datei,
+/// damit der Tool-Wrapper ein duenner Dispatch bleibt. Delegiert die Lint-Arbeit an
+/// <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
 /// (mit <c>noCache: true</c> analog zu <see cref="GetViolationsScanner"/>), sammelt zusaetzlich
 /// Klassenmetriken (Cognitive Complexity, AI-Context-Footprint, Sealed-Quote) ueber einen direkten
 /// Roslyn-Walk und aggregiert alles zu einem deterministischen 0-10-Score.
