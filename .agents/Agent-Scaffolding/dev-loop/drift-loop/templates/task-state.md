@@ -5,7 +5,7 @@ started_at: <ISO-8601>
 last_updated: <ISO-8601>
 rules_dir: <.agents/rules | .cursor/rules | <custom-pfad> | keins>  # einmalig erkannt (siehe ../spec.md §3.1), von konzept.md übernommen falls vorhanden
 total_steps: 0  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-001
+current_step: <step-id>
 ---
 
 # Task State: <TASK-NAME>
@@ -15,7 +15,7 @@ current_step: step-001
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-001`
+- **Aktueller Schritt:** `<step-id>`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** <ISO-8601>
@@ -32,7 +32,7 @@ mehr nötig.>
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | open | <Titel> | - | - | - | - |
+| <step-id> | <EPIC-ID> | open | <Titel> | - | - | - | - |
 | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ## Config (optional)
