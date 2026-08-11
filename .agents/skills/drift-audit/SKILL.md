@@ -88,5 +88,4 @@ umgestellt wird.
   `rules.json`) — dieser Skill ist eine zusätzliche, gründlichere manuelle Runde,
   kein Ersatz dafür.
 - Keine Naming-Drift-Erkennung (unterschiedlich benannte, aber strukturell ähnliche
-  Bezeichner) — nicht Teil von `find_duplicates`, siehe
-  `tasks/features/07-drift-audit-ideen.md` Idee E (zurückgestellt).
+  Bezeichner) — nicht Teil von `find_duplicates`, aktuell zurückgestellt.
