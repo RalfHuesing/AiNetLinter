@@ -5,28 +5,32 @@ project_kind: brownfield
 estimated_scope: small
 rules_dir: .agents/rules
 last_updated: 2026-08-11
-open_questions:
+open_questions: []
 ---
 
 # Konzept: Echte DuplicateCode-Funde im eigenen Repo konsolidieren
 
-## Ziel (Was)
+## Kurzfassung
 
-Das gerade fertiggestellte MCP-Feature M9 (`find_duplicates`-Tool + `DuplicateCodeChecker`-
-Linter-Regel, siehe `tasks/features/05-roadmap.md` §3 M9) hat beim ersten Lauf gegen das eigene
-AiNetLinter-Repo 9 echte `exact`-Cluster (Jaccard-Score 1,00, also byte-für-byte identische
-Methoden-Bodies bis auf Bezeichner) gefunden. Für jeden dieser 9 Cluster wird entschieden und
-umgesetzt: entweder echte Konsolidierung (gemeinsame Methode/Klasse extrahieren) oder bewusste,
-kurz begründete Suppression per `// ainetlinter-disable DuplicateCode`.
+Das MCP-Feature M9 (`find_duplicates`-Tool + `DuplicateCodeChecker`-Linter-Regel) hat im Dogfooding
+gegen das eigene Repo 9 echte `exact`-Cluster (Jaccard 1,00) gefunden. Dieses Konzept legt für jeden
+Cluster **verbindlich** fest, wie er aufgelöst wird — entweder durch eine konkrete Konsolidierung
+(Heimat, Signatur, Sichtbarkeit) oder durch eine begründete Suppression. Kein Cluster bleibt offen.
 
-## Warum / Kontext
+**Was wir tun:** 9 minimale, saubere Refactorings. Jeder Cluster bekommt eine klare Heimat
+(`internal static class` in einem sinnvollen Namespace) und einen Commit.
 
-Diese Duplikate existierten größtenteils schon vor M9 — das neue Tool macht sie nur zum ersten
-Mal sichtbar (Dogfooding-Erfolg: das Tool funktioniert wie vorgesehen). Sie sind bewusst NICHT
-im Zuge der M9-Umsetzung selbst mitkorrigiert worden, weil das den Feature-Scope gesprengt hätte
-(9 Cluster über ~18 unbeteiligte Dateien, nichts davon M9-Code) — siehe
-`tasks/features/05-roadmap.md` Akzeptanzkriterien-Notiz zu M9. Stattdessen als eigener,
-abgeschlossener Task hier nachgezogen.
+**Was wir NICHT tun:** Keine erzwungenen Interface- oder Generic-Constraint-Konstrukte. Keine
+Pauschal-Suppression. Keine breite architektonische Umorganisation. Keine Änderungen an
+`DuplicateDetectionEngine`/`DuplicateCodeChecker` selbst. Keine Test-Refactorings "weil wir gerade
+dabei sind".
+
+## Ziel (Was & Warum)
+
+Diese Duplikate existierten überwiegend schon vor M9 — das neue Tool macht sie nur sichtbar. Sie
+wurden bewusst nicht im M9-Scope mitkorrigiert (9 Cluster über ~18 unbeteiligte Dateien, kein
+M9-Code), sondern als eigenständiger Task hier nachgezogen. M9 ist abgeschlossen, jetzt kommt
+die Aufräumung.
 
 Aktueller Nachweis (jederzeit reproduzierbar):
 ```bash
@@ -37,188 +41,412 @@ dotnet run --project src/AiNetLinter -c Release -- -p AiNetLinter.slnx -c rules.
 
 ### Muss-Haben
 
-- Für jeden der 9 unten aufgeführten Cluster: Konsolidierung ODER begründete Suppression.
-- Nach jeder Änderung gezielter Test-Lauf für die betroffene(n) Klasse(n) (`dotnet test
-  AiNetLinter.slnx -c Release --filter "(FullyQualifiedName~<Klasse>)&Category!=Stress"`).
+- Für jeden der 9 unten aufgeführten Cluster: Konsolidierung gemäß unten dokumentierter Entscheidung
+  ODER begründete Suppression (genau ein Fall: Cluster 5).
+- Nach jedem Cluster gezielter Test-Lauf für die berührte(n) Klasse(n):
+  `dotnet test AiNetLinter.slnx -c Release --filter "(FullyQualifiedName~<Klasse>)&Category!=Stress"`.
 - Abschluss-Verifikation: `find_duplicates`/`DuplicateCodeChecker` zeigt für diese 9 Fälle keine
-  offenen (weder konsolidierten noch bewusst unterdrückten) Funde mehr.
+  offenen Funde mehr.
 - Finaler Volllauf `dotnet test AiNetLinter.slnx -c Release --filter "Category!=Stress"` grün.
-
-### Nice-to-Have (Zwischenspeicher — vor `status: ready` aufgelöst)
-
-(leer — alle Punkte sind bereits Muss-Haben oder Non-Goal)
+- Pro Cluster ein eigener Conventional-Commit auf Deutsch.
 
 ### Non-Goals (bewusst NICHT Teil davon)
 
-- **Weitere Duplicate-Code-Suche über diese 9 Cluster hinaus** — verworfen, weil das ein neuer,
-  unbegrenzter Scope wäre. Falls `find_duplicates` künftig neue Cluster findet, ist das ein
-  eigener Folge-Task (idealerweise über den Drift-Audit-Skill, `.agents/skills/drift-audit/
-  SKILL.md`, vor dem nächsten Epic-Abschluss).
-- **`near`-/`fuzzy`-Cluster** — nicht Teil dieses Tasks (der `DuplicateCodeChecker` meldet
-  ohnehin nur `exact` automatisch, siehe M9-Entscheidung; `near`/`fuzzy` bleiben bewusst
-  informell/manuell über `find_duplicates` einsehbar).
-- **Änderungen an `DuplicateDetectionEngine`/`DuplicateCodeChecker` selbst** — das ist M9-Code,
-  bereits abgeschlossen und verifiziert, hier nur Konsument der Ergebnisse.
+- **Weitere Duplicate-Code-Suche über diese 9 Cluster hinaus** — neuer, unbegrenzter Scope.
+  Künftige Funde gehören in einen eigenen Folge-Task (idealerweise über den Drift-Audit-Skill vor
+  dem nächsten Epic-Abschluss).
+- **`near`-/`fuzzy`-Cluster** — `DuplicateCodeChecker` meldet ohnehin nur `exact` automatisch
+  (M9-Entscheidung). `near`/`fuzzy` bleiben informell über `find_duplicates` einsehbar.
+- **Änderungen an `DuplicateDetectionEngine`/`DuplicateCodeChecker` selbst** — M9-Code,
+  abgeschlossen.
+- **`SyncAgentRulesCommand` ↔ `AgentRulesGenerator.Sync(AgentRulesSyncOptions)` Angleichen** —
+  die beiden Klassen rufen im Kern dieselbe Pipeline (`ResolveBaseDirectory` → `ResolveAgentRulesPath`
+  → `DetectBaselineUsage` → `GenerateContent` → Schreiben) mit kleinen Abweichungen auf. Das ist
+  ein eigenes Architektur-Thema, **nicht** Teil dieses Tasks. Wird hier nur erwähnt, damit klar
+  ist, dass es gesehen wurde.
+- **README-/ROADMAP-Updates für rein interne Refactorings** — Regeln verlangen Updates nur bei
+  Features/Konfiguration, nicht bei reinen Code-Internas. ROADMAP-Eintrag gibt's schon (M9).
+- **`git commit --amend`** — Spezifikation §10.3 und Memory-Eintrag verbieten es.
 
-## Zielplattformen / Technischer Rahmen
+## Verworfene Alternativen (allgemein)
 
-Unverändert: .NET 10, C#, bestehende Projektstruktur (`src/AiNetLinter/`, `src/AiNetLinter.Tests/`).
-Keine neuen Abhängigkeiten.
+- **Alles pauschal per `// ainetlinter-disable DuplicateCode` unterdrücken:** verworfen. Bei den
+  zwei 3-fachen Klonen (`ResolveSeverity`, `CountLines`) ist echte Konsolidierung klar besser
+  (drei statt eine Stelle bei künftigen Änderungen pflegen ist ein reales Risiko, kein Stilproblem).
+  Pauschale Suppression würde das Tool selbst entwerten.
+- **Alles pauschal konsolidieren, auch über künstliche Interfaces / generische Constraints:**
+  verworfen. Wenn Element-Typen nicht strukturell kompatibel sind, würde ein gemeinsames Interface
+  oder ein `<T>`-Constraint den Code verkomplizieren, ohne echten Wiederverwendungs-Gewinn. Eine
+  ehrliche Suppression mit echtem *Why*-Kommentar ist dann sauberer (genau ein Fall: Cluster 5,
+  `GetHotspotsScanner` dokumentiert diese Entscheidung in seinem XML-Doc schon heute).
 
-## Verworfene Alternativen
+## Entscheidungen pro Cluster (verbindlich)
 
-- **Alles pauschal per `// ainetlinter-disable DuplicateCode` unterdrücken:** verworfen — bei den
-  zwei 3-fachen Klonen (`ResolveSeverity`, `CountLines`) ist echte Konsolidierung klar die
-  bessere Lösung (drei statt eine Stelle bei künftigen Änderungen pflegen ist ein reales Risiko,
-  kein Stilproblem). Pauschale Suppression würde das Tool selbst entwerten.
-- **Alles pauschal konsolidieren, auch `BoolParameterChecker.CheckMethod`/`CheckConstructor`:**
-  verworfen als Automatismus — die beiden Methoden arbeiten auf unterschiedlichen Roslyn-Node-
-  Typen (`MethodDeclarationSyntax` vs. `ConstructorDeclarationSyntax`); eine erzwungene
-  Zusammenlegung könnte den Code über ein gemeinsames Interface/Delegate verkomplizieren, ohne
-  echten Wiederverwendungsgewinn. Bewusste Einzelfallprüfung statt Automatismus (siehe Cluster 3
-  unten).
+Jeder Cluster hat eine konkrete Empfehlung mit Ziel-Signatur/Heimat. Reihenfolge der Abarbeitung
+siehe „Konkrete Umsetzungsschritte".
 
-## Wo im Projekt
+### Cluster 1 — `FindGitRoot` (2-fach)
 
-9 `exact`-Cluster (Jaccard-Score 1,00), gefunden via `find_duplicates`/`DuplicateCodeChecker`:
+- **IST:** identische `private static string? FindGitRoot(string startPath)` in
+  `src/AiNetLinter/Core/DiffImpactAnalyzer.cs:77` und
+  `src/AiNetLinter/Scope/GitChangedFilesResolver.cs:26`. Beide byte-für-byte gleich.
+- **ZIEL:** neue Utility in `src/AiNetLinter/Core/GitRootLocator.cs`:
+  ```csharp
+  internal static class GitRootLocator
+  {
+      internal static string? Find(string startPath)
+      {
+          var current = File.Exists(startPath) ? Path.GetDirectoryName(startPath) : startPath;
+          while (!string.IsNullOrEmpty(current))
+          {
+              if (Directory.Exists(Path.Combine(current, ".git"))) return current;
+              current = Path.GetDirectoryName(current);
+          }
+          return null;
+      }
+  }
+  ```
+- **Aufrufer:** `DiffImpactAnalyzer.FindGitRoot(...)` → `GitRootLocator.Find(...)` (lokal ersetzen,
+  alte `private static`-Methode löschen). `GitChangedFilesResolver.FindGitRoot(...)` →
+  `GitRootLocator.Find(...)` (lokal ersetzen, alte `private static`-Methode löschen).
+- **Begründung:** kleine, semantisch eigenständige Hilfsfunktion, klare Heimat in `Core/`
+  (passt zu `DiffImpactAnalyzer` als Hauptnutzer; `Scope/` ist Konsument).
+- **Sichtbarkeit:** `internal static class`, `internal static string? Find(string)`. Beide
+  Aufrufer sind im selben Assembly, `internal` reicht.
 
-1. `AiNetLinter.Core.DiffImpactAnalyzer.FindGitRoot(string)` (`src/AiNetLinter/Core/
-   DiffImpactAnalyzer.cs:77`) vs. `AiNetLinter.Scope.GitChangedFilesResolver.FindGitRoot(string)`
-   (`src/AiNetLinter/Scope/GitChangedFilesResolver.cs:26`)
-2. `AiNetLinter.Commands.SyncAgentRulesCommand.ResolveBaseDirectory(string)`
-   (`src/AiNetLinter/Commands/SyncAgentRulesCommand.cs:88`) vs.
-   `AiNetLinter.Generators.AgentRulesGenerator.ResolveBaseDirectory(string)`
-   (`src/AiNetLinter/Generators/AgentRulesGenerator.cs:131`)
-3. `AiNetLinter.Core.Checkers.BoolParameterChecker.CheckMethod(...)`
-   (`src/AiNetLinter/Core/Checkers/BoolParameterChecker.cs:12`) vs. `.CheckConstructor(...)`
-   (`:18`) — dieselbe Datei/Klasse, unterschiedliche Roslyn-Node-Typen
-4. `AiNetLinter.Core.DiffImpactAnalyzer.FindDocumentByPath(Solution, string)`
-   (`src/AiNetLinter/Core/DiffImpactAnalyzer.cs:217`) vs.
-   `AiNetLinter.Core.LinterAutoFixer.FindDocumentByPath(Solution, string)`
-   (`src/AiNetLinter/Core/LinterAutoFixer.cs:63`)
-5. `AiNetLinter.Maps.HotspotMapBuilder.AppendSection(...)`
-   (`src/AiNetLinter/Maps/HotspotMapBuilder.cs:87`) vs.
-   `AiNetLinter.Mcp.Tools.FileStructure.GetHotspotsScanner.AppendSection(...)`
-   (`src/AiNetLinter/Mcp/Tools/FileStructure/GetHotspotsScanner.cs:125`)
-6. `AiNetLinter.Mcp.Tools.Analysis.GetViolationsScanner.ResolveSeverity(RuleViolation)`
-   (`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs:176`) vs.
-   `AiNetLinter.Mcp.Tools.MetricsTree.MetricsTreeRoslynScanner.ResolveSeverity(...)`
-   (`src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeRoslynScanner.cs:96`) vs.
-   `AiNetLinter.Mcp.Tools.Safeguard.SafeguardScanner.ResolveSeverity(...)`
-   (`src/AiNetLinter/Mcp/Tools/Safeguard/SafeguardScanner.cs:290`) — **3-facher Klon**
-7. `AiNetLinter.Web.CssAnalyzer.CountLines(string)` (`src/AiNetLinter/Web/CssAnalyzer.cs:137`)
-   vs. `AiNetLinter.Web.JsAnalyzer.CountLines(string)` (`src/AiNetLinter/Web/JsAnalyzer.cs:195`)
-   vs. `AiNetLinter.Web.RazorAnalyzer.CountLines(string)`
-   (`src/AiNetLinter/Web/RazorAnalyzer.Parsing.cs:262`) — **3-facher Klon**
-8. `AiNetLinter.Tests.Commands.PlaybookCheckCommandTests.FindSlnxFile()`
-   (`src/AiNetLinter.Tests/Commands/PlaybookCheckCommandTests.cs:57`) vs.
-   `AiNetLinter.Tests.Maps.Skeleton.SkeletonMapBuilderTests.FindSlnxFile()`
-   (`src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs:52`) — Test-Helper
-9. `AiNetLinter.Tests.Core.Checkers.MaxSwitchArmsTests.CreateSemanticModel(string)` vs.
-   `SwitchDispatcherDetectorTests.CreateSemanticModel(string)` vs.
-   `NullCoalescingInitializerClassifierTests.CreateSemanticModel(string)`
-   (`src/AiNetLinter.Tests/Core/Checkers/`) — **3-facher Test-Helper-Klon**
+### Cluster 2 — `ResolveBaseDirectory` (2-fach)
 
-## Entdeckte Mängel/Redundanzen
+- **IST:** identische Methode in
+  `src/AiNetLinter/Commands/SyncAgentRulesCommand.cs:88` (`internal static`) und
+  `src/AiNetLinter/Generators/AgentRulesGenerator.cs:131` (`private static`).
+- **Verifiziert:** `SyncAgentRulesCommand.Run` ruft bereits drei Methoden auf `AgentRulesGenerator`
+  auf (`ResolveAgentRulesPath`, `DetectBaselineUsage`, `GenerateContent`) — die
+  Abhängigkeitsrichtung `Commands → Generators` ist bereits etabliert.
+- **ZIEL:** Methode in `AgentRulesGenerator` von `private static` auf `internal static` hochziehen.
+  `SyncAgentRulesCommand` ersetzt die lokale Methode durch `AgentRulesGenerator.ResolveBaseDirectory(...)`.
+- **Entscheidung (statt neue Utility-Klasse):** bewusst **keine** neue Utility, weil die
+  Abhängigkeit `Commands → Generators` schon besteht und `AgentRulesGenerator` ohnehin die
+  Generator-Pipeline koordiniert. Eine separate Utility würde nur eine weitere Indirektion
+  einführen, ohne die Abhängigkeit zu reduzieren.
+- **Sichtbarkeit:** `internal static string ResolveBaseDirectory(string targetPath)`.
+- **Out-of-Scope-Note:** `AgentRulesGenerator.Sync(AgentRulesSyncOptions)` (siehe
+  `Generators/AgentRulesGenerator.cs:33`) implementiert die gleiche Pipeline wie
+  `SyncAgentRulesCommand.Run` mit kleinen Abweichungen (Verbose-Output, existierende-Datei-Check,
+  Directory-Create). Das ist ein eigenes Refactoring-Thema und **nicht** Teil dieses Tasks.
 
-- **Cluster 1 — `FindGitRoot` doppelt**
-  - **Gefunden:** identische Implementierung in `DiffImpactAnalyzer` und
-    `GitChangedFilesResolver` (Verzeichnis-Aufwärtssuche nach `.git`).
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** in eine gemeinsame, kleine Utility-Klasse extrahieren (z. B.
-    `Core/GitRootLocator.cs`, `internal static string? FindGitRoot(string startDir)`), von
-    beiden Aufrufern referenzieren.
-  - **Entscheidung:** übernommen ins Scope.
+### Cluster 3 — `BoolParameterChecker.CheckMethod`/`CheckConstructor` (2-fach, gleiche Klasse)
 
-- **Cluster 2 — `ResolveBaseDirectory` doppelt**
-  - **Gefunden:** identisch in `SyncAgentRulesCommand` und `AgentRulesGenerator`.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** in eine gemeinsame Stelle extrahieren — da `AgentRulesGenerator` bereits von
-    `SyncAgentRulesCommand` genutzt wird (oder umgekehrt, im Code prüfen), am naheliegendsten als
-    `internal static`-Methode direkt auf `AgentRulesGenerator` oder einer neuen kleinen Utility,
-    von `SyncAgentRulesCommand` aufgerufen statt dupliziert.
-  - **Entscheidung:** übernommen ins Scope.
+- **IST:** zwei Wrapper in `src/AiNetLinter/Core/Checkers/BoolParameterChecker.cs:12` und `:18`,
+  body-byte-für-byte identisch außer den Eingabe-Typen (`MethodDeclarationSyntax` vs.
+  `ConstructorDeclarationSyntax`):
+  ```csharp
+  internal static void CheckMethod(MethodDeclarationSyntax node, CheckerContext ctx)
+  {
+      if (IsPrivateOrProtected(node.Modifiers) && ctx.Config.Metrics.MaxBoolParameterCountAllowPrivate) return;
+      Check(node.ParameterList, node.Identifier.Text, node, ctx);
+  }
+  internal static void CheckConstructor(ConstructorDeclarationSyntax node, CheckerContext ctx)
+  {
+      if (IsPrivateOrProtected(node.Modifiers) && ctx.Config.Metrics.MaxBoolParameterCountAllowPrivate) return;
+      Check(node.ParameterList, node.Identifier.Text, node, ctx);
+  }
+  ```
+- **ZIEL:** Expression-bodied Wrapper + private Helper:
+  ```csharp
+  internal static void CheckMethod(MethodDeclarationSyntax node, CheckerContext ctx)
+      => CheckMember(node.Modifiers, node.ParameterList, node.Identifier.Text, node, ctx);
 
-- **Cluster 3 — `BoolParameterChecker.CheckMethod`/`CheckConstructor`**
-  - **Gefunden:** strukturell identische Logik für zwei unterschiedliche Roslyn-Node-Typen
-    (Methode vs. Konstruktor).
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** prüfen, ob eine gemeinsame private Hilfsmethode auf Basis der gemeinsamen
-    Schnittmenge (`ParameterList`, `Modifiers`) beide Fälle sauber abdeckt, ohne die Lesbarkeit zu
-    verschlechtern. Falls das eine unnötige Abstraktion wäre (zwei Aufrufer, klar getrennte
-    Bedeutung): bewusst per `// ainetlinter-disable DuplicateCode` mit kurzer Begründung
-    unterdrücken statt erzwungen zusammenlegen.
-  - **Entscheidung:** übernommen ins Scope — Einzelfallprüfung, Ergebnis (Extraktion ODER
-    Suppression) im Umsetzungs-Task dokumentieren.
+  internal static void CheckConstructor(ConstructorDeclarationSyntax node, CheckerContext ctx)
+      => CheckMember(node.Modifiers, node.ParameterList, node.Identifier.Text, node, ctx);
 
-- **Cluster 4 — `FindDocumentByPath` doppelt**
-  - **Gefunden:** identisch in `DiffImpactAnalyzer` und `LinterAutoFixer`.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** in eine gemeinsame Stelle extrahieren (z. B. als `internal static` Methode auf
-    `DiffImpactAnalyzer`, von `LinterAutoFixer` aufgerufen — je nachdem, welche Klasse die
-    "natürlichere" Heimat ist).
-  - **Entscheidung:** übernommen ins Scope.
+  private static void CheckMember(
+      SyntaxTokenList modifiers,
+      ParameterListSyntax paramList,
+      string memberName,
+      SyntaxNode node,
+      CheckerContext ctx)
+  {
+      if (IsPrivateOrProtected(modifiers) && ctx.Config.Metrics.MaxBoolParameterCountAllowPrivate) return;
+      Check(paramList, memberName, node, ctx);
+  }
+  ```
+- **Begründung:** Parameter sind strukturell identisch (nur Typen am Entry-Point unterschiedlich).
+  Ein gemeinsamer Helper, der die gemeinsame Schnittmenge nimmt, ist **ehrlicher** als eine
+  Suppression: die zwei öffentlichen Entry-Points bleiben klar lesbar (ihre Signatur dokumentiert
+  die Anwendungsfälle), die Logik ist einmal.
+- **Kein Breaking Change:** Signaturen von `CheckMethod`/`CheckConstructor` bleiben identisch
+  (Aufrufer bleiben unverändert). `Check`, `CountBoolParameters`, `IsBoolType`,
+  `IsPrivateOrProtected` bleiben unverändert.
 
-- **Cluster 5 — `AppendSection` doppelt**
-  - **Gefunden:** identisch in `HotspotMapBuilder` und `GetHotspotsScanner` (leicht
-    unterschiedliche generische Parameter-Typen laut Signatur — prüfen, ob eine gemeinsame
-    generische Methode oder ein gemeinsames Interface für die Elemente nötig ist).
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** gemeinsame generische Hilfsmethode extrahieren (z. B. in einer kleinen
-    `internal static class MapSectionFormatter`), falls die Elementtypen kompatibel gemacht
-    werden können; sonst begründete Suppression.
-  - **Entscheidung:** übernommen ins Scope.
+### Cluster 4 — `FindDocumentByPath` (2-fach)
 
-- **Cluster 6 — `ResolveSeverity` dreifach**
-  - **Gefunden:** identisch in `GetViolationsScanner`, `MetricsTreeRoslynScanner` und
-    `SafeguardScanner` — alle drei lösen `RuleViolation` → Severity-String über
-    `RuleRegistry.TryResolve` mit demselben Fallback auf.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00), höchste Priorität (3-facher Klon, zentrale
-    MCP-Scanner-Logik).
-  - **Vorschlag:** gemeinsame Utility-Klasse (z. B. `internal static class RuleSeverityResolver`
-    in `Core/` oder `Mcp/`) mit einer Methode `ResolveSeverity(RuleViolation)`, von allen drei
-    Scannern aufgerufen. Guter Kandidat für einen kleinen, risikoarmen Refactor.
-  - **Entscheidung:** übernommen ins Scope, höchste Priorität.
+- **IST:** identische `private static Document? FindDocumentByPath(Solution, string)` in
+  `src/AiNetLinter/Core/DiffImpactAnalyzer.cs:217` (laut Konzept; siehe Commit-Referenz) und
+  `src/AiNetLinter/Core/LinterAutoFixer.cs:63`.
+- **ZIEL:** Methode in `DiffImpactAnalyzer` von `private static` auf `internal static` hochziehen.
+  `LinterAutoFixer` ruft `DiffImpactAnalyzer.FindDocumentByPath(...)` auf, lokale Kopie löschen.
+- **Begründung:** `DiffImpactAnalyzer` ist die „Solution-Walk"-Heimat (`ParseGitDiffHunks`,
+  `ProcessDiffLine`, etc. — allesamt Solution-/Doc-Pfad-Operationen), `LinterAutoFixer` ist
+  Konsument. Eine neue Utility wäre zusätzliche Indirektion.
+- **Sichtbarkeit:** `internal static Document? FindDocumentByPath(Solution solution, string filePath)`.
 
-- **Cluster 7 — `CountLines` dreifach**
-  - **Gefunden:** identisch in `CssAnalyzer`, `JsAnalyzer`, `RazorAnalyzer`.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00), 3-facher Klon.
-  - **Vorschlag:** gemeinsame Utility (z. B. `internal static class LineCounter` in `Web/`), von
-    allen drei Analyzern aufgerufen.
-  - **Entscheidung:** übernommen ins Scope.
+### Cluster 5 — `AppendSection` (2-fach) — **Suppression**
 
-- **Cluster 8 — `FindSlnxFile` (Test-Helper) doppelt**
-  - **Gefunden:** identisch in `PlaybookCheckCommandTests` und `SkeletonMapBuilderTests`.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00).
-  - **Vorschlag:** in eine gemeinsame Test-Utility-Klasse verschieben (prüfen, ob bereits eine
-    `TestHelper`/`Fixtures`-Klasse existiert, die sich anbietet, statt eine neue anzulegen).
-  - **Entscheidung:** übernommen ins Scope.
+- **IST:** identische `private static void AppendSection(StringBuilder, string heading,
+  IReadOnlyList<...> files, int maxLineCount)` in `src/AiNetLinter/Maps/HotspotMapBuilder.cs:87`
+  (Element-Typ `StructureFileInfo` mit `RelativePath`, `Lines`, `Directory`) und
+  `src/AiNetLinter/Mcp/Tools/FileStructure/GetHotspotsScanner.cs:125` (Element-Typ `HotspotFileInfo`
+  mit `RelativePath`, `Lines`).
+- **Entscheidung: ehrliche Suppression, keine Konsolidierung.** Begründung:
+  1. Die Element-Records sind **semantisch unabhängig** (`StructureFileInfo` hat zusätzlich
+     `Directory`, kommt aus `Maps/` und wird vom CLI-Map-Workflow konsumiert; `HotspotFileInfo`
+     kommt aus `Mcp/Tools/FileStructure/` und wird über MCP gelesen). Ein gemeinsames Interface
+     wäre nur ein Marker ohne Verhalten.
+  2. Eine generische Methode mit `Func<T,string>`/`Func<T,int>`-Selektoren würde die *Aufrufseite*
+     komplizieren, nicht vereinfachen — das ist genau die Sorte „cleverer Code", die wir nicht
+     wollen.
+  3. `GetHotspotsScanner` dokumentiert diese Architekturentscheidung **bereits explizit** im
+     XML-Doc-Kommentar der Klasse: „Die zwei Schwellwert-Konstanten sind bewusst aus
+     `AiNetLinter.Maps.HotspotMapBuilder` dupliziert (dessen Formatierungs-Methoden sind `private`,
+     eine Abhängigkeit dorthin würde keinen echten Wiederverwendungs-Gewinn bringen)." Diese
+     Begründung trifft auf `AppendSection` gleichermaßen zu.
+  4. Der Code ist 13 Zeilen, gut lesbar, und die beiden Aufrufer-Klassen bleiben unabhängig
+     testbar.
+- **Konkrete Umsetzung:** in `GetHotspotsScanner.AppendSection`:
+  ```csharp
+  // ainetlinter-disable DuplicateCode — AppendSection ist hier eine private
+  // Formatierungshilfe; Strukturgleichheit zu HotspotMapBuilder.AppendSection ist gewollt.
+  // Die Element-Typen (HotspotFileInfo vs. StructureFileInfo) sind semantisch unabhängig,
+  // eine gemeinsame Schnittstelle wäre nur ein Marker ohne Verhalten. Siehe Klasse-XML-Doc.
+  private static void AppendSection(...)
+  ```
+  In `HotspotMapBuilder.AppendSection` **kein** Disable-Kommentar, weil der Tool nur die
+  Duplikate in `GetHotspotsScanner` markiert (Vergleich läuft von beiden Seiten, aber das
+  Disable auf einer Seite reicht zur Auflösung; siehe `DuplicateCodeChecker`-Logik aus M9).
+  Falls die Verifikation am Ende zeigt, dass auch `HotspotMapBuilder` markiert wird, wird der
+  Disable-Kommentar dort analog ergänzt.
+- **Test-Strategie:** nach der Änderung `find_duplicates`/`DuplicateCodeChecker` einmal laufen
+  lassen, um zu prüfen, ob der Disable auf einer Seite reicht.
 
-- **Cluster 9 — `CreateSemanticModel` (Test-Helper) dreifach**
-  - **Gefunden:** identisch in `MaxSwitchArmsTests`, `SwitchDispatcherDetectorTests`,
-    `NullCoalescingInitializerClassifierTests`.
-  - **Bezug:** `DuplicateCode`-Regel, `exact` (1,00), 3-facher Klon.
-  - **Vorschlag:** in eine gemeinsame Test-Utility verschieben (gleiche Prüfung wie Cluster 8:
-    existierende Helper-Klasse wiederverwenden statt neu anlegen).
-  - **Entscheidung:** übernommen ins Scope.
+### Cluster 6 — `ResolveSeverity` (3-fach) — höchste Priorität
 
-## Wie (grober Ansatz)
+- **IST:** identische `private static string ResolveSeverity(RuleViolation v)` in
+  `src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs:176`,
+  `src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeRoslynScanner.cs:96`,
+  `src/AiNetLinter/Mcp/Tools/Safeguard/SafeguardScanner.cs:290`. Body:
+  ```csharp
+  if (!string.IsNullOrEmpty(v.EffectiveSeverity)) return v.EffectiveSeverity;
+  return RuleRegistry.TryResolve(v.RuleName)?.Severity ?? "warning";
+  ```
+- **ZIEL:** neue Utility in `src/AiNetLinter/Mcp/RuleSeverityResolver.cs`:
+  ```csharp
+  internal static class RuleSeverityResolver
+  {
+      internal static string Resolve(RuleViolation violation)
+      {
+          if (!string.IsNullOrEmpty(violation.EffectiveSeverity)) return violation.EffectiveSeverity;
+          return RuleRegistry.TryResolve(violation.RuleName)?.Severity ?? "warning";
+      }
+  }
+  ```
+- **Aufrufer:** alle drei Klassen ersetzen ihre `private static` Methode durch
+  `RuleSeverityResolver.Resolve(v)` (Aufrufseite unverändert in Semantik).
+- **Begründung:** 3-facher Klon in MCP-Scanner-Kern, klar zusammengehörige Domäne. Eigene
+  Utility ist hier besser als auf einer der drei Klassen, weil keine der Scanner-Klassen die
+  „Heimat" ist (alle drei sind gleichberechtigte Konsumenten). Namespace `Mcp/` ist die
+  gemeinsame Heimat aller drei.
+- **Sichtbarkeit:** `internal static class`, `internal static string Resolve(RuleViolation)`.
+- **Reihenfolge:** **zuerst** (höchster Wartungsgewinn, 3 Aufrufer).
 
-Pro Cluster (außer ggf. Cluster 3, siehe oben): gemeinsame Logik in eine neue oder bestehende
-`internal static`-Methode/Klasse extrahieren, beide/alle Aufrufer darauf umstellen, Duplikat
-entfernen. Reihenfolge nach Risiko/Wert: zuerst die beiden 3-fachen Klone (Cluster 6, 7 — größter
-Wartungsgewinn), dann die einfachen 2-fachen Klone (1, 2, 4, 5), dann die Test-Helper (8, 9),
-zuletzt die Einzelfallentscheidung (3). Nach jedem Cluster gezielter Test-Lauf, Commit pro Cluster
-oder sinnvoll gebündelt (z. B. alle Test-Helper-Fälle in einem Commit).
+### Cluster 7 — `CountLines` (3-fach)
+
+- **IST:** identische `private static int CountLines(string content)` in
+  `src/AiNetLinter/Web/CssAnalyzer.cs:137`, `src/AiNetLinter/Web/JsAnalyzer.cs:195`,
+  `src/AiNetLinter/Web/RazorAnalyzer.Parsing.cs:262`. Body 8 Zeilen (`n=1` + Loop über `\n`).
+- **ZIEL:** neue Utility in `src/AiNetLinter/Web/LineCounter.cs`:
+  ```csharp
+  internal static class LineCounter
+  {
+      internal static int Count(string content)
+      {
+          if (string.IsNullOrEmpty(content)) return 0;
+          var n = 1;
+          for (int i = 0; i < content.Length; i++)
+          {
+              if (content[i] == '\n') n++;
+          }
+          return n;
+      }
+  }
+  ```
+- **Aufrufer:** alle drei ersetzen `CountLines(content)` durch `LineCounter.Count(content)` und
+  löschen ihre lokale `CountLines`-Methode.
+- **Begründung:** 3-facher Klon, semantisch zusammengehörig (alle Web-Analyzer), einfache
+  Logik, klar. `Web/` als Heimat passt — alle Aufrufer sind in `Web/`.
+- **Reihenfolge:** **zweite** (nach Cluster 6).
+- **Achtung:** `RazorAnalyzer.Parsing.cs` enthält zusätzlich eine `GetLineNumber(string, int)`
+  Methode, die *nicht* dupliziert ist — die bleibt unverändert. Konsolidierung nur für
+  `CountLines`.
+
+### Cluster 8 — `FindSlnxFile` (Test-Helper, 2-fach)
+
+- **IST:** identische `private static string? FindSlnxFile()` in
+  `src/AiNetLinter.Tests/Commands/PlaybookCheckCommandTests.cs:57` und
+  `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs:52`. Body: aufwärts von
+  `AppContext.BaseDirectory` nach `*.slnx` suchen.
+- **Verifiziert:** `src/AiNetLinter.Tests/TestHelper.cs` existiert bereits als `internal static`
+  class mit `CreateDefaultConfig`, `ParseCode`, `CreateContext`.
+- **ZIEL:** Methode nach `TestHelper` verschieben:
+  ```csharp
+  internal static class TestHelper
+  {
+      // ... bestehende Methoden ...
+
+      internal static string? FindSlnxFile()
+      {
+          var dir = new DirectoryInfo(AppContext.BaseDirectory);
+          while (dir != null)
+          {
+              var files = dir.GetFiles("*.slnx");
+              if (files.Length > 0) return files[0].FullName;
+              dir = dir.Parent;
+          }
+          return null;
+      }
+  }
+  ```
+- **Aufrufer:** beide Test-Klassen ersetzen lokales `FindSlnxFile()` durch
+  `TestHelper.FindSlnxFile()` und löschen die lokale Methode. `using AiNetLinter.Tests;` ist
+  ggf. schon da (gleicher Root-Namespace, je nach Test-Klasse prüfen).
+- **Begründung:** bestehende Test-Fixture wiederverwenden (vermeidet Duplikations-Wildwuchs).
+  `TestHelper` ist `internal static`, also die kanonische Heimat für Test-Helper in diesem
+  Projekt.
+
+### Cluster 9 — `CreateSemanticModel` (Test-Helper, 3-fach)
+
+- **IST:** identische `private static SemanticModel CreateSemanticModel(string source)` in
+  `src/AiNetLinter.Tests/Core/Checkers/MaxSwitchArmsTests.cs:19`,
+  `src/AiNetLinter.Tests/Core/Checkers/SwitchDispatcherDetectorTests.cs:15`,
+  `src/AiNetLinter.Tests/Core/NullCoalescingInitializerClassifierTests.cs:17`. Body: 8 Zeilen,
+  `typeof(object).Assembly` als einzige Reference.
+- **Wichtiger Verhaltens-Hinweis:** die drei Helper nehmen **nur** `typeof(object).Assembly`
+  als Reference. Die existierende `TestHelper.ParseCode(string)` nimmt dagegen *alle* Assemblies
+  aus `AppDomain.CurrentDomain.GetAssemblies()`. Ein direkter Aufruf von `ParseCode` würde
+  also das Test-Verhalten ändern (mehr References, potenziell andere Bindungen).
+- **ZIEL:** neue Methode in `TestHelper`, die das exakte Verhalten der drei duplizierten Helper
+  beibehält:
+  ```csharp
+  internal static SemanticModel CreateSemanticModel(string source)
+  {
+      var tree = CSharpSyntaxTree.ParseText(source);
+      var compilation = CSharpCompilation.Create("TestAssembly")
+          .AddSyntaxTrees(tree)
+          .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
+          .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+      return compilation.GetSemanticModel(tree);
+  }
+  ```
+  Die bestehende `ParseCode`-Methode bleibt **unverändert** (anderes Verhalten, anderer
+  Anwendungsfall — sie liefert `(tree, semanticModel)`-Tupel und bindet alle geladenen
+  Assemblies).
+- **Aufrufer:** alle drei Test-Klassen ersetzen lokales `CreateSemanticModel(source)` durch
+  `TestHelper.CreateSemanticModel(source)`. `using AiNetLinter.Tests;` ist je nach
+  Test-Klasse ggf. zu ergänzen (Namespace-Hierarchie: `AiNetLinter.Tests.Core.Checkers` und
+  `AiNetLinter.Tests.Core` → `AiNetLinter.Tests` ist jeweils ein Parent, also
+  using-Directive nötig).
+- **Begründung:** bestehende Test-Fixture wiederverwenden. Verhalten 1:1 erhalten (gleiche
+  Reference-Liste), keine versteckte Test-Semantik-Änderung.
+
+## Konkrete Umsetzungsschritte
+
+### Reihenfolge
+
+Priorisierung nach Risiko/Wartungsgewinn:
+
+1. **Cluster 6** — `ResolveSeverity` (3-fach, MCP-Scanner-Kern, höchster Hebel)
+2. **Cluster 7** — `CountLines` (3-fach, Web-Analyzer)
+3. **Cluster 1** — `FindGitRoot` (2-fach, neue `Core/GitRootLocator.cs`)
+4. **Cluster 2** — `ResolveBaseDirectory` (Methode auf `AgentRulesGenerator` hochziehen)
+5. **Cluster 4** — `FindDocumentByPath` (Methode auf `DiffImpactAnalyzer` hochziehen)
+6. **Cluster 5** — `AppendSection` (Suppression mit *Why*-Kommentar, danach `find_duplicates`-
+   Verifikation ob einseitig ausreichend)
+7. **Cluster 8** — `FindSlnxFile` (Test-Helper nach `TestHelper`)
+8. **Cluster 9** — `CreateSemanticModel` (Test-Helper nach `TestHelper`)
+9. **Cluster 3** — `BoolParameterChecker` (letzter, weil Einzelfall-Entscheidung im Konzept
+   schon dokumentiert ist, hier nur noch formale Umsetzung der Wrapper-Konsolidierung)
+
+### Test-Strategie
+
+- **Pro Cluster:** gezielter Test-Lauf der berührten Klasse(n):
+  `dotnet test AiNetLinter.slnx -c Release --filter "(FullyQualifiedName~<Klasse>)&Category!=Stress"`.
+- **Abschluss:** einmal Volllauf
+  `dotnet test AiNetLinter.slnx -c Release --filter "Category!=Stress"`.
+- **Verifikation:** nach Cluster 5 und am Ende
+  `dotnet run --project src/AiNetLinter -c Release -- -p AiNetLinter.slnx -c rules.json` —
+  muss für die 9 Cluster keine `DuplicateCode`-Funde mehr zeigen.
+
+### Commit-Strategie
+
+- Pro Cluster **ein** eigener Conventional-Commit auf Deutsch, imperativ:
+  - `refactor(duplicate-code): ResolveSeverity in RuleSeverityResolver extrahieren (3-fach)`
+  - `refactor(duplicate-code): CountLines in LineCounter extrahieren (3-fach)`
+  - `refactor(duplicate-code): FindGitRoot in GitRootLocator extrahieren`
+  - `refactor(duplicate-code): ResolveBaseDirectory auf AgentRulesGenerator hochziehen`
+  - `refactor(duplicate-code): FindDocumentByPath auf DiffImpactAnalyzer hochziehen`
+  - `chore(duplicate-code): AppendSection in GetHotspotsScanner bewusst unterdruecken`
+  - `refactor(tests): FindSlnxFile in TestHelper verschieben`
+  - `refactor(tests): CreateSemanticModel in TestHelper verschieben`
+  - `refactor(duplicate-code): BoolParameterChecker CheckMethod/CheckConstructor auf gemeinsamen Helper`
+- **Kein** `git commit --amend`. Folge-Commits für Korrekturen, falls nötig.
+- Am Ende optional ein `chore(duplicate-code): Konzept-Update mit konkreten Code-Empfehlungen`
+  (das ist dieser Konzept-Commit).
+
+### Was pro Cluster konkret zu tun ist (Template)
+
+1. Ziel-Datei(en) erstellen oder ändern (siehe Empfehlungen oben).
+2. Aufrufer umstellen.
+3. Alte Methode/Klasse löschen.
+4. Build prüfen: `dotnet build`.
+5. Gezielter Test-Lauf (siehe oben).
+6. Bei `// ainetlinter-disable` (nur Cluster 5): ehrlichen *Why*-Kommentar dranschreiben.
+7. Commit.
+8. Zurück zum Plan, nächster Cluster.
+
+## Was wir bewusst NICHT tun (prominent)
+
+- **Keine breite architektonische Umorganisation** aus diesen 9 Clonen. Keine „passen wir das
+  Verzeichnis-Layout gleich mit an". Keine „nehmen wir das zum Anlass für ein neues
+  Service-Konzept". 9 kleine, saubere Refactorings — fertig.
+- **Keine `// ainetlinter-disable`-Pflichterfüllung**, wenn Konsolidierung klar besser ist.
+  Suppression ist **kein** Ziel, sondern eine erlaubte Lösung **wenn** begründet (genau ein
+  Fall: Cluster 5).
+- **Keine `interface`-/Reflection-/`<T>`-Constraints-Konstrukte**, die das Problem nur verstecken
+  statt lösen. Wenn Element-Typen nicht zusammenpassen, dann ehrlich lassen oder ehrlich
+  unterdrücken.
+- **Keine Änderungen an `DuplicateDetectionEngine`/`DuplicateCodeChecker`**. M9-Code bleibt
+  unangetastet.
+- **Keine `Rundumschlag-Test-Refactorings** („weil wir gerade dabei sind"). Tests werden nur
+  angefasst, wenn sie zu einem der Refactorings gehören (Cluster 8, 9 — und auch dort nur die
+  jeweilige Helper-Methode, nicht die Tests selbst).
+- **Keine `// ainetlinter-disable`-Kommentare, die das *Was* statt das *Warum* dokumentieren.**
+  Nur echtes *Why* — und nur, wo es nötig ist. In den 8 Konsolidierungs-Clustern braucht es gar
+  keinen Kommentar, weil das Refactoring selbsterklärend ist.
+- **Keine `Rundumschlag`-Sync-Agent-Rules-Aufräumaktion** in `SyncAgentRulesCommand` (siehe
+  Out-of-Scope-Note Cluster 2).
+- **Kein `git commit --amend`** — weder pro Cluster noch am Ende.
+- **Keine README/ROADMAP-Updates** für rein interne Refactorings. Regeln verlangen Updates nur
+  bei Features/Konfiguration. M9 ist in der ROADMAP schon eingetragen.
 
 ## Definition of Done / Erfolgskriterien
 
-- Alle 9 Cluster bearbeitet (konsolidiert oder bewusst mit Kommentar unterdrückt).
-- `dotnet run --project src/AiNetLinter -c Release -- -p AiNetLinter.slnx -c rules.json` zeigt für
-  diese 9 Fälle keine offenen `DuplicateCode`-Funde mehr (weder als echten Verstoß noch als
-  stillschweigend ignorierten — Suppression-Fälle sind im Code sichtbar begründet).
+- Alle 9 Cluster bearbeitet (8 Konsolidierungen, 1 begründete Suppression).
+- `dotnet run --project src/AiNetLinter -c Release -- -p AiNetLinter.slnx -c rules.json` zeigt
+  für diese 9 Fälle keine offenen `DuplicateCode`-Funde mehr. Suppression-Fall (Cluster 5) ist
+  im Code sichtbar begründet.
 - `dotnet test AiNetLinter.slnx -c Release --filter "Category!=Stress"` (Volllauf) grün.
-- Commits im Conventional-Commit-Stil auf Deutsch, passend zur bisherigen Historie.
+- 9 Conventional-Commits auf Deutsch, einer pro Cluster, in passender Reihenfolge (Cluster 6
+  zuerst, Cluster 3 zuletzt).
+- Kein `--amend`, keine Force-Pushes.
 
 ## Offene Punkte
 
