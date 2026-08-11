@@ -50,10 +50,9 @@ internal static class FindReferencesTool
             var clampedDepth = Math.Clamp(depth, 1, CallGraphTraversal.MaxRecursionDepth);
             string body;
             bool isTruncated;
-            // StructuredContent (S1.3) nur fuer den depth=1-Flachfall — CallGraphTraversal
+            // StructuredContent nur fuer den depth=1-Flachfall — CallGraphTraversal
             // (depth>1) baut Locations intern als reine Strings ohne strukturiertes Zwischenmodell;
-            // eine strukturierte Erweiterung dort waere ein groesserer Umbau (bewusst ausgelassen,
-            // siehe Abschlussbericht).
+            // eine strukturierte Erweiterung dort waere ein groesserer Umbau (bewusst ausgelassen).
             IReadOnlyList<CallSiteEntry>? entries = null;
 
             if (clampedDepth == 1)
@@ -84,7 +83,7 @@ internal static class FindReferencesTool
                 isTruncated = body.Contains("hard-cap", StringComparison.Ordinal);
             }
 
-            // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse (Q5) — ein trunkiertes
+            // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — ein trunkiertes
             // Ergebnis traegt bereits seine eigene Meta-Zeile ("depth reduzieren oder maxResults
             // erhoehen"), die implizit "weitere Calls noetig" signalisiert.
             var finalBody = isTruncated ? body : McpSufficiencyHints.Append(body);
