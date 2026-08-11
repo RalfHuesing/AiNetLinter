@@ -189,6 +189,7 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
 | `BanBlockingTaskAccess`                          | Global  | Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`).                                                                                                                                                                                                                                                                                                                                                                          |
 | `BanBlockingTaskAccessAllowInMain`               | Global  | Erlaubt blockierende Task-Zugriffe in statischen `Main` Methoden.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `BanBlockingTaskAccessAllowInTests`              | Global  | Erlaubt blockierende Task-Zugriffe in Test-Projekten.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `EnableDuplicateCodeCheck`                       | Global  | Aktiviert die solution-weite Duplicate-Code-Erkennung (Token-CPD, siehe eigener Abschnitt `DuplicateCode` unten). Meldet `exact`-/`near`-Cluster als Regelverstoß `DuplicateCode`.                                                                                                                                                                                                                                                                               |
 | `EnforceResultPatternOverExceptions`             | Global  | Verbietet `throw` für fachlichen Kontrollfluss. Technische Standard-Exceptions (wie `ArgumentNullException`) sind für Fail-Fast erlaubt.                                                                                                                                                                                                                                                                                                                           |
 | `ResultPatternAllowThrowInNamespaceSuffixes`     | Global  | Namespace-Suffixe, für die `throw` explizit erlaubt ist (z. B. `["Infrastructure", "Middleware"]`). Segment-basierter Match: `MyApp.Infrastructure` endet mit `.Infrastructure`. Standard: `["Infrastructure", "Endpoints", "Middleware", "Program"]`.                                                                                                                                                                                                                                                                   |
 | `ResultPatternAllowCatchRethrow`                 | Global  | Bare `throw;` (Rethrow in einem Catch-Block ohne erneut zu konstruieren) ist immer erlaubt wenn `true`. Standard: `true`.                                                                                                                                                                                                                                                                                                                                          |
@@ -323,6 +324,53 @@ Verbietet `async void`-Methoden und lokale Funktionen. `async void` schleudert E
 Verbietet blockierende Task-Zugriffe (`.Wait()`, `.Result`, `.GetAwaiter().GetResult()`). Diese Muster blockieren ThreadPool-Threads und können in SynchronizationContext-Umgebungen (ASP.NET Classic, WPF) zu Deadlocks führen.
 
 **Ausnahme:** Blockierende Zugriffe in `static void Main` Methoden sind erlaubt wenn `BanBlockingTaskAccessAllowInMain: true` gesetzt ist. In Testdateien sind sie erlaubt wenn `BanBlockingTaskAccessAllowInTests: true` gesetzt ist (standardmäßig falsch, da Tests async sein sollten).
+
+### DuplicateCode
+
+| Schlüssel                          | Typ      | Standard |
+| ----------------------------------- | -------- | -------- |
+| `EnableDuplicateCodeCheck`          | `bool`   | `true`   |
+| `DuplicateCodeMinTokens`            | `int`    | `30`     |
+| `DuplicateCodeNgramSize`            | `int`    | `5`      |
+| `DuplicateCodeMinSharedNgrams`      | `int`    | `3`      |
+| `DuplicateCodeExactThreshold`       | `double` | `0.95`   |
+| `DuplicateCodeNearThreshold`        | `double` | `0.80`   |
+| `DuplicateCodeFuzzyThreshold`       | `double` | `0.65`   |
+| `DuplicateCodeNormalizeIdentifiers` | `bool`   | `false`  |
+| `DuplicateCodeMaxResults`           | `int`    | `20`     |
+
+Solution-weite DRY-Erkennung (Token-basiertes Clone-Detection, CCFinder/Jaccard-N-Gram-Ansatz,
+Method-Granularität — siehe `tasks/features/07-drift-audit-ideen.md` §A). Für jede Methode/lokale
+Funktion mit mindestens `DuplicateCodeMinTokens` Tokens im Body wird der Token-Stream in
+überlappende N-Gramme der Größe `DuplicateCodeNgramSize` zerlegt und über einen Inverted Index mit
+allen anderen Methoden der Solution verglichen. Methoden-Paare mit mindestens
+`DuplicateCodeMinSharedNgrams` gemeinsamen N-Grammen werden per Jaccard-Similarity
+(`|A∩B|/|A∪B|`) bewertet; transitiv verbundene Paare (A~B, B~C) werden zu einem Cluster
+zusammengefasst statt als isolierte Paare gemeldet.
+
+**Gestaffelte Schwellwerte statt hartem Cut:** `exact` (≥ `DuplicateCodeExactThreshold`, fast
+identisch), `near` (≥ `DuplicateCodeNearThreshold`, sehr ähnlich) und `fuzzy` (≥
+`DuplicateCodeFuzzyThreshold`, grenzwertig). Nur `exact`- und `near`-Cluster erzeugen einen
+Regelverstoß (`DuplicateCode`) — `fuzzy` wäre zu viel Rauschen für automatisches Lint, ist aber
+über das MCP-Tool `find_duplicates` abrufbar.
+
+**False-Positive-Disziplin:** `bin/`, `obj/`, `.ainetlinter/` und `tests/Fixtures/`-Verzeichnisse
+sind fest ausgeschlossen; Methoden mit `[GeneratedCode]`-Attribut (an der Methode oder am
+umschließenden Typ) werden übersprungen; `DuplicateCodeMinTokens` filtert triviale Methoden
+(leere `Dispose`/`ToString`-Overrides) heraus.
+
+**`DuplicateCodeNormalizeIdentifiers`** (Standard `false`): wenn aktiv, werden Identifier-Tokens
+vor dem Vergleich auf `$ID$` und Literal-Tokens auf `$LIT$` normalisiert — schaltet die Erkennung
+umbenannter Klone (Type-2, z. B. `CalculateOrderTotal` vs. `CalculateInvoiceTotal`) an. Standard
+`false`, weil das sonst semantisch unterschiedliche Methoden mit zufällig ähnlicher Struktur als
+Klon markieren würde.
+
+**`DuplicateCodeMaxResults`** begrenzt die als Verstoß gemeldeten Cluster (Top-N nach
+Jaccard-Score absteigend) — kein unbegrenzter Dump bei großen Solutions.
+
+> Evidenz: Roy & Cordy (2007), Bellon et al. (2007) für die Token-CPD-Methodik; Manning, Raghavan,
+> Schütze (2008) für Jaccard/N-Gram/Inverted-Index. Details und Referenz-Tools (CCFinder, PMD CPD,
+> jscpd) in `tasks/features/07-drift-audit-ideen.md` §A.
 
 ### MaxLinqChainLength
 
