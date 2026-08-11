@@ -19,6 +19,9 @@ purpose: Master-Übersicht aller Erkenntnisse aus dem 360-Grad-Überblick
 | 3 | `03-market-research.md` | Roslyn-MCP-Markt, MCP-Spec 2026, Token-Optimierung, Konkurrenz, Top-Features | 65 KB |
 | 4 | `04-explore-vs-flow-tools.md` | Detaillvergleich `codegraph_explore` ↔ AiNetLinter, `trace_flow`-Vorschlag | 41 KB |
 | 5 | `05-roadmap.md` | Konsolidierte Empfehlungen, priorisierte Roadmap, Epics | (separat) |
+| 6 | `06-nicht-umsetzen.md` | Bewusst gestrichene/nicht verfolgte Ideen samt Begründung | (separat) |
+| 7 | `07-drift-audit-ideen.md` | Ideensammlung für DRY- & Naming-Drift-Erkennung | (separat) |
+| 8 | `08-magic-values-mcp-tool-ideen.md` | Ideensammlung für Magic Values Detection MCP-Tool & Refactoring-Empfehlungen | (separat) |
 
 ---
 
