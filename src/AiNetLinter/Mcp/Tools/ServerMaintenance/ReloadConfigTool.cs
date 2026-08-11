@@ -13,22 +13,20 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 /// <summary>
-/// MCP-Tool <c>reload_config</c> (Q2, <c>tasks/features/05-roadmap.md</c> §3): liest die
-/// <c>rules.json</c> zur Laufzeit neu ein und ersetzt die in <see cref="McpCodeGraphServer"/>
-/// resident gehaltene Config-Instanz, die <c>get_violations</c> nutzt — ohne Server-Neustart.
-/// Schliesst Recon-B-Schwaeche #11 (Server ignoriert <c>rules.json</c>-Aenderungen waehrend der
-/// Laufzeit).
+/// MCP-Tool <c>reload_config</c>: liest die <c>rules.json</c> zur Laufzeit neu ein und ersetzt
+/// die in <see cref="McpCodeGraphServer"/> resident gehaltene Config-Instanz, die
+/// <c>get_violations</c> nutzt — ohne Server-Neustart.
 /// </summary>
 internal static class ReloadConfigTool
 {
     /// <summary>
     /// Ohne <paramref name="configPath"/> wird der zuletzt verwendete Pfad
-    /// (<see cref="McpCodeGraphServer.ResolvedConfigPath"/>) erneut geladen; lief der Server bisher
-    /// mit Default-Regeln, wird — wie beim Server-Start
+    /// (<see cref="McpCodeGraphServer.ResolvedConfigPath"/>) erneut geladen; lief der Server mit
+    /// Default-Regeln, wird — wie beim Server-Start
     /// (<see cref="AiNetLinter.Commands.McpServerCommand.TryResolveRulesJsonPath"/>) — erneut neben
     /// der Solution nach einer inzwischen angelegten <c>rules.json</c> gesucht. Datei fehlt oder ist
-    /// ungueltiges JSON: <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die bisherige
-    /// Config bleibt unveraendert aktiv, kein Datenverlust, kein Absturz.
+    /// ungueltiges JSON: <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive
+    /// Config bleibt unveraendert, kein Datenverlust, kein Absturz.
     /// </summary>
     internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? configPath, CancellationToken ct)
     {
