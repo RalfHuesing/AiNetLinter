@@ -9,22 +9,22 @@ using Xunit;
 namespace AiNetLinter.Tests.Core.DuplicateDetection;
 
 /// <summary>
-/// Ground-Truth-Tests fuer <see cref="DuplicateDetectionEngine"/> (Token-CPD/Jaccard-N-Gram,
-/// siehe <c>tasks/features/07-drift-audit-ideen.md</c> §A). Statt eines einzelnen langen Body wird
-/// eine 20-Statement-Basismethode (<see cref="BaseStatements"/>) genutzt, damit Klon-Varianten ueber
-/// gezielte Statement-Swaps kalibriert werden koennen: ein einzelner vollstaendig ersetzter
-/// 7-Token-Statement-Swap landet verlaesslich im <c>near</c>-Bucket, vier weit auseinanderliegende
-/// Swaps im <c>fuzzy</c>-Bucket, sechs Swaps klar unterhalb der <c>fuzzy</c>-Schwelle — die
-/// jeweiligen Score-Bereiche sind per Testlauf verifiziert (nicht nur ueberschlagen) und mit
-/// grosszuegigem Sicherheitsabstand zu den Bucket-Grenzen gewaehlt, um robust gegen kleine
-/// Aenderungen an der Tokenisierung zu bleiben.
+/// Ground-Truth-Tests fuer <see cref="DuplicateDetectionEngine"/> (Token-CPD/Jaccard-N-Gram).
+/// Statt eines einzelnen langen Body wird eine 20-Statement-Basismethode
+/// (<see cref="BaseStatements"/>) genutzt, damit Klon-Varianten ueber gezielte Statement-Swaps
+/// kalibriert werden koennen: ein einzelner vollstaendig ersetzter 7-Token-Statement-Swap landet
+/// verlaesslich im <c>near</c>-Bucket, vier weit auseinanderliegende Swaps im <c>fuzzy</c>-Bucket,
+/// sechs Swaps klar unterhalb der <c>fuzzy</c>-Schwelle — die jeweiligen Score-Bereiche sind per
+/// Testlauf verifiziert (nicht nur ueberschlagen) und mit grosszuegigem Sicherheitsabstand zu den
+/// Bucket-Grenzen gewaehlt, um robust gegen kleine Aenderungen an der Tokenisierung zu bleiben.
 /// <para/>
 /// Auf zwei Dateien aufgeteilt (<c>partial class</c>, hier: Ground-Truth-Klonstufen + transitive
-/// Cluster + Nicht-Klone + historischer Regressionstest; Fortsetzung in
+/// Cluster + Nicht-Klone + Regressionstest; Fortsetzung in
 /// <see cref="DuplicateDetectionEngineTests"/> in
 /// <c>DuplicateDetectionEngineFalsePositiveTests.cs</c>: False-Positive-Disziplin,
-/// Identifier-Normalisierung, Schwellwerte, Test-Infrastruktur), weil die urspruengliche Einzeldatei
-/// die <c>MaxLineCount</c>-Grenze (500 Zeilen) ueberschritt — siehe Klassen-Doc-Kommentar dort.
+/// Identifier-Normalisierung, Schwellwerte, Test-Infrastruktur), weil sonst die
+/// <c>MaxLineCount</c>-Grenze (500 Zeilen) ueberschritten wuerde — siehe Klassen-Doc-Kommentar
+/// dort.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed partial class DuplicateDetectionEngineTests
@@ -296,12 +296,10 @@ public sealed partial class DuplicateDetectionEngineTests
     // ── Historischer Regressionstest: McpJsonOptions-Duplikations-Fall (nachgebildet) ────────
 
     /// <summary>
-    /// Nachgebildet nach dem realen <c>JsonSerializerOptions</c>-Duplikationsfall, der vor der
-    /// Einfuehrung von <c>McpJsonOptions.Default</c> in mehreren MCP-Tools separat instanziiert
-    /// war (siehe Doc-Kommentar in <c>src/AiNetLinter/Mcp/McpJsonOptions.cs</c> und
-    /// <c>tasks/features/07-drift-audit-ideen.md</c> Z. ~37) — 4 Methoden, die jeweils ein Objekt
-    /// mit denselben 5 Optionen instanziieren. Beweisstueck, dass die Engine den urspruenglichen
-    /// Nutzer-Anwendungsfall tatsaechlich loest: MUSS als ein exact/near-Cluster erkannt werden.
+    /// Nachgebildet nach dem realen <c>JsonSerializerOptions</c>-Duplikationsfall (siehe
+    /// Doc-Kommentar in <c>src/AiNetLinter/Mcp/McpJsonOptions.cs</c>) — 4 Methoden, die jeweils
+    /// ein Objekt mit denselben 5 Optionen instanziieren. Beweisstueck, dass die Engine diesen
+    /// Anwendungsfall tatsaechlich loest: MUSS als ein exact/near-Cluster erkannt werden.
     /// </summary>
     [Fact]
     public async Task ScanAsync_FourMethodsInstantiatingSameOptionsObject_DetectedAsOneCluster()
