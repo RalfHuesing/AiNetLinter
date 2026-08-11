@@ -53,7 +53,7 @@ public sealed class FileSystemExclusionHelpersTests
     [Fact]
     public void IsGeneratedPath_DotWorktreesSubdir_ReturnsTrue()
     {
-        var path = Path.Combine("repo", ".worktrees", "pre-step-010", "src", "Foo.cs");
+        var path = Path.Combine("repo", ".worktrees", "agent-branch", "src", "Foo.cs");
 
         Assert.True(FileSystemExclusionHelpers.IsGeneratedPath(path));
     }
