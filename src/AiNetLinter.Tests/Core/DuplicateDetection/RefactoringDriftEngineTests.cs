@@ -15,10 +15,9 @@ using Xunit;
 namespace AiNetLinter.Tests.Core.DuplicateDetection;
 
 /// <summary>
-/// Engine-Ebene-Tests fuer <see cref="DuplicateDetectionEngine.FindSimilarToAsync"/> (Teil C,
-/// "absence-of-calls"-Heuristik, siehe <c>tasks/features/07-drift-audit-ideen.md</c> §C). Loest
-/// Symbole direkt ueber ein Roslyn-<see cref="SemanticModel"/> auf (statt ueber
-/// <c>FindReferencesTool.ResolveSymbolAsync</c>, das ist Gegenstand von
+/// Engine-Ebene-Tests fuer <see cref="DuplicateDetectionEngine.FindSimilarToAsync"/>
+/// ("absence-of-calls"-Heuristik). Loest Symbole direkt ueber ein Roslyn-<see cref="SemanticModel"/>
+/// auf (statt ueber <c>FindReferencesTool.ResolveSymbolAsync</c>, das ist Gegenstand von
 /// <c>RefactoringDriftScannerTests</c>) — diese Ebene prueft ausschliesslich die
 /// Fingerprint-Wiederverwendung + Jaccard-basierte Kandidatenfilterung der Engine selbst.
 /// </summary>
