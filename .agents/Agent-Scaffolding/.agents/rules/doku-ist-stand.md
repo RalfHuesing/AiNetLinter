@@ -20,7 +20,7 @@ Daraus folgt: Eine Datei beschreibt ausschließlich, **wie es ist**.
 - **Kein `version:`-Feld** im Frontmatter. `status:` (z. B. `draft`) ist
   dagegen erlaubt — das ist eine Aussage über den Ist-Zustand.
 - **Keine temporalen Formulierungen im Fließtext:** „jetzt vier statt
-  drei", „bisher gab es keinen Mechanismus für X", „(neu)", „vorher
+  drei", „Es gab keinen Mechanismus für X", „(neu)", „vorher
   wurde…", „behebt eine Lücke der alten Fassung", „wie gehabt".
   Streichen oder in eine Ist-Aussage umschreiben.
 
