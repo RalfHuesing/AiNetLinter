@@ -4,9 +4,8 @@ namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// Betriebsmodi von <c>find_duplicates</c> (Muster analog <c>MetricsTreeMode</c>/
-/// <c>MetricsTreeModeParser</c>). <see cref="Clone"/> ist Teil A (solution-weite Cluster-Suche),
-/// <see cref="RefactoringDrift"/> ist Teil C (Kandidaten-Suche relativ zu einem einzelnen
-/// Helper-Symbol, siehe <c>tasks/features/07-drift-audit-ideen.md</c> §C).
+/// <c>MetricsTreeModeParser</c>). <see cref="Clone"/> = solution-weite Cluster-Suche,
+/// <see cref="RefactoringDrift"/> = Kandidaten-Suche relativ zu einem einzelnen Helper-Symbol.
 /// </summary>
 internal enum DuplicateDetectionMode
 {
@@ -15,8 +14,8 @@ internal enum DuplicateDetectionMode
 }
 
 /// <summary>Parst den <c>mode</c>-Parameter von <c>find_duplicates</c>. Leer/<see langword="null"/>
-/// = Default <see cref="DuplicateDetectionMode.Clone"/> (bestehendes Teil-A-Verhalten, damit
-/// bestehende Aufrufe ohne <c>mode</c>-Argument unveraendert funktionieren).</summary>
+/// = Default <see cref="DuplicateDetectionMode.Clone"/> (Aufrufe ohne <c>mode</c>-Argument
+/// verhalten sich unveraendert).</summary>
 internal static class DuplicateDetectionModeParser
 {
     internal static DuplicateDetectionMode? TryParse(string? mode)
