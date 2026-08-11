@@ -51,7 +51,7 @@ internal static class GetImpactTool
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
         var clampedDepth = Math.Clamp(input.Depth, 1, CallGraphTraversal.MaxRecursionDepth);
         string body;
-        // StructuredContent (S1.3) nur fuer den depth=1-Flachfall — siehe FindReferencesTool fuer
+        // StructuredContent nur fuer den depth=1-Flachfall — siehe FindReferencesTool fuer
         // die identische, dort ausfuehrlicher begruendete Entscheidung (CallGraphTraversal baut
         // depth>1-Locations intern als reine Strings ohne strukturiertes Zwischenmodell).
         IReadOnlyList<CallSiteEntry>? entries = null;
