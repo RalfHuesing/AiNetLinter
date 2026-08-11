@@ -9,15 +9,15 @@ using Microsoft.CodeAnalysis;
 namespace AiNetLinter.Core.DuplicateDetection;
 
 /// <summary>
-/// Teil C — Refactoring-Drift-Detection ("absence-of-calls"-Heuristik, Murphy-Hill 2005 "How We
-/// Refactor, and How We Know It"), siehe <c>tasks/features/07-drift-audit-ideen.md</c> §C und
-/// <c>tasks/features/05-roadmap.md</c> "Teil C". Findet Methoden, deren Koerper strukturell einem
-/// gegebenen Helper <c>H</c> aehnelt, die <c>H</c> aber nicht aufrufen — Kandidat dafuer, dass der
-/// Helper "ausgewickelt" statt aufgerufen wurde. Baut bewusst NICHT auf einer zweiten
-/// Tokenisierungs-/Jaccard-Pipeline auf, sondern wiederverwendet <see cref="CollectFingerprintsAsync"/>
-/// und <see cref="ComputeJaccard"/> aus der Teil-A-Haelfte dieser <c>partial class</c> — "1 gegen
-/// alle" statt "alle gegen alle" (guenstiger als der volle Cluster-Scan aus <see cref="ScanAsync"/>,
-/// weil keine Kanten zwischen den Nicht-Helper-Kandidaten selbst gebraucht werden).
+/// Refactoring-Drift-Detection ("absence-of-calls"-Heuristik, Murphy-Hill 2005 "How We Refactor,
+/// and How We Know It"). Findet Methoden, deren Koerper strukturell einem gegebenen Helper <c>H</c>
+/// aehnelt, die <c>H</c> aber nicht aufrufen — Kandidat dafuer, dass der Helper "ausgewickelt"
+/// statt aufgerufen wurde. Baut bewusst NICHT auf einer zweiten Tokenisierungs-/Jaccard-Pipeline
+/// auf, sondern wiederverwendet <see cref="CollectFingerprintsAsync"/> und
+/// <see cref="ComputeJaccard"/> aus der Clone-Detection-Haelfte dieser <c>partial class</c> —
+/// "1 gegen alle" statt "alle gegen alle" (guenstiger als der volle Cluster-Scan aus
+/// <see cref="ScanAsync"/>, weil keine Kanten zwischen den Nicht-Helper-Kandidaten selbst gebraucht
+/// werden).
 /// </summary>
 internal static partial class DuplicateDetectionEngine
 {
