@@ -28,8 +28,8 @@ internal static class GetHotspotsScanner
 
     /// <summary>
     /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> — Text (Markdown-
-    /// Tabellen, bisheriges Format unveraendert) plus <see cref="HotspotEntry"/>-Liste fuer
-    /// <c>StructuredContent</c> (S1.3). Ist <paramref name="scopeFilter"/> gesetzt, aber matched
+    /// Tabellen) plus <see cref="HotspotEntry"/>-Liste fuer <c>StructuredContent</c>. Ist
+    /// <paramref name="scopeFilter"/> gesetzt, aber matched
     /// keine Datei, wird eine explizite "Keine Dateien im Scope"-Meldung geliefert statt der sonst
     /// irrefuehrenden "alles gruen"-Aussage (Entries dann leer).
     /// </summary>
@@ -150,7 +150,7 @@ internal static class GetHotspotsScanner
 }
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>get_hotspots</c> (S1.3) — ein Objekt je Datei mit Pfad, Zeilen
+/// StructuredContent-Eintrag fuer <c>get_hotspots</c> — ein Objekt je Datei mit Pfad, Zeilen
 /// und Auslastung, nur fuer <see cref="Category"/> <c>"critical"</c> (>=95%) oder <c>"warning"</c>
 /// (>=80%) — Dateien im gruenen Bereich tauchen bewusst nicht auf (siehe
 /// <see cref="GetHotspotsScanner.BuildEntries"/>).
