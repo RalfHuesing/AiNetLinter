@@ -83,7 +83,7 @@ internal sealed class McpCodeGraphServer : IDisposable
 
     /// <summary>Vollstaendige Linter-Konfiguration (aus <c>rules.json</c> via <c>--config</c> oder Default).
     /// Privates Setter statt <see langword="init"/>, weil <see cref="ReloadConfig"/> diese zur
-    /// Laufzeit austauscht (Q2, <c>reload_config</c>-Tool). Isolierter Zugriff auf NUR dieses
+    /// Laufzeit austauscht (<c>reload_config</c>-Tool). Isolierter Zugriff auf NUR dieses
     /// Property ist unkritisch; zusammen mit <see cref="UsedDefaultConfig"/>/<see cref="ResolvedConfigPath"/>
     /// immer <see cref="GetConfigSnapshot"/> nutzen (Begruendung dort).</summary>
     public ILinterEngineConfig Config { get; private set; }
@@ -101,19 +101,19 @@ internal sealed class McpCodeGraphServer : IDisposable
     public ILintConsole Console => _console;
 
     /// <summary>Zeit seit Konstruktion dieser Instanz — Proxy fuer die Server-Uptime, verwendet von
-    /// <c>get_server_health</c> (Q3).</summary>
+    /// <c>get_server_health</c>.</summary>
     public TimeSpan Uptime => DateTime.UtcNow - _startedAtUtc;
 
     /// <summary>Anzahl der <see cref="GetCurrentSolution"/>-Aufrufe seit Start, bei denen
     /// <see cref="RefreshStaleDocuments"/> tatsaechlich eine Aenderung (neue/geloeschte/modifizierte
     /// Datei) in die resident gehaltene <see cref="Solution"/> uebernommen hat. Verwendet von
-    /// <c>get_server_health</c> (Q3) als Signal, wie oft der Staleness-Check seit Start gegriffen hat.
+    /// <c>get_server_health</c> als Signal, wie oft der Staleness-Check seit Start gegriffen hat.
     /// Unter <see cref="_lock"/> gelesen, konsistent mit dem uebrigen Zugriffsmuster auf
     /// <see cref="_catalog"/>/<see cref="_fileState"/> in dieser Klasse.</summary>
     public int RefreshCount { get { lock (_lock) { return _refreshCount; } } }
 
     /// <summary>
-    /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (Q2, <c>reload_config</c>-Tool).
+    /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (<c>reload_config</c>-Tool).
     /// <paramref name="newConfig"/> ist bereits erfolgreich geladen/validiert. Unter <see cref="_lock"/>
     /// wie <see cref="GetConfigSnapshot"/> — NICHT weil das <see cref="GetCurrentSolution"/> schuetzt
     /// (der liest Config gar nicht), sondern damit Snapshot-Leser nie eine halb ausgetauschte
