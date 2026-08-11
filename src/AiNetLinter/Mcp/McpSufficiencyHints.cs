@@ -4,13 +4,12 @@ namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Gemeinsamer Sufficiency-Hinweis fuer MCP-Tool-Outputs, die vollstaendige/finale Daten fuer
-/// den angefragten Scope liefern (Q5 in <c>tasks/features/05-roadmap.md</c> §3, Sufficiency-
-/// Doctrine in <see cref="ServerInstructions"/>). Verhindert, dass ein Agent nach einem bereits
-/// vollstaendigen Tool-Ergebnis redundant per Read/Grep nachverifiziert — dieselbe Lehre wie
-/// CodeGraphs "do NOT Read these files"-Hinweis (siehe <c>tasks/features/04-explore-vs-flow-tools.md</c>
-/// §7.2). Sibling-Datei zu <see cref="McpTruncation"/>: dort steckt die Trunkierungs-Meta-Zeile
-/// fuer den Gegenfall (Ergebnis unvollstaendig, weitere Calls noetig) — beide Hinweise schliessen
-/// sich gegenseitig aus und werden nie auf denselben Output angewendet.
+/// den angefragten Scope liefern (Sufficiency-Doctrine in <see cref="ServerInstructions"/>).
+/// Verhindert, dass ein Agent nach einem bereits vollstaendigen Tool-Ergebnis redundant per
+/// Read/Grep nachverifiziert — dieselbe Lehre wie CodeGraphs "do NOT Read these files"-Hinweis.
+/// Sibling-Datei zu <see cref="McpTruncation"/>: dort steckt die Trunkierungs-Meta-Zeile fuer den
+/// Gegenfall (Ergebnis unvollstaendig, weitere Calls noetig) — beide Hinweise schliessen sich
+/// gegenseitig aus und werden nie auf denselben Output angewendet.
 /// </summary>
 internal static class McpSufficiencyHints
 {
