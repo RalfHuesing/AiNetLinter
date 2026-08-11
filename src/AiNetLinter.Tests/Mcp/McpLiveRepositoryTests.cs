@@ -300,4 +300,26 @@ public sealed class McpLiveRepositoryTests
             Assert.Contains(expected, ids);
         }
     }
+
+    [Fact]
+    public async Task LiveDogfood_DependencyGraph_ReturnsResults()
+    {
+        // FindReferencesTool.cs hat sowohl echte eingehende Abhaengigkeiten (z. B. GetImpactTool,
+        // GetTypeHierarchyTool nutzen ResolveSymbolAsync) als auch ausgehende (SymbolIdentifierResolver,
+        // DiffImpactAnalyzer) — gutes Live-Ziel fuer beide Richtungen gleichzeitig.
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "dependency_graph",
+            new Dictionary<string, object?>
+            {
+                ["filePath"] = "src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs",
+                ["direction"] = "both",
+                ["maxResults"] = 20,
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+        Assert.Contains("Ausgehende Abhaengigkeiten", text, StringComparison.Ordinal);
+        Assert.Contains("Eingehende Abhaengigkeiten", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", text, StringComparison.Ordinal);
+    }
 }
