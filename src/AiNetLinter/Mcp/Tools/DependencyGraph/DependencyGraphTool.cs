@@ -122,7 +122,7 @@ internal static class DependencyGraphTool
     {
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var body = RenderText(target, result);
-        // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse (Q5-Muster) — trunkiert durch
+        // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — trunkiert durch
         // maxResults ODER durch den Traversierungs-Hard-Cap (NodeCapReached), beides zaehlt.
         var finalBody = result.Truncated ? body : McpSufficiencyHints.Append(body);
         var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
