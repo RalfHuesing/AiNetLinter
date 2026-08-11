@@ -236,35 +236,49 @@ public sealed class McpServerCommandJsonRpcFramingTests
         // Producer-Task sauber beenden.
         try { await writerTask; } catch { /* Pipe-Close-Fehler ist hier OK */ }
 
-        // Auf graceful exit warten, falls noch nicht beendet (kurzer Timeout). Reagiert der
-        // Subprozess unter Last (z. B. konkurrierende Solution-Loads anderer parallel laufender
-        // Tests/Prozesse) nicht rechtzeitig, wird er hart beendet, statt den Test unbegrenzt
-        // haengen zu lassen — vorher konnte ein nie beendeter Subprozess das nachfolgende
-        // stderrTask.ReadToEndAsync() (blockiert bis stderr-EOF, also bis der Prozess beendet
-        // ist) auf unbestimmte Zeit blockieren, empirisch beobachtet als Volllauf-Haenger
-        // 2026-08-11.
+        await EnsureProcessTerminatedAsync(process, stderrTask);
+
+        return observed;
+    }
+
+    /// <summary>
+    /// Wartet auf graceful exit (kurzer Timeout), erzwingt danach einen Kill statt den Test
+    /// unbegrenzt haengen zu lassen, und deckelt anschliessend das Warten auf <paramref
+    /// name="stderrTask"/> (blockiert sonst bis stderr-EOF = Prozessende) mit einem eigenen
+    /// Timeout. Ausgelagert aus <see cref="RunAndCollectStdoutAsync"/>, damit dessen eigene
+    /// Komplexitaet unter <c>MaxCyclomaticComplexity</c>/<c>MaxCognitiveComplexity</c> bleibt —
+    /// vorher fehlte dieser gesamte Force-Kill-Pfad, was einen nie beendeten Subprozess unter
+    /// Last (konkurrierende Solution-Loads anderer parallel laufender Tests/Prozesse) den ganzen
+    /// Testlauf unbegrenzt blockieren liess, empirisch beobachtet als Volllauf-Haenger
+    /// 2026-08-11.
+    /// </summary>
+    private static async Task EnsureProcessTerminatedAsync(Process process, Task stderrTask)
+    {
         if (!process.HasExited)
         {
-            try
-            {
-                if (!process.WaitForExit(TimeSpan.FromSeconds(10)) && !process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch
-            {
-                // bewusst geschluckt - wir wollen den Test nicht am Server-Shutdown scheitern
-                // lassen, wenn der eigentliche Befund (stdout-Frames) schon erhoben ist.
-            }
+            TryWaitOrKill(process);
         }
 
         // stderrTask kann nach einem erzwungenen Kill kurzzeitig offen bleiben (Pipe-Handle-
         // Teardown ist nicht synchron mit dem Kill) — eigener Timeout statt unbegrenztem await,
         // damit ein Edge-Case hier nie wieder den ganzen Testlauf blockieren kann.
         await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10)));
+    }
 
-        return observed;
+    private static void TryWaitOrKill(Process process)
+    {
+        try
+        {
+            if (!process.WaitForExit(TimeSpan.FromSeconds(10)) && !process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+            // bewusst geschluckt - wir wollen den Test nicht am Server-Shutdown scheitern lassen,
+            // wenn der eigentliche Befund (stdout-Frames) schon erhoben ist.
+        }
     }
 
     private static string TrimForLog(string line) =>
