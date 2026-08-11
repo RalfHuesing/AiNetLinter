@@ -7,15 +7,13 @@ namespace AiNetLinter.Mcp;
 /// <see cref="McpServerOptionsFactory"/> ueber <c>ModelContextProtocol.Server.McpServerOptions
 /// .ServerInstructions</c> an jeden verbundenen Client durchreicht (SDK-Property, kein
 /// eigenes Protokoll-Feature — siehe <see cref="McpServerOptionsBuilder.WithServerInstructions"/>).
-/// Ersetzt den vormals inline in <see cref="McpServerOptionsFactory"/> gepflegten kurzen
-/// C#-only-Hinweis durch eine vollstaendige, an einer Stelle gepflegte Doctrine (Q4 in
-/// <c>tasks/features/05-roadmap.md</c> §3, analog zu CodeGraphs <c>server-instructions.ts</c>,
-/// siehe <c>tasks/features/04-explore-vs-flow-tools.md</c> §7.2): Tool-Uebersicht, C#-Only-Grenze
-/// mit Fallback, Sufficiency-Doctrine (siehe <see cref="McpSufficiencyHints"/>) und der
-/// isError-Hinweis (Policy-Details in <c>src/AiNetLinter/Mcp/IsErrorPolicy.md</c>). Bewusst als
-/// einzelne <see langword="const"/>-Property statt mehrerer verstreuter Strings, damit ein
-/// zukuenftiges neues Tool oder eine Policy-Aenderung an genau einer Stelle nachgezogen wird,
-/// statt in jeder Tool-Description dupliziert zu werden.
+/// Liefert die vollstaendige, an einer Stelle gepflegte Doctrine (analog zu CodeGraphs
+/// <c>server-instructions.ts</c>): Tool-Uebersicht, C#-Only-Grenze mit Fallback,
+/// Sufficiency-Doctrine (siehe <see cref="McpSufficiencyHints"/>) und der isError-Hinweis
+/// (Policy-Details in <c>src/AiNetLinter/Mcp/IsErrorPolicy.md</c>). Bewusst als einzelne
+/// <see langword="const"/>-Property statt mehrerer verstreuter Strings, damit ein zukuenftiges
+/// neues Tool oder eine Policy-Aenderung an genau einer Stelle nachgezogen wird, statt in jeder
+/// Tool-Description dupliziert zu werden.
 /// </summary>
 internal static class ServerInstructions
 {
