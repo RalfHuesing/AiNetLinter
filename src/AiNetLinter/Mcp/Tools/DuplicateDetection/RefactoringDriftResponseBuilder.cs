@@ -34,7 +34,7 @@ internal static class RefactoringDriftResponseBuilder
                 ShownCandidates: result.ShownCandidates.Count,
                 Truncated: result.Truncated));
 
-        // In ein Objekt gewrappt statt eines nackten Arrays (M2-Regressionslehre, siehe
+        // In ein Objekt gewrappt statt eines nackten Arrays (siehe
         // McpToolResults.Text<T>-Doc-Kommentar).
         return McpToolResults.Text(finalText, payload);
     }
