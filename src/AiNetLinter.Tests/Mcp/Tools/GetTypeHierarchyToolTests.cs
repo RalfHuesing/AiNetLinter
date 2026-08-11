@@ -69,7 +69,7 @@ public sealed class GetTypeHierarchyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("IGreeting", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("SpecialGreeting", textContent.Text, StringComparison.Ordinal);
-        // Q5 Sufficiency-Hinweis: Basisklassen/Interfaces trunkieren nie, aber die
+        // Sufficiency-Hinweis: Basisklassen/Interfaces trunkieren nie, aber die
         // abgeleiteten/implementierenden Typen koennten es bei Ueberschreitung von maxResults —
         // hier unter dem Default-Limit, also gilt der Hinweis.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
