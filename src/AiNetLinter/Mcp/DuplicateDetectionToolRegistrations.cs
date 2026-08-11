@@ -27,15 +27,18 @@ internal static class DuplicateDetectionToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
-                string? scopeDir = null, int? maxResults = null, CancellationToken ct = default) =>
+                string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
+                CancellationToken ct = default) =>
             {
-                var input = new DuplicateDetectionInput(minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults);
+                var input = new DuplicateDetectionInput(
+                    minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol);
                 if (callLog is null)
                 {
                     return await DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct);
                 }
                 return await callLog.ExecuteCallAsync(
-                    "find_duplicates", $"{minTokens}|{similarityThreshold}|{normalizeIdentifiers}|{scopeDir}|{maxResults}",
+                    "find_duplicates",
+                    $"{minTokens}|{similarityThreshold}|{normalizeIdentifiers}|{scopeDir}|{maxResults}|{mode}|{helperSymbol}",
                     () => DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct));
             },
             new McpServerToolCreateOptions
@@ -47,13 +50,20 @@ internal static class DuplicateDetectionToolRegistrations
 
     private const string FindDuplicatesDescription =
         "Wann nutzen: Solution-weite DRY-Audit-Suche nach Code-Duplikaten (Token-basiertes " +
-        "Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) — findet z. B. mehrfach separat " +
-        "instanziierte, eigentlich identische Objekt-Initialisierungen, die zentralisiert werden " +
-        "sollten. Ergebnis als Cluster (transitiv aehnliche Methoden), nicht als isolierte Paare. " +
-        "minTokens (Default aus rules.json, 30) filtert triviale Methoden. similarityThreshold: " +
-        "'exact' (>=0.95, fast identisch), 'near' (>=0.80) oder 'fuzzy' (>=0.65, Default — " +
-        "niedrigste noch angezeigte Stufe). normalizeIdentifiers (Default false) schaltet " +
-        "Erkennung umbenannter Klone an (Identifier/Literale werden vor dem Vergleich " +
-        "normalisiert). scopeDir grenzt auf einen Teilbereich ein (Default Solution-Root). " +
-        "maxResults begrenzt die gezeigten Cluster (Default 20).";
+        "Clone-Detection, Jaccard-N-Gram, Method-Granularitaet). mode='clone' (Default): findet " +
+        "z. B. mehrfach separat instanziierte, eigentlich identische Objekt-Initialisierungen, die " +
+        "zentralisiert werden sollten. Ergebnis als Cluster (transitiv aehnliche Methoden), nicht " +
+        "als isolierte Paare. minTokens (Default aus rules.json, 30) filtert triviale Methoden. " +
+        "similarityThreshold: 'exact' (>=0.95, fast identisch), 'near' (>=0.80) oder 'fuzzy' " +
+        "(>=0.65, Default — niedrigste noch angezeigte Stufe). normalizeIdentifiers (Default " +
+        "false) schaltet Erkennung umbenannter Klone an (Identifier/Literale werden vor dem " +
+        "Vergleich normalisiert). scopeDir grenzt auf einen Teilbereich ein (Default " +
+        "Solution-Root). maxResults begrenzt die gezeigten Cluster/Kandidaten (Default 20). " +
+        "mode='refactoring-drift': findet Methoden, die einen bereits existierenden Helper " +
+        "(helperSymbol, Pflicht bei diesem mode — Format wie find_references: " +
+        "Datei:Zeile:Spalte, stabile DocumentationCommentId oder qualifizierter Name) strukturell " +
+        "nachbauen statt ihn aufzurufen ('absence-of-calls'-Heuristik). Ergebnis als Kandidaten, " +
+        "nicht als Verstoesse (hoeheres False-Positive-Budget als mode='clone' — strukturelle " +
+        "Aehnlichkeit ist nicht zwingend Drift). similarityThreshold wird in diesem Modus ignoriert " +
+        "(fester near-Schwellwert aus rules.json).";
 }

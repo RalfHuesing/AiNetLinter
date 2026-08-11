@@ -87,3 +87,29 @@ internal sealed record DuplicateCluster(
 internal sealed record DuplicateDetectionScanResult(
     IReadOnlyList<DuplicateCluster> Clusters,
     int MethodsScanned);
+
+// ── Teil C: Refactoring-Drift (absence-of-calls-Heuristik, Murphy-Hill 2005) ─────────────────
+// Siehe tasks/features/07-drift-audit-ideen.md §C. Eigene Records statt Wiederverwendung von
+// DuplicateCluster/DuplicateClusterMember: Teil C hat keine Buckets/Cluster (nur "aehnlich zu
+// genau einem Helper H"), und die Ausgabe muss explizit als "Kandidaten" erkennbar sein, nicht
+// als "Duplikat-Cluster" (hoeheres False-Positive-Budget, siehe Roadmap-Akzeptanzkriterien).
+
+/// <summary>Ein Kandidat fuer Teil C: eine Methode, die strukturell aehnlich zu einem Helper
+/// <c>H</c> ist (Jaccard-Score ≥ <see cref="DuplicateDetectionOptions.NearThreshold"/>), <c>H</c>
+/// aber nachweislich nicht aufruft ("absence-of-calls"). <see cref="Score"/> ist der exakte
+/// Jaccard-Score zu <c>H</c>s Fingerprint (kein Cluster-Minimum wie bei <see cref="DuplicateCluster.Score"/>,
+/// weil es hier nur eine Kante pro Kandidat gibt, nicht ein Cluster).</summary>
+internal sealed record RefactoringDriftCandidate(
+    string FilePath,
+    int LineNumber,
+    string SignatureName,
+    int TokenCount,
+    double Score);
+
+/// <summary>Gesamtergebnis von <see cref="DuplicateDetectionEngine.FindSimilarToAsync"/>.
+/// <see cref="Candidates"/> ist unbegrenzt und absteigend nach <see cref="RefactoringDriftCandidate.Score"/>
+/// sortiert — Trunkierung ist wie bei <see cref="DuplicateDetectionScanResult"/> Sache des
+/// Aufrufers (<c>RefactoringDriftScanner</c>).</summary>
+internal sealed record RefactoringDriftScanResult(
+    IReadOnlyList<RefactoringDriftCandidate> Candidates,
+    int MethodsScanned);

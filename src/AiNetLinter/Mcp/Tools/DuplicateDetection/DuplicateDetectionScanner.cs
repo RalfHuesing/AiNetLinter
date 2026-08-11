@@ -25,16 +25,7 @@ internal static class DuplicateDetectionScanner
         Solution solution, GlobalConfig config, DuplicateDetectionInput input, DuplicateSimilarityBucket minBucket,
         CancellationToken ct)
     {
-        var options = new DuplicateDetectionOptions(
-            MinTokens: input.MinTokens ?? config.DuplicateCodeMinTokens,
-            NgramSize: config.DuplicateCodeNgramSize,
-            MinSharedNgrams: config.DuplicateCodeMinSharedNgrams,
-            ExactThreshold: config.DuplicateCodeExactThreshold,
-            NearThreshold: config.DuplicateCodeNearThreshold,
-            FuzzyThreshold: config.DuplicateCodeFuzzyThreshold,
-            NormalizeIdentifiers: input.NormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
-            PathScopeFilter: NormalizeScopeDir(input.ScopeDir));
-
+        var options = BuildOptions(config, input);
         var scanResult = await DuplicateDetectionEngine.ScanAsync(solution, options, ct);
 
         var filtered = scanResult.Clusters.Where(c => c.Bucket >= minBucket).ToList();
@@ -44,6 +35,22 @@ internal static class DuplicateDetectionScanner
 
         return new DuplicateDetectionScanResultForTool(shown, filtered.Count, scanResult.MethodsScanned, truncated);
     }
+
+    /// <summary>Loest Tool-Argumente + <see cref="GlobalConfig"/>-Defaults zu
+    /// <see cref="DuplicateDetectionOptions"/> auf — von <see cref="ScanAsync"/> (Teil A,
+    /// <c>mode="clone"</c>) UND <see cref="RefactoringDriftScanner.ScanAsync"/> (Teil C,
+    /// <c>mode="refactoring-drift"</c>) gemeinsam genutzt, damit die Argument-Aufloesungs-Regeln
+    /// (Tool-Argument ueberschreibt Config-Default) nicht zweimal gepflegt werden.</summary>
+    internal static DuplicateDetectionOptions BuildOptions(GlobalConfig config, DuplicateDetectionInput input) =>
+        new(
+            MinTokens: input.MinTokens ?? config.DuplicateCodeMinTokens,
+            NgramSize: config.DuplicateCodeNgramSize,
+            MinSharedNgrams: config.DuplicateCodeMinSharedNgrams,
+            ExactThreshold: config.DuplicateCodeExactThreshold,
+            NearThreshold: config.DuplicateCodeNearThreshold,
+            FuzzyThreshold: config.DuplicateCodeFuzzyThreshold,
+            NormalizeIdentifiers: input.NormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
+            PathScopeFilter: NormalizeScopeDir(input.ScopeDir));
 
     /// <summary>Wandelt Forward-Slashes in <paramref name="scopeDir"/> in den plattform-eigenen
     /// Trennzeichen um, damit der Substring-Abgleich gegen absolute Dateipfade
