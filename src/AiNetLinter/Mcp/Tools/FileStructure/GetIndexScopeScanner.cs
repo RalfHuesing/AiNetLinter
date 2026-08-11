@@ -24,8 +24,7 @@ internal static class GetIndexScopeScanner
 {
     /// <summary>
     /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> — Text
-    /// (bisheriges Format unveraendert) plus <see cref="FileTypeBreakdownEntry"/>-Liste fuer
-    /// <c>StructuredContent</c> (S1.3).
+    /// plus <see cref="FileTypeBreakdownEntry"/>-Liste fuer <c>StructuredContent</c>.
     /// </summary>
     internal static (string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries) BuildBreakdown(Solution solution)
     {
@@ -122,7 +121,7 @@ internal static class GetIndexScopeScanner
 }
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>get_index_scope</c> (S1.3) — ein Objekt je Dateityp mit Anzahl
+/// StructuredContent-Eintrag fuer <c>get_index_scope</c> — ein Objekt je Dateityp mit Anzahl
 /// und ob er vom Roslyn-Symbolgraph abgedeckt ist (nur <c>.cs</c>; siehe Scope-Hinweis-Text der
 /// anderen C#-only-Tools).
 /// </summary>
