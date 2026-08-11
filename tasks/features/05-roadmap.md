@@ -113,9 +113,9 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 | [ ] | M3 | **`feature_context` (One-Shot-Feature-Kontext)** | 80 | 1-2 Wo | Recon C §5.2 F7 |
 | [ ] | M5 | **`test_coverage_context` (Coverage-Awareness)** | 70 | 1 Wo | Recon C §5.3 F11, Recon B §6.3 |
 | [x] | M8 | **`--eval`/`--map` ersatzlos streichen** (Audit-Prompts + Codebase-Maps) | 60 | 2-3 Tage | Nutzer-Entscheidung 2026-08-11, Dogfooding-Session |
-| [ ] | M9 | **Drift-Audit (Naming-Drift + DRY)** — noch nicht spezifiziert, siehe [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md) | TBD | TBD | Nutzer-Anliegen 2026-08-11 |
+| [ ] | M9 | **Drift-Audit — DRY-Erkennung** (`find_duplicates` + `DuplicateCodeChecker` + Self-Audit-Skill + Refactoring-Drift) | 65 | 8-11 Tage | Nutzer-Anliegen 2026-08-11, [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md), Phase-1-Spec 2026-08-11 |
 
-**Gesamt M-Phase:** 4-6 Wochen (M9 noch ohne Aufwandsschätzung, da unspezifiziert). Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness.
+**Gesamt M-Phase:** 4-6 Wochen. Differenziator-ROI: ASP.NET-Analyse, Coverage-Awareness, deterministische DRY-Erkennung ohne Embeddings.
 
 > **Priorisierungs-Update (Dogfooding-Session 2026-08-10/11):** Nach einer Session, in der der
 > MCP-Server systematisch als Navigations-Werkzeug für einen "großen Task, Code-Stellen selbst
@@ -129,7 +129,9 @@ Phase 3: M1, M2, M3, M5 (4-6 Wo)   → ASP.NET-Suite (eigenes Vorhaben), depende
 > Nutzer wichtig genug, um direkt nach der Bereinigung (M8) zu kommen, aber noch nicht
 > spezifiziert; nur eine grobe Ideensammlung in
 > [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md), muss vor Umsetzung erst ausgearbeitet
-> werden (Score/Aufwand fehlen bewusst). **M5 `test_coverage_context` danach** — sinnvoller
+> werden (Score/Aufwand fehlen bewusst). **Update 2026-08-11 (Phase 1 abgeschlossen):** M9 ist
+> jetzt als Epic mit Score/Aufwand/Akzeptanzkriterien ausgearbeitet, siehe §3 M9 und Decisions
+> Log D19. **M5 `test_coverage_context` danach** — sinnvoller
 > Folgeschritt, aber weniger dringend, weil `find_references` bereits einen Teil des Bedarfs
 > abdeckt (findet Unit-Tests, die eine Methode direkt aufrufen). M1 (eigenstaendiges
 > Linting-Vorhaben) und M3 (haengt an S2.2, jetzt entsperrt) bleiben unveraendert nachrangig —
@@ -480,6 +482,158 @@ Plus 1-2 MCP-Tools:
 
 ---
 
+### M9 — Drift-Audit: DRY-Erkennung (`find_duplicates` + `DuplicateCodeChecker` + Self-Audit-Skill + Refactoring-Drift)
+
+**Warum:** Beim autonomen agentischen Entwickeln entsteht Code-Duplikation, weil eine bereits
+existierende Lösung nicht wiedergefunden/wiederverwendet wird — keine einzelne Lint-Regel fängt
+das, weil es erst im Vergleich über die ganze Codebase sichtbar wird. Konkretes Beispiel aus der
+Dogfooding-Session 2026-08-10/11: `JsonSerializerOptions` war vor S1.3 in 4 MCP-Tools einzeln
+instanziiert, bevor es zu `McpJsonOptions.Default` zentralisiert wurde. Ausgearbeitet in
+[`07-drift-audit-ideen.md`](07-drift-audit-ideen.md) auf Basis etablierter Clone-Detection-Forschung
+(Bellon et al. 2007, Roy & Cordy 2007, CCFinder/jscpd/PMD-CPD als Referenz-Implementierungen).
+
+**Scope-Entscheidung (Phase-1-Spec-Runde, 2026-08-11, siehe Decisions Log D19):** Nur der
+DRY-Block wird jetzt umgesetzt — Ideen **A** (Token-CPD), **F** (Self-Audit-Skill) und **C**
+(Refactoring-Drift via Symbolgraph), in dieser Reihenfolge/parallel wie unten beschrieben.
+**Explizit NICHT im Scope:** Idee **E** (Naming-Familien-Erkennung/Naming-Drift, bleibt Skizze
+für ein separates Folge-Epic), Idee **B** (AST-CPD, erst bei empirisch belegtem Bedarf nach A),
+Idee **D** (Pattern-Cluster-Detection, erst bei 2+ konkreten unbelegten Beispielen).
+
+#### Teil A — Token-CPD (Schicht 1): `find_duplicates` + `DuplicateCodeChecker`
+
+**Methode:** Method-Granularität, Roslyn-Token-Extraktion (`body.DescendantTokens()`), N-Gram-
+Shingling (`k=5`, konfigurierbar), SHA-256-Hash pro N-Gram, Inverted Index
+(`Dictionary<Hash, List<MethodId>>`), Kandidaten-Pairs ab `minSharedNgrams=3` gemeinsamen
+N-Grammen, finaler Score = Jaccard-Similarity über die N-Gram-Mengen. Details/Forschungs-Anker in
+`07-drift-audit-ideen.md` §A.2.
+
+**Schwellwert-Staffelung (bestätigt 2026-08-11):** drei Buckets statt hartem Cut —
+`exact ≥ 0.95`, `near 0.80–0.95`, `fuzzy 0.65–0.80`; unter `0.65` kein Output. Werden nach dem
+ersten Dogfooding-Lauf ggf. empirisch nachjustiert (kein Commitment auf ewig).
+
+**False-Positive-Disziplin:** Method-Granularität (kein Block/File), Min-Token-Filter `30`
+(bestätigt 2026-08-11), `bin/`/`obj/`/`.ainetlinter/`/`tests/Fixtures/` ausgeschlossen (Lehre aus
+Safeguard-Fix-Review 2026-08-06: Fixture-Verzeichnisse mit absichtlichen Verstößen nie in
+Drift-Audits einbeziehen), `[GeneratedCode]`-Methoden übersprungen. Identifier-Normalisierung
+(schaltet Type-2-Klon-Erkennung an) **Default aus**, Opt-in per Tool-Argument (bestätigt
+2026-08-11).
+
+**Konfiguration in `rules.json` — Korrektur gegenüber dem Entwurf in `07-drift-audit-ideen.md`
+§A.5:** Dieses Repo nutzt ein flaches `Global`-Objekt mit skalaren Keys (siehe `BanAsyncVoid`,
+`MaxCyclomaticComplexity` in `rules.json`), kein verschachteltes `{id, enabled, params}`-Schema.
+Neue Keys folgen der bestehenden Konvention:
+```json
+{
+  "Global": {
+    "EnableDuplicateCodeCheck": true,
+    "DuplicateCodeMinTokens": 30,
+    "DuplicateCodeNgramSize": 5,
+    "DuplicateCodeMinSharedNgrams": 3,
+    "DuplicateCodeExactThreshold": 0.95,
+    "DuplicateCodeNearThreshold": 0.80,
+    "DuplicateCodeFuzzyThreshold": 0.65,
+    "DuplicateCodeNormalizeIdentifiers": false,
+    "DuplicateCodeMaxResults": 20
+  }
+}
+```
+
+**`DuplicateCodeChecker` — Integrations-Punkt (Architektur-Klärung 2026-08-11):** Anders als die
+meisten Checker in `Core/Checkers/` (die als Node-Walker pro Datei laufen, z. B.
+`AsyncVoidChecker.CheckMethod`) braucht Duplicate-Detection eine solution-weite Sicht über alle
+Methoden hinweg. Passender Integrationspunkt ist **`PostAnalysisChecks.Run`** (analog
+`UiFileSeparationChecker.Run(state, config)`), das nach der Per-Dokument-Analyse auf dem
+aggregierten `AnalysisState` läuft — dort ist der N-Gram-Index über die ganze Solution bereits
+sinnvoll aufbaubar, ohne die bestehende Parallel-Walk-Architektur der Haupt-Checker zu verändern.
+Meldet Violations über die normale `RuleViolation`-Infrastruktur, geht in den `safeguard`-Score
+ein.
+
+**MCP-Tool `find_duplicates`** (Ordner `src/AiNetLinter/Mcp/Tools/DuplicateDetection/`, Split
+`DuplicateDetectionTool.cs` + `DuplicateDetectionScanner.cs`, wie bei `dependency_graph`/
+`pattern_detect`):
+- Input: `minTokens` (Default aus `rules.json`), `similarityThreshold` (Default `fuzzy`),
+  `normalizeIdentifiers` (Default `false`), `scopeDir` (optional, Default Solution-Root),
+  `maxResults` (Default 20, **zwingend von Anfang an**, wie bei `dependency_graph`/M2)
+- Output: Markdown-Cluster-Liste (Methoden-Signatur + Datei:Zeile + Jaccard-Score, Cluster
+  gruppiert statt isolierter Paare — "Methode A, B, C sind 0.91 ähnlich") +
+  `StructuredContent` als **Objekt** (`{ clusters: [...], summary: {...} }`), niemals ein
+  nacktes Array (Regressionstest analog `McpToolResultsTests`/M2)
+- Trunkierungs-Meta-Zeile statt Sufficiency-Hinweis, wenn `maxResults` greift (analog
+  `dependency_graph`s `Truncated`-Bool-Feld) — Sufficiency-Hinweis nur bei echter Vollständigkeit
+- Registrierung in einer eigenen `*ToolRegistrations.cs` bzw. Erweiterung der passendsten
+  bestehenden Registrations-Datei (finale Entscheidung beim Implementieren, analog der
+  M2-Erfahrung mit `SymbolGraphToolRegistrations.cs`)
+
+**Funktionsgarantie:** Erkennt garantiert alle Type-1-Klone (identische Token-Streams) oberhalb
+`minTokens`; Type-2 nur mit `normalizeIdentifiers=true`; Type-3 abhängig vom Score.
+False-Positive-Budget < 10 % der gemeldeten Cluster, False-Negative-Budget < 20 % verpasste Klone
+≥ `minTokens` (Ziel-Messwerte, siehe `07-drift-audit-ideen.md` §A.7).
+
+#### Teil F — Self-Audit-Skill als Hülle
+
+Skill-Datei `.agents/skills/drift-audit/SKILL.md`, 4 Schritte: (1) `find_duplicates` über
+`src/`, (2) pro `exact`-Cluster sofort konsolidieren oder Tech-Debt-Eintrag, (3) pro `near`-Cluster
+manueller Blick auf 1-2 Beispiele, (4) bei auffälligem Helper optional `find_references` +
+Idee-C-Logik nach Aufrufer-Lücken suchen. **Cadence (bestätigt 2026-08-11):** pro Step optional,
+pro Epic-Abschluss verpflichtend — referenziert im Drift-Loop-Skill/Kritiker-Workflow, damit die
+Lehre aus dem Safeguard-Fix-Review 2026-08-06 ("Skills, die 'irgendwann laufen sollen', laufen oft
+nicht") nicht wiederholt wird.
+
+#### Teil C — Refactoring-Drift-Detection (Schicht 2, baut auf Teil A auf)
+
+Erkennt, ob ein existierender Helper (`McpJsonOptions.Default`) von einzelnen Aufrufern inline
+dupliziert statt aufgerufen wird ("absence-of-calls"-Heuristik, Murphy-Hill 2005). Nutzt den
+bereits vorhandenen Roslyn-Symbolgraphen (`find_references`/`FindReferencesTool.ResolveSymbolAsync`,
+wiederverwendbar wie bei M2) kombiniert mit dem N-Gram-Index aus Teil A: Aufrufer-Liste von `H`
+via `find_references`, Candidate-Set = Methoden mit Jaccard-Score ≥ `near` zu `H.Body`, die `H`
+nicht aufrufen. **Design-Entscheidung (zur Bestätigung mit dem Epic):** als zusätzlicher `mode`-
+Parameter auf `find_duplicates` (`mode="clone"` Default, `mode="refactoring-drift"` mit
+zusätzlichem `helperSymbol`-Argument) statt eines separaten Tools — spart eine zweite
+Tool-Registrierung für dieselbe zugrunde liegende Engine, analog zum `mode`-Parameter-Muster bei
+`metrics_tree`/`dependency_graph`. Ausgabe explizit als "Kandidaten", nicht als "Verstöße" (höheres
+False-Positive-Budget < 25 %, da strukturelle Ähnlichkeit nicht zwingend Drift bedeutet — z. B.
+50 strukturell ähnliche `Dispose`-Implementierungen).
+
+**Abhängigkeiten:** Teil F und Teil C setzen Teil A voraus (Skill braucht das Tool, C nutzt den
+N-Gram-Index). Keine externe Abhängigkeit (kein Embedding-Modell, kein neuer Persist-Layer, siehe
+Ablehnung von RAG/Qdrant in `07-drift-audit-ideen.md`).
+**Aufwand:** 8-11 Tage gesamt (Teil A: 5-7 Tage inkl. Tests/Doku, Teil F: 1 Tag, Teil C: 2-3 Tage)
+**Akzeptanzkriterien:**
+- [ ] Teil A: N-Gram-Index + Jaccard-Score korrekt (Type-1-Klon zu 100 % erkannt oberhalb
+      `minTokens`, verifiziert an Ground-Truth-Fixture mit 5 künstlichen Klonen + 5
+      künstlichen Nicht-Klonen)
+- [ ] Teil A: Schwellwert-Staffelung (`exact`/`near`/`fuzzy`) korrekt im Tool-Output UND im
+      Checker
+- [ ] Teil A: `DuplicateCodeChecker` in `PostAnalysisChecks.Run` integriert, Violations über
+      normale `RuleViolation`-Infrastruktur, fließt in `safeguard`-Score ein
+- [ ] Teil A: `find_duplicates` mit `maxResults`-Trunkierung von Anfang an, `StructuredContent`
+      immer Objekt (Regressionstest), Cluster-Gruppierung statt isolierter Paare
+- [ ] Teil A: `rules.json`-Keys (flach, `Global`-Objekt) dokumentiert in `Docs/configuration.md`
+- [ ] Teil A: historischer Regressionstest — Tool auf den Code-Stand vor S1.3 angewendet muss die
+      4 `JsonSerializerOptions`-Instanziierungen als Cluster finden (False-Negative-Ground-Truth,
+      siehe `07-drift-audit-ideen.md` §A.7)
+- [ ] Teil F: `.agents/skills/drift-audit/SKILL.md` existiert, referenziert `find_duplicates`,
+      im Drift-Loop-Kritiker-Workflow als "pro Epic verpflichtend" verankert
+- [ ] Teil C: `mode="refactoring-drift"` findet den `McpJsonOptions.Default`-Fall, wenn rückwirkend
+      auf den Code-Stand vor S1.3 angewendet (zweiter historischer Regressionstest)
+- [ ] 30+ Unit-Tests (Scanner, Checker, Tool je Teil, Edge-Cases: keine Duplikate, identische
+      Methoden, Trunkierung, Refactoring-Drift-Kandidat gefunden/nicht gefunden)
+- [ ] 2 Integration-/Live-Repo-Tests (`find_duplicates` auf dem eigenen Repo; die beiden
+      historischen Regressionstests oben zählen zusätzlich)
+- [ ] Doku: `Docs/configuration.md` (neue `DuplicateCode*`-Keys), `Docs/agent-api.md`
+      (`find_duplicates` in der Tool-Tabelle inkl. `mode`-Parameter), `Docs/ROADMAP.md`
+      (Epic-Eintrag), `tasks/features/05-roadmap.md` (M9-Status `[x]`)
+- [ ] `dotnet build`/`dotnet test` (Volllauf, `Category!=Stress`) grün
+
+**Risiko:** Mittel (neue solution-weite Analyse-Logik, False-Positive-Risiko bei Teil C höher als
+bei Teil A — mitigiert durch "Kandidaten statt Verstöße"-Framing; keine neue Infrastruktur nötig,
+alles auf bestehendem Roslyn-Symbolgraphen/Checker-Framework aufgebaut)
+**Quelle:** Nutzer-Anliegen 2026-08-11, [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md)
+(Bellon et al. 2007, Roy & Cordy 2007, CCFinder/jscpd/PMD-CPD, Murphy-Hill 2005), Dogfooding-Session
+2026-08-10/11 (`JsonSerializerOptions`-Beispiel)
+
+---
+
 ## 4. Sequenzierungs-Vorschlag (für den Drift-Loop)
 
 **Empfohlene Reihenfolge** unter Berücksichtigung von Abhängigkeiten, Token-Save und Risiko:
@@ -509,7 +663,7 @@ Sprint 2 (2-3 Wo)
 Mid-Term (4-6 Wo) — Reihenfolge aktualisiert nach Dogfooding-Session 2026-08-10/11 (siehe §2)
 ├── M2 dependency_graph         ← unabhängig, HÖCHSTE PRIORITÄT (größte Navigationslücke laut Dogfooding)
 ├── M8 --eval/--map streichen   ← unabhängig, direkt danach (Nutzer-Entscheidung 2026-08-11)
-├── M9 Drift-Audit              ← noch nicht spezifiziert, muss erst ausgearbeitet werden (siehe 07-drift-audit-ideen.md)
+├── M9 Drift-Audit (DRY)        ← Teil A (find_duplicates+Checker), dann F (Skill) + C (Refactoring-Drift)
 ├── M5 test_coverage_context    ← unabhängig, danach
 ├── M1 ASP.NET-Analyzer-Suite   ← eigenständiges Linting-Vorhaben, siehe Hinweis oben, nachrangig
 └── M3 feature_context           ← hängt an S2.2 (jetzt entsperrt), nachrangig
@@ -674,4 +828,5 @@ User-Anweisung 2026-08-06: „entscheide du bitte (was macht codegraph bzw. was 
 | **D15** | Semantische/Fuzzy-Codesuche (Embeddings) bauen? | **Nein** | Widerspricht der strategischen Positionierung (§0: deterministisch, Roslyn-präzise, kein Modell-/Cloud-Abhängigkeit). Volle Begründung in [`06-nicht-umsetzen.md`](06-nicht-umsetzen.md) §10. |
 | **D16** | `--eval`/`--map` (Audit-Prompts + Codebase-Maps) behalten, streichen oder in MCP integrieren? | **Ersatzlos streichen (M8)** | Nutzer-Entscheidung 2026-08-11 nach Diskussion: kein Beleg für aktive Nutzung (nicht in `.agents/`-Drift-Loop-Scaffolding referenziert), inhaltlich vom MCP-Ansatz überholt (statischer Evidenz-Blob vs. gezielte Live-Tool-Calls), Integration in MCP architektonisch sinnlos (MCP-Tool bedient dieselbe Session, die schon Live-Zugriff hat). `HotspotMapBuilder`/`SkeletonMapBuilder` bleiben intern bestehen (Wiederverwendung durch `get_hotspots`/`get_file_skeleton`), nur die CLI-Fläche entfällt. Details in §3 M8. |
 | **D17** | Müssen unbekannte CLI-Parameter einen harten Fehler liefern (allgemeine Anforderung, nicht nur für `--eval`/`--map`)? | **Bereits der Fall, kein Handlungsbedarf** | Empirisch verifiziert 2026-08-11: `ainetlinter --this-flag-does-not-exist` liefert automatisch `Befehl oder Argument '...' nicht erkannt.` + Usage-Hilfetext + Exit-Code 1, via System.CommandLine-Standardverhalten. Gilt automatisch auch für `--eval`/`--map` nach deren Entfernung in M8 — kein Soft-Deprecation-Sonderfall nötig. |
-| **D18** | Drift-Audit (Naming-Drift + DRY) als neues Epic aufnehmen — mit welchem Detailgrad? | **Nur als offene Ideensammlung (M9), noch nicht spezifiziert** | Nutzer-Anliegen 2026-08-11: typische Drift-Probleme bei autonomer agentischer Entwicklung (Naming-Drift-Beispiel "A" → "A23456", DRY-Beispiel JsonSerializerOptions-Duplikation aus dieser Session). Direkt nach M8 priorisiert, aber absichtlich ohne Score/Aufwand/Akzeptanzkriterien in die Roadmap aufgenommen — muss erst ausgearbeitet werden. Ideen (Duplicate-Detection via AST-Vergleich, Naming-Familien via String-Ähnlichkeit, Self-Audit-Skill) in [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md). Im selben Gespräch RAG/Vektor-Suche (Qdrant) diskutiert und für die beiden konkreten Beispiele als falsches Werkzeug eingeschätzt (lexikalisches bzw. strukturelles Problem, kein semantisches) — Details ebenfalls in `07-drift-audit-ideen.md`, keine endgültige Entscheidung, nur vorläufige Einschätzung. |
+| **D18** | Drift-Audit (Naming-Drift + DRY) als neues Epic aufnehmen — mit welchem Detailgrad? | **Nur als offene Ideensammlung (M9), noch nicht spezifiziert** | Nutzer-Anliegen 2026-08-11: typische Drift-Probleme bei autonomer agentischer Entwicklung (Naming-Drift-Beispiel "A" → "A23456", DRY-Beispiel JsonSerializerOptions-Duplikation aus dieser Session). Direkt nach M8 priorisiert, aber absichtlich ohne Score/Aufwand/Akzeptanzkriterien in die Roadmap aufgenommen — muss erst ausgearbeitet werden. Ideen (Duplicate-Detection via AST-Vergleich, Naming-Familien via String-Ähnlichkeit, Self-Audit-Skill) in [`07-drift-audit-ideen.md`](07-drift-audit-ideen.md). Im selben Gespräch RAG/Vektor-Suche (Qdrant) diskutiert und für die beiden konkreten Beispiele als falsches Werkzeug eingeschätzt (lexikalisches bzw. strukturelles Problem, kein semantisches) — Details ebenfalls in `07-drift-audit-ideen.md`, keine endgültige Entscheidung, nur vorläufige Einschätzung. **Abgelöst durch D19** (M9 jetzt spezifiziert). |
+| **D19** | Phase-1-Spec-Runde für M9 (2026-08-11): DRY-Scope final festlegen (Ideen A/F/C aus D18), Threshold-/Default-Werte, Tool+Checker-Umfang | **DRY-Block (A, F, C) jetzt spezifiziert und in Roadmap aufgenommen; Idee E (Naming-Drift) bleibt bewusst Skizze für ein separates Folge-Epic, B/D zurückgestellt bis Empirie-Bedarf.** Konkrete Defaults, alle mit Nutzer bestätigt: Jaccard-Schwellwerte `0.95/0.80/0.65` (CCFinder-/jscpd-üblich, unverändert übernommen), Min-Token-Filter `30` (konservativ für die kleinere Codebase), Identifier-Normalisierung **Default aus** (Opt-in pro Aufruf, verhindert semantisch falsche Klon-Meldungen), sowohl das MCP-Tool `find_duplicates` **als auch** der Linter-Checker `DuplicateCodeChecker` werden in derselben Runde gebaut (teilen sich die Scan-Engine, kein Mehraufwand durch Trennung), Self-Audit-Skill (Idee F) läuft **parallel zu Idee A** statt danach (sonst Risiko dass Tool ungenutzt bleibt), Cadence im Drift-Loop: **pro Step optional, pro Epic verpflichtend**. Architektur-Korrektur gegenüber dem Ideensammlungs-Entwurf: `rules.json`-Konfiguration folgt dem bestehenden flachen `Global`-Schema (nicht das dort skizzierte verschachtelte `{id,enabled,params}`-Objekt), `DuplicateCodeChecker` hängt sich in `PostAnalysisChecks.Run` (solution-weite Prüfung, analog `UiFileSeparationChecker`) statt in die Pro-Datei-Node-Walker der übrigen Checker. Volles Epic in §3 M9. |
