@@ -64,7 +64,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierGivenDepth1_StructuredContentDeserializesToCallSiteEntries()
     {
-        // S1.3: Symbol-Branch depth=1 bekommt StructuredContent, analog find_references.
+        // Symbol-Branch depth=1 bekommt StructuredContent, analog find_references.
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
@@ -80,7 +80,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_GitRefUncommittedChange_StructuredContentDeserializesToCallSiteEntries()
     {
-        // S1.3: Git-Diff-Branch bekommt ebenfalls StructuredContent (ueber DiffImpactAnalyzer.AnalyzeEntriesAsync).
+        // Git-Diff-Branch bekommt ebenfalls StructuredContent (ueber DiffImpactAnalyzer.AnalyzeEntriesAsync).
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
         var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
