@@ -22,12 +22,12 @@ namespace AiNetLinter.Mcp;
 /// 2500-Limit getrieben hat. <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
 /// datei-inhalts-basiert arbeitet (wie <c>get_violations</c>) und damit semantisch nicht zu
 /// <see cref="SymbolGraphToolRegistrations"/> (C#-Symbolgraph) oder
-/// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt. <c>metrics_tree</c> ist in
-/// EPIC-02 hierher gewandert, weil seine zwei neuen Roslyn-Modi (<c>violation_density</c>,
+/// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt. <c>metrics_tree</c> ist
+/// hier registriert, weil seine zwei neuen Roslyn-Modi (<c>violation_density</c>,
 /// <c>complexity</c>) denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> haben —
 /// derselbe Grund, aus dem <c>get_violations</c> hier registriert ist statt in
-/// <see cref="FileStructureToolRegistrations"/>. <c>pattern_detect</c> ist in S2.2 hierher
-/// gewandert, weil es denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> hat (reine
+/// <see cref="FileStructureToolRegistrations"/>. <c>pattern_detect</c> ist hier registriert,
+/// weil es denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> hat (reine
 /// Aggregation bereits erzeugter <c>RuleViolation</c>-Objekte nach Pattern-Kategorie, siehe
 /// <see cref="PatternCatalog"/>).
 /// </summary>
