@@ -109,7 +109,7 @@ internal static class FindSymbolTool
     /// <see cref="SymbolLocationEntry"/> je Quell-Fundstelle von <paramref name="symbol"/>.
     /// Einzige Quelle der Wahrheit fuer beide Formen (Text via <see cref="FormatEntry"/>,
     /// JSON via <see cref="FindSymbolScanner.FindMatchesWithEntriesAsync"/>s
-    /// <c>StructuredContent</c>, S1.3), damit Text und JSON nie auseinanderdriften.
+    /// <c>StructuredContent</c>), damit Text und JSON nie auseinanderdriften.
     /// </summary>
     internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(ISymbol symbol, string outputRoot)
     {
@@ -158,7 +158,7 @@ internal static class FindSymbolTool
 }
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>find_symbol</c> (S1.3) — eine Quell-Fundstelle eines Symbols
+/// StructuredContent-Eintrag fuer <c>find_symbol</c> — eine Quell-Fundstelle eines Symbols
 /// (Pfad, Zeile, Kind, voll qualifizierter Name). Ein Symbol mit mehreren Deklarationen (z. B.
 /// <c>partial class</c>) liefert einen Eintrag je Fundstelle, konsistent zu
 /// <see cref="FindSymbolTool.FormatSymbolLocations"/>s Text-Zeilen.
