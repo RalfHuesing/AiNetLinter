@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 17  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-017
+total_steps: 18  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-018
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-017
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 17 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 18 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-017`
+- **Aktueller Schritt:** `step-018`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -49,6 +49,7 @@ mehr nötig.>
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
+| step-018 | EPIC-4 | open | Duplicate-Detection-Toolkohorte auf In-Memory-Plattform | - | - | - | - |
 
 ## Config (optional)
 

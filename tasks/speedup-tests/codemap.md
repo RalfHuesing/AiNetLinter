@@ -2,7 +2,7 @@
 task: speedup-tests
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 ---
 
 <!-- step-008: EPIC-2 Teil 3 -- FilterMini-Fixture (Disk + In-Memory-Spec + Fidelity-Test) real im
@@ -17,8 +17,11 @@ last_updated: 2026-08-12
 <!-- step-016: EPIC-4 Teil 3 -- RefactoringDriftScanner auf der vorhandenen virtuellen
      Factory-Pfadkalibrierung nach FastTests migriert. -->
 
-<!-- planning step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die
-     vorhandene In-Memory-Factory migrieren; Tool-Dispatch-Vertraege bleiben getrennt. -->
+<!-- step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die vorhandene
+     In-Memory-Factory migriert; Tool-Dispatch-Vertraege blieben getrennt. -->
+
+<!-- planning step-018: EPIC-4 Teil 5 -- die 19 Duplicate-Detection-Tool-Dispatch-Vertraege als
+     gemeinsame Kohorte auf einen besitzenden In-Memory-Testkontext migrieren. -->
 
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->

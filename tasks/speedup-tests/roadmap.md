@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-017-Abgleich (step-016 approved, naechste EPIC-4-Enginekohorte geplant)
+last_updated: 2026-08-13  # Planer-Step-018-Abgleich (step-017 approved, Duplicate-Detection-Toolkohorte geplant)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -122,13 +122,16 @@ obsolet markiert) — kein starres Vorab-Dokument.
       produktseitigem Coverage-Audit. **step-016 (`approved`) schloss als dritten Teil den
       `RefactoringDriftScanner`:** sieben Legacy-Verträge wechselten auf dieselbe In-Memory-Factory;
       ein zusätzlicher Lambda-Caller-Vertrag schloss die beim produktseitigen Audit gefundene Lücke
-      der Caller-Normalisierung. **step-017 plant als nächsten geschlossenen Teil die gemeinsame
-      Duplicate-Detection-Engine-Familie:** `DuplicateDetectionEngineTests` (zwei Partial-Dateien)
-      und `RefactoringDriftEngineTests` wechseln gemeinsam auf die vorhandene In-Memory-Factory;
-      ein zusätzlicher Local-Function-Vertrag schließt die beim Engine-Audit gefundene Lücke.
-      `DuplicateDetectionToolTests` und `DuplicateDetectionToolRefactoringDriftTests` bleiben als
-      getrennte Load-State-/Mode-/Argument-/Response-Dispatch-Kohorte für einen späteren JIT-Step
-      offen; ebenso alle übrigen Scanner/Tools.
+      der Caller-Normalisierung. **step-017 (`approved`) schloss als vierten Teil die gemeinsame
+      Duplicate-Detection-Engine-Familie:** `DuplicateDetectionEngineTests` (zwei Dateien) und
+      `RefactoringDriftEngineTests` wechselten gemeinsam auf die vorhandene In-Memory-Factory; ein
+      zusätzlicher Local-Function-Vertrag schloss die beim Engine-Audit gefundene Lücke.
+      **step-018 plant als nächsten geschlossenen Teil die darauf aufbauende
+      Duplicate-Detection-Toolkohorte:** die 19 Load-State-/Mode-/Argument-/Response-Dispatch-
+      Verträge aus `DuplicateDetectionToolTests` und
+      `DuplicateDetectionToolRefactoringDriftTests` wechseln gemeinsam nach FastTests und ersetzen
+      ihre doppelte Ad-hoc-/Temp-Datei-Hülle durch einen schmalen, besitzenden Testkontext auf der
+      vorhandenen In-Memory-Factory. Alle übrigen Scanner/Tools bleiben für spätere JIT-Steps offen.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.
