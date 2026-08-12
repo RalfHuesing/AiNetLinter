@@ -1,0 +1,159 @@
+#nullable enable
+
+using System;
+using System.IO;
+using AiNetLinter.TestKit;
+using Xunit;
+
+namespace AiNetLinter.FastTests.Platform;
+
+/// <summary>
+/// Vertragstests fuer <see cref="IsolatedFixtureLease"/> (konzept.md §2): belegt mechanisch Kopiervertrag,
+/// Isolation zwischen Leases, Dispose-Verhalten und die <c>bin</c>/<c>obj</c>-Auslassung -- reine
+/// Datei-I/O gegen eine kopierte <c>BaselineMini</c>, kein MSBuild, kein Prozess.
+/// </summary>
+[Trait("Category", "Component")]
+public sealed class IsolatedFixtureLeaseTests
+{
+    [Fact]
+    public void CopyFixture_ExistingFixture_ReturnsExistingRootPathWithExpectedSourceFiles()
+    {
+        var solutionRoot = FindSolutionRoot();
+
+        using var lease = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
+
+        Assert.True(Directory.Exists(lease.RootPath));
+        Assert.True(File.Exists(Path.Combine(lease.RootPath, "BaselineMini.slnx")));
+        Assert.True(File.Exists(Path.Combine(lease.RootPath, "src", "BaselineMini", "BaselineMini.csproj")));
+    }
+
+    [Fact]
+    public void CopyFixture_CalledTwiceForSameFolder_ReturnsIndependentTempPaths()
+    {
+        var solutionRoot = FindSolutionRoot();
+
+        using var first = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
+        using var second = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
+
+        Assert.NotEqual(first.RootPath, second.RootPath);
+        Assert.True(Directory.Exists(first.RootPath));
+        Assert.True(Directory.Exists(second.RootPath));
+    }
+
+    [Fact]
+    public void Dispose_DeletesTempDirectory()
+    {
+        var solutionRoot = FindSolutionRoot();
+        var lease = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
+        var rootPath = lease.RootPath;
+
+        lease.Dispose();
+
+        Assert.False(Directory.Exists(rootPath));
+    }
+
+    [Fact]
+    public void CopyFixture_SourceContainsBinAndObjSubfolders_TargetOmitsThem()
+    {
+        var solutionRoot = FindSolutionRoot();
+        using var syntheticSourceRoot = SyntheticSourceWithBinAndObj.Create(solutionRoot);
+
+        using var lease = IsolatedFixtureLease.CopyFixture(syntheticSourceRoot.SolutionRoot, syntheticSourceRoot.FolderName);
+
+        Assert.True(File.Exists(Path.Combine(lease.RootPath, "BaselineMini.slnx")));
+        Assert.False(Directory.Exists(Path.Combine(lease.RootPath, "bin")));
+        Assert.False(Directory.Exists(Path.Combine(lease.RootPath, "obj")));
+    }
+
+    private static string FindSolutionRoot()
+    {
+        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (currentDir != null)
+        {
+            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
+            {
+                return currentDir.FullName;
+            }
+
+            currentDir = currentDir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
+    }
+
+    /// <summary>
+    /// Simuliert eine Quell-Fixture mit <c>bin</c>/<c>obj</c>-Unterordnern in einer eigenen Kopie von
+    /// <c>tests/Fixtures/BaselineMini</c>, damit der Auslassungstest nicht vom zufaelligen Bestandszustand
+    /// der echten Fixture abhaengt (die aktuell keinen <c>bin</c>-Ordner enthaelt).
+    /// </summary>
+    private sealed class SyntheticSourceWithBinAndObj : IDisposable
+    {
+        private readonly string tempRoot;
+
+        private SyntheticSourceWithBinAndObj(string tempRoot, string folderName)
+        {
+            this.tempRoot = tempRoot;
+            FolderName = folderName;
+        }
+
+        /// <summary>
+        /// Wurzelverzeichnis, das wie ein echter <c>solutionRoot</c>-Parameter fuer
+        /// <see cref="IsolatedFixtureLease.CopyFixture"/> aussieht (enthaelt <c>tests/Fixtures/&lt;FolderName&gt;</c>).
+        /// </summary>
+        public string SolutionRoot => tempRoot;
+
+        public string FolderName { get; }
+
+        public static SyntheticSourceWithBinAndObj Create(string solutionRoot)
+        {
+            const string folderName = "BaselineMini";
+            var tempRoot = Directory.CreateTempSubdirectory("AiNetSyntheticFixture_").FullName;
+            var destination = Path.Combine(tempRoot, "tests", "Fixtures", folderName);
+
+            CopyDirectory(Path.Combine(solutionRoot, "tests", "Fixtures", folderName), destination);
+
+            var binDir = Path.Combine(destination, "bin");
+            Directory.CreateDirectory(binDir);
+            File.WriteAllText(Path.Combine(binDir, "dummy.dll"), "dummy");
+
+            var objDir = Path.Combine(destination, "obj");
+            Directory.CreateDirectory(objDir);
+            File.WriteAllText(Path.Combine(objDir, "dummy.cache"), "dummy");
+
+            return new SyntheticSourceWithBinAndObj(tempRoot, folderName);
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, recursive: true);
+                }
+            }
+            catch
+            {
+                // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt.
+            }
+        }
+
+        private static void CopyDirectory(string sourceRoot, string destinationRoot)
+        {
+            Directory.CreateDirectory(destinationRoot);
+            foreach (var sourceFile in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourceRoot, sourceFile);
+                var parts = relativePath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+                if (Array.Exists(parts, p => p.Equals("obj", StringComparison.OrdinalIgnoreCase) || p.Equals("bin", StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                var targetFile = Path.Combine(destinationRoot, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+                File.Copy(sourceFile, targetFile, overwrite: true);
+            }
+        }
+    }
+}
