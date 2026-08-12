@@ -39,8 +39,8 @@ mehr nötig.>
 | step-005 | EPIC-1 | done | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | bffe3e3 | approved | 2c9611c |
 | step-006 | EPIC-2 | done | Testplattform: RoslynTestSolutionFactory + PreparedSolutionFixture | - | f258992 | approved | 45322c3 |
 | step-007 | EPIC-2 | done | Testplattform: IsolatedFixtureLease + MsBuildFixtureHost | - | b2ebfbb | approved | 45361b5 |
-| step-008 | EPIC-2 | done (Korrektur ausstehend) | Testplattform: FilterMini-Fixture (Disk + In-Memory) | - | 968c35a | issues | 243f2db |
-| step-009 | EPIC-2 | in_progress | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | - | - | - |
+| step-008 | EPIC-2 | done | Testplattform: FilterMini-Fixture (Disk + In-Memory) | - | 968c35a | issues→approved (via step-009) | 243f2db |
+| step-009 | EPIC-2 | done | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | 1d64b47 | approved | 296447f |
 
 ## Config (optional)
 
