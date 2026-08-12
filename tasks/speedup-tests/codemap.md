@@ -5,6 +5,9 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-12
 ---
 
+<!-- step-008: EPIC-2 Teil 3 -- FilterMini-Fixture (Disk + In-Memory-Spec + Fidelity-Test) real im
+     Bestand, EPIC-2 damit abgeschlossen. -->
+
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
 
@@ -31,6 +34,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.IntegrationTests/`** — neue Infrastruktur-Assembly, eigenes `xunit.runner.json` (`parallelizeAssembly: false`), referenziert `AiNetLinter` + `AiNetLinter.TestKit`; enthaelt bisher eine Proof-Testklasse (`Configuration/ProjectOverrideRealSolutionTests.cs`), sonst noch leer. (zuletzt: step-001)
 - **`src/AiNetLinter.TestKit/`** — SDK-Class-Library fuer die gemeinsame Testplattform, importiert `tests/AiNetLinter.TestProject.props`, referenziert nur `AiNetLinter`, keine xUnit-Abhaengigkeit; enthaelt `RoslynTestSolutionFactory.cs` (deklarativer, mehrprojekt-faehiger `AdhocWorkspace`-Solution-Builder mit einmalig gecachtem `MetadataReference`-Kernsatz, Typen `ProjectSpec`/`RoslynTestSolution`), `PreparedSolutionFixture.cs` (Assembly-weit geteilter, pro Szenario lazy materialisierender `RoslynTestSolution`-Cache, thread-sicher ueber `Lazy<T>` mit `ExecutionAndPublication`) und jetzt `IsolatedFixtureLease.cs` (reine Datei-I/O-Klasse, kopiert `tests/Fixtures/<Name>/` unter Auslassung von `bin`/`obj` in ein `Directory.CreateTempSubdirectory`-Temp-Verzeichnis; bewusst ohne MSBuild-/xUnit-Abhaengigkeit, damit `TestKitAssembly_DoesNotReferenceDeniedInfrastructure` gruen bleibt). (zuletzt: step-007)
 - **`src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHost.cs`** — `IAsyncLifetime`-Assembly-Fixture: kopiert `BaselineMini` einmal ueber `IsolatedFixtureLease` und laedt sie einmal echt via `SourceFileCatalog.LoadAsync` (Properties `Catalog`/`Solution`); bewusst in `AiNetLinter.IntegrationTests` statt `TestKit`, weil `FastTestsDependencyGuardTests` MSBuild-Referenzen in `TestKit.dll` als Verletzung meldet. Registrierung ueber `MsBuildFixtureHostAssemblyFixture.cs` (`[assembly: AssemblyFixture(typeof(MsBuildFixtureHost))]`, analog zu `PreparedSolutionAssemblyFixture.cs`). (zuletzt: step-007)
+- **`src/AiNetLinter.TestKit/FilterMiniSolutionSpec.cs`** — deklarative In-Memory-Spiegelung der Disk-Fixture `FilterMini`: `CreateProjectSpecs()` liefert das `ProjectSpec[]`-Paar (`FilterMini` mit `Core/Widget.cs`/`Utils/Formatter.cs`, `FilterMini.Tests` mit `Core/WidgetTests.cs` plus `ProjectReferences: ["FilterMini"]`), Quelltext textuell identisch zu den physischen Dateien unter `tests/Fixtures/FilterMini/`. (zuletzt: step-008)
+- **`src/AiNetLinter.IntegrationTests/Platform/FilterMiniFidelityTests.cs`** — Fidelity-/Formvergleichstest zwischen der echten `FilterMini`-Disk-Fixture (geladen direkt ueber `IsolatedFixtureLease`+`SourceFileCatalog.LoadAsync`, kein geteilter Host) und `FilterMiniSolutionSpec`: Projektnamen, Dokumentanzahl (ohne generierte `obj`/`bin`-Dateien), Nullable-Kontext, `TestProjectDetector.IsTestProject`-Ergebnis pro Projekt sowie `Widget.Describe()`-Rueckgabetyp muessen uebereinstimmen. (zuletzt: step-008)
 - **`tasks/speedup-tests/test-migration-ledger.md`** — existiert jetzt: vollstaendiges Inventar aller 183 Legacy-Testklassen (Quelldatei, Testklasse, Produktbereich, Status, Legacy-Filter, neuer Abdeckungsort), Statuslegende und Konsistenzregeln; alle Zeilen initial `pending`. (zuletzt: step-002)
 - **`src/AiNetLinter.IntegrationTests/Migration/TestMigrationLedgerConsistencyTests.cs`** — Ledger-Konsistenzguard (Category=Integration): scannt die Legacy-Testklassen in `src/AiNetLinter.Tests` per Roslyn-Syntaxbaum und prueft alle vier Konsistenzregeln aus dem Ledger-Kopf gegen den tatsaechlichen Bestand. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsDependencyGuardTests.cs`** — statischer Deny-Listen-Guard (Category=Unit) ueber die kompilierten Metadaten (AssemblyRef/TypeRef/MemberRef via System.Reflection.Metadata) von `AiNetLinter.FastTests.dll`/`AiNetLinter.TestKit.dll` gegen MSBuild-/Workspace-/Process-/`SourceFileCatalog.LoadAsync`-Referenzen. (zuletzt: step-002)
@@ -96,7 +101,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`tests/Fixtures/GitImpactMini/`** — kleiner Symbol- und Git-Impact-Bestand. (zuletzt: planning)
 - **`tests/Fixtures/DiRegistrationMini/`** — kleine DI-Registrierungsstruktur. (zuletzt: planning)
 - **`tests/Fixtures/SymbolGraphMini/`** — gemeinsamer Symbol-, Hierarchie-, Call- und Violation-Bestand. (zuletzt: planning)
-- **`tests/Fixtures/FilterMini/`** — vorgesehener neuer kalibrierter Mehrprojekt-Bestand fuer Projekt-, Namespace-, Test- und Sichtbarkeitsfilter. (zuletzt: planning)
+- **`tests/Fixtures/FilterMini/`** — real im Bestand: kalibrierte Mehrprojekt-Fixture (Produktions- + Testprojekt mit Projektreferenz, drei Namespaces `FilterMini.Core`/`FilterMini.Utils`/`FilterMini.Tests.Core`, public/private- und public/internal-Mix) fuer Projekt-, Namespace-, Test- und Sichtbarkeitsfilter; In-Memory-Spiegel siehe `FilterMiniSolutionSpec.cs`. (zuletzt: step-008)
 
 ## Laufzeit-Hotspots und Migrationskandidaten
 
