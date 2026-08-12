@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-006-Abgleich
+last_updated: 2026-08-12  # Planer-Step-007-Abgleich
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -82,15 +82,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
       analysieren, CLI-Adapter, MCP-Handshake) und Umschalten des normalen Gates auf die neuen
       schnellen Profile.
 - [ ] EPIC-2: Testplattform-Fundamente — `RoslynTestSolutionFactory`, `PreparedSolutionFixture`,
-      gecachte `MetadataReference`n, lazy Materialisierung, `FilterMini`-Fixture — Konzept §2/§4.
-      Voraussetzung für die breite Migration in EPIC-3/4, da diese Bausteine von den migrierten
-      Tests konsumiert werden. **In Arbeit → step-006** (step-006 deckt `RoslynTestSolutionFactory`,
-      die gecachten `MetadataReference`n und `PreparedSolutionFixture` mit lazy
-      Szenario-Materialisierung ab, inkl. Migration des bestehenden lokalen
-      `CreateAdhocSolution`-Helpers aus `LinterEngineSolutionAnalysisTests` auf die neue
-      Plattform als erster echter Konsument — **offen bleibt danach**: `FilterMini`-Fixture, die
-      erst mit einem echten Konsumenten sinnvoll ist und voraussichtlich zusammen mit der
-      Filtermatrix-Migration in EPIC-4 gebaut wird).
+      `MsBuildFixtureHost`, `IsolatedFixtureLease`, gecachte `MetadataReference`n, lazy
+      Materialisierung, `FilterMini`-Fixture — Konzept §2/§4. Voraussetzung für die breite Migration
+      in EPIC-3/4/5, da diese Bausteine von den migrierten Tests konsumiert werden. **In Arbeit →
+      step-006** (step-006 deckt `RoslynTestSolutionFactory`, die gecachten `MetadataReference`n und
+      `PreparedSolutionFixture` mit lazy Szenario-Materialisierung ab, inkl. Migration des
+      bestehenden lokalen `CreateAdhocSolution`-Helpers aus `LinterEngineSolutionAnalysisTests` auf
+      die neue Plattform als erster echter Konsument). **Offen bleibt nach step-006, laut Konzept §2
+      Bestandteil dieses Epics (nicht von EPIC-5 vorweggenommen, EPIC-5 migriert lediglich die
+      konsumierende Testkohorte):** `MsBuildFixtureHost` (einmaliger echter `MSBuildWorkspace`-Load
+      einer kanonischen Mini-Solution) und `IsolatedFixtureLease` (isolierte Kopie für
+      Mutations-Tests) — geplant für step-007. Sowie weiterhin offen: `FilterMini`-Fixture, die erst
+      mit einem echten Konsumenten sinnvoll ist und voraussichtlich zusammen mit der
+      Filtermatrix-Migration in EPIC-4 gebaut wird.
 - [ ] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
       kleine-Compilation-Tests ohne MSBuild/Prozess/Repo aus `AiNetLinter.Tests` nach
       `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1.
