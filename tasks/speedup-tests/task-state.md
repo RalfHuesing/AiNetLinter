@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 3  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-003
+total_steps: 4  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-004
 ---
 
 # Task State: speedup-tests
@@ -15,7 +15,7 @@ current_step: step-003
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-003`
+- **Aktueller Schritt:** `step-004`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (noch nicht erzeugt)
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -35,6 +35,7 @@ mehr nötig.>
 | step-001 | EPIC-1 | done | Fundament: Zielprojekte + TestProject.props | - | b1fe9eb | approved | 9d20376 |
 | step-002 | EPIC-1 | done | Fundament: Migrationsledger, Guards, Baseline-Messung | - | cd1c80f | issues→approved (via step-003) | c5d4b10 |
 | step-003 | EPIC-1 | done | Korrektur: Nachweis Ledger-Guard | step-002 | c16be1a | approved | c16be1a |
+| step-004 | EPIC-1 | in_progress | Fundament: IVT, Safety Envelope, Legacy-Gate-Switch | - | - | - | - |
 
 ## Config (optional)
 
