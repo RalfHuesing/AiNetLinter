@@ -33,7 +33,7 @@ mehr nötig.>
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-1 | done | Fundament: Zielprojekte + TestProject.props | - | b1fe9eb | approved | 9d20376 |
-| step-002 | EPIC-1 | in_progress | Fundament: Migrationsledger, Guards, Baseline-Messung | - | - | - | - |
+| step-002 | EPIC-1 | done (Korrektur ausstehend) | Fundament: Migrationsledger, Guards, Baseline-Messung | - | cd1c80f | issues | c5d4b10 |
 
 ## Config (optional)
 
