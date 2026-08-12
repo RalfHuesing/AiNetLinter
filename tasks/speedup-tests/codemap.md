@@ -5,6 +5,10 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-12
 ---
 
+<!-- Rows marked "step-001" existieren jetzt tatsaechlich im Bestand; Rows mit "planning" sind
+     weiterhin offene Platzhalter/Beobachtungen aus der Konzeptphase. -->
+
+
 # CodeMap: speedup-tests
 
 Task-scoped Landkarte nach dem Pointer-Prinzip: Jeder Eintrag nennt nur Ort und Relevanz; Details
@@ -12,22 +16,22 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 
 ## Projekt- und Laufvertraege
 
-- **`AiNetLinter.slnx`** — enthaelt derzeit Produkt- und einziges Testprojekt und ist fuer eine moegliche physische Testtrennung relevant. (zuletzt: planning)
-- **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz. (zuletzt: planning)
-- **`src/AiNetLinter.FastTests/`** — vorgesehene neue schnelle Assembly fuer Unit- und In-Memory-Component-Tests. (zuletzt: planning)
-- **`src/AiNetLinter.IntegrationTests/`** — vorgesehene neue Infrastruktur-Assembly fuer Integration, Dogfood, Performance und Stress. (zuletzt: planning)
-- **`src/AiNetLinter.TestKit/`** — vorgesehene gemeinsame Testbibliothek fuer deklarative Builder und guenstige Hilfen ohne teure Hosts. (zuletzt: planning)
-- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status-, Abdeckungs- und Loeschindex fuer die Strangler-Migration des Legacy-Testprojekts. (zuletzt: planning)
+- **`AiNetLinter.slnx`** — enthaelt jetzt fuenf Projekte: Produkt, Legacy-Testprojekt und die drei neuen Zielprojekte (FastTests, IntegrationTests, TestKit). (zuletzt: step-001)
+- **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz; unveraendert (Legacy, Strangler-Quelle). (zuletzt: planning)
+- **`src/AiNetLinter.FastTests/`** — neue schnelle Assembly (SDK-Testprojekt), importiert `tests/AiNetLinter.TestProject.props`, referenziert `AiNetLinter` + `AiNetLinter.TestKit`; enthaelt bisher zwei Proof-Testklassen (`Configuration/ProjectOverrideResolutionTests.cs`, `Core/TestProjectDetectorSuffixTests.cs`), sonst noch leer. (zuletzt: step-001)
+- **`src/AiNetLinter.IntegrationTests/`** — neue Infrastruktur-Assembly, eigenes `xunit.runner.json` (`parallelizeAssembly: false`), referenziert `AiNetLinter` + `AiNetLinter.TestKit`; enthaelt bisher eine Proof-Testklasse (`Configuration/ProjectOverrideRealSolutionTests.cs`), sonst noch leer. (zuletzt: step-001)
+- **`src/AiNetLinter.TestKit/`** — neue leere SDK-Class-Library fuer die kuenftige gemeinsame Testplattform, importiert `tests/AiNetLinter.TestProject.props`, referenziert nur `AiNetLinter`, keine xUnit-Abhaengigkeit, noch keine `.cs`-Dateien. (zuletzt: step-001)
+- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status-, Abdeckungs- und Loeschindex fuer die Strangler-Migration des Legacy-Testprojekts; noch nicht angelegt. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/xunit.runner.json`** — steuert Collection-Parallelitaet, Threadzahl und Long-Running-Diagnostik. (zuletzt: planning)
-- **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche. (zuletzt: planning)
-- **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates. (zuletzt: planning)
+- **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche; wird jetzt auch von FastTests/IntegrationTests referenziert, unveraendert im Inhalt. (zuletzt: planning)
+- **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates; noch nicht auf die neuen Projekte umgeschaltet. (zuletzt: planning)
 - **`.agents/rules/AiNetLinterRichtlinien.mdc`** — enthaelt die projektspezifischen Test-, Parallelitaets-, MCP- und Commitregeln, u. a. die TRX-Diagnoseregel auf `TestResults/latest.trx`. (zuletzt: planning)
-- **`tests/AiNetLinter.TestProject.props`** — vorgesehene explizit importierte gemeinsame Eigenschaften und MSBuild-Paketpins der drei Zielprojekte ohne implizite Wirkung auf Produkt- oder Fixture-Projekte. (zuletzt: planning)
-- **`src/Directory.Build.props`** — pinnt bereits heute `Microsoft.Build.Framework` mit `PrivateAssets`/`ExcludeAssets` fuer alle Projekte unter `src/`; die neue `TestProject.props` muss dieses Pinning ergaenzen/spiegeln, nicht ersetzen, und darf nicht mit ihr kollidieren. (zuletzt: roadmap, verifiziert im Bestand)
+- **`tests/AiNetLinter.TestProject.props`** — existiert jetzt: explizit importierte gemeinsame Props (`TargetFramework net10.0`, `Nullable`, `TreatWarningsAsErrors`, `IsPackable false`) plus `Microsoft.Build.Framework`/`Microsoft.NET.StringTools`-Pinning (18.8.2) fuer alle drei neuen Projekte, ohne festes `RunSettingsFilePath`. (zuletzt: step-001)
+- **`src/Directory.Build.props`** — pinnt bereits heute `Microsoft.Build.Framework` mit `PrivateAssets`/`ExcludeAssets` fuer alle Projekte unter `src/`; die neue `TestProject.props` ergaenzt/spiegelt dieses Pinning fuer die drei neuen Projekte, kollidiert nicht damit (verifiziert: `dotnet build` gruen). (zuletzt: step-001)
 
 ## Produktive Konfigurationsvertraege mit Bezug zur Projektstruktur
 
-- **`rules.json`** — enthaelt `ProjectOverrides` (`*.Tests`), `TestSentinel` und `EnableTestSentinel`; die neuen Projektnamen greifen ohne Anpassung nicht. (zuletzt: planning)
+- **`rules.json`** — `ProjectOverrides` matcht jetzt `"*Tests"` (statt `"*.Tests"`, deckt `AiNetLinter.Tests`/`FastTests`/`IntegrationTests` ab) plus separatem Schluessel `"AiNetLinter.TestKit"`; `TestSentinel.TestProjectNameSuffixes` um `"TestKit"` erweitert. `InternalsVisibleTo` fuer die neuen Assemblies bewusst noch nicht ergaenzt (kein Bedarf, siehe step-001 JIT-Kontext). (zuletzt: step-001)
 - **`src/AiNetLinter/Configuration/ProjectConfigResolver.cs`** — uebersetzt Override-Schluessel in Regex und entscheidet, welche Regeln fuer ein Projekt gelten. (zuletzt: planning)
 - **`src/AiNetLinter/Core/TestProjectDetector.cs`** — erkennt Testprojekte ueber Metadatenreferenzen und Namenssuffixe; relevant fuer die Einordnung von TestKit und den neuen Assemblies. (zuletzt: planning)
 - **`src/AiNetLinter/Core/PostAnalysisChecks.cs`** — enthaelt den `StaticTestSentinel`, dessen Abdeckungsindex von den Testprojekten der geladenen Solution abhaengt. (zuletzt: planning)
