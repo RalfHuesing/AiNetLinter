@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FilterMini/FilterMini.csproj" />
+    <Project Path="src/FilterMini.Tests/FilterMini.Tests.csproj" />
+  </Folder>
+</Solution>
