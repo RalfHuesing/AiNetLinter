@@ -15,7 +15,7 @@ open_questions:
 
 Ein Roslyn-basiertes MCP-Server-Tool (`find_magic_values`), das als **On-Demand-Audit-Werkzeug** (keine störende/blockierende Linter-Build-Regel) dient. Es befähigt KI-Agenten und Entwickler dazu, auf Anforderung eine C# / .NET 10 Codebase gezielt nach festen Werten (Literalen wie Strings, Zahlen, Pfaden, Timeouts) zu scannen — **auch bei Einzelvorkommen ($\text{minOccurrences} = 1$)** —, diese fachlich zu klassifizieren und strukturierte Refactoring-Empfehlungen (Constants, `appsettings.json`, Enums, `nameof(...)`, Lokalisierung) zu liefern.
 
-Fundstellen, die bewusst im Code verbleiben sollen (False Positives oder beabsichtigte Literale), können über den bestehenden AiNetLinter-Suppression-Mechanismus (`// ainetlinter-disable MagicValues`) dauerhaft stumm geschaltet werden, damit sie in Folge-Audits nicht wiederholt gemeldet werden.
+Fundstellen, die bewusst im Code verbleiben sollen (False Positives oder beabsichtigte Literale), können über den bestehenden AiNetLinter-Suppression-Mechanismus (`// ainetlinter-disable MagicValues`) dauerhaft stumm geschaltet werden, damit sie in Folge-Audits nicht wiederholt gemdet werden.
 
 ## Warum / Kontext
 
@@ -33,16 +33,19 @@ Beim Entwickeln und Refactorn mit KI-Agenten entstehen häufig unbeabsichtigt **
 
 Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen und Magic Values sind folgende praxisrelevanten Muster aufgefallen:
 
-1. **In-String-Magic-Values & Interpolations-Fragmente (`$"..."`):**
+1. **Einheitliche `maxResults`-Kappung (`McpTruncation`):**
+   - *Bestandscode-Konvention:* Alle bestehenden AiNetLinter MCP-Tools (`get_violations`, `find_symbol`, `find_references`, `find_duplicates`, `search_pattern`) nutzen konsistent `maxResults` (Default: 50 bzw. 20) und kappen große Ergebnismengen mit der zentralen `McpTruncation`-Hilfsklasse (`"[N Treffer gesamt, M gezeigt — Filter verfeinern oder maxResults erhöhen]"`).
+   - *Übernahme:* `find_magic_values` übernimmt exakt diesen Standard-Parameter `maxResults` (Default: 50), um den Agenten vor riesigen JSON-Dumps zu schützen.
+2. **In-String-Magic-Values & Interpolations-Fragmente (`$"..."`):**
    - *Fundstelle:* In `HotspotMapBuilder.cs` und `GetHotspotsScanner.cs` steht `private const double WarnThreshold = 0.80;`, gleichzeitig wird in Strings inline `">80% des Limits"` hartcodiert.
    - *Roslyn-Bedarf:* Der Scanner muss auch statische Textteile in `InterpolatedStringExpressionSyntax` (`$"..."`) analysieren.
-2. **Duplizierte `private const`-Felder über Klassengrenzen hinweg:**
+3. **Duplizierte `private const`-Felder über Klassengrenzen hinweg:**
    - *Fundstelle:* `WarnThreshold = 0.80` ist in `HotspotMapBuilder.cs` und `GetHotspotsScanner.cs` als jeweils lokales `private const` definiert.
    - *Erweiterte Heuristik:* Das MCP-Tool sollte nicht nur anonyme Literale finden, sondern auch warnen, wenn **mehrere private/internal `const` Felder in verschiedenen Klassen identische Werte definieren** und die Hochstufung in eine gemeinsame Konstanten-Klasse empfehlen.
-3. **`nameof(...)`-Kandidaten:**
+4. **`nameof(...)`-Kandidaten:**
    - *Fundstelle:* Parameter- und Typ-Namen in Exceptions, Loggern oder Sentinel-String-Vergleichen (z. B. `"StaticTestSentinel"` oder Parameter-Strings).
    - *Neue Kategorie `nameof_candidates`:* String-Literale, die exakt einem Parameter, Member oder Typnamen im aktuellen Scope entsprechen, werden als Kandidat für `nameof(...)` klassifiziert.
-4. **C# / .NET 10 Raw String Literals (`"""..."""`):**
+5. **C# / .NET 10 Raw String Literals (`"""..."""`):**
    - *Roslyn-Bedarf:* Unterstützung von C# 11/12/13/14 Raw String Literals, die für JSON, Multi-Line-Prompts oder SQL verwendet werden.
 
 ## Scope
@@ -51,6 +54,8 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 
 - **Vollständige Erfassung (Default: `minOccurrences = 1`):**
   - Alle Literale erfassen, auch wenn sie nur 1x im Code stehen.
+- **Kappung großer Dumps (`maxResults: 50` Default via `McpTruncation`):**
+  - Schützt das Context-Window des Agenten. Übersteigt die Trefferzahl `maxResults`, wird das Resultat sauber gekappt und eine informative Meta-Zeile angehängt (`"[N Treffer gesamt, M gezeigt — scope/categoryFilter verfeinern oder maxResults erhöhen]"`).
 - **Dauerhafte Unterdrückung (Suppression-Support):**
   - Unterdrückung über das bestehende AiNetLinter-Kommentarsystem: `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`).
   - Wenn ein Entwickler/Agent ein Vorkommen als beabsichtigt oder False Positive bewertet und kommentiert, wird es in allen zukünftigen MCP-Audits ignoriert (`includeSuppressed: false` als Default).
@@ -76,12 +81,13 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
   "name": "find_magic_values",
   "description": "Führt einen On-Demand-Audit nach Magic Values (Strings, Zahlen, Pfaden, Timeouts) in C#-Quellcode durch und liefert fachlich klassifizierte Refactoring-Empfehlungen.",
   "parameters": {
-    "scope": "Optional. Projekt- oder Verzeichnispfad für den Scan (z. B. 'src/AiNetLinter/Mcp').",
-    "valueType": "all | strings | numbers (Default: 'all'). Filtert nach dem Datentyp des Literals.",
-    "categoryFilter": "all | config_candidates | constant_candidates | enum_candidates | nameof_candidates | localization_candidates (Default: 'all'). Filtert nach dem fachlichen Refactoring-Ziel.",
-    "minOccurrences": "Minimales Vorkommen für die Meldung (Default: 1 für vollständige Erfassung aller Einzelwerte; kann z. B. auf 2 gesetzt werden um nur Duplikate zu finden).",
-    "includeTests": "boolean (Default: false). Ob Test-Projekte/Dateien in den Audit einbezogen werden sollen.",
-    "includeSuppressed": "boolean (Default: false). Ob per '// ainetlinter-disable MagicValues' unterdrückte Fundstellen mit ausgegeben werden sollen."
+    "scope": "Optional. Pfad/Projekt-Filter (z. B. 'src/AiNetLinter/Mcp').",
+    "valueType": "all | strings | numbers (Default: 'all'). Filtert nach Datentyp der Literale.",
+    "categoryFilter": "all | config_candidates | constant_candidates | enum_candidates | nameof_candidates | localization_candidates (Default: 'all'). Filtert nach fachlichem Refactoring-Ziel.",
+    "minOccurrences": "Minimales Vorkommen (Default: 1 für alle Einzelwerte; kann z. B. auf 2 gesetzt werden um nur Duplikate zu finden).",
+    "maxResults": "Maximale Anzahl der zurückgegebenen Ergebnisse (Default: 50). Schützt vor Context-Window-Überlauf.",
+    "includeTests": "boolean (Default: false). Einbeziehung von Test-Projekten.",
+    "includeSuppressed": "boolean (Default: false). Einbeziehung von '// ainetlinter-disable MagicValues' markierten Stellen."
   }
 }
 ```
@@ -90,7 +96,7 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 
 1. **Beauftragung & Parameterwahl:** Der Entwickler beauftragt den Agenten mit einem fokussierten Audit (z. B. *"Prüfe alle magischen Zahlen/Timeouts"* oder *"Lagere alle Config-Parameter aus"*).
 2. **Zielgerichtete MCP-Abfrage:** 
-   - Agent ruft z. B. `find_magic_values(valueType="numbers")` auf.
+   - Agent ruft z. B. `find_magic_values(valueType="numbers", maxResults=50)` auf.
    - Oder `find_magic_values(categoryFilter="config_candidates")`.
 3. **Bewertung & Aktion:**
    - **Echter Magic Value:** Agent verlagert den Wert in `appsettings.json`, `Constants.cs`, `nameof(...)` etc.
@@ -118,6 +124,7 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 | :--- | :--- | :--- |
 | **Literal-Erkennung & AST-Scan** | `SyntaxWalker` über `LiteralExpressionSyntax`, Raw String Literals & `InterpolatedStringExpressionSyntax`. | 🟢 **100% machbar.** Sehr schnell & trivial. |
 | **Typ- & Kategorie-Filterung** | Auswertung der Parameter `valueType` und `categoryFilter` direkt im AST-Walker / Evaluation Pass. | 🟢 **100% machbar.** Spart Tokens & Rechenzeit. |
+| **`maxResults`-Kappung (`McpTruncation`)** | Wiederverwendung der `McpTruncation`-Klasse der AiNetLinter MCP Engine. | 🟢 **100% machbar.** Engine bereits vorhanden. |
 | **Suppression-Auswertung (`// ainetlinter-disable`)** | Einbindung des bestehenden `SuppressionScanner` / `Trivia` Check in Roslyn. | 🟢 **100% machbar.** Die Engine existiert bereits im Codebase (`src/AiNetLinter/Suppression`). |
 | **`nameof(...)`-Erkennung** | Scope-Check des AST-Knotens gegen Parameter, lokale Variablen & Member-Identifier. | 🟢 **Gut machbar.** Prüft, ob String-Inhalt einem Symbol-Namen im aktuellen Context entspricht. |
 | **Erkennung duplizierter `private const`** | Aggregation von `FieldDeclarationSyntax` mit `const`-Modifier über mehrere Klassen. | 🟢 **Gut machbar.** Erkennt doppelt definierte Konstanten (wie `WarnThreshold = 0.80`). |
@@ -139,12 +146,12 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 
 - **MCP-Tool Handler & Scanner:** `src/AiNetLinter/Mcp/` (bzw. Handlers-Verzeichnis für MCP Tools).
 - **Roslyn-Walker & Semantic Evaluator:** `src/AiNetLinter/Rules/` bzw. `src/AiNetLinter/Generators/`.
-- **Suppression-Engine Wiederverwendung:** `src/AiNetLinter/Suppression/` (`SuppressionScanner`, `SuppressionEvaluator`).
+- **Suppression-Engine & Truncation Wiederverwendung:** `src/AiNetLinter/Suppression/` (`SuppressionScanner`) und `src/AiNetLinter/Mcp/McpTruncation.cs`.
 - **Tests:** `src/AiNetLinter.FastTests` (Unit-Scans) & `src/AiNetLinter.IntegrationTests` (MCP JSON-RPC Integration).
 
 ## Entdeckte Mängel/Redundanzen
 
-- Keine Mängel im Bestandscode identifiziert; Wiederverwendung der bereits existierenden `Suppression`-Engine verhindert Code-Duplikation.
+- Keine Mängel im Bestandscode identifiziert; Wiederverwendung der existierenden `Suppression`- und `McpTruncation`-Engine verhindert Code-Duplikation.
 
 ## Wie (grober Ansatz)
 
@@ -153,13 +160,14 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 3. Check gegen `SuppressionScanner`: Zeilen mit `// ainetlinter-disable MagicValues` werden ausgeblendet (`includeSuppressed: false`).
 4. Kontextanalyse via `SemanticModel` bestimmt Methoden-Parameternamen, `nameof(...)`-Übereinstimmungen und Zuweisungsvariablen für Config-, Timeout- und Enum-Heuristiken.
 5. Duplikate, Einzelwerte und doppelte `private const` Felder werden aggregiert (`minOccurrences = 1` als Standard).
-6. Das Tool formatiert die Fundstellen als kompaktes JSON-Resultat mit konkreten `suggestedTarget`-Hinweisen.
+6. Ergebnisse werden mit `McpTruncation` bei `maxResults` (Default: 50) gekappt und als kompaktes JSON-Resultat zurückgegeben.
 
 ## Definition of Done / Erfolgskriterien
 
 - `find_magic_values` ist als MCP-Tool in `.mcp.json` / MCP Server Tool-Registry verfügbar.
 - Target Framework .NET 10 wird unterstützt.
-- Gezielte Filter-Parameter (`valueType`, `categoryFilter`, `scope`, `minOccurrences`) sind voll funktionsfähig.
+- Gezielte Filter-Parameter (`valueType`, `categoryFilter`, `scope`, `minOccurrences`, `maxResults`) sind voll funktionsfähig.
+- `maxResults`-Kappung nutzt die zentrale `McpTruncation`-Hilfsklasse.
 - Suppress-Kommentare (`// ainetlinter-disable MagicValues`) schalten Fundstellen zuverlässig stumm.
 - Scans mit `minOccurrences = 1` finden auch Einzelvorkommen treffsicher.
 - `nameof(...)`-Kandidaten und duplizierte `private const`-Felder werden erkannt.
