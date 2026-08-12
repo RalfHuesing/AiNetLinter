@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 14  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-014
+total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-015
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-014
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 14 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 15 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-014`
+- **Aktueller Schritt:** `step-015`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -46,6 +46,7 @@ mehr nötig.>
 | step-012 | EPIC-3 | done | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | eb645b8 | approved | be663e6 |
 | step-013 | EPIC-4 | done | Skeleton-Filterkohorte auf FilterMini migrieren | - | 8edee78 | issues→approved (via step-014) | 086ce31 |
 | step-014 | EPIC-4 | done | Korrektur: Namespace-Glob selektiv kalibrieren | step-013 | f41fd31 | approved | 34eaa0b |
+| step-015 | EPIC-4 | open | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | - | - | - |
 
 ## Config (optional)
 
