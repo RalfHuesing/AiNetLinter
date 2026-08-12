@@ -387,7 +387,19 @@ Konkrete Heuristik: **Wenn der Agent typischerweise 2+ Calls für eine User-Stor
 
 Das ist **differenzierend gegenüber allen anderen Roslyn-MCP-Servern**, die "nur Daten liefern".
 
-### 4.7 Zusammenfassung Konkurrenzlandschaft
+### 4.7 NDepend.MCP.Server — Architektur-/Metrik-Fokus statt AI-Readability
+
+**Ergänzt am 2026-08-13** (Nachtrag aus `tasks/features/09-wettbewerbsdossier-2026-08.md`, Handlungsempfehlung 5 — bei der ursprünglichen Recherche am 2026-08-06 noch nicht erfasst).
+
+**Repo:** [github.com/ndepend/NDepend.MCP.Server](https://github.com/ndepend/NDepend.MCP.Server), [blog.ndepend.com — MCP-Server-Guide](https://blog.ndepend.com/developing-an-mcp-server-with-c-a-complete-guide/)
+
+**Konzept:** NDepend (etabliertes kommerzielles .NET-Architektur-Tool, ab ca. $1.000/Jahr) hat 2026 einen eigenen, auf dem offiziellen `ModelContextProtocol`-NuGet-Paket aufbauenden MCP-Server veröffentlicht. Fokus liegt auf NDepends angestammten Stärken: **CQLinq**-basierte Architektur-/Dependency-Queries, Metrik-Trends über Zeit (Baselines zwischen Builds), Technical-Debt-Schätzung in Personentagen — Workspace-Analyse, Code-Inspektion und automatisierte Fixes für LLM-Agenten.
+
+**Wichtige Abgrenzung:** Kein AI-Readability-Regelwerk im Sinne von AiNetLinter — NDepend optimiert nicht dafür, dass ein LLM den Code selbst fehlerfrei erfassen/manipulieren kann, sondern liefert Architektur-Kennzahlen für Menschen (jetzt zusätzlich per MCP auch für Agenten). Überschneidet sich damit inhaltlich näher mit AiNetLinters `dependency_graph`/`metrics_tree` als mit dem Kern-Linting-Regelwerk.
+
+**Lehre für AiNetLinter:** Ein etabliertes kommerzielles Tool mit realer Marktbasis (im Gegensatz zu den meisten Solo-Roslyn-MCP-Servern in 4.1–4.6) validiert unabhängig, dass "Architektur-/Metrik-Daten für Agenten via MCP" ein tragfähiges Produktmuster ist — verstärkt aber auch die im Dossier (Abschnitt 4, "Adoptions-Realität") festgestellte Kluft zwischen AiNetLinters technischer Differenzierung und seiner Marktpräsenz.
+
+### 4.8 Zusammenfassung Konkurrenzlandschaft
 
 | Konkurrent | Lücke / Lektion für AiNetLinter |
 |------------|----------------------------------|
@@ -401,6 +413,7 @@ Das ist **differenzierend gegenüber allen anderen Roslyn-MCP-Servern**, die "nu
 | **Continue.dev** | Multi-MCP-Koexistenz → Namespace-Konventionen |
 | **Cody** | Cross-Repo-Indexing als Markt-Lücke |
 | **CodeScene** | **Quality-Contract-Pattern** (self-correcting loop) → **unser Haupt-Differentiator** |
+| **NDepend.MCP.Server** | Etabliertes kommerzielles Tool validiert das Marktmuster, aber anderer Fokus (Architektur-Metriken statt AI-Readability-Regelwerk) |
 
 ---
 
@@ -972,6 +985,8 @@ Sortierung: **Impact** (Wettbewerbsvorteil × Token-Einsparung × Häufigkeit) �
 - [github.com/codescene-oss/codescene-mcp-server](https://github.com/codescene-oss/codescene-mcp-server) — CodeScene-MCP-Repo
 - [codescene.com/hubfs/CodeScene-AI-Playbook-2026.pdf](https://codescene.com/hubfs/CodeScene-AI-Playbook-2026.pdf) — AI-Playbook
 - [helpcenter.codescene.com/articles/7208397-what-can-codescene-single-user-mcp-do](https://helpcenter.codescene.com/articles/7208397-what-can-codescene-single-user-mcp-do) — CodeScene-Tool-Liste
+- [github.com/ndepend/NDepend.MCP.Server](https://github.com/ndepend/NDepend.MCP.Server) — NDepend-MCP-Repo (Nachtrag 2026-08-13)
+- [blog.ndepend.com — MCP-Server-Guide](https://blog.ndepend.com/developing-an-mcp-server-with-c-a-complete-guide/) — NDepend-MCP-Hintergrund (Nachtrag 2026-08-13)
 
 ### Phase 5 — Roslyn-API
 - [devleader.ca/2026/07/16/ioperation-vs-syntaxnode-vs-symbol-in-roslyn](https://www.devleader.ca/2026/07/16/ioperation-vs-syntaxnode-vs-symbol-in-roslyn-choosing-the-right-analysis-api) — IOperation vs SyntaxNode vs Symbol

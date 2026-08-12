@@ -38,6 +38,8 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 
 Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollständigen Konfiguration:
 
+> **Hinweis:** Dieses Beispiel zeigt keine Code-Defaults, sondern ein bewusst strenges Beispielprofil — teils die in `Docs/ROADMAP.md` Epic 27 empirisch kalibrierten Werte (z. B. `MaxLineCount: 500`, `MaxInheritanceDepth: 3`), teils noch strengere Werte aus dem "Strict"-Profil weiter unten (z. B. `MaxCyclomaticComplexity`/`MaxCognitiveComplexity: 5` statt Code-Default 12/15). Die tatsächlichen Code-Defaults (das, was ohne eigene `rules.json` gilt) stehen ausschließlich in der Regel-Tabelle unten.
+
 ```json
 {
   "Global": {
@@ -107,7 +109,8 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
       "Generated",
       "wwwroot",
       "obj",
-      "bin"
+      "bin",
+      ".git"
     ],
     "MaxBoolParameterCount": 1,
     "MaxBoolParameterCountAllowPrivate": true,
@@ -120,7 +123,8 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
       "Mapper",
       "Constants",
       "Config",
-      "Args"
+      "Args",
+      "ConfigOverride"
     ],
     "MaxAIContextFootprint": 2500,
     "MaxSwitchArms": 10,
@@ -142,7 +146,11 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
       "Extensions",
       "Constants",
       "Converter",
-      "Profile"
+      "Profile",
+      "Seed",
+      "Migration",
+      "Startup",
+      "Module"
     ],
     "ExemptWhenInheritsFrom": ["ComponentBase", "IValueConverter", "Profile"],
     "ExemptStaticClasses": true
@@ -532,7 +540,7 @@ Empfohlene Konfiguration:
 
 ### Ausnahmen für EnforceExplicitStateImmutability (WPF & Blazor)
 
-Die Regel `EnforceExplicitStateImmutability` zwingt standardmäßig alle Klassen (die keine DTOs oder Entities sind) zur Unveränderlichkeit. Da bei WPF-ViewModels (MVVM) und Blazor-Komponenten mutable Eigenschaften und private Backing-Felder unumgänglich sind, bietet der Linter hierfür dedizierte Ausnahmen:
+Die Regel `EnforceExplicitStateImmutability` (Code-Default: `false`, also Opt-in — siehe `GlobalConfig.cs`) zwingt, wenn aktiviert, alle Klassen (die keine DTOs oder Entities sind) zur Unveränderlichkeit. Da bei WPF-ViewModels (MVVM) und Blazor-Komponenten mutable Eigenschaften und private Backing-Felder unumgänglich sind, bietet der Linter hierfür dedizierte Ausnahmen:
 
 - **`ImmutabilityExemptBaseTypes`** (Array von Strings, Default: `["ComponentBase", "LayoutComponentBase", "ObservableObject", "ObservableRecipient", "BackgroundService", "AuthenticationStateProvider", "INotifyPropertyChanged"]`): Klassen, die von einer dieser Basisklassen oder Schnittstellen erben (transitiv über die gesamte Hierarchie), werden vollständig von der Immutability-Prüfung ausgenommen.
 - **`ImmutabilityAllowPrivateBackingFields`** (Boolean, Default: `true`): Wenn `true`, werden private Felder, die mit einem Unterstrich (`_`) beginnen, nicht als Verstoß gemeldet. Dies erlaubt typische WPF-MVVM Backing-Felder.
