@@ -32,6 +32,7 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Selbstlint-Skeleton-Map-Check `ExcludeProjects=["*.Tests"]` schließt nur `AiNetLinter.Tests` aus, nicht `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests` — jeder zusammenhängende `"AiNetLinter.Tests"`-String-Literal in einem der drei neuen Projekte kann die Tests erneut kippen. |
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar referenziert „step-006" — verstößt gegen das Verbot von Task-/Planungsartefakt-Referenzen in Code-Kommentaren (`AiNetLinterRichtlinien.mdc` §5). |
+| TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | `CoreReferences` wird einmalig aus dem Testhost-`AppDomain` gebaut und enthält dadurch für **jedes** In-Memory-Projekt (unabhängig vom tatsächlichen Status) die xunit-Assemblies des Hosts — `TestProjectDetector.IsTestProject` erkennt jedes In-Memory-Produktionsprojekt fälschlich als Testprojekt; verfälscht potenziell die EPIC-4-Filtermatrix-Migration. |
 
 ## Einträge
 
@@ -124,4 +125,34 @@ werden. Default bei Unsicherheit ist `nein`.
   „...analog zum bereits vorhandenen Referenz-Caching-Test-Muster)".
 - **Auto-Fixable:** ja — reine Wortlautänderung im Kommentar, keine Architektur-Entscheidung, keine
   Verhaltensänderung.
+- **Status:** offen
+
+### TD-005 — `RoslynTestSolutionFactory.CoreReferences` kontaminiert jedes In-Memory-Projekt mit Testhost-Referenzen [Priorität: hoch] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-008 (Kritiker-Review vom 2026-08-12), ursprünglich vom Coder selbst während
+  der Umsetzung entdeckt und in `step-008/step-result.md` Abschnitt „Abweichungen vom Plan" bzw.
+  „Beobachtungen" dokumentiert; Ursache liegt im Factory-Design aus step-006, nicht in step-008.
+- **Ort:** `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferencesLazy`/
+  `BuildCoreReferences()`, `AddProject`).
+- **Befund:** `CoreReferences` wird einmalig statisch aus `AppDomain.CurrentDomain.GetAssemblies()`
+  gebaut (Testhost-Prozess) und ungefiltert an **jedes** über `CreateSolution` gebaute Projekt
+  gehängt — es gibt in `ProjectSpec` keinen Mechanismus, diese Kernreferenzen für ein einzelnes
+  Projekt auszuschließen (nur `AdditionalReferences` zum Hinzufügen). Da der Testhost selbst
+  `xunit`/`Microsoft.TestPlatform` referenziert, erkennt `TestProjectDetector.IsTestProject`
+  (referenzbasiert, vor dem Namenssuffix-Fallback geprüft) **jedes** In-Memory-Projekt als
+  Testprojekt — auch reine Produktionsprojekte wie `FilterMini`. Verifiziert in
+  `FilterMiniFidelityTests.AssertTestProjectDetectionMatches`: Disk-`FilterMini` liefert korrekt
+  `false`, In-Memory-`FilterMini` liefert `true`.
+- **Warum nicht sofort gefixt:** Root Cause liegt im Factory-Design aus step-006
+  (`RoslynTestSolutionFactory`), außerhalb des step-008-Scopes (FilterMini-Fixture); ein Fix erfordert
+  eine Architektur-Entscheidung (z. B. `ProjectSpec` um eine Möglichkeit erweitern, den globalen
+  Testhost-Referenzsatz für ein Projekt zu filtern/auszuschließen, oder `TestProjectDetector` mit
+  einem expliziten `testHostReferencesAreNoise`-Parameter für In-Memory-Aufrufer versehen) — kein
+  mechanischer Fix.
+- **Vorschlag:** Vor der EPIC-4-Filtermatrix-Migration klären, ob dort `IsTestProject`-Verhalten
+  gegen In-Memory-Solutions geprüft wird; falls ja, `RoslynTestSolutionFactory`/`ProjectSpec` um eine
+  projektspezifische Filtermöglichkeit für `CoreReferences` erweitern (oder `TestProjectDetector`
+  bewusst mit explizitem `testProjectNameSuffixes`-Parameter statt Default-Referenzheuristik
+  aufrufen), bevor die Migration reale Filtermatrix-Assertions auf diesem Verhalten aufbaut.
+- **Auto-Fixable:** nein — Architektur-Entscheidung über Filter-/Ausschluss-Mechanismus nötig.
 - **Status:** offen
