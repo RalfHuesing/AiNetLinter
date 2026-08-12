@@ -45,7 +45,7 @@ mehr nötig.>
 | step-011 | EPIC-3 | done | Web-Parser-Kohorte -> Unit (5 Klassen) | - | b720e1b | approved | 317f90c |
 | step-012 | EPIC-3 | done | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | eb645b8 | approved | be663e6 |
 | step-013 | EPIC-4 | done (Korrektur ausstehend) | Skeleton-Filterkohorte auf FilterMini migrieren | - | 8edee78 | issues | 086ce31 |
-| step-014 | EPIC-4 | open | Korrektur: Namespace-Glob selektiv kalibrieren | step-013 | - | - | - |
+| step-014 | EPIC-4 | in_progress | Korrektur: Namespace-Glob selektiv kalibrieren | step-013 | - | - | - |
 
 ## Config (optional)
 
