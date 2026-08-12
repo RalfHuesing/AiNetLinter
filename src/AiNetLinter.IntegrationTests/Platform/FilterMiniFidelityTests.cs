@@ -81,6 +81,7 @@ public sealed class FilterMiniFidelityTests
     {
         Assert.False(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini")));
         Assert.True(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini.Tests")));
+        Assert.False(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini")));
         Assert.True(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini.Tests")));
     }
 

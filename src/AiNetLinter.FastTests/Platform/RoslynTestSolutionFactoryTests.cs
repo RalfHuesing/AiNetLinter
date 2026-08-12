@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AiNetLinter.Core;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
@@ -115,6 +116,17 @@ public sealed class RoslynTestSolutionFactoryTests
                 new ProjectSpec("Consumer", [("Consumer.cs", "namespace X; public class C {}")], ProjectReferences: ["MissingProject"])));
 
         Assert.Contains("MissingProject", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CreateSolution_NormalProjectWithoutTestFrameworkReference_IsNotTestProject()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            new ProjectSpec("ProductionProbe", [("Probe.cs", "namespace Probe; public class Service {}")]));
+
+        var project = testSolution.Solution.Projects.Single();
+
+        Assert.False(TestProjectDetector.IsTestProject(project));
     }
 
     private static async Task<Compilation> GetCompilationAsync(Solution solution, string projectName)

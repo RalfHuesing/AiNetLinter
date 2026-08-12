@@ -46,9 +46,9 @@ public static class RoslynTestSolutionFactory
     private static readonly Lazy<ImmutableArray<MetadataReference>> CoreReferencesLazy = new(BuildCoreReferences);
 
     /// <summary>
-    /// Einmalig gebauter Kern-Referenzsatz aus allen aktuell geladenen, nicht-dynamischen Assemblies mit
-    /// einer Datei-Location. Ueber alle <see cref="CreateSolution"/>-Aufrufe hinweg dieselben
-    /// <see cref="MetadataReference"/>-Objekte (Referenzgleichheit der einzelnen Eintraege).
+/// Einmalig gebauter, testframework-freier BCL-Kern-Referenzsatz. Ueber alle
+/// <see cref="CreateSolution"/>-Aufrufe hinweg dieselben <see cref="MetadataReference"/>-Objekte
+/// (Referenzgleichheit der einzelnen Eintraege).
     /// </summary>
     public static ImmutableArray<MetadataReference> CoreReferences => CoreReferencesLazy.Value;
 
@@ -138,9 +138,18 @@ public static class RoslynTestSolutionFactory
 
     private static ImmutableArray<MetadataReference> BuildCoreReferences()
     {
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-            .Select(a => (MetadataReference)MetadataReference.CreateFromFile(a.Location))
+        var assemblies = new[]
+        {
+            typeof(object).Assembly,
+            typeof(System.Runtime.GCSettings).Assembly,
+            typeof(Enumerable).Assembly,
+            typeof(System.Threading.Tasks.Task).Assembly,
+        };
+
+        return assemblies
+            .Select(assembly => assembly.Location)
+            .Distinct(StringComparer.Ordinal)
+            .Select(location => (MetadataReference)MetadataReference.CreateFromFile(location))
             .ToImmutableArray();
     }
 }

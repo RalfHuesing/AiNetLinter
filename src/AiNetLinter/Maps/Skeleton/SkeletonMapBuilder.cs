@@ -28,12 +28,26 @@ internal static class SkeletonMapBuilder
     {
         using SourceFileCatalog catalog = await SourceFileCatalog.LoadAsync(targetPath, ct);
         var solutionPath = catalog.Solution.FilePath ?? targetPath;
-        var solutionDir = Path.GetDirectoryName(solutionPath) ?? targetPath;
+        return await BuildAsync(
+            catalog.Solution,
+            new SkeletonMapBuildRequest(solutionPath, config, console, args),
+            ct);
+    }
 
-        var types = await ExtractTypesAsync(catalog.Solution, solutionDir, args, config, ct);
+    internal static async Task<int> BuildAsync(
+        Solution solution,
+        SkeletonMapBuildRequest request,
+        CancellationToken ct = default)
+    {
+        var solutionDir = Path.GetDirectoryName(request.SolutionPath);
+        if (string.IsNullOrEmpty(solutionDir))
+        {
+            solutionDir = Directory.GetCurrentDirectory();
+        }
+        var types = await ExtractTypesAsync(solution, solutionDir, request.Args, request.Config, ct);
 
-        var markdown = SkeletonMarkdownRenderer.Render(types, solutionPath, DateTimeOffset.Now);
-        console.WriteLine(markdown);
+        var markdown = SkeletonMarkdownRenderer.Render(types, request.SolutionPath, DateTimeOffset.Now);
+        request.Console.WriteLine(markdown);
         return 0;
     }
 
@@ -96,3 +110,9 @@ internal static class SkeletonMapBuilder
         return walker.Types;
     }
 }
+
+internal sealed record SkeletonMapBuildRequest(
+    string SolutionPath,
+    Config Config,
+    ILintConsole Console,
+    LinterArgs Args);
