@@ -5,8 +5,8 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-12
 ---
 
-<!-- Rows marked "step-001" existieren jetzt tatsaechlich im Bestand; Rows mit "planning" sind
-     weiterhin offene Platzhalter/Beobachtungen aus der Konzeptphase. -->
+<!-- Rows marked "step-001"/"step-002" existieren jetzt tatsaechlich im Bestand; Rows mit "planning"
+     sind weiterhin offene Platzhalter/Beobachtungen aus der Konzeptphase. -->
 
 
 # CodeMap: speedup-tests
@@ -21,7 +21,13 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.FastTests/`** — neue schnelle Assembly (SDK-Testprojekt), importiert `tests/AiNetLinter.TestProject.props`, referenziert `AiNetLinter` + `AiNetLinter.TestKit`; enthaelt bisher zwei Proof-Testklassen (`Configuration/ProjectOverrideResolutionTests.cs`, `Core/TestProjectDetectorSuffixTests.cs`), sonst noch leer. (zuletzt: step-001)
 - **`src/AiNetLinter.IntegrationTests/`** — neue Infrastruktur-Assembly, eigenes `xunit.runner.json` (`parallelizeAssembly: false`), referenziert `AiNetLinter` + `AiNetLinter.TestKit`; enthaelt bisher eine Proof-Testklasse (`Configuration/ProjectOverrideRealSolutionTests.cs`), sonst noch leer. (zuletzt: step-001)
 - **`src/AiNetLinter.TestKit/`** — neue leere SDK-Class-Library fuer die kuenftige gemeinsame Testplattform, importiert `tests/AiNetLinter.TestProject.props`, referenziert nur `AiNetLinter`, keine xUnit-Abhaengigkeit, noch keine `.cs`-Dateien. (zuletzt: step-001)
-- **`tasks/speedup-tests/test-migration-ledger.md`** — vorgesehener lueckenloser Status-, Abdeckungs- und Loeschindex fuer die Strangler-Migration des Legacy-Testprojekts; noch nicht angelegt. (zuletzt: planning)
+- **`tasks/speedup-tests/test-migration-ledger.md`** — existiert jetzt: vollstaendiges Inventar aller 183 Legacy-Testklassen (Quelldatei, Testklasse, Produktbereich, Status, Legacy-Filter, neuer Abdeckungsort), Statuslegende und Konsistenzregeln; alle Zeilen initial `pending`. (zuletzt: step-002)
+- **`src/AiNetLinter.IntegrationTests/Migration/TestMigrationLedgerConsistencyTests.cs`** — Ledger-Konsistenzguard (Category=Integration): scannt die Legacy-Testklassen in `src/AiNetLinter.Tests` per Roslyn-Syntaxbaum und prueft alle vier Konsistenzregeln aus dem Ledger-Kopf gegen den tatsaechlichen Bestand. (zuletzt: step-002)
+- **`src/AiNetLinter.FastTests/Architecture/FastTestsDependencyGuardTests.cs`** — statischer Deny-Listen-Guard (Category=Unit) ueber die kompilierten Metadaten (AssemblyRef/TypeRef/MemberRef via System.Reflection.Metadata) von `AiNetLinter.FastTests.dll`/`AiNetLinter.TestKit.dll` gegen MSBuild-/Workspace-/Process-/`SourceFileCatalog.LoadAsync`-Referenzen. (zuletzt: step-002)
+- **`src/AiNetLinter.FastTests/Architecture/FastTestsRuntimeDependencyGuardFixture.cs`** — Laufzeit-Gegenstueck des Deny-Listen-Guards: `ICollectionFixture`, deren Dispose `AppDomain.CurrentDomain.GetAssemblies()` gegen dieselbe Deny-Liste prueft; Best-Effort-Nachweis (keine Prozessisolationsgarantie, siehe XML-Doc der Klasse). (zuletzt: step-002)
+- **`src/AiNetLinter.FastTests/Architecture/TestCategoryProfileGuardTests.cs`** — Kategorien-/Profilguard fuer `AiNetLinter.FastTests`: jede Testklasse mit `[Fact]`/`[Theory]` braucht genau einen Trait aus {Unit, Component}. (zuletzt: step-002)
+- **`src/AiNetLinter.IntegrationTests/Architecture/TestCategoryProfileGuardTests.cs`** — gleiches Prinzip fuer `AiNetLinter.IntegrationTests`, erlaubte Kategorien {Integration, Dogfood, Performance, Stress}. (zuletzt: step-002)
+- **`tasks/speedup-tests/baseline-measurement.md`** — Vorher-Baseline (Median ueber 3 Laeufe) fuer `Category=Unit` und `Category!=Stress` plus einmalig gestoppte Build-Zeit; dokumentiert auch eine bereits vor step-002 bestehende Flakiness in `McpServerCommandJsonRpcFramingTests` unter Volllast. (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/xunit.runner.json`** — steuert Collection-Parallelitaet, Threadzahl und Long-Running-Diagnostik. (zuletzt: planning)
 - **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche; wird jetzt auch von FastTests/IntegrationTests referenziert, unveraendert im Inhalt. (zuletzt: planning)
 - **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates; noch nicht auf die neuen Projekte umgeschaltet. (zuletzt: planning)
