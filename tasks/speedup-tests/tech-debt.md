@@ -31,6 +31,7 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Zwei Tests flaky unter Volllast des vollen `Category!=Stress`-Parallel-Laufs (stdout-Framing gegen echten MCP-Subprozess), isoliert stabil grün. |
 | TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Selbstlint-Skeleton-Map-Check `ExcludeProjects=["*.Tests"]` schließt nur `AiNetLinter.Tests` aus, nicht `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests` — jeder zusammenhängende `"AiNetLinter.Tests"`-String-Literal in einem der drei neuen Projekte kann die Tests erneut kippen. |
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
+| TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar referenziert „step-006" — verstößt gegen das Verbot von Task-/Planungsartefakt-Referenzen in Code-Kommentaren (`AiNetLinterRichtlinien.mdc` §5). |
 
 ## Einträge
 
@@ -104,4 +105,23 @@ werden. Default bei Unsicherheit ist `nein`.
   laufen lassen und den Diff committen.
 - **Auto-Fixable:** ja — rein mechanische Regenerierung aus der bereits korrekten `rules.json`, keine
   Architektur-Entscheidung, keine Verhaltensänderung am Produktcode.
+- **Status:** offen
+
+### TD-004 — Task-Artefakt-Referenz in Code-Kommentar [Priorität: niedrig] [Auto-Fixable: ja]
+
+- **Gefunden in:** step-007 (Kritiker-Review vom 2026-08-12), beim Rules-Konformitäts-Check
+  zufällig aufgefallen (nicht Teil der im Plan zitierten Rules-Refs für diesen Step, daher kein
+  Ebene-2-Finding, sondern Tech-Debt).
+- **Ort:** `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14`.
+- **Befund:** Der XML-Doc-Kommentar auf `SharedSolutionIdentityWitness` lautet u. a. „...analog zum
+  Referenz-Caching-Test aus step-006)" — enthält damit eine Referenz auf ein Planungsartefakt, das
+  `AiNetLinterRichtlinien.mdc` §5 „Sparsamer Einsatz von Code-Kommentaren" ausdrücklich verbietet
+  („Jede Referenz auf Task-/Planungsartefakte, die den Code überleben soll ... ist verboten").
+  `tasks/speedup-tests/` wird nach Task-Abschluss gelöscht, der Verweis wird dann bedeutungslos.
+- **Warum nicht sofort gefixt:** Außerhalb der für step-007 kuratierten Rules-Refs (nur §4
+  „Testsuite-Parallelität" war zitiert, nicht §5); Kritiker fixt laut eigenem Auftrag ohnehin nicht.
+- **Vorschlag:** „aus step-006" aus dem Kommentar entfernen, stattdessen ID-frei begründen, z. B.
+  „...analog zum bereits vorhandenen Referenz-Caching-Test-Muster)".
+- **Auto-Fixable:** ja — reine Wortlautänderung im Kommentar, keine Architektur-Entscheidung, keine
+  Verhaltensänderung.
 - **Status:** offen
