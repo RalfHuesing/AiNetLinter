@@ -6,7 +6,7 @@ using AiNetLinter.Web;
 using Xunit;
 
 // @covers RazorConfig (StaticTestSentinel: Kognitive Komplexitaet 6 > Schwellwert 5; Konfiguration ist ueber diese Tests abgedeckt.)
-namespace AiNetLinter.Tests.Web;
+namespace AiNetLinter.FastTests.Web;
 
 /// <summary>
 /// Unit-Tests fuer RazorAnalyzer. Implementiert die Test-Szenarien A-N aus

@@ -3,7 +3,7 @@
 using AiNetLinter.Web;
 using Xunit;
 
-namespace AiNetLinter.Tests.Web;
+namespace AiNetLinter.FastTests.Web;
 
 /// <summary>
 /// Unit-Tests fuer WebSuppressionDetector. Verifiziert dateiweite und regel-spezifische

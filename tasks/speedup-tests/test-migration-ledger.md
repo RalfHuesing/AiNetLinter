@@ -223,8 +223,8 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Suppression/SuppressionFileResolverTests.cs` | `SuppressionFileResolverTests` | Suppression | pending | `FullyQualifiedName~SuppressionFileResolverTests` |  |
 | `src/AiNetLinter.Tests/Suppression/SuppressionScannerTests.cs` | `SuppressionScannerTests` | Suppression | pending | `FullyQualifiedName~SuppressionScannerTests` |  |
 | `src/AiNetLinter.Tests/Suppression/ViolationPathResolverTests.cs` | `ViolationPathResolverTests` | Suppression | pending | `FullyQualifiedName~ViolationPathResolverTests` |  |
-| `src/AiNetLinter.Tests/Web/CssAnalyzerTests.cs` | `CssAnalyzerTests` | Web | pending | `FullyQualifiedName~CssAnalyzerTests` |  |
-| `src/AiNetLinter.Tests/Web/JsAnalyzerTests.cs` | `JsAnalyzerTests` | Web | pending | `FullyQualifiedName~JsAnalyzerTests` |  |
-| `src/AiNetLinter.Tests/Web/RazorAnalyzerTests.Extended.cs` | `RazorAnalyzerExtendedTests` | Web | pending | `FullyQualifiedName~RazorAnalyzerExtendedTests` |  |
-| `src/AiNetLinter.Tests/Web/RazorAnalyzerTests.cs` | `RazorAnalyzerTests` | Web | pending | `FullyQualifiedName~RazorAnalyzerTests` |  |
-| `src/AiNetLinter.Tests/Web/WebSuppressionDetectorTests.cs` | `WebSuppressionDetectorTests` | Web | pending | `FullyQualifiedName~WebSuppressionDetectorTests` |  |
+| `src/AiNetLinter.Tests/Web/CssAnalyzerTests.cs` | `CssAnalyzerTests` | Web | migrated | `FullyQualifiedName~CssAnalyzerTests` | `src/AiNetLinter.FastTests/Web/CssAnalyzerTests.cs` |
+| `src/AiNetLinter.Tests/Web/JsAnalyzerTests.cs` | `JsAnalyzerTests` | Web | migrated | `FullyQualifiedName~JsAnalyzerTests` | `src/AiNetLinter.FastTests/Web/JsAnalyzerTests.cs` |
+| `src/AiNetLinter.Tests/Web/RazorAnalyzerTests.Extended.cs` | `RazorAnalyzerExtendedTests` | Web | migrated | `FullyQualifiedName~RazorAnalyzerExtendedTests` | `src/AiNetLinter.FastTests/Web/RazorAnalyzerTests.Extended.cs` |
+| `src/AiNetLinter.Tests/Web/RazorAnalyzerTests.cs` | `RazorAnalyzerTests` | Web | migrated | `FullyQualifiedName~RazorAnalyzerTests` | `src/AiNetLinter.FastTests/Web/RazorAnalyzerTests.cs` |
+| `src/AiNetLinter.Tests/Web/WebSuppressionDetectorTests.cs` | `WebSuppressionDetectorTests` | Web | migrated | `FullyQualifiedName~WebSuppressionDetectorTests` | `src/AiNetLinter.FastTests/Web/WebSuppressionDetectorTests.cs` |
