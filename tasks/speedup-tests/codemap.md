@@ -14,6 +14,9 @@ last_updated: 2026-08-12
 <!-- planning step-015: EPIC-4 Teil 2 -- als naechster geschlossener Scannerteil ist ausschliesslich
      DuplicateDetectionScanner samt zentraler virtueller Factory-Pfadkalibrierung vorgesehen. -->
 
+<!-- planning step-016: EPIC-4 Teil 3 -- als naechster geschlossener Scannerteil ist ausschliesslich
+     RefactoringDriftScanner auf der vorhandenen virtuellen Factory-Pfadkalibrierung vorgesehen. -->
+
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
 
@@ -51,6 +54,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` / `src/AiNetLinter.FastTests/Platform/RoslynTestSolutionFactoryTests.cs`** — In-Memory-Builder und Plattformverträge stellen neben gecachten BCL-Referenzen optionale normalisierte virtuelle Solution- und Dokumentpfade bereit. (zuletzt: step-015)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionScannerTests.cs` / `src/AiNetLinter/Mcp/Tools/DuplicateDetection/DuplicateDetectionScanner.cs`** — sieben Component-Verträge für den Scanner verwenden die Factory mit virtuellen Pfaden und die kalibrierten Clone-Methoden des FastTests-Helpers. (zuletzt: step-015)
 - **~~`src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionScannerTests.cs`~~** — als Legacy-Quelle seit step-015 obsolet; die Scannerverträge liegen unter `src/AiNetLinter.FastTests/Mcp/Tools/`. (zuletzt: step-015)
+- **`src/AiNetLinter/Mcp/Tools/DuplicateDetection/RefactoringDriftScanner.cs` / `src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs`** — objektbasierter Scanner und noch pending Legacy-Kohorte; die Caller-Aufloesung benoetigt nur virtuelle Solution-/Dokumentpfade und kann die in step-015 geschaffene Factory-Seam direkt wiederverwenden. (zuletzt: planning step-016)
 - **`src/AiNetLinter.Tests/Output/TestLintConsole.cs`** — von zahlreichen weiterhin pending Legacy-Klassen konsumiertes `ILintConsole`-Testdouble; die Datei kann bei der Filtermigration nicht physisch mitverschoben werden, während ein gemeinsames Zielassembly-Double erst durch reale Fast-/Integration-Konsumenten gerechtfertigt ist. (zuletzt: planning step-013)
 - **`src/AiNetLinter.IntegrationTests/Platform/FilterMiniFidelityTests.cs`** — Fidelity-/Formvergleichstest zwischen Disk- und In-Memory-`FilterMini`, einschließlich positiver und negativer Testprojekt-Erkennung. (zuletzt: step-013)
 - **`tasks/speedup-tests/test-migration-ledger.md`** — Inventar aller 183 Legacy-Testklassen mit Status, Legacy-Filter und neuem Abdeckungsort; 28 Checker-, fuenf Web-Parser- und zwei Renderer-Zeilen stehen auf `migrated`. (zuletzt: step-012)

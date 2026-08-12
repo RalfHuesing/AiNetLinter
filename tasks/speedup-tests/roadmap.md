@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-015-Abgleich (step-013 via step-014 approved, EPIC-4 Scannerteil geplant)
+last_updated: 2026-08-12  # Planer-Step-016-Abgleich (step-015 approved, naechster EPIC-4-Scannerteil geplant)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -117,11 +117,13 @@ obsolet markiert) — kein starres Vorab-Dokument.
       step-013 (Korrektur step-014, inzwischen `approved`) schloss als ersten Teil die
       Skeleton-/Filterkohorte:** 18 Filterverträge gegen die vorbereitete `FilterMini`-Solution,
       objektbasierter `SkeletonMapBuilder`-Kern und zwei echte Pfad-/MSBuild-Adapterverträge.
-      **step-015 plant als nächsten geschlossenen Teil ausschließlich den
-      `DuplicateDetectionScanner`:** sieben Component-Verträge auf `RoslynTestSolutionFactory`
-      samt virtueller Pfadkalibrierung und produktseitigem Coverage-Audit. Duplicate-Detection-
-      Tool-/Refactoring-Drift-/Engine-Kohorten sowie alle übrigen Scanner/Tools bleiben für spätere
-      JIT-Steps offen.
+      **step-015 (`approved`) schloss als zweiten Teil den `DuplicateDetectionScanner`:** sieben
+      Component-Verträge auf `RoslynTestSolutionFactory` samt virtueller Pfadkalibrierung und
+      produktseitigem Coverage-Audit. **step-016 plant als nächsten geschlossenen Teil
+      ausschließlich den `RefactoringDriftScanner`:** die sieben Legacy-Verträge wechseln auf
+      dieselbe In-Memory-Factory; ein zusätzlicher Lambda-Caller-Vertrag schließt die beim
+      produktseitigen Audit gefundene Lücke der Caller-Normalisierung. Duplicate-Detection-
+      Tool-/Engine-Kohorten sowie alle übrigen Scanner/Tools bleiben für spätere JIT-Steps offen.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.
