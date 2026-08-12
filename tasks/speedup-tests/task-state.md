@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 5  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-005
+total_steps: 6  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-006
 ---
 
 # Task State: speedup-tests
@@ -15,7 +15,7 @@ current_step: step-005
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-005`
+- **Aktueller Schritt:** `step-006`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (noch nicht erzeugt)
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -37,6 +37,7 @@ mehr nötig.>
 | step-003 | EPIC-1 | done | Korrektur: Nachweis Ledger-Guard | step-002 | c16be1a | approved | c16be1a |
 | step-004 | EPIC-1 | done | Fundament: IVT, Safety Envelope, Legacy-Gate-Switch | - | a303edb | issues→approved (via step-005) | 59dcff9 |
 | step-005 | EPIC-1 | done | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | bffe3e3 | approved | 2c9611c |
+| step-006 | EPIC-2 | in_progress | Testplattform: RoslynTestSolutionFactory + PreparedSolutionFixture | - | - | - | - |
 
 ## Config (optional)
 
