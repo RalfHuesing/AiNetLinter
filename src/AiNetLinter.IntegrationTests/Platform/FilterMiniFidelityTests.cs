@@ -82,14 +82,6 @@ public sealed class FilterMiniFidelityTests
         Assert.False(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini")));
         Assert.True(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini.Tests")));
         Assert.True(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini.Tests")));
-
-        // In-memory-Projekte teilen sich CoreReferences aus dem laufenden Testhost-AppDomain
-        // (RoslynTestSolutionFactory), der selbst xunit referenziert -- die referenzbasierte
-        // Erkennung schlaegt dadurch fuer jedes In-Memory-Projekt an, unabhaengig vom
-        // tatsaechlichen Testprojektstatus. Nur die Namenssuffix-Erkennung ist im In-Memory-Fall
-        // aussagekraeftig; die referenzbasierte Erkennung wird ausschliesslich in der Disk-Welt
-        // sinnvoll geprueft (siehe Zeilen oben).
-        Assert.True(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini")));
     }
 
     private static async Task AssertWidgetDescribeReturnTypeMatchesAsync(Solution disk, Solution inMemory)
