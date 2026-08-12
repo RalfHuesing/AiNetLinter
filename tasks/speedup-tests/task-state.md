@@ -37,7 +37,7 @@ mehr nötig.>
 | step-003 | EPIC-1 | done | Korrektur: Nachweis Ledger-Guard | step-002 | c16be1a | approved | c16be1a |
 | step-004 | EPIC-1 | done | Fundament: IVT, Safety Envelope, Legacy-Gate-Switch | - | a303edb | issues→approved (via step-005) | 59dcff9 |
 | step-005 | EPIC-1 | done | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | bffe3e3 | approved | 2c9611c |
-| step-006 | EPIC-2 | in_progress | Testplattform: RoslynTestSolutionFactory + PreparedSolutionFixture | - | - | - | - |
+| step-006 | EPIC-2 | done | Testplattform: RoslynTestSolutionFactory + PreparedSolutionFixture | - | f258992 | approved | 45322c3 |
 
 ## Config (optional)
 
