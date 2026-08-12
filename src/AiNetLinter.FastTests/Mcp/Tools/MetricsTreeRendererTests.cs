@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
 public sealed class MetricsTreeRendererTests
@@ -81,5 +81,25 @@ public sealed class MetricsTreeRendererTests
 
         Assert.StartsWith("└── dir", lines[1]);
         Assert.StartsWith("    └── child.cs", lines[2]);
+    }
+
+    [Fact]
+    public void Render_NestedTopN_AppliesLimitAtEveryLevel()
+    {
+        var dir = new MetricsTreeNode("dir", "dir", 3, 0, "3 Dateien", new List<MetricsTreeNode>
+        {
+            Leaf("small.cs", 10),
+            Leaf("large.cs", 30),
+            Leaf("medium.cs", 20),
+        });
+        var root = new MetricsTreeNode("root", "", 3, 0, "3 Dateien", new List<MetricsTreeNode> { dir });
+
+        var text = MetricsTreeRenderer.Render(root, topN: 2, sortDescending: true);
+        var lines = text.Split('\n');
+
+        Assert.StartsWith("    ├── large.cs", lines[2]);
+        Assert.StartsWith("    ├── medium.cs", lines[3]);
+        Assert.StartsWith("    └── ... und 1 weitere", lines[4]);
+        Assert.DoesNotContain("small.cs", text);
     }
 }

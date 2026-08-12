@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 [Trait("Category", "Unit")]
 public sealed class CallTreeMermaidRendererTests
@@ -68,5 +68,25 @@ public sealed class CallTreeMermaidRendererTests
         Assert.DoesNotContain("\"Weird\"Name", text, StringComparison.Ordinal);
         Assert.Contains("Weird'Name", text, StringComparison.Ordinal);
         Assert.Contains("path.cs:1 more", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_NestedTopN_AppliesLimitAtEveryLevel()
+    {
+        var branch = new MetricsTreeNode("Branch.Run", "", 0, 0, "Branch.cs:4", new List<MetricsTreeNode>
+        {
+            Leaf("Child.First", "First.cs:8"),
+            Leaf("Child.Second", "Second.cs:12"),
+            Leaf("Child.Hidden", "Hidden.cs:16"),
+        });
+        var root = new MetricsTreeNode("Root.Run", "", 0, 0, "Root.cs:1", new List<MetricsTreeNode> { branch });
+
+        var text = CallTreeMermaidRenderer.Render(root, topN: 2);
+
+        Assert.Contains("Child.First", text, StringComparison.Ordinal);
+        Assert.Contains("Child.Second", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Child.Hidden", text, StringComparison.Ordinal);
+        Assert.Contains("n4[\"... und 1 weitere\"]", text, StringComparison.Ordinal);
+        Assert.Contains("n1 --> n4", text, StringComparison.Ordinal);
     }
 }

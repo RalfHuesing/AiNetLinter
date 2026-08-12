@@ -152,7 +152,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonStableIdTests.cs` | `SkeletonStableIdTests` | Maps | pending | `FullyQualifiedName~SkeletonStableIdTests` |  |
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonSyntaxWalkerTests.cs` | `SkeletonSyntaxWalkerTests` | Maps | pending | `FullyQualifiedName~SkeletonSyntaxWalkerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/CallGraphTraversalTests.cs` | `CallGraphTraversalTests` | Mcp | pending | `FullyQualifiedName~CallGraphTraversalTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/CallTreeMermaidRendererTests.cs` | `CallTreeMermaidRendererTests` | Mcp | pending | `FullyQualifiedName~CallTreeMermaidRendererTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/CallTreeMermaidRendererTests.cs` | `CallTreeMermaidRendererTests` | Mcp | migrated | `FullyQualifiedName~CallTreeMermaidRendererTests` | `src/AiNetLinter.FastTests/Mcp/Tools/CallTreeMermaidRendererTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphScannerTests.cs` | `DependencyGraphScannerTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphToolTests.cs` | `DependencyGraphToolTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/DiRegistrationHeuristicsTests.cs` | `DiRegistrationHeuristicsTests` | Mcp | pending | `FullyQualifiedName~DiRegistrationHeuristicsTests` |  |
@@ -185,7 +185,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/McpTestClientParallelTests.cs` | `McpTestClientParallelTests` | Mcp | pending | `FullyQualifiedName~McpTestClientParallelTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpTestClientRetryTests.cs` | `McpTestClientRetryTests` | Mcp | pending | `FullyQualifiedName~McpTestClientRetryTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpToolResultsTests.cs` | `McpToolResultsTests` | Mcp | pending | `FullyQualifiedName~McpToolResultsTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRendererTests.cs` | `MetricsTreeRendererTests` | Mcp | pending | `FullyQualifiedName~MetricsTreeRendererTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRendererTests.cs` | `MetricsTreeRendererTests` | Mcp | migrated | `FullyQualifiedName~MetricsTreeRendererTests` | `src/AiNetLinter.FastTests/Mcp/Tools/MetricsTreeRendererTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRoslynScannerTests.cs` | `MetricsTreeRoslynScannerTests` | Mcp | pending | `FullyQualifiedName~MetricsTreeRoslynScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeToolTests.cs` | `MetricsTreeToolTests` | Mcp | pending | `FullyQualifiedName~MetricsTreeToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/OverviewResourceRegistrationTests.cs` | `OverviewResourceRegistrationTests` | Mcp | pending | `FullyQualifiedName~OverviewResourceRegistrationTests` |  |
