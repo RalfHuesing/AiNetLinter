@@ -4,7 +4,7 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 0  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+total_steps: 1  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-001
 ---
 
@@ -32,7 +32,7 @@ mehr nötig.>
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-1 | in_progress | Fundament: Zielprojekte + TestProject.props | - | - | - | - |
+| step-001 | EPIC-1 | done | Fundament: Zielprojekte + TestProject.props | - | b1fe9eb | approved | 9d20376 |
 
 ## Config (optional)
 
