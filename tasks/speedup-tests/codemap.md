@@ -5,6 +5,9 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-12
 ---
 
+<!-- step-004: EPIC-1 abgeschlossen (Minimum Safety Envelope, Legacy-Build-Gate, InternalsVisibleTo,
+     Gate-Switch). -->
+
 <!-- Rows marked "step-001"/"step-002" existieren jetzt tatsaechlich im Bestand; Rows mit "planning"
      sind weiterhin offene Platzhalter/Beobachtungen aus der Konzeptphase. -->
 
@@ -27,11 +30,15 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsRuntimeDependencyGuardFixture.cs`** — Laufzeit-Gegenstueck des Deny-Listen-Guards: `ICollectionFixture`, deren Dispose `AppDomain.CurrentDomain.GetAssemblies()` gegen dieselbe Deny-Liste prueft; Best-Effort-Nachweis (keine Prozessisolationsgarantie, siehe XML-Doc der Klasse). (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Architecture/TestCategoryProfileGuardTests.cs`** — Kategorien-/Profilguard fuer `AiNetLinter.FastTests`: jede Testklasse mit `[Fact]`/`[Theory]` braucht genau einen Trait aus {Unit, Component}. (zuletzt: step-002)
 - **`src/AiNetLinter.IntegrationTests/Architecture/TestCategoryProfileGuardTests.cs`** — gleiches Prinzip fuer `AiNetLinter.IntegrationTests`, erlaubte Kategorien {Integration, Dogfood, Performance, Stress}. (zuletzt: step-002)
+- **`src/AiNetLinter.FastTests/Core/LinterEngineSolutionAnalysisTests.cs`** — MSE-Baustein "vorbereitete Solution analysieren": Component-Test, ruft `LinterEngine.RunAsync(Solution)` direkt gegen eine per `AdhocWorkspace` aufgebaute Zwei-Klassen-Solution auf (kein MSBuild), prueft Verletzungs- und regelkonformen Pfad. (zuletzt: step-004)
+- **`src/AiNetLinter.IntegrationTests/Cli/CliAdapterExitCodeTests.cs`** — MSE-Baustein "CLI-Adapter mit Exit-Code": ruft `Program.Main(string[])` in-process gegen zwei isolierte Kopien der Fixture `tests/Fixtures/BaselineMini` auf (eigene minimale, vollstaendig kontrollierte `rules.json`, sealed/unsealed-Kontrast statt der Original-Fixture-Regeln), prueft Exit-Code 0 vs. ungleich 0. (zuletzt: step-004)
+- **`src/AiNetLinter.IntegrationTests/Mcp/McpHandshakeToolRegistrationTests.cs`** — MSE-Baustein "MCP-Handshake/Toolregistrierung": startet `AiNetLinter.exe --mcp-server` als echten Subprozess gegen `tests/Fixtures/BaselineMini`, eigener schlanker `McpClient`-Handshake (kein Kopieren von `AiNetLinter.Tests.Mcp.McpTestClient`, keine TestKit-Extraktion), prueft `tools/list`. (zuletzt: step-004)
+- **`src/AiNetLinter.IntegrationTests/Migration/LegacyProjectBuildGateTests.cs`** — Legacy-Build-Gate (konzept.md Leitplanke 8): prueft mechanisch ueber `AiNetLinter.slnx`, dass `AiNetLinter.Tests` Solution-Mitglied und seine `.csproj` auf der Platte vorhanden bleibt, solange `test-migration-ledger.md` noch `pending`-Zeilen hat. (zuletzt: step-004)
 - **`tasks/speedup-tests/baseline-measurement.md`** — Vorher-Baseline (Median ueber 3 Laeufe) fuer `Category=Unit` und `Category!=Stress` plus einmalig gestoppte Build-Zeit; dokumentiert auch eine bereits vor step-002 bestehende Flakiness in `McpServerCommandJsonRpcFramingTests` unter Volllast. (zuletzt: step-002)
 - **`src/AiNetLinter.Tests/xunit.runner.json`** — steuert Collection-Parallelitaet, Threadzahl und Long-Running-Diagnostik. (zuletzt: planning)
 - **`.runsettings`** — definiert Ergebnisablage und TRX-Logging fuer Laufzeitvergleiche; wird jetzt auch von FastTests/IntegrationTests referenziert, unveraendert im Inhalt. (zuletzt: planning)
-- **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates; noch nicht auf die neuen Projekte umgeschaltet. (zuletzt: planning)
-- **`.agents/rules/AiNetLinterRichtlinien.mdc`** — enthaelt die projektspezifischen Test-, Parallelitaets-, MCP- und Commitregeln, u. a. die TRX-Diagnoseregel auf `TestResults/latest.trx`. (zuletzt: planning)
+- **`AGENTS.md`** — normales Gate ist jetzt auf `dotnet test src/AiNetLinter.FastTests`/`src/AiNetLinter.IntegrationTests --filter Category!=Stress` umgeschaltet; `AiNetLinter.Tests` (Legacy) ausdruecklich als quarantaeniert dokumentiert (baubar, gezielt ausfuehrbar ueber Ledger-Filter, nicht im Standardgate). (zuletzt: step-004)
+- **`.agents/rules/AiNetLinterRichtlinien.mdc`** — enthaelt die projektspezifischen Test-, Parallelitaets-, MCP- und Commitregeln; die TRX-Diagnoseregel (`TestResults/latest.trx`) verweist jetzt auf `AGENTS.md` als alleinige Quelle der aktuell gueltigen Gate-Kommandos statt sie zu duplizieren. (zuletzt: step-004)
 - **`tests/AiNetLinter.TestProject.props`** — existiert jetzt: explizit importierte gemeinsame Props (`TargetFramework net10.0`, `Nullable`, `TreatWarningsAsErrors`, `IsPackable false`) plus `Microsoft.Build.Framework`/`Microsoft.NET.StringTools`-Pinning (18.8.2) fuer alle drei neuen Projekte, ohne festes `RunSettingsFilePath`. (zuletzt: step-001)
 - **`src/Directory.Build.props`** — pinnt bereits heute `Microsoft.Build.Framework` mit `PrivateAssets`/`ExcludeAssets` fuer alle Projekte unter `src/`; die neue `TestProject.props` ergaenzt/spiegelt dieses Pinning fuer die drei neuen Projekte, kollidiert nicht damit (verifiziert: `dotnet build` gruen). (zuletzt: step-001)
 
@@ -42,7 +49,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter/Core/TestProjectDetector.cs`** — erkennt Testprojekte ueber Metadatenreferenzen und Namenssuffixe; relevant fuer die Einordnung von TestKit und den neuen Assemblies. (zuletzt: planning)
 - **`src/AiNetLinter/Core/PostAnalysisChecks.cs`** — enthaelt den `StaticTestSentinel`, dessen Abdeckungsindex von den Testprojekten der geladenen Solution abhaengt. (zuletzt: planning)
 - **`src/AiNetLinter/Core/TestCoverageCollector.cs` / `TestCoverageIndex.cs` / `TestCoverageResolver.cs`** — sammeln und aufloesen die Abdeckungssignale (Testklassenname, `typeof`/`nameof`, `@covers`) und sind als mechanisches Suchsignal fuer den Coverage-Audit relevant. (zuletzt: planning)
-- **`src/AiNetLinter/Core/LinterEngine.cs`** — traegt zusaetzlich das einzige `InternalsVisibleTo` (`AiNetLinter.Tests`); je neuer Test-Assembly ist ein Eintrag noetig. (zuletzt: planning)
+- **`src/AiNetLinter/Core/LinterEngine.cs`** — traegt jetzt drei `InternalsVisibleTo`-Eintraege (`AiNetLinter.Tests`, `AiNetLinter.FastTests`, `AiNetLinter.IntegrationTests`); je weiterer Test-Assembly mit `internal`-Seam-Zugriff ist ein zusaetzlicher Eintrag noetig. (zuletzt: step-004)
 
 ## Produktive Lade- und Ausfuehrungsgrenzen
 
