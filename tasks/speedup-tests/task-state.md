@@ -43,7 +43,7 @@ mehr nötig.>
 | step-009 | EPIC-2 | done | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | 1d64b47 | approved | 296447f |
 | step-010 | EPIC-3 | done | Checkers-Kohorte -> Unit (28 Klassen) | - | 8c1552f | approved | 9245277 |
 | step-011 | EPIC-3 | done | Web-Parser-Kohorte -> Unit (5 Klassen) | - | b720e1b | approved | 317f90c |
-| step-012 | EPIC-3 | in_progress | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | - | - | - |
+| step-012 | EPIC-3 | done | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | eb645b8 | approved | be663e6 |
 
 ## Config (optional)
 
