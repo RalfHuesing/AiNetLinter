@@ -60,7 +60,12 @@ obsolet markiert) — kein starres Vorab-Dokument.
 ## Epics
 
 - [ ] EPIC-1: Fundament — Zielprojekte, TestKit, Architekturguards, Ledger, Minimum Safety Envelope,
-      Legacy-Quarantäne — Konzept §Grober Lösungsansatz 1-2, Leitplanke 0/6/8. Umfasst: neue Projekte
+      Legacy-Quarantäne — Konzept §Grober Lösungsansatz 1-2, Leitplanke 0/6/8. **In Arbeit →
+      step-001** (deckt nur den ersten Teil ab: die drei neuen Projekte samt gemeinsamer
+      `TestProject.props`, Solution-Wiring und die beiden produktiven Konfigurationsverträge
+      `ProjectOverrides`/`TestProjectNameSuffixes` aus Leitplanke 0 — Architekturguards, Ledger,
+      Legacy-Build-Gate, Baseline-Messung, `InternalsVisibleTo` und Minimum Safety Envelope bleiben
+      offen für einen Folge-Step). Umfasst: neue Projekte
       `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests`/`AiNetLinter.TestKit` samt gemeinsamer
       `TestProject.props`; Anpassung von `rules.json` (`ProjectOverrides`), `TestSentinel.
       TestProjectNameSuffixes`, `InternalsVisibleTo`; `test-migration-ledger.md` mit
