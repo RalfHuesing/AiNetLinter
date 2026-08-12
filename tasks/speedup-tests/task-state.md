@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 10  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-010
+total_steps: 11  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-011
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-010
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 10 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 11 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-010`
+- **Aktueller Schritt:** `step-011`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -42,6 +42,7 @@ mehr nötig.>
 | step-008 | EPIC-2 | done | Testplattform: FilterMini-Fixture (Disk + In-Memory) | - | 968c35a | issues→approved (via step-009) | 243f2db |
 | step-009 | EPIC-2 | done | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | 1d64b47 | approved | 296447f |
 | step-010 | EPIC-3 | done | Checkers-Kohorte -> Unit (28 Klassen) | - | 8c1552f | approved | 9245277 |
+| step-011 | EPIC-3 | open | Web-Parser-Kohorte -> Unit (5 Klassen) | - | - | - | - |
 
 ## Config (optional)
 
