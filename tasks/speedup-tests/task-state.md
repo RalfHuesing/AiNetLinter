@@ -59,7 +59,7 @@ build_command: <aus roadmap.md Tech-Stack-Notiz>
 test_command: <aus roadmap.md Tech-Stack-Notiz>
 target_branch: <aktueller Branch, nicht hartcodiert>
 model_planer: GPT-5.6 Sol, Stufe Medium
-model_coder: GPT-5.6 Luna, Stufe High
+model_coder: GPT-5.6 Terra, Stufe High
 model_kritiker: GPT-5.6 Terra, Stufe Medium
 ```
 
