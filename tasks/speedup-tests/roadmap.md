@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-007-Abgleich
+last_updated: 2026-08-12  # Planer-Step-008-Abgleich (EPIC-2 abgeschlossen)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -81,20 +81,26 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (Messmethodik Leitplanke 10); Minimum Safety Envelope (Config laden, vorbereitete Solution
       analysieren, CLI-Adapter, MCP-Handshake) und Umschalten des normalen Gates auf die neuen
       schnellen Profile.
-- [ ] EPIC-2: Testplattform-Fundamente — `RoslynTestSolutionFactory`, `PreparedSolutionFixture`,
+- [x] EPIC-2: Testplattform-Fundamente — `RoslynTestSolutionFactory`, `PreparedSolutionFixture`,
       `MsBuildFixtureHost`, `IsolatedFixtureLease`, gecachte `MetadataReference`n, lazy
       Materialisierung, `FilterMini`-Fixture — Konzept §2/§4. Voraussetzung für die breite Migration
-      in EPIC-3/4/5, da diese Bausteine von den migrierten Tests konsumiert werden. **In Arbeit →
-      step-006** (step-006 deckt `RoslynTestSolutionFactory`, die gecachten `MetadataReference`n und
-      `PreparedSolutionFixture` mit lazy Szenario-Materialisierung ab, inkl. Migration des
-      bestehenden lokalen `CreateAdhocSolution`-Helpers aus `LinterEngineSolutionAnalysisTests` auf
-      die neue Plattform als erster echter Konsument). **Offen bleibt nach step-006, laut Konzept §2
-      Bestandteil dieses Epics (nicht von EPIC-5 vorweggenommen, EPIC-5 migriert lediglich die
-      konsumierende Testkohorte):** `MsBuildFixtureHost` (einmaliger echter `MSBuildWorkspace`-Load
-      einer kanonischen Mini-Solution) und `IsolatedFixtureLease` (isolierte Kopie für
-      Mutations-Tests) — geplant für step-007. Sowie weiterhin offen: `FilterMini`-Fixture, die erst
-      mit einem echten Konsumenten sinnvoll ist und voraussichtlich zusammen mit der
-      Filtermatrix-Migration in EPIC-4 gebaut wird.
+      in EPIC-3/4/5, da diese Bausteine von den migrierten Tests konsumiert werden. **Abgeschlossen →
+      step-006, step-007, step-008.** step-006 deckt `RoslynTestSolutionFactory`, die gecachten
+      `MetadataReference`n und `PreparedSolutionFixture` mit lazy Szenario-Materialisierung ab, inkl.
+      Migration des bestehenden lokalen `CreateAdhocSolution`-Helpers aus
+      `LinterEngineSolutionAnalysisTests` auf die neue Plattform als erster echter Konsument.
+      step-007 deckt `MsBuildFixtureHost` (einmaliger echter `MSBuildWorkspace`-Load einer
+      kanonischen Mini-Solution) und `IsolatedFixtureLease` (isolierte Kopie für Mutations-Tests) ab.
+      step-008 deckt die letzte offene Konzept-§2/§4-Zutat ab: die kalibrierte `FilterMini`-Fixture
+      (Disk-Solution mit Produktions-/Testprojekt, mehreren Namespaces, public/private Membern,
+      Projektbezug) plus dieselbe Spezifikation als In-Memory-`ProjectSpec`-Paar
+      (`FilterMiniSolutionSpec` in `AiNetLinter.TestKit`) und einem ersten
+      Fidelity-/Formvergleichstest zwischen beiden Welten (Konzept §4 „Fidelity-/Paritätstests",
+      struktureller Formvergleich). **Bewusst nicht Teil von step-008 und damit weiterhin offen für
+      EPIC-4:** die eigentliche Migration der 18-fälligen `FilterCliIntegrationTests`-Matrix auf die
+      neue `FilterMini`-Fixture (Konzept §2/§9 Punkt 3 nennt das explizit als EPIC-4-Aufgabe,
+      „voraussichtlich zusammen mit der Filtermatrix-Migration") — `FilterMini` ist jetzt als
+      Fundament vorhanden, der Konsument fehlt noch bewusst.
 - [ ] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
       kleine-Compilation-Tests ohne MSBuild/Prozess/Repo aus `AiNetLinter.Tests` nach
       `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1.
