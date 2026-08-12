@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-012-Abgleich (step-011 approved, EPIC-3 Renderer-Kohorte geplant)
+last_updated: 2026-08-12  # Planer-Step-013-Abgleich (EPIC-3 abgeschlossen, EPIC-4 Filterkohorte geplant)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -101,19 +101,23 @@ obsolet markiert) — kein starres Vorab-Dokument.
       neue `FilterMini`-Fixture (Konzept §2/§9 Punkt 3 nennt das explizit als EPIC-4-Aufgabe,
       „voraussichtlich zusammen mit der Filtermatrix-Migration") — `FilterMini` ist jetzt als
       Fundament vorhanden, der Konsument fehlt noch bewusst.
-- [ ] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
+- [x] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
       kleine-Compilation-Tests ohne MSBuild/Prozess/Repo aus `AiNetLinter.Tests` nach
-      `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1. **In
-      Arbeit → step-010 und step-011 `approved`, step-012 geplant.** Teil 1 ist durch step-010
+      `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1.
+      **Abgeschlossen → step-010, step-011 und step-012 (`approved`).** Teil 1 ist durch step-010
       `approved`: komplette
       `Core/Checkers`-Kohorte, 28 Testklassen + eigene `TestHelper.cs`-Teilmenge in
       `AiNetLinter.FastTests`. Teil 2 ist durch step-011 `approved`: die komplette Parser-Kohorte
-      (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`, fünf Klassen). Step-012 plant als
+      (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`, fünf Klassen). Step-012 migrierte als
       letzten Teil die zwei reinen Renderer-Testklassen (`Mcp/Tools/*RendererTests`) samt
-      Coverage-Audit und Unit-Profilgate an der EPIC-3-Grenze.
+      Coverage-Audit; das EPIC-3-Grenzgate ist mit 326 grünen Unit-Tests nachgewiesen.
 - [ ] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
       Produkt-Seams (Laden/Ausführen trennen, z. B. `SkeletonMapBuilder`) — Konzept §9 Punkt 3,
-      Leitplanke 3, Definition of Done „Filtermatrix gegen kalibrierte Solution".
+      Leitplanke 3, Definition of Done „Filtermatrix gegen kalibrierte Solution". **In Arbeit →
+      step-013 plant als ersten geschlossenen Teil ausschließlich die Skeleton-/Filterkohorte:**
+      18 Filterverträge gegen die vorbereitete `FilterMini`-Solution, objektbasierter
+      `SkeletonMapBuilder`-Kern und wenige echte Pfad-/MSBuild-Adapterverträge. Scanner- und übrige
+      Tool-Kohorten bleiben für spätere JIT-Steps offen.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.
