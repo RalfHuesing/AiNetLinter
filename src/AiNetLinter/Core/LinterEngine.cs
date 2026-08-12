@@ -16,6 +16,8 @@ using AiNetLinter.Cache;
 using AiNetLinter.Cli;
 
 [assembly: InternalsVisibleTo("AiNetLinter.Tests")]
+[assembly: InternalsVisibleTo("AiNetLinter.FastTests")]
+[assembly: InternalsVisibleTo("AiNetLinter.IntegrationTests")]
 
 namespace AiNetLinter.Core;
 

@@ -75,7 +75,7 @@ dotnet build          # Kompilieren
 dotnet test           # Tests ausführen
 dotnet run            # Starten
 ```
-* **Test-Logging & Fehlerdiagnose:** Jeder `dotnet test`-Lauf überschreibt durch `.runsettings` automatisch `TestResults/latest.trx`. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent direkt `TestResults/latest.trx` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten.
+* **Test-Logging & Fehlerdiagnose:** Jeder `dotnet test`-Lauf überschreibt durch `.runsettings` automatisch `TestResults/latest.trx` — seit es mehrere Zielprojekte gibt (`AiNetLinter.FastTests`, `AiNetLinter.IntegrationTests`, Legacy `AiNetLinter.Tests`), überschreibt sich `latest.trx` pro `dotnet test`-Aufruf erneut, gilt also nur für den zuletzt gelaufenen Befehl. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent direkt `TestResults/latest.trx` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten. Welche `dotnet test`-Befehle aktuell den maßgeblichen Standard-Gate-Pfad bilden (und welches Zielprojekt quarantäniert ist), steht ausschließlich in `AGENTS.md` — nicht hier zusätzlich pflegen.
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.

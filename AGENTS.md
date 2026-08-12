@@ -27,38 +27,57 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 ## 2. Entwicklungs- & Test-Workflow
 
 ### Verifikation & Test-Kategorien
-Da die gesamte Testsuite durch Integrationstests und MCP-Subprozesse zeitintensiv sein kann, sind die Tests in `Unit`, `Integration` und `Stress` kategorisiert. Agenten sollen Testkategorien während der Entwicklung gezielt auswählen:
+Die produktive Testsuite ist auf drei Zielprojekte verteilt (`src/AiNetLinter.FastTests`,
+`src/AiNetLinter.IntegrationTests`, das aktuell noch leere `src/AiNetLinter.TestKit`), innerhalb
+derer die Tests in `Unit`/`Component` (FastTests) bzw. `Integration`/`Dogfood`/`Performance`/`Stress`
+(IntegrationTests) kategorisiert sind. Agenten sollen Testkategorien während der Entwicklung gezielt
+auswählen:
 
 1. **Schnelle Iteration (während der Entwicklung)**:
-   Verwende gefilterte Läufe für schnelles Feedback (z. B. Unit-Tests in ~23-24 Sekunden):
+   Verwende gefilterte Läufe für schnelles Feedback:
    ```bash
-   dotnet test --filter Category=Unit
+   dotnet test src/AiNetLinter.FastTests --filter Category=Unit
    ```
-   (oder alternativ `dotnet test --filter Category!=Integration`)
 
 2. **Abschluss-Verifikation (vor Task-Beendigung)**:
-   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf grün durchgeführt werden — das schließt `Unit` und `Integration` ein, NICHT `Stress` (siehe Punkt 4):
+   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf über beide Zielprojekte grün
+   durchgeführt werden — das schließt `Unit`/`Component` und `Integration`/`Dogfood`/`Performance`
+   ein, NICHT `Stress` (siehe Punkt 4):
    ```bash
-   dotnet test --filter Category!=Stress
+   dotnet test src/AiNetLinter.FastTests --filter Category!=Stress
+   dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
    ```
 
 3. **Build prüfen**:
    ```bash
    dotnet build
    ```
+   Baut weiterhin alle fünf Projekte der Solution inklusive des quarantänierten Legacy-Projekts
+   (siehe Punkt 6).
 
 4. **`Stress`-Kategorie (nur gezielt/manuell, nie automatisch)**:
-   Tests, die absichtlich hohe parallele Last erzeugen (z. B. `McpTestClientParallelTests` mit 16 gleichzeitigen Server-Subprozessen, ~150s) sind `[Trait("Category", "Stress")]` statt `Integration` getaggt. Sie laufen NICHT im normalen Volllauf (Punkt 2) und NICHT im Unit-Slice (Punkt 1) mit, sondern nur auf explizite Anforderung:
+   Tests, die absichtlich hohe parallele Last erzeugen (z. B. `McpTestClientParallelTests` mit 16 gleichzeitigen Server-Subprozessen, ~150s) sind `[Trait("Category", "Stress")]` getaggt. Sie laufen NICHT im normalen Volllauf (Punkt 2) und NICHT im Unit-Slice (Punkt 1) mit, sondern nur auf explizite Anforderung:
    ```bash
-   dotnet test --filter Category=Stress
+   dotnet test src/AiNetLinter.IntegrationTests --filter Category=Stress
    ```
    Neue absichtlich lastintensive/parallele Tests (nicht einfach nur "langsam", sondern gezielt Last/Nebenläufigkeit prüfend) gehören ebenfalls in diese Kategorie, nicht in `Integration`.
 
 5. **Test-Ergebnisse & Logging**:
    Das Ergebnis wird in `TestResults/latest.trx` geloggt (Details & Diagnose-Workflow siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §3).
 
+6. **Legacy-Projekt `AiNetLinter.Tests` (quarantäniert)**:
+   `AiNetLinter.Tests` bleibt Teil der Solution und baubar (Punkt 3), ist aber **nicht mehr Teil
+   des normalen Gates** (Punkt 1/2). Bei Änderung an noch nicht migriertem Produktcode (siehe
+   `tasks/speedup-tests/test-migration-ledger.md`, Status `pending`) gezielt nur den betroffenen
+   engsten Legacy-Filter aus dem Ledger ausführen, kein solutionweiter Legacy-Lauf:
+   ```bash
+   dotnet test src/AiNetLinter.Tests --filter FullyQualifiedName~<BetroffeneTestklasse>
+   ```
+
 > [!IMPORTANT]
-> Beende einen Task erst, wenn `dotnet test --filter Category!=Stress` (Volllauf ohne Stress-Tests) grün durchgelaufen ist!
+> Beende einen Task erst, wenn sowohl `dotnet test src/AiNetLinter.FastTests --filter
+> Category!=Stress` als auch `dotnet test src/AiNetLinter.IntegrationTests --filter
+> Category!=Stress` grün durchgelaufen sind!
 
 ---
 
