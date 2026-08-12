@@ -5,7 +5,7 @@ started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
 total_steps: 0  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: <noch keiner>
+current_step: step-001
 ---
 
 # Task State: speedup-tests
@@ -15,7 +15,7 @@ current_step: <noch keiner>
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `<noch keiner>`
+- **Aktueller Schritt:** `step-001`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (noch nicht erzeugt)
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -32,7 +32,7 @@ mehr nötig.>
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| ... | ... | ... | ... | ... | ... | ... | ... |
+| step-001 | EPIC-1 | in_progress | Fundament: Zielprojekte + TestProject.props | - | - | - | - |
 
 ## Config (optional)
 
