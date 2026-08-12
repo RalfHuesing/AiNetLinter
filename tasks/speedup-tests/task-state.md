@@ -48,7 +48,7 @@ mehr nötig.>
 | step-014 | EPIC-4 | done | Korrektur: Namespace-Glob selektiv kalibrieren | step-013 | f41fd31 | approved | 34eaa0b |
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
-| step-017 | EPIC-4 | open | Duplicate-Detection-Engine auf In-Memory-Plattform | - | - | - | - |
+| step-017 | EPIC-4 | in_progress | Duplicate-Detection-Engine auf In-Memory-Plattform | - | - | - | - |
 
 ## Config (optional)
 
