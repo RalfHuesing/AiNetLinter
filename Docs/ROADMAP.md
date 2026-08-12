@@ -172,11 +172,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
   - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
-- [x] **Vermeidung von Magic Values (Numbers & Strings):**
-  - Finde literale Werte (Magic Numbers/Strings wie `status == 4` oder `role == "Admin"`) direkt in Methodenkörpern.
-  - Ausnahmen deklarieren für `0`, `1`, `-1` und leere Strings.
-  - Erzwinge stattdessen Konstanten (`const`), `static readonly` Felder oder `enum`s, um die Semantik explizit zu benennen.
-  - Konfigurierbar unter `GlobalConfig` (z. B. `EnforceNoMagicValues`).
+- [ ] ~~**Vermeidung von Magic Values (Numbers & Strings):**~~ **Entfernt am 2026-06-19** (Commit `764281a`, Begründung laut Commit-Message: *"Regel greift kein konkretes LLM-Failure-Pattern"*). `MagicValuesChecker`, `MagicValuesConfig`, `MagicValuesConfigOverride` sowie alle Konfigurationsfelder (`EnforceNoMagicValues`) wurden vollständig entfernt, inkl. Tests, Docs und `rules.json`-Einträgen. Ursprünglich geplant: literale Werte (`status == 4`, `role == "Admin"`) direkt in Methodenkörpern finden, mit Ausnahmen für `0`/`1`/`-1`/leere Strings, und stattdessen Konstanten/`static readonly`/`enum`s erzwingen. Ein gezielteres On-Demand-Audit-Tool (MCP-Tool statt Build-Regel, mit fachlicher Klassifizierung und Security-Fokus) ist als Konzept in Arbeit: `tasks/magic-values-in-mcp/konzept.md`.
 
 ---
 
@@ -319,7 +315,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026). Die Kalibrierung wurde in der projekteigenen `rules.json` (Dogfooding-Config dieses Repos) umgesetzt. Die eingebauten Code-Defaults in `MetricsConfig.cs`/`GlobalConfig.cs` (das, was ein Nutzer ohne eigene `rules.json` erhält) tragen weiterhin die alten Werte — dieser Teil der Kalibrierung steht noch aus.
 
-- [x] **M01 — MaxLineCount: 500 statt Code-Default 700** — Industriestandard-Mitte (Ardito et al. 2020); „Lost in the Middle"-Sweetspot bei 200–500 LOC.
+- [x] **M01 — MaxLineCount: 500 statt Code-Default 700** — praktische Kalibrierung auf einen gängigen Mittelwert, motiviert durch das allgemeine „Lost in the Middle"-Phänomen (Liu et al. 2023, siehe `rationale.md` Regel 1); kein direkt aus einer Studie abgeleiteter Wert. *(Korrektur 2026-08-13: der zuvor hier genannte Beleg "Ardito et al. 2020" war falsch zugeordnet — dieses Paper ist ein Survey über Maintainability-Metriken/-Tools ohne LOC-Schwellenwert-Aussage und erschien 2020, drei Jahre vor Liu et al. 2023, kann das "Lost in the Middle"-Konzept also chronologisch nicht stützen.)*
 - [x] **M06 — MaxInheritanceDepth: 3 statt Code-Default 2** — Wert 2 erzeugt False Positives für ASP.NET-Controller, EF-Entities, xUnit-Testklassen ohne korrekte `InheritanceDepthFrameworkPrefixes`.
 - [x] **M07 — MaxMethodOverloads: 5 statt Code-Default 3** — Standard-.NET-Async-Patterns (mit/ohne `CancellationToken`, mit/ohne `IProgress`) erzeugen regulär 3–5 Overloads.
 - [x] **M14 — MaxAIContextFootprint: 2500 statt Code-Default 5000** — Empirisch belegter Aufmerksamkeitsabfall bei LLMs ab ~2.000–3.000 transitiven Zeilen (Liu et al. 2023, „Lost in the Middle").
