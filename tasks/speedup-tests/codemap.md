@@ -17,6 +17,9 @@ last_updated: 2026-08-12
 <!-- step-016: EPIC-4 Teil 3 -- RefactoringDriftScanner auf der vorhandenen virtuellen
      Factory-Pfadkalibrierung nach FastTests migriert. -->
 
+<!-- planning step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die
+     vorhandene In-Memory-Factory migrieren; Tool-Dispatch-Vertraege bleiben getrennt. -->
+
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
 
@@ -56,9 +59,12 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **~~`src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionScannerTests.cs`~~** — als Legacy-Quelle seit step-015 obsolet; die Scannerverträge liegen unter `src/AiNetLinter.FastTests/Mcp/Tools/`. (zuletzt: step-015)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/RefactoringDriftScannerTests.cs` / `src/AiNetLinter/Mcp/Tools/DuplicateDetection/RefactoringDriftScanner.cs`** — acht Component-Vertraege nutzen die virtuelle Pfadkalibrierung der `RoslynTestSolutionFactory`, einschließlich Lambda-Caller-Normalisierung. (zuletzt: step-016)
 - **~~`src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs`~~** — als Legacy-Quelle seit step-016 obsolet; die Scannerverträge liegen unter `src/AiNetLinter.FastTests/Mcp/Tools/`. (zuletzt: step-016)
+- **`src/AiNetLinter/Core/DuplicateDetection/DuplicateDetectionEngine.cs` / `DuplicateDetectionEngine.RefactoringDrift.cs`** — gemeinsame reine `Solution`-Engine für Clone- und Refactoring-Drift-Fingerprints; nächster EPIC-4-Engine-Schnitt. (zuletzt: planning step-017)
+- **`src/AiNetLinter.Tests/Core/DuplicateDetection/DuplicateDetectionEngineTests.cs` / `DuplicateDetectionEngineFalsePositiveTests.cs` / `RefactoringDriftEngineTests.cs`** — noch pending Legacy-Engine-Familie mit lokalem Workspace-, Referenz- und Temp-Datei-Aufbau; geplanter Zielort ist `src/AiNetLinter.FastTests/Core/DuplicateDetection/`. (zuletzt: planning step-017)
+- **`src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolTests.cs` / `DuplicateDetectionToolRefactoringDriftTests.cs`** — getrennt pending bleibende Tool-Dispatch-Kohorte für Server-Loadstate, Mode-/Argumentvalidierung, Structured Content und Sufficiency-/Truncation-Antworten. (zuletzt: planning step-017)
 - **`src/AiNetLinter.Tests/Output/TestLintConsole.cs`** — von zahlreichen weiterhin pending Legacy-Klassen konsumiertes `ILintConsole`-Testdouble; die Datei kann bei der Filtermigration nicht physisch mitverschoben werden, während ein gemeinsames Zielassembly-Double erst durch reale Fast-/Integration-Konsumenten gerechtfertigt ist. (zuletzt: planning step-013)
 - **`src/AiNetLinter.IntegrationTests/Platform/FilterMiniFidelityTests.cs`** — Fidelity-/Formvergleichstest zwischen Disk- und In-Memory-`FilterMini`, einschließlich positiver und negativer Testprojekt-Erkennung. (zuletzt: step-013)
-- **`tasks/speedup-tests/test-migration-ledger.md`** — Inventar aller 183 Legacy-Testklassen mit Status, Legacy-Filter und neuem Abdeckungsort; 28 Checker-, fuenf Web-Parser- und zwei Renderer-Zeilen stehen auf `migrated`. (zuletzt: step-012)
+- **`tasks/speedup-tests/test-migration-ledger.md`** — Inventar aller 183 Legacy-Testklassen mit Status, Legacy-Filter und neuem Abdeckungsort; der reale Migrationsstand reicht inzwischen durch die Skeleton-/Filter- und beide Duplicate-Detection-Scanner-Kohorten. (zuletzt: step-016)
 - **`src/AiNetLinter.IntegrationTests/Migration/TestMigrationLedgerConsistencyTests.cs`** — Ledger-Konsistenzguard (Category=Integration): scannt die Legacy-Testklassen in `src/AiNetLinter.Tests` per Roslyn-Syntaxbaum und prueft alle vier Konsistenzregeln aus dem Ledger-Kopf gegen den tatsaechlichen Bestand. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsDependencyGuardTests.cs`** — statischer Deny-Listen-Guard (Category=Unit) ueber die kompilierten Metadaten (AssemblyRef/TypeRef/MemberRef via System.Reflection.Metadata) von `AiNetLinter.FastTests.dll`/`AiNetLinter.TestKit.dll` gegen MSBuild-/Workspace-/Process-/`SourceFileCatalog.LoadAsync`-Referenzen. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsRuntimeDependencyGuardFixture.cs`** — Laufzeit-Gegenstueck des Deny-Listen-Guards: `ICollectionFixture`, deren Dispose `AppDomain.CurrentDomain.GetAssemblies()` gegen dieselbe Deny-Liste prueft; Best-Effort-Nachweis (keine Prozessisolationsgarantie, siehe XML-Doc der Klasse). (zuletzt: step-002)
