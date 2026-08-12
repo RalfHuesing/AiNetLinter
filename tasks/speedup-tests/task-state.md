@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 11  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-011
+total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-012
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-011
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 11 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-011`
+- **Aktueller Schritt:** `step-012`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -43,6 +43,7 @@ mehr nötig.>
 | step-009 | EPIC-2 | done | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | 1d64b47 | approved | 296447f |
 | step-010 | EPIC-3 | done | Checkers-Kohorte -> Unit (28 Klassen) | - | 8c1552f | approved | 9245277 |
 | step-011 | EPIC-3 | done | Web-Parser-Kohorte -> Unit (5 Klassen) | - | b720e1b | approved | 317f90c |
+| step-012 | EPIC-3 | open | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | - | - | - |
 
 ## Config (optional)
 

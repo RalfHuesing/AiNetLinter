@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-011-Abgleich (step-010 approved, EPIC-3 Parser-Kohorte geplant)
+last_updated: 2026-08-12  # Planer-Step-012-Abgleich (step-011 approved, EPIC-3 Renderer-Kohorte geplant)
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -104,11 +104,13 @@ obsolet markiert) — kein starres Vorab-Dokument.
 - [ ] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
       kleine-Compilation-Tests ohne MSBuild/Prozess/Repo aus `AiNetLinter.Tests` nach
       `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1. **In
-      Arbeit → step-010, step-011 geplant.** Teil 1 ist durch step-010 `approved`: komplette
+      Arbeit → step-010 und step-011 `approved`, step-012 geplant.** Teil 1 ist durch step-010
+      `approved`: komplette
       `Core/Checkers`-Kohorte, 28 Testklassen + eigene `TestHelper.cs`-Teilmenge in
-      `AiNetLinter.FastTests`. Step-011 plant als Teil 2 die Parser-Kohorte
-      (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`). Danach bleibt innerhalb von EPIC-3
-      noch die Renderer-Kohorte (`Mcp/Tools/*RendererTests`) offen.
+      `AiNetLinter.FastTests`. Teil 2 ist durch step-011 `approved`: die komplette Parser-Kohorte
+      (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`, fünf Klassen). Step-012 plant als
+      letzten Teil die zwei reinen Renderer-Testklassen (`Mcp/Tools/*RendererTests`) samt
+      Coverage-Audit und Unit-Profilgate an der EPIC-3-Grenze.
 - [ ] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
       Produkt-Seams (Laden/Ausführen trennen, z. B. `SkeletonMapBuilder`) — Konzept §9 Punkt 3,
       Leitplanke 3, Definition of Done „Filtermatrix gegen kalibrierte Solution".
