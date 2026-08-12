@@ -191,7 +191,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/OverviewResourceRegistrationTests.cs` | `OverviewResourceRegistrationTests` | Mcp | pending | `FullyQualifiedName~OverviewResourceRegistrationTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectScannerTests.cs` | `PatternDetectScannerTests` | Mcp | pending | `FullyQualifiedName~PatternDetectScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectToolTests.cs` | `PatternDetectToolTests` | Mcp | pending | `FullyQualifiedName~PatternDetectToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs` | `RefactoringDriftScannerTests` | Mcp | pending | `FullyQualifiedName~RefactoringDriftScannerTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs` | `RefactoringDriftScannerTests` | Mcp | migrated | `FullyQualifiedName~RefactoringDriftScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/RefactoringDriftScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/ReloadConfigToolTests.cs` | `ReloadConfigToolTests` | Mcp | pending | `FullyQualifiedName~ReloadConfigToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/SafeguardScannerTests.cs` | `SafeguardScannerTests` | Mcp | pending | `FullyQualifiedName~SafeguardScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/SafeguardToolTests.cs` | `SafeguardToolTests` | Mcp | pending | `FullyQualifiedName~SafeguardToolTests` |  |
