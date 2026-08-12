@@ -23,6 +23,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`AGENTS.md`** — enthaelt die heute verbindlichen Unit-/Integration-/Stress-Filter und Abschlussgates. (zuletzt: planning)
 - **`.agents/rules/AiNetLinterRichtlinien.mdc`** — enthaelt die projektspezifischen Test-, Parallelitaets-, MCP- und Commitregeln, u. a. die TRX-Diagnoseregel auf `TestResults/latest.trx`. (zuletzt: planning)
 - **`tests/AiNetLinter.TestProject.props`** — vorgesehene explizit importierte gemeinsame Eigenschaften und MSBuild-Paketpins der drei Zielprojekte ohne implizite Wirkung auf Produkt- oder Fixture-Projekte. (zuletzt: planning)
+- **`src/Directory.Build.props`** — pinnt bereits heute `Microsoft.Build.Framework` mit `PrivateAssets`/`ExcludeAssets` fuer alle Projekte unter `src/`; die neue `TestProject.props` muss dieses Pinning ergaenzen/spiegeln, nicht ersetzen, und darf nicht mit ihr kollidieren. (zuletzt: roadmap, verifiziert im Bestand)
 
 ## Produktive Konfigurationsvertraege mit Bezug zur Projektstruktur
 
