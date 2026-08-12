@@ -120,6 +120,13 @@ Details, Rohdaten und Median-Berechnung: `tasks/speedup-tests/baseline-measureme
 
 ## Beobachtungen
 
+- **Nachtrag (step-003): Ledger-Konsistenzguard nachweislich rot bei simulierter Lücke.** Testweise
+  die Zeile `ArchitectureTests` aus `tasks/speedup-tests/test-migration-ledger.md` entfernt und
+  `dotnet test src/AiNetLinter.IntegrationTests --filter
+  FullyQualifiedName~TestMigrationLedgerConsistencyTests` ausgeführt: Ergebnis rot (1 von 4 Tests
+  fehlgeschlagen) mit Fehlermeldung `Testklassen ohne Ledger-Eintrag: ArchitectureTests` aus
+  `AllLegacyTestClasses_HaveLedgerEntry`. Danach die Zeile exakt wiederhergestellt (`git diff` für
+  `test-migration-ledger.md` leer) und denselben Testlauf erneut ausgeführt: grün (4 von 4 Tests).
 - **Während der Baseline-Messung entdeckt (nicht durch step-002 verursacht):** ein `dotnet test
   --filter Category!=Stress`-Lauf auf frischem Build schlug mit 2 Fehlern in
   `AiNetLinter.Tests.Mcp.McpServerCommandJsonRpcFramingTests` fehl
