@@ -127,14 +127,14 @@ public sealed class SkeletonMapFilterTests
     {
         var (output, console, exitCode) = await RunSkeletonAsync(new LinterArgs
         {
-            TargetPath = "FilterMini.slnx", Verbose = false, IncludeNamespaces = ["FilterMini.*"]
+            TargetPath = "FilterMini.slnx", Verbose = false, IncludeNamespaces = ["FilterMini.Tests.*"]
         });
 
         Assert.Equal(0, exitCode);
         Assert.Empty(console.ErrorLines);
-        Assert.Contains("## FilterMini.Core", output, StringComparison.Ordinal);
-        Assert.Contains("## FilterMini.Utils", output, StringComparison.Ordinal);
         Assert.Contains("## FilterMini.Tests.Core", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("## FilterMini.Core", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("## FilterMini.Utils", output, StringComparison.Ordinal);
     }
 
     [Fact]
