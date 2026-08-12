@@ -15,7 +15,7 @@ open_questions:
 
 Ein Roslyn-basiertes MCP-Server-Tool (`find_magic_values`), das als **On-Demand-Audit-Werkzeug** (keine störende/blockierende Linter-Build-Regel) dient. Es befähigt KI-Agenten und Entwickler dazu, auf Anforderung eine C# / .NET 10 Codebase gezielt nach festen Werten (Literalen wie Strings, Zahlen, Pfaden, Timeouts) zu scannen — **auch bei Einzelvorkommen ($\text{minOccurrences} = 1$)** —, diese fachlich zu klassifizieren und strukturierte Refactoring-Empfehlungen (Constants, `appsettings.json`, Enums, `nameof(...)`, Lokalisierung) zu liefern.
 
-Fundstellen, die bewusst im Code verbleiben sollen (False Positives oder beabsichtigte Literale), können über den bestehenden AiNetLinter-Suppression-Mechanismus (`// ainetlinter-disable MagicValues`) dauerhaft stumm geschaltet werden, damit sie in Folge-Audits nicht wiederholt gemdet werden.
+Fundstellen, die bewusst im Code verbleiben sollen (False Positives oder beabsichtigte Literale), können über den bestehenden AiNetLinter-Suppression-Mechanismus (`// ainetlinter-disable MagicValues`) dauerhaft stumm geschaltet werden, damit sie in Folge-Audits nicht wiederholt gemeldet werden.
 
 ## Warum / Kontext
 
