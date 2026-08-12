@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="../../tests/AiNetLinter.TestProject.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\AiNetLinter\AiNetLinter.csproj" />
+  </ItemGroup>
+
+</Project>

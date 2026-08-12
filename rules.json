@@ -293,7 +293,8 @@
       "Test",
       "IntegrationTests",
       "Specs",
-      "Spec"
+      "Spec",
+      "TestKit"
     ]
   },
   "UiSeparation": {
@@ -391,7 +392,26 @@
   },
   "ForbiddenNamespaceDependencies": [],
   "ProjectOverrides": {
-    "*.Tests": {
+    "*Tests": {
+      "Global": {
+        "EnforceSealedClasses": false
+      },
+      "Metrics": {
+        "MaxMethodLineCount": 100,
+        "MaxPublicMembersPerTypeExemptSuffixes": [
+          "Extensions",
+          "Mapper",
+          "Constants",
+          "Config",
+          "ConfigOverride",
+          "Args",
+          "Tests",
+          "Test",
+          "Specs"
+        ]
+      }
+    },
+    "AiNetLinter.TestKit": {
       "Global": {
         "EnforceSealedClasses": false
       },

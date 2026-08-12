@@ -1,0 +1,26 @@
+<Project>
+  <!-- Gemeinsame Einstellungen der neuen Testziel-Projekte (AiNetLinter.FastTests,
+       AiNetLinter.IntegrationTests, AiNetLinter.TestKit). Explizit importiert statt ueber eine
+       unscoped Directory.Build.props, damit Produkt- oder Mini-Fixture-Projekte unter src/ nicht
+       versehentlich mitgetroffen werden. RunSettingsFilePath wird hier bewusst NICHT gesetzt, da
+       AiNetLinter.TestKit eine reine Class Library ohne Testhost ist; test-ausfuehrende Projekte
+       setzen es selbst. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Build.Framework" Version="18.8.2">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.StringTools" Version="18.8.2">
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
