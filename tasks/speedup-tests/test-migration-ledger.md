@@ -156,7 +156,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphScannerTests.cs` | `DependencyGraphScannerTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphToolTests.cs` | `DependencyGraphToolTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/DiRegistrationHeuristicsTests.cs` | `DiRegistrationHeuristicsTests` | Mcp | pending | `FullyQualifiedName~DiRegistrationHeuristicsTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionScannerTests.cs` | `DuplicateDetectionScannerTests` | Mcp | pending | `FullyQualifiedName~DuplicateDetectionScannerTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionScannerTests.cs` | `DuplicateDetectionScannerTests` | Mcp | migrated | `FullyQualifiedName~DuplicateDetectionScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolRefactoringDriftTests.cs` | `DuplicateDetectionToolRefactoringDriftTests` | Mcp | pending | `FullyQualifiedName~DuplicateDetectionToolRefactoringDriftTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolTests.cs` | `DuplicateDetectionToolTests` | Mcp | pending | `FullyQualifiedName~DuplicateDetectionToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` | `FindReferencesToolTests` | Mcp | pending | `FullyQualifiedName~FindReferencesToolTests` |  |
