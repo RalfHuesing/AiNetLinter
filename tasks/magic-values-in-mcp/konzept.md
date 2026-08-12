@@ -58,7 +58,11 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
   - Schützt das Context-Window des Agenten. Übersteigt die Trefferzahl `maxResults`, wird das Resultat sauber gekappt und eine informative Meta-Zeile angehängt (`"[N Treffer gesamt, M gezeigt — scope/categoryFilter verfeinern oder maxResults erhöhen]"`).
 - **Dauerhafte Unterdrückung (Suppression-Support):**
   - Unterdrückung über das bestehende AiNetLinter-Kommentarsystem: `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`).
+  - *Architektur-Entscheidung:* Anstatt den globalen zeilenbasierten `SuppressionScanner` zu nutzen, werten wir direkt im `SyntaxWalker` die Roslyn `SyntaxTrivia` (Kommentare) am jeweiligen SyntaxNode aus. Das ist signifikant performanter (da wir den AST ohnehin durchlaufen) und erlaubt eine präzise knotenbasierte Evaluierung ohne zusätzliche File-IO-Leseoperationen.
   - Wenn ein Entwickler/Agent ein Vorkommen als beabsichtigt oder False Positive bewertet und kommentiert, wird es in allen zukünftigen MCP-Audits ignoriert (`includeSuppressed: false` als Default).
+- **Ziel-Fokus (Nur C# Code):**
+  - Der Scan beschränkt sich streng auf **reine C#-Dateien** und deren AST.
+  - Razor (`.razor`), HTML, CSS, WPF/XAML, Blazor oder JavaScript werden *nicht* durchsucht, da diese Dateitypen gänzlich andere Parser, Semantiken und Interpolations-Muster benötigen. Dieser strenge Fokus garantiert 100% korrekte Empfehlungen für den Backend-Code.
 - **Gezielte Parameter-Steuerung für Audits:**
   - Der Aufrufer (Agent/Entwickler) kann den Audit gezielt nach Typen (`strings`, `numbers`, `all`) und fachlichen Kategorien filtern, um Token-Budget zu sparen und schrittweise vorzugehen.
 - **Kategorisierung & Ziel-Empfehlungen:**
@@ -125,7 +129,7 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 | **Literal-Erkennung & AST-Scan** | `SyntaxWalker` über `LiteralExpressionSyntax`, Raw String Literals & `InterpolatedStringExpressionSyntax`. | 🟢 **100% machbar.** Sehr schnell & trivial. |
 | **Typ- & Kategorie-Filterung** | Auswertung der Parameter `valueType` und `categoryFilter` direkt im AST-Walker / Evaluation Pass. | 🟢 **100% machbar.** Spart Tokens & Rechenzeit. |
 | **`maxResults`-Kappung (`McpTruncation`)** | Wiederverwendung der `McpTruncation`-Klasse der AiNetLinter MCP Engine. | 🟢 **100% machbar.** Engine bereits vorhanden. |
-| **Suppression-Auswertung (`// ainetlinter-disable`)** | Einbindung des bestehenden `SuppressionScanner` / `Trivia` Check in Roslyn. | 🟢 **100% machbar.** Die Engine existiert bereits im Codebase (`src/AiNetLinter/Suppression`). |
+| **Suppression-Auswertung (`// ainetlinter-disable`)** | Auswertung der `SyntaxTrivia` (Kommentare) direkt am besuchten Roslyn `SyntaxNode`. | 🟢 **100% machbar.** Sehr performant, da im AST-Durchlauf integriert; ersetzt den zeilenbasierten Legacy-`SuppressionScanner` für dieses Tool. |
 | **`nameof(...)`-Erkennung** | Scope-Check des AST-Knotens gegen Parameter, lokale Variablen & Member-Identifier. | 🟢 **Gut machbar.** Prüft, ob String-Inhalt einem Symbol-Namen im aktuellen Context entspricht. |
 | **Erkennung duplizierter `private const`** | Aggregation von `FieldDeclarationSyntax` mit `const`-Modifier über mehrere Klassen. | 🟢 **Gut machbar.** Erkennt doppelt definierte Konstanten (wie `WarnThreshold = 0.80`). |
 | **Attribut-Filtern** | Prüfen, ob `node.FirstAncestorOrSelf<AttributeSyntax>() != null`. | 🟢 **100% machbar.** Reine AST-Prüfung ohne Semantik. |
@@ -144,9 +148,9 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 
 ## Wo im Projekt
 
-- **MCP-Tool Handler & Scanner:** `src/AiNetLinter/Mcp/` (bzw. Handlers-Verzeichnis für MCP Tools).
-- **Roslyn-Walker & Semantic Evaluator:** `src/AiNetLinter/Rules/` bzw. `src/AiNetLinter/Generators/`.
-- **Suppression-Engine & Truncation Wiederverwendung:** `src/AiNetLinter/Suppression/` (`SuppressionScanner`) und `src/AiNetLinter/Mcp/McpTruncation.cs`.
+- **MCP-Tool Handler & Scanner:** `src/AiNetLinter/Mcp/Tools/MagicValues/`.
+- **Roslyn-Walker & Semantic Evaluator:** `src/AiNetLinter/Mcp/Tools/MagicValues/`.
+- **Truncation Wiederverwendung:** `src/AiNetLinter/Mcp/McpTruncation.cs`.
 - **Tests:** `src/AiNetLinter.FastTests` (Unit-Scans) & `src/AiNetLinter.IntegrationTests` (MCP JSON-RPC Integration).
 
 ## Entdeckte Mängel/Redundanzen
@@ -157,7 +161,7 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
 
 1. `SyntaxWalker` durchläuft alle C#-Syntaxbäume der Solution für `LiteralExpressionSyntax` (inkl. Raw String Literals & static text in `InterpolatedStringExpressionSyntax`).
 2. AST-Filterung schließt Attribute, eindeutige `const`/`readonly`-Initialisierer und Test-Dateien (sofern `includeTests: false`) aus.
-3. Check gegen `SuppressionScanner`: Zeilen mit `// ainetlinter-disable MagicValues` werden ausgeblendet (`includeSuppressed: false`).
+3. Check auf Suppression: Über die `GetLeadingTrivia()` / `GetTrailingTrivia()` des aktuellen `SyntaxNode` wird geprüft, ob ein `// ainetlinter-disable MagicValues` Kommentar vorliegt. Zeilenbasierte File-IO-Scanner (`SuppressionScanner`) werden bewusst vermieden.
 4. Kontextanalyse via `SemanticModel` bestimmt Methoden-Parameternamen, `nameof(...)`-Übereinstimmungen und Zuweisungsvariablen für Config-, Timeout- und Enum-Heuristiken.
 5. Duplikate, Einzelwerte und doppelte `private const` Felder werden aggregiert (`minOccurrences = 1` als Standard).
 6. Ergebnisse werden mit `McpTruncation` bei `maxResults` (Default: 50) gekappt und als kompaktes JSON-Resultat zurückgegeben.
