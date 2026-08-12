@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12  # Planer-Step-002-Abgleich
+last_updated: 2026-08-12  # Planer-Step-006-Abgleich
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -59,21 +59,23 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 ## Epics
 
-- [ ] EPIC-1: Fundament — Zielprojekte, TestKit, Architekturguards, Ledger, Minimum Safety Envelope,
-      Legacy-Quarantäne — Konzept §Grober Lösungsansatz 1-2, Leitplanke 0/6/8. **In Arbeit →
-      step-001, step-002** (step-001 deckte die drei neuen Projekte samt gemeinsamer
-      `TestProject.props`, Solution-Wiring und die beiden produktiven Konfigurationsverträge
-      `ProjectOverrides`/`TestProjectNameSuffixes` aus Leitplanke 0 ab; step-002 deckt zusätzlich
-      `test-migration-ledger.md` samt Konsistenzguard, die Architekturguards (statische
-      Deny-Liste + Laufzeitcheck in `AiNetLinter.FastTests`/`TestKit`, Kategorien-/Profilguard je
-      Ziel-Assembly) und die Baseline-Messung vor dem ersten Refactoring (Messmethodik
-      Leitplanke 10) ab — **offen bleiben nach step-002**: Legacy-Build-Gate (technischer Anker,
-      erst mit der tatsächlichen Quarantäne sinnvoll), Minimum Safety Envelope (Config laden,
-      vorbereitete Solution analysieren, CLI-Adapter, MCP-Handshake), `InternalsVisibleTo`
-      (erst bei Bedarf, frühestens EPIC-2) und Umschalten des normalen Gates auf die neuen
-      schnellen Profile inkl. tatsächlicher Legacy-Quarantäne). Umfasst insgesamt: neue Projekte
-      `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests`/`AiNetLinter.TestKit` samt gemeinsamer
-      `TestProject.props`; Anpassung von `rules.json` (`ProjectOverrides`), `TestSentinel.
+- [x] EPIC-1: Fundament — Zielprojekte, TestKit, Architekturguards, Ledger, Minimum Safety Envelope,
+      Legacy-Quarantäne — Konzept §Grober Lösungsansatz 1-2, Leitplanke 0/6/8. **Abgeschlossen →
+      step-001, step-002 (Korrektur step-003), step-004 (Korrektur step-005)** (step-001 deckte die
+      drei neuen Projekte samt gemeinsamer `TestProject.props`, Solution-Wiring und die beiden produktiven
+      Konfigurationsverträge `ProjectOverrides`/`TestProjectNameSuffixes` aus Leitplanke 0 ab;
+      step-002 deckte zusätzlich `test-migration-ledger.md` samt Konsistenzguard, die
+      Architekturguards (statische Deny-Liste + Laufzeitcheck in `AiNetLinter.FastTests`/`TestKit`,
+      Kategorien-/Profilguard je Ziel-Assembly) und die Baseline-Messung vor dem ersten Refactoring
+      (Messmethodik Leitplanke 10) ab; step-003/step-004 schlossen die Minimum Safety Envelope
+      (Config laden, vorbereitete Solution analysieren, CLI-Adapter mit Exit-Code,
+      MCP-Handshake/Toolregistrierung), das Legacy-Build-Gate, `InternalsVisibleTo` für die neuen
+      Assemblies und das Umschalten des normalen Gates auf die neuen schnellen Profile ab —
+      step-005 korrigierte dabei ein von step-004 hinterlassenes MAJOR-Finding in
+      `AiNetLinterRichtlinien.mdc` §4 (Text verwies noch ausschließlich auf die Legacy-MCP-Testklasse
+      statt auf `McpHandshakeToolRegistrationTests`), inzwischen `approved`). Umfasst insgesamt: neue
+      Projekte `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests`/`AiNetLinter.TestKit` samt
+      gemeinsamer `TestProject.props`; Anpassung von `rules.json` (`ProjectOverrides`), `TestSentinel.
       TestProjectNameSuffixes`, `InternalsVisibleTo`; `test-migration-ledger.md` mit
       Konsistenzguard; Legacy-Build-Gate; Baseline-Messung vor dem ersten Refactoring
       (Messmethodik Leitplanke 10); Minimum Safety Envelope (Config laden, vorbereitete Solution
@@ -82,7 +84,13 @@ obsolet markiert) — kein starres Vorab-Dokument.
 - [ ] EPIC-2: Testplattform-Fundamente — `RoslynTestSolutionFactory`, `PreparedSolutionFixture`,
       gecachte `MetadataReference`n, lazy Materialisierung, `FilterMini`-Fixture — Konzept §2/§4.
       Voraussetzung für die breite Migration in EPIC-3/4, da diese Bausteine von den migrierten
-      Tests konsumiert werden.
+      Tests konsumiert werden. **In Arbeit → step-006** (step-006 deckt `RoslynTestSolutionFactory`,
+      die gecachten `MetadataReference`n und `PreparedSolutionFixture` mit lazy
+      Szenario-Materialisierung ab, inkl. Migration des bestehenden lokalen
+      `CreateAdhocSolution`-Helpers aus `LinterEngineSolutionAnalysisTests` auf die neue
+      Plattform als erster echter Konsument — **offen bleibt danach**: `FilterMini`-Fixture, die
+      erst mit einem echten Konsumenten sinnvoll ist und voraussichtlich zusammen mit der
+      Filtermatrix-Migration in EPIC-4 gebaut wird).
 - [ ] EPIC-3: Checker-/Parser-/Renderer-Kohorte auf Unit-Ebene migrieren — reine Logik-/Syntax-/
       kleine-Compilation-Tests ohne MSBuild/Prozess/Repo aus `AiNetLinter.Tests` nach
       `AiNetLinter.FastTests` (Unit) — Konzept §9 „Sinnvolle Kohorten" Punkt 2, Leitplanke 1.
