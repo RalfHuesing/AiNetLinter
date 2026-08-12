@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-12
 rules_dir: .agents/rules
-total_steps: 7  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-007
+total_steps: 8  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-008
 ---
 
 # Task State: speedup-tests
@@ -15,7 +15,7 @@ current_step: step-007
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-007`
+- **Aktueller Schritt:** `step-008`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (noch nicht erzeugt)
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -39,6 +39,7 @@ mehr nötig.>
 | step-005 | EPIC-1 | done | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | bffe3e3 | approved | 2c9611c |
 | step-006 | EPIC-2 | done | Testplattform: RoslynTestSolutionFactory + PreparedSolutionFixture | - | f258992 | approved | 45322c3 |
 | step-007 | EPIC-2 | done | Testplattform: IsolatedFixtureLease + MsBuildFixtureHost | - | b2ebfbb | approved | 45361b5 |
+| step-008 | EPIC-2 | in_progress | Testplattform: FilterMini-Fixture (Disk + In-Memory) | - | - | - | - |
 
 ## Config (optional)
 
