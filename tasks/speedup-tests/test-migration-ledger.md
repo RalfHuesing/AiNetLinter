@@ -90,7 +90,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Core/Checkers/WpfCodeBehindTests.cs` | `WpfCodeBehindTests` | Checkers | migrated | `FullyQualifiedName~WpfCodeBehindTests` | `src/AiNetLinter.FastTests/Core/Checkers/WpfCodeBehindTests.cs` |
 | `src/AiNetLinter.Tests/Cli/CliCommandBuilderMcpLogTests.cs` | `CliCommandBuilderMcpLogTests` | Cli | pending | `FullyQualifiedName~CliCommandBuilderMcpLogTests` |  |
 | `src/AiNetLinter.Tests/Cli/CliIntegrationTests.cs` | `CliIntegrationTests` | Cli | pending | `FullyQualifiedName~CliIntegrationTests` |  |
-| `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | `FilterCliIntegrationTests` | Cli | pending | `FullyQualifiedName~FilterCliIntegrationTests` |  |
+| `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | `FilterCliIntegrationTests` | Cli | migrated | `FullyQualifiedName~FilterCliIntegrationTests` | `src/AiNetLinter.FastTests/Maps/Skeleton/SkeletonMapFilterTests.cs` |
 | `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsCliTests.cs` | `IgnoreSuppressionsCliTests` | Cli | pending | `FullyQualifiedName~IgnoreSuppressionsCliTests` |  |
 | `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsIntegrationTests.cs` | `IgnoreSuppressionsIntegrationTests` | Cli | pending | `FullyQualifiedName~IgnoreSuppressionsIntegrationTests` |  |
 | `src/AiNetLinter.Tests/Cli/ProgramTests.cs` | `ProgramTests` | Cli | pending | `FullyQualifiedName~ProgramTests` |  |
@@ -148,7 +148,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Fixtures/LoadFixtureMeasurementsTests.cs` | `LoadFixtureMeasurementsTests` | Fixtures | pending | `FullyQualifiedName~LoadFixtureMeasurementsTests` |  |
 | `src/AiNetLinter.Tests/Fixtures/TD016aRefactorTests.cs` | `TD016aRefactorTests` | Fixtures | pending | `FullyQualifiedName~TD016aRefactorTests` |  |
 | `src/AiNetLinter.Tests/Maps/HotspotMapBuilderTests.cs` | `HotspotMapBuilderTests` | Maps | pending | `FullyQualifiedName~HotspotMapBuilderTests` |  |
-| `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs` | `SkeletonMapBuilderTests` | Maps | pending | `FullyQualifiedName~SkeletonMapBuilderTests` |  |
+| `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs` | `SkeletonMapBuilderTests` | Maps | migrated | `FullyQualifiedName~SkeletonMapBuilderTests` | `src/AiNetLinter.IntegrationTests/Maps/Skeleton/SkeletonMapBuilderAdapterTests.cs` |
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonStableIdTests.cs` | `SkeletonStableIdTests` | Maps | pending | `FullyQualifiedName~SkeletonStableIdTests` |  |
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonSyntaxWalkerTests.cs` | `SkeletonSyntaxWalkerTests` | Maps | pending | `FullyQualifiedName~SkeletonSyntaxWalkerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/CallGraphTraversalTests.cs` | `CallGraphTraversalTests` | Mcp | pending | `FullyQualifiedName~CallGraphTraversalTests` |  |

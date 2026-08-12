@@ -29,10 +29,10 @@ werden. Default bei Unsicherheit ist `nein`.
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Zwei Tests flaky unter Volllast des vollen `Category!=Stress`-Parallel-Laufs (stdout-Framing gegen echten MCP-Subprozess), isoliert stabil grün. |
-| TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Selbstlint-Skeleton-Map-Check `ExcludeProjects=["*.Tests"]` schließt nur `AiNetLinter.Tests` aus, nicht `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests` — jeder zusammenhängende `"AiNetLinter.Tests"`-String-Literal in einem der drei neuen Projekte kann die Tests erneut kippen. |
+| TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Durch die Migration nach `SkeletonMapFilterTests` gegen `FilterMini` geschlossen. |
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar referenziert „step-006" — verstößt gegen das Verbot von Task-/Planungsartefakt-Referenzen in Code-Kommentaren (`AiNetLinterRichtlinien.mdc` §5). |
-| TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | `CoreReferences` wird einmalig aus dem Testhost-`AppDomain` gebaut und enthält dadurch für **jedes** In-Memory-Projekt (unabhängig vom tatsächlichen Status) die xunit-Assemblies des Hosts — `TestProjectDetector.IsTestProject` erkennt jedes In-Memory-Produktionsprojekt fälschlich als Testprojekt; verfälscht potenziell die EPIC-4-Filtermatrix-Migration. |
+| TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
 
 ## Einträge
 
@@ -85,7 +85,7 @@ werden. Default bei Unsicherheit ist `nein`.
   Leitplanke 1/EPIC-4) den Ausschluss-Glob bzw. die Assertion auf die drei neuen Projektnamen
   abstimmen.
 - **Auto-Fixable:** nein — erfordert Entscheidung über die richtige Glob-/Assertion-Strategie.
-- **Status:** offen
+- **Status:** geschlossen in step-013
 
 ### TD-003 — `AiNetLinter.mdc` seit step-001 nicht neu synchronisiert [Priorität: mittel] [Auto-Fixable: ja]
 
@@ -155,4 +155,4 @@ werden. Default bei Unsicherheit ist `nein`.
   bewusst mit explizitem `testProjectNameSuffixes`-Parameter statt Default-Referenzheuristik
   aufrufen), bevor die Migration reale Filtermatrix-Assertions auf diesem Verhalten aufbaut.
 - **Auto-Fixable:** nein — Architektur-Entscheidung über Filter-/Ausschluss-Mechanismus nötig.
-- **Status:** offen
+- **Status:** geschlossen in step-013
