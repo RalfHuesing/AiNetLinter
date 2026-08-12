@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-12
+last_updated: 2026-08-12  # Planer-Step-002-Abgleich
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -61,11 +61,17 @@ obsolet markiert) — kein starres Vorab-Dokument.
 
 - [ ] EPIC-1: Fundament — Zielprojekte, TestKit, Architekturguards, Ledger, Minimum Safety Envelope,
       Legacy-Quarantäne — Konzept §Grober Lösungsansatz 1-2, Leitplanke 0/6/8. **In Arbeit →
-      step-001** (deckt nur den ersten Teil ab: die drei neuen Projekte samt gemeinsamer
+      step-001, step-002** (step-001 deckte die drei neuen Projekte samt gemeinsamer
       `TestProject.props`, Solution-Wiring und die beiden produktiven Konfigurationsverträge
-      `ProjectOverrides`/`TestProjectNameSuffixes` aus Leitplanke 0 — Architekturguards, Ledger,
-      Legacy-Build-Gate, Baseline-Messung, `InternalsVisibleTo` und Minimum Safety Envelope bleiben
-      offen für einen Folge-Step). Umfasst: neue Projekte
+      `ProjectOverrides`/`TestProjectNameSuffixes` aus Leitplanke 0 ab; step-002 deckt zusätzlich
+      `test-migration-ledger.md` samt Konsistenzguard, die Architekturguards (statische
+      Deny-Liste + Laufzeitcheck in `AiNetLinter.FastTests`/`TestKit`, Kategorien-/Profilguard je
+      Ziel-Assembly) und die Baseline-Messung vor dem ersten Refactoring (Messmethodik
+      Leitplanke 10) ab — **offen bleiben nach step-002**: Legacy-Build-Gate (technischer Anker,
+      erst mit der tatsächlichen Quarantäne sinnvoll), Minimum Safety Envelope (Config laden,
+      vorbereitete Solution analysieren, CLI-Adapter, MCP-Handshake), `InternalsVisibleTo`
+      (erst bei Bedarf, frühestens EPIC-2) und Umschalten des normalen Gates auf die neuen
+      schnellen Profile inkl. tatsächlicher Legacy-Quarantäne). Umfasst insgesamt: neue Projekte
       `AiNetLinter.FastTests`/`AiNetLinter.IntegrationTests`/`AiNetLinter.TestKit` samt gemeinsamer
       `TestProject.props`; Anpassung von `rules.json` (`ProjectOverrides`), `TestSentinel.
       TestProjectNameSuffixes`, `InternalsVisibleTo`; `test-migration-ledger.md` mit
