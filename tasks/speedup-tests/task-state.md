@@ -56,9 +56,9 @@ max_batch_diff_lines: 40    # siehe ../spec.md §10.6
 build_command: <aus roadmap.md Tech-Stack-Notiz>
 test_command: <aus roadmap.md Tech-Stack-Notiz>
 target_branch: <aktueller Branch, nicht hartcodiert>
-model_planer: Sonnet 5, Stufe High
-model_coder: Sonnet 5, Stufe Medium
-model_kritiker: Sonnet 5, Stufe Medium
+model_planer: GPT-5.6 Sol, Stufe Medium
+model_coder: GPT-5.6 Luna, Stufe High
+model_kritiker: GPT-5.6 Terra, Stufe Medium
 ```
 
 <Die drei `model_*`-Felder sind optional und halten eine vom Nutzer
