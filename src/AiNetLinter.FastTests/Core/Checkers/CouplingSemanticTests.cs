@@ -7,7 +7,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using System.Linq;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 [Trait("Category", "Unit")]
 public sealed class CouplingSemanticTests

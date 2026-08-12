@@ -8,7 +8,7 @@ using AiNetLinter.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 [Trait("Category", "Unit")]
 public sealed class MaxPartialClassFilesTests

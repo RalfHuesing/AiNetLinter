@@ -11,7 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 [Trait("Category", "Unit")]
 public sealed class MaxSwitchArmsTests

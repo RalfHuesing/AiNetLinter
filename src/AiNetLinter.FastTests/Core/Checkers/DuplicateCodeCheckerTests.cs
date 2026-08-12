@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateCodeChecker"/> — solution-weite Nachpruefung, die

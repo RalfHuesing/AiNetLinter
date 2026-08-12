@@ -8,7 +8,7 @@ using AiNetLinter.Core;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 [Trait("Category", "Unit")]
 public sealed class MaxInheritanceDepthTests

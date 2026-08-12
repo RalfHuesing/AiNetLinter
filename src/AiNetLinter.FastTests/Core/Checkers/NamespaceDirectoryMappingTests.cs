@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 // @covers LinterAnalyzer
 [Trait("Category", "Unit")]

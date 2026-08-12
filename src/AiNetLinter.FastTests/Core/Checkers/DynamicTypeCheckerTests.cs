@@ -7,7 +7,7 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core.Checkers;
 
-namespace AiNetLinter.Tests.Core.Checkers;
+namespace AiNetLinter.FastTests.Core.Checkers;
 
 [Trait("Category", "Unit")]
 public sealed class DynamicTypeCheckerTests
