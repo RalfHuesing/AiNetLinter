@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -127,6 +128,29 @@ public sealed class RoslynTestSolutionFactoryTests
         var project = testSolution.Solution.Projects.Single();
 
         Assert.False(TestProjectDetector.IsTestProject(project));
+    }
+
+    [Fact]
+    public void CreateSolution_WithVirtualPath_AssignsNormalizedPathsWithoutMaterializingFiles()
+    {
+        var virtualSolutionFilePath = Path.Combine(
+            Path.GetTempPath(),
+            $"ainetlinter-virtual-{Guid.NewGuid():N}",
+            "Virtual.slnx");
+
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            virtualSolutionFilePath,
+            new ProjectSpec("VirtualProject", [("Nested/Probe.cs", "namespace Probe; public class Type {}")]));
+
+        var expectedSolutionFilePath = Path.GetFullPath(virtualSolutionFilePath);
+        var expectedDocumentFilePath = Path.Combine(
+            Path.GetDirectoryName(expectedSolutionFilePath)!, "VirtualProject", "Nested", "Probe.cs");
+        var document = Assert.Single(testSolution.Solution.Projects.Single().Documents);
+
+        Assert.Equal(expectedSolutionFilePath, testSolution.Solution.FilePath);
+        Assert.Equal(expectedDocumentFilePath, document.FilePath);
+        Assert.False(File.Exists(expectedSolutionFilePath));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(expectedDocumentFilePath)!));
     }
 
     private static async Task<Compilation> GetCompilationAsync(Solution solution, string projectName)

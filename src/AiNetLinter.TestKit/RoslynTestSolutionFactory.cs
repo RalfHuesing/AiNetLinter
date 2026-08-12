@@ -57,17 +57,40 @@ public static class RoslynTestSolutionFactory
     /// Wirft <see cref="InvalidOperationException"/>, wenn ein <see cref="ProjectSpec.ProjectReferences"/>-Eintrag
     /// keinen der uebergebenen Spec-Namen trifft.
     /// </summary>
-    public static RoslynTestSolution CreateSolution(params ProjectSpec[] specs)
+    public static RoslynTestSolution CreateSolution(params ProjectSpec[] specs) => CreateSolutionCore(null, specs);
+
+    /// <summary>
+    /// Baut eine neue <see cref="AdhocWorkspace"/>-Solution mit rein virtuellen, normalisierten
+    /// Solution- und Dokumentpfaden. Es werden weder Dateien noch Verzeichnisse angelegt.
+    /// </summary>
+    public static RoslynTestSolution CreateSolution(string virtualSolutionFilePath, params ProjectSpec[] specs)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(virtualSolutionFilePath);
+        return CreateSolutionCore(virtualSolutionFilePath, specs);
+    }
+
+    private static RoslynTestSolution CreateSolutionCore(string? virtualSolutionFilePath, ProjectSpec[] specs)
     {
         var workspace = new AdhocWorkspace();
-        var solution = workspace.CurrentSolution;
+        var normalizedSolutionFilePath = virtualSolutionFilePath is null
+            ? null
+            : System.IO.Path.GetFullPath(virtualSolutionFilePath);
+        var solution = normalizedSolutionFilePath is null
+            ? workspace.CurrentSolution
+            : workspace.AddSolution(SolutionInfo.Create(
+                SolutionId.CreateNewId(),
+                VersionStamp.Create(),
+                filePath: normalizedSolutionFilePath));
+        var solutionDirectory = normalizedSolutionFilePath is null
+            ? null
+            : System.IO.Path.GetDirectoryName(normalizedSolutionFilePath)!;
         var projectIdsByName = new Dictionary<string, ProjectId>(StringComparer.Ordinal);
 
         foreach (var spec in specs)
         {
             var projectId = ProjectId.CreateNewId(spec.Name);
             projectIdsByName[spec.Name] = projectId;
-            solution = AddProject(solution, projectId, spec);
+            solution = AddProject(solution, projectId, spec, solutionDirectory);
         }
 
         foreach (var spec in specs)
@@ -101,7 +124,8 @@ public static class RoslynTestSolutionFactory
         return solution;
     }
 
-    private static Solution AddProject(Solution solution, ProjectId projectId, ProjectSpec spec)
+    private static Solution AddProject(
+        Solution solution, ProjectId projectId, ProjectSpec spec, string? solutionDirectory)
     {
         var references = spec.AdditionalReferences is { Count: > 0 }
             ? CoreReferences.Concat(spec.AdditionalReferences).ToImmutableArray()
@@ -130,7 +154,10 @@ public static class RoslynTestSolutionFactory
         foreach (var (fileName, content) in spec.Documents)
         {
             var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, fileName, content);
+            var filePath = solutionDirectory is null
+                ? null
+                : System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDirectory, spec.Name, fileName));
+            solution = solution.AddDocument(documentId, fileName, content, filePath: filePath);
         }
 
         return solution;
