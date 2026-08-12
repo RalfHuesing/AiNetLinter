@@ -21,7 +21,6 @@ purpose: Master-Übersicht aller Erkenntnisse aus dem 360-Grad-Überblick
 | 5 | `05-roadmap.md` | Konsolidierte Empfehlungen, priorisierte Roadmap, Epics | (separat) |
 | 6 | `06-nicht-umsetzen.md` | Bewusst gestrichene/nicht verfolgte Ideen samt Begründung | (separat) |
 | 7 | `07-drift-audit-ideen.md` | Ideensammlung für DRY- & Naming-Drift-Erkennung | (separat) |
-| 8 | `08-magic-values-mcp-tool-ideen.md` | Ideensammlung für Magic Values Detection MCP-Tool & Refactoring-Empfehlungen | (separat) |
 
 ---
 
