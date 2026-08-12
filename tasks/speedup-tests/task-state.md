@@ -35,8 +35,8 @@ mehr nötig.>
 | step-001 | EPIC-1 | done | Fundament: Zielprojekte + TestProject.props | - | b1fe9eb | approved | 9d20376 |
 | step-002 | EPIC-1 | done | Fundament: Migrationsledger, Guards, Baseline-Messung | - | cd1c80f | issues→approved (via step-003) | c5d4b10 |
 | step-003 | EPIC-1 | done | Korrektur: Nachweis Ledger-Guard | step-002 | c16be1a | approved | c16be1a |
-| step-004 | EPIC-1 | done (Korrektur ausstehend) | Fundament: IVT, Safety Envelope, Legacy-Gate-Switch | - | a303edb | issues | 59dcff9 |
-| step-005 | EPIC-1 | in_progress | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | - | - | - |
+| step-004 | EPIC-1 | done | Fundament: IVT, Safety Envelope, Legacy-Gate-Switch | - | a303edb | issues→approved (via step-005) | 59dcff9 |
+| step-005 | EPIC-1 | done | Korrektur: AiNetLinterRichtlinien.mdc §4 | step-004 | bffe3e3 | approved | 2c9611c |
 
 ## Config (optional)
 
