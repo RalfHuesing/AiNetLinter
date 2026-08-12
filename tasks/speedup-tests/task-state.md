@@ -42,7 +42,7 @@ mehr nötig.>
 | step-008 | EPIC-2 | done | Testplattform: FilterMini-Fixture (Disk + In-Memory) | - | 968c35a | issues→approved (via step-009) | 243f2db |
 | step-009 | EPIC-2 | done | Korrektur: FilterMiniFidelityTests IsTestProject | step-008 | 1d64b47 | approved | 296447f |
 | step-010 | EPIC-3 | done | Checkers-Kohorte -> Unit (28 Klassen) | - | 8c1552f | approved | 9245277 |
-| step-011 | EPIC-3 | in_progress | Web-Parser-Kohorte -> Unit (5 Klassen) | - | - | - | - |
+| step-011 | EPIC-3 | done | Web-Parser-Kohorte -> Unit (5 Klassen) | - | b720e1b | approved | 317f90c |
 
 ## Config (optional)
 
