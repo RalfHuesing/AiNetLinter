@@ -72,8 +72,10 @@ Bei einer Durchsuchung der eigenen Codebase (`src/`) nach bestehenden Literalen 
   - **Enum-Kandidaten (`enum`):** Diskrete Wertebereiche in `switch`-Statements oder `if-else`-Kaskaden (`"Pending"`, `"Active"`, `"Failed"` oder `1`, `2`, `3`).
   - **Lokalisierungs-Kandidaten (`IStringLocalizer` / `.resx`):** User-Facing Nachrichtentexte in Exceptions, UI-Prompts oder Logins.
   - **Standard-HTTP / System-Standard:** HTTP-Statuscodes (`404`, `500` $\rightarrow$ `StatusCodes.Status404NotFound`), Leere Strings (`""` $\rightarrow$ `string.Empty`).
-- **Rausch-Filterung (False Positives Vermeidung):**
+- **Rausch-Filterung (False Positives Vermeidung - SEHR WICHTIG):**
   - Triviale Werte ignorieren (`0`, `1`, `-1`, `""`, `" "`, `"\n"`, `true`, `false`, `null`).
+  - **Index- & Schleifen-Ausnahmen:** Literale, die als Array-Index (`args[2]`), Tuple-Zugriff (`Item3`) oder in einfachen Schleifen-Initialisierungen (`for (int i = 2; ...)`) verwendet werden, ignorieren. Hier handelt es sich meist um strukturelle Navigations-Zahlen, die nicht sinnvoll durch benannte Konstanten ersetzt werden können.
+  - **Exit-Codes & Mathematik:** Einfache Rückgabewerte wie `Environment.ExitCode = 2` oder Faktoren wie `radius * 2` sollten idealerweise durch Heuristiken (z.B. check auf mathematische Operatoren oder `ExitCode`) in der Basis-Stufe entschlackt werden.
   - Attribut-Argumente isolieren (`[JsonPropertyName("foo")]`, `[Route("...")]`, `[Obsolete("...")]`).
   - Tests vs. Production Code Trennung (`includeTests: false` als Default).
   - Bereits definierte *eindeutige* Konstanten ausschließen (außer bei Duplikation über verschiedene Klassen hinweg).
