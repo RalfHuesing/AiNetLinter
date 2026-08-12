@@ -46,7 +46,7 @@ mehr nötig.>
 | step-012 | EPIC-3 | done | Renderer-Kohorte -> Unit + Epic-Grenzgate | - | eb645b8 | approved | be663e6 |
 | step-013 | EPIC-4 | done | Skeleton-Filterkohorte auf FilterMini migrieren | - | 8edee78 | issues→approved (via step-014) | 086ce31 |
 | step-014 | EPIC-4 | done | Korrektur: Namespace-Glob selektiv kalibrieren | step-013 | f41fd31 | approved | 34eaa0b |
-| step-015 | EPIC-4 | in_progress | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | - | - | - |
+| step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 
 ## Config (optional)
 
