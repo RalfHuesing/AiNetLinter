@@ -4,8 +4,8 @@ using System;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Core;
@@ -13,8 +13,8 @@ namespace AiNetLinter.FastTests.Core;
 /// <summary>
 /// MSE-Baustein "vorbereitete Solution analysieren, regelkonformes Ergebnis und deterministischer
 /// Fehlerweg": ruft <see cref="LinterEngine.RunAsync(Solution, bool, int, System.Threading.CancellationToken)"/>
-/// direkt gegen eine per <see cref="AdhocWorkspace"/> aufgebaute Zwei-Klassen-Solution auf (kein
-/// MSBuild, keine Platte) und prueft sowohl den Verletzungs- als auch den regelkonformen Pfad
+/// direkt gegen eine per <see cref="RoslynTestSolutionFactory"/> aufgebaute Zwei-Klassen-Solution auf
+/// (kein MSBuild, keine Platte) und prueft sowohl den Verletzungs- als auch den regelkonformen Pfad
 /// deterministisch. Nutzt den internal LinterEngine-Konstruktor ueber
 /// InternalsVisibleTo("AiNetLinter.FastTests").
 /// </summary>
@@ -26,33 +26,6 @@ public sealed class LinterEngineSolutionAnalysisTests
         Global = new GlobalConfig { EnforceSealedClasses = true },
         Metrics = new MetricsConfig(),
     };
-
-    private static Solution CreateAdhocSolution(params (string FileName, string Content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-                projectId,
-                VersionStamp.Create(),
-                "SolutionAnalysisTestProject",
-                "SolutionAnalysisTestProject",
-                LanguageNames.CSharp)
-            .WithMetadataReferences([mscorlib])
-            .WithCompilationOptions(new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary,
-                nullableContextOptions: NullableContextOptions.Enable));
-
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        foreach (var file in files)
-        {
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, file.FileName, file.Content);
-        }
-
-        return solution;
-    }
 
     [Fact]
     public async Task RunAsync_PreparedSolutionWithSealedClassViolation_FlagsViolatingClassAndSparesCompliantClass()
@@ -72,12 +45,12 @@ public sealed class LinterEngineSolutionAnalysisTests
             }
             """;
 
-        var solution = CreateAdhocSolution(
-            ("UnsealedService.cs", violatingClass),
-            ("SealedService.cs", compliantClass));
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(new ProjectSpec(
+            "SolutionAnalysisTestProject",
+            [("UnsealedService.cs", violatingClass), ("SealedService.cs", compliantClass)]));
 
         var engine = new LinterEngine(CreateConfig());
-        var violations = await engine.RunAsync(solution);
+        var violations = await engine.RunAsync(testSolution.Solution);
 
         Assert.Contains(violations, v =>
             v.RuleName == nameof(GlobalConfig.EnforceSealedClasses) &&
