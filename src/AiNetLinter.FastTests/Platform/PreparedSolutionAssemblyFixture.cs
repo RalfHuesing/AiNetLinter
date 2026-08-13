@@ -1,6 +1,7 @@
 #nullable enable
 
 using AiNetLinter.TestKit;
+using AiNetLinter.FastTests.Architecture;
 
 // Registriert PreparedSolutionFixture als echte xUnit-v3-Assembly-Fixture (siehe
 // https://xunit.net/docs/shared-context, "Assembly Fixture") -- eine Instanz lebt fuer die gesamte
@@ -8,3 +9,4 @@ using AiNetLinter.TestKit;
 // AiNetLinterRichtlinien.mdc §4). Testklassen erhalten Zugriff ueber einen Konstruktorparameter
 // vom Typ PreparedSolutionFixture.
 [assembly: AssemblyFixture(typeof(PreparedSolutionFixture))]
+[assembly: AssemblyFixture(typeof(FastTestsRuntimeDependencyGuardFixture))]

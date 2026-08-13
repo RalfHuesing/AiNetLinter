@@ -35,16 +35,27 @@ public sealed class LoadedFixtureTests
             return current;
         }
 
-        var first = LoadedFixture.ExecuteWithinLoadBudgetAsync(EnterAsync);
-        var second = LoadedFixture.ExecuteWithinLoadBudgetAsync(EnterAsync);
-        await firstTwoEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var third = LoadedFixture.ExecuteWithinLoadBudgetAsync(EnterAsync);
+        var gate = new LoadBudgetGate(LoadedFixture.MaxConcurrentLoads);
+        var tasks = new Task<int>[]
+        {
+            gate.ExecuteAsync(EnterAsync),
+            gate.ExecuteAsync(EnterAsync),
+        };
 
-        Assert.Equal(LoadedFixture.MaxConcurrentLoads, Volatile.Read(ref entered));
-        Assert.False(third.IsCompleted);
+        try
+        {
+            await firstTwoEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var third = gate.ExecuteAsync(EnterAsync);
+            tasks = [.. tasks, third];
 
-        release.TrySetResult();
-        await Task.WhenAll(first, second, third);
+            Assert.Equal(LoadedFixture.MaxConcurrentLoads, Volatile.Read(ref entered));
+            Assert.False(third.IsCompleted);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await Task.WhenAll(tasks);
+        }
 
         Assert.Equal(LoadedFixture.MaxConcurrentLoads, Volatile.Read(ref maximum));
     }
@@ -52,31 +63,33 @@ public sealed class LoadedFixtureTests
     [Fact]
     public async Task ExecuteWithinLoadBudgetAsync_ReleasesPermitAfterException()
     {
+        var gate = new LoadBudgetGate(LoadedFixture.MaxConcurrentLoads);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            LoadedFixture.ExecuteWithinLoadBudgetAsync<int>(_ => Task.FromException<int>(new InvalidOperationException())));
+            gate.ExecuteAsync<int>(_ => Task.FromException<int>(new InvalidOperationException())));
 
-        await AssertTwoDelegatesCanEnterAsync();
+        await AssertTwoDelegatesCanEnterAsync(gate);
     }
 
     [Fact]
     public async Task ExecuteWithinLoadBudgetAsync_ReleasesPermitAfterCancellation()
     {
         using var cancellation = new CancellationTokenSource();
+        var gate = new LoadBudgetGate(LoadedFixture.MaxConcurrentLoads);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            LoadedFixture.ExecuteWithinLoadBudgetAsync<int>(_ =>
+            gate.ExecuteAsync<int>(_ =>
             {
                 cancellation.Cancel();
                 return Task.FromCanceled<int>(cancellation.Token);
             }));
 
-        await AssertTwoDelegatesCanEnterAsync();
+        await AssertTwoDelegatesCanEnterAsync(gate);
     }
 
     [Fact]
     public void SourceFileCatalogLoads_UseLoadedFixtureAsOnlyIntegrationTestCallsite()
     {
-        var rootPath = FindSolutionRoot();
+        var rootPath = SolutionRootLocator.Find();
         var integrationTestPath = Path.Combine(rootPath, "src", "AiNetLinter.IntegrationTests");
         const string LoadCall = "SourceFileCatalog." + "LoadAsync(";
 
@@ -88,7 +101,11 @@ public sealed class LoadedFixtureTests
         Assert.Equal(["Platform/LoadedFixture.cs"], callers);
     }
 
-    private static async Task AssertTwoDelegatesCanEnterAsync()
+    [Fact]
+    public void LoadedFixture_UsesSingleGateWithConfiguredCapacity() =>
+        Assert.Equal(LoadedFixture.MaxConcurrentLoads, LoadedFixture.LoadBudgetCapacity);
+
+    private static async Task AssertTwoDelegatesCanEnterAsync(LoadBudgetGate gate)
     {
         var entered = 0;
         var bothEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -105,28 +122,16 @@ public sealed class LoadedFixtureTests
             return 0;
         }
 
-        var first = LoadedFixture.ExecuteWithinLoadBudgetAsync(EnterAsync);
-        var second = LoadedFixture.ExecuteWithinLoadBudgetAsync(EnterAsync);
-        await bothEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
-        release.TrySetResult();
-        await Task.WhenAll(first, second);
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDirectory is not null)
+        var tasks = new[] { gate.ExecuteAsync(EnterAsync), gate.ExecuteAsync(EnterAsync) };
+        try
         {
-            if (File.Exists(Path.Combine(currentDirectory.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDirectory.FullName;
-            }
-
-            currentDirectory = currentDirectory.Parent;
+            await bothEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
+        finally
+        {
+            release.TrySetResult();
+            await Task.WhenAll(tasks);
+        }
     }
 
     private static void RecordMaximum(ref int maximum, int candidate)

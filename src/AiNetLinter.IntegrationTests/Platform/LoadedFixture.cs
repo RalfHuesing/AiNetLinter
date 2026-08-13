@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -17,7 +16,7 @@ public sealed class LoadedFixture : IAsyncDisposable
 {
     internal const int MaxConcurrentLoads = 2;
 
-    private static readonly SemaphoreSlim LoadBudget = new(initialCount: MaxConcurrentLoads, maxCount: MaxConcurrentLoads);
+    private static readonly LoadBudgetGate LoadBudget = new(MaxConcurrentLoads);
     private readonly IsolatedFixtureLease lease;
     private readonly SourceFileCatalog catalog;
 
@@ -35,7 +34,7 @@ public sealed class LoadedFixture : IAsyncDisposable
 
     public static async Task<LoadedFixture> CreateAsync(string fixtureName, CancellationToken cancellationToken = default)
     {
-        var lease = IsolatedFixtureLease.CopyFixture(FindSolutionRoot(), fixtureName);
+        var lease = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), fixtureName);
         try
         {
             var catalog = await LoadCatalogAsync(lease.RootPath, cancellationToken);
@@ -50,23 +49,12 @@ public sealed class LoadedFixture : IAsyncDisposable
 
     internal static async Task<SourceFileCatalog> LoadCatalogAsync(string rootPath, CancellationToken cancellationToken = default)
     {
-        return await ExecuteWithinLoadBudgetAsync(
+        return await LoadBudget.ExecuteAsync(
             token => SourceFileCatalog.LoadAsync(rootPath, token),
             cancellationToken);
     }
 
-    internal static async Task<T> ExecuteWithinLoadBudgetAsync<T>(Func<CancellationToken, Task<T>> load, CancellationToken cancellationToken = default)
-    {
-        await LoadBudget.WaitAsync(cancellationToken);
-        try
-        {
-            return await load(cancellationToken);
-        }
-        finally
-        {
-            LoadBudget.Release();
-        }
-    }
+    internal static int LoadBudgetCapacity => LoadBudget.Capacity;
 
     public ValueTask DisposeAsync()
     {
@@ -74,20 +62,30 @@ public sealed class LoadedFixture : IAsyncDisposable
         lease.Dispose();
         return ValueTask.CompletedTask;
     }
+}
 
-    private static string FindSolutionRoot()
+internal sealed class LoadBudgetGate
+{
+    private readonly SemaphoreSlim semaphore;
+
+    internal LoadBudgetGate(int capacity)
     {
-        var currentDirectory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDirectory is not null)
+        semaphore = new SemaphoreSlim(capacity, capacity);
+        Capacity = capacity;
+    }
+
+    internal int Capacity { get; }
+
+    internal async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+        try
         {
-            if (File.Exists(Path.Combine(currentDirectory.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDirectory.FullName;
-            }
-
-            currentDirectory = currentDirectory.Parent;
+            return await operation(cancellationToken);
         }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
+        finally
+        {
+            semaphore.Release();
+        }
     }
 }

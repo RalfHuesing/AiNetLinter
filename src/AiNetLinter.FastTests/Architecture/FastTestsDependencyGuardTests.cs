@@ -20,7 +20,6 @@ namespace AiNetLinter.FastTests.Architecture;
 /// Kosmetikpunkt, sondern der eigentliche Schutz der Fast-Policy.
 /// </summary>
 [Trait("Category", "Unit")]
-[Collection("FastTestsRuntimeDependencyGuard")]
 public sealed class FastTestsDependencyGuardTests
 {
     private static readonly string[] DeniedAssemblyNamePrefixes =

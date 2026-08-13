@@ -3,6 +3,7 @@
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
+using AiNetLinter.FastTests.Architecture;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.FastTests.Baseline;
@@ -40,4 +41,12 @@ public sealed class SourceFileCatalogPolicyTests
 
     [Fact]
     public void IsGeneratedPath_NormalPath_ReturnsFalse() => Assert.False(SourceFileCatalog.IsGeneratedPath(Path.Combine("repo", "src", "Project", "Foo.cs")));
+
+    [Fact]
+    public void PolicyCalls_DoNotLoadDeniedInfrastructure()
+    {
+        Assert.True(SourceFileCatalog.IsGeneratedPath(Path.Combine("repo", "src", "obj", "Foo.cs")));
+        Assert.False(SourceFileCatalog.IsGeneratedPath(Path.Combine("repo", "src", "Project", "Foo.cs")));
+        Assert.Empty(FastTestsRuntimeDependencyGuardFixture.FindLoadedDeniedAssemblies());
+    }
 }

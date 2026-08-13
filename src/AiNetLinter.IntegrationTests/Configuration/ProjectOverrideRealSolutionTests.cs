@@ -21,11 +21,8 @@ namespace AiNetLinter.IntegrationTests.Configuration;
 [Trait("Category", "Integration")]
 public sealed class ProjectOverrideRealSolutionTests
 {
-    [Theory]
-    [InlineData("AiNetLinter.FastTests")]
-    [InlineData("AiNetLinter.IntegrationTests")]
-    [InlineData("AiNetLinter.TestKit")]
-    public async Task RealSolutionProject_NewTestProjectNames_ResolvesOverrideAndIsDetectedAsTest(string projectName)
+    [Fact]
+    public async Task RealSolutionProjects_NewTestProjectNames_ResolveOverrideAndAreDetectedAsTest()
     {
         var rootDir = FindSolutionRoot();
         var rulesJsonPath = Path.Combine(rootDir, "rules.json");
@@ -33,15 +30,18 @@ public sealed class ProjectOverrideRealSolutionTests
         Assert.NotNull(globalConfig);
 
         using var catalog = await LoadedFixture.LoadCatalogAsync(rootDir);
-        var project = catalog.Solution.Projects.SingleOrDefault(p => p.Name == projectName);
-        Assert.NotNull(project);
+        foreach (var projectName in new[] { "AiNetLinter.FastTests", "AiNetLinter.IntegrationTests", "AiNetLinter.TestKit" })
+        {
+            var project = catalog.Solution.Projects.SingleOrDefault(p => p.Name == projectName);
+            Assert.NotNull(project);
 
-        var resolved = ProjectConfigResolver.ResolveForProject(projectName, globalConfig!);
-        Assert.False(resolved.Global.EnforceSealedClasses);
-        Assert.Equal(100, resolved.Metrics.MaxMethodLineCount);
+            var resolved = ProjectConfigResolver.ResolveForProject(projectName, globalConfig!);
+            Assert.False(resolved.Global.EnforceSealedClasses);
+            Assert.Equal(100, resolved.Metrics.MaxMethodLineCount);
 
-        var isTestProject = TestProjectDetector.IsTestProject(project!, globalConfig!.TestSentinel.TestProjectNameSuffixes);
-        Assert.True(isTestProject);
+            var isTestProject = TestProjectDetector.IsTestProject(project!, globalConfig!.TestSentinel.TestProjectNameSuffixes);
+            Assert.True(isTestProject);
+        }
     }
 
     private static string FindSolutionRoot()

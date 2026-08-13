@@ -1,6 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.MSBuild;
-using Microsoft.Build.Locator;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
 using AiNetLinter.Configuration;
@@ -14,9 +12,9 @@ namespace AiNetLinter.Baseline;
 /// </summary>
 public sealed class SourceFileCatalog : IDisposable
 {
-    private readonly MSBuildWorkspace? _workspace;
+    private readonly Workspace? _workspace;
 
-    private SourceFileCatalog(MSBuildWorkspace? workspace, Solution solution, bool hasLoadingErrors)
+    internal SourceFileCatalog(Workspace? workspace, Solution solution, bool hasLoadingErrors)
     {
         _workspace = workspace;
         Solution = solution;
@@ -38,26 +36,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// </summary>
     public static async Task<SourceFileCatalog> LoadAsync(string path, System.Threading.CancellationToken ct = default)
     {
-        var slnPath = FindSolutionFile(path);
-        RegisterMSBuild();
-
-        var workspace = MSBuildWorkspace.Create(LinterEngine.CreateWorkspaceProperties());
-        var diagnostics = new System.Collections.Concurrent.ConcurrentBag<string>();
-        workspace.RegisterWorkspaceFailedHandler(e =>
-        {
-            diagnostics.Add(e.Diagnostic.Message);
-        });
-
-        var solution = await workspace.OpenSolutionAsync(slnPath, cancellationToken: ct);
-
-        foreach (var msg in diagnostics.Distinct(StringComparer.Ordinal))
-        {
-            Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {msg}");
-        }
-
-        var hasLoadingErrors = !diagnostics.IsEmpty;
-
-        return new SourceFileCatalog(workspace, solution, hasLoadingErrors);
+        return await SourceFileCatalogLoader.LoadAsync(path, ct);
     }
 
     /// <summary>
@@ -232,63 +211,6 @@ public sealed class SourceFileCatalog : IDisposable
                path.Contains($"{Path.DirectorySeparatorChar}.worktrees{Path.DirectorySeparatorChar}") ||
                path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
                path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
-    }
-
-    // parallel laufenden Test-Klassen, die SourceFileCatalog.LoadAsync erstmalig aufrufen.
-    // MSBuildLocator ist ein prozessglobaler State, daher muss die Registration serialisiert
-    // werden. Der Fast-Pfad (Lock-frei) bleibt erhalten, um Lock-Contention im Normalfall
-    // (99% der Aufrufe nach dem ersten) zu vermeiden.
-    private static readonly object _msbuildRegistrationLock = new();
-
-    private static void RegisterMSBuild()
-    {
-        if (MSBuildLocator.IsRegistered) return; // Fast-Pfad: kein Lock, kein erneuter Patch
-
-        lock (_msbuildRegistrationLock)
-        {
-            if (MSBuildLocator.IsRegistered) return; // Double-Check: Thread B sieht Thread A's Registration
-
-            BuildHostPatcher.PatchBuildHostForVs2026();
-            try
-            {
-                MSBuildLocator.RegisterDefaults();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[WARN]: Error during MSBuild registration: {ex.Message}");
-            }
-            finally
-            {
-                // Clear environment variables so the child BuildHost.exe (.NET Framework)
-                // doesn't inherit .NET Core SDK paths.
-                Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", null);
-                Environment.SetEnvironmentVariable("MSBuildExtensionsPath", null);
-                Environment.SetEnvironmentVariable("MSBuildSDKsPath", null);
-            }
-        }
-    }
-
-    private static string FindSolutionFile(string path)
-    {
-        if (File.Exists(path)) return GetValidFile(path);
-        if (Directory.Exists(path)) return SearchInDirectory(path);
-        throw new FileNotFoundException($"Keine .sln oder .slnx Datei gefunden unter: {path}");
-    }
-
-    private static string GetValidFile(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        if (ext == ".sln" || ext == ".slnx") return path;
-        throw new FileNotFoundException($"Keine gültige Solution-Datei: {path}");
-    }
-
-    private static string SearchInDirectory(string dir)
-    {
-        var files = Directory.GetFiles(dir, "*.slnx")
-            .Concat(Directory.GetFiles(dir, "*.sln"))
-            .ToArray();
-        if (files.Length > 0) return files[0];
-        throw new FileNotFoundException($"Keine .sln oder .slnx Datei im Verzeichnis gefunden: {dir}");
     }
 
     internal static bool ShouldIncludeProject(Project project, LinterArgs args, Config? config)
