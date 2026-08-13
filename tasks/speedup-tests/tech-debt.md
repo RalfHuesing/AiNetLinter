@@ -35,9 +35,10 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
 | TD-006 | `src/AiNetLinter.FastTests/Architecture` / `src/AiNetLinter.IntegrationTests/Architecture` | niedrig | nein | `GetCategoryTraits` ist in beiden Assembly-Guards gleich implementiert. |
 | TD-007 | `src/AiNetLinter.FastTests/Maps/Skeleton` / `src/AiNetLinter.IntegrationTests/Maps/Skeleton` | niedrig | nein | Zwei lokale identische `CreateConfig`-Helfer fuer Skeleton-Tests. |
-| TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.Tests` | mittel | nein | Sieben exakte Testhelfer bleiben waehrend des Stranglers parallel. |
+| TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.IntegrationTests` / `src/AiNetLinter.Tests` | mittel | nein | Testhelfer und Compile-Error-Assertions bleiben waehrend des Stranglers parallel. |
 | TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Durch `LoadedFixture` mit mehreren realen Konsumenten geschlossen. |
 | TD-010 | `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` / `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs` | mittel | nein | Zwei Workspace-Kopierimplementierungen bleiben bis Legacy-Loeschung parallel. |
+| TD-011 | `src/AiNetLinter.IntegrationTests/Platform/LoadedFixture.cs` / `LoadedFixtureTests.cs` | niedrig | nein | Zwei exakte lokale FindSolutionRoot-Implementierungen ausserhalb der Step-023-Kohorte. |
 
 ## Einträge
 
@@ -186,7 +187,7 @@ werden. Default bei Unsicherheit ist `nein`.
 
 - **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
 - **Ort:** `src/AiNetLinter.FastTests/TestHelper.cs`, `src/AiNetLinter.Tests/TestHelper.cs`, `src/AiNetLinter.FastTests/Mcp/CompileErrorHeaderAssertions.cs` und `src/AiNetLinter.Tests/Mcp/CompileErrorHeaderAssertions.cs`.
-- **Befund:** Die exakten Paare `CompileErrorHeaderAssertions`, `CreateDefaultConfig`, `ParseCode`, `CreateContext`, `CreateContextWithLoadDiagnostics`, `DeleteDirectoryIfExists` und `CreateSemanticModel` bestehen in FastTests und Legacy parallel.
+- **Befund:** Die exakten Paare `CompileErrorHeaderAssertions`, `CreateDefaultConfig`, `ParseCode`, `CreateContext`, `CreateContextWithLoadDiagnostics`, `DeleteDirectoryIfExists` und `CreateSemanticModel` bestehen in FastTests und Legacy parallel; die Compile-Error-Assertion liegt inzwischen auch lokal in `AiNetLinter.IntegrationTests/Mcp/Tools/GetIndexScopeToolTests.cs` vor.
 - **Warum nicht sofort gefixt:** Die Legacy-Konsumenten bleiben bis EPIC-7 absichtlich separat und TestKit darf nicht ohne breiteren Bedarf zum Allzweckhelper werden.
 - **Vorschlag:** Bei der jeweiligen Restmigration Konsumenten auf die etablierte Zielassembly umstellen und die Legacy-Kopie mit dem Projekt entfernen.
 - **Auto-Fixable:** nein — die Konsumenten- und Assembly-Grenzen muessen kohortenweise entschieden werden.
@@ -210,4 +211,14 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Nach step-023 entfaellt nur `DisableAllCliTests`; weiterhin referenzieren 20 Legacy-Dateien die sechs `FixtureWorkspaceBase`-Ableitungen oder darauf aufbauende Catalog-/MCP-Fixtures. Eine vorzeitige Vereinheitlichung wuerde EPIC-6-Vertraege vorziehen.
 - **Vorschlag:** Im EPIC-7-Legacy-Entfernungsstep verifizieren, dass keine Legacy-Referenz verbleibt, und die verbleibende TestKit-Primitive beibehalten.
 - **Auto-Fixable:** nein — die Legacy-Kohorte bestimmt den sicheren Zeitpunkt.
+- **Status:** offen
+
+### TD-011 — Lokale `FindSolutionRoot`-Duplikation der Loaded-Fixture bewerten [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-023 (EPIC-5-Drift-Audit vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.IntegrationTests/Platform/LoadedFixture.cs` und `src/AiNetLinter.IntegrationTests/Platform/LoadedFixtureTests.cs`.
+- **Befund:** Beide privaten Methoden suchen vom Assembly-Basisverzeichnis aufwaerts nach `AiNetLinter.slnx` und sind exakt dupliziert.
+- **Warum nicht sofort gefixt:** Keine der beiden Dateien gehoert zur Step-023-Config-/Suppression-Kohorte; eine gemeinsame Test-/Fixture-Grenze ist ausserhalb des Migrationsschritts zu entscheiden.
+- **Vorschlag:** Bei der naechsten Bearbeitung der Loaded-Fixture eine schmale, testbare Root-Aufloesung bewerten und dann beide Aufrufer umstellen.
+- **Auto-Fixable:** nein — Sichtbarkeit und Zielort der gemeinsamen Funktion brauchen Architektur-Ermessen.
 - **Status:** offen
