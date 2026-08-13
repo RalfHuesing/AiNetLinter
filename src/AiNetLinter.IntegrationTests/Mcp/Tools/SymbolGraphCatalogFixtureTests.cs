@@ -19,11 +19,12 @@ public sealed class SymbolGraphCatalogFixtureTests
     [Fact]
     public async Task ReadOnlyServers_DisposeWithoutAffectingParallelOrLaterFixtureReaders()
     {
-        var snapshot = fixture.Workspace.Solution;
+        var snapshot = fixture.Snapshot;
         using var disposedServer = fixture.CreateReadOnlyServer();
         using var remainingServer = fixture.CreateReadOnlyServer();
 
         Assert.Null(typeof(SymbolGraphCatalogFixture).GetProperty("Catalog"));
+        Assert.Null(typeof(SymbolGraphCatalogFixture).GetProperty("Workspace"));
         Assert.Same(snapshot, disposedServer.GetCurrentSolution());
         Assert.Same(snapshot, remainingServer.GetCurrentSolution());
 

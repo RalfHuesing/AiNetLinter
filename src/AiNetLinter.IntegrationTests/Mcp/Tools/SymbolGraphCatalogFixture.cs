@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Platform;
 using AiNetLinter.Mcp;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 
@@ -11,7 +12,11 @@ public sealed class SymbolGraphCatalogFixture : IAsyncLifetime
 {
     private LoadedFixture? fixture;
 
-    public LoadedFixture Workspace => fixture ?? throw new InvalidOperationException("Fixture wurde noch nicht initialisiert.");
+    private LoadedFixture Fixture => fixture ?? throw new InvalidOperationException("Fixture wurde noch nicht initialisiert.");
+
+    public string RootPath => Fixture.RootPath;
+
+    public Solution Snapshot => Fixture.Solution;
 
     public async ValueTask InitializeAsync() => fixture = await LoadedFixture.CreateAsync("SymbolGraphMini");
 
@@ -19,7 +24,7 @@ public sealed class SymbolGraphCatalogFixture : IAsyncLifetime
         new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
             Catalog: null,
             UsedDefaultConfig: usedDefaultConfig,
-            ReadOnlySolutionSnapshot: Workspace.Solution)));
+            ReadOnlySolutionSnapshot: Snapshot)));
 
     public async ValueTask DisposeAsync()
     {

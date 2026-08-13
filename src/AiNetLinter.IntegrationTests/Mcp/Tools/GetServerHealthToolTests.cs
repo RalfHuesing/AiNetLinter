@@ -48,7 +48,7 @@ public sealed class GetServerHealthToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Loaded", text);
-        Assert.Contains(_fixture.Workspace.RootPath, text, System.StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(_fixture.RootPath, text, System.StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Uptime", text);
         Assert.Contains("Solution-Refreshes seit Start: 0", text);
     }
