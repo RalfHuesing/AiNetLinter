@@ -40,7 +40,7 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsCsCountMarkedAsGraphCovered()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -54,7 +54,7 @@ public sealed class GetIndexScopeToolTests
     {
         // StructuredContent ergaenzt den Text additiv — dieselben Zaehlwerte wie die
         // Text-Zeile ".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)".
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -74,7 +74,7 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsJsRazorCssCountsViaWebFileCatalog()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
@@ -88,7 +88,7 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_ReturnsXamlAndHtmlCountsMarkedAsNotGraphCovered()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 

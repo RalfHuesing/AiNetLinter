@@ -4,9 +4,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Configuration;
@@ -32,7 +32,7 @@ public sealed class ProjectOverrideRealSolutionTests
         var globalConfig = ConfigLoader.TryLoadConfig(rulesJsonPath, isRequired: true);
         Assert.NotNull(globalConfig);
 
-        using var catalog = await SourceFileCatalog.LoadAsync(rootDir);
+        using var catalog = await LoadedFixture.LoadCatalogAsync(rootDir);
         var project = catalog.Solution.Projects.SingleOrDefault(p => p.Name == projectName);
         Assert.NotNull(project);
 

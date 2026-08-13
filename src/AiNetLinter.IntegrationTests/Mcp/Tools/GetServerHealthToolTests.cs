@@ -41,8 +41,7 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_Loaded_ReportsLoadStateSolutionAndUptime()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
 
@@ -59,8 +58,7 @@ public sealed class GetServerHealthToolTests
     {
         // StructuredContent ergaenzt den Text additiv — dieselben Rohwerte wie die
         // Text-Zeilen "LoadState"/"Solution-Refreshes seit Start" oben.
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
 
@@ -77,8 +75,7 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_UsedDefaultConfig_MentionsDefaultRules()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, UsedDefaultConfig: true)));
+        using var state = _fixture.CreateReadOnlyServer(usedDefaultConfig: true);
 
         var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
 
@@ -89,8 +86,7 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_NoCallLog_ReportsCallLogNotActive()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
 
@@ -101,8 +97,7 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_ActiveCallLogWithRecordedCalls_ReportsAggregatesPerTool()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var logPath = CreateTempLogPath();
         try

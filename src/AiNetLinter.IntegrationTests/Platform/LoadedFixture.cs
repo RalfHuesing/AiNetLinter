@@ -15,7 +15,9 @@ namespace AiNetLinter.IntegrationTests.Platform;
 /// </summary>
 public sealed class LoadedFixture : IAsyncDisposable
 {
-    private static readonly SemaphoreSlim LoadBudget = new(initialCount: 2, maxCount: 2);
+    internal const int MaxConcurrentLoads = 2;
+
+    private static readonly SemaphoreSlim LoadBudget = new(initialCount: MaxConcurrentLoads, maxCount: MaxConcurrentLoads);
     private readonly IsolatedFixtureLease lease;
     private readonly SourceFileCatalog catalog;
 
@@ -36,16 +38,8 @@ public sealed class LoadedFixture : IAsyncDisposable
         var lease = IsolatedFixtureLease.CopyFixture(FindSolutionRoot(), fixtureName);
         try
         {
-            await LoadBudget.WaitAsync(cancellationToken);
-            try
-            {
-                var catalog = await SourceFileCatalog.LoadAsync(lease.RootPath);
-                return new LoadedFixture(lease, catalog);
-            }
-            finally
-            {
-                LoadBudget.Release();
-            }
+            var catalog = await LoadCatalogAsync(lease.RootPath, cancellationToken);
+            return new LoadedFixture(lease, catalog);
         }
         catch
         {
@@ -56,10 +50,17 @@ public sealed class LoadedFixture : IAsyncDisposable
 
     internal static async Task<SourceFileCatalog> LoadCatalogAsync(string rootPath, CancellationToken cancellationToken = default)
     {
+        return await ExecuteWithinLoadBudgetAsync(
+            token => SourceFileCatalog.LoadAsync(rootPath, token),
+            cancellationToken);
+    }
+
+    internal static async Task<T> ExecuteWithinLoadBudgetAsync<T>(Func<CancellationToken, Task<T>> load, CancellationToken cancellationToken = default)
+    {
         await LoadBudget.WaitAsync(cancellationToken);
         try
         {
-            return await SourceFileCatalog.LoadAsync(rootPath);
+            return await load(cancellationToken);
         }
         finally
         {

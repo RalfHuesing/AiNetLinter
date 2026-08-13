@@ -1,10 +1,8 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Core;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
@@ -17,8 +15,6 @@ namespace AiNetLinter.IntegrationTests.Platform;
 /// Struktureller Formvergleich und kleine Verhaltensparität zwischen der echten Disk-Fixture
 /// <c>tests/Fixtures/FilterMini/</c> und ihrem In-Memory-Spiegel <see cref="FilterMiniSolutionSpec"/>:
 /// belegt, dass dieselbe Quelltext-Spezifikation in beiden Welten dieselbe Solution-Form ergibt.
-/// Laedt die Disk-Fixture bewusst direkt ueber <see cref="IsolatedFixtureLease"/> statt ueber einen
-/// geteilten Host, weil hier keine Wiederverwendung ueber mehrere Testklassen ansteht.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class FilterMiniFidelityTests
@@ -26,28 +22,14 @@ public sealed class FilterMiniFidelityTests
     [Fact]
     public async Task DiskAndInMemoryFilterMini_MatchStructurallyAndBehaviorally()
     {
-        var root = FindSolutionRoot();
-        IsolatedFixtureLease? lease = null;
-        SourceFileCatalog? catalog = null;
-        RoslynTestSolution? inMemory = null;
-        try
-        {
-            lease = IsolatedFixtureLease.CopyFixture(root, "FilterMini");
-            catalog = await SourceFileCatalog.LoadAsync(lease.RootPath);
-            inMemory = RoslynTestSolutionFactory.CreateSolution(FilterMiniSolutionSpec.CreateProjectSpecs());
+        await using var loaded = await LoadedFixture.CreateAsync("FilterMini");
+        using var inMemory = RoslynTestSolutionFactory.CreateSolution(FilterMiniSolutionSpec.CreateProjectSpecs());
 
-            AssertProjectNamesMatch(catalog.Solution, inMemory.Solution);
-            AssertDocumentCountsMatch(catalog.Solution, inMemory.Solution);
-            AssertNullableContextMatches(catalog.Solution, inMemory.Solution);
-            AssertTestProjectDetectionMatches(catalog.Solution, inMemory.Solution);
-            await AssertWidgetDescribeReturnTypeMatchesAsync(catalog.Solution, inMemory.Solution);
-        }
-        finally
-        {
-            inMemory?.Dispose();
-            catalog?.Dispose();
-            lease?.Dispose();
-        }
+        AssertProjectNamesMatch(loaded.Solution, inMemory.Solution);
+        AssertDocumentCountsMatch(loaded.Solution, inMemory.Solution);
+        AssertNullableContextMatches(loaded.Solution, inMemory.Solution);
+        AssertTestProjectDetectionMatches(loaded.Solution, inMemory.Solution);
+        await AssertWidgetDescribeReturnTypeMatchesAsync(loaded.Solution, inMemory.Solution);
     }
 
     private static void AssertProjectNamesMatch(Solution disk, Solution inMemory)
@@ -122,19 +104,4 @@ public sealed class FilterMiniFidelityTests
                parts.Contains("bin", StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }

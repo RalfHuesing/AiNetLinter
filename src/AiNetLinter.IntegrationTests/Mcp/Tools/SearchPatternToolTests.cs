@@ -37,7 +37,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_PlainTextSubstring_FindsExpectedHitsInFixture()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "Greeter", isRegex: false, maxResults: 50, CancellationToken.None);
@@ -51,7 +51,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_RegexPattern_FindsExpectedHitsInFixture()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -68,7 +68,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_PlainTextTruncatesAtMaxResults_AppendsMetaLine()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "public", isRegex: false, maxResults: 2, CancellationToken.None);
@@ -96,7 +96,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_NoMatch_ReturnsZeroHitsMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state,
@@ -162,7 +162,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_InvalidRegex_ReturnsRecoverableInvalidArgument()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "(unclosed", isRegex: true, maxResults: 50, CancellationToken.None);
@@ -176,7 +176,7 @@ public sealed class SearchPatternToolTests
     [Fact]
     public async Task ExecuteAsync_EmptyPattern_ReturnsRecoverableInvalidArgument()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        using var state = _fixture.CreateReadOnlyServer();
 
         var result = await SearchPatternTool.ExecuteAsync(
             state, pattern: "", isRegex: false, maxResults: 50, CancellationToken.None);
