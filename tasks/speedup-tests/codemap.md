@@ -9,6 +9,10 @@ last_updated: 2026-08-13
      FastTests bzw. IntegrationTests migriert; read-only MSBuild-Solutions teilen Hosts, mutable
      Szenarien nutzen isolierte geladene Leases und ein begrenztes Loadbudget. -->
 
+<!-- step-022: Step-021-Korrektur -- alle IntegrationTests-Loads werden ueber einen
+     globalen Max-2-Gatepfad gefuehrt; SymbolGraph-Server konsumieren den Fixture-Katalog nur noch
+     ueber die vorhandene nichtbesitzende ReadOnlySolutionSnapshot-Seam. -->
+
 <!-- step-020: EPIC-4-Re-Auditkorrektur -- FindSymbolFileAdapterTests enthält den einzigen
      Scanner-No-Match-Vertrag; damit bilden 20 historische Methoden 19 einzigartige Zielvertraege
      ab (elf FastTests, acht IntegrationTests). -->
@@ -76,7 +80,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.TestKit/`** — SDK-Class-Library fuer die gemeinsame Testplattform, importiert `tests/AiNetLinter.TestProject.props`, referenziert nur `AiNetLinter`, keine xUnit-Abhaengigkeit; enthaelt die deterministische `RoslynTestSolutionFactory`, `PreparedSolutionFixture`, `IsolatedFixtureLease` und `RecordingLintConsole` als gemeinsamen `ILintConsole`-Sink der Zieltestassemblies. (zuletzt: step-013)
 - **`src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHost.cs`** — `IAsyncLifetime`-Assembly-Fixture: kopiert `BaselineMini` einmal ueber `IsolatedFixtureLease` und laedt sie einmal echt via `SourceFileCatalog.LoadAsync` (Properties `Catalog`/`Solution`); bewusst in `AiNetLinter.IntegrationTests` statt `TestKit`, weil `FastTestsDependencyGuardTests` MSBuild-Referenzen in `TestKit.dll` als Verletzung meldet. Registrierung ueber `MsBuildFixtureHostAssemblyFixture.cs` (`[assembly: AssemblyFixture(typeof(MsBuildFixtureHost))]`, analog zu `PreparedSolutionAssemblyFixture.cs`). (zuletzt: step-007)
 - **`src/AiNetLinter.IntegrationTests/Platform/` (step-021-Ziel)** — ein IntegrationTests-lokaler geladener Fixture-Owner soll `IsolatedFixtureLease` + `SourceFileCatalog` samt Disposal und begrenztem MSBuild-Load zentral besitzen; `MsBuildFixtureHost`, Find-Symbol und die neuen Baseline-/SymbolGraph-Konsumenten delegieren darauf (TD-009). Der ohnehin beruehrte Host-Test verliert zugleich seinen veraltenden Step-Verweis (TD-004). (zuletzt: planning step-021)
-- **`src/AiNetLinter.IntegrationTests/Platform/LoadedFixture.cs`** — gemeinsamer Owner für isolierte Fixture-Leases und budgetierte MSBuild-Katalogloads der Dateikohorte. (zuletzt: step-021)
+- **`src/AiNetLinter.IntegrationTests/Platform/LoadedFixture.cs`** — gemeinsamer Owner fuer isolierte Fixture-Leases und einziger global budgetierter MSBuild-Katalogload-Pfad der IntegrationTests. (zuletzt: step-022)
+- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SymbolGraphCatalogFixture.cs`** — assembly-weiter Owner des read-only SymbolGraph-Katalogs; Serverkonsumenten erhalten ausschliesslich eine nichtbesitzende Solution-Snapshot-Sicht. (zuletzt: step-022)
 - **`src/AiNetLinter.FastTests/Baseline/SourceFileCatalogPolicyTests.cs` / `src/AiNetLinter.IntegrationTests/Baseline/SourceFileCatalogAdapterTests.cs`** — Split der Catalog-Policy- und echten Adapterverträge. (zuletzt: step-021)
 - **`src/AiNetLinter.Tests/Baseline/`, `Cache/`, `Core/LinterEngine*`** — 15 pending Klassen der step-021-Kohorte: reine Vergleichs-/Mappingvertraege gehen nach FastTests, reale Baseline-, Cache-, Restore- und MSBuild-Dateivertraege nach IntegrationTests. `SourceFileCatalogRegisterMSBuildTests` bleibt wegen des 20-fachen Parallel-Stressanteils ausgenommen. (zuletzt: planning step-021)
 - **`src/AiNetLinter.Tests/Mcp/McpCodeGraphServer*` und `Mcp/Tools/`** — sieben pending step-021-Klassen fuer Dateiinventar, Config-/Call-Log-Datei und Refresh/Staleness wechseln auf read-only SymbolGraph-Host bzw. isolierte mutable Leases; Git-/Prozessvertraege bleiben ausgenommen. (zuletzt: planning step-021)
