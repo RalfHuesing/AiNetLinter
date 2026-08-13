@@ -2,7 +2,7 @@
 task: speedup-tests
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 ---
 
 # Tech-Debt-Log: speedup-tests
@@ -33,6 +33,11 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar referenziert „step-006" — verstößt gegen das Verbot von Task-/Planungsartefakt-Referenzen in Code-Kommentaren (`AiNetLinterRichtlinien.mdc` §5). |
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
+| TD-006 | `src/AiNetLinter.FastTests/Architecture` / `src/AiNetLinter.IntegrationTests/Architecture` | niedrig | nein | `GetCategoryTraits` ist in beiden Assembly-Guards gleich implementiert. |
+| TD-007 | `src/AiNetLinter.FastTests/Maps/Skeleton` / `src/AiNetLinter.IntegrationTests/Maps/Skeleton` | niedrig | nein | Zwei lokale identische `CreateConfig`-Helfer fuer Skeleton-Tests. |
+| TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.Tests` | mittel | nein | Sieben exakte Testhelfer bleiben waehrend des Stranglers parallel. |
+| TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Katalog-/Lease-Teardown ist in zwei Integration-Fixtures gleich. |
+| TD-010 | `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` / `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs` | mittel | nein | Zwei Workspace-Kopierimplementierungen bleiben bis Legacy-Loeschung parallel. |
 
 ## Einträge
 
@@ -156,3 +161,53 @@ werden. Default bei Unsicherheit ist `nein`.
   aufrufen), bevor die Migration reale Filtermatrix-Assertions auf diesem Verhalten aufbaut.
 - **Auto-Fixable:** nein — Architektur-Entscheidung über Filter-/Ausschluss-Mechanismus nötig.
 - **Status:** geschlossen in step-013
+
+### TD-006 — Kategorie-Trait-Auslesung zentralisieren [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.FastTests/Architecture/TestCategoryProfileGuardTests.cs` und `src/AiNetLinter.IntegrationTests/Architecture/TestCategoryProfileGuardTests.cs`.
+- **Befund:** Beide Assembly-Guards reflektieren `TraitAttribute` und extrahieren die Kategorie mit derselben Implementierung.
+- **Warum nicht sofort gefixt:** Eine gemeinsame Hilfsschicht zwischen den Testassemblies braucht eine Abhaengigkeits- und Sichtbarkeitsentscheidung; sie liegt ausserhalb des Find-Symbol-Schnitts.
+- **Vorschlag:** Bei einer gemeinsamen Guard-Weiterentwicklung einen testframeworkfreien Helper im TestKit bewerten.
+- **Auto-Fixable:** nein — Zielort und Assembly-Abhaengigkeit erfordern Architektur-Ermessen.
+- **Status:** offen
+
+### TD-007 — Lokale Skeleton-Testkonfigurationen bewerten [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.FastTests/Maps/Skeleton/SkeletonMapFilterTests.cs` und `src/AiNetLinter.IntegrationTests/Maps/Skeleton/SkeletonMapBuilderAdapterTests.cs`.
+- **Befund:** Beide privaten `CreateConfig`-Methoden erzeugen dieselbe minimale Konfiguration.
+- **Warum nicht sofort gefixt:** Die Helfer sind je Testklasse lokal; eine Extraktion wuerde fuer zwei kurze Aufrufer eine gemeinsame Testoberflaeche einfuehren und gehoert nicht zum Step.
+- **Vorschlag:** Erst bei einem dritten Konsumenten eine schmale gemeinsame Testkonfiguration erwägen.
+- **Auto-Fixable:** nein — die Wiederverwendungsgrenze ist eine Designentscheidung.
+- **Status:** offen
+
+### TD-008 — Parallele Fast-/Legacy-Testhelfer bis EPIC-7 verfolgen [Priorität: mittel] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.FastTests/TestHelper.cs`, `src/AiNetLinter.Tests/TestHelper.cs`, `src/AiNetLinter.FastTests/Mcp/CompileErrorHeaderAssertions.cs` und `src/AiNetLinter.Tests/Mcp/CompileErrorHeaderAssertions.cs`.
+- **Befund:** Die exakten Paare `CompileErrorHeaderAssertions`, `CreateDefaultConfig`, `ParseCode`, `CreateContext`, `CreateContextWithLoadDiagnostics`, `DeleteDirectoryIfExists` und `CreateSemanticModel` bestehen in FastTests und Legacy parallel.
+- **Warum nicht sofort gefixt:** Die Legacy-Konsumenten bleiben bis EPIC-7 absichtlich separat und TestKit darf nicht ohne breiteren Bedarf zum Allzweckhelper werden.
+- **Vorschlag:** Bei der jeweiligen Restmigration Konsumenten auf die etablierte Zielassembly umstellen und die Legacy-Kopie mit dem Projekt entfernen.
+- **Auto-Fixable:** nein — die Konsumenten- und Assembly-Grenzen muessen kohortenweise entschieden werden.
+- **Status:** offen
+
+### TD-009 — Integration-Fixture-Lebensdauer gemeinsam bewerten [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.IntegrationTests/Mcp/Tools/FindSymbolFileAdapterTests.cs` und `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHost.cs`.
+- **Befund:** Beide Fixtures entsorgen `SourceFileCatalog` und `IsolatedFixtureLease` in derselben Reihenfolge; die neue Fixture benoetigt aber `SymbolGraphMini`, der bestehende Assembly-Host `BaselineMini`.
+- **Warum nicht sofort gefixt:** Eine parametrisierte oder vererbte Fixture-Oberflaeche wuerde den bestehenden Assembly-Fixture-Vertrag beruehren und den Find-Symbol-Step ueber die lokale Adaptergrenze ausweiten.
+- **Vorschlag:** Bei einem weiteren diskbasierten Integration-Adapter einen kleinen gemeinsamen Lifecycle-Host innerhalb von IntegrationTests evaluieren.
+- **Auto-Fixable:** nein — Fixture-Instanziierung und Lebensdauer erfordern Designentscheidung.
+- **Status:** offen
+
+### TD-010 — Doppelte Workspace-Kopie beim Strangler-Ende aufloesen [Priorität: mittel] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
+- **Ort:** `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` und `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs`.
+- **Befund:** Beide Implementierungen kopieren Fixture-Baeume und schliessen `bin`/`obj` aus; die Legacy-Variante besitzt zusaetzlich ihr historisches Workspace-Basisklassen-API.
+- **Warum nicht sofort gefixt:** Das Paar ist ein Strangler-Uebergang; eine vorzeitige Vereinheitlichung muesste Legacy-Konsumenten breit migrieren, obwohl EPIC-7 deren Loeschung vorsieht.
+- **Vorschlag:** Im EPIC-7-Legacy-Entfernungsstep verifizieren, dass keine Legacy-Referenz verbleibt, und die verbleibende TestKit-Primitive beibehalten.
+- **Auto-Fixable:** nein — die Legacy-Kohorte bestimmt den sicheren Zeitpunkt.
+- **Status:** offen
