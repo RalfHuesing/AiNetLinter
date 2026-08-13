@@ -62,7 +62,7 @@ Falls `<task-dir>/config.md` existiert, hier die Overrides dokumentieren.
 Andernfalls gelten die Defaults aus `../spec.md`.
 
 ```
-max_fix_rounds_per_step: 3        # Kettenlänge über `corrects`, siehe ../spec.md §10.5
+max_fix_rounds_per_step: 6        # Kettenlänge über `corrects`, siehe ../spec.md §10.5
 soft_step_checkin_interval: 40    # weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
 max_batch_items: 40         # ERHÖHT FÜR MIGRATION: Da die Zielarchitektur steht, Kohorten zu Super-Steps zusammenfassen, um Overhead zu sparen!
 max_batch_diff_lines: 800   # ERHÖHT FÜR MIGRATION: Reines Schieben und Namespace-Anpassungen machen große Diffs sicher.
