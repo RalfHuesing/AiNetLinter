@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # step-023 implementiert; EPIC-5 wartet auf Kritiker-Audit
+last_updated: 2026-08-13  # EPIC-5 nach step-024-Kritiker-Audit abgeschlossen
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -153,10 +153,10 @@ obsolet markiert) — kein starres Vorab-Dokument.
       im Re-Audit `approved`; EPIC-4 ist damit abgeschlossen. Keine neue
       Produkt-Seam; die fuenf verbleibenden Datei-/Config-/
       Call-Log-/Git-Toolklassen gehoeren weiterhin EPIC-5/6.
-- [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
+- [x] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
-      — Konzept §9 Punkt 4, Leitplanke 4. **Implementiert, pending audit → step-021/step-022
-      approved; step-023:** Step 021 migrierte 22 historische Baseline-/Cache-/Datei-/Refresh-
+      — Konzept §9 Punkt 4, Leitplanke 4. **Abgeschlossen → step-021/step-022
+      approved; step-023/step-024 approved:** Step 021 migrierte 22 historische Baseline-/Cache-/Datei-/Refresh-
       Klassen; step-022 schloss die beiden Review-Findings mit assembly-weitem Max-2-Loadgate und
       nichtbesitzenden SymbolGraph-Snapshot-Servern ab (`approved`, Review-Commit `3f94674`).
       Step 023 bildet die verbleibende kohärente Config-/Suppression-Dateifamilie: 21 historische
@@ -165,7 +165,10 @@ obsolet markiert) — kein starres Vorab-Dokument.
       mutation nutzt eindeutige Temp-Pfade oder die vorhandene isolierte `BaselineMini`-Workspace-
       Kopie. TD-003 ist im ohnehin berührten Agent-Rules-Configbereich mechanisch synchronisiert.
       Der Kritiker bewertet nun Coverage-Audit, Ledger-/Architekturguards, Grenzgates und den
-      Drift-Audit, bevor EPIC-5 abgeschlossen wird. Der parallele echte MSBuild-Registrierungs-
+      Drift-Audit. Step-024 schloss die beiden Step-023-MAJORs mit assembly-weitem Fast-Runtime-Guard,
+      MSBuild-freiem Catalog-Kern, instanzisolierten Loadbudget-Selbsttests und gemeinsamer
+      LoadedFixture-Root-Aufloesung; die EPIC-5-Profile liefen mit 778 Fast- und 155 Integration-
+      Tests vollstaendig gruen. Der parallele echte MSBuild-Registrierungs-
       Lastvertrag bleibt wegen Stress in EPIC-6; Prozess, Framing, Retry, Git, Repo/Dogfood,
       Performance, Stress und finale Legacy-Loeschung bleiben ebenfalls ausserhalb.
 - [ ] EPIC-6: CLI-, MCP-Prozess-, Dogfood-, Performance- und Stress-Kohorte migrieren — geteilter

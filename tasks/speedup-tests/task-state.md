@@ -5,7 +5,7 @@ started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
 total_steps: 24  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-024
+current_step: step-024 (approved)
 ---
 
 # Task State: speedup-tests
@@ -15,7 +15,7 @@ current_step: step-024
 - **Task-Status:** `executing`
 - **Steps gesamt:** 24 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-024`
+- **Aktueller Schritt:** `step-024` (approved; EPIC-5 freigegeben)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -55,7 +55,7 @@ mehr nötig.>
 | step-021 | EPIC-5 | issues | MSBuild-/Baseline-/Datei-/Refresh-Super-Step (22 Klassen) | - | b2b8fde | issues | 22 Legacy-Dateien entfernt; Korrektur via step-022 |
 | step-022 | EPIC-5 | done | Korrektur: globales MSBuild-Loadgate und read-only Server-Ownership | step-021 | 5aa397f/1c5090d | approved | 3f94674 |
 | step-023 | EPIC-5 | issues | Config-/Suppression-Dateikohorte und EPIC-5-Grenzgate (21 Klassen) | - | 312b652 | issues | d37a2f7 |
-| step-024 | EPIC-5 | done (pending audit) | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | pending | Code 30918b9; Doku folgt |
+| step-024 | EPIC-5 | done | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | approved | Code 30918b9; Doku 00c3e33; Review mit diesem Commit |
 
 ## Config (optional)
 
