@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # Planer-Step-018-Abgleich (step-017 approved, Duplicate-Detection-Toolkohorte geplant)
+last_updated: 2026-08-13  # Step-018 nach Super-Step-Vorgabe auf 24 read-only Analyzer-/Scanner-/Toolklassen erweitert
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -130,12 +130,17 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Duplicate-Detection-Engine-Familie:** `DuplicateDetectionEngineTests` (zwei Dateien) und
       `RefactoringDriftEngineTests` wechselten gemeinsam auf die vorhandene In-Memory-Factory; ein
       zusätzlicher Local-Function-Vertrag schloss die beim Engine-Audit gefundene Lücke.
-      **step-018 plant als nächsten geschlossenen Teil die darauf aufbauende
-      Duplicate-Detection-Toolkohorte:** die 19 Load-State-/Mode-/Argument-/Response-Dispatch-
-      Verträge aus `DuplicateDetectionToolTests` und
-      `DuplicateDetectionToolRefactoringDriftTests` wechseln gemeinsam nach FastTests und ersetzen
-      ihre doppelte Ad-hoc-/Temp-Datei-Hülle durch einen schmalen, besitzenden Testkontext auf der
-      vorhandenen In-Memory-Factory. Alle übrigen Scanner/Tools bleiben für spätere JIT-Steps offen.
+      **step-018 plant gemäß der Super-Step-Vorgabe aus Commit `04dce94` als nächsten großen Teil
+      die read-only MCP-Roslyn-Analyzer-/Scanner-/Toolkohorten:** 24 kompatible
+      Legacy-Dateien/Testklassen wechseln in 14 Batch-Items gemeinsam nach FastTests und verwenden
+      vorbereitete bzw. szenariolokale In-Memory-Solutions. Der Schnitt umfasst Duplicate
+      Detection, Dependency-/
+      Call-/Symbolgraph, File-Skeleton/CSharp-Hotspots, Type-Hierarchy/DI, Violations, Metrics,
+      Pattern Detect, Safeguard, gemeinsame Toolresults und den reinen Suppression-Scanner. Er führt
+      keine Produkt-Seam ein; die zwei reinen `LinterAnalyzer`-Semantikkohorten sind im selben
+      Strukturmove enthalten. Sieben gemischte Tooldateien
+      mit Nicht-C#-Dateisuche, Config-/Call-Log-Mutation oder Git-Impact bleiben bewusst außerhalb,
+      ebenso MSBuild-, Prozess-, Repo- und alle EPIC-5/6-Kohorten.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.

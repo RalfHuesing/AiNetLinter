@@ -20,8 +20,9 @@ last_updated: 2026-08-13
 <!-- step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die vorhandene
      In-Memory-Factory migriert; Tool-Dispatch-Vertraege blieben getrennt. -->
 
-<!-- planning step-018: EPIC-4 Teil 5 -- die 19 Duplicate-Detection-Tool-Dispatch-Vertraege als
-     gemeinsame Kohorte auf einen besitzenden In-Memory-Testkontext migrieren. -->
+<!-- planning step-018: EPIC-4 Teil 5 -- 24 read-only MCP-Roslyn-Analyzer-/Scanner-/Toolklassen als
+     14-Item-Super-Step auf PreparedSolutionFixture/RoslynTestSolutionFactory migrieren;
+     Nicht-C#-Dateisuche, Config-/Call-Log-Mutation und Git-Impact bleiben ausgeschlossen. -->
 
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
