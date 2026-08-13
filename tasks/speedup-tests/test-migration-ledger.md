@@ -162,6 +162,9 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` | `FindReferencesToolTests` | Mcp | migrated | `FullyQualifiedName~FindReferencesToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/FindSymbolScannerTests.cs` | `FindSymbolScannerTests` | Mcp | migrated | `FullyQualifiedName~FindSymbolScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/FindSymbolScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/FindSymbolToolTests.cs` | `FindSymbolToolTests` | Mcp | migrated | `FullyQualifiedName~FindSymbolToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/FindSymbolToolTests.cs` |
+
+> **Find-Symbol-Coverage (step-020):** Die zwei historischen Plain-No-Match-Methoden werden durch den verbleibenden Scannervertrag in `src/AiNetLinter.IntegrationTests/Mcp/Tools/FindSymbolFileAdapterTests.cs` semantisch konsolidiert. Damit bilden 20 historische Methoden 19 einzigartige Verträge ab (elf FastTests, acht IntegrationTests); die maschinell geprüften Zielpfade und Statuswerte der beiden Zeilen bleiben unverändert.
+
 | `src/AiNetLinter.Tests/Mcp/Tools/GetCallTreeToolTests.cs` | `GetCallTreeToolTests` | Mcp | migrated | `FullyQualifiedName~GetCallTreeToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetCallTreeToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetFileSkeletonToolTests.cs` | `GetFileSkeletonToolTests` | Mcp | migrated | `FullyQualifiedName~GetFileSkeletonToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetFileSkeletonToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetHotspotsToolTests.cs` | `GetHotspotsToolTests` | Mcp | migrated | `FullyQualifiedName~GetHotspotsToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetHotspotsToolTests.cs` |

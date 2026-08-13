@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
-total_steps: 19  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-019
+total_steps: 20  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-020
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-019
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 19 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 20 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-019`
+- **Aktueller Schritt:** `step-020`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -50,7 +50,8 @@ mehr nötig.>
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
 | step-018 | EPIC-4 | done | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | approved (Re-Audit 9cc8b73) | Code e864407/f0dbacc; Doku b1a59b7; Review 9cc8b73 |
-| step-019 | EPIC-4 | done (pending audit) | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | pending | Code 6413510; Doku-Commit folgt |
+| step-019 | EPIC-4 | issues→pending re-audit (via step-020) | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | issues (af61a93) | Code 6413510; Doku 1c9c531; Review af61a93 |
+| step-020 | EPIC-4 | done (pending audit) | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | pending audit | Code 5041b00; Doku folgt |
 
 ## Config (optional)
 

@@ -19,7 +19,7 @@ blocker_category: n/a
 ## Zusammenfassung
 
 Die beiden Legacy-Klassen sind geloescht und ihre 20 historischen Methoden entlang der echten
-Ausfuehrungsgrenze migriert: elf Snapshot-/Dispatchvertraege nach FastTests, neun
+Ausfuehrungsgrenze migriert: elf Snapshot-/Dispatchvertraege nach FastTests, acht einzigartige
 C#-Leermengen-/Miss-Hint-Vertraege als hermetischer Diskadapter nach IntegrationTests. Der
 Integration-Adapter besitzt pro Testklasse genau eine isolierte `SymbolGraphMini`-Kopie und einen
 `SourceFileCatalog.LoadAsync`-Load. Es wurde keine Produkt-Seam oder TestKit-Abstraktion ergaenzt.
@@ -28,7 +28,7 @@ Integration-Adapter besitzt pro Testklasse genau eine isolierte `SymbolGraphMini
 
 - item-01: `src/AiNetLinter.FastTests/Mcp/Tools/FindSymbolScannerTests.cs` — zwei Scanner-Snapshotvertraege und der isolierte Trunkierungs-Unitvertrag.
 - item-01: `src/AiNetLinter.FastTests/Mcp/Tools/FindSymbolToolTests.cs` — acht Tool-Dispatch-, Structured-Content- und Compile-Error-Snapshotvertraege.
-- item-02: `src/AiNetLinter.IntegrationTests/Mcp/Tools/FindSymbolFileAdapterTests.cs` — neun Miss-Hint- und Leermengenvertraege mit lokalem asynchronem Fixture.
+- item-02: `src/AiNetLinter.IntegrationTests/Mcp/Tools/FindSymbolFileAdapterTests.cs` — acht einzigartige Miss-Hint- und Leermengenvertraege mit lokalem asynchronem Fixture.
 - item-03: `src/AiNetLinter.Tests/Mcp/Tools/FindSymbolScannerTests.cs` / `FindSymbolToolTests.cs` — Legacy-Quellen entfernt.
 - item-03: `tasks/speedup-tests/test-migration-ledger.md` — beide Klassen auf `migrated` gesetzt.
 - item-03: `tasks/speedup-tests/codemap.md`, `roadmap.md`, `task-state.md` und `step-019/step-plan.md` — Zielorte, Epic-Status und Step-Abschluss aktualisiert.
@@ -56,7 +56,11 @@ dotnet test src/AiNetLinter.FastTests --no-build --filter "Category=Component" �
 
 ## Abweichungen vom Plan
 
-Keine — Plan 1:1 umgesetzt. Die neun Dateivertraege werden in einer Zielklasse gehalten, damit
+Korrektur durch step-020: Das Review widerlegte die frühere Begründung, die zwei bytegleichen
+Plain-No-Match-Methoden müssten als getrennte historische Klassenverträge bestehen. Sie bilden
+einen Scannervertrag ab; deshalb werden 20 historische Methoden auf 19 einzigartige Verträge
+(elf FastTests, acht IntegrationTests) konsolidiert. Die acht Dateiverträge bleiben in einer
+Zielklasse, damit
 Kopie, Katalog und deterministisches Dispose pro Klasse einmal stattfinden.
 
 ## Beobachtungen
@@ -67,12 +71,11 @@ Snapshot- oder Dateiadapterziel zu. Loading-Zweig und `OperationCanceledExceptio
 sind im vorliegenden historischen Find-Symbol-Schnitt nicht als eigenständige Verträge vorhanden;
 es wurde dafür kein zusätzlicher Produktcode geändert.
 
-Der abschließende DRY-Scan (`find_duplicates`, `src`, 20 Tokens) meldet zwei in dieser Migration
-entstandene exakte Paare: die beiden Plain-No-Match-Tests und das lokale Fixture-Dispose-Muster.
-Die Plain-No-Match-Methoden bleiben getrennt, weil sie zwei historische Klassenverträge belegen;
-das lokale Dispose bleibt, weil eine gemeinsame Fixture-Abstraktion ohne zweiten Konsumenten den
-Step-Scope erweitern würde. Alle übrigen exakten/nahen Cluster lagen bereits außerhalb dieses
-Steps.
+Der abschließende DRY-Scan (`find_duplicates`, `src`, 20 Tokens) meldete die beiden
+Plain-No-Match-Tests und das lokale Fixture-Dispose-Muster als exakte Paare. Step-020 entfernt
+den semantisch redundanten Plain-No-Match-Test; das lokale Dispose bleibt, weil eine gemeinsame
+Fixture-Abstraktion ohne zweiten Konsumenten den Step-Scope erweitern würde. Alle übrigen
+exakten/nahen Cluster lagen bereits außerhalb dieses Steps.
 
 ## Bekannte Unschärfen
 
