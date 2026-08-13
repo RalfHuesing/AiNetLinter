@@ -49,7 +49,7 @@ mehr nötig.>
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
-| step-018 | EPIC-4 | open (Recovery 4) | MCP-Read-only-Snapshot-Super-Step (23 Klassen, 1 Rueck-Move) | - | e864407 (Roh-Renames; Recovery-Build gruen) | - | e864407 |
+| step-018 | EPIC-4 | in_progress (Recovery 4) | MCP-Read-only-Snapshot-Super-Step (23 Klassen, 1 Rueck-Move) | - | e864407 (Roh-Renames; Recovery-Build gruen) | - | e864407 |
 
 ## Config (optional)
 
