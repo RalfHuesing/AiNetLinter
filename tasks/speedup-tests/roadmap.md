@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # Step-018 nach Zwischenstandsdiagnose als plattenfreier 20-Klassen-Super-Step neu geplant
+last_updated: 2026-08-13  # Step-018 mit interner MCP-Read-only-Snapshot-Seam auf 23 Klassen neu geplant
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -130,17 +130,17 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Duplicate-Detection-Engine-Familie:** `DuplicateDetectionEngineTests` (zwei Dateien) und
       `RefactoringDriftEngineTests` wechselten gemeinsam auf die vorhandene In-Memory-Factory; ein
       zusätzlicher Local-Function-Vertrag schloss die beim Engine-Audit gefundene Lücke.
-      **step-018 ist nach dem in `e864407` committeten 24er Roh-Move als plattenfreier Super-Step
-      neu geplant:** 20 kompatible Analyzer-/Scanner-/Toolklassen bleiben im Batch und verwenden
-      zeilengetreue SymbolGraph-, CompileError- und DI-`ProjectSpec`s, einen pfadlosen Serverkontext
-      sowie eine fokussierte Faulting-Solution-Fixture. `DependencyGraphToolTests`,
-      `GetFileSkeletonToolTests`, `GetSymbolBodyToolTests` und `SuppressionScannerTests` werden als
-      vorwaertsgerichtete Renames wieder ins Legacy-Projekt verschoben: Ihre Dateiargument-/
-      Server-Refresh- bzw. `ScanFile`-Vertraege sind ohne neue Produkt-Seam echte Plattenvertraege.
-      Der verbleibende Schnitt umfasst Duplicate Detection, Dependency-Scanner, Call-/Symbolgraph,
-      CSharp-Hotspots, Type-Hierarchy/DI, Violations, Metrics, Pattern Detect, Safeguard,
-      Toolresults und zwei reine `LinterAnalyzer`-Semantikkohorten. Zuvor ausgeschlossene Nicht-C#-,
-      Config-/Call-Log-, Git-, MSBuild-, Prozess-, Repo- und EPIC-5/6-Kohorten bleiben ausserhalb.
+      **step-018 ist nach dem in `e864407` committeten 24er Roh-Move und dem gruenen Recovery-Build
+      erneut JIT-geplant:** Eine interne `ReadOnlySolutionSnapshot`-Seam trennt im MCP-Server die
+      objektbasierte Ausfuehrung vom live refreshbaren Catalog, wie in Konzept §3 vorgesehen.
+      Dadurch koennen 23 Analyzer-/Scanner-/Toolklassen gegen pfadfidele virtuelle SymbolGraph-,
+      CompileError-, DI- und Faulting-Solutions nach FastTests wechseln; auch
+      `DependencyGraphToolTests`, `GetFileSkeletonToolTests` und `GetSymbolBodyToolTests` bleiben im
+      In-Memory-Schnitt. Nur `SuppressionScannerTests` wird vorwaertsgerichtet ins Legacy-Projekt
+      zurueckverschoben, weil `ScanFile` selbst `File.Exists`/`File.ReadLines` als Produktvertrag
+      besitzt. Live-Refresh bleibt Produktionsdefault und wird mit bestehenden Legacy-Vertraegen
+      gegengeprueft. Nicht-C#-, Config-/Call-Log-, Git-, MSBuild-, Prozess-, Repo- und EPIC-5/6-
+      Kohorten bleiben ausserhalb.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.

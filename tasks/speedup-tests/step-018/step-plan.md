@@ -4,43 +4,31 @@ type: step-plan
 task: speedup-tests
 step: 018
 corrects: null
-title: "Read-only MCP-Roslyn-Kohorten als plattenfreien In-Memory-Super-Step fertigstellen"
+title: "MCP-Read-only-Snapshot-Seam einziehen und 23-Klassen-Super-Step abschliessen"
 epic: EPIC-4
 estimated_risk: medium
 step_type: batch
 items:
   - id: item-01
-    title: "Vier echte Dateisystemvertraege vorwaertsgerichtet ins Legacy-Projekt zurueckverschieben"
-    source: "e864407 Roh-Renames; aktuelle Produktvertraege"
+    title: "Interne Read-only-Solution-Snapshot-Seam im MCP-Server ergaenzen"
+    source: "konzept.md §3 Laden und Ausfuehren trennen"
   - id: item-02
-    title: "Deklarative SymbolGraph-, CompileError- und DI-Spezifikationen bereitstellen"
-    source: "konzept.md Technische Leitplanken §2/§5"
+    title: "ProjectSpec-Pfadfidelitaet und vier In-Memory-Spezifikationen korrigieren"
+    source: "TestResults/latest.trx; aktueller Recovery-Stand"
   - id: item-03
-    title: "MCP-In-Memory-Kontext und Faulting-Solution-Fixture vervollstaendigen"
-    source: "step-result.md; Diagnose-Build vom 2026-08-13"
+    title: "MCP-Testkontext auf virtuelle Read-only-Snapshots umstellen"
+    source: "McpCodeGraphServer.GetCurrentSolution/RefreshStaleDocuments"
   - id: item-04
-    title: "Duplicate-Detection-Tooldispatch migrieren"
-    source: "test-migration-ledger.md: DuplicateDetectionToolTests + DuplicateDetectionToolRefactoringDriftTests"
+    title: "Drei pfadgebundene Toolklassen wieder in FastTests aufnehmen"
+    source: "e864407 Roh-Renames; Snapshot-Seam"
   - id: item-05
-    title: "Dependency-Graph-Scanner migrieren"
-    source: "test-migration-ledger.md: DependencyGraphScannerTests"
+    title: "20-Klassen-Recovery-Batch gegen die Snapshot-Seam stabilisieren"
+    source: "142/220 gruen, 78 Fehler in TestResults/latest.trx"
   - id: item-06
-    title: "Call-Graph-Traversal und Call-Tree-Tool migrieren"
-    source: "test-migration-ledger.md: CallGraphTraversalTests + GetCallTreeToolTests"
+    title: "Suppression-Dateivertrag im Legacy-Projekt belassen"
+    source: "SuppressionScanner.ScanFile"
   - id: item-07
-    title: "SymbolIdentifierResolver und FindReferences migrieren"
-    source: "test-migration-ledger.md: SymbolIdentifierResolverTests + FindReferencesToolTests"
-  - id: item-08
-    title: "Hotspots, Type-Hierarchy und DI-Heuristik migrieren"
-    source: "test-migration-ledger.md: GetHotspotsToolTests + GetTypeHierarchyToolTests + DiRegistrationHeuristicsTests"
-  - id: item-09
-    title: "Violations-, Metrics-, Pattern-Detect- und Safeguard-Kohorten migrieren"
-    source: "test-migration-ledger.md: neun Scanner-/Toolklassen"
-  - id: item-10
-    title: "McpToolResults und LinterAnalyzer-Semantikvertraege migrieren"
-    source: "test-migration-ledger.md: drei Klassen"
-  - id: item-11
-    title: "Ledger, Kategorien und gezielte Gates abschliessen"
+    title: "Ledger, Guards und gezielte Gates abschliessen"
     source: "konzept.md Leitplanken §7/§8/§9"
 created_by: planer
 created_by_model: gpt-5.6-sol
@@ -53,303 +41,265 @@ related_to:
   - step-017
 ---
 
-# Step 018: Read-only MCP-Roslyn-Kohorten als plattenfreien In-Memory-Super-Step fertigstellen
+# Step 018: MCP-Read-only-Snapshot-Seam einziehen und 23-Klassen-Super-Step abschliessen
 
-## Bezug und verbindlicher Ausgangspunkt
+## Verbindlicher Ausgangspunkt
 
-- **Task/Epic:** `speedup-tests`, EPIC-4.
-- **Batch-Vorgabe:** `max_batch_items: 40`, `max_batch_diff_lines: 800`; reine
-  Strukturmigrationen werden als Super-Step gebuendelt.
-- **Historie:** Commit `e864407` enthaelt bereits die Roh-Renames von 24 Klassen. Diese Historie
-  wird nicht umgeschrieben. Der Coder arbeitet ausschliesslich vorwaerts auf diesem Commit und dem
-  vorhandenen, uncommittierten Teilport.
-- **Ist-Zustand:** Der einmalige diagnostische `dotnet build --no-restore` ist mit 26
-  Compilefehlern rot. `step-result.md` beschreibt den abgebrochenen Versuch; seine Blockerwertung
-  ist durch diese Neuplanung aufgehoben. Das Legacy-Ausgangsgate war dort mit 243 Tests gruen.
-- **Scope nach Vertragspruefung:** 20 Klassen bleiben im plattenfreien Super-Step. Vier Klassen
-  besitzen dagegen einen echten Datei-/Server-Refresh-Vertrag und werden als neue Aenderung gezielt
-  ins Legacy-Projekt zurueckverschoben. Der Batch bleibt mit 20 Klassen und 12 fachlichen Kohorten
-  gross; es entsteht kein step-019.
+- Commit `e864407` enthaelt die Roh-Renames von 24 Klassen. Der aktuelle Working Tree enthaelt
+  darauf aufbauend die zweite Recovery-Portierung, vier vorwaertsgerichtete Rueck-Moves und die
+  neuen FastTests-Fixtures. Kein Reset, Rebase, Checkout oder pauschales Restore dieses Stands.
+- `dotnet build --no-restore` ist jetzt **gruen**. Dieser Fortschritt bleibt erhalten.
+- Der kombinierte 20er-FastTests-Filter lief mit **220 Tests: 142 gruen, 78 rot**. Die vorhandene
+  `TestResults/latest.trx` ist die Diagnosequelle; der Planer hat den Lauf nicht wiederholt.
+- Die vorige Trennung in einen pfadlosen Server-Snapshot und einen virtuellen Direkt-Snapshot ist
+  widerlegt. Viele fachliche Operationen benoetigen `Solution.FilePath` und `Document.FilePath`
+  fuer relative Pfade. Ein virtueller Pfad allein reicht hinter `McpCodeGraphServer` ebenfalls
+  nicht, weil der Live-Staleness-Refresh nicht existente Dateien korrekt als geloescht behandelt.
+- EPIC-4 verlangt laut `konzept.md` §3 gerade die Trennung von Laden und objektbasierter
+  Ausfuehrung. Deshalb gilt **Entscheidung A**: eine kleine interne Read-only-Snapshot-Seam im
+  produktiven MCP-Server. Der Live-Catalog-/Refresh-Pfad bleibt unveraendert Default.
 
-## Vollstaendige Ursache der 26 Compilefehler
+## Diagnose der 78 Fehler
 
-Die Fehler sind keine Produktregression, sondern sechs unvollstaendig spezifizierte Portierungs-
-luecken des Roh-Moves:
+### Verteilung nach Testklasse
 
-1. **1 Fehler – nullable MaxLineCount:**
-   `Fixtures/McpInMemoryTestContext.cs:45` uebergibt `int?` an den nicht-nullbaren
-   `McpCodeGraphServerOptionsFromParameters.MaxLineCount` (`int`, Default 700).
-2. **11 Fehler – entfernte Legacy-Workspace-Fassade:**
-   `FindReferencesToolTests` (8), `GetFileSkeletonToolTests` (1) und
-   `GetSymbolBodyToolTests` (2) greifen noch auf `_fixture.Workspace.GreeterPath`, `CallerPath`
-   oder `OtherCallerPath` zu, obwohl der neue `SymbolGraphCatalogFixture` keine
-   `Workspace`-Property besitzt.
-3. **7 Fehler – Compile-Error-Fixtures fehlen:**
-   sechs Verwendungen von `CompileErrorMiniFixtureWorkspace` in `GetFileSkeletonToolTests`,
-   `FindReferencesToolTests`, `GetHotspotsToolTests`, `GetCallTreeToolTests`,
-   `GetViolationsToolTests` und `GetTypeHierarchyToolTests`, plus eine Verwendung von
-   `SingleCompileErrorMiniFixtureWorkspace` in `GetHotspotsToolTests`.
-4. **2 Fehler – gemeinsame Header-Assertion fehlt:**
-   `GetHotspotsToolTests` referenziert zweimal `CompileErrorHeaderAssertions`, die noch nur im
-   Legacy-Projekt existiert.
-5. **1 Fehler – DI-Fixture fehlt:**
-   `GetTypeHierarchyToolTests` referenziert `DiRegistrationMiniFixtureWorkspace`.
-6. **4 Fehler – Malfunction-Fixture fehlt:**
-   `GetViolationsToolTests`, `PatternDetectScannerTests`, `SafeguardScannerTests` und
-   `SafeguardToolTests` referenzieren `TestHelper.CreateFaultySolution`; der Legacy-Helper erzeugt
-   dabei eine reale Probe-Datei und ist im FastTests-Projekt weder sichtbar noch zulaessig.
+| Fehler | Klasse |
+|---:|---|
+| 17 | `FindReferencesToolTests` |
+| 9 | `CallGraphTraversalTests` |
+| 8 | `GetHotspotsToolTests` |
+| 8 | `GetTypeHierarchyToolTests` |
+| 7 | `MetricsTreeToolTests` |
+| 6 | `GetCallTreeToolTests` |
+| 6 | `GetViolationsToolTests` |
+| 6 | `MetricsTreeRoslynScannerTests` |
+| 5 | `PatternDetectToolTests` |
+| 4 | `SafeguardToolTests` |
+| 2 | `SafeguardScannerTests` |
 
-Summe: **1 + 11 + 7 + 2 + 1 + 4 = 26**.
+Damit schlagen elf der 20 Klassen fehl; neun Klassen sind im engen Lauf bereits vollstaendig
+gruen. Die elf Klassen zerfallen nicht in elf unabhaengige Produktfehler, sondern in zwei
+zusammenhaengende Infrastrukturursachen:
 
-## Scope-Entscheidung: 20 bleiben, vier gehen vorwaerts zurueck
+1. **37 unmittelbare Pfadausnahmen:** 19 `ArgumentNullException(path)`, neun
+   `ArgumentException(path is empty)` und neun `ArgumentException(relativeTo is empty)` aus
+   `SolutionFileWalker`, `PathNormalizer`, `CallGraphTraversal` und verwandten Formatierern.
+   Pfadlose Dokumente sind fuer diese Operationen kein gueltiger Analyse-Input.
+2. **41 Folgefehler in Toolresultaten/Assertions:** 23 `Assert.NotEqual`-Fehler, sechs
+   `Assert.False`, vier `Assert.Contains`, vier `Assert.Null`, zwei `Assert.DoesNotContain` und
+   zwei `Assert.StartsWith`. Bei servergebundenen virtuellen Szenarien entfernt
+   `RefreshStaleDocuments` die nicht auf Platte vorhandenen Dokumente; bei pfadlosen Szenarien
+   werden Pfadausnahmen als MCP-Fehlerantworten gefangen. Dadurch fehlen Symbole, Warnheader,
+   Violations und strukturierte Inhalte oder `IsError` kippt.
 
-Folgende vier Roh-Renames werden als eigener normaler Diff (nicht per Reset/Rebase) von
-`src/AiNetLinter.FastTests` nach `src/AiNetLinter.Tests` zurueckverschoben. Namespace, Usings und
-Kategorie werden dabei auf den Stand des Legacy-Vertrags gebracht; bereits angefangene
-FastTests-Teilportierungen dieser vier Dateien werden gezielt verworfen:
+Nach Aufrufgrenze sind **61 Fehler in acht servergebundenen Klassen**
+(`FindReferences`, `Hotspots`, `TypeHierarchy`, `MetricsTreeTool`, `CallTree`, `Violations`,
+`PatternDetectTool`, `SafeguardTool`) von der neuen Snapshot-Seam abhaengig. **17 Fehler in drei
+direkten Scanner-/Traversal-Klassen** (`CallGraphTraversal`, `MetricsTreeRoslynScanner`,
+`SafeguardScanner`) benoetigen keine Server-Seam, aber denselben vollstaendig pfadtragenden
+virtuellen Snapshot. Es gibt keinen Hinweis auf 78 fachliche Produktregressionen.
 
-- `Mcp/Tools/DependencyGraphToolTests.cs`: Der Toolvertrag akzeptiert reale/relative
-  `filePath`-Argumente. `McpCodeGraphServer.GetCurrentSolution()` entfernt nicht existierende
-  Dokumentpfade beim Refresh; virtuelle Pfade koennen deshalb den Dispatchvertrag ohne neuen
-  Produkt-Seam nicht tragen.
-- `Mcp/Tools/GetFileSkeletonToolTests.cs`: Das Tool ist ausschliesslich ein Dateipfad-Dispatch und
-  loest ueber `DiffImpactAnalyzer.FindDocumentByPath` nach dem Server-Refresh auf.
-- `Mcp/Tools/GetSymbolBodyToolTests.cs`: Zwei explizite Datei:Zeile:Spalte-Vertraege laufen durch
-  denselben Server-Refresh. Ein Wechsel nur auf stabile Symbol-IDs wuerde Abdeckung entfernen.
-- `Suppression/SuppressionScannerTests.cs`: `SuppressionScanner.ScanFile` prueft `File.Exists` und
-  liest mit `File.ReadLines`; die Platte ist hier Produktvertrag, nicht Testarrangement.
+## Entscheidung A: produktive Read-only-Snapshot-Seam
 
-Kein Kompatibilitaetswrapper, kein Abschwaechen/Loeschen von Assertions und keine neue
-Produkt-Seam sind erlaubt. Die vier Klassen bleiben im Ledger `pending` und werden spaeter mit den
-Platten-/Adapterkohorten eingeordnet.
+### Produktdateien und API
 
-Die verbleibenden **20 Klassen** sind:
+#### `src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`
 
-- `DuplicateDetectionToolTests`, `DuplicateDetectionToolRefactoringDriftTests`
-- `DependencyGraphScannerTests`
-- `CallGraphTraversalTests`, `GetCallTreeToolTests`
-- `SymbolIdentifierResolverTests`, `FindReferencesToolTests`
-- `GetHotspotsToolTests`, `GetTypeHierarchyToolTests`, `DiRegistrationHeuristicsTests`
-- `GetViolationsToolTests`
-- `MetricsTreeRoslynScannerTests`, `MetricsTreeToolTests`
-- `PatternDetectScannerTests`, `PatternDetectToolTests`
-- `SafeguardScannerTests`, `SafeguardToolTests`
-- `McpToolResultsTests`
-- `LinterAnalyzerArchitectureRuleTests`, `LinterAnalyzerTests`
+- `McpCodeGraphServerOptions` erhaelt eine interne optionale Property
+  `Solution? ReadOnlySolutionSnapshot` (Default `null`).
+- `McpCodeGraphServerOptionsFromParameters` erhaelt am Ende den optionalen, benannten Parameter
+  `Solution? ReadOnlySolutionSnapshot = null`. Bestehende positionale/benannte Call-Sites bleiben
+  quellkompatibel; `From(...)` kopiert die Property.
+- Zulaessige Zustaende:
+  - `Catalog` oder `LoadFunc`: bestehender **LiveFileSystem**-Pfad mit Staleness-Refresh.
+  - `ReadOnlySolutionSnapshot`: neuer immutable **Snapshot**-Pfad ohne Dateiabgleich.
+  - alles `null`: bestehender `SolutionNotLoaded`-Zustand.
+- `ReadOnlySolutionSnapshot` darf nicht gleichzeitig mit `Catalog` oder `LoadFunc` gesetzt sein.
+  Der Serverkonstruktor validiert dies mit einer klaren `ArgumentException`; keine stille
+  Prioritaetsregel.
+- Die Property/API bleibt `internal`. Es entsteht keine Test-only-Bedingung, kein `#if TESTING`
+  und keine oeffentliche Oberflaeche.
 
-## Exakte Fixture- und Besitzergrenzen
+#### `src/AiNetLinter/Mcp/McpCodeGraphServer.cs`
 
-### 1. Deklarative Specs unter `src/AiNetLinter.FastTests/Fixtures/`
+- Der Konstruktor erkennt den Snapshot-Zustand, kapselt die uebergebene `Solution` intern mit
+  `new SourceFileCatalog(solution, hasLoadingErrors: false)` und markiert den Server als
+  read-only Snapshot. Der Wrapper besitzt keinen MSBuild-Workspace; sein Dispose ist ein No-op.
+- Im Snapshot-Zustand:
+  - `LoadState` ist sofort `Loaded`.
+  - `GetCurrentSolution()` liefert exakt den residenten immutable Snapshot und ruft weder
+    `InitializeFileState` noch `RefreshStaleDocuments` auf.
+  - Es werden keine Hashes, mtimes, `File.Exists`-Checks oder Directory-Sweeps ausgefuehrt.
+  - `RefreshCount` bleibt deterministisch 0.
+  - Der Server besitzt **nicht** den `AdhocWorkspace`; der aufrufende Testkontext besitzt und
+    entsorgt `RoslynTestSolution`.
+- Im bestehenden Catalog-/Background-Load-Zustand bleibt das Verhalten byte-for-byte fachlich
+  gleich: Initialzustand cachen, geloeschte/neue/modifizierte Dateien erkennen, Catalog besitzen
+  und entsorgen. `McpServerCommand` setzt keinen Snapshot und bleibt damit immer LiveFileSystem.
+- ReloadConfig, Config-Snapshot, Loading/LoadFailed und Toolregistrierung werden nicht veraendert.
 
-Die Specs enthalten nur Namen, Quelltexte, virtuelle Pfadkonstanten und `ProjectSpec`-Erzeugung;
-sie besitzen weder Workspace noch Catalog/Server und fuehren keine IO aus.
+Diese Seam ist eine reale fachliche Ausfuehrungsgrenze: Der Server kann entweder einen live
+geladenen, refreshbaren Catalog oder einen bereits vorbereiteten immutable Analyse-Snapshot
+bedienen. Sie folgt `konzept.md` §3 und ist nicht bloss eine Testumgehung.
 
-#### `SymbolGraphMiniSolutionSpec.cs`
+### Schutz der Seam
 
-- Spiegelt die physischen C#-Quellen **zeilengetreu** als Raw-Strings:
-  `Greeter.cs`, `Caller.cs`, `OtherCaller.cs`, `Hierarchy.cs`, `ViolationTrigger.cs`. Die aktuelle
-  einzeilige Teilportierung ist zu ersetzen, weil die Positionsvertraege Zeilen 2/3/5/7/8
-  benoetigen.
-- Stellt zwei bewusst getrennte Erzeuger bereit:
-  - `CreateServerSnapshot()` ohne Solution-Dateipfad. Dokumente haben keine `FilePath`s und werden
-    deshalb vom Staleness-Refresh eines `McpCodeGraphServer` nicht als geloeschte Plattendateien
-    entfernt. Konsumenten sind alle symbolnamen-/stable-id-basierten Tooltests.
-  - `CreatePathSnapshot()` mit rein virtuellem Solutionpfad
-    `C:\ainetlinter-virtual\SymbolGraphMini.slnx`, Projektname `src` und Dokumentnamen
-    `SymbolGraphMini/<Datei>.cs`. Dieser Snapshot wird **nur direkt gegen Solution-/Scanner-
-    Funktionen** verwendet, nie hinter `McpCodeGraphServer.GetCurrentSolution()`.
-- Exponiert die aus der Spezifikation abgeleiteten Konstanten `GreeterPath`, `CallerPath` und
-  `OtherCallerPath` (`C:\ainetlinter-virtual\src\SymbolGraphMini\...`). Es gibt keine nachgebaute
-  `Workspace`-Fassade.
-- Konsumenten: serverloser Positionszweig von `FindReferencesToolTests`,
-  `SymbolIdentifierResolverTests`, `DependencyGraphScannerTests` und alle lokalen Scanner-Szenarien,
-  die virtuelle Pfade fuer Ausgabe/Projektklassifikation brauchen.
+- Neue Component-Vertraege in
+  `src/AiNetLinter.FastTests/Mcp/McpCodeGraphServerReadOnlySnapshotTests.cs`:
+  1. Ein virtueller, nicht auf Platte existierender Solution-/Document-Pfad bleibt nach
+     wiederholtem `GetCurrentSolution()` erhalten und liefert denselben Snapshot.
+  2. `RefreshCount` bleibt 0.
+  3. Snapshot plus Catalog wird sichtbar abgewiesen.
+- Bestehende Live-Vertraege bleiben im Legacy-Projekt und werden gezielt ausgefuehrt:
+  `McpCodeGraphServerConstructorTests`, `McpCodeGraphServerFileDiscoveryTests` und
+  `McpCodeGraphServerStalenessMtimeCacheTests`. Damit ist nachgewiesen, dass der Default weiterhin
+  reale Aenderungen entdeckt. Diese Tests werden nicht migriert und nicht abgeschwaecht.
 
-#### `CompileErrorMiniSolutionSpec.cs`
+## Pfadfidele In-Memory-Spezifikationen
 
-- `CreatePlural()` enthaelt genau sechs Dokumente im Projekt `CompileErrorMini`:
-  `ValidClassA/B/C.cs` zeilengetreu sowie
-  `BrokenClassA.cs` (`public void F( { } }`),
-  `BrokenClassB.cs` (`: DoesNotExist`) und
-  `BrokenClassC.cs` (`UndefinedType`). Damit entstehen Fehler in exakt drei Dateien.
-- `CreateSingular()` enthaelt im Projekt `SingleCompileErrorMini` genau `ValidClass.cs` und das
-  syntaktisch defekte `BrokenClass.cs`; damit entsteht genau eine Fehlerdatei.
-- Beide Erzeuger liefern pfadlose `RoslynTestSolutionFactory`-Snapshots. Der zugehoerige
-  `SourceFileCatalog` wird mit `hasLoadingErrors: false` erzeugt: Die erwartete Warnung stammt aus
-  `Compilation.GetDiagnostics()`, nicht aus einem simulierten MSBuild-Ladefehler.
-- Konsumenten: Plural in `FindReferencesToolTests`, `GetHotspotsToolTests`,
-  `GetCallTreeToolTests`, `GetViolationsToolTests`, `GetTypeHierarchyToolTests`; Singular nur in
-  `GetHotspotsToolTests`. Der entfallene `GetFileSkeletonToolTests`-Konsument bleibt Legacy.
+### `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs`
 
-#### `DiRegistrationMiniSolutionSpec.cs`
+- `ProjectSpec` erhaelt als letzten optionalen Wert `string? VirtualProjectDirectory = null`.
+  Default bleibt `<SolutionDir>/<ProjectSpec.Name>` und veraendert bestehende Specs nicht.
+- Bei gesetztem Wert werden nur die virtuellen `Document.FilePath`s unter
+  `<SolutionDir>/<VirtualProjectDirectory>/<FileName>` gebildet. Projektname, Referenzen,
+  CompilationOptions und Document.Name bleiben unveraendert. Es wird kein Verzeichnis angelegt.
+- Relative Segmente werden per `Path.GetFullPath` normalisiert; ein absoluter oder aus dem
+  Solution-Verzeichnis ausbrechender Wert wird mit `ArgumentException` abgewiesen. Ein kleiner
+  Factory-Vertrag prueft Default und `src/Projekt`-Layout.
+- Zweck: SymbolGraph muss zugleich Projektname `SymbolGraphMini` **und** Pfade
+  `src/SymbolGraphMini/*.cs` besitzen. Die aktuelle Notloesung Projektname `src` verfälscht
+  Projekt-Scope-/Violation-Vertraege.
 
-- Projekt `DiRegistrationMini`, ein `Program.cs` mit `IReporter`, `ConsoleReporter`, `Composition`
-  und den drei Aufrufen `AddScoped<IReporter, ConsoleReporter>()`,
-  `AddSingleton<IReporter>()`, `AddTransient<IReporter>()`; die Variable
-  `MyAddScopedHelper = "not a match"` bleibt als Negativsignal erhalten.
-- Damit Roslyn die Aufrufe semantisch statt ueber `dynamic` bindet, enthaelt derselbe deklarative
-  Source minimale `IServiceCollection`-/Extension-Stubs im Namespace
-  `Microsoft.Extensions.DependencyInjection`. Keine NuGet-/MSBuild-Abhaengigkeit.
-- Konsumenten: `DiRegistrationHeuristicsTests` und der DI-Abschnitt in
-  `GetTypeHierarchyToolTests`; beide verwenden dieselbe Spec, keine lokale zweite Sourcekopie.
+### FastTests-Fixtures
 
-### 2. `McpInMemoryTestContext.cs`
+- `SymbolGraphMiniSolutionSpec.Create()` ersetzt die Server-/Path-Doppelung. Ein einziger
+  virtueller Snapshot verwendet Solutionpfad `C:\ainetlinter-virtual\SymbolGraphMini.slnx`,
+  Projektname `SymbolGraphMini`, `VirtualProjectDirectory: "src/SymbolGraphMini"` und die
+  zeilengetreuen Quellen `Greeter`, `Caller`, `OtherCaller`, `Hierarchy`, `ViolationTrigger`.
+  `GreeterPath`, `CallerPath`, `OtherCallerPath` werden daraus abgeleitet.
+- `CompileErrorMiniSolutionSpec.CreatePlural/CreateSingular` erhalten virtuelle Solution- und
+  Dokumentpfade sowie die bereits portierten drei bzw. eine fehlerhafte Datei. Catalog-
+  `hasLoadingErrors` bleibt false; Aggregate-Warnungen kommen aus Compilation-Diagnostics.
+- `DiRegistrationMiniSolutionSpec.Create()` erhaelt virtuelle Pfade, behaelt Projektname
+  `DiRegistrationMini` und die semantisch bindbaren `IServiceCollection`-Extension-Stubs.
+- `FaultingSolutionFixture` erhaelt einen virtuellen `Solution.FilePath`, einen virtuellen
+  `Faulty.cs`-Pfad und weiterhin den werfenden `TextLoader`. Kein realer Pfad wird angelegt oder
+  abgefragt; der Snapshot-Server entfernt das Dokument nicht.
+- `McpInMemoryTestContext` nimmt den besessenen `RoslynTestSolution`, erzeugt Server ausschliesslich
+  ueber `ReadOnlySolutionSnapshot` und entsorgt den Workspace. Er erzeugt keinen nicht-besitzenden
+  Catalog mehr fuer Testaufrufer. `maxLineCount`, Config und UsedDefaultConfig werden ueber den
+  vorhandenen Options-Record weitergereicht.
+- Keine `SymbolGraphCatalog`-Collection, kein `SourceFileCatalog.LoadAsync`, keine Temp-Datei und
+  kein MSBuild in FastTests.
 
-- Der Kontext besitzt nur `SourceFileCatalog`/`McpCodeGraphServer`-Erzeugung um eine uebergebene
-  immutable `Solution`; Workspace-Lebensdauer bleibt beim aufrufenden `RoslynTestSolution` bzw.
-  bei `PreparedSolutionFixture`.
-- `CreateServer(int? maxLineCount = null, ...)` erzeugt bei `null` die Options-Defaultgrenze 700
-  (entweder getrennte Konstruktionszweige oder `maxLineCount ?? 700`), niemals eine nullable-
-  Uebergabe. Optional bleiben nur bereits vorhandene Config-/UsedDefaultConfig-Eingaenge.
-- Kein `SourceFileCatalog.LoadAsync`, kein MSBuild, keine Temp-Datei, keine Collection-Fixture.
-- Server-Snapshots stammen aus `SymbolGraphMiniSolutionSpec.CreateServerSnapshot()` oder den
-  pfadlosen CompileError-/DI-Specs. Die aktuell im Teilport definierte Klasse
-  `SymbolGraphCatalogFixture` wird nicht als Legacy-Kompatibilitaetsfassade fortgefuehrt.
-- Read-only Standardsnapshot wird ueber die vorhandene assemblyweite `PreparedSolutionFixture`
-  unter einem eindeutigen Szenarionamen materialisiert. Mutierende oder fehlerwerfende Szenarien
-  besitzen einen lokalen `RoslynTestSolution` und werden mit `using` entsorgt. Keine
-  `[Collection("SymbolGraphCatalog")]`-Attribute bleiben zur Serialisierung zurueck.
+## Batch-Scope: 23 Legacy-Klassen
 
-### 3. `FaultingSolutionFixture.cs`
+Die 20 derzeit im Recovery-Batch liegenden Klassen bleiben im Scope. Die Seam plus pfadfidele
+Specs adressieren alle elf roten Klassen; die neun bereits gruenen Klassen werden nur auf
+unerlaubte Rest-IO/Ownership und unveraenderte Assertions kontrolliert.
 
-- Fokussierter FastTests-lokaler Owner fuer den Malfunction-Vertrag; **kein**
-  `TestHelper.CreateFaultySolution`-Kompatibilitaetswrapper.
-- Besitzt einen `AdhocWorkspace`, ein C#-Projekt mit den gecachten
-  `RoslynTestSolutionFactory.CoreReferences` und ein Dokument `Faulty.cs` mit
-  `DocumentInfo`/einem privaten `ThrowingTextLoader`.
-- `filePath` und `Solution.FilePath` bleiben `null`. `SourceFileCatalog.IsValidDocument` verwendet
-  dann den Dokumentnamen, waehrend der MCP-Staleness-Refresh keine virtuelle Datei als geloescht
-  entfernen kann. Der Loader wirft weiter deterministisch
-  `InvalidOperationException("Simulierter Lesefehler ...")` beim Textzugriff.
-- Exponiert nur `Solution` und entsorgt den Workspace. Kein Probe-Verzeichnis, kein
-  `File.WriteAllText`, kein Cleanup-`try/finally`.
-- Genau vier Konsumenten: `GetViolationsToolTests`, `PatternDetectScannerTests`,
-  `SafeguardScannerTests`, `SafeguardToolTests`.
+Zusaetzlich werden drei der vier aktuellen Rueck-Moves wieder **vorwaerts** nach FastTests
+uebernommen, weil ihre Roslyn-/Toolvertraege mit dem Snapshot-Pfad jetzt ohne Platte pruefbar sind:
 
-### 4. `CompileErrorHeaderAssertions.cs`
+- `DependencyGraphToolTests`
+- `GetFileSkeletonToolTests`
+- `GetSymbolBodyToolTests`
 
-- FastTests-lokaler Assertion-Helper unter `src/AiNetLinter.FastTests/Mcp/` (kein TestKit-Code):
-  `AssertStartsWithCompileErrorHeader(text, expectedFileCount)` prueft `Hinweis:` sowie exakt
-  Singular `1 Datei hat Compile-Fehler` oder Plural `N Dateien haben Compile-Fehler`.
-- Konsument im verbleibenden Scope: `GetHotspotsToolTests`. Keine Produktlogik und kein Zugriff
-  aus IntegrationTests.
+Ihre relativen/absoluten Datei- und Datei:Zeile:Spalte-Vertraege bleiben unveraendert und laufen
+gegen die virtuelle SymbolGraph-/CompileError-Spec. Die Dateien enden damit wieder an den durch
+`e864407` committed Zielpfaden; das ist eine normale Fortsetzung des Working Trees, keine
+Historienumschreibung.
 
-## Kohortenarbeiten am verbleibenden Batch
+Nur `SuppressionScannerTests` bleibt als vorwaertsgerichteter Rueck-Move in
+`src/AiNetLinter.Tests/Suppression/`: `SuppressionScanner.ScanFile` prueft `File.Exists` und liest
+`File.ReadLines`; dies ist ein echter Produkt-Dateivertrag und gehoert zu EPIC-5.
 
-- **Duplicate Detection (2):** Alle 19 Tool-Dispatchvertraege behalten. Temp-Verzeichnisse und
-  manuelle `SolutionInfo`-/Dateischreib-Builder durch pfadlose lokale `ProjectSpec`s ersetzen;
-  Mode-/Argumentfehler, Scannerfehler, Structured Content, Sufficiency und Truncation unveraendert.
-- **Dependency Graph Scanner (1):** Alle Dokument-/Typ-, incoming/outgoing/both-, Depth-, Zyklus-,
-  Aggregations-, Self-edge-, BCL-, Truncation- und Testprojekt-Sortiervertraege direkt auf
-  `CreatePathSnapshot()` bzw. lokalen virtuellen Mehrprojekt-`ProjectSpec`s ausfuehren. Die Platte
-  war hier nur Builder-Implementation; `DependencyGraphScanner` bekommt `Document`/`Solution`.
-- **Call Graph/Tree (2):** Standardsnapshot bzw. CompileError-Plural verwenden; Gruppierung,
-  Depth-Cap, Top-N, ASCII/Mermaid, Warnung und Fehlerantworten erhalten.
-- **Symbolauflösung/References (2):** Name/stable ID gegen den pfadlosen Serversnapshot;
-  Datei:Zeile(:Spalte) direkt gegen `CreatePathSnapshot()` und dessen Pfadkonstanten. Ambiguitaet,
-  Accessor-Normalisierung, Call-Sites, Structured Content, Depth und Warnung erhalten.
-- **Hotspots/Hierarchy/DI (3):** MaxLineCount-Varianten ueber den Kontext, Singular/Plural ueber die
-  CompileError-Specs, Hierarchie/Interfaces ueber SymbolGraph und DI-Sektion ueber die eine DI-Spec.
-- **Violations (1):** Lint-/Format-/Defaultconfig-/Truncation-Vertraege gegen pfadlose Specs;
-  Malfunction ueber `FaultingSolutionFixture`.
-- **Metrics (2):** Standardsnapshot plus isolierte lokale `ProjectSpec`s; bestehende
-  `[Collection("SymbolGraphCatalog")]`-Attribute und irrefuehrende Workspace-Kommentare entfernen.
-- **Pattern Detect (2):** Alle lokalen `TempSourceDirectory`-/`File.WriteAllText`-Builder in
-  pfadlose oder virtuelle `ProjectSpec`s ueberfuehren; Malfunction ueber Faulting-Fixture.
-- **Safeguard (2):** Read-only Score-/Retry-/Dispatchvertraege auf Specs; Malfunction ueber
-  Faulting-Fixture. Keine reale Probe-Datei.
-- **Ergebnis-/Analyzervertraege (3):** `McpToolResultsTests` sowie die beiden reinen
-  `LinterAnalyzer`-Klassen als `Unit`; nur Namespace/Kategorie/Usings korrigieren, keine neue
-  Infrastruktur erzwingen.
+Der fertige Batch umfasst damit **23 migrierte Legacy-Klassen plus eine neue Snapshot-Seam-
+Testklasse**. Fachliche Kohorten: Duplicate Detection (2), Dependency Graph (2), Call Graph/Tree
+(2), Symbol/References/Body (3), Skeleton/Hotspots (2), Type/DI (2), Violations (1), Metrics (2),
+Pattern Detect (2), Safeguard (2), Toolresults (1), LinterAnalyzer (2).
 
-Alle Solution-/Server-Vertraege tragen `Category=Component`, reine Parser-/Formatter-/Analyzer-
-Vertraege `Category=Unit`. Kommentare nennen keine Task-IDs. Nullable bleibt aktiv. Bestehende
-Assertions und Testfaelle werden weder entfernt noch abgeschwaecht.
+## Ausfuehrbare Coder-Reihenfolge
 
-## Verbindliche Coder-Reihenfolge
+1. **Gruenen Buildstand bewahren:** Nur auf dem aktuellen Working Tree weiterarbeiten; keine
+   Ruecksetzung. Den bestehenden Build nicht vorsorglich wiederholen.
+2. **Produkt-Seam zuerst:** Options-Property/Parameter, Zustandsvalidierung und Snapshot-Zweig im
+   Server implementieren. Live-Pfad nicht refactoren. Snapshot-Seam-Tests anlegen.
+3. **Factory-Pfadfidelitaet:** `VirtualProjectDirectory` additiv implementieren und mit zwei engen
+   Factory-Tests sichern.
+4. **Specs vereinheitlichen:** SymbolGraph, CompileError plural/singular, DI und Faulting auf
+   virtuelle Solution-/Dokumentpfade umstellen. Pfadlosen `CreateServerSnapshot` entfernen; eine
+   kanonische Spec pro Szenario.
+5. **Kontext umstellen:** `McpInMemoryTestContext.CreateServer` verwendet ausschliesslich
+   `ReadOnlySolutionSnapshot`. Catalog-Property und manuelle Serverkonstruktionen der 23 Klassen
+   auf den Kontext abbauen; Owner jeweils deterministisch disposen.
+6. **Die 78 Fehler in dieser Reihenfolge schliessen:**
+   - direkte Pfadkonsumenten `CallGraphTraversal`, `MetricsTreeRoslynScanner`, `SafeguardScanner`;
+   - acht servergebundene rote Klassen;
+   - CompileError-/DI-/Faulting-Sonderszenarien.
+   Keine Assertion aendern, solange die erwartete Ausgabe nicht gegen die zeilen-/pfadtreue Spec
+   nachgewiesen falsch ist.
+7. **Drei Tool-Rueck-Moves umkehren:** DependencyGraphTool, FileSkeleton und SymbolBody wieder an
+   ihre FastTests-Zielpfade bringen, Namespace/Trait/Usings auf Component setzen und denselben
+   Kontext verwenden. Suppression bleibt Legacy.
+8. **Statischer Cleanup:** Im 23er FastTests-Scope keine `File.*`, `Directory.*`,
+   `Path.GetTempPath`, `TestTempDirectory`, `SourceFileCatalog.LoadAsync`, MSBuild-Referenz oder
+   serialisierende Collection. Keine Task-ID-Kommentare; Nullable/Traits vollstaendig.
+9. **Ledger zuletzt:** Erst nach gruenen Gates genau 23 Zeilen auf `migrated` setzen;
+   `SuppressionScannerTests` bleibt `pending`. Codemap und Step-Result auf den realen Stand bringen.
 
-1. **Arbeitsbaum sichern/verstehen:** Auf `e864407` und dem vorhandenen Teilport weiterarbeiten;
-   keine Historienumschreibung, kein pauschales Restore fremder Aenderungen.
-2. **Vier Rueck-Moves zuerst:** Die vier oben genannten Dateien als neue Renames nach
-   `AiNetLinter.Tests` zurueckfuehren und ihre Teilport-Hunks gezielt auf Legacy-Kompatibilitaet
-   bringen. Danach darf kein FastTests-Code sie referenzieren.
-3. **Specs vor Konsumenten:** `SymbolGraphMiniSolutionSpec`, `CompileErrorMiniSolutionSpec` und
-   `DiRegistrationMiniSolutionSpec` mit den exakt beschriebenen Sources/Pfaden anlegen.
-4. **Owner vervollstaendigen:** `McpInMemoryTestContext` korrigieren, `FaultingSolutionFixture` und
-   `CompileErrorHeaderAssertions` anlegen; erst danach Konsumenten umstellen.
-5. **Compilefehler kohortenweise schliessen:** zuerst SymbolGraph-Pfade, dann CompileError-
-   Konsumenten, dann DI, dann die vier Faulting-Konsumenten. Nach dieser Phase muss der
-   Diagnosebestand von 26 Fehlern auf null fallen.
-6. **Temp-Builder entfernen:** Duplicate-, DependencyScanner- und Pattern-Kohorten auf
-   `ProjectSpec` umstellen; danach im verbleibenden 20er FastTests-Scope kein `File.*`,
-   `Directory.*`, `Path.GetTempPath`, `TestTempDirectory`, `SourceFileCatalog.LoadAsync` oder
-   `Microsoft.CodeAnalysis.MSBuild`.
-7. **Restliche Klassen/Kategorien bereinigen:** Collections entfernen, Owner korrekt disposen,
-   Namespaces/Usings und Unit/Component-Traits finalisieren.
-8. **Ledger erst bei gruenem Code:** Genau die 20 erfolgreich migrierten Klassen auf `migrated`
-   mit ihrem FastTests-Ziel setzen; die vier Rueck-Moves bleiben `pending`. Danach Codemap/Result
-   aktualisieren.
+## Gates
 
-## Gates (sparsam, kein Stress- oder Vollprofil)
-
-1. Statischer Scope-Check: Im 20er FastTests-Scope keine verbotenen Platte-/MSBuild-Aufrufe und
-   keine `SymbolGraphCatalog`-Collection; alle 20 Klassen besitzen genau einen gueltigen Trait.
-2. `dotnet build --no-restore` — zwingend, weil der uebernommene Zwischenstand mit 26 Fehlern rot
-   ist und auch die vier rueckverschobenen Legacy-Klassen Teil der Solution bleiben.
-3. Ein kombinierter, exakt auf die 20 Klassen gefilterter Lauf von
-   `src/AiNetLinter.FastTests`; keine Wiederholung pro Klasse.
-4. Ein kombinierter Legacy-Filter fuer die vier rueckverschobenen Klassen, um den bewahrten
-   Datei-/Refreshvertrag nachzuweisen.
-5. Gezielte Guards: FastTests Dependency-/Category-Guards sowie
-   `TestMigrationLedgerConsistencyTests` im IntegrationTests-Projekt.
-6. `git diff --check` und Coverage-Abgleich: 20 Ledgerzeilen migriert, vier pending, keine
-   verschwundene Testmethode. Kein `Category=Stress` und kein komplettes Nicht-Stress-Profil, da
-   step-018 keine EPIC-Grenze schliesst.
+1. Enger Seam-/Factory-Filter:
+   `McpCodeGraphServerReadOnlySnapshotTests|RoslynTestSolutionFactoryTests`.
+2. `dotnet build --no-restore` einmal nach Seam, Specs und drei Wiederaufnahmen. Erwartung: der
+   bereits gruene Solution-Build bleibt gruen.
+3. Kombinierter FastTests-Filter fuer alle 23 migrierten Klassen plus die neue Snapshot-
+   Testklasse. Erwartung: alle zuvor 220 Tests plus die drei wiederaufgenommenen Klassen und neuen
+   Seam-Vertraege gruen.
+4. Gezielter Legacy-Live-Refresh-Filter:
+   `McpCodeGraphServerConstructorTests|McpCodeGraphServerFileDiscoveryTests|McpCodeGraphServerStalenessMtimeCacheTests`.
+5. Gezielter Legacy-Filter `SuppressionScannerTests`.
+6. FastTests Dependency-/Category-Guards und Integration-
+   `TestMigrationLedgerConsistencyTests`.
+7. Statischer verbotener-API-Check, Testmethoden-/Ledger-Abgleich und `git diff --check`.
+   Kein Stresslauf und kein komplettes Nicht-Stress-Profil; step-018 schliesst EPIC-4 noch nicht.
 
 ## Abnahmekriterien
 
-- Build gruen; alle sechs Ursachenbereiche der 26 Fehler geschlossen.
-- Genau 20 Klassen befinden sich vollstaendig und plattenfrei in FastTests; genau vier benannte
-  Klassen sind als vorwaertsgerichtete Renames wieder im Legacy-Projekt.
-- SymbolGraph-Sources sind zeilengetreu; pfadloser Server- und virtueller Direkt-Snapshot sind
-  getrennt. CompileError ergibt exakt drei bzw. eine Fehlerdatei. DI-Heuristik nutzt eine einzige
-  semantisch bindbare Spec. Faulting-Solution erzeugt keine Platte.
-- Keine neue Produkt-Seam, kein MSBuild-/Prozess-/Repovertrag, kein Kompatibilitaetswrapper.
-- Alle bestehenden Testvertraege bleiben erhalten; Ledger und Codemap spiegeln den realen
-  20/4-Stand.
+- Der Build bleibt gruen; alle 78 dokumentierten Fehler sind ursachengerecht geschlossen.
+- Snapshot-Modus bewahrt virtuelle Dokumente samt Pfaden ohne einen einzigen Dateisystemzugriff;
+  Live-Modus behaelt seine Refresh-Vertraege und bleibt Default fuer Produktion.
+- Alle 23 Klassen liegen in FastTests und behalten ihre Testmethoden/Assertions. Nur
+  `SuppressionScannerTests` liegt wieder im Legacy-Projekt.
+- SymbolGraph besitzt gleichzeitig den korrekten Projektnamen und `src/SymbolGraphMini`-Pfade;
+  CompileError, DI und Faulting sind vollstaendig virtuell und deterministisch.
+- Keine Testumgehung via `File.Exists`, keine temporaeren echten Dateien, kein MSBuild/Prozess/Git,
+  keine oeffentliche oder `#if TESTING`-Seam.
+- Ledger, Codemap und Result spiegeln 23 migrierte Klassen und einen pending Suppression-Vertrag.
 
 ## Risiko
 
-**Medium.** Das strukturelle Verschieben ist mechanisch; das Risiko liegt in Pfad-/Zeilenfidelitaet,
-Compile-Diagnostics und Workspace-Lebensdauer. Die Trennung pfadloser Server-Snapshots von
-virtuellen direkten Pfad-Snapshots verhindert den bekannten Server-Refresh-Konflikt. Der
-vorwaertsgerichtete Rueck-Move der vier echten Datei-Vertraege vermeidet eine riskante Produkt-Seam
-und haelt den verbleibenden Batch fachlich homogen.
+**Medium.** Die neue Produkt-Seam betrifft den zentralen Solution-Zugriff, bleibt aber intern,
+additiv und auf einen expliziten Snapshot-Zustand begrenzt. Das Hauptrisiko ist eine versehentliche
+Verhaltensaenderung des Live-Refresh-Pfads; die bestehenden drei Legacy-Refresh-Klassen sind deshalb
+Pflichtgate. Gegenueber elf weiteren Rueck-Moves ist diese Loesung kleiner, kohärenter und direkt
+vom Konzept gedeckt.
 
 ## Nicht-Ziele
 
-- Keine Produktcode-Aenderung oder neue Testbarkeit-Seam.
-- Keine Platte, kein MSBuild, kein Prozess, kein Git/Repo und keine EPIC-5/6-Kohorte im 20er Batch.
-- Keine Migration der vier Rueck-Moves oder der bereits zuvor ausgeschlossenen sieben
-  filesystem-/config-/processgebundenen MCP-Klassen.
-- Kein Vollprofil und kein Stresslauf in diesem Step.
-
-## Erwartete Artefakte
-
-- 20 vollstaendig migrierte FastTests-Klassen in den vorhandenen Zielpfaden.
-- Vier neue Rueck-Renames nach `src/AiNetLinter.Tests`.
-- `src/AiNetLinter.FastTests/Fixtures/SymbolGraphMiniSolutionSpec.cs`
-- `src/AiNetLinter.FastTests/Fixtures/CompileErrorMiniSolutionSpec.cs`
-- `src/AiNetLinter.FastTests/Fixtures/DiRegistrationMiniSolutionSpec.cs`
-- korrigiertes `src/AiNetLinter.FastTests/Fixtures/McpInMemoryTestContext.cs`
-- `src/AiNetLinter.FastTests/Fixtures/FaultingSolutionFixture.cs`
-- `src/AiNetLinter.FastTests/Mcp/CompileErrorHeaderAssertions.cs`
-- aktualisiertes `tasks/speedup-tests/test-migration-ledger.md`, `codemap.md`, `step-result.md`.
+- Kein Refactoring von `McpCodeGraphServerRefresh` oder seiner Hash-/mtime-/Sweep-Algorithmen.
+- Keine Aenderung oeffentlicher MCP-Protokolle, Toolantworten oder CLI-Konfiguration.
+- Keine Migration echter Mutation-/Loading-/Config-/Call-Log-/Prozess-/Git-Vertraege.
+- Keine Migration von `SuppressionScannerTests` in diesem Step.
+- Keine Assertion-Abschwaechung, keine echten FastTests-Dateien und kein Voll-/Stressprofil.
 
 ## MCP-/Recherche-Entscheidung
 
-Der fruehere MCP-Indexstand war fuer den alten 24er Plan nicht mehr ausreichend: Nach dem
-committeten Roh-Move und den uncommittierten Teilports waren Builddiagnostik, `git status/diff` und
-gezielte aktuelle Reads die kuerzere und wahrheitsgetreuere Quelle. MCP war nach der ausdruecklichen
-Nutzervorgabe optional und wurde fuer diese reine Planrevision nicht benoetigt. Es wurde genau ein
-diagnostischer Build ausgefuehrt; aktuelle Resultate wurden danach nicht redundant erneut erzeugt.
+Die aktuelle `latest.trx`, der grüne Buildzustand und gezielte Reads der bereits veraenderten
+Server-/Fixture-Dateien waren aktueller als der vor dem Recovery-Lauf erzeugte MCP-Index. Die
+relevante Aufrufkette `GetCurrentSolution -> RefreshStaleDocuments -> McpCodeGraphServerRefresh.Run`
+sowie alle `Path.GetRelativePath`-/`Document.FilePath`-Konsumenten wurden direkt im aktuellen Code
+abgeglichen. Ein MCP-Aufruf haette hier keine zusaetzliche, aktuellere Evidenz geliefert und wurde
+daher nicht redundant ausgefuehrt.

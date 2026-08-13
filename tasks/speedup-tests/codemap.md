@@ -20,10 +20,10 @@ last_updated: 2026-08-13
 <!-- step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die vorhandene
      In-Memory-Factory migriert; Tool-Dispatch-Vertraege blieben getrennt. -->
 
-<!-- planning step-018: EPIC-4 Teil 5 -- nach e864407 bleiben 20 plattenfreie read-only
-     MCP-Roslyn-Analyzer-/Scanner-/Toolklassen im Super-Step. Vier echte Datei-/Server-Refresh-
-     Vertraege werden vorwaertsgerichtet ins Legacy-Projekt zurueckverschoben; SymbolGraph-,
-     CompileError-, DI- und Faulting-Szenarien erhalten explizite In-Memory-Besitzergrenzen. -->
+<!-- planning step-018: EPIC-4 Teil 5 -- interne McpCodeGraphServer-ReadOnlySolutionSnapshot-Seam
+     trennt vorbereitete virtuelle Solutions vom unveraenderten Live-Refresh-Pfad. 23 read-only
+     Analyzer-/Scanner-/Toolklassen bleiben im Super-Step; nur SuppressionScannerTests geht wegen
+     des echten ScanFile-Dateivertrags vorwaertsgerichtet ins Legacy-Projekt zurueck. -->
 
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
