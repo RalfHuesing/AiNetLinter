@@ -38,7 +38,7 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.IntegrationTests` / `src/AiNetLinter.Tests` | mittel | nein | Testhelfer und Compile-Error-Assertions bleiben waehrend des Stranglers parallel. |
 | TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Durch `LoadedFixture` mit mehreren realen Konsumenten geschlossen. |
 | TD-010 | `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` / `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs` | mittel | nein | Zwei Workspace-Kopierimplementierungen bleiben bis Legacy-Loeschung parallel. |
-| TD-011 | `src/AiNetLinter.IntegrationTests/Platform/LoadedFixture.cs` / `LoadedFixtureTests.cs` | niedrig | nein | Zwei exakte lokale FindSolutionRoot-Implementierungen ausserhalb der Step-023-Kohorte. |
+| TD-011 | `src/AiNetLinter.IntegrationTests/Platform/SolutionRootLocator.cs` | niedrig | nein | Gemeinsame Root-Aufloesung fuer LoadedFixture und ihren Callsite-Guard (geschlossen in step-024). |
 
 ## Einträge
 
@@ -221,4 +221,4 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Keine der beiden Dateien gehoert zur Step-023-Config-/Suppression-Kohorte; eine gemeinsame Test-/Fixture-Grenze ist ausserhalb des Migrationsschritts zu entscheiden.
 - **Vorschlag:** Bei der naechsten Bearbeitung der Loaded-Fixture eine schmale, testbare Root-Aufloesung bewerten und dann beide Aufrufer umstellen.
 - **Auto-Fixable:** nein — Sichtbarkeit und Zielort der gemeinsamen Funktion brauchen Architektur-Ermessen.
-- **Status:** offen
+- **Status:** geschlossen in step-024

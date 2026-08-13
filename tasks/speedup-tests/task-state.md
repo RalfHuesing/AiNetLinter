@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
-total_steps: 23  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-023
+total_steps: 24  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-024
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-023
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 23 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 24 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-023`
+- **Aktueller Schritt:** `step-024`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -54,12 +54,13 @@ mehr nötig.>
 | step-020 | EPIC-4 | done | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | approved | Code 5041b00; Doku 9f60d03/27a6d9b; Review 28b3cb4 |
 | step-021 | EPIC-5 | issues | MSBuild-/Baseline-/Datei-/Refresh-Super-Step (22 Klassen) | - | b2b8fde | issues | 22 Legacy-Dateien entfernt; Korrektur via step-022 |
 | step-022 | EPIC-5 | done | Korrektur: globales MSBuild-Loadgate und read-only Server-Ownership | step-021 | 5aa397f/1c5090d | approved | 3f94674 |
-| step-023 | EPIC-5 | done (pending audit) | Config-/Suppression-Dateikohorte und EPIC-5-Grenzgate (21 Klassen) | - | pending | - | - |
+| step-023 | EPIC-5 | issues | Config-/Suppression-Dateikohorte und EPIC-5-Grenzgate (21 Klassen) | - | 312b652 | issues | d37a2f7 |
+| step-024 | EPIC-5 | done (pending audit) | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | pending | Code 30918b9; Doku folgt |
 
 ## Config (optional)
 
 > **ACHTUNG AN ALLE AGENTEN (Planer, Coder, Kritiker):**
-> Wir befinden uns in einer reinen Struktur-Migrationsphase (Dateien verschieben, Namespaces anpassen). 
+> Wir befinden uns in einer reinen Struktur-Migrationsphase (Dateien verschieben, Namespaces anpassen).
 > Um den extremen Overhead durch generiertes Markdown (`step-plan`/`step-result`) zu stoppen, MÜSSEN ab sofort große logische Batches (bis zu 40 Dateien) in "Super-Steps" zusammengefasst werden.
 > Das alte Limit von 8 Dateien pro Step ist explizit aufgehoben. Bündelt Kohorten effizient!
 
