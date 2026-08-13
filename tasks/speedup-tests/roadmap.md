@@ -115,7 +115,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`, fünf Klassen). Step-012 migrierte als
       letzten Teil die zwei reinen Renderer-Testklassen (`Mcp/Tools/*RendererTests`) samt
       Coverage-Audit; das EPIC-3-Grenzgate ist mit 326 grünen Unit-Tests nachgewiesen.
-- [ ] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
+- [x] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
       Produkt-Seams (Laden/Ausführen trennen, z. B. `SkeletonMapBuilder`) — Konzept §9 Punkt 3,
       Leitplanke 3, Definition of Done „Filtermatrix gegen kalibrierte Solution". **In Arbeit →
       step-013 (Korrektur step-014, inzwischen `approved`) schloss als ersten Teil die
@@ -149,8 +149,8 @@ obsolet markiert) — kein starres Vorab-Dokument.
       gegen eine isolierte `SymbolGraphMini`-Diskkopie in IntegrationTests. Das Build-, gezielte
       Fast-/Integration- und Component-Grenzgate sind gruen. Das Step-019-Review `af61a93` fand
       einen exakt doppelten Scanner-No-Match-Test; step-020 hat die 20 historischen Methoden auf
-      19 einzigartige Vertraege (elf FastTests, acht IntegrationTests) konsolidiert. EPIC-4 bleibt
-      bis zum Re-Audit offen. Keine neue
+      19 einzigartige Vertraege (elf FastTests, acht IntegrationTests) konsolidiert. Step-020 ist
+      im Re-Audit `approved`; EPIC-4 ist damit abgeschlossen. Keine neue
       Produkt-Seam; die fuenf verbleibenden Datei-/Config-/
       Call-Log-/Git-Toolklassen gehoeren weiterhin EPIC-5/6.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
