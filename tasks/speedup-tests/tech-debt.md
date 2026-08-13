@@ -30,7 +30,7 @@ werden. Default bei Unsicherheit ist `nein`.
 |---|---|---|---|---|
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Zwei Tests flaky unter Volllast des vollen `Category!=Stress`-Parallel-Laufs (stdout-Framing gegen echten MCP-Subprozess), isoliert stabil grün. |
 | TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Durch die Migration nach `SkeletonMapFilterTests` gegen `FilterMini` geschlossen. |
-| TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
+| TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | Generator-Synchronisation stellt `*Tests` und den separaten `AiNetLinter.TestKit`-Override wieder her (geschlossen in step-023). |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar bereinigt. |
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
 | TD-006 | `src/AiNetLinter.FastTests/Architecture` / `src/AiNetLinter.IntegrationTests/Architecture` | niedrig | nein | `GetCategoryTraits` ist in beiden Assembly-Guards gleich implementiert. |
@@ -111,7 +111,7 @@ werden. Default bei Unsicherheit ist `nein`.
   laufen lassen und den Diff committen.
 - **Auto-Fixable:** ja — rein mechanische Regenerierung aus der bereits korrekten `rules.json`, keine
   Architektur-Entscheidung, keine Verhaltensänderung am Produktcode.
-- **Status:** offen
+- **Status:** geschlossen in step-023 — `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` regenerierte die Datei; der isolierte Generatorvertrag belegt beide Override-Schlüssel.
 
 ### TD-004 — Task-Artefakt-Referenz in Code-Kommentar [Priorität: niedrig] [Auto-Fixable: ja]
 
@@ -207,7 +207,7 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-13).
 - **Ort:** `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` und `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs`.
 - **Befund:** Beide Implementierungen kopieren Fixture-Baeume und schliessen `bin`/`obj` aus; die Legacy-Variante besitzt zusaetzlich ihr historisches Workspace-Basisklassen-API.
-- **Warum nicht sofort gefixt:** Das Paar ist ein Strangler-Uebergang; eine vorzeitige Vereinheitlichung muesste Legacy-Konsumenten breit migrieren, obwohl EPIC-7 deren Loeschung vorsieht.
+- **Warum nicht sofort gefixt:** Nach step-023 entfaellt nur `DisableAllCliTests`; weiterhin referenzieren 20 Legacy-Dateien die sechs `FixtureWorkspaceBase`-Ableitungen oder darauf aufbauende Catalog-/MCP-Fixtures. Eine vorzeitige Vereinheitlichung wuerde EPIC-6-Vertraege vorziehen.
 - **Vorschlag:** Im EPIC-7-Legacy-Entfernungsstep verifizieren, dass keine Legacy-Referenz verbleibt, und die verbleibende TestKit-Primitive beibehalten.
 - **Auto-Fixable:** nein — die Legacy-Kohorte bestimmt den sicheren Zeitpunkt.
 - **Status:** offen

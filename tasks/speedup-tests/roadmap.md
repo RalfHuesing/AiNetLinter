@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # EPIC-4 approved; step-021 startet die grosse EPIC-5-Datei-/Refresh-Kohorte
+last_updated: 2026-08-13  # step-023 implementiert; EPIC-5 wartet auf Kritiker-Audit
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -155,16 +155,19 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Call-Log-/Git-Toolklassen gehoeren weiterhin EPIC-5/6.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
-      — Konzept §9 Punkt 4, Leitplanke 4. **Umgesetzt, pending audit → step-021:** 22 historische Klassen mit 99
-      Methoden bilden die erste grosse gemeinsame Plattformkohorte: komplette Baseline-Vertraege
-      (ausser dem gemischten MSBuild-Registrierungs-/Stressbestand), Cache- und LinterEngine-Cache-/
-      Restore-Vertraege sowie file-backed MCP-Scope-/Health-/Config-/Pattern- und Server-Refresh-
-      Vertraege. Read-only `BaselineMini`/`SymbolGraphMini` werden assembly-weit geteilt; mutable
-      Szenarien erhalten je Test eine isolierte geladene Lease und ein begrenztes MSBuild-Loadbudget.
-      TD-009 wird mit mehreren realen Konsumenten ueber einen IntegrationTests-lokalen Ownership-
-      Helper geschlossen; TD-004 wird in der ohnehin beruehrten Host-Testdatei mechanisch
-      bereinigt. TD-010 bleibt bis zur Legacy-Loeschung offen. Prozess, Framing, Retry, Git,
-      Repo/Dogfood, Performance, Stress und finale Legacy-Loeschung bleiben ausserhalb.
+      — Konzept §9 Punkt 4, Leitplanke 4. **Implementiert, pending audit → step-021/step-022
+      approved; step-023:** Step 021 migrierte 22 historische Baseline-/Cache-/Datei-/Refresh-
+      Klassen; step-022 schloss die beiden Review-Findings mit assembly-weitem Max-2-Loadgate und
+      nichtbesitzenden SymbolGraph-Snapshot-Servern ab (`approved`, Review-Commit `3f94674`).
+      Step 023 bildet die verbleibende kohärente Config-/Suppression-Dateifamilie: 21 historische
+      Klassen mit 126 Testmethoden/140 statisch sichtbaren xUnit-Fällen wurden nach FastTests bzw.
+      IntegrationTests geschnitten; reine Policy/Roslyn-Verträge bleiben schnell, reale Datei-
+      mutation nutzt eindeutige Temp-Pfade oder die vorhandene isolierte `BaselineMini`-Workspace-
+      Kopie. TD-003 ist im ohnehin berührten Agent-Rules-Configbereich mechanisch synchronisiert.
+      Der Kritiker bewertet nun Coverage-Audit, Ledger-/Architekturguards, Grenzgates und den
+      Drift-Audit, bevor EPIC-5 abgeschlossen wird. Der parallele echte MSBuild-Registrierungs-
+      Lastvertrag bleibt wegen Stress in EPIC-6; Prozess, Framing, Retry, Git, Repo/Dogfood,
+      Performance, Stress und finale Legacy-Loeschung bleiben ebenfalls ausserhalb.
 - [ ] EPIC-6: CLI-, MCP-Prozess-, Dogfood-, Performance- und Stress-Kohorte migrieren — geteilter
       read-only MCP-Host für idempotente Smokes, exklusive Hosts für Framing/Retry/Refresh,
       Parallelitätsbudgets (`SubprocessConcurrencyGate`-Nachfolger), getrennte Runner-Konfiguration

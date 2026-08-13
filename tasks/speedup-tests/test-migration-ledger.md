@@ -91,8 +91,8 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Cli/CliCommandBuilderMcpLogTests.cs` | `CliCommandBuilderMcpLogTests` | Cli | pending | `FullyQualifiedName~CliCommandBuilderMcpLogTests` |  |
 | `src/AiNetLinter.Tests/Cli/CliIntegrationTests.cs` | `CliIntegrationTests` | Cli | pending | `FullyQualifiedName~CliIntegrationTests` |  |
 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | `FilterCliIntegrationTests` | Cli | migrated | `FullyQualifiedName~FilterCliIntegrationTests` | `src/AiNetLinter.FastTests/Maps/Skeleton/SkeletonMapFilterTests.cs` |
-| `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsCliTests.cs` | `IgnoreSuppressionsCliTests` | Cli | pending | `FullyQualifiedName~IgnoreSuppressionsCliTests` |  |
-| `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsIntegrationTests.cs` | `IgnoreSuppressionsIntegrationTests` | Cli | pending | `FullyQualifiedName~IgnoreSuppressionsIntegrationTests` |  |
+| `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsCliTests.cs` | `IgnoreSuppressionsCliTests` | Cli | migrated | `FullyQualifiedName~IgnoreSuppressionsCliTests` | `src/AiNetLinter.FastTests/Cli/IgnoreSuppressionsCliTests.cs` |
+| `src/AiNetLinter.Tests/Cli/IgnoreSuppressionsIntegrationTests.cs` | `IgnoreSuppressionsIntegrationTests` | Cli | migrated | `FullyQualifiedName~IgnoreSuppressionsIntegrationTests` | `src/AiNetLinter.FastTests/Cli/IgnoreSuppressionsIntegrationTests.cs` |
 | `src/AiNetLinter.Tests/Cli/ProgramTests.cs` | `ProgramTests` | Cli | pending | `FullyQualifiedName~ProgramTests` |  |
 | `src/AiNetLinter.Tests/Commands/AuditCommandTests.cs` | `AuditCommandTests` | Commands | pending | `FullyQualifiedName~AuditCommandTests` |  |
 | `src/AiNetLinter.Tests/Commands/CliBatchRegressionTests.cs` | `CliBatchRegressionTests` | Commands | pending | `FullyQualifiedName~CliBatchRegressionTests` |  |
@@ -111,18 +111,18 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Commands/McpServerCommandTests.cs` | `McpServerCommandTests` | Commands | pending | `FullyQualifiedName~McpServerCommandTests` |  |
 | `src/AiNetLinter.Tests/Commands/PlaybookCheckCommandTests.cs` | `PlaybookCheckCommandTests` | Commands | pending | `FullyQualifiedName~PlaybookCheckCommandTests` |  |
 | `src/AiNetLinter.Tests/Commands/SyncAgentRulesCommandTests.cs` | `SyncAgentRulesCommandTests` | Commands | pending | `FullyQualifiedName~SyncAgentRulesCommandTests` |  |
-| `src/AiNetLinter.Tests/Configuration/AgentFeaturesTests.cs` | `AgentFeaturesTests` | Configuration | pending | `FullyQualifiedName~AgentFeaturesTests` |  |
-| `src/AiNetLinter.Tests/Configuration/ConfigLoaderRulesJsonTests.cs` | `ConfigLoaderRulesJsonTests` | Configuration | pending | `FullyQualifiedName~ConfigLoaderRulesJsonTests` |  |
-| `src/AiNetLinter.Tests/Configuration/ConfigNormalizerTests.cs` | `ConfigNormalizerTests` | Configuration | pending | `FullyQualifiedName~ConfigNormalizerTests` |  |
-| `src/AiNetLinter.Tests/Configuration/ConfigSyncerTests.cs` | `ConfigSyncerTests` | Configuration | pending | `FullyQualifiedName~ConfigSyncerTests` |  |
-| `src/AiNetLinter.Tests/Configuration/DeveloperExperienceTests.cs` | `DeveloperExperienceTests` | Configuration | pending | `FullyQualifiedName~DeveloperExperienceTests` |  |
-| `src/AiNetLinter.Tests/Configuration/FileFilterEvaluatorTests.cs` | `FileFilterEvaluatorTests` | Configuration | pending | `FullyQualifiedName~FileFilterEvaluatorTests` |  |
-| `src/AiNetLinter.Tests/Configuration/PathOverridesTests.cs` | `PathOverridesTests` | Configuration | pending | `FullyQualifiedName~PathOverridesTests` |  |
-| `src/AiNetLinter.Tests/Configuration/RuleMetadataRegistryTests.cs` | `RuleMetadataRegistryTests` | Configuration | pending | `FullyQualifiedName~RuleMetadataRegistryTests` |  |
+| `src/AiNetLinter.Tests/Configuration/AgentFeaturesTests.cs` | `AgentFeaturesTests` | Configuration | migrated | `FullyQualifiedName~AgentFeaturesTests` | `src/AiNetLinter.FastTests/Configuration/AgentFeaturesTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/ConfigLoaderRulesJsonTests.cs` | `ConfigLoaderRulesJsonTests` | Configuration | migrated | `FullyQualifiedName~ConfigLoaderRulesJsonTests` | `src/AiNetLinter.IntegrationTests/Configuration/ConfigLoaderRulesJsonTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/ConfigNormalizerTests.cs` | `ConfigNormalizerTests` | Configuration | migrated | `FullyQualifiedName~ConfigNormalizerTests` | `src/AiNetLinter.FastTests/Configuration/ConfigNormalizerTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/ConfigSyncerTests.cs` | `ConfigSyncerTests` | Configuration | migrated | `FullyQualifiedName~ConfigSyncerTests` | `src/AiNetLinter.IntegrationTests/Configuration/ConfigSyncerTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/DeveloperExperienceTests.cs` | `DeveloperExperienceTests` | Configuration | consolidated | `FullyQualifiedName~DeveloperExperienceTests` | `src/AiNetLinter.IntegrationTests/Configuration/DeveloperExperienceTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/FileFilterEvaluatorTests.cs` | `FileFilterEvaluatorTests` | Configuration | migrated | `FullyQualifiedName~FileFilterEvaluatorTests` | `src/AiNetLinter.FastTests/Configuration/FileFilterEvaluatorTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/PathOverridesTests.cs` | `PathOverridesTests` | Configuration | migrated | `FullyQualifiedName~PathOverridesTests` | `src/AiNetLinter.FastTests/Configuration/PathOverridesTests.cs` |
+| `src/AiNetLinter.Tests/Configuration/RuleMetadataRegistryTests.cs` | `RuleMetadataRegistryTests` | Configuration | migrated | `FullyQualifiedName~RuleMetadataRegistryTests` | `src/AiNetLinter.FastTests/Configuration/RuleMetadataRegistryTests.cs` |
 | `src/AiNetLinter.Tests/Core/AutoFixerTests.cs` | `AutoFixerTests` | Core | pending | `FullyQualifiedName~AutoFixerTests` |  |
 | `src/AiNetLinter.Tests/Core/ClassInfoCollectorTests.cs` | `ClassInfoCollectorTests` | Core | pending | `FullyQualifiedName~ClassInfoCollectorTests` |  |
-| `src/AiNetLinter.Tests/Core/CompoundSuppressionEvaluatorTests.cs` | `CompoundSuppressionEvaluatorTests` | Core | pending | `FullyQualifiedName~CompoundSuppressionEvaluatorTests` |  |
-| `src/AiNetLinter.Tests/Core/CompoundSuppressionIntegrationTests.cs` | `CompoundSuppressionIntegrationTests` | Core | pending | `FullyQualifiedName~CompoundSuppressionIntegrationTests` |  |
+| `src/AiNetLinter.Tests/Core/CompoundSuppressionEvaluatorTests.cs` | `CompoundSuppressionEvaluatorTests` | Core | migrated | `FullyQualifiedName~CompoundSuppressionEvaluatorTests` | `src/AiNetLinter.FastTests/Core/CompoundSuppressionEvaluatorTests.cs` |
+| `src/AiNetLinter.Tests/Core/CompoundSuppressionIntegrationTests.cs` | `CompoundSuppressionIntegrationTests` | Core | migrated | `FullyQualifiedName~CompoundSuppressionIntegrationTests` | `src/AiNetLinter.FastTests/Core/CompoundSuppressionIntegrationTests.cs` |
 | `src/AiNetLinter.Tests/Core/ControlFlowResilienceTests.cs` | `ControlFlowResilienceTests` | Core | pending | `FullyQualifiedName~ControlFlowResilienceTests` |  |
 | `src/AiNetLinter.Tests/Core/DiffImpactAnalyzerTests.cs` | `DiffImpactAnalyzerTests` | Core | pending | `FullyQualifiedName~DiffImpactAnalyzerTests` |  |
 | `src/AiNetLinter.Tests/Core/LinterAnalyzerTests.cs` | `LinterAnalyzerTests` | Core | migrated | `FullyQualifiedName~LinterAnalyzerTests` | `src/AiNetLinter.FastTests/Core/LinterAnalyzerTests.cs` |
@@ -217,15 +217,15 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Output/RuleLegendRegistryTests.cs` | `RuleLegendRegistryTests` | Output | pending | `FullyQualifiedName~RuleLegendRegistryTests` |  |
 | `src/AiNetLinter.Tests/Output/ViolationMarkdownFormatterTests.cs` | `ViolationMarkdownFormatterTests` | Output | pending | `FullyQualifiedName~ViolationMarkdownFormatterTests` |  |
 | `src/AiNetLinter.Tests/Output/ViolationSummaryBuilderTests.cs` | `ViolationSummaryBuilderTests` | Output | pending | `FullyQualifiedName~ViolationSummaryBuilderTests` |  |
-| `src/AiNetLinter.Tests/Suppression/DisableAllCliTests.cs` | `DisableAllCliTests` | Suppression | pending | `FullyQualifiedName~DisableAllCliTests` |  |
-| `src/AiNetLinter.Tests/Suppression/DisableAllCommentInjectorTests.cs` | `DisableAllCommentInjectorTests` | Suppression | pending | `FullyQualifiedName~DisableAllCommentInjectorTests` |  |
-| `src/AiNetLinter.Tests/Suppression/DisableAllCommentRemoverTests.cs` | `DisableAllCommentRemoverTests` | Suppression | pending | `FullyQualifiedName~DisableAllCommentRemoverTests` |  |
-| `src/AiNetLinter.Tests/Suppression/IgnoreSuppressionsFilterTests.cs` | `IgnoreSuppressionsFilterTests` | Suppression | pending | `FullyQualifiedName~IgnoreSuppressionsFilterTests` |  |
-| `src/AiNetLinter.Tests/Suppression/SuppressionCommentParserTests.cs` | `SuppressionCommentParserTests` | Suppression | pending | `FullyQualifiedName~SuppressionCommentParserTests` |  |
-| `src/AiNetLinter.Tests/Suppression/SuppressionEvaluatorTests.cs` | `SuppressionEvaluatorTests` | Suppression | pending | `FullyQualifiedName~SuppressionEvaluatorTests` |  |
-| `src/AiNetLinter.Tests/Suppression/SuppressionFileResolverTests.cs` | `SuppressionFileResolverTests` | Suppression | pending | `FullyQualifiedName~SuppressionFileResolverTests` |  |
-| `src/AiNetLinter.Tests/Suppression/SuppressionScannerTests.cs` | `SuppressionScannerTests` | Suppression | pending | `FullyQualifiedName~SuppressionScannerTests` |  |
-| `src/AiNetLinter.Tests/Suppression/ViolationPathResolverTests.cs` | `ViolationPathResolverTests` | Suppression | pending | `FullyQualifiedName~ViolationPathResolverTests` |  |
+| `src/AiNetLinter.Tests/Suppression/DisableAllCliTests.cs` | `DisableAllCliTests` | Suppression | migrated | `FullyQualifiedName~DisableAllCliTests` | `src/AiNetLinter.IntegrationTests/Suppression/DisableAllCliTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/DisableAllCommentInjectorTests.cs` | `DisableAllCommentInjectorTests` | Suppression | migrated | `FullyQualifiedName~DisableAllCommentInjectorTests` | `src/AiNetLinter.IntegrationTests/Suppression/DisableAllCommentInjectorTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/DisableAllCommentRemoverTests.cs` | `DisableAllCommentRemoverTests` | Suppression | migrated | `FullyQualifiedName~DisableAllCommentRemoverTests` | `src/AiNetLinter.IntegrationTests/Suppression/DisableAllCommentRemoverTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/IgnoreSuppressionsFilterTests.cs` | `IgnoreSuppressionsFilterTests` | Suppression | migrated | `FullyQualifiedName~IgnoreSuppressionsFilterTests` | `src/AiNetLinter.FastTests/Suppression/IgnoreSuppressionsFilterTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/SuppressionCommentParserTests.cs` | `SuppressionCommentParserTests` | Suppression | migrated | `FullyQualifiedName~SuppressionCommentParserTests` | `src/AiNetLinter.FastTests/Suppression/SuppressionCommentParserTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/SuppressionEvaluatorTests.cs` | `SuppressionEvaluatorTests` | Suppression | migrated | `FullyQualifiedName~SuppressionEvaluatorTests` | `src/AiNetLinter.FastTests/Suppression/SuppressionEvaluatorTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/SuppressionFileResolverTests.cs` | `SuppressionFileResolverTests` | Suppression | migrated | `FullyQualifiedName~SuppressionFileResolverTests` | `src/AiNetLinter.IntegrationTests/Suppression/SuppressionFileResolverTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/SuppressionScannerTests.cs` | `SuppressionScannerTests` | Suppression | migrated | `FullyQualifiedName~SuppressionScannerTests` | `src/AiNetLinter.IntegrationTests/Suppression/SuppressionScannerTests.cs` |
+| `src/AiNetLinter.Tests/Suppression/ViolationPathResolverTests.cs` | `ViolationPathResolverTests` | Suppression | migrated | `FullyQualifiedName~ViolationPathResolverTests` | `src/AiNetLinter.IntegrationTests/Suppression/ViolationPathResolverTests.cs` |
 | `src/AiNetLinter.Tests/Web/CssAnalyzerTests.cs` | `CssAnalyzerTests` | Web | migrated | `FullyQualifiedName~CssAnalyzerTests` | `src/AiNetLinter.FastTests/Web/CssAnalyzerTests.cs` |
 | `src/AiNetLinter.Tests/Web/JsAnalyzerTests.cs` | `JsAnalyzerTests` | Web | migrated | `FullyQualifiedName~JsAnalyzerTests` | `src/AiNetLinter.FastTests/Web/JsAnalyzerTests.cs` |
 | `src/AiNetLinter.Tests/Web/RazorAnalyzerTests.Extended.cs` | `RazorAnalyzerExtendedTests` | Web | migrated | `FullyQualifiedName~RazorAnalyzerExtendedTests` | `src/AiNetLinter.FastTests/Web/RazorAnalyzerTests.Extended.cs` |
