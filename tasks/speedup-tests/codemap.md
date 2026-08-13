@@ -5,6 +5,10 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-13
 ---
 
+<!-- step-019: EPIC-4-Grenze -- Find-Symbol ist ohne neue Produkt-Seam in elf
+     Snapshot-/Dispatchvertraege (FastTests) und neun echte Datei-Fallback-Vertraege
+     (IntegrationTests, isolierte SymbolGraphMini-Kopie) getrennt. -->
+
 <!-- step-008: EPIC-2 Teil 3 -- FilterMini-Fixture (Disk + In-Memory-Spec + Fidelity-Test) real im
      Bestand, EPIC-2 damit abgeschlossen. -->
 
@@ -49,6 +53,10 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz; unveraendert (Legacy, Strangler-Quelle). (zuletzt: planning)
 - **`src/AiNetLinter.FastTests/`** — schnelle Assembly (SDK-Testprojekt), importiert `tests/AiNetLinter.TestProject.props` und referenziert `AiNetLinter` + `AiNetLinter.TestKit`. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/Fixtures/` und `Mcp/Tools/`** — virtuelle Roslyn-Szenarien, Snapshot-Serverkontext und die 23 migrierten read-only MCP-Analyzer-/Scanner-/Toolverträge. (zuletzt: step-018)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindSymbolScannerTests.cs` / `FindSymbolToolTests.cs`** — elf Component- und ein isolierter Unit-Vertrag für Symbolsuche, Dispatch, Trunkierung und Compile-Fehler gegen vorhandene In-Memory-Snapshots. (zuletzt: step-019)
+- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/FindSymbolFileAdapterTests.cs`** — neun Integration-Verträge für C#-Leermengen und Nicht-C#-Miss-Hints gegen eine einmal geladene isolierte SymbolGraphMini-Kopie. (zuletzt: step-019)
+- **`src/AiNetLinter.FastTests/Fixtures/SymbolGraphMiniSolutionSpec.cs` / `McpInMemoryTestContext.cs`** — besitzende Snapshot-Bausteine für die schnellen Find-Symbol-Verträge. (zuletzt: step-019)
+- **`tests/Fixtures/SymbolGraphMini/` / `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs`** — kanonische Disk-Fixture und isolierte Kopierprimitive für den Find-Symbol-Dateiadapter. (zuletzt: step-019)
 - **`src/AiNetLinter.FastTests/Core/Checkers/`** — Zielort der 28 aus dem Legacy-Projekt migrierten Checker-Testklassen. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/TestHelper.cs`** — FastTests-lokale Teilmenge der Syntax-/Compilation-Helper fuer die migrierte Checker-Kohorte. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/Web/`** — Zielort der fuenf migrierten Unit-Testklassen fuer CSS-, JS- und Razor-Analyse sowie Web-Suppression. (zuletzt: step-011)

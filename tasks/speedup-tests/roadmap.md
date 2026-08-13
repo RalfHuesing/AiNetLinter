@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # Step-018 mit interner MCP-Read-only-Snapshot-Seam auf 23 Klassen neu geplant
+last_updated: 2026-08-13  # EPIC-4 implementiert; step-019 wartet auf Audit
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -115,7 +115,7 @@ obsolet markiert) — kein starres Vorab-Dokument.
       (`Web/*AnalyzerTests` plus `WebSuppressionDetectorTests`, fünf Klassen). Step-012 migrierte als
       letzten Teil die zwei reinen Renderer-Testklassen (`Mcp/Tools/*RendererTests`) samt
       Coverage-Audit; das EPIC-3-Grenzgate ist mit 326 grünen Unit-Tests nachgewiesen.
-- [ ] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
+- [x] EPIC-4: In-Memory-Roslyn-/Filter-/Scanner-/Tool-Kohorte migrieren, inkl. objektbasierter
       Produkt-Seams (Laden/Ausführen trennen, z. B. `SkeletonMapBuilder`) — Konzept §9 Punkt 3,
       Leitplanke 3, Definition of Done „Filtermatrix gegen kalibrierte Solution". **In Arbeit →
       step-013 (Korrektur step-014, inzwischen `approved`) schloss als ersten Teil die
@@ -140,7 +140,15 @@ obsolet markiert) — kein starres Vorab-Dokument.
       zurueckverschoben, weil `ScanFile` selbst `File.Exists`/`File.ReadLines` als Produktvertrag
       besitzt. Live-Refresh bleibt Produktionsdefault und wird mit bestehenden Legacy-Vertraegen
       gegengeprueft. Nicht-C#-, Config-/Call-Log-, Git-, MSBuild-, Prozess-, Repo- und EPIC-5/6-
-      Kohorten bleiben ausserhalb.
+      Kohorten bleiben ausserhalb. **Step-018 ist nach der kumulativen Doku-Korrektur `b1a59b7`
+      und dem Re-Audit `9cc8b73` approved. Als letzter EPIC-4-Grenzrest ist step-019 offen:**
+      `FindSymbolScannerTests` und `FindSymbolToolTests` wurden in step-019 entlang ihrer echten
+      Vertragsgrenze geteilt: elf Roslyn-/Dispatch-Vertraege laufen gegen die vorhandenen
+      In-Memory-Snapshots in FastTests, neun bei C#-Leermenge ausgefuehrte Datei-Fallback-Vertraege
+      gegen eine isolierte `SymbolGraphMini`-Diskkopie in IntegrationTests. Das Build-, gezielte
+      Fast-/Integration- und Component-Grenzgate sind gruen; EPIC-4 ist damit implementiert und
+      wartet auf das Step-019-Audit. Keine neue Produkt-Seam; die fuenf verbleibenden Datei-/Config-/
+      Call-Log-/Git-Toolklassen gehoeren weiterhin EPIC-5/6.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.

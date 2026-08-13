@@ -1,21 +1,21 @@
 ---
-status: done  # executing | blocked | done | aborted
+status: executing  # executing | blocked | done | aborted
 task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
-total_steps: 18  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-018
+total_steps: 19  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-019
 ---
 
 # Task State: speedup-tests
 
 ## Übersicht
 
-- **Task-Status:** `done (pending re-audit)`
-- **Steps gesamt:** 18 (regulär + Korrekturen — weicher Check-in bei
+- **Task-Status:** `executing`
+- **Steps gesamt:** 19 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-018`
+- **Aktueller Schritt:** `step-019`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -49,7 +49,8 @@ mehr nötig.>
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
-| step-018 | EPIC-4 | done (pending re-audit) | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | issues -> re-audit ausstehend | Code f0dbacc; Doku-Korrekturcommit folgt |
+| step-018 | EPIC-4 | done | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | approved (Re-Audit 9cc8b73) | Code e864407/f0dbacc; Doku b1a59b7; Review 9cc8b73 |
+| step-019 | EPIC-4 | done (pending audit) | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | pending | Code 6413510; Doku-Commit folgt |
 
 ## Config (optional)
 
