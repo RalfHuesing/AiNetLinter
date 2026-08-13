@@ -149,7 +149,7 @@ Die beiden zur Bewertung unterstellten Features fügen sich in dieses Bild ein, 
 2. **[Umgesetzt 2026-08-13]** `README.md`-Tool-Tabelle (14→18 Tools ergänzt) und `ROADMAP.md` Epic 14 korrigiert (Doku-Drift-Muster aus Abschnitt 4.3) — inkl. Beleg des tatsächlichen Entfernungs-Commits (`764281a`, 2026-06-19).
 3. Bei der Priorisierung von `validate_file` gegenüber `find_magic_values` den engeren Wettbewerbs-Vorsprung von `validate_file` einpreisen — Umsetzungsdruck ist höher als angenommen, weil Konkurrenz hier nicht nur beobachtet, sondern aktiv nachzieht.
 4. Die "AI-Readability"-Positionierung (Achse 1) explizit und prominent als eigenständigen, von der Zitat-Dichte unabhängigen Claim kommunizieren — sie ist der eigentliche Burggraben, nicht die einzelnen Fußnoten.
-5. `NDepend.MCP.Server` in die laufende MCP-Konkurrenzbeobachtung (`03-market-research.md`) nachtragen — bisher nicht erfasst, inhaltlich näher an `dependency_graph`/`metrics_tree` als an den übrigen Roslyn-MCP-Servern.
+5. **[Umgesetzt 2026-08-13]** `NDepend.MCP.Server` als Abschnitt 4.7 in `03-market-research.md` nachgetragen — inhaltlich näher an `dependency_graph`/`metrics_tree` als an den übrigen Roslyn-MCP-Servern, kein AI-Readability-Regelwerk im Sinne von AiNetLinter.
 
 ---
 
