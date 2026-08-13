@@ -46,20 +46,20 @@ bleibt bewusst auf Inventar-Ebene.
 | Quelldatei | Testklasse | Produktbereich | Status | Legacy-Filter | Neuer Abdeckungsort |
 |---|---|---|---|---|---|
 | `src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs` | `ArchitectureTests` | Architecture | migrated | `FullyQualifiedName~ArchitectureTests` | `src/AiNetLinter.FastTests/Core/LinterAnalyzerArchitectureRuleTests.cs` |
-| `src/AiNetLinter.Tests/Baseline/BaselineCliTests.cs` | `BaselineCliTests` | Baseline | pending | `FullyQualifiedName~BaselineCliTests` |  |
-| `src/AiNetLinter.Tests/Baseline/BaselineComparerTests.cs` | `BaselineComparerTests` | Baseline | pending | `FullyQualifiedName~BaselineComparerTests` |  |
-| `src/AiNetLinter.Tests/Baseline/BaselineReaderWriterTests.cs` | `BaselineReaderWriterTests` | Baseline | pending | `FullyQualifiedName~BaselineReaderWriterTests` |  |
-| `src/AiNetLinter.Tests/Baseline/BaselineViolationFilterTests.cs` | `BaselineViolationFilterTests` | Baseline | pending | `FullyQualifiedName~BaselineViolationFilterTests` |  |
-| `src/AiNetLinter.Tests/Baseline/FileChecksumCalculatorTests.cs` | `FileChecksumCalculatorTests` | Baseline | pending | `FullyQualifiedName~FileChecksumCalculatorTests` |  |
-| `src/AiNetLinter.Tests/Baseline/FileSystemExclusionHelpersTests.cs` | `FileSystemExclusionHelpersTests` | Baseline | pending | `FullyQualifiedName~FileSystemExclusionHelpersTests` |  |
-| `src/AiNetLinter.Tests/Baseline/ProjectRestoreStateTests.cs` | `ProjectRestoreStateTests` | Baseline | pending | `FullyQualifiedName~ProjectRestoreStateTests` |  |
-| `src/AiNetLinter.Tests/Baseline/SourceFileCatalogBlazorPartialTests.cs` | `SourceFileCatalogBlazorPartialTests` | Baseline | pending | `FullyQualifiedName~SourceFileCatalogBlazorPartialTests` |  |
+| `src/AiNetLinter.Tests/Baseline/BaselineCliTests.cs` | `BaselineCliTests` | Baseline | migrated | `FullyQualifiedName~BaselineCliTests` | `src/AiNetLinter.IntegrationTests/Baseline/BaselineCliTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/BaselineComparerTests.cs` | `BaselineComparerTests` | Baseline | migrated | `FullyQualifiedName~BaselineComparerTests` | `src/AiNetLinter.FastTests/Baseline/BaselineComparerTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/BaselineReaderWriterTests.cs` | `BaselineReaderWriterTests` | Baseline | migrated | `FullyQualifiedName~BaselineReaderWriterTests` | `src/AiNetLinter.IntegrationTests/Baseline/BaselineReaderWriterTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/BaselineViolationFilterTests.cs` | `BaselineViolationFilterTests` | Baseline | migrated | `FullyQualifiedName~BaselineViolationFilterTests` | `src/AiNetLinter.FastTests/Baseline/BaselineViolationFilterTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/FileChecksumCalculatorTests.cs` | `FileChecksumCalculatorTests` | Baseline | migrated | `FullyQualifiedName~FileChecksumCalculatorTests` | `src/AiNetLinter.FastTests/Baseline/FileChecksumCalculatorTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/FileSystemExclusionHelpersTests.cs` | `FileSystemExclusionHelpersTests` | Baseline | migrated | `FullyQualifiedName~FileSystemExclusionHelpersTests` | `src/AiNetLinter.IntegrationTests/Baseline/FileSystemExclusionHelpersTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/ProjectRestoreStateTests.cs` | `ProjectRestoreStateTests` | Baseline | migrated | `FullyQualifiedName~ProjectRestoreStateTests` | `src/AiNetLinter.IntegrationTests/Baseline/ProjectRestoreStateTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/SourceFileCatalogBlazorPartialTests.cs` | `SourceFileCatalogBlazorPartialTests` | Baseline | migrated | `FullyQualifiedName~SourceFileCatalogBlazorPartialTests` | `src/AiNetLinter.IntegrationTests/Baseline/SourceFileCatalogBlazorPartialTests.cs` |
 | `src/AiNetLinter.Tests/Baseline/SourceFileCatalogRegisterMSBuildTests.cs` | `SourceFileCatalogRegisterMSBuildTests` | Baseline | pending | `FullyQualifiedName~SourceFileCatalogRegisterMSBuildTests` |  |
-| `src/AiNetLinter.Tests/Baseline/SourceFileCatalogTests.cs` | `SourceFileCatalogTests` | Baseline | pending | `FullyQualifiedName~SourceFileCatalogTests` |  |
-| `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs` | `WebBaselineTests` | Baseline | pending | `FullyQualifiedName~WebBaselineTests` |  |
-| `src/AiNetLinter.Tests/Cache/AnalysisCacheManagerIsolationTests.cs` | `AnalysisCacheManagerIsolationTests` | Cache | pending | `FullyQualifiedName~AnalysisCacheManagerIsolationTests` |  |
-| `src/AiNetLinter.Tests/Cache/AnalysisCacheManagerTests.cs` | `AnalysisCacheManagerTests` | Cache | pending | `FullyQualifiedName~AnalysisCacheManagerTests` |  |
-| `src/AiNetLinter.Tests/Cache/CacheEntryMapperTests.cs` | `CacheEntryMapperTests` | Cache | pending | `FullyQualifiedName~CacheEntryMapperTests` |  |
+| `src/AiNetLinter.Tests/Baseline/SourceFileCatalogTests.cs` | `SourceFileCatalogTests` | Baseline | migrated | `FullyQualifiedName~SourceFileCatalogTests` | `src/AiNetLinter.IntegrationTests/Baseline/SourceFileCatalogAdapterTests.cs` |
+| `src/AiNetLinter.Tests/Baseline/WebBaselineTests.cs` | `WebBaselineTests` | Baseline | migrated | `FullyQualifiedName~WebBaselineTests` | `src/AiNetLinter.IntegrationTests/Baseline/WebBaselineTests.cs` |
+| `src/AiNetLinter.Tests/Cache/AnalysisCacheManagerIsolationTests.cs` | `AnalysisCacheManagerIsolationTests` | Cache | migrated | `FullyQualifiedName~AnalysisCacheManagerIsolationTests` | `src/AiNetLinter.IntegrationTests/Cache/AnalysisCacheManagerIsolationTests.cs` |
+| `src/AiNetLinter.Tests/Cache/AnalysisCacheManagerTests.cs` | `AnalysisCacheManagerTests` | Cache | migrated | `FullyQualifiedName~AnalysisCacheManagerTests` | `src/AiNetLinter.IntegrationTests/Cache/AnalysisCacheManagerTests.cs` |
+| `src/AiNetLinter.Tests/Cache/CacheEntryMapperTests.cs` | `CacheEntryMapperTests` | Cache | migrated | `FullyQualifiedName~CacheEntryMapperTests` | `src/AiNetLinter.FastTests/Cache/CacheEntryMapperTests.cs` |
 | `src/AiNetLinter.Tests/Core/Checkers/AsciiIdentifiersTests.cs` | `AsciiIdentifiersTests` | Checkers | migrated | `FullyQualifiedName~AsciiIdentifiersTests` | `src/AiNetLinter.FastTests/Core/Checkers/AsciiIdentifiersTests.cs` |
 | `src/AiNetLinter.Tests/Core/Checkers/AsyncVoidCheckerTests.cs` | `AsyncVoidCheckerTests` | Checkers | migrated | `FullyQualifiedName~AsyncVoidCheckerTests` | `src/AiNetLinter.FastTests/Core/Checkers/AsyncVoidCheckerTests.cs` |
 | `src/AiNetLinter.Tests/Core/Checkers/BlockingTaskCheckerTests.cs` | `BlockingTaskCheckerTests` | Checkers | migrated | `FullyQualifiedName~BlockingTaskCheckerTests` | `src/AiNetLinter.FastTests/Core/Checkers/BlockingTaskCheckerTests.cs` |
@@ -126,8 +126,8 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Core/ControlFlowResilienceTests.cs` | `ControlFlowResilienceTests` | Core | pending | `FullyQualifiedName~ControlFlowResilienceTests` |  |
 | `src/AiNetLinter.Tests/Core/DiffImpactAnalyzerTests.cs` | `DiffImpactAnalyzerTests` | Core | pending | `FullyQualifiedName~DiffImpactAnalyzerTests` |  |
 | `src/AiNetLinter.Tests/Core/LinterAnalyzerTests.cs` | `LinterAnalyzerTests` | Core | migrated | `FullyQualifiedName~LinterAnalyzerTests` | `src/AiNetLinter.FastTests/Core/LinterAnalyzerTests.cs` |
-| `src/AiNetLinter.Tests/Core/LinterEngineCacheTests.cs` | `LinterEngineCacheTests` | Core | pending | `FullyQualifiedName~LinterEngineCacheTests` |  |
-| `src/AiNetLinter.Tests/Core/LinterEngineProjectRestoreTests.cs` | `LinterEngineProjectRestoreTests` | Core | pending | `FullyQualifiedName~LinterEngineProjectRestoreTests` |  |
+| `src/AiNetLinter.Tests/Core/LinterEngineCacheTests.cs` | `LinterEngineCacheTests` | Core | migrated | `FullyQualifiedName~LinterEngineCacheTests` | `src/AiNetLinter.IntegrationTests/Core/LinterEngineCacheTests.cs` |
+| `src/AiNetLinter.Tests/Core/LinterEngineProjectRestoreTests.cs` | `LinterEngineProjectRestoreTests` | Core | migrated | `FullyQualifiedName~LinterEngineProjectRestoreTests` | `src/AiNetLinter.IntegrationTests/Core/LinterEngineProjectRestoreTests.cs` |
 | `src/AiNetLinter.Tests/Core/LinterEngineTests.cs` | `LinterEngineTests` | Core | pending | `FullyQualifiedName~LinterEngineTests` |  |
 | `src/AiNetLinter.Tests/Core/NamespaceFilterTests.cs` | `NamespaceFilterTests` | Core | pending | `FullyQualifiedName~NamespaceFilterTests` |  |
 | `src/AiNetLinter.Tests/Core/NullCoalescingInitializerClassifierTests.cs` | `NullCoalescingInitializerClassifierTests` | Core | pending | `FullyQualifiedName~NullCoalescingInitializerClassifierTests` |  |
@@ -169,16 +169,16 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/Tools/GetFileSkeletonToolTests.cs` | `GetFileSkeletonToolTests` | Mcp | migrated | `FullyQualifiedName~GetFileSkeletonToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetFileSkeletonToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetHotspotsToolTests.cs` | `GetHotspotsToolTests` | Mcp | migrated | `FullyQualifiedName~GetHotspotsToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetHotspotsToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/GetImpactToolTests.cs` | `GetImpactToolTests` | Mcp | pending | `FullyQualifiedName~GetImpactToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetIndexScopeToolTests.cs` | `GetIndexScopeToolTests` | Mcp | pending | `FullyQualifiedName~GetIndexScopeToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetServerHealthToolTests.cs` | `GetServerHealthToolTests` | Mcp | pending | `FullyQualifiedName~GetServerHealthToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetIndexScopeToolTests.cs` | `GetIndexScopeToolTests` | Mcp | migrated | `FullyQualifiedName~GetIndexScopeToolTests` | `src/AiNetLinter.IntegrationTests/Mcp/Tools/GetIndexScopeToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetServerHealthToolTests.cs` | `GetServerHealthToolTests` | Mcp | migrated | `FullyQualifiedName~GetServerHealthToolTests` | `src/AiNetLinter.IntegrationTests/Mcp/Tools/GetServerHealthToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetSymbolBodyToolTests.cs` | `GetSymbolBodyToolTests` | Mcp | migrated | `FullyQualifiedName~GetSymbolBodyToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetSymbolBodyToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetTypeHierarchyToolTests.cs` | `GetTypeHierarchyToolTests` | Mcp | migrated | `FullyQualifiedName~GetTypeHierarchyToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetTypeHierarchyToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetViolationsToolTests.cs` | `GetViolationsToolTests` | Mcp | migrated | `FullyQualifiedName~GetViolationsToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetViolationsToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/McpCallLogTests.cs` | `McpCallLogTests` | Mcp | pending | `FullyQualifiedName~McpCallLogTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerConstructorTests.cs` | `McpCodeGraphServerConstructorTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerConstructorTests` |  |
-| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerFileDiscoveryTests.cs` | `McpCodeGraphServerFileDiscoveryTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerFileDiscoveryTests` |  |
-| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerStalenessMtimeCacheTests.cs` | `McpCodeGraphServerStalenessMtimeCacheTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerStalenessMtimeCacheTests` |  |
-| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerTests.cs` | `McpCodeGraphServerTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerTests` |  |
+| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerFileDiscoveryTests.cs` | `McpCodeGraphServerFileDiscoveryTests` | Mcp | migrated | `FullyQualifiedName~McpCodeGraphServerFileDiscoveryTests` | `src/AiNetLinter.IntegrationTests/Mcp/McpCodeGraphServerFileDiscoveryTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerStalenessMtimeCacheTests.cs` | `McpCodeGraphServerStalenessMtimeCacheTests` | Mcp | migrated | `FullyQualifiedName~McpCodeGraphServerStalenessMtimeCacheTests` | `src/AiNetLinter.IntegrationTests/Mcp/McpCodeGraphServerStalenessMtimeCacheTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerTests.cs` | `McpCodeGraphServerTests` | Mcp | migrated | `FullyQualifiedName~McpCodeGraphServerTests` | `src/AiNetLinter.IntegrationTests/Mcp/McpCodeGraphServerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/McpDocumentationSmokeTests.cs` | `McpDocumentationSmokeTests` | Mcp | pending | `FullyQualifiedName~McpDocumentationSmokeTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpLiveRepositoryTests.cs` | `McpLiveRepositoryTests` | Mcp | pending | `FullyQualifiedName~McpLiveRepositoryTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpServerAllToolsE2ETests.cs` | `McpServerAllToolsE2ETests` | Mcp | pending | `FullyQualifiedName~McpServerAllToolsE2ETests` |  |
@@ -195,10 +195,10 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectScannerTests.cs` | `PatternDetectScannerTests` | Mcp | migrated | `FullyQualifiedName~PatternDetectScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectToolTests.cs` | `PatternDetectToolTests` | Mcp | migrated | `FullyQualifiedName~PatternDetectToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs` | `RefactoringDriftScannerTests` | Mcp | migrated | `FullyQualifiedName~RefactoringDriftScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/RefactoringDriftScannerTests.cs` |
-| `src/AiNetLinter.Tests/Mcp/Tools/ReloadConfigToolTests.cs` | `ReloadConfigToolTests` | Mcp | pending | `FullyQualifiedName~ReloadConfigToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/ReloadConfigToolTests.cs` | `ReloadConfigToolTests` | Mcp | migrated | `FullyQualifiedName~ReloadConfigToolTests` | `src/AiNetLinter.IntegrationTests/Mcp/Tools/ReloadConfigToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/SafeguardScannerTests.cs` | `SafeguardScannerTests` | Mcp | migrated | `FullyQualifiedName~SafeguardScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SafeguardScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/SafeguardToolTests.cs` | `SafeguardToolTests` | Mcp | migrated | `FullyQualifiedName~SafeguardToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SafeguardToolTests.cs` |
-| `src/AiNetLinter.Tests/Mcp/Tools/SearchPatternToolTests.cs` | `SearchPatternToolTests` | Mcp | pending | `FullyQualifiedName~SearchPatternToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/SearchPatternToolTests.cs` | `SearchPatternToolTests` | Mcp | migrated | `FullyQualifiedName~SearchPatternToolTests` | `src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/SymbolGraphToolRegistrationsTests.cs` | `SymbolGraphToolRegistrationsTests` | Mcp | pending | `FullyQualifiedName~SymbolGraphToolRegistrationsTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/SymbolIdentifierResolverTests.cs` | `SymbolIdentifierResolverTests` | Mcp | migrated | `FullyQualifiedName~SymbolIdentifierResolverTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/SymbolIdentifierResolverTests.cs` |
 | `src/AiNetLinter.Tests/Metrics/AIContextFootprintDeduplicationTests.cs` | `AIContextFootprintDeduplicationTests` | Metrics | pending | `FullyQualifiedName~AIContextFootprintDeduplicationTests` |  |

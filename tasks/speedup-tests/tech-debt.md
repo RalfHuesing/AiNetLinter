@@ -31,12 +31,12 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-001 | `src/AiNetLinter.Tests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Zwei Tests flaky unter Volllast des vollen `Category!=Stress`-Parallel-Laufs (stdout-Framing gegen echten MCP-Subprozess), isoliert stabil grün. |
 | TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Durch die Migration nach `SkeletonMapFilterTests` gegen `FilterMini` geschlossen. |
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | „Projekt-Overrides"-Abschnitt zeigt noch den seit step-001 veralteten Override-Schlüssel `*.Tests` statt `*Tests` und nennt keine separate `AiNetLinter.TestKit`-Zeile — Datei nicht neu synchronisiert nach der `rules.json`-Änderung in step-001. |
-| TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar referenziert „step-006" — verstößt gegen das Verbot von Task-/Planungsartefakt-Referenzen in Code-Kommentaren (`AiNetLinterRichtlinien.mdc` §5). |
+| TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar bereinigt. |
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
 | TD-006 | `src/AiNetLinter.FastTests/Architecture` / `src/AiNetLinter.IntegrationTests/Architecture` | niedrig | nein | `GetCategoryTraits` ist in beiden Assembly-Guards gleich implementiert. |
 | TD-007 | `src/AiNetLinter.FastTests/Maps/Skeleton` / `src/AiNetLinter.IntegrationTests/Maps/Skeleton` | niedrig | nein | Zwei lokale identische `CreateConfig`-Helfer fuer Skeleton-Tests. |
 | TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.Tests` | mittel | nein | Sieben exakte Testhelfer bleiben waehrend des Stranglers parallel. |
-| TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Katalog-/Lease-Teardown ist in zwei Integration-Fixtures gleich. |
+| TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Durch `LoadedFixture` mit mehreren realen Konsumenten geschlossen. |
 | TD-010 | `src/AiNetLinter.TestKit/IsolatedFixtureLease.cs` / `src/AiNetLinter.Tests/Fixtures/FixtureWorkspaceBase.cs` | mittel | nein | Zwei Workspace-Kopierimplementierungen bleiben bis Legacy-Loeschung parallel. |
 
 ## Einträge
@@ -130,7 +130,7 @@ werden. Default bei Unsicherheit ist `nein`.
   „...analog zum bereits vorhandenen Referenz-Caching-Test-Muster)".
 - **Auto-Fixable:** ja — reine Wortlautänderung im Kommentar, keine Architektur-Entscheidung, keine
   Verhaltensänderung.
-- **Status:** offen
+- **Status:** geschlossen in step-021
 
 ### TD-005 — `RoslynTestSolutionFactory.CoreReferences` kontaminiert jedes In-Memory-Projekt mit Testhost-Referenzen [Priorität: hoch] [Auto-Fixable: nein]
 
@@ -200,7 +200,7 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Eine parametrisierte oder vererbte Fixture-Oberflaeche wuerde den bestehenden Assembly-Fixture-Vertrag beruehren und den Find-Symbol-Step ueber die lokale Adaptergrenze ausweiten.
 - **Vorschlag:** Bei einem weiteren diskbasierten Integration-Adapter einen kleinen gemeinsamen Lifecycle-Host innerhalb von IntegrationTests evaluieren.
 - **Auto-Fixable:** nein — Fixture-Instanziierung und Lebensdauer erfordern Designentscheidung.
-- **Status:** offen
+- **Status:** geschlossen in step-021
 
 ### TD-010 — Doppelte Workspace-Kopie beim Strangler-Ende aufloesen [Priorität: mittel] [Auto-Fixable: nein]
 

@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
-total_steps: 20  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-020
+total_steps: 21  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-021
 ---
 
 # Task State: speedup-tests
@@ -13,9 +13,9 @@ current_step: step-020
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 20 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 21 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-020`
+- **Aktueller Schritt:** `step-021`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -51,7 +51,8 @@ mehr nötig.>
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
 | step-018 | EPIC-4 | done | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | approved (Re-Audit 9cc8b73) | Code e864407/f0dbacc; Doku b1a59b7; Review 9cc8b73 |
 | step-019 | EPIC-4 | done | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | issues→approved (via step-020) | Code 6413510; Doku 1c9c531; Review af61a93 |
-| step-020 | EPIC-4 | done | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | approved | Code 5041b00; Doku 9f60d03; Review `step-020/step-review.md` |
+| step-020 | EPIC-4 | done | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | approved | Code 5041b00; Doku 9f60d03/27a6d9b; Review 28b3cb4 |
+| step-021 | EPIC-5 | done (pending audit) | MSBuild-/Baseline-/Datei-/Refresh-Super-Step (22 Klassen) | - | b2b8fde | pending audit | 22 Legacy-Dateien entfernt; enge Gates grün |
 
 ## Config (optional)
 

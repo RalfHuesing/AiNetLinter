@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # EPIC-4 implementiert; step-020 korrigiert den offenen step-019-Auditfund
+last_updated: 2026-08-13  # EPIC-4 approved; step-021 startet die grosse EPIC-5-Datei-/Refresh-Kohorte
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -155,7 +155,16 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Call-Log-/Git-Toolklassen gehoeren weiterhin EPIC-5/6.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
-      — Konzept §9 Punkt 4, Leitplanke 4.
+      — Konzept §9 Punkt 4, Leitplanke 4. **Umgesetzt, pending audit → step-021:** 22 historische Klassen mit 99
+      Methoden bilden die erste grosse gemeinsame Plattformkohorte: komplette Baseline-Vertraege
+      (ausser dem gemischten MSBuild-Registrierungs-/Stressbestand), Cache- und LinterEngine-Cache-/
+      Restore-Vertraege sowie file-backed MCP-Scope-/Health-/Config-/Pattern- und Server-Refresh-
+      Vertraege. Read-only `BaselineMini`/`SymbolGraphMini` werden assembly-weit geteilt; mutable
+      Szenarien erhalten je Test eine isolierte geladene Lease und ein begrenztes MSBuild-Loadbudget.
+      TD-009 wird mit mehreren realen Konsumenten ueber einen IntegrationTests-lokalen Ownership-
+      Helper geschlossen; TD-004 wird in der ohnehin beruehrten Host-Testdatei mechanisch
+      bereinigt. TD-010 bleibt bis zur Legacy-Loeschung offen. Prozess, Framing, Retry, Git,
+      Repo/Dogfood, Performance, Stress und finale Legacy-Loeschung bleiben ausserhalb.
 - [ ] EPIC-6: CLI-, MCP-Prozess-, Dogfood-, Performance- und Stress-Kohorte migrieren — geteilter
       read-only MCP-Host für idempotente Smokes, exklusive Hosts für Framing/Retry/Refresh,
       Parallelitätsbudgets (`SubprocessConcurrencyGate`-Nachfolger), getrennte Runner-Konfiguration
