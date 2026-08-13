@@ -89,7 +89,7 @@ TEST "LintReport wird erzeugt und ist grün":
        --config  <Pfad zur rules.json>
        --path    <Solution-Root>
        --baseline <Pfad zur Baseline-JSON>   ← nach Schritt 6 verfügbar
-       --sync-agent-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (oder .agents/rules/AiNetLinter.mdc)
+       --sync-agent-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (Pfad anpassbar über --agent-rules-path)
 
    4. Prozess starten, stdout + stderr lesen, auf Exit warten
 
@@ -132,9 +132,11 @@ Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ra
 
 `--sync-agent-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
 
-- `.agents/rules/AiNetLinter.mdc` (oder `.agents/rules/AiNetLinter.mdc`) — Metriken und aktive Regeln aus der `rules.json`
+- `.agents/rules/AiNetLinter.mdc` (Default-Pfad) — Metriken und aktive Regeln aus der `rules.json`
 
 Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
+
+Für andere Agent-Hosts (z. B. Cursor: `.cursor/rules/AiNetLinter.mdc`) den Zielpfad über `--agent-rules-path <Verzeichnis-oder-Datei>` setzen — Default ist ausschliesslich `.agents/rules/AiNetLinter.mdc`, es wird kein zweiter Pfad automatisch mitgeschrieben.
 
 Optional: Playbook erzeugen (Repo-Statistik, Migrations-Status):
 
