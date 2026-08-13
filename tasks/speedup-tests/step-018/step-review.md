@@ -34,7 +34,7 @@ tech_debt_ids: []
 
 ### Plan-Erfüllung
 
-Item-01 bis Item-03 sind in den fünf Zielklassen sachlich umgesetzt: exakt 15+10+9+11+17 = 62 `[Fact]`/`[Theory]`-Verträge blieben erhalten, der Diff enthält keine geänderte öffentliche Testmethode und die Assertion-Zahlen sind unverändert (41+37+36+30+66 = 210). Item-04 ist jedoch nicht erfüllt, weil der Code-Commit die explizite Recovery-Scope-Grenze massiv überschreitet und die Ergebnisdokumentation dies als „Keine — Plan 1:1 umgesetzt“ ausweist.
+Item-01 bis Item-03 sind in den fünf Zielklassen sachlich umgesetzt: exakt 15+10+9+11+17 = 62 `[Fact]`/`[Theory]`-Verträge blieben erhalten, der Diff enthält keine geänderte öffentliche Testmethode und die Assertion-Zahlen sind unverändert (41+46+42+31+66 = 226). Item-04 ist jedoch nicht erfüllt, weil der Code-Commit die explizite Recovery-Scope-Grenze massiv überschreitet und die Ergebnisdokumentation dies als „Keine — Plan 1:1 umgesetzt“ ausweist.
 
 ### Rules-Konformität
 
