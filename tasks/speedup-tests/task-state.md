@@ -53,14 +53,19 @@ mehr nötig.>
 
 ## Config (optional)
 
+> **ACHTUNG AN ALLE AGENTEN (Planer, Coder, Kritiker):**
+> Wir befinden uns in einer reinen Struktur-Migrationsphase (Dateien verschieben, Namespaces anpassen). 
+> Um den extremen Overhead durch generiertes Markdown (`step-plan`/`step-result`) zu stoppen, MÜSSEN ab sofort große logische Batches (bis zu 40 Dateien) in "Super-Steps" zusammengefasst werden.
+> Das alte Limit von 8 Dateien pro Step ist explizit aufgehoben. Bündelt Kohorten effizient!
+
 Falls `<task-dir>/config.md` existiert, hier die Overrides dokumentieren.
 Andernfalls gelten die Defaults aus `../spec.md`.
 
 ```
 max_fix_rounds_per_step: 3        # Kettenlänge über `corrects`, siehe ../spec.md §10.5
 soft_step_checkin_interval: 40    # weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
-max_batch_items: 8          # siehe ../spec.md §10.6 (Micro-Batches innerhalb eines Epics)
-max_batch_diff_lines: 40    # siehe ../spec.md §10.6
+max_batch_items: 40         # ERHÖHT FÜR MIGRATION: Da die Zielarchitektur steht, Kohorten zu Super-Steps zusammenfassen, um Overhead zu sparen!
+max_batch_diff_lines: 800   # ERHÖHT FÜR MIGRATION: Reines Schieben und Namespace-Anpassungen machen große Diffs sicher.
 build_command: <aus roadmap.md Tech-Stack-Notiz>
 test_command: <aus roadmap.md Tech-Stack-Notiz>
 target_branch: <aktueller Branch, nicht hartcodiert>

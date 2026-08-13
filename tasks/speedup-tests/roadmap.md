@@ -10,6 +10,10 @@ created_by_model_knowledge_cutoff: 2026-01
 
 # Roadmap: speedup-tests
 
+> **ACHTUNG AN ALLE AGENTEN:**
+> Die Zielarchitektur (EPIC-1 und 2) steht. Um den Markdown-Overhead pro Step in der anstehenden Migrationsphase (EPIC-4 bis 6) zu reduzieren, **ist das alte Batch-Limit von 8 aufgehoben**. 
+> Fasse Dateien ab sofort zu großen, logischen "Super-Steps" zusammen (bis zu 40 Dateien pro Step)! Minimiere die Anzahl der neu generierten `step-*`-Ordner, indem du komplette Kohorten am Stück umsetzt.
+
 Grober Anker, kein Detailplan — Detail-Steps entstehen erst JIT im
 Step-Modus des Planers, siehe `../spec.md` §7.2. Diese Datei wird
 laufend angepasst (Epics abgehakt, ergänzt, umformuliert oder als
