@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Xunit;
 using AiNetLinter.Configuration;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.FastTests.Configuration;
 
 [Trait("Category", "Unit")]
 public sealed class PathOverridesTests

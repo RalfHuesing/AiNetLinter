@@ -7,7 +7,7 @@ using AiNetLinter.Suppression;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.FastTests.Configuration;
 
 // @covers TestCoverageResolver
 // @covers TestCoverageCollector

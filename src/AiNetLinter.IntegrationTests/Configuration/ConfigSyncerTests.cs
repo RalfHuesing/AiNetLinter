@@ -5,9 +5,9 @@ using System.Text.Json;
 using AiNetLinter.Configuration;
 using Xunit;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.IntegrationTests.Configuration;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class ConfigSyncerTests
 {
     private static readonly JsonSerializerOptions ReadOptions = new()

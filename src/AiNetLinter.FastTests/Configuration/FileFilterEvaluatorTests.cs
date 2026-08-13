@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.FastTests.Configuration;
 
 [Trait("Category", "Unit")]
 public sealed class FileFilterEvaluatorTests

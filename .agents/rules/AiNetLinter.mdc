@@ -81,6 +81,7 @@ Trotzdem immer verboten: `dynamic`; `out` (außer in `Try*`).
 
 ## Projekt-Overrides (nur Abweichungen)
 
-**`*.Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
+**`*Tests`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
+**`AiNetLinter.TestKit`:** `MaxMethodLineCount` **100**; `EnforceSealedClasses` aus. Details: `rules.json`.
 
 Details: `rules.json`, `AiNetLinter.exe --docs <name>`.

@@ -4,10 +4,10 @@ using System.IO;
 using AiNetLinter.Configuration;
 using Xunit;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.IntegrationTests.Configuration;
 
 // @covers ConfigLoader
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class ConfigLoaderRulesJsonTests
 {
     [Fact]

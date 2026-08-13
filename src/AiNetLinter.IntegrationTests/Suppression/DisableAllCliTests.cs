@@ -2,11 +2,10 @@ using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Suppression;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.IntegrationTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Suppression;
+namespace AiNetLinter.IntegrationTests.Suppression;
 
 [Trait("Category", "Integration")]
 public sealed class DisableAllCliTests
@@ -23,7 +22,7 @@ public sealed class DisableAllCliTests
             ConfigPath = workspace.ConfigPath,
             AddDisableAll = true,
         };
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
 
         Assert.Equal(0, exitCode);
@@ -44,7 +43,7 @@ public sealed class DisableAllCliTests
             Verbose = false,
             RemoveDisableAll = true,
         };
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
 
         Assert.Equal(0, exitCode);

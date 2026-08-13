@@ -1,20 +1,19 @@
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Suppression;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.Tests.Suppression;
+namespace AiNetLinter.IntegrationTests.Suppression;
 
 /// <summary>
 /// End-to-End-Regressionstest fuer den Worktree-Ausschluss in
 /// <see cref="SuppressionFileResolver.ResolveAbsolutePathsAsync"/> selbst — nicht nur fuer den
-/// darunterliegenden <c>SourceFileCatalog.IsGeneratedPath</c>-Helper isoliert (siehe
-/// <c>SourceFileCatalogTests</c>). Deckt den solutionlosen Verzeichnis-Scan-Pfad ab
+/// darunterliegenden <c>SourceFileCatalog.IsGeneratedPath</c>-Helper isoliert. Deckt den solutionlosen Verzeichnis-Scan-Pfad ab
 /// (<c>EnumerateCsFilesInDirectory</c>), der ohne diese Absicherung volle Repo-Kopien aus
 /// <c>worktrees/</c>/<c>.worktrees/</c>-Unterordnern mit einlesen wuerde.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class SuppressionFileResolverTests
 {
     [Fact]

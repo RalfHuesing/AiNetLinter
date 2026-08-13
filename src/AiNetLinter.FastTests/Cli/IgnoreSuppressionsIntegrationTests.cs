@@ -6,7 +6,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Suppression;
 using AiNetLinter.Web;
 
-namespace AiNetLinter.Tests.Cli;
+namespace AiNetLinter.FastTests.Cli;
 
 // @covers LinterArgs
 // @covers IgnoreSuppressionsFilter

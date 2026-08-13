@@ -5,7 +5,7 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.FastTests.Configuration;
 
 [Trait("Category", "Unit")]
 public sealed class RuleMetadataRegistryTests

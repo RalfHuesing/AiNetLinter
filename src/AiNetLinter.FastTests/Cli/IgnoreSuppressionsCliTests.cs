@@ -2,7 +2,7 @@ using Xunit;
 using System.CommandLine;
 using AiNetLinter.Cli;
 
-namespace AiNetLinter.Tests.Cli;
+namespace AiNetLinter.FastTests.Cli;
 
 // @covers LinterArgs
 [Trait("Category", "Unit")]

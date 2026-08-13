@@ -9,7 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class CompoundSuppressionIntegrationTests

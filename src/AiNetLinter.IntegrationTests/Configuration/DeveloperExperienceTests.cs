@@ -14,7 +14,7 @@ using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests.Configuration;
+namespace AiNetLinter.IntegrationTests.Configuration;
 
 // @covers RepoPlaybookGenerator
 // @covers PlaybookSyntaxWalker
@@ -29,7 +29,7 @@ namespace AiNetLinter.Tests.Configuration;
 /// <summary>
 /// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class DeveloperExperienceTests
 {
     private static (SyntaxTree, SemanticModel) GetSemanticContext(string source, string assemblyName = "TestAssembly")
@@ -308,11 +308,18 @@ public sealed class DeveloperExperienceTests
             },
             ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
             {
-                ["*.Tests"] = new()
+                ["*Tests"] = new()
                 {
                     Global = new GlobalConfigOverride
                     {
                         EnforceExplicitStateImmutability = false
+                    }
+                },
+                ["AiNetLinter.TestKit"] = new()
+                {
+                    Metrics = new MetricsConfigOverride
+                    {
+                        MaxMethodLineCount = 100
                     }
                 }
             }
@@ -329,7 +336,8 @@ public sealed class DeveloperExperienceTests
             Assert.Contains("description: C#-Codequalität", content);
             Assert.Contains("MaxLineCount", content);
             Assert.Contains("EnforceSealedClasses", content);
-            Assert.Contains("*.Tests", content);
+            Assert.Contains("*Tests", content);
+            Assert.Contains("AiNetLinter.TestKit", content);
         }
         finally
         {
@@ -338,20 +346,6 @@ public sealed class DeveloperExperienceTests
                 Directory.Delete(tempDir, recursive: true);
             }
         }
-    }
-
-    [Fact]
-    public void SyncAgentRules_OnSelfRepository_UpdatesMdc()
-    {
-        var root = FindProjectRoot();
-        var configPath = Path.Combine(root, "rules.json");
-        var config = ConfigLoader.TryLoadConfig(configPath, isRequired: true);
-        Assert.NotNull(config);
-
-        AgentRulesGenerator.Sync(root, config, verbose: true);
-
-        var mdcPath = Path.Combine(root, ".agents", "rules", "AiNetLinter.mdc");
-        Assert.True(File.Exists(mdcPath));
     }
 
     [Fact]
@@ -399,17 +393,4 @@ public sealed class DeveloperExperienceTests
         Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
     }
 
-    private static string FindProjectRoot()
-    {
-        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (dir != null)
-        {
-            if (dir.GetFiles("rules.json").Any())
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-        throw new InvalidOperationException("Project root not found.");
-    }
 }

@@ -1,9 +1,9 @@
 using AiNetLinter.Suppression;
 using Xunit;
 
-namespace AiNetLinter.Tests.Suppression;
+namespace AiNetLinter.IntegrationTests.Suppression;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class DisableAllCommentRemoverTests
 {
     [Fact]

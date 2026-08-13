@@ -1,7 +1,7 @@
 using AiNetLinter.Suppression;
 using Xunit;
 
-namespace AiNetLinter.Tests.Suppression;
+namespace AiNetLinter.FastTests.Suppression;
 
 [Trait("Category", "Unit")]
 public sealed class SuppressionCommentParserTests

@@ -2,7 +2,7 @@ using Xunit;
 using AiNetLinter.Suppression;
 using AiNetLinter.Web;
 
-namespace AiNetLinter.Tests.Suppression;
+namespace AiNetLinter.FastTests.Suppression;
 
 // @covers IgnoreSuppressionsFilter
 [Trait("Category", "Unit")]
