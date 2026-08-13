@@ -5,6 +5,17 @@ maintained_by: planer, coder, kritiker
 last_updated: 2026-08-13
 ---
 
+<!-- planning step-025: EPIC-6 Teil 1 -- 21 Mini-Solution-MCP-Klassen werden entlang der echten
+     Hostgrenze geteilt: reine Policy/Loading/Symbolvertraege nach FastTests, idempotente E2E-
+     Smokes auf einen lazy read-only SymbolGraph-Host, Framing/Retry/Error/Git/Refresh auf
+     exklusive vollstaendig budgetierte Hosts. Dogfood/Performance/Stress bleiben ausserhalb. -->
+
+<!-- planning step-026: Korrektur zu step-025 -- der einzige im 49er-Fast-Zielgate belegte
+     MSBuild-Load laeuft aus McpServerCommandTests ueber RunAsync -> TryLoadSolutionAsync ->
+     SourceFileCatalogLoader; der echte Hostvertrag wechselt nach Integration, waehrend zehn reine
+     Command-Helper Fast bleiben. Zugleich werden 15 derzeit fehlende historische Zielvertraege
+     wiederhergestellt und Host-/Retry-/Framing-/Ledger-Reste geschlossen. -->
+
 <!-- planning step-021: EPIC-5 Teil 1 -- 22 Baseline-/Cache-/Datei-/Refresh-Klassen werden auf
      FastTests bzw. IntegrationTests migriert; read-only MSBuild-Solutions teilen Hosts, mutable
      Szenarien nutzen isolierte geladene Leases und ein begrenztes Loadbudget. -->
@@ -111,6 +122,17 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsDependencyGuardTests.cs`** — statischer Deny-Listen-Guard (Category=Unit) ueber die kompilierten Metadaten (AssemblyRef/TypeRef/MemberRef via System.Reflection.Metadata) von `AiNetLinter.FastTests.dll`/`AiNetLinter.TestKit.dll` gegen MSBuild-/Workspace-/Process-/`SourceFileCatalog.LoadAsync`-Referenzen. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Architecture/FastTestsRuntimeDependencyGuardFixture.cs`** — assembly-weites Laufzeit-Gegenstueck des statischen Deny-Listen-Guards mit Start- und Abschlusscheck. (zuletzt: step-024)
 - **`src/AiNetLinter.IntegrationTests/xunit.runner.json` / `Platform/MsBuildFixtureHostAssemblyFixture.cs`** — Collections laufen parallel; zwei Assembly-Fixtures laden BaselineMini und SymbolGraphMini beim Assembly-Start durch das gemeinsame Max-2-Gate. (zuletzt: step-024)
+- **`src/AiNetLinter.IntegrationTests/Mcp/Platform/` (step-025-Ziel)** — Integration-lokaler
+  besitzender MCP-Prozesshost, lazy read-only SymbolGraph-Assembly-Fixture, exklusive Raw-/Mutable-
+  Hosts und ein Max-2-Lifetimebudget sollen die Legacy-Handshake-only-Bremse ersetzen. (zuletzt:
+  planning step-025)
+- **`src/AiNetLinter.FastTests/Mcp/` / `src/AiNetLinter.IntegrationTests/Mcp/` (step-025-Ziel)** —
+  Zielorte der 21 Klassen umfassenden Mini-MCP-Familie: direkte Policy-/Loading-/Symbolvertraege
+  bleiben schnell; stdio-, Datei-, Git-, Fehler-, Retry-, Framing- und Refresh-Grenzen bleiben
+  Integration. (zuletzt: planning step-025)
+- **`src/AiNetLinter/Commands/McpServerCommand.cs` / `src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs`** — belegte Runtime-Callchain des Fast-Cleanup-Funds: nur `RunAsync` startet den Hintergrund-Load bis `MSBuildLocator`/`MSBuildWorkspace`; reine Resolution-/Config-/CallLog-Helper bleiben ohne vorsorglichen Produktionssplit direkt testbar. (zuletzt: planning step-026)
+- **`TestResults/step025-fast-target.trx` / `step025-fast-partial.trx`** — Diagnoseevidenz: 49/49 fachlich grün mit rotem Runtime-Cleanup versus 31/31 cleanup-grüne direkte Loading-/GetImpact-/Options-/Registration-Verträge; keine Pre-Move-Legacy-Baseline vorhanden. (zuletzt: planning step-026)
+- **`src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs` / `McpProcessLifetimeGate.cs` / `ReadOnlyMcpHostFixture.cs`** — uncommittierter Step-025-Zielhost; Step 026 muss Retry, Startfehler/Cancellation/Disposal, lazy Einmalmaterialisierung und vollständige Max-2-Prozesslebensdauer noch vertraglich schließen. (zuletzt: planning step-026)
 - **`src/AiNetLinter.FastTests/Architecture/TestCategoryProfileGuardTests.cs`** — Kategorien-/Profilguard fuer `AiNetLinter.FastTests`: jede Testklasse mit `[Fact]`/`[Theory]` braucht genau einen Trait aus {Unit, Component}. (zuletzt: step-002)
 - **`src/AiNetLinter.IntegrationTests/Architecture/TestCategoryProfileGuardTests.cs`** — gleiches Prinzip fuer `AiNetLinter.IntegrationTests`, erlaubte Kategorien {Integration, Dogfood, Performance, Stress}. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Core/LinterEngineSolutionAnalysisTests.cs`** — MSE-Baustein "vorbereitete Solution analysieren": Component-Test, ruft `LinterEngine.RunAsync(Solution)` direkt gegen eine per `RoslynTestSolutionFactory.CreateSolution` aufgebaute Zwei-Klassen-Solution auf (kein MSBuild), prueft Verletzungs- und regelkonformen Pfad; erster echter Konsument der Testplattform-Factory. (zuletzt: step-006)
@@ -159,11 +181,19 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogFixture.cs`** — laedt `SymbolGraphMini` bereits einmal fuer read-only Tooltests; entsorgt beim Dispose nur den Fixture-Workspace, nicht den besitzenden Katalog. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs`** — trotz des Namens ein reiner `LinterAnalyzer`-Regeltest, kein Architekturguard; Namensverwechslung beim Aufbau der neuen Guards vermeiden. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/SymbolGraphCatalogCollection.cs`** — teilt die Catalog-Fixture heute ueber eine Collection und serialisiert dadurch zahlreiche Tooltestklassen. (zuletzt: planning)
-- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — teilt einen MCP-Prozess ueber eine bewusst serielle Collection und ist fuer die kuenftige Zustands-/Exklusivitaetspruefung relevant. (zuletzt: planning)
+- **`src/AiNetLinter.Tests/Fixtures/SymbolGraphMcpCollection.cs`** — teilt den Legacy-Mini-MCP-
+  Prozess ueber eine serielle Collection; step-025 ersetzt diesen Vertrag fuer 21 Zielklassen
+  durch einen parallelen lazy read-only Host. (zuletzt: planning step-025)
 - **`src/AiNetLinter.Tests/Fixtures/McpMiniFixtureBase.cs`** — im parallelen DRY-Refactoring entstehende gemeinsame Basis fuer Mini-Fixture-MCP-Clients. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/McpLiveRepositoryFixture.cs`** — haelt einen echten Repository-MCP-Prozess collection-weit am Leben. (zuletzt: planning)
-- **`src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs`** — begrenzt Subprozessstarts und ist fuer kuenftige Start-/Load-/Lifetime-Budgets relevant. (zuletzt: planning)
-- **`src/AiNetLinter.Tests/Mcp/McpTestClient.cs`** — kapselt Prozessstart, MCP-Handshake, Loading-Retry, Toolaufrufe und Disposal. (zuletzt: planning)
+- **`src/AiNetLinter.Tests/Fixtures/SubprocessConcurrencyGate.cs`** — Legacy-Gate mit Kapazitaet
+  sechs; `McpTestClient` haelt sein Lease nur bis zum Handshake. Step 025 baut den Zielhost mit
+  Max-2-Volllebensdauerbudget, waehrend CLI-/Stress-Legacykonsumenten bis zu ihrem eigenen Schnitt
+  bestehen bleiben. (zuletzt: planning step-025)
+- **`src/AiNetLinter.Tests/Mcp/McpTestClient.cs`** — Legacy-Harness fuer Start, Handshake,
+  Loading-Retry, Toolaufrufe und Disposal; nach step-025 nur noch von bewusst ausgeschlossenen
+  CLI-/Stress-/Dogfood-Resten zu verwenden, nicht als Zielarchitektur zu kopieren. (zuletzt:
+  planning step-025)
 - **`src/AiNetLinter.Tests/Fixtures/LoadFixtureBuilder.cs`** — erzeugt synthetische Platten-Solutions fuer definierte Lastprofile. (zuletzt: planning)
 - **`src/AiNetLinter.Tests/Fixtures/LoadFixtureMeasurementsTests.cs`** — enthaelt derzeit Performance-Messungen unter der Integration-Kategorie. (zuletzt: planning)
 
@@ -192,6 +222,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.Tests/Commands/McpServerCommand*Tests.cs`** — enthaelt direkte Command-, Loading-, Fehler- und echte MCP-Prozessvertraege mit unterschiedlichen Ziel-Lebensdauern. (zuletzt: planning)
 
 ## Messdaten
+
+- **`src/AiNetLinter.IntegrationTests/Mcp/Platform/`** — besitzt den lazy read-only MCP-Host, den Retry und das vollständige Max-2-Prozessbudget der migrierten Mini-MCP-Kohorte. (zuletzt: step-026)
 
 - **`TestResults/final-run.trx`** — vorhandener 1.471-Test-Snapshot mit 228,38 Sekunden Wall Clock fuer die Ausgangsdiagnose. (zuletzt: planning)
 - **`TestResults/fulltest.trx`** — aelterer 1.349-Test-Snapshot mit 158,18 Sekunden Wall Clock als Hinweis auf Laufzeitdrift. (zuletzt: planning)

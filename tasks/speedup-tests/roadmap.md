@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # EPIC-5 nach step-024-Kritiker-Audit abgeschlossen
+last_updated: 2026-08-13  # EPIC-6-step-025 wird durch step-026 korrigiert
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -175,6 +175,21 @@ obsolet markiert) — kein starres Vorab-Dokument.
       read-only MCP-Host für idempotente Smokes, exklusive Hosts für Framing/Retry/Refresh,
       Parallelitätsbudgets (`SubprocessConcurrencyGate`-Nachfolger), getrennte Runner-Konfiguration
       pro Assembly — Konzept §9 Punkt 5, Leitplanke 5, 6 (Runner-/Prozessparallelität).
+      **In Arbeit → step-025, Korrektur step-026:** Als groesste vollständige erste Hostfamilie werden 21
+      Mini-Solution-MCP-Klassen (121 statische Fälle) fachlich auf FastTests und IntegrationTests
+      geschnitten. Ein lazy assembly-weiter SymbolGraph-Prozess bedient ausschließlich
+      idempotente read-only Smokes; Framing, Retry, Fehler, Git-Impact und Refresh erhalten
+      exklusive Hosts. Das Max-2-Prozessbudget umfasst die volle Lebensdauer, der Integration-
+      Runner wird endlich gedeckelt. TD-001/TD-006 werden im berührten Scope geschlossen.
+      Der uncommittierte Step-025-Stand baut, aber sein Fast-Zielgate endet trotz 49/49 bestandener
+      Methoden rot: ein `McpServerCommand.RunAsync`-Vertrag startet transitiv den
+      `SourceFileCatalogLoader` und lädt drei verbotene MSBuild-Assemblies, die der Assembly-
+      Cleanup korrekt meldet. Step 026 verschiebt diesen echten Hostvertrag nach Integration,
+      stellt die vollständige 121er-Vertragsmatrix wieder her und schließt Retry/Framing/Git/
+      Refresh, Prozessbudget, Guards, Ledger und Debt-Evidenz ab. Allgemeine CLI-Self-Repo-
+      Verträge, Dogfood, Performance und Stress bleiben getrennte EPIC-6-Host-/Cadence-Schnitte;
+      weder Step 025 noch Step 026 führt ein Stressprofil oder einen vollen
+      `Category!=Stress`-Lauf aus.
 - [ ] EPIC-7: Restmigration, Legacy-Löschung, finale Laufprofile, Messbericht, Dokumentation —
       verbleibende Kohorten, Ledger auf `pending = 0`, physisches Löschen von `AiNetLinter.Tests`
       und Solution-Bereinigung, Abschlussverifikation aller Profile (Unit/Component/Integration/

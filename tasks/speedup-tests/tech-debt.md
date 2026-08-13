@@ -28,12 +28,12 @@ werden. Default bei Unsicherheit ist `nein`.
 
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
-| TD-001 | `src/AiNetLinter.Tests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Zwei Tests flaky unter Volllast des vollen `Category!=Stress`-Parallel-Laufs (stdout-Framing gegen echten MCP-Subprozess), isoliert stabil grün. |
+| TD-001 | `src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandJsonRpcFramingTests.cs` | mittel | nein | Framing-Wiederholung und PID-Nachweis sind in step-026 grün geschlossen. |
 | TD-002 | `src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` | mittel | nein | Durch die Migration nach `SkeletonMapFilterTests` gegen `FilterMini` geschlossen. |
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | Generator-Synchronisation stellt `*Tests` und den separaten `AiNetLinter.TestKit`-Override wieder her (geschlossen in step-023). |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar bereinigt. |
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
-| TD-006 | `src/AiNetLinter.FastTests/Architecture` / `src/AiNetLinter.IntegrationTests/Architecture` | niedrig | nein | `GetCategoryTraits` ist in beiden Assembly-Guards gleich implementiert. |
+| TD-006 | `src/AiNetLinter.TestKit/TestCategoryTraitInspector.cs` | niedrig | nein | Testframeworkfreier Trait-Inspector ist in step-026 geschlossen. |
 | TD-007 | `src/AiNetLinter.FastTests/Maps/Skeleton` / `src/AiNetLinter.IntegrationTests/Maps/Skeleton` | niedrig | nein | Zwei lokale identische `CreateConfig`-Helfer fuer Skeleton-Tests. |
 | TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.IntegrationTests` / `src/AiNetLinter.Tests` | mittel | nein | Testhelfer und Compile-Error-Assertions bleiben waehrend des Stranglers parallel. |
 | TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Durch `LoadedFixture` mit mehreren realen Konsumenten geschlossen. |
@@ -62,7 +62,7 @@ werden. Default bei Unsicherheit ist `nein`.
   gehört der Test in `konzept.md` Leitplanke 5 „exklusive Hosts" oder braucht ein höheres
   Start-/Read-Timeout unter Last.
 - **Auto-Fixable:** nein — Ursache unklar, braucht Untersuchung/Ermessen, keine mechanische Korrektur.
-- **Status:** offen
+- **Status:** geschlossen in step-026 — drei Framing-Läufe mit je 3/3 grün; PID-Snapshots vor/nach dem engen Integration-Gate zeigten keine neue zugehörige Prozesskette.
 
 ### TD-002 — Selbstlint-Testglob deckt neue Testprojekte nicht ab [Priorität: mittel] [Auto-Fixable: nein]
 
@@ -171,7 +171,7 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Eine gemeinsame Hilfsschicht zwischen den Testassemblies braucht eine Abhaengigkeits- und Sichtbarkeitsentscheidung; sie liegt ausserhalb des Find-Symbol-Schnitts.
 - **Vorschlag:** Bei einer gemeinsamen Guard-Weiterentwicklung einen testframeworkfreien Helper im TestKit bewerten.
 - **Auto-Fixable:** nein — Zielort und Assembly-Abhaengigkeit erfordern Architektur-Ermessen.
-- **Status:** offen
+- **Status:** geschlossen in step-026 — beide Kategorieguards verwenden `TestCategoryTraitInspector`; Fast-Zielgate 69/69 und enger Integrationsguard grün.
 
 ### TD-007 — Lokale Skeleton-Testkonfigurationen bewerten [Priorität: niedrig] [Auto-Fixable: nein]
 
