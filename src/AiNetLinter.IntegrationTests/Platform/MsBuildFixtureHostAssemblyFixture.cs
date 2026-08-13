@@ -9,3 +9,4 @@ using AiNetLinter.IntegrationTests.Platform;
 // AiNetLinterRichtlinien.mdc §4). Testklassen erhalten Zugriff ueber einen Konstruktorparameter
 // vom Typ MsBuildFixtureHost.
 [assembly: AssemblyFixture(typeof(MsBuildFixtureHost))]
+[assembly: AssemblyFixture(typeof(AiNetLinter.IntegrationTests.Mcp.Tools.SymbolGraphCatalogFixture))]

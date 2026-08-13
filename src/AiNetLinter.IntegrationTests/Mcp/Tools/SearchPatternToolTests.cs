@@ -5,14 +5,13 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Integration")]
 public sealed class SearchPatternToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
@@ -120,7 +119,7 @@ public sealed class SearchPatternToolTests
         Directory.CreateDirectory(generatedDir);
         File.WriteAllText(Path.Combine(generatedDir, "Generated.cs"), "PATTERN_ANCHOR_999 content");
 
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
@@ -144,7 +143,7 @@ public sealed class SearchPatternToolTests
         Directory.CreateDirectory(worktreeDir);
         File.WriteAllText(Path.Combine(worktreeDir, "Duplicate.cs"), "PATTERN_ANCHOR_WORKTREE_777 content");
 
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(
@@ -194,7 +193,7 @@ public sealed class SearchPatternToolTests
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await SearchPatternTool.ExecuteAsync(

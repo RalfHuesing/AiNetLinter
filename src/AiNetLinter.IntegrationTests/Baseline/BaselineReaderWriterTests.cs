@@ -1,9 +1,9 @@
 using AiNetLinter.Baseline;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.IntegrationTests.Baseline;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class BaselineReaderWriterTests
 {
     [Fact]

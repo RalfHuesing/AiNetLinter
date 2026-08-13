@@ -2,7 +2,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.FastTests.Baseline;
 
 [Trait("Category", "Unit")]
 public sealed class BaselineViolationFilterTests

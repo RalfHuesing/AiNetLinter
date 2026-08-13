@@ -4,10 +4,9 @@ using System;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Cache;
-using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Cache;
+namespace AiNetLinter.IntegrationTests.Cache;
 
 /// <summary>
 ///: Zwei Cache-Loads mit unterschiedlichen
@@ -18,7 +17,7 @@ namespace AiNetLinter.Tests.Cache;
 /// Diese Tests beweisen die Isolations-Eigenschaft ueber die neu eingefuehrte
 /// <see cref="AnalysisCacheManager.CachePath"/>-Property (internal, fuer Test-Sichtbarkeit).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class AnalysisCacheManagerIsolationTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cache-iso-");
@@ -26,7 +25,6 @@ public sealed class AnalysisCacheManagerIsolationTests : IDisposable
     public void Dispose() => _tempDir.Dispose();
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Load_DifferentSolutionPaths_ProduceDifferentHashes()
     {
         // A3-Kern: zwei Loesungen mit unterschiedlichem Pfad und gleichem rulesJson
@@ -46,7 +44,6 @@ public sealed class AnalysisCacheManagerIsolationTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Load_SameSolutionPath_ProduceSameHash()
     {
         // Identische Loesung mit identischem rulesJson => identischer Hash-Anteil.
@@ -64,7 +61,6 @@ public sealed class AnalysisCacheManagerIsolationTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Load_DifferentRulesJson_ProduceDifferentHashes()
     {
         // A3-Kern: unterschiedlicher rulesJson-Inhalt (bei gleichem Solution-Pfad) muss
@@ -84,7 +80,6 @@ public sealed class AnalysisCacheManagerIsolationTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Load_SamePathCaseInsensitive_ProduceSameHash()
     {
         // Konzept Z. 619-621: Cache-Filenamen muessen case-insensitive sein, damit

@@ -12,9 +12,9 @@ using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Cache;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.IntegrationTests.Core;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class LinterEngineCacheTests : IDisposable
 {
     private readonly string _tempDir;

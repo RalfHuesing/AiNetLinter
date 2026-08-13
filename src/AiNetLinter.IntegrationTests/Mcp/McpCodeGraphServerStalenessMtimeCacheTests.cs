@@ -5,10 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
-using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// Verifiziert, dass der MCP-Server den Verzeichnis-Sweep in Phase 2 (SweepForNewFiles)
@@ -24,7 +23,7 @@ public sealed class McpCodeGraphServerStalenessMtimeCacheTests
     public async Task GetCurrentSolution_CalledTwiceWithoutDirChange_SkipsSweepOnSecondCall()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 
@@ -43,7 +42,7 @@ public sealed class McpCodeGraphServerStalenessMtimeCacheTests
     public async Task GetCurrentSolution_CalledAfterNewFile_TriggersSweepAgain()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 
@@ -81,7 +80,7 @@ public sealed class McpCodeGraphServerStalenessMtimeCacheTests
         // Lint-/Score-Ergebnisse verfaelschen, sobald der Sweep unter Last (irgendeine
         // Directory-mtime-Aenderung im Baum) auslöste.
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 

@@ -2,11 +2,10 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.IntegrationTests.Baseline;
 
 [Trait("Category", "Integration")]
 public sealed class BaselineCliTests
@@ -24,7 +23,7 @@ public sealed class BaselineCliTests
                 Verbose = false,
                 CreateBaselinePath = baselinePath,
             };
-            var console = new TestLintConsole();
+            var console = new RecordingLintConsole();
             var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
 
             Assert.Equal(0, exitCode);
@@ -54,7 +53,7 @@ public sealed class BaselineCliTests
                 Verbose = false,
                 CreateBaselinePath = baselinePath,
             };
-            var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new TestLintConsole());
+            var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
             Assert.Equal(0, createExitCode);
 
             var auditArgs = new LinterArgs
@@ -64,7 +63,7 @@ public sealed class BaselineCliTests
                 ConfigPath = configPath,
                 BaselinePath = baselinePath,
             };
-            var auditConsole = new TestLintConsole();
+            var auditConsole = new RecordingLintConsole();
             var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
 
             Assert.Equal(0, auditExitCode);
@@ -90,7 +89,7 @@ public sealed class BaselineCliTests
                 Verbose = false,
                 CreateBaselinePath = baselinePath,
             };
-            await MaintenanceCommand.TryRunAsync(createArgs, default, new TestLintConsole());
+            await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
             var baselineBefore = BaselineReader.Read(baselinePath);
             var relativePath = baselineBefore.Files.Keys.First(k => k.EndsWith("ViolatingClass.cs", StringComparison.OrdinalIgnoreCase));
 
@@ -103,7 +102,7 @@ public sealed class BaselineCliTests
                 ConfigPath = workspace.ConfigPath,
                 BaselinePath = baselinePath,
             };
-            var auditConsole = new TestLintConsole();
+            var auditConsole = new RecordingLintConsole();
             var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
 
             Assert.Equal(1, auditExitCode);
@@ -112,7 +111,7 @@ public sealed class BaselineCliTests
             var baselineAfter = BaselineReader.Read(baselinePath);
             Assert.NotEqual(baselineBefore.Files[relativePath], baselineAfter.Files[relativePath]);
 
-            var secondAuditConsole = new TestLintConsole();
+            var secondAuditConsole = new RecordingLintConsole();
             var secondAuditExitCode = await AuditCommand.RunAsync(auditArgs, default, secondAuditConsole);
             Assert.Equal(0, secondAuditExitCode);
         }
@@ -137,8 +136,18 @@ public sealed class BaselineCliTests
 
     private static string GetFixtureRoot()
     {
-        var root = CliProcessRunner.FindSolutionRoot();
-        return Path.Combine(root, "tests", "Fixtures", "BaselineMini");
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AiNetLinter.slnx")))
+            {
+                return Path.Combine(directory.FullName, "tests", "Fixtures", "BaselineMini");
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
     }
 
 }

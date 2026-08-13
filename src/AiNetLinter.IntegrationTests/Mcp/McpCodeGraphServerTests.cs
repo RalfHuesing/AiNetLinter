@@ -1,10 +1,9 @@
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
-using AiNetLinter.Tests.Fixtures;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 [Trait("Category", "Integration")]
 public sealed class McpCodeGraphServerTests
@@ -22,7 +21,7 @@ public sealed class McpCodeGraphServerTests
     public async Task GetCurrentSolution_NoFileChanges_ReturnsSameSolutionVersion()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var first = server.GetCurrentSolution();
@@ -36,7 +35,7 @@ public sealed class McpCodeGraphServerTests
     public async Task GetCurrentSolution_FileModifiedOnDisk_ReflectsNewContent()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();
@@ -58,7 +57,7 @@ public sealed class McpCodeGraphServerTests
     public async Task GetCurrentSolution_FileTouchedWithoutContentChange_SkipsSolutionUpdate()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var first = server.GetCurrentSolution();
@@ -73,7 +72,7 @@ public sealed class McpCodeGraphServerTests
     public async Task GetCurrentSolution_FileDeletedOnDisk_DoesNotThrow()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();
@@ -89,7 +88,7 @@ public sealed class McpCodeGraphServerTests
     public async Task GetCurrentSolution_ConcurrentCalls_DoNotThrow()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         _ = server.GetCurrentSolution();

@@ -5,11 +5,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
-using AiNetLinter.Tests.Fixtures;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// Verifiziert das B.2-Verhalten des Verzeichnis-Sweeps in
@@ -24,7 +23,7 @@ public sealed class McpCodeGraphServerFileDiscoveryTests
     public async Task GetCurrentSolution_NewFileAddedAfterStart_AppearsInSolution()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 
@@ -49,7 +48,7 @@ public sealed class McpCodeGraphServerFileDiscoveryTests
     public async Task GetCurrentSolution_FileDeletedAfterStart_RemovedFromSolution()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 
@@ -70,7 +69,7 @@ public sealed class McpCodeGraphServerFileDiscoveryTests
     public async Task GetCurrentSolution_GeneratedFile_NotAdded()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 

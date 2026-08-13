@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.IntegrationTests.Baseline;
 
 [Trait("Category", "Integration")]
 public sealed class WebBaselineTests
@@ -44,7 +43,7 @@ public sealed class WebBaselineTests
                 ConfigPath = workspace.ConfigPath,
                 CreateBaselinePath = baselinePath,
             };
-            var createConsole = new TestLintConsole();
+            var createConsole = new RecordingLintConsole();
             var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, createConsole);
 
             Assert.Equal(0, createExitCode);
@@ -94,7 +93,7 @@ public sealed class WebBaselineTests
                 ConfigPath = workspace.ConfigPath,
                 CreateBaselinePath = baselinePath,
             };
-            var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new TestLintConsole());
+            var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
             Assert.Equal(0, createExitCode);
 
             // 4. Modify css file to violate the MaxCssLineCount rule (3 lines > 2 limit)
@@ -108,7 +107,7 @@ public sealed class WebBaselineTests
                 ConfigPath = workspace.ConfigPath,
                 BaselinePath = baselinePath,
             };
-            var auditConsole = new TestLintConsole();
+            var auditConsole = new RecordingLintConsole();
             var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
 
             Assert.Equal(1, auditExitCode);
@@ -118,7 +117,7 @@ public sealed class WebBaselineTests
             //    the second audit reports no violations. This implicitly verifies that the
             //    baseline file was updated (no need to re-read the JSON for an explicit assert,
             //    the audit-result invariant is stronger).
-            var secondAuditConsole = new TestLintConsole();
+            var secondAuditConsole = new RecordingLintConsole();
             var secondAuditExitCode = await AuditCommand.RunAsync(auditArgs, default, secondAuditConsole);
             Assert.Equal(0, secondAuditExitCode);
         }

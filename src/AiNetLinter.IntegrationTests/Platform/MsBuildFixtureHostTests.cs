@@ -10,8 +10,7 @@ namespace AiNetLinter.IntegrationTests.Platform;
 /// <summary>
 /// Helfer fuer <see cref="MsBuildFixtureHostTests"/>/<see cref="MsBuildFixtureHostSharedInstanceTests"/>:
 /// erzwingt und belegt die Objektidentitaet der von <see cref="MsBuildFixtureHost"/> geteilten
-/// <see cref="Solution"/> ueber mehrere Testklassen hinweg (Nachweis "einmal geladen", analog zum
-/// Referenz-Caching-Test aus step-006). Ordnungsunabhaengig: der Vergleich laeuft bei jeder
+/// <see cref="Solution"/> ueber mehrere Testklassen hinweg. Ordnungsunabhaengig: der Vergleich laeuft bei jeder
 /// Instanziierung einer der beiden Testklassen, nicht nur bei einer bestimmten Ausfuehrungsreihenfolge.
 /// </summary>
 internal static class SharedSolutionIdentityWitness

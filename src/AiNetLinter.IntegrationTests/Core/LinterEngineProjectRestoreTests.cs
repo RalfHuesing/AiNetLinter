@@ -10,9 +10,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
-using AiNetLinter.Tests.Output;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.IntegrationTests.Core;
 
 /// <summary>
 /// End-to-End-Absicherung des Restore-Erkennungsmechanismus (siehe rationale.md): ein Projekt
@@ -20,7 +19,7 @@ namespace AiNetLinter.Tests.Core;
 /// unaufloesbarem using erzeugen, sondern genau EINE klare <c>PROJECT_NOT_RESTORED</c>-Diagnose.
 /// Ein sauber restoretes Projekt mit einem echten unaufloesbaren using muss weiterhin melden.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class LinterEngineProjectRestoreTests : IDisposable
 {
     private readonly string _tempDir;
@@ -82,7 +81,7 @@ public sealed class Foo
     public async Task Run_SuppressesPhantomViolation_AndReportsSingleDiagnostic_WhenProjectNotRestored()
     {
         var solution = CreateSolutionWithProjectFile(restored: false);
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var engine = new LinterEngine(CreateConfigWithPhantomCheck(), console: console);
 
         var violations = await engine.RunAsync(solution, noCache: true);
@@ -95,7 +94,7 @@ public sealed class Foo
     public async Task Run_ReportsPhantomViolation_WhenProjectRestoredButUsingUnresolvable()
     {
         var solution = CreateSolutionWithProjectFile(restored: true);
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var engine = new LinterEngine(CreateConfigWithPhantomCheck(), console: console);
 
         var violations = await engine.RunAsync(solution, noCache: true);

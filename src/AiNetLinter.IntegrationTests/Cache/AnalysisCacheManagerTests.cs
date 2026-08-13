@@ -7,11 +7,10 @@ using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Cache;
 
-using AiNetLinter.Tests.Fixtures;
 
-namespace AiNetLinter.Tests.Cache;
+namespace AiNetLinter.IntegrationTests.Cache;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class AnalysisCacheManagerTests : IDisposable
 {
     private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-cachetests-");

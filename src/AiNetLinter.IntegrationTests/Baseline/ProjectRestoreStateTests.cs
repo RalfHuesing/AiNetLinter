@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis;
 using Xunit;
 using AiNetLinter.Baseline;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.IntegrationTests.Baseline;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class ProjectRestoreStateTests : IDisposable
 {
     private readonly string _tempDir;

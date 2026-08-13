@@ -20,13 +20,12 @@ namespace AiNetLinter.IntegrationTests.Platform;
 /// </summary>
 public sealed class MsBuildFixtureHost : IAsyncLifetime
 {
-    private IsolatedFixtureLease? lease;
-    private SourceFileCatalog? catalog;
+    private LoadedFixture? fixture;
 
     /// <summary>
     /// Der einmalig geladene Katalog. Nicht <see langword="null"/> nach <see cref="InitializeAsync"/>.
     /// </summary>
-    public SourceFileCatalog Catalog => catalog ?? throw new InvalidOperationException(
+    public SourceFileCatalog Catalog => fixture?.Catalog ?? throw new InvalidOperationException(
         $"{nameof(MsBuildFixtureHost)} wurde noch nicht initialisiert.");
 
     /// <summary>
@@ -36,31 +35,12 @@ public sealed class MsBuildFixtureHost : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        var root = FindSolutionRoot();
-        lease = IsolatedFixtureLease.CopyFixture(root, "BaselineMini");
-        catalog = await SourceFileCatalog.LoadAsync(lease.RootPath);
+        fixture = await LoadedFixture.CreateAsync("BaselineMini");
     }
 
     public ValueTask DisposeAsync()
     {
-        catalog?.Dispose();
-        lease?.Dispose();
-        return ValueTask.CompletedTask;
+        return fixture?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }

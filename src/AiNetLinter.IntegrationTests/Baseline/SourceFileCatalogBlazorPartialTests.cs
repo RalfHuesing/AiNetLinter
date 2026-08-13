@@ -5,11 +5,11 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.IntegrationTests.Baseline;
 
 /// <summary>
 /// Belegt, dass die vom Razor-Source-Generator erzeugte zweite Partial-Deklaration einer
@@ -27,7 +27,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
     public async Task LoadAsync_BlazorPartialFixture_ResolvesComponentBaseWithoutCompileErrors()
     {
         using var fixture = new BlazorPartialMiniFixtureWorkspace();
-        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
 
         var errorsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(catalog.Solution, CancellationToken.None);
         Assert.False(errorsByFile.TryGetValue(fixture.SiteViewCsPath, out _));
@@ -42,7 +42,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
     public async Task GetIndexScope_BlazorPartialFixture_ShowsNoCompileErrorHint()
     {
         using var fixture = new BlazorPartialMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
@@ -57,7 +57,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
     public async Task GetFileSkeleton_SiteViewRazorCs_ShowsComponentBaseAndNoCompileError()
     {
         using var fixture = new BlazorPartialMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(

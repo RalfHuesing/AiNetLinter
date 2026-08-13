@@ -8,18 +8,17 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
-using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="ReloadConfigTool"/>. Jeder Test nutzt eine frische
 /// <see cref="SymbolGraphMiniFixtureWorkspace"/>-Kopie statt einer geteilten Fixture, weil die
 /// Tests rules.json-Dateien auf der Platte schreiben und die Server-Config zur Laufzeit mutieren.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class ReloadConfigToolTests
 {
     private static Config CreateConfig() => new() { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
@@ -40,7 +39,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_ExplicitConfigPathDoesNotExist_ReturnsRecoverableConfigNotFound_OldConfigStaysActive()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var originalConfig = CreateConfig();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig, UsedDefaultConfig: true)));
@@ -64,7 +63,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_ExplicitConfigPathInvalidJson_ReturnsRecoverableConfigInvalid_OldConfigStaysActive()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var originalConfig = CreateConfig();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig, UsedDefaultConfig: true)));
@@ -87,7 +86,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_ExplicitValidConfigPath_ReplacesConfigAndReportsSummary()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 
@@ -108,7 +107,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_NoConfigPath_ReloadsPreviouslyResolvedPathPickingUpDiskChange()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var existingPath = Path.Combine(fixture.RootPath, "rules.json");
         await File.WriteAllTextAsync(existingPath, "{ \"Global\": {}, \"Metrics\": {} }");
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
@@ -129,7 +128,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_NoConfigPathAndNoneDiscoverable_ReturnsInformationalTextWithoutError()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 
@@ -145,7 +144,7 @@ public sealed class ReloadConfigToolTests
     public async Task ExecuteAsync_NoConfigPathButRulesJsonAppearedNextToSolution_AutoDiscoversAndReloadsIt()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 

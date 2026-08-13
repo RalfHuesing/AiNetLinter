@@ -6,18 +6,17 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="GetServerHealthTool"/>: LoadState/Solution/Config-Anzeige,
 /// Uptime/Refresh-Aggregate und die Call-Log-Aggregation (aktiv vs. nicht aktiv).
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Integration")]
 public sealed class GetServerHealthToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;

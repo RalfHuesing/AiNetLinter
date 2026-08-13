@@ -9,14 +9,13 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Integration")]
 public sealed class GetIndexScopeToolTests
 {
     private readonly SymbolGraphCatalogFixture _fixture;
@@ -109,7 +108,7 @@ public sealed class GetIndexScopeToolTests
         File.WriteAllText(Path.Combine(generatedDir, "Generated.xaml"), "<Page />");
         File.WriteAllText(Path.Combine(generatedDir, "Generated.html"), "<html></html>");
 
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
@@ -124,28 +123,28 @@ public sealed class GetIndexScopeToolTests
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
+        AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
     }
 
     [Fact]
     public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
     {
         using var fixture = new SingleCompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
+        AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
     }
 
     /// <summary>
@@ -156,5 +155,12 @@ public sealed class GetIndexScopeToolTests
     {
         var label = count == 1 ? "Datei" : "Dateien";
         return $"{extension}: {count} {label} {suffix}";
+    }
+
+    private static void AssertStartsWithCompileErrorHeader(string text, int expectedFileCount)
+    {
+        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        var expected = expectedFileCount == 1 ? "1 Datei hat Compile-Fehler" : $"{expectedFileCount} Dateien haben Compile-Fehler";
+        Assert.Contains(expected, text, StringComparison.Ordinal);
     }
 }

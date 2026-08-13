@@ -9,7 +9,7 @@ using AiNetLinter.Cache;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Cache;
+namespace AiNetLinter.FastTests.Cache;
 
 [Trait("Category", "Unit")]
 public sealed class CacheEntryMapperTests

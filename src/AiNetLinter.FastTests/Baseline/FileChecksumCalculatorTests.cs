@@ -1,7 +1,7 @@
 using AiNetLinter.Baseline;
 using Xunit;
 
-namespace AiNetLinter.Tests.Baseline;
+namespace AiNetLinter.FastTests.Baseline;
 
 [Trait("Category", "Unit")]
 public sealed class FileChecksumCalculatorTests

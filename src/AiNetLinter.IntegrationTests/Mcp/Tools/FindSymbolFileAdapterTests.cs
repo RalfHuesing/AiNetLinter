@@ -107,38 +107,19 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
 
 public sealed class FindSymbolFileAdapterFixture : IAsyncLifetime
 {
-    private IsolatedFixtureLease? lease;
-    private SourceFileCatalog? catalog;
+    private LoadedFixture? fixture;
 
-    public Microsoft.CodeAnalysis.Solution Solution => (catalog ?? throw new InvalidOperationException(
+    public Microsoft.CodeAnalysis.Solution Solution => (fixture ?? throw new InvalidOperationException(
         $"{nameof(FindSymbolFileAdapterFixture)} wurde noch nicht initialisiert.")).Solution;
 
     public async ValueTask InitializeAsync()
     {
-        lease = IsolatedFixtureLease.CopyFixture(FindSolutionRoot(), "SymbolGraphMini");
-        catalog = await SourceFileCatalog.LoadAsync(lease.RootPath);
+        fixture = await LoadedFixture.CreateAsync("SymbolGraphMini");
     }
 
     public ValueTask DisposeAsync()
     {
-        catalog?.Dispose();
-        lease?.Dispose();
-        return ValueTask.CompletedTask;
+        return fixture?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }
