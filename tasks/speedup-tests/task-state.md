@@ -2,7 +2,7 @@
 status: executing  # executing | blocked | done | aborted
 task: speedup-tests
 started_at: 2026-08-12
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 rules_dir: .agents/rules
 total_steps: 18  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-018
@@ -19,7 +19,7 @@ current_step: step-018
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
-- **Zuletzt aktualisiert:** 2026-08-12
+- **Zuletzt aktualisiert:** 2026-08-13
 
 ## Steps
 
@@ -49,7 +49,7 @@ mehr nötig.>
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
-| step-018 | EPIC-4 | in_progress (Neuplanung) | Read-only MCP-Roslyn-Super-Step (24 Klassen) | - | e864407 (Blocker-Zwischenstand) | - | e864407 |
+| step-018 | EPIC-4 | open (neu geplant) | Plattenfreier MCP-Roslyn-Super-Step (20 Klassen, 4 Rueck-Moves) | - | e864407 (Roh-Renames; Fortsetzung offen) | - | e864407 |
 
 ## Config (optional)
 

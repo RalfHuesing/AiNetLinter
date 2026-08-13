@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # Step-018 nach Super-Step-Vorgabe auf 24 read-only Analyzer-/Scanner-/Toolklassen erweitert
+last_updated: 2026-08-13  # Step-018 nach Zwischenstandsdiagnose als plattenfreier 20-Klassen-Super-Step neu geplant
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -130,17 +130,17 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Duplicate-Detection-Engine-Familie:** `DuplicateDetectionEngineTests` (zwei Dateien) und
       `RefactoringDriftEngineTests` wechselten gemeinsam auf die vorhandene In-Memory-Factory; ein
       zusätzlicher Local-Function-Vertrag schloss die beim Engine-Audit gefundene Lücke.
-      **step-018 plant gemäß der Super-Step-Vorgabe aus Commit `04dce94` als nächsten großen Teil
-      die read-only MCP-Roslyn-Analyzer-/Scanner-/Toolkohorten:** 24 kompatible
-      Legacy-Dateien/Testklassen wechseln in 14 Batch-Items gemeinsam nach FastTests und verwenden
-      vorbereitete bzw. szenariolokale In-Memory-Solutions. Der Schnitt umfasst Duplicate
-      Detection, Dependency-/
-      Call-/Symbolgraph, File-Skeleton/CSharp-Hotspots, Type-Hierarchy/DI, Violations, Metrics,
-      Pattern Detect, Safeguard, gemeinsame Toolresults und den reinen Suppression-Scanner. Er führt
-      keine Produkt-Seam ein; die zwei reinen `LinterAnalyzer`-Semantikkohorten sind im selben
-      Strukturmove enthalten. Sieben gemischte Tooldateien
-      mit Nicht-C#-Dateisuche, Config-/Call-Log-Mutation oder Git-Impact bleiben bewusst außerhalb,
-      ebenso MSBuild-, Prozess-, Repo- und alle EPIC-5/6-Kohorten.
+      **step-018 ist nach dem in `e864407` committeten 24er Roh-Move als plattenfreier Super-Step
+      neu geplant:** 20 kompatible Analyzer-/Scanner-/Toolklassen bleiben im Batch und verwenden
+      zeilengetreue SymbolGraph-, CompileError- und DI-`ProjectSpec`s, einen pfadlosen Serverkontext
+      sowie eine fokussierte Faulting-Solution-Fixture. `DependencyGraphToolTests`,
+      `GetFileSkeletonToolTests`, `GetSymbolBodyToolTests` und `SuppressionScannerTests` werden als
+      vorwaertsgerichtete Renames wieder ins Legacy-Projekt verschoben: Ihre Dateiargument-/
+      Server-Refresh- bzw. `ScanFile`-Vertraege sind ohne neue Produkt-Seam echte Plattenvertraege.
+      Der verbleibende Schnitt umfasst Duplicate Detection, Dependency-Scanner, Call-/Symbolgraph,
+      CSharp-Hotspots, Type-Hierarchy/DI, Violations, Metrics, Pattern Detect, Safeguard,
+      Toolresults und zwei reine `LinterAnalyzer`-Semantikkohorten. Zuvor ausgeschlossene Nicht-C#-,
+      Config-/Call-Log-, Git-, MSBuild-, Prozess-, Repo- und EPIC-5/6-Kohorten bleiben ausserhalb.
 - [ ] EPIC-5: MSBuild-/Fixture-/Baseline-/Datei-/Refresh-Kohorte migrieren — `MsBuildFixtureHost`,
       `IsolatedFixtureLease`, Fidelity-/Paritätstests zwischen In-Memory- und echter MSBuild-Welt
       — Konzept §9 Punkt 4, Leitplanke 4.
