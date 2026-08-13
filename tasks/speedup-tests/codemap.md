@@ -21,8 +21,9 @@ last_updated: 2026-08-13
      In-Memory-Factory migriert; Tool-Dispatch-Vertraege blieben getrennt. -->
 
 <!-- step-018: EPIC-4 Teil 5 -- interne McpCodeGraphServer-ReadOnlySolutionSnapshot-Seam trennt
-     vorbereitete virtuelle Solutions vom unveraenderten Live-Refresh-Pfad; 23 read-only Klassen
-     liegen in FastTests, SuppressionScannerTests bleibt wegen ScanFile im Legacy-Projekt. -->
+     vorbereitete virtuelle Solutions vom unveraenderten Live-Refresh-Pfad; residente Roslyn-
+     Dokumenttexte laufen ueber WalkedFile/SolutionFileWalker, 23 read-only Klassen liegen in
+     FastTests, SuppressionScannerTests bleibt wegen ScanFile im Legacy-Projekt. -->
 
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
@@ -109,8 +110,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter.FastTests/Maps/Skeleton/SkeletonMapFilterTests.cs`** — Component-Zielort der 18 Skeleton-Filterverträge gegen den assembly-weit vorbereiteten `FilterMini`-Snapshot. (zuletzt: step-013)
 - **`src/AiNetLinter.IntegrationTests/Maps/Skeleton/SkeletonMapBuilderAdapterTests.cs`** — Integration-Zielort der zwei Pfad-/MSBuild-Adapterverträge gegen eine isolierte `FilterMini`-Kopie. (zuletzt: step-013)
 - **~~`src/AiNetLinter.Tests/Cli/FilterCliIntegrationTests.cs` / `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs`~~** — Legacy-Quellen seit step-013 obsolet; die Abdeckung liegt in den Fast-/Integration-Zieltests. (zuletzt: step-013)
-- **`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`** — uebergibt Catalog oder Hintergrund-Loader an den residenten MCP-Server. (zuletzt: planning)
-- **`src/AiNetLinter/Mcp/McpCodeGraphServer*.cs`** — verwaltet residente Solution, Refresh und Datei-Staleness und trennt read-only von mutierenden Testszenarien. (zuletzt: planning)
+- **`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs` / `McpCodeGraphServer.cs`** — trennen den internen read-only `Solution`-Snapshot ohne Refresh vom unveraenderten Catalog-/LoadFunc-Livepfad. (zuletzt: step-018)
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/SolutionFileWalker.cs` / `WalkedFile.cs` / `GetHotspotsScanner.cs` / `MetricsTree/MetricsTreeScanner.cs`** — der gemeinsame Walker traegt residente Roslyn-Dokumente fuer virtuelle Snapshot-Analysen und behaelt den Dateifallback fuer den Livepfad. (zuletzt: step-018)
 - **`src/AiNetLinter/Mcp/Tools/`** — enthaelt Scanner- und Tool-Einstiege, die ueberwiegend gegen eine vorhandene Solution testbar sind. (zuletzt: planning)
 
 ## Bestehende Testplattform

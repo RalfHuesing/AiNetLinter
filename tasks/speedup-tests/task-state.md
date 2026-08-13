@@ -1,5 +1,5 @@
 ---
-status: executing  # executing | blocked | done | aborted
+status: done  # executing | blocked | done | aborted
 task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-13
@@ -12,7 +12,7 @@ current_step: step-018
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `done (pending re-audit)`
 - **Steps gesamt:** 18 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
 - **Aktueller Schritt:** `step-018`
@@ -49,7 +49,7 @@ mehr nötig.>
 | step-015 | EPIC-4 | done | Duplicate-Detection-Scanner auf In-Memory-Plattform | - | 9abadf9 | approved | 63d3333 |
 | step-016 | EPIC-4 | done | Refactoring-Drift-Scanner auf In-Memory-Plattform | - | 14ea50c | approved | 7578235 |
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
-| step-018 | EPIC-4 | done (pending audit) | Fuenf rohe FastTests-Helper auf virtuelle Snapshots schliessen | - | f0dbacc | - | f0dbacc |
+| step-018 | EPIC-4 | done (pending re-audit) | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | issues -> re-audit ausstehend | Code f0dbacc; Doku-Korrekturcommit folgt |
 
 ## Config (optional)
 
