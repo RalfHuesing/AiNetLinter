@@ -51,7 +51,7 @@ mehr nötig.>
 | step-017 | EPIC-4 | done | Duplicate-Detection-Engine auf In-Memory-Plattform | - | b8730a7 | approved | 7f54028 |
 | step-018 | EPIC-4 | done | Kumulativer MCP-Read-only-Snapshot-Super-Step (23 Klassen, Suppression Legacy) | - | e864407 -> f0dbacc | approved (Re-Audit 9cc8b73) | Code e864407/f0dbacc; Doku b1a59b7; Review 9cc8b73 |
 | step-019 | EPIC-4 | issues→pending re-audit (via step-020) | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | issues (af61a93) | Code 6413510; Doku 1c9c531; Review af61a93 |
-| step-020 | EPIC-4 | done (pending audit) | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | pending audit | Code 5041b00; Doku folgt |
+| step-020 | EPIC-4 | done (pending audit) | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | pending audit | Code 5041b00; Doku 9f60d03 |
 
 ## Config (optional)
 

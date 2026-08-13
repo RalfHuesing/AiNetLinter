@@ -39,7 +39,7 @@ IntegrationTests-Verträge.
   ```
 - **Branch:** main
 - **Push:** nein (lokal)
-- **Doku-Commit:** separater, zweiter Commit folgt.
+- **Doku-Commit:** `9f60d03` (`docs(tasks): dokumentiere Find-Symbol-Konsolidierung [speedup-tests]`).
 
 ## Build-/Test-Output
 
