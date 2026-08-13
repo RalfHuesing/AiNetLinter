@@ -7,7 +7,7 @@ using AiNetLinter.Cache;
 using AiNetLinter.Mcp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 ///: Ein MCP-Server + ein gleichzeitiger
@@ -23,6 +23,7 @@ namespace AiNetLinter.Tests.Commands;
 /// AnalysisCacheManager _cache;</c>), dann findet <c>GetFields</c>/<c>GetProperties</c>
 /// diesen Eintrag und der Test schlaegt fehl.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpServerCommandCacheBypassTests
 {
     [Fact]

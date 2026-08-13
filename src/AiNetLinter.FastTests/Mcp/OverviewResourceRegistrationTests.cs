@@ -10,7 +10,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Tests fuer die MCP-Resource <c>ainetlinter://overview</c> (<see cref="OverviewResourceRegistration"/>):

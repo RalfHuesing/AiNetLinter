@@ -7,10 +7,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// First-Principles-E2E-Test fuer das JSON-RPC-Framing des MCP-Servers: spawnt einen
@@ -166,7 +167,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
     private static async Task<System.Collections.Generic.List<string>> RunAndCollectStdoutAsync(
         string targetDirectory, string[] frames)
     {
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync();
+        using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         if (!File.Exists(exePath))
         {

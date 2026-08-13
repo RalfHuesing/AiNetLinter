@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using AiNetLinter.TestKit;
 
@@ -14,7 +15,7 @@ internal abstract class FixtureWorkspace : IDisposable
 
     public string RootPath => lease.RootPath;
 
-    public void Dispose() => lease.Dispose();
+    public virtual void Dispose() => lease.Dispose();
 
     private static string FindSolutionRoot()
     {
@@ -41,6 +42,59 @@ internal sealed class SymbolGraphMiniFixtureWorkspace : FixtureWorkspace
     public string GreeterPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "Greeter.cs");
     public string CallerPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "Caller.cs");
     public string OtherCallerPath => Path.Combine(RootPath, "src", "SymbolGraphMini", "OtherCaller.cs");
+}
+
+internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
+{
+    public GitImpactMiniFixtureWorkspace() : base("GitImpactMini") => InitializeGitRepository();
+
+    public string CalculatorPath => Path.Combine(RootPath, "src", "GitImpactMini", "Calculator.cs");
+
+    public void ChangeCalculatorAddBodyWithoutCommitting()
+    {
+        var content = File.ReadAllText(CalculatorPath);
+        File.WriteAllText(CalculatorPath, content.Replace(
+            "public int Add(int a, int b) => a + b;", "public int Add(int a, int b) => a + b + 0;"));
+    }
+
+    public void CommitCalculatorAddBodyChange()
+    {
+        ChangeCalculatorAddBodyWithoutCommitting();
+        RunGit("add -A");
+        RunGit("commit -m change");
+    }
+
+    public override void Dispose()
+    {
+        foreach (var path in Directory.EnumerateFileSystemEntries(RootPath, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+        base.Dispose();
+    }
+
+    private void InitializeGitRepository()
+    {
+        RunGit("init");
+        RunGit("config user.email ainetlinter-test@example.com");
+        RunGit("config user.name AiNetLinterTest");
+        RunGit("add -A");
+        RunGit("commit -m initial");
+    }
+
+    private void RunGit(string arguments)
+    {
+        using var process = Process.Start(new ProcessStartInfo("git", arguments)
+        {
+            WorkingDirectory = RootPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        });
+        process!.WaitForExit();
+        if (process.ExitCode != 0) throw new InvalidOperationException($"git {arguments} schlug fehl.");
+    }
 }
 
 internal sealed class CompileErrorMiniFixtureWorkspace : FixtureWorkspace { public CompileErrorMiniFixtureWorkspace() : base("CompileErrorMini") { } }

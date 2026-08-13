@@ -4,12 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Mcp;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Test fuer: eine Datei-Aenderung
@@ -29,10 +29,10 @@ public sealed class McpServerCommandStalenessTests
     [Fact]
     public async Task RunAsync_FileChangeBetweenCalls_ReflectedInSecondCall()
     {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var fixture = new SymbolGraphMiniFixtureWorkspace();
         var callerPath = fixture.CallerPath;
 
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
+        await using var client = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
 
         // 1) Initial: CallerRenamedXyz existiert noch nicht in Caller.cs.
         var initial = await client.CallToolAsync(

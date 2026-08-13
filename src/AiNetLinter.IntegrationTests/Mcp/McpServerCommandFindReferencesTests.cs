@@ -1,26 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
-[Collection("SymbolGraphMcp")]
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandFindReferencesTests
 {
-    private readonly SymbolGraphMcpFixture _fixture;
+    private readonly ReadOnlyMcpHostFixture fixture;
 
-    public McpServerCommandFindReferencesTests(SymbolGraphMcpFixture fixture)
+    public McpServerCommandFindReferencesTests(ReadOnlyMcpHostFixture fixture)
     {
-        _fixture = fixture;
+        this.fixture = fixture;
     }
 
     [Fact]
     public async Task RunAsync_ValidFixture_FindReferencesWithMaxResultsTruncates()
     {
-        var text = await _fixture.Client.CallToolGetTextAsync(
+        var host = await fixture.GetHostAsync();
+        var text = await host.CallToolGetTextAsync(
             "find_references",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet", ["maxResults"] = 2 });
 

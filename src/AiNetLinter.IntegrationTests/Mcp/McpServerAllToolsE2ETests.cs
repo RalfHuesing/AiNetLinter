@@ -3,24 +3,23 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// Umfassende E2E- und Edge-Case-Tests fuer alle 9 MCP-Tools.
-/// Nutzt <see cref="SymbolGraphMcpFixture"/> zur einmaligen Fixture- und Client-Instanziierung pro Testklasse.
+/// Nutzt <see cref="ReadOnlyMcpHostFixture"/> zur einmaligen lazy Host-Instanziierung.
 /// </summary>
 [Trait("Category", "Integration")]
-[Collection("SymbolGraphMcp")]
 public sealed class McpServerAllToolsE2ETests
 {
-    private readonly SymbolGraphMcpFixture _fixture;
+    private readonly ReadOnlyMcpHostFixture _fixture;
 
-    public McpServerAllToolsE2ETests(SymbolGraphMcpFixture fixture)
+    public McpServerAllToolsE2ETests(ReadOnlyMcpHostFixture fixture)
     {
         _fixture = fixture;
     }

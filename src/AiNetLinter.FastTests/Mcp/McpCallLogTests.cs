@@ -10,13 +10,14 @@ using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Unit-Tests fuer <see cref="McpCallLog"/>: verifiziert die JSONL-Schreib-Mechanik
 /// (Konzept-Felder ts/tool/args/lines/truncated/duration_ms/empty), die
 /// Trunkierungs-/Leermenge-Erkennung und das automatische Loeschen leerer Log-Files.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpCallLogTests
 {
     [Fact]
@@ -431,7 +432,19 @@ public sealed class McpCallLogTests
         return Path.Combine(dir, "calls.log");
     }
 
-    private static void TryDelete(string path) => TestHelper.TryDeleteLogFileAndDirectory(path);
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+            var directory = Path.GetDirectoryName(path);
+            if (directory is not null && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+        catch (IOException)
+        {
+            return;
+        }
+    }
 
     private static JsonElement ParseSingleEntry(string[] lines)
     {

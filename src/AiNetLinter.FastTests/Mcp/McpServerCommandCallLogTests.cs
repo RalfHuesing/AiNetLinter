@@ -4,10 +4,10 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Commands;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Unit-Tests fuer die Verdrahtung des <c>--mcp-log</c>-Flags in <see cref="McpServerCommand"/>:
@@ -17,31 +17,30 @@ namespace AiNetLinter.Tests.Commands;
 /// Diese Tests beruehren bewusst nur die statischen <see cref="McpServerCommand.TryCreateCallLog"/>-
 /// und <see cref="McpServerCommand.BuildDefaultLogPath"/>-Helfermethoden, ohne einen Subprozess zu spawnen.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpServerCommandCallLogTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void TryCreateCallLog_PathNotSet_ReturnsNull()
     {
         var solutionPath = Path.Combine(Path.GetTempPath(), "non-existent-fake.slnx");
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var exeDir = MakeExeDir();
 
         var result = McpServerCommand.TryCreateCallLog(null, solutionPath, exeDir, console);
 
         Assert.Null(result);
-        Assert.Empty(console.Errors);
+        Assert.Empty(console.ErrorLines);
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task TryCreateCallLog_RelativePath_CreatesLogFileRelativeToSolutionDir()
     {
         var solutionDir = Path.Combine(Path.GetTempPath(), "mcp-log-rel-" + Guid.NewGuid().ToString("N"));
         var solutionPath = Path.Combine(solutionDir, "Only.slnx");
         var relativeLog = ".mcp-log/calls.log";
         var exeDir = MakeExeDir();
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         try
         {
             Directory.CreateDirectory(solutionDir);
@@ -63,13 +62,12 @@ public sealed class McpServerCommandCallLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task TryCreateCallLog_AbsolutePath_CreatesLogFileAtGivenPath()
     {
         var tempFile = Path.Combine(Path.GetTempPath(), "mcp-log-abs-" + Guid.NewGuid().ToString("N") + ".log");
         var fakeSolution = Path.Combine(Path.GetTempPath(), "fake.slnx");
         var exeDir = MakeExeDir();
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         try
         {
             await using var log = McpServerCommand.TryCreateCallLog(tempFile, fakeSolution, exeDir, console);
@@ -85,13 +83,12 @@ public sealed class McpServerCommandCallLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task TryCreateCallLog_WhitespacePath_CreatesDefaultLog()
     {
         var solutionDir = Path.Combine(Path.GetTempPath(), "mcp-log-default-" + Guid.NewGuid().ToString("N"));
         var solutionPath = Path.Combine(solutionDir, "Only.slnx");
         var exeDir = MakeExeDir();
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var today = DateTime.Now.ToString("yyyy-MM-dd");
         try
         {
@@ -101,7 +98,7 @@ public sealed class McpServerCommandCallLogTests
             await using var log = McpServerCommand.TryCreateCallLog("   ", solutionPath, exeDir, console);
 
             Assert.NotNull(log);
-            Assert.Empty(console.Errors);
+            Assert.Empty(console.ErrorLines);
             var expected = Path.Combine(exeDir, "logs", "Only", today, "calls.jsonl");
             Assert.Equal(expected, log!.LogPath);
         }
@@ -113,25 +110,23 @@ public sealed class McpServerCommandCallLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void TryCreateCallLog_WhitespacePathNoSolution_WritesErrorAndReturnsNull()
     {
         var exeDir = MakeExeDir();
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
 
         var result = McpServerCommand.TryCreateCallLog("   ", null, exeDir, console);
 
         Assert.Null(result);
-        var error = Assert.Single(console.Errors);
+        var error = Assert.Single(console.ErrorLines);
         Assert.Contains("[ERROR]:", error);
         Assert.Contains("RESOURCE_NOT_FOUND", error);
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void BuildDefaultLogPath_WithSolution_IncludesSolutionName()
     {
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var today = DateTime.Now.ToString("yyyy-MM-dd");
 
         var result = McpServerCommand.BuildDefaultLogPath(
@@ -140,16 +135,15 @@ public sealed class McpServerCommandCallLogTests
             console);
 
         Assert.NotNull(result);
-        Assert.Empty(console.Errors);
+        Assert.Empty(console.ErrorLines);
         var expected = Path.Combine("opt", "ainet", "logs", "MyApp", today, "calls.jsonl");
         Assert.Equal(expected, result);
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void BuildDefaultLogPath_DateIsLocal()
     {
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var localToday = DateTime.Now.ToString("yyyy-MM-dd");
 
         var result = McpServerCommand.BuildDefaultLogPath(
@@ -158,13 +152,12 @@ public sealed class McpServerCommandCallLogTests
             console);
 
         Assert.NotNull(result);
-        Assert.Empty(console.Errors);
+        Assert.Empty(console.ErrorLines);
         var expectedDateSegment = Path.Combine("logs", "MyApp", localToday, "calls.jsonl");
         Assert.EndsWith(expectedDateSegment, result);
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveMcpLogPath_AbsolutePath_ReturnsAsIs()
     {
         var absolute = Path.Combine("C:", "tmp", "x.log");

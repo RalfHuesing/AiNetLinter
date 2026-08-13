@@ -4,7 +4,7 @@ using System.Reflection;
 using AiNetLinter.Mcp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Strukturelle A3-Sicherung fuer den Konstruktor von <see cref="McpCodeGraphServer"/>:
@@ -12,6 +12,7 @@ namespace AiNetLinter.Tests.Mcp;
 /// weil der Konstruktor am projektweiten <c>MaxConstructorDependencies: 5</c>-Limit
 /// (siehe <c>AiNetLinter.mdc</c>) angelangt war und ein weiterer Parameter den Build gebrochen haette.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpCodeGraphServerConstructorTests
 {
     [Fact]

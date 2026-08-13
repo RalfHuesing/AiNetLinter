@@ -3,26 +3,26 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 [Trait("Category", "Integration")]
-[Collection("SymbolGraphMcp")]
 public sealed class McpServerCommandMissHintTests
 {
-    private readonly SymbolGraphMcpFixture _fixture;
+    private readonly ReadOnlyMcpHostFixture fixture;
 
-    public McpServerCommandMissHintTests(SymbolGraphMcpFixture fixture)
+    public McpServerCommandMissHintTests(ReadOnlyMcpHostFixture fixture)
     {
-        _fixture = fixture;
+        this.fixture = fixture;
     }
 
     [Fact]
     public async Task RunAsync_NonCsOnlyMatch_ReturnsExplicitMissHint()
     {
-        var text = await _fixture.Client.CallToolGetTextAsync(
+        var host = await fixture.GetHostAsync();
+        var text = await host.CallToolGetTextAsync(
             "find_symbol",
             new Dictionary<string, object?> { ["namePattern"] = "userService" });
 

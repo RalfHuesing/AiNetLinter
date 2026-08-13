@@ -1,30 +1,29 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Mcp;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Tests fuer <c>get_impact</c>.
 /// </summary>
-[Collection("SymbolGraphMcp")]
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandGetImpactTests
 {
-    private readonly SymbolGraphMcpFixture _fixture;
+    private readonly ReadOnlyMcpHostFixture fixture;
 
-    public McpServerCommandGetImpactTests(SymbolGraphMcpFixture fixture)
+    public McpServerCommandGetImpactTests(ReadOnlyMcpHostFixture fixture)
     {
-        _fixture = fixture;
+        this.fixture = fixture;
     }
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetImpactSymbolBranchWithMaxResultsTruncates()
     {
-        var text = await _fixture.Client.CallToolGetTextAsync(
+        var host = await fixture.GetHostAsync();
+        var text = await host.CallToolGetTextAsync(
             "get_impact",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet", ["maxResults"] = 2 });
 
@@ -35,10 +34,10 @@ public sealed class McpServerCommandGetImpactTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetImpactGitBranchWithMaxResultsTruncates()
     {
-        using var fixture = new GitImpactMiniFixtureWorkspace();
-        fixture.ChangeCalculatorAddBodyWithoutCommitting();
+        var workspace = new GitImpactMiniFixtureWorkspace();
+        workspace.ChangeCalculatorAddBodyWithoutCommitting();
 
-        await using var client = await McpTestClient.ConnectAsync(fixture.RootPath);
+        await using var client = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
 
         var text = await client.CallToolGetTextAsync(
             "get_impact",

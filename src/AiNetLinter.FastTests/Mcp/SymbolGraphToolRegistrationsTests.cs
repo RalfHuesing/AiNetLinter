@@ -5,7 +5,7 @@ using System.Linq;
 using AiNetLinter.Mcp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Regressionstests fuer die in <see cref="SymbolGraphToolRegistrations"/> gepflegten

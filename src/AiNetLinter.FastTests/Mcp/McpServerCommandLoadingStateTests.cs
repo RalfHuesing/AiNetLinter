@@ -3,13 +3,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.Tests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// E2E-Beweis fuer den dritten Server-Zustand <see cref="ServerLoadState.Loading"/>:
@@ -18,17 +19,9 @@ namespace AiNetLinter.Tests.Commands;
 /// Nach Abschluss des Loads liefern dieselben Tools reguläre Antworten. Beide Pfade
 /// sind ueber das Test-Subprozess-Protokoll (kein Mocking) abgesichert.
 /// </summary>
-[Trait("Category", "Integration")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class McpServerCommandLoadingStateTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
-
-    public McpServerCommandLoadingStateTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
-
     [Fact]
     public void RunAsync_LoadFuncStillRunning_ToolReturnsLoadingInfo()
     {
@@ -140,7 +133,8 @@ public sealed class McpServerCommandLoadingStateTests
 
         Assert.Equal(ServerLoadState.Loading, server.LoadState);
 
-        release.SetResult(_fixture.Catalog);
+        using var context = new McpInMemoryTestContext();
+        release.SetResult(new SourceFileCatalog(context.Solution, hasLoadingErrors: false));
 
         var safetyTimeout = Task.Delay(TimeSpan.FromSeconds(20));
         var winner = await Task.WhenAny(server.LoadTask!, safetyTimeout);

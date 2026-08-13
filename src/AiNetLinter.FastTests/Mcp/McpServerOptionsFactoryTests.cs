@@ -3,7 +3,7 @@
 using AiNetLinter.Mcp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsFactory"/>: konzentriert auf den zentralen Scope-Hint,

@@ -4,10 +4,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Test fuer: ein Zielverzeichnis
@@ -48,7 +48,7 @@ public sealed class McpServerCommandAmbiguityE2ETests
             CreateNoWindow = true,
         };
 
-        var result = await CliProcessRunner.RunAsync(processInfo, TimeSpan.FromSeconds(10));
+        var result = await McpProcessRunner.RunAsync(processInfo, TimeSpan.FromSeconds(10));
 
         Assert.True(
             !result.TimedOut,

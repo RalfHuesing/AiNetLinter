@@ -5,12 +5,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Tests fuer den
@@ -51,7 +52,7 @@ public sealed class McpServerCommandErrorHandlingTests
             // (viele parallele Threads/Subprozesse gleichzeitig) reichten 30s nicht immer,
             // beobachtet als TaskCanceledException in SendRequestAsync.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
+            using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(cts.Token);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
             var result = await CallToolWithLoadingRetryAsync(
                 client,
@@ -91,7 +92,7 @@ public sealed class McpServerCommandErrorHandlingTests
 
         // 60s statt 30s, siehe Begruendung in RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        using var lease = await SubprocessConcurrencyGate.AcquireAsync(cts.Token);
+                using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var result = await CallToolWithLoadingRetryAsync(
             client,

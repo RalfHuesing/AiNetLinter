@@ -1,9 +1,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Architecture;
@@ -23,35 +22,13 @@ public sealed class TestCategoryProfileGuardTests
     [Fact]
     public void EveryTestClass_HasExactlyOneValidCategoryTrait()
     {
-        var assembly = typeof(TestCategoryProfileGuardTests).Assembly;
-        var testClasses = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract && t.IsPublic)
-            .Where(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Any(m => m.GetCustomAttributes().Any(a => a.GetType().Name is "FactAttribute" or "TheoryAttribute")));
-
-        var violations = new List<string>();
-        foreach (var type in testClasses)
-        {
-            var categories = GetCategoryTraits(type);
-            if (categories.Count != 1 || !AllowedCategories.Contains(categories[0]))
-            {
-                violations.Add($"{type.FullName} [{string.Join(",", categories)}]");
-            }
-        }
+        var violations = TestCategoryTraitInspector.GetTestClasses(typeof(TestCategoryProfileGuardTests).Assembly)
+            .Select(type => (Type: type, Categories: TestCategoryTraitInspector.GetCategoryTraits(type)))
+            .Where(entry => entry.Categories.Count != 1 || !AllowedCategories.Contains(entry.Categories.Single()))
+            .Select(entry => $"{entry.Type.FullName} [{string.Join(",", entry.Categories)}]")
+            .ToList();
 
         Assert.True(violations.Count == 0,
             $"Testklassen mit ungueltigem/fehlendem Kategorie-Trait (erlaubt: {string.Join(",", AllowedCategories)}): {string.Join("; ", violations)}");
-    }
-
-    private static List<string> GetCategoryTraits(Type type)
-    {
-        return type.GetCustomAttributes()
-            .Where(a => a.GetType().Name == "TraitAttribute")
-            .Select(a => (
-                Name: a.GetType().GetProperty("Name")?.GetValue(a) as string,
-                Value: a.GetType().GetProperty("Value")?.GetValue(a) as string))
-            .Where(t => t.Name == "Category" && t.Value != null)
-            .Select(t => t.Value!)
-            .ToList();
     }
 }

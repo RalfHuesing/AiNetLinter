@@ -99,8 +99,14 @@ public sealed class TestMigrationLedgerConsistencyTests
 
     private static string ExtractPathFromCoverageLocation(string coverageLocation)
     {
-        // Erwartetes Format bei migrated/consolidated: ein Dateipfad, optional in Backticks.
-        return coverageLocation.Trim('`', ' ');
+        var trimmed = coverageLocation.Trim();
+        if (trimmed.StartsWith('`'))
+        {
+            var closingBacktick = trimmed.IndexOf('`', 1);
+            if (closingBacktick > 1) return trimmed[1..closingBacktick];
+        }
+
+        return trimmed.Split(" — ", StringSplitOptions.None)[0].Trim();
     }
 
     private static HashSet<string> ScanLegacyTestClassNames(string root)

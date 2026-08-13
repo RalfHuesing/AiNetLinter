@@ -3,7 +3,7 @@
 using AiNetLinter.Mcp;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsBuilder"/>: konzentriert auf die Default-Werte
@@ -11,10 +11,10 @@ namespace AiNetLinter.Tests.Mcp;
 /// eigenstaendige, testbare Einheit ist — die Factory-Tests pruefen nur den Endpunkt
 /// <c>Create(state) -&gt; McpServerOptions</c> via realer Integration.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class McpServerOptionsBuilderTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_DefaultName_UsesAinetlinter()
     {
         var options = new McpServerOptionsBuilder().Build();
@@ -23,7 +23,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_DefaultVersion_UsesAssemblyVersion()
     {
         // Der Builder liest die Version aus der Produktiv-Assembly (AiNetLinter.dll),
@@ -38,7 +37,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_DefaultInstructions_IsEmpty()
     {
         var options = new McpServerOptionsBuilder().Build();
@@ -47,7 +45,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithServerName_PropagatesToServerOptions()
     {
         var options = new McpServerOptionsBuilder()
@@ -58,7 +55,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithServerInstructions_PropagatesToServerOptions()
     {
         var options = new McpServerOptionsBuilder()
@@ -69,7 +65,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithoutToolCollection_ProvidesEmptyCollection()
     {
         var options = new McpServerOptionsBuilder().Build();
@@ -79,7 +74,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithServerVersion_PropagatesToServerOptions()
     {
         var options = new McpServerOptionsBuilder()
@@ -90,7 +84,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithoutResourceCollection_ProvidesEmptyCollection()
     {
         var options = new McpServerOptionsBuilder().Build();
@@ -100,7 +93,6 @@ public sealed class McpServerOptionsBuilderTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Build_WithResourceCollection_PropagatesToServerOptions()
     {
         var resources = new ModelContextProtocol.Server.McpServerResourceCollection();
