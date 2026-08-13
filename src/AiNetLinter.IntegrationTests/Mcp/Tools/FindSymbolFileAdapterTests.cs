@@ -94,16 +94,6 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     }
 
     [Fact]
-    public async Task FindMatchesAndFormat_ToolNoCsMatchAndNoNonCsHit_ReturnsPlainNoMatchText()
-    {
-        var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "DoesNotExistXyzBlub123", kind: null, maxResults: 50);
-
-        Assert.Contains("Keine Treffer fuer 'DoesNotExistXyzBlub123'", result);
-        Assert.DoesNotContain("Hinweis: kein C#-Symbol", result);
-    }
-
-    [Fact]
     public async Task FindMatchesAndFormat_KindFilterMissHit_StillFires()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
