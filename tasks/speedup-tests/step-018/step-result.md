@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: done
 type: step-result
 task: speedup-tests
 step: 018
@@ -9,59 +9,63 @@ coded_by: coder
 coded_by_model: gpt-5.6-terra
 coded_by_model_knowledge_cutoff: nicht ausgewiesen
 coded_at: 2026-08-13
-code_commit_hash: n/a
-status_after: blocked
-blocker_category: content
+code_commit_hash: f0dbacc
+status_after: done (pending audit)
+blocker_category: n/a
 ---
 
-# Result Step 018: Read-only MCP-Roslyn-Toolkohorten als In-Memory-Super-Step migrieren
+# Result Step 018: Fuenf rohe FastTests-Helper auf virtuelle Snapshots schliessen
 
 ## Zusammenfassung
 
-Die einmalige Legacy-Baseline war grün (243 Tests). Die 24 vorgesehenen Klassen wurden in die
-FastTests-Zielstruktur überführt und ein lokaler, direkter Snapshot-Kontext begonnen. Der vollständige
-Build bleibt rot; die Migration wird deshalb nicht als Code-Commit gesichert.
+Die fuenf letzten FastTests-Klassen verwenden nun ausschliesslich besitzende virtuelle
+`RoslynTestSolution`-Snapshots bzw. `McpInMemoryTestContext`. Lokale Temp-Verzeichnisse,
+Dateischreiben, manuelle Workspace-/Catalog-Builder und das funktionslose Probeverzeichnis der
+Malfunction-Faelle sind entfernt; alle 62 vorhandenen Testvertraege blieben erhalten.
+
+## Geänderte Dateien
+
+- **item-01:** `src/AiNetLinter.FastTests/Mcp/Tools/DependencyGraphScannerTests.cs` — 15 Scannervertraege auf virtuelle Factory-Snapshots umgestellt.
+- **item-02:** `src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionToolTests.cs` / `DuplicateDetectionToolRefactoringDriftTests.cs` — Tool-Dispatch gegen besitzenden Snapshot-Kontext ausgefuehrt.
+- **item-03:** `src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectScannerTests.cs` / `SafeguardScannerTests.cs` — Scanner- und Faulting-Faelle ohne Dateisystem aufgebaut.
+- **item-04:** `tasks/speedup-tests/step-018/step-plan.md`, `task-state.md`, `codemap.md`, `step-result.md` — Abschlussstatus und Pointer aktualisiert.
+
+## Commit
+
+- **Code-Commit-Hash:** `f0dbacc`
+- **Message:**
+  ```
+  refactor(mcp): migriere Tooltests auf Snapshots [speedup-tests]
+  ```
+- **Branch:** main
+- **Push:** nein (lokal)
+- **Doku-Commit:** separater, zweiter Commit.
 
 ## Build-/Test-Output
 
 ```
-dotnet test src/AiNetLinter.Tests --filter "<24-Klassen-Baselinefilter>" → grün (243 Tests, 0 Fehler)
-dotnet build → rot: 26 Compilefehler in noch nicht portierten Legacy-Fixtureverträgen
+statischer Fuenf-Dateien-Guard (Dateisystem/Catalog/Builder) → grün (0 Treffer; 62 Methoden)
+dotnet test src\AiNetLinter.FastTests --filter "FullyQualifiedName~DependencyGraphScannerTests|FullyQualifiedName~DuplicateDetectionToolTests|FullyQualifiedName~DuplicateDetectionToolRefactoringDriftTests|FullyQualifiedName~PatternDetectScannerTests|FullyQualifiedName~SafeguardScannerTests" → grün (62 Tests, 0 Fehler)
+dotnet test src\AiNetLinter.FastTests --filter "FullyQualifiedName~GetHotspotsToolTests|FullyQualifiedName~MetricsTreeToolTests|FullyQualifiedName~MetricsTreeRoslynScannerTests|FullyQualifiedName~GetCallTreeToolTests|FullyQualifiedName~FindReferencesToolTests|FullyQualifiedName~GetTypeHierarchyToolTests|FullyQualifiedName~GetViolationsToolTests|FullyQualifiedName~PatternDetectToolTests|FullyQualifiedName~SafeguardScannerTests|FullyQualifiedName~SafeguardToolTests|FullyQualifiedName~McpCodeGraphServerReadOnlySnapshotTests|FullyQualifiedName~RoslynTestSolutionFactoryTests" → grün (126 Tests, 0 Fehler)
+dotnet build → grün (0 Warnungen, 0 Fehler)
+dotnet test src\AiNetLinter.FastTests --no-build --filter "FullyQualifiedName~LinterAnalyzerArchitectureRuleTests|FullyQualifiedName~LinterAnalyzerTests|FullyQualifiedName~CallGraphTraversalTests|FullyQualifiedName~DependencyGraphScannerTests|FullyQualifiedName~DependencyGraphToolTests|FullyQualifiedName~DiRegistrationHeuristicsTests|FullyQualifiedName~DuplicateDetectionToolRefactoringDriftTests|FullyQualifiedName~DuplicateDetectionToolTests|FullyQualifiedName~FindReferencesToolTests|FullyQualifiedName~GetCallTreeToolTests|FullyQualifiedName~GetFileSkeletonToolTests|FullyQualifiedName~GetHotspotsToolTests|FullyQualifiedName~GetSymbolBodyToolTests|FullyQualifiedName~GetTypeHierarchyToolTests|FullyQualifiedName~GetViolationsToolTests|FullyQualifiedName~McpToolResultsTests|FullyQualifiedName~MetricsTreeRoslynScannerTests|FullyQualifiedName~MetricsTreeToolTests|FullyQualifiedName~PatternDetectScannerTests|FullyQualifiedName~PatternDetectToolTests|FullyQualifiedName~SafeguardScannerTests|FullyQualifiedName~SafeguardToolTests|FullyQualifiedName~SymbolIdentifierResolverTests|FullyQualifiedName~McpCodeGraphServerReadOnlySnapshotTests|FullyQualifiedName~RoslynTestSolutionFactoryTests" → grün (253 Tests, 0 Fehler)
+dotnet test src\AiNetLinter.Tests --no-build --filter "FullyQualifiedName~McpCodeGraphServerConstructorTests|FullyQualifiedName~McpCodeGraphServerFileDiscoveryTests|FullyQualifiedName~McpCodeGraphServerStalenessMtimeCacheTests" → grün (8 Tests, 0 Fehler)
+dotnet test src\AiNetLinter.Tests --no-build --filter "FullyQualifiedName~SuppressionScannerTests" → grün (1 Test, 0 Fehler)
+dotnet test src\AiNetLinter.FastTests --no-build --filter "FullyQualifiedName~FastTestsDependencyGuardTests|FullyQualifiedName~TestCategoryProfileGuardTests" → grün (3 Tests, 0 Fehler)
+dotnet test src\AiNetLinter.IntegrationTests --no-build --filter "FullyQualifiedName~TestMigrationLedgerConsistencyTests|FullyQualifiedName~LegacyProjectBuildGateTests" → grün (5 Tests, 0 Fehler)
+statischer 23-Scope-Guard, Ledger-Check und git diff --check → grün (0 Treffer; 23 migrated; Suppression pending)
 ```
 
 ## Abweichungen vom Plan
 
-Keine fachliche Scope-Erweiterung vorgenommen. Die drei zulässigen ursachengerechten Korrekturläufe
-endeten in einer breiteren Fixture-Abhängigkeit; daher Status `blocked` statt einer unvollständigen
-Migration mit abgeschwächten Verträgen.
+Keine — Plan 1:1 umgesetzt. Der 126er-Filter war im aktuellen Recovery-6-Plan nur als
+Erwartungswert angegeben und wurde aus dem committed Recovery-4-Plan als zehn Fehlerklassen plus
+Snapshot-Seam- und Factory-Vertraege rekonstruiert; er ergab die erwarteten 126 Tests.
 
 ## Beobachtungen
 
-- `FindReferencesToolTests`, `GetSymbolBodyToolTests` und `GetFileSkeletonToolTests` verwenden
-  konkrete `Workspace`-Pfade der bisherigen Plattenfixture.
-- Sechs Toolklassen verwenden die nicht migrierten Compile-error- und DI-Workspace-Fixtures;
-  `PatternDetect`/`Safeguard`/`Violations` benötigen zusätzlich den Legacy-Helper
-  `TestHelper.CreateFaultySolution`.
-- Diese Abhängigkeiten müssen vor einem neuen Coder-Lauf als deklarative In-Memory-Szenarien
-  vollständig spezifiziert werden; ein Kompatibilitätswrapper würde den verbotenen Datei-/MSBuild-
-  Vertrag in FastTests weitertragen.
+Keine außerhalb des Scopes.
 
 ## Bekannte Unschärfen
 
-Die verschobenen Code-Dateien sind absichtlich uncommittet und der Ledger/CodeMap unverändert.
-Ein Folgeschritt muss die Arbeitskopie entweder gezielt fortsetzen oder die unvollständige
-Strukturmigration vor einer Neuplanung sauber verwerfen.
-
-## Falls Status `blocked`
-
-**Blocker-Art:** `content`
-
-**Blockiert weil:** Der bestehende Step-Plan benennt die lokalen Spezialfälle, liefert aber keine
-vollständige In-Memory-Spezifikation der von acht Klassen gemeinsam genutzten Compile-error- und
-Pfadfixture-Verträge. Nach drei Build-/Fixzyklen ist kein weiterer Versuch zulässig.
-
-**Brauche von Nutzer:** Eine neue JIT-Planung, die diese Fixture-Kohorte als explizite deklarative
-ProjectSpecs samt Fehlerstatus und virtuellen Pfadwerten ausarbeitet.
-
-**Aktueller Stand:** Legacy-Baseline dokumentiert; Code-Worktree enthält uncommittete Übernahmen,
-die weder Build noch Gate bestehen.
+Keine. Die Recovery verbrauchte keinen der beiden verbleibenden ursachengebundenen Fixversuche.

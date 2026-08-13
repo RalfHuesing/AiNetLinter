@@ -45,7 +45,7 @@ bleibt bewusst auf Inventar-Ebene.
 
 | Quelldatei | Testklasse | Produktbereich | Status | Legacy-Filter | Neuer Abdeckungsort |
 |---|---|---|---|---|---|
-| `src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs` | `ArchitectureTests` | Architecture | pending | `FullyQualifiedName~ArchitectureTests` |  |
+| `src/AiNetLinter.Tests/Architecture/ArchitectureTests.cs` | `ArchitectureTests` | Architecture | migrated | `FullyQualifiedName~ArchitectureTests` | `src/AiNetLinter.FastTests/Core/LinterAnalyzerArchitectureRuleTests.cs` |
 | `src/AiNetLinter.Tests/Baseline/BaselineCliTests.cs` | `BaselineCliTests` | Baseline | pending | `FullyQualifiedName~BaselineCliTests` |  |
 | `src/AiNetLinter.Tests/Baseline/BaselineComparerTests.cs` | `BaselineComparerTests` | Baseline | pending | `FullyQualifiedName~BaselineComparerTests` |  |
 | `src/AiNetLinter.Tests/Baseline/BaselineReaderWriterTests.cs` | `BaselineReaderWriterTests` | Baseline | pending | `FullyQualifiedName~BaselineReaderWriterTests` |  |
@@ -125,7 +125,7 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Core/CompoundSuppressionIntegrationTests.cs` | `CompoundSuppressionIntegrationTests` | Core | pending | `FullyQualifiedName~CompoundSuppressionIntegrationTests` |  |
 | `src/AiNetLinter.Tests/Core/ControlFlowResilienceTests.cs` | `ControlFlowResilienceTests` | Core | pending | `FullyQualifiedName~ControlFlowResilienceTests` |  |
 | `src/AiNetLinter.Tests/Core/DiffImpactAnalyzerTests.cs` | `DiffImpactAnalyzerTests` | Core | pending | `FullyQualifiedName~DiffImpactAnalyzerTests` |  |
-| `src/AiNetLinter.Tests/Core/LinterAnalyzerTests.cs` | `LinterAnalyzerTests` | Core | pending | `FullyQualifiedName~LinterAnalyzerTests` |  |
+| `src/AiNetLinter.Tests/Core/LinterAnalyzerTests.cs` | `LinterAnalyzerTests` | Core | migrated | `FullyQualifiedName~LinterAnalyzerTests` | `src/AiNetLinter.FastTests/Core/LinterAnalyzerTests.cs` |
 | `src/AiNetLinter.Tests/Core/LinterEngineCacheTests.cs` | `LinterEngineCacheTests` | Core | pending | `FullyQualifiedName~LinterEngineCacheTests` |  |
 | `src/AiNetLinter.Tests/Core/LinterEngineProjectRestoreTests.cs` | `LinterEngineProjectRestoreTests` | Core | pending | `FullyQualifiedName~LinterEngineProjectRestoreTests` |  |
 | `src/AiNetLinter.Tests/Core/LinterEngineTests.cs` | `LinterEngineTests` | Core | pending | `FullyQualifiedName~LinterEngineTests` |  |
@@ -151,26 +151,26 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonMapBuilderTests.cs` | `SkeletonMapBuilderTests` | Maps | migrated | `FullyQualifiedName~SkeletonMapBuilderTests` | `src/AiNetLinter.IntegrationTests/Maps/Skeleton/SkeletonMapBuilderAdapterTests.cs` |
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonStableIdTests.cs` | `SkeletonStableIdTests` | Maps | pending | `FullyQualifiedName~SkeletonStableIdTests` |  |
 | `src/AiNetLinter.Tests/Maps/Skeleton/SkeletonSyntaxWalkerTests.cs` | `SkeletonSyntaxWalkerTests` | Maps | pending | `FullyQualifiedName~SkeletonSyntaxWalkerTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/CallGraphTraversalTests.cs` | `CallGraphTraversalTests` | Mcp | pending | `FullyQualifiedName~CallGraphTraversalTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/CallGraphTraversalTests.cs` | `CallGraphTraversalTests` | Mcp | migrated | `FullyQualifiedName~CallGraphTraversalTests` | `src/AiNetLinter.FastTests/Mcp/Tools/CallGraphTraversalTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/CallTreeMermaidRendererTests.cs` | `CallTreeMermaidRendererTests` | Mcp | migrated | `FullyQualifiedName~CallTreeMermaidRendererTests` | `src/AiNetLinter.FastTests/Mcp/Tools/CallTreeMermaidRendererTests.cs` |
-| `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphScannerTests.cs` | `DependencyGraphScannerTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphScannerTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphToolTests.cs` | `DependencyGraphToolTests` | Mcp | pending | `FullyQualifiedName~DependencyGraphToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/DiRegistrationHeuristicsTests.cs` | `DiRegistrationHeuristicsTests` | Mcp | pending | `FullyQualifiedName~DiRegistrationHeuristicsTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphScannerTests.cs` | `DependencyGraphScannerTests` | Mcp | migrated | `FullyQualifiedName~DependencyGraphScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DependencyGraphScannerTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/DependencyGraphToolTests.cs` | `DependencyGraphToolTests` | Mcp | migrated | `FullyQualifiedName~DependencyGraphToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DependencyGraphToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/DiRegistrationHeuristicsTests.cs` | `DiRegistrationHeuristicsTests` | Mcp | migrated | `FullyQualifiedName~DiRegistrationHeuristicsTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DiRegistrationHeuristicsTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionScannerTests.cs` | `DuplicateDetectionScannerTests` | Mcp | migrated | `FullyQualifiedName~DuplicateDetectionScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionScannerTests.cs` |
-| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolRefactoringDriftTests.cs` | `DuplicateDetectionToolRefactoringDriftTests` | Mcp | pending | `FullyQualifiedName~DuplicateDetectionToolRefactoringDriftTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolTests.cs` | `DuplicateDetectionToolTests` | Mcp | pending | `FullyQualifiedName~DuplicateDetectionToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` | `FindReferencesToolTests` | Mcp | pending | `FullyQualifiedName~FindReferencesToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolRefactoringDriftTests.cs` | `DuplicateDetectionToolRefactoringDriftTests` | Mcp | migrated | `FullyQualifiedName~DuplicateDetectionToolRefactoringDriftTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionToolRefactoringDriftTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolTests.cs` | `DuplicateDetectionToolTests` | Mcp | migrated | `FullyQualifiedName~DuplicateDetectionToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` | `FindReferencesToolTests` | Mcp | migrated | `FullyQualifiedName~FindReferencesToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/FindSymbolScannerTests.cs` | `FindSymbolScannerTests` | Mcp | pending | `FullyQualifiedName~FindSymbolScannerTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/FindSymbolToolTests.cs` | `FindSymbolToolTests` | Mcp | pending | `FullyQualifiedName~FindSymbolToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetCallTreeToolTests.cs` | `GetCallTreeToolTests` | Mcp | pending | `FullyQualifiedName~GetCallTreeToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetFileSkeletonToolTests.cs` | `GetFileSkeletonToolTests` | Mcp | pending | `FullyQualifiedName~GetFileSkeletonToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetHotspotsToolTests.cs` | `GetHotspotsToolTests` | Mcp | pending | `FullyQualifiedName~GetHotspotsToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetCallTreeToolTests.cs` | `GetCallTreeToolTests` | Mcp | migrated | `FullyQualifiedName~GetCallTreeToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetCallTreeToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetFileSkeletonToolTests.cs` | `GetFileSkeletonToolTests` | Mcp | migrated | `FullyQualifiedName~GetFileSkeletonToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetFileSkeletonToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetHotspotsToolTests.cs` | `GetHotspotsToolTests` | Mcp | migrated | `FullyQualifiedName~GetHotspotsToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetHotspotsToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/GetImpactToolTests.cs` | `GetImpactToolTests` | Mcp | pending | `FullyQualifiedName~GetImpactToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetIndexScopeToolTests.cs` | `GetIndexScopeToolTests` | Mcp | pending | `FullyQualifiedName~GetIndexScopeToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/Tools/GetServerHealthToolTests.cs` | `GetServerHealthToolTests` | Mcp | pending | `FullyQualifiedName~GetServerHealthToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetSymbolBodyToolTests.cs` | `GetSymbolBodyToolTests` | Mcp | pending | `FullyQualifiedName~GetSymbolBodyToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetTypeHierarchyToolTests.cs` | `GetTypeHierarchyToolTests` | Mcp | pending | `FullyQualifiedName~GetTypeHierarchyToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/GetViolationsToolTests.cs` | `GetViolationsToolTests` | Mcp | pending | `FullyQualifiedName~GetViolationsToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetSymbolBodyToolTests.cs` | `GetSymbolBodyToolTests` | Mcp | migrated | `FullyQualifiedName~GetSymbolBodyToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetSymbolBodyToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetTypeHierarchyToolTests.cs` | `GetTypeHierarchyToolTests` | Mcp | migrated | `FullyQualifiedName~GetTypeHierarchyToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetTypeHierarchyToolTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/GetViolationsToolTests.cs` | `GetViolationsToolTests` | Mcp | migrated | `FullyQualifiedName~GetViolationsToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/GetViolationsToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/McpCallLogTests.cs` | `McpCallLogTests` | Mcp | pending | `FullyQualifiedName~McpCallLogTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerConstructorTests.cs` | `McpCodeGraphServerConstructorTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerConstructorTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpCodeGraphServerFileDiscoveryTests.cs` | `McpCodeGraphServerFileDiscoveryTests` | Mcp | pending | `FullyQualifiedName~McpCodeGraphServerFileDiscoveryTests` |  |
@@ -184,20 +184,20 @@ bleibt bewusst auf Inventar-Ebene.
 | `src/AiNetLinter.Tests/Mcp/McpServerOptionsFactoryTests.cs` | `McpServerOptionsFactoryTests` | Mcp | pending | `FullyQualifiedName~McpServerOptionsFactoryTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpTestClientParallelTests.cs` | `McpTestClientParallelTests` | Mcp | pending | `FullyQualifiedName~McpTestClientParallelTests` |  |
 | `src/AiNetLinter.Tests/Mcp/McpTestClientRetryTests.cs` | `McpTestClientRetryTests` | Mcp | pending | `FullyQualifiedName~McpTestClientRetryTests` |  |
-| `src/AiNetLinter.Tests/Mcp/McpToolResultsTests.cs` | `McpToolResultsTests` | Mcp | pending | `FullyQualifiedName~McpToolResultsTests` |  |
+| `src/AiNetLinter.Tests/Mcp/McpToolResultsTests.cs` | `McpToolResultsTests` | Mcp | migrated | `FullyQualifiedName~McpToolResultsTests` | `src/AiNetLinter.FastTests/Mcp/McpToolResultsTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRendererTests.cs` | `MetricsTreeRendererTests` | Mcp | migrated | `FullyQualifiedName~MetricsTreeRendererTests` | `src/AiNetLinter.FastTests/Mcp/Tools/MetricsTreeRendererTests.cs` |
-| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRoslynScannerTests.cs` | `MetricsTreeRoslynScannerTests` | Mcp | pending | `FullyQualifiedName~MetricsTreeRoslynScannerTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeToolTests.cs` | `MetricsTreeToolTests` | Mcp | pending | `FullyQualifiedName~MetricsTreeToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeRoslynScannerTests.cs` | `MetricsTreeRoslynScannerTests` | Mcp | migrated | `FullyQualifiedName~MetricsTreeRoslynScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/MetricsTreeRoslynScannerTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/MetricsTreeToolTests.cs` | `MetricsTreeToolTests` | Mcp | migrated | `FullyQualifiedName~MetricsTreeToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/MetricsTreeToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/OverviewResourceRegistrationTests.cs` | `OverviewResourceRegistrationTests` | Mcp | pending | `FullyQualifiedName~OverviewResourceRegistrationTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectScannerTests.cs` | `PatternDetectScannerTests` | Mcp | pending | `FullyQualifiedName~PatternDetectScannerTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectToolTests.cs` | `PatternDetectToolTests` | Mcp | pending | `FullyQualifiedName~PatternDetectToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectScannerTests.cs` | `PatternDetectScannerTests` | Mcp | migrated | `FullyQualifiedName~PatternDetectScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectScannerTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/PatternDetectToolTests.cs` | `PatternDetectToolTests` | Mcp | migrated | `FullyQualifiedName~PatternDetectToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/RefactoringDriftScannerTests.cs` | `RefactoringDriftScannerTests` | Mcp | migrated | `FullyQualifiedName~RefactoringDriftScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/RefactoringDriftScannerTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/ReloadConfigToolTests.cs` | `ReloadConfigToolTests` | Mcp | pending | `FullyQualifiedName~ReloadConfigToolTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/SafeguardScannerTests.cs` | `SafeguardScannerTests` | Mcp | pending | `FullyQualifiedName~SafeguardScannerTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/SafeguardToolTests.cs` | `SafeguardToolTests` | Mcp | pending | `FullyQualifiedName~SafeguardToolTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/SafeguardScannerTests.cs` | `SafeguardScannerTests` | Mcp | migrated | `FullyQualifiedName~SafeguardScannerTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SafeguardScannerTests.cs` |
+| `src/AiNetLinter.Tests/Mcp/Tools/SafeguardToolTests.cs` | `SafeguardToolTests` | Mcp | migrated | `FullyQualifiedName~SafeguardToolTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SafeguardToolTests.cs` |
 | `src/AiNetLinter.Tests/Mcp/Tools/SearchPatternToolTests.cs` | `SearchPatternToolTests` | Mcp | pending | `FullyQualifiedName~SearchPatternToolTests` |  |
 | `src/AiNetLinter.Tests/Mcp/SymbolGraphToolRegistrationsTests.cs` | `SymbolGraphToolRegistrationsTests` | Mcp | pending | `FullyQualifiedName~SymbolGraphToolRegistrationsTests` |  |
-| `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/SymbolIdentifierResolverTests.cs` | `SymbolIdentifierResolverTests` | Mcp | pending | `FullyQualifiedName~SymbolIdentifierResolverTests` |  |
+| `src/AiNetLinter.Tests/Mcp/Tools/SymbolGraph/SymbolIdentifierResolverTests.cs` | `SymbolIdentifierResolverTests` | Mcp | migrated | `FullyQualifiedName~SymbolIdentifierResolverTests` | `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/SymbolIdentifierResolverTests.cs` |
 | `src/AiNetLinter.Tests/Metrics/AIContextFootprintDeduplicationTests.cs` | `AIContextFootprintDeduplicationTests` | Metrics | pending | `FullyQualifiedName~AIContextFootprintDeduplicationTests` |  |
 | `src/AiNetLinter.Tests/Metrics/CognitiveComplexityGuidanceTests.cs` | `CognitiveComplexityGuidanceTests` | Metrics | pending | `FullyQualifiedName~CognitiveComplexityGuidanceTests` |  |
 | `src/AiNetLinter.Tests/Metrics/CognitiveComplexityWalkerTests.cs` | `CognitiveComplexityWalkerTests` | Metrics | pending | `FullyQualifiedName~CognitiveComplexityWalkerTests` |  |

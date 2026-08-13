@@ -20,10 +20,9 @@ last_updated: 2026-08-13
 <!-- step-017: EPIC-4 Teil 4 -- gemeinsame Duplicate-Detection-Engine-Familie auf die vorhandene
      In-Memory-Factory migriert; Tool-Dispatch-Vertraege blieben getrennt. -->
 
-<!-- planning step-018: EPIC-4 Teil 5 -- interne McpCodeGraphServer-ReadOnlySolutionSnapshot-Seam
-     trennt vorbereitete virtuelle Solutions vom unveraenderten Live-Refresh-Pfad. 23 read-only
-     Analyzer-/Scanner-/Toolklassen bleiben im Super-Step; nur SuppressionScannerTests geht wegen
-     des echten ScanFile-Dateivertrags vorwaertsgerichtet ins Legacy-Projekt zurueck. -->
+<!-- step-018: EPIC-4 Teil 5 -- interne McpCodeGraphServer-ReadOnlySolutionSnapshot-Seam trennt
+     vorbereitete virtuelle Solutions vom unveraenderten Live-Refresh-Pfad; 23 read-only Klassen
+     liegen in FastTests, SuppressionScannerTests bleibt wegen ScanFile im Legacy-Projekt. -->
 
 <!-- step-007: EPIC-2 Teil 2 -- IsolatedFixtureLease (TestKit) und MsBuildFixtureHost (IntegrationTests)
      real im Bestand. -->
@@ -48,6 +47,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`AiNetLinter.slnx`** — enthaelt jetzt fuenf Projekte: Produkt, Legacy-Testprojekt und die drei neuen Zielprojekte (FastTests, IntegrationTests, TestKit). (zuletzt: step-001)
 - **`src/AiNetLinter.Tests/AiNetLinter.Tests.csproj`** — zentraler Testprojektvertrag mit xUnit-v3-, Runsettings- und Produktreferenz; unveraendert (Legacy, Strangler-Quelle). (zuletzt: planning)
 - **`src/AiNetLinter.FastTests/`** — schnelle Assembly (SDK-Testprojekt), importiert `tests/AiNetLinter.TestProject.props` und referenziert `AiNetLinter` + `AiNetLinter.TestKit`. (zuletzt: step-010)
+- **`src/AiNetLinter.FastTests/Fixtures/` und `Mcp/Tools/`** — virtuelle Roslyn-Szenarien, Snapshot-Serverkontext und die 23 migrierten read-only MCP-Analyzer-/Scanner-/Toolverträge. (zuletzt: step-018)
 - **`src/AiNetLinter.FastTests/Core/Checkers/`** — Zielort der 28 aus dem Legacy-Projekt migrierten Checker-Testklassen. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/TestHelper.cs`** — FastTests-lokale Teilmenge der Syntax-/Compilation-Helper fuer die migrierte Checker-Kohorte. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/Web/`** — Zielort der fuenf migrierten Unit-Testklassen fuer CSS-, JS- und Razor-Analyse sowie Web-Suppression. (zuletzt: step-011)
@@ -67,7 +67,7 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 - **`src/AiNetLinter/Core/DuplicateDetection/DuplicateDetectionEngine.cs` / `DuplicateDetectionEngine.RefactoringDrift.cs`** — gemeinsame reine `Solution`-Engine für Clone- und Refactoring-Drift-Fingerprints; ihre direkten Component-Verträge liegen unter `src/AiNetLinter.FastTests/Core/DuplicateDetection/`. (zuletzt: step-017)
 - **`src/AiNetLinter.FastTests/Core/DuplicateDetection/DuplicateDetectionEngineTests.cs` / `DuplicateDetectionEngineFalsePositiveTests.cs` / `RefactoringDriftEngineTests.cs`** — Component-Enginekohorte mit `RoslynTestSolutionFactory`, virtuellen Pfaden und dem kalibrierten FastTests-Helper; die Local-Function-Erkennung ist dort ebenfalls abgedeckt. (zuletzt: step-017)
 - **~~`src/AiNetLinter.Tests/Core/DuplicateDetection/DuplicateDetectionEngineTests.cs` / `DuplicateDetectionEngineFalsePositiveTests.cs` / `RefactoringDriftEngineTests.cs`~~** — seit step-017 obsolet; die drei Legacy-Quellen wurden nach FastTests migriert. (zuletzt: step-017)
-- **`src/AiNetLinter.Tests/Mcp/Tools/DuplicateDetectionToolTests.cs` / `DuplicateDetectionToolRefactoringDriftTests.cs`** — getrennt pending bleibende Tool-Dispatch-Kohorte für Server-Loadstate, Mode-/Argumentvalidierung, Structured Content und Sufficiency-/Truncation-Antworten. (zuletzt: planning step-017)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/DuplicateDetectionToolTests.cs` / `DuplicateDetectionToolRefactoringDriftTests.cs`** — Component-Dispatchverträge gegen den besitzenden In-Memory-Snapshot-Kontext. (zuletzt: step-018)
 - **`src/AiNetLinter.Tests/Output/TestLintConsole.cs`** — von zahlreichen weiterhin pending Legacy-Klassen konsumiertes `ILintConsole`-Testdouble; die Datei kann bei der Filtermigration nicht physisch mitverschoben werden, während ein gemeinsames Zielassembly-Double erst durch reale Fast-/Integration-Konsumenten gerechtfertigt ist. (zuletzt: planning step-013)
 - **`src/AiNetLinter.IntegrationTests/Platform/FilterMiniFidelityTests.cs`** — Fidelity-/Formvergleichstest zwischen Disk- und In-Memory-`FilterMini`, einschließlich positiver und negativer Testprojekt-Erkennung. (zuletzt: step-013)
 - **`tasks/speedup-tests/test-migration-ledger.md`** — Inventar aller 183 Legacy-Testklassen mit Status, Legacy-Filter und neuem Abdeckungsort; der reale Migrationsstand schließt nun auch die Duplicate-Detection-Engine-Familie ein. (zuletzt: step-017)
