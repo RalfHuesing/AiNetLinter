@@ -21,7 +21,8 @@ public sealed record ProjectSpec(
     IReadOnlyList<MetadataReference>? AdditionalReferences = null,
     NullableContextOptions Nullable = NullableContextOptions.Enable,
     IReadOnlyList<string>? PreprocessorSymbols = null,
-    OutputKind OutputKind = OutputKind.DynamicallyLinkedLibrary);
+    OutputKind OutputKind = OutputKind.DynamicallyLinkedLibrary,
+    string? VirtualProjectDirectory = null);
 
 /// <summary>
 /// Immutable Solution-Snapshot plus der Besitzer des zugrunde liegenden <see cref="Workspace"/> zur
@@ -154,9 +155,10 @@ public static class RoslynTestSolutionFactory
         foreach (var (fileName, content) in spec.Documents)
         {
             var documentId = DocumentId.CreateNewId(projectId);
+            var projectDirectory = spec.VirtualProjectDirectory ?? spec.Name;
             var filePath = solutionDirectory is null
                 ? null
-                : System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDirectory, spec.Name, fileName));
+                : System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDirectory, projectDirectory, fileName));
             solution = solution.AddDocument(documentId, fileName, content, filePath: filePath);
         }
 

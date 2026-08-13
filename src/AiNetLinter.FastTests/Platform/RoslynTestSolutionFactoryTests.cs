@@ -153,6 +153,23 @@ public sealed class RoslynTestSolutionFactoryTests
         Assert.False(Directory.Exists(Path.GetDirectoryName(expectedDocumentFilePath)!));
     }
 
+    [Fact]
+    public void CreateSolution_VirtualProjectDirectory_PreservesProjectNameAndBuildsExpectedDocumentPath()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\SymbolGraphMini.slnx",
+            new ProjectSpec(
+                "SymbolGraphMini",
+                [("Greeter.cs", "namespace SymbolGraphMini; public class Greeter {}")],
+                VirtualProjectDirectory: "src/SymbolGraphMini"));
+
+        var project = Assert.Single(testSolution.Solution.Projects);
+        var document = Assert.Single(project.Documents);
+
+        Assert.Equal("SymbolGraphMini", project.Name);
+        Assert.Equal(@"C:\ainetlinter-virtual\src\SymbolGraphMini\Greeter.cs", document.FilePath);
+    }
+
     private static async Task<Compilation> GetCompilationAsync(Solution solution, string projectName)
     {
         var project = solution.Projects.Single(p => p.Name == projectName);

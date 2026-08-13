@@ -7,11 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.PatternDetect;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tool-Layer-Tests fuer <see cref="PatternDetectTool"/>: Validierung (unbekannte pattern-IDs,
@@ -19,16 +19,12 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// INVALID_ARGUMENT) und StructuredContent-Form. Pattern 1:1 von <c>GetViolationsToolTests</c>
 /// uebernommen.
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class PatternDetectToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public PatternDetectToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public PatternDetectToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -45,7 +41,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_NullPatternsFilter_ReturnsAllSixPatternsInStructuredContent()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, null, null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
@@ -58,7 +54,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_EmptyPatternsArray_MeansAllPatterns()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, [], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
@@ -70,7 +66,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_SinglePatternFilter_ReturnsOnlyThatPatternInStructuredContent()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, ["async-void"], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
@@ -84,7 +80,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownPatternId_ReturnsRecoverableInvalidArgumentNotIsError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, ["definitely-not-a-pattern"], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
@@ -100,7 +96,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessageWithoutStructuredContent()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, null, "DoesNotExistAnywhere", PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
@@ -113,7 +109,7 @@ public sealed class PatternDetectToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolution_ReportTextMentionsPatternDetectHeaderAndSufficiencyHint()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, null, null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 

@@ -1,33 +1,29 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Models;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class GetViolationsToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public GetViolationsToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public GetViolationsToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -44,7 +40,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionNoScopeFilter_ReturnsViolationForKnownFixture()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, null, GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -59,7 +55,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_RestrictsViolations()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -73,7 +69,7 @@ public sealed class GetViolationsToolTests
     {
         // Structured-Output-Mode: StructuredContent ergaenzt den Text additiv, ohne ihn zu
         // aendern (siehe die unveraenderten Text-Assertions in den anderen Tests dieser Klasse).
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -89,7 +85,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, "DoesNotExistAnywhere", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -101,7 +97,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolutionWithViolation_FormatsViolationsAsMarkdownTable()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -113,9 +109,8 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_DoesNotIncludeCompileErrorsAsViolations()
     {
-        using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        using var state = context.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, null, GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
@@ -135,28 +130,18 @@ public sealed class GetViolationsToolTests
         // wird eine realistische Malfunction (Quelldatei zwischen Indexierung und Analyse vom
         // Dateisystem verschwunden -> IOException beim Text-Zugriff) ueber einen deterministischen
         // TextLoader-Fake, statt auf einen fragilen realen Timing-Race zu warten.
-        var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-malfunction-probe-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(probeDir);
-        try
-        {
-            var solution = TestHelper.CreateFaultySolution(probeDir);
+        using var faulty = new FaultingSolutionFixture();
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: faulty.Solution)));
 
-            var catalog = new SourceFileCatalog(solution, hasLoadingErrors: false);
-            using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        var result = await GetViolationsTool.ExecuteAsync(state, null, GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
-            var result = await GetViolationsTool.ExecuteAsync(state, null, GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
-
-            Assert.True(result.IsError);
-            var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-            Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
-            Assert.Contains("Einmal erneut versuchen", textContent.Text, StringComparison.Ordinal);
-            // Context-Feld (rohe Exception-Message) landet im Text — Nachweis fuer den context:-Fix.
-            Assert.Contains("Simulierter Lesefehler", textContent.Text, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(probeDir, recursive: true);
-        }
+        Assert.True(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Einmal erneut versuchen", textContent.Text, StringComparison.Ordinal);
+        // Context-Feld (rohe Exception-Message) landet im Text — Nachweis fuer den context:-Fix.
+        Assert.Contains("Simulierter Lesefehler", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -200,7 +185,7 @@ public sealed class GetViolationsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_MaxResultsBelowViolationCount_IsTruncatedSuppressesSufficiencyHint()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", 0, CancellationToken.None);
 

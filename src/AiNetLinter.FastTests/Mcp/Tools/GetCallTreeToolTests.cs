@@ -7,22 +7,18 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class GetCallTreeToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public GetCallTreeToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public GetCallTreeToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -40,7 +36,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("DoesNotExistXyz", 2, null, 10), CancellationToken.None);
@@ -53,7 +49,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_AmbiguousSimpleName_ReturnsAmbiguousSymbol()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Run", 2, null, 10), CancellationToken.None);
@@ -66,7 +62,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_AsciiFormatDefault_ReturnsTreeWithCallerNames()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Greeter.Greet", 1, null, 10), CancellationToken.None);
@@ -84,7 +80,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_MermaidFormat_ReturnsFlowchartBlock()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Greeter.Greet", 1, "mermaid", 10), CancellationToken.None);
@@ -99,7 +95,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_TopNBelowCallerCount_AppendsRemainingCountLine()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Greeter.Greet", 1, null, 1), CancellationToken.None);
@@ -120,7 +116,7 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_DepthAboveCap_ClampsAndStillReturnsResult()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Greeter.Greet", 99, null, 10), CancellationToken.None);
@@ -131,9 +127,8 @@ public sealed class GetCallTreeToolTests
     [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
-        using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        using var state = context.CreateServer();
 
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("ValidClassA.DoWork", 1, null, 10), CancellationToken.None);

@@ -1,19 +1,16 @@
 #nullable enable
 
-using System;
-using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/> — Argument-Validierung, Fehlerbehandlung,
@@ -21,50 +18,16 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar) und End-zu-End-Wiring gegen eine
 /// selbst gebaute In-Memory-Solution mit einem echten exact-Klon-Paar.
 /// </summary>
-[Trait("Category", "Unit")]
-public sealed class DuplicateDetectionToolTests : IDisposable
+[Trait("Category", "Component")]
+public sealed class DuplicateDetectionToolTests
 {
-    private readonly string _tempDir;
-
-    public DuplicateDetectionToolTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "ainetlinter-duptool-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort cleanup */ }
-    }
-
     private static string BuildMethod(string className, string methodName) =>
         TestHelper.BuildCalibratedMethod(className, methodName);
 
-    private McpCodeGraphServer BuildServer(params (string FileName, string Content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-        var runtimeAsm = MetadataReference.CreateFromFile(typeof(System.Runtime.GCLatencyMode).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-            projectId, VersionStamp.Create(), "TestProject", "TestProject", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib, runtimeAsm })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        var solutionInfo = SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create(), filePath: Path.Combine(_tempDir, "Test.slnx"));
-        var solution = workspace.AddSolution(solutionInfo).AddProject(projectInfo);
-        foreach (var file in files)
-        {
-            var fullPath = Path.Combine(_tempDir, file.FileName);
-            File.WriteAllText(fullPath, file.Content);
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, file.FileName, file.Content, filePath: fullPath);
-        }
-
-        var catalog = new SourceFileCatalog(solution, hasLoadingErrors: false);
-        return new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
-    }
+    private static McpInMemoryTestContext CreateContext(params (string FileName, string Content)[] files) =>
+        new(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\DuplicateDetectionToolTests.slnx",
+            new ProjectSpec("TestProject", files, VirtualProjectDirectory: ".")));
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -82,7 +45,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_InvalidSimilarityThreshold_ReturnsRecoverableInvalidArgument()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, "sideways", null, null, null), CancellationToken.None);
@@ -98,7 +62,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_NegativeMinTokens_ReturnsRecoverableInvalidArgument()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(MinTokens: 0, null, null, null, null), CancellationToken.None);
@@ -111,7 +76,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_NegativeMaxResults_ReturnsRecoverableInvalidArgument()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, MaxResults: 0), CancellationToken.None);
@@ -124,7 +90,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_StructuredContent_IsJsonObjectNotArray()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
@@ -138,7 +105,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_ExactCloneFound_TextMentionsBucketAndBothMethods()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
@@ -153,7 +121,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_EmptySolution_ReturnsNoDuplicatesMessageWithoutError()
     {
-        var state = BuildServer();
+        using var context = CreateContext();
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
@@ -166,7 +135,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_NotTruncated_AppendsSufficiencyHint()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
@@ -201,9 +171,10 @@ public sealed class DuplicateDetectionToolTests : IDisposable
                 }
             }
             """;
-        var state = BuildServer(
+        using var context = CreateContext(
             ("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")),
             ("C1.cs", secondFamilyA), ("C2.cs", secondFamilyB));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, MaxResults: 1), CancellationToken.None);
@@ -221,7 +192,8 @@ public sealed class DuplicateDetectionToolTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_ExactSimilarityThreshold_FiltersOutNonExactMatchesButKeepsExact()
     {
-        var state = BuildServer(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, "exact", null, null, null), CancellationToken.None);

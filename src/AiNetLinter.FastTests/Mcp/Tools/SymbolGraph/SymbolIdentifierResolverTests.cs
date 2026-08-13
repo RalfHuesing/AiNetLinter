@@ -3,7 +3,7 @@
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
 /// <summary>
 /// Reine Parsing-Tests fuer <see cref="SymbolIdentifierResolver.TryParsePosition"/> und

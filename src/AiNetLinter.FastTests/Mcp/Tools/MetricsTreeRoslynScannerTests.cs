@@ -7,17 +7,18 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsTree;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer die zwei Roslyn-Modi <c>violation_density</c>/<c>complexity</c> von
 /// <c>metrics_tree</c> — ueber <see cref="MetricsTreeTool.ExecuteAsync"/>, analog
 /// <see cref="MetricsTreeToolTests"/> fuer die Datei-Modi. Nutzt fuer <c>violation_density</c> die
-/// geteilte <see cref="SymbolGraphCatalogFixture"/> (ViolationTrigger.cs traegt bereits einen
+/// geteilte <see cref="McpInMemoryTestContext"/> (ViolationTrigger.cs traegt bereits einen
 /// bekannten Verstoss). Fuer <c>complexity</c> braucht es zusaetzlich eine verzweigungsreiche
 /// Methode bzw. eine methodenlose Datei — beides fehlt im geteilten SymbolGraphMini-Fixture (dessen
 /// exakte Datei-/Methodenzahl von anderen Tests, z. B. GetIndexScopeToolTests, exakt geprueft wird)
@@ -25,19 +26,15 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// geschriebenen Dateien (Pattern analog
 /// <c>GetIndexScopeToolTests.ExecuteAsync_GeneratedObjBinDirectories_ExcludedFromXamlHtmlCount</c>).
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class MetricsTreeRoslynScannerTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public MetricsTreeRoslynScannerTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public MetricsTreeRoslynScannerTests() { _fixture = new McpInMemoryTestContext(); }
 
     private McpCodeGraphServer NewState() =>
-        new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        _fixture.CreateServer();
 
     [Fact]
     public async Task ExecuteAsync_ViolationDensityMode_ReturnsTreeSortedByViolationCountDescending()
@@ -108,8 +105,7 @@ public sealed class MetricsTreeRoslynScannerTests
         // hoher zyklomatischer Komplexitaet die von GetIndexScopeToolTests/GetHotspotsToolTests
         // exakt geprueften Datei-/Methodenzahlen des geteilten SymbolGraphMini-Fixtures veraendern
         // wuerde.
-        using var workspace = new SymbolGraphMiniFixtureWorkspace();
-        WriteFile(workspace, "HighComplexity.cs", """
+        var scenario = CreateComplexityScenario("HighComplexity.cs", """
             namespace SymbolGraphMini;
 
             public class HighComplexity
@@ -138,8 +134,8 @@ public sealed class MetricsTreeRoslynScannerTests
             }
             """);
 
-        var catalog = await SourceFileCatalog.LoadAsync(workspace.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(scenario);
+        using var state = context.CreateServer();
 
         var result = await MetricsTreeTool.ExecuteAsync(
             state,
@@ -160,8 +156,7 @@ public sealed class MetricsTreeRoslynScannerTests
     [Fact]
     public async Task ExecuteAsync_ComplexityMode_FileWithoutMethods_ReturnsZeroMetricsWithoutCrash()
     {
-        using var workspace = new SymbolGraphMiniFixtureWorkspace();
-        WriteFile(workspace, "NoMethods.cs", """
+        var scenario = CreateComplexityScenario("NoMethods.cs", """
             namespace SymbolGraphMini;
 
             public class NoMethods
@@ -170,8 +165,8 @@ public sealed class MetricsTreeRoslynScannerTests
             }
             """);
 
-        var catalog = await SourceFileCatalog.LoadAsync(workspace.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(scenario);
+        using var state = context.CreateServer();
 
         var result = await MetricsTreeTool.ExecuteAsync(
             state,
@@ -185,9 +180,9 @@ public sealed class MetricsTreeRoslynScannerTests
         Assert.Contains("max CC 0", text, StringComparison.Ordinal);
     }
 
-    private static void WriteFile(SymbolGraphMiniFixtureWorkspace workspace, string fileName, string content)
-    {
-        var projectDir = Path.GetDirectoryName(workspace.GreeterPath)!;
-        File.WriteAllText(Path.Combine(projectDir, fileName), content);
-    }
+    private static RoslynTestSolution CreateComplexityScenario(string fileName, string content) =>
+        McpInMemoryTestContext.CreateScenario(new ProjectSpec("src", [
+            ("SymbolGraphMini/Greeter.cs", "namespace SymbolGraphMini; public class Greeter { public string Greet(string name) => name; }"),
+            ($"SymbolGraphMini/{fileName}", content)
+        ]));
 }

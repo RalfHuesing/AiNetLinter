@@ -104,14 +104,14 @@ internal static class MetricsTreeScanner
 
     private static FileMetric? ComputeCodeSizeMetric(WalkedFile f)
     {
-        var lines = SolutionFileWalker.TryReadAllLines(f.AbsolutePath);
+        var lines = SolutionFileWalker.TryReadAllLines(f);
         if (lines is null) return null;
         return new FileMetric(f.RelativePath, CommentLines: 0, CodeLines: lines.Length, Bytes: TryGetFileSize(f.AbsolutePath));
     }
 
     private static FileMetric? ComputeCommentDensityMetric(WalkedFile f)
     {
-        var lines = SolutionFileWalker.TryReadAllLines(f.AbsolutePath);
+        var lines = SolutionFileWalker.TryReadAllLines(f);
         if (lines is null) return null;
         var (commentLines, codeLines) = CountCommentLines(lines);
         return new FileMetric(f.RelativePath, commentLines, codeLines, Bytes: 0);

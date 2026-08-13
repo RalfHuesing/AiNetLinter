@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -8,23 +10,19 @@ using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class FindReferencesToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public FindReferencesToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public FindReferencesToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -41,7 +39,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_QualifiedName_ReturnsSingleMatch()
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Greeter.Greet", CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -51,7 +49,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_UnknownName_ReturnsSymbolNotFoundError()
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "DoesNotExistXyz", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "DoesNotExistXyz", CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -65,7 +63,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "DoesNotExistXyz", maxResults: 50, depth: 1, CancellationToken.None);
 
@@ -77,7 +75,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_AmbiguousSimpleName_ReturnsAmbiguousSymbolError()
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, "Run", CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Run", CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -90,8 +88,8 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_PositionIdentifier_ReturnsSymbolAtPosition()
     {
-        var identifier = $"{_fixture.Workspace.GreeterPath}:5:19";
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:5:19";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -101,8 +99,8 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ResolveSymbolAsync_PositionOnPropertyAccessorKeyword_ReturnsPropertySymbolNotAccessor()
     {
-        var identifier = $"{_fixture.Workspace.GreeterPath}:7:28";
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:7:28";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -115,7 +113,7 @@ public sealed class FindReferencesToolTests
     public async Task ResolveSymbolAsync_PositionIdentifierWithSolutionRelativePath_ReturnsSymbolAtPosition()
     {
         var identifier = "src/SymbolGraphMini/Greeter.cs:5:19";
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -126,12 +124,12 @@ public sealed class FindReferencesToolTests
     public async Task ResolveSymbolAsync_StableId_ReturnsSymbolAtId()
     {
         var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(resolved);
         var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
         Assert.NotNull(stableId);
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, stableId!, CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, stableId!, CancellationToken.None);
 
         Assert.Null(error);
         Assert.NotNull(symbol);
@@ -141,7 +139,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_ValidQualifiedName_ReturnsCallSiteInCaller()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 1, CancellationToken.None);
 
@@ -157,7 +155,7 @@ public sealed class FindReferencesToolTests
     {
         // Nur der depth=1-Flachfall bekommt StructuredContent (siehe Kommentar in
         // FindReferencesTool.ExecuteAsync — depth>1 laesst CallGraphTraversal unveraendert).
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 1, CancellationToken.None);
 
@@ -175,7 +173,7 @@ public sealed class FindReferencesToolTests
         // Bewusste Entscheidung (siehe FindReferencesTool.ExecuteAsync): depth>1 traversiert ueber
         // CallGraphTraversal, das intern reine Strings statt eines strukturierten Zwischenmodells
         // baut — kein StructuredContent fuer diesen Fall.
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 2, CancellationToken.None);
 
@@ -186,9 +184,9 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_StableId_ReturnsCallSiteInCaller()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
         var (resolved, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(resolved!);
 
         var result = await FindReferencesTool.ExecuteAsync(state, stableId!, maxResults: 50, depth: 1, CancellationToken.None);
@@ -201,7 +199,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_ValidSymbolWithManyCallSites_TruncatesAtMaxResults_AppendsMetaLine()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 2, depth: 1, CancellationToken.None);
 
@@ -218,9 +216,8 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
-        using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        using var state = context.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "ValidClassA.DoWork", maxResults: 50, depth: 1, CancellationToken.None);
 
@@ -233,7 +230,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_Depth2_StillReturnsCallSite()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 2, CancellationToken.None);
 
@@ -245,7 +242,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_DepthAboveCap_ClampsToThreeAndReturnsResult()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 100, CancellationToken.None);
 
@@ -255,7 +252,7 @@ public sealed class FindReferencesToolTests
     [Fact]
     public async Task ExecuteAsync_Depth1_MatchesCurrentBehavior()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 1, CancellationToken.None);
 
@@ -274,13 +271,13 @@ public sealed class FindReferencesToolTests
         // wie die explizite Datei:Zeile:Spalte-Angabe auf den Klassennamen. OtherCallerPath ist
         // ein absoluter Windows-Pfad mit Laufwerksbuchstabe (Fixture-Temp-Verzeichnis) — deckt
         // damit implizit auch die Laufwerksbuchstaben-Rekonstruktion aus TryParseLineOnlyPosition ab.
-        var lineOnlyIdentifier = $"{_fixture.Workspace.OtherCallerPath}:3";
-        var positionIdentifier = $"{_fixture.Workspace.OtherCallerPath}:3:14";
+        var lineOnlyIdentifier = $"{SymbolGraphMiniSolutionSpec.OtherCallerPath}:3";
+        var positionIdentifier = $"{SymbolGraphMiniSolutionSpec.OtherCallerPath}:3:14";
 
         var (lineOnlySymbol, lineOnlyError) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, lineOnlyIdentifier, CancellationToken.None);
+            _fixture.Solution, lineOnlyIdentifier, CancellationToken.None);
         var (positionSymbol, positionError) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, positionIdentifier, CancellationToken.None);
+            _fixture.Solution, positionIdentifier, CancellationToken.None);
 
         Assert.Null(lineOnlyError);
         Assert.Null(positionError);
@@ -294,9 +291,9 @@ public sealed class FindReferencesToolTests
     {
         // Caller.cs Zeile 8 ("return greeter.Greet(\"World\");") traegt zwei eigenstaendige
         // quelltext-Symbole: die lokale Variable "greeter" und die Methode "Greet".
-        var identifier = $"{_fixture.Workspace.CallerPath}:8";
+        var identifier = $"{SymbolGraphMiniSolutionSpec.CallerPath}:8";
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -311,9 +308,9 @@ public sealed class FindReferencesToolTests
     {
         // Caller.cs Zeile 2 ist eine Leerzeile zwischen "namespace ...;" und der Klasse — kein
         // einziges Token mit aufloesbarem Symbol.
-        var identifier = $"{_fixture.Workspace.CallerPath}:2";
+        var identifier = $"{SymbolGraphMiniSolutionSpec.CallerPath}:2";
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -333,7 +330,7 @@ public sealed class FindReferencesToolTests
         // (siehe SymbolIdentifierResolverTests fuer den direkten Parsing-Nachweis).
         var identifier = "C:\\Datei.cs:91";
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Catalog.Solution, identifier, CancellationToken.None);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
 
         Assert.Null(symbol);
         Assert.NotNull(error);
@@ -348,8 +345,8 @@ public sealed class FindReferencesToolTests
         // Belegt, dass der gemeinsame Resolver-Fix transitiv auch fuer get_type_hierarchy wirkt
         // (nicht nur fuer find_references direkt) — Greeter.cs Zeile 3 ist eine eindeutige
         // Klassendeklarationszeile.
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
-        var identifier = $"{_fixture.Workspace.GreeterPath}:3";
+        var state = _fixture.CreateServer();
+        var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:3";
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, identifier, GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
@@ -367,8 +364,8 @@ public sealed class FindReferencesToolTests
     {
         // Belegt denselben transitiven Effekt fuer get_symbol_body — OtherCaller.cs Zeile 5
         // ("public string Run() => \"other\";") ist eine eindeutige Methodenzeile.
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
-        var identifier = $"{_fixture.Workspace.OtherCallerPath}:5";
+        var state = _fixture.CreateServer();
+        var identifier = $"{SymbolGraphMiniSolutionSpec.OtherCallerPath}:5";
 
         var result = await GetSymbolBodyTool.ExecuteAsync(state, identifier, GetSymbolBodyTool.DefaultMaxBodyLines, CancellationToken.None);
 

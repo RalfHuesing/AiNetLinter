@@ -84,7 +84,7 @@ internal static class GetHotspotsScanner
 
         foreach (var walked in SolutionFileWalker.CollectFiles(solution, solutionDir, scopeFilter))
         {
-            var lines = SolutionFileWalker.TryReadAllLines(walked.AbsolutePath)?.Length;
+            var lines = SolutionFileWalker.TryReadAllLines(walked)?.Length;
             if (lines is null) continue;
 
             result.Add(new HotspotFileInfo(walked.RelativePath, lines.Value));

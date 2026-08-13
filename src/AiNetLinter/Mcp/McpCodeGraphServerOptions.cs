@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp;
 
@@ -62,6 +63,8 @@ internal sealed record McpCodeGraphServerOptions
     /// </summary>
     public Func<CancellationToken, Task<SourceFileCatalog?>>? LoadFunc { get; init; }
 
+    internal Solution? ReadOnlySolutionSnapshot { get; init; }
+
     /// <summary>
     /// Factory-Methode, die die Konfigurations-Eingaenge in einem Parameter-Record bündelt,
     /// damit <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) eingehalten wird
@@ -81,6 +84,7 @@ internal sealed record McpCodeGraphServerOptions
             Config = p.Config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
             UsedDefaultConfig = p.UsedDefaultConfig,
             ResolvedConfigPath = p.ResolvedConfigPath,
+            ReadOnlySolutionSnapshot = p.ReadOnlySolutionSnapshot,
         };
     }
 }
@@ -97,4 +101,5 @@ internal sealed record McpCodeGraphServerOptionsFromParameters(
     int MaxLineCount = 700,
     Config? Config = null,
     bool UsedDefaultConfig = false,
-    string? ResolvedConfigPath = null);
+    string? ResolvedConfigPath = null,
+    Solution? ReadOnlySolutionSnapshot = null);

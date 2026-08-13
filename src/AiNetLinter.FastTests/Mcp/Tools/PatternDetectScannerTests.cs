@@ -2,28 +2,27 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.FastTests;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Tools.PatternDetect;
-using AiNetLinter.Tests;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Text;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="PatternDetectScanner"/> — deckt die Zuordnung je Pattern (1 Test pro
 /// Pattern, siehe <see cref="PatternCatalog"/>) sowie Edge-Cases (0 Treffer, Scope ohne Treffer,
-/// Trunkierung, Malfunction) ab. Kleine, gezielte In-Memory-Solutions (<see cref="AdhocWorkspace"/>)
-/// statt der geteilten Live-Fixture — pro Test genau der Code, der die jeweilige Regel
+/// Trunkierung, Malfunction) ab. Kleine, gezielte virtuelle Solutions statt der geteilten
+/// Live-Fixture — pro Test genau der Code, der die jeweilige Regel
 /// deterministisch ausloest (Pattern 1:1 von <c>SafeguardScannerTests</c> uebernommen).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Component")]
 public sealed class PatternDetectScannerTests
 {
     [Fact]
@@ -163,7 +162,8 @@ public class MiddleManClass
     [Fact]
     public async Task BuildReportAsync_CleanSolution_AllPatternsZeroHits()
     {
-        var result = await RunAsync(CreateAdhocSolution(Path.GetTempPath()), CreateConfig());
+        using var testSolution = CreateSolution();
+        var result = await RunAsync(testSolution.Solution, CreateConfig());
 
         Assert.NotNull(result.Payload);
         Assert.All(result.Payload!.Patterns, p => Assert.Equal(0, p.Occurrences));
@@ -176,8 +176,8 @@ public class MiddleManClass
     public async Task BuildReportAsync_ScopeFilterMatchesNoFile_ReturnsExplicitMessageWithoutPayload()
     {
         const string source = "namespace Test; public sealed class Foo { }";
-        using var tempDir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(tempDir.Path, ("Foo.cs", source));
+        using var testSolution = CreateSolution(("Foo.cs", source));
+        var solution = testSolution.Solution;
 
         var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
             Solution: solution,
@@ -204,8 +204,8 @@ public sealed class Foo{i}
     public async void Run() {{ await Task.Delay(0); }}
 }}"))
             .ToArray();
-        using var tempDir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(tempDir.Path, files);
+        using var testSolution = CreateSolution(files);
+        var solution = testSolution.Solution;
 
         var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
             Solution: solution,
@@ -226,8 +226,9 @@ public sealed class Foo{i}
     [Fact]
     public async Task BuildReportAsync_PatternsSubsetRequested_OnlyRequestedPatternsInPayload()
     {
+        using var testSolution = CreateSolution();
         var result = await RunAsync(
-            CreateAdhocSolution(Path.GetTempPath()),
+            testSolution.Solution,
             CreateConfig(),
             PatternCatalog.Patterns.Where(p => p.Id == "async-void").ToList());
 
@@ -238,37 +239,28 @@ public sealed class Foo{i}
     [Fact]
     public async Task BuildReportAsync_LinterEngineThrows_ReturnsMalfunctionWithContext()
     {
-        var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-patterndetect-malfunction-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(probeDir);
-        try
-        {
-            var solution = TestHelper.CreateFaultySolution(probeDir);
+        using var faulty = new FaultingSolutionFixture();
+        var solution = faulty.Solution;
 
-            var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
-                Solution: solution,
-                Config: CreateConfig(),
-                Console: AiNetLinter.Output.LinterConsole.Instance,
-                ScopeFilter: null,
-                Patterns: PatternCatalog.Patterns,
-                CancellationToken: CancellationToken.None));
+        var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
+            Solution: solution,
+            Config: CreateConfig(),
+            Console: AiNetLinter.Output.LinterConsole.Instance,
+            ScopeFilter: null,
+            Patterns: PatternCatalog.Patterns,
+            CancellationToken: CancellationToken.None));
 
-            Assert.True(result.IsMalfunction);
-            Assert.Null(result.Payload);
-            Assert.NotNull(result.Context);
-            Assert.Contains("Simulierter Lesefehler", result.Context, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(probeDir, recursive: true);
-        }
+        Assert.True(result.IsMalfunction);
+        Assert.Null(result.Payload);
+        Assert.NotNull(result.Context);
+        Assert.Contains("Simulierter Lesefehler", result.Context, StringComparison.Ordinal);
     }
 
     private static async Task<PatternDetectResult> RunAsync(
         (string FileName, string Source) file, Config config, IReadOnlyList<PatternDefinition>? patterns = null)
     {
-        using var tempDir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(tempDir.Path, file);
-        return await RunAsync(solution, config, patterns);
+        using var testSolution = CreateSolution(file);
+        return await RunAsync(testSolution.Solution, config, patterns);
     }
 
     private static async Task<PatternDetectResult> RunAsync(
@@ -305,65 +297,9 @@ public sealed class Foo{i}
         DetectAndBanPhantomDependencies = false,
     };
 
-    /// <summary>
-    /// Baut eine In-Memory-Solution mit auf der Platte real gespiegelten Quelldateien unter
-    /// <paramref name="baseDir"/>. Ein rein virtuelles <c>filePath</c> reicht nicht: die
-    /// <see cref="AiNetLinter.Core.LinterEngine"/> liest manche Checker-Pfade physisch von der
-    /// Platte (nicht nur ueber den Roslyn-<see cref="SourceText"/>-Puffer) — ohne reale Datei
-    /// schlaegt <see cref="PatternDetectScanner.BuildReportAsync"/> als Malfunction fehl
-    /// ("Could not find a part of the path", empirisch in einem fruehen Testlauf hier gefunden).
-    /// </summary>
-    private static Solution CreateAdhocSolution(string baseDir, params (string fileName, string content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-        var taskAsm = MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.Task).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-            projectId, VersionStamp.Create(), "TestProject", "TestProject", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib, taskAsm })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        // SolutionInfo mit explizitem FilePath (statt des sonst leeren AdhocWorkspace-Defaults):
-        // PatternDetectScanner leitet solutionDir aus solution.FilePath ab (identisches Muster wie
-        // GetViolationsScanner) und ruft Path.GetRelativePath(solutionDir, ...) auf — bei
-        // solution.FilePath == null faellt das auf "" zurueck, und GetRelativePath wirft bei leerem
-        // relativeTo eine ArgumentException. In Produktion ist solution.FilePath immer gesetzt (echte
-        // .sln/.slnx via MSBuildWorkspace), dieser Fallback wird dort nie erreicht — nur die
-        // AdhocWorkspace-Testsolution hier braucht den expliziten Pfad.
-        var solutionInfo = SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create(), filePath: Path.Combine(baseDir, "Test.slnx"));
-        var solution = workspace.AddSolution(solutionInfo).AddProject(projectInfo);
-        foreach (var file in files)
-        {
-            var fullPath = Path.Combine(baseDir, file.fileName);
-            File.WriteAllText(fullPath, file.content);
-
-            var documentId = DocumentId.CreateNewId(projectId);
-            // Explizites filePath (statt nur Name) noetig: PatternDetectScanner.BuildFileToProjectMap
-            // (analog GetViolationsScanner) ueberspringt Documents mit FilePath == null komplett —
-            // ohne echten Pfad landet keine Violation in der Scope-gefilterten Trefferliste, obwohl
-            // LinterEngine sie durchaus findet.
-            solution = solution.AddDocument(
-                documentId, file.fileName, SourceText.From(file.content), filePath: fullPath);
-        }
-        return solution;
-    }
-
-    /// <summary>Erstellt ein eindeutiges Temp-Verzeichnis fuer die auf Platte gespiegelten
-    /// Testdateien (siehe <see cref="CreateAdhocSolution"/>) und raeumt es beim Dispose wieder
-    /// auf (best-effort, Fehler beim Aufraeumen werden verschluckt).</summary>
-    private sealed class TempSourceDirectory : IDisposable
-    {
-        public string Path { get; } = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(), "ainetlinter-patterndetect-" + Guid.NewGuid().ToString("N"));
-
-        public TempSourceDirectory() => Directory.CreateDirectory(Path);
-
-        public void Dispose()
-        {
-            try { Directory.Delete(Path, recursive: true); } catch { /* best-effort cleanup */ }
-        }
-    }
+    private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
+        RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\PatternDetectScannerTests.slnx",
+            new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 
 }

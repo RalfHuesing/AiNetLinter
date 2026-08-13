@@ -1,26 +1,23 @@
+#nullable enable
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class GetFileSkeletonToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public GetFileSkeletonToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public GetFileSkeletonToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -37,7 +34,7 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownFilePath_ReturnsRecoverableResourceNotFound()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/DoesNotExist.cs", CancellationToken.None);
@@ -50,7 +47,7 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_ValidRelativePath_ReturnsGreeterSkeletonWithGreetMethod()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
@@ -66,12 +63,12 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_AbsolutePath_ResolvesSameAsRelativePath()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var relativeResult = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
         var absoluteResult = await GetFileSkeletonTool.ExecuteAsync(
-            state, _fixture.Workspace.GreeterPath, CancellationToken.None);
+            state, SymbolGraphMiniSolutionSpec.GreeterPath, CancellationToken.None);
 
         Assert.NotEqual(true, relativeResult.IsError);
         Assert.NotEqual(true, absoluteResult.IsError);
@@ -84,9 +81,8 @@ public sealed class GetFileSkeletonToolTests
     [Fact]
     public async Task ExecuteAsync_CompileErrorFile_OutputContainsFileSpecificWarning()
     {
-        using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        using var state = context.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, "src/CompileErrorMini/BrokenClassA.cs", CancellationToken.None);

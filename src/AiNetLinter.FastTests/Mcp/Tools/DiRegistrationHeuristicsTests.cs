@@ -1,152 +1,66 @@
+#nullable enable
+
 using System;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.Tests.Fixtures;
-using Xunit;
+using AiNetLinter.TestKit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class DiRegistrationHeuristicsTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
-
-    public DiRegistrationHeuristicsTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
-
     [Fact]
     public async Task FindRegistrationsAsync_NoRegistrationForType_ReturnsEmpty()
     {
-        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter", CancellationToken.None);
-        Assert.NotNull(symbol);
-
-        var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(
-            _fixture.Catalog.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
-
+        using var fixture = new McpInMemoryTestContext();
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(fixture.Solution, "Greeter", CancellationToken.None);
+        var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(fixture.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
         Assert.Empty(hits);
     }
 
-    [Fact]
-    public async Task FindRegistrationsAsync_FindsAddScopedHit_FormatsWithLifestyle()
+    [Theory]
+    [InlineData("AddScoped:")]
+    [InlineData("AddSingleton:")]
+    [InlineData("AddTransient:")]
+    public async Task FindRegistrationsAsync_Registrations_ReturnExpectedLifestyle(string expected)
     {
-        var fixture = new DiRegistrationMiniFixtureWorkspace();
-        try
-        {
-            var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-            var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-                catalog.Solution, "IReporter", CancellationToken.None);
-            Assert.NotNull(symbol);
-
-            var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(
-                catalog.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
-
-            Assert.Contains(hits, h => h.StartsWith("AddScoped:", StringComparison.Ordinal));
-        }
-        finally
-        {
-            fixture.Dispose();
-        }
+        using var scenario = CreateScenario();
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(scenario.Solution, "IReporter", CancellationToken.None);
+        var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(scenario.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
+        Assert.Contains(hits, hit => hit.StartsWith(expected, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task FindRegistrationsAsync_FindsAddSingletonAndTransient_OrdersByLine()
+    public async Task FindRegistrationsAsync_HelperSubstring_IsNotRegistration()
     {
-        var fixture = new DiRegistrationMiniFixtureWorkspace();
-        try
-        {
-            var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-            var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-                catalog.Solution, "IReporter", CancellationToken.None);
-            Assert.NotNull(symbol);
-
-            var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(
-                catalog.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
-
-            Assert.NotEmpty(hits);
-            Assert.Contains(hits, h => h.StartsWith("AddSingleton:", StringComparison.Ordinal));
-            Assert.Contains(hits, h => h.StartsWith("AddTransient:", StringComparison.Ordinal));
-        }
-        finally
-        {
-            fixture.Dispose();
-        }
+        using var scenario = CreateScenario();
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(scenario.Solution, "IReporter", CancellationToken.None);
+        var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(scenario.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
+        Assert.DoesNotContain(hits, hit => hit.Contains("MyAddScopedHelper", StringComparison.Ordinal));
+        Assert.True(hits.Count <= DiRegistrationHeuristics.MaxRegistrationHits);
     }
 
-    [Fact]
-    public async Task FindRegistrationsAsync_DoesNotMatchAddScopedHelperAsSubstring()
-    {
-        var fixture = new DiRegistrationMiniFixtureWorkspace();
-        try
-        {
-            var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-            var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-                catalog.Solution, "IReporter", CancellationToken.None);
-            Assert.NotNull(symbol);
-
-            var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(
-                catalog.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
-
-            Assert.DoesNotContain(hits, h => h.Contains("MyAddScopedHelper", StringComparison.Ordinal));
-        }
-        finally
-        {
-            fixture.Dispose();
-        }
-    }
-
-    [Fact]
-    public async Task FindRegistrationsAsync_RespectsMaxRegistrationHitsCap()
-    {
-        var fixture = new DiRegistrationMiniFixtureWorkspace();
-        try
-        {
-            var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-            var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-                catalog.Solution, "IReporter", CancellationToken.None);
-            Assert.NotNull(symbol);
-
-            var hits = await DiRegistrationHeuristics.FindRegistrationsAsync(
-                catalog.Solution, (Microsoft.CodeAnalysis.INamedTypeSymbol)symbol!, CancellationToken.None);
-
-            Assert.True(hits.Count <= DiRegistrationHeuristics.MaxRegistrationHits);
-        }
-        finally
-        {
-            fixture.Dispose();
-        }
-    }
-}
-
-/// <summary>
-/// Mini-Fixture mit einem Interface, das auf mehrere Arten DI-registriert ist
-/// (AddScoped, AddSingleton, AddTransient) plus eine zusaetzliche "MyAddScopedHelper"-Zeile,
-/// um zu verifizieren, dass die \b-Word-Boundary-Regex keine Substring-Treffer erzeugt.
-/// </summary>
-internal sealed class DiRegistrationMiniFixtureWorkspace : FixtureWorkspaceBase
-{
-    public DiRegistrationMiniFixtureWorkspace()
-        : base("DiRegistrationMini", "ainetlinter-direg-")
-    {
-        var dir = Path.Combine(RootPath, "src", "DiRegistrationMini");
-        Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "Program.cs"),
-            """
+    private static RoslynTestSolution CreateScenario() => McpInMemoryTestContext.CreateScenario(new ProjectSpec("src", [
+        ("DiRegistrationMini/Program.cs", """
+            namespace Microsoft.Extensions.DependencyInjection;
+            public interface IServiceCollection { }
+            public static class ServiceCollectionExtensions
+            {
+                public static void AddScoped<TService, TImplementation>(this IServiceCollection services) { }
+                public static void AddSingleton<TService>(this IServiceCollection services) { }
+                public static void AddTransient<TService>(this IServiceCollection services) { }
+            }
             namespace DiRegistrationMini;
-
-            public interface IReporter { void Report(string s); }
-            public class ConsoleReporter : IReporter { public void Report(string s) {} }
+            using Microsoft.Extensions.DependencyInjection;
+            public interface IReporter { void Report(string value); }
+            public class ConsoleReporter : IReporter { public void Report(string value) { } }
             public static class Composition
             {
-                public static void Register(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+                public static void Register(IServiceCollection services)
                 {
                     services.AddScoped<IReporter, ConsoleReporter>();
                     services.AddSingleton<IReporter>();
@@ -154,21 +68,6 @@ internal sealed class DiRegistrationMiniFixtureWorkspace : FixtureWorkspaceBase
                     var MyAddScopedHelper = "not a match";
                 }
             }
-            """);
-        File.WriteAllText(Path.Combine(dir, "DiRegistrationMini.csproj"),
-            """
-            <Project Sdk="Microsoft.NET.Sdk">
-              <PropertyGroup>
-                <TargetFramework>net10.0</TargetFramework>
-                <Nullable>enable</Nullable>
-              </PropertyGroup>
-            </Project>
-            """);
-        File.WriteAllText(Path.Combine(RootPath, "DiRegistrationMini.slnx"),
-            """
-            <Solution>
-              <Project Path="src/DiRegistrationMini/DiRegistrationMini.csproj" />
-            </Solution>
-            """);
-    }
+            """)
+    ]));
 }

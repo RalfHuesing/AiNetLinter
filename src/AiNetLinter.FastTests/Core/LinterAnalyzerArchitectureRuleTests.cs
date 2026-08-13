@@ -1,13 +1,15 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.Architecture;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
-public sealed class ArchitectureTests
+public sealed class LinterAnalyzerArchitectureRuleTests
 {
     private static Config CreateDefaultConfig()
     {

@@ -32,6 +32,7 @@ internal sealed class McpCodeGraphServer : IDisposable
     private SourceFileCatalog? _catalog;
     private DateTime? _lastSolutionDirMtimeUtc;
     private int _refreshCount;
+    private readonly bool _isReadOnlySnapshot;
 
     // Input-Record als Parameter-Object, damit MaxConstructorDependencies: 5 eingehalten wird
     // und kuenftige Config-Properties additiv wachsen koennen, ohne die Konstruktor-Signatur
@@ -44,8 +45,17 @@ internal sealed class McpCodeGraphServer : IDisposable
         Config = options.Config;
         UsedDefaultConfig = options.UsedDefaultConfig;
         ResolvedConfigPath = options.ResolvedConfigPath;
+        if (options.ReadOnlySolutionSnapshot is not null && (options.Catalog is not null || options.LoadFunc is not null))
+        {
+            throw new ArgumentException("ReadOnlySolutionSnapshot kann nicht mit Catalog oder LoadFunc kombiniert werden.");
+        }
 
-        if (options.LoadFunc is { } loadFunc)
+        if (options.ReadOnlySolutionSnapshot is { } snapshot)
+        {
+            _catalog = new SourceFileCatalog(snapshot, hasLoadingErrors: false);
+            _isReadOnlySnapshot = true;
+        }
+        else if (options.LoadFunc is { } loadFunc)
         {
             // Hintergrund-Load: der Server startet sofort, der Tool-Dispatch sieht
             // solange LoadState == Loading und antwortet mit McpToolResults.Loading().
@@ -170,6 +180,7 @@ internal sealed class McpCodeGraphServer : IDisposable
             }
 
             if (_catalog is null) return null;
+            if (_isReadOnlySnapshot) return _catalog.Solution;
             RefreshStaleDocuments();
             return _catalog.Solution;
         }

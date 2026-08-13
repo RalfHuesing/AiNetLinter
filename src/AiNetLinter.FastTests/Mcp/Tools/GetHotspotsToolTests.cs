@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,22 +10,18 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class GetHotspotsToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public GetHotspotsToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public GetHotspotsToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -40,7 +38,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_SmallMaxLineCount_MarksFileAsCritical()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, MaxLineCount: 1)));
+        var state = _fixture.CreateServer(1);
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -55,7 +53,7 @@ public sealed class GetHotspotsToolTests
     {
         // StructuredContent ergaenzt den Text additiv — Category spiegelt dieselbe
         // Schwellwert-Klassifizierung wie die Text-Sektion "Kritische Dateien".
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, MaxLineCount: 1)));
+        var state = _fixture.CreateServer(1);
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -71,7 +69,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_MidRangeMaxLineCount_MarksFileAsWarning()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog, MaxLineCount: 7)));
+        var state = _fixture.CreateServer(7);
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -84,7 +82,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_DefaultMaxLineCount_AllFilesGreen()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -104,7 +102,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesProjectName_ReturnsAllFiles()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetHotspotsTool.ExecuteAsync(state, "SymbolGraphMini", CancellationToken.None);
 
@@ -116,7 +114,7 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await GetHotspotsTool.ExecuteAsync(state, "DoesNotExistAnywhere", CancellationToken.None);
 
@@ -129,9 +127,8 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
     {
-        using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        using var state = context.CreateServer();
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
@@ -143,9 +140,8 @@ public sealed class GetHotspotsToolTests
     [Fact]
     public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
     {
-        using var fixture = new SingleCompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreateSingular());
+        using var state = context.CreateServer();
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 

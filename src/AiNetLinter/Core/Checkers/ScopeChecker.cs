@@ -189,6 +189,7 @@ internal static class ScopeChecker
         var current = startDir;
         while (!string.IsNullOrEmpty(current))
         {
+            if (!Directory.Exists(current)) return "";
             if (Directory.GetFiles(current, "*.csproj").Any()) return current;
             current = Path.GetDirectoryName(current);
         }

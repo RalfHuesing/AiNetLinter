@@ -1,36 +1,33 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="DependencyGraphScanner"/> — kleine, gezielte In-Memory-Solutions
-/// (<see cref="AdhocWorkspace"/>, Dateien real auf Platte gespiegelt, Pattern uebernommen von
-/// <c>PatternDetectScannerTests.CreateAdhocSolution</c>) statt der geteilten Live-Fixture, damit
+/// (virtuelle <see cref="Solution"/>-Snapshots) statt der geteilten Live-Fixture, damit
 /// jeder Test genau das Datei-Abhaengigkeits-Szenario aufbaut, das er pruefen will (Zyklen,
 /// Multi-Typ-Dateien, BCL-Rauschen).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Component")]
 public sealed class DependencyGraphScannerTests
 {
     [Fact]
     public async Task ScanFileAsync_OutgoingOnly_ReturnsEdgeToReferencedFile()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? Other; }"),
             ("FileB.cs", "public class B {}"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -47,10 +44,10 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_IncomingOnly_ReturnsEdgeFromReferencingFile()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? Other; }"),
             ("FileB.cs", "public class B {}"));
+        var solution = testSolution.Solution;
         var docB = GetDocument(solution, "FileB.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -71,12 +68,11 @@ public sealed class DependencyGraphScannerTests
         // liegen koennen als Produktionscode) — ohne die Test-Projekt-Nachrangigkeit wuerde
         // maxResults=1 die alphabetisch fruehere Test-Kante zeigen statt der fuer die
         // Blast-Radius-Frage relevanteren Produktionscode-Kante.
-        using var dir = new TempSourceDirectory();
-        Directory.CreateDirectory(Path.Combine(dir.Path, "MyProject.Tests"));
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A {}"),
             ("ZZZProd.cs", "public class ZZZProd { public A? Other; }"),
             ("MyProject.Tests/AAATest.cs", "public class AAATest { public A? Other; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -90,11 +86,11 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_BothDirections_ReturnsBothEdgeSets()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? Out; }"),
             ("FileB.cs", "public class B {}"),
             ("FileC.cs", "public class C { public A? In; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -108,8 +104,8 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_NoDependencies_ReturnsEmptyResultNotError()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path, ("FileA.cs", "public class A { public int X; }"));
+        using var testSolution = CreateSolution(("FileA.cs", "public class A { public int X; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -123,10 +119,10 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_CyclicFiles_DepthTwo_TerminatesAndBothDirectionsAppear()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? Other; }"),
             ("FileB.cs", "public class B { public A? Other; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -143,13 +139,13 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_MaxResultsBelowTotal_TruncatesEdges()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? B; public C? C; public D? D; public E? E; }"),
             ("FileB.cs", "public class B {}"),
             ("FileC.cs", "public class C {}"),
             ("FileD.cs", "public class D {}"),
             ("FileE.cs", "public class E {}"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -163,8 +159,8 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_DepthAboveCap_ClampsToThree()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path, ("FileA.cs", "public class A { public int X; }"));
+        using var testSolution = CreateSolution(("FileA.cs", "public class A { public int X; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -176,11 +172,11 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanTypeAsync_Incoming_NarrowerThanFile_ExcludesOtherTypeReferences()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class TypeOne {} public class TypeTwo {}"),
             ("FileB.cs", "public class UsesOne { public TypeOne? Prop; }"),
             ("FileC.cs", "public class UsesTwo { public TypeTwo? Prop; }"));
+        var solution = testSolution.Solution;
         var typeOne = await GetTypeSymbolAsync(solution, "FileA.cs", "TypeOne");
 
         var result = await DependencyGraphScanner.ScanTypeAsync(
@@ -194,10 +190,10 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanTypeAsync_Outgoing_ReturnsOnlyThatTypesReferences()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class TypeOne { public Helper? H; } public class TypeTwo { public Helper? H; }"),
             ("FileB.cs", "public class Helper {}"));
+        var solution = testSolution.Solution;
         var typeOne = await GetTypeSymbolAsync(solution, "FileA.cs", "TypeOne");
 
         var result = await DependencyGraphScanner.ScanTypeAsync(
@@ -211,8 +207,8 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanTypeAsync_Outgoing_SelfReferencingType_ExcludesSelfEdge()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path, ("Node.cs", "public class Node { public Node? Next; }"));
+        using var testSolution = CreateSolution(("Node.cs", "public class Node { public Node? Next; }"));
+        var solution = testSolution.Solution;
         var node = await GetTypeSymbolAsync(solution, "Node.cs", "Node");
 
         var result = await DependencyGraphScanner.ScanTypeAsync(
@@ -224,9 +220,9 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_IntraFileReferences_ExcludedAsSelfEdges()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "public class A { public B? Other; } public class B { public A? Other; }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -238,9 +234,9 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_OutgoingBclTypeReference_ExcludedFromEdges()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileA.cs", "using System.Collections.Generic; public class A { public List<int> Items = new(); }"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -252,10 +248,10 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_IncomingMultipleReferencesSameFile_AggregatesReferenceCount()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path,
+        using var testSolution = CreateSolution(
             ("FileB.cs", "public class B {}"),
             ("FileA.cs", "public class A { public B? X; public B? Y; }"));
+        var solution = testSolution.Solution;
         var docB = GetDocument(solution, "FileB.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -269,8 +265,8 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_SingleProjectAdhocSolution_ProjectReferencesEmptyNotCrash()
     {
-        using var dir = new TempSourceDirectory();
-        var solution = CreateAdhocSolution(dir.Path, ("FileA.cs", "public class A {}"));
+        using var testSolution = CreateSolution(("FileA.cs", "public class A {}"));
+        var solution = testSolution.Solution;
         var docA = GetDocument(solution, "FileA.cs");
 
         var result = await DependencyGraphScanner.ScanFileAsync(
@@ -293,48 +289,8 @@ public sealed class DependencyGraphScannerTests
         return (INamedTypeSymbol)semanticModel!.GetDeclaredSymbol(decl)!;
     }
 
-    /// <summary>
-    /// Baut eine In-Memory-Solution mit auf der Platte real gespiegelten Quelldateien —
-    /// Pattern 1:1 uebernommen von <c>PatternDetectScannerTests.CreateAdhocSolution</c>: der
-    /// Scanner leitet Solution-relative Pfade aus <c>solution.FilePath</c> ab (<c>Path.GetRelativePath</c>
-    /// wirft bei leerem <c>relativeTo</c>), daher braucht auch die reine In-Memory-AdhocWorkspace
-    /// hier ein explizites <c>SolutionInfo.FilePath</c>.
-    /// </summary>
-    private static Solution CreateAdhocSolution(string baseDir, params (string fileName, string content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-            projectId, VersionStamp.Create(), "TestProject", "TestProject", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        var solutionInfo = SolutionInfo.Create(
-            SolutionId.CreateNewId(), VersionStamp.Create(), filePath: Path.Combine(baseDir, "Test.slnx"));
-        var solution = workspace.AddSolution(solutionInfo).AddProject(projectInfo);
-
-        foreach (var file in files)
-        {
-            var fullPath = Path.Combine(baseDir, file.fileName);
-            File.WriteAllText(fullPath, file.content);
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, file.fileName, SourceText.From(file.content), filePath: fullPath);
-        }
-        return solution;
-    }
-
-    private sealed class TempSourceDirectory : IDisposable
-    {
-        public string Path { get; } = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(), "ainetlinter-dependencygraph-" + Guid.NewGuid().ToString("N"));
-
-        public TempSourceDirectory() => Directory.CreateDirectory(Path);
-
-        public void Dispose()
-        {
-            try { Directory.Delete(Path, recursive: true); } catch { /* best-effort cleanup */ }
-        }
-    }
+    private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
+        RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\DependencyGraphScannerTests.slnx",
+            new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 }

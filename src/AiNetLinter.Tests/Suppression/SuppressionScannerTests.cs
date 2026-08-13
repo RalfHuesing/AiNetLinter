@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.IO;
 using System.Linq;
 using AiNetLinter.Suppression;

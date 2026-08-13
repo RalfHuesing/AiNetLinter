@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,35 +9,32 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Models;
-using AiNetLinter.Tests;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests;
+using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Text;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="SafeguardScanner"/>. Etabliert ein neues Scanner-Test-Pattern (es
 /// existiert keine dedizierte Test-Datei fuer <c>GetViolationsScanner</c>) und deckt den
 /// deterministischen Score-Pfad, Threshold-Logik, Edge-Cases und den Malfunction-Pfad ab.
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class SafeguardScannerTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public SafeguardScannerTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public SafeguardScannerTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ComputeScoreAsync_EmptySolution_ReturnsHighScore()
     {
-        var solution = CreateAdhocSolution();
+        using var testSolution = CreateSolution();
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
@@ -61,7 +57,8 @@ public class Greeter
     // bewusst keine sealed-Markierung -> EnforceSealedClasses (Default: error, Severity 2)
     public string Hello() => ""hi"";
 }";
-        var solution = CreateAdhocSolution(("Greeter.cs", source));
+        using var testSolution = CreateSolution(("Greeter.cs", source));
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
@@ -77,7 +74,7 @@ public class Greeter
     [Fact]
     public async Task ComputeScoreAsync_KnownFixture_HasAtLeastOneViolation()
     {
-        var solution = _fixture.Catalog.Solution;
+        var solution = _fixture.Solution;
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
@@ -101,7 +98,8 @@ public sealed class A { public int X() => 1; }
 public sealed class B { public int Y() => 2; }
 public sealed class C { public int Z() => 3; }
 public sealed class D { public int W() => 4; }";
-        var solution = CreateAdhocSolution(("Mini.cs", source));
+        using var testSolution = CreateSolution(("Mini.cs", source));
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
@@ -126,7 +124,8 @@ public class Giant
 {{
 {methods}
 }}";
-        var solution = CreateAdhocSolution(("Giant.cs", source));
+        using var testSolution = CreateSolution(("Giant.cs", source));
+        var solution = testSolution.Solution;
         var config = CreateConfig() with
         {
             Metrics = new MetricsConfig
@@ -160,7 +159,8 @@ public class Giant
         const string source = @"
 namespace Test;
 public class Greeter { public string Hello() => ""hi""; }";
-        var solution = CreateAdhocSolution(("Greeter.cs", source));
+        using var testSolution = CreateSolution(("Greeter.cs", source));
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = new SafeguardScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
@@ -179,7 +179,7 @@ public class Greeter { public string Hello() => ""hi""; }";
     [Fact]
     public async Task ComputeScoreAsync_Determinismus_ZweiLaufeIdentischerScore()
     {
-        var solution = _fixture.Catalog.Solution;
+        var solution = _fixture.Solution;
         var config = CreateConfig();
         var parameters1 = CreateParameters(solution, config);
         var parameters2 = CreateParameters(solution, config);
@@ -205,26 +205,18 @@ public class Greeter { public string Hello() => ""hi""; }";
         // Regressionstest analog GetViolationsToolTests: ein ThrowingTextLoader deterministisch
         // simuliert eine LinterEngine-Malfunction. SafeguardScanner faengt die Exception ab
         // und liefert IsMalfunction=true mit der rohen Exception-Message im Context-Feld.
-        var probeDir = Path.Combine(Path.GetTempPath(), "ainetlinter-safeguard-malfunction-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(probeDir);
-        try
-        {
-            var solution = TestHelper.CreateFaultySolution(probeDir);
+        using var faulty = new FaultingSolutionFixture();
+        var solution = faulty.Solution;
 
-            var config = CreateConfig();
-            var parameters = CreateParameters(solution, config);
+        var config = CreateConfig();
+        var parameters = CreateParameters(solution, config);
 
-            var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
 
-            Assert.True(result.IsMalfunction);
-            Assert.Null(result.Score);
-            Assert.NotNull(result.Context);
-            Assert.Contains("Simulierter Lesefehler", result.Context, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(probeDir, recursive: true);
-        }
+        Assert.True(result.IsMalfunction);
+        Assert.Null(result.Score);
+        Assert.NotNull(result.Context);
+        Assert.Contains("Simulierter Lesefehler", result.Context, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -387,7 +379,8 @@ public class Greeter { public string Hello() => ""hi""; }";
     [Fact]
     public void SafeguardScannerParameters_DefaultThreshold_Is8()
     {
-        var solution = CreateAdhocSolution();
+        using var testSolution = CreateSolution();
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = new SafeguardScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
@@ -401,7 +394,8 @@ public class Greeter { public string Hello() => ""hi""; }";
     [Fact]
     public void SafeguardScannerParameters_ExplicitOverrides_AreRespected()
     {
-        var solution = CreateAdhocSolution();
+        using var testSolution = CreateSolution();
+        var solution = testSolution.Solution;
         var config = CreateConfig();
         var parameters = new SafeguardScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
@@ -418,29 +412,10 @@ public class Greeter { public string Hello() => ""hi""; }";
         => new(Solution: solution, Config: config, Console: NullConsole.Instance,
                ScopeFilter: null, CancellationToken: CancellationToken.None);
 
-    private static Solution CreateAdhocSolution(params (string fileName, string content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-            projectId,
-            VersionStamp.Create(),
-            "TestProject",
-            "TestProject",
-            LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        foreach (var file in files)
-        {
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, file.fileName, file.content);
-        }
-        return solution;
-    }
+    private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
+        RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\SafeguardScannerTests.slnx",
+            new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 
     /// <summary>
     /// Stiller Konsolen-Stub fuer Scanner-Tests. Verhindert, dass ein realer LinterEngine-Lauf

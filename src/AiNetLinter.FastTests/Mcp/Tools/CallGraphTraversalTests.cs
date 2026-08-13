@@ -1,34 +1,32 @@
+#nullable enable
+
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class CallGraphTraversalTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public CallGraphTraversalTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public CallGraphTraversalTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExpandAndFormatAsync_Depth1_ReturnsCallSiteFromCaller()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var text = await CallGraphTraversal.ExpandAndFormatAsync(
-            _fixture.Catalog.Solution, symbol!, 1, 50, CancellationToken.None);
+            _fixture.Solution, symbol!, 1, 50, CancellationToken.None);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
     }
@@ -37,11 +35,11 @@ public sealed class CallGraphTraversalTests
     public async Task ExpandAndFormatAsync_Depth2_FormatsWithDepthMarker()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var text = await CallGraphTraversal.ExpandAndFormatAsync(
-            _fixture.Catalog.Solution, symbol!, 2, 50, CancellationToken.None);
+            _fixture.Solution, symbol!, 2, 50, CancellationToken.None);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
     }
@@ -50,11 +48,11 @@ public sealed class CallGraphTraversalTests
     public async Task ExpandAndFormatAsync_DepthAboveCap_ClampsToThree()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var text = await CallGraphTraversal.ExpandAndFormatAsync(
-            _fixture.Catalog.Solution, symbol!, 99, 50, CancellationToken.None);
+            _fixture.Solution, symbol!, 99, 50, CancellationToken.None);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
     }
@@ -68,11 +66,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_Depth1_RootHasThreeDistinctCallerChildren()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
 
         Assert.False(truncated);
         Assert.Equal(3, root.Children.Count);
@@ -87,11 +85,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_MultipleCallSitesInSameCaller_GroupedIntoOneChildWithCountMarker()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, _) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
 
         var runThrice = root.Children.Single(c => c.Name == "Caller.RunThrice");
         // RunThrice ruft Greet dreimal auf — ein Knoten, DisplayLine traegt den "+N weitere"-Marker.
@@ -102,11 +100,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_Depth2_NoFurtherCallersOfCaller_ChildrenStayLeaves()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 2, topN: 10, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 2, topN: 10, CancellationToken.None);
 
         Assert.False(truncated);
         Assert.Equal(3, root.Children.Count);
@@ -118,11 +116,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_DepthAboveCap_ClampsToMaxCallTreeDepth()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 99, topN: 10, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 99, topN: 10, CancellationToken.None);
 
         Assert.False(truncated);
         Assert.Equal(3, root.Children.Count);
@@ -132,11 +130,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_TopNBelowChildCount_KeepsAllChildrenInTreeForRendererCap()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, _) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 2, topN: 2, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 2, topN: 2, CancellationToken.None);
 
         // topN begrenzt nur die weitere Rekursion, nicht die Sichtbarkeit im Baum — der
         // MetricsTreeRenderer wendet seine eigene Top-N-Kappung ("... und N weitere") an.
@@ -147,11 +145,11 @@ public sealed class CallGraphTraversalTests
     public async Task BuildTreeAsync_RootDisplayLineContainsGreeterFile()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
-            _fixture.Catalog.Solution, "Greeter.Greet", CancellationToken.None);
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
         var (root, _) = await CallGraphTraversal.BuildTreeAsync(
-            _fixture.Catalog.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
+            _fixture.Solution, symbol!, requestedDepth: 1, topN: 10, CancellationToken.None);
 
         Assert.Equal("Greeter.Greet", root.Name);
         Assert.Contains("Greeter.cs", root.DisplayLine, System.StringComparison.Ordinal);

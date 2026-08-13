@@ -1,3 +1,5 @@
+#nullable enable
+
 using Xunit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -5,7 +7,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Cli;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class LinterAnalyzerTests

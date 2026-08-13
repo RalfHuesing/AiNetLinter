@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="DependencyGraphTool"/> — Argument-Validierung (gegenseitig exklusive
@@ -18,16 +18,12 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// End-zu-End-Wiring gegen die geteilte SymbolGraphMini-Fixture (Caller.cs -&gt; Greeter.cs ist
 /// eine echte, deterministische Datei-Abhaengigkeit ueber <c>new Greeter()</c>).
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("SymbolGraphCatalog")]
+[Trait("Category", "Component")]
 public sealed class DependencyGraphToolTests
 {
-    private readonly SymbolGraphCatalogFixture _fixture;
+    private readonly McpInMemoryTestContext _fixture;
 
-    public DependencyGraphToolTests(SymbolGraphCatalogFixture fixture)
-    {
-        _fixture = fixture;
-    }
+    public DependencyGraphToolTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()
@@ -45,7 +41,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_BothFilePathAndTypeIdentifierGiven_ReturnsRecoverableInvalidArgument()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Greeter.cs", "Greeter", null, 1, 50), CancellationToken.None);
@@ -58,7 +54,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_NeitherFilePathNorTypeIdentifierGiven_ReturnsRecoverableInvalidArgument()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput(null, null, null, 1, 50), CancellationToken.None);
@@ -71,7 +67,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownFilePath_ReturnsRecoverableResourceNotFound()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/DoesNotExist.cs", null, null, 1, 50), CancellationToken.None);
@@ -84,7 +80,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_UnknownTypeIdentifier_ReturnsRecoverableSymbolNotFound()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput(null, "DoesNotExistXyz", null, 1, 50), CancellationToken.None);
@@ -97,7 +93,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_InvalidDirection_ReturnsRecoverableInvalidArgumentListingValidValues()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Greeter.cs", null, "sideways", 1, 50), CancellationToken.None);
@@ -113,7 +109,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_FilePathGiven_OutgoingSectionContainsGreeterFile()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Caller.cs", null, "outgoing", 1, 50), CancellationToken.None);
@@ -127,7 +123,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_TypeIdentifierGiven_IncomingSectionContainsCallerFile()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput(null, "Greeter", "incoming", 1, 50), CancellationToken.None);
@@ -141,7 +137,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_StructuredContent_IsJsonObjectNotArray()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Caller.cs", null, "outgoing", 1, 50), CancellationToken.None);
@@ -154,7 +150,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_NotTruncated_AppendsSufficiencyHint()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Caller.cs", null, "outgoing", 1, 50), CancellationToken.None);
@@ -167,7 +163,7 @@ public sealed class DependencyGraphToolTests
     [Fact]
     public async Task ExecuteAsync_FileWithoutDependencies_ReturnsEmptySectionsNotError()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(_fixture.Catalog)));
+        var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/OtherCaller.cs", null, "both", 1, 50), CancellationToken.None);

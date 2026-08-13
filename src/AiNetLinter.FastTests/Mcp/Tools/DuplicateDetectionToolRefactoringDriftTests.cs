@@ -1,19 +1,16 @@
 #nullable enable
 
-using System;
-using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/>s <c>mode="refactoring-drift"</c>-Dispatch (Teil
@@ -22,22 +19,9 @@ namespace AiNetLinter.Tests.Mcp.Tools;
 /// fuer den neuen <see cref="RefactoringDriftPayload"/>-Typ (analog der Teil-A-Regressionstests in
 /// <c>DuplicateDetectionToolTests</c>).
 /// </summary>
-[Trait("Category", "Unit")]
-public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
+[Trait("Category", "Component")]
+public sealed class DuplicateDetectionToolRefactoringDriftTests
 {
-    private readonly string _tempDir;
-
-    public DuplicateDetectionToolRefactoringDriftTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "ainetlinter-duptool-refdrift-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort cleanup */ }
-    }
-
     private const string StubTypes = """
         public sealed class SerializerOptionsStub
         {
@@ -93,36 +77,16 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
         }
         """;
 
-    private McpCodeGraphServer BuildServer(params (string FileName, string Content)[] files)
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-        var runtimeAsm = MetadataReference.CreateFromFile(typeof(System.Runtime.GCLatencyMode).Assembly.Location);
-
-        var projectInfo = ProjectInfo.Create(
-            projectId, VersionStamp.Create(), "TestProject", "TestProject", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib, runtimeAsm })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        var solutionInfo = SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create(), filePath: Path.Combine(_tempDir, "Test.slnx"));
-        var solution = workspace.AddSolution(solutionInfo).AddProject(projectInfo);
-        foreach (var file in files)
-        {
-            var fullPath = Path.Combine(_tempDir, file.FileName);
-            File.WriteAllText(fullPath, file.Content);
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(documentId, file.FileName, file.Content, filePath: fullPath);
-        }
-
-        var catalog = new SourceFileCatalog(solution, hasLoadingErrors: false);
-        return new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
-    }
+    private static McpInMemoryTestContext CreateContext(params (string FileName, string Content)[] files) =>
+        new(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\DuplicateDetectionToolRefactoringDriftTests.slnx",
+            new ProjectSpec("TestProject", files, VirtualProjectDirectory: ".")));
 
     [Fact]
     public async Task ExecuteAsync_UnknownMode_ReturnsInvalidArgumentListingValidModes()
     {
-        var state = BuildServer(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        using var context = CreateContext(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, "sideways", null), CancellationToken.None);
@@ -137,7 +101,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RefactoringDriftModeWithoutHelperSymbol_ReturnsInvalidArgument()
     {
-        var state = BuildServer(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        using var context = CreateContext(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, "refactoring-drift", null), CancellationToken.None);
@@ -164,7 +129,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RefactoringDrift_UnresolvableHelperSymbol_PassesThroughSymbolNotFoundError()
     {
-        var state = BuildServer(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        using var context = CreateContext(("A.cs", Helper), ("Stubs.cs", StubTypes));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, "refactoring-drift", "DoesNotExistXyz"), CancellationToken.None);
@@ -177,7 +143,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RefactoringDrift_FindsCandidate_TextSaysCandidatesNotViolations()
     {
-        var state = BuildServer(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
+        using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state,
@@ -195,7 +162,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RefactoringDrift_StructuredContent_IsJsonObjectWithCandidatesField()
     {
-        var state = BuildServer(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
+        using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state,
@@ -214,7 +182,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_RefactoringDrift_NoCandidates_TextSaysNoCandidatesFound()
     {
-        var state = BuildServer(("Stubs.cs", StubTypes), ("Helper.cs", Helper));
+        using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state,
@@ -229,7 +198,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_CloneModeStillWorksUnaffectedByModeDispatch()
     {
-        var state = BuildServer(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
+        using var context = CreateContext(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, "clone", null), CancellationToken.None);
@@ -242,7 +212,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_DefaultMode_BehavesLikeClone()
     {
-        var state = BuildServer(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
+        using var context = CreateContext(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
+        var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);

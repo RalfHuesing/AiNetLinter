@@ -39,7 +39,7 @@ internal static class SolutionFileWalker
                 var relativePath = Path.GetRelativePath(solutionDir, document.FilePath!).Replace('\\', '/');
                 if (fileFilter != null && !fileFilter.IsMatch(relativePath)) continue;
 
-                result.Add(new WalkedFile(relativePath, document.FilePath!));
+                result.Add(new WalkedFile(relativePath, document.FilePath!, document));
             }
         }
 
@@ -61,18 +61,41 @@ internal static class SolutionFileWalker
     }
 
     /// <summary>
-    /// Liest alle Zeilen von <paramref name="path"/>, oder <see langword="null"/> bei einem
-    /// <see cref="IOException"/> (z. B. Datei zwischenzeitlich geloescht/gesperrt).
+    /// Liest die Zeilen aus einem bereits residenten Roslyn-Dokument. Falls der Workspace den
+    /// Text noch nicht materialisiert hat, wird fuer den Live-Pfad auf die Datei zurueckgefallen.
     /// </summary>
-    internal static string[]? TryReadAllLines(string path)
+    internal static string[]? TryReadAllLines(WalkedFile file)
     {
+        if (file.Document.TryGetText(out var sourceText))
+        {
+            return ToLines(sourceText);
+        }
+
+        if (!File.Exists(file.AbsolutePath))
+        {
+            // ainetlinter-disable BanBlockingTaskAccess — der synchrone Toolpfad kann bei rein
+            // virtuellen Dokumenten nicht auf die Platte ausweichen; Roslyn liefert deren Text
+            // aus dem bereits an den Snapshot gebundenen Workspace.
+            return ToLines(file.Document.GetTextAsync().GetAwaiter().GetResult());
+        }
+
         try
         {
-            return File.ReadAllLines(path);
+            return File.ReadAllLines(file.AbsolutePath);
         }
         catch (IOException)
         {
             return null;
         }
+    }
+
+    private static string[] ToLines(Microsoft.CodeAnalysis.Text.SourceText sourceText)
+    {
+        var lines = new string[sourceText.Lines.Count];
+        for (var index = 0; index < lines.Length; index++)
+        {
+            lines[index] = sourceText.Lines[index].ToString();
+        }
+        return lines;
     }
 }

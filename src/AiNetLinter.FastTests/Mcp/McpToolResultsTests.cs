@@ -6,7 +6,7 @@ using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.FastTests.Mcp;
 
 [Trait("Category", "Unit")]
 public sealed class McpToolResultsTests
