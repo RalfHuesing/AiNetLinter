@@ -53,7 +53,7 @@ mehr nötig.>
 | step-019 | EPIC-4 | done | EPIC-4-Grenze: Find-Symbol-Snapshotmatrix und Nicht-C#-Dateiadapter | - | 6413510 | issues→approved (via step-020) | Code 6413510; Doku 1c9c531; Review af61a93 |
 | step-020 | EPIC-4 | done | Korrektur: doppelten Find-Symbol-No-Match-Vertrag konsolidieren | step-019 | 5041b00 | approved | Code 5041b00; Doku 9f60d03/27a6d9b; Review 28b3cb4 |
 | step-021 | EPIC-5 | issues | MSBuild-/Baseline-/Datei-/Refresh-Super-Step (22 Klassen) | - | b2b8fde | issues | 22 Legacy-Dateien entfernt; Korrektur via step-022 |
-| step-022 | EPIC-5 | done (pending audit) | Korrektur: globales MSBuild-Loadgate und read-only Server-Ownership | step-021 | 5aa397f/1c5090d | pending audit | Loadgate-, Ownership- und Guard-Nachweise gruen |
+| step-022 | EPIC-5 | done | Korrektur: globales MSBuild-Loadgate und read-only Server-Ownership | step-021 | 5aa397f/1c5090d | approved | Loadgate-, Ownership- und Guard-Nachweise gruen |
 
 ## Config (optional)
 
