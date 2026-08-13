@@ -5,7 +5,7 @@ started_at: 2026-08-12
 last_updated: 2026-08-13
 rules_dir: .agents/rules
 total_steps: 26  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-026 (done pending audit)
+current_step: step-026 (issues; auf Nutzerwunsch pausiert, keine Folgeplanung)
 ---
 
 # Task State: speedup-tests
@@ -15,8 +15,8 @@ current_step: step-026 (done pending audit)
 - **Task-Status:** `executing`
 - **Steps gesamt:** 26 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-026` (done pending audit; korrigiert den Runtime-Dependency- und
-  Vertragsabschluss von step-025)
+- **Aktueller Schritt:** `step-026` (Review `issues`; die erforderliche Korrektur ist auf
+  Nutzerwunsch pausiert, ohne Folgeplanung)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -58,7 +58,7 @@ mehr nötig.>
 | step-023 | EPIC-5 | issues | Config-/Suppression-Dateikohorte und EPIC-5-Grenzgate (21 Klassen) | - | 312b652 | issues | d37a2f7 |
 | step-024 | EPIC-5 | done | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | approved | Code 30918b9; Doku 00c3e33; Review 8b577ca |
 | step-025 | EPIC-6 | issues | EPIC-6-Start: deterministische Mini-MCP-Prozesshosts (21 Klassen) | - | uncommittiert | blocked by Fast-Runtime-Dependency-Cleanup | - |
-| step-026 | EPIC-6 | done (pending audit) | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | pending audit | 06fdc20 |
+| step-026 | EPIC-6 | issues | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | issues (Audit 2026-08-13; pausiert auf Nutzerwunsch) | 06fdc20 |
 
 ## Config (optional)
 
