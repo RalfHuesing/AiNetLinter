@@ -417,7 +417,7 @@ internal static class SafeguardScanner
     private static bool ShouldIncludeDocument(Document document, Project project, string? scopeFilter)
     {
         if (string.IsNullOrEmpty(scopeFilter)) return true;
-        if (document.FilePath is { } p && p.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
+        if (document.FilePath is { } p && PathNormalizer.MatchesScope(p, scopeFilter)) return true;
         return project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
     }
 

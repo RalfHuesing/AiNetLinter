@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
 using AiNetLinter.Models;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
@@ -38,15 +39,15 @@ internal static class ViolationScopeFilter
 
     /// <summary>
     /// Kein Filter gesetzt = alles im Scope. Sonst case-insensitiver <c>Contains</c>-Abgleich auf
-    /// Projekt-Name oder solution-relativem Pfad.
+    /// Projekt-Name oder solution-relativem Pfad mit einheitlichen Trennzeichen.
     /// </summary>
     internal static bool MatchesScope(string filePath, string projectName, string solutionDir, string? scopeFilter)
     {
         if (string.IsNullOrEmpty(scopeFilter)) return true;
         if (projectName.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
 
-        var relativePath = Path.GetRelativePath(solutionDir, filePath);
-        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
+        var relativePath = PathNormalizer.ToRelative(solutionDir, filePath);
+        return PathNormalizer.MatchesScope(relativePath, scopeFilter);
     }
 
     /// <summary>Anzahl der Dateien aus <paramref name="fileToProject"/>, die <paramref name="scopeFilter"/> matchen.</summary>

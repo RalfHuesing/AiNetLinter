@@ -34,7 +34,8 @@ internal static class GetImpactTool
         {
             return McpToolResults.InvalidArgument(
                 "gitRef und symbolIdentifier sind gegenseitig exklusiv — genau einen angeben oder " +
-                "beide weglassen fuer Git-Diff gegen uncommittete Aenderungen.");
+                "beide weglassen fuer Git-Diff gegen uncommittete Aenderungen.",
+                hint: "Entweder gitRef ODER symbolIdentifier angeben, nie beide.");
         }
         return await (hasSymbolIdentifier
             ? ExecuteSymbolBranchAsync(solution, input, ct)

@@ -96,6 +96,7 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("clone", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("refactoring-drift", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("gitRef", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -111,6 +112,7 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("gitRef", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -235,4 +235,23 @@ public sealed class GetViolationsToolTests
         Assert.Contains("Keine Dateien im Scope", text, StringComparison.Ordinal);
         Assert.Contains("SymbolGraphMini", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void FormatReport_ForwardSlashScopeFilterMatchesWindowsPaths_DoesNotReturnNoFiles()
+    {
+        var fileToProject = new Dictionary<string, string>
+        {
+            [@"C:\Proj\src\Mini\Foo.cs"] = "OtherProject",
+        };
+
+        var text = GetViolationsScanner.FormatReport(
+            solutionDir: @"C:\Proj",
+            fileToProject: fileToProject,
+            violations: Array.Empty<RuleViolation>(),
+            scopeFilter: "src/Mini",
+            usedDefaultConfig: false);
+
+        Assert.DoesNotContain("Keine Dateien im Scope", text, StringComparison.Ordinal);
+        Assert.Contains("Dateien im Scope", text, StringComparison.Ordinal);
+    }
 }

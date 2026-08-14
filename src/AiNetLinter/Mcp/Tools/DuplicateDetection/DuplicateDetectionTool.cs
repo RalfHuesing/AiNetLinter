@@ -34,15 +34,18 @@ internal static class DuplicateDetectionTool
         if (mode is null)
         {
             return McpToolResults.InvalidArgument(
-                $"Ungueltiger mode-Wert '{input.Mode}' — gueltig sind 'clone', 'refactoring-drift'.");
+                $"Ungueltiger mode-Wert '{input.Mode}' — gueltig sind 'clone', 'refactoring-drift'.",
+                hint: "mode='clone' oder mode='refactoring-drift' angeben (Default: 'clone').");
         }
         if (input.MinTokens is < 1)
         {
-            return McpToolResults.InvalidArgument("minTokens muss mindestens 1 sein.");
+            return McpToolResults.InvalidArgument("minTokens muss mindestens 1 sein.",
+                hint: "minTokens als positive Ganzzahl >= 1 angeben.");
         }
         if (input.MaxResults is < 1)
         {
-            return McpToolResults.InvalidArgument("maxResults muss mindestens 1 sein.");
+            return McpToolResults.InvalidArgument("maxResults muss mindestens 1 sein.",
+                hint: "maxResults als positive Ganzzahl >= 1 angeben.");
         }
 
         var configSnapshot = state.GetConfigSnapshot();
@@ -79,7 +82,8 @@ internal static class DuplicateDetectionTool
         {
             return McpToolResults.InvalidArgument(
                 "helperSymbol ist bei mode='refactoring-drift' Pflicht (Datei:Zeile:Spalte, stabile " +
-                "DocumentationCommentId oder qualifizierter Name — Format wie bei find_references).");
+                "DocumentationCommentId oder qualifizierter Name — Format wie bei find_references).",
+                hint: "helperSymbol als C#-Symbol-Identifikator angeben (z. B. 'Klasse.Methode' oder 'M:Namespace.Klasse.Methode').");
         }
 
         var (result, error) = await RefactoringDriftScanner.ScanAsync(solution, config, input, ct);
@@ -99,7 +103,8 @@ internal static class DuplicateDetectionTool
             "near" => (DuplicateSimilarityBucket.Near, null),
             "fuzzy" => (DuplicateSimilarityBucket.Fuzzy, null),
             _ => (DuplicateSimilarityBucket.Fuzzy, McpToolResults.InvalidArgument(
-                $"Ungueltiger similarityThreshold-Wert '{value}' — gueltig sind 'exact', 'near', 'fuzzy'.")),
+                $"Ungueltiger similarityThreshold-Wert '{value}' — gueltig sind 'exact', 'near', 'fuzzy'.",
+                hint: "similarityThreshold='exact', 'near' oder 'fuzzy' angeben (Default: 'fuzzy').")),
         };
     }
 

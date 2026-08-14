@@ -288,4 +288,54 @@ public sealed class McpLiveRepositoryTests
         Assert.Contains("Eingehende Abhaengigkeiten", text, StringComparison.Ordinal);
         Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LiveDogfood_GetHotspots_WithForwardSlashScopeFilter_ReturnsFilteredResults()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_hotspots",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp"
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+        Assert.DoesNotContain("Keine Dateien im Scope", text, StringComparison.Ordinal);
+        Assert.Contains("Gescannt:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_GetViolations_WithForwardSlashScopeFilter_ReturnsFilteredResults()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_violations",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp"
+            });
+
+        Assert.NotNull(text);
+        Assert.NotEmpty(text);
+        Assert.DoesNotContain("Keine Dateien im Scope", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_Safeguard_WithForwardSlashScopeFilter_AnalyzesMatchingClasses()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "safeguard",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp",
+                ["minScore"] = 0.0,
+                ["maxViolations"] = 20,
+            });
+
+        Assert.False(result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        var summary = (string)json["summary"]!;
+        Assert.DoesNotContain("0 Klassen analysiert", summary, StringComparison.Ordinal);
+    }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -91,8 +92,7 @@ internal static partial class DuplicateDetectionEngine
         if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) return false;
         var path = document.FilePath;
         if (IsPermanentlyExcludedPath(path)) return false;
-        if (string.IsNullOrEmpty(pathScopeFilter)) return true;
-        return path.Contains(pathScopeFilter, StringComparison.OrdinalIgnoreCase);
+        return PathNormalizer.MatchesScope(path, pathScopeFilter);
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ internal static partial class DuplicateDetectionEngine
     /// </summary>
     private static bool IsPermanentlyExcludedPath(string path)
     {
-        var normalized = path.Replace('\\', '/');
+        var normalized = PathNormalizer.NormalizeSeparators(path);
         return normalized.Contains("/.ainetlinter/", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("/tests/fixtures/", StringComparison.OrdinalIgnoreCase);
     }

@@ -50,12 +50,5 @@ internal static class DuplicateDetectionScanner
             NearThreshold: config.DuplicateCodeNearThreshold,
             FuzzyThreshold: config.DuplicateCodeFuzzyThreshold,
             NormalizeIdentifiers: input.NormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
-            PathScopeFilter: NormalizeScopeDir(input.ScopeDir));
-
-    /// <summary>Wandelt Forward-Slashes in <paramref name="scopeDir"/> in den plattform-eigenen
-    /// Trennzeichen um, damit der Substring-Abgleich gegen absolute Dateipfade
-    /// (<see cref="DuplicateDetectionEngine"/>) unabhaengig davon funktioniert, mit welcher
-    /// Slash-Konvention der Aufrufer <paramref name="scopeDir"/> angibt.</summary>
-    private static string? NormalizeScopeDir(string? scopeDir) =>
-        string.IsNullOrEmpty(scopeDir) ? null : scopeDir.Replace('/', System.IO.Path.DirectorySeparatorChar);
+            PathScopeFilter: string.IsNullOrWhiteSpace(input.ScopeDir) ? null : Output.PathNormalizer.NormalizeSeparators(input.ScopeDir));
 }

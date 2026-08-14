@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using AiNetLinter.Baseline;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -36,7 +37,7 @@ internal static class SolutionFileWalker
                 if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
                 if (!MatchesScope(document, solutionDir, scopeFilter)) continue;
 
-                var relativePath = Path.GetRelativePath(solutionDir, document.FilePath!).Replace('\\', '/');
+                var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath!);
                 if (fileFilter != null && !fileFilter.IsMatch(relativePath)) continue;
 
                 result.Add(new WalkedFile(relativePath, document.FilePath!, document));
@@ -48,16 +49,17 @@ internal static class SolutionFileWalker
 
     /// <summary>
     /// Prueft, ob ein Dokument in den optionalen <paramref name="scopeFilter"/> faellt — entweder als
-    /// Substring im Projekt-Namen oder im relativen Pfad (beide <see cref="StringComparison.OrdinalIgnoreCase"/>).
+    /// Substring im Projekt-Namen oder im relativen Pfad mit einheitlichen Trennzeichen.
     /// </summary>
     internal static bool MatchesScope(Document document, string solutionDir, string? scopeFilter)
     {
         if (string.IsNullOrEmpty(scopeFilter)) return true;
 
         if (document.Project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
+        if (document.FilePath is null) return false;
 
-        var relativePath = Path.GetRelativePath(solutionDir, document.FilePath!);
-        return relativePath.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
+        var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath);
+        return PathNormalizer.MatchesScope(relativePath, scopeFilter);
     }
 
     /// <summary>

@@ -103,6 +103,20 @@ public sealed class SafeguardToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ForwardSlashScopeFilter_MatchesClasses()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await SafeguardTool.ExecuteAsync(state, "src/SymbolGraphMini", 8.0, 20, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        var violations = (JsonArray)json["violations"]!;
+        Assert.NotEmpty(violations);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MinScoreAndMaxViolationsOverrides_AreHonored()
     {
         var state = _fixture.CreateServer();

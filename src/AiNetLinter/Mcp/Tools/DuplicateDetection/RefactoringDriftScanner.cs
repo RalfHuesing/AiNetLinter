@@ -41,7 +41,8 @@ internal static class RefactoringDriftScanner
                 $"helperSymbol '{input.HelperSymbol}' muss eine gewoehnliche Methode oder lokale Funktion sein " +
                 $"(aufgeloest zu {DescribeKind(symbol!)}) — die Duplicate-Detection-Engine arbeitet nur auf " +
                 "Method-/Local-Function-Koerpern (Teil A), Konstruktoren/Properties/Felder/Operatoren werden " +
-                "nicht fingerprinted."));
+                "nicht fingerprinted.",
+                hint: "helperSymbol auf eine Methode oder lokale Funktion zeigen lassen."));
         }
 
         var options = DuplicateDetectionScanner.BuildOptions(config, input);
@@ -56,7 +57,8 @@ internal static class RefactoringDriftScanner
                 $"helperSymbol '{input.HelperSymbol}' erfuellt die Fingerprint-Voraussetzungen der Engine nicht " +
                 $"(minTokens={options.MinTokens}, [GeneratedCode], ausgeschlossenes Verzeichnis " +
                 "(bin/obj/.ainetlinter/tests/Fixtures) oder ausserhalb des Solution-Verzeichnisses) — kein " +
-                "sinnvoller Aehnlichkeitsvergleich moeglich. minTokens senken oder Symbol-Fundort pruefen."));
+                "sinnvoller Aehnlichkeitsvergleich moeglich. minTokens senken oder Symbol-Fundort pruefen.",
+                hint: "minTokens pruefen oder eine Methode ausserhalb von generierten/Fixture-Verzeichnissen waehlen."));
         }
 
         var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);

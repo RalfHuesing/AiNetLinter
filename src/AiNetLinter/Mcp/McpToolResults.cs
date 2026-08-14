@@ -101,17 +101,16 @@ internal static class McpToolResults
     }
 
     /// <summary>
-    /// Kurzform fuer den Fall, dass ein Tool-Aufruf gegenseitig exklusive Parameter verletzt
-    /// (z. B. <c>get_impact</c>s <c>gitRef</c> und <c>symbolIdentifier</c> beide gesetzt).
+    /// Kurzform fuer den Fall, dass ein Tool-Aufruf ungueltige oder unvollstaendige Argumente enthaelt.
     /// IsError=false (recoverable) — ein Nutzer-/Agentenfehler bei den Argumenten, kein
     /// Tool-Ausfall.
     /// </summary>
-    internal static CallToolResult InvalidArgument(string message)
+    internal static CallToolResult InvalidArgument(string message, string? hint = null)
     {
         return Recoverable(
             LinterErrorCodes.InvalidArgument,
             message,
-            hint: "Entweder gitRef ODER symbolIdentifier angeben, nie beide.");
+            hint: hint ?? "Parameter pruefen und gemaess Spezifikation uebergeben.");
     }
 
     /// <summary>

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -38,7 +39,8 @@ internal static class DependencyGraphTool
         if (hasFilePath == hasTypeIdentifier)
         {
             return McpToolResults.InvalidArgument(
-                "filePath und typeIdentifier sind gegenseitig exklusiv — genau einen angeben, nie beide oder keins.");
+                "filePath und typeIdentifier sind gegenseitig exklusiv — genau einen angeben, nie beide oder keins.",
+                hint: "Entweder filePath ODER typeIdentifier angeben, nie beide.");
         }
 
         var (includeOutgoing, includeIncoming, directionError) = ParseDirection(input.Direction);
@@ -68,7 +70,8 @@ internal static class DependencyGraphTool
             "incoming" => (false, true, null),
             "both" => (true, true, null),
             _ => (false, false, McpToolResults.InvalidArgument(
-                $"Ungueltiger direction-Wert '{direction}' — gueltig sind 'incoming', 'outgoing', 'both'.")),
+                $"Ungueltiger direction-Wert '{direction}' — gueltig sind 'incoming', 'outgoing', 'both'.",
+                hint: "direction='incoming', 'outgoing' oder 'both' angeben (Default: 'both').")),
         };
     }
 
@@ -82,7 +85,7 @@ internal static class DependencyGraphTool
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
         var result = await DependencyGraphScanner.ScanFileAsync(document, request, ct);
-        var relativePath = Path.GetRelativePath(solutionDir, absolutePath).Replace('\\', '/');
+        var relativePath = PathNormalizer.ToRelative(solutionDir, absolutePath);
         var target = new DependencyGraphTarget("file", relativePath, null);
         return await BuildResponseAsync(solution, target, result, ct);
     }
@@ -99,7 +102,8 @@ internal static class DependencyGraphTool
         if (targetType is null)
         {
             return McpToolResults.InvalidArgument(
-                $"'{input.TypeIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.");
+                $"'{input.TypeIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
+                hint: "typeIdentifier muss auf einen Typen oder Typ-Member verweisen.");
         }
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
@@ -114,7 +118,7 @@ internal static class DependencyGraphTool
         var location = type.Locations.FirstOrDefault(l => l.IsInSource && l.SourceTree is not null);
         if (location is null) return type.Name;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        return Path.GetRelativePath(solutionDir, location.SourceTree!.FilePath).Replace('\\', '/');
+        return PathNormalizer.ToRelative(solutionDir, location.SourceTree!.FilePath);
     }
 
     private static async Task<CallToolResult> BuildResponseAsync(

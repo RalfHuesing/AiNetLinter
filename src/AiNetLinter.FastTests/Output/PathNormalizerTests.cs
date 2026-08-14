@@ -55,4 +55,28 @@ public sealed class PathNormalizerTests
     {
         Assert.Equal(expected, PathNormalizer.IsTestFile(path));
     }
+
+    [Theory]
+    [InlineData(@"src\AiNetLinter\Mcp\Tool.cs", "src/AiNetLinter/Mcp/Tool.cs")]
+    [InlineData("src/AiNetLinter/Mcp/Tool.cs", "src/AiNetLinter/Mcp/Tool.cs")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void NormalizeSeparators_ConvertsBackslashesToForwardSlashes(string? input, string expected)
+    {
+        Assert.Equal(expected, PathNormalizer.NormalizeSeparators(input));
+    }
+
+    [Theory]
+    [InlineData(@"src\AiNetLinter\Mcp\Tool.cs", "src/AiNetLinter/Mcp", true)]
+    [InlineData("src/AiNetLinter/Mcp/Tool.cs", @"src\AiNetLinter\Mcp", true)]
+    [InlineData(@"C:\Solution\src\AiNetLinter\Mcp\Tool.cs", "src/AiNetLinter/Mcp", true)]
+    [InlineData("src/AiNetLinter/Mcp/Tool.cs", "OtherDir", false)]
+    [InlineData("src/AiNetLinter/Mcp/Tool.cs", "", true)]
+    [InlineData("src/AiNetLinter/Mcp/Tool.cs", null, true)]
+    [InlineData("", "src/Mcp", false)]
+    [InlineData(null, "src/Mcp", false)]
+    public void MatchesScope_MatchesCrossPlatformPathsCorrectly(string? filePath, string? scopeFilter, bool expected)
+    {
+        Assert.Equal(expected, PathNormalizer.MatchesScope(filePath, scopeFilter));
+    }
 }

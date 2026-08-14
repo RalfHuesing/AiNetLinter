@@ -112,6 +112,18 @@ public sealed class GetHotspotsToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ScopeFilterWithForwardSlashPath_MatchesFiles()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetHotspotsTool.ExecuteAsync(state, "src/SymbolGraphMini", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Gescannt: 5 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
         var state = _fixture.CreateServer();

@@ -33,7 +33,7 @@ public static class PathNormalizer
     /// </summary>
     public static bool IsTestFile(string relativePath)
     {
-        var normalized = relativePath.Replace('\\', '/');
+        var normalized = NormalizeSeparators(relativePath);
         return normalized.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains(".FastTests/", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains(".IntegrationTests/", StringComparison.OrdinalIgnoreCase) ||
@@ -41,5 +41,30 @@ public static class PathNormalizer
                normalized.Contains(".Specs/", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
                normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Normalisiert Pfad-Trennzeichen auf einheitliche Forward-Slashes ('/'),
+    /// damit String- und Scope-Vergleiche plattformunabhängig funktionieren.
+    /// </summary>
+    public static string NormalizeSeparators(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return string.Empty;
+        return path.Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Prüft, ob ein Dateipfad (relativ oder absolut) in einen Scope-Filter fällt.
+    /// Beide Pfade werden vor dem Vergleich auf einheitliche Forward-Slashes normalisiert.
+    /// </summary>
+    public static bool MatchesScope(string? filePath, string? scopeFilter)
+    {
+        if (string.IsNullOrWhiteSpace(scopeFilter)) return true;
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+
+        var normalizedPath = NormalizeSeparators(filePath);
+        var normalizedFilter = NormalizeSeparators(scopeFilter);
+
+        return normalizedPath.Contains(normalizedFilter, StringComparison.OrdinalIgnoreCase);
     }
 }
