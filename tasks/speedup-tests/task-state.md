@@ -1,23 +1,21 @@
 ---
-status: executing  # executing | blocked | done | aborted
+status: done  # executing | blocked | done | aborted
 task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-14
 rules_dir: .agents/rules
 total_steps: 29  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-029 (open; hybrider Master-Superstep fuer den gesamten Task-Rest)
+current_step: step-029 (done)
 ---
 
 # Task State: speedup-tests
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Steps gesamt:** 29 (regulär + Korrekturen — weicher Check-in bei
-  jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-029` (`open`; drei grosse Restpakete ohne weitere
-  Unterkohorten-Planung; Arbeitsmodus `hybrid-low-cost`)
-- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
+- **Task-Status:** `done`
+- **Steps gesamt:** 29 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-029` (`done`; alle 3 Pakete vollständig abgeschlossen)
+- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (alle Epics EPIC-1 bis EPIC-7 `done`)
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
 - **Zuletzt aktualisiert:** 2026-08-14
@@ -32,7 +30,7 @@ sich die Kettenlänge fürs Fix-Budget (§10.5), keine separate Zählung
 mehr nötig.>
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
-|------|------|--------|-------|----------|-------|----------|--------|
+|---|---|---|---|---|---|---|---|
 | step-001 | EPIC-1 | done | Fundament: Zielprojekte + TestProject.props | - | b1fe9eb | approved | 9d20376 |
 | step-002 | EPIC-1 | done | Fundament: Migrationsledger, Guards, Baseline-Messung | - | cd1c80f | issues→approved (via step-003) | c5d4b10 |
 | step-003 | EPIC-1 | done | Korrektur: Nachweis Ledger-Guard | step-002 | c16be1a | approved | c16be1a |
@@ -61,7 +59,7 @@ mehr nötig.>
 | step-026 | EPIC-6 | done | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | issues→approved via step-027/028 | Code 06fdc20; Doku 1e20391 |
 | step-027 | EPIC-6 | done | Korrektur: Git-Workspace-Cleanup und Kategorieguard abschliessen | step-026 | 399a463 | issues→approved via step-028 | Code 399a463; Doku 479a7a7/32b0150 |
 | step-028 | EPIC-6 | done | Korrektur: enge Step-027-Matrixevidenz nachweisen | step-027 | Evidenz-only | approved | Review in aktuellem Planungscommit |
-| step-029 | EPIC-6/7 | open | Master-Superstep: 15 + 38 Klassen, Legacy-Loeschung und Abschluss | - | - | - | - |
+| step-029 | EPIC-6/7 | done | Master-Superstep: 15 + 38 Klassen, Legacy-Loeschung und Abschluss | - | 71a596b | approved | 71a596b |
 
 ## Config (optional)
 

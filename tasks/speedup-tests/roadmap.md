@@ -1,9 +1,9 @@
 ---
-status: active  # active | done
+status: done  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-14  # Step 028 approved; Task-Rest in Master-Step 029 gebuendelt
+last_updated: 2026-08-14  # Alle Epics EPIC-1 bis EPIC-7 abgeschlossen
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -171,38 +171,21 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Tests vollstaendig gruen. Der parallele echte MSBuild-Registrierungs-
       Lastvertrag bleibt wegen Stress in EPIC-6; Prozess, Framing, Retry, Git, Repo/Dogfood,
       Performance, Stress und finale Legacy-Loeschung bleiben ebenfalls ausserhalb.
-- [ ] EPIC-6: CLI-, MCP-Prozess-, Dogfood-, Performance- und Stress-Kohorte migrieren — geteilter
+- [x] EPIC-6: CLI-, MCP-Prozess-, Dogfood-, Performance- und Stress-Kohorte migrieren — geteilter
       read-only MCP-Host für idempotente Smokes, exklusive Hosts für Framing/Retry/Refresh,
       Parallelitätsbudgets (`SubprocessConcurrencyGate`-Nachfolger), getrennte Runner-Konfiguration
       pro Assembly — Konzept §9 Punkt 5, Leitplanke 5, 6 (Runner-/Prozessparallelität).
-      **In Arbeit → step-025, Korrektur step-026:** Als groesste vollständige erste Hostfamilie werden 21
-      Mini-Solution-MCP-Klassen (121 statische Fälle) fachlich auf FastTests und IntegrationTests
-      geschnitten. Ein lazy assembly-weiter SymbolGraph-Prozess bedient ausschließlich
-      idempotente read-only Smokes; Framing, Retry, Fehler, Git-Impact und Refresh erhalten
-      exklusive Hosts. Das Max-2-Prozessbudget umfasst die volle Lebensdauer, der Integration-
-      Runner wird endlich gedeckelt. TD-001/TD-006 werden im berührten Scope geschlossen.
-      Der uncommittierte Step-025-Stand baut, aber sein Fast-Zielgate endet trotz 49/49 bestandener
-      Methoden rot: ein `McpServerCommand.RunAsync`-Vertrag startet transitiv den
-      `SourceFileCatalogLoader` und lädt drei verbotene MSBuild-Assemblies, die der Assembly-
-      Cleanup korrekt meldet. Step 026 verschiebt diesen echten Hostvertrag nach Integration,
-      stellt die vollständige 121er-Vertragsmatrix wieder her und schließt Retry/Framing/Git/
-      Refresh, Prozessbudget, Guards, Ledger und Debt-Evidenz ab. Allgemeine CLI-Self-Repo-
-      Verträge, Dogfood, Performance und Stress bleiben getrennte EPIC-6-Host-/Cadence-Schnitte;
-      weder Step 025 noch Step 026 führt ein Stressprofil oder einen vollen
-      `Category!=Stress`-Lauf aus. **Step 027 ist nach der manifestscharfen Evidenzkorrektur
-      Step 028 approved:** Fast 69/69 und Integration 64/64, je FQN-genau. Der gesamte EPIC-6-Rest
-      liegt nun ohne weitere Unterkohorten-Planung in Master-Step 029, Paket 1: exakt 15 pending
-      CLI-/MSBuild-/MCP-Dogfood-/Performance-/Stressklassen; Zielstand 38 pending. Stress wird
-      migriert, kompiliert und discovered, aber ohne neue Nutzerfreigabe nicht ausgefuehrt.
-- [ ] EPIC-7: Restmigration, Legacy-Löschung, finale Laufprofile, Messbericht, Dokumentation —
+      **Abgeschlossen → Paket 1 in step-029 (`5c80494`, `78d84e8`, `4d483bf`):** Alle 15 Klassen
+      vollständig migriert, Stress compiliert & discovered, Dogfood/Performance isoliert.
+- [x] EPIC-7: Restmigration, Legacy-Löschung, finale Laufprofile, Messbericht, Dokumentation —
       verbleibende Kohorten, Ledger auf `pending = 0`, physisches Löschen von `AiNetLinter.Tests`
       und Solution-Bereinigung, Abschlussverifikation aller Profile (Unit/Component/Integration/
       Dogfood/Performance/Stress getrennt), Vorher-/Nachher-Messbericht nach Leitplanke 10,
       Aktualisierung von `AGENTS.md`/Testdokumentation/Diagnoseregel — Konzept §9 Punkt 6,
-      Definition of Done. **Gebündelt in Master-Step 029:** Paket 2 migriert alle danach
-      verbleibenden 38 Ledgerklassen auf `pending = 0`; Paket 3 löscht Legacyprojekt und Support,
-      bereinigt Solution/Runner/Rules/Doku und führt Build, beide `Category!=Stress`-Abschlussgates,
-      getrennte Profilmessung und Drift-Audit aus. Keine weiteren Stepordner sind vorgesehen.
+      Definition of Done. **Abgeschlossen → Paket 2 & Paket 3 in step-029 (`91d9d0b`..`71a596b`):**
+      Alle 38 verbleibenden Klassen migriert (0 pending), `AiNetLinter.Tests` gelöscht, Solution
+      bereinigt, finaler Messbericht in `final-measurement.md` und Drift-Audit via `find_duplicates`
+      erfolgreich abgeschlossen.
 
 <Reihenfolge folgt der Strangler-Abhängigkeit aus Konzept §8: EPIC-1/2 sind Voraussetzung für jede
 Migrationskohorte (EPIC-3..6), EPIC-7 setzt voraus, dass alle Kohorten migriert sind. Die genaue
