@@ -1,7 +1,7 @@
 # Pre-Audit Findings: find_magic_values (EPIC-1 & EPIC-2)
 
 > **Hinweis zur Verwendung:**  
-> Dieses Dokument enthält Beobachtungen und potenzielle Schwachstellen aus einer statischen Code-Inspektion der `find_magic_values`-Implementierung.  
+> Dieses Dokument enthält Beobachtungen, funktionale Schwachstellen und Linter-Regelverstöße aus einer statischen Code-Inspektion und einer automatisierten Analyse über den residierenden MCP-Server `ainetlinter`.  
 > Die Punkte sind **keine pauschale Umsetzungs-Pflicht**, sondern dienen als fundierte Prüfgrundlage für den Coder/Kritiker zur Tiefenprüfung, ob und in welchem Umfang sie für das Konzept und die Praxistauglichkeit adressiert werden sollten.
 
 ---
@@ -74,21 +74,12 @@
 
 ## 4. Trivia-Attachment bei Suppression-Kommentaren (`// ainetlinter-disable MagicValues`)
 
-- **Dateipfad:** `src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesClassifier.cs` (ca. Zeilen 302–314)
+- **Dateipfad:** `src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesClassifier.cs` (ca. Zeilen 302–328)
 - **Code-Stelle:**
   ```csharp
   private static bool HasDisableComment(LiteralExpressionSyntax literal)
   {
-      const string Marker = "ainetlinter-disable MagicValues";
-      foreach (var trivia in literal.GetLeadingTrivia())
-      {
-          if (IsDisableCommentTrivia(trivia, Marker)) return true;
-      }
-      foreach (var trivia in literal.GetTrailingTrivia())
-      {
-          if (IsDisableCommentTrivia(trivia, Marker)) return true;
-      }
-      return false;
+      ...
   }
   ```
 - **Beobachtung & Problem:**  
@@ -103,11 +94,9 @@
   ```csharp
   const string ApiUrl = "https://api.example.com"; // ainetlinter-disable MagicValues
   ```
-  werden bei der Prüfung von `literal.GetLeadingTrivia()` nicht erkannt. Nur Inline-Kommentare direkt vor/nach dem Literal (`/* ainetlinter-disable MagicValues */ "https://..."`) würden greifen.
+  werden bei alleiniger Prüfung von `literal.GetLeadingTrivia()` nicht erkannt. Nur Inline-Kommentare direkt vor/nach dem Literal (`/* ainetlinter-disable MagicValues */ "https://..."`) greifen.
 - **Konkreter Vorschlag zur Prüfung:**  
-  Die Trivia-Prüfung um den umschließenden Statement- bzw. Deklarationsknoten erweitern:
-  - Führende Trivia von `literal.FirstAncestorOrSelf<StatementSyntax>()` bzw. `FieldDeclarationSyntax`.
-  - Nachstehende Trivia der umschließenden Anweisung (z. B. am Statement-Ende).
+  Die Trivia-Prüfung um den umschließenden Statement- bzw. Deklarationsknoten erweitern (siehe auch Punkt 6.1 zur Komplexitätsreduktion).
 
 ---
 
@@ -127,3 +116,38 @@
   Alle Heuristiken oder Filter, die im AST nach oben navigieren (z. B. `ResolveSurroundingName` für `security_candidates`, `FirstAncestorOrSelf<AttributeSyntax>()`, oder `HasDisableComment`), liefern bei synthetischen String-Segmenten `null` bzw. greifen nicht.
 - **Konkreter Vorschlag zur Prüfung:**  
   Prüfen, ob für statische Fragmente interpolierter Strings der übergeordnete `InterpolatedStringExpressionSyntax`-Knoten als Kontext übergeben werden sollte, um zumindest Symbol- und Unterdrückungskontext auswerten zu können.
+
+---
+
+## 6. Linter- & Architektur-Befunde (ermittelt via MCP-Server `ainetlinter`)
+
+Die Analyse über die residierenden Linter-Tools (`get_violations`, `get_hotspots`, `safeguard`) hat folgende konkrete Regelverletzungen und Risiken im aktuellen Codebestand aufgezeigt:
+
+### 6.1 `MaxCognitiveComplexity` in `MagicValuesClassifier.cs`
+- **Fundstelle:** `src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesClassifier.cs` (Zeile ~301)
+- **Regelverstoß:** Die Methode `HasDisableComment` hat eine Kognitive Komplexität von **16** (erlaubt sind maximal **15**).
+- **Ursache:** Verschachtelte Schleifen (`for current = literal.Parent` + `foreach trivia`) bei der Vorfahren-Prüfung.
+- **Konkreter Vorschlag:** Auslagerung der Vorfahren-Schleife in eine separate Hilfsmethode (z. B. `HasAncestorDisableComment(literal, marker)`), um die Komplexität der Hauptmethode unter 15 zu senken.
+
+### 6.2 `MaxBoolParameterCount` in `FindMagicValuesTestHelpers.cs`
+- **Fundstelle:** `src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesTestHelpers.cs` (Zeilen ~27 & ~51)
+- **Regelverstoß:** Die Hilfsmethode `RunAsync` deklariert **3 bool-Parameter** (`includeTests`, `includeSuppressed`, `changedOnly`). Erlaubt ist laut Projektregel maximal **1 bool-Parameter**.
+- **Ursache:** Bool-Parameter sind an der Aufrufstelle opak (z. B. `RunAsync(source, false, false, true)`).
+- **Konkreter Vorschlag:** Nutzung des bereits bestehenden Records `ScanAsyncParams` oder eines Options-Parameters anstelle einzelner bools in den Helper-Überladungen.
+
+### 6.3 `DetectAndBanPhantomDependencies` in `FindMagicValuesTestHelpers.cs`
+- **Fundstelle:** `src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesTestHelpers.cs` (Zeile 9)
+- **Regelverstoß:** Der importierte Namespace `using AiNetLinter.TestKit;` kann im Kontext des Testprojekts nicht aufgelöst werden (Phantom Dependency).
+- **Konkreter Vorschlag:** Unbenutztes `using` entfernen bzw. Projektreferenz prüfen.
+
+### 6.4 Hotspot-Warnung / `MaxLineCount`-Risiko in `FindMagicValuesScannerTests.cs`
+- **Fundstelle:** `src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerTests.cs`
+- **Metrik:** Die Datei steht bei **486 Zeilen (97 % des 500-Zeilen-Limits)**.
+- **Auswirkung:** Werden weitere Unit-Tests in diese Datei eingefügt, bricht der Build mit `MaxLineCount > 500` ab (`TreatWarningsAsErrors=true`).
+- **Konkreter Vorschlag:** Alle neuen Tests für EPIC-2 konsequent in `FindMagicValuesScannerHeuristicTests.cs` oder eine neue `FindMagicValuesScannerArgTests.cs` auslagern.
+
+### 6.5 `MaxPublicMembersPerType` in Test-Klassen
+- **Fundstellen:**  
+  - `FindMagicValuesScannerTests.cs` (21 öffentliche Member, erlaubt: 15)  
+  - `FindMagicValuesScannerHeuristicTests.cs` (19 öffentliche Member, erlaubt: 15)
+- **Konkreter Vorschlag:** Bei weiterem Anwachsen der Testsuite die Test-Klassen nach Fachbereichen (z. B. Filter-Tests vs. Heuristik-Tests) aufteilen.
