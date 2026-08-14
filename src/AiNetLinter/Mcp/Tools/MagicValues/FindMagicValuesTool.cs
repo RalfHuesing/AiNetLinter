@@ -12,8 +12,8 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// Rohe, noch ungeparste <c>find_magic_values</c>-Toolargumente vor der Validierung in
 /// <see cref="FindMagicValuesTool.ExecuteAsync"/>. Stellt alle 9 Konfigurations-Felder
 /// bereit, die das Tool laut Konzept §"MCP-Tool Schnittstellen-Spezifikation" akzeptiert.
-/// <c>IncludeSuppressed</c> und <c>ChangedOnly</c> sind EPIC-2-Platzhalter (in EPIC-1
-/// No-op) — bereits im Record, damit EPIC-2 ohne API-Bruch nachliefern kann.
+/// <c>IncludeSuppressed</c>, <c>IncludeTests</c> und <c>ChangedOnly</c> sind in EPIC-2
+/// wirksam (siehe <c>FindMagicValuesScanner</c> fuer die jeweilige Implementierung).
 /// </summary>
 internal sealed record FindMagicValuesToolArgs(
     string? ScopeFilter,
@@ -73,8 +73,8 @@ internal static class FindMagicValuesTool
                     MaxResults: maxResults,
                     IgnoreNumbers: args.IgnoreNumbers,
                     IncludeTests: args.IncludeTests,
-                    IncludeSuppressed: args.IncludeSuppressed, // EPIC-1 No-op (siehe Classifier)
-                    ChangedOnly: args.ChangedOnly,               // EPIC-1 No-op
+                    IncludeSuppressed: args.IncludeSuppressed, // EPIC-2 wirksam — siehe Classifier
+                    ChangedOnly: args.ChangedOnly,               // EPIC-2 wirksam — siehe Scanner
                     CancellationToken: ct)),
                 ct);
         }

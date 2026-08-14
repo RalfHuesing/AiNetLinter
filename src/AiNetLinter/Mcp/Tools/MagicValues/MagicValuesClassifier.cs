@@ -21,14 +21,15 @@ internal sealed record MagicValueClassification(
     string ContextHint);
 
 /// <summary>
-/// Parameter-Bundel fuer <see cref="MagicValuesClassifier.Classify"/>. Fasst die zwei
-/// EPIC-2-Platzhalter-Bools (<c>includeTests</c>, <c>includeSuppressed</c>) zu einem
-/// <c>ClassifierOptions</c>-Record zusammen, damit das Methoden-Signatur-Limit (max 4
-/// Parameter) eingehalten wird.
+/// Parameter-Bundel fuer <see cref="MagicValuesClassifier.Classify"/>. Fasst die
+/// Classifier-Steuerflags (<c>IncludeTests</c>, <c>IncludeSuppressed</c>, <c>IsTestPath</c>)
+/// zu einem <c>ClassifierOptions</c>-Record zusammen, damit das Methoden-Signatur-Limit
+/// (max 4 Parameter) eingehalten wird.
 /// </summary>
 internal sealed record MagicValueClassifierOptions(
     bool IncludeTests,
-    bool IncludeSuppressed);
+    bool IncludeSuppressed,
+    bool IsTestPath = false);
 
 /// <summary>
 /// Reine, deterministische Heuristik-Funktion: bestimmt, ob ein Literal ein "Magic Value" im
@@ -55,13 +56,6 @@ internal static class MagicValuesClassifier
     private const int TrivialNumberLow = -1;
     private const int TrivialNumberHigh = 1;
 
-    // Schlüsselwörter im Literal, die auf einen Connection-String hindeuten
-    // (Konzept §"Wie" Punkt 4 — "Server=", "Database=", ...).
-    private static readonly string[] ConnectionStringKeywords =
-    [
-        "Server=", "Database=", "Trusted_Connection=", "User Id=", "Password=", "Data Source=",
-    ];
-
     /// <summary>
     /// Klassifiziert ein einzelnes <paramref name="literal"/>. Liefert <c>IsMagic=false</c>
     /// fuer Trivial-/Attribut-/Index-/Loop-/GetHashCode-Faelle, sonst eine fachliche
@@ -73,15 +67,25 @@ internal static class MagicValuesClassifier
     /// verwendet. <see langword="null"/> in syntaktischen Unit-Tests.</param>
     /// <param name="ignoreNumbers">Zusaetzliche Zahlen, die ueber die Trivial-Liste hinaus
     /// ignoriert werden sollen (z. B. 24/60/360/1000 fuer Zeit-Konstanten).</param>
-    /// <param name="options">EPIC-2-Platzhalter-Bools gebuendelt; aktuell No-op in EPIC-1,
-    /// aber im Args-Record bereits durchgereicht fuer API-Stabilitaet.</param>
+    /// <param name="options">Steuerflags: <c>IncludeSuppressed</c> (wirksam via
+    /// <see cref="HasDisableComment"/>), <c>IncludeTests</c>/<c>IsTestPath</c> (vom
+    /// Walker-Context vorberechnet fuer die Tests-Projekt-Filterung).</param>
     internal static MagicValueClassification Classify(
         LiteralExpressionSyntax literal,
         SemanticModel? model,
         IReadOnlySet<int> ignoreNumbers,
         MagicValueClassifierOptions options)
     {
-        _ = options; // EPIC-1 No-op: includeTests/includeSuppressed sind Platzhalter
+        // Suppression-Pruefung VOR allen anderen Filtern: ein Literal mit
+        // // ainetlinter-disable MagicValues-Kommentar wird bei includeSuppressed=false
+        // komplett uebergangen — auch dann, wenn die Heuristik es als Magic Value
+        // klassifizieren wuerde. Konzept §"Verworfene Alternativen" verlangt diese
+        // pro-Fundstelle-Granularitaet (im Gegensatz zur dateiweiten SuppressionScanner-
+        // Semantik); die Auswertung am SyntaxTrivia ist bewusst billig (kein File-IO).
+        if (!options.IncludeSuppressed && HasDisableComment(literal))
+        {
+            return NotMagic();
+        }
 
         // Attribut-Isolierung: jedes Literal innerhalb eines Attributs (z. B. [Route("/api/v1")])
         // ist semantisch vom Compiler-/Framework-Vertrag abhaengig und nicht refactorbar — nie melden.
@@ -228,33 +232,37 @@ internal static class MagicValuesClassifier
         LiteralExpressionSyntax literal,
         SemanticModel? model)
     {
-        // Connection-String-Heuristik: jedes Schluesselwort-Treffer genuegt — Server- und Database-Keys
-        // sind praktisch immer Teil eines Connection-Strings, nicht eigenstaendige Magic Values.
-        foreach (var keyword in ConnectionStringKeywords)
+        // Reihenfolge der String-Heuristiken ist relevant — Security und Localization
+        // muessen VOR den strukturellen Heuristiken (URL/Path/Format/Header-Id) laufen,
+        // damit z. B. eine Secret-URL als security_candidates und nicht als
+        // config_candidates gemeldet wird, und damit eine lange Exception-Message
+        // korrekt als localization_candidates klassifiziert wird. Die eigentlichen
+        // Heuristik-Implementierungen liegen in MagicValuesStringHeuristics (gleiche
+        // Aufteilung wie MagicValuesNumberClassifier); hier nur der Dispatch.
+
+        // 1) Security (CWE-798) — Secret-URL gewinnt gegen URL-Heuristik.
+        if (MagicValuesStringHeuristics.ClassifySecurityCandidate(literal, model) is { } sec)
         {
-            if (value.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                return new MagicValueClassification(
-                    true,
-                    MagicValueCategory.ConfigCandidates,
-                    "appsettings.json (ConnectionStrings-Sektion)",
-                    $"Connection-String-Kandidat enthaelt '{keyword}'");
-            }
+            return sec;
         }
 
-        // URL-Heuristik: 'http://' / 'https://' / 'ftp://' sind sehr starke Indikatoren fuer
-        // eine Konfigurations-URL. Bewusst einfach (kein UrlParser), um false positives in
-        // Kommentaren / XML-Doku zu vermeiden — letztere beginnen nie mit einem Schema.
-        if (StartsWithAny(value, "http://", "https://", "ftp://"))
+        // 2) Localization (Exception-Message > 15 Zeichen).
+        if (MagicValuesStringHeuristics.ClassifyLocalizationCandidate(literal, model) is { } loc)
         {
-            return new MagicValueClassification(
-                true,
-                MagicValueCategory.ConfigCandidates,
-                "appsettings.json (ApiSettings/BaseUrl o. ae.)",
-                "URL-Literal");
+            return loc;
         }
 
-        // Windows-Pfad-Heuristik: 'C:\...' oder '\\server\share' sind Pfad-Literale.
+        // 3) Strukturelle Heuristiken in Reihenfolge: Connection-String, URL, Windows-Pfad,
+        // Format-String, Header-Id. Delegation an MagicValuesStringHeuristics, um die
+        // Methode unter MaxMethodLineCount/MaxCyclomaticComplexity zu halten.
+        if (MagicValuesStringHeuristics.ClassifyConnectionStringCandidate(value) is { } conn)
+        {
+            return conn;
+        }
+        if (MagicValuesStringHeuristics.ClassifyUrlCandidate(value) is { } url)
+        {
+            return url;
+        }
         if (LooksLikeWindowsPath(value))
         {
             return new MagicValueClassification(
@@ -263,8 +271,6 @@ internal static class MagicValuesClassifier
                 "appsettings.json (Paths-Sektion)",
                 "Windows-Pfad-Literal");
         }
-
-        // Format-String-Heuristik: typische .NET-Format-String-Patterns (Datum, Zahlen, Platzhalter).
         if (LooksLikeFormatString(value))
         {
             return new MagicValueClassification(
@@ -273,33 +279,84 @@ internal static class MagicValuesClassifier
                 "Constants.cs (Format-String-Konstante)",
                 "Format-String-Literal");
         }
-
-        // Header-/Correlation-ID-Name mit Bindestrich (z. B. 'X-Correlation-ID'): semantisch
-        // ein Identifier, sollte zentral definiert werden.
-        if (value.Contains('-', StringComparison.Ordinal) && value.Length is > 2 and < 64
-            && value.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'))
+        if (MagicValuesStringHeuristics.ClassifyHeaderIdentifierCandidate(value) is { } header)
         {
-            return new MagicValueClassification(
-                true,
-                MagicValueCategory.ConstantCandidates,
-                "Constants.cs (Header-/Identifier-Konstante)",
-                "Identifier-artiger String mit Bindestrich");
+            return header;
+        }
+
+        // 4) Nameof als letzter String-Pfad (Identifier-artige Header-Namen haben Vorrang).
+        if (MagicValuesStringHeuristics.ClassifyNameofCandidate(literal, model) is { } nameof)
+        {
+            return nameof;
         }
 
         return NotMagic();
     }
 
-    private static bool StartsWithAny(string value, params string[] prefixes)
+    /// <summary>Prueft, ob ein Literal-Node oder einer seiner umschliessenden Vorfahren
+    /// (Field/Property/Variable/Methode) einen <c>// ainetlinter-disable MagicValues</c>-
+    /// Kommentar in den Leading-Trivia traegt. Block-Kommentare (<c>/* ... */</c>) werden
+    /// ebenfalls ausgewertet. Konzept §"Muss-Haven" verlangt pro-Fundstelle-Granularitaet
+    /// via SyntaxTrivia; das ist genau der Pfad, ohne zusaetzlichen File-IO-Pass.</summary>
+    private static bool HasDisableComment(LiteralExpressionSyntax literal)
     {
-        foreach (var prefix in prefixes)
+        const string Marker = "ainetlinter-disable MagicValues";
+        // Literal-eigene Trivia (Leading + Trailing).
+        if (HasMarkerInTrivia(literal.GetLeadingTrivia(), Marker)) return true;
+        if (HasMarkerInTrivia(literal.GetTrailingTrivia(), Marker)) return true;
+        // Trivia der umschliessenden Field/Property/Method/Accessor — der Kommentar steht
+        // in der Praxis VOR der Deklaration, nicht am Literal selbst.
+        return HasMarkerInEnclosingAncestors(literal, Marker);
+    }
+
+    /// <summary>Prueft, ob mindestens eine Trivia in <paramref name="trivias"/> den
+    /// Marker-Text enthaelt (Single- oder Multi-Line-Kommentar). Aus
+    /// <see cref="HasDisableComment"/> extrahiert, um dessen kognitive Komplexitaet
+    /// unter dem 15-Limit zu halten.</summary>
+    private static bool HasMarkerInTrivia(SyntaxTriviaList trivias, string marker)
+    {
+        foreach (var trivia in trivias)
         {
-            if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (IsDisableCommentTrivia(trivia, marker)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Prueft, ob ein umschliessender Vorfahre (Field/Property/Variable/
+    /// Methode/Accessor) den Marker in den Leading-Trivia traegt. Aus
+    /// <see cref="HasDisableComment"/> extrahiert, um dessen kognitive Komplexitaet
+    /// unter dem 15-Limit zu halten.</summary>
+    private static bool HasMarkerInEnclosingAncestors(LiteralExpressionSyntax literal, string marker)
+    {
+        for (var current = literal.Parent; current is not null; current = current.Parent)
+        {
+            if (IsEnclosingAncestor(current)
+                && HasMarkerInTrivia(current.GetLeadingTrivia(), marker))
             {
                 return true;
             }
         }
-
         return false;
+    }
+
+    private static bool IsEnclosingAncestor(SyntaxNode node)
+    {
+        return node is BaseFieldDeclarationSyntax
+            or PropertyDeclarationSyntax
+            or VariableDeclaratorSyntax
+            or BaseMethodDeclarationSyntax
+            or AccessorDeclarationSyntax
+            or LocalDeclarationStatementSyntax;
+    }
+
+    private static bool IsDisableCommentTrivia(SyntaxTrivia trivia, string marker)
+    {
+        if (!trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+            && !trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+        {
+            return false;
+        }
+        return trivia.ToString().Contains(marker, StringComparison.Ordinal);
     }
 
     private static bool LooksLikeWindowsPath(string value)

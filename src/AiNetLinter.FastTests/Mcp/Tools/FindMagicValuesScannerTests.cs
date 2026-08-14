@@ -337,21 +337,95 @@ public sealed class Foo
     }
 
     [Fact]
-    public async Task ScanAsync_IncludeSuppressedFalse_IsNoOpInEpic1()
+    public async Task ScanAsync_IncludeSuppressedFalse_SuppressesLiteralWithDisableComment()
     {
-        // In EPIC-1 hat includeSuppressed=false keine Auswirkung: Suppression-Logik
-        // existiert noch nicht, das Literal wird unveraendert gemeldet. Test dokumentiert
-        // dieses erwartete Verhalten; EPIC-2 wird den Test anpassen, sobald Suppression
-        // implementiert ist.
+        // EPIC-1-Platzhalter-Anker umgedreht: includeSuppressed=false unterdrueckt jetzt
+        // echte Suppression-Kommentare. Das Literal mit // ainetlinter-disable MagicValues
+        // wird NICHT gemeldet (0 Funde), waehrend includeSuppressed=true es melden wuerde
+        // (siehe ScanAsync_IncludeSuppressedTrue_ReportsLiteralWithDisableComment).
         const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    // ainetlinter-disable MagicValues
+    public const string Url = ""https://api.example.com"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: false));
+
+        Assert.Empty(result.Payload!.MagicValues);
+    }
+
+    [Fact]
+    public async Task ScanAsync_IncludeSuppressedTrue_ReportsLiteralWithDisableComment()
+    {
+        // includeSuppressed=true ignoriert den Suppression-Kommentar und meldet das Literal
+        // trotzdem (1 Fund). Verifiziert das wirksame includeSuppressed-Argument.
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    // ainetlinter-disable MagicValues
+    public const string Url = ""https://api.example.com"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: true));
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("https://api.example.com", entry.Value);
+    }
+
+    [Fact]
+    public async Task ScanAsync_IncludeTestsFalse_ExcludesTestPaths()
+    {
+        // includeTests=false (Default): Test-Pfade mit /Tests/ im Pfad werden ausgefiltert.
+        // Nur das Production-File (ohne /Tests/) liefert einen Fund.
+        var productionSource = @"
 namespace Test;
 public sealed class Foo
 {
     public const string Url = ""https://api.example.com"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), includeSuppressed: false);
+        var testSource = @"
+namespace Test;
+public sealed class Bar
+{
+    public const string Url = ""https://api.test.com"";
+}";
+        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+            ("src/Production/Foo.cs", productionSource),
+            ("tests/FastTests/Bar.cs", testSource));
 
-        Assert.Single(result.Payload!.MagicValues);
+        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: false));
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("https://api.example.com", entry.Value);
+        Assert.DoesNotContain("/Tests/", entry.FilePath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ScanAsync_IncludeTestsTrue_IncludesTestPaths()
+    {
+        // includeTests=true: Beide Dateien (Production + Test) liefern Funde.
+        var productionSource = @"
+namespace Test;
+public sealed class Foo
+{
+    public const string Url = ""https://api.example.com"";
+}";
+        var testSource = @"
+namespace Test;
+public sealed class Bar
+{
+    public const string Url = ""https://api.test.com"";
+}";
+        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+            ("src/Production/Foo.cs", productionSource),
+            ("tests/FastTests/Bar.cs", testSource));
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: true));
+
+        Assert.Equal(2, result.Payload!.MagicValues.Count);
+        Assert.Contains(result.Payload!.MagicValues, e => e.Value == "https://api.example.com");
+        Assert.Contains(result.Payload!.MagicValues, e => e.Value == "https://api.test.com");
     }
 
     [Fact]
@@ -374,5 +448,38 @@ public sealed class Foo
         Assert.Equal("config_candidates", entry.Category);
         Assert.Equal("Server=prod;Database=mydb; for env ", entry.Value);
         Assert.Contains("Server=prod;Database=mydb", entry.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ScanAsync_ChangedOnlyTrue_LimitsToChangedFiles()
+    {
+        // changedOnly=true mit leerem Git-Output (kein Git-Repo im Solution-Verzeichnis
+        // oder keine uncommitteten Diffs) liefert 0 Dateien im Scope.
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public const string Url = ""https://api.example.com"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: true));
+
+        // Kein Git-Repo, also 0 Funde — gewuenschte Semantik.
+        Assert.False(result.IsMalfunction);
+    }
+
+    [Fact]
+    public async Task ScanAsync_ChangedOnlyFalse_ScansAllFiles()
+    {
+        // changedOnly=false (Default) ignoriert den Git-Diff-Filter — alle Dateien.
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public const string Url = ""https://api.example.com"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: false));
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("https://api.example.com", entry.Value);
     }
 }

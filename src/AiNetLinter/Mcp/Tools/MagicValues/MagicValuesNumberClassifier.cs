@@ -72,6 +72,16 @@ internal static class MagicValuesNumberClassifier
             }
         }
 
+        // Well-known Standard-Konstanten: Buffer-Groessen (1024/2048/4096/8192) und
+        // Zeit-Konstanten in Sekunden/Minuten/Stunden/Tagen (1000/24/60/360/1440/86400).
+        // Bewusst als eigener Pfad, damit z. B. Thread.Sleep(1000) trotz Timeout-Heuristik
+        // daneben als NamedConstant (MillisecondsPerSecond) gemeldet wird — das ist ein
+        // anderer Refactor-Hinweis (Constants.cs vs. appsettings.json).
+        if (MagicValuesStringHeuristics.ClassifyStandardCandidateExtras(literal) is { } standardClassification)
+        {
+            return standardClassification;
+        }
+
         return new MagicValueClassification(false, MagicValueCategory.ConfigCandidates, string.Empty, string.Empty);
     }
 

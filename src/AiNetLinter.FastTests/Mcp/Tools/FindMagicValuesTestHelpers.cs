@@ -23,7 +23,7 @@ internal static class FindMagicValuesTestHelpers
     // ainetlinter-disable MaxMethodParameterCount — Test-Helper mit bequemer positional-API
     // (je ein optionales Argument pro Filter); Aufrufer uebergeben typischerweise 1-2 Filter,
     // die uebrigen Defaults sind unkritisch. Direkter Pfad ohne ScanAsyncParams-Record wuerde
-    // die Aufrufstellen der Tests kuenstlich aufblahen (alle 7 Defaults muessten benannt werden).
+    // die Aufrufstellen der Tests kuenstlich aufblahen (alle Defaults muessten benannt werden).
     internal static async Task<FindMagicValuesResult> RunAsync(
         (string FileName, string Source) file,
         MagicValueValueType? valueType = null,
@@ -31,7 +31,7 @@ internal static class FindMagicValuesTestHelpers
         int minOccurrences = 1,
         int maxResults = 50,
         HashSet<int>? ignoreNumbers = null,
-        bool includeSuppressed = false)
+        FindMagicValuesRunOptions? options = null)
     {
         using var testSolution = CreateSolution(file);
         return await RunAsync(testSolution.Solution, new ScanAsyncParams(
@@ -40,7 +40,7 @@ internal static class FindMagicValuesTestHelpers
             MinOccurrences: minOccurrences,
             MaxResults: maxResults,
             IgnoreNumbers: ignoreNumbers,
-            IncludeSuppressed: includeSuppressed));
+            Options: options));
     }
 
     // ainetlinter-disable MaxMethodParameterCount — siehe oben (Aufrufstellen-Komfort).
@@ -51,7 +51,7 @@ internal static class FindMagicValuesTestHelpers
         int minOccurrences = 1,
         int maxResults = 50,
         HashSet<int>? ignoreNumbers = null,
-        bool includeSuppressed = false)
+        FindMagicValuesRunOptions? options = null)
     {
         return RunAsync(solution, new ScanAsyncParams(
             ValueType: valueType,
@@ -59,13 +59,14 @@ internal static class FindMagicValuesTestHelpers
             MinOccurrences: minOccurrences,
             MaxResults: maxResults,
             IgnoreNumbers: ignoreNumbers,
-            IncludeSuppressed: includeSuppressed));
+            Options: options));
     }
 
     internal static async Task<FindMagicValuesResult> RunAsync(
         Solution solution,
         ScanAsyncParams p)
     {
+        var options = p.Options ?? new FindMagicValuesRunOptions();
         return await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
             Solution: solution,
             ScopeFilter: p.ScopeFilter,
@@ -74,9 +75,9 @@ internal static class FindMagicValuesTestHelpers
             MinOccurrences: p.MinOccurrences,
             MaxResults: p.MaxResults,
             IgnoreNumbers: p.IgnoreNumbers?.ToArray(),
-            IncludeTests: false,
-            IncludeSuppressed: p.IncludeSuppressed,
-            ChangedOnly: false,
+            IncludeTests: options.IncludeTests,
+            IncludeSuppressed: options.IncludeSuppressed,
+            ChangedOnly: options.ChangedOnly,
             CancellationToken: CancellationToken.None));
     }
 
@@ -86,12 +87,35 @@ internal static class FindMagicValuesTestHelpers
             new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 }
 
+/// <summary>Bool-Parameter-Object fuer <see cref="FindMagicValuesTestHelpers.RunAsync"/> —
+/// buendelt die drei EPIC-2-Bool-Flags (includeSuppressed/includeTests/changedOnly) in einem
+/// Record, damit die Helper-Methoden das <c>MaxBoolParameterCount: 1</c>-Limit (siehe
+/// <c>AiNetLinter.mdc</c>) einhalten. <see langword="null"/> und <c>default</c> bedeuten
+/// "alle drei Flags aus".</summary>
+internal sealed record FindMagicValuesRunOptions(
+    bool IncludeSuppressed = false,
+    bool IncludeTests = false,
+    bool ChangedOnly = false)
+{
+    /// <summary>Impliziter Konvertierungs-Operator von <see langword="bool"/> (alter
+    /// EPIC-1-Stil mit positionalem <c>includeSuppressed: true</c>) auf den neuen
+    /// Options-Record. Erlaubt Aufrufer-kompatible Uebergaenge, ohne den neuen Stil zu
+    /// erzwingen — die bestehenden Tests koennen weiterhin <c>includeSuppressed: true</c>
+    /// schreiben, der Wert landet automatisch in <see cref="IncludeSuppressed"/>.</summary>
+    public static implicit operator FindMagicValuesRunOptions(bool includeSuppressed) =>
+        new(IncludeSuppressed: includeSuppressed);
+}
+
 /// <summary>Hilfs-Record fuer <see cref="FindMagicValuesTestHelpers.RunAsync(Solution, ScanAsyncParams)"/>
-/// — buendelt die 7 Konfigurations-Felder in einem Parameter-Object, damit die Methoden-Signatur
+/// — buendelt die Konfigurations-Felder in einem Parameter-Object, damit die Methoden-Signatur
 /// das <c>MaxMethodParameterCount: 4</c>-Limit (siehe <c>AiNetLinter.mdc</c>) einhaelt. Bewusst
 /// auf Top-Level statt nested, weil <c>BanPublicNestedTypes</c> auch <c>internal</c> nested Typen
 /// verbietet (Ausnahme nur fuer <c>private</c>) — und der Record <c>internal</c> sein muss, damit
-/// die Test-Klassen ihn ueber ihre <c>RunAsync(... ScanAsyncParams)</c>-Aufrufe konstruieren koennen.</summary>
+/// die Test-Klassen ihn ueber ihre <c>RunAsync(... ScanAsyncParams)</c>-Aufrufe konstruieren koennen.
+/// <para>EPIC-2: <c>Options</c> ersetzt die drei EPIC-1-Bool-Felder am
+/// <see cref="FindMagicValuesTestHelpers.RunAsync"/>-Helper. Aufrufer koennen weiterhin
+/// <c>includeSuppressed: true</c> schreiben — der Wert wird via impliziter Konvertierung in
+/// <see cref="FindMagicValuesRunOptions"/> ueberfuehrt.</para></summary>
 internal sealed record ScanAsyncParams(
     string? ScopeFilter = null,
     MagicValueValueType? ValueType = null,
@@ -99,4 +123,4 @@ internal sealed record ScanAsyncParams(
     int MinOccurrences = 1,
     int MaxResults = 50,
     HashSet<int>? IgnoreNumbers = null,
-    bool IncludeSuppressed = false);
+    FindMagicValuesRunOptions? Options = null);
