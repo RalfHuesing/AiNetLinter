@@ -2,10 +2,10 @@
 status: executing
 task: magic-values-in-mcp
 started_at: 2026-08-14T20:33:30+02:00
-last_updated: 2026-08-14T22:28:00+02:00
+last_updated: 2026-08-14T22:42:00+02:00
 rules_dir: .agents/rules
-total_steps: 2
-current_step: step-002
+total_steps: 3
+current_step: step-003
 ---
 
 # Task State: magic-values-in-mcp
@@ -13,8 +13,8 @@ current_step: step-002
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 2
-- **Aktueller Schritt:** `step-002` (done — approved; EPIC-1 abgeschlossen, EPIC-2 steht aus)
+- **Steps gesamt:** 3
+- **Aktueller Schritt:** `step-003` (in_progress — Coder läuft; EPIC-2)
 - **Roadmap:** `roadmap.md` (aktiv)
 - **Tech-Debt:** `tech-debt.md` (TD-001, mittel, nicht auto-fixable)
 - **Gestartet:** 2026-08-14T20:33:30+02:00
@@ -26,6 +26,7 @@ current_step: step-002
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-1 | done | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `4f3b6b6` (review: `issues` 1× MAJOR → Korrektur step-002) | |
 | step-002 | EPIC-1 | done | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | `59ffd74` | `9b36db8` (review: `approved`) | |
+| step-003 | EPIC-2 | in_progress | EPIC-2 — Erweiterte Heuristiken, Suppression, includeTests/changedOnly, Doku-Abschluss | - | - | - | - |
 
 ## Config (Defaults aus spec.md §10.5/§10.6, kein Override nötig)
 
