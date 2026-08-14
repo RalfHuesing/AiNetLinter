@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.MagicValues;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;
@@ -29,7 +30,10 @@ namespace AiNetLinter.Mcp;
 /// <see cref="FileStructureToolRegistrations"/>. <c>pattern_detect</c> ist hier registriert,
 /// weil es denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> hat (reine
 /// Aggregation bereits erzeugter <c>RuleViolation</c>-Objekte nach Pattern-Kategorie, siehe
-/// <see cref="PatternCatalog"/>).
+/// <see cref="PatternCatalog"/>). <c>find_magic_values</c> ist hier registriert, weil es
+/// ebenfalls Roslyn-<c>SyntaxWalker</c>-basiert ueber die Solution iteriert und damit
+/// semantisch zu den analyse-orientierten Tools passt (kein Symbolgraph-Lookup, keine
+/// Datei-Struktur-Ausgabe, sondern On-Demand-Audit ueber Literale).
 /// </summary>
 internal static class AnalysisToolRegistrations
 {
@@ -49,6 +53,7 @@ internal static class AnalysisToolRegistrations
         AddSearchPattern(tools, mcpState, callLog);
         AddMetricsTree(tools, mcpState, callLog);
         AddPatternDetect(tools, mcpState, callLog);
+        AddFindMagicValues(tools, mcpState, callLog);
     }
 
     private static void AddGetViolations(
@@ -194,4 +199,50 @@ internal static class AnalysisToolRegistrations
         "long-method, public-without-doc, empty-catch, feature-envy), scopeFilter " +
         "(Projekt-Name oder Pfad-Substring) grenzt auf einen Teilbereich ein, " +
         "maxResultsPerPattern begrenzt die Trefferliste je Pattern (Default 20).";
+
+    private static void AddFindMagicValues(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (FindMagicValuesToolArgs? args = null, CancellationToken ct = default) =>
+            {
+                var effective = args ?? new FindMagicValuesToolArgs(
+                    ScopeFilter: null,
+                    ValueType: "all",
+                    CategoryFilter: "all",
+                    MinOccurrences: 1,
+                    MaxResults: FindMagicValuesScanner.DefaultMaxResults,
+                    IgnoreNumbers: null,
+                    IncludeTests: false,
+                    IncludeSuppressed: false,
+                    ChangedOnly: false);
+                if (callLog is null)
+                {
+                    return await FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct);
+                }
+                var logArgs = $"scope={effective.ScopeFilter}|valueType={effective.ValueType}|category={effective.CategoryFilter}|minOcc={effective.MinOccurrences}|max={effective.MaxResults}|tests={effective.IncludeTests}|supp={effective.IncludeSuppressed}|changed={effective.ChangedOnly}";
+                return await callLog.ExecuteCallAsync("find_magic_values", logArgs,
+                    () => FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "find_magic_values",
+                Description = FindMagicValuesDescription,
+            }));
+    }
+
+    private const string FindMagicValuesDescription =
+        "Wann nutzen: On-Demand-Audit nach Magic Values (Strings, Zahlen, URLs, Pfaden, " +
+        "Timeouts, Format-Strings, Schwellenwerten, HTTP-Statuscodes) in C#-Quellcode. " +
+        "valueType (Default 'all': strings, numbers, all) filtert nach Literal-Datentyp, " +
+        "categoryFilter (Default 'all': config_candidates, constant_candidates, " +
+        "enum_candidates, nameof_candidates, localization_candidates, standard_candidates, " +
+        "security_candidates) filtert nach fachlichem Refactoring-Ziel, " +
+        "minOccurrences (Default 1 — auch Einzelvorkommen), maxResults (Default 50), " +
+        "ignoreNumbers (optional) ergaenzt die Trivial-Liste um projektspezifische Zahlen, " +
+        "includeTests (Default false), includeSuppressed (Default false; No-op in aktueller " +
+        "Version — Suppression-Logik kommt in einer Folgeversion), changedOnly (Default false; " +
+        "No-op in aktueller Version), scopeFilter (Projekt-Name oder Pfad-Substring).";
 }
