@@ -125,9 +125,17 @@ internal static partial class FindMagicValuesScanner
             MagicValueCategory.ConstantCandidates,
             recommendation,
             $"Dupliziertes const-Feld '{entry.FieldName}' ({key.Type} = {key.Value})");
+        // ValueType dynamisch aus dem Typ-Namen ableiten: 'string' (oder abgeleitete
+        // String-Typen) -> String, alles andere (int/double/float/decimal/long/short/
+        // byte/bool/char) -> Number. Vorher hartcodiertes Number hat String-Konstanten
+        // (z. B. private const string DefaultRole = "Admin") als Number klassifiziert
+        // und im Report unquoted ausgegeben.
+        var valueType = key.Type.Contains("string", StringComparison.OrdinalIgnoreCase)
+            ? MagicValueValueType.String
+            : MagicValueValueType.Number;
         return new RawMagicValue(
             entry.FilePath, entry.Line, entry.Column,
-            MagicValueValueType.Number, key.Value, classification);
+            valueType, key.Value, classification);
     }
 
     private static void CollectDuplicateConstFields(

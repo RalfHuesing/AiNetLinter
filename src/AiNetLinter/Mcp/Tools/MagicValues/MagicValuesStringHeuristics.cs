@@ -141,37 +141,60 @@ internal static class MagicValuesStringHeuristics
         var literalText = literal.Token.ValueText;
         if (string.IsNullOrEmpty(literalText)) return null;
 
-        // 1) Parameter-Namen im umschliessenden Method/Constructor-Scope pruefen.
-        // Parameter-Namen sind nicht als IdentifierNameSyntax im Tree vorhanden — sie
-        // muessen separat ueber ParameterSyntax-Aufzaehlung gefunden werden.
+        // Scope-Root: naechstes umschliessendes Method/Accessor/Local-Function-Body. Wenn
+        // keines existiert (z. B. Literal in einem Field-Initializer), ist der Scope
+        // null und wir ueberspringen die Suche — Field-Initializer koennen ohnehin keine
+        // Magic-Value-Stringliterale enthalten, die per nameof() aufgeloest werden sollen.
         var scopeRoot = FindScopeRoot(literal);
-        if (scopeRoot is not null)
-        {
-            var parameterMatch = scopeRoot.DescendantNodesAndSelf()
-                .OfType<ParameterSyntax>()
-                .Any(p => string.Equals(p.Identifier.ValueText, literalText, StringComparison.Ordinal));
-            if (parameterMatch) return new MagicValueClassification(
-                true,
-                MagicValueCategory.NameofCandidates,
-                $"nameof({literalText})",
-                "Name des Symbols im Scope");
-        }
+        if (scopeRoot is null) return null;
 
-        // 2) IdentifierNameSyntax (Member-/Variable-Referenzen) im Scope pruefen.
-        if (scopeRoot is not null)
-        {
-            var identifierMatch = scopeRoot.DescendantNodesAndSelf()
-                .OfType<IdentifierNameSyntax>()
-                .Any(id => string.Equals(id.Identifier.ValueText, literalText, StringComparison.Ordinal));
-            if (identifierMatch) return new MagicValueClassification(
-                true,
-                MagicValueCategory.NameofCandidates,
-                $"nameof({literalText})",
-                "Name des Symbols im Scope");
-        }
+        if (!HasMatchingSymbolName(scopeRoot, literalText)) return null;
 
-        return null;
+        return new MagicValueClassification(
+            true,
+            MagicValueCategory.NameofCandidates,
+            $"nameof({literalText})",
+            "Name des Symbols im Scope");
     }
+
+    /// <summary>Prueft, ob im umschliessenden Scope mindestens ein Symbol-Bezeichner
+    /// (Identifier-Referenz oder Deklarations-Bezeichner) exakt dem Literal-Text
+    /// entspricht. Aus <see cref="ClassifyNameofCandidate"/> extrahiert, um dessen
+    /// kognitive Komplexitaet unter dem 12-Limit zu halten.</summary>
+    private static bool HasMatchingSymbolName(SyntaxNode scopeRoot, string literalText)
+    {
+        return scopeRoot.DescendantNodesAndSelf()
+            .Where(IsNameofCandidateNode)
+            .Select(ExtractSymbolName)
+            .Any(name => !string.IsNullOrEmpty(name)
+                && string.Equals(name, literalText, StringComparison.Ordinal));
+    }
+
+    /// <summary>Filtert Syntax-Knoten, deren Identifier fuer die Nameof-Heuristik relevant
+    /// ist. Beinhaltet sowohl Identifier-Referenzen (IdentifierNameSyntax) als auch
+    /// Deklarations-Bezeichner (Parameter/Variable/Property/Method/Type/EnumMember).</summary>
+    private static bool IsNameofCandidateNode(SyntaxNode n) =>
+        n is IdentifierNameSyntax
+            || n is ParameterSyntax
+            || n is VariableDeclaratorSyntax
+            || n is PropertyDeclarationSyntax
+            || n is MethodDeclarationSyntax
+            || n is TypeDeclarationSyntax
+            || n is EnumMemberDeclarationSyntax;
+
+    /// <summary>Extrahiert den relevanten Bezeichner-Text aus einem Syntax-Knoten fuer die
+    /// Nameof-Heuristik. Liefert <see cref="string.Empty"/> fuer nicht-relevante Knoten.</summary>
+    private static string ExtractSymbolName(SyntaxNode n) => n switch
+    {
+        IdentifierNameSyntax id => id.Identifier.ValueText,
+        ParameterSyntax p => p.Identifier.ValueText,
+        VariableDeclaratorSyntax v => v.Identifier.ValueText,
+        PropertyDeclarationSyntax p => p.Identifier.ValueText,
+        MethodDeclarationSyntax m => m.Identifier.ValueText,
+        TypeDeclarationSyntax t => t.Identifier.ValueText,
+        EnumMemberDeclarationSyntax e => e.Identifier.ValueText,
+        _ => string.Empty,
+    };
 
     /// <summary>Prueft, ob ein String-Literal ein hartcodiertes Secret/Credential ist
     /// (CWE-798). Erkennung ueber drei orthogonale Heuristiken: Praefix-Muster (AWS Access

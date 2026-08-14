@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -6,11 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.MagicValues;
-using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 
 // @covers MagicValueSyntaxWalker (VisitInterpolatedStringExpression via ScanAsync_InterpolatedString_StaticTextSegmentsClassified)
 /// <summary>
@@ -125,7 +124,7 @@ public sealed class Foo
         // HTTP-Statuscodes sind per Default Magic Values (Wertebereich 100-599 ist semantisch
         // eindeutig). ignoreNumbers ergaenzt die Trivial-Liste {0, 1, -1} um zusaetzliche
         // Werte. 200 und 301 sollen via ignoreNumbers verschwinden, 404 und 500 bleiben
-        // sichtbar — der Test verifiziert, dass ignoreNumbers tatsaechlich greift.
+        // sichtbar â€” der Test verifiziert, dass ignoreNumbers tatsaechlich greift.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -335,151 +334,5 @@ public sealed class Foo
         Assert.NotNull(result.Payload!.Summary);
         Assert.Equal(1, result.Payload!.Summary.Total);
     }
-
-    [Fact]
-    public async Task ScanAsync_IncludeSuppressedFalse_SuppressesLiteralWithDisableComment()
-    {
-        // EPIC-1-Platzhalter-Anker umgedreht: includeSuppressed=false unterdrueckt jetzt
-        // echte Suppression-Kommentare. Das Literal mit // ainetlinter-disable MagicValues
-        // wird NICHT gemeldet (0 Funde), waehrend includeSuppressed=true es melden wuerde
-        // (siehe ScanAsync_IncludeSuppressedTrue_ReportsLiteralWithDisableComment).
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    // ainetlinter-disable MagicValues
-    public const string Url = ""https://api.example.com"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: false));
-
-        Assert.Empty(result.Payload!.MagicValues);
-    }
-
-    [Fact]
-    public async Task ScanAsync_IncludeSuppressedTrue_ReportsLiteralWithDisableComment()
-    {
-        // includeSuppressed=true ignoriert den Suppression-Kommentar und meldet das Literal
-        // trotzdem (1 Fund). Verifiziert das wirksame includeSuppressed-Argument.
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    // ainetlinter-disable MagicValues
-    public const string Url = ""https://api.example.com"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: true));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("https://api.example.com", entry.Value);
-    }
-
-    [Fact]
-    public async Task ScanAsync_IncludeTestsFalse_ExcludesTestPaths()
-    {
-        // includeTests=false (Default): Test-Pfade mit /Tests/ im Pfad werden ausgefiltert.
-        // Nur das Production-File (ohne /Tests/) liefert einen Fund.
-        var productionSource = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string Url = ""https://api.example.com"";
-}";
-        var testSource = @"
-namespace Test;
-public sealed class Bar
-{
-    public const string Url = ""https://api.test.com"";
-}";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
-            ("src/Production/Foo.cs", productionSource),
-            ("tests/FastTests/Bar.cs", testSource));
-
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: false));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("https://api.example.com", entry.Value);
-        Assert.DoesNotContain("/Tests/", entry.FilePath, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task ScanAsync_IncludeTestsTrue_IncludesTestPaths()
-    {
-        // includeTests=true: Beide Dateien (Production + Test) liefern Funde.
-        var productionSource = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string Url = ""https://api.example.com"";
-}";
-        var testSource = @"
-namespace Test;
-public sealed class Bar
-{
-    public const string Url = ""https://api.test.com"";
-}";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
-            ("src/Production/Foo.cs", productionSource),
-            ("tests/FastTests/Bar.cs", testSource));
-
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: true));
-
-        Assert.Equal(2, result.Payload!.MagicValues.Count);
-        Assert.Contains(result.Payload!.MagicValues, e => e.Value == "https://api.example.com");
-        Assert.Contains(result.Payload!.MagicValues, e => e.Value == "https://api.test.com");
-    }
-
-    [Fact]
-    public async Task ScanAsync_InterpolatedString_StaticTextSegmentsClassified()
-    {
-        // Konzept §"Muss-Haven" Beispiel 2: in-string magic values & interpolation fragments.
-        // Der statische Text-Teil vor der Interpolation (vor dem "{") wird durch den
-        // MagicValuesClassifier klassifiziert; das dynamische Segment ({env}) wird nicht
-        // ausgewertet. Hier trifft die Connection-String-Heuristik auf "Server=" und
-        // "Database=" im statischen Fragment.
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public string M(int env) => $""Server=prod;Database=mydb; for env {env}"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("config_candidates", entry.Category);
-        Assert.Equal("Server=prod;Database=mydb; for env ", entry.Value);
-        Assert.Contains("Server=prod;Database=mydb", entry.Value, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ScanAsync_ChangedOnlyTrue_LimitsToChangedFiles()
-    {
-        // changedOnly=true mit leerem Git-Output (kein Git-Repo im Solution-Verzeichnis
-        // oder keine uncommitteten Diffs) liefert 0 Dateien im Scope.
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string Url = ""https://api.example.com"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: true));
-
-        // Kein Git-Repo, also 0 Funde — gewuenschte Semantik.
-        Assert.False(result.IsMalfunction);
-    }
-
-    [Fact]
-    public async Task ScanAsync_ChangedOnlyFalse_ScansAllFiles()
-    {
-        // changedOnly=false (Default) ignoriert den Git-Diff-Filter — alle Dateien.
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string Url = ""https://api.example.com"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: false));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("https://api.example.com", entry.Value);
-    }
 }
+

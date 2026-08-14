@@ -139,7 +139,7 @@ internal static class FindMagicValuesTool
     /// 'all' (Default); unbekannte Werte liefern ein recoverable <c>INVALID_ARGUMENT</c>.</summary>
     private static ValueTypeResolution ResolveValueType(string raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return new ValueTypeResolution(MagicValueValueType.String, null);
+        if (string.IsNullOrWhiteSpace(raw)) return new ValueTypeResolution(null, null);
         return raw.Trim().ToLowerInvariant() switch
         {
             "all" => new ValueTypeResolution(null, null),

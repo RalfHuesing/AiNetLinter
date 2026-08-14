@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,10 +6,10 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 
 /// <summary>
-/// Malfunction-Tests fuer <see cref="FindMagicValuesScanner"/> — prueft, dass ein
+/// Malfunction-Tests fuer <see cref="FindMagicValuesScanner"/> â€” prueft, dass ein
 /// unleserliches Document korrekt als echte Malfunction (IsMalfunction=true mit
 /// Context) gemeldet wird, statt stillschweigend ein leeres Ergebnis zu liefern.
 /// Aus <see cref="FindMagicValuesScannerTests"/> in eine eigene Datei extrahiert, damit
@@ -43,3 +43,4 @@ public sealed class FindMagicValuesScannerMalfunctionTests
         Assert.NotNull(result.Context);
     }
 }
+

@@ -1,147 +1,29 @@
-#nullable enable
+﻿#nullable enable
 
-using System;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 
 /// <summary>
-/// Heuristik-Detail-Tests fuer <see cref="FindMagicValuesScanner"/> — prueft die einzelnen
-/// Klassifizierungs-Heuristiken (URL, Windows-Pfad, Format-String, HTTP-Statuscode,
-/// Schwellenwert-Doppel, Connection-String) jeweils isoliert auf kleinen Quell-Texten.
-/// Aufteilung in eine eigene Datei, damit die Haupt-Testklasse
-/// <see cref="FindMagicValuesScannerTests"/> unter dem <c>MaxLineCount: 500</c>-Limit
-/// bleibt (siehe <c>AiNetLinter.mdc</c>). Beide Klassen teilen die Helpers ueber
-/// <see cref="FindMagicValuesTestHelpers"/>.
+/// Erweiterte Heuristik-Tests fuer <see cref="FindMagicValuesScanner"/>: <c>nameof_candidates</c>
+/// (Symbol-Scope-Walk inkl. Parameter-, Variablen-, Property-, Methoden-, Typ- und
+/// Enum-Member-Bezeichner), <c>security_candidates</c> (Symbol-Name- und Praefix-Heuristik),
+/// <c>standard_candidates</c>-Erweiterung (Buffer/Zeit-Konstanten), duplizierte
+/// <c>const</c>-Felder, <c>enum_candidates</c> (if/switch-Kaskaden) und
+/// <c>localization_candidates</c> (Exception-Konstruktor-Argument). Aus
+/// <see cref="FindMagicValuesScannerHeuristicTests"/> in eine eigene Datei extrahiert, damit
+/// beide Heuristik-Test-Klassen unter dem <c>MaxPublicMembersPerType: 15</c>-Limit bleiben.
+/// Geteilte Helpers ueber <see cref="FindMagicValuesTestHelpers"/>.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesScannerHeuristicTests
+public sealed class FindMagicValuesScannerAdvancedHeuristicTests
 {
-    [Fact]
-    public async Task ScanAsync_UrlLiteral_ReportedAsConfigCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string ApiBaseUrl = ""https://api.example.com/v1"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("config_candidates", entry.Category);
-        Assert.Equal("https://api.example.com/v1", entry.Value);
-        Assert.Contains("appsettings.json", entry.Recommendation, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ScanAsync_WindowsPathLiteral_ReportedAsConfigCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string DataDir = @""C:\Data\Production\Input"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("config_candidates", entry.Category);
-        Assert.Equal(@"C:\Data\Production\Input", entry.Value);
-    }
-
-    [Fact]
-    public async Task ScanAsync_FormatString_ReportedAsConstantCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string DateFormat = ""yyyy-MM-dd"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("constant_candidates", entry.Category);
-        Assert.Equal("yyyy-MM-dd", entry.Value);
-    }
-
-    [Fact]
-    public async Task ScanAsync_HttpStatusCode_ReportedAsStandardCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public void M(int status)
-    {
-        if (status == 404) { }
-    }
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("standard_candidates", entry.Category);
-        Assert.Equal("404", entry.Value);
-        Assert.Contains("Status404", entry.Recommendation, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ScanAsync_ConstantDoubleThreshold_ReportedAsConstantCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    private const double Tolerance = 0.19;
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("constant_candidates", entry.Category);
-        Assert.Equal("0.19", entry.Value);
-    }
-
-    [Fact]
-    public async Task ScanAsync_ConnectionStringLiteral_ReportedAsConfigCandidate()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public const string ConnString = ""Server=prod;Database=mydb;Trusted_Connection=True;"";
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
-
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("config_candidates", entry.Category);
-        Assert.Contains("ConnectionString", entry.Recommendation, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ScanAsync_NonHttpStatusCodeNumber_NotReportedAsStandard()
-    {
-        const string source = @"
-namespace Test;
-public sealed class Foo
-{
-    public void M(int status)
-    {
-        if (status == 7) { }
-    }
-}";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), valueType: MagicValueValueType.Number);
-
-        // 7 ist kein HTTP-Statuscode — keine Meldung.
-        Assert.Empty(result.Payload!.MagicValues);
-    }
-
     [Fact]
     public async Task Classify_NameofCandidate_StringMatchesParameterName()
     {
-        // String-Literal "foo" entspricht dem Parameter-Namen foo — sollte als
+        // String-Literal "foo" entspricht dem Parameter-Namen foo â€” sollte als
         // nameof_candidates klassifiziert werden mit Empfehlung nameof(foo).
         const string source = @"
 namespace Test;
@@ -161,9 +43,35 @@ public sealed class Foo
     }
 
     [Fact]
+    public async Task Classify_NameofCandidate_StringMatchesLocalVariableName()
+    {
+        // String-Literal "bar" entspricht dem lokalen Variablen-Namen bar â€” wird ueber
+        // VariableDeclaratorSyntax.Identifier (Deklarations-Bezeichner) gefunden, nicht
+        // ueber IdentifierNameSyntax. Verifiziert die Finding-2-Erweiterung.
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public void M()
+    {
+        var bar = Compute();
+        Validate(bar, ""bar"");
+    }
+    private int Compute() => 0;
+    private void Validate(int v, string name) { }
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("nameof_candidates", entry.Category);
+        Assert.Equal("bar", entry.Value);
+        Assert.Equal("nameof(bar)", entry.Recommendation);
+    }
+
+    [Fact]
     public async Task Classify_NameofCandidate_StringDoesNotMatchAnySymbol_IsNotMagic()
     {
-        // String-Literal "bar" matcht KEINEN Parameter-Namen im Scope — kein Fund.
+        // String-Literal "bar" matcht KEINEN Parameter-Namen im Scope â€” kein Fund.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -204,7 +112,7 @@ public sealed class Foo
     [Fact]
     public async Task Classify_SecurityCandidate_AwsAccessKeyPrefix()
     {
-        // "AKIA..." Praefix matcht — security_candidates mit CWE-798-Hinweis.
+        // "AKIA..." Praefix matcht â€” security_candidates mit CWE-798-Hinweis.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -292,9 +200,37 @@ public sealed class B
     }
 
     [Fact]
+    public async Task Classify_DuplicateConstFields_StringConstant_HasStringValueType()
+    {
+        // Vorher hartcodiertes MagicValueValueType.Number hat String-Konstanten mit Number
+        // klassifiziert. Mit Fix wird der ValueType dynamisch aus key.Type abgeleitet: 'string'
+        // (OrdinalIgnoreCase-Match) -> String, alles andere -> Number. Verifiziert Finding 3.
+        var source1 = @"
+namespace Test.One;
+public sealed class A
+{
+    private const string DefaultRole = ""Admin"";
+}";
+        var source2 = @"
+namespace Test.Two;
+public sealed class B
+{
+    private const string DefaultRole = ""Admin"";
+}";
+        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+            ("A.cs", source1),
+            ("B.cs", source2));
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
+
+        Assert.Equal(2, result.Payload!.MagicValues.Count);
+        Assert.All(result.Payload!.MagicValues, e => Assert.Equal("string", e.ValueType));
+    }
+
+    [Fact]
     public async Task Classify_DuplicateConstFields_OnlyOneOccurrence_IsNotReported()
     {
-        // Nur ein const-Feld mit Wert 12345 — Schwelle ist ≥ 2 Vorkommen in ≥ 2 Files,
+        // Nur ein const-Feld mit Wert 12345 â€” Schwelle ist â‰¥ 2 Vorkommen in â‰¥ 2 Files,
         // also KEIN Duplikat-Fund. (Die Standard-Pipeline liefert ebenfalls keinen Fund,
         // weil 12345 kein HTTP-Statuscode, keine Buffer/Zeit-Konstante und keine
         // Schwellenwert-double/float/decimal ist.)
@@ -312,7 +248,7 @@ public sealed class A
     [Fact]
     public async Task Classify_EnumCandidates_IfElseCascade()
     {
-        // if-else-Kaskade mit ≥ 3 Vergleichen gegen denselben Identifier.
+        // if-else-Kaskade mit â‰¥ 3 Vergleichen gegen denselben Identifier.
         // Erwartet: 3 Funde mit enum_candidates-Klassifizierung.
         const string source = @"
 namespace Test;
@@ -338,7 +274,7 @@ public sealed class Foo
     [Fact]
     public async Task Classify_EnumCandidates_OnlyTwoComparisons_IsNotEnum()
     {
-        // Nur 2 Vergleiche — unter der Schwelle (≥ 3), also KEIN Fund.
+        // Nur 2 Vergleiche â€” unter der Schwelle (â‰¥ 3), also KEIN Fund.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -358,7 +294,7 @@ public sealed class Foo
     public async Task Classify_LocalizationCandidate_ExceptionMessageLongerThan15()
     {
         // Exception-Message mit > 15 Zeichen (Whitespace ungleich) als Argument in
-        // Exception-Konstruktor — sollte als localization_candidates klassifiziert werden.
+        // Exception-Konstruktor â€” sollte als localization_candidates klassifiziert werden.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -394,3 +330,4 @@ public sealed class Foo
         Assert.Empty(result.Payload!.MagicValues);
     }
 }
+

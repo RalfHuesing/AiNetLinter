@@ -265,7 +265,13 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
         // synthetischen Knoten haben kein Parent (nicht im SyntaxTree), daher feuern die
         // Parent-Pfad-basierten Filter (Attribut/GetHashCode/Index/Loop) auf ihnen nicht —
         // das ist akzeptabel, weil die statischen Fragmente in diesen Kontexten ohnehin
-        // keine Heuristik treffen wuerden.
+        // keine Heuristik treffen wuerden. Auch die per-Symbol-Kontext-Heuristiken
+        // (ClassifyNameofCandidate ueber FindScopeRoot, ClassifySecurityCandidate ueber
+        // ResolveSurroundingName, ClassifyLocalizationCandidate ueber ArgumentSyntax-Kette,
+        // HasDisableComment ueber Vorfahren-Walk) sind defensiv implementiert: ihre
+        // Schleifen iterieren `for (var current = literal.Parent; current is not null;
+        // current = current.Parent)`, terminieren also bei synthetic.Parent == null
+        // automatisch ohne NullReferenceException.
         foreach (var content in node.Contents)
         {
             if (content is not InterpolatedStringTextSyntax text) continue;
