@@ -14,7 +14,6 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class McpServerCommandTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
     {
         var tempDir = CreateTempDir();
@@ -39,7 +38,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_NoSolutionFound_ReportsResourceNotFound()
     {
         var tempDir = CreateTempDir();
@@ -59,7 +57,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_SingleCandidate_ReturnsIt()
     {
         var tempDir = CreateTempDir();
@@ -81,7 +78,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveSolutionPathOrError_MissingPath_UsesCurrentDirectory()
     {
         var tempDir = CreateTempDir();
@@ -106,7 +102,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveMaxLineCount_ConfigWithCustomMaxLineCount_ReturnsConfiguredValue()
     {
         var tempDir = CreateTempDir();
@@ -127,7 +122,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveMaxLineCount_NoConfigPath_ReturnsMetricsConfigDefault()
     {
         var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
@@ -138,7 +132,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveConfig_ConfigWithCustomMaxLineCount_UsesConfigFromArgs()
     {
         var tempDir = CreateTempDir();
@@ -160,7 +153,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveConfig_NoConfigPath_ReturnsDefaultConfig()
     {
         var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
@@ -172,7 +164,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveConfig_ExplicitConfigPath_TakesPrecedenceOverAutoDiscovered()
     {
         var solutionDir = CreateTempDir();
@@ -209,7 +200,6 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ResolveConfig_NoExplicitConfigPath_AutoDiscoversRulesJsonInSolutionDirectory()
     {
         var tempDir = CreateTempDir();

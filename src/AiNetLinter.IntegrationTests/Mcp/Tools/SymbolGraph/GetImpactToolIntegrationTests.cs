@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,5 +86,18 @@ public sealed class GetImpactToolIntegrationTests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GitImpactMiniFixtureWorkspace_DisposeTwice_DeletesRootWithoutThrowing()
+    {
+        var workspace = new GitImpactMiniFixtureWorkspace();
+        var rootPath = workspace.RootPath;
+
+        workspace.Dispose();
+        var exception = Record.Exception(() => workspace.Dispose());
+
+        Assert.Null(exception);
+        Assert.False(Directory.Exists(rootPath));
     }
 }

@@ -3,6 +3,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using AiNetLinter.TestKit;
 
 namespace AiNetLinter.IntegrationTests.Fixtures;
@@ -10,12 +11,26 @@ namespace AiNetLinter.IntegrationTests.Fixtures;
 internal abstract class FixtureWorkspace : IDisposable
 {
     private readonly IsolatedFixtureLease lease;
+    private int disposed;
 
     protected FixtureWorkspace(string fixtureName) => lease = IsolatedFixtureLease.CopyFixture(FindSolutionRoot(), fixtureName);
 
     public string RootPath => lease.RootPath;
 
-    public virtual void Dispose() => lease.Dispose();
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
+        try
+        {
+            PrepareForDelete();
+        }
+        finally
+        {
+            lease.Dispose();
+        }
+    }
+
+    protected virtual void PrepareForDelete() { }
 
     private static string FindSolutionRoot()
     {
@@ -64,13 +79,13 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
         RunGit("commit -m change");
     }
 
-    public override void Dispose()
+    protected override void PrepareForDelete()
     {
+        if (!Directory.Exists(RootPath)) return;
         foreach (var path in Directory.EnumerateFileSystemEntries(RootPath, "*", SearchOption.AllDirectories))
         {
             File.SetAttributes(path, FileAttributes.Normal);
         }
-        base.Dispose();
     }
 
     private void InitializeGitRepository()
