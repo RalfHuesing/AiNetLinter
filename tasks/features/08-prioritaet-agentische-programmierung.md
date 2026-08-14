@@ -14,14 +14,13 @@ Portabilität selbst ist **kein offener Punkt** — `README.md` dokumentiert ber
 
 ## Empfehlung in einem Satz
 
-**Zuerst `find_magic_values` fertig umsetzen** (Konzept ist heute fertig geworden, sofort startklar, deckt ein universelles KI-Codegenerierungs-Antipattern inkl. Secrets ab) — **danach direkt `validate_file`** als Konzept aufsetzen (fehlendes Kern-Primitive: kompaktes Post-Edit-Feedback, das in *jedem* Edit in *jedem* Projekt gebraucht wird, öfter als jedes Audit-Tool).
+**`find_magic_values` fertig umsetzen** (Konzept ist fertig, sofort startklar, deckt ein universelles KI-Codegenerierungs-Antipattern inkl. Secrets ab) — `validate_file` wurde nach Evaluation verworfen (redundant zu `dotnet build` + `safeguard`/`get_violations`, siehe `06-nicht-umsetzen.md` §11).
 
 ## P1 — Jetzt
 
 | # | Idee | Warum P1 (cross-project Hebel) | Aufwand | Quelle |
 |---|---|---|---|---|
 | 1 | **`find_magic_values`** | Konzept fertig (heute), sofort an `drift-loop` übergebbar. Magic Values/Secrets sind ein universelles KI-Generierungsproblem — in jeder Codebase relevant, nicht AiNetLinter-spezifisch. | mittel, Konzept steht | `tasks/magic-values-in-mcp/konzept.md` |
-| 2 | **`validate_file`** (F1) | Kompaktes Post-Edit-Feedback (Compiler-Errors + Lint-Diagnostics + `nextSteps`) in *einem* Call. Fehlt aktuell im 18-Tool-Set — dabei ist "nach jedem Edit verifizieren" die mit Abstand häufigste Aktion in jeder Agent-Loop, in jedem Projekt. Höherer Frequenz-Hebel als jedes Audit-Tool. | noch kein Konzept, Basis (`LinterAutoFixer`/Diagnostics) existiert schon | `03-market-research.md` §5.1 |
 
 ## P2 — Als Nächstes
 
@@ -47,7 +46,7 @@ Portabilität selbst ist **kein offener Punkt** — `README.md` dokumentiert ber
 
 ## Nicht erneut vorschlagen (bereits abgelehnt, `06-nicht-umsetzen.md`)
 
-`trace_flow`, `skeleton`/PageRank-Repo-Map, `preview_refactor`/`apply_refactor`, Multi-Agent-Installer, Progressive-Disclosure-Meta-Tool, komplette L-Phase (Cloud/HTTP/OAuth/OTel), komplette XL-Liste (Plugin-System, ML-Suggestions, Cross-Solution), Embeddings/RAG-Suche, Git-History als eigenes Tool.
+`validate_file`, `trace_flow`, `skeleton`/PageRank-Repo-Map, `preview_refactor`/`apply_refactor`, Multi-Agent-Installer, Progressive-Disclosure-Meta-Tool, komplette L-Phase (Cloud/HTTP/OAuth/OTel), komplette XL-Liste (Plugin-System, ML-Suggestions, Cross-Solution), Embeddings/RAG-Suche, Git-History als eigenes Tool.
 
 ## Offener Punkt
 

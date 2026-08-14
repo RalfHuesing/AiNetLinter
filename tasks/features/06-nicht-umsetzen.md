@@ -148,6 +148,20 @@ Diese Epics/Ideen wurden in den Recon-Berichten bzw. der ursprünglichen Roadmap
 
 ---
 
-## 11. Revidierte frühere Planungs-Philosophie
+## 11. `validate_file` (Kompakte Post-Edit-Validierung)
+
+**Ursprünglich geplant als:** F1 in [03-market-research.md](03-market-research.md) §5.1, Konzeptentwurf `tasks/validate-file/konzept.md` (2026-08-12)
+**Quelle:** Priorisierungs-Runde 2026-08-12 ([08-prioritaet-agentische-programmierung.md](08-prioritaet-agentische-programmierung.md))
+
+**Begründung:** Die Idee war ein One-Shot-MCP-Tool, das nach einem Datei-Edit Compiler-Errors (`CS...`) und AiNetLinter-Diagnostics kombiniert zurückgibt. Im realen Entwicklungs-Workflow mit modernen Coding-Agenten (Antigravity, Cursor, Claude Code) ist dieses Tool jedoch redundant:
+1. **Agenten nutzen das Terminal:** Nach Code-Änderungen führt der Agent standardmäßig `dotnet build` und `dotnet test` im Terminal aus. Compiler-Fehler werden von Roslyn/MSBuild bereits zuverlässig, schnell (1–2 Sekunden bei lokalen Projekten) und präzise auf `stdout` ausgegeben und von LLMs problemlos interpretiert.
+2. **Keine Linter-Lücke:** Für Architektur- und Clean-Code-Regeln stehen bereits `get_violations` (gezielter Linter-Lauf) und `safeguard` (Qualitäts-Gate vor Commit/PR) als deterministische MCP-Tools bereit.
+3. **Tool-Sprawl vermeiden:** Ein zusätzlicher MCP-Wrapper für In-Memory-Kompilierung auf Dateiebene erhöht die Server-Komplexität und Tool-Anzahl unnötig, ohne einen workflow-kritischen Mehrwert zu liefern.
+
+**Revival-Bedingung:** Nur falls AiNetLinter in isolierten Headless-/Web-MCP-Umgebungen eingesetzt wird, in denen der aufrufende Agent keinerlei Shell-/Terminal-Zugriff (`run_command`/Bash) hat und somit `dotnet build` nicht ausführen kann.
+
+---
+
+## 12. Revidierte frühere Planungs-Philosophie
 
 Die ursprüngliche Roadmap-Fassung folgte der Prämisse "perspektivisch alles drin" — jede aus den Recons abgeleitete Idee wurde in eine Phase (Q/S/M/L/XL) einsortiert, mit dem Ziel, möglichst vollständig zu sein. Nach Review wurde das umgekehrt: **die Roadmap enthält nur noch, was wir aktiv bauen wollen.** Grund: Die Recon-Dokumente selbst identifizieren als Kernlehre aus CodeGraph "5-15 Tools ideal, Single-Tool-Doctrine, Progressive Disclosure" — eine Roadmap, die auf 17+ Tools plus Cloud-Infrastruktur plus einer zehnteiligen Vision-Liste zusteuert, widerspricht dieser eigenen Erkenntnis. Konsolidieren vor Erweitern, und nur bauen, was Speed, Fokus, Audit-Fähigkeit oder Kosten-/Token-Effizienz direkt verbessert.
