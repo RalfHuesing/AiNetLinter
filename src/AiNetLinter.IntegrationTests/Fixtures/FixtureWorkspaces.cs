@@ -86,6 +86,7 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
         {
             File.SetAttributes(path, FileAttributes.Normal);
         }
+        File.SetAttributes(RootPath, FileAttributes.Normal);
     }
 
     private void InitializeGitRepository()
@@ -99,16 +100,24 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
 
     private void RunGit(string arguments)
     {
-        using var process = Process.Start(new ProcessStartInfo("git", arguments)
+        var startInfo = new ProcessStartInfo
         {
+            FileName = "git",
+            Arguments = arguments,
             WorkingDirectory = RootPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-        });
-        process!.WaitForExit();
-        if (process.ExitCode != 0) throw new InvalidOperationException($"git {arguments} schlug fehl.");
+        };
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Konnte git nicht starten ('{arguments}').");
+        process.StandardInput.Close();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        Task.WaitAll(stdoutTask, stderrTask);
+        if (process.ExitCode != 0) throw new InvalidOperationException($"git {arguments} schlug fehl: {stderrTask.Result}");
     }
 }
 
