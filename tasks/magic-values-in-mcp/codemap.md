@@ -2,7 +2,7 @@
 task: magic-values-in-mcp
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-14T23:36:00+02:00
+last_updated: 2026-08-15T00:10:00+02:00
 ---
 
 # CodeMap: magic-values-in-mcp
@@ -47,7 +47,7 @@ Ortsangaben kaum. Wer mehr wissen muss, liest die Datei selbst nach.
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesCategories.cs`** — `MagicValueCategory`-Enum mit 7 Werten (ConfigCandidates/ConstantCandidates/EnumCandidates/NameofCandidates/LocalizationCandidates/StandardCandidates/SecurityCandidates) + `ToStringValue()`-Helper (snake_case-Stable-Strings für JSON-RPC und `categoryFilter`-Validierung); neu in step-001.
 
-- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesStringHeuristics.cs`** — Vier statische Sub-Heuristiken (`ClassifyNameofCandidate`, `ClassifySecurityCandidate`, `ClassifyStandardCandidateExtras`, `ClassifyLocalizationCandidate`) plus Connection-String/URL/Header-Identifier-Dispatch-Helper; aus den Hauptdateien extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-003.
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesStringHeuristics.cs`** — Vier statische Sub-Heuristiken (`ClassifyNameofCandidate`, `ClassifySecurityCandidate`, `ClassifyStandardCandidateExtras`, `ClassifyLocalizationCandidate`) plus Connection-String/URL/Header-Identifier-Dispatch-Helper; in step-003-Nachfix (`cfe2769`) wurde `ClassifyNameofCandidate` so erweitert, dass Symbol-Bezeichner aus `IdentifierNameSyntax`/`ParameterSyntax`/`VariableDeclaratorSyntax`/`PropertyDeclarationSyntax`/`MethodDeclarationSyntax`/`TypeDeclarationSyntax`/`EnumMemberDeclarationSyntax` gesammelt werden (3 Helper `HasMatchingSymbolName`/`IsNameofCandidateNode`/`ExtractSymbolName` extrahiert, kognitive Komplexität unter 12-Limit); aus den Hauptdateien extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-003.
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesClassifier.cs`** — `MagicValuesClassifier.Classify()`-Hauptmethode (Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter + String-Heuristiken: Connection-String, URL, Windows-Pfad, Format-String, Header-Identifier); plus `MagicValueClassification`/`MagicValueClassifierOptions` Records; neu in step-001.
 
@@ -61,17 +61,21 @@ Ortsangaben kaum. Wer mehr wissen muss, liest die Datei selbst nach.
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesScannerRecords.cs`** — `MagicValueValueType` enum + `RawMagicValue`/`GroupedMagicValue`/`FindMagicValuesScannerParameters`/`FindMagicValuesResult`/`FindMagicValuesPayload`/`MagicValueEntry`/`MagicValuesSummary` Records + `MagicValueValueTypeExtensions`; aus Hauptdatei extrahiert zur `MaxLineCount: 500`-Einhaltung; neu in step-003.
 
-- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesStringHeuristics.cs`** — Vier statische Sub-Heuristiken (`ClassifyNameofCandidate`, `ClassifySecurityCandidate`, `ClassifyStandardCandidateExtras`, `ClassifyLocalizationCandidate`) plus Connection-String/URL/Header-Identifier-Dispatch-Helper; aus den Hauptdateien extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-003.
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesStringHeuristics.cs`** — Vier statische Sub-Heuristiken (`ClassifyNameofCandidate`, `ClassifySecurityCandidate`, `ClassifyStandardCandidateExtras`, `ClassifyLocalizationCandidate`) plus Connection-String/URL/Header-Identifier-Dispatch-Helper; in step-003-Nachfix (`cfe2769`) wurde `ClassifyNameofCandidate` so erweitert, dass Symbol-Bezeichner aus `IdentifierNameSyntax`/`ParameterSyntax`/`VariableDeclaratorSyntax`/`PropertyDeclarationSyntax`/`MethodDeclarationSyntax`/`TypeDeclarationSyntax`/`EnumMemberDeclarationSyntax` gesammelt werden (3 Helper `HasMatchingSymbolName`/`IsNameofCandidateNode`/`ExtractSymbolName` extrahiert, kognitive Komplexität unter 12-Limit); aus den Hauptdateien extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-003.
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesTool.cs`** — Dispatcher-Implementierung des 19. MCP-Tools `find_magic_values` (Loading/NotLoaded/Validation/Malfunction-Pfade + `Task.Run`-Wrapper um den Scanner); nutzt `FindMagicValuesScanner`, `MagicValuesClassifier`, `McpTruncation` und `McpToolResults.Text<T>` (Objekt-Wrapper statt Top-Level-Array); neu in step-001.
 
-- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerTests.cs`** — Filter/Aggregation-Pipeline-Tests (Trivial/Index/Attribut/GetHashCode/ignoreNumbers, minOccurrences, valueType/categoryFilter/scopeFilter, maxResults, StructuredContent-Shape, EPIC-2-Platzhalter); neu in step-001.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesScannerTests.cs`** — Filter/Aggregation-Pipeline-Tests (Trivial/Index/Attribut/GetHashCode/ignoreNumbers, minOccurrences, valueType/categoryFilter/scopeFilter, maxResults, StructuredContent-Shape); in step-003-Nachfix (`cfe2769`) von 21 → 14 Public-Methods reduziert (6 Arg-Tests in eigene Datei, InterpolatedString nach HeuristicTests verschoben); Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-001.
 
-- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerHeuristicTests.cs`** — Heuristik-Detail-Tests (URL/Pfad/Format-String/HTTP-Statuscode/Schwellenwert/Connection-String); aus der Haupt-Test-Klasse extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-001.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesScannerHeuristicTests.cs`** — Basis-Heuristik-Tests (URL/WindowsPath/FormatString/HttpStatus/ConstantDouble/ConnectionString/NonHttpStatus) + InterpolatedString; in step-003-Nachfix (`cfe2769`) von 19 → 8 Public-Methods reduziert (erweiterte Heuristiken in eigene Datei, InterpolatedString aus Tests.cs übernommen); Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-001.
 
-- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerMalfunctionTests.cs`** — `FaultingSolutionFixture`-Malfunction-Test (IsMalfunction=true + Context); aus der Haupt-Test-Klasse extrahiert; neu in step-001.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesScannerArgTests.cs`** — Arg-Aktivierungs-Tests (`ScanAsync_DefaultValueType_IsAll` für Finding-1-Fix + `ScanAsync_IncludeSuppressedFalse/True` + `ScanAsync_IncludeTestsFalse/True` + `ScanAsync_ChangedOnlyTrue/False`); Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-003 (Nachfix `cfe2769`).
 
-- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesTestHelpers.cs`** — Geteilte `RunAsync`-Helpers (3 Overloads) + `ScanAsyncParams`-Parameter-Object; `ainetlinter-disable MaxMethodParameterCount` auf den 7-Param-Overloads (Aufrufstellen-Komfort vs. AI-ContextFootprint); neu in step-001.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesScannerAdvancedHeuristicTests.cs`** — Erweiterte Heuristik-Tests (Nameof 3 inkl. `StringMatchesLocalVariableName` für Finding-2-Fix + Security 2 + Standard 2 + DuplicateConst 3 inkl. `StringConstant_HasStringValueType` für Finding-3-Fix + Enum 2 + Localization 2 = 14 Public-Methods); Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-003 (Nachfix `cfe2769`).
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesScannerMalfunctionTests.cs`** — `FaultingSolutionFixture`-Malfunction-Test (IsMalfunction=true + Context); aus der Haupt-Test-Klasse extrahiert; Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-001.
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValues/FindMagicValuesTestHelpers.cs`** — Geteilte `RunAsync`-Helpers (3 Overloads) + `FindMagicValuesRunOptions`/`ScanAsyncParams`-Parameter-Records (3 Bool-Flags in `FindMagicValuesRunOptions` gebuendelt für `MaxBoolParameterCount: 1`); in step-003-Nachfix (`cfe2769`) wurde redundantes `using AiNetLinter.TestKit;` entfernt (global via csproj); Namespace `AiNetLinter.FastTests.Mcp.Tools.FindMagicValues`; neu in step-001.
 
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/FindMagicValuesToolTests.cs`** — Integration-Tests gegen `SymbolGraphCatalogFixture` (SOLUTION_NOT_LOADED/Loading, Parameter-Validierung mit `INVALID_ARGUMENT`, Clamping, `StructuredContent`-Shape, Tool-Registrierung in `tools/list`); neu in step-001.
 

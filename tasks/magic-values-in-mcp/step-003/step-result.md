@@ -6,7 +6,9 @@ step: 003
 coded_by_model: MiniMax-M3
 coded_by_model_knowledge_cutoff: 2026-01
 code_commit_hash: 7fcb4013a211007765045eb5c2b1cbd1d6d3f229
-step_plan_status: open -> done (pending audit) — nach Commit in separatem Schritt
+code_commit_nachfix_hash: cfe2769ef4a1c63e1b6db4e10af1c450d051aa33
+step_plan_status: open -> done (pending audit)
+audit_resolved_findings: 10/10
 ---
 
 # Step 003 — Result: EPIC-2 erweiterte Heuristiken, Args-Aktivierungen, Suppression & Doku-Abschluss
@@ -105,7 +107,9 @@ Workaround: Test aus dem Test-Gate rausgefiltert (`FullyQualifiedName!~LiveDogfo
 
 ## Tech-Debt (neu in step-003)
 
-Keine neuen Tech-Debt-Eintraege aus step-003. Alle Abweichungen sind entweder bewusst (Pragmatik, Plan-Updates) oder pre-existing Test-Bugs (ausserhalb Scope).
+### TD-002 — `localization_candidates` deckt nur Exception-Konstruktoren ab (UI-Prompts/Logins fehlen) [Priorität: niedrig] [Auto-Fixable: nein]
+
+In `tech-debt.md` ergänzt. Konzept §Muss-Haven nennt „User-Facing Nachrichtentexte in Exceptions, UI-Prompts oder Logins". Pragmatik mit Exception-Konstruktor + Längenschwelle (`> 15` Zeichen) ist die kleinste, false-positive-ärmste Variante und entspricht dem in `agent-api.md` dokumentierten Verhalten. Caller-Type-Erkennung (welche UI-Frameworks/Methoden lösen `localization_candidates` aus) wäre eigene Architektur-Entscheidung mit Konfigurationsformat — Folge-Task.
 
 ## Beobachtungen
 

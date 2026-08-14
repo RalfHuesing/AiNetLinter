@@ -31,6 +31,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
 | TD-001 | `Mcp/OverviewResourceRegistration.cs` + 3 Test-Dateien | mittel | nein | Tool-Count muss bei jedem Tool-Add an drei Stellen manuell synchronisiert werden — zentrale Konstante fehlt. |
+| TD-002 | `src\AiNetLinter\Mcp\Tools\MagicValues\MagicValuesStringHeuristics.cs` | niedrig | nein | `localization_candidates`-Heuristik deckt nur Exception-Konstruktoren ab; UI-Prompts/Logins fehlen (Caller-Type-Heuristik nicht umgesetzt). |
 
 ## Einträge
 
@@ -42,4 +43,14 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-001; die drei Test-Dateien sind Bestand und der Refactor würde zentrale Konstanten-Sichtbarkeit + Test-API-Design (z. B. `internal const int CurrentToolCount`) berühren, was eine eigene Planer-/Nutzer-Entscheidung verdient.
 - **Vorschlag:** `internal const int CurrentToolCount = N;` in `McpServerOptionsFactory` oder `OverviewResourceRegistration` exportieren; die drei Tests darauf umstellen. Analog für den C#-only-Subset (`McpDocumentationSmokeTests`-`12`/`13`-Konstante). Konsolidierung kann im selben Epic wie das nächste Tool-Add erfolgen.
 - **Auto-Fixable:** nein — berührt Test-API-Design und Konstanten-Sichtbarkeit, ist nicht rein mechanisch.
+- **Status:** offen
+
+### TD-002 — `localization_candidates` deckt nur Exception-Konstruktoren ab (UI-Prompts/Logins fehlen) [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-003 (Coder-Result vom 2026-08-15)
+- **Ort:** `src\AiNetLinter\Mcp\Tools\MagicValues\MagicValuesStringHeuristics.ClassifyLocalizationCandidate` — die Heuristik matcht nur String-Literale, die (a) Argument in einem Exception-Konstruktor sind und (b) eine effektive Länge > 15 Zeichen haben.
+- **Befund:** Konzept §Muss-Haven nennt „User-Facing Nachrichtentexte in Exceptions, UI-Prompts oder Logins". EPIC-2 setzt nur den Exception-Teil um. UI-Prompts (z. B. `ShowDialog("Bitte bestätigen Sie...")`) und Login-Flows (z. B. `Console.WriteLine("Enter password:")`) würden ebenfalls `localization_candidates` sein, brauchen aber eine Caller-Type-Heuristik (z. B. UI-Framework-Imports, `Console.WriteLine`-Symbol-Name, `ILogger`-Wrapper).
+- **Warum nicht sofort gefixt:** Caller-Type-Erkennung ist Architektur-Ermessen (welche UI-Frameworks? WPF/WinUI/Blazor/Console? projektspezifisch konfigurierbar?). Wäre eigener Planer-Aufruf wert. Pragmatik mit Exception-Konstruktor + Längenschwelle ist die kleinste, false-positive-ärmste Variante und entspricht dem in `agent-api.md` dokumentierten Verhalten.
+- **Vorschlag:** Folge-Task: Caller-Type-Heuristik mit projektspezifischer Konfiguration (welche Methoden/Namespaces/Frameworks lösen `localization_candidates` aus). Konfigurationsdatei (z. B. `rules.json`-Erweiterung um `localizationCallerTypes: ["ShowDialog", "Console.WriteLine", ...]`) als Mechanismus.
+- **Auto-Fixable:** nein — Caller-Type-Set und Konfigurationsformat sind Architektur-Entscheidungen.
 - **Status:** offen
