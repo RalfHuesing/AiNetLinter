@@ -1,9 +1,12 @@
-using Xunit;
+#nullable enable
+
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Xunit;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 [Trait("Category", "Unit")]
 public sealed class CognitiveComplexityWalkerTests

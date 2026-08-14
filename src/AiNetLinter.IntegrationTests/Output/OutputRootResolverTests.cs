@@ -1,10 +1,13 @@
 #nullable enable
 
+using System;
+using System.IO;
 using AiNetLinter.Output;
+using Xunit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.IntegrationTests.Output;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class OutputRootResolverTests
 {
     [Fact]

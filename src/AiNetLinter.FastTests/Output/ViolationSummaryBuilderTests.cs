@@ -1,9 +1,11 @@
 #nullable enable
 
+using System.IO;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
+using Xunit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.FastTests.Output;
 
 [Trait("Category", "Unit")]
 public sealed class ViolationSummaryBuilderTests

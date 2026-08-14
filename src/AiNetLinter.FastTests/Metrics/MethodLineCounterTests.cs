@@ -1,12 +1,16 @@
-using Xunit;
+#nullable enable
+
+using System;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 [Trait("Category", "Unit")]
 public sealed class MethodLineCounterTests

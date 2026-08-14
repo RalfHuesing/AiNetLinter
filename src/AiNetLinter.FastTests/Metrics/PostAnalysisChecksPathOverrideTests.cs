@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,10 +11,10 @@ using AiNetLinter.Core;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 /// <summary>
-/// Testet, dass PathOverrides in PostAnalysisChecks korrekt aufgelöst werden,
+/// Testet, dass PathOverrides in PostAnalysisChecks korrekt aufgeloest werden,
 /// wenn SolutionBasePath gesetzt ist.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -71,7 +71,6 @@ public sealed class PostAnalysisChecksPathOverrideTests
     [Fact]
     public async Task AIContextFootprint_WithPathOverride_NoViolationWhenUnderOverrideLimit()
     {
-        // footprint 7000 > global 5000 but ≤ override 12000 → no violation
         var state = CreateState(MakeClass("DataTablePage", TestFilePath, footprint: 7000));
 
         await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
@@ -82,7 +81,6 @@ public sealed class PostAnalysisChecksPathOverrideTests
     [Fact]
     public async Task AIContextFootprint_WithPathOverride_ViolationWhenAboveOverrideLimit()
     {
-        // footprint 13000 > override 12000 → violation even with override
         var state = CreateState(MakeClass("DataTablePage", TestFilePath, footprint: 13000));
 
         await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
@@ -93,7 +91,6 @@ public sealed class PostAnalysisChecksPathOverrideTests
     [Fact]
     public async Task AIContextFootprint_FileOutsideOverridePath_UsesGlobalLimit()
     {
-        // Production file is NOT under the PathOverride glob → global limit (5000) applies
         var state = CreateState(MakeClass("ProdPage", OtherFilePath, footprint: 7000));
 
         await PostAnalysisChecks.RunAsync(state, MakeConfig(globalLimit: 5000, pathOverrideLimit: 12000));
@@ -104,7 +101,6 @@ public sealed class PostAnalysisChecksPathOverrideTests
     [Fact]
     public async Task AIContextFootprint_PartialClass_UsesRepresentativeFileForPathOverride()
     {
-        // Partial class with one file under the override path → override applies, no violation
         var state = CreateState(new ClassInfo
         {
             Name = "DataTablePage",
@@ -126,7 +122,6 @@ public sealed class PostAnalysisChecksPathOverrideTests
     [Fact]
     public async Task AIContextFootprint_WildcardPattern_MatchesNestedPaths()
     {
-        // Ensure ** glob correctly matches nested path segments
         var state = CreateState(MakeClass("Nested", @"C:\Solution\App\Pages\Test\Sub\Deep\Page.cs", footprint: 7000));
         var config = TestHelper.CreateDefaultConfig() with
         {

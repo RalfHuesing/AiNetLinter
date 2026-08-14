@@ -1,23 +1,21 @@
 #nullable enable
 
+using System;
 using System.IO;
 using AiNetLinter.Output;
 using Xunit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.FastTests.Output;
 
 /// <summary>
 /// Unit-Tests fuer <see cref="McpLintConsole"/>: stellt sicher, dass die im MCP-Modus aktive
 /// <see cref="ILintConsole"/>-Implementierung beide Methoden strukturell nach <c>stderr</c>
-/// umleitet. Dieser Test ist die in-Memory-Entsprechung des E2E-Framing-Tests in
-/// <c>McpServerCommandJsonRpcFramingTests</c>: der E2E-Test prueft das Verhalten am echten
-/// Subprozess, dieser Unit-Test das Verhalten der Implementierung selbst.
+/// umleitet.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpLintConsoleTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void WriteLine_RoutesToStderr()
     {
         var original = Console.Error;
@@ -36,7 +34,6 @@ public sealed class McpLintConsoleTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void WriteError_RoutesToStderr()
     {
         var original = Console.Error;
@@ -55,7 +52,6 @@ public sealed class McpLintConsoleTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Instance_ReturnsSameSingleton()
     {
         Assert.Same(McpLintConsole.Instance, McpLintConsole.Instance);

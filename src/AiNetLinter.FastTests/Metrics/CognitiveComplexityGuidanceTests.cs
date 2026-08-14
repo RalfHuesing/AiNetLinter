@@ -1,14 +1,17 @@
 #nullable enable
 
+using System;
+using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 /// <summary>
-/// Prüft, dass CognitiveComplexityGuidance.Build unterschiedliche Guidance liefert
+/// Prueft, dass CognitiveComplexityGuidance.Build unterschiedliche Guidance liefert
 /// je nachdem ob die Methode kurz+dicht oder lang+komplex ist.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -34,7 +37,6 @@ public sealed class CognitiveComplexityGuidanceTests
     [Fact]
     public void Build_ShortDenseMethod_WithNestedIfs_ReturnsNamingGuidance()
     {
-        // < 20 code lines, deeply nested ifs, complexity >> limit
         const string source = @"
 void Dense(int a, int b, int c) {
     if (a > 0) {
@@ -52,14 +54,13 @@ void Dense(int a, int b, int c) {
         var result = CognitiveComplexityGuidance.Build(method, complexity: 10, limit: 4);
 
         Assert.Contains("benannte Properties", result);
-        Assert.Contains("Dense", result); // method name in hint
+        Assert.Contains("Dense", result);
         Assert.DoesNotContain("Extract Method", result);
     }
 
     [Fact]
     public void Build_ShortDenseMethod_WithoutNestedIfs_ReturnsGuardClauseGuidance()
     {
-        // Short method, no if nesting (below nested-if threshold), high CogC
         const string source = @"
 void NoIfs(int a) {
     var x = a + 1;
@@ -76,8 +77,7 @@ void NoIfs(int a) {
     [Fact]
     public void Build_LongComplexMethod_WithNestedIfs_ReturnsExtractMethodGuidance()
     {
-        // >= 20 code lines, nested ifs, complexity >> limit
-        var bodyLines = new System.Text.StringBuilder();
+        var bodyLines = new StringBuilder();
         bodyLines.AppendLine("void LongDense(int a, int b, int c) {");
         for (int i = 1; i <= 17; i++)
             bodyLines.AppendLine($"    var v{i} = a + {i};");
@@ -94,15 +94,14 @@ void NoIfs(int a) {
         var result = CognitiveComplexityGuidance.Build(method, complexity: 10, limit: 4);
 
         Assert.Contains("Extract Method", result);
-        Assert.Contains("LongDense", result); // method name in hint
+        Assert.Contains("LongDense", result);
         Assert.DoesNotContain("Guard-Clauses", result);
     }
 
     [Fact]
     public void Build_LongComplexMethod_WithoutNestedIfs_ReturnsGenericExtractMethodGuidance()
     {
-        // >= 20 code lines, no nested ifs, complexity >> limit
-        var bodyLines = new System.Text.StringBuilder();
+        var bodyLines = new StringBuilder();
         bodyLines.AppendLine("void LongFlat(int a) {");
         for (int i = 1; i <= 22; i++)
             bodyLines.AppendLine($"    var v{i} = a + {i};");

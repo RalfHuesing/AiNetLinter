@@ -1,15 +1,16 @@
-﻿#nullable enable
+#nullable enable
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 /// <summary>
-/// Prüft, dass die MaxLineCount-Guidance den durchschnittlichen CC der Methoden in der Datei berücksichtigt
+/// Prueft, dass die MaxLineCount-Guidance den durchschnittlichen CC der Methoden in der Datei beruecksichtigt
 /// und zwischen "strukturell flach" und "lang UND komplex" unterscheidet.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -22,7 +23,7 @@ public sealed class FileLimitGuidanceTests
             Metrics = new MetricsConfig
             {
                 MaxLineCount = maxLineCount,
-                CompoundSuppressions = new System.Collections.Generic.List<CompoundSuppression>()
+                CompoundSuppressions = new List<CompoundSuppression>()
             }
         };
 
@@ -88,7 +89,6 @@ public sealed class FileLimitGuidanceTests
     [Fact]
     public void FlatFile_WithSimpleMethods_ReturnsStructurallyFlatGuidance()
     {
-        // Datei mit vielen trivialen Methoden (CC=1) → "strukturell flach"
         var code = BuildFlatFile(lineCount: 30);
         var (_, model) = TestHelper.ParseCode(code);
         var config = LowLineLimitConfig(maxLineCount: 5);
@@ -105,7 +105,6 @@ public sealed class FileLimitGuidanceTests
     [Fact]
     public void ComplexFile_WithBranchingMethods_ReturnsLongAndComplexGuidance()
     {
-        // Datei mit verzweigten Methoden (avg CC > 2) → "lang UND komplex"
         var code = BuildComplexFile(methodCount: 5);
         var (_, model) = TestHelper.ParseCode(code);
         var config = LowLineLimitConfig(maxLineCount: 5);

@@ -2,8 +2,9 @@
 
 using Xunit;
 using AiNetLinter.Output;
+using AiNetLinter.TestKit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.FastTests.Output;
 
 /// <summary>
 /// Tests fuer <see cref="LinterErrorFormatter"/> und <see cref="LinterErrorCodes"/>.
@@ -54,13 +55,13 @@ public sealed class LinterErrorFormatterTests
     [Fact]
     public void Format_ThenWriteError_WritesStructuredMessage()
     {
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         console.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.WorkspaceDiagnostic,
             "Workspace-Problem.", context: "foo.slnx"));
 
-        Assert.Single(console.Errors);
-        Assert.Contains("WORKSPACE_DIAGNOSTIC", console.Errors[0]);
-        Assert.Contains("foo.slnx", console.Errors[0]);
+        Assert.Single(console.ErrorLines);
+        Assert.Contains("WORKSPACE_DIAGNOSTIC", console.ErrorLines[0]);
+        Assert.Contains("foo.slnx", console.ErrorLines[0]);
     }
 
     [Fact]

@@ -1,14 +1,17 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AiNetLinter.Configuration;
 using AiNetLinter.Output;
+using Xunit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.FastTests.Output;
 
 /// <summary>
 /// Stellt sicher dass jede in RuleMetadataRegistry registrierte Regel einen expliziten
-/// Legende-Eintrag in RuleLegendRegistry hat. Schlägt an wenn eine neue Regel hinzugefügt
-/// wird ohne gleichzeitig Warum-Text und Fix-Alternativen zu ergänzen.
+/// Legende-Eintrag in RuleLegendRegistry hat.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class RuleLegendRegistryTests
@@ -22,7 +25,7 @@ public sealed class RuleLegendRegistryTests
     {
         Assert.True(
             RuleLegendRegistry.HasEntry(ruleName),
-            $"Regel '{ruleName}' fehlt in RuleLegendRegistry — Warum-Text und Fix-Alternativen ergänzen.");
+            $"Regel '{ruleName}' fehlt in RuleLegendRegistry — Warum-Text und Fix-Alternativen ergaenzen.");
     }
 
     [Theory]

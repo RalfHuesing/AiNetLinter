@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using AiNetLinter.Output;
 using Xunit;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.IntegrationTests.Output;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class DebtReportBuilderTests
 {
     [Fact]

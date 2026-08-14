@@ -4,9 +4,8 @@ using System.Threading.Tasks;
 using Xunit;
 using AiNetLinter.Output;
 
-namespace AiNetLinter.Tests.Output;
+namespace AiNetLinter.FastTests.Output;
 
-// @covers DebtReportBuilder
 [Trait("Category", "Unit")]
 public sealed class DebtReportBuilderHeaderTests
 {

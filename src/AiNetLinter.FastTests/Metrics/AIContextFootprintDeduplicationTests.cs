@@ -1,10 +1,12 @@
+#nullable enable
+
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.FastTests.Metrics;
 
 [Trait("Category", "Unit")]
 public sealed class AIContextFootprintDeduplicationTests

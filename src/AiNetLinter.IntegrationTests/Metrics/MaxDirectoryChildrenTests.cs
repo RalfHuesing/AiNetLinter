@@ -1,16 +1,17 @@
 #nullable enable
 
-using Xunit;
+using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using System.Collections.Concurrent;
+using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 
-namespace AiNetLinter.Tests.Metrics;
+namespace AiNetLinter.IntegrationTests.Metrics;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class MaxDirectoryChildrenTests : IDisposable
 {
     private readonly string _tempDir;
@@ -21,10 +22,23 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
         Directory.CreateDirectory(_tempDir);
     }
 
-    public void Dispose() => TestHelper.DeleteDirectoryIfExists(_tempDir);
+    public void Dispose()
+    {
+        try
+        {
+            if (Directory.Exists(_tempDir))
+            {
+                Directory.Delete(_tempDir, true);
+            }
+        }
+        catch
+        {
+            // Ignored on test cleanup
+        }
+    }
 
     private static Config CreateConfig(int limit, string[]? exemptNames = null) =>
-        TestHelper.CreateDefaultConfig() with
+        new Config
         {
             Global = new GlobalConfig
             {
@@ -35,7 +49,10 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceNoSilentCatch = false,
+                EnforceExplicitStateImmutability = false,
+                PreventContextDependentOverloads = false,
+                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
             },
             Metrics = new MetricsConfig
