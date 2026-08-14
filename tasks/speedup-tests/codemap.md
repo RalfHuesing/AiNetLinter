@@ -2,7 +2,7 @@
 task: speedup-tests
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-13
+last_updated: 2026-08-14
 ---
 
 <!-- planning step-025: EPIC-6 Teil 1 -- 21 Mini-Solution-MCP-Klassen werden entlang der echten
@@ -73,6 +73,20 @@ last_updated: 2026-08-13
 
 Task-scoped Landkarte nach dem Pointer-Prinzip: Jeder Eintrag nennt nur Ort und Relevanz; Details
 werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
+
+## Master-Step 029
+
+- **`tasks/speedup-tests/master-low-cost-handoff.md`** — verbindlicher Detailplan fuer die drei
+  verbleibenden Super-Pakete: 15 EPIC-6-Klassen, 38 EPIC-7-Restklassen, danach Legacy-Loeschung und
+  Abschlussprofile. (zuletzt: planning step-029)
+- **`src/AiNetLinter.Tests/`** — noch 53 pending Klassen plus 28 Support-`.cs`-Dateien; nach Paket 2
+  ohne Testklassen, in Paket 3 vollstaendig zu loeschen. (zuletzt: planning step-029)
+- **`src/AiNetLinter.IntegrationTests/Platform/` / `Mcp/Platform/`** — Zielort des assembly-weiten
+  Max-2-Subprozessbudgets, des CLI-Prozessrunners und des lazy Hauptrepo-MCP-Hosts fuer Dogfood;
+  keine neue Produkt-Seam. (zuletzt: planning step-029)
+- **`tasks/speedup-tests/final-measurement.md`** — geplanter Abschlussbericht mit Buildzeit und drei
+  Round-Robin-Laeufen je Unit/Component/Integration/Dogfood/Performance; Stress nur Discovery ohne
+  neue Nutzerfreigabe. (zuletzt: planning step-029)
 
 ## Projekt- und Laufvertraege
 

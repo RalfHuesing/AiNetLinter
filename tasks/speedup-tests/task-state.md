@@ -4,8 +4,8 @@ task: speedup-tests
 started_at: 2026-08-12
 last_updated: 2026-08-14
 rules_dir: .agents/rules
-total_steps: 27  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-027 (issues; enge Matrix-Gates nachzuweisen)
+total_steps: 29  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-029 (open; hybrider Master-Superstep fuer den gesamten Task-Rest)
 ---
 
 # Task State: speedup-tests
@@ -13,10 +13,10 @@ current_step: step-027 (issues; enge Matrix-Gates nachzuweisen)
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 27 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 29 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-027` (Review `issues`; die drei Code-Fixes sind geprüft, aber die
-  verpflichtenden engen Fast-/Integration-Matrix-Gates sind noch nachzuweisen)
+- **Aktueller Schritt:** `step-029` (`open`; drei grosse Restpakete ohne weitere
+  Unterkohorten-Planung; Arbeitsmodus `hybrid-low-cost`)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
@@ -57,9 +57,11 @@ mehr nötig.>
 | step-022 | EPIC-5 | done | Korrektur: globales MSBuild-Loadgate und read-only Server-Ownership | step-021 | 5aa397f/1c5090d | approved | 3f94674 |
 | step-023 | EPIC-5 | issues | Config-/Suppression-Dateikohorte und EPIC-5-Grenzgate (21 Klassen) | - | 312b652 | issues | d37a2f7 |
 | step-024 | EPIC-5 | done | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | approved | Code 30918b9; Doku 00c3e33; Review 8b577ca |
-| step-025 | EPIC-6 | issues | EPIC-6-Start: deterministische Mini-MCP-Prozesshosts (21 Klassen) | - | uncommittiert | blocked by Fast-Runtime-Dependency-Cleanup | - |
-| step-026 | EPIC-6 | issues | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | issues (Audit 2026-08-13; pausiert auf Nutzerwunsch) | 06fdc20 |
-| step-027 | EPIC-6 | issues | Korrektur: Git-Workspace-Cleanup und Kategorieguard abschliessen | step-026 | 399a463 | issues (Matrix-Evidenz 318/112 statt 69/64) | Code 399a463; Doku 479a7a7 |
+| step-025 | EPIC-6 | done | EPIC-6-Start: deterministische Mini-MCP-Prozesshosts (21 Klassen) | - | 06fdc20 (kumulativ via step-026) | issues→approved via step-026/027/028 | Code 06fdc20 |
+| step-026 | EPIC-6 | done | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | issues→approved via step-027/028 | Code 06fdc20; Doku 1e20391 |
+| step-027 | EPIC-6 | done | Korrektur: Git-Workspace-Cleanup und Kategorieguard abschliessen | step-026 | 399a463 | issues→approved via step-028 | Code 399a463; Doku 479a7a7/32b0150 |
+| step-028 | EPIC-6 | done | Korrektur: enge Step-027-Matrixevidenz nachweisen | step-027 | Evidenz-only | approved | Review in aktuellem Planungscommit |
+| step-029 | EPIC-6/7 | open | Master-Superstep: 15 + 38 Klassen, Legacy-Loeschung und Abschluss | - | - | - | - |
 
 ## Config (optional)
 
@@ -110,5 +112,3 @@ auch nicht nach. Siehe `../spec.md` §10.8.>
   sind reine Beobachtung, kein Steuerungssignal (siehe `../spec.md` §9).
   Auch `auto_fixable: ja`-Einträge lösen nichts eigenständig aus, sie
   werden nur an ohnehin laufende Steps angehängt.
-</content>
-</invoke>

@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: speedup-tests
 step: 027
@@ -262,4 +262,3 @@ Jeder relevante Testlauf erhält per `--logger "trx;LogFileName=<name>.trx"` ein
   Scope dieses Fixes.
 - TD-007, TD-008 und TD-010 bleiben offen. Dogfood, Performance, Stress und allgemeine CLI-
   Self-Repo-Verträge folgen erst nach Freigabe dieses Korrektur-Steps.
-

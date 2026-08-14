@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-result
 task: speedup-tests
 step: 027
@@ -52,8 +52,8 @@ step027-cleanup-cause.trx -> grün (1/1)
 step027-command-contracts.trx -> grün (13/13)
 step027-fast-guards.trx -> grün (13/13)
 step027-integration-guards.trx -> grün (1/1)
-step027-fast-matrix.trx -> grün (318/318)
-step027-integration-matrix.trx -> grün (112/112)
+step027-fast-matrix.trx -> grün (318/318, historischer Breitlauf; korrigiert via step028-fast-matrix.trx auf 69/69)
+step027-integration-matrix.trx -> grün (112/112, historischer Breitlauf; korrigiert via step028-integration-matrix.trx auf 64/64)
 step027-ledger-guards.trx -> grün (5/5)
 git --no-pager diff --check -> grün
 find_duplicates(scopeDir="src", minTokens=20) -> 0 exact-Cluster fuer die Kategorieguards
@@ -61,7 +61,7 @@ find_duplicates(scopeDir="src", minTokens=20) -> 0 exact-Cluster fuer die Katego
 
 ## Abweichungen vom Plan
 
-Keine — Plan 1:1 umgesetzt.
+Die in Step 027 protokollierten Läufe `step027-fast-matrix.trx` (318 Tests) und `step027-integration-matrix.trx` (112 Tests) waren zu breit angesetzt, da Namespace-Filter auch fremde MCP-Kohorten erfasst hatten. Diese wurden in Step 028 durch exakte klassenscharfe Manifeste und FQN-genaue Matrixläufe korrigiert: `step028-fast-matrix.trx` (69/69) und `step028-integration-matrix.trx` (64/64). Die Discovery- und TRX-FQN-Diffs (`step028-*-discovery.diff.txt`, `step028-*-trx.diff.txt`) sind jeweils 0 Byte (100 % manifestscharf).
 
 ## Beobachtungen
 

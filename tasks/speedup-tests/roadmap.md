@@ -3,7 +3,7 @@ status: active  # active | done
 task: speedup-tests
 derived_from: konzept.md
 created_at: 2026-08-12
-last_updated: 2026-08-13  # EPIC-6-step-025 wird durch step-026 korrigiert
+last_updated: 2026-08-14  # Step 028 approved; Task-Rest in Master-Step 029 gebuendelt
 created_by_model: claude-sonnet-5
 created_by_model_knowledge_cutoff: 2026-01
 ---
@@ -189,13 +189,20 @@ obsolet markiert) — kein starres Vorab-Dokument.
       Refresh, Prozessbudget, Guards, Ledger und Debt-Evidenz ab. Allgemeine CLI-Self-Repo-
       Verträge, Dogfood, Performance und Stress bleiben getrennte EPIC-6-Host-/Cadence-Schnitte;
       weder Step 025 noch Step 026 führt ein Stressprofil oder einen vollen
-      `Category!=Stress`-Lauf aus.
+      `Category!=Stress`-Lauf aus. **Step 027 ist nach der manifestscharfen Evidenzkorrektur
+      Step 028 approved:** Fast 69/69 und Integration 64/64, je FQN-genau. Der gesamte EPIC-6-Rest
+      liegt nun ohne weitere Unterkohorten-Planung in Master-Step 029, Paket 1: exakt 15 pending
+      CLI-/MSBuild-/MCP-Dogfood-/Performance-/Stressklassen; Zielstand 38 pending. Stress wird
+      migriert, kompiliert und discovered, aber ohne neue Nutzerfreigabe nicht ausgefuehrt.
 - [ ] EPIC-7: Restmigration, Legacy-Löschung, finale Laufprofile, Messbericht, Dokumentation —
       verbleibende Kohorten, Ledger auf `pending = 0`, physisches Löschen von `AiNetLinter.Tests`
       und Solution-Bereinigung, Abschlussverifikation aller Profile (Unit/Component/Integration/
       Dogfood/Performance/Stress getrennt), Vorher-/Nachher-Messbericht nach Leitplanke 10,
       Aktualisierung von `AGENTS.md`/Testdokumentation/Diagnoseregel — Konzept §9 Punkt 6,
-      Definition of Done.
+      Definition of Done. **Gebündelt in Master-Step 029:** Paket 2 migriert alle danach
+      verbleibenden 38 Ledgerklassen auf `pending = 0`; Paket 3 löscht Legacyprojekt und Support,
+      bereinigt Solution/Runner/Rules/Doku und führt Build, beide `Category!=Stress`-Abschlussgates,
+      getrennte Profilmessung und Drift-Audit aus. Keine weiteren Stepordner sind vorgesehen.
 
 <Reihenfolge folgt der Strangler-Abhängigkeit aus Konzept §8: EPIC-1/2 sind Voraussetzung für jede
 Migrationskohorte (EPIC-3..6), EPIC-7 setzt voraus, dass alle Kohorten migriert sind. Die genaue
