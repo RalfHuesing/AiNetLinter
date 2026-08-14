@@ -1,5 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -9,10 +10,10 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Metrics;
 
-namespace AiNetLinter.Tests.FalsePositives;
+namespace AiNetLinter.FastTests.FalsePositives;
 
 /// <summary>
-/// Tests für die False-Positive-Erweiterungen: AllowOutParametersInPrivateMethods,
+/// Tests fuer die False-Positive-Erweiterungen: AllowOutParametersInPrivateMethods,
 /// SemanticNamingExemptMethodNames, FootprintIgnoreTypeNames, SemanticNamingAllowSubstringOfMethodName.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -31,7 +32,10 @@ public sealed class FalsePositiveExtensionsTests
             EnforceXmlDocumentation = false,
             EnforceSemanticNaming = false,
             EnforceNullableEnable = false,
-            EnforceNoSilentCatch = false,            EnforceExplicitStateImmutability = false,            PreventContextDependentOverloads = false,            EnforceNamespaceDirectoryMapping = false,
+            EnforceNoSilentCatch = false,
+            EnforceExplicitStateImmutability = false,
+            PreventContextDependentOverloads = false,
+            EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false,
         },
         Metrics = new MetricsConfig
@@ -57,12 +61,10 @@ public sealed class FalsePositiveExtensionsTests
             .ToList();
 
         if (errors.Count > 0)
-            throw new System.Exception("Compilation errors:\n" + string.Join("\n", errors));
+            throw new Exception("Compilation errors:\n" + string.Join("\n", errors));
 
         return compilation.GetSemanticModel(tree);
     }
-
-    // ─── Feature 1: AllowOutParametersInPrivateMethods ───────────────────────
 
     [Fact]
     public void AllowOutParametersInPrivateMethods_True_DoesNotFlagPrivateMethod()
@@ -180,8 +182,6 @@ public sealed class FalsePositiveExtensionsTests
         Assert.Contains(violations, v => v.RuleName == "AllowOutParameters");
     }
 
-    // ─── Feature 2: SemanticNamingExemptMethodNames ───────────────────────────
-
     [Fact]
     public void SemanticNaming_EqualsOverride_ObjNotFlagged_ByDefault()
     {
@@ -281,13 +281,9 @@ public sealed class FalsePositiveExtensionsTests
         Assert.Contains(violations, v => v.RuleName == "EnforceSemanticNaming");
     }
 
-    // ─── Feature 3: FootprintIgnoreTypeNames ─────────────────────────────────
-
     [Fact]
     public void FootprintIgnoreTypeNames_ExcludesNamedType_ReducesFootprint()
     {
-        // HeavyDependency liegt in einer eigenen Datei (eigenem SyntaxTree),
-        // damit das Ausschließen tatsächlich die Footprint-Zeilenzahl reduziert.
         const string depSource = """
             namespace TestNs;
             public class HeavyDependency
@@ -369,8 +365,6 @@ public sealed class FalsePositiveExtensionsTests
 
         Assert.Equal(footprintExact, footprintLower);
     }
-
-    // ─── Feature 4: SemanticNamingAllowSubstringOfMethodName ─────────────────
 
     [Fact]
     public void SemanticNaming_SubstringOfMethod_NotFlagged_WhenOptionEnabled()

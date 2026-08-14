@@ -1,5 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -7,11 +8,11 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 
-namespace AiNetLinter.Tests.FalsePositives;
+namespace AiNetLinter.FastTests.FalsePositives;
 
 /// <summary>
 /// Explorations-Suite: legitimer C#-Code, der vom Linter nicht als Fehler gemeldet werden darf.
-/// Jeder Test beschreibt ein konkretes FP-Szenario. Fehlschläge beweisen echte False-Positives.
+/// Jeder Test beschreibt ein konkretes FP-Szenario. Fehlschlaege beweisen echte False-Positives.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class FalsePositiveTests
@@ -32,7 +33,8 @@ public sealed class FalsePositiveTests
             EnforceXmlDocumentation = false,
             EnforceSemanticNaming = false,
             EnforceNullableEnable = false,
-            EnforceNoSilentCatch = false,            EnforceExplicitStateImmutability = false,
+            EnforceNoSilentCatch = false,
+            EnforceExplicitStateImmutability = false,
             PreventContextDependentOverloads = false,
             EnforceNamespaceDirectoryMapping = false,
             DetectAndBanPhantomDependencies = false
@@ -60,14 +62,10 @@ public sealed class FalsePositiveTests
             .ToList();
 
         if (errors.Count > 0)
-            throw new System.Exception("Compilation errors:\n" + string.Join("\n", errors));
+            throw new Exception("Compilation errors:\n" + string.Join("\n", errors));
 
         return compilation.GetSemanticModel(tree);
     }
-
-    // ─── FP #1: Deconstruct-Methode mit out-Parametern ───────────────────────
-    // Deconstruct ist ein C#-Sprachmuster und MUSS out-Parameter verwenden.
-    // Weder Prefix "Try"/"Is" noch Rückgabetyp bool — daher früher fälschlich gemeldet.
 
     [Fact]
     public void FP_Deconstruct_OutParameters_ShouldNotViolate()
@@ -110,11 +108,6 @@ public sealed class Color
         var violations = LinterAnalyzer.Analyze("Color.cs", model, CreateConfig(allowOut: false, allowTryPatternOut: true));
         Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
     }
-
-    // ─── FP #2: Lokale Funktion mit Try*-Muster und out-Parameter ────────────
-    // bool TryParse(string s, out int n) als lokale Funktion ist idiomatisches C#.
-    // Der Parent ist LocalFunctionStatementSyntax, nicht MethodDeclarationSyntax —
-    // früher wurde der AllowTryPatternOut-Check dadurch nicht erreicht.
 
     [Fact]
     public void FP_LocalFunction_TryPattern_OutParameter_ShouldNotViolate()
@@ -170,10 +163,6 @@ public sealed class Validator
         Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
     }
 
-    // ─── FP #3: Interface-Implementierung mit erzwungenen out-Parametern ──────
-    // Wer ein fremdes Interface implementiert, darf die Signatur nicht ändern.
-    // Auch non-Try*-Methoden dürfen out-Parameter haben, wenn ein Interface es vorschreibt.
-
     [Fact]
     public void FP_InterfaceImplementation_ForcedOutParameter_ShouldNotViolate()
     {
@@ -218,10 +207,6 @@ public sealed class ConcreteProvider : ProviderBase
         Assert.DoesNotContain(violations, v => v.RuleName == "AllowOutParameters");
     }
 
-    // ─── FP #4: Switch-Expression Komplexität ─────────────────────────────────
-    // Eine switch-expression mit 5 Arms hat McCabe-Komplexität 6 (weit unter 12).
-    // Kognitiv zählt die gesamte switch-expression als +1, nicht als N Arms.
-
     [Fact]
     public void FP_SwitchExpression_FiveArms_CyclomaticUnderLimit()
     {
@@ -262,15 +247,10 @@ public sealed class StatusMapper
     };
 }";
         var model = GetSemanticModel(source);
-        // 7 Arms + default = cyclomatic 8, kognitive 1 — beides unter 12/15
         var violations = LinterAnalyzer.Analyze("StatusMapper.cs", model, CreateConfig());
         Assert.DoesNotContain(violations, v => v.RuleName == "MaxCyclomaticComplexity");
         Assert.DoesNotContain(violations, v => v.RuleName == "MaxCognitiveComplexity");
     }
-
-    // ─── FP #6: string? TryXxx(out T) — Error-String-Try*-Muster ────────────
-    // null = Erfolg, non-null = Fehlermeldung. Variante des BCL-Try*-Musters mit
-    // string? statt bool als Rückgabetyp. out-Parameter ist erlaubt.
 
     [Fact]
     public void FP_StringNullable_TryPattern_OutSideData_ShouldNotViolate()
@@ -353,10 +333,6 @@ public static class Converter
         Assert.Contains(violations, v => v.RuleName == "AllowOutParameters");
     }
 
-    // ─── FP #7: CancellationToken als 5. Parameter ───────────────────────────
-    // CancellationToken ist per rules.json in MethodParameterCountIgnoreTypeNames.
-    // Dieser Test dokumentiert, dass die Config korrekt greift.
-
     [Fact]
     public void FP_CancellationToken_FifthParameter_WithIgnoreConfig_ShouldNotViolate()
     {
@@ -380,10 +356,6 @@ public sealed class OrderService
         Assert.DoesNotContain(violations, v => v.RuleName == "MaxMethodParameterCount");
     }
 
-    // ─── FP #8: Record mit with-Expression (funktionale Mutation) ────────────
-    // `record with { ... }` erzeugt eine neue Instanz — kein Zustandsmutation.
-    // EnforceExplicitStateImmutability darf hier nicht feuern.
-
     [Fact]
     public void FP_Record_WithExpression_FunctionalTransition_ShouldNotViolate()
     {
@@ -406,17 +378,9 @@ public static class GroupOperations
         Assert.DoesNotContain(violations, v => v.RuleName == "EnforceExplicitStateImmutability");
     }
 
-    // ─── FP #9: Guard-Clause / Early-Return-Linearisierung ──────────────────
-    // Flat geschriebener Code (Early Returns) hat dieselbe McCabe-CC wie
-    // tief verschachtelter äquivalenter Code — aber deutlich niedrigere
-    // kognitive Komplexität (CogCC Flat=3, Nested=8 bei 3 Bedingungen).
-    // MaxCognitiveComplexity muss Guard-Clause-Muster klar bevorzugen;
-    // MaxCyclomaticComplexity behandelt beide korrekt gleich.
-
     [Fact]
     public void FP_GuardClausePattern_FlatCode_NotFlaggedWhereNestedEquivalentWouldBe()
     {
-        // Variante B — Guard Clauses: CogCC = 3, CC = 4
         const string flatSource = @"
 public sealed class UserStatusResolver
 {
@@ -429,7 +393,6 @@ public sealed class UserStatusResolver
     }
 }";
 
-        // Variante A — Nesting (logisch äquivalent): CogCC = 8, CC = 4
         const string nestedSource = @"
 public sealed class UserStatusResolver
 {
@@ -457,7 +420,6 @@ public sealed class UserStatusResolver
     }
 }";
 
-        // Enges CogCC-Limit (5): flat-Code unauffällig, Nesting-Code verletzt
         var strictConfig = CreateConfig() with
         {
             Metrics = CreateConfig().Metrics with { MaxCognitiveComplexity = 5 }
@@ -469,7 +431,6 @@ public sealed class UserStatusResolver
         Assert.DoesNotContain(flatViolations, v => v.RuleName == "MaxCognitiveComplexity");
         Assert.Contains(nestedViolations, v => v.RuleName == "MaxCognitiveComplexity");
 
-        // McCabe-CC ist für beide gleich (Pfadanzahl identisch) — kein false positive
         Assert.DoesNotContain(flatViolations, v => v.RuleName == "MaxCyclomaticComplexity");
         Assert.DoesNotContain(nestedViolations, v => v.RuleName == "MaxCyclomaticComplexity");
     }

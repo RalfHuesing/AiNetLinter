@@ -1,27 +1,29 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Xunit;
 using AiNetLinter.Maps.Skeleton;
 
-namespace AiNetLinter.Tests.Maps.Skeleton;
+namespace AiNetLinter.FastTests.Maps.Skeleton;
 
 [Trait("Category", "Unit")]
 public sealed class SkeletonSyntaxWalkerTests
 {
     private static (SkeletonSyntaxWalker Walker, SemanticModel Model) CreateWalker(
         string code,
-        System.Collections.Generic.IReadOnlyList<string>? includeNamespaces = null,
-        System.Collections.Generic.IReadOnlyList<string>? excludeNamespaces = null,
+        IReadOnlyList<string>? includeNamespaces = null,
+        IReadOnlyList<string>? excludeNamespaces = null,
         bool publicOnly = false)
     {
         var (tree, model) = TestHelper.ParseCode(code);
         var walker = new SkeletonSyntaxWalker(
             model,
             "Test.cs",
-            includeNamespaces ?? System.Array.Empty<string>(),
-            excludeNamespaces ?? System.Array.Empty<string>(),
+            includeNamespaces ?? Array.Empty<string>(),
+            excludeNamespaces ?? Array.Empty<string>(),
             publicOnly);
         walker.Visit(tree.GetRoot());
         return (walker, model);

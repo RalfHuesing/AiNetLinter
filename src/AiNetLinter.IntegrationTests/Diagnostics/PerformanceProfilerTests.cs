@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.IO;
@@ -7,13 +7,9 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Diagnostics;
 using Xunit;
 
-namespace AiNetLinter.Tests.Diagnostics;
+namespace AiNetLinter.IntegrationTests.Diagnostics;
 
-// @covers PerformanceProfiler
-// @covers DocumentPerformanceEntry
-// @covers ProfilerJsonReport
-// @covers ProfilerSummary
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class PerformanceProfilerTests
 {
     [Fact]

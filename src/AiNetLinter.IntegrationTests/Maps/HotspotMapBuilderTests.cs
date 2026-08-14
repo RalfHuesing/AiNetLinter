@@ -5,11 +5,11 @@ using System.IO;
 using System.Linq;
 using Xunit;
 using AiNetLinter.Maps;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.TestKit;
 
-namespace AiNetLinter.Tests.Maps;
+namespace AiNetLinter.IntegrationTests.Maps;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class HotspotMapBuilderTests : IDisposable
 {
     private readonly string _tempDir;
@@ -20,7 +20,20 @@ public sealed class HotspotMapBuilderTests : IDisposable
         Directory.CreateDirectory(_tempDir);
     }
 
-    public void Dispose() => TestHelper.DeleteDirectoryIfExists(_tempDir);
+    public void Dispose()
+    {
+        try
+        {
+            if (Directory.Exists(_tempDir))
+            {
+                Directory.Delete(_tempDir, true);
+            }
+        }
+        catch
+        {
+            // Ignored on test cleanup
+        }
+    }
 
     private string CreateTempFiles(params (string FileName, string Content)[] files)
     {
@@ -41,7 +54,7 @@ public sealed class HotspotMapBuilderTests : IDisposable
     public void Build_NoHotspots_ShowsGreenMessage()
     {
         CreateTempFiles(("Small.cs", "namespace Foo;"));
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
         Assert.Contains("grünen Bereich", console.OutputText);
     }
@@ -52,7 +65,7 @@ public sealed class HotspotMapBuilderTests : IDisposable
         // 476 lines in a 500 max limit file is 95.2% (critical limit >= 95%)
         var linesContent = string.Join(Environment.NewLine, Enumerable.Repeat("line", 476));
         CreateTempFiles(("Critical.cs", linesContent));
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
         Assert.Contains("Kritische Dateien", console.OutputText);
         Assert.Contains("Critical.cs", console.OutputText);
@@ -64,10 +77,9 @@ public sealed class HotspotMapBuilderTests : IDisposable
         // 410 lines in a 500 max limit file is 82% (warning limit >= 80% and < 95%)
         var linesContent = string.Join(Environment.NewLine, Enumerable.Repeat("line", 410));
         CreateTempFiles(("Warning.cs", linesContent));
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         HotspotMapBuilder.Build(_tempDir, 500, console);
         Assert.Contains("Warnungs-Dateien", console.OutputText);
         Assert.Contains("Warning.cs", console.OutputText);
     }
-
 }
