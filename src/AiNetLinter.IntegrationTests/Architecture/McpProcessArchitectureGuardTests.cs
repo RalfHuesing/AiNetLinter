@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Architecture;
@@ -13,7 +14,7 @@ public sealed class McpProcessArchitectureGuardTests
     [Fact]
     public void RunnerAndProcessCallsites_StayWithinMcpOwners()
     {
-        var root = FindSolutionRoot();
+        var root = SolutionRootLocator.Find();
         var runner = File.ReadAllText(Path.Combine(root, "src", "AiNetLinter.IntegrationTests", "xunit.runner.json"));
 
         Assert.Contains("\"parallelizeAssembly\": false", runner, StringComparison.Ordinal);
@@ -48,17 +49,5 @@ public sealed class McpProcessArchitectureGuardTests
             source.Path.EndsWith(Path.Combine("Platform", "CliProcessRunner.cs"), StringComparison.Ordinal) &&
             source.Text.Contains("process.Start()", StringComparison.Ordinal));
         Assert.DoesNotContain(sources, source => source.Text.Contains("SymbolGraphMcp", StringComparison.Ordinal));
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AiNetLinter.slnx"))) return current.FullName;
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit AiNetLinter.slnx wurde nicht gefunden.");
     }
 }

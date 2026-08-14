@@ -14,10 +14,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 /// <c>AiNetLinter.exe --mcp-server</c> als echten Subprozess gegen die Mini-Fixture
 /// <c>tests/Fixtures/BaselineMini</c>, fuehrt den JSON-RPC-<c>initialize</c>-Handshake ueber
 /// <see cref="McpClient.CreateAsync(ModelContextProtocol.Client.IClientTransport, ModelContextProtocol.Client.McpClientOptions?, System.Threading.CancellationToken)"/>
-/// durch und ruft <c>tools/list</c> auf. Bewusst kein Kopieren des vollen
-/// <c>AiNetLinter.Tests.Mcp.McpTestClient</c>-Funktionsumfangs (Retry/Loading-State/Call-Log sind
-/// nicht Teil der MSE) und keine TestKit-Extraktion (Leitplanke 11: erst bei zwei echten
-/// Konsumenten) -- nur Start, Handshake, ein <c>tools/list</c>-Call, Dispose.
+/// durch und ruft <c>tools/list</c> auf.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class McpHandshakeToolRegistrationTests
@@ -28,7 +25,7 @@ public sealed class McpHandshakeToolRegistrationTests
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}");
 
-        var fixtureRoot = Path.Combine(FindSolutionRoot(), "tests", "Fixtures", "BaselineMini");
+        var fixtureRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
 
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
@@ -44,21 +41,5 @@ public sealed class McpHandshakeToolRegistrationTests
 
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "get_violations");
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
     }
 }

@@ -3,7 +3,6 @@
     <Project Path="src/AiNetLinter.FastTests/AiNetLinter.FastTests.csproj" />
     <Project Path="src/AiNetLinter.IntegrationTests/AiNetLinter.IntegrationTests.csproj" />
     <Project Path="src/AiNetLinter.TestKit/AiNetLinter.TestKit.csproj" />
-    <Project Path="src/AiNetLinter.Tests/AiNetLinter.Tests.csproj" />
     <Project Path="src/AiNetLinter/AiNetLinter.csproj" />
   </Folder>
 </Solution>

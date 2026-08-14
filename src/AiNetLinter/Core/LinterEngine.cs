@@ -15,7 +15,6 @@ using AiNetLinter.Metrics;
 using AiNetLinter.Cache;
 using AiNetLinter.Cli;
 
-[assembly: InternalsVisibleTo("AiNetLinter.Tests")]
 [assembly: InternalsVisibleTo("AiNetLinter.FastTests")]
 [assembly: InternalsVisibleTo("AiNetLinter.IntegrationTests")]
 [assembly: InternalsVisibleTo("AiNetLinter.TestKit")]

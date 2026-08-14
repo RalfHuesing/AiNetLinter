@@ -75,7 +75,7 @@ dotnet build          # Kompilieren
 dotnet test           # Tests ausführen
 dotnet run            # Starten
 ```
-* **Test-Logging & Fehlerdiagnose:** Jeder `dotnet test`-Lauf überschreibt durch `.runsettings` automatisch `TestResults/latest.trx` — seit es mehrere Zielprojekte gibt (`AiNetLinter.FastTests`, `AiNetLinter.IntegrationTests`, Legacy `AiNetLinter.Tests`), überschreibt sich `latest.trx` pro `dotnet test`-Aufruf erneut, gilt also nur für den zuletzt gelaufenen Befehl. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent direkt `TestResults/latest.trx` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten. Welche `dotnet test`-Befehle aktuell den maßgeblichen Standard-Gate-Pfad bilden (und welches Zielprojekt quarantäniert ist), steht ausschließlich in `AGENTS.md` — nicht hier zusätzlich pflegen.
+* **Test-Logging & Fehlerdiagnose:** Testläufe können über `--logger "trx;LogFileName=<Name>.trx"` diagnostiziert werden. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent die generierte TRX-Datei in `TestResults/` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten. Welche `dotnet test`-Befehle aktuell den maßgeblichen Standard-Gate-Pfad bilden, steht ausschließlich in `AGENTS.md` — nicht hier zusätzlich pflegen.
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
@@ -91,13 +91,13 @@ dotnet run            # Starten
   Collection zwangsserialisieren ist die teuerste und am wenigsten
   zielgerichtete Lösung und braucht vor jedem Einsatz eine explizite
   Begründung, warum die gezielte Lösung nicht reicht.
-- **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur umgesetzt (aktuell u. a. `McpHandshakeToolRegistrationTests` in `AiNetLinter.IntegrationTests`; die verbleibenden `pending`-MCP-Verträge liegen bis zu ihrer Migration in `McpLiveRepositoryTests`/`McpTestClient`, `AiNetLinter.Tests`). Das Anlegen von Ad-hoc-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
+- **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur umgesetzt (u. a. `McpHandshakeToolRegistrationTests` und `McpLiveRepositoryTests` in `AiNetLinter.IntegrationTests`). Das Anlegen von Ad-hoc-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
 - **Update-Pflicht:** Bei Änderungen an Features/Konfiguration immer auch `Docs/ROADMAP.md`, `Docs/configuration.md`,  `README.md` und `rules.json` aktualisieren (ohne Aufforderung).
 - **Commit-Vorschlag Pflicht:** Bei jeder Änderung an Dateien, die im Git versioniert werden, muss die Antwort des Agenten immer mit einem konkreten `### Commit-Vorschlag` abschließen. Dieser enthält ausschließlich den reinen Commit-Text (Conventional Commit auf Deutsch, imperativ, z. B. `refactor: CLI-Optionen auf --sync-agent-rules umgestellt`) ohne Shell-Befehle (`git commit ...`), damit er direkt in das Git-Feld der IDE kopiert werden kann.
 
 ## 5. Qualitätsdrift-Prävention
 
-- **Zero-Warning-Direktive:** Beide Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
+- **Zero-Warning-Direktive:** Alle Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
 - **Result-Pattern bevorzugen:** Fehlerfälle explizit als `Result<T>` modellieren statt Exceptions zu werfen. Exceptions nur für echte, exogene Ausnahmefälle (z. B. Netzwerkausfall, IO-Fehler). Der Linter erzwingt dies nicht — die Einhaltung liegt beim Entwickler und der KI.
 - **Symptom-Fixing verboten:** Fehlschlagende Tests nicht auskommentieren oder Assertions abschwächen, um sie grün zu bekommen. Ursache immer in der zugrunde liegenden Engine bzw. im Rule-Processor beheben.
 - **Sparsamer Einsatz von Code-Kommentaren (Clean Code):** Self-Documenting Code bevorzugen; im Zweifelsfall keine Kommentare schreiben.

@@ -291,7 +291,7 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
   "edges": [
     { "from": "...", "to": "...", "direction": "outgoing", "typeNames": ["SymbolIdentifierResolver"], "referenceCount": 2 }
   ],
-  "projectReferences": [ { "project": "AiNetLinter.Tests", "references": ["AiNetLinter"] } ],
+  "projectReferences": [ { "project": "AiNetLinter.IntegrationTests", "references": ["AiNetLinter", "AiNetLinter.TestKit"] } ],
   "truncated": false
 }
 ```

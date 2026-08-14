@@ -50,24 +50,6 @@ internal static class TestHelper
     }
 }
 
-internal sealed class RecordingLintConsole : ILintConsole
-{
-    private readonly List<string> output = [];
-    private readonly List<string> errors = [];
-
-    public string OutputText => string.Join("\n", output);
-
-    public string ErrorText => string.Join("\n", errors);
-
-    public IReadOnlyList<string> Errors => errors;
-
-    public IReadOnlyList<string> ErrorLines => errors;
-
-    public void WriteLine(string message) => output.Add(message);
-
-    public void WriteError(string message) => errors.Add(message);
-}
-
 internal sealed class TestTempDirectory : IDisposable
 {
     private TestTempDirectory(string directoryPath) => DirectoryPath = directoryPath;

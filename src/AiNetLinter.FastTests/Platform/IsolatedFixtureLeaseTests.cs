@@ -18,7 +18,7 @@ public sealed class IsolatedFixtureLeaseTests
     [Fact]
     public void CopyFixture_ExistingFixture_ReturnsExistingRootPathWithExpectedSourceFiles()
     {
-        var solutionRoot = FindSolutionRoot();
+        var solutionRoot = SolutionRootLocator.Find();
 
         using var lease = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
 
@@ -30,7 +30,7 @@ public sealed class IsolatedFixtureLeaseTests
     [Fact]
     public void CopyFixture_CalledTwiceForSameFolder_ReturnsIndependentTempPaths()
     {
-        var solutionRoot = FindSolutionRoot();
+        var solutionRoot = SolutionRootLocator.Find();
 
         using var first = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
         using var second = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
@@ -43,7 +43,7 @@ public sealed class IsolatedFixtureLeaseTests
     [Fact]
     public void Dispose_DeletesTempDirectory()
     {
-        var solutionRoot = FindSolutionRoot();
+        var solutionRoot = SolutionRootLocator.Find();
         var lease = IsolatedFixtureLease.CopyFixture(solutionRoot, "BaselineMini");
         var rootPath = lease.RootPath;
 
@@ -55,7 +55,7 @@ public sealed class IsolatedFixtureLeaseTests
     [Fact]
     public void CopyFixture_SourceContainsBinAndObjSubfolders_TargetOmitsThem()
     {
-        var solutionRoot = FindSolutionRoot();
+        var solutionRoot = SolutionRootLocator.Find();
         using var syntheticSourceRoot = SyntheticSourceWithBinAndObj.Create(solutionRoot);
 
         using var lease = IsolatedFixtureLease.CopyFixture(syntheticSourceRoot.SolutionRoot, syntheticSourceRoot.FolderName);
@@ -63,22 +63,6 @@ public sealed class IsolatedFixtureLeaseTests
         Assert.True(File.Exists(Path.Combine(lease.RootPath, "BaselineMini.slnx")));
         Assert.False(Directory.Exists(Path.Combine(lease.RootPath, "bin")));
         Assert.False(Directory.Exists(Path.Combine(lease.RootPath, "obj")));
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
     }
 
     /// <summary>

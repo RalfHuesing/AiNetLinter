@@ -31,7 +31,15 @@ public static class PathNormalizer
     /// <summary>
     /// Prüft, ob ein relativer Dateipfad eine Testdatei darstellt.
     /// </summary>
-    public static bool IsTestFile(string relativePath) =>
-        relativePath.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) ||
-        relativePath.Contains(".Tests\\", StringComparison.OrdinalIgnoreCase);
+    public static bool IsTestFile(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/');
+        return normalized.Contains(".Tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains(".FastTests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains(".IntegrationTests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains(".TestKit/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains(".Specs/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase);
+    }
 }

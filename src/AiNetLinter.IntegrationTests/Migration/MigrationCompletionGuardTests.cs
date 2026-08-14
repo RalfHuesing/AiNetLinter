@@ -4,50 +4,49 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Migration;
 
 /// <summary>
-/// Macht das Migrationsledger (tasks/speedup-tests/test-migration-ledger.md) zu einer geprueften
-/// Invariante statt einer Absichtserklaerung (konzept.md Leitplanke 8, "Zwei Mechanismen, die das
-/// Ledger von Dokumentation zu Schutz machen"). Scannt die tatsaechlichen Legacy-Testklassen im
-/// Legacy-Testprojektordner ueber Roslyn-Syntaxbaeume statt ueber Reflection auf die geladene
-/// Testassembly, weil AiNetLinter.IntegrationTests das Legacy-Testprojekt nicht referenziert und ein
-/// zusaetzlicher Assembly-Load hier unnoetige MSBuild-Startkosten haette.
+/// Finaler Migrationsabschluss-Guard: Sichert ab, dass 0 Ledger-Zeilen 'pending' sind,
+/// alle Zielorte auf der Platte existieren und das Legacy-Projekt weder in der Solution
+/// noch auf der Platte vorhanden ist.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class TestMigrationLedgerConsistencyTests
+public sealed class MigrationCompletionGuardTests
 {
     private const string LedgerRelativePath = "tasks/speedup-tests/test-migration-ledger.md";
-
-    // Bewusst aus zwei Segmenten zusammengesetzt statt als ein Literal: FilterCliIntegrationTests
-    // prueft per Selbstlint-Skeleton-Map, dass der Solution-weite Output nach Ausschluss von
-    // "*.Tests" keine Vorkommen des Legacy-Projektnamens mehr enthaelt -- ein zusammenhaengendes
-    // Literal in dieser (nicht ausgeschlossenen) Assembly wuerde diese Pruefung faelschlich zum
-    // Legacy-Quelltext zaehlen.
+    private static readonly string LegacyProjectName = string.Concat("AiNetLinter", ".Tests");
     private static readonly string LegacyTestsRelativeDir = string.Concat("src/AiNetLinter", ".Tests");
 
     [Fact]
-    public void AllLegacyTestClasses_HaveLedgerEntry()
+    public void LegacyProject_IsNotInSolutionAndNotOnDisk()
     {
-        var root = FindSolutionRoot();
-        var ledgerClassNames = ParseLedger(root).Select(e => e.TestClassName).ToHashSet(StringComparer.Ordinal);
-        var actualClassNames = ScanLegacyTestClassNames(root);
+        var root = SolutionRootLocator.Find();
+        var slnxPath = Path.Combine(root, "AiNetLinter.slnx");
+        var slnxContent = File.ReadAllText(slnxPath);
 
-        var missing = actualClassNames.Except(ledgerClassNames).OrderBy(n => n, StringComparer.Ordinal).ToList();
+        Assert.DoesNotContain(LegacyProjectName, slnxContent, StringComparison.Ordinal);
 
-        Assert.True(missing.Count == 0,
-            $"Testklassen ohne Ledger-Eintrag: {string.Join(", ", missing)}");
+        var legacyDir = Path.Combine(root, LegacyTestsRelativeDir.Replace('/', Path.DirectorySeparatorChar));
+        Assert.False(Directory.Exists(legacyDir), $"Legacy-Verzeichnis existiert noch auf der Platte: {legacyDir}");
+    }
+
+    [Fact]
+    public void Ledger_HasZeroPendingEntries()
+    {
+        var root = SolutionRootLocator.Find();
+        var pending = ParseLedger(root).Where(e => e.Status == "pending").ToList();
+
+        Assert.Empty(pending);
     }
 
     [Fact]
     public void MigratedOrConsolidatedEntries_DoNotReferenceStillExistingLegacySourceFiles()
     {
-        var root = FindSolutionRoot();
+        var root = SolutionRootLocator.Find();
         var offenders = new List<string>();
 
         foreach (var entry in ParseLedger(root).Where(e => e.Status is "migrated" or "consolidated"))
@@ -68,7 +67,7 @@ public sealed class TestMigrationLedgerConsistencyTests
     [Fact]
     public void MigratedOrConsolidatedEntries_HaveExistingNewCoverageLocation()
     {
-        var root = FindSolutionRoot();
+        var root = SolutionRootLocator.Find();
         var offenders = new List<string>();
 
         foreach (var entry in ParseLedger(root).Where(e => e.Status is "migrated" or "consolidated"))
@@ -87,7 +86,7 @@ public sealed class TestMigrationLedgerConsistencyTests
     [Fact]
     public void RemovedTrivialEntries_HaveNonEmptyJustification()
     {
-        var root = FindSolutionRoot();
+        var root = SolutionRootLocator.Find();
         var offenders = ParseLedger(root)
             .Where(e => e.Status == "removed-trivial" && string.IsNullOrWhiteSpace(e.NewCoverageLocation))
             .Select(e => e.TestClassName)
@@ -107,46 +106,6 @@ public sealed class TestMigrationLedgerConsistencyTests
         }
 
         return trimmed.Split(" — ", StringSplitOptions.None)[0].Trim();
-    }
-
-    private static HashSet<string> ScanLegacyTestClassNames(string root)
-    {
-        var dir = Path.Combine(root, LegacyTestsRelativeDir.Replace('/', Path.DirectorySeparatorChar));
-        var names = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var file in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
-        {
-            if (file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
-                file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
-            {
-                continue;
-            }
-
-            var text = File.ReadAllText(file);
-            var tree = CSharpSyntaxTree.ParseText(text);
-            var root2 = tree.GetRoot();
-
-            foreach (var classDecl in root2.DescendantNodes().OfType<ClassDeclarationSyntax>())
-            {
-                var hasTestMethod = classDecl.Members
-                    .OfType<MethodDeclarationSyntax>()
-                    .Any(m => m.AttributeLists
-                        .SelectMany(al => al.Attributes)
-                        .Any(a => IsFactOrTheory(a.Name.ToString())));
-
-                if (hasTestMethod)
-                {
-                    names.Add(classDecl.Identifier.Text);
-                }
-            }
-        }
-
-        return names;
-    }
-
-    private static bool IsFactOrTheory(string attributeName)
-    {
-        return attributeName is "Fact" or "FactAttribute" or "Theory" or "TheoryAttribute";
     }
 
     private static List<LedgerEntry> ParseLedger(string root)
@@ -193,20 +152,4 @@ public sealed class TestMigrationLedgerConsistencyTests
         string Status,
         string LegacyFilter,
         string NewCoverageLocation);
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }

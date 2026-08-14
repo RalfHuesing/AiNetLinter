@@ -24,7 +24,7 @@ public sealed class ProjectOverrideRealSolutionTests
     [Fact]
     public async Task RealSolutionProjects_NewTestProjectNames_ResolveOverrideAndAreDetectedAsTest()
     {
-        var rootDir = FindSolutionRoot();
+        var rootDir = SolutionRootLocator.Find();
         var rulesJsonPath = Path.Combine(rootDir, "rules.json");
         var globalConfig = ConfigLoader.TryLoadConfig(rulesJsonPath, isRequired: true);
         Assert.NotNull(globalConfig);
@@ -42,21 +42,5 @@ public sealed class ProjectOverrideRealSolutionTests
             var isTestProject = TestProjectDetector.IsTestProject(project!, globalConfig!.TestSentinel.TestProjectNameSuffixes);
             Assert.True(isTestProject);
         }
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
     }
 }

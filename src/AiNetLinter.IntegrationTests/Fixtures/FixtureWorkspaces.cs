@@ -13,7 +13,7 @@ internal abstract class FixtureWorkspace : IDisposable
     private readonly IsolatedFixtureLease lease;
     private int disposed;
 
-    protected FixtureWorkspace(string fixtureName) => lease = IsolatedFixtureLease.CopyFixture(FindSolutionRoot(), fixtureName);
+    protected FixtureWorkspace(string fixtureName) => lease = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), fixtureName);
 
     public string RootPath => lease.RootPath;
 
@@ -31,17 +31,6 @@ internal abstract class FixtureWorkspace : IDisposable
     }
 
     protected virtual void PrepareForDelete() { }
-
-    private static string FindSolutionRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AiNetLinter.slnx"))) return directory.FullName;
-            directory = directory.Parent;
-        }
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }
 
 internal sealed class BaselineMiniFixtureWorkspace : FixtureWorkspace
@@ -98,6 +87,7 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
         RunGit("commit -m initial");
     }
 
+    // ainetlinter-disable BanBlockingTaskAccess
     private void RunGit(string arguments)
     {
         var startInfo = new ProcessStartInfo

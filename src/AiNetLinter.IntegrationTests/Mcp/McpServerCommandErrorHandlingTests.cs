@@ -107,9 +107,7 @@ public sealed class McpServerCommandErrorHandlingTests
 
     /// <summary>
     /// Ruft ein MCP-Tool auf und retryt, solange die Antwort den Loading-Info-Text enthaelt
-    /// (Hintergrund-Load des Servers ist noch nicht abgeschlossen). Wiederholt das aehnliche
-    /// Pattern aus <see cref="AiNetLinter.Tests.Mcp.McpTestClient"/>, lokal gehalten, weil
-    /// diese Testklasse den <see cref="McpClient"/> direkt verwendet.
+    /// (Hintergrund-Load des Servers ist noch nicht abgeschlossen).
     /// </summary>
     private static async Task<CallToolResult> CallToolWithLoadingRetryAsync(
         McpClient client,

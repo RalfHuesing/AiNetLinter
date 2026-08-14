@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Generators;
 using AiNetLinter.Models;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Core;
@@ -15,16 +16,7 @@ namespace AiNetLinter.IntegrationTests.Core;
 public sealed class PlaybookGeneratorRound2FileTests
 {
     private static Solution BuildSolution(string source, string projectName = "TestProj", string docName = "Doc.cs")
-    {
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var projectInfo = ProjectInfo.Create(projectId, VersionStamp.Create(), projectName, projectName, LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        var docId = DocumentId.CreateNewId(projectId);
-        return solution.AddDocument(docId, docName, source);
-    }
+        => RoslynTestSolutionFactory.CreateSolution(source, projectName, docName).Solution;
 
     [Fact]
     public async Task BuildContentAsync_ProducesIdenticalContentToGenerateAsync()

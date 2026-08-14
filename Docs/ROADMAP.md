@@ -657,4 +657,23 @@ strukturell nur zufaellig aehnliche Testmethoden (parametrisierte Szenario-Varia
 
 ---
 
+## Testsuite-Restrukturierung & Speedup (FastTests, IntegrationTests, TestKit)
+
+Vollständige Neustrukturierung und Beschleunigung der Testsuite (.NET 10 / xUnit v3) zur Trennung von schnellen In-Memory-Tests und prozess-/dateibasierten Integrationstests:
+
+- [x] **Drei spezialisierte Testprojekte:**
+  - `src/AiNetLinter.FastTests`: Reine In-Memory-Tests (Unit & Component, Roslyn Adhoc-Workspaces, Ausführung < 10s).
+  - `src/AiNetLinter.IntegrationTests`: Datei-I/O-, CLI-, Dogfood-, Performance- und Stress-Tests.
+  - `src/AiNetLinter.TestKit`: Wiederverwendbare Test-Infrastruktur, Fixtures (`RoslynTestSolutionFactory`, `IsolatedFixtureLease`, `RecordingLintConsole`).
+- [x] **Vollständige Migration aller 183 Testklassen / 1259+ Tests:**
+  - 100% der Klassen methodengenau und verhaltensgetreu migriert.
+  - Altes Legacy-Projekt `src/AiNetLinter.Tests` vollständig aus Solution und Dateisystem entfernt.
+- [x] **Kategorisierung & Selektive Testläufe:**
+  - Schnelle Entwicklungsschleife über `Category=Unit` oder `Category=Component`.
+  - Normales CI/Verifikations-Gate über `Category!=Stress`.
+  - Gezielte Last- und Stresstests über `Category=Stress`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
+

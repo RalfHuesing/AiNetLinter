@@ -56,8 +56,7 @@ public sealed class IsolatedFixtureLease : IDisposable
         }
         catch (Exception ignored)
         {
-            // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt (identisch zu
-            // AiNetLinter.Tests.Fixtures.TestTempDirectory.Dispose).
+            // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt.
             _ = ignored;
         }
     }

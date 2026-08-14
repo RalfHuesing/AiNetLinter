@@ -9,8 +9,7 @@ namespace AiNetLinter.IntegrationTests.Cli;
 
 /// <summary>
 /// MSE-Baustein "ein repraesentativer CLI-Adapter mit Exit-Code": ruft
-/// <see cref="AiNetLinter.Program.Main(string[])"/> in-process auf (Muster aus
-/// AiNetLinter.Tests.Cli.ProgramTests, Main_WithEmptyArgs_ReturnsExitCodeOne) gegen zwei isolierte
+/// <see cref="AiNetLinter.Program.Main(string[])"/> in-process auf gegen zwei isolierte
 /// Kopien der Mini-Fixture <c>tests/Fixtures/BaselineMini</c> -- eine mit unveraendertem
 /// (unsealed) <c>ViolatingClass.cs</c> fuer den Verstoss-Fall, eine mit einer sealed-Variante fuer
 /// den sauberen Fall -- und prueft den resultierenden Prozess-Exit-Code. Die kopierte
@@ -100,7 +99,7 @@ public sealed class CliAdapterExitCodeTests
 
     private static (string RootPath, string ConfigPath) CopyBaselineMiniFixture(bool makeCompliant)
     {
-        var sourceRoot = Path.Combine(FindSolutionRoot(), "tests", "Fixtures", "BaselineMini");
+        var sourceRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
         var destinationRoot = Path.Combine(Path.GetTempPath(), $"ainetlinter-cli-adapter-{Guid.NewGuid():N}");
         CopyFixtureDirectory(sourceRoot, destinationRoot);
 
@@ -136,21 +135,5 @@ public sealed class CliAdapterExitCodeTests
             Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
             File.Copy(sourceFile, targetFile, overwrite: true);
         }
-    }
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
     }
 }

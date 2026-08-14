@@ -10,6 +10,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.IntegrationTests.Platform;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -52,8 +53,6 @@ public sealed class GetIndexScopeToolTests
     [Fact]
     public async Task ExecuteAsync_MixedFixture_StructuredContentDeserializesToFileTypeBreakdownEntries()
     {
-        // StructuredContent ergaenzt den Text additiv — dieselben Zaehlwerte wie die
-        // Text-Zeile ".cs: 5 Dateien (voll vom Symbolgraph abgedeckt)".
         using var state = _fixture.CreateReadOnlyServer();
 
         var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
@@ -130,7 +129,7 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
     }
 
     [Fact]
@@ -144,23 +143,12 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
+        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
     }
 
-    /// <summary>
-    /// Singular/Plural an einer Stelle gehalten, damit jede Datei-Typ-Zeile konsistent zur
-    /// tatsaechlichen Engine-Ausgabe prueft (count == 1 -> "Datei", sonst "Dateien").
-    /// </summary>
     private static string BuildBreakdownLine(string extension, int count, string suffix)
     {
         var label = count == 1 ? "Datei" : "Dateien";
         return $"{extension}: {count} {label} {suffix}";
-    }
-
-    private static void AssertStartsWithCompileErrorHeader(string text, int expectedFileCount)
-    {
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
-        var expected = expectedFileCount == 1 ? "1 Datei hat Compile-Fehler" : $"{expectedFileCount} Dateien haben Compile-Fehler";
-        Assert.Contains(expected, text, StringComparison.Ordinal);
     }
 }

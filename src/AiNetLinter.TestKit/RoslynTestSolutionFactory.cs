@@ -38,9 +38,8 @@ public sealed record RoslynTestSolution(Solution Solution, Workspace Workspace) 
 /// <summary>
 /// Zentraler, mehrprojekt-faehiger In-Memory-Solution-Builder auf <see cref="AdhocWorkspace"/>-Basis.
 /// Der Kern-Referenzsatz (<see cref="CoreReferences"/>) wird einmalig statisch gebaut und ueber alle
-/// Aufrufe hinweg wiederverwendet -- anders als das Legacy-Muster in
-/// <c>AiNetLinter.Tests.TestHelper.ParseCode</c>, das den vollen Referenzsatz bei jedem Aufruf neu per
-/// <see cref="AppDomain.CurrentDomain"/>-Scan aufbaut.
+/// Aufrufe hinweg wiederverwendet -- statt bei jedem Aufruf neu per
+/// <see cref="AppDomain.CurrentDomain"/>-Scan aufgebaut zu werden.
 /// </summary>
 public static class RoslynTestSolutionFactory
 {
@@ -52,6 +51,12 @@ public static class RoslynTestSolutionFactory
 /// (Referenzgleichheit der einzelnen Eintraege).
     /// </summary>
     public static ImmutableArray<MetadataReference> CoreReferences => CoreReferencesLazy.Value;
+
+    /// <summary>
+    /// Baut eine neue <see cref="AdhocWorkspace"/>-Solution mit einem einzelnen Dokument.
+    /// </summary>
+    public static RoslynTestSolution CreateSolution(string source, string projectName = "TestProj", string docName = "Doc.cs")
+        => CreateSolution(new ProjectSpec(projectName, [(docName, source)]));
 
     /// <summary>
     /// Baut eine neue <see cref="AdhocWorkspace"/>-Solution aus den gegebenen <paramref name="specs"/>.

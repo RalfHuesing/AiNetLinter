@@ -23,6 +23,7 @@ public sealed class ReadOnlyMcpHostFixture : IAsyncLifetime
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
+    // ainetlinter-disable DuplicateCode
     public async ValueTask DisposeAsync()
     {
         if (host.IsValueCreated) await (await host.Value.ConfigureAwait(false)).DisposeAsync().ConfigureAwait(false);

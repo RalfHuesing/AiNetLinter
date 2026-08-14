@@ -17,7 +17,7 @@ public sealed class SkeletonMapBuilderAdapterTests
     [Fact]
     public async Task BuildAsync_WithFilterMini_ReturnsZeroAndContainsMarkdown()
     {
-        var solutionRoot = FindSolutionRoot();
+        var solutionRoot = SolutionRootLocator.Find();
         using var lease = IsolatedFixtureLease.CopyFixture(solutionRoot, "FilterMini");
         var console = new RecordingLintConsole();
         var args = new LinterArgs { TargetPath = lease.RootPath, Verbose = false };
@@ -48,20 +48,4 @@ public sealed class SkeletonMapBuilderAdapterTests
         Global = new GlobalConfig(),
         Metrics = new MetricsConfig(),
     };
-
-    private static string FindSolutionRoot()
-    {
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null)
-        {
-            if (File.Exists(Path.Combine(currentDir.FullName, "AiNetLinter.slnx")))
-            {
-                return currentDir.FullName;
-            }
-
-            currentDir = currentDir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Das Root-Verzeichnis mit der Projektmappe 'AiNetLinter.slnx' wurde nicht gefunden.");
-    }
 }
