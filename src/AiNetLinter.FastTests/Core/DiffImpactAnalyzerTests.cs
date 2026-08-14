@@ -1,16 +1,11 @@
 #nullable enable
 
-using System.Collections.Generic;
+using System.IO;
 using AiNetLinter.Core;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
-// @covers DiffImpactAnalyzer
-
-/// <summary>
-/// Unit-Tests für den DiffImpactAnalyzer zur Verifizierung des Git-Diff-Hunk-Parsers.
-/// </summary>
 [Trait("Category", "Unit")]
 public sealed class DiffImpactAnalyzerTests
 {
@@ -33,16 +28,19 @@ public sealed class DiffImpactAnalyzerTests
 
         var result = DiffImpactAnalyzer.ParseGitDiffHunks(diffOutput);
 
-        Assert.Equal(2, result.Count);
-        Assert.True(result.ContainsKey("src\\FileA.cs"));
-        Assert.True(result.ContainsKey("src\\FileB.cs"));
+        var keyA = Path.Combine("src", "FileA.cs");
+        var keyB = Path.Combine("src", "FileB.cs");
 
-        var fileALines = result["src\\FileA.cs"];
+        Assert.Equal(2, result.Count);
+        Assert.True(result.ContainsKey(keyA));
+        Assert.True(result.ContainsKey(keyB));
+
+        var fileALines = result[keyA];
         Assert.Equal(5, fileALines.Count);
         Assert.Contains(45, fileALines);
         Assert.Contains(49, fileALines);
 
-        var fileBLines = result["src\\FileB.cs"];
+        var fileBLines = result[keyB];
         Assert.Single(fileBLines);
         Assert.Contains(20, fileBLines);
     }

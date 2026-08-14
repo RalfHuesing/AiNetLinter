@@ -1,7 +1,11 @@
+#nullable enable
+
+using System;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class TestCoverageResolverTests

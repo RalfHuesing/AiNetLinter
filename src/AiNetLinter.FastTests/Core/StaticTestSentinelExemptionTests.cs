@@ -1,16 +1,18 @@
-﻿#nullable enable
+#nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using System.Linq;
-using System.Threading.Tasks;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Component")]
 public sealed class StaticTestSentinelExemptionTests
 {
     private static Config CreateSentinelConfig(TestSentinelConfig? sentinel = null)
@@ -29,7 +31,9 @@ public sealed class StaticTestSentinelExemptionTests
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
                 EnforceResultPatternOverExceptions = false,
-                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceExplicitStateImmutability = false,
+                PreventContextDependentOverloads = false,
+                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false,
                 EnableTestSentinel = true,
             },
@@ -67,7 +71,6 @@ public sealed class StaticTestSentinelExemptionTests
         return solution;
     }
 
-    // Quelle mit Methode (Komplexität 1) ohne Testklasse → Sentinel feuert
     private const string SourceWithComplexMethod = @"
 namespace MyApp;
 public sealed class OrderService
@@ -246,8 +249,8 @@ public sealed class BoolToVisibilityConverter : IValueConverter
     {
         var config = CreateSentinelConfig(new TestSentinelConfig
         {
-            ExemptClassNameSuffixes = System.Array.Empty<string>(),
-            ExemptWhenInheritsFrom = System.Array.Empty<string>(),
+            ExemptClassNameSuffixes = Array.Empty<string>(),
+            ExemptWhenInheritsFrom = Array.Empty<string>(),
             ExemptStaticClasses = false,
         });
         var solution = CreateAdhocSolution(("OrderService.cs", SourceWithComplexMethod));
@@ -270,8 +273,6 @@ public static class StringExtensions
         return s;
     }
 }";
-        // Global config: no exemptions
-        // ProjectOverride for "TestProject": ExemptClassNameSuffixes = ["Extensions"]
         var config = TestHelper.CreateDefaultConfig() with
         {
             Global = new GlobalConfig
@@ -287,12 +288,14 @@ public static class StringExtensions
                 EnforceNullableEnable = false,
                 EnforceNoSilentCatch = false,
                 EnforceResultPatternOverExceptions = false,
-                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceExplicitStateImmutability = false,
+                PreventContextDependentOverloads = false,
+                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false,
             },
             Metrics = new MetricsConfig { MinCognitiveComplexityForTest = 0 },
-            TestSentinel = new TestSentinelConfig(), // no global exemptions
-            ProjectOverrides = new System.Collections.Generic.Dictionary<string, ProjectOverrideEntry>
+            TestSentinel = new TestSentinelConfig(),
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
             {
                 ["TestProject"] = new ProjectOverrideEntry
                 {

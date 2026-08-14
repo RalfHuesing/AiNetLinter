@@ -1,11 +1,13 @@
-﻿using Xunit;
+#nullable enable
+
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using System.Linq;
+using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class ControlFlowResilienceTests
@@ -165,7 +167,6 @@ public sealed class Test
         Assert.Single(violations);
         Assert.Equal("EnforceResultPatternOverExceptions", violations.First().RuleName);
     }
-
 
     [Fact]
     public void ThrowStatement_InNormalMethod_IsDisallowed()

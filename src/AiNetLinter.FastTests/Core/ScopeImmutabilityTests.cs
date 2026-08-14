@@ -1,11 +1,14 @@
-﻿using Xunit;
+#nullable enable
+
+using System;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using System.Linq;
+using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class ScopeImmutabilityTests
@@ -24,7 +27,8 @@ public sealed class ScopeImmutabilityTests
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,                EnforceExplicitStateImmutability = false,
+                EnforceNoSilentCatch = false,
+                EnforceExplicitStateImmutability = false,
                 PreventContextDependentOverloads = false,
                 EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false
@@ -55,7 +59,7 @@ public sealed class ScopeImmutabilityTests
 
         if (errors.Any())
         {
-            throw new System.Exception("Compilation errors:\n" + string.Join("\n", errors));
+            throw new Exception("Compilation errors:\n" + string.Join("\n", errors));
         }
 
         return compilation.GetSemanticModel(tree);
@@ -94,7 +98,8 @@ public sealed class Calc
                 EnforceXmlDocumentation = false,
                 EnforceSemanticNaming = false,
                 EnforceNullableEnable = false,
-                EnforceNoSilentCatch = false,                EnforceExplicitStateImmutability = true,
+                EnforceNoSilentCatch = false,
+                EnforceExplicitStateImmutability = true,
                 PreventContextDependentOverloads = false,
                 EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false,

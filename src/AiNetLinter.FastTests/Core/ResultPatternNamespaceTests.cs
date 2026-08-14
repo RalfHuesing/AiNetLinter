@@ -1,11 +1,13 @@
-﻿using Xunit;
+#nullable enable
+
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using System.Linq;
+using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class ResultPatternNamespaceTests
@@ -29,7 +31,9 @@ public sealed class ResultPatternNamespaceTests
                 EnforceNoSilentCatch = false,
                 EnforceResultPatternOverExceptions = true,
                 AllowedExceptions = System.Array.Empty<string>(),
-                EnforceExplicitStateImmutability = false,                PreventContextDependentOverloads = false,                EnforceNamespaceDirectoryMapping = false,
+                EnforceExplicitStateImmutability = false,
+                PreventContextDependentOverloads = false,
+                EnforceNamespaceDirectoryMapping = false,
                 DetectAndBanPhantomDependencies = false,
                 ResultPatternAllowThrowInNamespaceSuffixes = allowedNamespaceSuffixes ?? System.Array.Empty<string>(),
                 ResultPatternAllowCatchRethrow = allowCatchRethrow,

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Linq;
 using Xunit;
@@ -9,7 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Core.Checkers;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class NullCoalescingInitializerClassifierTests

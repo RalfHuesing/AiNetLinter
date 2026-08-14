@@ -1,9 +1,10 @@
-using Xunit;
-using AiNetLinter.Core;
-using System;
-using System.Collections.Generic;
+#nullable enable
 
-namespace AiNetLinter.Tests.Core;
+using System.Collections.Generic;
+using AiNetLinter.Core;
+using Xunit;
+
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class NamespaceFilterTests

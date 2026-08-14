@@ -12,14 +12,12 @@ using AiNetLinter.Core;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
-
-// @covers LinterAutoFixer
+namespace AiNetLinter.IntegrationTests.Core;
 
 /// <summary>
-/// Unit-Tests für den LinterAutoFixer zur Verifizierung der Korrektur-Operationen.
+/// Integrationstests fuer den LinterAutoFixer zur Verifizierung der Korrektur-Operationen auf realen Dateien.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class AutoFixerTests
 {
     private static Solution CreateTestSolution(Dictionary<string, string> files)

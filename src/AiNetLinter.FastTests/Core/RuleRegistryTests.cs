@@ -1,14 +1,15 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Commands;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class RuleRegistryTests
@@ -71,11 +72,11 @@ public sealed class RuleRegistryTests
     [Fact]
     public void ListRulesCommand_OutputContainsAllRuleIds()
     {
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var result = ListRulesCommand.ListAll(console);
 
         Assert.Equal(0, result);
-        var output = string.Join("\n", console.Output);
+        var output = string.Join("\n", console.OutputLines);
         foreach (var rule in RuleRegistry.All)
             Assert.Contains(rule.RuleId, output);
     }
@@ -83,11 +84,11 @@ public sealed class RuleRegistryTests
     [Fact]
     public void ListRulesCommand_DescribeOne_ContainsWarumAndAlternativen()
     {
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var result = ListRulesCommand.DescribeOne("EnforceSealedClasses", console);
 
         Assert.Equal(0, result);
-        var output = string.Join("\n", console.Output);
+        var output = string.Join("\n", console.OutputLines);
         Assert.Contains("Warum", output);
         Assert.Contains("Alternativen", output);
     }

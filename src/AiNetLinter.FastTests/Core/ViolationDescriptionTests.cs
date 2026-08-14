@@ -4,7 +4,7 @@ using System.Linq;
 using AiNetLinter.Core.Checkers;
 using Xunit;
 
-namespace AiNetLinter.Tests.Core;
+namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
 public sealed class ViolationDescriptionTests
