@@ -2,10 +2,10 @@
 status: executing  # executing | blocked | done | aborted
 task: speedup-tests
 started_at: 2026-08-12
-last_updated: 2026-08-13
+last_updated: 2026-08-14
 rules_dir: .agents/rules
-total_steps: 26  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-026 (issues; auf Nutzerwunsch pausiert, keine Folgeplanung)
+total_steps: 27  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-027 (open; hybrid handoff)
 ---
 
 # Task State: speedup-tests
@@ -13,14 +13,14 @@ current_step: step-026 (issues; auf Nutzerwunsch pausiert, keine Folgeplanung)
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 26 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 27 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-026` (Review `issues`; die erforderliche Korrektur ist auf
-  Nutzerwunsch pausiert, ohne Folgeplanung)
+- **Aktueller Schritt:** `step-027` (`open`; korrigiert die drei blockierenden Findings aus
+  Step 026; Umsetzung im kostenoptimierten Hybrid-Handoff)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-12
-- **Zuletzt aktualisiert:** 2026-08-13
+- **Zuletzt aktualisiert:** 2026-08-14
 
 ## Steps
 
@@ -59,6 +59,7 @@ mehr nötig.>
 | step-024 | EPIC-5 | done | Korrektur: deterministische EPIC-5-Grenzprofile | step-023 | 30918b9 | approved | Code 30918b9; Doku 00c3e33; Review 8b577ca |
 | step-025 | EPIC-6 | issues | EPIC-6-Start: deterministische Mini-MCP-Prozesshosts (21 Klassen) | - | uncommittiert | blocked by Fast-Runtime-Dependency-Cleanup | - |
 | step-026 | EPIC-6 | issues | Korrektur: Runtime-sauberer MCP-Vertragsschnitt und vollständiger Hostabschluss | step-025 | 06fdc20 | issues (Audit 2026-08-13; pausiert auf Nutzerwunsch) | 06fdc20 |
+| step-027 | EPIC-6 | open | Korrektur: Git-Workspace-Cleanup und Kategorieguard abschliessen | step-026 | - | hybrid handoff; ausstehend | - |
 
 ## Config (optional)
 

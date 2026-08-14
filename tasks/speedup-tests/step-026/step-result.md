@@ -59,3 +59,7 @@ Der DRY-Audit fand bekannte Strangler-Duplikate und fachlich unterschiedliche ne
 ## Bekannte Unschärfen
 
 TD-008 und TD-010 bleiben offen; Voll-, Dogfood-, Performance-, Stress- und Legacy-Volltest wurden nicht ausgeführt.
+
+## Nachtrag (Korrektur in Step 027)
+
+`step026-command-contracts.trx` endete historisch mit 11/13 (Workspace-Cleanup-Defekt in `GitImpactMiniFixtureWorkspace.Dispose()`). Die deterministische Ownership und idempotente Dispose-Schablone wurden in `step-027` korrigiert (`step027-command-contracts.trx`: 13/13 grün).

@@ -224,6 +224,8 @@ werden vor jedem Drift-Loop-Step im aktuellen Bestand nachgelesen.
 ## Messdaten
 
 - **`src/AiNetLinter.IntegrationTests/Mcp/Platform/`** — besitzt den lazy read-only MCP-Host, den Retry und das vollständige Max-2-Prozessbudget der migrierten Mini-MCP-Kohorte. (zuletzt: step-026)
+- **`src/AiNetLinter.IntegrationTests/Fixtures/FixtureWorkspaces.cs`** — besitzt die einmalige `FixtureWorkspace`-Dispose-Schablone mit geschütztem `PrepareForDelete`-Hook; idempotentes Git-Attribut-Cleanup vor Lease-Delete. (zuletzt: step-027)
+- **`src/AiNetLinter.TestKit/TestCategoryTraitInspector.cs`** — zentrale, testframeworkfreie Kategorie-Validierung `EnsureEveryTestClassHasExactlyOneValidCategoryTrait`; beide TestCategoryProfileGuardTests sind schlanke Ein-Zeilen-Konsumenten ohne exact-Duplikatcluster. (zuletzt: step-027)
 
 - **`TestResults/final-run.trx`** — vorhandener 1.471-Test-Snapshot mit 228,38 Sekunden Wall Clock fuer die Ausgangsdiagnose. (zuletzt: planning)
 - **`TestResults/fulltest.trx`** — aelterer 1.349-Test-Snapshot mit 158,18 Sekunden Wall Clock als Hinweis auf Laufzeitdrift. (zuletzt: planning)

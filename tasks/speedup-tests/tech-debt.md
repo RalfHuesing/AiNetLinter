@@ -33,7 +33,7 @@ werden. Default bei Unsicherheit ist `nein`.
 | TD-003 | `.agents/rules/AiNetLinter.mdc` | mittel | ja | Generator-Synchronisation stellt `*Tests` und den separaten `AiNetLinter.TestKit`-Override wieder her (geschlossen in step-023). |
 | TD-004 | `src/AiNetLinter.IntegrationTests/Platform/MsBuildFixtureHostTests.cs:14` | niedrig | ja | XML-Doc-Kommentar bereinigt. |
 | TD-005 | `src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs` (`CoreReferences`) | hoch | nein | Durch deterministische testframework-freie BCL-Core-Referenzen geschlossen. |
-| TD-006 | `src/AiNetLinter.TestKit/TestCategoryTraitInspector.cs` | niedrig | nein | Testframeworkfreier Trait-Inspector ist in step-026 geschlossen. |
+| TD-006 | `src/AiNetLinter.TestKit/TestCategoryTraitInspector.cs` | niedrig | nein | Vollstaendige Trait-Validierungslogik im TestKit konsolidiert (geschlossen in step-027). |
 | TD-007 | `src/AiNetLinter.FastTests/Maps/Skeleton` / `src/AiNetLinter.IntegrationTests/Maps/Skeleton` | niedrig | nein | Zwei lokale identische `CreateConfig`-Helfer fuer Skeleton-Tests. |
 | TD-008 | `src/AiNetLinter.FastTests` / `src/AiNetLinter.IntegrationTests` / `src/AiNetLinter.Tests` | mittel | nein | Testhelfer und Compile-Error-Assertions bleiben waehrend des Stranglers parallel. |
 | TD-009 | `src/AiNetLinter.IntegrationTests/Mcp/Tools` / `Platform` | niedrig | nein | Durch `LoadedFixture` mit mehreren realen Konsumenten geschlossen. |
@@ -171,7 +171,7 @@ werden. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Eine gemeinsame Hilfsschicht zwischen den Testassemblies braucht eine Abhaengigkeits- und Sichtbarkeitsentscheidung; sie liegt ausserhalb des Find-Symbol-Schnitts.
 - **Vorschlag:** Bei einer gemeinsamen Guard-Weiterentwicklung einen testframeworkfreien Helper im TestKit bewerten.
 - **Auto-Fixable:** nein — Zielort und Assembly-Abhaengigkeit erfordern Architektur-Ermessen.
-- **Status:** geschlossen in step-026 — beide Kategorieguards verwenden `TestCategoryTraitInspector`; Fast-Zielgate 69/69 und enger Integrationsguard grün.
+- **Status:** geschlossen in step-027 — vollstaendige Kategoriepruefung liegt im TestKit; beide Assemblyguards sind Ein-Zeilen-Konsumenten, exact-Duplikatcluster beseitigt.
 
 ### TD-007 — Lokale Skeleton-Testkonfigurationen bewerten [Priorität: niedrig] [Auto-Fixable: nein]
 
