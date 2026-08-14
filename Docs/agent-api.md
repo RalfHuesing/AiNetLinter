@@ -189,7 +189,7 @@ Fehlermeldungen sind maschinenlesbar:
 
 ## MCP-Server-Modus
 
-Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 18 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
+Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse als 19 granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
 
 ### Server-Lifecycle
 
@@ -210,11 +210,11 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
 
-> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body, find_duplicates) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
+> Symbolgraph-Tools (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, find_magic_values, get_symbol_body, find_duplicates) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
 
-Konsequenz für den Agent-Loop: 12 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, get_symbol_body, find_duplicates), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Konsequenz für den Agent-Loop: 13 Tools sind C#-only (find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_violations, safeguard, pattern_detect, find_magic_values, get_symbol_body, find_duplicates), 2 Tools sind Struktur-orientiert und nicht C#-beschränkt (get_index_scope, get_hotspots). `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
 
-### Die 18 Tools
+### Die 19 Tools
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :---: | :---: |
@@ -231,6 +231,7 @@ Konsequenz für den Agent-Loop: 12 Tools sind C#-only (find_symbol, find_referen
 | `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResults?` (Default 50) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | ja |
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
 | `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste (siehe unten) | ja | ja (je Pattern) |
+| `find_magic_values` | `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 1, auch Einzelvorkommen), `maxResults?` (Default 50), `ignoreNumbers?` (optional), `includeTests?` (Default false), `includeSuppressed?` (Default false; No-op in aktueller Version), `changedOnly?` (Default false; No-op in aktueller Version) | Strukturierte Funde (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) mit Ziel-Empfehlung (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX…`); Heuristiken für `enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates` sind Bestandteil einer Folgeversion und liefern in der aktuellen Version 0 Treffer (siehe unten) | ja | ja |
 | `get_symbol_body` | `identifier` (stabile DocumentationCommentId, Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
@@ -239,7 +240,7 @@ Konsequenz für den Agent-Loop: 12 Tools sind C#-only (find_symbol, find_referen
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`), `dependency_graph` (alle `depth`-Werte) und `find_duplicates` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_violations`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`), `dependency_graph` (alle `depth`-Werte), `find_duplicates` und `find_magic_values` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
 
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
@@ -331,6 +332,37 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 
 Feldname bewusst `candidates`, nicht `violations` — False-Positive-Budget ist höher als bei `mode=clone` (Ziel < 25 %), weil strukturelle Ähnlichkeit nicht zwingend Refactoring-Drift bedeutet (z. B. mehrere legitime, ähnlich aufgebaute `Dispose()`-Implementierungen). Text und `StructuredContent` benennen das Ergebnis konsistent als Kandidaten zur manuellen Prüfung, nie als automatisch gemeldete Verstöße — anders als `mode=clone` fließt dieser Modus **nicht** in `DuplicateCodeChecker`/`safeguard` ein (On-Demand-only, kein Lint-Gate).
 
+**`find_magic_values` — Structured Output im Detail:** On-Demand-Audit ueber alle `.cs`-Dokumente der Solution. Klassifiziert Literale nach fachlichen Refactoring-Zielen (`config_candidates` fuer URLs/Pfade/Connection-Strings/Timeouts, `constant_candidates` fuer Format-Strings/Schwellenwerte, `standard_candidates` fuer HTTP-Statuscodes mit Empfehlung `StatusCodes.StatusXXX...`). Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter verhindern false positives; `ignoreNumbers` ergaenzt die Trivial-Liste um projektspezifische Zahlen (z. B. 24/60/360/1000). Heuristiken fuer `enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates` sind Bestandteil einer Folgeversion und liefern in der aktuellen Version 0 Treffer; `includeSuppressed` und `changedOnly` sind in der aktuellen Version ebenfalls No-ops (Platzhalter ohne Effekt). `StructuredContent` liefert:
+
+```json
+{
+  "magicValues": [
+    {
+      "filePath": "src/AiNetLinter/Api/Controllers/UsersController.cs",
+      "line": 42,
+      "column": 25,
+      "valueType": "string",
+      "value": "https://api.example.com/v1",
+      "category": "config_candidates",
+      "recommendation": "appsettings.json (ApiSettings/BaseUrl o. ae.)",
+      "contextHint": "URL-Literal",
+      "occurrences": 1
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "shownOccurrences": 17,
+    "byCategoryConfig": 12,
+    "byCategoryConstant": 4,
+    "byCategoryStandard": 1
+  }
+}
+```
+
+`occurrences` zaehlt identische Literale in derselben Datei (Aggregation ueber `(category, value, filePath)`-Tupel); `minOccurrences` (Default 1 — auch Einzelvorkommen) filtert unterhalb der Schwelle. `byCategory*`-Felder aggregieren ueber alle Kategorie-Treffer (vor `maxResults`-Trunkierung). `truncated: true` wird in der Text-Antwort via `McpTruncation`-Meta-Zeile signalisiert, `summary.shownOccurrences < summary.total` ist die korrespondierende `StructuredContent`-Signalisierung.
+
+**Suppression-Sonderfall (bewusste Ausnahme):** `find_magic_values` unterstuetzt Suppression ueber `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`), allerdings bewusst pro Fundstelle via `SyntaxTrivia` (Leading + Trailing) statt ueber den dateiweiten `SuppressionScanner`. Abweichung von der sonst projektweiten Suppression-Semantik ist gewollt: bei dutzenden Magic-Value-Funden pro Datei waere ein dateiweiter Disable-Kommentar nutzlos (ein einzelner Kommentar wuerde alle Funde der Datei stumm schalten). Diese feinere Granularitaet ist eine bewusste Ausnahme und nicht als Inkonsistenz misszuverstehen — die Knoten-Auswertung am `LiteralExpressionSyntax` laesst sich performant im selben AST-Walk miterledigen. In der aktuellen Version ist `includeSuppressed: false` der wirksame Default; `includeSuppressed: true` zeigt auch stummgeschaltete Funde (kein Heuristik-Unterschied).
+
 Beispiel-Aufruf (JSON-RPC über stdio):
 
 ```json
@@ -372,9 +404,9 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 ### Resource `ainetlinter://overview`
 
-Neben den 18 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
+Neben den 19 Tools stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit zwei Teilen:
 
-1. Kurzbeschreibung aller 18 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
+1. Kurzbeschreibung aller 19 Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 
 Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.

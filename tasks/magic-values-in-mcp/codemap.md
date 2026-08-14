@@ -2,7 +2,7 @@
 task: magic-values-in-mcp
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-14T20:36:21+02:00
+last_updated: 2026-08-14T20:45:00+02:00
 ---
 
 # CodeMap: magic-values-in-mcp
@@ -45,12 +45,32 @@ Ortsangaben kaum. Wer mehr wissen muss, liest die Datei selbst nach.
 
 - **`src/AiNetLinter.FastTests/Mcp/Tools/PatternDetectScannerTests.cs`** + **`PatternDetectToolTests.cs`** — FastTests-Vorlage für reine Scanner-/Tool-Unit-Tests im Komponenten-Test-Layer; passt 1:1 auf `FindMagicValuesScannerTests.cs` mit `[Trait("Category", "Component")]` für Scanner-Tests und `[Trait("Category", "Unit")]` für reine Helper-Tests (z. B. Klassifizierungs-Tabellen, Heuristik-Reinheit).
 
-- **`Docs/agent-api.md`** — zu aktualisieren: Tool-Tabelle Abschnitt „Die 18 Tools" (wird zu „Die 19 Tools", Tabellenzeilen-Eintrag für `find_magic_values`); Structured-Output-Abschnitt um einen `find_magic_values`-Eintrag ergänzen; Suppression-Sonderfall-Hinweis (pro-Fundstelle statt dateiweit) als explizite „bewusste Ausnahme"-Notiz, weil das von der sonst projektweiten Suppression-Semantik abweicht.
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesCategories.cs`** — `MagicValueCategory`-Enum mit 7 Werten (ConfigCandidates/ConstantCandidates/EnumCandidates/NameofCandidates/LocalizationCandidates/StandardCandidates/SecurityCandidates) + `ToStringValue()`-Helper (snake_case-Stable-Strings für JSON-RPC und `categoryFilter`-Validierung); neu in step-001.
 
-- **`Docs/ROADMAP.md`** — bei Abschluss: Eintrag in einem passenden Epic (vermutlich Epic 12 „Agent-Resilienz" oder ein neuer Epic) mit Kurzbeschreibung, Datum, Verweis auf die Konzept- und Step-IDs.
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesClassifier.cs`** — `MagicValuesClassifier.Classify()`-Hauptmethode (Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter + String-Heuristiken: Connection-String, URL, Windows-Pfad, Format-String, Header-Identifier); plus `MagicValueClassification`/`MagicValueClassifierOptions` Records; neu in step-001.
+
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesNumberClassifier.cs`** — Number-spezifische Sub-Heuristiken (`ClassifyNumber` für HTTP-Statuscode/Timeout-Parameter/Schwellenwert-Konstante, plus `TryResolveParameterName` via `SemanticModel`); aus `MagicValuesClassifier` extrahiert, damit die Hauptklasse unter `MaxLineCount: 500` bleibt; neu in step-001.
+
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesScanner.cs`** — `FindMagicValuesScanner.ScanAsync` (Top-Level-Loop, Aggregation, Trunkierung via `McpTruncation`, `StructuredContent`-Payload-Bau) + `MagicValueSyntaxWalker : CSharpSyntaxWalker` (nimmt `MagicValueWalkerContext` als Parameter-Record, nicht 7 einzelne Ctor-Args); plus die Result-/Payload-/Entry-/Summary-Records; neu in step-001.
+
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesTool.cs`** — Dispatcher-Implementierung des 19. MCP-Tools `find_magic_values` (Loading/NotLoaded/Validation/Malfunction-Pfade + `Task.Run`-Wrapper um den Scanner); nutzt `FindMagicValuesScanner`, `MagicValuesClassifier`, `McpTruncation` und `McpToolResults.Text<T>` (Objekt-Wrapper statt Top-Level-Array); neu in step-001.
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerTests.cs`** — Filter/Aggregation-Pipeline-Tests (Trivial/Index/Attribut/GetHashCode/ignoreNumbers, minOccurrences, valueType/categoryFilter/scopeFilter, maxResults, StructuredContent-Shape, EPIC-2-Platzhalter); neu in step-001.
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerHeuristicTests.cs`** — Heuristik-Detail-Tests (URL/Pfad/Format-String/HTTP-Statuscode/Schwellenwert/Connection-String); aus der Haupt-Test-Klasse extrahiert, um `MaxLineCount: 500` einzuhalten; neu in step-001.
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesScannerMalfunctionTests.cs`** — `FaultingSolutionFixture`-Malfunction-Test (IsMalfunction=true + Context); aus der Haupt-Test-Klasse extrahiert; neu in step-001.
+
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FindMagicValuesTestHelpers.cs`** — Geteilte `RunAsync`-Helpers (3 Overloads) + `ScanAsyncParams`-Parameter-Object; `ainetlinter-disable MaxMethodParameterCount` auf den 7-Param-Overloads (Aufrufstellen-Komfort vs. AI-ContextFootprint); neu in step-001.
+
+- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/FindMagicValuesToolTests.cs`** — Integration-Tests gegen `SymbolGraphCatalogFixture` (SOLUTION_NOT_LOADED/Loading, Parameter-Validierung mit `INVALID_ARGUMENT`, Clamping, `StructuredContent`-Shape, Tool-Registrierung in `tools/list`); neu in step-001.
+
+- **`Docs/agent-api.md`** — Tool-Tabelle Abschnitt „Die 18 Tools" (jetzt „Die 19 Tools", Tabellenzeilen-Eintrag für `find_magic_values`); Structured-Output-Abschnitt um einen `find_magic_values`-Eintrag mit JSON-Schema + Suppression-Sonderfall-Hinweis (pro-Fundstelle statt dateiweit) als explizite „bewusste Ausnahme"-Notiz ergänzt, weil das von der sonst projektweiten Suppression-Semantik abweicht. **Status 2026-08-14: aktualisiert (18→19, Tabellen-Eintrag, JSON-Schema, Sonderfall-Hinweis).**
+
+- **`Docs/ROADMAP.md`** — Eintrag in Epic 19 „AI-Developer Experience (AI-DX) & Tooling" hinzugefügt: `find_magic_values` MCP-Tool (On-Demand-Magic-Value-Audit), Verweis auf `tasks/magic-values-in-mcp/konzept.md` und `step-001/step-plan.md`, Datum 2026-08-14. **Status 2026-08-14: aktualisiert.**
 
 - **`src/AiNetLinter/Suppression/SuppressionCommentParser.cs`** — Parser für `// ainetlinter-disable <Rule>`-Kommentare; relevant nur als Referenz für die exakte Syntax-Erkennung, weil `find_magic_values` Magic-Value-Suppression direkt am `SyntaxTrivia` auswertet statt diesen Parser aufzurufen (Performance-Grund, Konzept §„Wie" Punkt 3).
 
-- **`src/AiNetLinter/Mcp/IsErrorPolicy.md`** + **`src/AiNetLinter/Mcp/McpToolResults.cs` (Methoden `Recoverable`/`Error`/`SolutionNotLoaded`/`Loading`)** — verbindliche `IsError`-Semantik: Pflicht-Argumente / unbekannte Enum-Werte → `InvalidArgument` (recoverable, IsError=false); Server lädt noch → `Loading`; keine Solution → `SolutionNotLoaded` (IsError=true). `find_magic_values` hält sich strikt an diese Tabelle.
+- **`src/AiNetLinter/Mcp/IsErrorPolicy.md`** + **`src/AiNetLinter/Mcp/McpToolResults.cs` (Methoden `Recoverable`/`Error`/`SolutionNotLoaded`/`Loading`)** — verbindliche `IsError`-Semantik: Pflicht-Argumente / unbekannte Enum-Werte → `InvalidArgument` (recoverable, IsError=false); Server lädt noch → `Loading`; keine Solution → `SolutionNotLoaded` (IsError=true). `find_magic_values` hält sich strikt an diese Tabelle. **Status 2026-08-14: Audit-Tabelle ergänzt um `find_magic_values`-Zeile (18→19 Tools-Überschrift, Eintrag mit `isError=true` für `SOLUTION_NOT_LOADED`+`ANALYSIS_FAILED`, `isError=false` für `INVALID_ARGUMENT`+leere Treffermenge).**
 
 - **`src/AiNetLinter/Mcp/IsErrorPolicy.md`** *(redundant zu oben, bewusst zweimal — getrennt von „echter Malfunction"-Regel)* — defensive `try/catch` um den Scan liefert `CompilationError` (= `WORKSPACE_DIAGNOSTIC`, IsError=true, Retry-once-Hinweis) bei unerwarteten Roslyn-/Laufzeit-Fehlern, nicht `INVALID_ARGUMENT` — siehe Policy-Tabelle.
