@@ -2,10 +2,10 @@
 status: executing
 task: magic-values-in-mcp
 started_at: 2026-08-14T20:33:30+02:00
-last_updated: 2026-08-14T20:38:00+02:00
+last_updated: 2026-08-14T22:05:00+02:00
 rules_dir: .agents/rules
-total_steps: 0
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: magic-values-in-mcp
@@ -13,8 +13,8 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 1
-- **Aktueller Schritt:** `step-001` (in_progress — Coder läuft)
+- **Steps gesamt:** 2
+- **Aktueller Schritt:** `step-002` (in_progress — Coder läuft; Korrektur für step-001)
 - **Roadmap:** `roadmap.md` (noch nicht erzeugt)
 - **Tech-Debt:** `tech-debt.md` (noch nicht erzeugt)
 - **Gestartet:** 2026-08-14T20:33:30+02:00
@@ -24,7 +24,8 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-1 | in_progress | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | - | - | - |
+| step-001 | EPIC-1 | done (Korrektur ausstehend) | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `c1129d4` (review: `issues` 1× MAJOR) |  |
+| step-002 | EPIC-1 | in_progress | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | - | - | - |
 
 ## Config (Defaults aus spec.md §10.5/§10.6, kein Override nötig)
 
