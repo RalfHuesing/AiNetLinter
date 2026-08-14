@@ -3,11 +3,12 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.IntegrationTests.Fixtures;
+using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Commands;
 
 /// <summary>
 /// Tests für <see cref="PlaybookCheckCommand"/>. Leitet <see cref="Console.Error"/> via
@@ -22,13 +23,8 @@ public sealed class PlaybookCheckCommandTests
     [Fact]
     public async Task RunAsync_WhenPlaybookFileNotExists_ReturnsOne()
     {
-        // Für diesen Test brauchen wir eine echte Solution-Datei
-        var slnxPath = TestHelper.FindSlnxFile();
-        if (slnxPath == null)
-        {
-            // Kein .slnx im Testumfeld gefunden — Test überspringen
-            return;
-        }
+        using var workspace = new BaselineMiniFixtureWorkspace();
+        var slnxPath = Path.Combine(workspace.RootPath, "BaselineMini.slnx");
 
         var args = new LinterArgs
         {
@@ -53,5 +49,4 @@ public sealed class PlaybookCheckCommandTests
             Console.SetError(originalError);
         }
     }
-
 }

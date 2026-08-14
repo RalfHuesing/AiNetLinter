@@ -20,8 +20,9 @@ public sealed class McpProcessArchitectureGuardTests
         Assert.Contains("\"parallelizeTestCollections\": true", runner, StringComparison.Ordinal);
         Assert.Contains("\"maxParallelThreads\": 4", runner, StringComparison.Ordinal);
 
-        var mcpDirectory = Path.Combine(root, "src", "AiNetLinter.IntegrationTests", "Mcp");
-        var sources = Directory.EnumerateFiles(mcpDirectory, "*.cs", SearchOption.AllDirectories)
+        var integrationDirectory = Path.Combine(root, "src", "AiNetLinter.IntegrationTests");
+        var sources = Directory.EnumerateFiles(integrationDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.EndsWith("McpProcessArchitectureGuardTests.cs", StringComparison.Ordinal))
             .Select(path => (Path: path, Text: File.ReadAllText(path)))
             .ToList();
 
@@ -34,11 +35,18 @@ public sealed class McpProcessArchitectureGuardTests
             $"Nicht besitzende StdioClientTransport-Callsite: {source.Path}"));
 
         var processCallsites = sources.Where(source => source.Text.Contains("Process.Start(", StringComparison.Ordinal)).ToList();
-        Assert.Single(processCallsites);
-        Assert.EndsWith(Path.Combine("Mcp", "McpServerCommandJsonRpcFramingTests.cs"), processCallsites[0].Path, StringComparison.Ordinal);
+        Assert.Equal(2, processCallsites.Count);
+        Assert.All(processCallsites, source => Assert.True(
+            source.Path.EndsWith(Path.Combine("Mcp", "McpServerCommandJsonRpcFramingTests.cs"), StringComparison.Ordinal) ||
+            source.Path.EndsWith(Path.Combine("Fixtures", "FixtureWorkspaces.cs"), StringComparison.Ordinal),
+            $"Nicht besitzende Process.Start-Callsite: {source.Path}"));
+
         Assert.Contains(sources, source =>
             source.Path.EndsWith(Path.Combine("Mcp", "McpProcessRunner.cs"), StringComparison.Ordinal) &&
             source.Text.Contains("process.Start();", StringComparison.Ordinal));
+        Assert.Contains(sources, source =>
+            source.Path.EndsWith(Path.Combine("Platform", "CliProcessRunner.cs"), StringComparison.Ordinal) &&
+            source.Text.Contains("process.Start()", StringComparison.Ordinal));
         Assert.DoesNotContain(sources, source => source.Text.Contains("SymbolGraphMcp", StringComparison.Ordinal));
     }
 

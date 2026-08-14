@@ -4,13 +4,13 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AiNetLinter.IntegrationTests.Mcp.Platform;
+namespace AiNetLinter.IntegrationTests.Platform;
 
-internal sealed class McpProcessLifetimeGate
+internal sealed class SubprocessLifetimeGate
 {
     private readonly SemaphoreSlim semaphore;
 
-    public McpProcessLifetimeGate(int capacity)
+    public SubprocessLifetimeGate(int capacity)
     {
         if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
         semaphore = new SemaphoreSlim(capacity, capacity);
@@ -36,7 +36,7 @@ internal sealed class McpProcessLifetimeGate
     }
 }
 
-internal static class McpProcessLifetimeBudget
+internal static class SubprocessLifetimeBudget
 {
-    internal static McpProcessLifetimeGate Shared { get; } = new(capacity: 2);
+    internal static SubprocessLifetimeGate Shared { get; } = new(capacity: 4);
 }

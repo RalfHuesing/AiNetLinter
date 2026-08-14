@@ -1,13 +1,15 @@
+#nullable enable
+
 using System.CommandLine;
 using AiNetLinter.Cli;
 using Xunit;
 
-namespace AiNetLinter.Tests.Cli;
+namespace AiNetLinter.FastTests.Cli;
 
+[Trait("Category", "Unit")]
 public sealed class CliCommandBuilderMcpLogTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void McpLog_NotSet_ReturnsNull()
     {
         var (root, options) = CliCommandBuilder.Build();
@@ -19,7 +21,6 @@ public sealed class CliCommandBuilderMcpLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void McpLog_Parameterless_ReturnsEmptyString()
     {
         var (root, options) = CliCommandBuilder.Build();
@@ -32,7 +33,6 @@ public sealed class CliCommandBuilderMcpLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void McpLog_ExplicitPath_ReturnsGivenPath()
     {
         var (root, options) = CliCommandBuilder.Build();
@@ -44,7 +44,6 @@ public sealed class CliCommandBuilderMcpLogTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void McpLog_ParameterlessFollowedByPathOption_ReturnsEmptyStringAndParsesPath()
     {
         var (root, options) = CliCommandBuilder.Build();

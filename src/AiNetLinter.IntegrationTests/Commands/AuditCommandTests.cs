@@ -2,13 +2,12 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using Xunit;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Commands;
 
 /// <summary>
 /// Tests für <see cref="AuditCommand"/>. Leitet <see cref="Console.Out"/> und
@@ -48,5 +47,4 @@ public sealed class AuditCommandTests
             Console.SetError(originalError);
         }
     }
-
 }

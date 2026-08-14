@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp;
@@ -45,7 +46,7 @@ public sealed class McpTestClientRetryTests
     [Fact]
     public async Task AcquireAsync_TwoLeasesBlockThirdUntilDisposal()
     {
-        var gate = new McpProcessLifetimeGate(2);
+        var gate = new SubprocessLifetimeGate(2);
         using var first = await gate.AcquireAsync(CancellationToken.None);
         using var second = await gate.AcquireAsync(CancellationToken.None);
         var third = gate.AcquireAsync(CancellationToken.None);

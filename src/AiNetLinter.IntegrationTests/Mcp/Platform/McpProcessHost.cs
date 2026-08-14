@@ -6,10 +6,13 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
+
+internal sealed record McpProcessTarget(string RootPath, IDisposable? Owner = null);
 
 internal sealed class McpProcessHost : IAsyncDisposable
 {
@@ -17,22 +20,28 @@ internal sealed class McpProcessHost : IAsyncDisposable
     private const int LoadingRetryCount = 30;
     private static readonly McpConnectRetryOptions DefaultConnectRetryOptions = new();
     private readonly McpClient client;
-    private readonly FixtureWorkspace workspace;
+    private readonly McpProcessTarget target;
     private readonly IDisposable lease;
 
-    private McpProcessHost(McpClient client, FixtureWorkspace workspace, IDisposable lease)
+    private McpProcessHost(McpClient client, McpProcessTarget target, IDisposable lease)
     {
         this.client = client;
-        this.workspace = workspace;
+        this.target = target;
         this.lease = lease;
     }
 
-    public static async Task<McpProcessHost> StartAsync(
+    public static Task<McpProcessHost> StartAsync(
         FixtureWorkspace workspace,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default) =>
+        StartAsync(new McpProcessTarget(workspace.RootPath, workspace), timeout, cancellationToken);
+
+    public static async Task<McpProcessHost> StartAsync(
+        McpProcessTarget target,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(cancellationToken).ConfigureAwait(false);
+        var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -45,7 +54,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
                     {
                         Name = "ainetlinter-integration-mcp-host",
                         Command = exePath,
-                        Arguments = ["--mcp-server", "--path", workspace.RootPath],
+                        Arguments = ["--mcp-server", "--path", target.RootPath],
                     });
                     using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                     timeoutSource.CancelAfter(timeout);
@@ -53,11 +62,11 @@ internal sealed class McpProcessHost : IAsyncDisposable
                 },
                 DefaultConnectRetryOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-            return new McpProcessHost(client, workspace, lease);
+            return new McpProcessHost(client, target, lease);
         }
         catch
         {
-            workspace.Dispose();
+            target.Owner?.Dispose();
             lease.Dispose();
             throw;
         }
@@ -98,7 +107,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         try { await client.DisposeAsync().ConfigureAwait(false); }
         finally
         {
-            workspace.Dispose();
+            target.Owner?.Dispose();
             lease.Dispose();
         }
     }

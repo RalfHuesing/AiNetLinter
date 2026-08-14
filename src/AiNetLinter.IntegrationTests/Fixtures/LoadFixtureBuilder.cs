@@ -3,12 +3,11 @@
 using System;
 using System.IO;
 using System.Text;
-using AiNetLinter.Tests.Fixtures;
 
-namespace AiNetLinter.Tests.Fixtures;
+namespace AiNetLinter.IntegrationTests.Fixtures;
 
 /// <summary>
-/// Generiert synthetische Loesungen in einem <see cref="TestTempDirectory"/>, um Performance-
+/// Generiert synthetische Loesungen in einem temporären Verzeichnis, um Performance-
 /// und Skalierungs-Verhalten des MCP-Servers reproduzierbar zu messen. Pro Projekt wird ein
 /// kompakter <c>.csproj</c>-Stub plus <c>N</c> Quelldateien mit konfigurierbarer
 /// Zeilenanzahl geschrieben; eine <c>.slnx</c> listet alle Projekte. Kompilation ist nicht
@@ -18,7 +17,7 @@ namespace AiNetLinter.Tests.Fixtures;
 public static class LoadFixtureBuilder
 {
     /// <summary>
-    /// Erstellt eine Synthetic-Solution in einem neuen <see cref="TestTempDirectory"/>.
+    /// Erstellt eine Synthetic-Solution in einem neuen temporären Verzeichnis.
     /// </summary>
     /// <param name="name">Anzeige-Name (z. B. "1k-loc"). Geht in den Prefix des Temp-Verzeichnisses ein.</param>
     /// <param name="projectCount">Anzahl der zu erstellenden <c>.csproj</c>-Projekte.</param>
@@ -34,8 +33,8 @@ public static class LoadFixtureBuilder
         if (filesPerProject < 1) throw new ArgumentOutOfRangeException(nameof(filesPerProject));
         if (linesPerFile < 3) throw new ArgumentOutOfRangeException(nameof(linesPerFile));
 
-        var tempDir = TestTempDirectory.Create($"ainetlinter-load-{SanitizeName(name)}-");
-        var solutionDir = tempDir.DirectoryPath;
+        var tempDir = Directory.CreateTempSubdirectory($"ainetlinter-load-{SanitizeName(name)}-").FullName;
+        var solutionDir = tempDir;
 
         for (var p = 0; p < projectCount; p++)
         {

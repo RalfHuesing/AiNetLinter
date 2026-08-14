@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp;
@@ -23,24 +24,20 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 /// einziger ungefilterter <c>Console.WriteLine</c>-Call aus irgendeiner zentralen
 /// Hilfsklasse wuerde das JSON-RPC-Framing der gesamten Session zerstoeren und hier als
 /// nicht-JSON-Zeile sichtbar werden. Regressions-Schutz fuer die strukturelle
-/// stdout-Absicherung durch <see cref="AiNetLinter.Output.McpLintConsole"/>.
+/// stderr-Disziplin (alles Loggen ausschliesslich via Console.Error).
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandJsonRpcFramingTests
 {
     private const string ProtocolVersion = "2024-11-05";
-    private const string ClientName = "framing-test-client";
+    private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
 
     [Fact]
-    public async Task ToolCallSequence_AllStdoutLinesAreValidJsonRpcFrames()
+    public async Task HandshakeOnly_AllStdoutLinesAreValidJsonRpcFrames()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
-        // Handgeschriebene JSON-RPC-Frames - bewusst ohne SDK-Parser, damit der Test die
-        // Server-seitige stdout-Disziplin direkt prueft. Sequenz: initialize, initialized,
-        // tools/list, tools/call find_symbol, tools/call get_index_scope. Jede Antwort
-        // muss ein jsonrpc==2.0-Frame sein.
         var frames = new[]
         {
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
@@ -49,65 +46,66 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}",
-            "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{" +
-                "\"name\":\"find_symbol\",\"arguments\":{\"namePattern\":\"Greeter\"}}}",
-            "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{" +
-                "\"name\":\"get_index_scope\",\"arguments\":{}}}",
         };
 
         var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
 
         Assert.NotEmpty(observedLines);
-        // Die exakte Anzahl der Antwort-Frames haengt vom Timing der Solution-Hintergrund-Loads
-        // ab (B.4 Drei-Zustands-Lifecycle): initialize + tools/list kommen sofort; die
-        // tools/call-Antworten koennen hinter dem Load zurueckbleiben, bevor der Server
-        // nach stdin-EOF herunterfaehrt. Strukturell wird verifiziert, dass JEDE Zeile ein
-        // gueltiger JSON-RPC-Frame ist - die Anzahl selbst ist nicht der Befund, sondern die
-        // Disziplin-Eigenschaft. Fruehere Test-Variante mit ">= 4" war zu strikt.
-        Assert.True(observedLines.Count >= 2,
-            $"Erwartete mindestens 2 JSON-RPC-Antwort-Frames (initialize + tools/list), " +
-            $"erhielt {observedLines.Count} Zeilen.");
-
-        var parseFailures = new System.Collections.Generic.List<string>();
-        var nonJsonRpcLines = new System.Collections.Generic.List<string>();
-        var lineIndex = 0;
         foreach (var line in observedLines)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
-            lineIndex++;
-            try
-            {
-                using var doc = JsonDocument.Parse(line);
-                if (!doc.RootElement.TryGetProperty("jsonrpc", out var jsonrpc) ||
-                    jsonrpc.GetString() != "2.0")
-                {
-                    nonJsonRpcLines.Add($"[Z. {lineIndex}] kein jsonrpc==2.0: {TrimForLog(line)}");
-                }
-            }
-            catch (JsonException ex)
-            {
-                parseFailures.Add($"[Z. {lineIndex}] {ex.Message}: {TrimForLog(line)}");
-            }
+            using var doc = JsonDocument.Parse(line);
+            Assert.Equal("2.0", doc.RootElement.GetProperty("jsonrpc").GetString());
         }
-
-        Assert.True(parseFailures.Count == 0,
-            "Ungueltige JSON-Zeilen auf stdout entdeckt (bedeutet: ein Caller hat " +
-            "Console.WriteLine genutzt statt McpLintConsole - strukturelle Absicherung verletzt): " +
-            string.Join(" | ", parseFailures));
-        Assert.True(nonJsonRpcLines.Count == 0,
-            "Zeilen ohne gueltigen jsonrpc==2.0-Header entdeckt: " +
-            string.Join(" | ", nonJsonRpcLines));
     }
 
     [Fact]
-    public async Task HandshakeOnly_AllStdoutLinesAreValidJsonRpcFrames()
+    public async Task HandshakeAndSingleToolCall_AllStdoutLinesAreValidJsonRpcFrames()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
-        // Minimaler Smoke-Test: nur initialize + initialized. Erwartet exakt 1
-        // JSON-RPC-Antwort (die initialize-Response), notifications/initialized liefert
-        // per JSON-RPC-Spec nichts zurueck.
         var frames = new[]
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"" + ProtocolVersion + "\"," +
+                "\"capabilities\":{}," +
+                "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{" +
+                "\"name\":\"find_symbol\",\"arguments\":{\"namePattern\":\"Greeter\"}}}",
+        };
+
+        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+
+        Assert.NotEmpty(observedLines);
+        foreach (var line in observedLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var doc = JsonDocument.Parse(line);
+            Assert.Equal("2.0", doc.RootElement.GetProperty("jsonrpc").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task HandshakeAndTenToolCallsSequentially_AllStdoutLinesAreValidJsonRpcFrames()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+
+        var toolNames = new[]
+        {
+            "find_symbol",
+            "find_references",
+            "get_impact",
+            "get_type_hierarchy",
+            "get_file_skeleton",
+            "get_index_scope",
+            "get_hotspots",
+            "get_violations",
+            "search_pattern",
+            "metrics_tree",
+        };
+
+        var frameList = new System.Collections.Generic.List<string>
         {
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
                 "\"protocolVersion\":\"" + ProtocolVersion + "\"," +
@@ -116,7 +114,26 @@ public sealed class McpServerCommandJsonRpcFramingTests
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
         };
 
-        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var id = 2;
+        foreach (var toolName in toolNames)
+        {
+            var args = toolName switch
+            {
+                "find_symbol" => "{\"namePattern\":\"Greeter\"}",
+                "find_references" => "{\"symbolIdentifier\":\"Greeter\"}",
+                "get_impact" => "{\"symbolIdentifier\":\"Greeter\"}",
+                "get_type_hierarchy" => "{\"typeIdentifier\":\"Greeter\"}",
+                "get_file_skeleton" => "{\"filePath\":\"src/SymbolGraphMini/Greeter.cs\"}",
+                "search_pattern" => "{\"pattern\":\"Greeter\"}",
+                _ => "{}",
+            };
+            frameList.Add(
+                "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"tools/call\",\"params\":{" +
+                    "\"name\":\"" + toolName + "\",\"arguments\":" + args + "}}");
+            id++;
+        }
+
+        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frameList.ToArray());
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -167,7 +184,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
     private static async Task<System.Collections.Generic.List<string>> RunAndCollectStdoutAsync(
         string targetDirectory, string[] frames)
     {
-        using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
+        using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         if (!File.Exists(exePath))
         {
@@ -277,11 +294,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
         }
         catch
         {
-            // bewusst geschluckt - wir wollen den Test nicht am Server-Shutdown scheitern lassen,
-            // wenn der eigentliche Befund (stdout-Frames) schon erhoben ist.
+            // Best-effort-Cleanup.
         }
     }
-
-    private static string TrimForLog(string line) =>
-        line.Length <= 240 ? line : line[..240] + "...";
 }

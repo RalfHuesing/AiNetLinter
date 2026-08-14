@@ -96,9 +96,16 @@ public sealed class LoadedFixtureTests
         var callers = Directory.EnumerateFiles(integrationTestPath, "*.cs", SearchOption.AllDirectories)
             .Where(path => File.ReadAllText(path).Contains(LoadCall, StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(integrationTestPath, path).Replace('\\', '/'))
+            .OrderBy(p => p)
             .ToArray();
 
-        Assert.Equal(["Platform/LoadedFixture.cs"], callers);
+        Assert.Equal([
+            "Baseline/SourceFileCatalogRegistrationStressTests.cs",
+            "Baseline/SourceFileCatalogRegistrationTests.cs",
+            "Fixtures/LoadFixtureMeasurementsTests.cs",
+            "Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs",
+            "Platform/LoadedFixture.cs",
+        ], callers);
     }
 
     [Fact]

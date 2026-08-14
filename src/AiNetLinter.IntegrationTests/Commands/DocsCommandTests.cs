@@ -2,11 +2,10 @@
 
 using System;
 using System.IO;
-using System.Text;
 using Xunit;
 using AiNetLinter.Commands;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Commands;
 
 /// <summary>
 /// Tests für <see cref="DocsCommand"/>. Leitet in jedem Testfall <see cref="Console.Out"/>

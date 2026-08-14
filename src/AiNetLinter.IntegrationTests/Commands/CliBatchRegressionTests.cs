@@ -5,27 +5,15 @@ using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
-using AiNetLinter.Tests.Fixtures;
-using AiNetLinter.Tests.Output;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Platform;
+using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.Tests.Commands;
+namespace AiNetLinter.IntegrationTests.Commands;
 
 /// <summary>
-///: der bestehende CLI-Batch-Modus
-/// (ainetlinter --config rules.json --path &lt;dir&gt;) bleibt nach allen
-/// Aenderungen unveraendert lauffaehig. Bestehender Test
-/// <c>CliIntegrationTests.RunLinterCli_OnWholeSolution_ReturnsSuccess</c> deckt die echte
-/// AiNetLinter-Solution ab; dieser Test deckt eine Mini-Fixture
-/// (<c>SymbolGraphMiniFixtureWorkspace</c>) ab, die schneller und deterministischer ist
-/// und die deterministische Verletzung in <c>ViolationTrigger.cs</c> (fehlendes sealed)
-/// als Erfolgs-Marker nutzt.
-///
-/// A3-Pfad: wenn in <c>Program.Main</c> der CLI-Dispatcher die args-Verarbeitung
-/// bricht (z. B. weil ein neuer
-/// <c>ExecuteLinterAsync</c> aufgerufen wird), oder wenn der Pfad zu
-/// <c>ViolationTrigger.cs</c> durch einen Refactor von <c>EnforceSealedClasses</c>
-/// stillschweigend uebersprungen wird, schlaegt dieser Test fehl.
+/// Verifiziert den CLI-Batch-Modus gegen eine isolierte SymbolGraphMiniFixtureWorkspace.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class CliBatchRegressionTests
@@ -35,7 +23,7 @@ public sealed class CliBatchRegressionTests
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
-        var rootDir = CliProcessRunner.FindSolutionRoot();
+        var rootDir = SolutionRootLocator.Find();
         var configPath = Path.Combine(rootDir, "rules.json");
 
         Assert.True(File.Exists(configPath), $"Konfiguration nicht gefunden: {configPath}");
@@ -46,14 +34,11 @@ public sealed class CliBatchRegressionTests
             Verbose = false,
             ConfigPath = configPath,
         };
-        var console = new TestLintConsole();
+        var console = new RecordingLintConsole();
         var exitCode = await AuditCommand.RunAsync(args, default, console);
 
         // SymbolGraphMini enthaelt eine deterministische Verletzung (ViolationTrigger.cs,
         // fehlendes sealed), daher erwarten wir Exit-Code 1 (= Violations gefunden) statt 0.
-        // Der bestehende Test RunLinterCli_OnWholeSolution_ReturnsSuccess laeuft gegen die
-        // echte Solution (clean, Exit 0) — dieser Test ist das Pendant fuer die Mini-Fixture
-        // mit Verletzung.
         Assert.True(
             exitCode == 1,
             $"Linter-Audit brach unerwartet ab (Exit {exitCode}, erwartet 1 fuer Violations). "

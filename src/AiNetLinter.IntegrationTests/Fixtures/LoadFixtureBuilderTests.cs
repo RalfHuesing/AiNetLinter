@@ -2,17 +2,17 @@
 
 using System.IO;
 using System.Linq;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Fixtures;
+namespace AiNetLinter.IntegrationTests.Fixtures;
 
 /// <summary>
 /// Stellt sicher, dass <see cref="LoadFixtureBuilder"/> die erwarteten Verzeichnis- und
 /// Datei-Strukturen erzeugt: Solution-Datei, ein <c>.csproj</c> pro Projekt und die
 /// spezifizierte Anzahl an <c>.cs</c>-Dateien mit konfigurierter Zeilenanzahl pro Datei.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 public sealed class LoadFixtureBuilderTests
 {
     [Fact]
