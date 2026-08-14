@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: magic-values-in-mcp
 step: 002
@@ -14,6 +14,8 @@ created_by_model: MiniMax-M3
 created_by_model_knowledge_cutoff: 2026-01
 related_to:
   - step-001/step-review.md
+code_commit_hash: 59ffd74
+code_commit_message: "fix(mcp): VisitInterpolatedStringExpression aktiviert [magic-values-in-mcp]"
 ---
 
 # Step 002: Korrektur step-001 — VisitInterpolatedStringExpression aktivieren

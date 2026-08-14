@@ -2,7 +2,7 @@
 task: magic-values-in-mcp
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-14T20:45:00+02:00
+last_updated: 2026-08-14T22:15:00+02:00
 ---
 
 # CodeMap: magic-values-in-mcp
@@ -51,7 +51,7 @@ Ortsangaben kaum. Wer mehr wissen muss, liest die Datei selbst nach.
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/MagicValuesNumberClassifier.cs`** — Number-spezifische Sub-Heuristiken (`ClassifyNumber` für HTTP-Statuscode/Timeout-Parameter/Schwellenwert-Konstante, plus `TryResolveParameterName` via `SemanticModel`); aus `MagicValuesClassifier` extrahiert, damit die Hauptklasse unter `MaxLineCount: 500` bleibt; neu in step-001.
 
-- **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesScanner.cs`** — `FindMagicValuesScanner.ScanAsync` (Top-Level-Loop, Aggregation, Trunkierung via `McpTruncation`, `StructuredContent`-Payload-Bau) + `MagicValueSyntaxWalker : CSharpSyntaxWalker` (nimmt `MagicValueWalkerContext` als Parameter-Record, nicht 7 einzelne Ctor-Args); plus die Result-/Payload-/Entry-/Summary-Records; neu in step-001.
+- **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesScanner.cs`** — `FindMagicValuesScanner.ScanAsync` (Top-Level-Loop, Aggregation, Trunkierung via `McpTruncation`, `StructuredContent`-Payload-Bau) + `MagicValueSyntaxWalker : CSharpSyntaxWalker` (nimmt `MagicValueWalkerContext` als Parameter-Record, nicht 7 einzelne Ctor-Args); plus die Result-/Payload-/Entry-/Summary-Records; neu in step-001, `VisitInterpolatedStringExpression` für statische `InterpolatedStringText`-Segmente in `$"..."` in step-002 nachgezogen (Konzept §"Muss-Haben" Beispiel 2: in-string magic values).
 
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesTool.cs`** — Dispatcher-Implementierung des 19. MCP-Tools `find_magic_values` (Loading/NotLoaded/Validation/Malfunction-Pfade + `Task.Run`-Wrapper um den Scanner); nutzt `FindMagicValuesScanner`, `MagicValuesClassifier`, `McpTruncation` und `McpToolResults.Text<T>` (Objekt-Wrapper statt Top-Level-Array); neu in step-001.
 

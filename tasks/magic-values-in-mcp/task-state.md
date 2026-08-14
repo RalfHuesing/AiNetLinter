@@ -24,8 +24,8 @@ current_step: step-002
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-1 | done (Korrektur ausstehend) | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `c1129d4` (review: `issues` 1× MAJOR) |  |
-| step-002 | EPIC-1 | in_progress | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | - | - | - |
+| step-001 | EPIC-1 | done | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `c1129d4` (review: `issues` 1× MAJOR) | Korrektur via step-002 (Commit `59ffd74`) |
+| step-002 | EPIC-1 | done (pending audit) | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | `59ffd74` | - | - |
 
 ## Config (Defaults aus spec.md §10.5/§10.6, kein Override nötig)
 
