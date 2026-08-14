@@ -2,7 +2,7 @@
 status: executing
 task: magic-values-in-mcp
 started_at: 2026-08-14T20:33:30+02:00
-last_updated: 2026-08-14T22:05:00+02:00
+last_updated: 2026-08-14T22:28:00+02:00
 rules_dir: .agents/rules
 total_steps: 2
 current_step: step-002
@@ -14,18 +14,18 @@ current_step: step-002
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 2
-- **Aktueller Schritt:** `step-002` (in_progress — Coder läuft; Korrektur für step-001)
-- **Roadmap:** `roadmap.md` (noch nicht erzeugt)
-- **Tech-Debt:** `tech-debt.md` (noch nicht erzeugt)
+- **Aktueller Schritt:** `step-002` (done — approved; EPIC-1 abgeschlossen, EPIC-2 steht aus)
+- **Roadmap:** `roadmap.md` (aktiv)
+- **Tech-Debt:** `tech-debt.md` (TD-001, mittel, nicht auto-fixable)
 - **Gestartet:** 2026-08-14T20:33:30+02:00
-- **Zuletzt aktualisiert:** 2026-08-14T20:33:30+02:00
+- **Zuletzt aktualisiert:** 2026-08-14T22:28:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-1 | done | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `c1129d4` (review: `issues` 1× MAJOR) | Korrektur via step-002 (Commit `59ffd74`) |
-| step-002 | EPIC-1 | done (pending audit) | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | `59ffd74` | - | - |
+| step-001 | EPIC-1 | done | find_magic_values — Tool-Core, Basis-Klassifizierung & Doku-Sync | - | `85683f8` | `4f3b6b6` (review: `issues` 1× MAJOR → Korrektur step-002) | |
+| step-002 | EPIC-1 | done | Korrektur step-001 — VisitInterpolatedStringExpression aktivieren | step-001 | `59ffd74` | `9b36db8` (review: `approved`) | |
 
 ## Config (Defaults aus spec.md §10.5/§10.6, kein Override nötig)
 
