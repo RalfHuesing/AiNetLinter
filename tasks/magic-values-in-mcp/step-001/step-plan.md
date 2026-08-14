@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done (Korrektur ausstehend)
 type: step-plan
 task: magic-values-in-mcp
 step: 001
