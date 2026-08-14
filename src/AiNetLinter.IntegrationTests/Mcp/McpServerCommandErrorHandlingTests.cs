@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -52,7 +53,7 @@ public sealed class McpServerCommandErrorHandlingTests
             // (viele parallele Threads/Subprozesse gleichzeitig) reichten 30s nicht immer,
             // beobachtet als TaskCanceledException in SendRequestAsync.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(cts.Token);
+            using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cts.Token);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
             var result = await CallToolWithLoadingRetryAsync(
                 client,
@@ -62,21 +63,18 @@ public sealed class McpServerCommandErrorHandlingTests
 
             Assert.True(result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-            Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text);
+            Assert.Contains("[ERROR]: SOLUTION_NOT_LOADED", textContent.Text, StringComparison.Ordinal);
         }
         finally
         {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
+            try { Directory.Delete(tempDir, recursive: true); } catch { /* ignore */ }
         }
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_CompileErrorFileReturnsWarningSection()
+    public async Task RunAsync_CompileErrorMini_GetFileSkeleton_ReturnsFileSpecificCompileErrorHint()
     {
-        // Valide Solution mit intentionalen Compile-Fehlern: get_file_skeleton auf eine kaputte
+        // 006-Erweiterung: GetFileSkeleton auf einer datei-spezifisch fehlerhaften
         // Datei muss den
         // unstrukturierter Output.
         using var fixture = new CompileErrorMiniFixtureWorkspace();
@@ -92,7 +90,7 @@ public sealed class McpServerCommandErrorHandlingTests
 
         // 60s statt 30s, siehe Begruendung in RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                using var lease = await McpProcessLifetimeBudget.Shared.AcquireAsync(cts.Token);
+        using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var result = await CallToolWithLoadingRetryAsync(
             client,

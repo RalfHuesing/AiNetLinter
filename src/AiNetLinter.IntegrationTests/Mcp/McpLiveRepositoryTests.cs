@@ -6,23 +6,21 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using AiNetLinter.Tests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
-namespace AiNetLinter.Tests.Mcp;
+namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// Live-Integrationstests fuer alle 10 MCP-Tools direkt gegen das eigene Repository.
-/// Ersetzt ad-hoc Python-Dogfooding-Skripte durch saubere, automatisierte C# xUnit-Tests.
-/// Nutzt <see cref="McpLiveRepositoryFixture"/> zur einmaligen MCP-Prozessverbindung pro Collection.
+/// Nutzt <see cref="RepositoryMcpHostFixture"/> zur geteilten MCP-Prozessverbindung pro Assembly.
 /// </summary>
-[Trait("Category", "Integration")]
-[Collection("McpLiveRepository")]
+[Trait("Category", "Dogfood")]
 public sealed class McpLiveRepositoryTests
 {
-    private readonly McpLiveRepositoryFixture _fixture;
+    private readonly RepositoryMcpHostFixture _fixture;
 
-    public McpLiveRepositoryTests(McpLiveRepositoryFixture fixture)
+    public McpLiveRepositoryTests(RepositoryMcpHostFixture fixture)
     {
         _fixture = fixture;
     }
@@ -72,10 +70,6 @@ public sealed class McpLiveRepositoryTests
 
         Assert.NotNull(text);
         Assert.NotEmpty(text);
-        // Ein echter Baum traegt entweder Kind-Praefixe (ASCII-Renderer) oder — falls das
-        // Symbol keine Aufrufer im Solution-Scope hat — nur die Root-Zeile; beide Faelle sind
-        // gueltige "echte Baum"-Ergebnisse, daher wird hier nur Nicht-Leere geprueft und dass
-        // kein Malfunction-Fehlercode zurueckkommt.
         Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", text, StringComparison.Ordinal);
     }
 
@@ -218,13 +212,6 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_Safeguard_ReturnsResults()
     {
-        // End-to-end-Verifikation: das safeguard-Tool liefert auf dem echten
-        // AiNetLinter-Repo einen Score >= 5.0 und einen gueltigen JSON-Schema-2020-12-
-        // Structured-Content. Score-Aufruf gegen den Live-Subprozess via _fixture.Client
-        // (geteilter MCP-Server pro Collection, startet einmal in IAsyncLifetime).
-        // minScore wird bewusst auf 0.0 gesetzt, damit der Korridor-Assert die
-        // Score-Berechnung isoliert prueft, ohne die Passed-Logik des Tools mit dem
-        // Korridor zu vermischen.
         var result = await _fixture.Client.CallToolAsync(
             "safeguard",
             new Dictionary<string, object?>
@@ -234,21 +221,13 @@ public sealed class McpLiveRepositoryTests
                 ["maxViolations"] = 20,
             });
 
-        // Tool-Layer-Invariante: kein Malfunction-/Loading-/SolutionNotLoaded-Fehler
-        // auf einem geladenen Live-Repo. Fixture garantiert Load via IAsyncLifetime
-        // plus 60s Timeout plus Retry-Schleife (siehe McpLiveRepositoryFixture).
         Assert.False(result.IsError);
         Assert.NotNull(result.StructuredContent);
 
-        // StructuredContent ist JsonElement?; Deserialisierung zur JsonObject-Form
-        // folgt dem Pattern aus SafeguardToolTests.
         var json = JsonSerializer.Deserialize<JsonObject>(
             result.StructuredContent!.Value.GetRawText())!;
         Assert.NotNull(json);
 
-        // Pflicht-Felder gemaess konzept.md (JSON-Schema 2020-12 Vertrag): passed,
-        // score, threshold, violations, remediation, summary. Nur Existenz und Typ
-        // werden geprueft; konkrete Werte separat.
         Assert.True(json.ContainsKey("passed"));
         Assert.True(json.ContainsKey("score"));
         Assert.True(json.ContainsKey("threshold"));
@@ -257,24 +236,14 @@ public sealed class McpLiveRepositoryTests
         Assert.True(json.ContainsKey("summary"));
         Assert.IsType<JsonArray>(json["violations"]);
 
-        // Korridor-Assert: score >= 5.0. Real gemessener Wert auf dem AiNetLinter-
-        // Repo: 10.00/10 (deutlich ueber dem Konzept-Korridor). Bei Verletzung
-        // dieser Schwelle liegt der Bug in der Score-Formel, nicht im Tool-Layer —
-        // dann ist blocked mit Verweis auf SafeguardScanner zu setzen, nicht der
-        // Schwellwert im Test anzupassen.
         var score = (double)json["score"]!;
         Assert.True(score >= 5.0,
-            $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0 — " +
-            "moeglicher Bug in der Score-Formel, nicht im aktuellen Schritt zu fixen.");
+            $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0");
     }
 
     [Fact]
     public async Task LiveDogfood_PatternDetect_ReturnsStructuredResultsForAllSixPatterns()
     {
-        // Live-Repo hat EnforceXmlDocumentation=false (rules.json-Default in diesem Repo) —
-        // "public-without-doc" liefert daher vermutlich 0 Treffer. Das ist KEIN Bug: geprueft
-        // wird nur, dass der Report syntaktisch/strukturell korrekt ist (alle 6 Pattern-Eintraege
-        // vorhanden, gueltiges JSON-Schema), nicht dass jedes Pattern > 0 Treffer hat.
         var result = await _fixture.Client.CallToolAsync(
             "pattern_detect",
             new Dictionary<string, object?>
@@ -304,9 +273,6 @@ public sealed class McpLiveRepositoryTests
     [Fact]
     public async Task LiveDogfood_DependencyGraph_ReturnsResults()
     {
-        // FindReferencesTool.cs hat sowohl echte eingehende Abhaengigkeiten (z. B. GetImpactTool,
-        // GetTypeHierarchyTool nutzen ResolveSymbolAsync) als auch ausgehende (SymbolIdentifierResolver,
-        // DiffImpactAnalyzer) — gutes Live-Ziel fuer beide Richtungen gleichzeitig.
         var text = await _fixture.Client.CallToolGetTextAsync(
             "dependency_graph",
             new Dictionary<string, object?>

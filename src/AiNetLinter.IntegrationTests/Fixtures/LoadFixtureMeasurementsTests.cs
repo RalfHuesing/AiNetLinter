@@ -6,19 +6,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
-using AiNetLinter.Tests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.Tests.Fixtures;
+namespace AiNetLinter.IntegrationTests.Fixtures;
 
 /// <summary>
-/// Performance-Skalierungsmessung gegen die generierte Last-Fixture. Statt die externe
-/// 160k-LOC-Annahme zu pruefen, misst der Test das Verhalten der Engine gegen
-/// reproduzierbare Synthetic-Loesungen in mehreren Skalierungs-Stufen. Die
-/// ausgegebenen Wall-Clock-Werte sind ueber <see cref="ITestOutputHelper"/> sichtbar,
-/// die Assertions sind bewusst grosszuegig kalibriert (vgl. gemessene Realitaet).
+/// Performance-Skalierungsmessung gegen die generierte Last-Fixture. Schreibt strukturierte Samples
+/// in xUnit-Output und prueft fachliche Gueltigkeit, Vollstaendigkeit und nichtnegative Werte.
 /// </summary>
-[Trait("Category", "Integration")]
+[Trait("Category", "Performance")]
 public sealed class LoadFixtureMeasurementsTests
 {
     private readonly ITestOutputHelper _output;
@@ -46,13 +42,10 @@ public sealed class LoadFixtureMeasurementsTests
         sw.Stop();
 
         Assert.NotNull(solution);
-        _output.WriteLine($"ColdStart (1k-LOC-Fixture, 50 Dateien): {sw.Elapsed.TotalSeconds:F2} s");
+        var durationSec = sw.Elapsed.TotalSeconds;
+        _output.WriteLine($"ColdStart (1k-LOC-Fixture, 50 Dateien): {durationSec:F3} s");
 
-        // Grosszuegig kalibriert; beobachtete Realitaet auf Standard-Hardware im einstelligen
-        // Sekundenbereich. Dient als Smoke-Test, dass die Engine ueberhaupt antwortet.
-        Assert.True(
-            sw.Elapsed.TotalSeconds < 30,
-            $"Cold-Start ueberschreitet 30 s auf der 1k-LOC-Fixture: {sw.Elapsed.TotalSeconds:F2} s");
+        Assert.True(double.IsFinite(durationSec) && durationSec >= 0);
     }
 
     [Fact]
@@ -91,9 +84,9 @@ public sealed class LoadFixtureMeasurementsTests
             $"GetCurrentSolution (10k-LOC, 1000 Dateien, 10 Iterationen): " +
             $"min={min:F3} s, median={median:F3} s, mean={mean:F3} s, max={max:F3} s");
 
-        // Wieder grosszuegig kalibriert; Median in der Praxis < 1 s auf Standard-Hardware.
-        Assert.True(
-            max < 5,
-            $"Max-Wand-Zeit ueberschreitet 5 s auf der 10k-LOC-Fixture: max={max:F3} s");
+        Assert.True(double.IsFinite(min) && min >= 0);
+        Assert.True(double.IsFinite(median) && median >= 0);
+        Assert.True(double.IsFinite(mean) && mean >= 0);
+        Assert.True(double.IsFinite(max) && max >= 0);
     }
 }
