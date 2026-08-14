@@ -12,6 +12,7 @@ using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools;
 
+// @covers MagicValueSyntaxWalker (VisitInterpolatedStringExpression via ScanAsync_InterpolatedString_StaticTextSegmentsClassified)
 /// <summary>
 /// Filter-/Aggregations-Pipeline-Tests fuer <see cref="FindMagicValuesScanner"/>:
 /// Rausch-Filter (Trivial/Attribut/Index/Loop/GetHashCode/ignoreNumbers), Aggregation
@@ -351,5 +352,27 @@ public sealed class Foo
         var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), includeSuppressed: false);
 
         Assert.Single(result.Payload!.MagicValues);
+    }
+
+    [Fact]
+    public async Task ScanAsync_InterpolatedString_StaticTextSegmentsClassified()
+    {
+        // Konzept §"Muss-Haven" Beispiel 2: in-string magic values & interpolation fragments.
+        // Der statische Text-Teil vor der Interpolation (vor dem "{") wird durch den
+        // MagicValuesClassifier klassifiziert; das dynamische Segment ({env}) wird nicht
+        // ausgewertet. Hier trifft die Connection-String-Heuristik auf "Server=" und
+        // "Database=" im statischen Fragment.
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public string M(int env) => $""Server=prod;Database=mydb; for env {env}"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("config_candidates", entry.Category);
+        Assert.Equal("Server=prod;Database=mydb; for env ", entry.Value);
+        Assert.Contains("Server=prod;Database=mydb", entry.Value, StringComparison.Ordinal);
     }
 }

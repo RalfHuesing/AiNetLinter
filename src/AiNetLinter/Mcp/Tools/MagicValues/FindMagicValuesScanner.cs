@@ -333,16 +333,32 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
 
     public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
     {
-        // Statische Text-Segmente in interpolated strings ($"...{x}..."). Dynamische
-        // Segmente (Interpolationen) werden NICHT ausgewertet — das wuerde eine
-        // Laufzeit-Aufloesung erfordern, die fuer ein On-Demand-Audit zu teuer und
-        // semantisch fragwuerdig waere (Konzept §"Wie" Punkt 1). In EPIC-1 ist die
-        // Verarbeitung ein No-op-Hook fuer Folge-Versionen, der strukturelle Aufbau ist
-        // aber bereits da.
-        _ = node;
+        // Konzept §"Muss-Haven" Beispiel 2: statische Text-Segmente in $"...{x}..." werden
+        // durch den MagicValuesClassifier klassifiziert. Dynamische Segmente ({x}) werden
+        // NICHT ausgewertet — das wuerde eine Laufzeit-Aufloesung erfordern, die fuer ein
+        // On-Demand-Audit zu teuer und semantisch fragwuerdig waere. Wir synthetisieren
+        // fuer jedes InterpolatedStringTextSyntax einen LiteralExpressionSyntax-Knoten und
+        // reichen ihn durch den existierenden ProcessLiteral-Pfad — damit greifen URL/Path/
+        // Format-String/Connection-String/Header-Id-Heuristiken ohne doppelte Logik. Die
+        // synthetischen Knoten haben kein Parent (nicht im SyntaxTree), daher feuern die
+        // Parent-Pfad-basierten Filter (Attribut/GetHashCode/Index/Loop) auf ihnen nicht —
+        // das ist akzeptabel, weil die statischen Fragmente in diesen Kontexten ohnehin
+        // keine Heuristik treffen wuerden.
+        foreach (var content in node.Contents)
+        {
+            if (content is not InterpolatedStringTextSyntax text) continue;
+            var textValue = text.TextToken.ValueText;
+            if (string.IsNullOrEmpty(textValue)) continue;
+            var synthetic = SyntaxFactory.LiteralExpression(
+                SyntaxKind.StringLiteralExpression,
+                SyntaxFactory.Literal(textValue, textValue));
+            ProcessLiteral(synthetic, node.GetLocation());
+        }
+
+        base.VisitInterpolatedStringExpression(node);
     }
 
-    private void ProcessLiteral(LiteralExpressionSyntax node)
+    private void ProcessLiteral(LiteralExpressionSyntax node, Location? location = null)
     {
         if (!IsInScope(node.Kind())) return;
 
@@ -357,7 +373,11 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
 
         if (context.CategoryFilter is not null && classification.Category != context.CategoryFilter.Value) return;
 
-        var lineSpan = node.GetLocation().GetLineSpan();
+        // location-Override fuer synthetische Literale aus interpolierten Strings: die
+        // echte Quellcode-Position steht am InterpolatedStringExpressionSyntax-Knoten,
+        // nicht am synthetischen Literal (das per Default-Location (0,0) liefert).
+        var effectiveLocation = location ?? node.GetLocation();
+        var lineSpan = effectiveLocation.GetLineSpan();
         var line = lineSpan.StartLinePosition.Line + 1;
         var column = lineSpan.StartLinePosition.Character + 1;
 
