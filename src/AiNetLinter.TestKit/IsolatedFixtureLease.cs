@@ -54,10 +54,11 @@ public sealed class IsolatedFixtureLease : IDisposable
                 Directory.Delete(tempDirectoryPath, recursive: true);
             }
         }
-        catch
+        catch (Exception ignored)
         {
             // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt (identisch zu
             // AiNetLinter.Tests.Fixtures.TestTempDirectory.Dispose).
+            _ = ignored;
         }
     }
 

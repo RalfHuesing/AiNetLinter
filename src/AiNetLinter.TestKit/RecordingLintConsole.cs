@@ -5,6 +5,7 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.TestKit;
 
+// ainetlinter-disable AvoidExcessiveMiddleMen
 internal sealed class RecordingLintConsole : ILintConsole
 {
     private readonly List<string> outputLines = [];

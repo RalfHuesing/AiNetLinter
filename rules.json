@@ -174,7 +174,9 @@
       "wwwroot",
       "obj",
       "bin",
-      ".git"
+      ".git",
+      "TestResults",
+      "speedup-tests"
     ],
     "MaxPartialClassFiles": 2,
     "MaxPartialClassFilesExemptTypes": [
