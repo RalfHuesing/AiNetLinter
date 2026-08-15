@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 type: step-plan
 task: ainetlinter-feedback-r1
 step: "006"

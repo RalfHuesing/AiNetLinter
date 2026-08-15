@@ -29,7 +29,7 @@ current_step: step-006
 | step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
 | step-004 | EPIC-04 | done | Teil B: Code-Snippet in get_violations direkt mitgeben | - | done | approved | 3f8948f |
 | step-005 | EPIC-05 | done | Teil A: Neues MCP-Tool get_class_structure | - | done | approved | b2b24ef |
-| step-006 | EPIC-06 | in_progress | FB-01: Heuristik fuer declaration-only types im AIContextFootprint | - | - | - | - |
+| step-006 | EPIC-06 | done | FB-01: Heuristik fuer declaration-only types im AIContextFootprint | - | done | approved | 9ee8098 |
 
 ## Config (optional)
 
