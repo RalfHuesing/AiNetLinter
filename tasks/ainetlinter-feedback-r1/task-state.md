@@ -27,7 +27,7 @@ current_step: step-004
 | step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
 | step-002 | EPIC-02 | done | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | done | approved | 8d3462e |
 | step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
-| step-004 | EPIC-04 | in_progress | Teil B: Code-Snippet in get_violations direkt mitgeben | - | - | - | - |
+| step-004 | EPIC-04 | done | Teil B: Code-Snippet in get_violations direkt mitgeben | - | done | approved | 3f8948f |
 
 ## Config (optional)
 
