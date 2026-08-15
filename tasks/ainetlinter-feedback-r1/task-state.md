@@ -26,7 +26,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
 | step-002 | EPIC-02 | done | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | done | approved | 8d3462e |
-| step-003 | EPIC-03 | in_progress | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | - | - | - |
+| step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
 
 ## Config (optional)
 
