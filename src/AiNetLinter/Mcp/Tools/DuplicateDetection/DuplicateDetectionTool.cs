@@ -47,6 +47,16 @@ internal static class DuplicateDetectionTool
             return McpToolResults.InvalidArgument("maxResults muss mindestens 1 sein.",
                 hint: "maxResults als positive Ganzzahl >= 1 angeben.");
         }
+        if (!string.IsNullOrWhiteSpace(input.ScopeType))
+        {
+            var st = input.ScopeType.Trim().ToLowerInvariant();
+            if (st is not ("all" or "production" or "tests"))
+            {
+                return McpToolResults.InvalidArgument(
+                    $"Ungueltiger scopeType-Wert '{input.ScopeType}' — gueltig sind 'all', 'production', 'tests'.",
+                    hint: "scopeType='all', 'production' oder 'tests' angeben (Default: 'all').");
+            }
+        }
 
         var configSnapshot = state.GetConfigSnapshot();
         var config = configSnapshot.Config.Global;
@@ -154,6 +164,19 @@ internal static class DuplicateDetectionTool
 
         var sb = new StringBuilder();
         sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Cluster(n) ({result.MethodsScanned} Methoden gescannt):");
+
+        if (result.TotalClusters > 20 || result.ShownClusters.Count > 20)
+        {
+            sb.Append("\n\n### Top-Cluster Uebersicht:");
+            var topCount = Math.Min(5, result.ShownClusters.Count);
+            for (int i = 0; i < topCount; i++)
+            {
+                var c = result.ShownClusters[i];
+                var files = string.Join(", ", c.Members.Select(m => PathNormalizer.ToRelative(solutionDir, m.FilePath)).Distinct());
+                sb.Append($"\n- Cluster {i + 1} ({BucketLabel(c.Bucket)}, Score {c.Score:F2}, {c.Members.Count} Methoden): {files}");
+            }
+        }
+
         var index = 0;
         foreach (var cluster in result.ShownClusters)
         {

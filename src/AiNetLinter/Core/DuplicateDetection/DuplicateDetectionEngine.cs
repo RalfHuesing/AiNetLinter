@@ -73,14 +73,14 @@ internal static partial class DuplicateDetectionEngine
             foreach (var document in project.Documents)
             {
                 ct.ThrowIfCancellationRequested();
-                if (!IsEligibleDocument(document, solutionDir, options.PathScopeFilter)) continue;
+                if (!IsEligibleDocument(document, solutionDir, options)) continue;
                 await CollectDocumentFingerprintsAsync(document, compilation, options, result, ct);
             }
         }
         return result;
     }
 
-    private static bool IsEligibleDocument(Document document, string solutionDir, string? pathScopeFilter)
+    private static bool IsEligibleDocument(Document document, string solutionDir, DuplicateDetectionOptions options)
     {
         // Document.FilePath ist bei manchen In-Memory-Test-Solutions (AdhocWorkspace ohne
         // explizites filePath) null — SourceFileCatalog.IsValidDocument laesst das bewusst durch
@@ -92,7 +92,24 @@ internal static partial class DuplicateDetectionEngine
         if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) return false;
         var path = document.FilePath;
         if (IsPermanentlyExcludedPath(path)) return false;
-        return PathNormalizer.MatchesScope(path, pathScopeFilter);
+        if (!PathNormalizer.MatchesScope(path, options.PathScopeFilter)) return false;
+
+        if (string.Equals(options.ScopeType, "production", StringComparison.OrdinalIgnoreCase))
+        {
+            var isTest = PathNormalizer.IsTestFile(path) ||
+                         document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
+                         document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
+            if (isTest) return false;
+        }
+        else if (string.Equals(options.ScopeType, "tests", StringComparison.OrdinalIgnoreCase))
+        {
+            var isTest = PathNormalizer.IsTestFile(path) ||
+                         document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
+                         document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
+            if (!isTest) return false;
+        }
+
+        return true;
     }
 
     /// <summary>

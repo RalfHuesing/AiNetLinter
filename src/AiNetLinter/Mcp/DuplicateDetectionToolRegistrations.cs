@@ -28,17 +28,18 @@ internal static class DuplicateDetectionToolRegistrations
         tools.Add(McpServerTool.Create(
             async (int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
+                string? scopeType = null,
                 CancellationToken ct = default) =>
             {
                 var input = new DuplicateDetectionInput(
-                    minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol);
+                    minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
                 if (callLog is null)
                 {
                     return await DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct);
                 }
                 return await callLog.ExecuteCallAsync(
                     "find_duplicates",
-                    $"{minTokens}|{similarityThreshold}|{normalizeIdentifiers}|{scopeDir}|{maxResults}|{mode}|{helperSymbol}",
+                    $"{minTokens}|{similarityThreshold}|{normalizeIdentifiers}|{scopeDir}|{maxResults}|{mode}|{helperSymbol}|{scopeType}",
                     () => DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct));
             },
             new McpServerToolCreateOptions
@@ -58,7 +59,8 @@ internal static class DuplicateDetectionToolRegistrations
         "(>=0.65, Default — niedrigste noch angezeigte Stufe). normalizeIdentifiers (Default " +
         "false) schaltet Erkennung umbenannter Klone an (Identifier/Literale werden vor dem " +
         "Vergleich normalisiert). scopeDir grenzt auf einen Teilbereich ein (Default " +
-        "Solution-Root). maxResults begrenzt die gezeigten Cluster/Kandidaten (Default 20). " +
+        "Solution-Root). scopeType ('all' [Default], 'production', 'tests') filtert nach " +
+        "Produktions- oder Test-Code. maxResults begrenzt die gezeigten Cluster/Kandidaten (Default 20). " +
         "mode='refactoring-drift': findet Methoden, die einen bereits existierenden Helper " +
         "(helperSymbol, Pflicht bei diesem mode — Format wie find_references: " +
         "Datei:Zeile:Spalte, stabile DocumentationCommentId oder qualifizierter Name) strukturell " +

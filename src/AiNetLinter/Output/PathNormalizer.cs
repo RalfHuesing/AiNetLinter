@@ -40,6 +40,8 @@ public static class PathNormalizer
                normalized.Contains(".TestKit/", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains(".Specs/", StringComparison.OrdinalIgnoreCase) ||
                normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.EndsWith("Tests.cs", StringComparison.OrdinalIgnoreCase) ||
+               normalized.EndsWith("Test.cs", StringComparison.OrdinalIgnoreCase) ||
                normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase);
     }
 

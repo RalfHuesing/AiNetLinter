@@ -39,7 +39,8 @@ internal sealed record DuplicateDetectionOptions(
     double NearThreshold,
     double FuzzyThreshold,
     bool NormalizeIdentifiers,
-    string? PathScopeFilter = null);
+    string? PathScopeFilter = null,
+    string? ScopeType = null);
 
 /// <summary>Vom Ground-Truth-Beispiel abgeleitete Default-Werte — Quelle der Wahrheit fuer
 /// <see cref="Configuration.GlobalConfig"/>s <c>DuplicateCode*</c>-Property-Defaults und fuer

@@ -201,4 +201,82 @@ public sealed class DuplicateDetectionToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("exact", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidScopeType_ReturnsRecoverableInvalidArgument()
+    {
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "invalid-scope"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text);
+        Assert.Contains("scopeType", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeTypeProduction_FiltersOutTestFiles()
+    {
+        using var context = CreateContext(
+            ("A.cs", BuildMethod("A", "One")),
+            ("BTests.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "production"), CancellationToken.None);
+
+        var summary = result.StructuredContent!.Value.GetProperty("summary");
+        Assert.Equal(0, summary.GetProperty("totalClusters").GetInt32());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeTypeTests_FiltersOutProductionFiles()
+    {
+        using var context = CreateContext(
+            ("A.cs", BuildMethod("A", "One")),
+            ("BTests.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "tests"), CancellationToken.None);
+
+        var summary = result.StructuredContent!.Value.GetProperty("summary");
+        Assert.Equal(0, summary.GetProperty("totalClusters").GetInt32());
+    }
+
+    [Fact]
+    public async Task RenderText_WhenMoreThanTwentyClusters_IncludesTopClusterSummary()
+    {
+        static string BuildUniqueMethod(string className, string methodName, int seed) => $$"""
+            public static class {{className}}
+            {
+                public static int {{methodName}}(int x)
+                {
+                    int a{{seed}} = x + {{seed}}; int b{{seed}} = x + {{seed + 1}}; int c{{seed}} = x + {{seed + 2}}; int d{{seed}} = x + {{seed + 3}}; int e{{seed}} = x + {{seed + 4}};
+                    int f{{seed}} = a{{seed}} + b{{seed}}; int g{{seed}} = c{{seed}} + d{{seed}}; int h{{seed}} = e{{seed}} + f{{seed}}; int i{{seed}} = g{{seed}} + h{{seed}}; int j{{seed}} = i{{seed}} - a{{seed}};
+                    int k{{seed}} = j{{seed}} - b{{seed}}; int l{{seed}} = k{{seed}} - c{{seed}}; int m{{seed}} = l{{seed}} - d{{seed}}; int n{{seed}} = m{{seed}} - e{{seed}}; int o{{seed}} = n{{seed}} * 2;
+                    int p{{seed}} = o{{seed}} / 2; int q{{seed}} = p{{seed}} + 1; int r{{seed}} = q{{seed}} + 2; int s{{seed}} = r{{seed}} + 3; int t{{seed}} = s{{seed}} + 4;
+                    return t{{seed}};
+                }
+            }
+            """;
+
+        var files = new (string FileName, string Content)[42];
+        for (int i = 0; i < 21; i++)
+        {
+            files[i * 2] = ($"A{i}.cs", BuildUniqueMethod($"ClassA{i}", $"Method{i}", i));
+            files[i * 2 + 1] = ($"B{i}.cs", BuildUniqueMethod($"ClassB{i}", $"Method{i}", i));
+        }
+        using var context = CreateContext(files);
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, MaxResults: 50), CancellationToken.None);
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("### Top-Cluster Uebersicht:", textContent.Text, StringComparison.Ordinal);
+    }
 }

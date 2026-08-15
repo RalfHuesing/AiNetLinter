@@ -24,7 +24,8 @@ internal sealed record DuplicateDetectionInput(
     string? ScopeDir,
     int? MaxResults,
     string? Mode = null,
-    string? HelperSymbol = null);
+    string? HelperSymbol = null,
+    string? ScopeType = null);
 
 /// <summary>Ein Cluster-Mitglied fuer die <c>find_duplicates</c>-Ausgabe (Text und
 /// StructuredContent gemeinsam) — 1:1-Projektion von
