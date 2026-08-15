@@ -200,7 +200,7 @@ ainetlinter --mcp-server            # sucht .sln/.slnx im aktuellen Verzeichnis
 ainetlinter --mcp-server --path <Datei/Verzeichnis>   # explizite Ziel-Solution
 ```
 
-Bei `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) kann bei großen Solutions spürbar dauern, danach sind Tool-Calls schnell.
+Bei `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) skaliert mit der Solution-Größe; Tool-Calls arbeiten gegen den resident geladenen Workspace und benötigen keinen erneuten Solution-Load.
 
 Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
 
@@ -361,7 +361,7 @@ Feldname bewusst `candidates`, nicht `violations` — False-Positive-Budget ist 
 
 `occurrences` zaehlt identische Literale in derselben Datei (Aggregation ueber `(category, value, filePath)`-Tupel); `minOccurrences` (Default 1 — auch Einzelvorkommen) filtert unterhalb der Schwelle. `byCategory*`-Felder aggregieren ueber alle Kategorie-Treffer (vor `maxResults`-Trunkierung). `truncated: true` wird in der Text-Antwort via `McpTruncation`-Meta-Zeile signalisiert, `summary.shownOccurrences < summary.total` ist die korrespondierende `StructuredContent`-Signalisierung.
 
-**Suppression-Sonderfall (bewusste Ausnahme):** `find_magic_values` unterstuetzt Suppression ueber `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`), allerdings bewusst pro Fundstelle via `SyntaxTrivia` (Leading + Trailing) statt ueber den dateiweiten `SuppressionScanner`. Abweichung von der sonst projektweiten Suppression-Semantik ist gewollt: bei dutzenden Magic-Value-Funden pro Datei waere ein dateiweiter Disable-Kommentar nutzlos (ein einzelner Kommentar wuerde alle Funde der Datei stumm schalten). Diese feinere Granularitaet ist eine bewusste Ausnahme und nicht als Inkonsistenz misszuverstehen — die Knoten-Auswertung am `LiteralExpressionSyntax` laesst sich performant im selben AST-Walk miterledigen. Implementierte Granularitaet: `SingleLineCommentTrivia` und `MultiLineCommentTrivia` mit exaktem Substring `ainetlinter-disable MagicValues` (Block-Kommentare werden ebenfalls ausgewertet, solange der Heuristik-Pfad sauber bleibt). `includeSuppressed: false` ist der wirksame Default; `includeSuppressed: true` zeigt auch stummgeschaltete Funde (kein Heuristik-Unterschied). Andere Regel-Namen (z. B. `// ainetlinter-disable SomeOtherRule`) und dateiweite `// ainetlinter-disable all`-Semantik werden in EPIC-2 NICHT ausgewertet.
+**Suppression-Sonderfall (bewusste Ausnahme):** `find_magic_values` unterstuetzt Suppression ueber `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`), allerdings bewusst pro Fundstelle via `SyntaxTrivia` (Leading + Trailing) statt ueber den dateiweiten `SuppressionScanner`. Abweichung von der sonst projektweiten Suppression-Semantik ist gewollt: bei dutzenden Magic-Value-Funden pro Datei waere ein dateiweiter Disable-Kommentar nutzlos (ein einzelner Kommentar wuerde alle Funde der Datei stumm schalten). Diese feinere Granularitaet ist eine bewusste Ausnahme und nicht als Inkonsistenz misszuverstehen — die Knoten-Auswertung am `LiteralExpressionSyntax` laesst sich performant im selben AST-Walk miterledigen. Implementierte Granularitaet: `SingleLineCommentTrivia` und `MultiLineCommentTrivia` mit exaktem Substring `ainetlinter-disable MagicValues` (Block-Kommentare werden ebenfalls ausgewertet, solange der Heuristik-Pfad sauber bleibt). `includeSuppressed: false` ist der wirksame Default; `includeSuppressed: true` zeigt auch stummgeschaltete Funde (kein Heuristik-Unterschied). Andere Regel-Namen (z. B. `// ainetlinter-disable SomeOtherRule`) und dateiweite `// ainetlinter-disable all`-Semantik werden nicht ausgewertet.
 
 Beispiel-Aufruf (JSON-RPC über stdio):
 
@@ -396,7 +396,7 @@ Vier Listen-Tools (`find_symbol`, `find_references`, `get_impact`, `search_patte
 [N Dateien mit Textfund, M gezeigt — search_pattern fuer Details]
 ```
 
-Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` übernommen — der Code ist die Source of Truth, nicht das Konzept.
+Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` übernommen — der Code ist die Source of Truth.
 
 ### Miss-Hint (find_symbol Fallback)
 
@@ -488,7 +488,7 @@ Zusätzlich laufen pro Refresh zwei Erweiterungen:
 - **Verzeichnis-Sweep** hängt `.cs`-Dateien, die seit dem Solution-Load neu auf der Platte angelegt wurden, automatisch via `Solution.AddDocument` ein (Filter: `*.cs`, `IsGeneratedPath`-Ausschluss, neues Document landet im ersten passenden Nicht-Test-Projekt bzw. Fallback erstes Projekt). So liefert `find_symbol` auch für gerade erstellten Code Treffer, statt stillschweigend „keine Treffer".
 - **Document-Removal** entfernt Documents, deren Datei zwischenzeitlich von der Platte gelöscht wurde, aus dem Solution-Modell (`Solution.RemoveDocument`). So liefert `find_symbol` keine Geister-Treffer auf nicht mehr existente Dateien.
 
-Beide Pfade sind „best-effort": `<Compile Remove=…>`-Ausschlüsse aus `.csproj` werden bewusst nicht gelesen (Konzept-Vorgabe).
+Beide Pfade sind „best-effort": `<Compile Remove=…>`-Ausschlüsse aus `.csproj` werden bewusst nicht gelesen — csproj-Parsing würde den MCP-Server unnötig komplex machen.
 
 ### Symbolgraph-Erweiterungen
 
@@ -545,7 +545,7 @@ Heuristik scant alle `.cs`-Dateien per `\b`-Word-Boundary-Regex auf
 `AddScoped<...>`, `AddSingleton<...>`, `AddTransient<...>` und filtert
 auf Treffer, deren Typ-Parameter den voll-qualifizierten Namen des
 Hierarchie-Typs enthalten. Convention-basierte und Factory-basierte
-Registrierungen werden bewusst NICHT erkannt (Konzept-Vorgabe). Bei
+Registrierungen werden bewusst nicht über Reflection erkannt. Bei
 0 Treffern wird die Sektion weggelassen.
 
 Wenn der Server ohne `--config` gestartet wurde **und** keine `rules.json` neben der aufgelösten Solution-Datei findet, läuft er mit den `Config`-Defaults. `get_violations` prependet in diesem Fall vor den eigentlichen Lint-Output eine sichtbare Header-Zeile:

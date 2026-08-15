@@ -101,7 +101,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ## Epic 10: Erweiterte Analyse & CI/CD-Integration (Extensions & Best Practices)
 
 - [x] **Syntaktische Typ-Analyse für verbotene Namespace-Kopplungen:** Durchsuche den Quellcode nach der Verwendung von vollqualifizierten Typnamen (in `QualifiedNameSyntax` und `MemberAccessExpressionSyntax`), die gegen die konfigurierten Namespace-Kopplungen verstoßen (auch wenn kein `using`-Statement verwendet wird).
-- [x] **Sicherer Test Sentinel:** Stelle sicher, dass gefundene Testklassen tatsächliche Testmethoden (mit `[Fact]`, `[Theory]`, `[Test]` oder `[TestMethod]` Attributen) enthalten, um zu verhindern, dass leere Testdateien den Sentinel austricksen.
+- [x] **Test Sentinel mit Inhalts-Validierung:** Testklassen werden nur gezählt, wenn sie Testmethoden mit `[Fact]`/`[Theory]`/`[Test]`/`[TestMethod]` enthalten.
 
 ---
 
@@ -172,7 +172,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
   - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
-- [ ] ~~**Vermeidung von Magic Values (Numbers & Strings):**~~ **Entfernt am 2026-06-19** (Commit `764281a`, Begründung laut Commit-Message: *"Regel greift kein konkretes LLM-Failure-Pattern"*). `MagicValuesChecker`, `MagicValuesConfig`, `MagicValuesConfigOverride` sowie alle Konfigurationsfelder (`EnforceNoMagicValues`) wurden vollständig entfernt, inkl. Tests, Docs und `rules.json`-Einträgen. Ursprünglich geplant: literale Werte (`status == 4`, `role == "Admin"`) direkt in Methodenkörpern finden, mit Ausnahmen für `0`/`1`/`-1`/leere Strings, und stattdessen Konstanten/`static readonly`/`enum`s erzwingen. Ein gezielteres On-Demand-Audit-Tool (MCP-Tool statt Build-Regel, mit fachlicher Klassifizierung und Security-Fokus) ist als Konzept in Arbeit: `tasks/magic-values-in-mcp/konzept.md`.
+- [ ] ~~**Vermeidung von Magic Values (Numbers & Strings):**~~ **Entfernt am 2026-06-19** (Commit `764281a`, Begründung laut Commit-Message: *"Regel greift kein konkretes LLM-Failure-Pattern"*). `MagicValuesChecker`, `MagicValuesConfig`, `MagicValuesConfigOverride` sowie alle Konfigurationsfelder (`EnforceNoMagicValues`) wurden vollständig entfernt, inkl. Tests, Docs und `rules.json`-Einträgen. Ursprünglich geplant: literale Werte (`status == 4`, `role == "Admin"`) direkt in Methodenkörpern finden, mit Ausnahmen für `0`/`1`/`-1`/leere Strings, und stattdessen Konstanten/`static readonly`/`enum`s erzwingen. Ein gezielteres On-Demand-Audit-Tool (MCP-Tool statt Build-Regel, mit fachlicher Klassifizierung und Security-Fokus) ist im aktuellen `find_magic_values`-Tool umgesetzt.
 
 ---
 
@@ -233,7 +233,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Semantische Diff-Impact-Analyse:** Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten, via `GitChangedFilesResolver` und `SymbolFinder.FindReferencesAsync`.
 - [x] **Dynamischer, LLM-orientierter Codegraph (Entfernt):** Generierte einen Software-Abhängigkeitsgraphen im Mermaid-Format aus Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld-/Konstruktor-Abhängigkeiten.
 - [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
-- [x] **`find_magic_values` MCP-Tool (On-Demand-Magic-Value-Audit):** 19. MCP-Tool — Roslyn-basierter On-Demand-Audit über alle `.cs`-Dokumente der Solution, klassifiziert Literale (URLs, Pfade, Connection-Strings, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) mit Ziel-Empfehlungen (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX...`). Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter, `ignoreNumbers`-Erweiterung. Erweiterte Heuristiken (`enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates`, duplizierte `private const`-Erkennung, Suppression via `SyntaxTrivia`, `changedOnly`) sind in einer Folgeversion geplant. Konzept: `tasks/magic-values-in-mcp/konzept.md`, Plan: `tasks/magic-values-in-mcp/step-001/step-plan.md` (Stand 2026-08-14).
+- [x] **`find_magic_values` MCP-Tool (On-Demand-Magic-Value-Audit):** 19. MCP-Tool — Roslyn-basierter On-Demand-Audit über alle `.cs`-Dokumente der Solution, klassifiziert Literale (URLs, Pfade, Connection-Strings, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) mit Ziel-Empfehlungen (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX...`). Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter, `ignoreNumbers`-Erweiterung. Erweiterte Heuristiken (`enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates`, duplizierte `private const`-Erkennung, Suppression via `SyntaxTrivia`, `changedOnly`) sind in einer Folgeversion geplant. Stand 2026-08-14.
 
 ---
 
@@ -371,8 +371,8 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 - [x] **`RazorAnalyzer`:** Textbasierter Analyzer, der Razor-Markup effizient auf Dateigroesse, HTML-Verschachtelungstiefe, Event-Lambdas, Control-Flow-Komplexitaet (Schleifen und Verzweigungen) sowie Inline-Ternaries in Attributen scannt.
 - [x] **Regel-IDs:** Die acht Regeln (`RAZOR_MaxRazorLineCount`, `RAZOR_MaxRazorCodeBlockLines`, `RAZOR_MaxMarkupNestingDepth`, `RAZOR_BanInlineEventLambdas`, `RAZOR_MaxControlFlowBlocks`, `RAZOR_MaxForeachNestingDepth`, `RAZOR_MaxComponentParameterCount`, `RAZOR_BanInlineTernaryInAttributes`) sind in `LinterRuleIds` deklariert und in der Rule-Registry registriert.
 - [x] **Project-Overrides:** Volle Unterstuetzung fuer Project-Overrides (z. B. Deaktivierung der Razor-Regeln fuer Testprojekte via `ProjectOverrides`).
-- [x] **Test-Suite:** Umfassende Testabdeckung mit 33 Unit-Tests in `RazorAnalyzerTests.cs` und `RazorAnalyzerTests.Extended.cs` (alle Edge-Cases abgedeckt, 100% gruen).
-- [x] **Dogfooding:** Die CLI-Integrationstests laufen auf der eigenen Codebase mit aktivierter Razor-Sektion fehlerfrei durch.
+- [x] **Test-Suite:** 33 Unit-Tests in `RazorAnalyzerTests.cs` und `RazorAnalyzerTests.Extended.cs`. Coverage-Bericht (sofern verfügbar) verweist auf den geprüften Anteil.
+- [x] **Dogfooding:** CLI-Integrationstests auf der eigenen Codebase mit aktivierter Razor-Sektion — Exit-Code 0, keine neuen Verstöße in der Vergleichsbasis.
 - [x] **Dokumentation:** Vollstaendige Dokumentation der Regeln, Konfigurationen und Suppressions in `Docs/configuration.md` und `README.md`.
 
 *Hinweis zum Go/No-Go-Kriterium:* Das Risiko bezueglich Zeilennummern-Uebersetzung entfaellt beim textbasierten Parser, da dieser direkt auf den Original-Dateizeilen arbeitet und Zeilennummern praezise bestimmt.
@@ -456,7 +456,7 @@ Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. 
 - **DI-Registrierungs-Hinweis als Zusatzzeile in `get_type_hierarchy` (E.3)** — `DiRegistrationHeuristics` mit `\b`-Word-Boundary-Regex auf `AddScoped`/`AddSingleton`/`AddTransient` + Heuristik-Filter auf `type.ToDisplayString()`. 4. Sektion im Tool-Output mit explizitem Header „DI-Registrierungen (heuristisch, Convention-/Factory-basiertes Scanning nicht abgedeckt)". Test-Mini-Solution `DiRegistrationMini/` als realistisches DI-Setup. Status: **umgesetzt in EPIC-08** (step-012).
 - **Tech-Debt-Abschluss (Muss-Haben D, EPIC-07)** — TD-001 (ungenutzte transitive Paket-Referenz) + TD-002 (Subprozess-E2E-Fixture-Pool) + TD-006 (`SafeEnumerateFiles`/`IsGeneratedPath`-DRY-Konsolidierung in `FileSystemExclusionHelpers`) + TD-008 (Refactoring-Historie „ehemalige 6-Parameter-Signatur" in `GetViolationsScanner.cs`) geschlossen; TD-004 (Footprint-Druck auf Tool-Registrierungs-Sammelklassen) bewusst zurückgestellt mit Begründung: gemeinsame Basis-Klasse würde das „dünner Dispatch + Scanner/Formatter-Datei"-Pattern aus EPIC-03 verwässern, Footprint-Druck ist über PathOverride-Mechanik + `ILinterEngineConfig`-Entlastung aus step-008 beherrschbar. Status: **umgesetzt in EPIC-08** (step-012).
 
-Details und Reihenfolge der geplanten Punkte: `tasks/codegraph-mcp-server/konzept.md` Z. 207-324. Jede Erweiterung wird einzeln geplant, eigene Einheit, eigener Review — keine „Alles-oder-nichts"-Bündelung.
+Details und Reihenfolge der geplanten Punkte folgen in den jeweiligen Epic-Abschnitten weiter oben. Jede Erweiterung wird einzeln geplant, eigene Einheit, eigener Review — keine „Alles-oder-nichts"-Bündelung.
 
 ---
 
@@ -534,7 +534,7 @@ Bug-Report aus einer Dogfooding-Session gegen ein fremdes, per `ainetlinter`-MCP
 Projekt: `MSBuildWorkspace` fuehrt (anders als `dotnet build`) keinen impliziten NuGet-Restore aus —
 ein nicht restoretes Zielprojekt liess `DetectAndBanPhantomDependencies` tausende Einzel-Violations
 pro unaufloesbarem `using` melden und den `safeguard`-Score auf 0,00/10 einbrechen, obwohl `dotnet
-build` fuer dasselbe Projekt fehlerfrei lief. Architektur-Entscheidung (Erkennen statt Auto-Restore)
+build` fuer dasselbe Projekt mit Exit-Code 0 abschloss. Architektur-Entscheidung (Erkennen statt Auto-Restore)
 und Begruendung: `rationale.md` §13.
 
 - [x] **`ProjectRestoreState`** (`Baseline/`): dateisystembasierte Erkennung (`obj/project.assets.json`
