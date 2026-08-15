@@ -397,4 +397,44 @@ public sealed class MiddleManCheckerTests
         // Daher darf kein Verstoß gemeldet werden.
         Assert.Empty(ctx.Violations);
     }
+
+    [Fact]
+    public void MiddleManChecker_NoViolation_WhenTestFile()
+    {
+        var code = TestHelperTypes + @"
+            public class TestClassWithForwarders
+            {
+                private readonly Collaborator _c = new();
+                public void Test1() => _c.DoStuff();
+                public void Test2() { _c.DoStuff(); }
+                public int P1 => _c.Value;
+                public int P2 { get { return _c.Value; } }
+                public void Test3() => _c.DoStuff();
+            }
+        ";
+
+        var (tree, model) = TestHelper.ParseCode(code);
+        var ctx = TestHelper.CreateContext(
+            config: TestHelper.CreateDefaultConfig() with
+            {
+                Global = new GlobalConfig
+                {
+                    AvoidExcessiveMiddleMen = true,
+                    MaxMiddleManForwardingRatio = 0.60,
+                    MiddleManMinMemberCount = 5
+                }
+            },
+            semanticModel: model,
+            isTestFile: true
+        );
+
+        var node = tree.GetRoot().DescendantNodes()
+            .OfType<ClassDeclarationSyntax>()
+            .First(c => c.Identifier.Text == "TestClassWithForwarders");
+
+        MiddleManChecker.Check(node, ctx);
+
+        Assert.Empty(ctx.Violations);
+    }
 }
+

@@ -50,6 +50,8 @@ internal static class MiddleManChecker
     {
         if (!ctx.Config.Global.AvoidExcessiveMiddleMen) return true;
 
+        if (ctx.IsTestFile) return true;
+
         // Statische Klassen werden ignoriert
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) return true;
 
