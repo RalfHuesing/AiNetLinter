@@ -32,9 +32,38 @@ internal static class FileStructureToolRegistrations
         McpCallLog? callLog = null)
     {
         AddGetFileSkeleton(tools, mcpState, callLog);
+        AddGetClassStructure(tools, mcpState, callLog);
         AddGetIndexScope(tools, mcpState, callLog);
         AddGetHotspots(tools, mcpState, callLog);
     }
+
+    private static void AddGetClassStructure(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string? symbol = null, string? sortBy = "lines", CancellationToken ct = default) =>
+            {
+                if (callLog is null)
+                {
+                    return await GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, ct);
+                }
+                return await callLog.ExecuteCallAsync("get_class_structure", $"{symbol}|{sortBy}",
+                    () => GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "get_class_structure",
+                Description = GetClassStructureDescription,
+            }));
+    }
+
+    private const string GetClassStructureDescription =
+        "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
+        "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
+        "vor Refactorings oder zur Identifikation langer Member). symbol (Pflicht): Typname, " +
+        "File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,

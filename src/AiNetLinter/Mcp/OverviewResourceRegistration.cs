@@ -36,6 +36,7 @@ internal static class OverviewResourceRegistration
         ("get_type_hierarchy", "Liefert Basisklassen, Interfaces, abgeleitete Typen und heuristische DI-Registrierungen eines Typs."),
         ("dependency_graph", "Liefert die Datei-/Typ-Abhaengigkeiten einer Datei oder eines Typs (eingehend/ausgehend/beides, echte SemanticModel-Typreferenzen)."),
         ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer C#-Datei."),
+        ("get_class_structure", "Liefert eine tabellarische Member- und Zeilen-Uebersicht eines C#-Typs."),
         ("get_symbol_body", "Liefert den Source-Body eines C#-Symbols per stabiler ID oder Datei:Zeile:Spalte."),
         ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
         ("safeguard", "Liefert einen deterministischen 0-10-Quality-Score inkl. Pass/Fail-Threshold, Top-Violations und Remediation-Hint."),
