@@ -191,6 +191,7 @@
       "ConfigOverride",
       "Args"
     ],
+    "MaxPublicMembersPerTypeApplyToTestFiles": false,
     "MaxLinqChainLength": 0,
     "LinqMethodNames": [
       "Where",
