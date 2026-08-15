@@ -9,7 +9,7 @@ last_updated: 2026-08-15T19:10:00+02:00
 
 ## Karte
 
-- **`src/AiNetLinter/Core/Checkers/MiddleManChecker.cs`** — Prüft Klassen auf Excessive-Middle-Man-Muster; hier wird `ctx.IsTestFile` Skip eingebaut.
+- **`src/AiNetLinter/Core/Checkers/MiddleManChecker.cs`** — Prüft Klassen auf Excessive-Middle-Man-Muster; hier wird `ctx.IsTestFile` Skip eingebaut. (zuletzt: step-001)
 - **`src/AiNetLinter/Core/Checkers/PublicMembersChecker.cs`** — Prüft Typen auf Überschreitung von `MaxPublicMembersPerType`; hier wird Test-Skip mit Opt-in-Flag eingebaut.
 - **`src/AiNetLinter/Configuration/MetricsConfig.cs`** — Konfigurationsmodell für Metriken; hier wird `MaxPublicMembersPerTypeApplyToTestFiles` ergänzt.
 - **`src/AiNetLinter/Metrics/AIContextFootprintCalculator.cs`** — Berechnet den transitiven Zeilen-Footprint; hier wird die Heuristik für declaration-only types integriert.
