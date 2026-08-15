@@ -62,14 +62,14 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, CancellationToken ct = default) =>
+            async (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 0, bool includeSnippet = false, CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
-                    return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, ct);
+                    return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, contextLines, includeSnippet, ct);
                 }
-                return await callLog.ExecuteCallAsync("get_violations", $"{scopeFilter}|{maxResults}",
-                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, ct));
+                return await callLog.ExecuteCallAsync("get_violations", $"{scopeFilter}|{maxResults}|{contextLines}|{includeSnippet}",
+                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, contextLines, includeSnippet, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -81,7 +81,8 @@ internal static class AnalysisToolRegistrations
     private const string GetViolationsDescription =
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
         "erneut aufrufbar, kein Disk-Cache. scopeFilter (Projekt-Name oder Pfad-Substring) " +
-        "grenzt auf einen Teilbereich ein, maxResults begrenzt die Trefferliste (Default 50).";
+        "grenzt auf einen Teilbereich ein, maxResults begrenzt die Trefferliste (Default 50). " +
+        "includeSnippet=true gibt den relevanten Quellcode-Ausschnitt mit (contextLines 0-5, Default 0).";
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,

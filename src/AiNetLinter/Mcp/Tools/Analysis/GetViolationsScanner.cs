@@ -98,13 +98,73 @@ internal static class GetViolationsScanner
         var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
         var isTruncated = filtered.Count > maxResults;
 
+        IReadOnlyList<RuleViolation> finalViolations;
+        if (p.IncludeSnippet)
+        {
+            var contextLines = Math.Clamp(p.ContextLines, 0, 5);
+            var enriched = new List<RuleViolation>(filtered.Count);
+            foreach (var v in filtered)
+            {
+                ct.ThrowIfCancellationRequested();
+                var snippet = await ExtractSnippetAsync(solution, v.FilePath, v.LineNumber, contextLines, ct);
+                enriched.Add(v with { Snippet = snippet });
+            }
+            finalViolations = enriched;
+        }
+        else
+        {
+            finalViolations = filtered;
+        }
+
+        var reportText = FormatReport(solutionDir, fileToProject, finalViolations, scopeFilter, usedDefaultConfig, maxResults);
+        var shown = isTruncated ? finalViolations.Take(maxResults).ToList() : finalViolations;
+
         return new GetViolationsResult(
-            FormatReport(solutionDir, fileToProject, violations, scopeFilter, usedDefaultConfig, maxResults),
+            reportText,
             IsMalfunction: false,
             IsTruncated: isTruncated,
             // Gleiche Trunkierung wie FormatReport — StructuredContent zeigt exakt die Violations,
             // die auch im Text-Report auftauchen.
-            Violations: isTruncated ? filtered.Take(maxResults).ToList() : filtered);
+            Violations: shown);
+    }
+
+    private static async Task<string?> ExtractSnippetAsync(
+        Solution solution, string filePath, int lineNumber, int contextLines, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(filePath) || lineNumber < 1) return null;
+
+        var doc = solution.Projects
+            .SelectMany(p => p.Documents)
+            .FirstOrDefault(d => string.Equals(d.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+
+        Microsoft.CodeAnalysis.Text.SourceText? sourceText = null;
+        if (doc is not null)
+        {
+            sourceText = await doc.GetTextAsync(ct);
+        }
+        else if (File.Exists(filePath))
+        {
+            var fileContent = await File.ReadAllTextAsync(filePath, ct);
+            sourceText = Microsoft.CodeAnalysis.Text.SourceText.From(fileContent);
+        }
+
+        if (sourceText is null) return null;
+
+        var startLineIndex = Math.Max(0, lineNumber - 1 - contextLines);
+        var endLineIndex = Math.Min(sourceText.Lines.Count - 1, lineNumber - 1 + contextLines);
+        if (endLineIndex - startLineIndex + 1 > 15)
+        {
+            endLineIndex = startLineIndex + 14;
+        }
+
+        var sb = new StringBuilder();
+        for (int i = startLineIndex; i <= endLineIndex; i++)
+        {
+            var lineStr = sourceText.Lines[i].ToString();
+            var lineNum = i + 1;
+            sb.AppendLine($"{lineNum,4} | {lineStr}");
+        }
+        return sb.ToString().TrimEnd();
     }
 
     // ainetlinter-disable MaxMethodParameterCount — FormatReport kapselt einen Report-Bau
@@ -193,6 +253,14 @@ internal static class GetViolationsScanner
         {
             var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
             sb.AppendLine($"| {relativePath} | {v.LineNumber} | {v.RuleName} | {v.Details} |");
+            if (!string.IsNullOrWhiteSpace(v.Snippet))
+            {
+                sb.AppendLine();
+                sb.AppendLine("```csharp");
+                sb.AppendLine(v.Snippet);
+                sb.AppendLine("```");
+                sb.AppendLine();
+            }
         }
         sb.AppendLine();
     }
@@ -201,7 +269,7 @@ internal static class GetViolationsScanner
 
 /// <summary>
 /// Parameter-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>. Kapselt
-/// 7 Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
+/// 9 Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
 /// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird.
 /// </summary>
 internal sealed record GetViolationsScannerParameters(
@@ -211,7 +279,9 @@ internal sealed record GetViolationsScannerParameters(
     string? ScopeFilter,
     CancellationToken CancellationToken,
     bool UsedDefaultConfig = false,
-    int MaxResults = GetViolationsScanner.DefaultMaxResults);
+    int MaxResults = GetViolationsScanner.DefaultMaxResults,
+    int ContextLines = 0,
+    bool IncludeSnippet = false);
 
 /// <summary>
 /// Ergebnis-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>.

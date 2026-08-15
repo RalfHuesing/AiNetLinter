@@ -15,4 +15,8 @@ public sealed record RuleViolation
     /// Wird von CompoundSuppression.SeverityOverride gesetzt wenn Bedingungen erfüllt.
     /// </summary>
     public string? EffectiveSeverity { get; init; }
+    /// <summary>
+    /// Optionales Code-Snippet um den Verstoß (für get_violations mit includeSnippet: true).
+    /// </summary>
+    public string? Snippet { get; init; }
 }

@@ -474,4 +474,26 @@ public sealed class ViolationMarkdownFormatterTests
 
         Assert.Contains("Empfehlung: Guidance text", result);
     }
+
+    [Fact]
+    public void Format_IncludesSnippetWhenPresent()
+    {
+        var violations = new[]
+        {
+            new RuleViolation
+            {
+                FilePath = @"C:\Projects\MyApp\src\Foo.cs",
+                LineNumber = 5,
+                RuleName = "AvoidExcessiveMiddleMen",
+                Details = "Detail text",
+                Guidance = "Guidance text",
+                Snippet = "   5 | public void Foo() { Bar(); }"
+            }
+        };
+
+        var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
+
+        Assert.Contains("```csharp", result);
+        Assert.Contains("public void Foo() { Bar(); }", result);
+    }
 }

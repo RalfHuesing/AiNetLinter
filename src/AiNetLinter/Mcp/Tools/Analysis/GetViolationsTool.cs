@@ -22,8 +22,20 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// </summary>
 internal static class GetViolationsTool
 {
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        string? scopeFilter,
+        int maxResults,
+        CancellationToken ct) =>
+        ExecuteAsync(state, scopeFilter, maxResults, 0, false, ct);
+
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? scopeFilter, int maxResults, CancellationToken ct)
+        McpCodeGraphServer state,
+        string? scopeFilter,
+        int maxResults,
+        int contextLines,
+        bool includeSnippet,
+        CancellationToken ct = default)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -42,7 +54,9 @@ internal static class GetViolationsTool
                 ScopeFilter: scopeFilter,
                 CancellationToken: ct,
                 UsedDefaultConfig: configSnapshot.UsedDefaultConfig,
-                MaxResults: normalizedMaxResults));
+                MaxResults: normalizedMaxResults,
+                ContextLines: contextLines,
+                IncludeSnippet: includeSnippet));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder

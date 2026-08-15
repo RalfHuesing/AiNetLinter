@@ -254,4 +254,57 @@ public sealed class GetViolationsToolTests
         Assert.DoesNotContain("Keine Dateien im Scope", text, StringComparison.Ordinal);
         Assert.Contains("Dateien im Scope", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_IncludeSnippetTrue_AppendsCodeSnippetToTextAndStructuredContent()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetViolationsTool.ExecuteAsync(
+            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 0, includeSnippet: true, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("```csharp", textContent.Text, StringComparison.Ordinal);
+
+        var violations = result.StructuredContent!.Value.GetProperty("violations")
+            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
+        Assert.NotNull(violations);
+        Assert.NotEmpty(violations!);
+        Assert.All(violations!, v => Assert.NotNull(v.Snippet));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IncludeSnippetWithContextLines_IncludesSurroundingLines()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetViolationsTool.ExecuteAsync(
+            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 2, includeSnippet: true, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var violations = result.StructuredContent!.Value.GetProperty("violations")
+            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
+        Assert.NotNull(violations);
+        var first = violations!.First(v => !string.IsNullOrEmpty(v.Snippet));
+        Assert.Contains("\n", first.Snippet);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IncludeSnippetFalse_SnippetPropertyIsNull()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetViolationsTool.ExecuteAsync(
+            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 0, includeSnippet: false, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.DoesNotContain("```csharp", textContent.Text, StringComparison.Ordinal);
+
+        var violations = result.StructuredContent!.Value.GetProperty("violations")
+            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
+        Assert.NotNull(violations);
+        Assert.All(violations!, v => Assert.Null(v.Snippet));
+    }
 }

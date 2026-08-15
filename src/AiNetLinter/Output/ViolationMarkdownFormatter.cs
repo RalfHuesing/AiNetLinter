@@ -252,6 +252,15 @@ public static class ViolationMarkdownFormatter
             {
                 sb.Append($"  Empfehlung: {v.Guidance.Trim()}\n");
             }
+            if (!string.IsNullOrWhiteSpace(v.Snippet))
+            {
+                sb.Append("  ```csharp\n");
+                foreach (var line in v.Snippet.Split('\n'))
+                {
+                    sb.Append($"  {line.TrimEnd()}\n");
+                }
+                sb.Append("  ```\n");
+            }
         }
     }
 }
