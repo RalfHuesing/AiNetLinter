@@ -4,8 +4,8 @@ task: ainetlinter-feedback-r1
 started_at: 2026-08-15T19:10:00+02:00
 last_updated: 2026-08-15T19:10:00+02:00
 rules_dir: .agents/rules
-total_steps: 3
-current_step: step-003
+total_steps: 4
+current_step: step-004
 ---
 
 # Task State: ainetlinter-feedback-r1
@@ -13,12 +13,12 @@ current_step: step-003
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 3
-- **Aktueller Schritt:** `step-003`
+- **Steps gesamt:** 4
+- **Aktueller Schritt:** `step-004`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-15T19:10:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-15T19:17:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-15T19:24:00+02:00
 
 ## Steps
 
@@ -27,6 +27,7 @@ current_step: step-003
 | step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
 | step-002 | EPIC-02 | done | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | done | approved | 8d3462e |
 | step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
+| step-004 | EPIC-04 | in_progress | Teil B: Code-Snippet in get_violations direkt mitgeben | - | - | - | - |
 
 ## Config (optional)
 
