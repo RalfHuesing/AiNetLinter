@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
@@ -239,7 +240,7 @@ internal static partial class FindMagicValuesScanner
         if (document.SourceCodeKind != SourceCodeKind.Regular) return false;
         if (document.FilePath is null) return false;
         if (!document.FilePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
-        if (IsGeneratedPath(document.FilePath)) return false;
+        if (FileSystemExclusionHelpers.IsGeneratedPath(document.FilePath)) return false;
 
         var relativePath = solutionDir.Length == 0
             ? document.FilePath
@@ -275,14 +276,6 @@ internal static partial class FindMagicValuesScanner
     {
         return path.Contains("/Tests/", StringComparison.OrdinalIgnoreCase)
             || path.Contains("/FastTests/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsGeneratedPath(string path)
-    {
-        var sep = Path.DirectorySeparatorChar;
-        return path.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}.ainetlinter{sep}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<GroupedMagicValue> AggregateAndFilter(
