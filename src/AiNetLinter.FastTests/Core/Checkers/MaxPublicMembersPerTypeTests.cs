@@ -35,7 +35,7 @@ public sealed class MaxPublicMembersPerTypeTests
             }
         };
 
-    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config)
+    private static IReadOnlyCollection<RuleViolation> Analyze(string source, Config config, bool isTestFile = false)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
         var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
@@ -44,7 +44,7 @@ public sealed class MaxPublicMembersPerTypeTests
             .AddReferences(mscorlib)
             .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         var semanticModel = compilation.GetSemanticModel(tree);
-        return LinterAnalyzer.Analyze("Test.cs", semanticModel, config);
+        return LinterAnalyzer.Analyze("Test.cs", semanticModel, config, isTestFile);
     }
 
     [Fact]
@@ -190,4 +190,45 @@ public sealed class HugeService {
             v.RuleName == nameof(MetricsConfig.MaxPublicMembersPerType) &&
             v.Details!.Contains("HugeService"));
     }
+
+    [Fact]
+    public void TestFile_Skipped_ByDefault()
+    {
+        const string source = @"
+public sealed class MassiveUnitTestClass {
+    public void Test1() {}
+    public void Test2() {}
+    public void Test3() {}
+    public void Test4() {}
+    public void Test5() {}
+    public void Test6() {}
+}";
+        var config = CreateConfig(limit: 3);
+        var violations = Analyze(source, config, isTestFile: true);
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxPublicMembersPerType)));
+    }
+
+    [Fact]
+    public void TestFile_Reported_WhenOptInFlagTrue()
+    {
+        const string source = @"
+public sealed class MassiveUnitTestClass {
+    public void Test1() {}
+    public void Test2() {}
+    public void Test3() {}
+    public void Test4() {}
+    public void Test5() {}
+    public void Test6() {}
+}";
+        var config = CreateConfig(limit: 3) with
+        {
+            Metrics = CreateConfig(limit: 3).Metrics with
+            {
+                MaxPublicMembersPerTypeApplyToTestFiles = true
+            }
+        };
+        var violations = Analyze(source, config, isTestFile: true);
+        Assert.Contains(violations, v => v.RuleName == nameof(MetricsConfig.MaxPublicMembersPerType));
+    }
 }
+

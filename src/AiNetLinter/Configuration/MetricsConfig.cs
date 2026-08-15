@@ -219,6 +219,12 @@ public sealed record MetricsConfig
         = ["Extensions", "Mapper", "Constants", "Config", "ConfigOverride", "Args"];
 
     /// <summary>
+    /// Bestimmt, ob MaxPublicMembersPerType auch auf Testdateien angewendet wird.
+    /// Standard: false (Testdateien werden übersprungen, da xUnit [Fact]/[Theory] public sein müssen).
+    /// </summary>
+    public bool MaxPublicMembersPerTypeApplyToTestFiles { get; init; } = false;
+
+    /// <summary>
     /// Maximale Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette.
     /// 0 = deaktiviert. Empfehlung: 5 (ab 6 Methoden: warning).
     /// Nur Methoden aus <see cref="LinqMethodNames"/> zählen.

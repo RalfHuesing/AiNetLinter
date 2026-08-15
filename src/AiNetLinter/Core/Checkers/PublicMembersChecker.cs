@@ -12,6 +12,8 @@ internal static class PublicMembersChecker
 {
     internal static void Check(TypeDeclarationSyntax node, string typeName, CheckerContext ctx)
     {
+        if (ctx.IsTestFile && !ctx.Config.Metrics.MaxPublicMembersPerTypeApplyToTestFiles) return;
+
         var limit = ctx.Config.Metrics.MaxPublicMembersPerType;
         if (limit <= 0) return;
 

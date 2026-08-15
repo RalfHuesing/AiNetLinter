@@ -83,5 +83,6 @@ internal static class MetricsConfigApplier
         MaxPartialClassFilesExemptTypes = o.MaxPartialClassFilesExemptTypes ?? config.MaxPartialClassFilesExemptTypes,
         MaxPublicMembersPerType = o.MaxPublicMembersPerType ?? config.MaxPublicMembersPerType,
         MaxPublicMembersPerTypeExemptSuffixes = o.MaxPublicMembersPerTypeExemptSuffixes ?? config.MaxPublicMembersPerTypeExemptSuffixes,
+        MaxPublicMembersPerTypeApplyToTestFiles = o.MaxPublicMembersPerTypeApplyToTestFiles ?? config.MaxPublicMembersPerTypeApplyToTestFiles,
     };
 }
