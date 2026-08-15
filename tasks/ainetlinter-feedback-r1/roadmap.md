@@ -26,7 +26,7 @@ created_by_model_knowledge_cutoff: 2026-01
 ## Epics
 
 - [x] EPIC-01: FB-02 — `AvoidExcessiveMiddleMen` für Testfiles überspringen (`MiddleManChecker.cs`, Testfall in FastTests). (→ step-001)
-- [ ] EPIC-02: FB-03 — `MaxPublicMembersPerType` für Testfiles standardmäßig überspringen mit Opt-in-Flag (`PublicMembersChecker.cs`, `MetricsConfig.cs`, `rules.json`, Baseline-Config, FastTests).
+- [x] EPIC-02: FB-03 — `MaxPublicMembersPerType` für Testfiles standardmäßig überspringen mit Opt-in-Flag (`PublicMembersChecker.cs`, `MetricsConfig.cs`, `rules.json`, Baseline-Config, FastTests). (→ step-002)
 - [ ] EPIC-03: FB-04 — `find_duplicates` UX-Verbesserungen: Top-Cluster Summary bei >20 Treffern und neuer `scopeType`-Filter (`all` | `production` | `tests`) (`DuplicateDetectionScanner.cs`, `DuplicateDetectionTool.cs`, Fast- und IntegrationTests).
 - [ ] EPIC-04: B — Code-Snippet in `get_violations` direkt mitgeben (`contextLines`, `includeSnippet`, Truncation, `GetViolationsScanner.cs`, `ViolationMarkdownFormatter.cs`, Fast- und IntegrationTests).
 - [ ] EPIC-05: A — Neues MCP-Tool `get_class_structure` für tabellarische Member-/Zeilen-Übersicht (`GetClassStructureTool.cs`, Registrierung in `FileStructureToolRegistrations.cs`, Fast- und IntegrationTests).

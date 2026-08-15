@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: ainetlinter-feedback-r1
 step: "002"

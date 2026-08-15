@@ -25,7 +25,7 @@ current_step: step-002
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
-| step-002 | EPIC-02 | in_progress | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | - | - | - |
+| step-002 | EPIC-02 | done | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | done | approved | 8d3462e |
 
 ## Config (optional)
 
