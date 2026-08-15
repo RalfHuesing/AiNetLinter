@@ -2,7 +2,7 @@
 task: ainetlinter-feedback-r1
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-15T19:30:00+02:00
+last_updated: 2026-08-15T19:33:00+02:00
 ---
 
 # CodeMap: ainetlinter-feedback-r1
@@ -13,7 +13,7 @@ last_updated: 2026-08-15T19:30:00+02:00
 - **`src/AiNetLinter/Core/Checkers/MiddleManChecker.cs`** — Prüft Klassen auf Excessive-Middle-Man-Muster; hier wird `ctx.IsTestFile` Skip eingebaut. (zuletzt: step-001)
 - **`src/AiNetLinter/Core/Checkers/PublicMembersChecker.cs`** — Prüft Typen auf Überschreitung von `MaxPublicMembersPerType`; hier wird Test-Skip mit Opt-in-Flag eingebaut. (zuletzt: step-002)
 - **`src/AiNetLinter/Configuration/MetricsConfig.cs`** — Konfigurationsmodell für Metriken; hier wird `MaxPublicMembersPerTypeApplyToTestFiles` ergänzt. (zuletzt: step-002)
-- **`src/AiNetLinter/Metrics/AIContextFootprintCalculator.cs`** — Berechnet den transitiven Zeilen-Footprint; hier wird die Heuristik für declaration-only types integriert.
+- **`src/AiNetLinter/Metrics/AIContextFootprintCalculator.cs`** — Berechnet den transitiven Zeilen-Footprint; hier wird die Heuristik für declaration-only types integriert. (zuletzt: step-006)
 - **`src/AiNetLinter/Mcp/Tools/DuplicateDetection/`** — Tool und Scanner für `find_duplicates`; hier werden `scopeType` und Summary-Header ergänzt. (zuletzt: step-003)
 - **`src/AiNetLinter/Core/DuplicateDetection/`** — Engine und Models für Clone-Detection; hier werden `scopeType` und Testfile-Filterung integriert. (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs`** — Scanner für `get_violations`; hier wird die Source-Snippet-Extraktion integriert. (zuletzt: step-004)
