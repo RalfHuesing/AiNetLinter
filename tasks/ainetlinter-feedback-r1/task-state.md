@@ -4,8 +4,8 @@ task: ainetlinter-feedback-r1
 started_at: 2026-08-15T19:10:00+02:00
 last_updated: 2026-08-15T19:10:00+02:00
 rules_dir: .agents/rules
-total_steps: 5
-current_step: step-005
+total_steps: 6
+current_step: step-006
 ---
 
 # Task State: ainetlinter-feedback-r1
@@ -13,12 +13,12 @@ current_step: step-005
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 5
-- **Aktueller Schritt:** `step-005`
+- **Steps gesamt:** 6
+- **Aktueller Schritt:** `step-006`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-15T19:10:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-15T19:28:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-15T19:32:00+02:00
 
 ## Steps
 
@@ -29,6 +29,7 @@ current_step: step-005
 | step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
 | step-004 | EPIC-04 | done | Teil B: Code-Snippet in get_violations direkt mitgeben | - | done | approved | 3f8948f |
 | step-005 | EPIC-05 | done | Teil A: Neues MCP-Tool get_class_structure | - | done | approved | b2b24ef |
+| step-006 | EPIC-06 | in_progress | FB-01: Heuristik fuer declaration-only types im AIContextFootprint | - | - | - | - |
 
 ## Config (optional)
 
