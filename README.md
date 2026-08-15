@@ -9,7 +9,7 @@ Das Tool läuft in zwei unabhängigen Modi:
 | Modus | Was es tut |
 | :--- | :--- |
 | **CLI-Batch-Modus** | Ein Lint-Lauf gegen eine Solution: Markdown-Report auf stdout, CI-tauglicher Exit-Code, optionaler Auto-Fixer für triviale Verstöße. |
-| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 18 einzeln abfragbare Tools (Symbolsuche, Referenzen, Impact-Analyse, Lint-Status u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
+| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 19 einzeln abfragbare Tools (Symbolsuche, Referenzen, Impact-Analyse, Lint-Status u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
 
 Beide Modi teilen sich dieselbe Analyse-Engine und dieselbe `rules.json`-Konfiguration.
 
@@ -81,6 +81,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `get_call_tree` | Caller-Baum eines Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid), transitiv über `depth` |
 | `dependency_graph` | Datei-/Typ-Abhängigkeiten (echte SemanticModel-Typreferenzen statt `using`-Direktiven), ein-/ausgehend, transitiv |
 | `get_file_skeleton` | Struktur-Skelett einer Datei (Signaturen ohne Bodies) |
+| `get_class_structure` | Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Signatur); `maxMembers` (Default 50, Cap 200) + `sortBy` (`lines`/`kind`/`name`); bei `record`-Typen werden Primary-Constructor-Parameter als eigene Zeilen ausgegeben |
 | `get_symbol_body` | Source-Body eines einzelnen Symbols per stabiler ID |
 | `get_index_scope` | Dateityp-Aufschlüsselung der geladenen Solution |
 | `get_hotspots` | Dateien nahe oder über dem `MaxLineCount`-Limit |
