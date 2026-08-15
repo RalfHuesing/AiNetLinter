@@ -2,7 +2,7 @@
 task: ainetlinter-feedback-r1
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-15T19:26:00+02:00
+last_updated: 2026-08-15T19:30:00+02:00
 ---
 
 # CodeMap: ainetlinter-feedback-r1
@@ -19,8 +19,10 @@ last_updated: 2026-08-15T19:26:00+02:00
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs`** — Scanner für `get_violations`; hier wird die Source-Snippet-Extraktion integriert. (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsTool.cs`** — Tool-Handler für `get_violations`. (zuletzt: step-004)
 - **`src/AiNetLinter/Output/ViolationMarkdownFormatter.cs`** — Rendert Violations in Markdown; hier werden Code-Snippets formatiert. (zuletzt: step-004)
-- **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — Struktur-Tools; hier wird das neue Tool `GetClassStructureTool.cs` implementiert.
-- **`src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs`** — Registrierung der FileStructure-Tools im MCP-Server.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs`** — Liefert tabellarische Member-/Zeilen-Übersicht eines Typs. (zuletzt: step-005)
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureModels.cs`** — Structured-Content Models für `get_class_structure`. (zuletzt: step-005)
+- **`src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs`** — Registrierung der FileStructure-Tools im MCP-Server. (zuletzt: step-005)
+- **`src/AiNetLinter/Mcp/OverviewResourceRegistration.cs`** — Übersicht der MCP-Tools und Server-Status. (zuletzt: step-005)
 - **`src/AiNetLinter/Mcp/McpJsonOptions.cs`** — JSON-Optionen und Schemadefinitionen für MCP-Aufrufe.
 - **`rules.json`** — Globale Standardkonfiguration von AiNetLinter. (zuletzt: step-002)
 - **`tests/Fixtures/BaselineMini/rules.json`** — Test-Fixture-Konfiguration für Baseline- und Integrationstests. (zuletzt: step-002)
