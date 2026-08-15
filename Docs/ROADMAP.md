@@ -676,7 +676,7 @@ Vollständige Neustrukturierung und Beschleunigung der Testsuite (.NET 10 / xUni
 
 ---
 
-## Feedback-Runde 1: MCP-UX & Regel-Präzision (2026-08)
+## Feedback-Runde 1: MCP-UX & Regel-Präzision
 
 Erweiterungen und Verfeinerungen basierend auf praktischem Agent-Feedback:
 
@@ -689,13 +689,15 @@ Erweiterungen und Verfeinerungen basierend auf praktischem Agent-Feedback:
   - Neuer Parameter `scopeType` (`"all"` [Default], `"production"`, `"tests"`) zur gezielten Einschränkung der Duplicate-Detection.
   - Top-Cluster-Übersichts-Header bei mehr als 20 Treffern für schnellen Überblick.
 - [x] **Teil B: Code-Snippets in `get_violations`:**
-  - Neue Parameter `includeSnippet` (Default `false`) und `contextLines` (0-5, Default 0).
+  - Neue Parameter `includeSnippet` (Default `false`) und `contextLines` (0-5, Default `2`).
   - Quellcode-Ausschnitte werden direkt in Text-Report und `structuredContent` eingebettet (spart separate `get_symbol_body`-Calls).
 - [x] **Teil A: Neues MCP-Tool `get_class_structure`:**
   - Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl, Signatur).
-  - Unterstützt `sortBy` (`"lines"` [Default], `"kind"`, `"name"`), Partial-Classes-Kombination und `ClassStructurePayload`.
+  - Parameter `sortBy` (`"lines"` [Default], `"kind"`, `"name"`), `maxMembers` (Default 50, Cap 200) mit Truncation-Meta-Zeile und `Truncated`-Flag im StructuredContent (`TotalMemberCount`/`ShownMemberCount`).
+  - Bei `record`-Typen werden die Parameter des Primary Constructors als eigene Zeilen (`Kind: "PrimaryCtor-Param"`) vor den restlichen Membern ausgegeben.
+  - Unterstützt Partial-Classes-Kombination und `ClassStructurePayload` im StructuredContent.
 - [x] **FB-01: Heuristik für declaration-only types im `AIContextFootprint`:**
-  - Reine Datenträger-Typen (DTOs, Models, Options, Enums, Records ohne Methoden) werden im transitiven Footprint auf max. 10 Deklarationszeilen gedeckelt.
+  - Reine Datenträger-Typen (DTOs, Models, Options, Enums, Records ohne Methoden) werden im transitiven Footprint auf max. 10 Deklarationszeilen gedeckelt (`MaxDeclarationLines` in `AIContextFootprintCalculator`).
 
 ---
 
