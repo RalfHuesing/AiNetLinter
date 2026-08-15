@@ -24,7 +24,7 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | in_progress | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | - | - | - |
+| step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
 
 ## Config (optional)
 
