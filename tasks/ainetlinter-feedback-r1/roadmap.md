@@ -31,4 +31,4 @@ created_by_model_knowledge_cutoff: 2026-01
 - [x] EPIC-04: B — Code-Snippet in `get_violations` direkt mitgeben (`contextLines`, `includeSnippet`, Truncation, `GetViolationsScanner.cs`, `ViolationMarkdownFormatter.cs`, Fast- und IntegrationTests). (→ step-004)
 - [x] EPIC-05: A — Neues MCP-Tool `get_class_structure` für tabellarische Member-/Zeilen-Übersicht (`GetClassStructureTool.cs`, Registrierung in `FileStructureToolRegistrations.cs`, Fast- und IntegrationTests). (→ step-005)
 - [x] EPIC-06: FB-01 — Heuristik für „declaration-only types" im `AIContextFootprint` (`AIContextFootprintCalculator.cs`, FastTests). (→ step-006)
-- [ ] EPIC-07: Doku-, Schemata- und Konfig-Abschluss-Synchronisation (`Docs/configuration.md`, `Docs/agent-api.md`, `Docs/ROADMAP.md`, Agent-Rules-Sync).
+- [x] EPIC-07: Doku-, Schemata- und Konfig-Abschluss-Synchronisation (`Docs/configuration.md`, `Docs/agent-api.md`, `Docs/ROADMAP.md`, Agent-Rules-Sync).
