@@ -4,8 +4,8 @@ task: ainetlinter-feedback-r1
 started_at: 2026-08-15T19:10:00+02:00
 last_updated: 2026-08-15T19:10:00+02:00
 rules_dir: .agents/rules
-total_steps: 1
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: ainetlinter-feedback-r1
@@ -13,18 +13,19 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 1
-- **Aktueller Schritt:** `step-001`
+- **Steps gesamt:** 2
+- **Aktueller Schritt:** `step-002`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-15T19:10:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-15T19:11:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-15T19:13:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | done | approved | adadf99 |
+| step-002 | EPIC-02 | in_progress | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | - | - | - |
 
 ## Config (optional)
 
