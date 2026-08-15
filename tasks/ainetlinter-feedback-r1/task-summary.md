@@ -2,26 +2,29 @@
 task: ainetlinter-feedback-r1
 type: task-summary
 produced_by: globaler-kritiker
-last_updated: 2026-08-15T19:58:00+02:00
-verdict: needs-correction
+last_updated: 2026-08-15T20:15:00+02:00
+verdict: completed
 ---
 
 # Task Summary: ainetlinter-feedback-r1
 
-## Verdict: needs-correction
+## Verdict: **completed**
 
-Build und Tests sind grün, sechs von sechs Epics technisch implementiert —
-aber drei Konzept-Verstöße rechtfertigen einen Korrektur-Step (step-008),
-bevor der Task als final `completed` markiert werden kann.
+Build und Tests sind grün, sechs von sechs Epics technisch implementiert,
+die drei vom Globalen Kritiker identifizierten Konzept-Verstöße sind in
+step-008 behoben. Token-Budget-Garantie ist eingehalten
+(50 KB Zielwert, manuell validiert < 10 KB bei maxMembers=200). Task ist
+abgeschlossen — `includeAttributes` und `includeSnippet`-Default-Frage
+sind dokumentierte Restpunkte für eine Folge-Runde.
 
-## Test-Stand (Ground-Truth)
+## Test-Stand (Ground-Truth, nach step-008)
 
 | Suite | Result | Dauer | Hinweis |
 |---|---|---|---|
-| `dotnet build AiNetLinter.slnx` | ✅ 0 Fehler, 0 Warnungen | 14s | `TreatWarningsAsErrors = true` greift |
-| `AiNetLinter.FastTests` (1345) | ✅ 1345 grün, 0 fehlgeschlagen, 0 übersprungen | 13s | mit `--filter Category!=Stress`, `--no-build` |
-| `AiNetLinter.IntegrationTests` (310) | ✅ 310 grün, 0 fehlgeschlagen, 0 übersprungen | 1m 51s | mit `--filter Category!=Stress`, `--no-build` |
-| **Gesamt** | **1655 grün** | **~2m 5s** | kein Ausuern, im bisherigen Korridor |
+| `dotnet build AiNetLinter.slnx` | ✅ 0 Fehler, 0 Warnungen | 4s | `TreatWarningsAsErrors = true` greift |
+| `AiNetLinter.FastTests` (1348) | ✅ 1348 grün, 0 fehlgeschlagen, 0 übersprungen | 8s | mit `--filter Category!=Stress` (+3 neue in step-008) |
+| `AiNetLinter.IntegrationTests` (310) | ✅ 310 grün, 0 fehlgeschlagen, 0 übersprungen | 1m 55s | mit `--filter Category!=Stress` (keine neuen) |
+| **Gesamt** | **1658 grün** | **~2m 5s** | kein Ausuern, im bisherigen Korridor |
 
 ## Was gut lief (Pattern-Reuse hat funktioniert)
 

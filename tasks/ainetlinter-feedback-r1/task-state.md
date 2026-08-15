@@ -12,13 +12,13 @@ current_step: step-007
 
 ## Übersicht
 
-- **Task-Status:** `in-progress (Korrektur)`
+- **Task-Status:** `completed`
 - **Steps gesamt:** 7
 - **Aktueller Schritt:** `step-007`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-15T19:10:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-15T19:58:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-15T20:15:00+02:00
 
 ## Steps
 
@@ -31,7 +31,7 @@ current_step: step-007
 | step-005 | EPIC-05 | done | Teil A: Neues MCP-Tool get_class_structure | - | done | approved | b2b24ef |
 | step-006 | EPIC-06 | done | FB-01: Heuristik fuer declaration-only types im AIContextFootprint | - | done | approved | 9ee8098 |
 | step-007 | EPIC-07 | done | Doku-, Schemata- und Konfig-Abschluss-Synchronisation | - | done | approved | bf1d417 |
-| step-008 | EPIC-08 (Korrektur) | pending | Korrekturen: maxMembers/Record-PCC in get_class_structure, contextLines-Default in get_violations | step-005, step-004 | pending | pending | — |
+| step-008 | EPIC-08 (Korrektur) | done | Korrekturen: maxMembers/Record-PCC in get_class_structure, contextLines-Default in get_violations | step-005, step-004 | done | approved | aef14fe |
 
 ## Config (optional)
 
