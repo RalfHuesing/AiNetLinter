@@ -1,7 +1,9 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,17 +14,9 @@ internal static class PublicMembersChecker
 {
     internal static void Check(TypeDeclarationSyntax node, string typeName, CheckerContext ctx)
     {
-        if (ctx.IsTestFile && !ctx.Config.Metrics.MaxPublicMembersPerTypeApplyToTestFiles) return;
+        if (IsExempt(typeName, ctx)) return;
 
         var limit = ctx.Config.Metrics.MaxPublicMembersPerType;
-        if (limit <= 0) return;
-
-        foreach (var suffix in ctx.Config.Metrics.MaxPublicMembersPerTypeExemptSuffixes)
-        {
-            if (typeName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-
         var count = CountPublicMembers(node);
         var constructorDeps = StateChecker.GetConstructorDependencies(node, ctx);
 
@@ -38,16 +32,41 @@ internal static class PublicMembersChecker
 
         if (effectiveLimit == 0) return; // vollständig supprimiert
 
+        var activeLimit = effectiveLimit > 0 ? effectiveLimit : limit;
+        if (count <= activeLimit) return;
+
         var configured = CompoundSuppressionEvaluator.FindConfigured(
             LinterRuleIds.MaxPublicMembersPerType, suppressions);
 
-        var activeLimit = effectiveLimit > 0 ? effectiveLimit : limit;
+        ReportExcessiveMembers(node, typeName, ctx, count, limit, effectiveLimit, configured, metrics, suppressions);
+    }
 
-        if (count <= activeLimit) return;
+    private static bool IsExempt(string typeName, CheckerContext ctx)
+    {
+        if (ctx.IsTestFile && !ctx.Config.Metrics.MaxPublicMembersPerTypeApplyToTestFiles) return true;
+        if (ctx.Config.Metrics.MaxPublicMembersPerType <= 0) return true;
 
+        foreach (var suffix in ctx.Config.Metrics.MaxPublicMembersPerTypeExemptSuffixes)
+        {
+            if (typeName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static void ReportExcessiveMembers(
+        TypeDeclarationSyntax node,
+        string typeName,
+        CheckerContext ctx,
+        int count,
+        int limit,
+        int effectiveLimit,
+        CompoundSuppression? configured,
+        Dictionary<string, int> metrics,
+        IReadOnlyList<CompoundSuppression>? suppressions)
+    {
         if (effectiveLimit > 0)
         {
-            // Scenario A: Suppression active, but RelaxedLimit exceeded
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
             var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
                 LinterRuleIds.MaxPublicMembersPerType, suppressions, metrics);
@@ -64,7 +83,6 @@ internal static class PublicMembersChecker
 
         if (configured != null)
         {
-            // Scenario B: Suppression configured, but not active
             var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
             var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
             ctx.ReportViolation(node, new ViolationDescription(
@@ -74,7 +92,6 @@ internal static class PublicMembersChecker
             return;
         }
 
-        // Scenario C: Classic
         ctx.ReportViolation(node, new ViolationDescription(
             LinterRuleIds.MaxPublicMembersPerType,
             $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",

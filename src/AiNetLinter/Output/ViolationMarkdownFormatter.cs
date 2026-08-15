@@ -242,25 +242,30 @@ public static class ViolationMarkdownFormatter
         sb.Append($"\n#### {fileGroup.Key}\n");
         foreach (var v in fileGroup.OrderBy(x => x.LineNumber).ThenBy(x => x.RuleName ?? string.Empty, StringComparer.Ordinal))
         {
-            var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
-            var structTag = StructuralRules.Contains(v.RuleName ?? string.Empty) ? " [→ strukturell]" : string.Empty;
-            var warnTag = v.EffectiveSeverity?.Equals("warning", StringComparison.OrdinalIgnoreCase) == true
-                ? " [warn]" : string.Empty;
-            var detail = (v.Details ?? string.Empty).Split('\n')[0].TrimEnd();
-            sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag}{warnTag} — {detail}\n");
-            if (!string.IsNullOrWhiteSpace(v.Guidance))
+            AppendViolationItem(sb, v);
+        }
+    }
+
+    private static void AppendViolationItem(StringBuilder sb, RuleViolation v)
+    {
+        var fixTag = AutoFixableRules.Contains(v.RuleName ?? string.Empty) ? " [auto-fix]" : string.Empty;
+        var structTag = StructuralRules.Contains(v.RuleName ?? string.Empty) ? " [→ strukturell]" : string.Empty;
+        var warnTag = v.EffectiveSeverity?.Equals("warning", StringComparison.OrdinalIgnoreCase) == true
+            ? " [warn]" : string.Empty;
+        var detail = (v.Details ?? string.Empty).Split('\n')[0].TrimEnd();
+        sb.Append($"- Z.{v.LineNumber} {v.RuleName}{fixTag}{structTag}{warnTag} — {detail}\n");
+        if (!string.IsNullOrWhiteSpace(v.Guidance))
+        {
+            sb.Append($"  Empfehlung: {v.Guidance.Trim()}\n");
+        }
+        if (!string.IsNullOrWhiteSpace(v.Snippet))
+        {
+            sb.Append("  ```csharp\n");
+            foreach (var line in v.Snippet.Split('\n'))
             {
-                sb.Append($"  Empfehlung: {v.Guidance.Trim()}\n");
+                sb.Append($"  {line.TrimEnd()}\n");
             }
-            if (!string.IsNullOrWhiteSpace(v.Snippet))
-            {
-                sb.Append("  ```csharp\n");
-                foreach (var line in v.Snippet.Split('\n'))
-                {
-                    sb.Append($"  {line.TrimEnd()}\n");
-                }
-                sb.Append("  ```\n");
-            }
+            sb.Append("  ```\n");
         }
     }
 }

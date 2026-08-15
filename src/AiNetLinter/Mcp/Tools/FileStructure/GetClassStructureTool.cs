@@ -42,13 +42,7 @@ internal static class GetClassStructureTool
             if (error is not null) return error;
             if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbol);
 
-            INamedTypeSymbol? namedType = resolvedSymbol as INamedTypeSymbol;
-            if (namedType is null && resolvedSymbol.ContainingType is not null)
-            {
-                namedType = resolvedSymbol.ContainingType;
-            }
-
-            if (namedType is null)
+            if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
             {
                 return McpToolResults.InvalidArgument(
                     $"Symbol '{resolvedSymbol.ToDisplayString()}' ist kein Typ.",
@@ -56,56 +50,63 @@ internal static class GetClassStructureTool
             }
 
             var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var kind = GetTypeKindDescription(namedType);
-
-            var declaringRefs = namedType.DeclaringSyntaxReferences;
-            var files = new List<string>();
-            int totalLines = 0;
-
-            foreach (var syntaxRef in declaringRefs)
-            {
-                var tree = syntaxRef.SyntaxTree;
-                if (!string.IsNullOrEmpty(tree.FilePath))
-                {
-                    files.Add(PathNormalizer.ToRelative(solutionDir, tree.FilePath));
-                }
-                var rootNode = await syntaxRef.GetSyntaxAsync(ct);
-                var span = rootNode.GetLocation().GetLineSpan();
-                totalLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
-            }
-
-            if (files.Count == 0 && namedType.Locations.Length > 0)
-            {
-                foreach (var loc in namedType.Locations)
-                {
-                    if (loc.SourceTree is not null)
-                    {
-                        files.Add(PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath));
-                    }
-                }
-            }
-            files = files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
+            var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
             var members = ExtractMembers(namedType, solutionDir);
             var sortedMembers = SortMembers(members, sortBy);
 
             var payload = new ClassStructurePayload(
                 TypeName: namedType.ToDisplayString(),
-                Kind: kind,
+                Kind: GetTypeKindDescription(namedType),
                 Files: files,
                 TotalLines: totalLines,
                 MemberCount: sortedMembers.Count,
                 Members: sortedMembers);
 
             var markdown = RenderMarkdown(payload);
-            var finalText = McpSufficiencyHints.Append(markdown);
-
-            return McpToolResults.Text(finalText, payload);
+            return McpToolResults.Text(McpSufficiencyHints.Append(markdown), payload);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
         }
+    }
+
+    private static bool TryResolveNamedType(ISymbol symbol, out INamedTypeSymbol? namedType)
+    {
+        namedType = symbol as INamedTypeSymbol ?? symbol.ContainingType;
+        return namedType is not null;
+    }
+
+    private static async Task<(List<string> Files, int TotalLines)> CollectDeclarationFilesAsync(
+        INamedTypeSymbol namedType, string solutionDir, CancellationToken ct)
+    {
+        var files = new List<string>();
+        int totalLines = 0;
+
+        foreach (var syntaxRef in namedType.DeclaringSyntaxReferences)
+        {
+            var tree = syntaxRef.SyntaxTree;
+            if (!string.IsNullOrEmpty(tree.FilePath))
+            {
+                files.Add(PathNormalizer.ToRelative(solutionDir, tree.FilePath));
+            }
+            var rootNode = await syntaxRef.GetSyntaxAsync(ct);
+            var span = rootNode.GetLocation().GetLineSpan();
+            totalLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
+        }
+
+        if (files.Count == 0 && namedType.Locations.Length > 0)
+        {
+            foreach (var loc in namedType.Locations)
+            {
+                if (loc.SourceTree is not null)
+                {
+                    files.Add(PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath));
+                }
+            }
+        }
+
+        return (files.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), totalLines);
     }
 
     private static string GetTypeKindDescription(INamedTypeSymbol namedType)
@@ -128,86 +129,102 @@ internal static class GetClassStructureTool
     private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)
     {
         var result = new List<ClassStructureMemberEntry>();
-
         foreach (var m in namedType.GetMembers())
         {
-            if (m.IsImplicitlyDeclared && m is not IMethodSymbol { MethodKind: MethodKind.Constructor })
+            if (IsExcludedMember(m)) continue;
+            result.Add(CreateMemberEntry(m, solutionDir));
+        }
+        return result;
+    }
+
+    private static bool IsExcludedMember(ISymbol m)
+    {
+        if (m.IsImplicitlyDeclared && m is not IMethodSymbol { MethodKind: MethodKind.Constructor })
+        {
+            return true;
+        }
+        if (m is IMethodSymbol method)
+        {
+            if (method.MethodKind is MethodKind.PropertyGet or MethodKind.PropertySet
+                or MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise)
             {
-                continue;
+                return true;
             }
-            if (m is IMethodSymbol method)
+            if (method.Name.StartsWith("<") || method.Name.EndsWith("$"))
             {
-                if (method.MethodKind is MethodKind.PropertyGet or MethodKind.PropertySet
-                    or MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise)
-                {
-                    continue;
-                }
-                if (method.Name.StartsWith("<") || method.Name.EndsWith("$"))
-                {
-                    continue;
-                }
+                return true;
             }
-            if (m is IFieldSymbol field && (field.Name.StartsWith("<") || field.Name.EndsWith("$")))
-            {
-                continue;
-            }
+        }
+        if (m is IFieldSymbol field && (field.Name.StartsWith("<") || field.Name.EndsWith("$")))
+        {
+            return true;
+        }
+        return false;
+    }
 
-            var memberKind = m switch
-            {
-                IMethodSymbol { MethodKind: MethodKind.Constructor or MethodKind.StaticConstructor } => "Constructor",
-                IMethodSymbol => "Method",
-                IPropertySymbol => "Property",
-                IFieldSymbol { IsConst: true } => "Constant",
-                IFieldSymbol => "Field",
-                IEventSymbol => "Event",
-                INamedTypeSymbol { TypeKind: TypeKind.Enum } => "Enum",
-                INamedTypeSymbol { TypeKind: TypeKind.Interface } => "Interface",
-                INamedTypeSymbol { TypeKind: TypeKind.Struct } => "Struct",
-                INamedTypeSymbol => "Class",
-                _ => m.Kind.ToString(),
-            };
+    private static ClassStructureMemberEntry CreateMemberEntry(ISymbol m, string solutionDir)
+    {
+        var loc = m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
+        var memberFilePath = loc?.SourceTree?.FilePath is not null
+            ? PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath)
+            : "";
 
-            var visibility = m.DeclaredAccessibility switch
-            {
-                Accessibility.Public => "public",
-                Accessibility.Private => "private",
-                Accessibility.Protected => "protected",
-                Accessibility.Internal => "internal",
-                Accessibility.ProtectedOrInternal => "protected internal",
-                Accessibility.ProtectedAndInternal => "private protected",
-                _ => "private",
-            };
-
-            var loc = m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
-            var memberFilePath = loc?.SourceTree?.FilePath is not null
-                ? PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath)
-                : "";
-
-            int startLine = 0;
-            int endLine = 0;
-            int lineCount = 0;
-            if (loc is not null && loc.IsInSource)
-            {
-                var span = loc.GetLineSpan();
-                startLine = span.StartLinePosition.Line + 1;
-                endLine = span.EndLinePosition.Line + 1;
-                lineCount = endLine - startLine + 1;
-            }
-
-            var sig = m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-
-            result.Add(new ClassStructureMemberEntry(
-                Kind: memberKind,
-                Name: m.Name,
-                Visibility: visibility,
-                StartLine: startLine,
-                EndLine: endLine,
-                LineCount: lineCount,
-                Signature: sig,
-                FilePath: memberFilePath));
+        int startLine = 0;
+        int endLine = 0;
+        int lineCount = 0;
+        if (loc is not null && loc.IsInSource)
+        {
+            var span = loc.GetLineSpan();
+            startLine = span.StartLinePosition.Line + 1;
+            endLine = span.EndLinePosition.Line + 1;
+            lineCount = endLine - startLine + 1;
         }
 
-        return result;
+        return new ClassStructureMemberEntry(
+            Kind: ResolveMemberKind(m),
+            Name: m.Name,
+            Visibility: ResolveVisibility(m),
+            StartLine: startLine,
+            EndLine: endLine,
+            LineCount: lineCount,
+            Signature: m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+            FilePath: memberFilePath);
+    }
+
+    private static string ResolveMemberKind(ISymbol m)
+    {
+        if (m is IMethodSymbol method)
+        {
+            return method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor ? "Constructor" : "Method";
+        }
+        if (m is IPropertySymbol) return "Property";
+        if (m is IFieldSymbol field) return field.IsConst ? "Constant" : "Field";
+        if (m is IEventSymbol) return "Event";
+        if (m is INamedTypeSymbol nts)
+        {
+            return nts.TypeKind switch
+            {
+                TypeKind.Enum => "Enum",
+                TypeKind.Interface => "Interface",
+                TypeKind.Struct => "Struct",
+                _ => "Class",
+            };
+        }
+        return m.Kind.ToString();
+    }
+
+    private static string ResolveVisibility(ISymbol m)
+    {
+        return m.DeclaredAccessibility switch
+        {
+            Accessibility.Public => "public",
+            Accessibility.Private => "private",
+            Accessibility.Protected => "protected",
+            Accessibility.Internal => "internal",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            Accessibility.ProtectedAndInternal => "private protected",
+            _ => "private",
+        };
     }
 
     private static List<ClassStructureMemberEntry> SortMembers(

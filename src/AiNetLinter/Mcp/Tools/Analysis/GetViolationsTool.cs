@@ -27,14 +27,11 @@ internal static class GetViolationsTool
         string? scopeFilter,
         int maxResults,
         CancellationToken ct) =>
-        ExecuteAsync(state, scopeFilter, maxResults, 0, false, ct);
+        ExecuteAsync(state, new GetViolationsToolExecutionOptions(scopeFilter, maxResults), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string? scopeFilter,
-        int maxResults,
-        int contextLines,
-        bool includeSnippet,
+        GetViolationsToolExecutionOptions options,
         CancellationToken ct = default)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
@@ -45,18 +42,18 @@ internal static class GetViolationsTool
         // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
         // sonst eine zerrissene Kombination liefern (Config schon neu, UsedDefaultConfig noch alt).
         var configSnapshot = state.GetConfigSnapshot();
-        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        var normalizedMaxResults = options.MaxResults < 1 ? 1 : options.MaxResults;
         var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(
                 Solution: solution,
                 Config: configSnapshot.Config,
                 Console: state.Console,
-                ScopeFilter: scopeFilter,
+                ScopeFilter: options.ScopeFilter,
                 CancellationToken: ct,
                 UsedDefaultConfig: configSnapshot.UsedDefaultConfig,
                 MaxResults: normalizedMaxResults,
-                ContextLines: contextLines,
-                IncludeSnippet: includeSnippet));
+                ContextLines: options.ContextLines,
+                IncludeSnippet: options.IncludeSnippet));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder
@@ -82,3 +79,12 @@ internal static class GetViolationsTool
         return McpToolResults.Text(text, new { Violations = result.Violations! });
     }
 }
+
+/// <summary>
+/// Parameter-Record fuer <see cref="GetViolationsTool.ExecuteAsync(McpCodeGraphServer, GetViolationsToolExecutionOptions, CancellationToken)"/>.
+/// </summary>
+internal sealed record GetViolationsToolExecutionOptions(
+    string? ScopeFilter = null,
+    int MaxResults = GetViolationsScanner.DefaultMaxResults,
+    int ContextLines = 0,
+    bool IncludeSnippet = false);

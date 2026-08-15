@@ -93,23 +93,21 @@ internal static partial class DuplicateDetectionEngine
         var path = document.FilePath;
         if (IsPermanentlyExcludedPath(path)) return false;
         if (!PathNormalizer.MatchesScope(path, options.PathScopeFilter)) return false;
+        return MatchesScopeType(document, path, options.ScopeType);
+    }
 
-        if (string.Equals(options.ScopeType, "production", StringComparison.OrdinalIgnoreCase))
+    private static bool MatchesScopeType(Document document, string path, string? scopeType)
+    {
+        if (string.IsNullOrEmpty(scopeType) || string.Equals(scopeType, "all", StringComparison.OrdinalIgnoreCase))
         {
-            var isTest = PathNormalizer.IsTestFile(path) ||
-                         document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
-                         document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
-            if (isTest) return false;
-        }
-        else if (string.Equals(options.ScopeType, "tests", StringComparison.OrdinalIgnoreCase))
-        {
-            var isTest = PathNormalizer.IsTestFile(path) ||
-                         document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
-                         document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
-            if (!isTest) return false;
+            return true;
         }
 
-        return true;
+        var isTest = PathNormalizer.IsTestFile(path) ||
+                     document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
+                     document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
+
+        return string.Equals(scopeType, "production", StringComparison.OrdinalIgnoreCase) ? !isTest : isTest;
     }
 
     /// <summary>

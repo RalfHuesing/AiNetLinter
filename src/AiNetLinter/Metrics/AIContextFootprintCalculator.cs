@@ -47,20 +47,9 @@ public static class AIContextFootprintCalculator
         foreach (var symbol in visited)
         {
             var isTarget = SymbolEqualityComparer.Default.Equals(symbol, targetOriginal);
-            if (!isTarget && IsDeclarationOnlyType(symbol))
-            {
-                int declLines = 0;
-                foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
-                {
-                    var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
-                    declLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
-                }
-                totalLines += Math.Min(declLines > 0 ? declLines : 1, MaxDeclarationLines);
-            }
-            else
-            {
-                totalLines += SumLinesForSymbol(symbol, visitedTrees);
-            }
+            totalLines += (!isTarget && IsDeclarationOnlyType(symbol))
+                ? CalculateDeclarationLines(symbol, visitedTrees)
+                : SumLinesForSymbol(symbol, visitedTrees);
         }
 
         var deps = new List<(string Name, int Lines)>();
@@ -71,22 +60,9 @@ public static class AIContextFootprintCalculator
                 continue;
             }
 
-            int symLines;
-            if (IsDeclarationOnlyType(symbol))
-            {
-                int declLines = 0;
-                foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
-                {
-                    var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
-                    declLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
-                }
-                symLines = Math.Min(declLines > 0 ? declLines : 1, MaxDeclarationLines);
-            }
-            else
-            {
-                var symbolTrees = symbol.DeclaringSyntaxReferences.Select(r => r.SyntaxTree).Distinct().ToList();
-                symLines = symbolTrees.Sum(t => t.GetText().Lines.Count);
-            }
+            int symLines = IsDeclarationOnlyType(symbol)
+                ? CalculateDeclarationLines(symbol)
+                : symbol.DeclaringSyntaxReferences.Select(r => r.SyntaxTree).Distinct().Sum(t => t.GetText().Lines.Count);
 
             deps.Add((symbol.ToDisplayString(), symLines));
         }
@@ -96,6 +72,24 @@ public static class AIContextFootprintCalculator
             .ToList();
 
         return (totalLines, topDeps);
+    }
+
+    private static int CalculateDeclarationLines(INamedTypeSymbol symbol, HashSet<SyntaxTree>? visitedTrees = null)
+    {
+        int declLines = 0;
+        bool hasUnvisited = false;
+        foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
+        {
+            var tree = syntaxRef.SyntaxTree;
+            if (visitedTrees is null || visitedTrees.Add(tree))
+            {
+                hasUnvisited = true;
+                var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
+                declLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
+            }
+        }
+        if (visitedTrees is not null && !hasUnvisited) return 0;
+        return Math.Min(declLines > 0 ? declLines : 1, MaxDeclarationLines);
     }
 
     /// <summary>

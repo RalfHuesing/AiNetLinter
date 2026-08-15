@@ -676,5 +676,28 @@ Vollständige Neustrukturierung und Beschleunigung der Testsuite (.NET 10 / xUni
 
 ---
 
+## Feedback-Runde 1: MCP-UX & Regel-Präzision (2026-08)
+
+Erweiterungen und Verfeinerungen basierend auf praktischem Agent-Feedback:
+
+- [x] **FB-02: `AvoidExcessiveMiddleMen` für Testdateien überspringen:**
+  - Test-Fixtures, Mocks und Helper leiten Methodenaufrufe häufig 1:1 weiter; diese werden nun standardmäßig von der Prüfung ausgenommen.
+- [x] **FB-03: `MaxPublicMembersPerType` für Testdateien mit Opt-in:**
+  - Testklassen mit vielen `[Fact]`-Methoden werden standardmäßig nicht mehr als Verstoß gewertet.
+  - Neue Konfigurationsoption `MaxPublicMembersPerTypeApplyToTestFiles` (Standard: `false`) ermöglicht explizites Opt-in.
+- [x] **FB-04: `find_duplicates` UX-Verbesserungen:**
+  - Neuer Parameter `scopeType` (`"all"` [Default], `"production"`, `"tests"`) zur gezielten Einschränkung der Duplicate-Detection.
+  - Top-Cluster-Übersichts-Header bei mehr als 20 Treffern für schnellen Überblick.
+- [x] **Teil B: Code-Snippets in `get_violations`:**
+  - Neue Parameter `includeSnippet` (Default `false`) und `contextLines` (0-5, Default 0).
+  - Quellcode-Ausschnitte werden direkt in Text-Report und `structuredContent` eingebettet (spart separate `get_symbol_body`-Calls).
+- [x] **Teil A: Neues MCP-Tool `get_class_structure`:**
+  - Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl, Signatur).
+  - Unterstützt `sortBy` (`"lines"` [Default], `"kind"`, `"name"`), Partial-Classes-Kombination und `ClassStructurePayload`.
+- [x] **FB-01: Heuristik für declaration-only types im `AIContextFootprint`:**
+  - Reine Datenträger-Typen (DTOs, Models, Options, Enums, Records ohne Methoden) werden im transitiven Footprint auf max. 10 Deklarationszeilen gedeckelt.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
 

@@ -71,8 +71,8 @@ public sealed class McpDocumentationSmokeTests
 
         var docText = File.ReadAllText(docPath);
 
-        Assert.Contains("13 Tools sind C#-only", docText, StringComparison.Ordinal);
-        Assert.DoesNotContain("12 Tools sind C#-only", docText, StringComparison.Ordinal);
+        Assert.Contains("14 Tools sind C#-only", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("13 Tools sind C#-only", docText, StringComparison.Ordinal);
         Assert.Contains("`search_pattern` ist der vorgesehene Fallback", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, StringComparison.Ordinal);
     }

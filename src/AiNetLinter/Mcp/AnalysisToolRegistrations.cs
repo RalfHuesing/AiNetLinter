@@ -66,10 +66,10 @@ internal static class AnalysisToolRegistrations
             {
                 if (callLog is null)
                 {
-                    return await GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, contextLines, includeSnippet, ct);
+                    return await GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct);
                 }
                 return await callLog.ExecuteCallAsync("get_violations", $"{scopeFilter}|{maxResults}|{contextLines}|{includeSnippet}",
-                    () => GetViolationsTool.ExecuteAsync(mcpState, scopeFilter, maxResults, contextLines, includeSnippet, ct));
+                    () => GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct));
             },
             new McpServerToolCreateOptions
             {

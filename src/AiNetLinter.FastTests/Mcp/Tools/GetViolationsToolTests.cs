@@ -261,7 +261,7 @@ public sealed class GetViolationsToolTests
         var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(
-            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 0, includeSnippet: true, CancellationToken.None);
+            state, new GetViolationsToolExecutionOptions(ScopeFilter: "SymbolGraphMini", ContextLines: 0, IncludeSnippet: true), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -280,7 +280,7 @@ public sealed class GetViolationsToolTests
         var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(
-            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 2, includeSnippet: true, CancellationToken.None);
+            state, new GetViolationsToolExecutionOptions(ScopeFilter: "SymbolGraphMini", ContextLines: 2, IncludeSnippet: true), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var violations = result.StructuredContent!.Value.GetProperty("violations")
@@ -296,7 +296,7 @@ public sealed class GetViolationsToolTests
         var state = _fixture.CreateServer();
 
         var result = await GetViolationsTool.ExecuteAsync(
-            state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, contextLines: 0, includeSnippet: false, CancellationToken.None);
+            state, new GetViolationsToolExecutionOptions(ScopeFilter: "SymbolGraphMini", ContextLines: 0, IncludeSnippet: false), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
