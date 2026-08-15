@@ -24,6 +24,12 @@ public static class AIContextFootprintCalculator
     }
 
     /// <summary>
+    /// Maximale Anzahl an Zeilen, die für einen transitiven reinen Deklarations-Typ (DTO, Model, Record ohne Body)
+    /// angerechnet werden.
+    /// </summary>
+    public const int MaxDeclarationLines = 10;
+
+    /// <summary>
     /// Berechnet den transitiven AI-Context-Footprint und ermittelt die Top-Abhängigkeiten.
     /// </summary>
     public static (int TotalLines, List<(string Name, int Lines)> TopDependencies) CalculateDetailed(
@@ -34,15 +40,29 @@ public static class AIContextFootprintCalculator
         var visited = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
         QueueSymbols(classSymbol, visited, ignoreNamespacePrefixes, ignoreTypeNames);
 
+        var targetOriginal = classSymbol.OriginalDefinition;
         int totalLines = 0;
         var visitedTrees = new HashSet<SyntaxTree>();
 
         foreach (var symbol in visited)
         {
-            totalLines += SumLinesForSymbol(symbol, visitedTrees);
+            var isTarget = SymbolEqualityComparer.Default.Equals(symbol, targetOriginal);
+            if (!isTarget && IsDeclarationOnlyType(symbol))
+            {
+                int declLines = 0;
+                foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
+                {
+                    var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
+                    declLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
+                }
+                totalLines += Math.Min(declLines > 0 ? declLines : 1, MaxDeclarationLines);
+            }
+            else
+            {
+                totalLines += SumLinesForSymbol(symbol, visitedTrees);
+            }
         }
 
-        var targetOriginal = classSymbol.OriginalDefinition;
         var deps = new List<(string Name, int Lines)>();
         foreach (var symbol in visited)
         {
@@ -51,8 +71,22 @@ public static class AIContextFootprintCalculator
                 continue;
             }
 
-            var symbolTrees = symbol.DeclaringSyntaxReferences.Select(r => r.SyntaxTree).Distinct().ToList();
-            int symLines = symbolTrees.Sum(t => t.GetText().Lines.Count);
+            int symLines;
+            if (IsDeclarationOnlyType(symbol))
+            {
+                int declLines = 0;
+                foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
+                {
+                    var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
+                    declLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
+                }
+                symLines = Math.Min(declLines > 0 ? declLines : 1, MaxDeclarationLines);
+            }
+            else
+            {
+                var symbolTrees = symbol.DeclaringSyntaxReferences.Select(r => r.SyntaxTree).Distinct().ToList();
+                symLines = symbolTrees.Sum(t => t.GetText().Lines.Count);
+            }
 
             deps.Add((symbol.ToDisplayString(), symLines));
         }
@@ -62,6 +96,33 @@ public static class AIContextFootprintCalculator
             .ToList();
 
         return (totalLines, topDeps);
+    }
+
+    /// <summary>
+    /// Prüft, ob ein Typ ein reiner Deklarations- oder Datenträgertyp ist (DTO, Model, Options, Record ohne Methoden).
+    /// Solche Typen werden im transitiven Footprint nur mit ihren Deklarationszeilen (max. <see cref="MaxDeclarationLines"/>)
+    /// angerechnet statt des gesamten Datei-Bodys.
+    /// </summary>
+    public static bool IsDeclarationOnlyType(INamedTypeSymbol symbol)
+    {
+        if (symbol.TypeKind is TypeKind.Enum)
+        {
+            return true;
+        }
+
+        var ordinaryMethods = symbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Ordinary
+                        && !m.IsImplicitlyDeclared
+                        && !(symbol.IsRecord && (m.Name is "<Clone>$" or "ToString" or "PrintMembers" or "Equals" or "GetHashCode" or "Deconstruct")));
+
+        if (ordinaryMethods.Any())
+        {
+            return false;
+        }
+
+        var hasPropertiesOrFields = symbol.GetMembers().Any(m => m is IPropertySymbol or IFieldSymbol);
+        return hasPropertiesOrFields || symbol.IsRecord;
     }
 
     private static int SumLinesForSymbol(INamedTypeSymbol symbol, HashSet<SyntaxTree> visitedTrees)
