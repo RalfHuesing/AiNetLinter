@@ -11,7 +11,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 
 /// <summary>
 /// Argument-Aktivierungs-Tests fuer <see cref="FindMagicValuesScanner"/>: <c>includeSuppressed</c>
-/// (EPIC-2 wirksam via <c>HasDisableComment</c>), <c>includeTests</c> (Pfad-Match <c>/Tests/</c>)
+/// (wirksam via <c>HasDisableComment</c>), <c>includeTests</c> (Pfad-Match <c>/Tests/</c>)
 /// und <c>changedOnly</c> (Git-Diff-Filter via <c>DiffImpactAnalyzer</c>). Aus
 /// <see cref="FindMagicValuesScannerTests"/> in eine eigene Datei extrahiert, damit die
 /// Haupt-Testklasse unter dem <c>MaxPublicMembersPerType: 15</c>-Limit bleibt. Geteilte
@@ -44,8 +44,8 @@ public sealed class Foo
     [Fact]
     public async Task ScanAsync_IncludeSuppressedFalse_SuppressesLiteralWithDisableComment()
     {
-        // EPIC-1-Platzhalter-Anker umgedreht: includeSuppressed=false unterdrueckt jetzt
-        // echte Suppression-Kommentare. Das Literal mit // ainetlinter-disable MagicValues
+        // includeSuppressed=false unterdrueckt jetzt echte Suppression-Kommentare. Das Literal
+        // mit // ainetlinter-disable MagicValues
         // wird NICHT gemeldet (0 Funde), waehrend includeSuppressed=true es melden wuerde
         // (siehe ScanAsync_IncludeSuppressedTrue_ReportsLiteralWithDisableComment).
         const string source = @"

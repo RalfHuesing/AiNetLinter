@@ -17,24 +17,20 @@ internal enum MagicValueCategory
     /// Empfehlung zentrale <c>Constants.cs</c>.</summary>
     ConstantCandidates,
 
-    /// <summary>Enum-Kandidat: diskreter Wertebereich in switch/if-Kaskaden. Heuristik
-    /// in EPIC-2 nachzuliefern (siehe Konzept §"Wie" Punkt 5).</summary>
+    /// <summary>Enum-Kandidat: diskreter Wertebereich in switch/if-Kaskaden.</summary>
     EnumCandidates,
 
-    /// <summary><c>nameof(...)</c>-Kandidat: String entspricht einem Symbol-Namen im Scope.
-    /// Heuristik in EPIC-2 nachzuliefern.</summary>
+    /// <summary><c>nameof(...)</c>-Kandidat: String entspricht einem Symbol-Namen im Scope.</summary>
     NameofCandidates,
 
-    /// <summary>Lokalisierungs-Kandidat: User-Facing Text in Exception/UI-Prompts. Heuristik
-    /// in EPIC-2 nachzuliefern.</summary>
+    /// <summary>Lokalisierungs-Kandidat: User-Facing Text in Exception/UI-Prompts.</summary>
     LocalizationCandidates,
 
     /// <summary>Standard-Kandidat: HTTP-Statuscode, Framework-Konstante. Empfehlung
     /// <c>StatusCodes.StatusXXX...</c>.</summary>
     StandardCandidates,
 
-    /// <summary>Security-Kandidat: hartcodiertes Secret/Credential. Heuristik in EPIC-2
-    /// nachzuliefern (siehe Konzept §"Wie" Punkt 6).</summary>
+    /// <summary>Security-Kandidat: hartcodiertes Secret/Credential.</summary>
     SecurityCandidates,
 }
 

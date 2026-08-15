@@ -74,11 +74,8 @@ public sealed class DiffImpactAnalyzer
         }
     }
 
-    // Sichtbarkeits-Aenderung von private -> internal static: EPIC-2
-    // find_magic_values/changedOnly ruft RunGitDiff direkt auf, um die
-    // git-diff-Mechanik nicht zu duplizieren. Reine Sichtbarkeits-Aenderung,
-    // kein Verhaltens-Unterschied. Der bestehende AnalyzeEntriesAsync-Aufruf
-    // bleibt unveraendert.
+    // find_magic_values/changedOnly ruft RunGitDiff direkt auf, damit die
+    // git-diff-Mechanik nicht dupliziert wird.
     internal static string? RunGitDiff(string repoRoot, string? gitSinceRef)
     {
         var args = string.IsNullOrEmpty(gitSinceRef) ? "diff -U0 -- *.cs" : $"diff -U0 {gitSinceRef} -- *.cs";

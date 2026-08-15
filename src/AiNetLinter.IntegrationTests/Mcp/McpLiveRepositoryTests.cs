@@ -238,7 +238,7 @@ public sealed class McpLiveRepositoryTests
 
         var score = (double)json["score"]!;
         Assert.True(score >= 5.0,
-            $"Safeguard-Live-Score {score} unter Konzept-Korridor >= 5.0");
+            $"Safeguard-Live-Score {score} unter Korridor >= 5.0");
     }
 
     [Fact]

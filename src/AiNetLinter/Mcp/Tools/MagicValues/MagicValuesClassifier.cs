@@ -34,7 +34,7 @@ internal sealed record MagicValueClassifierOptions(
 /// <summary>
 /// Reine, deterministische Heuristik-Funktion: bestimmt, ob ein Literal ein "Magic Value" im
 /// Sinn von <c>find_magic_values</c> ist. Bewusst konservativ (mehr False Negatives als False
-/// Positives) — siehe Konzept §"Rausch-Filterung". Syntaktische Pruefungen dominieren; ein
+/// Positives). Syntaktische Pruefungen dominieren; ein
 /// optionaler <see cref="SemanticModel"/> wird nur fuer Aufruf-Argument-Kontext (z. B.
 /// <c>Thread.Sleep(5000)</c> → <c>millisecondsTimeout</c>-Parameter) herangezogen, sonst reiner
 /// AST. Unit-testbar ohne Roslyn-Solution: nur <see cref="LiteralExpressionSyntax"/> plus
@@ -42,10 +42,10 @@ internal sealed record MagicValueClassifierOptions(
 /// </summary>
 internal static class MagicValuesClassifier
 {
-    // Trivial-Werte, die nie gemeldet werden (Konzept §"Rausch-Filterung" Punkt 1).
-    // Bewusst klein gehalten: '0'/'1'/'-1' decken haeufige Index-/Loop-Startwerte ab,
-    // Leerstring/' '/'\n' decken Empty-/Whitespace-Literale ab, 'true'/'false'/'null'
-    // sind Bool-/Null-Literale, die nie eine Refactoring-Empfehlung wert sind.
+    // Trivial-Werte, die nie gemeldet werden. Bewusst klein gehalten: '0'/'1'/'-1' decken
+    // haeufige Index-/Loop-Startwerte ab, Leerstring/' '/'\n' decken Empty-/Whitespace-Literale
+    // ab, 'true'/'false'/'null' sind Bool-/Null-Literale, die nie eine Refactoring-Empfehlung
+    // wert sind.
     private static readonly HashSet<string> TrivialStringLiterals = new(StringComparer.Ordinal)
     {
         string.Empty,
@@ -79,9 +79,9 @@ internal static class MagicValuesClassifier
         // Suppression-Pruefung VOR allen anderen Filtern: ein Literal mit
         // // ainetlinter-disable MagicValues-Kommentar wird bei includeSuppressed=false
         // komplett uebergangen — auch dann, wenn die Heuristik es als Magic Value
-        // klassifizieren wuerde. Konzept §"Verworfene Alternativen" verlangt diese
-        // pro-Fundstelle-Granularitaet (im Gegensatz zur dateiweiten SuppressionScanner-
-        // Semantik); die Auswertung am SyntaxTrivia ist bewusst billig (kein File-IO).
+        // klassifizieren wuerde. Die pro-Fundstelle-Granularitaet (im Gegensatz zur
+        // dateiweiten SuppressionScanner-Semantik) wird am SyntaxTrivia ausgewertet,
+        // bewusst billig (kein File-IO).
         if (!options.IncludeSuppressed && HasDisableComment(literal))
         {
             return NotMagic();
@@ -141,7 +141,7 @@ internal static class MagicValuesClassifier
                     if (i >= TrivialNumberLow && i <= TrivialNumberHigh) return true;
                     return ignoreNumbers.Contains(i);
                 }
-                // Andere numerische Typen (double/float/decimal/long) sind in EPIC-1 nicht trivial —
+                // Andere numerische Typen (double/float/decimal/long) werden gemeldet —
                 // Schwellenwert-Heuristik behandelt sie als constant_candidates.
                 return false;
             }
@@ -296,8 +296,8 @@ internal static class MagicValuesClassifier
     /// <summary>Prueft, ob ein Literal-Node oder einer seiner umschliessenden Vorfahren
     /// (Field/Property/Variable/Methode) einen <c>// ainetlinter-disable MagicValues</c>-
     /// Kommentar in den Leading-Trivia traegt. Block-Kommentare (<c>/* ... */</c>) werden
-    /// ebenfalls ausgewertet. Konzept §"Muss-Haven" verlangt pro-Fundstelle-Granularitaet
-    /// via SyntaxTrivia; das ist genau der Pfad, ohne zusaetzlichen File-IO-Pass.</summary>
+    /// ebenfalls ausgewertet. Pro-Fundstelle-Granularitaet via SyntaxTrivia, ohne
+    /// zusaetzlichen File-IO-Pass.</summary>
     private static bool HasDisableComment(LiteralExpressionSyntax literal)
     {
         const string Marker = "ainetlinter-disable MagicValues";

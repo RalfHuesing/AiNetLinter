@@ -14,7 +14,7 @@ namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Unit-Tests fuer <see cref="McpCallLog"/>: verifiziert die JSONL-Schreib-Mechanik
-/// (Konzept-Felder ts/tool/args/lines/truncated/duration_ms/empty), die
+/// (Felder ts/tool/args/lines/truncated/duration_ms/empty), die
 /// Trunkierungs-/Leermenge-Erkennung und das automatische Loeschen leerer Log-Files.
 /// </summary>
 [Trait("Category", "Unit")]

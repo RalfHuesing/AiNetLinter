@@ -251,8 +251,7 @@ internal static partial class FindMagicValuesScanner
             return false;
         }
 
-        // includeTests=false: Datei mit "/Tests/" oder "/FastTests/" im Pfad ueberspringen
-        // (Konzept-Vorgabe).
+        // includeTests=false: Datei mit "/Tests/" oder "/FastTests/" im Pfad ueberspringen.
         if (!includeTests && LooksLikeTestPath(relativePath))
         {
             return false;
@@ -271,7 +270,7 @@ internal static partial class FindMagicValuesScanner
     }
 
     /// <summary>Erkennt Test-Pfade per Substring-Match auf "/Tests/" oder "/FastTests/"
-    /// (forward-slash normalisiert). Konzept-Vorgabe.</summary>
+    /// (forward-slash normalisiert).</summary>
     private static bool LooksLikeTestPath(string path)
     {
         return path.Contains("/Tests/", StringComparison.OrdinalIgnoreCase)

@@ -38,7 +38,7 @@ internal static class SharedSolutionIdentityWitness
 }
 
 /// <summary>
-/// Vertragstests fuer <see cref="MsBuildFixtureHost"/> (konzept.md §2): belegt mechanisch, dass die
+/// Vertragstests fuer <see cref="MsBuildFixtureHost"/>: belegt mechanisch, dass die
 /// isolierte <c>BaselineMini</c>-Kopie tatsaechlich einmal ueber einen echten MSBuild-Workspace geladen
 /// wird. Erhaelt die Fixture ueber die assembly-weite
 /// <c>[assembly: AssemblyFixture(typeof(MsBuildFixtureHost))]</c>-Registrierung (siehe

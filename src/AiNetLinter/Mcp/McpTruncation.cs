@@ -10,9 +10,9 @@ namespace AiNetLinter.Mcp;
 /// das konfigurierte Limit (<paramref name="maxResults"/>) uebersteigt, werden nur die ersten
 /// <paramref name="maxResults"/> Zeilen ausgegeben und eine einheitliche Meta-Zeile
 /// "[N Treffer gesamt, M gezeigt — Pattern verfeinern oder maxResults erhöhen]" angehaengt.
-/// Format entspricht <c>konzept.md</c> Z. 230-233 (P0/P1, Plain-Text, einheitlich fuer alle
-/// Listen-Tools). Bewusst als sibling-Datei zu <see cref="McpToolResults"/> extrahiert, damit
-/// Folge-Einheiten (003/004/005) den Helper ohne Suchen in der Antwort-Bibliothek finden.
+/// Format: P0/P1, Plain-Text, einheitlich fuer alle Listen-Tools. Bewusst als
+/// sibling-Datei zu <see cref="McpToolResults"/> extrahiert, damit der Helper
+/// ohne Suchen in der Antwort-Bibliothek gefunden wird.
 /// </summary>
 internal static class McpTruncation
 {

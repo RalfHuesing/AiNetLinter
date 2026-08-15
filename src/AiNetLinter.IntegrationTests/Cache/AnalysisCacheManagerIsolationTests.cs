@@ -82,7 +82,7 @@ public sealed class AnalysisCacheManagerIsolationTests : IDisposable
     [Fact]
     public void Load_SamePathCaseInsensitive_ProduceSameHash()
     {
-        // Konzept Z. 619-621: Cache-Filenamen muessen case-insensitive sein, damit
+        // Cache-Filenamen muessen case-insensitive sein, damit
         // "C:\Temp\Solution.slnx" und "c:\temp\solution.slnx" denselben Cache treffen
         // (Windows-Dateisystem ist case-insensitive). Das SHA256-Pattern hasht mit
         // ToLowerInvariant, daher identische Hashes.

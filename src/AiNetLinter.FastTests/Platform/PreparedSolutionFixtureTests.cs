@@ -10,7 +10,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Platform;
 
 /// <summary>
-/// Vertragstests fuer <see cref="PreparedSolutionFixture"/> (konzept.md §2): belegt mechanisch die
+/// Vertragstests fuer <see cref="PreparedSolutionFixture"/>: belegt mechanisch die
 /// drei geforderten Eigenschaften -- lazy Materialisierung pro Szenario, Isolation zwischen
 /// Szenarien und Thread-Sicherheit -- statt sie nur im XML-Doc zu behaupten. Erhaelt die Fixture
 /// ueber die assembly-weite <c>[assembly: AssemblyFixture(typeof(PreparedSolutionFixture))]</c>-Registrierung

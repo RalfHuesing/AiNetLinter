@@ -8,7 +8,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Platform;
 
 /// <summary>
-/// Vertragstests fuer <see cref="IsolatedFixtureLease"/> (konzept.md §2): belegt mechanisch Kopiervertrag,
+/// Vertragstests fuer <see cref="IsolatedFixtureLease"/>: belegt mechanisch Kopiervertrag,
 /// Isolation zwischen Leases, Dispose-Verhalten und die <c>bin</c>/<c>obj</c>-Auslassung -- reine
 /// Datei-I/O gegen eine kopierte <c>BaselineMini</c>, kein MSBuild, kein Prozess.
 /// </summary>

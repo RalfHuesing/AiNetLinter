@@ -16,7 +16,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 /// Filter-/Aggregations-Pipeline-Tests fuer <see cref="FindMagicValuesScanner"/>:
 /// Rausch-Filter (Trivial/Attribut/Index/Loop/GetHashCode/ignoreNumbers), Aggregation
 /// (minOccurrences), Filter (valueType/categoryFilter/scopeFilter/maxResults),
-/// StructuredContent-Shape, Malfunction- und EPIC-2-Platzhalter-Verhalten. Die
+/// StructuredContent-Shape und Malfunction-Verhalten. Die
 /// Heuristik-Detail-Tests (URL/Pfad/Format-String/HTTP-Statuscode/Schwellenwert/
 /// Connection-String) liegen in
 /// <see cref="FindMagicValuesScannerHeuristicTests"/>; Geteilte Helpers in

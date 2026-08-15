@@ -29,42 +29,42 @@ namespace AiNetLinter.Mcp.Tools.Safeguard;
 /// <see cref="SafeguardScoreResult.IsMalfunction"/>=true mit <see cref="SafeguardScoreResult.Context"/>
 /// (Pattern analog <see cref="GetViolationsScanner"/>). Score-Gewichte sind benannte Konstanten, damit
 /// Tests und Dokumentation dieselben Werte sehen — Anpassung nur bei offensichtlich unplausiblen
-/// Test-Scores (siehe Tech-Stack-Notiz / "Bekannte Ausnahmen" des Step-Plans).
+/// Test-Scores; die unten dokumentierten Gewichte sind die aktuell gueltigen.
 /// </summary>
 internal static class SafeguardScanner
 {
-    /// <summary>Standard-Mindest-Score fuer <c>Passed</c> (siehe Konzept §"Muss-Haven").</summary>
+    /// <summary>Standard-Mindest-Score fuer <c>Passed</c>.</summary>
     internal const double DefaultMinScoreThreshold = 8.0;
 
     /// <summary>Standard-Obergrenze fuer Top-Remediation-Eintraege.</summary>
     internal const int DefaultMaxRemediationEntries = 20;
 
     /// <summary>
-    /// Severity-Gewicht fuer eine Lint-Error-Verletzung. Plan-Wert 0.1 wuerde 20 Errors brauchen,
+    /// Severity-Gewicht fuer eine Lint-Error-Verletzung. 0.1 wuerde 20 Errors brauchen,
     /// um den Score unter 8.0 zu druecken — fuer den Test "SingleViolation_LowersScoreBelowThreshold"
     /// unplausibel. Auf 1.5 angehoben: 1 Error senkt den Score um 3.0 (Severity 2 * 1.5), liegt
-    /// damit klar unter 8.0. Anpassung im Commit-Body dokumentiert.
+    /// damit klar unter 8.0.
     /// </summary>
     internal const double ViolationPenaltyUnit = 1.5;
 
-    /// <summary>Severity-Stufe fuer eine Lint-Error-Verletzung (siehe Konzept §"Wie").</summary>
+    /// <summary>Severity-Stufe fuer eine Lint-Error-Verletzung.</summary>
     internal const double ViolationErrorSeverity = 2.0;
 
-    /// <summary>Severity-Stufe fuer eine Lint-Warning (siehe Konzept §"Wie").</summary>
+    /// <summary>Severity-Stufe fuer eine Lint-Warning.</summary>
     internal const double ViolationWarningSeverity = 1.0;
 
-    /// <summary>Severity-Stufe fuer einen Lint-Info-Hinweis (siehe Konzept §"Wie").</summary>
+    /// <summary>Severity-Stufe fuer einen Lint-Info-Hinweis.</summary>
     internal const double ViolationInfoSeverity = 0.25;
 
     /// <summary>
     /// Penalty pro Cognitive-Complexity-Einheit ueber <c>Metrics.MaxCognitiveComplexity</c>, gemittelt
-    /// ueber alle Klassen. Plan-Default beibehalten (0.05).
+    /// ueber alle Klassen. Bewusst auf 0.05 belassen.
     /// </summary>
     internal const double CcPenaltyPerUnitOverThreshold = 0.05;
 
     /// <summary>
     /// Penalty pro AI-Context-Footprint-Einheit ueber <c>Metrics.MaxAIContextFootprint</c>, gemittelt
-    /// ueber alle Klassen. Plan-Default beibehalten (0.02).
+    /// ueber alle Klassen. Bewusst auf 0.02 belassen.
     /// </summary>
     internal const double FootprintPenaltyPerUnitOverLimit = 0.02;
 

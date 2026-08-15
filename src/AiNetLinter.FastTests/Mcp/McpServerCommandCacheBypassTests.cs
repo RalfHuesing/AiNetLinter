@@ -12,7 +12,7 @@ namespace AiNetLinter.FastTests.Mcp;
 /// <summary>
 ///: Ein MCP-Server + ein gleichzeitiger
 /// CLI-Lint-Lauf auf derselben Solution kollidieren nicht. Begruendung: der MCP-Modus
-/// umgeht den Disk-Cache (<see cref="AnalysisCacheManager"/>) per Konzept Z. 175-183.
+/// umgeht den Disk-Cache (<see cref="AnalysisCacheManager"/>) per Design.
 /// Statt eines E2E-Process-Coordination-Tests verifiziert dieser Reflection-Test die
 /// strukturelle Eigenschaft: <see cref="McpCodeGraphServer"/> hat KEINEN Verweis auf
 /// <see cref="AnalysisCacheManager"/>. Wuerde in einer spaeteren Einheit versehentlich

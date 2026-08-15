@@ -10,17 +10,16 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.MagicValues;
 
 /// <summary>
-/// String- und Number-spezifische Sub-Heuristiken fuer <see cref="MagicValuesClassifier"/>,
-/// die in EPIC-2 nachgereicht wurden: <c>nameof_candidates</c>, <c>security_candidates</c>,
-/// <c>localization_candidates</c> und die <c>standard_candidates</c>-Erweiterung um
-/// nicht-HTTP Magic Numbers. Aus den Hauptdateien in eine eigene Datei extrahiert, damit
-/// <see cref="MagicValuesClassifier"/> und <see cref="MagicValuesNumberClassifier"/> unter
-/// dem <c>MaxLineCount: 500</c>-Limit bleiben (siehe <c>AiNetLinter.mdc</c>).
+/// String- und Number-spezifische Sub-Heuristiken fuer <see cref="MagicValuesClassifier"/>:
+/// <c>nameof_candidates</c>, <c>security_candidates</c>, <c>localization_candidates</c> und
+/// die <c>standard_candidates</c>-Erweiterung um nicht-HTTP Magic Numbers. Aus den
+/// Hauptdateien in eine eigene Datei extrahiert, damit <see cref="MagicValuesClassifier"/>
+/// und <see cref="MagicValuesNumberClassifier"/> unter dem <c>MaxLineCount: 500</c>-Limit
+/// bleiben (siehe <c>AiNetLinter.mdc</c>).
 /// </summary>
 internal static class MagicValuesStringHeuristics
 {
-    // Parameternamen, die auf ein Secret/Credential hindeuten
-    // (Konzept §"Muss-Haven" Punkt 6 — CWE-798).
+    // Parameternamen, die auf ein Secret/Credential hindeuten (CWE-798).
     private static readonly HashSet<string> SecurityNameKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "password", "secret", "apikey", "token", "connectionstring", "credential", "auth",
@@ -33,7 +32,7 @@ internal static class MagicValuesStringHeuristics
     };
 
     // Schluesselwoerter im Literal, die auf einen Connection-String hindeuten
-    // (Konzept §"Wie" Punkt 4 — "Server=", "Database=", ...).
+    // (z. B. "Server=", "Database=", ...).
     private static readonly string[] ConnectionStringKeywords =
     [
         "Server=", "Database=", "Trusted_Connection=", "User Id=", "Password=", "Data Source=",
@@ -69,8 +68,7 @@ internal static class MagicValuesStringHeuristics
         [86400] = "SecondsPerDay",
     };
 
-    // Exception-Typen, die als Heuristik fuer User-Facing-Message-Texte gelten
-    // (Konzept §"Muss-Haven" Punkt "Lokalisierungs-Kandidaten" — pragmatische Variante).
+    // Exception-Typen, die als Heuristik fuer User-Facing-Message-Texte gelten.
     private static readonly HashSet<string> ExceptionTypeNames = new(StringComparer.Ordinal)
     {
         "ArgumentException", "ArgumentNullException", "ArgumentOutOfRangeException",
@@ -133,7 +131,7 @@ internal static class MagicValuesStringHeuristics
     /// <summary>Prueft, ob ein String-Literal einem Symbol-Namen im umschliessenden Scope
     /// entspricht (Parameter, lokale Variable, Member, Typ). Liefert eine
     /// <c>nameof_candidates</c>-Klassifizierung, wenn das Literal exakt dem
-    /// Identifier-Namen entspricht — siehe Konzept §"Muss-Haven" Punkt 4.</summary>
+    /// Identifier-Namen entspricht.</summary>
     internal static MagicValueClassification? ClassifyNameofCandidate(
         LiteralExpressionSyntax literal,
         SemanticModel? model)
@@ -268,11 +266,11 @@ internal static class MagicValuesStringHeuristics
             "Well-known Konstante (Buffer-Groesse / Zeit-Konstante)");
     }
 
-    /// <summary>Prueft, ob ein String-Literal als User-Facing Exception-Message fungiert
-    /// (Konzept §"Muss-Haven" Punkt "Lokalisierungs-Kandidaten"). Pragmatische Variante:
-    /// das Literal ist Argument in einem Exception-Konstruktor UND die effektive
-    /// String-Laenge (ohne Whitespace) ueberschreitet 15 Zeichen. UI-Prompts/Logins
-    /// waeren zusaetzliche Caller-Type-Heuristiken, die als Tech-Debt offen sind.</summary>
+    /// <summary>Prueft, ob ein String-Literal als User-Facing Exception-Message fungiert.
+    /// Pragmatische Variante: das Literal ist Argument in einem Exception-Konstruktor
+    /// UND die effektive String-Laenge (ohne Whitespace) ueberschreitet 15 Zeichen.
+    /// UI-Prompts/Logins waeren zusaetzliche Caller-Type-Heuristiken, die als
+    /// Tech-Debt offen sind.</summary>
     internal static MagicValueClassification? ClassifyLocalizationCandidate(
         LiteralExpressionSyntax literal,
         SemanticModel? model)

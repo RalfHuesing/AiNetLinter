@@ -10,8 +10,8 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// <summary>
 /// MCP-Tool <c>get_index_scope</c>: liefert eine Dateityp-Aufschluesselung der resident gehaltenen
 /// Solution — .cs (voll vom Symbolgraph abgedeckt) sowie .css/.html/.js/.razor/.xaml (jeweils nicht
-/// vom Symbolgraph abgedeckt, mit Anzahl). Orientierungspunkt, den ein Agent laut konzept.md aufrufen
-/// soll, bevor er ueberhaupt mit find_symbol/search_pattern zu suchen beginnt. Bewusst
+/// vom Symbolgraph abgedeckt, mit Anzahl). Orientierungspunkt für Agent-Loops,
+/// die ihn vor find_symbol/search_pattern aufrufen sollten. Bewusst
 /// duenner Dispatch auf <see cref="GetIndexScopeScanner.BuildBreakdown"/> — keine eigene Zaehl-/
 /// Formatierungslogik, damit dieser
 /// Klasse eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt.

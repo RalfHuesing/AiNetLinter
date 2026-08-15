@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// generische <c>AddScoped&lt;ILogger&lt;&gt;&gt;</c>-Patterns nicht zu Massen-Treffern fuehren.
 /// Convention-basierte Registrierung (z. B. <c>services.AddMvc()</c>) und Factory-basierte
 /// Registrierung (z. B. <c>services.AddSingleton&lt;IFoo&gt;(sp =&gt; new Foo())</c>) werden
-/// bewusst NICHT erkannt — Konzept-Vorgabe.
+/// bewusst NICHT erkannt: Convention-/Factory-Patterns sind mit Regex nicht sauber auflösbar.
 /// </summary>
 internal static class DiRegistrationHeuristics
 {

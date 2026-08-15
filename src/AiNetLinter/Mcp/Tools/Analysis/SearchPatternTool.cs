@@ -27,7 +27,8 @@ internal static class SearchPatternTool
     /// <c>INVALID_ARGUMENT</c>-Fehler statt zu crashen (Result-Pattern, siehe
     /// <c>. <see cref="Task.Run"/> umschliesst den
     /// CPU-/IO-bound Scan, damit der <c>McpCodeGraphServer</c>-Lock nicht unnoetig gehalten wird
-    /// (siehe Plan: bewusst eingesetzt, <c>Task.Run</c> ist hier kein Ueber-Engineering).
+    /// (Bewusst eingesetzt: <c>Task.Run</c> verhindert, dass der CPU-/IO-bound Scan den
+    /// <c>McpCodeGraphServer</c>-Lock blockiert.)
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,

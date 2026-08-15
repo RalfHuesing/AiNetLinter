@@ -12,8 +12,8 @@ using Xunit;
 namespace AiNetLinter.FastTests.Platform;
 
 /// <summary>
-/// Vertragstests fuer <see cref="RoslynTestSolutionFactory"/> (konzept.md §2/§4 sinngemaess auf die
-/// Plattform selbst angewendet): belegt mechanisch Mehrprojekt-Verdrahtung, Nullable-Context,
+/// Vertragstests fuer <see cref="RoslynTestSolutionFactory"/> (Plattform-spezifisch): belegt
+/// mechanisch Mehrprojekt-Verdrahtung, Nullable-Context,
 /// Preprocessor-Symbole, Referenz-Caching und den Fehlerpfad bei unbekannten Projektnamen, statt
 /// diese Eigenschaften nur im XML-Doc zu behaupten.
 /// </summary>

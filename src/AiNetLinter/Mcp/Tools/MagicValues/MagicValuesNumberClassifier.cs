@@ -18,7 +18,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 internal static class MagicValuesNumberClassifier
 {
     // Parameternamen, die auf einen Timeout / Delay / Retry hindeuten
-    // (Konzept §"Wie" Punkt 4 — "Thread.Sleep(5000)" etc.).
+    // (Beispiel: "Thread.Sleep(5000)" o. ae. Konstanten mit Millisekunden-typischer Groessenordnung).
     internal static readonly System.Collections.Generic.HashSet<string> TimeoutParameterNames =
         new(StringComparer.OrdinalIgnoreCase)
         {

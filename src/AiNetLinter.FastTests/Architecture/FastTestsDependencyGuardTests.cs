@@ -13,7 +13,7 @@ namespace AiNetLinter.FastTests.Architecture;
 
 /// <summary>
 /// Statische Deny-Liste gegen die kompilierten Metadaten von AiNetLinter.FastTests.dll und
-/// AiNetLinter.TestKit.dll (konzept.md Leitplanke 6, "Was die Guards wirklich koennen"). Prueft
+/// AiNetLinter.TestKit.dll. Prueft
 /// AssemblyRef-, TypeRef- und MemberRef-Tabellen ueber System.Reflection.Metadata statt
 /// Quelltext-Grep, damit auch indirekte Nutzung ueber eigene Helfer erkannt wird. Die
 /// Produktreferenz macht MSBuild-Typen transitiv erreichbar; diese Deny-Liste ist deshalb kein

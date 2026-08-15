@@ -11,7 +11,7 @@ namespace AiNetLinter.IntegrationTests.Platform;
 
 /// <summary>
 /// Einmaliger echter <see cref="Microsoft.CodeAnalysis.MSBuild.MSBuildWorkspace"/>-Load einer isolierten
-/// Kopie der kanonischen Mini-Solution <c>BaselineMini</c> (konzept.md §2 Baustein 3), geteilt ueber eine
+/// Kopie der kanonischen Mini-Solution <c>BaselineMini</c>, geteilt ueber eine
 /// xUnit-v3-Assembly-Fixture fuer <c>AiNetLinter.IntegrationTests</c> (Registrierung siehe
 /// <see cref="MsBuildFixtureHostAssemblyFixture"/>). Ersetzt die pro Testklasse duplizierte Kombination
 /// aus lokalem <c>FindSolutionRoot</c>-Helper plus Direktaufruf von <see cref="SourceFileCatalog.LoadAsync"/>.

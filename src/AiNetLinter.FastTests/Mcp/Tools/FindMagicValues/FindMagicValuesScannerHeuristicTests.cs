@@ -143,7 +143,7 @@ public sealed class Foo
     [Fact]
     public async Task ScanAsync_InterpolatedString_StaticTextSegmentsClassified()
     {
-        // Konzept Â§"Muss-Haven" Beispiel 2: in-string magic values & interpolation fragments.
+        // In-string magic values & interpolation fragments.
         // Der statische Text-Teil vor der Interpolation (vor dem "{") wird durch den
         // MagicValuesClassifier klassifiziert; das dynamische Segment ({env}) wird nicht
         // ausgewertet. Hier trifft die Connection-String-Heuristik auf "Server=" und

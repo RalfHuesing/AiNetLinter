@@ -22,9 +22,8 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// <c>AiNetLinter.mdc</c>) klein bleibt.
 /// Delegiert die eigentliche Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
 /// mit <c>noCache: true</c> — bewusst KEIN Neubau einer eigenen Lint-Loop, weil
-/// <c>konzept.md</c> fuer <c>get_violations</c> explizit die <see cref="LinterEngine"/> als Basis
-/// vorsieht und der Disk-Cache fuer den resident laufenden Server irrelevant ist (Muss-Haven "Cache
-/// umgehen": Cache dient der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
+/// vorsieht und der Disk-Cache fuer den resident laufenden Server irrelevant ist
+/// (Cache dient der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
 /// Post-Filter auf den fertigen <see cref="RuleViolation"/>s (case-insensitive <c>Contains</c> auf
 /// Projekt-Name oder solution-relativem Pfad), kein Pre-Filter ueber <see cref="LinterArgs"/> —
 /// reine Funktionen ohne <see cref="McpCodeGraphServer"/>-Abhaengigkeit, direkt unit-testbar.

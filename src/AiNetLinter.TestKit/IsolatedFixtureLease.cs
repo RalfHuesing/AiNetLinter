@@ -7,8 +7,8 @@ using System.Linq;
 namespace AiNetLinter.TestKit;
 
 /// <summary>
-/// Isolierte Temp-Kopie einer kanonischen Mini-Solution aus <c>tests/Fixtures/&lt;fixtureFolderName&gt;/</c>
-/// (konzept.md §2 Baustein 4). Reine Datei-I/O ohne MSBuild-/xUnit-Abhaengigkeit, damit dieser Baustein
+/// Isolierte Temp-Kopie einer kanonischen Mini-Solution aus <c>tests/Fixtures/&lt;fixtureFolderName&gt;/</c>.
+/// Reine Datei-I/O ohne MSBuild-/xUnit-Abhaengigkeit, damit dieser Baustein
 /// sowohl von <see cref="AiNetLinter.TestKit"/>-Konsumenten selbst als auch von einem echten
 /// MSBuild-Ladepfad (Integration-Ebene) verwendbar ist, ohne die Deny-Liste von
 /// <c>FastTestsDependencyGuardTests</c> zu beruehren.

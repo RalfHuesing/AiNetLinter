@@ -23,8 +23,8 @@ namespace AiNetLinter.FastTests.Mcp.Tools;
 /// <see cref="McpCodeGraphServer"/> und folgt dem Naming
 /// <c>ExecuteAsync_&lt;Bedingung&gt;_&lt;Erwartung&gt;</c>. Zusaetzlicher
 /// Fokus: <c>passed=false</c> ist explizit NICHT <c>isError=true</c> (Anti-Pattern-Falle aus
-/// <c>IsErrorPolicy.md</c> und Konzept §"Zielplattformen") — der entsprechende Test ist als
-/// Regressionsschutz fuer genau diese Falle benannt.
+/// <c>IsErrorPolicy.md</c>) — der entsprechende Test ist als Regressionsschutz fuer genau
+/// diese Falle benannt.
 /// </summary>
 [Trait("Category", "Component")]
 public sealed class SafeguardToolTests
@@ -70,8 +70,8 @@ public sealed class SafeguardToolTests
     [Fact]
     public async Task ExecuteAsync_LoadedSolution_FailedScore_PassedFalseButIsErrorFalse()
     {
-        // Regressionstest fuer die Anti-Pattern-Falle aus IsErrorPolicy.md / Konzept
-        // §"Zielplattformen": ein Score mit Passed=false (z. B. minScore=100.0 — kein
+        // Regressionstest fuer die Anti-Pattern-Falle aus IsErrorPolicy.md: ein Score mit
+        // Passed=false (z. B. minScore=100.0 — kein
         // realer Score erreicht diesen Wert) ist explizit KEIN isError=true, sondern der
         // erwartete Output des Quality-Gate-Tools. Beide Flags muessen getrennt geprueft
         // werden, damit eine spaetere Refactoring-Welle, die das koppelt, sofort auffliegt.

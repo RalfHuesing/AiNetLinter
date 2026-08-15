@@ -11,9 +11,9 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// <summary>
 /// Rohe, noch ungeparste <c>find_magic_values</c>-Toolargumente vor der Validierung in
 /// <see cref="FindMagicValuesTool.ExecuteAsync"/>. Stellt alle 9 Konfigurations-Felder
-/// bereit, die das Tool laut Konzept §"MCP-Tool Schnittstellen-Spezifikation" akzeptiert.
-/// <c>IncludeSuppressed</c>, <c>IncludeTests</c> und <c>ChangedOnly</c> sind in EPIC-2
-/// wirksam (siehe <c>FindMagicValuesScanner</c> fuer die jeweilige Implementierung).
+/// bereit, die das Tool akzeptiert. <c>IncludeSuppressed</c>, <c>IncludeTests</c>
+/// und <c>ChangedOnly</c> sind wirksam (siehe <c>FindMagicValuesScanner</c> fuer die
+/// jeweilige Implementierung).
 /// </summary>
 internal sealed record FindMagicValuesToolArgs(
     string? ScopeFilter,
@@ -52,9 +52,9 @@ internal static class FindMagicValuesTool
         if (categoryResult.Error is not null) return categoryResult.Error;
 
         // minOccurrences und maxResults werden defensiv geclamped, nicht als INVALID_ARGUMENT
-        // abgelehnt (Konzept §"Wie" + Step-Plan: "Clamp statt reject"). Sucht der Agent nach
-        // minOccurrences=0 oder maxResults=0, bekommt er ein sinnvolles Default-Ergebnis
-        // statt eines Formalfehlers.
+        // abgelehnt (Clamp statt reject). Sucht der Agent nach minOccurrences=0 oder
+        // maxResults=0, bekommt er ein sinnvolles Default-Ergebnis statt eines Formalfehlers —
+        // harte Ablehnung würde den Agenten ohne Alternative dastehen lassen.
         var minOccurrences = Math.Max(1, args.MinOccurrences);
         var maxResults = Math.Max(1, args.MaxResults);
 
@@ -73,8 +73,8 @@ internal static class FindMagicValuesTool
                     MaxResults: maxResults,
                     IgnoreNumbers: args.IgnoreNumbers,
                     IncludeTests: args.IncludeTests,
-                    IncludeSuppressed: args.IncludeSuppressed, // EPIC-2 wirksam — siehe Classifier
-                    ChangedOnly: args.ChangedOnly,               // EPIC-2 wirksam — siehe Scanner
+                    IncludeSuppressed: args.IncludeSuppressed, // siehe Classifier
+                    ChangedOnly: args.ChangedOnly,               // siehe Scanner
                     CancellationToken: ct)),
                 ct);
         }

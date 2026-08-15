@@ -255,7 +255,7 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
 
     public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
     {
-        // Konzept §"Muss-Haven" Beispiel 2: statische Text-Segmente in $"...{x}..." werden
+        // Beispiel: statische Text-Segmente in $"...{x}..." werden
         // durch den MagicValuesClassifier klassifiziert. Dynamische Segmente ({x}) werden
         // NICHT ausgewertet — das wuerde eine Laufzeit-Aufloesung erfordern, die fuer ein
         // On-Demand-Audit zu teuer und semantisch fragwuerdig waere. Wir synthetisieren
@@ -322,7 +322,7 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
     {
         SyntaxKind.StringLiteralExpression or SyntaxKind.Utf8StringLiteralExpression
             => context.ValueTypeFilter is null or MagicValueValueType.String,
-        SyntaxKind.CharacterLiteralExpression => false, // EPIC-1: char-Literale nicht gemeldet
+        SyntaxKind.CharacterLiteralExpression => false, // char-Literale nicht gemeldet (CWE-787 / Encoding-Risiken, hier out-of-scope)
         SyntaxKind.NumericLiteralExpression
             => context.ValueTypeFilter is null or MagicValueValueType.Number,
         _ => false,

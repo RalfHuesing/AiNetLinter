@@ -87,7 +87,7 @@ internal static class FindMagicValuesTestHelpers
 }
 
 /// <summary>Bool-Parameter-Object fuer <see cref="FindMagicValuesTestHelpers.RunAsync"/> â€”
-/// buendelt die drei EPIC-2-Bool-Flags (includeSuppressed/includeTests/changedOnly) in einem
+/// buendelt die drei Bool-Flags (includeSuppressed/includeTests/changedOnly) in einem
 /// Record, damit die Helper-Methoden das <c>MaxBoolParameterCount: 1</c>-Limit (siehe
 /// <c>AiNetLinter.mdc</c>) einhalten. <see langword="null"/> und <c>default</c> bedeuten
 /// "alle drei Flags aus".</summary>
@@ -96,11 +96,11 @@ internal sealed record FindMagicValuesRunOptions(
     bool IncludeTests = false,
     bool ChangedOnly = false)
 {
-    /// <summary>Impliziter Konvertierungs-Operator von <see langword="bool"/> (alter
-    /// EPIC-1-Stil mit positionalem <c>includeSuppressed: true</c>) auf den neuen
-    /// Options-Record. Erlaubt Aufrufer-kompatible Uebergaenge, ohne den neuen Stil zu
-    /// erzwingen â€” die bestehenden Tests koennen weiterhin <c>includeSuppressed: true</c>
-    /// schreiben, der Wert landet automatisch in <see cref="IncludeSuppressed"/>.</summary>
+    /// <summary>Impliziter Konvertierungs-Operator von <see langword="bool"/> (Stil mit
+    /// positionalem <c>includeSuppressed: true</c>) auf den neuen Options-Record. Erlaubt
+    /// Aufrufer-kompatible Uebergaenge, ohne den neuen Stil zu erzwingen â€” die bestehenden
+    /// Tests koennen weiterhin <c>includeSuppressed: true</c> schreiben, der Wert landet
+    /// automatisch in <see cref="IncludeSuppressed"/>.</summary>
     public static implicit operator FindMagicValuesRunOptions(bool includeSuppressed) =>
         new(IncludeSuppressed: includeSuppressed);
 }
@@ -111,7 +111,7 @@ internal sealed record FindMagicValuesRunOptions(
 /// auf Top-Level statt nested, weil <c>BanPublicNestedTypes</c> auch <c>internal</c> nested Typen
 /// verbietet (Ausnahme nur fuer <c>private</c>) â€” und der Record <c>internal</c> sein muss, damit
 /// die Test-Klassen ihn ueber ihre <c>RunAsync(... ScanAsyncParams)</c>-Aufrufe konstruieren koennen.
-/// <para>EPIC-2: <c>Options</c> ersetzt die drei EPIC-1-Bool-Felder am
+/// <para><c>Options</c> ersetzt die drei bool-Felder am
 /// <see cref="FindMagicValuesTestHelpers.RunAsync"/>-Helper. Aufrufer koennen weiterhin
 /// <c>includeSuppressed: true</c> schreiben â€” der Wert wird via impliziter Konvertierung in
 /// <see cref="FindMagicValuesRunOptions"/> ueberfuehrt.</para></summary>
