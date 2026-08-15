@@ -28,7 +28,7 @@ current_step: step-005
 | step-002 | EPIC-02 | done | FB-03: MaxPublicMembersPerType fuer Testfiles standardmaessig ueberspringen mit Opt-in | - | done | approved | 8d3462e |
 | step-003 | EPIC-03 | done | FB-04: find_duplicates UX (scopeType und Top-Cluster Summary) | - | done | approved | 999d548 |
 | step-004 | EPIC-04 | done | Teil B: Code-Snippet in get_violations direkt mitgeben | - | done | approved | 3f8948f |
-| step-005 | EPIC-05 | in_progress | Teil A: Neues MCP-Tool get_class_structure | - | - | - | - |
+| step-005 | EPIC-05 | done | Teil A: Neues MCP-Tool get_class_structure | - | done | approved | b2b24ef |
 
 ## Config (optional)
 
