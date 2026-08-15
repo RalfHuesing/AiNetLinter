@@ -2,19 +2,20 @@
 status: ready
 type: konzept
 project_kind: brownfield
-estimated_scope: medium
+estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-08-15
 open_questions: []
 ---
 
-# Konzept: AiNetLinter-Feedback Runde 1 — vier Lücken/Verbesserungen aus `dry-refactor`
+# Konzept: AiNetLinter-Feedback Runde 1 — sechs Lücken/Verbesserungen aus `dry-refactor`
 
 ## Ziel (Was)
 
-Vier während des `dry-refactor`-Tasks am AiNetLinter MCP-Server und an den
+Sechs während des `dry-refactor`-Tasks am AiNetLinter MCP-Server und an den
 Linter-Regeln beobachtete Lücken werden generisch (nicht projektspezifisch)
-geschlossen:
+geschlossen — vier Lücken-Reparaturen (FB-01..FB-04) plus zwei
+MCP-UX-Erweiterungen (A, B):
 
 1. **`AvoidExcessiveMiddleMen`** meldet in xUnit-Testklassen fälschlich
    „100 % Middle Man", weil Einzeiler-Wrapper wie
@@ -32,10 +33,21 @@ geschlossen:
    Liste ohne Vorspann und kennt keine Trennung zwischen Test- und
    Produktions-Code — beides behindert den Agent-Loop, weil jede Antwort
    erst langwierig sortiert werden muss.
+5. **Neues MCP-Tool `get_class_structure`**: kompakte Klassen-Übersicht
+   mit Member-Liste und Zeilenbereichen — Antwort auf den
+   `view_file`-mit-120-Zeilen-Workaround, den Agenten derzeit fahren,
+   um Klassen-Splits vorzubereiten. Existierende Tools
+   (`get_symbol_body` für Einzelsymbole, `get_file_skeleton` für ganze
+   Dateien) decken diese Lücke nicht.
+6. **Code-Snippet direkt in `get_violations`**: 1–2 Kontextzeilen plus
+   die verletzende Zeile als Snippet in der Violation-Antwort. Spart
+   die anschließende `view_file`-Runde für Einzeiler-Fixes (z. B.
+   `sealed` ergänzen, Parameter entfernen).
 
 Ergebnis: weniger False-Positives für Test- und Schema-Code, klarere
-MCP-Antworten beim Duplicate-Check. Der Linter bleibt ein allgemeines Tool
-— keine SqlToAi-Spezifika landen im Code.
+MCP-Antworten beim Duplicate-Check, kompaktere Antworten beim
+Klassen-Refactoring und bei Violation-Triage. Der Linter bleibt ein
+allgemeines Tool — keine SqlToAi-Spezifika landen im Code.
 
 ## Warum / Kontext
 
@@ -66,6 +78,11 @@ eine Inkonsistenz, kein Feature-Wunsch.
 
 ### Muss-Haben
 
+Reihenfolge-Vorschlag: **FB-02 → FB-03 → FB-04 → B → A → FB-01** (klein
++ Tool-nah → groß + Architektur-nah). Details pro Punkt unten; Planer
+kann die Reihenfolge anpassen, wenn ein späterer Schritt frühere
+Ergebnisse voraussetzt.
+
 - **FB-02: `AvoidExcessiveMiddleMen` für Testfiles überspringen.**
   - Datei: `src/AiNetLinter/Core/Checkers/MiddleManChecker.cs`, Methode
     `ShouldSkipClass` (Zeile ~49-68).
@@ -84,18 +101,6 @@ eine Inkonsistenz, kein Feature-Wunsch.
     `ImmutabilityChecker`).
   - Eintrag in `rules.json` + `tests/Fixtures/BaselineMini/rules.json`
     für die Konfiguration.
-- **FB-01: Heuristik für „declaration-only types" im
-  `AIContextFootprint`.**
-  - Datei: `src/AiNetLinter/Metrics/AIContextFootprintCalculator.cs`,
-    Methode `QueueMemberSymbols` (Zeile ~138-152) bzw.
-    `QueueMethodSymbols` (Zeile ~154-161).
-  - Kernidee: Typen, deren Member ausschließlich Attribute oder leere
-    Bodies sind, werden in der transitiven Zählung markiert oder
-    ausgeschlossen. Konkretisierung im Planer-Schritt.
-  - Falls die Heuristik nicht greift, sind die bereits existierenden
-    `MetricsConfig.FootprintIgnoreNamespacePrefixes` und
-    `FootprintIgnoreTypeNames` die expliziten Fallback-Knöpfe
-    (`src/AiNetLinter/Configuration/MetricsConfig.cs:101-112`).
 - **FB-04: `find_duplicates` UX.**
   - Datei: `src/AiNetLinter/Mcp/Tools/DuplicateDetection/DuplicateDetectionTool.cs`
     + `DuplicateDetectionScanner.cs`.
@@ -109,6 +114,102 @@ eine Inkonsistenz, kein Feature-Wunsch.
     `src/AiNetLinter/Core/DocumentContext.cs:14`).
   - JSON-Schema (`McpJsonOptions` o. ä.) und Tests entsprechend
     erweitern.
+- **B: Code-Snippet direkt in `get_violations`.**
+  - Datei: `src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs` +
+    `src/AiNetLinter/Output/ViolationMarkdownFormatter.cs`.
+  - Neues Feld `snippet` (Liste von Source-Zeilen) im strukturierten
+    Violation-JSON; Markdown-Output bekommt unter jeder Violation einen
+    Snippet-Block (Code-Fence, mit Pfad:Zeile-Header).
+  - **Edge-Cases:**
+    - `contextLines` als Tool-Parameter (Default 2, max 5) — Snippet
+      zeigt `N` Zeilen davor, die verletzende Zeile, `N` Zeilen danach.
+    - Datei-Anfang/-Ende respektieren: weniger Zeilen zurückgeben, wenn
+      der Kontext über den Datei-Rand hinausläuft (kein Wrap-Around,
+      kein Phantom-Padding).
+    - Cluster-Violations ohne spezifische Zeile (z. B.
+      `EnableDuplicateCodeCheck`-Cluster, `MaxAIContextFootprint` auf
+      Typ-Ebene, `Safeguard`-Score): **kein Snippet**, stattdessen
+      Cluster-Summary oder Begründungstext. Snippet nur, wenn
+      `ViolationDescription.SourceSpan` vorhanden.
+    - Mehrere Violations auf der gleichen Zeile: Snippet wird pro
+      Violation wiederholt (kein Caching auf Datei-Ebene, um
+      Eindeutigkeit zu wahren — Token-Kosten sind überschaubar: 5
+      Zeilen × ~80 Zeichen ≈ 400 Bytes je Violation).
+    - Sehr lange Source-Zeilen (> 200 Zeichen): auf 200 Zeichen
+      kürzen + `…` Suffix, damit der Output nicht durch Auto-Format-
+      Zeilen gesprengt wird.
+    - Opt-out via `includeSnippet: bool = true`, falls ein Aufrufer
+      nur die Metrik-Liste will (z. B. ein Bulk-Triage-Skript).
+  - Pattern-Reuse: bestehendes `maxResults`-Argument und das
+    `McpTruncation`-Helper-Modul (`src/AiNetLinter/Mcp/McpTruncation.cs`)
+    für die Truncation-Meta-Zeile wiederverwenden.
+- **A: Neues MCP-Tool `get_class_structure`.**
+  - Datei: `src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs`
+    (neu) + Registrierung in `src/AiNetLinter/Mcp/FileStructureToolRegistrations.cs`
+    + Tool-Schema in `src/AiNetLinter/Mcp/McpJsonOptions.cs`.
+  - Output: tabellarische Member-Liste mit Zeilenbereichen, analog zum
+    User-Wunsch:
+    ```text
+    SchemaServiceTests:
+    - L20-L45: ListDatabasesAsync_ShouldReturnAllowedDatabases (Fact, 25 Zeilen)
+    - L47-L80: SearchDatabasesAsync_ShouldReturnMatchingDatabases (Fact, 33 Zeilen)
+    ```
+  - Parameter:
+    - `className` (Pflicht): FQN (`Namespace.ClassName`) oder relativer
+      Name (wenn eindeutig).
+    - `maxMembers` (Default 50, max 200): begrenzt die Member-Liste
+      konsistent mit `McpTruncation`-Mechanik. Bei Überschreitung
+      Truncation-Meta-Zeile mit „weitere N Member" Hinweis.
+    - `includeAttributes` (Default `false`): opt-in für
+      Attribut-Listen pro Member (kostet Token, nicht jeder Agent
+      braucht das).
+  - **Edge-Cases:**
+    - Klasse nicht gefunden → `ClassNotFound` (neuer Error-Code
+      parallel zu `FileNotFound`).
+    - Mehrdeutigkeit (gleicher Klassen-Name in verschiedenen
+      Namespaces) → Antwort listet alle Treffer mit FQN, fordert
+      Aufrufer zur Disambiguierung auf. Konsistent mit
+      `FindSymbolTool`/`McpServerCommandFindSymbolTests`-Patterns.
+    - `partial class` über mehrere Dateien → Tool gibt pro Part
+      einen getrennten Eintrag mit `file:line`-Quelle des jeweiligen
+      Members. Falls Parts in sehr vielen Dateien (> 5), Hinweis im
+      Output („diese Klasse ist über N Dateien verteilt — Split in
+      Erwägung ziehen").
+    - `record` mit Primary Constructor → Parameter des Primary
+      Constructors als eigene Zeile vor den restlichen Membern.
+    - `struct`, `enum`, `record struct`, `interface`: alle vier
+      unterstützen. Für `enum` sind „Member" die Werte; für
+      `interface` nur die Signaturen.
+    - Nested types: werden mit aufgelistet, mit
+      `OuterClass.NestedClass`-FQN.
+    - Sehr große Klassen (> 700 Zeilen, knapp unter `MaxLineCount`):
+      Tool funktioniert, aber der Member-Scan läuft über Roslyn-Syntax
+      (kein Regex), Performance ist kein Risiko.
+  - Output-Format: Markdown (analog `get_file_skeleton`) plus
+    `StructuredContent` (analog `get_violations` in Zeile 68 von
+    `GetViolationsTool.cs`) für Tool-zu-Tool-Aufrufe.
+- **FB-01: Heuristik für „declaration-only types" im
+  `AIContextFootprint`.**
+  - Datei: `src/AiNetLinter/Metrics/AIContextFootprintCalculator.cs`,
+    Methode `QueueMemberSymbols` (Zeile ~138-152) bzw.
+    `QueueMethodSymbols` (Zeile ~154-161).
+  - Kernidee: Typen, deren Member ausschließlich Attribute oder leere
+    Bodies sind, werden in der transitiven Zählung markiert oder
+    ausgeschlossen. Konkretisierung im Planer-Schritt.
+  - Falls die Heuristik nicht greift, sind die bereits existierenden
+    `MetricsConfig.FootprintIgnoreNamespacePrefixes` und
+    `FootprintIgnoreTypeNames` die expliziten Fallback-Knöpfe
+    (`src/AiNetLinter/Configuration/MetricsConfig.cs:101-112`).
+  - **Edge-Cases:**
+    - Klassen mit gemischtem Inhalt (z. B. drei Attribute + ein
+      echter Konstruktor): Heuristik nur anwenden, wenn **alle**
+      Member declaration-only sind. Andernfalls reguläre Zählung.
+    - Partielle Klassen: jede Partial-Datei wird eigenständig
+      bewertet (Members summieren sich nicht über Dateien, das wäre
+      eine Verhaltens-Änderung).
+    - Generische Constraints (`where T : new()` etc.) sind kein
+      „Logik-Indikator" — sie bleiben für die Zählung irrelevant
+      (betrifft ohnehin nur die generische Argument-Auflösung).
 
 ### Nice-to-Have (Zwischenspeicher — vor `status: ready` aufgelöst)
 
@@ -131,6 +232,25 @@ eine Inkonsistenz, kein Feature-Wunsch.
   später nachgezogen werden, wenn derselbe Bedarf empirisch entsteht.
 - **Eigene Regelvariante `AvoidExcessiveMiddleMenInTests`** — Overkill,
   der Pattern-Reuse via `IsTestFile`-Skip ist etabliert und kürzer.
+- **Snippets für Cluster-Violations** in B (z. B. `EnableDuplicateCodeCheck`,
+  `MaxAIContextFootprint`-Überschreitungen) — Cluster haben keine
+  einzelne verletzende Zeile. Ein Snippet wäre irreführend. Stattdessen
+  Cluster-Summary bzw. Begründungstext (im Konzept bereits als
+  Edge-Case dokumentiert).
+- **Body-Snippets in `get_class_structure` (A)** — Tool liefert nur
+  Zeilenbereiche und Signaturen, keine Methoden-Bodies. Wer Bodies
+  braucht, nutzt `get_symbol_body` (einzelnes Symbol) oder
+  `get_file_skeleton` (ganze Datei). Drei-Tool-Komposition statt
+  Mega-Tool, jeweils token-effizient.
+- **Snippets in `find_duplicates` / `safeguard` (FB-04)** — die
+  Top-Cluster-Liste in FB-04(a) ist eine Summary, kein Snippet-
+  Feld pro Cluster. Doppelung mit B wäre redundant; B ist die
+  Snippet-Quelle, FB-04 die Listen-Verdichtung.
+- **Volltext-Snippet-Output (mehr als 5 Kontextzeilen) in B** — die
+  Grenze 5 Kontextzeilen ist hart, nicht konfigurierbar nach oben.
+  Wer mehr Kontext braucht, soll `get_symbol_body` oder `view_file`
+  nachziehen. Verhindert, dass die „Snippet"-Funktion zu einem
+  heimlichen Volltext-Dump wird.
 
 ## Zielplattformen / Technischer Rahmen
 
@@ -249,10 +369,39 @@ eine Inkonsistenz, kein Feature-Wunsch.
     gleichzeitig umstellen — siehe Non-Goals. Falls sich der Bedarf
     später verallgemeinert, kann das Pattern kopiert werden.
   - **Entscheidung:** übernommen ins Scope (→ siehe Muss-Haben FB-04).
+- **`maxResults` + `McpTruncation`-Mechanik ist etabliertes Pattern für
+  Output-Begrenzung in MCP-Tools**
+  - **Gefunden:** `get_violations` (Default 50, `GetViolationsScanner.DefaultMaxResults`),
+    `search_pattern` (Default 50), `pattern_detect` (Default 20),
+    `find_magic_values` (Default 50), `find_duplicates` (Default 20) —
+    alle nutzen `maxResults` als Parameter und klammern sich an
+    `src/AiNetLinter/Mcp/McpTruncation.cs` (zentrale
+    Truncation-Meta-Zeile).
+  - **Bezug:** Konsistenz mit existierenden Tool-API-Konventionen;
+    vermeidet Tool-Drift, bei dem jeder MCP-Call anders aussieht.
+  - **Vorschlag:** Für A (`get_class_structure`) `maxMembers` (Default
+    50) nach demselben Muster; für B (`get_violations`-Snippet) die
+    Truncation-Logik aus `McpTruncation` wiederverwenden statt neue
+    erfinden.
+  - **Entscheidung:** übernommen ins Scope (→ siehe Muss-Haben A + B
+    Edge-Cases).
+- **Strukturierter Output (`StructuredContent`) ist etabliertes Pattern
+  für Tool-zu-Tool-Aufrufe**
+  - **Gefunden:** `GetViolationsTool.cs:68` liefert Text + strukturiertes
+    `{ Violations = result.Violations! }`. Andere Tools
+    (`find_magic_values`, `search_pattern`) folgen demselben Muster
+    laut `IsErrorPolicy.md` und Tool-Tests.
+  - **Bezug:** MCP-Schema-Konvention für `structuredContent`.
+  - **Vorschlag:** `get_class_structure` (A) liefert sowohl Markdown
+    (human-readable) als auch `StructuredContent` (machine-readable
+    mit `{ ClassName, Members: [...] }`), damit andere Tools/Agents
+    ohne Markdown-Parsing arbeiten können.
+  - **Entscheidung:** übernommen ins Scope (→ siehe Muss-Haben A
+    Output-Format-Spezifikation).
 
 ## Wie (grober Ansatz)
 
-Die Umsetzung wird in **vier logisch trennbaren Steps** (einer pro
+Die Umsetzung wird in **sechs logisch trennbaren Steps** (einer pro
 Muss-Haven-Punkt) geplant — Details (Step-Reihenfolge, Commit-Schnitte)
 verantwortet der Planer im `drift-loop`. Grob-Skizze je Punkt:
 
@@ -268,22 +417,56 @@ verantwortet der Planer im `drift-loop`. Grob-Skizze je Punkt:
   `tests/Fixtures/BaselineMini/rules.json` ergänzen. FastTests in
   `MaxPublicMembersPerTypeTests.cs` anpassen. Agent-Rules-Sync
   ausführen. `Docs/configuration.md` aktualisieren.
-- **FB-01** (1–2 Commits): Heuristik im
-  `AIContextFootprintCalculator.QueueMemberSymbols` einbauen — Idee:
-  Member ohne `Body`/`ExpressionBody` und ohne nicht-Attribute-Dekoration
-  werden markiert oder beim Aufsummieren mit reduzierter Gewichtung
-  gezählt. Konkretisierung mit Verweis auf existierende
-  `AIContextFootprintDeduplicationTests` (für Regressions-Schutz).
 - **FB-04** (1–2 Commits): `scopeType`-Parameter in
   `DuplicateDetectionInput`/`DuplicateDetectionScanner`, plus
   Summary-Header in `DuplicateDetectionTool.BuildResponse` (oder
   einem dedizierten Response-Builder). JSON-Schema + FastTests +
   Integration-Tests anpassen.
+- **B** (1–2 Commits): Snippet-Implementierung in
+  `GetViolationsScanner.cs` (Snippet-Resolution aus
+  `SemanticModel.SyntaxTree.GetText().Lines`, gesteuert über
+  `contextLines` + `includeSnippet`-Parameter aus dem Tool-Schema).
+  Markdown-Format-Anpassung in `Output/ViolationMarkdownFormatter.cs`
+  (Code-Fence-Block mit Pfad:Zeile-Header, max 200 Zeichen pro Zeile,
+  Kontext vor/nach der verletzenden Zeile). Schema-Erweiterung in
+  `McpJsonOptions.cs` + Tool-Registrierung in
+  `AnalysisToolRegistrations.cs`. FastTests in
+  `GetViolationsToolTests.cs`/`GetViolationsScannerTests.cs`
+  (Edge-Cases: Datei-Anfang, mehrere Violations/Zeile, Cluster ohne
+  Zeile). Integration-Tests in
+  `IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`.
+- **A** (2–3 Commits): neues Tool
+  `src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs`.
+  Scanner-Logik auf Roslyn-SyntaxTree (`SyntaxNode.DescendantNodes()`
+  gefiltert auf `MemberDeclarationSyntax`-Kinder, mit
+  `GetLocation().GetLineSpan()` für Zeilenbereiche). Output-Builder
+  liefert Markdown + `StructuredContent` analog
+  `GetViolationsTool.cs:68`. Tool-Registrierung in
+  `FileStructureToolRegistrations.cs` (Lambda-Header mit
+  `maxMembers = 50` Default + `includeAttributes = false` Default,
+  konsistent mit `AnalysisToolRegistrations.cs:65`-Pattern).
+  FastTests in `GetClassStructureToolTests.cs` (alle Edge-Cases:
+  nicht gefunden, mehrdeutig, partial, record, struct, enum, nested,
+  sehr große Klasse > 100 Member mit Truncation-Meta-Zeile).
+  Integration-Tests für End-to-End-Aufruf.
+- **FB-01** (1–2 Commits): Heuristik im
+  `AIContextFootprintCalculator.QueueMemberSymbols` einbauen — Idee:
+  Member ohne `Body`/`ExpressionBody` und ohne nicht-Attribute-Dekoration
+  werden markiert oder beim Aufsummieren mit reduzierter Gewichtung
+  gezählt. Konkretisierung mit Verweis auf existierende
+  `AIContextFootprintDeduplicationTests` (für Regressions-Schchutz).
 
-Reihenfolge-Vorschlag: **FB-02 → FB-03 → FB-04 → FB-01** (klein nach
-groß). Alle vier Commits auf Deutsch, Conventional-Commits-Stil, autonom
-in den Loop gepusht — keine erzwungenen Pausen dazwischen, sofern die
-Tests grün bleiben.
+Reihenfolge-Vorschlag: **FB-02 → FB-03 → FB-04 → B → A → FB-01** (klein
++ Tool-nah → groß + Architektur-nah). Alle sechs Commits auf Deutsch,
+Conventional-Commits-Stil, autonom in den Loop gepusht — keine
+erzwungenen Pausen dazwischen, sofern die Tests grün bleiben.
+
+**Token-Budget-Garantie:** kein Tool in dieser Runde darf eine
+unbegrenzte Liste zurückgeben. `maxResults`/`maxMembers` ist Pflicht,
+`McpTruncation`-Meta-Zeile ist Pflicht, Snippets sind pro Violation
+gedeckelt (max 5 Kontextzeilen × 200 Zeichen/Zeile ≈ 1 KB/Violation).
+Zielwert: eine typische `get_violations`-Antwort bleibt unter
+~50 KB auch bei 50 Treffern.
 
 ## Definition of Done / Erfolgskriterien
 
@@ -296,29 +479,51 @@ Tests grün bleiben.
     Override-Slot spiegelbar.
   - `rules.json` und `tests/Fixtures/BaselineMini/rules.json` sind
     konsistent ergänzt.
+  - Neues Tool `get_class_structure` mit Markdown-Output +
+    `StructuredContent` ist implementiert, registriert und
+    dokumentiert.
+  - `get_violations` liefert Snippet-Feld pro Violation mit Zeile
+    davor/danach (per `contextLines` konfigurierbar, Default 2).
 - **Tests (alle müssen grün sein):**
   - `dotnet build` (mit `TreatWarningsAsErrors = true`).
   - `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
-    — neuer MiddleMan-Test, neue PublicMembers-Tests
+    — neue MiddleMan-Tests, neue PublicMembers-Tests
     (Skip + Opt-in), neue AIContextFootprint-Tests (Heuristik),
-    neue DuplicateDetection-Tests (`scopeType` + Summary).
+    neue DuplicateDetection-Tests (`scopeType` + Summary), neue
+    `get_class_structure`-Tests (alle Edge-Cases aus „Wie"), neue
+    `get_violations`-Snippet-Tests (Datei-Anfang, mehrere
+    Violations/Zeile, Cluster ohne Zeile, lange Zeilen, Opt-out).
   - `dotnet test src/AiNetLinter.IntegrationTests --filter
     Category!=Stress` — keine Regression in bestehenden
-    End-to-End-Szenarien.
+    End-to-End-Szenarien; `McpServerAllToolsE2ETests` und
+    `McpServerCommandContractTests` müssen die neuen Tool-Signaturen
+    und Schema-Änderungen mitmachen.
 - **Doku & Konfig-Sync:**
   - `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only`
     ausgeführt und committed.
   - `Docs/configuration.md` aktualisiert (neue Property, neuer
-    `scopeType`-Parameter, ggf. Heuristik-Hinweis).
-  - `Docs/ROADMAP.md` aktualisiert, falls einer der vier Punkte dort
+    `scopeType`-Parameter, neue Tool-Beschreibung, ggf.
+    Heuristik-Hinweis).
+  - `Docs/agent-api.md` aktualisiert mit Signatur + Parametern von
+    `get_class_structure` und dem neuen Snippet-Feld in
+    `get_violations`.
+  - `Docs/ROADMAP.md` aktualisiert, falls einer der sechs Punkte dort
     als Meilenstein geführt wird (prüft der Planer).
+- **Token-Budget (harter Test):**
+  - Smoke-Test-Skript im IntegrationTest-Setup (oder als
+    `McpToolResults`-Test): ein Aufruf mit Worst-Case-Args
+    (`maxResults = 100`, `contextLines = 5`, `maxMembers = 200`) darf
+    die Antwort-Bytes nicht über ein definiertes Limit
+    (~50 KB) treiben. Schwellwert-Verletzung ist Test-Fail.
 - **Commits:** Conventional Commits auf Deutsch, imperativ. Pro
   Muss-Haven-Punkt mindestens ein Commit, autonom in den
   `drift-loop` eingespielt. Push erfolgt durch den Loop bzw. durch den
   Nutzer am Ende der Runde.
 - **Keine projektspezifischen Hardcodings:** Kein `JsonSerializerContext`,
   keine `SqlCharScanner`-Sonderlogik, keine `Mcp*`-Spezialfälle
-  außerhalb der `find_duplicates`-Tool-Logik.
+  außerhalb der `find_duplicates`-Tool-Logik. Snippet-Code und
+  Class-Structure-Tool arbeiten rein über Roslyn-SyntaxTree, keine
+  String-Magie.
 
 ## Offene Punkte
 
