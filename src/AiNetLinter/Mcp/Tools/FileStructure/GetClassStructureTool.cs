@@ -18,11 +18,35 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// MCP-Tool <c>get_class_structure</c>: liefert eine tabellarische Übersicht über alle Member eines
 /// C#-Typs (Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur). Unterstützt partial
 /// classes über mehrere Dateien.
+///
+/// <para>
+/// <b>Token-Budget:</b> Die Member-Liste wird auf <c>maxMembers</c> Einträge begrenzt (Default 50,
+/// Cap 200). Bei Überschreitung wird eine Truncation-Meta-Zeile in den Markdown-Output gehängt und
+/// das Feld <c>Truncated = true</c> im StructuredContent gesetzt; <c>TotalMemberCount</c> und
+/// <c>ShownMemberCount</c> dokumentieren den Zustand für Tool-zu-Tool-Aufrufer.
+/// </para>
+///
+/// <para>
+/// <b>Records:</b> Bei <c>record class</c>/<c>record struct</c> mit Primary Constructor werden
+/// die Konstruktor-Parameter als eigene Zeilen mit <c>Kind = "PrimaryCtor-Param"</c> vor den
+/// restlichen Membern ausgegeben — Position und Name sind essentiell für Refactorings und gehen
+/// sonst in der impliziten Konstruktor-Syntax verloren.
+/// </para>
 /// </summary>
 internal static class GetClassStructureTool
 {
+    /// <summary>Default für <c>maxMembers</c> — konsistent mit <see cref="McpTruncation"/>.</summary>
+    internal const int DefaultMaxMembers = 50;
+
+    /// <summary>Harter Cap — Antwort bleibt damit immer unter ~50 KB.</summary>
+    internal const int MaxMembersCap = 200;
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state, string? symbol, string? sortBy, CancellationToken ct) =>
+        ExecuteAsync(state, symbol, sortBy, DefaultMaxMembers, ct);
+
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbol, string? sortBy, CancellationToken ct)
+        McpCodeGraphServer state, string? symbol, string? sortBy, int maxMembers, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -35,6 +59,8 @@ internal static class GetClassStructureTool
                 "Pflichtparameter 'symbol' fehlt oder ist leer.",
                 hint: "symbol angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
+
+        var clampedMaxMembers = Math.Clamp(maxMembers, 1, MaxMembersCap);
 
         try
         {
@@ -51,16 +77,22 @@ internal static class GetClassStructureTool
 
             var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
             var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
-            var members = ExtractMembers(namedType, solutionDir);
-            var sortedMembers = SortMembers(members, sortBy);
+            var allMembers = ExtractMembers(namedType, solutionDir);
+            var sortedMembers = SortMembers(allMembers, sortBy);
+            var truncated = sortedMembers.Count > clampedMaxMembers;
+            var shownMembers = truncated
+                ? sortedMembers.Take(clampedMaxMembers).ToList()
+                : sortedMembers;
 
             var payload = new ClassStructurePayload(
                 TypeName: namedType.ToDisplayString(),
                 Kind: GetTypeKindDescription(namedType),
                 Files: files,
                 TotalLines: totalLines,
-                MemberCount: sortedMembers.Count,
-                Members: sortedMembers);
+                TotalMemberCount: sortedMembers.Count,
+                ShownMemberCount: shownMembers.Count,
+                Truncated: truncated,
+                Members: shownMembers);
 
             var markdown = RenderMarkdown(payload);
             return McpToolResults.Text(McpSufficiencyHints.Append(markdown), payload);
@@ -129,12 +161,61 @@ internal static class GetClassStructureTool
     private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)
     {
         var result = new List<ClassStructureMemberEntry>();
+        // Records: Primary-Constructor-Parameter voranstellen (Konzept Edge-Case).
+        if (namedType.IsRecord)
+        {
+            result.AddRange(ExtractRecordPrimaryCtorParams(namedType));
+        }
         foreach (var m in namedType.GetMembers())
         {
             if (IsExcludedMember(m)) continue;
             result.Add(CreateMemberEntry(m, solutionDir));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Liefert für jeden Parameter des Primary Constructors eines Records eine
+    /// <see cref="ClassStructureMemberEntry"/> mit <c>Kind = "PrimaryCtor-Param"</c>.
+    /// Defensiv: gibt eine leere Liste zurück, wenn kein impliziter Constructor
+    /// gefunden wird (z. B. bei Records ohne Primary Ctor).
+    /// </summary>
+    private static IEnumerable<ClassStructureMemberEntry> ExtractRecordPrimaryCtorParams(INamedTypeSymbol namedType)
+    {
+        // Bei positional records ist der Primary-Constructor der Instance-Constructor mit
+        // den meisten Parametern, dessen Parameter nicht zu einer explizit deklarierten
+        // this(...)-Body-Definition gehören. Roslyn markiert ihn als IsImplicitlyDeclared
+        // = false (er ist explizit Teil der record-Deklaration), aber seine Locations
+        // zeigen auf die Record-Deklarations-Syntax (Klammer-Args, nicht Body).
+        // Pragmatischer Filter: Instance-Constructor mit höchster Parameter-Anzahl.
+        IMethodSymbol? primaryCtor = namedType.InstanceConstructors
+            .OrderByDescending(c => c.Parameters.Length)
+            .FirstOrDefault();
+
+        if (primaryCtor is null || primaryCtor.Parameters.Length == 0)
+        {
+            yield break;
+        }
+
+        var recordLine = namedType.Locations
+            .Where(l => l.IsInSource)
+            .Select(l => l.GetLineSpan().StartLinePosition.Line + 1)
+            .DefaultIfEmpty(0)
+            .Min();
+        if (recordLine <= 0) recordLine = 0;
+
+        foreach (var p in primaryCtor.Parameters)
+        {
+            yield return new ClassStructureMemberEntry(
+                Kind: "PrimaryCtor-Param",
+                Name: p.Name,
+                Visibility: "public",
+                StartLine: recordLine,
+                EndLine: recordLine,
+                LineCount: 0,
+                Signature: $"{p.Name} : {p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}",
+                FilePath: "");
+        }
     }
 
     private static bool IsExcludedMember(ISymbol m)
@@ -247,7 +328,7 @@ internal static class GetClassStructureTool
         var fileCountStr = p.Files.Count == 1 ? "1 Datei" : $"{p.Files.Count} Dateien";
         sb.AppendLine($"- Files: {filesStr} ({fileCountStr})");
         sb.AppendLine($"- Total Lines: {p.TotalLines}");
-        sb.AppendLine($"- Member Count: {p.MemberCount}");
+        sb.AppendLine($"- Member Count: {p.ShownMemberCount} von {p.TotalMemberCount}");
         sb.AppendLine();
 
         if (p.Members.Count == 0)
@@ -263,6 +344,12 @@ internal static class GetClassStructureTool
             var linesStr = m.StartLine > 0 ? $"{m.StartLine}-{m.EndLine}" : "-";
             var countStr = m.LineCount > 0 ? m.LineCount.ToString() : "-";
             sb.AppendLine($"| {m.Kind} | {m.Name} | {m.Visibility} | {linesStr} | {countStr} | {m.Signature} |");
+        }
+
+        if (p.Truncated)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"[{p.TotalMemberCount} Member gesamt, {p.ShownMemberCount} gezeigt — maxMembers erhöhen oder sortBy wechseln]");
         }
 
         return sb.ToString().TrimEnd();

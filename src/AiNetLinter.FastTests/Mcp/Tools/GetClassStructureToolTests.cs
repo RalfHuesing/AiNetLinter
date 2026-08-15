@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,6 +89,8 @@ public sealed class GetClassStructureToolTests
         Assert.NotEmpty(payload.Files);
         Assert.NotEmpty(payload.Members);
         Assert.Contains(payload.Members, m => m.Name == "Greet" && m.Kind == "Method");
+        Assert.Equal(payload.TotalMemberCount, payload.ShownMemberCount);
+        Assert.False(payload.Truncated);
     }
 
     [Fact]
@@ -145,5 +148,102 @@ public sealed class GetClassStructureToolTests
         Assert.NotNull(payload);
         Assert.Equal(2, payload!.Files.Count);
         Assert.Equal(2, payload.Members.Count(m => m.Kind == "Method"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxMembers_TruncatesMemberListAndSetsFlag()
+    {
+        // Klasse mit 60 privaten Methoden + 1 public Greet → 61 Member.
+        // maxMembers=10 erwartet 10 Member + Truncated=true + Meta-Zeile im Markdown.
+        var methods = string.Join("\n", Enumerable.Range(1, 60).Select(i => $"        private void HiddenMethod{i}() {{ }}"));
+        var source = $$"""
+            namespace TestNs;
+            public class LargeClass
+            {
+                public void Greet() { }
+            {{methods}}
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("LargeClass.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(state, "LargeClass", "lines", maxMembers: 10, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        // Sanity: die Klasse muss tatsächlich 61 Member haben, sonst testet der Test nichts.
+        Assert.True(payload!.TotalMemberCount >= 50, $"Test ungueltig: nur {payload.TotalMemberCount} Member gefunden (erwartet >= 50). Source:\n{source}");
+        Assert.True(payload.Truncated, $"Truncated muss true sein bei {payload.TotalMemberCount} Member und maxMembers=10.");
+        Assert.Equal(10, payload.ShownMemberCount);
+        Assert.Equal(10, payload.Members.Count);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("maxMembers erhöhen", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxMembers_ClampedToCap()
+    {
+        // User setzt maxMembers=10000 → muss auf 200 gekappt werden.
+        // TinyClass hat impliziten Default-Constructor + 1 explizite Methode = 2 Member.
+        const string source = """
+            namespace TestNs;
+            public class TinyClass { public void A() { } }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("TinyClass.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(state, "TinyClass", "lines", maxMembers: 10000, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        // TinyClass hat 1 Method + 1 impliziten Default-Constructor; cap=200 ist irrelevant,
+        // aber Clamp darf nicht crashen und nicht versehentlich truncaten.
+        Assert.InRange(payload!.TotalMemberCount, 1, 3);
+        Assert.Equal(payload.TotalMemberCount, payload.ShownMemberCount);
+        Assert.False(payload.Truncated);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RecordWithPrimaryCtor_ListsParamsBeforeMembers()
+    {
+        const string source = """
+            namespace TestNs;
+            public record Person(string FirstName, string LastName, int Age);
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("Person.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(state, "Person", "lines", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("record class", payload!.Kind);
+        var primaryCtorParams = payload.Members.Where(m => m.Kind == "PrimaryCtor-Param").ToList();
+        // Default sortBy="lines" sortiert nach FilePath+StartLine — bei gleicher recordLine
+        // ist die Reihenfolge der PrimaryCtor-Params also undefiniert, prüfen wir nur die
+        // Anwesenheit der korrekten Param-Namen statt die Sortierung.
+        Assert.Equal(3, primaryCtorParams.Count);
+        Assert.Equal(
+            new HashSet<string> { "FirstName", "LastName", "Age" },
+            primaryCtorParams.Select(p => p.Name).ToHashSet());
+        // Primäre Konstruktor-Parameter müssen vor den restlichen Membern stehen
+        // (Equals/GetHashCode/ToString/PrintMembers-Boilerplate, der vom Compiler generiert wird).
+        var firstNonParamIndex = payload.Members
+            .Select((m, idx) => (m, idx))
+            .First(t => t.m.Kind != "PrimaryCtor-Param").idx;
+        var lastParamIndex = payload.Members
+            .Select((m, idx) => (m, idx))
+            .Last(t => t.m.Kind == "PrimaryCtor-Param").idx;
+        Assert.True(lastParamIndex < firstNonParamIndex,
+            $"PrimaryCtor-Params müssen vor den restlichen Membern stehen (last={lastParamIndex}, firstNonParam={firstNonParamIndex}).");
     }
 }

@@ -19,11 +19,19 @@ public sealed record ClassStructureMemberEntry(
 
 /// <summary>
 /// Structured-Content-Wurzel für das MCP-Tool <c>get_class_structure</c>.
+/// <para>
+/// <c>TotalMemberCount</c> ist die Anzahl aller Member vor Truncation,
+/// <c>ShownMemberCount</c> die Anzahl der tatsächlich zurückgegebenen
+/// (kann bei sehr großen Klassen kleiner sein). <c>Truncated = true</c>
+/// signalisiert, dass weitere Member existieren, die nicht enthalten sind.
+/// </para>
 /// </summary>
 public sealed record ClassStructurePayload(
     string TypeName,
     string Kind,
     IReadOnlyList<string> Files,
     int TotalLines,
-    int MemberCount,
+    int TotalMemberCount,
+    int ShownMemberCount,
+    bool Truncated,
     IReadOnlyList<ClassStructureMemberEntry> Members);

@@ -43,14 +43,16 @@ internal static class FileStructureToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (string? symbol = null, string? sortBy = "lines", CancellationToken ct = default) =>
+            async (string? symbol = null, string? sortBy = "lines",
+                int maxMembers = GetClassStructureTool.DefaultMaxMembers,
+                CancellationToken ct = default) =>
             {
                 if (callLog is null)
                 {
-                    return await GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, ct);
+                    return await GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct);
                 }
-                return await callLog.ExecuteCallAsync("get_class_structure", $"{symbol}|{sortBy}",
-                    () => GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, ct));
+                return await callLog.ExecuteCallAsync("get_class_structure", $"{symbol}|{sortBy}|{maxMembers}",
+                    () => GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct));
             },
             new McpServerToolCreateOptions
             {
@@ -59,11 +61,14 @@ internal static class FileStructureToolRegistrations
             }));
     }
 
-    private const string GetClassStructureDescription =
+    private static readonly string GetClassStructureDescription =
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
         "vor Refactorings oder zur Identifikation langer Member). symbol (Pflicht): Typname, " +
-        "File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'.";
+        "File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'. " +
+        "maxMembers: Token-Budget-Limit (Default 50, Cap " +
+        + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung Truncation-Meta-Zeile " +
+        "und TotalMemberCount vs. ShownMemberCount im StructuredContent.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,

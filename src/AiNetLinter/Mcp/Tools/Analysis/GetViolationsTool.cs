@@ -27,7 +27,7 @@ internal static class GetViolationsTool
         string? scopeFilter,
         int maxResults,
         CancellationToken ct) =>
-        ExecuteAsync(state, new GetViolationsToolExecutionOptions(scopeFilter, maxResults), ct);
+        ExecuteAsync(state, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, ContextLines: 2), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
@@ -86,5 +86,5 @@ internal static class GetViolationsTool
 internal sealed record GetViolationsToolExecutionOptions(
     string? ScopeFilter = null,
     int MaxResults = GetViolationsScanner.DefaultMaxResults,
-    int ContextLines = 0,
+    int ContextLines = 2,
     bool IncludeSnippet = false);
