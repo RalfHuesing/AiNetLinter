@@ -4,8 +4,8 @@ task: ainetlinter-feedback-r1
 started_at: 2026-08-15T19:10:00+02:00
 last_updated: 2026-08-15T19:10:00+02:00
 rules_dir: .agents/rules
-total_steps: 0
-current_step: null
+total_steps: 1
+current_step: step-001
 ---
 
 # Task State: ainetlinter-feedback-r1
@@ -13,17 +13,18 @@ current_step: null
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0
-- **Aktueller Schritt:** keiner
+- **Steps gesamt:** 1
+- **Aktueller Schritt:** `step-001`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-15T19:10:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-15T19:10:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-15T19:11:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
+| step-001 | EPIC-01 | in_progress | FB-02: AvoidExcessiveMiddleMen fuer Testfiles ueberspringen | - | - | - | - |
 
 ## Config (optional)
 
