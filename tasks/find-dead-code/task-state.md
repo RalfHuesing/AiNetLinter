@@ -24,7 +24,7 @@ current_step: 001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| 001 | EPIC-01 | in_progress | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | - | - | - |
+| 001 | EPIC-01 | done | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | ja | approved | `06d49fc` |
 
 ## Config (optional)
 
