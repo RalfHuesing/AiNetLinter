@@ -27,7 +27,7 @@ Grober Anker, kein Detailplan — Detail-Steps entstehen erst JIT im Step-Modus 
 
 ## Epics
 
-- [ ] EPIC-01: Core-Scanner & Scope-Bounding-Pipeline — Implementierung von `FindDeadCodeScanner` und Datenmodellen mit Document-Scoped Search ($O(\text{doc})$), Top-Down-Container-Pruning, Whitelisting (Compiler/Runtime/Entry-Points/Utility-Ctors) und Interface/Override-Kaskadierung (Bezug: `konzept.md` §3.1, §3.2, §3.4, §3.5).
+- [ ] EPIC-01: Core-Scanner & Scope-Bounding-Pipeline — Implementierung von `FindDeadCodeScanner` und Datenmodellen mit Document-Scoped Search ($O(\text{doc})$), Top-Down-Container-Pruning, Whitelisting (Compiler/Runtime/Entry-Points/Utility-Ctors) und Interface/Override-Kaskadierung (in Arbeit -> step-001).
 - [ ] EPIC-02: Diagnosen & Locals-Erkennung (Mode-Support) — Integration von Compiler- und Roslyn-Diagnosen (`CS0169`, `CS0414`, `IDE0051`, `IDE0052`) für `mode: locals` / `both` (Bezug: `konzept.md` §3.3 Mode-Filter).
 - [ ] EPIC-03: MCP-Tool-Wrapper & Registrierung — Implementierung von `FindDeadCodeTool`, Tool-Registrierung in `AnalysisToolRegistrations.cs`, Aktualisierung von `ServerInstructions.cs`, Formatierung von Structured Output und Text-Output inklusive `limitsApplies`-Matrix und `recommendedNextAction` (Bezug: `konzept.md` §3.1, §3.6, §Strukturelle Lücken).
 - [ ] EPIC-04: Testsuite & Integration-Verifikation — Unit- & Component-Tests in `AiNetLinter.FastTests` (Interface-Kaskadierung, Scope-Bounding, Whitelist-Sonderfälle, Filter-Kombinationen, Pagination) und Live-Dogfooding-Test in `AiNetLinter.IntegrationTests` (Bezug: `konzept.md` §3.7, §Definition of Done).

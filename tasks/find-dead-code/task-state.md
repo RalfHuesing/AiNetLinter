@@ -4,8 +4,8 @@ task: find-dead-code
 started_at: 2026-08-17T17:16:00+02:00
 last_updated: 2026-08-17T17:16:00+02:00
 rules_dir: .agents/rules
-total_steps: 0
-current_step: -
+total_steps: 1
+current_step: 001
 ---
 
 # Task State: find-dead-code
@@ -13,17 +13,18 @@ current_step: -
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `-`
+- **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
+- **Aktueller Schritt:** `001`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-17T17:16:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-17T17:16:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-17T17:17:45+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
+| 001 | EPIC-01 | in_progress | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | - | - | - |
 
 ## Config (optional)
 
