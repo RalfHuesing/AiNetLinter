@@ -12,261 +12,149 @@ open_questions: []
 
 ## Ziel (Was)
 
-Ein neues MCP-Tool, das in der geladenen Solution Symbole (Klassen, Records, Enums, Methoden, Felder, Properties, Events) und (optional) Variablen/Lokale/const-Felder findet, auf die **innerhalb der geladenen Solution nicht referenziert wird**. Treffer werden mit klaren Confidence-Stufen ausgegeben — `high` (private/internal ohne Referenzen, mit hoher Wahrscheinlichkeit toter Code) und `low` (public, könnte von extern referenziert werden — der Nutzer entscheidet).
+Ein neues MCP-Tool, das in der geladenen Solution Symbole (Klassen, Records, Structs, Enums, Interfaces, Methoden, Properties, Felder, Events, Delegates) und (optional) ungenutzte Variablen/Lokale/Felder findet, auf die **innerhalb der geladenen Solution nicht referenziert wird**. 
+
+Treffer werden mit klaren Confidence-Stufen ausgegeben:
+- **`high`** (private/internal ohne Referenzen, keine Framework-/Interface-Bindung: mit extrem hoher Wahrscheinlichkeit toter Code, der sicher entfernt werden kann).
+- **`low`** (public API-Surface, Framework-/DI-Kandidaten, `InternalsVisibleTo` oder Interface-Implementierungen mit externem Scope: "nicht in Solution referenziert" — erfordert User-Entscheidung).
+
+Das Tool implementiert strenge **False-Positive-Schutzmechanismen** (Interface-Kaskadierung, EntryPoint-Schutz, Document-Scoped Bounding) und eine **hochperformante Scan-Pipeline** ($O(1)$/$O(\text{doc})$ für private Symbole statt naivem $O(N \times M)$ Workspace-Scan).
 
 ## Warum / Kontext
 
-Drift-Loop-Coder-Aufgaben enthalten "entferne toten Code" regelmäßig — Refactorings, Aufräumen vor PR, Drift-Korrektur. Aktuell muss der Agent das **manuell** machen: einzeln `find_references` aufrufen, manuell iterieren, raten. Das ist N Calls pro vermutet totem Symbol, plus Heuristik-Bauchgefühl. Ein dediziertes Tool, das die Solution einmal durchscannt und Treffer mit Confidence-Level liefert, ersetzt das durch 1 Call.
+Drift-Loop-Coder-Aufgaben enthalten regelmäßig "entferne toten Code" — bei Refactorings, beim Aufräumen vor PRs oder nach Architektur-Migrationen. Aktuell muss ein Agent das manuell machen: einzeln `find_references` aufrufen, manuell iterieren und Heuristiken raten. Das erfordert $N$ Tool-Calls pro vermutetem Symbol. Ein dediziertes Tool, das die Solution scannt und verlässliche Treffer mit Confidence-Level liefert, ersetzt das durch **1 einzigen Call**.
 
-**Status in der Roadmap:** In `tasks/features/05-roadmap.md` nicht eingeplant (weder MUST/SHOULD/NICE noch bewusst gestrichen in `06-nicht-umsetzen.md`) — neue Idee, die im aktuellen Recon-Stand fehlt. Strategischer Nachbar: `pattern_detect` (S2.2) macht etwas Ähnliches (gruppiert Lint-Verstöße), `find_magic_values` macht einen anderen On-Demand-Audit. Beide sind fertig → Tool-Familie ist etabliert.
+**Strategischer Nachbar:** `find_magic_values` und `pattern_detect` machen verwandte Solution-weite Audits. `find_dead_code` schließt die Lücke für strukturelle Code-Hygiene.
 
-**Marktdifferenzierung:** CodeGraph hat keine dedizierte Dead-Code-Detection, andere Roslyn-MCP-Server (siehe `tasks/features/03-market-research.md`) auch nicht. Roslyn liefert `SymbolFinder.FindReferencesAsync` (Symbol-Referenzen) und `SemanticModel.AnalyzeDataFlow` (Variablen/Lokale) — beides nativ nutzbar. Roslyns eingebaute Diagnostic-Analyzer IDE0051/IDE0052 (Private member 'X' is unused / Remove unread private member) sind vorhanden, aber wir exposen sie aktuell nicht (kein Treffer im Code auf diese IDs).
+**Marktdifferenzierung & Roslyn-Vorteil:** Roslyn bietet `SymbolFinder.FindReferencesAsync` und semantische Diagnosen (`CS0169`, `CS0414`, `IDE0051`, `IDE0052`). `find_dead_code` orchestriert diese nativ mit projektweiter Caching- und Scope-Bounding-Intelligenz.
 
 ## Scope
 
 ### Muss-Haben
 
-- Tool `find_dead_code` registriert in `SymbolGraphToolRegistrations` (neben `find_symbol`/`find_references`).
-- Iterativer Sweep über alle deklarierten Symbole in der geladenen Solution (Klassen, Records, Structs, Enums, Interfaces, Methoden, Properties, Felder, Events, Delegates).
-- Pro Symbol: `SymbolFinder.FindReferencesAsync` → 0 Treffer = potenziell tot.
-- Klassifikation in zwei Stufen:
-  - **`high`** (private/internal, nicht in `public` API-Surface, keine der unten gelisteten Attribute): sehr wahrscheinlich tot.
-  - **`low`** (public/protected, oder internal mit `InternalsVisibleTo` auf eine externe Assembly, oder internal in einer Library-Assembly die als NuGet veröffentlicht wird): "nicht in Solution referenziert" — User-Entscheidung.
-- Filter-Parameter `include_public: bool` (default `false`): wenn `false`, werden nur `high`-Treffer geliefert; wenn `true`, zusätzlich `low`-Treffer.
-- Filter-Parameter `scopeFilter` (string, optional): analog `get_violations`/`find_magic_values` — case-insensitive `Contains` auf Projekt-Name oder solution-relativem Pfad. Wiederverwendung von `ViolationScopeFilter.MatchesScope` (siehe `ViolationScopeFilter.cs:44-51`).
-- Filter-Parameter `kind` (enum: `all` | `class` | `method` | `field` | `property` | `event` | `delegate`, default `all`): Sym-Kind-Filter.
-- Filter-Parameter `confidence` (enum: `high` | `low` | `both`, default `both`): nur diese Confidence-Stufen liefern.
-- Filter-Parameter `accessibility` (enum: `all` | `private` | `internal` | `public`, default `all`): Accessibility-Filter.
-- Filter-Parameter `include_tests` (bool, default `false`): Test-Pfade (`**/*Tests/**/*.cs`, `**/TestKit/**/*.cs`) aus dem Scan ausnehmen. Begründung: Test-Methoden sind oft `public` + werden per Reflection aufgerufen; mit `include_public=true` würden sie massenhaft als `low` auftauchen. Per Default aus, User kann es bei Bedarf aktivieren.
-- Filter-Parameter `mode`: `members` (default) | `locals` | `both`. Wenn `mode=locals` oder `both`: zusätzlich zur Symbol-Referenz-Prüfung aktiviert der Scanner `Compilation.GetDiagnostics()` mit `SpecificDiagnosticOptions` für:
-  - `CS0169` "The private field 'X' is never used"
-  - `CS0414` "The field 'X' is assigned but its value is never used"
-  - `IDE0051` "Private member 'X' is unused" (Roslyn-IDE-Warnung, oft default off)
-  - `IDE0052` "Remove unread private member 'X'"
-  - `IDE0044` "Make field readonly" (verwandt, oft gleiche Wurzel)
-
-  Implementierungs-Skizze: `CSharpCompilationOptions.WithSpecificDiagnosticOptions(...)` mit `ReportDiagnostic.Hidden` für die fünf IDs, dann `compilation.GetDiagnostics()` filtern und in den Output integrieren. Damit findet der Scanner ungenutzte lokale Variablen, ungenutzte Parameter (außer in `out`/`ref`/Discard-Pattern), ungenutzte `const`-Felder — Roslyns eigene, kampferprobte Edge-Case-Behandlung (Lambda-Discards, Field-Readonly-Mismatch, generierte Display-Classes) kommt kostenlos. **Trade-off:** Compiler-Version-abhängig, weniger Kontrolle über Output-Format — bewusst akzeptiert.
-- **Pagination via `maxResults`** (int, default `DefaultMaxResults`, Konstante analog `GetViolationsScanner.DefaultMaxResults`): trunkiert die Trefferliste. Trunkierungs-Meta-Zeile via `McpTruncation.TruncateLines` mit Standard-Text `"[X Dead-Code-Treffer gesamt, M gezeigt — scopeFilter verfeinern, confidence='high' eingrenzen oder maxResults erhoehen]"` (konsistent mit `GetViolationsScanner.cs:229`). `IsTruncated: bool` im `structuredContent` (analog `DuplicateDetectionResult.Truncated`, `DuplicateDetectionModels.cs:53`).
-- **Sufficiency-Hinweis via `McpSufficiencyHints.Append`** (nur bei nicht-trunkierten Ergebnissen, analog `FindReferencesTool.cs:99`): "Diese Daten sind vollstaendig fuer die geladenen Solution im angegebenen Filter-Scope. Bei `low`-Treffern oder Symbolen mit `limitsApplies`-Eintraegen: manuell validieren vor destruktiven Aktionen."
-- Structured Output (JSON Schema 2020-12): `{ deadSymbols: [{ id, kind, containerType, file, line, accessibility, confidence, reason, exemptReason? }], summary: { high, low, byKind, scannedSymbols, exemptCount }, limits: string[] }`. `limits` listet die strukturellen Lücken auf (siehe "Strukturelle Lücken" unten), damit der Agent weiß, was das Tool NICHT erkennen kann.
-- Sufficiency-Hinweis: "Diese Daten sind vollstaendig fuer die geladene Solution" (analog `find_references`).
-- **Compiler-/Reflection-Whitelist** (immer ausgenommen, nie als tot markiert — ohne diese ist das Tool im Eigengebrauch unbrauchbar, weil massenhaft compiler-generated Symbole als tot gemeldet würden):
-  - `IsImplicitlyDeclared == true` (fängt ab: Auto-Property-Backing-Fields, Record-Equality-Methoden (`Equals`/`GetHashCode`/`ToString`/`PrintMembers`/`Deconstruct`/`<Clone>$`), Lambda-Display-Klassen, Iterator-State-Machines (`<MethodName>d__*`), Async-State-Machines, Primary-Constructor-Capture-Felder, `init`-only/Required-Helpers).
-  - `MethodKind.StaticConstructor` (`.cctor`) — wird implizit aufgerufen.
-  - `MethodKind.Destructor` (Finalizer `~Foo()`) — wird vom GC aufgerufen.
-  - `MethodKind.PropertyGet` / `MethodKind.PropertySet` / `MethodKind.EventAdd` / `MethodKind.EventRemove` / `MethodKind.EventRaise` (Property/Event-Accessor-Symbole — direkter Property-Zugriff ruft sie auf).
-  - Operator-Overloads (`op_*`) — Compiler synthetisiert die Aufrufe; Roslyn erkennt das meist, aber defensiv whitelisten.
-  - Attribute mit `[Conditional(...)]` (analog Konzept-V1).
-  - Methoden/Properties mit `[ModuleInitializer]` (impliziter Runtime-Aufruf).
-  - Methoden mit `[DllImport]` / `IsExtern == true` (PInvoke).
-  - Test-Methoden mit `[Fact]` / `[Theory]` / `[Test]` / `[TestMethod]` (Test-Runner-Aufruf per Reflection).
-  - Reflection-Marker-Attribute (für MCP-Server / MEF / ähnliche Plugin-Systeme): `[McpServerTool]`, `[McpTool]`, `[Export]`, `[Import]`, `[Plugin]`-artige. **Bewusst erweiterbar** über Whitelist-Konstante, weil das projektspezifisch ist.
-  - `[InternalsVisibleTo]`-Assembly-Whitelist: Wenn eine Solution-Assembly `InternalsVisibleTo` auf eine Test-Assembly hat, werden `internal`-Symbole, die nur von der Test-Assembly referenziert werden, **nicht** als `high` markiert, sondern als `low` mit `exemptReason: "InternalsVisibleTo"`. Konkret relevant für AiNetLinter selbst: `LinterEngine.cs:18-20` deklariert `InternalsVisibleTo` auf `AiNetLinter.FastTests`/`IntegrationTests`/`TestKit` — wenn wir das Tool darauf selbst anwenden, würden sonst dutzende `internal`-Helfer fälschlich als tot gemeldet.
-  - Konstruktoren (Roslyn unterscheidet `IMethodSymbol.MethodKind == Constructor` — bewusst nicht als tot werten, auch wenn keine direkten Aufrufer; `new Foo()` ist die übliche Nutzung, aber `Activator.CreateInstance(typeof(Foo))` und DI-Container umgehen das — siehe Lücken).
-  - Symbole, die in XML-Doc-Kommentaren referenziert werden (`<see cref="...">`).
-- Tests: 5+ Unit-Tests (verschiedene Confidence-Stufen, Filter-Kombinationen, Edge-Case-Whitelist, `limitsApplies`-Befüllung, Trunkierungs-Pfad), 1 Integration-Test auf Live-Repo (AiNetLinter-Repo selbst — dort gibt's garantiert echte Treffer, plus dokumentierte `InternalsVisibleTo`-Treffer als `low`).
+1. **Tool `find_dead_code` Registrierung**:
+   - Registriert in [AnalysisToolRegistrations.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs) (semantisch ein Solution-weiter Audit-Scan wie `find_magic_values` und `pattern_detect`).
+2. **Klassifikation in Confidence-Stufen**:
+   - **`high`**: `private` oder `internal` Member/Typen ohne Referenzen, keine Interface-Implementierung, kein Override, keine Framework-Marker.
+   - **`low`**: `public` Symbole (potenzielle Public-API), `protected` Member (potenziell vererbt), `internal` bei Assemblies mit `InternalsVisibleTo`, oder Symbole mit Framework-/DI-/Serializer-Attributen.
+3. **Filter-Parameter**:
+   - `accessibility` (enum: `all` | `private` | `internal` | `public` | `private_internal`, default `private_internal`): Filtert nach Deklarations-Sichtbarkeit. Default fokussiert auf direkt entfernbaren Code.
+   - `confidence` (enum: `both` | `high` | `low`, default `both`): Filtert nach Vertrauensstufe.
+   - `kind` (enum: `all` | `type` | `class` | `method` | `field` | `property` | `event` | `delegate`, default `all`): Symbol-Typ-Filter.
+   - `scopeFilter` (string, optional): Case-insensitive `Contains` auf Projekt-Name oder solution-relativem Pfad (Wiederverwendung von `ViolationScopeFilter.MatchesScope`, [ViolationScopeFilter.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/Analysis/ViolationScopeFilter.cs)).
+   - `include_tests` (bool, default `false`): Test-Pfade (`**/*Tests/**/*.cs`, `**/TestKit/**/*.cs`) aus dem Scan ausnehmen.
+   - `mode` (enum: `members` | `locals` | `both`, default `members`):
+     - `members`: Reiner Symbol-Graph-Referenz-Check für deklarierte Typen und Member.
+     - `locals`: Zieht Compiler-Diagnosen für ungenutzte Elemente heran: `CS0169` (unused private field), `CS0414` (assigned but unused field), `IDE0051` (unused private member), `IDE0052` (unread private member). *(Hinweis: IDE0044 "Make readonly" wird explizit NICHT aufgenommen, da es kein toter Code ist).*
+     - `both`: Führt beide Analysen zusammen.
+   - `maxResults` (int, default `50`): Pagination via `McpTruncation.TruncateLines` und `IsTruncated: bool` im `structuredContent`.
+4. **False-Positive-Schutz (Semantische Korrektheit)**:
+   - **Interface- & Override-Kaskadierung (Kritisch!)**:
+     - Wenn eine Methode/Property ein Interface implementiert (`ISymbol.ExplicitOrImplicitInterfaceImplementations`) oder eine Basismethode überschreibt (`IsOverride == true`): Prüfen, ob das Interface- oder Basis-Symbol Referenzen hat.
+     - Hat das Interface/Basis-Symbol Referenzen, ist die Implementierung **KEIN** toter Code!
+     - Hat auch das Interface 0 Referenzen, wird das Symbol entsprechend klassifiziert.
+   - **Entry-Points & Top-Level-Programme**:
+     - `compilation.GetEntryPoint(ct)` (z. B. `static void Main`, `<Program>$`, Top-Level Statements) wird immer gewhitelistet.
+   - **Konstruktoren-Sonderbehandlung**:
+     - *Private parameterlose Konstruktoren in statischen/Utility-Klassen* (`private MyUtils() {}`, wo alle anderen Member statisch sind) dienen der Verhinderung von Instanziierung und werden **immer gewhitelistet** (kein Dead Code).
+     - *Implizite Standardkonstruktoren* (`IsImplicitlyDeclared == true`) werden immer gewhitelistet.
+     - Explizite Konstruktoren in instanziierbaren Klassen werden bei 0 Referenzen nur dann als `high` gemeldet, wenn sie `private` sind und die Klasse nicht per DI oder Factory instanziiert wird.
+   - **Compiler- & Runtime-Whitelist (immer ausgenommen)**:
+     - `IsImplicitlyDeclared == true` (Compiler-generierte Backing-Fields, Record-Equality-Methoden `Equals`/`GetHashCode`/`ToString`/`<Clone>$`, State-Machines, Primary-Constructor-Captures).
+     - `MethodKind.StaticConstructor` (`.cctor`) und `MethodKind.Destructor` (Finalizer).
+     - `MethodKind.PropertyGet` / `Set` / `EventAdd` / `Remove` (werden über Property/Event selbst geprüft).
+     - Operatoren-Overloads (`op_*`).
+     - `[ModuleInitializer]`, `[DllImport]`, `[UnmanagedCallersOnly]`, `IsExtern == true`.
+     - Test-Methoden mit `[Fact]`, `[Theory]`, `[Test]`, `[TestMethod]`.
+     - Reflection-Marker: `[McpServerTool]`, `[McpTool]`, `[Export]`, `[Import]`, `[JSInvokable]`, `[Parameter]`, `[Inject]`.
+   - **Kein Schutz durch XML-Doc**:
+     - Reine Erwähnungen in XML-Kommentaren (`<see cref="...">`) schützen `private`/`internal`-Symbole **nicht** vor der Einstufung als Dead Code (alte Doku darf toten Code nicht maskieren).
+5. **Performance-Architektur ($O(\text{doc})$ Bounding)**:
+   - **Document-Scoped Search für `private` Symbole**: Da `private`-Member nur in der deklarierenden Datei (bzw. bei `partial` in den Typ-Dokumenten) sichtbar sind, wird `SymbolFinder.FindReferencesAsync(symbol, solution, documents: ImmutableHashSet.Create(doc))` aufgerufen. Dies reduziert die Suchzeit für ~70 % aller Symbole um Faktor 50x–100x.
+   - **Top-Down Container Pruning**: Wenn ein nicht-öffentlicher Container-Typ (`private class/struct`) 0 Referenzen hat, wird der gesamte Typ als Dead Code markiert; dessen innere Member müssen nicht mehr separat per Workspace-Scan durchleuchtet werden.
+   - **Identifier Pre-Check**: Vor der Ausführung von `FindReferencesAsync` für `internal`/`public` Symbole wird geprüft, ob der Identifier-Name überhaupt als Token in anderen Dokumenten vorkommt.
+6. **Structured Output & Trust-Modell**:
+   - Output Schema: `{ deadSymbols: [{ id, kind, containerType, file, line, accessibility, confidence, reason, limitsApplies: string[] }], summary: { high, low, byKind, scannedSymbols }, limits: string[], recommendedNextAction: { action: "ask_user", reason: "..." } }`.
+   - Header-Box mit klarem Trust-Hinweis im Text-Output.
+   - Sufficiency-Hinweis via `McpSufficiencyHints.Append`.
+7. **Tests**:
+   - FastTests (Unit/Component): Interface-Kaskadierung, `private`-Document-Bounding, Entry-Point-Schutz, Utility-Konstruktoren, Filter-Kombinationen, Pagination.
+   - IntegrationTests: Live-Dogfood-Test gegen AiNetLinter-Solution selbst.
 
 ### Non-Goals (bewusst NICHT Teil davon)
 
-- **Variablen-Modus / Hybrid-Strategie mit Roslyn-Compiler-Warnings:** in Muss-Haben verschoben (siehe `mode`-Parameter und zugehörige Diagnostics-Aktivierung oben).
-- **Effektiv-private Heuristik (transitive tote Inseln):** ein `public`-Symbol, das nur von anderen `public`-Symbolen in der eigenen Assembly referenziert wird, die ihrerseits ungenutzt sind → rekursive "transitive tote Inseln" erkennen. **Nicht jetzt** — größerer Algorithmus-Block, eigenes Feature, separater Scope. Wiederaufgreifen bei konkretem Bedarf.
-- **Grouped Output nach Datei** (analog `pattern_detect` Summary): für Audit-Workflow "welche Dateien würden durch Aufräumen am stärksten schrumpfen". **Nicht jetzt** — kann später als zusätzlicher Render-Modus nachgerüstet werden, ohne Scanner-Logik zu ändern.
-- **`--dead-code-only`-Option für `dotnet run` (CLI):** gleiche Logik wie MCP-Tool, aber als Datei-Audit-Output. **Nicht jetzt** — widerspricht der read-only-Linie (würde MCP-Logik in CLI duplizieren), außerdem kein belegter CI-Bedarf. Wiederaufgreifen, falls CI-Integration explizit gewünscht wird.
-- **Auto-Fix / Auto-Delete** (auch via `preview_refactor`): explizit ausgeschlossen — wäre Mutation auf der Platte. AiNetLinter bleibt Verifikations-Gatekeeper, der Coder/Agent entscheidet. Begründung: gleiches Argument wie die Streichung von `preview_refactor` in `06-nicht-umsetzen.md` §3 (read-only-Architektur).
-- **Cross-Solution / NuGet-Consumer-Analyse:** wir können nicht wissen, ob eine `public`-Methode aus einer anderen Solution aufgerufen wird. Wir markieren das ehrlich als `low` und überlassen die Entscheidung dem User. Eine echte Analyse würde NuGet-Referenz-Graph erfordern — eigenständiges Vorhaben (siehe M2 `dependency_graph`, abgeschlossen in der Roadmap, aber noch nicht für Consumer-Use-Cases erweitert).
-- **Source-Generator-Output-Tracking:** Generierter Code kann statische Methoden/Properties aus Source-Assemblies referenzieren, die Roslyn als ungenutzt darstellt. Würde zu vielen False-Positives führen. Erkennung: `Symbol.IsInSource == false` oder `IPropertySymbol.GetMethod?.DeclaringSyntaxReferences` zeigt auf generierte Dateien → als `low` whitelisten, nicht beheben.
-- **Reflection-Aufrufer:** `Type.GetMethod("Foo")` oder `Activator.CreateInstance(typeof(T))` können nicht strukturell erkannt werden. Wäre `provenance: heuristic`-Arbeit analog CodeGraph — wir liefern `provenance: roslyn-symbolic` (siehe `00-master-overview.md` §4.3), das schließt Reflection aus.
-- **Multi-Sprachen-Totcode** (VB.NET, F#): AiNetLinter ist C#-pur (siehe `06-nicht-umsetzen.md` §8).
+- **Transitive Inseln (Effektiv-private Erkennung)**: Eine isolierte Gruppe von `public` Klassen, die sich nur gegenseitig aufrufen, aber von außen ungenutzt sind. (Komplexer Graph-Algorithmus, separater Scope).
+- **Auto-Fix / Auto-Delete**: AiNetLinter bleibt Verifikations-Gatekeeper (Read-Only). Der Coder/Agent entscheidet über das Löschen.
+- **Cross-Solution / Externe NuGet-Consumer**: Das Tool bewertet ehrlich innerhalb der geladenen Solution; `public` APIs werden konsistent als `low` eingestuft.
+- **Reflection String-Parsing**: Kein Parsen von `Type.GetMethod("Foo")` — stattdessen Abbildung über `limitsApplies: ["reflection"]`.
+- **Multi-Language Support**: AiNetLinter ist C#-pur.
 
-## Strukturelle Lücken — was das Tool NICHT erkennen kann
+## Strukturelle Lücken & `limitsApplies`-Matrix
 
-Diese Patterns sind **nicht durch strukturelle Roslyn-Statische-Analyse** erkennbar (Roslyn sieht die Aufrufe nicht, weil sie zur Laufzeit per Reflection oder Framework-Magic entstehen). Das Tool meldet für betroffene Symbole ggf. fälschlich `high`. Das ist **kein Bug, sondern eine fundamentale Grenze** — würde sich nur durch eine dynamische Analyse (Profiling, Coverage-Daten) lösen lassen, die AiNetLinter bewusst nicht macht. Die Liste wird im Tool-Output unter `limits[]` angezeigt, damit der Agent weiß, was er manuell validieren muss.
+Das Tool kennzeichnet strukturell nicht erkennbare Muster transparent pro Treffer über das `limitsApplies`-Feld:
 
-| Pattern | Warum nicht erkennbar | Beispiel | Mitigation |
-|---------|----------------------|----------|------------|
-| `Type.GetMethod("Foo")` / `MethodInfo.Invoke` | String-basierte Reflection, Roslyn sieht nur den String | `typeof(Foo).GetMethod("Bar")?.Invoke(...)` | manuell validieren, ggf. `[InternalsVisibleTo]`-Hinweis |
-| `Activator.CreateInstance(typeof(T))` | Type-Symbol wird zwar referenziert, aber der "wird instanziiert"-Pfad fehlt | `Activator.CreateInstance(typeof(MyClass))` | siehe oben |
-| DI-Container-Registrierung | Container ruft Konstruktoren/Methoden per Reflection auf | `services.AddTransient<IFoo, Foo>()` | siehe oben |
-| JSON-Serializer (System.Text.Json, Newtonsoft) | Serializer liest public Properties/Fields per Reflection | `JsonSerializer.Serialize<Foo>(foo)` | public properties gelten ggf. fälschlich als `low` |
-| ASP.NET MVC/WebAPI Controller-Routing | Routing liest Controller-Methoden per Reflection | `[HttpGet("foo")] public IActionResult Foo()` | siehe oben, ggf. `[McpServerTool]`-Analogon für `[Http*]`-Attribute als Hinweis |
-| Minimal-API Handler | Lambda wird registriert, Roslyn erkennt den Lambda-Body | `app.MapGet("/foo", (FooService s) => ...)` | der Lambda-Body selbst ist sichtbar, der Handler-Pfad nicht |
-| Blazor Component-Methoden | Blazor ruft `[Parameter]` und `[JSInvokable]` per Reflection | `[Parameter] public string Foo { get; set; }` | ggf. Attribute als Exempt-Marker |
-| xUnit/NUnit/MSTest Test-Runner | ruft `[Fact]`/`[Test]`-Methoden per Reflection | (wird durch Whitelist abgedeckt, siehe Muss-Haben) | OK |
-| MCP-Server-Tool-Dispatch | Server holt `[McpServerTool]`-Methoden per Reflection | (wird durch Whitelist abgedeckt) | OK |
-| Source-Generator-Output | Generierter Code referenziert Symbole aus Source-Assembly | `[GeneratedRegex]`-Helper | schwer erkennbar — IsInSource/IsImplicitlyDeclared hilft teilweise |
-| `dynamic x; x.Foo()` | Dynamic Dispatch, statisch nicht auflösbar | `dynamic obj; obj.Foo();` | nicht erkennbar, aber selten |
-| `MethodInfo.CreateDelegate` | Delegate-Erzeugung per Reflection | `typeof(Foo).GetMethod("Bar").CreateDelegate(...)` | wie Reflection, nicht erkennbar |
-| `[InternalsVisibleTo]` über Solution-Grenzen | Wir sehen nur References innerhalb der geladenen Solution; Aufrufer in externen Assemblies (NuGet-Consumer, andere nicht-geladene Solutions) sind unsichtbar | Library-Assembly mit `public`-API wird von externem Service genutzt | als `low` markiert, User manuell validiert |
-| COM / WinRT / PInvoke | extern, nicht in Solution | `[DllImport("kernel32.dll")]` | OK (Whitelist) |
-| Module-Initializer | Runtime ruft Methode einmal auf | `[ModuleInitializer] static void Init() {...}` | OK (Whitelist) |
+| Symbol-Charakteristik | `limitsApplies` Einträge | Hintergrund |
+|---|---|---|
+| `public` oder `protected` | `["publicApiSurface", "reflection"]` | Mögliche externe Consumer oder Reflection-Aufrufe. |
+| Interface-Implementierung | `["interfaceImplementation"]` | Aufrufe laufen potenziell über Interface-Instanzen. |
+| POCO / DTO Properties | `["jsonSerializer", "optionsBinding"]` | Serializer oder `IOptions<T>` setzen Properties per Reflection. |
+| Controller / Minimal API Actions | `["aspNetRouting"]` | Framework routet HTTP-Endpunkte per Metadaten. |
+| CQRS / MediatR / Handler | `["di", "handler"]` | Handler-Auflösung erfolgt dynamisch über den Service-Provider. |
+| EF Core Entity / Configuration | `["efCoreMapping"]` | Entity-Framework bindet Navigations-Properties und Tabellen. |
+| Blazor Component Parameter | `["blazor"]` | `[Parameter]` wird von der Blazor-Runtime injiziert. |
+| `InternalsVisibleTo` Assembly | `["internalsVisibleTo"]` | Zugriff potenziell aus befreundeter externer Assembly. |
 
-Diese Liste wird im Tool-Output **explizit** ausgeben (nicht stillschweigend weglassen), damit ein Agent entscheiden kann, ob er `find_dead_code`-Treffer vertraut oder ob er manuell prüft.
+## False-Positive-Schutz & Trust-Modell
 
-## False-Positive-Schutz — Trust-Modell und User-Bestätigung
+Da statische Dead-Code-Analysen per Definition Lücken gegenüber dynamischer Laufzeit-Magie haben, gelten drei Schutzmaßnahmen:
 
-`find_dead_code` ist das **erste Tool in der AiNetLinter-Tool-Familie, das eine Heuristik-basierte Bewertung** liefert ("Symbol X ist wahrscheinlich tot") statt einer harten Tatsache ("Symbol Y ruft Z" / "Violation in Datei D"). Andere Tools liefern Fakten, die objektiv überprüfbar sind; `find_dead_code` liefert eine **Strukturanalyse, die per Definition unvollständig** ist (siehe vorherige Sektion: Reflection, DI, Serializer etc. sind nicht erkennbar). Daraus folgt: **ein Agent darf auf Basis eines `find_dead_code`-Treffers nicht autonom Code löschen**. Ohne Schutzmaßnahmen ist das Worst-Case-Szenario: Agent findet 50 `low`-Treffer, löscht alle 50 in einem Rutsch, davon waren 12 Reflection-aufgerufene Symbole → Laufzeit-Crashes.
-
-Drei Schutzmaßnahmen, alle gleichzeitig:
-
-### 1. Prominenter Trust-Hinweis im Text-Output (Header)
-
-Jeder Tool-Output beginnt mit einer Box, die klar macht, dass die Treffer Heuristik-basiert sind:
-
-```
-[TRUST-HINWEIS]: find_dead_code nutzt statische Roslyn-Analyse. Strukturelle Luecken
-(Reflection, DI-Container, JSON-Serialisierung, ASP.NET-Routing, Source-Generator-Output)
-koennen zu False-Positives fuehren. Validiere jeden Treffer vor destruktiven Aktionen.
-Siehe 'limits' im strukturierten Output fuer die vollstaendige Luecken-Liste.
-```
-
-Wird **immer** angezeigt, auch bei nicht-trunkierten Ergebnissen — Sufficiency-Hinweis (siehe oben) gilt nur für die Vollständigkeit der gelieferten Daten, **nicht** für die Korrektheit der Bewertung. Das ist eine bewusste Doppelung: "vollständig" und "korrekt" sind zwei verschiedene Eigenschaften.
-
-### 2. Per-Treffer `limitsApplies`-Feld im structuredContent
-
-Jeder Treffer bekommt ein Feld `limitsApplies: string[]` mit den konkret anwendbaren Lücken (Subset der globalen `limits`-Liste), basierend auf Symbol-Charakteristika:
-
-| Symbol-Charakteristik | `limitsApplies` enthält |
-|----------------------|-------------------------|
-| `public` oder `protected` | `["publicApiSurface", "reflection"]` |
-| Hat Parameter `(Type, ...)` oder `params object[]` | `["reflection", "di"]` |
-| Property/Field mit `[JsonProperty]`, `[JsonInclude]`, `[DataMember]`, `[JsonPropertyName]` etc. | `["jsonSerializer"]` |
-| Methode mit `[HttpGet]`, `[HttpPost]`, `[Route]`, `[ApiController]`-Klasse | `["aspNetRouting"]` |
-| Methode mit `[JSInvokable]` | `["blazor", "reflection"]` |
-| Methode mit `[Inject]`, Konstruktor mit `IServiceCollection.AddXxx`-Pattern (heuristisch) | `["di"]` |
-| Konstruktor in `public class` mit `public/internal` Accessibility | `["di", "reflection"]` |
-| Symbol in `AssemblyInfo.cs` / `Generated*.cs` (Source-Generator) | `["sourceGenerator"]` |
-
-Damit der Agent **pro Treffer** sehen kann, welche Lücken für genau diesen Treffer relevant sind — nicht nur "irgendwo gibt's Lücken".
-
-### 3. Strukturierter `recommendedNextAction`-Block
-
-Im `structuredContent` ein separates Feld:
-
-```json
-{
-  "recommendedNextAction": {
-    "action": "ask_user",
-    "reason": "find_dead_code-Treffer sind Heuristik-basiert. Validiere mit dem User, bevor destruktive Aktionen (Loeschen, Refactoring) durchgefuehrt werden.",
-    "confidenceNote": "high-Confidence-Treffer ohne limitsApplies-Eintrag sind mit hoher Wahrscheinlichkeit tote Symbole. low-Confidence-Treffer oder Treffer mit limitsApplies-Eintraegen erfordern manuelle Pruefung."
-  }
-}
-```
-
-Der Server-Instructions-Text in `Mcp/ServerInstructions.cs` wird ergänzt um eine explizite Direktive:
-
-> "Bei Dead-Code-Loeschungen aus `find_dead_code`-Treffern: erst User bestaetigen lassen, besonders bei `low`-Confidence-Treffern oder Symbolen mit `limitsApplies`-Eintraegen. Das Tool ist eine Heuristik, kein Audit."
-
-**Begründung für die Doppelung (Text + strukturierter Hinweis):** Text-Hinweis ist für den LLM-Agenten direkt lesbar im Antwort-Body, strukturierter Hinweis ist programmatisch auswertbar für deterministische Workflow-Tools (z.B. ein `pre-commit`-Hook, der `recommendedNextAction.action == "ask_user"` erzwingt). Beide Zielgruppen werden bedient.
-
-**Was bewusst NICHT Teil davon ist:**
-- **Echte Tool-Blockade** (Tool gibt `isError: true` zurück, wenn User nicht bestätigt hat): Das wäre eine zustandsbehaftete Server-Logik, die MCP nicht vorsieht und die gegen die read-only-Architektur-Linie verstößt.
-- **MCP `elicitation` (User-Dialog zur Laufzeit)**: Im Recon C §2.4 als L5/L-Phase gestrichen (Spec noch instabil, UI-Komplexität, siehe `06-nicht-umsetzen.md` §6/§8). Die `recommendedNextAction`-Variante ist die pragmatische Zwischenstufe ohne Server-State.
-
-## Zielplattformen / Technischer Rahmen
-
-- **MCP-Server, stdio** — bestehender Server (`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`), neues Tool parallel zu `find_references` in `SymbolGraphToolRegistrations`. Begründung: thematisch verwandt (Symbolgraph-Abfragen), User-Workflow passt zu "ich vermute X ist tot → find_dead_code zeigt alle Kandidaten".
-- **Roslyn `SymbolFinder.FindReferencesAsync`** für Symbol-Referenz-Checks — bestehende API, bereits in `find_references` genutzt.
-- **Roslyn `SemanticModel.AnalyzeDataFlow`** (optional, für `mode=locals`) — neue API-Nutzung, semantischer Schritt pro Methode (Performance-Implikation siehe Nice-to-Have).
-- **C#-only** — wie alle anderen MCP-Tools, dokumentiert in `ServerInstructions.cs`.
-- **Structured Output** — Pflicht, wie bei `pattern_detect` (S2.2 Akzeptanzkriterien).
-- **Naming-Konvention:** `find_*` (wie `find_symbol`, `find_references`, `find_duplicates`, `find_magic_values`). Vorschlag: `find_dead_code` — passt zum bestehenden Naming, "dead code" ist etablierter C#-Begriff (Roslyn IDE0051/0052), LLMs erkennen ihn sicher.
-
-## Verworfene Alternativen
-
-- **Nur als Linter-Rule** (`DeadCodeChecker`): Verworfen, weil das Pattern dem User-Facing-Charakter nicht gerecht wird. Linter-Violations werden vom Agent typischerweise in großen Listen mit anderen Verstößen vermischt; ein dediziertes Tool mit Confidence-Levels und Filter ist klarer. Mögliche Brücke: Linter-Rule könnte das Tool aufrufen und in `get_violations` aggregieren — Nice-to-Have.
-- **Externes Tool (z. B. `JetBrains.Annotations`, `Resharper`-CLI):** Verworfen, weil AiNetLinter bewusst eigenständig bleibt und Roslyn nativ nutzt. Keine zusätzlichen Tool-Abhängigkeiten für eine Fähigkeit, die Roslyn selbst anbietet.
-- **Embeddings / Fuzzy-Suche:** Verworfen, siehe `06-nicht-umsetzen.md` §10 (semantische Suche widerspricht der Roslyn-präzisen Positionierung).
-- **Zwei separate Tools** (`find_unused_symbols` + `find_unused_locals`): Verworfen für jetzt — ein Tool mit `mode`-Parameter ist kompakter, konsistent mit `metrics_tree` (verschiedene Modi in einem Tool). Falls sich zeigt, dass die Variablen-Analyse fundamental andere UX braucht (z. B. weil DataFlowAnalysis andere Filter braucht), Split nachholen.
-- **Git-History-aware (wer hat das Symbol zuletzt benutzt?):** Verworfen — siehe `06-nicht-umsetzen.md` §9 (kein Git-Wrapper ohne echten Symbolbezug). Wenn überhaupt, wäre das ein eigener `find_dead_code`-Modus mit `consider_git: bool` — sehr aufwendig, kein belegter Bedarf.
+1. **Prominenter Header-Hinweis**: Jeder Text-Output beginnt mit einem Hinweis auf Heuristiken und verweist auf die `limits`-Liste.
+2. **Per-Treffer `limitsApplies`**: Zeigt dem Agenten genau, welche Framework-Effekte für diesen konkreten Treffer zutreffen.
+3. **`recommendedNextAction` Block**: Enthält immer `action: "ask_user"`, um autonome Fehl-Löschungen durch Agenten zu verhindern.
 
 ## Wo im Projekt
 
-**Pattern-Reuse-Check (Schritt 3a, bereits durchgeführt):**
+- **Scanner-Kern**: `src/AiNetLinter/Mcp/Tools/Analysis/FindDeadCodeScanner.cs` (reine statische Scan-Funktion).
+- **Tool-Wrapper**: `src/AiNetLinter/Mcp/Tools/Analysis/FindDeadCodeTool.cs`.
+- **Registrierung**: `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs` (unter den Solution-weiten Audits).
+- **Instructions**: `src/AiNetLinter/Mcp/ServerInstructions.cs` (Dokumentation des neuen Tools).
+- **Tests**:
+  - `src/AiNetLinter.FastTests/Mcp/FindDeadCodeScannerTests.cs` (Unit/Component-Tests).
+  - `src/AiNetLinter.IntegrationTests/McpLiveRepositoryTests.cs` (Dogfood-Test gegen AiNetLinter).
 
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` — nutzt `SymbolFinder.FindReferencesAsync` (über `DiffImpactAnalyzer.FindCallSiteEntriesAsync`). Kernlogik wiederverwendbar, aber `find_references` ist 1 Symbol → N Aufrufer; wir brauchen das Inverse: N Symbole → 0 Aufrufer. Iterations-Wrapper, nicht Replacement.
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolTool.cs` — Symbol-Identifikator-Resolution (`SymbolIdentifierResolver`). Wird im neuen Tool NICHT gebraucht (wir iterieren über die ganze Solution), aber `McpSufficiencyHints`/`McpTruncation`/`McpToolResults` werden wiederverwendet.
-- `src/AiNetLinter/Mcp/Tools/PatternDetect/PatternCatalog.cs` + `PatternDetectScanner.cs` — Pattern-Catalog-Pattern (statische Pattern-Definition) + Scanner-Pattern (Solution-weiter Sweep). Architektur-Vorbild für `find_dead_code`: `FindDeadCodeScanner.cs` als reine Funktion, `FindDeadCodeTool.cs` als dünner Wrapper.
-- `src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs` + `ViolationScopeFilter.cs` — `scope`-Parameter-Handling analog übernehmen.
-- `src/AiNetLinter/Mcp/McpSufficiencyHints.cs` — Sufficiency-Hinweis wiederverwenden, gleiche Textbaustein-Pattern wie `find_references`.
-- `src/AiNetLinter/Mcp/McpToolResults.cs` — `McpToolResults.Recoverable()` / `.Text()` / `.SolutionNotLoaded()` / `.CompilationError()` — alle vorhanden, keine Neuerfindung.
-- `src/AiNetLinter/Mcp/ServerInstructions.cs` — muss ergänzt werden (neuer Tool-Eintrag in der Tool-Liste, neuer Eintrag in der C#-only-Sektion).
-- `src/AiNetLinter/Mcp/IsErrorPolicy.md` — kein neuer `isError: true`-Fall nötig (Empty-Result ist recoverable wie bei `find_references`).
+## Wie (Ablauf & Algorithmus)
 
-**Mängel-Check:** Im Bestand kein Verstoß gegen `.agents/rules/**` gefunden im scope dieses Konzepts. Konzept folgt den Stil-Konventionen (record-Parameter, sealed, max. 60 Zeilen Methode).
+1. **Initialisierung & Pre-Filter**:
+   - Solution validieren. Bei `include_tests == false` Test-Projekte aus der Dokument-Menge herausfiltern.
+   - EntryPoint der Compilation ermitteln und in Whitelist aufnehmen.
+2. **Deklarations-Sweep mit Scope-Bounding**:
+   - Für jedes Dokument der Ziel-Projekte: deklarierte Typen und Member ermitteln.
+   - Whitelist-Check (`IsImplicitlyDeclared`, Compiler-Generics, Marker-Attribute, Utility-Konstruktoren, EntryPoint).
+   - *Top-Down Pruning*: Wenn Container-Typ privat & ungenutzt, Member kaskadierend erfassen ohne Einzelscans.
+3. **Referenz-Prüfung**:
+   - Für `private` Symbole: `SymbolFinder.FindReferencesAsync` beschränkt auf Deklarations-Dokument(e).
+   - Für `internal`/`public` Symbole: Schneller Token-Pre-Check, danach `SymbolFinder.FindReferencesAsync` über Solution.
+   - Bei Interface-Implementierungen / Overrides: Referenzen des Interface-/Basis-Symbols gegenprüfen.
+4. **Locals-Diagnosen (wenn `mode != members`)**:
+   - Diagnostics für `CS0169`, `CS0414`, `IDE0051`, `IDE0052` sammeln und als Treffer integrieren.
+5. **Klassifikation & Output-Generierung**:
+   - Zuordnung `high` vs. `low`, Ermittlung von `limitsApplies`.
+   - Result-Aggregation, Pagination via `McpTruncation`, Anfügen von Sufficiency-Hinweis und `recommendedNextAction`.
 
-## Entdeckte Mängel/Redundanzen
+## Definition of Done
 
-- **`find_references` mit 0 Treffern = Vorstufe von Dead-Code-Check**
-  - **Gefunden:** `FindReferencesTool.cs:75-77` — "Keine Aufrufstellen gefunden fuer 'X'" ist bereits ein vollständiges, definitives Ergebnis.
-  - **Bezug:** kein `rules_dir`-Verstoß; strukturelle Redundanz — beide Tools rufen `SymbolFinder.FindReferencesAsync`, aber in entgegengesetzter Richtung.
-  - **Vorschlag:** Behalten — User kann für Einzelfälle weiter `find_references` nutzen, das neue Tool ist der "Scan-alle"-Aufruf. Kein Refactoring der bestehenden `FindReferencesScanner.cs` nötig; `find_dead_code` ruft intern dieselbe API, aggregiert über alle Symbole.
-  - **Entscheidung:** bewusst beibehalten (siehe Nice-to-Have Brücke zur Linter-Rule).
-
-- **Filter-Logik für compiler-generated Members existiert bereits fragmentiert**
-  - **Gefunden:** `AIContextFootprintCalculator.cs:108-110` filtert mit `MethodKind.Ordinary + !IsImplicitlyDeclared + Record-Spezial-Members-Whitelist`; `GetClassStructureTool.cs:222-231` filtert Accessor-`MethodKind`-Werte.
-  - **Bezug:** kein `rules_dir`-Verstoß; Pattern-Reuse statt Neuerfindung.
-  - **Vorschlag:** Diese Filter-Logik in `FindDeadCodeScanner` wiederverwenden (gleiche Filter-Semantik). Wenn sich zeigt, dass die Filter konzeptionell identisch bleiben, kann man später eine gemeinsame `IsEffectivelyUserAuthored(ISymbol)`-Helfermethode extrahieren — vorerst Pattern-Reuse per Copy mit klarer Begründung im Scanner-Header.
-  - **Entscheidung:** übernommen ins Scope (Muss-Haben Whitelist nutzt diese Logik).
-
-- **`InternalsVisibleTo` auf Test-Assemblies — direkter Eigengebrauch-Effekt**
-  - **Gefunden:** `LinterEngine.cs:18-20` deklariert `InternalsVisibleTo("AiNetLinter.FastTests"/"IntegrationTests"/"TestKit")`.
-  - **Bezug:** kein `rules_dir`-Verstoß; **wäre ein falscher `high`-Treffer-Generator** ohne explizite Whitelist-Behandlung.
-  - **Vorschlag:** Muss-Haben-Whitelist erkennt `InternalsVisibleTo`-deklarierende Assemblies, markiert `internal`-Symbole, die nur von diesen referenziert werden, als `low` mit `exemptReason: "InternalsVisibleTo"`. So wird das Tool im Eigengebrauch sofort nutzbar, ohne Dutzende False-Positives.
-  - **Entscheidung:** übernommen ins Scope (Muss-Haben Whitelist-Item).
-
-- **Roslyn-Compiler-Diagnostic-IDs für ungenutzte Elemente werden nicht genutzt**
-  - **Gefunden:** Kein Treffer auf `CS0169`/`CS0414`/`IDE0051`/`IDE0052`/`IDE0044` im Code — diese existieren in Roslyn nativ, werden aber nirgends in der Pipeline aktiviert oder ausgewertet.
-  - **Bezug:** kein `rules_dir`-Verstoß; verpasste Chance, eine kampferprobte Datenquelle zu nutzen.
-  - **Vorschlag:** Hybrid-Strategie (siehe Nice-to-Have) aktiviert diese Warnungen on-demand im Scanner und integriert sie in den Output.
-  - **Entscheidung:** Nice-to-Have, nicht Muss — reine `SymbolFinder`-Variante funktioniert auch ohne.
-
-- **Reflection-Marker-Attribute sind projektspezifisch**
-  - **Gefunden:** Kein zentrales Whitelist-Pattern für Reflection-Attribute im Bestand; jede Datei handhabt das ad-hoc.
-  - **Bezug:** kein `rules_dir`-Verstoß; Pattern-Reuse-Opportunity.
-  - **Vorschlag:** Initiale Whitelist-Liste im Scanner-Code mit den gängigen Attributen (`[McpServerTool]`, `[McpTool]`, `[Export]`, `[Import]`, `[Fact]`, `[Theory]`, `[Test]`, `[TestMethod]`, `[Conditional]`, `[ModuleInitializer]`, `[DllImport]`, `[JSInvokable]`, `[Parameter]`, `[Inject]`) — als Konstante, leicht erweiterbar. Keine `rules.json`-Anbindung in v1 (würde gegen das "monolithisch & schlank"-Architekturprinzip verstoßen, siehe `06-nicht-umsetzen.md` §8).
-  - **Entscheidung:** übernommen ins Scope (Muss-Haben Whitelist nutzt die Konstante).
-
-## Wie (grob)
-
-1. `FindDeadCodeScanner` iteriert via `solution.Projects` → `INamedTypeSymbol.GetMembers()` (mit `DeclaredAccessibility`-Filter und `Kind`-Filter) → für jedes Symbol `SymbolFinder.FindReferencesAsync(symbol, solution)`.
-2. Pro Symbol: bei 0 Treffern Klassifikation nach `Accessibility` + Attributen → `high` oder `low`.
-3. `FindDeadCodeTool.ExecuteAsync` orchestriert: Solution-Load-Check, Filter-Param-Normalisierung, Scanner-Aufruf, Result-Aggregation, Structured-Output-Build, Sufficiency-Hinweis anhängen.
-4. Edge-Case-Whitelist in `FindDeadCodeScanner` als kleine Helfermethode `IsExempt(ISymbol)` (Main, Constructor, Conditional, etc.).
-5. Tests: 5+ Unit-Tests mit In-Memory-Workspaces (verschiedene Symbol-Kinds, Accessibilities, Attribute-Kombinationen), 1 Integration-Test gegen AiNetLinter-Solution selbst.
-
-## Definition of Done / Erfolgskriterien
-
-- Tool `find_dead_code` ist in `SymbolGraphToolRegistrations` registriert und im `tools/list`-Output sichtbar.
-- Tool-Eintrag in `ServerInstructions.cs` ergänzt (Tool-Liste + C#-only-Sektion + Trust-Direktive).
-- Structured Output vorhanden, JSON Schema validiert, mit `deadSymbols[]`/`summary`/`limits[]`/`isTruncated`/`recommendedNextAction`/`scope`/`mode`.
-- `include_public`/`scopeFilter`/`kind`/`confidence`/`accessibility`/`include_tests`/`mode`/`maxResults`-Filter funktionieren wie spezifiziert.
-- Edge-Case-Whitelist schützt vor False-Positives (10+ dokumentierte Exempt-Cases: `IsImplicitlyDeclared`, `MethodKind.StaticConstructor`/`Destructor`/Accessor, `[ModuleInitializer]`, `[DllImport]`, `[Conditional]`, `[Fact]`/`[Theory]`/`[Test]`/`[TestMethod]`, `[McpServerTool]`/`[McpTool]`/`[Export]`/`[Import]`, `[InternalsVisibleTo]`, Konstruktoren, XML-Doc-Referenzen).
-- Trust-Hinweis erscheint in jedem Tool-Output (Header-Box vor der Trefferliste).
-- `limitsApplies` pro Treffer wird basierend auf Symbol-Charakteristika korrekt befüllt (mind. 4 dokumentierte Heuristik-Mappings: public/Reflection/JSON/ASP.NET).
-- `recommendedNextAction`-Block ist im structuredContent vorhanden mit `action: "ask_user"`.
-- 5+ Unit-Tests in `AiNetLinter.FastTests` (Unit/Component): verschiedene Confidence-Stufen, Filter-Kombinationen, Edge-Case-Whitelist, `limitsApplies`-Befüllung, Trunkierungs-Pfad.
-- 1 Integration-Test in `AiNetLinter.IntegrationTests`: `LiveDogfood_FindDeadCode_ReturnsResults` auf AiNetLinter-Repo selbst, stabil unter wiederholten Läufen, findet mindestens 3 echte `high`-Treffer, dokumentiert `low`-Treffer aus `InternalsVisibleTo`-Effekt.
-- `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` und `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` beide grün.
-- `dotnet build` warnungsfrei (`TreatWarningsAsErrors = true`).
-- Doku in `Docs/agent-api.md#mcp-server-modus` mit Beispiel-Workflow ("vermutlich tote private Methode X → find_dead_code liefert die ganze Liste → User validiert jeden `low`-Treffer vor Löschung").
-- Drift-Audit-Skill (`find_duplicates`) gibt keine Hinweise auf Code-Duplikation zwischen Scanner und Pattern-Catalog-Pattern (wir bauen **kein** Duplikat).
-
-## Pattern-Konsistenz mit bestehenden Tools
-
-`find_dead_code` muss sich nahtlos in die bestehende Tool-Familie einfügen, damit Agenten das Pattern nicht pro Tool neu lernen müssen. Konkrete Wiederverwendungen:
-
-| Konvention | Vorbild | Wiederverwendung |
-|------------|---------|------------------|
-| Tool-Definition mit Default-Parametern | `SymbolGraphToolRegistrations.cs:164-166` (`async (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) => ...`) | gleiche Struktur: `async (string? scopeFilter = null, int maxResults = FindDeadCodeScanner.DefaultMaxResults, bool includePublic = false, string kind = "all", string confidence = "both", string accessibility = "all", bool includeTests = false, string mode = "members", CancellationToken ct = default) => ...` |
-| Default-Wert-Konstante | `GetViolationsScanner.DefaultMaxResults` (Konstante, Test-Assertions) | `FindDeadCodeScanner.DefaultMaxResults` |
-| Trunkierungs-Helper | `McpTruncation.TruncateLines` (siehe `McpTruncation.cs:29`) | gleicher Helper, Meta-Zeile mit Standard-Text-Pattern `[N Treffer gesamt, M gezeigt — …]` |
-| Truncated-Flag im structuredContent | `DuplicateDetectionResult.Truncated` (`DuplicateDetectionModels.cs:53`) | `IsTruncated: bool` |
-| Sufficiency-Hinweis | `McpSufficiencyHints.Append` (genutzt in `FindReferencesTool.cs:99`, `GetCallTreeTool.cs:69-70`) | gleiche Helper, angepasster Text für Heuristik-Kontext (siehe Muss-Haben) |
-| Scope-Filter | `ViolationScopeFilter.MatchesScope` (`ViolationScopeFilter.cs:44-51`) | gleiche Helfermethode, case-insensitive `Contains` auf Projekt/Pfad |
-| `McpToolResults.Recoverable`/`Text`/`CompilationError`/`SolutionNotLoaded` | alle existierenden Tools | gleiche Helper, keine Neuerfindung |
-| Tool-Entry in `ServerInstructions.cs` | Format: `- toolname: kurze Beschreibung in 1 Satz.` | gleiche Format-Konvention |
-| Filter-Default für Test-Paths | `find_magic_values` hat `includeTests: bool` (default `false`) | `include_tests: bool` (default `false`) |
-| `pattern_detect`-Pattern-Library-Vorbild | `PatternCatalog.cs` + `PatternDetectScanner.cs` | Scanner-Architektur mit Helper-Konstanten für Edge-Case-Whitelist (statt Pattern-Catalog) |
+- Tool `find_dead_code` ist in `AnalysisToolRegistrations` registriert und über MCP aufrufbar.
+- Parameterset (`accessibility`, `confidence`, `kind`, `scopeFilter`, `include_tests`, `mode`, `maxResults`) funktioniert vollständig.
+- Keine False-Positives bei:
+  - Interface-Implementierungen mit aktiven Interface-Aufrufen.
+  - Überschriebenen Methoden (`override`) mit Basis-Aufrufen.
+  - Entry-Points (`Program.cs`, `Main`).
+  - Privaten Utility-Konstruktoren (`private MyUtils() {}`).
+  - Compiler-generierten Members (Records, Auto-Props, Lambdas).
+- Performance: Scan über AiNetLinter-Solution läuft in unter 3 Sekunden durch Scope Bounding.
+- Structured Output validiert mit `deadSymbols[]`, `summary`, `limits[]`, `limitsApplies[]`, `recommendedNextAction`.
+- FastTests und IntegrationTests laufen fehlerfrei durch (`dotnet test --filter Category!=Stress`).
+- Zero-Warning-Build (`TreatWarningsAsErrors = true`).
 
 ## Offene Punkte
 
