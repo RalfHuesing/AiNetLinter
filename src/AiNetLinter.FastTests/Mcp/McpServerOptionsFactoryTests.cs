@@ -1,5 +1,7 @@
 #nullable enable
 
+using System;
+using System.Linq;
 using AiNetLinter.Mcp;
 using Xunit;
 
@@ -18,13 +20,40 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void Create_ServerInstructionsContainsScopeHint()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
         var options = McpServerOptionsFactory.Create(state);
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
-        Assert.Contains(".cs", options.ServerInstructions);
-        Assert.Contains("search_pattern", options.ServerInstructions);
-        Assert.Contains(".js", options.ServerInstructions);
-        Assert.Contains(".xaml", options.ServerInstructions);
+        Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains(".xaml", options.ServerInstructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Create_ServerInstructionsContainsAllRegisteredTools()
+    {
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        var options = McpServerOptionsFactory.Create(state);
+
+        var registeredNames = options.ToolCollection!.Select(t => t.ProtocolTool.Name).ToList();
+        Assert.Equal(20, registeredNames.Count);
+
+        foreach (var name in registeredNames)
+        {
+            Assert.Contains($"- {name}:", ServerInstructions.Text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void ServerInstructions_MatchesOverviewResourceTools()
+    {
+        var overviewNames = OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToList();
+        Assert.Equal(20, overviewNames.Count);
+
+        foreach (var name in overviewNames)
+        {
+            Assert.Contains($"- {name}:", ServerInstructions.Text, StringComparison.Ordinal);
+        }
     }
 }

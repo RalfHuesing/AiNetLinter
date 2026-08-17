@@ -88,6 +88,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `metrics_tree` | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (Code-Größe, Kommentaranteil, Lint-Verstöße, Komplexität), Ebene für Ebene explorierbar |
 | `get_violations` | Aktuelle Lint-Verstöße für einen Scope |
 | `pattern_detect` | Lint-Verstöße nach Pattern-Kategorie gruppiert (God-Class, async-void, lange Methoden, Public-API ohne Doc, leere Catch-Blöcke, Feature-Envy) statt flacher Datei-Liste |
+| `find_magic_values` | On-Demand-Audit nach Magic Values (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) in C#-Quellcode |
 | `find_duplicates` | Token-basierte Duplikat-Suche (Clone-Detection, Jaccard-N-Gram) und Refactoring-Drift-Erkennung (Helper wird strukturell nachgebaut statt aufgerufen) |
 | `safeguard` | Deterministischer 0–10-Qualitätsscore inkl. Pass/Fail gegen einen Schwellenwert |
 | `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer) |

@@ -23,7 +23,7 @@ erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im
 | Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
 | Solution wird noch im Hintergrund geladen (`McpToolResults.Loading()`) | **false** | Transienter Wartezustand, kein Fehler — der Text ist ein `[INFO]`-Hinweis, Client kann nach kurzer Pause retryn. |
 
-## Audit-Ergebnis pro Tool (19 Tools)
+## Audit-Ergebnis pro Tool (20 Tools)
 
 Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je Tool, siehe
 `src/AiNetLinter/Mcp/Tools/*.cs`.
@@ -36,6 +36,7 @@ Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je To
 | `get_type_hierarchy` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `typeIdentifier`, Identifikator ist kein Typ); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
 | `get_call_tree` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
 | `get_file_skeleton` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `filePath`); `RESOURCE_NOT_FOUND` (Pfad matcht kein Dokument) |
+| `get_class_structure` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC` via `CompilationError`, catch-Block) | `INVALID_ARGUMENT` (fehlendes/leeres `symbol`, unbekannter `sortBy`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (ueber `FindReferencesTool.ResolveSymbolAsync`, wiederverwendet) |
 | `get_index_scope` | `SOLUTION_NOT_LOADED` | *(keine — Tool hat keine Argumente, daher keine erwartbare Fehlerbedingung ausser dem Solution-Zustand)* |
 | `get_hotspots` | `SOLUTION_NOT_LOADED` | leere Treffermenge (Scope-Filter matched keine Datei — eigene Textmeldung, kein `[ERROR]`-Code noetig) |
 | `get_violations` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in `LinterEngine.RunAsync`) | leere Treffermenge (0 Violations); Scope-Filter matched keine Datei |

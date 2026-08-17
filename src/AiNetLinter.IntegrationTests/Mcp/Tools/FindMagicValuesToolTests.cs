@@ -174,6 +174,8 @@ public sealed class FindMagicValuesToolTests
 
         Assert.NotNull(findMagicValues);
         Assert.Contains("Magic", findMagicValues!.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("scopeFilter", findMagicValues.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"args\"", findMagicValues.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

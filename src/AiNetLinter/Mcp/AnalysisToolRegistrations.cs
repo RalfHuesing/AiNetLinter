@@ -207,18 +207,28 @@ internal static class AnalysisToolRegistrations
         McpCallLog? callLog)
     {
         tools.Add(McpServerTool.Create(
-            async (FindMagicValuesToolArgs? args = null, CancellationToken ct = default) =>
+            async (
+                string? scopeFilter = null,
+                string? valueType = "all",
+                string? categoryFilter = "all",
+                int minOccurrences = 1,
+                int maxResults = FindMagicValuesScanner.DefaultMaxResults,
+                int[]? ignoreNumbers = null,
+                bool includeTests = false,
+                bool includeSuppressed = false,
+                bool changedOnly = false,
+                CancellationToken ct = default) =>
             {
-                var effective = args ?? new FindMagicValuesToolArgs(
-                    ScopeFilter: null,
-                    ValueType: "all",
-                    CategoryFilter: "all",
-                    MinOccurrences: 1,
-                    MaxResults: FindMagicValuesScanner.DefaultMaxResults,
-                    IgnoreNumbers: null,
-                    IncludeTests: false,
-                    IncludeSuppressed: false,
-                    ChangedOnly: false);
+                var effective = new FindMagicValuesToolArgs(
+                    ScopeFilter: scopeFilter,
+                    ValueType: valueType ?? "all",
+                    CategoryFilter: categoryFilter ?? "all",
+                    MinOccurrences: minOccurrences,
+                    MaxResults: maxResults,
+                    IgnoreNumbers: ignoreNumbers,
+                    IncludeTests: includeTests,
+                    IncludeSuppressed: includeSuppressed,
+                    ChangedOnly: changedOnly);
                 if (callLog is null)
                 {
                     return await FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct);
