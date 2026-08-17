@@ -19,8 +19,8 @@ Task-scoped Landkarte — existiert nur für diesen Task, wird mit `<task-dir>` 
 ## Karte
 
 - **`src/AiNetLinter/Mcp/Tools/Analysis/`** — Beherbergt analyse-orientierte Scanner und Tool-Wrapper wie `GetViolations*`, `SearchPattern*` und `ViolationScopeFilter`. (zuletzt: init)
-- **`src/AiNetLinter/Mcp/Tools/DeadCode/`** — Ziel-Namespace für `FindDeadCodeScanner`, Datenmodelle und `FindDeadCodeTool`. (zuletzt: init)
+- **`src/AiNetLinter/Mcp/Tools/DeadCode/`** — `FindDeadCodeScanner`, `DeadCodeModels` und `DeadCodeWhitelist` für Symbol-Graph Dead-Code-Analysen. (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs`** — Registriert alle analyse-orientierten Tools an der MCP-Tool-Collection. (zuletzt: init)
 - **`src/AiNetLinter/Mcp/ServerInstructions.cs`** — Enthält die System-Prompts und Tool-Beschreibungen für MCP-Clients. (zuletzt: init)
-- **`src/AiNetLinter.FastTests/Mcp/`** — Schnelle In-Memory Unit- und Component-Tests für MCP-Tools gegen Adhoc-Workspaces. (zuletzt: init)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/DeadCode/`** — In-Memory Component-Tests für `FindDeadCodeScanner` gegen Adhoc-Workspaces. (zuletzt: step-001)
 - **`src/AiNetLinter.IntegrationTests/McpLiveRepositoryTests.cs`** — Live-Dogfooding-Tests der MCP-Tools gegen das eigene AiNetLinter-Repository. (zuletzt: init)
