@@ -35,12 +35,6 @@ public sealed class LinterEngineCacheTests : IDisposable
             {
                 Directory.Delete(_tempDir, true);
             }
-
-            var cacheDir = Path.Combine(_exeDir, "cache");
-            if (Directory.Exists(cacheDir))
-            {
-                Directory.Delete(cacheDir, true);
-            }
         }
         catch (Exception ignored)
         {

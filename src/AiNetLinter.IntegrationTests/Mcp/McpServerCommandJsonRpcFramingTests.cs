@@ -214,11 +214,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
         // vollen stderr-Puffer aufhaengt. Wird im Test-Output nicht direkt geprueft, der
         // eigentliche Assert liegt auf stdout-Disziplin.
         var stderrTask = process.StandardError.ReadToEndAsync();
+        var expectedResponses = CountExpectedResponses(frames);
 
-        // Producer/Consumer: schreibt die Frames in den stdin-Pipe (mit kleinen Pausen, damit
-        // der Server Zeit zum Verarbeiten hat zwischen den Anfragen) und liest parallel die
-        // stdout-Antwort-Frames. Wird stdin am Ende der Producer-Phase geschlossen, faehrt der
-        // Server nach Verarbeitung aller Frames graceful herunter.
+        // Producer: schreibt die Frames auf stdin. Stdin bleibt offen, solange noch auf die
+        // erwarteten Antworten gewartet wird, damit der Server unter Volllauf-Last nicht
+        // vorzeitig durch ein vorzeitiges EOF abgebrochen wird.
         var writer = process.StandardInput;
         var writerTask = Task.Run(async () =>
         {
@@ -226,37 +226,83 @@ public sealed class McpServerCommandJsonRpcFramingTests
             {
                 await writer.WriteLineAsync(frame);
                 await writer.FlushAsync();
-                await Task.Delay(500);
             }
-            // stdin schliessen, damit der StdioServerTransport auf EOF-Read graceful beendet.
-            try { writer.Close(); } catch { /* Pipe evtl. schon zu */ }
         });
 
-        // stdout zeilenweise lesen, bis der Prozess beendet (EOF auf stdout = process exit)
-        // oder der Timeout greift. Grosszuegiger Timeout wegen Solution-Load im Hintergrund
-        // (B.4 Drei-Zustands-Lifecycle) + Tool-Call-Latenz.
+        // stdout zeilenweise lesen, bis mindestens alle erwarteten Responses eingetroffen sind,
+        // der Prozess beendet oder der Timeout greift.
         var observed = new System.Collections.Generic.List<string>();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
         try
         {
-            while (!cts.IsCancellationRequested)
-            {
-                var line = await process.StandardOutput.ReadLineAsync(cts.Token);
-                if (line is null) break;
-                observed.Add(line);
-            }
+            await ReadStdoutFramesAsync(process.StandardOutput, observed, expectedResponses, cts.Token);
         }
         catch (OperationCanceledException)
         {
             // Server hat zu lange gebraucht; Frames bis hierhin lesen und Assertion laufen lassen.
         }
 
-        // Producer-Task sauber beenden.
+        // Producer-Task sauber beenden und stdin schliessen, damit der Server graceful beendet.
         try { await writerTask; } catch { /* Pipe-Close-Fehler ist hier OK */ }
+        try { writer.Close(); } catch { /* Pipe evtl. schon zu */ }
+
+        // Verbleibende Ausgaben bis zum Prozessende aufnehmen (z. B. nachlaufende stdout-Frames).
+        try
+        {
+            await DrainRemainingStdoutAsync(process.StandardOutput, observed, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout beim Drain
+        }
 
         await EnsureProcessTerminatedAsync(process, stderrTask);
 
         return observed;
+    }
+
+    private static int CountExpectedResponses(string[] frames)
+    {
+        var count = 0;
+        foreach (var frame in frames)
+        {
+            if (frame.Contains("\"id\":", StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static async Task ReadStdoutFramesAsync(
+        StreamReader stdout,
+        System.Collections.Generic.List<string> observed,
+        int expectedResponses,
+        CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            var line = await stdout.ReadLineAsync(ct);
+            if (line is null) break;
+            observed.Add(line);
+            if (expectedResponses > 0 && observed.Count >= expectedResponses)
+            {
+                break;
+            }
+        }
+    }
+
+    private static async Task DrainRemainingStdoutAsync(
+        StreamReader stdout,
+        System.Collections.Generic.List<string> observed,
+        CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            var line = await stdout.ReadLineAsync(ct);
+            if (line is null) break;
+            observed.Add(line);
+        }
     }
 
     /// <summary>

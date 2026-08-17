@@ -90,6 +90,11 @@ internal sealed class AnalysisCacheManager
     public void SaveIfDirty()
     {
         if (!_dirty) return;
+        var dir = Path.GetDirectoryName(_cachePath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
         var json = JsonSerializer.Serialize(_cache, JsonOptions);
         File.WriteAllText(_cachePath, json, Encoding.UTF8);
         _dirty = false;
