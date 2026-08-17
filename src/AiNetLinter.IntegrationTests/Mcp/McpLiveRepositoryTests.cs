@@ -358,4 +358,51 @@ public sealed class McpLiveRepositoryTests
         Assert.NotNull(json["summary"]);
         Assert.NotNull(json["deadSymbols"]);
     }
+
+    [Fact]
+    public async Task LiveDogfood_AuditDump_WritesReport()
+    {
+        var resultPrivateInternal = await _fixture.Client.CallToolGetTextAsync(
+            "find_dead_code",
+            new Dictionary<string, object?>
+            {
+                ["accessibility"] = "private_internal",
+                ["confidence"] = "both",
+                ["mode"] = "both",
+                ["maxResults"] = 200
+            });
+
+        var resultDeadCodeMagic = await _fixture.Client.CallToolGetTextAsync(
+            "find_magic_values",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp/Tools/DeadCode",
+                ["maxResults"] = 100
+            });
+
+        var resultDeadCodeDuplicates = await _fixture.Client.CallToolGetTextAsync(
+            "find_duplicates",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "DeadCode",
+                ["maxResults"] = 50
+            });
+
+        var outDir = Path.Combine(AppContext.BaseDirectory, "../../../../src/test-output");
+        Directory.CreateDirectory(outDir);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== FIND_DEAD_CODE (private_internal, both) ===");
+        sb.AppendLine(resultPrivateInternal);
+        sb.AppendLine();
+        sb.AppendLine("=== FIND_MAGIC_VALUES (DeadCode) ===");
+        sb.AppendLine(resultDeadCodeMagic);
+        sb.AppendLine();
+        sb.AppendLine("=== FIND_DUPLICATES (DeadCode) ===");
+        sb.AppendLine(resultDeadCodeDuplicates);
+        File.WriteAllText(Path.Combine(outDir, "dead-code-audit.txt"), sb.ToString());
+
+        Assert.Contains("# Dead-Code-Analyse", resultPrivateInternal, StringComparison.Ordinal);
+        Assert.Contains("Magic-Value-Audit", resultDeadCodeMagic, StringComparison.Ordinal);
+        Assert.Contains("Duplikat-Cluster", resultDeadCodeDuplicates, StringComparison.Ordinal);
+    }
 }

@@ -175,7 +175,10 @@
       "obj",
       "bin",
       ".git",
+      "artifacts",
+      "publish",
       "TestResults",
+      ".vs",
       "speedup-tests"
     ],
     "MaxPartialClassFiles": 2,

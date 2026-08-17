@@ -38,7 +38,18 @@ internal static class PublicMembersChecker
         var configured = CompoundSuppressionEvaluator.FindConfigured(
             LinterRuleIds.MaxPublicMembersPerType, suppressions);
 
-        ReportExcessiveMembers(node, typeName, ctx, count, limit, effectiveLimit, configured, metrics, suppressions);
+        var args = new ExcessiveMembersReportArgs(
+            node,
+            typeName,
+            ctx,
+            count,
+            limit,
+            effectiveLimit,
+            configured,
+            metrics,
+            suppressions);
+
+        ReportExcessiveMembers(args);
     }
 
     private static bool IsExempt(string typeName, CheckerContext ctx)
@@ -54,49 +65,51 @@ internal static class PublicMembersChecker
         return false;
     }
 
-    private static void ReportExcessiveMembers(
-        TypeDeclarationSyntax node,
-        string typeName,
-        CheckerContext ctx,
-        int count,
-        int limit,
-        int effectiveLimit,
-        CompoundSuppression? configured,
-        Dictionary<string, int> metrics,
-        IReadOnlyList<CompoundSuppression>? suppressions)
+    private static void ReportExcessiveMembers(ExcessiveMembersReportArgs args)
     {
-        if (effectiveLimit > 0)
+        if (args.EffectiveLimit > 0)
         {
-            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured!.WhenAllOf, metrics);
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(args.Configured!.WhenAllOf, args.Metrics);
             var severityOverride = CompoundSuppressionEvaluator.GetActiveSeverityOverride(
-                LinterRuleIds.MaxPublicMembersPerType, suppressions, metrics);
+                LinterRuleIds.MaxPublicMembersPerType, args.Suppressions, args.Metrics);
             var severityHint = severityOverride == "warning"
                 ? " Severity auf 'warning' herabgestuft — kein Build-Fehler."
                 : string.Empty;
-            ctx.ReportViolation(node, new ViolationDescription(
+            args.Ctx.ReportViolation(args.Node, new ViolationDescription(
                 LinterRuleIds.MaxPublicMembersPerType,
-                $"'{typeName}' hat {count} öffentliche Member (Compound-Limit: {effectiveLimit}; Standard: {limit} · {condSummary}).",
-                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {effectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)}.{severityHint}",
+                $"'{args.TypeName}' hat {args.Count} öffentliche Member (Compound-Limit: {args.EffectiveLimit}; Standard: {args.Limit} · {condSummary}).",
+                $"Compound-Bedingungen erfüllt, aber relaxiertes Limit ebenfalls überschritten. Teile den Typ nach Single-Responsibility auf. Ziel: ≤ {args.EffectiveLimit} Member bei weiterhin {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)}.{severityHint}",
                 EffectiveSeverity: severityOverride));
             return;
         }
 
-        if (configured != null)
+        if (args.Configured != null)
         {
-            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(configured.WhenAllOf, metrics);
-            var relaxedLimit = configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
-            ctx.ReportViolation(node, new ViolationDescription(
+            var condSummary = CompoundSuppressionEvaluator.BuildConditionSummary(args.Configured.WhenAllOf, args.Metrics);
+            var relaxedLimit = args.Configured.RelaxedLimit.HasValue ? $"effektives Limit steigt auf {args.Configured.RelaxedLimit}." : "Violation wird vollständig supprimiert.";
+            args.Ctx.ReportViolation(args.Node, new ViolationDescription(
                 LinterRuleIds.MaxPublicMembersPerType,
-                $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit} · Compound-Suppression inaktiv: {condSummary}).",
-                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(configured.WhenAllOf)} → {relaxedLimit} (2) Teile den Typ nach Single-Responsibility auf."));
+                $"'{args.TypeName}' hat {args.Count} öffentliche Member (erlaubt: {args.Limit} · Compound-Suppression inaktiv: {condSummary}).",
+                $"Optionen: (1) Metriken senken auf {CompoundSuppressionEvaluator.BuildThresholdSummary(args.Configured.WhenAllOf)} → {relaxedLimit} (2) Teile den Typ nach Single-Responsibility auf."));
             return;
         }
 
-        ctx.ReportViolation(node, new ViolationDescription(
+        args.Ctx.ReportViolation(args.Node, new ViolationDescription(
             LinterRuleIds.MaxPublicMembersPerType,
-            $"'{typeName}' hat {count} öffentliche Member (erlaubt: {limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
+            $"'{args.TypeName}' hat {args.Count} öffentliche Member (erlaubt: {args.Limit}). Eine breite API-Oberfläche erhöht die Wahrscheinlichkeit, dass Agenten vorhandene Methoden übersehen und duplizieren.",
             "Teile den Typ nach Single-Responsibility auf (z. B. QueryService / CommandService). Prüfe, ob Methoden auf 'internal' oder 'private' reduziert werden können."));
     }
+
+    private sealed record ExcessiveMembersReportArgs(
+        TypeDeclarationSyntax Node,
+        string TypeName,
+        CheckerContext Ctx,
+        int Count,
+        int Limit,
+        int EffectiveLimit,
+        CompoundSuppression? Configured,
+        Dictionary<string, int> Metrics,
+        IReadOnlyList<CompoundSuppression>? Suppressions);
 
     internal static int CountPublicMembers(TypeDeclarationSyntax node)
     {

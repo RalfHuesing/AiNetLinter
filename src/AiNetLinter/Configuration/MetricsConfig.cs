@@ -191,7 +191,7 @@ public sealed record MetricsConfig
     /// Standard: übliche generierte Ordner wie "Migrations", "Generated", "wwwroot".
     /// </summary>
     public IReadOnlyCollection<string> MaxDirectoryChildrenExemptNames { get; init; }
-        = ["Migrations", "Generated", "wwwroot", "obj", "bin", ".git"];
+        = ["Migrations", "Generated", "wwwroot", "obj", "bin", ".git", "artifacts", "publish", "TestResults", ".vs"];
 
     /// <summary>
     /// Maximale Anzahl Dateien, in denen ein partial-Typ deklariert sein darf.

@@ -169,3 +169,15 @@ public static class DeadCodeLimits
         "di: Dependency-Injection Container loesen Konstruktoren und Typen dynamisch auf"
     ];
 }
+
+internal sealed class DeadCodeScanContext(Microsoft.CodeAnalysis.Solution solution, string solutionDir, FindDeadCodeArgs args)
+{
+    public Microsoft.CodeAnalysis.Solution Solution { get; } = solution;
+    public string SolutionDir { get; } = solutionDir;
+    public FindDeadCodeArgs Args { get; } = args;
+    public List<DeadCodeEntry> DeadSymbols { get; } = [];
+    public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
+    public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
+    public int ScannedCount { get; set; }
+}

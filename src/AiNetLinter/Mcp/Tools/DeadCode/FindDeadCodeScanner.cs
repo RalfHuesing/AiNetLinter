@@ -86,20 +86,49 @@ public static class FindDeadCodeScanner
         var declaredTypeNodes = syntaxRoot.DescendantNodes().Where(n => n is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax);
         foreach (var typeNode in declaredTypeNodes)
         {
-            if (semanticModel.GetDeclaredSymbol(typeNode, ct) is not INamedTypeSymbol typeSymbol) continue;
-            context.ScannedCount++;
-
-            if (typeSymbol.ContainingType != null && context.DeadContainerTypes.Contains(typeSymbol.ContainingType))
-            {
-                continue;
-            }
-
-            var typeIsDead = await CheckAndRecordTypeAsync(typeSymbol, document, entryPoint, hasInternalsVisibleTo, context, ct);
-            if (!typeIsDead)
-            {
-                await ScanTypeMembersAsync(typeSymbol, document, entryPoint, hasInternalsVisibleTo, context, ct);
-            }
+            await ProcessTypeNodeAsync(typeNode, semanticModel, document, entryPoint, hasInternalsVisibleTo, context, ct);
         }
+    }
+
+    private static async Task ProcessTypeNodeAsync(
+        SyntaxNode typeNode,
+        SemanticModel semanticModel,
+        Document document,
+        IMethodSymbol? entryPoint,
+        bool hasInternalsVisibleTo,
+        DeadCodeScanContext context,
+        CancellationToken ct)
+    {
+        if (semanticModel.GetDeclaredSymbol(typeNode, ct) is not INamedTypeSymbol typeSymbol) return;
+        context.ScannedCount++;
+
+        if (typeSymbol.ContainingType != null && context.DeadContainerTypes.Contains(typeSymbol.ContainingType))
+        {
+            return;
+        }
+
+        var isAlive = await EvaluateTypeLivenessAsync(typeSymbol, document, entryPoint, hasInternalsVisibleTo, context, ct);
+        if (isAlive)
+        {
+            await ScanTypeMembersAsync(typeSymbol, document, typeNode, entryPoint, hasInternalsVisibleTo, context, ct);
+        }
+    }
+
+    private static async Task<bool> EvaluateTypeLivenessAsync(
+        INamedTypeSymbol typeSymbol,
+        Document document,
+        IMethodSymbol? entryPoint,
+        bool hasInternalsVisibleTo,
+        DeadCodeScanContext context,
+        CancellationToken ct)
+    {
+        if (!context.ScannedTypes.Add(typeSymbol))
+        {
+            return !context.DeadContainerTypes.Contains(typeSymbol);
+        }
+
+        var isDead = await CheckAndRecordTypeAsync(typeSymbol, document, entryPoint, hasInternalsVisibleTo, context, ct);
+        return !isDead;
     }
 
     private static async Task<bool> CheckAndRecordTypeAsync(
@@ -118,6 +147,19 @@ public static class FindDeadCodeScanner
         var isDead = await IsSymbolUnreferencedAsync(typeSymbol, document, context.Solution, ct);
         if (!isDead) return false;
 
+        if (typeSymbol.IsStatic)
+        {
+            foreach (var member in typeSymbol.GetMembers())
+            {
+                if (member.IsImplicitlyDeclared) continue;
+                var memberIsDead = await IsSymbolUnreferencedAsync(member, document, context.Solution, ct);
+                if (!memberIsDead)
+                {
+                    return false;
+                }
+            }
+        }
+
         if (typeSymbol.DeclaredAccessibility == Accessibility.Private)
         {
             context.DeadContainerTypes.Add(typeSymbol);
@@ -132,6 +174,7 @@ public static class FindDeadCodeScanner
     private static async Task ScanTypeMembersAsync(
         INamedTypeSymbol typeSymbol,
         Document document,
+        SyntaxNode typeNode,
         IMethodSymbol? entryPoint,
         bool hasInternalsVisibleTo,
         DeadCodeScanContext context,
@@ -139,16 +182,29 @@ public static class FindDeadCodeScanner
     {
         foreach (var member in typeSymbol.GetMembers())
         {
-            if (member.IsImplicitlyDeclared) continue;
-            if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint)) continue;
-            if (!ShouldCheckMemberKind(member, context.Args.Kind)) continue;
-            if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) continue;
+            await ProcessMemberAsync(member, document, typeNode, entryPoint, hasInternalsVisibleTo, context, ct);
+        }
+    }
 
-            var isDead = await IsSymbolUnreferencedAsync(member, document, context.Solution, ct);
-            if (isDead)
-            {
-                AddDeadSymbol(context, member, document, hasInternalsVisibleTo);
-            }
+    private static async Task ProcessMemberAsync(
+        ISymbol member,
+        Document document,
+        SyntaxNode typeNode,
+        IMethodSymbol? entryPoint,
+        bool hasInternalsVisibleTo,
+        DeadCodeScanContext context,
+        CancellationToken ct)
+    {
+        if (member.IsImplicitlyDeclared) return;
+        if (!member.DeclaringSyntaxReferences.Any(r => typeNode.Span.Contains(r.Span))) return;
+        if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint)) return;
+        if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
+        if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
+
+        var isDead = await IsSymbolUnreferencedAsync(member, document, context.Solution, ct);
+        if (isDead)
+        {
+            AddDeadSymbol(context, member, document, hasInternalsVisibleTo);
         }
     }
 
@@ -165,12 +221,20 @@ public static class FindDeadCodeScanner
 
         if (symbol.DeclaredAccessibility == Accessibility.Private)
         {
+            var containerDocs = symbol.ContainingType?.DeclaringSyntaxReferences
+                .Select(r => solution.GetDocument(r.SyntaxTree))
+                .OfType<Document>()
+                .ToImmutableHashSet();
+
             var declaringDocs = symbol.DeclaringSyntaxReferences
                 .Select(r => solution.GetDocument(r.SyntaxTree))
                 .OfType<Document>()
                 .ToImmutableHashSet();
 
-            var effectiveDocs = declaringDocs.IsEmpty ? ImmutableHashSet.Create(declaringDocument) : declaringDocs;
+            var effectiveDocs = (containerDocs != null && !containerDocs.IsEmpty)
+                ? containerDocs
+                : (declaringDocs.IsEmpty ? ImmutableHashSet.Create(declaringDocument) : declaringDocs);
+
             var references = await SymbolFinder.FindReferencesAsync(symbol, solution, documents: effectiveDocs, cancellationToken: ct);
             return references.All(r => !r.Locations.Any());
         }
@@ -411,15 +475,4 @@ public static class FindDeadCodeScanner
 
     private static string GetAccessibilityString(Accessibility accessibility) =>
         DeadCodeFilters.GetAccessibilityString(accessibility);
-}
-
-internal sealed class DeadCodeScanContext(Solution solution, string solutionDir, FindDeadCodeArgs args)
-{
-    public Solution Solution { get; } = solution;
-    public string SolutionDir { get; } = solutionDir;
-    public FindDeadCodeArgs Args { get; } = args;
-    public List<DeadCodeEntry> DeadSymbols { get; } = [];
-    public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public HashSet<INamedTypeSymbol> DeadContainerTypes { get; } = new(SymbolEqualityComparer.Default);
-    public int ScannedCount { get; set; }
 }
