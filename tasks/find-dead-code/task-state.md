@@ -26,7 +26,7 @@ current_step: 003
 |------|------|--------|-------|----------|-------|----------|--------|
 | 001 | EPIC-01 | done | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | ja | approved | `06d49fc` |
 | 002 | EPIC-02 | done | Diagnosen & Locals-Erkennung (Mode: locals & both) | - | ja | approved | `6189330` |
-| 003 | EPIC-03 | in_progress | MCP-Tool-Wrapper, Registrierung & Server-Instructions | - | - | - | - |
+| 003 | EPIC-03 | done | MCP-Tool-Wrapper, Registrierung & Server-Instructions | - | ja | approved | `669064c` |
 
 ## Config (optional)
 
