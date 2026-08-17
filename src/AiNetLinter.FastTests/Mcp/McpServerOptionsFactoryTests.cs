@@ -37,7 +37,7 @@ public sealed class McpServerOptionsFactoryTests
         var options = McpServerOptionsFactory.Create(state);
 
         var registeredNames = options.ToolCollection!.Select(t => t.ProtocolTool.Name).ToList();
-        Assert.Equal(20, registeredNames.Count);
+        Assert.Equal(21, registeredNames.Count);
 
         foreach (var name in registeredNames)
         {
@@ -49,7 +49,7 @@ public sealed class McpServerOptionsFactoryTests
     public void ServerInstructions_MatchesOverviewResourceTools()
     {
         var overviewNames = OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToList();
-        Assert.Equal(20, overviewNames.Count);
+        Assert.Equal(21, overviewNames.Count);
 
         foreach (var name in overviewNames)
         {
