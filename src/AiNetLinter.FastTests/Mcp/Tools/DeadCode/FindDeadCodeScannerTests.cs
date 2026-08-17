@@ -174,6 +174,58 @@ public sealed class FindDeadCodeScannerTests
         Assert.Equal("DeadPrivate", dead.SymbolName);
     }
 
+    [Fact]
+    public async Task ScanAsync_ModeLocals_CollectsUnusedFieldDiagnostics()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                private int _unusedValue;
+                public void DoWork() => System.Console.WriteLine("hi");
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            Mode: DeadCodeMode.Locals,
+            Accessibility: DeadCodeAccessibilityFilter.All,
+            Confidence: DeadCodeConfidenceFilter.Both,
+            Kind: DeadCodeKindFilter.All);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        var dead = Assert.Single(result.DeadSymbols);
+        Assert.Equal("_unusedValue", dead.SymbolName);
+        Assert.Equal("field", dead.Kind);
+        Assert.Equal("high", dead.Confidence);
+        Assert.Contains("CS0169", dead.Reason);
+    }
+
+    [Fact]
+    public async Task ScanAsync_ModeBoth_CombinesAndDeduplicates()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                private int _unusedValue;
+                private void DeadMethod() {}
+                public void DoWork() => System.Console.WriteLine("hi");
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            Mode: DeadCodeMode.Both,
+            Accessibility: DeadCodeAccessibilityFilter.Private,
+            Confidence: DeadCodeConfidenceFilter.High,
+            Kind: DeadCodeKindFilter.All);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "_unusedValue");
+        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod");
+    }
+
     private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
         RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\FindDeadCodeScannerTests.slnx",
