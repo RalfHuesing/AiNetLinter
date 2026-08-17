@@ -1,13 +1,11 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
 rules_dir: .agents/rules
 last_updated: 2026-08-17
-open_questions:
-  - "Vertrauens-Stufe im Output: nur prominenter Text-Hinweis, oder zusaetzlich strukturiertes recommendedNextAction-Feld (mit Hinweis 'ask_user') im structuredContent?"
-  - "include_tests-Default: false (Tests per Default aus, weil per Reflection aufgerufen) oder true (alle Symbole gleich behandelt)?"
+open_questions: []
 ---
 
 # Konzept: `find_dead_code` — MCP-Tool für Dead-Code-Detection
@@ -40,7 +38,14 @@ Drift-Loop-Coder-Aufgaben enthalten "entferne toten Code" regelmäßig — Refac
 - Filter-Parameter `confidence` (enum: `high` | `low` | `both`, default `both`): nur diese Confidence-Stufen liefern.
 - Filter-Parameter `accessibility` (enum: `all` | `private` | `internal` | `public`, default `all`): Accessibility-Filter.
 - Filter-Parameter `include_tests` (bool, default `false`): Test-Pfade (`**/*Tests/**/*.cs`, `**/TestKit/**/*.cs`) aus dem Scan ausnehmen. Begründung: Test-Methoden sind oft `public` + werden per Reflection aufgerufen; mit `include_public=true` würden sie massenhaft als `low` auftauchen. Per Default aus, User kann es bei Bedarf aktivieren.
-- Filter-Parameter `mode`: `members` (default) | `locals` | `both` (siehe Nice-to-Have für `locals`).
+- Filter-Parameter `mode`: `members` (default) | `locals` | `both`. Wenn `mode=locals` oder `both`: zusätzlich zur Symbol-Referenz-Prüfung aktiviert der Scanner `Compilation.GetDiagnostics()` mit `SpecificDiagnosticOptions` für:
+  - `CS0169` "The private field 'X' is never used"
+  - `CS0414` "The field 'X' is assigned but its value is never used"
+  - `IDE0051` "Private member 'X' is unused" (Roslyn-IDE-Warnung, oft default off)
+  - `IDE0052` "Remove unread private member 'X'"
+  - `IDE0044` "Make field readonly" (verwandt, oft gleiche Wurzel)
+
+  Implementierungs-Skizze: `CSharpCompilationOptions.WithSpecificDiagnosticOptions(...)` mit `ReportDiagnostic.Hidden` für die fünf IDs, dann `compilation.GetDiagnostics()` filtern und in den Output integrieren. Damit findet der Scanner ungenutzte lokale Variablen, ungenutzte Parameter (außer in `out`/`ref`/Discard-Pattern), ungenutzte `const`-Felder — Roslyns eigene, kampferprobte Edge-Case-Behandlung (Lambda-Discards, Field-Readonly-Mismatch, generierte Display-Classes) kommt kostenlos. **Trade-off:** Compiler-Version-abhängig, weniger Kontrolle über Output-Format — bewusst akzeptiert.
 - **Pagination via `maxResults`** (int, default `DefaultMaxResults`, Konstante analog `GetViolationsScanner.DefaultMaxResults`): trunkiert die Trefferliste. Trunkierungs-Meta-Zeile via `McpTruncation.TruncateLines` mit Standard-Text `"[X Dead-Code-Treffer gesamt, M gezeigt — scopeFilter verfeinern, confidence='high' eingrenzen oder maxResults erhoehen]"` (konsistent mit `GetViolationsScanner.cs:229`). `IsTruncated: bool` im `structuredContent` (analog `DuplicateDetectionResult.Truncated`, `DuplicateDetectionModels.cs:53`).
 - **Sufficiency-Hinweis via `McpSufficiencyHints.Append`** (nur bei nicht-trunkierten Ergebnissen, analog `FindReferencesTool.cs:99`): "Diese Daten sind vollstaendig fuer die geladenen Solution im angegebenen Filter-Scope. Bei `low`-Treffern oder Symbolen mit `limitsApplies`-Eintraegen: manuell validieren vor destruktiven Aktionen."
 - Structured Output (JSON Schema 2020-12): `{ deadSymbols: [{ id, kind, containerType, file, line, accessibility, confidence, reason, exemptReason? }], summary: { high, low, byKind, scannedSymbols, exemptCount }, limits: string[] }`. `limits` listet die strukturellen Lücken auf (siehe "Strukturelle Lücken" unten), damit der Agent weiß, was das Tool NICHT erkennen kann.
@@ -59,33 +64,14 @@ Drift-Loop-Coder-Aufgaben enthalten "entferne toten Code" regelmäßig — Refac
   - `[InternalsVisibleTo]`-Assembly-Whitelist: Wenn eine Solution-Assembly `InternalsVisibleTo` auf eine Test-Assembly hat, werden `internal`-Symbole, die nur von der Test-Assembly referenziert werden, **nicht** als `high` markiert, sondern als `low` mit `exemptReason: "InternalsVisibleTo"`. Konkret relevant für AiNetLinter selbst: `LinterEngine.cs:18-20` deklariert `InternalsVisibleTo` auf `AiNetLinter.FastTests`/`IntegrationTests`/`TestKit` — wenn wir das Tool darauf selbst anwenden, würden sonst dutzende `internal`-Helfer fälschlich als tot gemeldet.
   - Konstruktoren (Roslyn unterscheidet `IMethodSymbol.MethodKind == Constructor` — bewusst nicht als tot werten, auch wenn keine direkten Aufrufer; `new Foo()` ist die übliche Nutzung, aber `Activator.CreateInstance(typeof(Foo))` und DI-Container umgehen das — siehe Lücken).
   - Symbole, die in XML-Doc-Kommentaren referenziert werden (`<see cref="...">`).
-- Tests: 5+ Unit-Tests (verschiedene Confidence-Stufen, Filter-Kombinationen, Edge-Case-Whitelist), 1 Integration-Test auf Live-Repo (AiNetLinter-Repo selbst — dort gibt's garantiert echte Treffer, plus dokumentierte `InternalsVisibleTo`-Treffer als `low`).
-
-### Nice-to-Have (Zwischenspeicher — vor `status: ready` aufgelöst)
-
-- **Variablen-Modus** (DataFlowAnalysis pro Methode): findet ungenutzte lokale Variablen, ungenutzte Parameter (außer in `out`/`ref`/Discard-Pattern), ungenutzte `const`-Felder. Aufwendiger, weil pro Methode einmal SemanticModel.AnalyzeDataFlow → in großen Methoden spürbar. Eigener Parameter `mode: "members" | "locals" | "both"` (default `members`).
-- **Hybrid-Strategie mit Roslyn-Compiler-Warnings:** Statt (oder zusätzlich zu) eigener `DataFlowAnalysis` aktiviert der Scanner `Compilation.GetDiagnostics()` mit `SpecificDiagnosticOptions` für:
-  - `CS0169` "The private field 'X' is never used"
-  - `CS0414` "The field 'X' is assigned but its value is never used"
-  - `IDE0051` "Private member 'X' is unused" (Roslyn-IDE-Warnung, oft default off)
-  - `IDE0052` "Remove unread private member 'X'"
-  - `IDE0044` "Make field readonly" (verwandt, oft gleiche Wurzel)
-
-  Diese Warnungen sind Roslyns eigene, kampferprobte Implementierung — exakt die Edge-Cases, die wir selbst schwer abdecken (Lambda-Discards, Field-Readonly-Mismatch, generierte Display-Classes), sind dort schon berücksichtigt. **Vorteil:** weniger eigener Code, Roslyn-Updates bringen Verbesserungen kostenlos. **Nachteil:** Compiler-Version-abhängig, ggf. unterschiedlich pro Solution aktiv/inaktiv (Default-Warning-Levels), weniger Kontrolle über Output-Format. Implementierungs-Skizze: `CSharpCompilationOptions.WithSpecificDiagnosticOptions(...)` mit `ReportDiagnostic.Hidden` für die fünf IDs, dann `compilation.GetDiagnostics()` filtern und in den Output integrieren.
-
-- **Effektiv-private Heuristik:** ein `public` Symbol, das nur von anderen `public`-Symbolen in der eigenen Assembly referenziert wird, die ihrerseits ungenutzt sind → rekursive "transitive tote Inseln" erkennen. Erweitert das um `internal`-Symbole, die nur von anderen ungenutzten erreicht werden.
-- **Grouped Output nach Datei** (analog `pattern_detect` Summary): für Audit-Workflow "welche Dateien würden durch Aufräumen am stärksten schrumpfen".
-- **`--dead-code-only`**-Option für `dotnet run` (CLI): gleiche Logik wie MCP-Tool, aber als Datei-Audit-Output — sinnvoll für CI-Integration.
-
-### Nice-to-Have (Zwischenspeicher — vor `status: ready` aufgelöst)
-
-- **Variablen-Modus** (DataFlowAnalysis pro Methode): findet ungenutzte lokale Variablen, ungenutzte Parameter (außer in `out`/`ref`/Discard-Pattern), ungenutzte `const`-Felder. Aufwendiger, weil pro Methode einmal SemanticModel.AnalyzeDataFlow → in großen Methoden spürbar. Eigener Parameter `mode: "members" | "locals" | "both"` (default `members`).
-- **Effektiv-private Heuristik:** ein `public` Symbol, das nur von anderen `public`-Symbolen in der eigenen Assembly referenziert wird, die ihrerseits ungenutzt sind → rekursive "transitive tote Inseln" erkennen. Erweitert das um `internal`-Symbole, die nur von anderen ungenutzten erreicht werden.
-- **Grouped Output nach Datei** (analog `pattern_detect` Summary): für Audit-Workflow "welche Dateien würden durch Aufräumen am stärksten schrumpfen".
-- **`--dead-code-only`**-Option für `dotnet run` (CLI): gleiche Logik wie MCP-Tool, aber als Datei-Audit-Output — sinnvoll für CI-Integration.
+- Tests: 5+ Unit-Tests (verschiedene Confidence-Stufen, Filter-Kombinationen, Edge-Case-Whitelist, `limitsApplies`-Befüllung, Trunkierungs-Pfad), 1 Integration-Test auf Live-Repo (AiNetLinter-Repo selbst — dort gibt's garantiert echte Treffer, plus dokumentierte `InternalsVisibleTo`-Treffer als `low`).
 
 ### Non-Goals (bewusst NICHT Teil davon)
 
+- **Variablen-Modus / Hybrid-Strategie mit Roslyn-Compiler-Warnings:** in Muss-Haben verschoben (siehe `mode`-Parameter und zugehörige Diagnostics-Aktivierung oben).
+- **Effektiv-private Heuristik (transitive tote Inseln):** ein `public`-Symbol, das nur von anderen `public`-Symbolen in der eigenen Assembly referenziert wird, die ihrerseits ungenutzt sind → rekursive "transitive tote Inseln" erkennen. **Nicht jetzt** — größerer Algorithmus-Block, eigenes Feature, separater Scope. Wiederaufgreifen bei konkretem Bedarf.
+- **Grouped Output nach Datei** (analog `pattern_detect` Summary): für Audit-Workflow "welche Dateien würden durch Aufräumen am stärksten schrumpfen". **Nicht jetzt** — kann später als zusätzlicher Render-Modus nachgerüstet werden, ohne Scanner-Logik zu ändern.
+- **`--dead-code-only`-Option für `dotnet run` (CLI):** gleiche Logik wie MCP-Tool, aber als Datei-Audit-Output. **Nicht jetzt** — widerspricht der read-only-Linie (würde MCP-Logik in CLI duplizieren), außerdem kein belegter CI-Bedarf. Wiederaufgreifen, falls CI-Integration explizit gewünscht wird.
 - **Auto-Fix / Auto-Delete** (auch via `preview_refactor`): explizit ausgeschlossen — wäre Mutation auf der Platte. AiNetLinter bleibt Verifikations-Gatekeeper, der Coder/Agent entscheidet. Begründung: gleiches Argument wie die Streichung von `preview_refactor` in `06-nicht-umsetzen.md` §3 (read-only-Architektur).
 - **Cross-Solution / NuGet-Consumer-Analyse:** wir können nicht wissen, ob eine `public`-Methode aus einer anderen Solution aufgerufen wird. Wir markieren das ehrlich als `low` und überlassen die Entscheidung dem User. Eine echte Analyse würde NuGet-Referenz-Graph erfordern — eigenständiges Vorhaben (siehe M2 `dependency_graph`, abgeschlossen in der Roadmap, aber noch nicht für Consumer-Use-Cases erweitert).
 - **Source-Generator-Output-Tracking:** Generierter Code kann statische Methoden/Properties aus Source-Assemblies referenzieren, die Roslyn als ungenutzt darstellt. Würde zu vielen False-Positives führen. Erkennung: `Symbol.IsInSource == false` oder `IPropertySymbol.GetMethod?.DeclaringSyntaxReferences` zeigt auf generierte Dateien → als `low` whitelisten, nicht beheben.
@@ -284,4 +270,4 @@ Der Server-Instructions-Text in `Mcp/ServerInstructions.cs` wird ergänzt um ein
 
 ## Offene Punkte
 
-(Vorerst leer — Klärung in Fragerunde 1.)
+(Bewusst leer — `open_questions` im Frontmatter ist aufgelöst; alle Nice-to-Have-Punkte sind entweder in Muss-Haben hochgestuft oder in Non-Goals mit Begründung verschoben. Keine Restbestände.)
