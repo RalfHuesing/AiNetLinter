@@ -226,6 +226,113 @@ public sealed class FindDeadCodeScannerTests
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod");
     }
 
+    [Fact]
+    public async Task ScanAsync_WithMaxResults_TruncatesAndSetsFlag()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                private void Dead1() {}
+                private void Dead2() {}
+                private void Dead3() {}
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            Accessibility: DeadCodeAccessibilityFilter.Private,
+            Confidence: DeadCodeConfidenceFilter.Both,
+            Kind: DeadCodeKindFilter.Method,
+            MaxResults: 2);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        Assert.True(result.IsTruncated);
+        Assert.Equal(2, result.DeadSymbols.Count);
+        Assert.Equal(3, result.Summary.TotalDead);
+    }
+
+    [Fact]
+    public async Task ScanAsync_WithScopeFilter_LimitsToMatchingFiles()
+    {
+        using var testSolution = CreateSolution(
+            ("Included.cs", """
+            public class IncludedService
+            {
+                private void DeadIncluded() {}
+            }
+            """),
+            ("Excluded.cs", """
+            public class ExcludedService
+            {
+                private void DeadExcluded() {}
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            ScopeFilter: "Included",
+            Accessibility: DeadCodeAccessibilityFilter.Private,
+            Confidence: DeadCodeConfidenceFilter.Both,
+            Kind: DeadCodeKindFilter.Method);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        var dead = Assert.Single(result.DeadSymbols);
+        Assert.Equal("DeadIncluded", dead.SymbolName);
+    }
+
+    [Fact]
+    public async Task ScanAsync_JsonConstructorAttribute_IsWhitelisted()
+    {
+        using var testSolution = CreateSolution(
+            ("Model.cs", """
+            namespace System.Text.Json.Serialization
+            {
+                [AttributeUsage(AttributeTargets.Constructor)]
+                public sealed class JsonConstructorAttribute : Attribute {}
+            }
+
+            public class Model
+            {
+                [System.Text.Json.Serialization.JsonConstructor]
+                private Model(int id) {}
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            Accessibility: DeadCodeAccessibilityFilter.All,
+            Confidence: DeadCodeConfidenceFilter.Both,
+            Kind: DeadCodeKindFilter.All);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        Assert.DoesNotContain(result.DeadSymbols, d => d.Kind == "constructor" && d.ContainerType.Contains("Model"));
+    }
+
+    [Fact]
+    public async Task ScanAsync_UnusedEventAndDelegate_DetectedAsDeadCode()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                private delegate void DeadCallback(int x);
+                private event System.Action? DeadEvent;
+                public void DoWork() => System.Console.WriteLine("hi");
+            }
+            """));
+
+        var args = new FindDeadCodeArgs(
+            Accessibility: DeadCodeAccessibilityFilter.Private,
+            Confidence: DeadCodeConfidenceFilter.Both,
+            Kind: DeadCodeKindFilter.All);
+
+        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+
+        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadCallback" && d.Kind == "delegate");
+        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadEvent" && d.Kind == "event");
+    }
+
     private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
         RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\FindDeadCodeScannerTests.slnx",

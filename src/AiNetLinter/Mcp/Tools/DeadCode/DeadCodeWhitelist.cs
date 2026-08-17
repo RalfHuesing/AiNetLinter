@@ -27,7 +27,11 @@ internal static class DeadCodeWhitelist
         "ImportAttribute",
         "JSInvokableAttribute",
         "ParameterAttribute",
-        "InjectAttribute"
+        "InjectAttribute",
+        "JsonConstructorAttribute",
+        "JsonConstructor",
+        "BenchmarkAttribute",
+        "Benchmark"
     };
 
     /// <summary>

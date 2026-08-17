@@ -338,4 +338,24 @@ public sealed class McpLiveRepositoryTests
         var summary = (string)json["summary"]!;
         Assert.DoesNotContain("0 Klassen analysiert", summary, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LiveDogfood_FindDeadCode_WithForwardSlashScopeFilter_ReturnsResults()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_dead_code",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp",
+                ["accessibility"] = "private_internal",
+                ["confidence"] = "both",
+                ["maxResults"] = 20
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        Assert.NotNull(json["summary"]);
+        Assert.NotNull(json["deadSymbols"]);
+    }
 }

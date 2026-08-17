@@ -83,7 +83,7 @@ public static class FindDeadCodeScanner
         var syntaxRoot = await document.GetSyntaxRootAsync(ct);
         if (semanticModel is null || syntaxRoot is null) return;
 
-        var declaredTypeNodes = syntaxRoot.DescendantNodes().OfType<BaseTypeDeclarationSyntax>();
+        var declaredTypeNodes = syntaxRoot.DescendantNodes().Where(n => n is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax);
         foreach (var typeNode in declaredTypeNodes)
         {
             if (semanticModel.GetDeclaredSymbol(typeNode, ct) is not INamedTypeSymbol typeSymbol) continue;
