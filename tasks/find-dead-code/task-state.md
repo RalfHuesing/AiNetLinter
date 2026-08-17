@@ -4,8 +4,8 @@ task: find-dead-code
 started_at: 2026-08-17T17:16:00+02:00
 last_updated: 2026-08-17T17:16:00+02:00
 rules_dir: .agents/rules
-total_steps: 3
-current_step: 003
+total_steps: 4
+current_step: 004
 ---
 
 # Task State: find-dead-code
@@ -13,12 +13,12 @@ current_step: 003
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `003`
+- **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
+- **Aktueller Schritt:** `004`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-17T17:16:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-17T17:32:30+02:00
+- **Zuletzt aktualisiert:** 2026-08-17T17:40:30+02:00
 
 ## Steps
 
@@ -27,6 +27,7 @@ current_step: 003
 | 001 | EPIC-01 | done | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | ja | approved | `06d49fc` |
 | 002 | EPIC-02 | done | Diagnosen & Locals-Erkennung (Mode: locals & both) | - | ja | approved | `6189330` |
 | 003 | EPIC-03 | done | MCP-Tool-Wrapper, Registrierung & Server-Instructions | - | ja | approved | `669064c` |
+| 004 | EPIC-04 | in_progress | Erweiterte Testsuite & Live-Dogfooding-Verifikation | - | - | - | - |
 
 ## Config (optional)
 
