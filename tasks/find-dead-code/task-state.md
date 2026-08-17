@@ -25,7 +25,7 @@ current_step: 002
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | 001 | EPIC-01 | done | Core-Scanner, Datenmodelle & Scope-Bounding-Pipeline | - | ja | approved | `06d49fc` |
-| 002 | EPIC-02 | in_progress | Diagnosen & Locals-Erkennung (Mode: locals & both) | - | - | - | - |
+| 002 | EPIC-02 | done | Diagnosen & Locals-Erkennung (Mode: locals & both) | - | ja | approved | `6189330` |
 
 ## Config (optional)
 
