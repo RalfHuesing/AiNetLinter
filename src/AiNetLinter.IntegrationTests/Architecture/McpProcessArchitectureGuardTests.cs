@@ -28,11 +28,12 @@ public sealed class McpProcessArchitectureGuardTests
             .ToList();
 
         var transportCallsites = sources.Where(source => source.Text.Contains("new StdioClientTransport", StringComparison.Ordinal)).ToList();
-        Assert.Equal(3, transportCallsites.Count);
+        Assert.Equal(4, transportCallsites.Count);
         Assert.All(transportCallsites, source => Assert.True(
             source.Path.EndsWith(Path.Combine("Mcp", "Platform", "McpProcessHost.cs"), StringComparison.Ordinal) ||
             source.Path.EndsWith(Path.Combine("Mcp", "McpHandshakeToolRegistrationTests.cs"), StringComparison.Ordinal) ||
-            source.Path.EndsWith(Path.Combine("Mcp", "McpServerCommandErrorHandlingTests.cs"), StringComparison.Ordinal),
+            source.Path.EndsWith(Path.Combine("Mcp", "McpServerCommandErrorHandlingTests.cs"), StringComparison.Ordinal) ||
+            source.Path.EndsWith(Path.Combine("Mcp", "McpObservabilityE2ETests.cs"), StringComparison.Ordinal),
             $"Nicht besitzende StdioClientTransport-Callsite: {source.Path}"));
 
         var processCallsites = sources.Where(source => source.Text.Contains("Process.Start(", StringComparison.Ordinal)).ToList();

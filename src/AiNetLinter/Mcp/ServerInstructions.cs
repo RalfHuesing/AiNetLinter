@@ -59,8 +59,8 @@ internal static class ServerInstructions
         "- search_pattern: Text- oder Regex-Suche ueber den gesamten Dateibestand, alle " +
         "Dateitypen.\n" +
         "- reload_config: Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart.\n" +
-        "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-" +
-        "Aggregate.\n" +
+        "- get_server_health: Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status.\n" +
+        "- report_observability_feedback: Meldet Probleme, False-Positives, unerwartete Ergebnisse oder Feature-Wünsche zu diesem MCP-Server, um AiNetLinter zu verbessern.\n" +
         "- find_duplicates: Findet Code-Duplikate (Token-basiertes Clone-Detection, " +
         "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
         "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +

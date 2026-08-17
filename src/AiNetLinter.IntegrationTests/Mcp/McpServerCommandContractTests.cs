@@ -61,10 +61,10 @@ public sealed class McpServerCommandContractTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_ServerRespondsWithTwentyOneTools()
+    public async Task RunAsync_ValidFixture_ServerRespondsWithAllTools()
     {
         var tools = await (await fixture.GetHostAsync()).ListToolsAsync();
-        Assert.Equal(21, tools.Count);
+        Assert.Equal(22, tools.Count);
     }
 
     [Fact]

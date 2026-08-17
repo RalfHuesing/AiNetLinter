@@ -92,7 +92,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--no-cache` | bool | Deaktiviert den Analyse-Cache für diesen Lauf |
 | `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
 | `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
-| `--mcp-log [pfad]` | string | Aktiviert das opt-in Call-Log im MCP-Server-Modus |
+| `--mcp-log [pfad]` | string | Konfiguriert das Observability- & Tool-Call-Logging (Default: aktiv unter `%LOCALAPPDATA%`, 'off' zum Deaktivieren) |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
@@ -236,7 +236,8 @@ Konsequenz für den Agent-Loop: 14 Tools sind C#-only (find_symbol, find_referen
 | `get_symbol_body` | `identifier` (stabile DocumentationCommentId, Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Call-Log-Aggregation (falls `--mcp-log` aktiv) | nein | nein |
+| `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Observability-Status (aktiv/deaktiviert) | nein | nein |
+| `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
 | `find_duplicates` | `mode?` (`clone` Default oder `refactoring-drift`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, nur `mode=clone`), `normalizeIdentifiers?` (Default `false`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten | ja | ja |
 
 ### Structured Output
@@ -421,52 +422,35 @@ Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird
 
 Regressions-Schutz: ein E2E-Framing-Test in `McpServerCommandJsonRpcFramingTests` spawnt `AiNetLinter.exe` als Subprozess, schreibt `initialize` + `tools/list` + `tools/call`-Frames manuell auf stdin und prueft **jede** Zeile auf stdout als gueltigen JSON-RPC-Frame (`jsonrpc == "2.0"`). Kein SDK-Parser zwischen Subprozess und Assertions — ein zukuenftiger Leak wuerde als nicht-JSON-Zeile sichtbar.
 
-### Call-Log (opt-in)
+### MCP-Observability & Feedback
 
-Opt-in-Beobachtung der tatsaechlichen Tool-Nutzung in der Praxis, default deaktiviert (kein File I/O). Aktivierung ueber das Flag `--mcp-log <pfad>` (oder kurz `-mcp-log`).
+AiNetLinter integriert das Paket `RalfHuesing.Mcp.Observability` für standardisiertes Tool-Call-Logging, Performance-Metriken und strukturierte Agent-Feedbacks.
+
+**Status:** Standardmäßig aktiv.
 
 ```bash
-ainetlinter --mcp-server --mcp-log ./.mcp-log/calls.log
-ainetlinter --mcp-server --mcp-log  # Default-Pfad: <exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl
+# Standard-Start (Log-Verzeichnis unter %LOCALAPPDATA%\RalfHuesing\McpObservability\AiNetLinter\<Solution>\<Datum>\)
+ainetlinter --mcp-server
+
+# Explizites Log-Verzeichnis angeben:
+ainetlinter --mcp-server --mcp-log ./.mcp-log/
+
+# Observability komplett deaktivieren:
+ainetlinter --mcp-server --mcp-log off
 ```
 
-Format: JSONL, ein Eintrag pro Tool-Call. Felder pro Zeile:
+Format: JSONL-Dateien mit standardisierten Records:
+1. `recordType: "tool_call"`: Enthält `serverName`, `toolName`, `arguments`, `executionTimeMs`, `success`, `resultSummary` und Zeitstempel.
+2. `recordType: "feedback"`: Wird geschrieben, wenn ein LLM-Agent das Tool `report_observability_feedback` aufruft, um Fehler, False-Positives oder Feature-Requests zu melden.
 
-| Feld | Typ | Bedeutung |
-| :--- | :--- | :--- |
-| `ts` | string (ISO 8601) | UTC-Zeitstempel des Call-Beginns |
-| `tool` | string | Tool-Name (z. B. `find_symbol`) |
-| `args` | string | Kurzform der Argumente, max. 200 Zeichen + `...` |
-| `lines` | number | Anzahl Text-Zeilen im Tool-Result |
-| `truncated` | bool | `true` wenn Trunkierungs-Meta-Zeile erkannt |
-| `duration_ms` | number | Dauer des Tool-Aufrufs in Millisekunden |
-| `empty` | bool | `true` wenn `lines == 0` und kein Fehler |
-
-Beispiel-Snippet:
-
-```json
-{"ts":"2026-08-04T11:23:45.123Z","tool":"find_symbol","args":"Greeter|null|50","lines":3,"truncated":false,"duration_ms":12.4,"empty":false}
-{"ts":"2026-08-04T11:23:46.456Z","tool":"get_index_scope","args":"","lines":7,"truncated":false,"duration_ms":1.2,"empty":false}
-```
-
-**Pfad-Aufloesung:** absoluter Pfad → wie angegeben; relativer Pfad → relativ zum Solution-Verzeichnis (analog zu `cache/` neben der Solution). Default bei `--mcp-log` ohne Wert: `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` (lokales Server-Datum; `<solutionName>` ist der Dateiname der Solution ohne Extension). Wenn keine Solution auflösbar ist, bricht der Server mit Fehlermeldung auf stderr und Exit-Code 1 ab, es wird keine Log-Datei angelegt. Leere Logs (kein Tool-Call aufgezeichnet) werden beim Server-Shutdown automatisch geloescht.
-
-**Error-Schema (Tool-Handler-Exceptions):** Unbehandelte Exceptions in Tool-Handlern werden in derselben JSONL-Datei als zusaetzliche Zeile mit `level=error` persistiert. Die Felder `ts`, `tool` und `args` sind identisch zum Call-Schema; statt `lines`/`truncated`/`duration_ms`/`empty` traegt der Eintrag:
-
-| Feld | Typ | Bedeutung |
-| :--- | :--- | :--- |
-| `level` | string | Immer `"error"` fuer diese Zeilen |
-| `error_type` | string | Exception-Typ-Name ohne Namespace (z. B. `InvalidOperationException`) |
-| `error_message` | string | `Exception.Message` |
-| `stack_trace` | string | Stack-Trace, gekappt auf 4 KB + `...`-Marker bei Ueberschreitung |
-
-Beispiel-Snippet:
-
-```json
-{"ts":"2026-08-05T09:14:22.011Z","tool":"get_file_skeleton","args":"./src/Foo.cs","level":"error","error_type":"InvalidOperationException","error_message":"simuliertes Hot-Reload-Race in get_file_skeleton","stack_trace":"   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.HandleGetFileSkeleton(String path) in FileStructureToolRegistrations.cs:line 142\n   at AiNetLinter.Mcp.Tools.FileStructureToolRegistrations.ExecuteCallAsync(String tool, JsonElement args, McpCallLog log) in FileStructureToolRegistrations.cs:line 67\n..."}
-```
-
-Der Wrapper ist ein **Fast-Path**: ohne Flag laeuft der Tool-Dispatch ohne Overhead (kein `McpCallLogScope`-Objekt, kein `Stopwatch.StartNew()`). Siehe `Docs/configuration.md` fuer die formale CLI-Option-Spec.
+**Feedback-Tool (`report_observability_feedback`):**
+Agenten können dieses Tool nutzen, um Probleme bei der Code-Analyse direkt zu melden:
+- `feedbackType`: `"issue"` oder `"feature_request"`
+- `title`: Prägnante Überschrift
+- `description`: Detaillierte Fehlerbeschreibung
+- `relatedTool`: Optional Name des betroffenen Tools (z. B. `get_violations`)
+- `severity`: `"low"`, `"medium"`, `"high"`, `"critical"`
+- `expectedBehavior`, `actualBehavior`, `additionalContext`: Optionale strukturierte Kontext-Felder.
 
 ### Compile-Fehler-Warnhinweis
 

@@ -23,37 +23,27 @@ internal static class SymbolGraphToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die sechs Symbolgraph-Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
-    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet
-    /// jeden Tool-Aufruf auf, wenn aktiv (kein Overhead bei deaktiviertem Log).
+    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        McpCodeGraphServer mcpState)
     {
-        AddFindSymbol(tools, mcpState, callLog);
-        AddFindReferences(tools, mcpState, callLog);
-        AddGetCallTree(tools, mcpState, callLog);
-        AddGetImpact(tools, mcpState, callLog);
-        AddGetTypeHierarchy(tools, mcpState, callLog);
-        AddDependencyGraph(tools, mcpState, callLog);
+        AddFindSymbol(tools, mcpState);
+        AddFindReferences(tools, mcpState);
+        AddGetCallTree(tools, mcpState);
+        AddGetImpact(tools, mcpState);
+        AddGetTypeHierarchy(tools, mcpState);
+        AddDependencyGraph(tools, mcpState);
     }
 
     private static void AddFindSymbol(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct);
-                }
-                return await callLog.ExecuteCallAsync("find_symbol", $"{namePattern}|{kind}|{maxResults}",
-                    () => FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct));
-            },
+            (string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "find_symbol",
@@ -68,19 +58,11 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct);
-                }
-                return await callLog.ExecuteCallAsync("find_references", $"{symbolIdentifier}|{maxResults}|{depth}",
-                    () => FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct));
-            },
+            (string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct),
             new McpServerToolCreateOptions
             {
                 Name = "find_references",
@@ -98,20 +80,11 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
-            {
-                var input = new GetCallTreeInput(symbolIdentifier, depth, format, topN);
-                if (callLog is null)
-                {
-                    return await GetCallTreeTool.ExecuteAsync(mcpState, input, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_call_tree", $"{symbolIdentifier}|{depth}|{format}|{topN}",
-                    () => GetCallTreeTool.ExecuteAsync(mcpState, input, ct));
-            },
+            (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
+                GetCallTreeTool.ExecuteAsync(mcpState, new GetCallTreeInput(symbolIdentifier, depth, format, topN), ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_call_tree",
@@ -128,20 +101,11 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-            {
-                var input = new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth);
-                if (callLog is null)
-                {
-                    return await GetImpactTool.ExecuteAsync(mcpState, input, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_impact", $"{gitRef}|{symbolIdentifier}|{maxResults}|{depth}",
-                    () => GetImpactTool.ExecuteAsync(mcpState, input, ct));
-            },
+            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+                GetImpactTool.ExecuteAsync(mcpState, new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth), ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_impact",
@@ -158,19 +122,11 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_type_hierarchy", $"{typeIdentifier}|{maxResults}",
-                    () => GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct));
-            },
+            (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+                GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_type_hierarchy",
@@ -187,22 +143,12 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? filePath = null, string? typeIdentifier = null, string? direction = null,
+            (string? filePath = null, string? typeIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
-            {
-                var input = new DependencyGraphInput(filePath, typeIdentifier, direction, depth, maxResults);
-                if (callLog is null)
-                {
-                    return await DependencyGraphTool.ExecuteAsync(mcpState, input, ct);
-                }
-                return await callLog.ExecuteCallAsync(
-                    "dependency_graph", $"{filePath}|{typeIdentifier}|{direction}|{depth}|{maxResults}",
-                    () => DependencyGraphTool.ExecuteAsync(mcpState, input, ct));
-            },
+                DependencyGraphTool.ExecuteAsync(mcpState, new DependencyGraphInput(filePath, typeIdentifier, direction, depth, maxResults), ct),
             new McpServerToolCreateOptions
             {
                 Name = "dependency_graph",

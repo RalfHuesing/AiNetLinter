@@ -23,37 +23,27 @@ internal static class FileStructureToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die dateistruktur-orientierten Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
-    /// (siehe <c>. Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn
-    /// aktiv (kein Overhead bei deaktiviertem Log).
+    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        McpCodeGraphServer mcpState)
     {
-        AddGetFileSkeleton(tools, mcpState, callLog);
-        AddGetClassStructure(tools, mcpState, callLog);
-        AddGetIndexScope(tools, mcpState, callLog);
-        AddGetHotspots(tools, mcpState, callLog);
+        AddGetFileSkeleton(tools, mcpState);
+        AddGetClassStructure(tools, mcpState);
+        AddGetIndexScope(tools, mcpState);
+        AddGetHotspots(tools, mcpState);
     }
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? symbol = null, string? sortBy = "lines",
+            (string? symbol = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_class_structure", $"{symbol}|{sortBy}|{maxMembers}",
-                    () => GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct));
-            },
+                GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_class_structure",
@@ -72,19 +62,11 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? filePath = null, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_file_skeleton", filePath ?? "",
-                    () => GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct));
-            },
+            (string? filePath = null, CancellationToken ct = default) =>
+                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_file_skeleton",
@@ -98,19 +80,11 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetIndexScopeTool.ExecuteAsync(mcpState, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_index_scope", "",
-                    () => GetIndexScopeTool.ExecuteAsync(mcpState, ct));
-            },
+            (CancellationToken ct = default) =>
+                GetIndexScopeTool.ExecuteAsync(mcpState, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_index_scope",
@@ -125,19 +99,11 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetHotspots(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? scopeFilter = null, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_hotspots", scopeFilter ?? "",
-                    () => GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct));
-            },
+            (string? scopeFilter = null, CancellationToken ct = default) =>
+                GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_hotspots",

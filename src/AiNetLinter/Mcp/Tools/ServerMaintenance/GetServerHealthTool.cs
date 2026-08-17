@@ -11,14 +11,14 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// <summary>
 /// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss des laufenden MCP-Server-Prozesses —
 /// <see cref="ServerLoadState"/>, geladene Solution/Config-Quelle, Uptime, Anzahl
-/// Solution-Refreshes seit Start und (falls <c>--mcp-log</c> aktiv) eine Call-Log-Aggregation.
+/// Solution-Refreshes seit Start und Observability-Status (Logging & Feedback-Kanal).
 /// Reine Diagnose ohne Recoverable-Pfad; einzige Ausnahme
 /// <see cref="ServerLoadState.LoadFailed"/>, konsistent mit den anderen Tools' SOLUTION_NOT_LOADED-
 /// Kurzform.
 /// </summary>
 internal static class GetServerHealthTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, McpCallLog? callLog)
+    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? observabilityLogPath = null)
     {
         if (state.LoadState == ServerLoadState.LoadFailed) return Task.FromResult(McpToolResults.SolutionNotLoaded());
 
@@ -31,10 +31,10 @@ internal static class GetServerHealthTool
         sb.AppendLine($"- Uptime: {FormatUptime(state.Uptime)}");
         sb.AppendLine($"- Solution-Refreshes seit Start: {state.RefreshCount}");
         sb.AppendLine();
-        sb.Append(DescribeCallLog(callLog));
+        sb.Append(DescribeObservability(observabilityLogPath));
 
         var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, callLog)));
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, observabilityLogPath)));
     }
 
     /// <summary>
@@ -42,12 +42,12 @@ internal static class GetServerHealthTool
     /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
     /// wie "wird noch geladen").
     /// </summary>
-    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, McpCallLog? callLog)
+    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string? observabilityLogPath)
     {
         var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
-        var callLogPayload = callLog is null
+        var callLogPayload = observabilityLogPath is null
             ? null
-            : new CallLogPayload(callLog.LogPath, callLog.EntryCount, callLog.ErrorCount, callLog.CallCountsByTool);
+            : new CallLogPayload(observabilityLogPath, 0, 0, new Dictionary<string, int>());
 
         return new ServerHealthPayload(
             LoadState: state.LoadState.ToString(),
@@ -83,27 +83,12 @@ internal static class GetServerHealthTool
         return uptime.TotalMinutes >= 1 ? $"{(int)uptime.TotalMinutes}min {uptime.Seconds}s" : $"{uptime.Seconds}s";
     }
 
-    /// <summary>
-    /// Call-Log ist deaktiviert (Default): klarer Hinweistext statt Fehler, damit ein Agent nicht
-    /// annimmt, das Tool sei kaputt. Aktiv: Gesamt-Eintraege, Gesamt-Fehler, Pro-Tool-Aufrufzahlen
-    /// absteigend sortiert.
-    /// </summary>
-    private static string DescribeCallLog(McpCallLog? callLog)
+    private static string DescribeObservability(string? logPath)
     {
-        if (callLog is null)
+        if (string.IsNullOrWhiteSpace(logPath))
         {
-            return "Call-Log: nicht aktiv (--mcp-log wurde beim Start nicht gesetzt).";
+            return "Observability: aktiv (RalfHuesing.Mcp.Observability, Tool-Call Logging & Feedback-Kanal).";
         }
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"Call-Log: aktiv ({callLog.LogPath})");
-        sb.AppendLine($"- Eintraege gesamt: {callLog.EntryCount}, Fehler: {callLog.ErrorCount}");
-        foreach (var (tool, count) in callLog.CallCountsByTool
-                     .OrderByDescending(kv => kv.Value)
-                     .ThenBy(kv => kv.Key, StringComparer.Ordinal))
-        {
-            sb.AppendLine($"  - {tool}: {count}");
-        }
-        return sb.ToString();
+        return $"Observability: aktiv ({logPath})";
     }
 }

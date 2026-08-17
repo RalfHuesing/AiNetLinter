@@ -22,25 +22,17 @@ internal static class DuplicateDetectionToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
+            (int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
                 string? scopeType = null,
                 CancellationToken ct = default) =>
             {
                 var input = new DuplicateDetectionInput(
                     minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
-                if (callLog is null)
-                {
-                    return await DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct);
-                }
-                return await callLog.ExecuteCallAsync(
-                    "find_duplicates",
-                    $"{minTokens}|{similarityThreshold}|{normalizeIdentifiers}|{scopeDir}|{maxResults}|{mode}|{helperSymbol}|{scopeType}",
-                    () => DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct));
+                return DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct);
             },
             new McpServerToolCreateOptions
             {

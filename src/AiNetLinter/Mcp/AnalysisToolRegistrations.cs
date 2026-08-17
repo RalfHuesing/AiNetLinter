@@ -41,38 +41,28 @@ internal static class AnalysisToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen den
     /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
-    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn
-    /// aktiv (kein Overhead bei deaktiviertem Log).
+    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        McpCodeGraphServer mcpState)
     {
-        AddGetViolations(tools, mcpState, callLog);
-        AddSafeguard(tools, mcpState, callLog);
-        AddSearchPattern(tools, mcpState, callLog);
-        AddMetricsTree(tools, mcpState, callLog);
-        AddPatternDetect(tools, mcpState, callLog);
-        AddFindMagicValues(tools, mcpState, callLog);
-        AddFindDeadCode(tools, mcpState, callLog);
+        AddGetViolations(tools, mcpState);
+        AddSafeguard(tools, mcpState);
+        AddSearchPattern(tools, mcpState);
+        AddMetricsTree(tools, mcpState);
+        AddPatternDetect(tools, mcpState);
+        AddFindMagicValues(tools, mcpState);
+        AddFindDeadCode(tools, mcpState);
     }
 
     private static void AddGetViolations(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct);
-                }
-                return await callLog.ExecuteCallAsync("get_violations", $"{scopeFilter}|{maxResults}|{contextLines}|{includeSnippet}",
-                    () => GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct));
-            },
+            (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+                GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_violations",
@@ -88,19 +78,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct);
-                }
-                return await callLog.ExecuteCallAsync("safeguard", $"{scopeFilter}|{minScore}|{maxViolations}",
-                    () => SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct));
-            },
+            (string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+                SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct),
             new McpServerToolCreateOptions
             {
                 Name = "safeguard",
@@ -117,19 +99,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? pattern = null, bool isRegex = false, int maxResults = 50, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct);
-                }
-                return await callLog.ExecuteCallAsync("search_pattern", $"{pattern}|{isRegex}|{maxResults}",
-                    () => SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct));
-            },
+            (string? pattern = null, bool isRegex = false, int maxResults = 50, CancellationToken ct = default) =>
+                SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "search_pattern",
@@ -144,20 +118,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
-            {
-                var args = new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter);
-                if (callLog is null)
-                {
-                    return await MetricsTreeTool.ExecuteAsync(mcpState, args, ct);
-                }
-                return await callLog.ExecuteCallAsync("metrics_tree", $"{root}|{mode}|{depth}|{topN}|{fileFilter}",
-                    () => MetricsTreeTool.ExecuteAsync(mcpState, args, ct));
-            },
+            (string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+                MetricsTreeTool.ExecuteAsync(mcpState, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct),
             new McpServerToolCreateOptions
             {
                 Name = "metrics_tree",
@@ -174,19 +139,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct);
-                }
-                return await callLog.ExecuteCallAsync("pattern_detect", $"{string.Join(",", patterns ?? [])}|{scopeFilter}|{maxResultsPerPattern}",
-                    () => PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct));
-            },
+            (string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+                PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct),
             new McpServerToolCreateOptions
             {
                 Name = "pattern_detect",
@@ -205,11 +162,10 @@ internal static class AnalysisToolRegistrations
 
     private static void AddFindMagicValues(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (
+            (
                 string? scopeFilter = null,
                 string? valueType = "all",
                 string? categoryFilter = "all",
@@ -231,13 +187,7 @@ internal static class AnalysisToolRegistrations
                     IncludeTests: includeTests,
                     IncludeSuppressed: includeSuppressed,
                     ChangedOnly: changedOnly);
-                if (callLog is null)
-                {
-                    return await FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct);
-                }
-                var logArgs = $"scope={effective.ScopeFilter}|valueType={effective.ValueType}|category={effective.CategoryFilter}|minOcc={effective.MinOccurrences}|max={effective.MaxResults}|tests={effective.IncludeTests}|supp={effective.IncludeSuppressed}|changed={effective.ChangedOnly}";
-                return await callLog.ExecuteCallAsync("find_magic_values", logArgs,
-                    () => FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct));
+                return FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct);
             },
             new McpServerToolCreateOptions
             {
@@ -261,11 +211,10 @@ internal static class AnalysisToolRegistrations
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (
+            (
                 string? accessibility = "private_internal",
                 string? confidence = "both",
                 string? kind = "all",
@@ -283,13 +232,7 @@ internal static class AnalysisToolRegistrations
                     IncludeTests: includeTests,
                     Mode: mode,
                     MaxResults: maxResults);
-                if (callLog is null)
-                {
-                    return await FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct);
-                }
-                var logArgs = $"acc={effective.Accessibility}|conf={effective.Confidence}|kind={effective.Kind}|scope={effective.ScopeFilter}|tests={effective.IncludeTests}|mode={effective.Mode}|max={effective.MaxResults}";
-                return await callLog.ExecuteCallAsync("find_dead_code", logArgs,
-                    () => FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct));
+                return FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct);
             },
             new McpServerToolCreateOptions
             {

@@ -18,46 +18,44 @@ internal static class McpServerOptionsFactory
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
     /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler
-    /// <paramref name="callLog"/> zeichnet jeden Tool-Aufruf auf, wenn aktiv (kein Overhead
-    /// bei deaktiviertem Log, weil jede Registrierung ihren Lambda-Wrapper nur dann baut, wenn
-    /// das Log auch tatsaechlich gesetzt ist). Die <c>initialize</c>-Handshake-Instructions
-    /// kommen aus <see cref="ServerInstructions.Text"/> (Single-Source-of-Truth, siehe dort).
+    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Die
+    /// <c>initialize</c>-Handshake-Instructions kommen aus <see cref="ServerInstructions.Text"/>
+    /// (Single-Source-of-Truth, siehe dort).
     /// </summary>
-    internal static McpServerOptions Create(McpCodeGraphServer mcpState, McpCallLog? callLog = null)
+    internal static McpServerOptions Create(McpCodeGraphServer mcpState, IServiceProvider? serviceProvider = null)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions.Text)
-            .WithToolCollection(BuildToolCollection(mcpState, callLog))
+            .WithToolCollection(BuildToolCollection(mcpState, serviceProvider))
             .WithResourceCollection(BuildResourceCollection(mcpState))
             .Build();
     }
 
-    private static McpServerResourceCollection BuildResourceCollection(McpCodeGraphServer mcpState)
+    internal static McpServerResourceCollection BuildResourceCollection(McpCodeGraphServer mcpState)
     {
         var resources = new McpServerResourceCollection();
         OverviewResourceRegistration.Register(resources, mcpState);
         return resources;
     }
 
-    private static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
+    internal static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
         McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        IServiceProvider? serviceProvider = null)
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
-        SymbolGraphToolRegistrations.Register(tools, mcpState, callLog);
-        FileStructureToolRegistrations.Register(tools, mcpState, callLog);
-        AnalysisToolRegistrations.Register(tools, mcpState, callLog);
-        SymbolBodyToolRegistrations.Register(tools, mcpState, callLog);
-        ServerMaintenanceToolRegistrations.Register(tools, mcpState, callLog);
-        DuplicateDetectionToolRegistrations.Register(tools, mcpState, callLog);
+        SymbolGraphToolRegistrations.Register(tools, mcpState);
+        FileStructureToolRegistrations.Register(tools, mcpState);
+        AnalysisToolRegistrations.Register(tools, mcpState);
+        SymbolBodyToolRegistrations.Register(tools, mcpState);
+        ServerMaintenanceToolRegistrations.Register(tools, mcpState, serviceProvider);
+        DuplicateDetectionToolRegistrations.Register(tools, mcpState);
 
         return tools;
     }
 
-    private static string GetServerVersion()
+    internal static string GetServerVersion()
     {
         return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
     }

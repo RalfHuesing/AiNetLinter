@@ -48,7 +48,8 @@ internal static class OverviewResourceRegistration
         ("metrics_tree", "Liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (z. B. Code-Groesse, Kommentaranteil) zur Ebene-fuer-Ebene-Exploration."),
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
-        ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Call-Log-Aggregate."),
+        ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status."),
+        ("report_observability_feedback", "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
     ];
 

@@ -22,27 +22,18 @@ internal static class SymbolBodyToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        McpCodeGraphServer mcpState)
     {
-        AddGetSymbolBody(tools, mcpState, callLog);
+        AddGetSymbolBody(tools, mcpState);
     }
 
     private static void AddGetSymbolBody(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? identifier = null, int maxBodyLines = 80, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct);
-                }
-                return await callLog.ExecuteCallAsync("get_symbol_body", $"{identifier}|{maxBodyLines}",
-                    () => GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct));
-            },
+            (string? identifier = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+                GetSymbolBodyTool.ExecuteAsync(mcpState, identifier, maxBodyLines, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_symbol_body",

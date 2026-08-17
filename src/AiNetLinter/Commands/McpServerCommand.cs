@@ -12,7 +12,11 @@ using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Commands;
 
@@ -24,8 +28,7 @@ internal static class McpServerCommand
 {
     /// <summary>
     /// Loest die Ziel-Solution auf, laedt sie (bester Versuch, kein Absturz bei Fehlschlag) und
-    /// startet danach den MCP-Server mit dem in diesem Step registrierten Tool-Set (aktuell
-    /// nur <c>find_symbol</c>, siehe <see cref="McpServerOptionsFactory"/>). Der Solution-Load
+    /// startet danach den MCP-Server mit dem registrierten Tool-Set. Der Solution-Load
     /// laeuft im Hintergrund — der MCP-Transport antwortet auf <c>initialize</c> sofort, Tools
     /// waehrend des Loads reagieren mit <see cref="McpToolResults.Loading"/>.
     /// </summary>
@@ -59,87 +62,92 @@ internal static class McpServerCommand
             LoadFunc = innerCt => TryLoadSolutionAsync(solutionPath, innerCt, c),
         });
 
-        McpCallLog? callLog = null;
-        try
-        {
-            var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory;
-            var wasOptedIn = args.McpLogPath is not null;
-            callLog = TryCreateCallLog(args.McpLogPath, solutionPath, exeDir, c);
-            if (wasOptedIn && callLog is null) return 1;
+        var obsOptions = ResolveObservabilityOptions(args.McpLogPath, solutionPath);
 
-            var serverOptions = McpServerOptionsFactory.Create(mcpState, callLog);
-            var transport = new StdioServerTransport(serverOptions);
-            await using var server = McpServer.Create(transport, serverOptions);
-            await server.RunAsync(ct);
-        }
-        finally
+        var services = new ServiceCollection();
+        var builder = services.AddMcpServer();
+        builder.WithObservability(obsOptions);
+
+        var serviceProvider = services.BuildServiceProvider();
+        var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        serverOptions.ServerInfo = new Implementation
         {
-            if (callLog is not null) await callLog.DisposeAsync();
-        }
+            Name = "ainetlinter",
+            Version = McpServerOptionsFactory.GetServerVersion(),
+        };
+        serverOptions.ServerInstructions = ServerInstructions.Text;
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(mcpState, serviceProvider);
+        serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(mcpState);
+
+        var transport = new StdioServerTransport(serverOptions);
+        await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);
+        await server.RunAsync(ct);
         return 0;
     }
 
     /// <summary>
-    /// Loest den konfigurierten <c>--mcp-log</c>-Pfad auf und instanziiert bei Bedarf ein
-    /// <see cref="McpCallLog"/>. Drei Faelle: <see langword="null"/> = Opt-in nicht aktiv, kein
-    /// Log; <c>IsNullOrWhiteSpace</c> = Default-Pfad via <see cref="BuildDefaultLogPath"/> unter
-    /// <c>&lt;exeDir&gt;/logs/&lt;solutionName&gt;/&lt;yyyy-MM-dd&gt;/calls.jsonl</c> (bricht
-    /// sauber ab, wenn keine Solution aufloesbar); konkreter Wert = expliziter Pfad, Aufloesung
-    /// ueber <see cref="ResolveMcpLogPath"/>. Liefert <see langword="null"/>, wenn das Flag
-    /// nicht gesetzt ist oder der Default-Pfad mangels Solution scheitert — der Aufrufer
-    /// unterscheidet die beiden Faelle ueber das zusaetzliche Opt-in-Signal.
+    /// Loest die <see cref="McpObservabilityOptions"/> anhand des CLI-Wertes <paramref name="mcpLogPath"/> auf.
+    /// Default (<c>null</c>): Observability und Feedback-Tool sind aktiv, LogDirectory ist null (schreibt
+    /// in Standardordner %LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\).
+    /// Bei Werten wie "off", "false", "disabled", "none" wird Observability komplett deaktiviert.
+    /// Bei einem Pfad wird das angegebene Verzeichnis verwendet (relativ zum Solution-Pfad oder absolut).
     /// </summary>
-    internal static McpCallLog? TryCreateCallLog(string? mcpLogPath, string? solutionPath, string exeDir, ILintConsole console)
+    internal static McpObservabilityOptions ResolveObservabilityOptions(string? mcpLogPath, string? solutionPath)
     {
-        if (mcpLogPath is null) return null;
-
-        if (string.IsNullOrWhiteSpace(mcpLogPath))
+        if (mcpLogPath is null)
         {
-            var defaultPath = BuildDefaultLogPath(solutionPath, exeDir, console);
-            return defaultPath is null ? null : new McpCallLog(defaultPath);
+            return new McpObservabilityOptions
+            {
+                Enabled = true,
+                EnableToolCallLogging = true,
+                EnableFeedbackTool = true,
+                LogDirectory = null,
+            };
         }
 
-        return new McpCallLog(ResolveMcpLogPath(mcpLogPath, solutionPath ?? string.Empty));
+        var trimmed = mcpLogPath.Trim();
+        if (trimmed.Equals("off", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("disabled", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return new McpObservabilityOptions
+            {
+                Enabled = false,
+                EnableToolCallLogging = false,
+                EnableFeedbackTool = false,
+                LogDirectory = null,
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return new McpObservabilityOptions
+            {
+                Enabled = true,
+                EnableToolCallLogging = true,
+                EnableFeedbackTool = true,
+                LogDirectory = null,
+            };
+        }
+
+        var resolvedDir = ResolveMcpLogPath(trimmed, solutionPath ?? string.Empty);
+        return new McpObservabilityOptions
+        {
+            Enabled = true,
+            EnableToolCallLogging = true,
+            EnableFeedbackTool = true,
+            LogDirectory = resolvedDir,
+        };
     }
 
     /// <summary>
-    /// Baut den vorhersagbaren Default-Pfad
-    /// <c>&lt;exeDir&gt;/logs/&lt;solutionName&gt;/&lt;yyyy-MM-dd&gt;/calls.jsonl</c>. Wenn
-    /// <paramref name="solutionPath"/> leer ist oder keinen Dateinamen-Anteil liefert (z. B.
-    /// <c>".slnx"</c>), scheitert der Helper mit einer strukturierten <c>RESOURCE_NOT_FOUND</c>-
-    /// Meldung auf stderr und liefert <see langword="null"/> — kein stiller Fallback-Pfad, damit
-    /// ein Server-Start ohne zuordenbares Log-Verzeichnis hart abgebrochen wird.
-    /// </summary>
-    internal static string? BuildDefaultLogPath(string? solutionPath, string exeDir, ILintConsole console)
-    {
-        var solutionName = string.IsNullOrWhiteSpace(solutionPath)
-            ? null
-            : Path.GetFileNameWithoutExtension(solutionPath);
-
-        if (string.IsNullOrWhiteSpace(solutionName))
-        {
-            console.WriteError(LinterErrorFormatter.Format(
-                LinterErrorCodes.ResourceNotFound,
-                "Keine Solution fuer --mcp-log aufloesbar; ohne sie ist kein Default-Log-Verzeichnis ableitbar.",
-                hint: "Server aus einem Verzeichnis mit genau einer .sln/.slnx starten oder --path auf eine konkrete Solution-Datei setzen."));
-            return null;
-        }
-
-        var dateStr = DateTime.Now.ToString("yyyy-MM-dd");
-        return Path.Combine(exeDir, "logs", solutionName, dateStr, "calls.jsonl");
-    }
-
-    /// <summary>
-    /// Aufloesung des expliziten Call-Log-Pfads: absolut -> wie angegeben; relativ -> relativ zum
-    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Datei zur Solution gehoert und nicht
-    /// in das Installations-Verzeichnis des Tools wandert). Wird nur fuer explizit angegebene
-    /// Pfade aufgerufen — der Whitespace-Fall geht in <see cref="BuildDefaultLogPath"/>.
-    /// GetFullPath normalisiert zusaetzlich Separatoren, damit das Ergebnis konsistent fuer
-    /// Tests und Konsumenten ist.
+    /// Aufloesung des expliziten Log-Verzeichnisses: absolut -> wie angegeben; relativ -> relativ zum
+    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Dateien zur Solution gehoeren).
     /// </summary>
     internal static string ResolveMcpLogPath(string mcpLogPath, string solutionPath)
     {
-        if (Path.IsPathRooted(mcpLogPath)) return mcpLogPath;
+        if (Path.IsPathRooted(mcpLogPath)) return Path.GetFullPath(mcpLogPath);
         var solutionDir = Path.GetDirectoryName(solutionPath) ?? string.Empty;
         return Path.GetFullPath(Path.Combine(solutionDir, mcpLogPath));
     }

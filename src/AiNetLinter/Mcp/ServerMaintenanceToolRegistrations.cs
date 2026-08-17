@@ -22,34 +22,25 @@ internal static class ServerMaintenanceToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die beiden Wartungs-Tools hinzu. Tools erreichen den resident
     /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
-    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler <paramref name="callLog"/> zeichnet jeden
-    /// Tool-Aufruf auf, wenn aktiv, und ist gleichzeitig die Datenquelle fuer
-    /// <c>get_server_health</c>s Call-Log-Aggregation.
+    /// <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         McpCodeGraphServer mcpState,
-        McpCallLog? callLog = null)
+        IServiceProvider? serviceProvider = null)
     {
-        AddReloadConfig(tools, mcpState, callLog);
-        AddGetServerHealth(tools, mcpState, callLog);
+        AddReloadConfig(tools, mcpState);
+        AddGetServerHealth(tools, mcpState);
+        AddReportObservabilityFeedback(tools, serviceProvider);
     }
 
     private static void AddReloadConfig(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (string? configPath = null, CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await ReloadConfigTool.ExecuteAsync(mcpState, configPath, ct);
-                }
-                return await callLog.ExecuteCallAsync("reload_config", configPath ?? "",
-                    () => ReloadConfigTool.ExecuteAsync(mcpState, configPath, ct));
-            },
+            (string? configPath = null, CancellationToken ct = default) =>
+                ReloadConfigTool.ExecuteAsync(mcpState, configPath, ct),
             new McpServerToolCreateOptions
             {
                 Name = "reload_config",
@@ -65,19 +56,11 @@ internal static class ServerMaintenanceToolRegistrations
 
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState,
-        McpCallLog? callLog)
+        McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            async (CancellationToken ct = default) =>
-            {
-                if (callLog is null)
-                {
-                    return await GetServerHealthTool.ExecuteAsync(mcpState, callLog);
-                }
-                return await callLog.ExecuteCallAsync("get_server_health", "",
-                    () => GetServerHealthTool.ExecuteAsync(mcpState, callLog));
-            },
+            (CancellationToken ct = default) =>
+                GetServerHealthTool.ExecuteAsync(mcpState),
             new McpServerToolCreateOptions
             {
                 Name = "get_server_health",
@@ -88,5 +71,28 @@ internal static class ServerMaintenanceToolRegistrations
     private const string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server ueberhaupt laeuft, welche Solution/Config aktiv " +
         "ist, wie lange der Prozess schon laeuft, wie oft die Solution seit Start refresht wurde, " +
-        "und (falls --mcp-log aktiv) Anzahl Calls/Fehler pro Tool in dieser Session.";
+        "und ob Observability (Logging/Feedback) aktiv ist.";
+
+    private static void AddReportObservabilityFeedback(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        IServiceProvider? serviceProvider)
+    {
+        tools.Add(McpServerTool.Create(
+            (string feedbackType, string title, string description, string? relatedTool = null,
+                string severity = "medium", string? expectedBehavior = null, string? actualBehavior = null,
+                string? additionalContext = null, CancellationToken ct = default) =>
+                ReportObservabilityFeedbackTool.ExecuteAsync(serviceProvider, feedbackType, title, description, relatedTool, severity, expectedBehavior, actualBehavior, additionalContext, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "report_observability_feedback",
+                Description = ReportObservabilityFeedbackDescription,
+            }));
+    }
+
+    private const string ReportObservabilityFeedbackDescription =
+        "Wann nutzen: Ein Problem, unerwartete Ausgaben, Falsch-Positive bei Lint-Regeln oder einen Feature-Wunsch " +
+        "zu diesem MCP-Server melden, um AiNetLinter kontinuierlich zu verbessern. feedbackType ('issue' | 'feature_request'), " +
+        "title (Kurztitel), description (ausfuehrliche Beschreibung), relatedTool (optional, Name des betroffenen Tools), " +
+        "severity (optional, 'low', 'medium', 'high', 'critical'), expectedBehavior (optional), actualBehavior (optional), " +
+        "additionalContext (optional).";
 }

@@ -31,7 +31,7 @@ public sealed class GetServerHealthToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+        var result = await GetServerHealthTool.ExecuteAsync(state, observabilityLogPath: null);
 
         Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -43,7 +43,7 @@ public sealed class GetServerHealthToolTests
     {
         using var state = _fixture.CreateReadOnlyServer();
 
-        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+        var result = await GetServerHealthTool.ExecuteAsync(state, observabilityLogPath: null);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -56,11 +56,9 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_Loaded_StructuredContentDeserializesToServerHealthPayload()
     {
-        // StructuredContent ergaenzt den Text additiv — dieselben Rohwerte wie die
-        // Text-Zeilen "LoadState"/"Solution-Refreshes seit Start" oben.
         using var state = _fixture.CreateReadOnlyServer();
 
-        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+        var result = await GetServerHealthTool.ExecuteAsync(state, observabilityLogPath: null);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
@@ -77,59 +75,32 @@ public sealed class GetServerHealthToolTests
     {
         using var state = _fixture.CreateReadOnlyServer(usedDefaultConfig: true);
 
-        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+        var result = await GetServerHealthTool.ExecuteAsync(state, observabilityLogPath: null);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Default-Regeln", text);
     }
 
     [Fact]
-    public async Task ExecuteAsync_NoCallLog_ReportsCallLogNotActive()
+    public async Task ExecuteAsync_DefaultObservability_ReportsObservabilityActive()
     {
         using var state = _fixture.CreateReadOnlyServer();
 
-        var result = await GetServerHealthTool.ExecuteAsync(state, callLog: null);
+        var result = await GetServerHealthTool.ExecuteAsync(state, observabilityLogPath: null);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Call-Log: nicht aktiv", text);
+        Assert.Contains("Observability: aktiv", text);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ActiveCallLogWithRecordedCalls_ReportsAggregatesPerTool()
+    public async Task ExecuteAsync_CustomObservabilityPath_ReportsCustomLogPath()
     {
         using var state = _fixture.CreateReadOnlyServer();
 
-        var logPath = CreateTempLogPath();
-        try
-        {
-            await using var log = new McpCallLog(logPath);
-            await log.ExecuteCallAsync("find_symbol", "Greeter",
-                () => Task.FromResult(McpToolResults.Text("hit")));
-            await log.ExecuteCallAsync("find_symbol", "Caller",
-                () => Task.FromResult(McpToolResults.Text("hit")));
-            await log.ExecuteCallAsync("get_violations", "",
-                () => Task.FromResult(McpToolResults.SolutionNotLoaded()));
+        var customPath = "C:\\Custom\\Logs";
+        var result = await GetServerHealthTool.ExecuteAsync(state, customPath);
 
-            var result = await GetServerHealthTool.ExecuteAsync(state, log);
-
-            var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-            Assert.Contains("Call-Log: aktiv", text);
-            Assert.Contains("Eintraege gesamt: 3, Fehler: 1", text);
-            Assert.Contains("find_symbol: 2", text);
-            Assert.Contains("get_violations: 1", text);
-        }
-        finally
-        {
-            TryDelete(logPath);
-        }
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Observability: aktiv (C:\\Custom\\Logs)", text);
     }
-
-    private static string CreateTempLogPath()
-    {
-        var dir = Path.Combine(Path.GetTempPath(), "mcp-server-health-tests-" + System.Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        return Path.Combine(dir, "calls.log");
-    }
-
-    private static void TryDelete(string path) => TestHelper.TryDeleteLogFileAndDirectory(path);
 }
