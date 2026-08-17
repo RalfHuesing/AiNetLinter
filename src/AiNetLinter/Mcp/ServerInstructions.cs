@@ -77,6 +77,10 @@ internal static class ServerInstructions
         "eine eigene Meta-Zeile (\"... gezeigt — maxResults erhoehen/depth reduzieren\"): dort " +
         "sind weitere Tool-Calls mit angepassten Parametern der richtige naechste Schritt, " +
         "nicht Read/Grep.\n\n" +
+        "Empfohlene Workflows:\n" +
+        "- Code erkunden: get_index_scope -> metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body\n" +
+        "- Refactoring & Impact: find_symbol -> find_references / get_call_tree -> get_impact / dependency_graph\n" +
+        "- Quality-Gate vor Commit: safeguard -> get_violations -> find_magic_values / find_duplicates\n\n" +
         "isError-Policy (Details: src/AiNetLinter/Mcp/IsErrorPolicy.md): isError=true kommt " +
         "ausschliesslich bei SOLUTION_NOT_LOADED, Sicherheitsverweigerungen und echten " +
         "Malfunctions (unerwartete Fehler, Hinweis auf einmaligen Retry im Text) vor. Alle " +

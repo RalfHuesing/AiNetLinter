@@ -84,6 +84,18 @@ public sealed class OverviewResourceRegistrationTests
     }
 
     [Fact]
+    public void BuildOverviewText_ContainsRecommendedWorkflows()
+    {
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        var text = OverviewResourceRegistration.BuildOverviewText(state);
+
+        Assert.Contains("## Empfohlene Workflows (Tool-Choreographie)", text, StringComparison.Ordinal);
+        Assert.Contains("Code erkunden", text, StringComparison.Ordinal);
+        Assert.Contains("Refactoring & Impact", text, StringComparison.Ordinal);
+        Assert.Contains("Quality-Gate vor Commit", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolSummaries_MatchesRegisteredToolNames()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));

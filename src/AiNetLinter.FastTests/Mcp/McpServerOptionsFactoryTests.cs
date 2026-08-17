@@ -56,4 +56,13 @@ public sealed class McpServerOptionsFactoryTests
             Assert.Contains($"- {name}:", ServerInstructions.Text, StringComparison.Ordinal);
         }
     }
+
+    [Fact]
+    public void Create_ServerInstructionsContainsWorkflowGuidance()
+    {
+        Assert.Contains("Empfohlene Workflows:", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Code erkunden:", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Refactoring & Impact:", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Quality-Gate vor Commit:", ServerInstructions.Text, StringComparison.Ordinal);
+    }
 }

@@ -105,6 +105,15 @@ internal static class OverviewResourceRegistration
             sb.AppendLine($"- `{name}` — {summary}");
         }
         sb.AppendLine();
+        sb.AppendLine("## Empfohlene Workflows (Tool-Choreographie)");
+        sb.AppendLine();
+        sb.AppendLine("1. Code erkunden (Token-sparend statt ganzer File-Dumps):");
+        sb.AppendLine("   get_index_scope -> metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body");
+        sb.AppendLine("2. Refactoring & Impact pruefen (Semantisch statt Text-Grep):");
+        sb.AppendLine("   find_symbol -> find_references / get_call_tree -> get_impact / dependency_graph");
+        sb.AppendLine("3. Quality-Gate vor Commit (Inkrementell im RAM):");
+        sb.AppendLine("   safeguard (Score 0-10) -> get_violations -> find_magic_values / find_duplicates");
+        sb.AppendLine();
         sb.AppendLine(
             "Vollstaendige Parameter-Schemas liefert `tools/list`; diese Resource ist nur die " +
             "Kurzuebersicht.");
