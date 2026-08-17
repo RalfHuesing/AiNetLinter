@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.DeadCode;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
@@ -54,6 +55,7 @@ internal static class AnalysisToolRegistrations
         AddMetricsTree(tools, mcpState, callLog);
         AddPatternDetect(tools, mcpState, callLog);
         AddFindMagicValues(tools, mcpState, callLog);
+        AddFindDeadCode(tools, mcpState, callLog);
     }
 
     private static void AddGetViolations(
@@ -256,4 +258,52 @@ internal static class AnalysisToolRegistrations
         "includeTests (Default false), includeSuppressed (Default false; No-op in aktueller " +
         "Version — Suppression-Logik kommt in einer Folgeversion), changedOnly (Default false; " +
         "No-op in aktueller Version), scopeFilter (Projekt-Name oder Pfad-Substring).";
+
+    private static void AddFindDeadCode(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState,
+        McpCallLog? callLog)
+    {
+        tools.Add(McpServerTool.Create(
+            async (
+                string? accessibility = "private_internal",
+                string? confidence = "both",
+                string? kind = "all",
+                string? scopeFilter = null,
+                bool includeTests = false,
+                string? mode = "members",
+                int maxResults = 50,
+                CancellationToken ct = default) =>
+            {
+                var effective = new FindDeadCodeToolArgs(
+                    Accessibility: accessibility,
+                    Confidence: confidence,
+                    Kind: kind,
+                    ScopeFilter: scopeFilter,
+                    IncludeTests: includeTests,
+                    Mode: mode,
+                    MaxResults: maxResults);
+                if (callLog is null)
+                {
+                    return await FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct);
+                }
+                var logArgs = $"acc={effective.Accessibility}|conf={effective.Confidence}|kind={effective.Kind}|scope={effective.ScopeFilter}|tests={effective.IncludeTests}|mode={effective.Mode}|max={effective.MaxResults}";
+                return await callLog.ExecuteCallAsync("find_dead_code", logArgs,
+                    () => FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct));
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "find_dead_code",
+                Description = FindDeadCodeDescription,
+            }));
+    }
+
+    private const string FindDeadCodeDescription =
+        "Wann nutzen: Solution nach unreferenziertem/totem Code durchleuchten — findet ungenutzte " +
+        "Typen, Methoden, Properties, Felder und Events mit Vertrauensstufen (high fuer direkt " +
+        "entfernbaren privaten/internen Code, low fuer Public-API/Framework-Kandidaten). " +
+        "accessibility (Default 'private_internal': all, private, internal, public, private_internal), " +
+        "confidence (Default 'both': both, high, low), kind (Default 'all': all, type, class, method, " +
+        "field, property, event, delegate), scopeFilter (Projekt-Name oder Pfad-Substring), " +
+        "includeTests (Default false), mode (Default 'members': members, locals, both), maxResults (Default 50).";
 }

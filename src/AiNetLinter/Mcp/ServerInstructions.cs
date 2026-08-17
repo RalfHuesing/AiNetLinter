@@ -52,6 +52,8 @@ internal static class ServerInstructions
         "flacher Datei-Liste — Solution-weite Audit-Sicht.\n" +
         "- find_magic_values: Fuehrt einen On-Demand-Audit nach Magic Values (URLs, Pfade, " +
         "Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) in C#-Quellcode durch.\n" +
+        "- find_dead_code: Findet unreferenzierten/toten Code (Typen, Methoden, Properties, Felder) " +
+        "mit Confidence-Stufen (high/low) und False-Positive-Schutz.\n" +
         "- get_symbol_body: Liefert den Source-Body eines C#-Symbols per stabiler ID oder " +
         "Datei:Zeile:Spalte.\n" +
         "- search_pattern: Text- oder Regex-Suche ueber den gesamten Dateibestand, alle " +
@@ -64,7 +66,7 @@ internal static class ServerInstructions
         "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
         "get_type_hierarchy, dependency_graph, get_file_skeleton, get_class_structure, get_violations, safeguard, " +
-        "pattern_detect, find_magic_values, get_symbol_body und find_duplicates " +
+        "pattern_detect, find_magic_values, find_dead_code, get_symbol_body und find_duplicates " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
         "(deckt alle Dateitypen ab). get_index_scope und get_hotspots arbeiten ohne diese " +
