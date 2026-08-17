@@ -6,9 +6,8 @@ estimated_scope: medium
 rules_dir: .agents/rules
 last_updated: 2026-08-17
 open_questions:
-  - "Hybrid-Strategie: Compilation.GetDiagnostics() mit aktivierten CS0169/CS0414/IDE0051/IDE0052 als zusätzliche Datenquelle statt/mit eigener DataFlowAnalysis?"
-  - "Strukturelle Lücken (Reflection, DI, JSON-Serializer, ASP.NET-Routing) im Output dokumentieren oder über zusätzliche Pattern-Listen versuchen abzudecken?"
-  - "Test-Methoden-Whitelist: per Default aktiv (über [Fact]/[Theory]/[Test]/[TestMethod]) oder Filter-Flag?"
+  - "Vertrauens-Stufe im Output: nur prominenter Text-Hinweis, oder zusaetzlich strukturiertes recommendedNextAction-Feld (mit Hinweis 'ask_user') im structuredContent?"
+  - "include_tests-Default: false (Tests per Default aus, weil per Reflection aufgerufen) oder true (alle Symbole gleich behandelt)?"
 ---
 
 # Konzept: `find_dead_code` — MCP-Tool für Dead-Code-Detection
@@ -36,9 +35,14 @@ Drift-Loop-Coder-Aufgaben enthalten "entferne toten Code" regelmäßig — Refac
   - **`high`** (private/internal, nicht in `public` API-Surface, keine der unten gelisteten Attribute): sehr wahrscheinlich tot.
   - **`low`** (public/protected, oder internal mit `InternalsVisibleTo` auf eine externe Assembly, oder internal in einer Library-Assembly die als NuGet veröffentlicht wird): "nicht in Solution referenziert" — User-Entscheidung.
 - Filter-Parameter `include_public: bool` (default `false`): wenn `false`, werden nur `high`-Treffer geliefert; wenn `true`, zusätzlich `low`-Treffer.
-- Filter-Parameter `scope` (analog `get_violations`): Subset der Solution.
-- Filter-Parameter `kind`: einschränken auf `class | method | field | property | event | all` (default `all`).
+- Filter-Parameter `scopeFilter` (string, optional): analog `get_violations`/`find_magic_values` — case-insensitive `Contains` auf Projekt-Name oder solution-relativem Pfad. Wiederverwendung von `ViolationScopeFilter.MatchesScope` (siehe `ViolationScopeFilter.cs:44-51`).
+- Filter-Parameter `kind` (enum: `all` | `class` | `method` | `field` | `property` | `event` | `delegate`, default `all`): Sym-Kind-Filter.
+- Filter-Parameter `confidence` (enum: `high` | `low` | `both`, default `both`): nur diese Confidence-Stufen liefern.
+- Filter-Parameter `accessibility` (enum: `all` | `private` | `internal` | `public`, default `all`): Accessibility-Filter.
+- Filter-Parameter `include_tests` (bool, default `false`): Test-Pfade (`**/*Tests/**/*.cs`, `**/TestKit/**/*.cs`) aus dem Scan ausnehmen. Begründung: Test-Methoden sind oft `public` + werden per Reflection aufgerufen; mit `include_public=true` würden sie massenhaft als `low` auftauchen. Per Default aus, User kann es bei Bedarf aktivieren.
 - Filter-Parameter `mode`: `members` (default) | `locals` | `both` (siehe Nice-to-Have für `locals`).
+- **Pagination via `maxResults`** (int, default `DefaultMaxResults`, Konstante analog `GetViolationsScanner.DefaultMaxResults`): trunkiert die Trefferliste. Trunkierungs-Meta-Zeile via `McpTruncation.TruncateLines` mit Standard-Text `"[X Dead-Code-Treffer gesamt, M gezeigt — scopeFilter verfeinern, confidence='high' eingrenzen oder maxResults erhoehen]"` (konsistent mit `GetViolationsScanner.cs:229`). `IsTruncated: bool` im `structuredContent` (analog `DuplicateDetectionResult.Truncated`, `DuplicateDetectionModels.cs:53`).
+- **Sufficiency-Hinweis via `McpSufficiencyHints.Append`** (nur bei nicht-trunkierten Ergebnissen, analog `FindReferencesTool.cs:99`): "Diese Daten sind vollstaendig fuer die geladenen Solution im angegebenen Filter-Scope. Bei `low`-Treffern oder Symbolen mit `limitsApplies`-Eintraegen: manuell validieren vor destruktiven Aktionen."
 - Structured Output (JSON Schema 2020-12): `{ deadSymbols: [{ id, kind, containerType, file, line, accessibility, confidence, reason, exemptReason? }], summary: { high, low, byKind, scannedSymbols, exemptCount }, limits: string[] }`. `limits` listet die strukturellen Lücken auf (siehe "Strukturelle Lücken" unten), damit der Agent weiß, was das Tool NICHT erkennen kann.
 - Sufficiency-Hinweis: "Diese Daten sind vollstaendig fuer die geladene Solution" (analog `find_references`).
 - **Compiler-/Reflection-Whitelist** (immer ausgenommen, nie als tot markiert — ohne diese ist das Tool im Eigengebrauch unbrauchbar, weil massenhaft compiler-generated Symbole als tot gemeldet würden):
@@ -111,6 +115,66 @@ Diese Patterns sind **nicht durch strukturelle Roslyn-Statische-Analyse** erkenn
 | Module-Initializer | Runtime ruft Methode einmal auf | `[ModuleInitializer] static void Init() {...}` | OK (Whitelist) |
 
 Diese Liste wird im Tool-Output **explizit** ausgeben (nicht stillschweigend weglassen), damit ein Agent entscheiden kann, ob er `find_dead_code`-Treffer vertraut oder ob er manuell prüft.
+
+## False-Positive-Schutz — Trust-Modell und User-Bestätigung
+
+`find_dead_code` ist das **erste Tool in der AiNetLinter-Tool-Familie, das eine Heuristik-basierte Bewertung** liefert ("Symbol X ist wahrscheinlich tot") statt einer harten Tatsache ("Symbol Y ruft Z" / "Violation in Datei D"). Andere Tools liefern Fakten, die objektiv überprüfbar sind; `find_dead_code` liefert eine **Strukturanalyse, die per Definition unvollständig** ist (siehe vorherige Sektion: Reflection, DI, Serializer etc. sind nicht erkennbar). Daraus folgt: **ein Agent darf auf Basis eines `find_dead_code`-Treffers nicht autonom Code löschen**. Ohne Schutzmaßnahmen ist das Worst-Case-Szenario: Agent findet 50 `low`-Treffer, löscht alle 50 in einem Rutsch, davon waren 12 Reflection-aufgerufene Symbole → Laufzeit-Crashes.
+
+Drei Schutzmaßnahmen, alle gleichzeitig:
+
+### 1. Prominenter Trust-Hinweis im Text-Output (Header)
+
+Jeder Tool-Output beginnt mit einer Box, die klar macht, dass die Treffer Heuristik-basiert sind:
+
+```
+[TRUST-HINWEIS]: find_dead_code nutzt statische Roslyn-Analyse. Strukturelle Luecken
+(Reflection, DI-Container, JSON-Serialisierung, ASP.NET-Routing, Source-Generator-Output)
+koennen zu False-Positives fuehren. Validiere jeden Treffer vor destruktiven Aktionen.
+Siehe 'limits' im strukturierten Output fuer die vollstaendige Luecken-Liste.
+```
+
+Wird **immer** angezeigt, auch bei nicht-trunkierten Ergebnissen — Sufficiency-Hinweis (siehe oben) gilt nur für die Vollständigkeit der gelieferten Daten, **nicht** für die Korrektheit der Bewertung. Das ist eine bewusste Doppelung: "vollständig" und "korrekt" sind zwei verschiedene Eigenschaften.
+
+### 2. Per-Treffer `limitsApplies`-Feld im structuredContent
+
+Jeder Treffer bekommt ein Feld `limitsApplies: string[]` mit den konkret anwendbaren Lücken (Subset der globalen `limits`-Liste), basierend auf Symbol-Charakteristika:
+
+| Symbol-Charakteristik | `limitsApplies` enthält |
+|----------------------|-------------------------|
+| `public` oder `protected` | `["publicApiSurface", "reflection"]` |
+| Hat Parameter `(Type, ...)` oder `params object[]` | `["reflection", "di"]` |
+| Property/Field mit `[JsonProperty]`, `[JsonInclude]`, `[DataMember]`, `[JsonPropertyName]` etc. | `["jsonSerializer"]` |
+| Methode mit `[HttpGet]`, `[HttpPost]`, `[Route]`, `[ApiController]`-Klasse | `["aspNetRouting"]` |
+| Methode mit `[JSInvokable]` | `["blazor", "reflection"]` |
+| Methode mit `[Inject]`, Konstruktor mit `IServiceCollection.AddXxx`-Pattern (heuristisch) | `["di"]` |
+| Konstruktor in `public class` mit `public/internal` Accessibility | `["di", "reflection"]` |
+| Symbol in `AssemblyInfo.cs` / `Generated*.cs` (Source-Generator) | `["sourceGenerator"]` |
+
+Damit der Agent **pro Treffer** sehen kann, welche Lücken für genau diesen Treffer relevant sind — nicht nur "irgendwo gibt's Lücken".
+
+### 3. Strukturierter `recommendedNextAction`-Block
+
+Im `structuredContent` ein separates Feld:
+
+```json
+{
+  "recommendedNextAction": {
+    "action": "ask_user",
+    "reason": "find_dead_code-Treffer sind Heuristik-basiert. Validiere mit dem User, bevor destruktive Aktionen (Loeschen, Refactoring) durchgefuehrt werden.",
+    "confidenceNote": "high-Confidence-Treffer ohne limitsApplies-Eintrag sind mit hoher Wahrscheinlichkeit tote Symbole. low-Confidence-Treffer oder Treffer mit limitsApplies-Eintraegen erfordern manuelle Pruefung."
+  }
+}
+```
+
+Der Server-Instructions-Text in `Mcp/ServerInstructions.cs` wird ergänzt um eine explizite Direktive:
+
+> "Bei Dead-Code-Loeschungen aus `find_dead_code`-Treffern: erst User bestaetigen lassen, besonders bei `low`-Confidence-Treffern oder Symbolen mit `limitsApplies`-Eintraegen. Das Tool ist eine Heuristik, kein Audit."
+
+**Begründung für die Doppelung (Text + strukturierter Hinweis):** Text-Hinweis ist für den LLM-Agenten direkt lesbar im Antwort-Body, strukturierter Hinweis ist programmatisch auswertbar für deterministische Workflow-Tools (z.B. ein `pre-commit`-Hook, der `recommendedNextAction.action == "ask_user"` erzwingt). Beide Zielgruppen werden bedient.
+
+**Was bewusst NICHT Teil davon ist:**
+- **Echte Tool-Blockade** (Tool gibt `isError: true` zurück, wenn User nicht bestätigt hat): Das wäre eine zustandsbehaftete Server-Logik, die MCP nicht vorsieht und die gegen die read-only-Architektur-Linie verstößt.
+- **MCP `elicitation` (User-Dialog zur Laufzeit)**: Im Recon C §2.4 als L5/L-Phase gestrichen (Spec noch instabil, UI-Komplexität, siehe `06-nicht-umsetzen.md` §6/§8). Die `recommendedNextAction`-Variante ist die pragmatische Zwischenstufe ohne Server-State.
 
 ## Zielplattformen / Technischer Rahmen
 
@@ -187,16 +251,36 @@ Diese Liste wird im Tool-Output **explizit** ausgeben (nicht stillschweigend weg
 ## Definition of Done / Erfolgskriterien
 
 - Tool `find_dead_code` ist in `SymbolGraphToolRegistrations` registriert und im `tools/list`-Output sichtbar.
-- Tool-Eintrag in `ServerInstructions.cs` ergänzt (Tool-Liste + C#-only-Sektion).
-- Structured Output vorhanden, JSON Schema validiert.
-- `include_public`-Filter funktioniert wie spezifiziert.
-- Edge-Case-Whitelist schützt vor False-Positives (5+ dokumentierte Exempt-Cases).
-- 5+ Unit-Tests in `AiNetLinter.FastTests` (Unit/Component), alle grün.
-- 1 Integration-Test in `AiNetLinter.IntegrationTests`: `LiveDogfood_FindDeadCode_ReturnsResults` auf AiNetLinter-Repo selbst, stabil unter wiederholten Läufen, findet mindestens 3 echte Treffer in der eigenen Codebase.
+- Tool-Eintrag in `ServerInstructions.cs` ergänzt (Tool-Liste + C#-only-Sektion + Trust-Direktive).
+- Structured Output vorhanden, JSON Schema validiert, mit `deadSymbols[]`/`summary`/`limits[]`/`isTruncated`/`recommendedNextAction`/`scope`/`mode`.
+- `include_public`/`scopeFilter`/`kind`/`confidence`/`accessibility`/`include_tests`/`mode`/`maxResults`-Filter funktionieren wie spezifiziert.
+- Edge-Case-Whitelist schützt vor False-Positives (10+ dokumentierte Exempt-Cases: `IsImplicitlyDeclared`, `MethodKind.StaticConstructor`/`Destructor`/Accessor, `[ModuleInitializer]`, `[DllImport]`, `[Conditional]`, `[Fact]`/`[Theory]`/`[Test]`/`[TestMethod]`, `[McpServerTool]`/`[McpTool]`/`[Export]`/`[Import]`, `[InternalsVisibleTo]`, Konstruktoren, XML-Doc-Referenzen).
+- Trust-Hinweis erscheint in jedem Tool-Output (Header-Box vor der Trefferliste).
+- `limitsApplies` pro Treffer wird basierend auf Symbol-Charakteristika korrekt befüllt (mind. 4 dokumentierte Heuristik-Mappings: public/Reflection/JSON/ASP.NET).
+- `recommendedNextAction`-Block ist im structuredContent vorhanden mit `action: "ask_user"`.
+- 5+ Unit-Tests in `AiNetLinter.FastTests` (Unit/Component): verschiedene Confidence-Stufen, Filter-Kombinationen, Edge-Case-Whitelist, `limitsApplies`-Befüllung, Trunkierungs-Pfad.
+- 1 Integration-Test in `AiNetLinter.IntegrationTests`: `LiveDogfood_FindDeadCode_ReturnsResults` auf AiNetLinter-Repo selbst, stabil unter wiederholten Läufen, findet mindestens 3 echte `high`-Treffer, dokumentiert `low`-Treffer aus `InternalsVisibleTo`-Effekt.
 - `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` und `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` beide grün.
 - `dotnet build` warnungsfrei (`TreatWarningsAsErrors = true`).
-- Doku in `Docs/agent-api.md#mcp-server-modus` mit Beispiel-Workflow ("vermutlich tote private Methode X → find_dead_code liefert die ganze Liste → User entscheidet pro Treffer").
+- Doku in `Docs/agent-api.md#mcp-server-modus` mit Beispiel-Workflow ("vermutlich tote private Methode X → find_dead_code liefert die ganze Liste → User validiert jeden `low`-Treffer vor Löschung").
 - Drift-Audit-Skill (`find_duplicates`) gibt keine Hinweise auf Code-Duplikation zwischen Scanner und Pattern-Catalog-Pattern (wir bauen **kein** Duplikat).
+
+## Pattern-Konsistenz mit bestehenden Tools
+
+`find_dead_code` muss sich nahtlos in die bestehende Tool-Familie einfügen, damit Agenten das Pattern nicht pro Tool neu lernen müssen. Konkrete Wiederverwendungen:
+
+| Konvention | Vorbild | Wiederverwendung |
+|------------|---------|------------------|
+| Tool-Definition mit Default-Parametern | `SymbolGraphToolRegistrations.cs:164-166` (`async (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) => ...`) | gleiche Struktur: `async (string? scopeFilter = null, int maxResults = FindDeadCodeScanner.DefaultMaxResults, bool includePublic = false, string kind = "all", string confidence = "both", string accessibility = "all", bool includeTests = false, string mode = "members", CancellationToken ct = default) => ...` |
+| Default-Wert-Konstante | `GetViolationsScanner.DefaultMaxResults` (Konstante, Test-Assertions) | `FindDeadCodeScanner.DefaultMaxResults` |
+| Trunkierungs-Helper | `McpTruncation.TruncateLines` (siehe `McpTruncation.cs:29`) | gleicher Helper, Meta-Zeile mit Standard-Text-Pattern `[N Treffer gesamt, M gezeigt — …]` |
+| Truncated-Flag im structuredContent | `DuplicateDetectionResult.Truncated` (`DuplicateDetectionModels.cs:53`) | `IsTruncated: bool` |
+| Sufficiency-Hinweis | `McpSufficiencyHints.Append` (genutzt in `FindReferencesTool.cs:99`, `GetCallTreeTool.cs:69-70`) | gleiche Helper, angepasster Text für Heuristik-Kontext (siehe Muss-Haben) |
+| Scope-Filter | `ViolationScopeFilter.MatchesScope` (`ViolationScopeFilter.cs:44-51`) | gleiche Helfermethode, case-insensitive `Contains` auf Projekt/Pfad |
+| `McpToolResults.Recoverable`/`Text`/`CompilationError`/`SolutionNotLoaded` | alle existierenden Tools | gleiche Helper, keine Neuerfindung |
+| Tool-Entry in `ServerInstructions.cs` | Format: `- toolname: kurze Beschreibung in 1 Satz.` | gleiche Format-Konvention |
+| Filter-Default für Test-Paths | `find_magic_values` hat `includeTests: bool` (default `false`) | `include_tests: bool` (default `false`) |
+| `pattern_detect`-Pattern-Library-Vorbild | `PatternCatalog.cs` + `PatternDetectScanner.cs` | Scanner-Architektur mit Helper-Konstanten für Edge-Case-Whitelist (statt Pattern-Catalog) |
 
 ## Offene Punkte
 
