@@ -1,0 +1,6 @@
+<Project>
+  <!-- Isoliert Test-Fixtures vom zentralen Package Management des Hauptprojekts -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

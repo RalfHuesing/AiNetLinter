@@ -2,23 +2,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Version>1.0.98</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
-    <PackageReference Include="Microsoft.Build.Locator" Version="1.11.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.6.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
-    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
-    <PackageReference Include="RalfHuesing.Mcp.Observability" Version="1.0.2" />
-    <PackageReference Include="System.CommandLine" Version="2.0.10" />
-    <PackageReference Include="ExCSS" Version="4.3.2" />
-    <PackageReference Include="Esprima" Version="3.0.6" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.Build.Locator" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="RalfHuesing.Mcp.Observability" />
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="ExCSS" />
+    <PackageReference Include="Esprima" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,17 +25,6 @@
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
     <EmbeddedResource Include="..\..\Docs\ROADMAP.md" LogicalName="Docs/ROADMAP.md" />
     <EmbeddedResource Include="..\..\rules.json" LogicalName="rules.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="Microsoft.Build.Framework" Version="18.8.2">
-      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.StringTools" Version="18.8.2">
-      <ExcludeAssets>runtime</ExcludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>
