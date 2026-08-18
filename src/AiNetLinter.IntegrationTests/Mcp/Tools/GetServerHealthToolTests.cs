@@ -141,6 +141,7 @@ public sealed class GetServerHealthToolTests
         public string ServerName => "ainetlinter";
         public string ServerVersion => "1.0.96";
         public string? CurrentLogFilePath => logFilePath;
+        public string? CurrentFeedbackLogFilePath => null;
         public int ProcessId => 12345;
         public string InstanceId => "fake-instance-id";
         public Task FlushAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

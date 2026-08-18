@@ -278,14 +278,8 @@ public sealed class SkeletonMapFilterTests
     private async Task<(string Output, RecordingLintConsole Console, int ExitCode)> RunSkeletonAsync(LinterArgs args)
     {
         var console = new RecordingLintConsole();
-        var request = new SkeletonMapBuildRequest("FilterMini.slnx", CreateConfig(), console, args);
+        var request = new SkeletonMapBuildRequest("FilterMini.slnx", TestConfigFactory.CreateEmpty(), console, args);
         var exitCode = await SkeletonMapBuilder.BuildAsync(filterMini, request);
         return (console.OutputText, console, exitCode);
     }
-
-    private static Config CreateConfig() => new()
-    {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
 }

@@ -22,7 +22,7 @@ public sealed class SkeletonMapBuilderAdapterTests
         var console = new RecordingLintConsole();
         var args = new LinterArgs { TargetPath = lease.RootPath, Verbose = false };
 
-        var result = await SkeletonMapBuilder.BuildAsync(lease.RootPath, CreateConfig(), console, args);
+        var result = await SkeletonMapBuilder.BuildAsync(lease.RootPath, TestConfigFactory.CreateEmpty(), console, args);
 
         Assert.Equal(0, result);
         Assert.Empty(console.ErrorLines);
@@ -40,12 +40,6 @@ public sealed class SkeletonMapBuilderAdapterTests
         var args = new LinterArgs { TargetPath = missingPath, Verbose = false };
 
         await Assert.ThrowsAsync<FileNotFoundException>(
-            () => SkeletonMapBuilder.BuildAsync(missingPath, CreateConfig(), console, args));
+            () => SkeletonMapBuilder.BuildAsync(missingPath, TestConfigFactory.CreateEmpty(), console, args));
     }
-
-    private static Config CreateConfig() => new()
-    {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
 }

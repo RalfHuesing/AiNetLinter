@@ -72,11 +72,10 @@ public sealed class McpObservabilityE2ETests
             // 4. Client sauber schliessen, damit der Serverprozess flushed und beendet
             await client.DisposeAsync();
 
-            // 5. JSONL-Log-Inhalt ueberpruefen
             var logFiles = Directory.GetFiles(logDir, "*.jsonl", SearchOption.AllDirectories);
             Assert.NotEmpty(logFiles);
 
-            var logLines = File.ReadAllLines(logFiles[0]);
+            var logLines = logFiles.SelectMany(File.ReadAllLines).ToArray();
             Assert.True(logLines.Length >= 2, "Erwartet mindestens 2 JSONL Zeilen");
 
             var foundToolCall = false;

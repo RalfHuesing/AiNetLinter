@@ -205,16 +205,17 @@ public sealed class McpObservabilityIntegrationTests
     private static async Task ValidateLoggedRecordsAsync(string tempDir)
     {
         var logFiles = Directory.GetFiles(tempDir, "*.jsonl", SearchOption.AllDirectories);
-        Assert.Single(logFiles);
+        Assert.NotEmpty(logFiles);
 
-        string[] lines;
-        using (var stream = new FileStream(logFiles[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        using (var reader = new StreamReader(stream))
+        var lines = new List<string>();
+        foreach (var file in logFiles)
         {
+            using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(stream);
             var content = await reader.ReadToEndAsync();
-            lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+            lines.AddRange(content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries));
         }
-        Assert.True(lines.Length >= 2);
+        Assert.True(lines.Count >= 2);
 
         var hasToolCall = false;
         var hasFeedback = false;
