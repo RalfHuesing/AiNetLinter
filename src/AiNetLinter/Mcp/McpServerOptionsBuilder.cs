@@ -15,10 +15,9 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal sealed class McpServerOptionsBuilder
 {
-    private const string DefaultServerName = "ainetlinter";
     private const string FallbackVersion = "0.0.0";
 
-    private string _serverName = DefaultServerName;
+    private string _serverName = McpServerOptionsFactory.ServerName;
     private string? _serverVersion;
     private string _serverInstructions = string.Empty;
     private McpServerPrimitiveCollection<McpServerTool>? _toolCollection;

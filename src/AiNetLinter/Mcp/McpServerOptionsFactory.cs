@@ -15,6 +15,8 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class McpServerOptionsFactory
 {
+    internal const string ServerName = "ainetlinter";
+
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
     /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein

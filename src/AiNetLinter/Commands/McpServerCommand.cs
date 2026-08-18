@@ -72,7 +72,7 @@ internal static class McpServerCommand
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         serverOptions.ServerInfo = new Implementation
         {
-            Name = "ainetlinter",
+            Name = McpServerOptionsFactory.ServerName,
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
@@ -96,25 +96,7 @@ internal static class McpServerCommand
     {
         var serverVersion = McpServerOptionsFactory.GetServerVersion();
 
-        if (mcpLogPath is null)
-        {
-            return new McpObservabilityOptions
-            {
-                Enabled = true,
-                EnableToolCallLogging = true,
-                EnableFeedbackTool = true,
-                EnableResponseLogging = true,
-                ServerName = "ainetlinter",
-                ServerVersion = serverVersion,
-                LogDirectory = null,
-            };
-        }
-
-        var trimmed = mcpLogPath.Trim();
-        if (trimmed.Equals("off", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.Equals("false", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.Equals("disabled", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.Equals("none", StringComparison.OrdinalIgnoreCase))
+        if (IsObservabilityDisabledKeyword(mcpLogPath))
         {
             return new McpObservabilityOptions
             {
@@ -122,37 +104,36 @@ internal static class McpServerCommand
                 EnableToolCallLogging = false,
                 EnableFeedbackTool = false,
                 EnableResponseLogging = false,
-                ServerName = "ainetlinter",
+                ServerName = McpServerOptionsFactory.ServerName,
                 ServerVersion = serverVersion,
                 LogDirectory = null,
             };
         }
 
-        if (string.IsNullOrWhiteSpace(trimmed))
-        {
-            return new McpObservabilityOptions
-            {
-                Enabled = true,
-                EnableToolCallLogging = true,
-                EnableFeedbackTool = true,
-                EnableResponseLogging = true,
-                ServerName = "ainetlinter",
-                ServerVersion = serverVersion,
-                LogDirectory = null,
-            };
-        }
+        var logDirectory = string.IsNullOrWhiteSpace(mcpLogPath)
+            ? null
+            : ResolveMcpLogPath(mcpLogPath.Trim(), solutionPath ?? string.Empty);
 
-        var resolvedDir = ResolveMcpLogPath(trimmed, solutionPath ?? string.Empty);
         return new McpObservabilityOptions
         {
             Enabled = true,
             EnableToolCallLogging = true,
             EnableFeedbackTool = true,
             EnableResponseLogging = true,
-            ServerName = "ainetlinter",
+            ServerName = McpServerOptionsFactory.ServerName,
             ServerVersion = serverVersion,
-            LogDirectory = resolvedDir,
+            LogDirectory = logDirectory,
         };
+    }
+
+    private static bool IsObservabilityDisabledKeyword(string? mcpLogPath)
+    {
+        if (mcpLogPath is null) return false;
+        var trimmed = mcpLogPath.Trim();
+        return trimmed.Equals("off", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("disabled", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("none", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
