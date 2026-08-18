@@ -15,7 +15,7 @@ internal static class SealedClassChecker
         if (!ctx.Config.Global.EnforceSealedClasses) return;
         if (IsSealedOrStaticOrAbstract(node)) return;
         if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) && ctx.Config.Global.AllowUnsealedPartialClasses) return;
-        if (HasExemptSuffix(node.Identifier.Text, ctx)) return;
+        if (ExemptBaseTypeResolver.HasExemptSuffix(node.Identifier.Text, ctx.Config.Global.SealedClassExemptSuffixes)) return;
 
         ctx.ReportViolation(node, new ViolationDescription(
             nameof(ctx.Config.Global.EnforceSealedClasses),
@@ -25,11 +25,4 @@ internal static class SealedClassChecker
 
     internal static bool IsSealedOrStaticOrAbstract(ClassDeclarationSyntax node) =>
         node.Modifiers.Any(m => m.IsKind(SyntaxKind.SealedKeyword) || m.IsKind(SyntaxKind.StaticKeyword) || m.IsKind(SyntaxKind.AbstractKeyword));
-
-    private static bool HasExemptSuffix(string className, CheckerContext ctx)
-    {
-        var suffixes = ctx.Config.Global.SealedClassExemptSuffixes;
-        if (suffixes == null || suffixes.Count == 0) return false;
-        return suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
-    }
 }

@@ -10,7 +10,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildArchitectureRules() =>
     [
         new(
-            RuleId: "ForbiddenNamespaceDependency",
+            RuleId: LinterRuleIds.ForbiddenNamespaceDependency,
             DisplayName: "Namespace Abhaengigkeiten",
             GetShortDescription: c => "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
             Warum: "Architektur-Slices sollen entkoppelt sein. Direkte Abhängigkeiten zwischen verbotenen Namespaces erzeugen Zyklen, die Agenten nicht erkennen und weiterverstärken.",
@@ -30,7 +30,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: false
         ),
         new(
-            RuleId: "EnforceNamespaceDirectoryMapping",
+            RuleId: LinterRuleIds.EnforceNamespaceDirectoryMapping,
             DisplayName: "Namespace Pfadmapping",
             GetShortDescription: c => "Namespace entspricht nicht dem Verzeichnis-Pfad.",
             Warum: "Wenn Namespace und Dateipfad nicht übereinstimmen, können Agenten Dateien nicht über den Namespace lokalisieren und erzeugen fehlerhafte `using`-Direktiven.",
@@ -49,7 +49,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "DetectAndBanPhantomDependencies",
+            RuleId: LinterRuleIds.DetectAndBanPhantomDependencies,
             DisplayName: "Keine Phantom Dependencies",
             GetShortDescription: c => "Phantom-Abhaengigkeiten (unaufloesbare Namespaces oder Reflection-Laden) verboten.",
             Warum: "Nicht-auflösbare Namespaces und Reflection-Lade-APIs sind die häufigste Halluzinations-Quelle in KI-generiertem Code — der Compiler sieht sie nicht, das Programm scheitert erst zur Laufzeit.",
@@ -73,7 +73,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildTestCoverageRules() =>
     [
         new(
-            RuleId: "StaticTestSentinel",
+            RuleId: LinterRuleIds.StaticTestSentinel,
             DisplayName: "Testabdeckung Sentinel",
             GetShortDescription: c => "Fehlende Testabdeckung (Unit-Test) fuer komplexe Klasse.",
             Warum: "Komplexe Typen ohne Testabdeckung sind für Agenten eine Black Box — sie können keine Regression bei Änderungen erkennen.",

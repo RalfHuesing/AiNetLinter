@@ -140,6 +140,46 @@ internal sealed class McpCodeGraphServer : IDisposable
     }
 
     /// <summary>
+    /// Laedt die resident gehaltene Solution und ihren <see cref="SourceFileCatalog"/> asynchron neu
+    /// (z. B. nach <c>dotnet restore</c> bei neu hinzugefuegten NuGet-Abhaengigkeiten im Zuge von
+    /// <c>reload_config</c>). Aktualisiert alle Projekt- und Metadaten-Referenzen der Solution.
+    /// </summary>
+    internal async Task<bool> ReloadSolutionAsync(CancellationToken ct = default)
+    {
+        string? solutionPath;
+        lock (_lock)
+        {
+            if (_isReadOnlySnapshot || _catalog is null) return false;
+            solutionPath = _catalog.Solution.FilePath;
+        }
+
+        if (string.IsNullOrEmpty(solutionPath) || !File.Exists(solutionPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var newCatalog = await SourceFileCatalog.LoadAsync(solutionPath, ct);
+            lock (_lock)
+            {
+                var oldCatalog = _catalog;
+                _catalog = newCatalog;
+                _fileState.Clear();
+                InitializeFileState(newCatalog.Solution);
+                oldCatalog?.Dispose();
+                _refreshCount++;
+            }
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _console.WriteError($"[WARN]: Solution konnte beim Reload nicht neu geladen werden ({solutionPath}): {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Atomarer Schnappschuss von <see cref="Config"/>/<see cref="UsedDefaultConfig"/>/
     /// <see cref="ResolvedConfigPath"/> unter <see cref="_lock"/>. Pflicht fuer jeden Aufrufer, der
     /// mehr als eines der drei Felder zusammen braucht — sonst kann ein gleichzeitiger

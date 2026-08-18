@@ -61,7 +61,7 @@ internal static class MiddleManChecker
         var className = node.Identifier.Text;
 
         // Suffix-Ausnahme prüfen
-        if (HasExemptSuffix(className, ctx)) return true;
+        if (ExemptBaseTypeResolver.HasExemptSuffix(className, ctx.Config.Global.MiddleManExemptSuffixes)) return true;
 
         // Basisklassen-Ausnahme prüfen
         if (ExemptBaseTypeResolver.HasExemptBaseType(node, ctx, ctx.Config.Global.MiddleManExemptBaseTypes)) return true;
@@ -107,13 +107,6 @@ internal static class MiddleManChecker
         }
 
         return true;
-    }
-
-    private static bool HasExemptSuffix(string className, CheckerContext ctx)
-    {
-        var suffixes = ctx.Config.Global.MiddleManExemptSuffixes;
-        if (suffixes == null || suffixes.Count == 0) return false;
-        return suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPureForwarder(MemberDeclarationSyntax member, ClassDeclarationSyntax classNode, CheckerContext ctx)

@@ -226,39 +226,39 @@ public sealed record GlobalConfig
     /// <c>Dispose</c>/<c>ToString</c>-Overrides) als Klone markiert werden. Standard: <c>30</c>
     /// (konservativer Start, PMD CPD nutzt 100, jscpd 50).
     /// </summary>
-    public int DuplicateCodeMinTokens { get; init; } = 30;
+    public int DuplicateCodeMinTokens { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.MinTokens;
 
     /// <summary>
     /// Groesse des Sliding-Window (Token-Anzahl) fuer das N-Gram-Shingling (Broder 1997).
     /// Standard: <c>5</c>.
     /// </summary>
-    public int DuplicateCodeNgramSize { get; init; } = 5;
+    public int DuplicateCodeNgramSize { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.NgramSize;
 
     /// <summary>
     /// Mindestanzahl gemeinsamer N-Gramme, ab der zwei Methoden ueberhaupt als Kandidaten-Paar
     /// fuer den exakten Jaccard-Vergleich gelten (Vorfilter ueber den Inverted Index).
     /// Standard: <c>3</c>.
     /// </summary>
-    public int DuplicateCodeMinSharedNgrams { get; init; } = 3;
+    public int DuplicateCodeMinSharedNgrams { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.MinSharedNgrams;
 
     /// <summary>
     /// Jaccard-Schwellwert (inklusive), ab der ein Cluster als <c>exact</c> gilt (fast identisch,
     /// Konsolidierung dringend). Standard: <c>0.95</c>.
     /// </summary>
-    public double DuplicateCodeExactThreshold { get; init; } = 0.95;
+    public double DuplicateCodeExactThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.ExactThreshold;
 
     /// <summary>
     /// Jaccard-Schwellwert (inklusive), ab der ein Cluster als <c>near</c> gilt (sehr aehnlich,
     /// lohnt den Blick). Standard: <c>0.80</c>.
     /// </summary>
-    public double DuplicateCodeNearThreshold { get; init; } = 0.80;
+    public double DuplicateCodeNearThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.NearThreshold;
 
     /// <summary>
     /// Jaccard-Schwellwert (inklusive), ab der ein Cluster ueberhaupt noch als <c>fuzzy</c>
     /// gemeldet wird (Grenzwertig, evtl. Pattern-Klone). Unterhalb wird nichts ausgegeben.
     /// Standard: <c>0.65</c>.
     /// </summary>
-    public double DuplicateCodeFuzzyThreshold { get; init; } = 0.65;
+    public double DuplicateCodeFuzzyThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.FuzzyThreshold;
 
     /// <summary>
     /// Wenn <c>true</c>: Identifier-Tokens werden vor dem N-Gram-Shingling auf <c>$ID$</c> und
@@ -266,11 +266,11 @@ public sealed record GlobalConfig
     /// Klone) an. Standard: <c>false</c> (sonst wuerden z. B. <c>CalculateOrderTotal</c> und
     /// <c>CalculateInvoiceTotal</c> faelschlich als Klon markiert).
     /// </summary>
-    public bool DuplicateCodeNormalizeIdentifiers { get; init; } = false;
+    public bool DuplicateCodeNormalizeIdentifiers { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.NormalizeIdentifiers;
 
     /// <summary>
     /// Obergrenze der als Lint-Verstoss gemeldeten Duplicate-Code-Cluster (Top-N nach
     /// Jaccard-Score absteigend) — kein unbegrenzter Dump. Standard: <c>20</c>.
     /// </summary>
-    public int DuplicateCodeMaxResults { get; init; } = 20;
+    public int DuplicateCodeMaxResults { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.MaxResults;
 }

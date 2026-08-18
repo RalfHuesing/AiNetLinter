@@ -21,7 +21,7 @@ public sealed record FindDeadCodeToolArgs(
     string? ScopeFilter = null,
     bool IncludeTests = false,
     string? Mode = "members",
-    int MaxResults = 50);
+    int MaxResults = FindDeadCodeScanner.DefaultMaxResults);
 
 /// <summary>
 /// MCP-Tool find_dead_code: Scannt die geladene Solution nach unreferenziertem Code.

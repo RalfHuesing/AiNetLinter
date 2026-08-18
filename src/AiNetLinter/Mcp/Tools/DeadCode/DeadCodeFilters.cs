@@ -70,7 +70,7 @@ internal static class DeadCodeFilters
             IPropertySymbol => "property",
             IFieldSymbol => "field",
             IEventSymbol => "event",
-            _ => "symbol"
+            _ => nameof(symbol)
         };
     }
 

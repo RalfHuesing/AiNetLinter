@@ -159,4 +159,21 @@ public sealed class ReloadConfigToolTests
         Assert.Equal(discoveredPath, state.ResolvedConfigPath);
         Assert.False(state.Config.Global.BanAsyncVoid);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithLoadedSolution_ReloadsSolutionWorkspaceAndIncrementsRefreshCount()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
+
+        var initialRefreshCount = state.RefreshCount;
+
+        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.True(state.RefreshCount > initialRefreshCount);
+        Assert.NotNull(state.GetCurrentSolution());
+    }
 }

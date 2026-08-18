@@ -7,29 +7,9 @@ using AiNetLinter.IntegrationTests.Fixtures;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 
-public sealed class ReadOnlyMcpHostFixture : IAsyncLifetime
+public sealed class ReadOnlyMcpHostFixture : McpHostFixtureBase
 {
-    private readonly Lazy<Task<McpProcessHost>> host;
-    private readonly ReadOnlyMcpHostClient client;
-
-    public ReadOnlyMcpHostFixture()
-    {
-        host = new Lazy<Task<McpProcessHost>>(CreateAsync, true);
-        client = new ReadOnlyMcpHostClient(host);
-    }
-
-    internal Task<McpProcessHost> GetHostAsync() => host.Value;
-    internal ReadOnlyMcpHostClient Client => client;
-
-    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
-
-    // ainetlinter-disable DuplicateCode
-    public async ValueTask DisposeAsync()
-    {
-        if (host.IsValueCreated) await (await host.Value.ConfigureAwait(false)).DisposeAsync().ConfigureAwait(false);
-    }
-
-    private static Task<McpProcessHost> CreateAsync() => McpProcessHost.StartAsync(
+    private protected override Task<McpProcessHost> CreateProcessHostAsync() => McpProcessHost.StartAsync(
         new SymbolGraphMiniFixtureWorkspace(), TimeSpan.FromSeconds(60));
 }
 

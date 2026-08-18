@@ -37,4 +37,10 @@ internal static class ExemptBaseTypeResolver
 
         return false;
     }
+
+    internal static bool HasExemptSuffix(string name, IReadOnlyCollection<string>? suffixes)
+    {
+        if (suffixes == null || suffixes.Count == 0) return false;
+        return suffixes.Any(s => name.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+    }
 }

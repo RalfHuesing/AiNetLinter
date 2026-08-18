@@ -13,6 +13,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using AiNetLinter.Models;
 using AiNetLinter.Core;
+using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Generators;
 
@@ -21,7 +22,7 @@ namespace AiNetLinter.Generators;
 /// </summary>
 public sealed class RepoPlaybookGenerator
 {
-    private const string DisableMarker = "ainetlinter-disable";
+    private const string DisableMarker = SuppressionCommentParser.DisableMarker;
     private const string AllKeyword = "all";
     private const string MultiLineCommentEnd = "*/";
 
@@ -94,10 +95,8 @@ public sealed class RepoPlaybookGenerator
                 totalThrows += docScan.Throws;
                 docInfos.Add(new PlaybookDocInfo(
                     document.FilePath ?? string.Empty,
-                    project.Name,
                     docScan.HasDisableAll,
-                    docScan.LineCount,
-                    docScan.Namespaces
+                    docScan.LineCount
                 ));
             }
         }
@@ -128,7 +127,7 @@ public sealed class RepoPlaybookGenerator
         var syntaxRoot = await document.GetSyntaxRootAsync();
         if (semanticModel == null || syntaxRoot == null)
         {
-            return new PlaybookDocScanResult(0, 0, false, 0, []);
+            return new PlaybookDocScanResult(0, 0, false, 0);
         }
 
         var effectiveConfig = config != null ? ProjectConfigResolver.ResolveForDocument(document, config) : null;
@@ -138,19 +137,13 @@ public sealed class RepoPlaybookGenerator
         walker.Visit(syntaxRoot);
 
         var text = (await document.GetTextAsync()).ToString();
-        bool hasDisableAll = text.Contains("ainetlinter-disable all");
+        bool hasDisableAll = text.Contains($"{DisableMarker} {AllKeyword}");
 
         CollectSuppressionsFromTrivia(syntaxRoot, suppressionCounts);
 
-        var namespaces = syntaxRoot.DescendantNodes()
-            .OfType<BaseNamespaceDeclarationSyntax>()
-            .Select(ns => ns.Name.ToString())
-            .Distinct()
-            .ToList();
-
         int lineCount = syntaxRoot.GetText().Lines.Count;
 
-        return new PlaybookDocScanResult(walker.ResultPatternCount, walker.ThrowCount, hasDisableAll, lineCount, namespaces);
+        return new PlaybookDocScanResult(walker.ResultPatternCount, walker.ThrowCount, hasDisableAll, lineCount);
     }
 
     private static void CollectSuppressionsFromTrivia(SyntaxNode root, Dictionary<string, int> suppressionCounts)

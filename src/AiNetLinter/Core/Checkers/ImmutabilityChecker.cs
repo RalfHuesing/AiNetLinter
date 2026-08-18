@@ -66,17 +66,11 @@ internal static class ImmutabilityChecker
 
     private static bool IsDtoOrEntity(ClassDeclarationSyntax node, string className, CheckerContext ctx)
     {
-        if (HasImmutabilityExemptSuffix(className, ctx)) return true;
+        if (ExemptBaseTypeResolver.HasExemptSuffix(className, ctx.Config.Global.ImmutabilityExemptSuffixes)) return true;
         if (HasImmutabilityExemptPattern(className, ctx)) return true;
         if (IsConfigurationBindingOrJsonSerializable(node, ctx)) return true;
         if (ExemptBaseTypeResolver.HasExemptBaseType(node, ctx, ctx.Config.Global.ImmutabilityExemptBaseTypes)) return true;
         return HasDtoOrEntityAttribute(node, ctx);
-    }
-
-    private static bool HasImmutabilityExemptSuffix(string className, CheckerContext ctx)
-    {
-        var suffixes = ctx.Config.Global.ImmutabilityExemptSuffixes;
-        return suffixes != null && suffixes.Any(s => className.EndsWith(s, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool HasImmutabilityExemptPattern(string className, CheckerContext ctx)

@@ -22,7 +22,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildGeneralCoreRules() =>
     [
         new(
-            RuleId: "EnforceSealedClasses",
+            RuleId: LinterRuleIds.EnforceSealedClasses,
             DisplayName: "Sealed Classes Pflicht",
             GetShortDescription: c => "Konkrete Klassen muessen 'sealed' sein (oder 'sealed partial').",
             Warum: "Nicht-`sealed` Klassen signalisieren irrtümlich, dass Vererbung gewollt ist. Agenten leiten dann von Klassen ab, die nie dafür gedacht waren — erzeugt fragile Hierarchien.",
@@ -42,7 +42,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AvoidExcessiveMiddleMen",
+            RuleId: LinterRuleIds.AvoidExcessiveMiddleMen,
             DisplayName: "Vermeidung von Middle-Man-Klassen",
             GetShortDescription: c => $"Die Klasse ist als Middle Man eingestuft (Weiterleitungs-Verhältnis > {c.Global.MaxMiddleManForwardingRatio:P0}).",
             Warum: "Klassen, die primär als reine Weiterleitungsschicht agieren, erhöhen die Indirektionstiefe der Codebasis. Für KI-Agenten führt dies zu erheblichem Tool-Call-Overhead (ständiges Nachschlagen von Weiterleitungsgliedern), erhöhtem Tokenverbrauch im Kontextfenster und einer höheren Wahrscheinlichkeit für fehlerhafte Parameterübergaben.",
@@ -63,7 +63,7 @@ internal static partial class RuleRegistry
             ConfigKeyHint: "rules.json → Global.MaxMiddleManForwardingRatio"
         ),
         new(
-            RuleId: "BanPublicNestedTypes",
+            RuleId: LinterRuleIds.BanPublicNestedTypes,
             DisplayName: "Keine Nested Typen",
             GetShortDescription: c => "Verbot oeffentlicher nested Typen.",
             Warum: "Nested Typen (auch `internal`) erscheinen nicht in Dateilisten und Grep-Ergebnissen auf Namespace-Ebene. Agenten lokalisieren sie über File-Lookup nicht, halluzinieren FQNs (`Outer.Inner` statt `Inner`) und duplizieren sie unbemerkt.",
@@ -84,7 +84,7 @@ internal static partial class RuleRegistry
             ConfigKeyHint: "rules.json → Global.NestedTypeExemptSuffixes"
         ),
         new(
-            RuleId: "EnforcePascalCase",
+            RuleId: LinterRuleIds.EnforcePascalCase,
             DisplayName: "PascalCase Bezeichner",
             GetShortDescription: c => "PascalCase fuer oeffentliche Bezeichner erforderlich.",
             Warum: "Agenten orientieren sich an Namenskonventionen, um Typen und Methoden zu finden. Inkonsistente Schreibweise führt zu 'Type not found'-Fehlern und Halluzinationen.",
@@ -102,7 +102,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceAsciiIdentifiers",
+            RuleId: LinterRuleIds.EnforceAsciiIdentifiers,
             DisplayName: "ASCII-Bezeichner Pflicht",
             GetShortDescription: c => "Bezeichner dürfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
             Warum: "Nicht-ASCII-Zeichen erhoehen den Token-Footprint fuer LLM-Tokenizer (BPE) und koennen zu Schreibweisen-Drift (Halluzinationen), Encoding-Problemen oder homoglyphen Sicherheitsluecken fuehren.",
@@ -122,7 +122,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceSemanticNaming",
+            RuleId: LinterRuleIds.EnforceSemanticNaming,
             DisplayName: "Semantische Namensgebung",
             GetShortDescription: c => "Generische Namen (data, temp, obj) und werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) sind verboten.",
             Warum: "Generische Namen (`data`, `temp`, `obj`) oder werkzeug-generierte Dummy-Namen (`MyRegex`, `NewMethod`, `Class1`) geben keine Information über den Zweck — Agenten wählen falsche Variablen oder generieren fehlerhaften Code.",
@@ -142,7 +142,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceNullableEnable",
+            RuleId: LinterRuleIds.EnforceNullableEnable,
             DisplayName: "Nullable Enable Pflicht",
             GetShortDescription: c => "#nullable enable fehlt am Dateianfang.",
             Warum: "Ohne `#nullable enable` kann der Agent nicht zwischen null-sicheren und unsicheren Pfaden unterscheiden — erzeugt potenzielle NullReferenceExceptions.",
@@ -164,7 +164,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildGeneralAllowRules() =>
     [
         new(
-            RuleId: "AllowDynamic",
+            RuleId: LinterRuleIds.AllowDynamic,
             DisplayName: "Verbot Dynamic Typen",
             GetShortDescription: c => "'dynamic' ist verboten. Nutze statische Typen.",
             Warum: "`dynamic` deaktiviert statische Typanalyse. Agenten können keine korrekten Typ-Inferenzen machen und erzeugen Code, der erst zur Laufzeit scheitert.",
@@ -184,7 +184,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AllowOutParameters",
+            RuleId: LinterRuleIds.AllowOutParameters,
             DisplayName: "Verbot Out Parameter",
             GetShortDescription: c => "'out'-Parameter sind verboten. Benutze Tuples oder Records.",
             Warum: "`out`-Parameter erzeugen Seiteneffekte, die nicht aus der Methodensignatur erkennbar sind — Agenten übersehen Out-Parameter oder setzen sie falsch.",
@@ -204,7 +204,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AllowUnsealedPartialClasses",
+            RuleId: LinterRuleIds.AllowUnsealedPartialClasses,
             DisplayName: "Allow Unsealed Partial Classes",
             GetShortDescription: c => "Unversiegelte partial Klassen erlaubt (z. B. Blazor-Komponenten).",
             Warum: "Blazor-Komponenten und generierte Code-Klassen benoetigen unversiegelte partial Klassen. Diese Option deaktiviert die EnforceSealedClasses-Pruefung fuer solche Typen.",
@@ -219,7 +219,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AllowTryPatternOutParameters",
+            RuleId: LinterRuleIds.AllowTryPatternOutParameters,
             DisplayName: "Allow Try Pattern Out Parameters",
             GetShortDescription: c => "out-Parameter in Try*-Methoden erlaubt.",
             Warum: "Das Try*-Pattern (TryParse, TryGet) benoetigt out-Parameter. Diese Option deaktiviert die Pruefung auf out-Parameter fuer Methoden mit 'Try'-Praefix.",
@@ -234,7 +234,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AllowCancellationShutdownCatch",
+            RuleId: LinterRuleIds.AllowCancellationShutdownCatch,
             DisplayName: "Allow Cancellation Shutdown Catch",
             GetShortDescription: c => "OperationCanceledException beim Shutdown abfangen erlaubt.",
             Warum: "Graceful-Shutdown-Logik muss OperationCanceledException abfangen koennen. Diese Option erlaubt den Catch in Shutdown-Methoden, die sonst durch die Pruefung blockiert waeren.",
@@ -249,7 +249,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "AllowedEmptyReads",
+            RuleId: LinterRuleIds.AllowedEmptyReads,
             DisplayName: "Allowed Empty Reads",
             GetShortDescription: c => "Leseoperationen ohne unmittelbaren Guard verboten.",
             Warum: "Leseoperationen ohne unmittelbaren Null-Guard sind eine haeufige Fehlerquelle. Diese Option erlaubt spezifische Ausnahmen, z. B. fuer Properties mit garantiertem Wert nach Initialisierung.",
@@ -268,7 +268,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildGeneralAdvancedRules() =>
     [
         new(
-            RuleId: "EnforceXmlDocumentation",
+            RuleId: LinterRuleIds.EnforceXmlDocumentation,
             DisplayName: "XML API Dokumentation",
             GetShortDescription: c => "Fehlende XML-Dokumentation fuer oeffentliche Schnittstellen.",
             Warum: "Fehlende XML-Dokumentation für öffentliche APIs zwingt Agenten, den Zweck aus dem Code zu inferieren — erhöht Fehlerrate bei komplexen Parametern.",
@@ -287,7 +287,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceExplicitStateImmutability",
+            RuleId: LinterRuleIds.EnforceExplicitStateImmutability,
             DisplayName: "Immutability Pflicht",
             GetShortDescription: c => "Felder und Properties muessen readonly oder init-only sein.",
             Warum: "Veränderlicher Zustand ist für Agenten schwer zu verfolgen — sie übersehen, wo Zustand geändert wird, und erzeugen Race Conditions.",
@@ -307,7 +307,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceMinimalApiAsParameters",
+            RuleId: LinterRuleIds.EnforceMinimalApiAsParameters,
             DisplayName: "Minimal API Bindung",
             GetShortDescription: c => "Minimal-API: Parameter muessen per [AsParameters] gebunden werden.",
             Warum: "Minimal-API-Endpunkte ohne Parameter-Binding-Records verleiten Agenten zu inkonsistentem Parameterhandling.",
@@ -325,7 +325,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceResultPatternOverExceptions",
+            RuleId: LinterRuleIds.EnforceResultPatternOverExceptions,
             DisplayName: "Result Pattern Pflicht",
             GetShortDescription: c => "Fachlicher Kontrollfluss muss Result-Pattern statt Exceptions (throw) nutzen.",
             Warum: "Exceptions für Business-Logik sind für Agenten schwer zu verfolgen — sie übersehen `throw`-Pfade und schreiben keine Tests für Fehlerfälle.",
@@ -344,7 +344,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "EnforceValueObjectContracts",
+            RuleId: LinterRuleIds.EnforceValueObjectContracts,
             DisplayName: "ValueObject Immutability",
             GetShortDescription: c => "ValueObject-Klassen muessen record oder readonly struct sein.",
             Warum: "Klassen mit `*ValueObject`-Suffix sollten strukturell unveränderlich sein. Agenten fügen sonst mutierbare Properties hinzu und brechen das Invariant.",
@@ -363,7 +363,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: true
         ),
         new(
-            RuleId: "PreventContextDependentOverloads",
+            RuleId: LinterRuleIds.PreventContextDependentOverloads,
             DisplayName: "Keine primitives-only Ueberladungen",
             GetShortDescription: c => "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
             Warum: "Überladungen mit identischer Parameteranzahl, die sich nur durch primitive Typen unterscheiden, sind für Agenten nicht disambiguierbar — falscher Aufruf bleibt kompilierbar.",
@@ -386,7 +386,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildUiSeparationRules() =>
     [
         new(
-            RuleId: "BlazorRequireCodeBehind",
+            RuleId: LinterRuleIds.BlazorRequireCodeBehind,
             DisplayName: "Blazor Code Behind",
             GetShortDescription: c => "Blazor-Komponenten muessen Code-Behind nutzen.",
             Warum: "Logik in `@code { }` Blöcken ist für Agenten ohne Razor-Unterstützung unsichtbar — sie modifizieren nur die `.razor.cs`-Datei und übersehen den `@code`-Block.",
@@ -405,7 +405,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: false
         ),
         new(
-            RuleId: "BlazorRequireCssIsolation",
+            RuleId: LinterRuleIds.BlazorRequireCssIsolation,
             DisplayName: "Blazor CSS Isolation",
             GetShortDescription: c => "Blazor-Komponenten muessen CSS-Isolation nutzen.",
             Warum: "Inline `<style>`-Tags in `.razor`-Dateien werden vom Agenten oft übersehen und nicht in CSS-Isolation-Dateien migriert — erzeugt Style-Konflikte.",
@@ -424,7 +424,7 @@ internal static partial class RuleRegistry
             IncludeInAgentRules: false
         ),
         new(
-            RuleId: "WpfRequireMinimalCodeBehind",
+            RuleId: LinterRuleIds.WpfRequireMinimalCodeBehind,
             DisplayName: "WPF Minimal Code Behind",
             GetShortDescription: c => "WPF-Code-Behind darf keine Business-Logik enthalten.",
             Warum: "Umfangreiches Code-Behind in WPF verletzt MVVM. Agenten fügen Logik ins Code-Behind ein, wenn sie den ViewModel nicht finden — kumuliert technische Schulden.",

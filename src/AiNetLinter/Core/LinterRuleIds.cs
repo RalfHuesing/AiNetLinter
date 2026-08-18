@@ -33,6 +33,7 @@ internal static class LinterRuleIds
 
     // --- Globale Regeln (GlobalConfig) ---
     internal const string EnforceSealedClasses = nameof(GlobalConfig.EnforceSealedClasses);
+    internal const string AvoidExcessiveMiddleMen = nameof(GlobalConfig.AvoidExcessiveMiddleMen);
     internal const string AllowUnsealedPartialClasses = nameof(GlobalConfig.AllowUnsealedPartialClasses);
     internal const string BanPublicNestedTypes = nameof(GlobalConfig.BanPublicNestedTypes);
     internal const string EnforceNoSilentCatch = nameof(GlobalConfig.EnforceNoSilentCatch);

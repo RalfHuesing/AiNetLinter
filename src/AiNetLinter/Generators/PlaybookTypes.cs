@@ -18,18 +18,15 @@ public sealed record PlaybookOptions(
 
 internal sealed record PlaybookDocInfo(
     string FilePath,
-    string ProjectName,
     bool HasDisableAll,
-    int LineCount,
-    List<string> Namespaces
+    int LineCount
 );
 
 internal sealed record PlaybookDocScanResult(
     int ResultMethods,
     int Throws,
     bool HasDisableAll,
-    int LineCount,
-    List<string> Namespaces
+    int LineCount
 );
 
 internal sealed record PlaybookStats(

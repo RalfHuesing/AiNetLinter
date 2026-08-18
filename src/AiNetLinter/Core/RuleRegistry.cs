@@ -55,7 +55,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildMetricsSizeRules() =>
     [
         new(
-            RuleId: "MaxLineCount",
+            RuleId: LinterRuleIds.MaxLineCount,
             DisplayName: "Maximale Dateilaenge",
             GetShortDescription: c => $"Dateizeilenlimit (max. {c.Metrics.MaxLineCount} Zeilen) ueberschritten.",
             Warum: "Lange Dateien übersteigen das lesbare Kontextfenster. Der Agent sieht nur Ausschnitte und übersieht Invarianten am Datei-Anfang oder -Ende.",
@@ -76,7 +76,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxLineCount
         ),
         new(
-            RuleId: "MaxMethodLineCount",
+            RuleId: LinterRuleIds.MaxMethodLineCount,
             DisplayName: "Maximale Methodenlaenge",
             GetShortDescription: c => $"Methode hat zu viele Codezeilen (max. {c.Metrics.MaxMethodLineCount} Zeilen).",
             Warum: "Lange Methoden übersteigen den analysierbaren Ausschnitt — Seiteneffekte am Methodenende werden vom Agenten übersehen.",
@@ -97,7 +97,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxMethodLineCount
         ),
         new(
-            RuleId: "MaxMethodParameterCount",
+            RuleId: LinterRuleIds.MaxMethodParameterCount,
             DisplayName: "Maximale Parameteranzahl",
             GetShortDescription: c => $"Zu viele Methodenparameter (max. {c.Metrics.MaxMethodParameterCount}).",
             Warum: "Viele Parameter erhöhen die Wahrscheinlichkeit, dass Agenten Argumente in falscher Reihenfolge übergeben oder Pflichtparameter übersehen.",
@@ -122,7 +122,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildMetricsComplexityRules() =>
     [
         new(
-            RuleId: "MaxCyclomaticComplexity",
+            RuleId: LinterRuleIds.MaxCyclomaticComplexity,
             DisplayName: "Zyklomatische Komplexitaet",
             GetShortDescription: c => $"Zu hohe zyklomatische Komplexitaet (max. {c.Metrics.MaxCyclomaticComplexity}).",
             Warum: "Hohe zyklomatische Komplexität (McCabe) bedeutet viele mögliche Ausführungspfade. Agenten analysieren typischerweise den Happy-Path und übersehen Randfälle.",
@@ -143,7 +143,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxCyclomaticComplexity
         ),
         new(
-            RuleId: "MaxCognitiveComplexity",
+            RuleId: LinterRuleIds.MaxCognitiveComplexity,
             DisplayName: "Kognitive Komplexitaet",
             GetShortDescription: c => $"Zu hohe kognitive Komplexitaet (max. {c.Metrics.MaxCognitiveComplexity}).",
             Warum: "Kognitive Komplexität (SonarSource) misst die mentale Last beim Lesen — tief verschachtelter Code wird vom Agenten falsch interpretiert.",
@@ -164,7 +164,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxCognitiveComplexity
         ),
         new(
-            RuleId: "MaxInheritanceDepth",
+            RuleId: LinterRuleIds.MaxInheritanceDepth,
             DisplayName: "Vererbungstiefe",
             GetShortDescription: c => $"Vererbungstiefe ueberschreitet Limit (max. {c.Metrics.MaxInheritanceDepth}).",
             Warum: "Tiefe Vererbungshierarchien sind für Agenten schwer zu durchdringen — sie sehen nicht alle Basisklassen-Methoden und übersehen Overrides.",
@@ -184,7 +184,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxInheritanceDepth
         ),
         new(
-            RuleId: "MaxMethodOverloads",
+            RuleId: LinterRuleIds.MaxMethodOverloads,
             DisplayName: "Methodenueberladungen",
             GetShortDescription: c => $"Zu viele Methodenueberladungen (max. {c.Metrics.MaxMethodOverloads}).",
             Warum: "Viele Überladungen mit ähnlicher Semantik erschweren dem Agenten die Auswahl der richtigen Signatur — er wählt die falsche und verursacht subtile Fehler.",
@@ -208,7 +208,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildMetricsDependencyRules() =>
     [
         new(
-            RuleId: "MaxConstructorDependencies",
+            RuleId: LinterRuleIds.MaxConstructorDependencies,
             DisplayName: "Konstruktorabhaengigkeiten",
             GetShortDescription: c => $"Zu viele Konstruktorabhaengigkeiten (max. {c.Metrics.MaxConstructorDependencies}).",
             Warum: "Konstruktoren mit vielen Abhängigkeiten signalisieren zu viele Verantwortlichkeiten — Agenten übergeben falsche Abhängigkeiten oder erzeugen inkorrekte Objekte.",
@@ -228,7 +228,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxConstructorDependencies
         ),
         new(
-            RuleId: "AIContextFootprint",
+            RuleId: LinterRuleIds.AIContextFootprint,
             DisplayName: "AI Context Footprint",
             GetShortDescription: c => $"AI-Context-Footprint (transitive Codezeilen aller Abhaengigkeiten) ueberschreitet Limit (max. {c.Metrics.MaxAIContextFootprint}).",
             Warum: "Ein zu großer transitiver Code-Footprint bedeutet: der Agent braucht das volle Kontextbudget für eine einzige Klasse. Er sieht nie den vollständigen Kontext und übersieht Invarianten.",
@@ -254,7 +254,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildMetricsStructureRules() =>
     [
         new(
-            RuleId: "MaxDirectoryDepth",
+            RuleId: LinterRuleIds.MaxDirectoryDepth,
             DisplayName: "Verzeichnistiefe",
             GetShortDescription: c => $"Verzeichnistiefe ueberschreitet Limit (max. {c.Metrics.MaxDirectoryDepth}).",
             Warum: "Tief verschachtelte Verzeichnisse sind für Agenten schwer zu navigieren — File-Listings überschreiten das Kontextfenster.",
@@ -274,7 +274,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxDirectoryDepth
         ),
         new(
-            RuleId: "MaxDirectoryChildren",
+            RuleId: LinterRuleIds.MaxDirectoryChildren,
             DisplayName: "Verzeichniseintraege",
             GetShortDescription: c => $"Zu viele Kind-Eintraege im Verzeichnis (max. {c.Metrics.MaxDirectoryChildren}).",
             Warum: "Zu viele Dateien in einem Verzeichnis übersteigen die Darstellbarkeit in einem File-Listing — Agenten wählen aus einem unvollständigen Satz und übersehen Dateien.",
@@ -293,7 +293,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxDirectoryChildren
         ),
         new(
-            RuleId: "MaxBoolParameterCount",
+            RuleId: LinterRuleIds.MaxBoolParameterCount,
             DisplayName: "Bool Parameteranzahl",
             GetShortDescription: c => $"Zu viele bool-Parameter in einer Methode (max. {c.Metrics.MaxBoolParameterCount}).",
             Warum: "`DoWork(true, false)` trägt an der Call-Site keine semantische Information — der Agent ordnet Flags falsch zu und macht Aufruffehler.",
@@ -315,7 +315,7 @@ internal static partial class RuleRegistry
             GetMetricLimit: c => c.Metrics.MaxBoolParameterCount
         ),
         new(
-            RuleId: "MaxPartialClassFiles",
+            RuleId: LinterRuleIds.MaxPartialClassFiles,
             DisplayName: "Partial Class Files",
             GetShortDescription: c => $"Typ ist in zu vielen partial-Dateien aufgeteilt (max. {c.Metrics.MaxPartialClassFiles}).",
             Warum: "Agenten sehen nur die aktuell geöffnete Datei. Invarianten, Felder und Methoden aus anderen Partial-Dateien derselben Klasse sind unsichtbar — der Agent erkennt Konflikte nicht und dupliziert Logik.",
@@ -338,7 +338,7 @@ internal static partial class RuleRegistry
             ConfigKeyHint: "rules.json → Metrics.MaxPartialClassFiles | Ausnahmen via PathOverrides"
         ),
         new(
-            RuleId: "MaxPublicMembersPerType",
+            RuleId: LinterRuleIds.MaxPublicMembersPerType,
             DisplayName: "Public Members Pro Typ",
             GetShortDescription: c => $"Zu viele oeffentliche Member in einem Typ (max. {c.Metrics.MaxPublicMembersPerType}).",
             Warum: "Breite API-Fläche erhöht die Wahrscheinlichkeit, dass Agenten existierende Methoden übersehen und duplizieren. Der Agent wählt aus dem sichtbaren Ausschnitt, nicht der vollständigen Klasse.",
@@ -390,7 +390,7 @@ internal static partial class RuleRegistry
     private static RuleMetadata[] BuildAgentResilientRules() =>
     [
         new(
-            RuleId: "EnforceNoSilentCatch",
+            RuleId: LinterRuleIds.EnforceNoSilentCatch,
             DisplayName: "Keine leeren catch Bloecke",
             GetShortDescription: c => "Keine stummen catch-Bloecke.",
             Warum: "Leere catch-Blöcke verbergen Fehler. Agenten können nicht erkennen ob ein Fehler normal oder kritisch ist — führt zu Silent Data Loss.",

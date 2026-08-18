@@ -15,7 +15,8 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// <summary>
 /// MCP-Tool <c>reload_config</c>: liest die <c>rules.json</c> zur Laufzeit neu ein und ersetzt
 /// die in <see cref="McpCodeGraphServer"/> resident gehaltene Config-Instanz, die
-/// <c>get_violations</c> nutzt — ohne Server-Neustart.
+/// <c>get_violations</c> nutzt — und laedt die Solution/Workspace-Kompilierung (inkl.
+/// wiederhergestellter NuGet-Metadatenreferenzen) neu ein, ohne Server-Neustart.
 /// </summary>
 internal static class ReloadConfigTool
 {
@@ -28,43 +29,45 @@ internal static class ReloadConfigTool
     /// ungueltiges JSON: <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive
     /// Config bleibt unveraendert, kein Datenverlust, kein Absturz.
     /// </summary>
-    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? configPath, CancellationToken ct)
+    internal static async Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? configPath, CancellationToken ct)
     {
-        if (state.LoadState == ServerLoadState.Loading) return Task.FromResult(McpToolResults.Loading());
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
-        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var targetPath = ResolveTargetPath(configPath, state, solution.FilePath);
         if (targetPath is null)
         {
-            return Task.FromResult(McpToolResults.Text(
+            await state.ReloadSolutionAsync(ct);
+            return McpToolResults.Text(
                 "Keine rules.json gefunden (weder expliziter configPath noch neben der Solution) — " +
-                "Server laeuft weiterhin unveraendert mit den eingebauten Default-Regeln."));
+                "Server laeuft weiterhin unveraendert mit den eingebauten Default-Regeln.");
         }
 
         if (!File.Exists(targetPath))
         {
-            return Task.FromResult(McpToolResults.Recoverable(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigNotFound,
                 $"Konfigurationsdatei nicht gefunden: {targetPath}",
                 context: targetPath,
                 hint: "Pfad pruefen (relativ zum Solution-Verzeichnis oder absolut) oder configPath " +
-                      "weglassen, um erneut neben der Solution zu suchen. Bisherige Konfiguration bleibt aktiv."));
+                      "weglassen, um erneut neben der Solution zu suchen. Bisherige Konfiguration bleibt aktiv.");
         }
 
         var newConfig = ConfigLoader.TryLoadConfig(targetPath, isRequired: false);
         if (newConfig is null)
         {
-            return Task.FromResult(McpToolResults.Recoverable(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigInvalid,
                 $"Konfigurationsdatei konnte nicht geladen werden (ungueltiges JSON?): {targetPath}",
                 context: targetPath,
-                hint: "JSON-Syntax der rules.json pruefen. Bisherige Konfiguration bleibt aktiv."));
+                hint: "JSON-Syntax der rules.json pruefen. Bisherige Konfiguration bleibt aktiv.");
         }
 
         var summary = BuildSummary(state, targetPath, newConfig);
         state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: targetPath);
-        return Task.FromResult(McpToolResults.Text(summary));
+        await state.ReloadSolutionAsync(ct);
+        return McpToolResults.Text(summary);
     }
 
     /// <summary>
