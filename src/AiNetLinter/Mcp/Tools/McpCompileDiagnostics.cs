@@ -89,7 +89,7 @@ internal static class McpCompileDiagnostics
         var shown = diagnostics.Take(maxShown).Select(FormatDiagnostic);
         var suffix = diagnostics.Count > maxShown ? $" (+{diagnostics.Count - maxShown} weitere)" : string.Empty;
 
-        return $"Hinweis: Diese Datei hat {diagnostics.Count} Compile-Fehler — Ergebnis ist moeglicherweise unvollstaendig. " +
+        return $"Hinweis: Diese Datei hat {diagnostics.Count} Compile-Fehler (kann ein temporärer Zwischenstand während Bearbeitung sein — 'dotnet build' ist die Referenz). " +
                $"Diagnostics: {string.Join("; ", shown)}{suffix}";
     }
 
@@ -98,20 +98,16 @@ internal static class McpCompileDiagnostics
     /// (<c>find_symbol</c>, <c>find_references</c>, <c>get_impact</c>, <c>get_type_hierarchy</c>,
     /// <c>search_pattern</c> sowie die drei Aggregate-Tools). Format:
     /// "Hinweis: 1 Datei hat Compile-Fehler" bzw. "Hinweis: N Dateien haben Compile-Fehler
-    /// (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien."
+    /// (M Errors gesamt — oft ein normaler temporärer Zwischenstand während Multi-File-Edits oder vor 'dotnet build')."
     /// </summary>
     internal static string FormatAggregateWarning(int fileCount, int totalErrors)
     {
         if (fileCount == 0 || totalErrors == 0) return string.Empty;
 
-        if (fileCount == 1)
-        {
-            return $"Hinweis: 1 Datei hat Compile-Fehler " +
-                   $"({totalErrors} Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.";
-        }
-
-        return $"Hinweis: {fileCount} Dateien haben Compile-Fehler " +
-               $"({totalErrors} Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.";
+        var fileText = fileCount == 1 ? "1 Datei hat Compile-Fehler" : $"{fileCount} Dateien haben Compile-Fehler";
+        return $"Hinweis: {fileText} ({totalErrors} Errors gesamt im aktuellen Roslyn-Workspace — " +
+               "oft ein normaler temporärer Zwischenstand während Multi-File-Edits oder vor 'dotnet build'; " +
+               "Ergebnis basiert auf dem aktuellen Disk-Stand).";
     }
 
     private static string FormatDiagnostic(Diagnostic diagnostic)
