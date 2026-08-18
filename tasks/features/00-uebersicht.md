@@ -30,11 +30,12 @@ Priorisierte To-Dos mit eigenständigen Detail-Konzepten:
    * Erkennt inkonsistente Benennungsfamilien (z. B. `UserDto`, `UserData`, `UserModel`) rein lexikalisch über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
 4. [04-test-context.md](04-test-context.md) — **Test-Coverage-Awareness (`get_test_context`)**
    * Exponiert den bestehenden `TestCoverageResolver` als MCP-Tool, um vor Refactorings sofort die zugehörigen Unit-/Integration-Tests zu identifizieren.
+5. [05-feature-context.md](05-feature-context.md) — **Composite One-Shot-Exploration (`get_feature_context`)**
+   * Bündelt Deklaration, Callers, Tests, Metriken/Budget und offene Violations für ein Ziel-Symbol in einem einzigen Call vor Refactorings.
 
 ---
 
 ## 3. Nachgelagerte Ideen & Verworfene Features
 
-* [05-bedingt-sinnvoll.md](05-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (Composite-Tools wie `feature_context`, ASP.NET-Analyzer-Suite).
-* [06-nicht-umsetzen.md](06-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
-
+* [06-bedingt-sinnvoll.md](06-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (ASP.NET-Framework-Analyzer-Suite).
+* [07-nicht-umsetzen.md](07-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).

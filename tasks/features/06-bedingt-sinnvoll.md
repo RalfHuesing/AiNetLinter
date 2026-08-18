@@ -4,21 +4,7 @@ Dieses Dokument sammelt Ideen, die architektonisch denkbar sind oder für Spezia
 
 ---
 
-## 1. `feature_context` (Composite One-Shot-Tool)
-
-* **Idee:** Ein mächtiges One-Shot-Tool, das für ein Ziel-Symbol (z. B. eine Kernklasse) folgendes auf einmal aggregiert:
-  1. Symbol-Definition & Skelett (`get_file_skeleton` / `get_class_structure`)
-  2. Direkte Callers & Callees (`get_call_tree` depth=1)
-  3. Aktuelle Metriken & AIContextFootprint (`metrics_lookup`)
-  4. Zugehörige Tests (`get_test_context`)
-  5. Offene Linter-Violations auf dieser Datei (`get_violations`)
-* **Status / Bewertung:**
-  * **Bedingt sinnvoll:** Sehr mächtig für den ersten Schritt bei großen Refactorings ("Give me all context for class X").
-  * **Abhängigkeit:** Baut direkt auf `metrics_lookup` und `get_test_context` auf. Erst wenn diese beiden Basis-Tools existieren, kann `feature_context` als schlanker Composite-Orchestrator gebaut werden.
-
----
-
-## 2. ASP.NET-Framework-Analyzer-Suite
+## 1. ASP.NET-Framework-Analyzer-Suite
 
 * **Idee:** 6 hochspezifische Roslyn-Analyzer für ASP.NET Core & Web-APIs:
   1. `AspNetControllerRouteAnalyzer` (fehlende/ungültige Route-Attribute)
