@@ -264,7 +264,7 @@ internal static class GetClassStructureTool
         return new ClassStructureMemberEntry(
             Kind: ResolveMemberKind(m),
             Name: m.Name,
-            Visibility: ResolveVisibility(m),
+            Visibility: SymbolVisibilityResolver.ResolveVisibility(m),
             StartLine: startLine,
             EndLine: endLine,
             LineCount: lineCount,
@@ -292,20 +292,6 @@ internal static class GetClassStructureTool
             };
         }
         return m.Kind.ToString();
-    }
-
-    private static string ResolveVisibility(ISymbol m)
-    {
-        return m.DeclaredAccessibility switch
-        {
-            Accessibility.Public => "public",
-            Accessibility.Private => "private",
-            Accessibility.Protected => "protected",
-            Accessibility.Internal => "internal",
-            Accessibility.ProtectedOrInternal => "protected internal",
-            Accessibility.ProtectedAndInternal => "private protected",
-            _ => "private",
-        };
     }
 
     private static List<ClassStructureMemberEntry> SortMembers(
