@@ -76,6 +76,7 @@ dotnet test           # Tests ausführen
 dotnet run            # Starten
 ```
 * **Test-Logging & Fehlerdiagnose:** Testläufe können über `--logger "trx;LogFileName=<Name>.trx"` diagnostiziert werden. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent die generierte TRX-Datei in `TestResults/` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten. Welche `dotnet test`-Befehle aktuell den maßgeblichen Standard-Gate-Pfad bilden, steht ausschließlich in `AGENTS.md` — nicht hier zusätzlich pflegen.
+* **Test-Performance & Iterations-Workflow:** Während der schnellen Entwicklungsiteration ausschließlich in-memory Unit-/Component-Slices ausführen (`dotnet test src/AiNetLinter.FastTests --filter Category=Unit` bzw. `Category=Component`, <10s). Volle Integrationsläufe (`AiNetLinter.IntegrationTests --filter Category!=Stress`) starten Dutzende echte Subprozesse (`AiNetLinter.exe`), führen Roslyn-Workspace-Loads durch und dogfooden die gesamte Solution (~2 Minuten Laufzeit). Sie sind ausschließlich für die finale Gate-Verifikation vor dem Abschluss eines Steps oder Tasks bestimmt.
 
 ## 4. Updates & Tests
 - **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.

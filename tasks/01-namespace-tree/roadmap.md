@@ -16,8 +16,8 @@ Step-Modus des Planers, siehe `spec.md` §7.2.
 ## Tech-Stack-Notiz
 
 - **Build-Command:** `dotnet build`
-- **Test-Command:** `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress; dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
-- **Fast-Test-Command (Iteration):** `dotnet test src/AiNetLinter.FastTests --filter Category=Unit` bzw. `Category=Component`
+- **Test-Command (Gate/Final):** `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress; dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` (vollständiger Verifikationslauf über alle Subprozesse, ~2 Min)
+- **Fast-Test-Command (Iteration während Dev):** `dotnet test src/AiNetLinter.FastTests --filter Category=Unit` bzw. `Category=Component` (schnelles Feedback in-memory, <10s)
 - **Lint-Command:** MCP-Tool `get_violations`
 - **Code-Style-Kurzfassung:** C# .NET 10, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `sealed` für konkrete Klassen, flache Methoden (≤60 Zeilen, max. 4 Parameter), `Result<T>`/`McpToolResults` ohne unnötige Exceptions, keine ALCs oder Reflection-Plugins, Footprint < 2500 Zeilen.
 - **Commit-Konventionen:** Conventional Commits auf Deutsch, imperativ (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`) mit Task-Suffix `[01-namespace-tree]`.
