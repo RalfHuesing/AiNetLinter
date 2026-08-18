@@ -20,18 +20,21 @@ Die folgenden 18 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 ## 2. Nächste Schritte (Sehr sinnvoll & hoher Hebel)
 
-Für die nächsten To-Dos existieren eigenständige Detail-Konzepte:
+Priorisierte To-Dos mit eigenständigen Detail-Konzepten:
 
-1. [01-metrics-lookup.md](01-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint**
+1. [01-namespace-tree.md](01-namespace-tree.md) — **Hierarchische Code-Exploration (`get_namespace_tree`)** *(P1 - Höchster Hebel)*
+   * Ermöglicht stufenweisen Zoom (Projekte ➔ Namespaces ➔ Typen) nach dem Progressive-Disclosure-Prinzip. Verhindert Kontext-Fluten und spart massiv Token bei der Orientierung in unbekannten/großen Codebases.
+2. [02-metrics-lookup.md](02-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)**
    * Bündelt CC, CogC, LOC, Parameter-Anzahl und AI-Context-Footprint für ein Symbol in einem schnellen Call.
-2. [02-similar-names.md](02-similar-names.md) — **Naming-Drift-Erkennung**
+3. [03-similar-names.md](03-similar-names.md) — **Naming-Drift-Erkennung (`similar_names`)**
    * Erkennt inkonsistente Benennungsfamilien (z. B. `UserDto`, `UserData`, `UserModel`) rein lexikalisch über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
-3. [03-test-context.md](03-test-context.md) — **Test-Coverage-Awareness (`get_test_context`)**
+4. [04-test-context.md](04-test-context.md) — **Test-Coverage-Awareness (`get_test_context`)**
    * Exponiert den bestehenden `TestCoverageResolver` als MCP-Tool, um vor Refactorings sofort die zugehörigen Unit-/Integration-Tests zu identifizieren.
 
 ---
 
 ## 3. Nachgelagerte Ideen & Verworfene Features
 
-* [04-bedingt-sinnvoll.md](04-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (Composite-Tools wie `feature_context`, ASP.NET-Analyzer-Suite).
-* [05-nicht-umsetzen.md](05-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
+* [05-bedingt-sinnvoll.md](05-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (Composite-Tools wie `feature_context`, ASP.NET-Analyzer-Suite).
+* [06-nicht-umsetzen.md](06-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
+
