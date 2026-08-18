@@ -1,6 +1,6 @@
 # Feature-Übersicht & Backlog (AiNetLinter MCP-Server)
 
-Dieses Dokument fasst den aktuellen Stand der MCP-Server-Features zusammen, verweist auf die detaillierten Konzepte für die nächsten Schritte und dokumentiert die bereits umgesetzten Features.
+Dieses Dokument priorisiert die nächsten Features nach **Effizienz (Token-/Kosteneinsparung)** und **Code-Qualität (Prävention von Tech-Debt)**.
 
 ---
 
@@ -18,20 +18,25 @@ Die folgenden 23 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 ---
 
-## 2. Nächste Schritte (Sehr sinnvoll & hoher Hebel)
+## 2. Priorisierte Abarbeitungs-Reihenfolge (ROI: Token-Save & Qualität)
 
-Priorisierte To-Dos mit eigenständigen Detail-Konzepten:
+Die Reihenfolge minimiert Kontext-Roundtrips, senkt API-Kosten pro Agenten-Task und verhindert architektonischen Drift:
 
-1. [02-metrics-lookup.md](02-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)**
-   * Bündelt CC, CogC, LOC, Parameter-Anzahl und AI-Context-Footprint für ein Symbol in einem schnellen Call.
-2. [03-similar-names.md](03-similar-names.md) — **Naming-Drift & Semantische Namensfamilien (`similar_names`)**
-   * Erkennt inkonsistente Typ-Familien (`UserDto`, `UserData`) und Methoden-Drift (`GetTypeKindDescription` vs `DescribeTypeKind`) rein lexikalisch und signatur-basiert über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
-3. [08-structural-drift-detection.md](08-structural-drift-detection.md) — **Semantische DRY- & Drift-Erkennung via AST-Fingerprinting (`find_duplicates` mit `mode="structural"`)** *(P1 - Höchster Hebel gegen Typ-4-Drift)*
-   * Extrahiert Struktur-Profile (Signatur, CFG-Shape, Typ-Interaktionen) und berechnet Cosine-Similarity über Sparse-Vektoren zur Erkennung paralleler Hilfsfunktionen mit gleicher Intention (Schicht 4 der Drift-Audit-Initiative).
-4. [04-test-context.md](04-test-context.md) — **Test-Coverage-Awareness (`get_test_context`)**
-   * Exponiert den bestehenden `TestCoverageResolver` als MCP-Tool, um vor Refactorings sofort die zugehörigen Unit-/Integration-Tests zu identifizieren.
-5. [05-feature-context.md](05-feature-context.md) — **Composite One-Shot-Exploration (`get_feature_context`)**
-   * Bündelt Deklaration, Callers, Tests, Metriken/Budget und offene Violations für ein Ziel-Symbol in einem einzigen Call vor Refactorings.
+### Phase 1: Maximale Token- & Roundtrip-Reduktion vor Edits
+1. **[02-metrics-lookup.md](02-metrics-lookup.md) — One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)** *(Prio 1.1)*
+   * **Token-ROI:** Sehr hoch. Liefert CC, CogC, LOC, ParamCount und AI-Context-Footprint für ein Einzelsymbol in einem kompakten Call (~50 Tokens statt ganze Datei mit 2.000 Tokens zu laden). Dient als Baustein für Feature-Kontext.
+2. **[05-feature-context.md](05-feature-context.md) — Composite One-Shot-Exploration (`get_feature_context`)** *(Prio 1.2 — Höchster Workflow-Hebel)*
+   * **Token-ROI:** Maximal. Bündelt Deklaration, Callers, Tests, Metriken/Budget und offene Violations für ein Ziel-Symbol. **Ersetzt 4–5 aufeinanderfolgende Tool-Calls durch genau 1 Call** vor jedem Refactoring.
+
+### Phase 2: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
+3. **[08-structural-drift-detection.md](08-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 2.1)*
+   * **Qualitäts-ROI:** Maximal. Erkennt parallele Zwillingsmethoden (Typ-4-Drift wie redundante Enum-Switches) über Merkmalsvektoren und Cosine-Similarity. Verhindert Code-Aufblähung nachhaltig.
+4. **[03-similar-names.md](03-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 2.2)*
+   * **Qualitäts-ROI:** Hoch. Erkennt inkonsistente DTO-/Model-Familien (`UserDto`, `UserData`) und Hilfsfunktions-Drift rein lexikalisch und signaturbasiert über den Roslyn-Symbolgraphen.
+
+### Phase 3: Test-Sicherheit & Gezielte Testläufe
+5. **[04-test-context.md](04-test-context.md) — Test-Coverage-Awareness (`get_test_context`)** *(Prio 3.1)*
+   * **Workflow-ROI:** Hoch. Exponiert den residenten `TestCoverageResolver` als MCP-Tool, um vor/nach Code-Änderungen sofort die exakten Unit-/Integrationstests einer Methode zu isolieren und gezielt auszuführen.
 
 ---
 
