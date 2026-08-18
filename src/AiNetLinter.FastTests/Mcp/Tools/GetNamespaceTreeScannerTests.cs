@@ -195,4 +195,102 @@ public sealed class GetNamespaceTreeScannerTests
         Assert.Equal(2, payload.ShownCount);
         Assert.Contains("[3 Typen gesamt, 2 gezeigt — maxResults erhoehen]", text);
     }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_GlobalNamespace_ReturnsTypesInGlobalNamespace()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [
+                    ("TopLevel.cs", """
+                        public class GlobalRootClass {}
+                        """),
+                ]));
+
+        var project = testSolution.Solution.Projects.Single();
+        var parameters = new NamespaceTreeScanParameters(
+            Project: project,
+            NamespacePrefix: null,
+            Depth: 1,
+            IncludeTypes: true,
+            KindFilter: "all",
+            MaxResults: 50,
+            SolutionDir: @"C:\virtual");
+
+        var (text, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.Contains("App.Core", text);
+    }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_KindFilterCaseInsensitive_MatchesCorrectTypes()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [
+                    ("Entities.cs", """
+                        namespace App.Core.Domain;
+                        public struct MyStruct {}
+                        public enum MyEnum { X }
+                        """),
+                ]));
+
+        var project = testSolution.Solution.Projects.Single();
+        var parameters = new NamespaceTreeScanParameters(
+            Project: project,
+            NamespacePrefix: "App.Core.Domain",
+            Depth: 1,
+            IncludeTypes: true,
+            KindFilter: "STRUCT",
+            MaxResults: 50,
+            SolutionDir: @"C:\virtual");
+
+        var (text, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.Contains("MyStruct (struct)", text);
+        Assert.DoesNotContain("MyEnum", text);
+        Assert.NotNull(payload.Types);
+        Assert.Single(payload.Types!);
+        Assert.Equal("MyStruct", payload.Types![0].Name);
+    }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_EmptyParentWithSubNamespaceTypes_Navigable()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [
+                    ("Deep.cs", """
+                        namespace App.Core.Services.Sub;
+                        public class DeepService {}
+                        """),
+                ]));
+
+        var project = testSolution.Solution.Projects.Single();
+        var parameters = new NamespaceTreeScanParameters(
+            Project: project,
+            NamespacePrefix: "App.Core",
+            Depth: 2,
+            IncludeTypes: false,
+            KindFilter: "all",
+            MaxResults: 50,
+            SolutionDir: @"C:\virtual");
+
+        var (text, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.Contains("App.Core.Services", text);
+        Assert.NotNull(payload.Namespaces);
+    }
 }

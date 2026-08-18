@@ -405,4 +405,28 @@ public sealed class McpLiveRepositoryTests
         Assert.Contains("Magic-Value-Audit", resultDeadCodeMagic, StringComparison.Ordinal);
         Assert.Contains("Duplikat-Cluster", resultDeadCodeDuplicates, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LiveDogfood_GetNamespaceTree_ReturnsProjectsAndNamespaces()
+    {
+        var overview = await _fixture.Client.CallToolGetTextAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>());
+
+        Assert.NotNull(overview);
+        Assert.Contains("# Solution Overview", overview, StringComparison.Ordinal);
+        Assert.Contains("AiNetLinter", overview, StringComparison.Ordinal);
+
+        var tree = await _fixture.Client.CallToolGetTextAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "AiNetLinter",
+                ["includeTypes"] = false
+            });
+
+        Assert.NotNull(tree);
+        Assert.Contains("# Namespaces in Projekt 'AiNetLinter'", tree, StringComparison.Ordinal);
+        Assert.Contains("AiNetLinter", tree, StringComparison.Ordinal);
+    }
 }

@@ -78,30 +78,41 @@ internal static class GetNamespaceTreeTool
         string solutionDir,
         CancellationToken ct)
     {
-        var matchingProjects = solution.Projects
-            .Where(p => p.Name.Contains(input.Project!, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var exactMatch = solution.Projects
+            .FirstOrDefault(p => p.Name.Equals(input.Project, StringComparison.OrdinalIgnoreCase));
 
-        if (matchingProjects.Count == 0)
+        Project targetProject;
+        if (exactMatch is not null)
         {
-            var available = string.Join(", ", solution.Projects.Select(p => p.Name));
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                $"Projekt '{input.Project}' wurde in der Solution nicht gefunden.",
-                hint: $"Verfuegbare Projekte: {available}");
+            targetProject = exactMatch;
         }
-
-        if (matchingProjects.Count > 1)
+        else
         {
-            var candidates = matchingProjects.Select(p => $"- {p.Name} ({p.FilePath})");
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.AmbiguousSymbol,
-                $"Projektname '{input.Project}' ist mehrdeutig — mehrere Projekte gefunden.",
-                context: string.Join("\n", candidates),
-                hint: "Projektnamen praezisieren (vollstaendigen Projektnamen uebergeben).");
-        }
+            var matchingProjects = solution.Projects
+                .Where(p => p.Name.Contains(input.Project!, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-        var targetProject = matchingProjects[0];
+            if (matchingProjects.Count == 0)
+            {
+                var available = string.Join(", ", solution.Projects.Select(p => p.Name));
+                return McpToolResults.Recoverable(
+                    LinterErrorCodes.InvalidArgument,
+                    $"Projekt '{input.Project}' wurde in der Solution nicht gefunden.",
+                    hint: $"Verfuegbare Projekte: {available}");
+            }
+
+            if (matchingProjects.Count > 1)
+            {
+                var candidates = matchingProjects.Select(p => $"- {p.Name} ({p.FilePath})");
+                return McpToolResults.Recoverable(
+                    LinterErrorCodes.AmbiguousSymbol,
+                    $"Projektname '{input.Project}' ist mehrdeutig — mehrere Projekte gefunden.",
+                    context: string.Join("\n", candidates),
+                    hint: "Projektnamen praezisieren (vollstaendigen Projektnamen uebergeben).");
+            }
+
+            targetProject = matchingProjects[0];
+        }
         var scanParams = new NamespaceTreeScanParameters(
             Project: targetProject,
             NamespacePrefix: input.NamespacePrefix,

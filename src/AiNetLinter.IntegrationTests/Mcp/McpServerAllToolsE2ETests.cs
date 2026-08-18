@@ -315,4 +315,29 @@ public sealed class McpServerAllToolsE2ETests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task GetNamespaceTree_NoArguments_ReturnsSolutionOverview()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>());
+
+        Assert.Contains("# Solution Overview", text, StringComparison.Ordinal);
+        Assert.Contains("SymbolGraphMini", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetNamespaceTree_SpecificProject_ReturnsNamespaces()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "SymbolGraphMini",
+                ["includeTypes"] = false
+            });
+
+        Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", text, StringComparison.Ordinal);
+    }
 }

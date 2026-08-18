@@ -135,4 +135,30 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Contains("# Typen in Namespace 'SymbolGraphMini' (Projekt: SymbolGraphMini):", textContent.Text);
         Assert.Contains("IGreeting (interface)", textContent.Text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CaseInsensitiveProjectName_ResolvesCorrectly()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(Project: "symbolgraphmini"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", textContent.Text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NegativeDepth_DefaultsTo1()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(Project: "SymbolGraphMini", Depth: -5), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", textContent.Text);
+    }
 }
