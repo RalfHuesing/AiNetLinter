@@ -1,5 +1,5 @@
 ---
-status: open
+status: in_progress
 type: step-plan
 task: 01-namespace-tree
 step: 003
