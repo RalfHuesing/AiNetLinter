@@ -59,15 +59,14 @@ public sealed class McpObservabilityIntegrationTests
     public void McpObservabilityTools_AddFeedbackTool_IsIdempotent()
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
-        var sp = new ServiceCollection().BuildServiceProvider();
 
-        tools.AddFeedbackTool(sp);
+        tools.AddFeedbackTool();
         Assert.Single(tools);
-        Assert.True(tools.TryGetPrimitive("report_observability_feedback", out var tool));
+        Assert.True(tools.TryGetPrimitive(McpObservabilityTools.FeedbackToolName, out var tool));
         Assert.NotNull(tool);
 
         // Zweiter Aufruf darf keine Exception werfen und keine Duplikate erzeugen
-        tools.AddFeedbackTool(sp);
+        tools.AddFeedbackTool();
         Assert.Single(tools);
     }
 
@@ -92,6 +91,26 @@ public sealed class McpObservabilityIntegrationTests
         Assert.Equal("1.0.96", obsService.ServerVersion);
         Assert.True(obsService.ProcessId > 0);
         Assert.False(string.IsNullOrEmpty(obsService.InstanceId));
+    }
+
+    [Fact]
+    public void McpObservabilityService_WhenDisabled_RegistersDisabledServiceInDiContainer()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddMcpServer();
+        builder.WithObservability(new McpObservabilityOptions
+        {
+            Enabled = false,
+            ServerName = "ainetlinter",
+            ServerVersion = "1.0.96",
+        });
+
+        var sp = services.BuildServiceProvider();
+        var obsService = sp.GetService<IMcpObservabilityService>();
+
+        Assert.NotNull(obsService);
+        Assert.False(obsService.IsEnabled);
+        Assert.Null(obsService.CurrentLogFilePath);
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp;
 
@@ -49,7 +50,7 @@ internal static class OverviewResourceRegistration
         ("search_pattern", "Text- oder Regex-Suche ueber den gesamten Dateibestand, alle Dateitypen."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
         ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status."),
-        ("report_observability_feedback", "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
+        (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
     ];
 

@@ -143,5 +143,6 @@ public sealed class GetServerHealthToolTests
         public string? CurrentLogFilePath => logFilePath;
         public int ProcessId => 12345;
         public string InstanceId => "fake-instance-id";
+        public Task FlushAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

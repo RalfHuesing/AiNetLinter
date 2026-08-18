@@ -22,8 +22,6 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class ServerMaintenanceToolRegistrations
 {
-    private static readonly IServiceProvider EmptyServiceProvider = new ServiceCollection().BuildServiceProvider();
-
     /// <summary>
     /// Fuegt <paramref name="tools"/> die Wartungs-Tools hinzu. Tools erreichen den resident
     /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
@@ -84,6 +82,6 @@ internal static class ServerMaintenanceToolRegistrations
         McpServerPrimitiveCollection<McpServerTool> tools,
         IServiceProvider? serviceProvider)
     {
-        tools.AddFeedbackTool(serviceProvider ?? EmptyServiceProvider);
+        tools.AddFeedbackTool(serviceProvider);
     }
 }
