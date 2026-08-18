@@ -701,5 +701,23 @@ Erweiterungen und Verfeinerungen basierend auf praktischem Agent-Feedback:
 
 ---
 
+## Hierarchische Code-Exploration: `get_namespace_tree` (P1 - Progressive Disclosure)
+
+Strukturierter semantischer Drilldown entlang der logischen C#-Hierarchie (Projekte ➔ Namespaces ➔ Typen):
+
+- [x] **3 Zoom-Stufen:**
+  - Stufe 1: Solution-Überblick über alle Projekte (`Typ: Lib/Exe/Test`, Namespace- und Typ-Anzahl).
+  - Stufe 2: Projekt-/Namespace-Drilldown (`depth`-Traversierung 1-3, `includeTypes: false/true`, Einrückungsebenen).
+  - Stufe 3: Typen-Auflistung im Namespace (`Name`, `Kind`, `FilePath:Line`, `Visibility: public/internal/private`).
+- [x] **Filterung & Absicherung:**
+  - Filter nach `kind` (`class`, `interface`, `record`, `struct`, `enum`, `all`).
+  - Ausschluss von generierten Symbolen (`<CompilerGeneratedAttribute>`, `<Clone>$`, `EqualityContract`).
+  - Quellcode-Fokus (`IsInSource` / `DeclaringSyntaxReferences`).
+  - Robuste Truncation (`maxResults`, Cap 200) mit Truncation-Meta-Zeile und StructuredContent-Payload (`NamespaceTreePayload`).
+- [x] **DRY-Refactoring & Konsolidierung:**
+  - `SymbolKindClassifier` und `SymbolVisibilityResolver` für modulübergreifende Einheitlichkeit bei Typ-, Kind- und Visibility-Deskriptoren.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
 

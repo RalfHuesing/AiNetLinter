@@ -1,5 +1,7 @@
 # Konzept: `get_namespace_tree` (Hierarchische Code-Exploration & Progressive Disclosure)
 
+**Status:** Erledigt & im Code verifiziert (`GetNamespaceTreeTool.cs`, `GetNamespaceTreeScanner.cs`, Fast- und Integration-Tests).
+
 ## 1. Problemstellung & Motivation
 Wenn ein Agent eine Codebase erkundet (zu Beginn einer Session oder bei unbekannten Projekten), steht er vor einem Dilemma:
 1. `find_symbol` durchsucht die Solution flach und verlangt einen bekannten Namens-Substring (`namePattern`). Sucht man nach allgemeinen Begriffen wie `"Tool"`, `"Service"` oder `"Controller"`, erhält man dutzende Treffer aus allen Projekten und Tests durcheinandergewürfelt.

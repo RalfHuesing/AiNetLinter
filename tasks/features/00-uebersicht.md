@@ -6,12 +6,12 @@ Dieses Dokument fasst den aktuellen Stand der MCP-Server-Features zusammen, verw
 
 ## 1. Bereits erledigt & im Code verifiziert
 
-Die folgenden 18 MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
+Die folgenden 23 MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
 
 | Kategorie | Tools | Beschreibung |
 |---|---|---|
 | **Symbolgraph** | `find_symbol`, `find_references`, `get_call_tree`, `get_impact`, `get_type_hierarchy`, `dependency_graph` | Vollständige Roslyn-Symbolnavigation, Caller-Bäume (ASCII/Mermaid), Git-Diff-Blast-Radius und echte typbasierte Abhängigkeitsgraphen. |
-| **Dateistruktur & Navigation** | `get_file_skeleton`, `get_class_structure`, `get_index_scope`, `get_hotspots` | Schnelle Übersicht über Signaturen, tabellarische Member-/Zeilen-Details und Erkennung von Dateien nahe dem Zeilenlimit. |
+| **Dateistruktur & Navigation** | `get_namespace_tree`, `get_file_skeleton`, `get_class_structure`, `get_index_scope`, `get_hotspots` | Progressive Disclosure (Projekte ➔ Namespaces ➔ Typen), schnelle Übersicht über Signaturen, tabellarische Member-/Zeilen-Details und Erkennung von Dateien nahe dem Zeilenlimit. |
 | **Analyse & Quality Gates** | `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code`, `search_pattern` | Deterministisches 0-10 Quality-Gate (`safeguard`), Pattern-Gruppierung (God-Classes, async-void etc.), Literale/Secrets-Audit und Dead-Code-Detection. |
 | **DRY & Drift** | `find_duplicates` | Token-basiertes Clone-Detection (Exact/Near/Fuzzy) + Refactoring-Drift (`helperSymbol`) + `DuplicateCodeChecker` in `PostAnalysisChecks`. |
 | **Wartung & Observability** | `reload_config`, `get_server_health`, `report_observability_feedback` | Hot-Reload von `rules.json`, Status-/Health-Prüfung und Feedback-Kanal für Agenten. |
@@ -22,9 +22,7 @@ Die folgenden 18 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 Priorisierte To-Dos mit eigenständigen Detail-Konzepten:
 
-1. [01-namespace-tree.md](01-namespace-tree.md) — **Hierarchische Code-Exploration (`get_namespace_tree`)** *(P1 - Höchster Hebel)*
-   * Ermöglicht stufenweisen Zoom (Projekte ➔ Namespaces ➔ Typen) nach dem Progressive-Disclosure-Prinzip. Verhindert Kontext-Fluten und spart massiv Token bei der Orientierung in unbekannten/großen Codebases.
-2. [02-metrics-lookup.md](02-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)**
+1. [02-metrics-lookup.md](02-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)**
    * Bündelt CC, CogC, LOC, Parameter-Anzahl und AI-Context-Footprint für ein Symbol in einem schnellen Call.
 3. [03-similar-names.md](03-similar-names.md) — **Naming-Drift-Erkennung (`similar_names`)**
    * Erkennt inkonsistente Benennungsfamilien (z. B. `UserDto`, `UserData`, `UserModel`) rein lexikalisch über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
