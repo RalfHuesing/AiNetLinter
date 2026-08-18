@@ -336,7 +336,7 @@ public sealed class McpLiveRepositoryTests
         Assert.NotNull(result.StructuredContent);
         var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
         var summary = (string)json["summary"]!;
-        Assert.DoesNotContain("0 Klassen analysiert", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain(" 0 Klassen analysiert", summary, StringComparison.Ordinal);
     }
 
     [Fact]

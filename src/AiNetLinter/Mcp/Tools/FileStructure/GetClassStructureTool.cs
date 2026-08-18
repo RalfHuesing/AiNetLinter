@@ -86,7 +86,7 @@ internal static class GetClassStructureTool
 
             var payload = new ClassStructurePayload(
                 TypeName: namedType.ToDisplayString(),
-                Kind: GetTypeKindDescription(namedType),
+                Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, englishClass: true),
                 Files: files,
                 TotalLines: totalLines,
                 TotalMemberCount: sortedMembers.Count,
@@ -141,22 +141,6 @@ internal static class GetClassStructureTool
         return (files.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), totalLines);
     }
 
-    private static string GetTypeKindDescription(INamedTypeSymbol namedType)
-    {
-        if (namedType.IsRecord)
-        {
-            return namedType.TypeKind == TypeKind.Struct ? "record struct" : "record class";
-        }
-        return namedType.TypeKind switch
-        {
-            TypeKind.Class => "class",
-            TypeKind.Struct => "struct",
-            TypeKind.Interface => "interface",
-            TypeKind.Enum => "enum",
-            TypeKind.Delegate => "delegate",
-            _ => namedType.TypeKind.ToString().ToLowerInvariant(),
-        };
-    }
 
     private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)
     {

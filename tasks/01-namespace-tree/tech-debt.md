@@ -2,7 +2,7 @@
 task: 01-namespace-tree
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-19T00:50:00+02:00
+last_updated: 2026-08-19T00:55:00+02:00
 ---
 
 # Tech-Debt-Log: 01-namespace-tree
@@ -14,12 +14,12 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 
 ## Index
 
-| ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
-|---|---|---|---|---|
-| TD-001 | `src/AiNetLinter/Mcp/Tools/FileStructure/GetNamespaceTreeScanner.cs:428` | mittel | ja | Redundante private `ResolveVisibility`-Methode statt Nutzung des bestehenden `SymbolVisibilityResolver` |
-| TD-002 | `src/AiNetLinter/Mcp/Tools/` | mittel | nein | Fragmentierte `TypeKind` & `IsRecord` String-Formatierungen ("Klasse", "class", "record class", etc.) über diverse MCP-Tools |
-| TD-003 | `src/AiNetLinter/Mcp/Tools/` | niedrig | nein | Parallele Kind-Filter-Parser für MCP-Tool-Parameter (`kind`) ohne gemeinsame Parser-Abstraktion |
-| TD-004 | `src/AiNetLinter/Mcp/Tools/FileStructure/ProjectTypeClassifier.cs:24` | mittel | nein | Heuristik-Duplikation bei Test-Projekt-Erkennung (`ProjectTypeClassifier` vs. `TestProjectDetector`) |
+| ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung | Status |
+|---|---|---|---|---|---|
+| TD-001 | `src/AiNetLinter/Mcp/Tools/FileStructure/GetNamespaceTreeScanner.cs:428` | mittel | ja | Redundante private `ResolveVisibility`-Methode statt Nutzung des bestehenden `SymbolVisibilityResolver` | erledigt |
+| TD-002 | `src/AiNetLinter/Mcp/Tools/` | mittel | nein | Fragmentierte `TypeKind` & `IsRecord` String-Formatierungen ("Klasse", "class", "record class", etc.) über diverse MCP-Tools | erledigt |
+| TD-003 | `src/AiNetLinter/Mcp/Tools/` | niedrig | nein | Parallele Kind-Filter-Parser für MCP-Tool-Parameter (`kind`) ohne gemeinsame Parser-Abstraktion | erledigt |
+| TD-004 | `src/AiNetLinter/Mcp/Tools/FileStructure/ProjectTypeClassifier.cs:24` | mittel | nein | Heuristik-Duplikation bei Test-Projekt-Erkennung (`ProjectTypeClassifier` vs. `TestProjectDetector`) | erledigt |
 
 ## Einträge
 
@@ -31,7 +31,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** Wurde im Step-001 Coder-Commit eingeführt und im Review übersehen.
 - **Vorschlag:** Private Methode in `GetNamespaceTreeScanner.cs` entfernen und Aufruf in Zeile 329 auf `SymbolVisibilityResolver.ResolveVisibility(t)` umstellen.
 - **Auto-Fixable:** ja
-- **Status:** offen
+- **Status:** erledigt  # Behoben durch Konsolidierung auf SymbolVisibilityResolver (inkl. Accessibility-Überladung)
 
 ### TD-002 — Fragmentierte `TypeKind` & `IsRecord` String-Formatierungen über MCP-Tools [Priorität: mittel] [Auto-Fixable: nein]
 
@@ -45,7 +45,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** Eine Vereinheitlichung berührt mehrere Tools und deren Ausgabeverträge/Dokumentation (`Docs/agent-api.md`).
 - **Vorschlag:** Zentrale Helper-Klasse für Typ-Deskriptoren (z. B. `McpTypeKindFormatter` mit standardisierten Bezeichnungen für englische/deutsche Tool-Outputs) definieren und konsolidieren.
 - **Auto-Fixable:** nein
-- **Status:** offen
+- **Status:** erledigt  # Behoben durch SymbolKindClassifier.DescribeNamedTypeKind und DescribeSymbolKind
 
 ### TD-003 — Parallele Kind-Filter-Parser für MCP-Tool-Parameter (`kind`) [Priorität: niedrig] [Auto-Fixable: nein]
 
@@ -58,7 +58,7 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** Die Tools unterstützen leicht unterschiedliche Teilmengen (z. B. `find_symbol` unterstützt auch `"method"`/`"property"`, während `get_namespace_tree` nur Type-Level-Kinds filtert).
 - **Vorschlag:** Gemeinsamer `McpKindFilter`-Parser oder Flags-Enum, der Aliasse ("klasse"/"class", "methode"/"method") zentral normalisiert und gegen `ISymbol`/`ITypeSymbol` evaluiert.
 - **Auto-Fixable:** nein
-- **Status:** offen
+- **Status:** erledigt  # Behoben durch SymbolKindClassifier.MatchesTypeKind und MatchesSymbolKind
 
 ### TD-004 — Heuristik-Duplikation bei Test-Projekt-Erkennung (`ProjectTypeClassifier` vs. `TestProjectDetector`) [Priorität: mittel] [Auto-Fixable: nein]
 
@@ -70,4 +70,4 @@ Duplikation, Konsistenz) — siehe `../spec.md` §8.3/§9.
 - **Warum nicht sofort gefixt:** `ProjectTypeClassifier` läuft im MCP-Kontext; eine Konsolidierung erfordert das Abstimmen der Token-Mengen (z. B. `.TestKit`, `.FastTests`).
 - **Vorschlag:** `ProjectTypeClassifier` auf `TestProjectDetector` umstellen bzw. `TestProjectDetector` um fehlende projektspezifische Suffixe erweitern.
 - **Auto-Fixable:** nein
-- **Status:** offen
+- **Status:** erledigt  # Behoben durch Erweiterung von TestProjectDetector und Umstellung von ProjectTypeClassifier

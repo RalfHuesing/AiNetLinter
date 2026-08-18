@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Core;
@@ -14,11 +16,11 @@ public static class TestProjectDetector
     private static readonly string[] TestKeywords = ["xunit", "nunit", "testplatform", "unittesting"];
 
     private static readonly string[] DefaultTestProjectNameSuffixes =
-        ["Tests", "Test", "IntegrationTests", "Specs", "Spec"];
+        ["Tests", "Test", "IntegrationTests", "FastTests", "TestKit", "Specs", "Spec"];
 
     /// <summary>
     /// Prüft, ob ein Projekt ein Testprojekt ist.
-    /// Primär via Metadatenreferenzen, Fallback über Projektnamen-Suffixe.
+    /// Primär via Metadatenreferenzen, Fallback über Projektnamen-Suffixe und Dateipfade.
     /// </summary>
     /// <param name="project">Das zu prüfende Roslyn-Projekt.</param>
     /// <param name="testProjectNameSuffixes">
@@ -36,7 +38,21 @@ public static class TestProjectDetector
         }
 
         var suffixes = testProjectNameSuffixes ?? DefaultTestProjectNameSuffixes;
-        return HasTestProjectNameSuffix(project.Name, suffixes);
+        if (HasTestProjectNameSuffix(project.Name, suffixes))
+        {
+            return true;
+        }
+
+        if (project.FilePath is { } path)
+        {
+            var fileName = Path.GetFileName(path);
+            if (PathNormalizer.IsTestFile(fileName) || PathNormalizer.IsTestFile(path))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool HasTestProjectNameSuffix(string projectName, IReadOnlyList<string> suffixes)
@@ -44,7 +60,8 @@ public static class TestProjectDetector
         foreach (var suffix in suffixes)
         {
             if (projectName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
-                || projectName.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase))
+                || projectName.EndsWith("." + suffix, StringComparison.OrdinalIgnoreCase)
+                || projectName.Contains("." + suffix + ".", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

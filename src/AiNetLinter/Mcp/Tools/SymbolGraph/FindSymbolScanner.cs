@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -111,14 +112,6 @@ internal static class FindSymbolScanner
     private static IEnumerable<ISymbol> FilterByKind(IEnumerable<ISymbol> symbols, string? kind)
     {
         if (kind is null) return symbols;
-
-        return kind.ToLowerInvariant() switch
-        {
-            "class" or "klasse" => symbols.Where(s => s is ITypeSymbol { TypeKind: TypeKind.Class }),
-            "interface" => symbols.Where(s => s is ITypeSymbol { TypeKind: TypeKind.Interface }),
-            "method" or "methode" => symbols.Where(s => s.Kind == SymbolKind.Method),
-            "property" => symbols.Where(s => s.Kind == SymbolKind.Property),
-            _ => symbols,
-        };
+        return symbols.Where(s => SymbolKindClassifier.MatchesSymbolKind(s, kind));
     }
 }

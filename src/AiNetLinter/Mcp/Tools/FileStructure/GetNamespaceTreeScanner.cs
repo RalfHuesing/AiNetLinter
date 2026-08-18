@@ -17,16 +17,7 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetNamespaceTreeScanner
 {
-    private static readonly HashSet<string> ValidKinds = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "class", "klasse", "interface", "record", "struct", "enum", "all",
-    };
-
-    internal static bool IsValidKind(string? kind)
-    {
-        if (string.IsNullOrWhiteSpace(kind)) return true;
-        return ValidKinds.Contains(kind);
-    }
+    internal static bool IsValidKind(string? kind) => SymbolKindClassifier.IsValidTypeKind(kind);
 
     /// <summary>
     /// Stufe 1: Solution-Ueberblick ueber alle Projekte.
@@ -130,7 +121,7 @@ internal static class GetNamespaceTreeScanner
         INamespaceSymbol ns)
     {
         var allTypes = CollectSourceTypes(ns)
-            .Where(t => MatchesKindFilter(t, parameters.KindFilter))
+            .Where(t => SymbolKindClassifier.MatchesTypeKind(t, parameters.KindFilter))
             .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -145,7 +136,7 @@ internal static class GetNamespaceTreeScanner
                 ? PathNormalizer.ToRelative(parameters.SolutionDir, location.SourceTree.FilePath)
                 : string.Empty;
             var line = (location?.GetLineSpan().StartLinePosition.Line ?? 0) + 1;
-            var kindDesc = DescribeTypeKind(t);
+            var kindDesc = SymbolKindClassifier.DescribeNamedTypeKind(t, englishClass: false);
             var visibility = SymbolVisibilityResolver.ResolveVisibility(t);
             return new TypeNodeEntry(t.Name, kindDesc, filePath, line, visibility);
         }).ToList();
@@ -275,7 +266,7 @@ internal static class GetNamespaceTreeScanner
         foreach (var subNs in candidateNamespaces)
         {
             var directTypes = CollectSourceTypes(subNs)
-                .Where(t => MatchesKindFilter(t, parameters.KindFilter))
+                .Where(t => SymbolKindClassifier.MatchesTypeKind(t, parameters.KindFilter))
                 .ToList();
 
             var subTreeNodes = new List<NamespaceTreeNode>();
@@ -326,7 +317,7 @@ internal static class GetNamespaceTreeScanner
             ? PathNormalizer.ToRelative(solutionDir, location.SourceTree.FilePath)
             : string.Empty;
         var line = (location?.GetLineSpan().StartLinePosition.Line ?? 0) + 1;
-        return new TypeNodeEntry(t.Name, DescribeTypeKind(t), filePath, line, ResolveVisibility(t));
+        return new TypeNodeEntry(t.Name, SymbolKindClassifier.DescribeNamedTypeKind(t, englishClass: false), filePath, line, SymbolVisibilityResolver.ResolveVisibility(t));
     }
 
     private static bool HasAnySourceTypesInHierarchy(INamespaceSymbol ns)
@@ -390,54 +381,7 @@ internal static class GetNamespaceTreeScanner
         return false;
     }
 
-    private static bool MatchesKindFilter(INamedTypeSymbol type, string? kind)
-    {
-        if (string.IsNullOrWhiteSpace(kind) || kind.Equals("all", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
 
-        return kind.ToLowerInvariant() switch
-        {
-            "class" or "klasse" => type.TypeKind == TypeKind.Class && !type.IsRecord,
-            "interface" => type.TypeKind == TypeKind.Interface,
-            "record" => type.IsRecord,
-            "struct" => type.TypeKind == TypeKind.Struct && !type.IsRecord,
-            "enum" => type.TypeKind == TypeKind.Enum,
-            _ => true,
-        };
-    }
-
-    private static string DescribeTypeKind(INamedTypeSymbol namedType)
-    {
-        if (namedType.IsRecord)
-        {
-            return namedType.TypeKind == TypeKind.Struct ? "record struct" : "record";
-        }
-        return namedType.TypeKind switch
-        {
-            TypeKind.Class => "Klasse",
-            TypeKind.Struct => "struct",
-            TypeKind.Interface => "interface",
-            TypeKind.Enum => "enum",
-            TypeKind.Delegate => "delegate",
-            _ => namedType.TypeKind.ToString().ToLowerInvariant(),
-        };
-    }
-
-    private static string ResolveVisibility(ISymbol m)
-    {
-        return m.DeclaredAccessibility switch
-        {
-            Accessibility.Public => "public",
-            Accessibility.Private => "private",
-            Accessibility.Protected => "protected",
-            Accessibility.Internal => "internal",
-            Accessibility.ProtectedOrInternal => "protected internal",
-            Accessibility.ProtectedAndInternal => "private protected",
-            _ => "private",
-        };
-    }
 
     private static INamespaceSymbol? FindNamespace(INamespaceSymbol root, string? namespacePrefix)
     {

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -113,7 +114,7 @@ internal static class FindSymbolTool
     /// </summary>
     internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(ISymbol symbol, string outputRoot)
     {
-        var kindLabel = DescribeKind(symbol);
+        var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
@@ -125,15 +126,6 @@ internal static class FindSymbolTool
 
     private static string FormatEntry(SymbolLocationEntry entry) =>
         $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}";
-
-    private static string DescribeKind(ISymbol symbol)
-    {
-        if (symbol is ITypeSymbol { TypeKind: TypeKind.Class }) return "Klasse";
-        if (symbol is ITypeSymbol { TypeKind: TypeKind.Interface }) return "Interface";
-        if (symbol.Kind == SymbolKind.Method) return "Methode";
-        if (symbol.Kind == SymbolKind.Property) return "Property";
-        return symbol.Kind.ToString();
-    }
 
     /// <summary>
     /// Stellt einen

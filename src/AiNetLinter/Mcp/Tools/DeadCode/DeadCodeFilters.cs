@@ -1,5 +1,6 @@
 #nullable enable
 
+using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.DeadCode;
@@ -87,17 +88,6 @@ internal static class DeadCodeFilters
         };
     }
 
-    internal static string GetAccessibilityString(Accessibility accessibility)
-    {
-        return accessibility switch
-        {
-            Accessibility.Private => "private",
-            Accessibility.Internal => "internal",
-            Accessibility.Public => "public",
-            Accessibility.Protected => "protected",
-            Accessibility.ProtectedOrInternal => "protected internal",
-            Accessibility.ProtectedAndInternal => "private protected",
-            _ => "unknown"
-        };
-    }
+    internal static string GetAccessibilityString(Accessibility accessibility) =>
+        SymbolVisibilityResolver.ResolveVisibility(accessibility);
 }

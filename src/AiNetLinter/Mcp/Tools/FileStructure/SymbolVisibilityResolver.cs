@@ -9,9 +9,8 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class SymbolVisibilityResolver
 {
-    internal static string ResolveVisibility(ISymbol symbol)
-    {
-        return symbol.DeclaredAccessibility switch
+    internal static string ResolveVisibility(Accessibility accessibility) =>
+        accessibility switch
         {
             Accessibility.Public => "public",
             Accessibility.Private => "private",
@@ -21,5 +20,7 @@ internal static class SymbolVisibilityResolver
             Accessibility.ProtectedAndInternal => "private protected",
             _ => "private",
         };
-    }
+
+    internal static string ResolveVisibility(ISymbol symbol) =>
+        ResolveVisibility(symbol.DeclaredAccessibility);
 }
