@@ -94,6 +94,8 @@ internal static class McpServerCommand
     /// </summary>
     internal static McpObservabilityOptions ResolveObservabilityOptions(string? mcpLogPath, string? solutionPath)
     {
+        var serverVersion = McpServerOptionsFactory.GetServerVersion();
+
         if (mcpLogPath is null)
         {
             return new McpObservabilityOptions
@@ -101,6 +103,9 @@ internal static class McpServerCommand
                 Enabled = true,
                 EnableToolCallLogging = true,
                 EnableFeedbackTool = true,
+                EnableResponseLogging = true,
+                ServerName = "ainetlinter",
+                ServerVersion = serverVersion,
                 LogDirectory = null,
             };
         }
@@ -116,6 +121,9 @@ internal static class McpServerCommand
                 Enabled = false,
                 EnableToolCallLogging = false,
                 EnableFeedbackTool = false,
+                EnableResponseLogging = false,
+                ServerName = "ainetlinter",
+                ServerVersion = serverVersion,
                 LogDirectory = null,
             };
         }
@@ -127,6 +135,9 @@ internal static class McpServerCommand
                 Enabled = true,
                 EnableToolCallLogging = true,
                 EnableFeedbackTool = true,
+                EnableResponseLogging = true,
+                ServerName = "ainetlinter",
+                ServerVersion = serverVersion,
                 LogDirectory = null,
             };
         }
@@ -137,6 +148,9 @@ internal static class McpServerCommand
             Enabled = true,
             EnableToolCallLogging = true,
             EnableFeedbackTool = true,
+            EnableResponseLogging = true,
+            ServerName = "ainetlinter",
+            ServerVersion = serverVersion,
             LogDirectory = resolvedDir,
         };
     }

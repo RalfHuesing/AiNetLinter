@@ -1,10 +1,12 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ModelContextProtocol.Protocol;
+using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
@@ -18,9 +20,22 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// </summary>
 internal static class GetServerHealthTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? observabilityLogPath = null)
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        string? observabilityLogPath = null)
+    {
+        return ExecuteAsync(state, observabilityService: null, observabilityLogPath: observabilityLogPath);
+    }
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        IMcpObservabilityService? observabilityService,
+        string? observabilityLogPath = null)
     {
         if (state.LoadState == ServerLoadState.LoadFailed) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+
+        var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
+        var isEnabled = observabilityService is null || observabilityService.IsEnabled;
 
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter MCP-Server — Health");
@@ -31,10 +46,10 @@ internal static class GetServerHealthTool
         sb.AppendLine($"- Uptime: {FormatUptime(state.Uptime)}");
         sb.AppendLine($"- Solution-Refreshes seit Start: {state.RefreshCount}");
         sb.AppendLine();
-        sb.Append(DescribeObservability(observabilityLogPath));
+        sb.Append(DescribeObservability(isEnabled, effectiveLogPath));
 
         var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, observabilityLogPath)));
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, effectiveLogPath)));
     }
 
     /// <summary>
@@ -83,8 +98,13 @@ internal static class GetServerHealthTool
         return uptime.TotalMinutes >= 1 ? $"{(int)uptime.TotalMinutes}min {uptime.Seconds}s" : $"{uptime.Seconds}s";
     }
 
-    private static string DescribeObservability(string? logPath)
+    private static string DescribeObservability(bool isEnabled, string? logPath)
     {
+        if (!isEnabled)
+        {
+            return "Observability: deaktiviert.";
+        }
+
         if (string.IsNullOrWhiteSpace(logPath))
         {
             return "Observability: aktiv (RalfHuesing.Mcp.Observability, Tool-Call Logging & Feedback-Kanal).";

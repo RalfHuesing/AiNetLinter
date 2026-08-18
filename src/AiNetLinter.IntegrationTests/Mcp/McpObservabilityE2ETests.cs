@@ -91,6 +91,12 @@ public sealed class McpObservabilityE2ETests
                 {
                     foundToolCall = true;
                     Assert.Equal("ainetlinter", root.GetProperty("serverName").GetString());
+                    Assert.True(root.TryGetProperty("response", out var responseProp));
+                    Assert.False(string.IsNullOrEmpty(responseProp.GetString()));
+                    Assert.True(root.GetProperty("responseLength").GetInt32() > 0);
+                    Assert.True(root.GetProperty("responseLines").GetInt32() >= 1);
+                    Assert.False(root.GetProperty("responseTruncated").GetBoolean());
+                    Assert.Equal(0, root.GetProperty("nonTextContentBlocks").GetInt32());
                 }
                 else if (recordType == "feedback")
                 {

@@ -1,26 +1,31 @@
 #nullable enable
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
+using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Registriert die server-eigenen Wartungs-/Diagnose-Tools (<c>reload_config</c>,
-/// <c>get_server_health</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
-/// Tool-Collection. Eigene Registrar-Klasse statt Anhaengen an eine bestehende Gruppe, weil beide
-/// Tools semantisch den Server-Prozess selbst betreffen (Config-Reload, Health-Snapshot) statt die
+/// <c>get_server_health</c>, <c>report_observability_feedback</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
+/// Tool-Collection. Eigene Registrar-Klasse statt Anhaengen an eine bestehende Gruppe, weil diese
+/// Tools semantisch den Server-Prozess selbst betreffen (Config-Reload, Health-Snapshot, Feedback) statt die
 /// Solution/den Symbolgraph zu befragen — passt zu keiner der bestehenden Gruppen (Symbolgraph,
 /// Dateistruktur, Analyse, Symbol-Body).
 /// </summary>
 internal static class ServerMaintenanceToolRegistrations
 {
+    private static readonly IServiceProvider EmptyServiceProvider = new ServiceCollection().BuildServiceProvider();
+
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die beiden Wartungs-Tools hinzu. Tools erreichen den resident
+    /// Fuegt <paramref name="tools"/> die Wartungs-Tools hinzu. Tools erreichen den resident
     /// gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container (siehe
     /// <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
@@ -30,7 +35,7 @@ internal static class ServerMaintenanceToolRegistrations
         IServiceProvider? serviceProvider = null)
     {
         AddReloadConfig(tools, mcpState);
-        AddGetServerHealth(tools, mcpState);
+        AddGetServerHealth(tools, mcpState, serviceProvider);
         AddReportObservabilityFeedback(tools, serviceProvider);
     }
 
@@ -56,11 +61,13 @@ internal static class ServerMaintenanceToolRegistrations
 
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        McpCodeGraphServer mcpState,
+        IServiceProvider? serviceProvider)
     {
+        var obsService = serviceProvider?.GetService<IMcpObservabilityService>();
         tools.Add(McpServerTool.Create(
             (CancellationToken ct = default) =>
-                GetServerHealthTool.ExecuteAsync(mcpState),
+                GetServerHealthTool.ExecuteAsync(mcpState, obsService),
             new McpServerToolCreateOptions
             {
                 Name = "get_server_health",
@@ -77,22 +84,6 @@ internal static class ServerMaintenanceToolRegistrations
         McpServerPrimitiveCollection<McpServerTool> tools,
         IServiceProvider? serviceProvider)
     {
-        tools.Add(McpServerTool.Create(
-            (string feedbackType, string title, string description, string? relatedTool = null,
-                string severity = "medium", string? expectedBehavior = null, string? actualBehavior = null,
-                string? additionalContext = null, CancellationToken ct = default) =>
-                ReportObservabilityFeedbackTool.ExecuteAsync(serviceProvider, feedbackType, title, description, relatedTool, severity, expectedBehavior, actualBehavior, additionalContext, ct),
-            new McpServerToolCreateOptions
-            {
-                Name = "report_observability_feedback",
-                Description = ReportObservabilityFeedbackDescription,
-            }));
+        tools.AddFeedbackTool(serviceProvider ?? EmptyServiceProvider);
     }
-
-    private const string ReportObservabilityFeedbackDescription =
-        "Wann nutzen: Ein Problem, unerwartete Ausgaben, Falsch-Positive bei Lint-Regeln oder einen Feature-Wunsch " +
-        "zu diesem MCP-Server melden, um AiNetLinter kontinuierlich zu verbessern. feedbackType ('issue' | 'feature_request'), " +
-        "title (Kurztitel), description (ausfuehrliche Beschreibung), relatedTool (optional, Name des betroffenen Tools), " +
-        "severity (optional, 'low', 'medium', 'high', 'critical'), expectedBehavior (optional), actualBehavior (optional), " +
-        "additionalContext (optional).";
 }

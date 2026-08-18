@@ -440,7 +440,7 @@ ainetlinter --mcp-server --mcp-log off
 ```
 
 Format: JSONL-Dateien mit standardisierten Records:
-1. `recordType: "tool_call"`: Enthält `serverName`, `toolName`, `arguments`, `executionTimeMs`, `success`, `resultSummary` und Zeitstempel.
+1. `recordType: "tool_call"`: Enthält `serverName`, `serverVersion`, `processId`, `instanceId`, `toolName`, `arguments`, `durationMs`, `success`, `isErrorResult`, `errorMessage`, `response` (sanitisiertes Text-Ergebnis), `responseLength`, `responseLines`, `responseTruncated`, `nonTextContentBlocks` und Zeitstempel.
 2. `recordType: "feedback"`: Wird geschrieben, wenn ein LLM-Agent das Tool `report_observability_feedback` aufruft, um Fehler, False-Positives oder Feature-Requests zu melden.
 
 **Feedback-Tool (`report_observability_feedback`):**

@@ -103,4 +103,45 @@ public sealed class GetServerHealthToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Observability: aktiv (C:\\Custom\\Logs)", text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithObservabilityService_ReportsActiveWithLogPath()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+        var obsService = new FakeObservabilityService(isEnabled: true, logFilePath: "C:\\Logs\\AiNetLinter_123.jsonl");
+
+        var result = await GetServerHealthTool.ExecuteAsync(state, obsService);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Observability: aktiv (C:\\Logs\\AiNetLinter_123.jsonl)", text);
+
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<ServerHealthPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.NotNull(payload!.CallLog);
+        Assert.Equal("C:\\Logs\\AiNetLinter_123.jsonl", payload.CallLog!.LogPath);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithObservabilityServiceDisabled_ReportsDisabled()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+        var obsService = new FakeObservabilityService(isEnabled: false);
+
+        var result = await GetServerHealthTool.ExecuteAsync(state, obsService);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Observability: deaktiviert.", text);
+    }
+
+    private sealed class FakeObservabilityService(bool isEnabled, string? logFilePath = null) : RalfHuesing.Mcp.Observability.IMcpObservabilityService
+    {
+        public bool IsEnabled => isEnabled;
+        public string ServerName => "ainetlinter";
+        public string ServerVersion => "1.0.96";
+        public string? CurrentLogFilePath => logFilePath;
+        public int ProcessId => 12345;
+        public string InstanceId => "fake-instance-id";
+    }
 }

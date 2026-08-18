@@ -21,7 +21,7 @@ namespace AiNetLinter.FastTests.Mcp;
 /// <summary>
 /// Unit- und Integrationstests fuer die Anbindung von <see cref="RalfHuesing.Mcp.Observability"/>:
 /// verifiziert Tool-Registrierung von <c>report_observability_feedback</c>, automatisches
-/// Tool-Call-Logging aller Aufrufe und Speicherung im konfigurierten Log-Verzeichnis.
+/// Tool-Call-Logging (Request & Response) aller Aufrufe und Speicherung im konfigurierten Log-Verzeichnis.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpObservabilityIntegrationTests
@@ -48,11 +48,54 @@ public sealed class McpObservabilityIntegrationTests
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
+        Assert.True(options.EnableResponseLogging);
+        Assert.Equal(0, options.MaxResponseLength);
+        Assert.Null(options.ServerName);
+        Assert.Null(options.ServerVersion);
         Assert.Null(options.LogDirectory);
     }
 
     [Fact]
-    public async Task EndToEnd_ToolCallAndFeedback_WritesJsonlLogs()
+    public void McpObservabilityTools_AddFeedbackTool_IsIdempotent()
+    {
+        var tools = new McpServerPrimitiveCollection<McpServerTool>();
+        var sp = new ServiceCollection().BuildServiceProvider();
+
+        tools.AddFeedbackTool(sp);
+        Assert.Single(tools);
+        Assert.True(tools.TryGetPrimitive("report_observability_feedback", out var tool));
+        Assert.NotNull(tool);
+
+        // Zweiter Aufruf darf keine Exception werfen und keine Duplikate erzeugen
+        tools.AddFeedbackTool(sp);
+        Assert.Single(tools);
+    }
+
+    [Fact]
+    public void McpObservabilityService_IsRegisteredInDiContainer()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddMcpServer();
+        builder.WithObservability(new McpObservabilityOptions
+        {
+            Enabled = true,
+            ServerName = "ainetlinter",
+            ServerVersion = "1.0.96",
+        });
+
+        var sp = services.BuildServiceProvider();
+        var obsService = sp.GetService<IMcpObservabilityService>();
+
+        Assert.NotNull(obsService);
+        Assert.True(obsService.IsEnabled);
+        Assert.Equal("ainetlinter", obsService.ServerName);
+        Assert.Equal("1.0.96", obsService.ServerVersion);
+        Assert.True(obsService.ProcessId > 0);
+        Assert.False(string.IsNullOrEmpty(obsService.InstanceId));
+    }
+
+    [Fact]
+    public async Task EndToEnd_ToolCallAndFeedback_WritesJsonlLogsWithResponseContent()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "mcp-obs-e2e-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -79,6 +122,9 @@ public sealed class McpObservabilityIntegrationTests
                 Enabled = true,
                 EnableToolCallLogging = true,
                 EnableFeedbackTool = true,
+                EnableResponseLogging = true,
+                ServerName = "ainetlinter",
+                ServerVersion = "1.0.96",
                 LogDirectory = tempDir,
             };
             builder.WithObservability(obsOptions);
@@ -88,7 +134,7 @@ public sealed class McpObservabilityIntegrationTests
             serverOptions.ServerInfo = new Implementation
             {
                 Name = "ainetlinter",
-                Version = "1.0.95",
+                Version = "1.0.96",
             };
             serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(state, sp);
 
@@ -103,7 +149,7 @@ public sealed class McpObservabilityIntegrationTests
             Assert.Contains(tools, t => t.Name == "report_observability_feedback");
             Assert.Contains(tools, t => t.Name == "get_index_scope");
 
-            // 2. Reguläres Tool aufrufen (wird als tool_call geloggt)
+            // 2. Reguläres Tool aufrufen (wird als tool_call mit Request & Response geloggt)
             var indexResult = await client.CallToolAsync("get_index_scope", new Dictionary<string, object?>(), cancellationToken: cts.Token);
             Assert.NotNull(indexResult);
 
@@ -126,42 +172,7 @@ public sealed class McpObservabilityIntegrationTests
             else sp.Dispose();
 
             // 4. Log-Datei validieren
-            var logFiles = Directory.GetFiles(tempDir, "*.jsonl", SearchOption.AllDirectories);
-            Assert.Single(logFiles);
-
-            string[] lines;
-            using (var stream = new FileStream(logFiles[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var reader = new StreamReader(stream))
-            {
-                var content = await reader.ReadToEndAsync();
-                lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-            }
-            Assert.True(lines.Length >= 2);
-
-            var hasToolCall = false;
-            var hasFeedback = false;
-
-            foreach (var line in lines)
-            {
-                using var doc = JsonDocument.Parse(line);
-                var root = doc.RootElement;
-                var recordType = root.GetProperty("recordType").GetString();
-                if (recordType == "tool_call")
-                {
-                    hasToolCall = true;
-                    Assert.Equal("ainetlinter", root.GetProperty("serverName").GetString());
-                }
-                else if (recordType == "feedback")
-                {
-                    hasFeedback = true;
-                    Assert.Equal("issue", root.GetProperty("feedbackType").GetString());
-                    Assert.Equal("Falsch-Positiv bei Nullable-Check", root.GetProperty("title").GetString());
-                    Assert.Equal("get_violations", root.GetProperty("relatedTool").GetString());
-                }
-            }
-
-            Assert.True(hasToolCall, "Erwartet mindestens einen tool_call Record");
-            Assert.True(hasFeedback, "Erwartet einen feedback Record");
+            await ValidateLoggedRecordsAsync(tempDir);
         }
         finally
         {
@@ -170,5 +181,54 @@ public sealed class McpObservabilityIntegrationTests
                 try { Directory.Delete(tempDir, true); } catch { }
             }
         }
+    }
+
+    private static async Task ValidateLoggedRecordsAsync(string tempDir)
+    {
+        var logFiles = Directory.GetFiles(tempDir, "*.jsonl", SearchOption.AllDirectories);
+        Assert.Single(logFiles);
+
+        string[] lines;
+        using (var stream = new FileStream(logFiles[0], FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (var reader = new StreamReader(stream))
+        {
+            var content = await reader.ReadToEndAsync();
+            lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        }
+        Assert.True(lines.Length >= 2);
+
+        var hasToolCall = false;
+        var hasFeedback = false;
+
+        foreach (var line in lines)
+        {
+            using var doc = JsonDocument.Parse(line);
+            var root = doc.RootElement;
+            var recordType = root.GetProperty("recordType").GetString();
+            if (recordType == "tool_call")
+            {
+                hasToolCall = true;
+                Assert.Equal("ainetlinter", root.GetProperty("serverName").GetString());
+                Assert.Equal("1.0.96", root.GetProperty("serverVersion").GetString());
+
+                // Response-Logging Pruefung (Neu in 1.0.1)
+                Assert.True(root.TryGetProperty("response", out var responseProp));
+                Assert.False(string.IsNullOrEmpty(responseProp.GetString()));
+                Assert.True(root.GetProperty("responseLength").GetInt32() > 0);
+                Assert.True(root.GetProperty("responseLines").GetInt32() >= 1);
+                Assert.False(root.GetProperty("responseTruncated").GetBoolean());
+                Assert.Equal(0, root.GetProperty("nonTextContentBlocks").GetInt32());
+            }
+            else if (recordType == "feedback")
+            {
+                hasFeedback = true;
+                Assert.Equal("issue", root.GetProperty("feedbackType").GetString());
+                Assert.Equal("Falsch-Positiv bei Nullable-Check", root.GetProperty("title").GetString());
+                Assert.Equal("get_violations", root.GetProperty("relatedTool").GetString());
+            }
+        }
+
+        Assert.True(hasToolCall, "Erwartet mindestens einen tool_call Record");
+        Assert.True(hasFeedback, "Erwartet einen feedback Record");
     }
 }

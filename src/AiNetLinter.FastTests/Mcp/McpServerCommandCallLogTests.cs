@@ -27,6 +27,9 @@ public sealed class McpServerCommandCallLogTests
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
+        Assert.True(options.EnableResponseLogging);
+        Assert.Equal("ainetlinter", options.ServerName);
+        Assert.NotNull(options.ServerVersion);
         Assert.Null(options.LogDirectory);
     }
 
@@ -45,6 +48,8 @@ public sealed class McpServerCommandCallLogTests
         Assert.False(options.Enabled);
         Assert.False(options.EnableToolCallLogging);
         Assert.False(options.EnableFeedbackTool);
+        Assert.False(options.EnableResponseLogging);
+        Assert.Equal("ainetlinter", options.ServerName);
     }
 
     [Fact]
@@ -57,6 +62,8 @@ public sealed class McpServerCommandCallLogTests
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
+        Assert.True(options.EnableResponseLogging);
+        Assert.Equal("ainetlinter", options.ServerName);
         Assert.Null(options.LogDirectory);
     }
 
@@ -72,6 +79,8 @@ public sealed class McpServerCommandCallLogTests
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
+        Assert.True(options.EnableResponseLogging);
+        Assert.Equal("ainetlinter", options.ServerName);
         var expected = Path.Combine(solutionDir, ".mcp-log");
         Assert.Equal(expected, options.LogDirectory);
     }
@@ -87,6 +96,8 @@ public sealed class McpServerCommandCallLogTests
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
+        Assert.True(options.EnableResponseLogging);
+        Assert.Equal("ainetlinter", options.ServerName);
         Assert.Equal(tempDir, options.LogDirectory);
     }
 
