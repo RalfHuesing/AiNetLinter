@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: 01-namespace-tree
 started_at: 2026-08-18T23:30:00+02:00
-last_updated: 2026-08-18T23:45:00+02:00
+last_updated: 2026-08-19T00:10:00+02:00
 rules_dir: .agents/rules
 total_steps: 1
 current_step: step-001
@@ -19,13 +19,13 @@ current_step: step-001
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-18T23:30:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-18T23:45:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-19T00:10:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | open | Core Models, ProjectTypeClassifier & GetNamespaceTreeScanner implementieren | - | - | - | - |
+| step-001 | EPIC-01 | done | Core Models, ProjectTypeClassifier & GetNamespaceTreeScanner implementieren | - | 79cb319 | approved | cdf46a2 |
 
 ## Config (optional)
 
@@ -58,4 +58,5 @@ model_kritiker:
   sind reine Beobachtung, kein Steuerungssignal (siehe `../spec.md` §9).
   Auch `auto_fixable: ja`-Einträge lösen nichts eigenständig aus, sie
   werden nur an ohnehin laufende Steps angehängt.
+
 

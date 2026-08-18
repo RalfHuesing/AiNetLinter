@@ -29,7 +29,8 @@ Step-Modus des Planers, siehe `spec.md` §7.2.
 
 ## Epics
 
-- [ ] EPIC-01: Core Scanner & Models (`GetNamespaceTreeScanner`) — Roslyn-basierte Extraktion für 3 Zoom-Stufen (Projekte, Namespaces, Typen) inkl. Filterung (Source-Only, Compiler-Generated) und Truncation. (Bezug: `konzept.md` §Scope, Muss-Haben, §Technische Umsetzung)
+- [x] EPIC-01: Core Scanner & Models (`GetNamespaceTreeScanner`) — Roslyn-basierte Extraktion für 3 Zoom-Stufen (Projekte, Namespaces, Typen) inkl. Filterung (Source-Only, Compiler-Generated) und Truncation. (→ step-001)
 - [ ] EPIC-02: Tool-Registrierung & MCP-Integration (`get_namespace_tree`) — Registrierung in `FileStructureToolRegistrations`, `OverviewResourceRegistration`, `ServerInstructions` und Verifikation via `McpServerOptionsFactory`. (Bezug: `konzept.md` §Scope, Muss-Haben, §Edge Cases)
 - [ ] EPIC-03: Umfassende FastTests & IntegrationTests — Testabdeckung in `AiNetLinter.FastTests` (>15 Tests für Zoom-Stufen, Filter, Truncation, Errors) und IntegrationTest-Verifikation. (Bezug: `konzept.md` §Definition of Done #11-13)
 - [ ] EPIC-04: Dokumentation, Backlog & Roadmap-Synchronisation — Aktualisierung von `Docs/configuration.md`, `Docs/integration.md`, `Docs/ROADMAP.md`, `README.md`, `tasks/features/00-uebersicht.md` und `tasks/features/01-namespace-tree.md`. (Bezug: `konzept.md` §Definition of Done #14-15)
+
