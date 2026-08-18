@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 01-namespace-tree
 started_at: 2026-08-18T23:30:00+02:00
-last_updated: 2026-08-19T00:40:00+02:00
+last_updated: 2026-08-19T00:45:00+02:00
 rules_dir: .agents/rules
-total_steps: 2
-current_step: step-002
+total_steps: 3
+current_step: step-003
 ---
 
 # Task State: 01-namespace-tree
@@ -13,13 +13,13 @@ current_step: step-002
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-002`
+- **Aktueller Schritt:** `step-003`
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-18T23:30:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-19T00:40:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-19T00:45:00+02:00
 
 ## Steps
 
@@ -27,6 +27,7 @@ current_step: step-002
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Core Models, ProjectTypeClassifier & GetNamespaceTreeScanner implementieren | - | 79cb319 | approved | cdf46a2 |
 | step-002 | EPIC-02 | done | GetNamespaceTreeTool registrieren, MCP-Optionen & Server-Instructions synchronisieren | - | ac42e1c | approved | 933be51 |
+| step-003 | EPIC-03 | open | Umfassende FastTests, IntegrationTests & Dogfood-Tests für get_namespace_tree | - | - | - | - |
 
 ## Config (optional)
 
@@ -59,6 +60,7 @@ model_kritiker:
   sind reine Beobachtung, kein Steuerungssignal (siehe `../spec.md` §9).
   Auch `auto_fixable: ja`-Einträge lösen nichts eigenständig aus, sie
   werden nur an ohnehin laufende Steps angehängt.
+
 
 
 
