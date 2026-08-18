@@ -24,8 +24,10 @@ Priorisierte To-Dos mit eigenständigen Detail-Konzepten:
 
 1. [02-metrics-lookup.md](02-metrics-lookup.md) — **One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)**
    * Bündelt CC, CogC, LOC, Parameter-Anzahl und AI-Context-Footprint für ein Symbol in einem schnellen Call.
-3. [03-similar-names.md](03-similar-names.md) — **Naming-Drift-Erkennung (`similar_names`)**
-   * Erkennt inkonsistente Benennungsfamilien (z. B. `UserDto`, `UserData`, `UserModel`) rein lexikalisch über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
+2. [03-similar-names.md](03-similar-names.md) — **Naming-Drift & Semantische Namensfamilien (`similar_names`)**
+   * Erkennt inkonsistente Typ-Familien (`UserDto`, `UserData`) und Methoden-Drift (`GetTypeKindDescription` vs `DescribeTypeKind`) rein lexikalisch und signatur-basiert über den Roslyn-Symbolgraphen (Schicht 3 der Drift-Audit-Initiative).
+3. [08-scattered-switches.md](08-scattered-switches.md) — **Semantische Switch-Clustering & Linter-Regel (`find_scattered_switches` / `AvoidScatteredEnumSwitches`)** *(P1 - Höchster Hebel gegen Typ-4-Drift)*
+   * Findet verstreute Switch-Kaskaden über dieselben Enum-/Domain-Typen und schützt die Codebase vor semantischer Duplikation (Schicht 4 der Drift-Audit-Initiative).
 4. [04-test-context.md](04-test-context.md) — **Test-Coverage-Awareness (`get_test_context`)**
    * Exponiert den bestehenden `TestCoverageResolver` als MCP-Tool, um vor Refactorings sofort die zugehörigen Unit-/Integration-Tests zu identifizieren.
 5. [05-feature-context.md](05-feature-context.md) — **Composite One-Shot-Exploration (`get_feature_context`)**
