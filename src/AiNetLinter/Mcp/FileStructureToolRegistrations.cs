@@ -29,11 +29,41 @@ internal static class FileStructureToolRegistrations
         McpServerPrimitiveCollection<McpServerTool> tools,
         McpCodeGraphServer mcpState)
     {
+        AddGetNamespaceTree(tools, mcpState);
         AddGetFileSkeleton(tools, mcpState);
         AddGetClassStructure(tools, mcpState);
         AddGetIndexScope(tools, mcpState);
         AddGetHotspots(tools, mcpState);
     }
+
+    private static void AddGetNamespaceTree(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState)
+    {
+        tools.Add(McpServerTool.Create(
+            (string? project = null, string? namespacePrefix = null,
+                int depth = GetNamespaceTreeTool.DefaultDepth,
+                bool includeTypes = true,
+                string? kind = "all",
+                int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
+                CancellationToken ct = default) =>
+            {
+                var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
+                return GetNamespaceTreeTool.ExecuteAsync(mcpState, input, ct);
+            },
+            new McpServerToolCreateOptions
+            {
+                Name = "get_namespace_tree",
+                Description = GetNamespaceTreeDescription,
+            }));
+    }
+
+    private static readonly string GetNamespaceTreeDescription =
+        "Wann nutzen: hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte " +
+        "-> Namespaces -> Typen) nach dem Progressive-Disclosure-Prinzip. Ohne Parameter: Projekt-" +
+        "Uebersicht. project: Namespaces eines Projekts. namespacePrefix: Einstiegspunkt fuer " +
+        "Drilldown. depth: 1-3 Namespace-Ebenen. includeTypes: Typen ausgeben oder nur Sub-Namespaces. " +
+        "kind: class/interface/record/struct/enum/all. maxResults: Obergrenze (Default 50, Cap 200).";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -34,6 +34,7 @@ internal static class ServerInstructions
         "- dependency_graph: Liefert Datei-/Typ-Abhaengigkeiten einer Datei oder eines Typs " +
         "(eingehend/ausgehend/beides, echte SemanticModel-Typreferenzen statt using-Direktiven), " +
         "optional transitiv (depth).\n" +
+        "- get_namespace_tree: Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen).\n" +
         "- get_file_skeleton: Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) " +
         "einer C#-Datei.\n" +
         "- get_class_structure: Liefert eine tabellarische Member- und Zeilen-Uebersicht eines C#-Typs.\n" +
@@ -65,7 +66,7 @@ internal static class ServerInstructions
         "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
         "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
-        "get_type_hierarchy, dependency_graph, get_file_skeleton, get_class_structure, get_violations, safeguard, " +
+        "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, get_violations, safeguard, " +
         "pattern_detect, find_magic_values, find_dead_code, get_symbol_body und find_duplicates " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
@@ -80,7 +81,7 @@ internal static class ServerInstructions
         "sind weitere Tool-Calls mit angepassten Parametern der richtige naechste Schritt, " +
         "nicht Read/Grep.\n\n" +
         "Empfohlene Workflows:\n" +
-        "- Code erkunden: get_index_scope -> metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body\n" +
+        "- Code erkunden: get_index_scope -> get_namespace_tree / metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body\n" +
         "- Refactoring & Impact: find_symbol -> find_references / get_call_tree -> get_impact / dependency_graph\n" +
         "- Quality-Gate vor Commit: safeguard -> get_violations -> find_magic_values / find_duplicates\n\n" +
         "isError-Policy (Details: src/AiNetLinter/Mcp/IsErrorPolicy.md): isError=true kommt " +

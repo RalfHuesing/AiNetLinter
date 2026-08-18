@@ -51,6 +51,7 @@ internal static class OverviewResourceRegistration
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
         ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status."),
         (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
+        ("get_namespace_tree", "Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen)."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
     ];
 

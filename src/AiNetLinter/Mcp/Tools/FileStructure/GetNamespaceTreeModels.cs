@@ -34,8 +34,16 @@ public sealed record NamespaceTreeNode(
     IReadOnlyList<NamespaceTreeNode>? SubNamespaces = null);
 
 /// <summary>
-/// Parameter-Objekt für <see cref="GetNamespaceTreeScanner.ScanProjectNamespacesAsync"/>.
+/// Eingabeargumente für <see cref="GetNamespaceTreeTool.ExecuteAsync"/>.
 /// </summary>
+public sealed record GetNamespaceTreeInput(
+    string? Project = null,
+    string? NamespacePrefix = null,
+    int Depth = 1,
+    bool IncludeTypes = true,
+    string? Kind = "all",
+    int MaxResults = 50);
+
 public sealed record NamespaceTreeScanParameters(
     Project Project,
     string? NamespacePrefix,
