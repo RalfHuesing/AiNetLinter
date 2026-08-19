@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -81,29 +81,36 @@ public sealed class Foo
     [Fact]
     public async Task ScanAsync_IncludeTestsFalse_ExcludesTestPaths()
     {
-        // includeTests=false (Default): Test-Pfade mit /Tests/ im Pfad werden ausgefiltert.
-        // Nur das Production-File (ohne /Tests/) liefert einen Fund.
+        // includeTests=false (Default): Test-Pfade (z.B. /Tests/, .FastTests/, .IntegrationTests/) werden ausgefiltert.
+        // Nur das Production-File liefert einen Fund.
         var productionSource = @"
 namespace Test;
 public sealed class Foo
 {
     public const string Url = ""https://api.example.com"";
 }";
-        var testSource = @"
+        var testSource1 = @"
 namespace Test;
 public sealed class Bar
 {
     public const string Url = ""https://api.test.com"";
 }";
+        var testSource2 = @"
+namespace Test;
+public sealed class Baz
+{
+    public const string Url = ""https://api.integration.com"";
+}";
         using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
             ("src/Production/Foo.cs", productionSource),
-            ("tests/FastTests/Bar.cs", testSource));
+            ("src/AiNetLinter.FastTests/BarTests.cs", testSource1),
+            ("src/AiNetLinter.IntegrationTests/BazTests.cs", testSource2));
 
         var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: false));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("https://api.example.com", entry.Value);
-        Assert.DoesNotContain("/Tests/", entry.FilePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("src/Production/Foo.cs", entry.FilePath);
     }
 
     [Fact]

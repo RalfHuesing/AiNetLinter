@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -134,7 +135,7 @@ internal static partial class FindMagicValuesScanner
         var reasons = new List<string>();
         if (!string.IsNullOrWhiteSpace(scopeFilter)) reasons.Add($"Scope-Filter '{scopeFilter}'");
         if (changedOnly) reasons.Add("changedOnly aktiv (kein Git-Diff oder keine geaenderten Dateien)");
-        if (!includeTests) reasons.Add("Test-Pfade ausgefiltert (/Tests/, /FastTests/)");
+        if (!includeTests) reasons.Add("Test-Pfade ausgefiltert");
         var reasonText = reasons.Count == 0 ? "keine passenden Dateien" : string.Join(" + ", reasons);
         return $"Keine Dateien im Scope ({reasonText}) — Filter pruefen.";
     }
@@ -270,12 +271,10 @@ internal static partial class FindMagicValuesScanner
         return true;
     }
 
-    /// <summary>Erkennt Test-Pfade per Substring-Match auf "/Tests/" oder "/FastTests/"
-    /// (forward-slash normalisiert).</summary>
+    /// <summary>Erkennt Test-Pfade und Test-Dateien (delegiert an <see cref="PathNormalizer.IsTestFile"/>).</summary>
     private static bool LooksLikeTestPath(string path)
     {
-        return path.Contains("/Tests/", StringComparison.OrdinalIgnoreCase)
-            || path.Contains("/FastTests/", StringComparison.OrdinalIgnoreCase);
+        return PathNormalizer.IsTestFile(path);
     }
 
     private static IReadOnlyList<GroupedMagicValue> AggregateAndFilter(
