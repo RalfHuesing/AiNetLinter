@@ -4,8 +4,8 @@ task: markdown-builder
 started_at: 2026-08-19
 last_updated: 2026-08-19
 rules_dir: .agents/rules
-total_steps: 2
-current_step: step-002
+total_steps: 3
+current_step: step-003
 ---
 
 # Task State: markdown-builder
@@ -13,9 +13,9 @@ current_step: step-002
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 3 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-002` (done — EPIC-01 abgeschlossen)
+- **Aktueller Schritt:** `step-003` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-19
@@ -27,6 +27,7 @@ current_step: step-002
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | fc603681 | step-001/step-review.md: issues | - |
 | step-002 | EPIC-01 | done | MarkdownTableBuilder zeilenweise API + EPIC-01 DoD präzisieren | step-001 | b1a39ab1 | step-002/step-review.md: approved | - |
+| step-003 | EPIC-02 | in_progress | EPIC-02 Welle 1 — HotspotSectionFormatter löschen + ListRulesCommand + GetSymbolBodyTool | - | - | - | - |
 |------|------|--------|-------|----------|-------|----------|--------|
 
 ## Config (optional)
