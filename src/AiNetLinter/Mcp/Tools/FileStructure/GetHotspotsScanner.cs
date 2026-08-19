@@ -17,10 +17,11 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Liefert dieselbe
 /// Kennzahl wie <see cref="AiNetLinter.Maps.HotspotMapBuilder"/> (CLI-Map-Typ <c>--map hotspots</c>),
 /// aber gegen die resident gehaltene <see cref="Solution"/> statt eines Einmal-Filesystem-Scans, damit
-/// z. B. Test-Fixtures im selben Verzeichnisbaum nicht faelschlich mitgezaehlt werden 
+/// z. B. Test-Fixtures im selben Verzeichnisbaum nicht faelschlich mitgezaehlt werden
 /// JIT-Kontext). Die zwei Schwellwert-Konstanten sind bewusst aus <see cref="AiNetLinter.Maps.HotspotMapBuilder"/>
-/// dupliziert (beide Klassen bleiben so unabhaengig voneinander instanziierbar); die reine
-/// Tabellen-Formatierung teilen sich beide ueber <see cref="AiNetLinter.Output.HotspotSectionFormatter"/>.
+/// dupliziert (beide Klassen bleiben so unabhaengig voneinander instanziierbar); die Tabellen-Formatierung
+/// lebt jeweils privat in <see cref="AiNetLinter.Maps.HotspotMapBuilder"/> und hier (Schicht-Trennung:
+/// <c>Maps →</c> darf nicht <c>Mcp.Tools</c> referenzieren, also kein gemeinsamer Helper).
 /// </summary>
 internal static class GetHotspotsScanner
 {
@@ -105,8 +106,8 @@ internal static class GetHotspotsScanner
         sb.AppendLine($"Gescannt: {files.Count} .cs-Dateien | MaxLineCount: {maxLineCount}{scopeSuffix}");
         sb.AppendLine();
 
-        HotspotSectionFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", critical.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
-        HotspotSectionFormatter.AppendSection(sb, "Warnungs-Dateien (>=80% des Limits)", warning.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
+        AppendHotspotSection(sb, "Kritische Dateien (>=95% des Limits)", critical, maxLineCount);
+        AppendHotspotSection(sb, "Warnungs-Dateien (>=80% des Limits)", warning, maxLineCount);
 
         if (critical.Count == 0 && warning.Count == 0)
         {
@@ -121,6 +122,34 @@ internal static class GetHotspotsScanner
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    private static void AppendHotspotSection(StringBuilder sb, string heading, IReadOnlyList<HotspotFileInfo> files, int maxLineCount) // ainetlinter-disable DuplicateCode — Schicht-Trennung Maps → Mcp.Tools verbietet gemeinsamen Helper
+    {
+        var mb = new MarkdownBuilder();
+        mb.Heading(2, heading).BlankLine();
+        if (files.Count == 0)
+        {
+            mb.Line("Keine.");
+        }
+        else
+        {
+            mb.Table(t =>
+            {
+                t.AddColumn("Datei")
+                 .AddColumn("Zeilen", ColumnAlign.Right)
+                 .AddColumn("Auslastung", ColumnAlign.Right)
+                 .AddColumn("Verbleibend", ColumnAlign.Right);
+                foreach (var f in files.OrderByDescending(x => x.Lines).ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
+                {
+                    var pct = (double)f.Lines / maxLineCount * 100;
+                    var remaining = maxLineCount - f.Lines;
+                    t.AddRow(f.RelativePath, f.Lines, $"{pct:F0} %", $"{remaining} Zeilen");
+                }
+            });
+        }
+        mb.AppendTo(sb);
+        sb.AppendLine();
     }
 
     private sealed record HotspotFileInfo(string RelativePath, int Lines);

@@ -57,11 +57,16 @@ internal static class GetSymbolBodyTool
             var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
             var isTruncated = body.Contains(TruncationMarker, StringComparison.Ordinal);
 
-            var markdown = $"### {symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`\n\n" +
-                           (idSuffix is null ? "" : $"id: `{idSuffix}`\n\n") +
-                           "```csharp\n" +
-                           body +
-                           "\n```";
+            var mb = new MarkdownBuilder();
+            mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
+            mb.BlankLine();
+            if (idSuffix is not null)
+            {
+                mb.Line($"id: `{idSuffix}`");
+                mb.BlankLine();
+            }
+            mb.CodeBlock("csharp", body);
+            var markdown = mb.Build().TrimEnd();
 
             // Sufficiency-Hinweis nur fuer den vollstaendigen Body — ein per maxBodyLines
             // gekappter Body traegt bereits seinen eigenen "truncated, maxBodyLines erhoehen"-

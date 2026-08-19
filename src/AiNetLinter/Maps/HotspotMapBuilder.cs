@@ -42,8 +42,8 @@ internal static class HotspotMapBuilder
         sb.AppendLine($"Gescannt: {files.Count} .cs-Dateien | MaxLineCount: {maxLineCount} | Pfad: {root.Replace('\\', '/')}");
         sb.AppendLine();
 
-        HotspotSectionFormatter.AppendSection(sb, "🔴 Kritische Dateien (>95% des Limits)", critical.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
-        HotspotSectionFormatter.AppendSection(sb, "⚠ Warnungs-Dateien (>80% des Limits)", warning.Select(f => (f.RelativePath, f.Lines)).ToList(), maxLineCount);
+        AppendHotspotSection(sb, "🔴 Kritische Dateien (>95% des Limits)", critical, maxLineCount);
+        AppendHotspotSection(sb, "⚠ Warnungs-Dateien (>80% des Limits)", warning, maxLineCount);
 
         if (critical.Count == 0 && warning.Count == 0)
         {
@@ -82,6 +82,34 @@ internal static class HotspotMapBuilder
             .OrderByDescending(f => f.Lines)
             .ThenBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static void AppendHotspotSection(StringBuilder sb, string heading, IReadOnlyList<StructureFileInfo> files, int maxLineCount)
+    {
+        var mb = new MarkdownBuilder();
+        mb.Heading(2, heading).BlankLine();
+        if (files.Count == 0)
+        {
+            mb.Line("Keine.");
+        }
+        else
+        {
+            mb.Table(t =>
+            {
+                t.AddColumn("Datei")
+                 .AddColumn("Zeilen", ColumnAlign.Right)
+                 .AddColumn("Auslastung", ColumnAlign.Right)
+                 .AddColumn("Verbleibend", ColumnAlign.Right);
+                foreach (var f in files.OrderByDescending(x => x.Lines).ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
+                {
+                    var pct = (double)f.Lines / maxLineCount * 100;
+                    var remaining = maxLineCount - f.Lines;
+                    t.AddRow(f.RelativePath, f.Lines, $"{pct:F0} %", $"{remaining} Zeilen");
+                }
+            });
+        }
+        mb.AppendTo(sb);
+        sb.AppendLine();
     }
 
 }

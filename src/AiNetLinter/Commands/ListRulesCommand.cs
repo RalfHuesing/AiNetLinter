@@ -19,15 +19,21 @@ internal static class ListRulesCommand
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter — Regeluebersicht");
         sb.AppendLine();
-        sb.AppendLine("| RuleId | Bezeichnung | Intent | Severity | Auto-Fix |");
-        sb.AppendLine("|:---|:---|:---|:---|:---|");
+
+        var table = new MarkdownTableBuilder()
+            .AddColumn("RuleId")
+            .AddColumn("Bezeichnung")
+            .AddColumn("Intent")
+            .AddColumn("Severity")
+            .AddColumn("Auto-Fix");
 
         foreach (var rule in RuleRegistry.All)
         {
             var autoFix = rule.HasAutoFix ? "ja (--fix)" : "-";
-            sb.AppendLine($"| {rule.RuleId} | {rule.DisplayName} | {rule.Intent} | {rule.Severity} | {autoFix} |");
+            table.AddRow(rule.RuleId, rule.DisplayName, rule.Intent, rule.Severity, autoFix);
         }
 
+        table.AppendTo(sb);
         c.WriteLine(sb.ToString().TrimEnd());
         return 0;
     }
