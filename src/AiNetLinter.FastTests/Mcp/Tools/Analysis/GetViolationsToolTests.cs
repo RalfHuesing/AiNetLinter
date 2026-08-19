@@ -256,6 +256,34 @@ public sealed class GetViolationsToolTests
     }
 
     [Fact]
+    public void FormatReport_DirectoryLevelViolation_IsNotDropped()
+    {
+        var fileToProject = new Dictionary<string, string>
+        {
+            [@"C:\Proj\src\Mini\Foo.cs"] = "Mini",
+        };
+
+        var dirViolation = new RuleViolation
+        {
+            FilePath = @"C:\Proj\src\Mini\Components",
+            LineNumber = 0,
+            RuleName = "MaxDirectoryChildren",
+            Details = "Directory has 35 children (limit 30)",
+            Guidance = "Reduce directory children",
+        };
+
+        var text = GetViolationsScanner.FormatReport(
+            solutionDir: @"C:\Proj",
+            fileToProject: fileToProject,
+            violations: new[] { dirViolation },
+            scopeFilter: null,
+            usedDefaultConfig: false);
+
+        Assert.Contains("MaxDirectoryChildren", text, StringComparison.Ordinal);
+        Assert.Contains("src/Mini/Components", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_IncludeSnippetTrue_AppendsCodeSnippetToTextAndStructuredContent()
     {
         var state = _fixture.CreateServer();

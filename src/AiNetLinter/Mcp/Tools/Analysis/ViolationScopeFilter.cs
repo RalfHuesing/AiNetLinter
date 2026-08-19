@@ -67,8 +67,11 @@ internal static class ViolationScopeFilter
         IReadOnlyCollection<RuleViolation> violations, string? scopeFilter)
     {
         return violations
-            .Where(v => LookupProjectName(fileToProject, v.FilePath) is { } projectName
-                        && MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter))
+            .Where(v =>
+            {
+                var projectName = LookupProjectName(fileToProject, v.FilePath) ?? string.Empty;
+                return MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter);
+            })
             .OrderBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.LineNumber)
             .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
