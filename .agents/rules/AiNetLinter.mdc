@@ -16,11 +16,11 @@ Auto-generiert durch AiNetLinter 1.0.105 aus `rules.json`. Neuen Produktionscode
 
 ## Grenzwerte (Produktion)
 | Regel | Limit | Praxis |
-| :--- | :---: | :--- |
+|:---|:---:|:---|
 | `MaxLineCount` | **500** | Datei splitten wenn sie wächst. |
 | `MaxMethodLineCount` | **60** | Eine Aufgabe pro Methode; Rest extrahieren. |
 | `MaxMethodParameterCount` | **4** | Ab Überschreitung: `record` als Parameter-Object. |
-| `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe). |
+| `MaxCyclomaticComplexity` | **12** | Weniger `if`/`switch`/`&&`/`\|\|` pro Methode (McCabe). |
 | `MaxCognitiveComplexity` | **15** | Weniger Verschachtelung; Early Return bevorzugen (kognitiv). |
 | `MaxInheritanceDepth` | **3** | Komposition vor Vererbung. |
 | `MaxMethodOverloads` | **5** | Methoden mit eindeutigen Namen bevorzugen. |
@@ -46,7 +46,7 @@ Auto-generiert durch AiNetLinter 1.0.105 aus `rules.json`. Neuen Produktionscode
 Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:
 
 | Regel | Bedingung | Effektives Limit | Severity | Grund |
-|:--|:--|:--|:--|:--|
+|:---|:---|:---|:---|:---|
 | `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 AND CognitiveComplexity ≤ 5 | **150** | `warning` | Initialisierungs- und Builder-Methoden sind semantisch flach. LOC bei CC≤3 ist nicht mit Fehleranfälligkeit korreliert (Palomba et al., 2018). Über 150 Zeilen: sichtbar als warning, kein Build-Fehler. |
 
 ## agent-resilience
