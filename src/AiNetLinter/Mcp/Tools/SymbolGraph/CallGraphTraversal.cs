@@ -25,7 +25,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// ohne die bestehende flache Aggregation fuer <c>find_references</c>/<c>get_impact</c> zu
 /// veraendern.
 /// </summary>
-internal static partial class CallGraphTraversal
+internal static class CallGraphTraversal
 {
     internal const int MaxRecursionDepth = 3;
     internal const int MaxRecursionNodes = 200;
@@ -363,7 +363,7 @@ internal static partial class CallGraphTraversal
         state.Enqueue(child, nextLevel);
     }
 
-    private static string FormatSymbolName(ISymbol symbol, CallTreeDirection direction = CallTreeDirection.Incoming)
+    internal static string FormatSymbolName(ISymbol symbol, CallTreeDirection direction = CallTreeDirection.Incoming)
     {
         // Lambdas/anonyme Methoden (z. B. Aufrufer innerhalb Task.Run(() => ...)) haben ein leeres
         // ISymbol.Name — ohne Sonderbehandlung entsteht ein nichtssagendes "Klasse." Label. Statt
@@ -401,7 +401,7 @@ internal static partial class CallGraphTraversal
             : $"{path}:{line}";
     }
 
-    private static string FormatRootDisplay(ISymbol seedSymbol, Solution solution)
+    internal static string FormatRootDisplay(ISymbol seedSymbol, Solution solution)
     {
         var declaringLocation = seedSymbol.Locations.FirstOrDefault(l => l.IsInSource);
         if (declaringLocation is null) return seedSymbol.ToDisplayString();

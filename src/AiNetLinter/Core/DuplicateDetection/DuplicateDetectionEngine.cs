@@ -36,7 +36,7 @@ namespace AiNetLinter.Core.DuplicateDetection;
 /// <c>RuleRegistry.Architecture.cs</c>/<c>RuleRegistry.General.cs</c>), damit diese
 /// Verhaltens-Datei nicht ueber <c>MaxLineCount</c> waechst.
 /// </summary>
-internal static partial class DuplicateDetectionEngine
+internal static class DuplicateDetectionEngine
 {
     /// <summary>
     /// Obergrenze fuer die Anzahl Methoden, die ein einzelnes N-Gram im Inverted Index zur
@@ -58,7 +58,7 @@ internal static partial class DuplicateDetectionEngine
 
     // ── 1) Fingerprint-Sammlung ──────────────────────────────────────────────────────────────
 
-    private static async Task<List<MethodFingerprint>> CollectFingerprintsAsync(
+    internal static async Task<List<MethodFingerprint>> CollectFingerprintsAsync(
         Solution solution, DuplicateDetectionOptions options, CancellationToken ct)
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -308,7 +308,7 @@ internal static partial class DuplicateDetectionEngine
 
     // ── 5) Jaccard-Similarity ────────────────────────────────────────────────────────────────
 
-    private static double ComputeJaccard(HashSet<ulong> a, HashSet<ulong> b)
+    internal static double ComputeJaccard(HashSet<ulong> a, HashSet<ulong> b)
     {
         var (smaller, larger) = a.Count <= b.Count ? (a, b) : (b, a);
         var intersection = smaller.Count(larger.Contains);
@@ -382,17 +382,6 @@ internal static partial class DuplicateDetectionEngine
     };
 
     private readonly record struct MethodCandidate(SyntaxNode Declaration, SyntaxNode Body);
-
-    /// <summary><see cref="Symbol"/> ist zusaetzlich zu den bereits fuer den <c>clone</c>-Modus
-    /// (Teil A) benoetigten Feldern gehalten — reine In-Process-Identitaet fuer Teil C
-    /// (Refactoring-Drift, <see cref="FindSimilarToAsync"/>), die per <see cref="ReferenceEquals"/>
-    /// bzw. <see cref="SymbolEqualityComparer"/> einen konkreten Fingerprint zu einem per
-    /// <c>helperSymbol</c> aufgeloesten <see cref="IMethodSymbol"/> zurueckfindet, ohne eine zweite
-    /// Symbol-Aufloesung zu brauchen. Verlaesst die Engine nie (kein Export in <see cref="DuplicateCluster"/>/
-    /// <see cref="DuplicateClusterMember"/>) — reine interne Fingerprint-Kohaerenz.</summary>
-    private sealed record MethodFingerprint(
-        string FilePath, int LineNumber, string SignatureName, int TokenCount, HashSet<ulong> NgramHashes,
-        IMethodSymbol Symbol);
 
     private readonly record struct FingerprintEdge(int A, int B, double Jaccard);
 

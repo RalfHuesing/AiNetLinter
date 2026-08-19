@@ -50,7 +50,7 @@ internal static class RefactoringDriftScanner
         var callSites = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(helper, solution);
         var callers = await ResolveCallerMethodSymbolsAsync(solution, callSites, ct);
 
-        var scanResult = await DuplicateDetectionEngine.FindSimilarToAsync(solution, helper, callers, options, ct);
+        var scanResult = await RefactoringDriftDetector.FindSimilarToAsync(solution, helper, callers, options, ct);
         if (scanResult is null)
         {
             return (null, McpToolResults.InvalidArgument(

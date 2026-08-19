@@ -26,7 +26,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// <c>McpCodeGraphServer</c>-Abhaengigkeit, direkt unit-testbar (Pattern 1:1 von
 /// <see cref="Mcp.Tools.Analysis.GetViolationsScanner"/>).
 /// </summary>
-internal static partial class FindMagicValuesScanner
+internal static class FindMagicValuesScanner
 {
     /// <summary>
     /// Default-Obergrenze fuer die Anzahl gezeigter Magic-Value-Funde in Text-Report
@@ -72,7 +72,7 @@ internal static partial class FindMagicValuesScanner
         // Per-Literal-SyntaxWalker, der pro Literal klassifiziert).
         if (raw.Count > 0 || malfunctionContext is null)
         {
-            await DetectDuplicateConstFieldsAsync(raw, matchingDocuments, p.CancellationToken);
+            await DuplicateConstScanner.DetectDuplicateConstFieldsAsync(raw, matchingDocuments, p.CancellationToken);
         }
 
         // Wenn kein einziges Dokument erfolgreich war UND wir einen Fehler gesehen haben, ist

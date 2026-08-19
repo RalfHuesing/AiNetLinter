@@ -105,10 +105,21 @@ internal sealed record RefactoringDriftCandidate(
     int TokenCount,
     double Score);
 
-/// <summary>Gesamtergebnis von <see cref="DuplicateDetectionEngine.FindSimilarToAsync"/>.
+/// <summary>Gesamtergebnis von <see cref="RefactoringDriftDetector.FindSimilarToAsync"/>.
 /// <see cref="Candidates"/> ist unbegrenzt und absteigend nach <see cref="RefactoringDriftCandidate.Score"/>
 /// sortiert — Trunkierung ist wie bei <see cref="DuplicateDetectionScanResult"/> Sache des
 /// Aufrufers (<c>RefactoringDriftScanner</c>).</summary>
 internal sealed record RefactoringDriftScanResult(
     IReadOnlyList<RefactoringDriftCandidate> Candidates,
     int MethodsScanned);
+
+/// <summary>
+/// Interner Fingerprint einer analysierten Methode mit Token-Zählung, N-Gram-Hashes und Symbol.
+/// </summary>
+internal sealed record MethodFingerprint(
+    string FilePath,
+    int LineNumber,
+    string SignatureName,
+    int TokenCount,
+    HashSet<ulong> NgramHashes,
+    Microsoft.CodeAnalysis.IMethodSymbol Symbol);

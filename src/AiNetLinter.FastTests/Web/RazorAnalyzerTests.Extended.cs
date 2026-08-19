@@ -249,7 +249,7 @@ public sealed class RazorAnalyzerExtendedTests
             </div>
             """;
 
-        Assert.Equal(2, RazorAnalyzer.ComputeMaxTagNestingDepth(content));
+        Assert.Equal(2, RazorSyntaxParser.ComputeMaxTagNestingDepth(content));
     }
 
     // Zusatztest — ComputeMaxTagNestingDepth zaehlt korrekt.
@@ -260,7 +260,7 @@ public sealed class RazorAnalyzerExtendedTests
             <a><b><c><d><e>x</e></d></c></b></a>
             """;
 
-        Assert.Equal(5, RazorAnalyzer.ComputeMaxTagNestingDepth(content));
+        Assert.Equal(5, RazorSyntaxParser.ComputeMaxTagNestingDepth(content));
     }
 
     // Zusatztest — ComputeMaxForeachNestingDepth erkennt Verschachtelung.
@@ -275,7 +275,7 @@ public sealed class RazorAnalyzerExtendedTests
             }
             """;
 
-        Assert.Equal(2, RazorAnalyzer.ComputeMaxForeachNestingDepth(content));
+        Assert.Equal(2, RazorSyntaxParser.ComputeMaxForeachNestingDepth(content));
     }
 
     // Zusatztest — CountAttributes zaehlt @-Praefix korrekt.
@@ -284,6 +284,6 @@ public sealed class RazorAnalyzerExtendedTests
     {
         const string attrs = """ @bind-Value="x" @bind-Value:event="oninput" Disabled="true" """;
 
-        Assert.Equal(3, RazorAnalyzer.CountAttributes(attrs));
+        Assert.Equal(3, RazorSyntaxParser.CountAttributes(attrs));
     }
 }

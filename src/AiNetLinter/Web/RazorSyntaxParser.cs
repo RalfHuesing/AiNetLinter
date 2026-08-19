@@ -7,24 +7,41 @@ using System.Text.RegularExpressions;
 namespace AiNetLinter.Web;
 
 /// <summary>
-/// Hilfs- und Parsing-Methoden fuer <see cref="RazorAnalyzer"/> (separate Datei wegen MaxLineCount-Limit
-/// und zur Reduktion der kognitiven Komplexitaet der Checker-Methoden).
+/// Hilfs- und Parsing-Methoden für Razor-Markup (Tag-Verschachtelung, Schleifen-Tiefe, Kommentar-Entfernung).
 /// </summary>
-internal static partial class RazorAnalyzer
+internal static class RazorSyntaxParser
 {
-    /// <summary>
-    /// Prueft, ob ein Attribut-Name ein Event-Handler (on*) oder Binding (bind*) ist.
-    /// </summary>
-    private static bool IsEventOrBindingAttribute(string name) =>
+    private static readonly HashSet<string> VoidElements = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    };
+
+    private static readonly Regex OpeningTagPattern = new(
+        @"<([a-zA-Z][a-zA-Z0-9\-]*)([^>]*?)(/?)>",
+        RegexOptions.Compiled);
+
+    private static readonly Regex ClosingTagPattern = new(
+        @"</([a-zA-Z][a-zA-Z0-9\-]*)\s*>",
+        RegexOptions.Compiled);
+
+    private static readonly Regex RazorCommentPattern = new(
+        @"@\*[\s\S]*?\*@|<!--[\s\S]*?-->",
+        RegexOptions.Compiled);
+
+    private static readonly Regex ForeachPattern = new(
+        @"@foreach\b",
+        RegexOptions.Compiled);
+
+    private static readonly Regex AttributePattern = new(
+        @"\s+@?[a-zA-Z_][a-zA-Z0-9_.\-]*(:[a-zA-Z_][a-zA-Z0-9_.\-]*)?\s*=",
+        RegexOptions.Compiled);
+
+    internal static bool IsEventOrBindingAttribute(string name) =>
         name.StartsWith("on", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("bind", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Bestimmt, ob ein Attributwert ein komplexes Lambda enthaelt.
-    /// Komplex = enthaelt Block-Klammern (mehrzeilig) oder mehr als ein Statement.
-    /// Triviale Einzeiler-Lambdas wie '() => Count++' sind erlaubt.
-    /// </summary>
-    private static bool IsComplexLambda(string value)
+    internal static bool IsComplexLambda(string value)
     {
         if (string.IsNullOrEmpty(value)) return false;
         if (!value.Contains("=>", StringComparison.Ordinal)) return false;
@@ -33,31 +50,18 @@ internal static partial class RazorAnalyzer
 
         var firstSemi = value.IndexOf(';');
         if (firstSemi < 0) return false;
-        // Mehr als ein Semikolon = mehrzeilig.
         return value.IndexOf(';', firstSemi + 1) >= 0;
     }
 
-    /// <summary>
-    /// Zaehlt Attribute in einem Attribut-Block (inkl. @-Praefix und ':event'-Modifikatoren).
-    /// </summary>
     internal static int CountAttributes(string attrs)
     {
         if (string.IsNullOrWhiteSpace(attrs)) return 0;
         return AttributePattern.Matches(attrs).Count;
     }
 
-    /// <summary>
-    /// Ersetzt Razor- und HTML-Kommentare durch Leerzeichen gleicher Laenge
-    /// (Zeilennummern bleiben erhalten).
-    /// </summary>
-    private static string StripComments(string content) =>
+    internal static string StripComments(string content) =>
         RazorCommentPattern.Replace(content, m => new string(' ', m.Length));
 
-    /// <summary>
-    /// Berechnet die maximale Verschachtelungstiefe der oeffnenden HTML-Tags.
-    /// Self-closing Tags (<br/>, <MyComp />) und Void-Elemente (<input>)
-    /// zaehlen nicht zur Tiefe.
-    /// </summary>
     internal static int ComputeMaxTagNestingDepth(string sanitized)
     {
         var events = new List<(int Index, bool IsOpen)>();
@@ -96,9 +100,6 @@ internal static partial class RazorAnalyzer
         return maxDepth;
     }
 
-    /// <summary>
-    /// Berechnet die maximale Verschachtelungstiefe von @foreach-Schleifen.
-    /// </summary>
     internal static int ComputeMaxForeachNestingDepth(string content)
     {
         var positions = CollectForeachPositions(content);
@@ -157,12 +158,8 @@ internal static partial class RazorAnalyzer
         return maxDepth;
     }
 
-    /// <summary>
-    /// Findet das Ende des @foreach-Body-Blocks (Position der schliessenden '}').
-    /// </summary>
     private static int FindForeachBodyEnd(string content, int foreachPos)
     {
-        // Suche erste '{' nach '@foreach (...)'.
         var openBrace = content.IndexOf('{', foreachPos + "@foreach".Length);
         if (openBrace < 0) return -1;
 
@@ -171,7 +168,7 @@ internal static partial class RazorAnalyzer
         while (i < content.Length && depth > 0)
         {
             i = SkipStringContext(content, i, out var endedInString);
-            if (endedInString) return -1; // Unbalancierte Anfuehrungszeichen → kein Match.
+            if (endedInString) return -1;
 
             var c = content[i];
             if (c == '{') depth++;
@@ -182,10 +179,7 @@ internal static partial class RazorAnalyzer
         return depth == 0 ? i - 1 : -1;
     }
 
-    /// <summary>
-    /// Findet die Position der zu 'openBracePos' gehoerenden schliessenden Klammer.
-    /// </summary>
-    private static int FindMatchingBrace(string content, int openBracePos)
+    internal static int FindMatchingBrace(string content, int openBracePos)
     {
         if (openBracePos >= content.Length || content[openBracePos] != '{') return -1;
 
@@ -204,11 +198,6 @@ internal static partial class RazorAnalyzer
         return depth == 0 ? i - 1 : -1;
     }
 
-    /// <summary>
-    /// Ueberspringt String-/Char-Literal- und Razor-Kommentar-Bereiche ab Position 'i'.
-    /// Liefert die neue Position und gibt an, ob ein String/Kommentar unbalanciert
-    /// endete (dann sollte der Aufrufer abbrechen).
-    /// </summary>
     private static int SkipStringContext(string content, int i, out bool endedInString)
     {
         endedInString = false;
@@ -259,7 +248,7 @@ internal static partial class RazorAnalyzer
         return content.Length;
     }
 
-    private static int GetLineNumber(string content, int position)
+    internal static int GetLineNumber(string content, int position)
     {
         if (position <= 0) return 1;
         var line = 1;
@@ -271,15 +260,11 @@ internal static partial class RazorAnalyzer
         return line;
     }
 
-    private static (int StartLine, int EndLine) GetLineRange(
+    internal static (int StartLine, int EndLine) GetLineRange(
         string content, int startPos, int endPos) =>
         (GetLineNumber(content, startPos), GetLineNumber(content, endPos));
 
-    /// <summary>
-    /// Extrahiert den Komponentennamen aus einem .razor-Dateipfad
-    /// (z. B. 'C:\app\Pages\Counter.razor' → 'Counter').
-    /// </summary>
-    private static string ExtractComponentNameFromPath(string filePath)
+    internal static string ExtractComponentNameFromPath(string filePath)
     {
         if (string.IsNullOrEmpty(filePath)) return string.Empty;
         var sep = Math.Max(filePath.LastIndexOf('/'), filePath.LastIndexOf('\\'));

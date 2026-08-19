@@ -10,50 +10,17 @@ using AiNetLinter.Models;
 namespace AiNetLinter.Web;
 
 /// <summary>
-/// Analysiert Razor/Blazor-Komponenten-Markup auf AI-spezifische Probleme: Dateigroesse,
-/// Markup-Verschachtelung, Control-Flow-Komplexitaet, Inline-Lambdas und Ternary-Ausdruecke.
-/// Implementiert die Regeln aus Research/Extend-Web-Features/03_Razor_Linting.md Phase 3.
-///
-/// Implementierungs-Ansatz: rein textbasiert. Die Regeln basieren auf Pattern-Counting
-/// (Anzahl Bloecke, Anzahl Verschachtelungen, Anzahl Attribute), nicht auf AST-Semantik.
-/// Ein dedizierter Razor-Parser (Microsoft.AspNetCore.Razor.Language) ist fuer diese
-/// Pattern-Checks nicht erforderlich — der textbasierte Ansatz ist robuster, schneller
-/// und hat keine externen Abhaengigkeiten. C#-Logik innerhalb von @code/@if/@foreach
-/// wird nicht analysiert (das ist Aufgabe der Code-Behind-Datei .razor.cs).
+/// Analysiert Razor/Blazor-Komponenten-Markup auf AI-spezifische Probleme: Dateigröße,
+/// Markup-Verschachtelung, Control-Flow-Komplexität, Inline-Lambdas und Ternary-Ausdrücke.
 /// </summary>
-internal static partial class RazorAnalyzer
+internal static class RazorAnalyzer
 {
-    /// <summary>
-    /// Void HTML-Elemente (kein Closing-Tag erforderlich). Zaehlen nicht zur Verschachtelungstiefe.
-    /// </summary>
-    private static readonly HashSet<string> VoidElements = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "area", "base", "br", "col", "embed", "hr", "img", "input",
-        "link", "meta", "param", "source", "track", "wbr",
-    };
-
-    private static readonly Regex OpeningTagPattern = new(
-        @"<([a-zA-Z][a-zA-Z0-9\-]*)([^>]*?)(/?)>",
-        RegexOptions.Compiled);
-
-    private static readonly Regex ClosingTagPattern = new(
-        @"</([a-zA-Z][a-zA-Z0-9\-]*)\s*>",
-        RegexOptions.Compiled);
-
-    private static readonly Regex RazorCommentPattern = new(
-        @"@\*[\s\S]*?\*@|<!--[\s\S]*?-->",
-        RegexOptions.Compiled);
-
     private static readonly Regex CodeBlockStartPattern = new(
         @"@code\s*\{",
         RegexOptions.Compiled);
 
     private static readonly Regex ControlFlowPattern = new(
         @"@(if|else\s+if|foreach|for|while|switch)\b",
-        RegexOptions.Compiled);
-
-    private static readonly Regex ForeachPattern = new(
-        @"@foreach\b",
         RegexOptions.Compiled);
 
     private static readonly Regex ComponentTagPattern = new(
@@ -64,16 +31,12 @@ internal static partial class RazorAnalyzer
         @"@\(\s*[^()]*?\?[^():]*:[^()]*\)",
         RegexOptions.Compiled);
 
-    private static readonly Regex AttributePattern = new(
-        @"\s+@?[a-zA-Z_][a-zA-Z0-9_.\-]*(:[a-zA-Z_][a-zA-Z0-9_.\-]*)?\s*=",
-        RegexOptions.Compiled);
-
     private static readonly Regex AttributeWithValuePattern = new(
         @"@(\w[\w\-]*)\s*=\s*(?:""([^""]*?)""|'([^']*?)')",
         RegexOptions.Compiled);
 
     /// <summary>
-    /// Analysiert den Razor-Quelltext und liefert alle Regelverstoesse.
+    /// Analysiert den Razor-Quelltext und liefert alle Regelverstösse.
     /// </summary>
     public static IReadOnlyList<RuleViolation> Analyze(
         string razorContent, string filePath, RazorConfig config)
@@ -124,14 +87,14 @@ internal static partial class RazorAnalyzer
         foreach (Match match in CodeBlockStartPattern.Matches(content))
         {
             var braceStart = match.Index + match.Length - 1;
-            var braceEnd = FindMatchingBrace(content, braceStart);
+            var braceEnd = RazorSyntaxParser.FindMatchingBrace(content, braceStart);
             if (braceEnd < 0) continue;
 
-            var lineSpan = GetLineRange(content, match.Index, braceEnd);
+            var lineSpan = RazorSyntaxParser.GetLineRange(content, match.Index, braceEnd);
             var lineCount = lineSpan.EndLine - lineSpan.StartLine + 1;
             if (lineCount > config.MaxRazorCodeBlockLines)
             {
-                var componentName = ExtractComponentNameFromPath(filePath);
+                var componentName = RazorSyntaxParser.ExtractComponentNameFromPath(filePath);
                 var codeBehindHint = string.IsNullOrEmpty(componentName)
                     ? "Verschiebe die Logik in die Code-Behind-Datei '.razor.cs' (partial class)."
                     : $"Verschiebe die Logik in die Code-Behind-Datei '{componentName}.razor.cs' (partial class).";
@@ -139,7 +102,7 @@ internal static partial class RazorAnalyzer
                 violations.Add(new RuleViolation
                 {
                     FilePath = filePath,
-                    LineNumber = GetLineNumber(content, match.Index),
+                    LineNumber = RazorSyntaxParser.GetLineNumber(content, match.Index),
                     RuleName = LinterRuleIds.RAZOR_MaxRazorCodeBlockLines,
                     Details = $"@code-Block hat {lineCount} Zeilen (erlaubt: {config.MaxRazorCodeBlockLines}).",
                     Guidance = codeBehindHint,
@@ -153,8 +116,8 @@ internal static partial class RazorAnalyzer
     {
         if (config.MaxMarkupNestingDepth <= 0) return;
 
-        var sanitized = StripComments(content);
-        var maxDepth = ComputeMaxTagNestingDepth(sanitized);
+        var sanitized = RazorSyntaxParser.StripComments(content);
+        var maxDepth = RazorSyntaxParser.ComputeMaxTagNestingDepth(sanitized);
         if (maxDepth > config.MaxMarkupNestingDepth)
         {
             violations.Add(new RuleViolation
@@ -178,15 +141,15 @@ internal static partial class RazorAnalyzer
         foreach (Match match in AttributeWithValuePattern.Matches(content))
         {
             var attributeName = match.Groups[1].Value;
-            if (!IsEventOrBindingAttribute(attributeName)) continue;
+            if (!RazorSyntaxParser.IsEventOrBindingAttribute(attributeName)) continue;
 
             var value = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
-            if (!IsComplexLambda(value)) continue;
+            if (!RazorSyntaxParser.IsComplexLambda(value)) continue;
 
             violations.Add(new RuleViolation
             {
                 FilePath = filePath,
-                LineNumber = GetLineNumber(content, match.Index),
+                LineNumber = RazorSyntaxParser.GetLineNumber(content, match.Index),
                 RuleName = LinterRuleIds.RAZOR_BanInlineEventLambdas,
                 Details = $"Inline-Event-Lambda in '@{attributeName}' ist zu komplex.",
                 Guidance = "Extrahiere die Logik in eine Methode in der Code-Behind-Datei " +
@@ -221,7 +184,7 @@ internal static partial class RazorAnalyzer
     {
         if (config.MaxForeachNestingDepth <= 0) return;
 
-        var maxDepth = ComputeMaxForeachNestingDepth(content);
+        var maxDepth = RazorSyntaxParser.ComputeMaxForeachNestingDepth(content);
         if (maxDepth > config.MaxForeachNestingDepth)
         {
             violations.Add(new RuleViolation
@@ -245,13 +208,13 @@ internal static partial class RazorAnalyzer
         {
             var tagName = match.Groups[1].Value;
             var attrs = match.Groups[2].Value;
-            var attrCount = CountAttributes(attrs);
+            var attrCount = RazorSyntaxParser.CountAttributes(attrs);
             if (attrCount > config.MaxComponentParameterCount)
             {
                 violations.Add(new RuleViolation
                 {
                     FilePath = filePath,
-                    LineNumber = GetLineNumber(content, match.Index),
+                    LineNumber = RazorSyntaxParser.GetLineNumber(content, match.Index),
                     RuleName = LinterRuleIds.RAZOR_MaxComponentParameterCount,
                     Details = $"Komponentenaufruf '<{tagName}>' hat {attrCount} Parameter " +
                         $"(erlaubt: {config.MaxComponentParameterCount}).",
@@ -272,7 +235,7 @@ internal static partial class RazorAnalyzer
             violations.Add(new RuleViolation
             {
                 FilePath = filePath,
-                LineNumber = GetLineNumber(content, match.Index),
+                LineNumber = RazorSyntaxParser.GetLineNumber(content, match.Index),
                 RuleName = LinterRuleIds.RAZOR_BanInlineTernaryInAttributes,
                 Details = "Ternary-Ausdruck im Attributwert gefunden.",
                 Guidance = "Berechne den Wert in einer Property der Code-Behind-Datei " +

@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,23 +12,11 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.MagicValues;
 
 /// <summary>
-/// Partial-Class-Erweiterung von <see cref="FindMagicValuesScanner"/>: enthaelt die
-/// <c>constant_candidates</c>-Heuristik fuer duplizierte <c>private const</c>-Felder.
-/// Aus der Hauptdatei in eine eigene Datei extrahiert, damit
-/// <see cref="FindMagicValuesScanner"/> unter dem <c>MaxLineCount: 500</c>-Limit bleibt
-/// (siehe <c>AiNetLinter.mdc</c>).
+/// Erkennt duplizierte const-Felder (constant_candidates) über mehrere Dokumente.
 /// </summary>
-internal static partial class FindMagicValuesScanner
+internal static class DuplicateConstScanner
 {
-    /// <summary>Loest die <c>constant_candidates</c>-Heuristik fuer duplizierte
-    /// <c>private const</c>-Felder auf: iteriert alle <c>Project</c>s/Document/s,
-    /// sammelt <c>FieldDeclarationSyntax</c> mit <c>const</c>-Modifier, gruppiert
-    /// nach (Type, Value) und meldet jede Gruppe mit ≥ 2 Vorkommen in ≥ 2 verschiedenen
-    /// Dateien. Hinweis: der <see cref="MagicValuesClassifier.Classify"/>-Pfad wird
-    /// bewusst NICHT durchlaufen, weil <c>const</c>-Definitionen semantisch keine
-    /// "Literale" sind — die Suppression-Pruefung auf einem <c>LiteralExpressionSyntax</c>
-    /// wuerde hier nicht greifen, was methodisch sauber ist (Definition != Anwendung).</summary>
-    private static async Task DetectDuplicateConstFieldsAsync(
+    internal static async Task DetectDuplicateConstFieldsAsync(
         List<RawMagicValue> sink,
         IReadOnlyList<(Document Document, string FilePath)> matchingDocuments,
         CancellationToken ct)
@@ -45,9 +32,6 @@ internal static partial class FindMagicValuesScanner
         EmitDuplicateConstGroups(sink, groups);
     }
 
-    /// <summary>Laedt die Syntax-Tree fuer ein einzelnes Document und sammelt Const-Feld-Duplikate.
-    /// Aus <see cref="DetectDuplicateConstFieldsAsync"/> extrahiert, um dessen kognitive
-    /// Komplexitaet unter dem 15-Limit zu halten.</summary>
     private static async Task CollectFromDocumentAsync(
         Document document,
         string filePath,
@@ -64,10 +48,6 @@ internal static partial class FindMagicValuesScanner
         CollectDuplicateConstFields(root, filePath, groups);
     }
 
-    /// <summary>Schreibt pro Const-Duplikat-Gruppe mit ≥ 2 Vorkommen in ≥ 2 verschiedenen
-    /// Dateien je einen <see cref="RawMagicValue"/> in den Sink. Aus
-    /// <see cref="DetectDuplicateConstFieldsAsync"/> extrahiert, um dessen kognitive
-    /// Komplexitaet unter dem 15-Limit zu halten.</summary>
     private static void EmitDuplicateConstGroups(
         List<RawMagicValue> sink,
         Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups)
@@ -108,11 +88,6 @@ internal static partial class FindMagicValuesScanner
             MagicValueCategory.ConstantCandidates,
             recommendation,
             $"Dupliziertes const-Feld '{entry.FieldName}' ({key.Type} = {key.Value})");
-        // ValueType dynamisch aus dem Typ-Namen ableiten: 'string' (oder abgeleitete
-        // String-Typen) -> String, alles andere (int/double/float/decimal/long/short/
-        // byte/bool/char) -> Number. Vorher hartcodiertes Number hat String-Konstanten
-        // (z. B. private const string DefaultRole = "Admin") als Number klassifiziert
-        // und im Report unquoted ausgegeben.
         var valueType = key.Type.Contains("string", StringComparison.OrdinalIgnoreCase)
             ? MagicValueValueType.String
             : MagicValueValueType.Number;

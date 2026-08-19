@@ -31,7 +31,7 @@ public sealed class RefactoringDriftEngineTests
         using var testSolution = CreateSolution(("Stubs.cs", StubTypes), ("Helper.cs", BuildHelperBody("Helper", "BuildDefault")), ("Drifted.cs", BuildHelperBody("Drifted", "BuildInline")));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "BuildDefault");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         var candidate = Assert.Single(result!.Candidates);
         Assert.Contains("BuildInline", candidate.SignatureName, StringComparison.Ordinal);
@@ -45,7 +45,7 @@ public sealed class RefactoringDriftEngineTests
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "BuildDefault");
         var driftedAsCaller = await GetMethodSymbolAsync(testSolution.Solution, "Drifted.cs", "BuildInline");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [driftedAsCaller], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [driftedAsCaller], DefaultOptions, CancellationToken.None);
 
         Assert.Empty(result!.Candidates);
     }
@@ -56,7 +56,7 @@ public sealed class RefactoringDriftEngineTests
         using var testSolution = CreateSolution(("Helper.cs", BuildHelperBody("Helper", "BuildDefault")), ("Stubs.cs", StubTypes));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "BuildDefault");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         Assert.DoesNotContain(result!.Candidates, candidate => candidate.SignatureName.Contains("Helper", StringComparison.Ordinal));
     }
@@ -68,7 +68,7 @@ public sealed class RefactoringDriftEngineTests
         using var testSolution = CreateSolution(("A.cs", tiny));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "A.cs", "Get");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -82,7 +82,7 @@ public sealed class RefactoringDriftEngineTests
         using var testSolution = CreateSolution(("Stubs.cs", StubTypes), ("Helper.cs", BuildHelperBody("Helper", "BuildDefault")), ("Unrelated.cs", unrelated));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "BuildDefault");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         Assert.Empty(result!.Candidates);
     }
@@ -98,7 +98,7 @@ public sealed class RefactoringDriftEngineTests
             ("Drifted2.cs", BuildCalibratedMethod("Drifted2", "ComputeNear", nearVariant)));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "ComputeBase");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         Assert.Equal(2, result!.Candidates.Count);
         Assert.Contains("Drifted1", result.Candidates[0].SignatureName, StringComparison.Ordinal);
@@ -113,7 +113,7 @@ public sealed class RefactoringDriftEngineTests
         using var testSolution = CreateSolution(("Stubs.cs", StubTypes), ("Helper.cs", BuildHelperBody("Helper", "BuildDefault")));
         var helper = await GetMethodSymbolAsync(testSolution.Solution, "Helper.cs", "BuildDefault");
 
-        var result = await DuplicateDetectionEngine.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
+        var result = await RefactoringDriftDetector.FindSimilarToAsync(testSolution.Solution, helper, [], DefaultOptions, CancellationToken.None);
 
         Assert.Empty(result!.Candidates);
         Assert.Equal(1, result.MethodsScanned);
