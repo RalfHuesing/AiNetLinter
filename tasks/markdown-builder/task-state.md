@@ -1,23 +1,22 @@
 ---
-status: executing
+status: done
 task: markdown-builder
 started_at: 2026-08-19
 last_updated: 2026-08-19
 rules_dir: .agents/rules
-total_steps: 4
-current_step: step-004
+total_steps: 5
+current_step: step-005
 ---
 
 # Task State: markdown-builder
 
 ## Übersicht
 
-- **Task-Status:** `executing`
-- **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
-  jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-004` (in_progress)
-- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
-- **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
+- **Task-Status:** `done`
+- **Steps gesamt:** 5 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-005` (done)
+- **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt (alle Epics abgeschlossen)
+- **Tech-Debt:** siehe `tech-debt.md` für gesammelte Funde (alle behoben bzw. obsolet)
 - **Gestartet:** 2026-08-19
 - **Zuletzt aktualisiert:** 2026-08-19
 
@@ -28,7 +27,8 @@ current_step: step-004
 | step-001 | EPIC-01 | done | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | fc603681 | step-001/step-review.md: issues | - |
 | step-002 | EPIC-01 | done | MarkdownTableBuilder zeilenweise API + EPIC-01 DoD präzisieren | step-001 | b1a39ab1 | step-002/step-review.md: approved | - |
 | step-003 | EPIC-02 | done | EPIC-02 Welle 1 — HotspotSectionFormatter löschen + ListRulesCommand + GetSymbolBodyTool | - | 107b2682 | step-003/step-review.md: approved | - |
-| step-004 | EPIC-02 | in_progress | EPIC-02 Welle 2 — drei Generators-Callsites (Prio 5/7/8) auf MarkdownBuilder umstellen | - | - | - | - |
+| step-004 | EPIC-02 | done | EPIC-02 Welle 2 — drei Generators-Callsites (Prio 5/7/8) auf MarkdownBuilder umstellen | - | 337c002e | step-004/step-review.md: approved | - |
+| step-005 | EPIC-02 | done | EPIC-02 Welle 3 — MetricsLookupFormatter (Prio 9) + TD-001 + Sealed Class Fix | - | working | step-005/step-review.md: approved | - |
 |------|------|--------|-------|----------|-------|----------|--------|
 
 ## Config (optional)

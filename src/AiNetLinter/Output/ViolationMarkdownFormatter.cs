@@ -37,7 +37,7 @@ public static class ViolationMarkdownFormatter
         var hasAutoFix = violations.Any(v => AutoFixableRules.Contains(v.RuleName ?? string.Empty));
         var output = new StringBuilder();
 
-        output.Append($"# AiNetLinter - {violations.Count} violations\n");
+        new MarkdownBuilder().Heading(1, $"AiNetLinter - {violations.Count} violations").AppendTo(output);
         output.Append(BuildSummaryTable(violations, byRule, outputRoot));
         output.Append(BuildInstructionBlock(outputRoot, hasAutoFix));
         output.Append(BuildRegellegende(byRule));

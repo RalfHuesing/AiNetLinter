@@ -30,7 +30,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
-| TD-001 | `src/AiNetLinter/Output/ViolationMarkdownFormatter.cs:40` | niedrig | ja | `# AiNetLinter - N violations`-Header ist `sb.Append($"...")` statt `MarkdownBuilder.Heading(1, ...)` — Builder-Kandidat für EPIC-02+. |
+| TD-001 | `src/AiNetLinter/Output/ViolationMarkdownFormatter.cs:40` | niedrig | ja | ~~`# AiNetLinter - N violations`-Header ist `sb.Append($"...")` statt `MarkdownBuilder.Heading(1, ...)`.~~ **Behoben in step-005**. |
 | TD-002 | `src/AiNetLinter/Output/MarkdownBuilder.cs:141` | niedrig | nein | ~~`Table(MarkdownTableBuilder)`-Instanz-Überladung wird in EPIC-01 nur getestet, nicht produktiv genutzt; produktive Nutzung erst in EPIC-02 (Prio 4/5).~~ **Obsolet durch step-004** (Prio 5/7/8): Überladung wird in 4 produktiven Callsites genutzt. |
 
 ## Einträge
@@ -56,7 +56,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Architektur-Ermessen, keine Verhaltensänderung (Heading-Output bleibt
   byte-stabil, weil `MarkdownBuilder.Heading` bare `\n` emittiert wie
   das aktuelle `Append($"…\n")`).
-- **Status:** offen
+- **Status:** behoben (in step-005 umgesetzt)
 
 ### TD-002 — `MarkdownBuilder.Table(MarkdownTableBuilder)` ungenutzt in EPIC-01 [Priorität: niedrig] [Auto-Fixable: nein]
 

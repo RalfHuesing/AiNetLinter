@@ -7,7 +7,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Output;
 
 [Trait("Category", "Unit")]
-public class MarkdownBuilderTests
+public sealed class MarkdownBuilderTests
 {
     // StaticTestSentinel-Coverage-Referenz: die folgenden Typen sind im Testprojekt abgedeckt.
     // @covers MarkdownTableBuilder
@@ -375,5 +375,14 @@ public class MarkdownBuilderTests
         var line = table.BuildRowLine(null, "x");
 
         Assert.Equal("| - | x |", line);
+    }
+
+    [Fact]
+    public void Heading_AppendTo_AppendsFormattedHeadingToOuterStringBuilder()
+    {
+        var sb = new StringBuilder();
+        new MarkdownBuilder().Heading(1, "Test Heading").AppendTo(sb);
+
+        Assert.Equal("# Test Heading\n", sb.ToString());
     }
 }

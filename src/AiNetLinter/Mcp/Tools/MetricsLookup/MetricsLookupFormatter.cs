@@ -1,7 +1,7 @@
 #nullable enable
 
-using System.Text;
 using AiNetLinter.Core;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Mcp.Tools.MetricsLookup;
 
@@ -12,30 +12,31 @@ internal static class MetricsLookupFormatter
 {
     internal static string Format(MetricsLookupResultDto dto)
     {
-        var sb = new StringBuilder();
+        var mb = new MarkdownBuilder();
 
-        sb.Append("### ").Append(dto.SymbolKind).Append(": ").Append(dto.QualifiedName).AppendLine();
-        sb.AppendLine();
+        mb.Heading(3, $"{dto.SymbolKind}: {dto.QualifiedName}").BlankLine();
 
         if (dto.Location != null)
         {
-            sb.Append("- **Ort:** `").Append(dto.Location.FilePath)
-              .Append(':').Append(dto.Location.StartLine).Append('-').Append(dto.Location.EndLine).AppendLine("`");
+            mb.Line($"- **Ort:** `{dto.Location.FilePath}:{dto.Location.StartLine}-{dto.Location.EndLine}`");
         }
 
         if (!string.IsNullOrEmpty(dto.DocCommentId))
         {
-            sb.Append("- **Id:** `").Append(dto.DocCommentId).AppendLine("`");
+            mb.Line($"- **Id:** `{dto.DocCommentId}`");
         }
 
-        sb.AppendLine();
+        mb.BlankLine();
 
         if (dto.ThresholdChecks.Count > 0)
         {
-            sb.AppendLine("#### Schwellwert-Abgleich & Metriken");
-            sb.AppendLine();
-            sb.AppendLine("| Metrik | Wert | Grenzwert | Status | Regel |");
-            sb.AppendLine("|:---|---:|---:|:---:|:---|");
+            mb.Heading(4, "Schwellwert-Abgleich & Metriken").BlankLine();
+            var table = new MarkdownTableBuilder()
+                .AddColumn("Metrik")
+                .AddColumn("Wert", ColumnAlign.Right)
+                .AddColumn("Grenzwert", ColumnAlign.Right)
+                .AddColumn("Status", ColumnAlign.Center)
+                .AddColumn("Regel");
 
             foreach (var check in dto.ThresholdChecks)
             {
@@ -43,75 +44,68 @@ internal static class MetricsLookupFormatter
                 var statusBadge = $"[{check.Status}]";
                 var ruleStr = !string.IsNullOrEmpty(check.RuleId) ? check.RuleId : "-";
 
-                sb.Append("| ").Append(FormatMetricDisplayName(check.Metric))
-                  .Append(" | ").Append(check.Value)
-                  .Append(" | ").Append(limitStr)
-                  .Append(" | ").Append(statusBadge)
-                  .Append(" | ").Append(ruleStr)
-                  .AppendLine(" |");
+                table.AddRow(
+                    FormatMetricDisplayName(check.Metric),
+                    check.Value,
+                    limitStr,
+                    statusBadge,
+                    ruleStr);
             }
 
-            sb.AppendLine();
+            mb.Table(table);
+            mb.BlankLine();
         }
 
         if (dto.MethodMetrics != null)
         {
-            FormatMethodDetails(sb, dto.MethodMetrics);
+            FormatMethodDetails(mb, dto.MethodMetrics);
         }
         else if (dto.TypeMetrics != null)
         {
-            FormatTypeDetails(sb, dto.TypeMetrics);
+            FormatTypeDetails(mb, dto.TypeMetrics);
         }
         else if (dto.PropertyMetrics != null)
         {
-            FormatPropertyDetails(sb, dto.PropertyMetrics);
+            FormatPropertyDetails(mb, dto.PropertyMetrics);
         }
 
-        return sb.ToString().TrimEnd();
+        return mb.Build().TrimEnd();
     }
 
-    private static void FormatMethodDetails(StringBuilder sb, MethodMetricsDto method)
+    private static void FormatMethodDetails(MarkdownBuilder mb, MethodMetricsDto method)
     {
         if (method.IgnoredParameters.Count > 0)
         {
-            sb.Append("**Ignorierte Parameter (vom Zählen ausgenommen):** ")
-              .Append(string.Join(", ", method.IgnoredParameters))
-              .AppendLine();
-            sb.AppendLine();
+            mb.Line($"**Ignorierte Parameter (vom Zählen ausgenommen):** {string.Join(", ", method.IgnoredParameters)}");
+            mb.BlankLine();
         }
     }
 
-    private static void FormatTypeDetails(StringBuilder sb, TypeMetricsDto type)
+    private static void FormatTypeDetails(MarkdownBuilder mb, TypeMetricsDto type)
     {
-        sb.AppendLine("#### Typ-Struktur");
-        sb.AppendLine();
-        sb.Append("- **Code-Zeilen (LOC):** ").Append(type.CodeLines).AppendLine();
-        sb.Append("- **AI-Context-Footprint:** ").Append(type.AiContextFootprint).Append(" Zeilen").AppendLine();
-        sb.Append("- **Members:** ").Append(type.TotalMemberCount).Append(" gesamt (")
-          .Append(type.PublicMemberCount).Append(" public, ")
-          .Append(type.MethodCount).Append(" Methoden, ")
-          .Append(type.PropertyCount).Append(" Properties)")
-          .AppendLine();
-        sb.AppendLine();
+        mb.Heading(4, "Typ-Struktur").BlankLine();
+        mb.Line($"- **Code-Zeilen (LOC):** {type.CodeLines}");
+        mb.Line($"- **AI-Context-Footprint:** {type.AiContextFootprint} Zeilen");
+        mb.Line($"- **Members:** {type.TotalMemberCount} gesamt ({type.PublicMemberCount} public, {type.MethodCount} Methoden, {type.PropertyCount} Properties)");
+        mb.BlankLine();
 
         if (type.TopDependencies.Count > 0)
         {
-            sb.AppendLine("**Top-Abhängigkeiten (AI-Context-Footprint):**");
+            mb.Line("**Top-Abhängigkeiten (AI-Context-Footprint):**");
             foreach (var dep in type.TopDependencies)
             {
-                sb.Append("- `").Append(dep.Name).Append("`: ").Append(dep.Lines).AppendLine(" Zeilen");
+                mb.Line($"- `{dep.Name}`: {dep.Lines} Zeilen");
             }
-            sb.AppendLine();
+            mb.BlankLine();
         }
     }
 
-    private static void FormatPropertyDetails(StringBuilder sb, PropertyMetricsDto prop)
+    private static void FormatPropertyDetails(MarkdownBuilder mb, PropertyMetricsDto prop)
     {
-        sb.AppendLine("#### Property-Details");
-        sb.AppendLine();
-        sb.Append("- **Code-Zeilen (LOC):** ").Append(prop.CodeLines).AppendLine();
-        sb.Append("- **Zyklomatische Komplexität:** ").Append(prop.CyclomaticComplexity).AppendLine();
-        sb.Append("- **Kognitive Komplexität:** ").Append(prop.CognitiveComplexity).AppendLine();
+        mb.Heading(4, "Property-Details").BlankLine();
+        mb.Line($"- **Code-Zeilen (LOC):** {prop.CodeLines}");
+        mb.Line($"- **Zyklomatische Komplexität:** {prop.CyclomaticComplexity}");
+        mb.Line($"- **Kognitive Komplexität:** {prop.CognitiveComplexity}");
         var accessors = (prop.HasGetter, prop.HasSetter) switch
         {
             (true, true) => "Getter & Setter",
@@ -119,8 +113,8 @@ internal static class MetricsLookupFormatter
             (false, true) => "Nur Setter",
             _ => "Keine expliziten Accessoren"
         };
-        sb.Append("- **Accessoren:** ").Append(accessors).AppendLine();
-        sb.AppendLine();
+        mb.Line($"- **Accessoren:** {accessors}");
+        mb.BlankLine();
     }
 
     private static string FormatMetricDisplayName(string metric) => metric switch
