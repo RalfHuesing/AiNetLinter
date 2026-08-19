@@ -1,15 +1,12 @@
 ---
 title: MarkdownBuilder — Fluenter Dokument-Builder für MCP-/CLI-Markdown-Output
-status: draft
+status: ready
 type: konzept
 last_updated: 2026-08-19
 rules_dir: .agents/rules
 project_kind: brownfield
 estimated_scope: small
-open_questions:
-  - "Sortierung in HotspotTable-Aufrufern: macht der Aufrufer OrderBy selbst (empfohlen) oder bekommt der Builder ein optionales OrderBy-Callback? Konzept legt fest: Aufrufer sortiert vor — Builder ist dumm."
-  - "Snippet-Reihenfolge in GetViolationsScanner (war schon im alten Konzept offen, siehe Prio 2)."
-  - "Soll der Builder seine Escaping-Strategie (Pipe + Newline) konfigurierbar machen, oder hartcodiert sein? Empfehlung: hartcodiert, weil das CommonMark-Standardverhalten ist und die aktuellen Aufrufer nichts anderes brauchen."
+open_questions: []
 ---
 
 # Konzept: Interner `MarkdownBuilder` — Fluenter Dokument-Builder
@@ -291,27 +288,26 @@ var table = new MarkdownTableBuilder()
     .AddColumn("Regel")
     .AddColumn("Details");
 
+var mb = new MarkdownBuilder();
 foreach (var v in violations.OrderBy(x => x.FilePath, StringComparer.OrdinalIgnoreCase)
                                  .ThenBy(x => x.LineNumber)
                                  .ThenBy(x => x.RuleName ?? string.Empty, StringComparer.Ordinal))
 {
     var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
     table.AddRow(relativePath, v.LineNumber, v.RuleName, v.Details);
+    if (!string.IsNullOrWhiteSpace(v.Snippet))
+    {
+        mb.CodeBlock("csharp", v.Snippet!);
+        mb.BlankLine();
+    }
 }
-table.AppendTo(sb);
-sb.AppendLine();
-
-// Snippet-Loop separat danach (siehe offene Frage)
-var mb = new MarkdownBuilder();
-foreach (var v in violations.Where(x => !string.IsNullOrWhiteSpace(x.Snippet)))
-{
-    mb.CodeBlock("csharp", v.Snippet ?? string.Empty);
-    mb.BlankLine();
-}
+mb.Table(table);
 mb.AppendTo(sb);
 ```
 
-> **Offene Frage (siehe Frontmatter):** Aktuell steht der Snippet-Block *innerhalb* des `foreach` direkt nach der Tabellenzeile — d. h. die Ausgabe ist "Zeile → Snippet → Zeile → Snippet". Nach dem Umbau sind das zwei separate Schleifen: erst alle Zeilen, dann alle Snippets. **Prüfen, ob das die intendierte Reihenfolge ist.** Falls Snippets zur jeweiligen Tabellenzeile gehören müssen: Snippet-Loop innerhalb des `foreach` lassen und mit `MarkdownBuilder.CodeBlock("csharp", v.Snippet!)` ersetzen.
+> **Reihenfolge-Entscheidung (geklärt):** Snippet-Block bleibt **innerhalb desselben `foreach`** wie die Tabellen-Row (Snippets gehören kontextuell zur jeweiligen Violation-Zeile). Die Ausgabe-Reihenfolge "Zeile → Snippet → Zeile → Snippet" bleibt identisch zur Originalimplementierung. Das war die intendierte Reihenfolge — keine Trennung in "erst alle Zeilen, dann alle Snippets".
+
+> **Hinweis:** Der `MarkdownBuilder` wird hier genutzt, um die Tabelle und die Snippets in **einen** StringBuilder-Output zu mergen. Die `AppendSection`-Methode nimmt einen `StringBuilder sb` als Parameter; daher am Ende `mb.AppendTo(sb)`. Reihenfolge: zuerst alle Tabellen-Rows (über `MarkdownTableBuilder`), dann inline nach jeder Row der Snippet-Codeblock — das Resultat ist `Table + Snippet1 + Table + Snippet2 + ...` in der Ausgabe.
 
 ---
 
@@ -453,25 +449,6 @@ HotspotSectionFormatter.AppendSection(sb, "⚠ Warnungs-Dateien (>80% des Limits
 
 **Nach:**
 ```csharp
-mb.Table(t => t
-    .AddColumn("Intent")
-    .AddColumn("Offene Verstöße (wave-ready)", ColumnAlign.Right)
-    .AddColumn("Regeln"));
-
-if (intentGroups.Count == 0)
-{
-    mb.Table(t => t.AddRow("-", 0, "Keine offenen Verstöße"));
-}
-else
-{
-    foreach (var group in intentGroups)
-        mb.Table(t => t.AddRow(group.Intent, group.Count, group.Rules));
-}
-```
-
-> **Achtung:** Mehrere `mb.Table(...)`-Aufrufe erzeugen mehrere Tabellen untereinander — das ist **nicht** was wir wollen. Korrekt ist, **eine** `MarkdownTableBuilder`-Instanz zu nutzen und mit `AddRow` zu befüllen. Da der Builder-API-Callback nur **eine** Tabelle pro Aufruf erzeugt, muss der Aufrufer den `MarkdownTableBuilder` selbst halten:
-
-```csharp
 var table = new MarkdownTableBuilder()
     .AddColumn("Intent")
     .AddColumn("Offene Verstöße (wave-ready)", ColumnAlign.Right)
@@ -489,7 +466,7 @@ else
 mb.Table(table);
 ```
 
-> **API-Erweiterung nötig:** `MarkdownBuilder.Table(MarkdownTableBuilder instance)` als Überladung. Damit kann der Aufrufer auch ohne Callback mit einer vorbereiteten Tabelle arbeiten (Pattern-Reuse: dieselbe Tabelle mehrfach verwenden, z. B. in Tests). **Konzept-Update:** Diese Überladung wird in §2b ergänzt, siehe „API-Erweiterung" unten.
+> **Wichtig:** `mb.Table(t => t.AddRow(...))` für **jede** Row aufzurufen erzeugt mehrere separate Tabellen untereinander — das ist **nicht** was wir wollen. Statt dessen: **eine** `MarkdownTableBuilder`-Instanz halten, alle Rows per `AddRow()` anhängen, dann **einmal** `mb.Table(table)` aufrufen. Hier nutzen wir die `Table(MarkdownTableBuilder)`-Überladung (siehe API-Erweiterung am Ende von §2).
 
 ---
 
@@ -868,6 +845,8 @@ Keine externen Abhängigkeiten.
 
 ## 9. Offene Punkte
 
-- Sortierung in Hotspot-Aufrufern: Aufrufer sortiert (Builder bleibt dumm) — siehe `open_questions` im Frontmatter.
-- Snippet-Reihenfolge in `GetViolationsScanner`: nach Umbau möglicherweise "alle Zeilen → alle Snippets" statt "Zeile → Snippet" — siehe Prio 2 + Frontmatter.
-- Escaping-Strategie hartcodiert: aktuell CommonMark-konform; sollte sich in Zukunft als nicht-ausreichend herausstellen, dann API-Erweiterung mit `escapeMode`-Parameter.
+Keine. Alle während der Konzept-Iteration aufgekommenen Fragen sind in den jeweiligen Abschnitten entschieden:
+
+- **Sortierung in Hotspot-Aufrufern** (war `open_questions` #1): **Aufrufer sortiert**, Builder bleibt dumm. Siehe Prio 4 (`AppendHotspotSection` ruft `OrderByDescending().ThenBy()` selbst auf).
+- **Snippet-Reihenfolge in `GetViolationsScanner`** (war `open_questions` #2): **inner-foreach** — Snippet-Block bleibt im selben Loop wie die Tabellen-Row, Ausgabe-Reihenfolge "Zeile → Snippet → Zeile → Snippet" bleibt identisch zur Originalimplementierung. Siehe Prio 2.
+- **Escaping-Strategie** (war `open_questions` #3): **hartcodiert** (`|` → `\|`, `\r`/`\n` → Leerzeichen). CommonMark-konform, alle aktuellen Aufrufer brauchen nichts anderes. YAGNI für Konfigurierbarkeit.
