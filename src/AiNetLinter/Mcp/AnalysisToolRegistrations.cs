@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.DeadCode;
+using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -18,7 +19,7 @@ namespace AiNetLinter.Mcp;
 /// <summary>
 /// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>safeguard</c>,
 /// <c>search_pattern</c>, <c>metrics_tree</c>, <c>metrics_lookup</c>, <c>pattern_detect</c>,
-/// <c>find_magic_values</c> und <c>find_dead_code</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// <c>find_magic_values</c>, <c>find_dead_code</c> und <c>get_feature_context</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection.
 /// </summary>
 internal static class AnalysisToolRegistrations
@@ -40,6 +41,7 @@ internal static class AnalysisToolRegistrations
         AddPatternDetect(tools, mcpState);
         AddFindMagicValues(tools, mcpState);
         AddFindDeadCode(tools, mcpState);
+        AddGetFeatureContext(tools, mcpState);
     }
 
     private static void AddGetViolations(
@@ -257,4 +259,25 @@ internal static class AnalysisToolRegistrations
         "confidence (Default 'both': both, high, low), kind (Default 'all': all, type, class, method, " +
         "field, property, event, delegate), scopeFilter (Projekt-Name oder Pfad-Substring), " +
         "includeTests (Default false), mode (Default 'members': members, locals, both), maxResults (Default 50).";
+
+    private static void AddGetFeatureContext(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState)
+    {
+        tools.Add(McpServerTool.Create(
+            (string symbol, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+                GetFeatureContextTool.ExecuteAsync(mcpState, new FeatureContextOptions(symbol, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "get_feature_context",
+                Description = GetFeatureContextDescription,
+            }));
+    }
+
+    private const string GetFeatureContextDescription =
+        "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
+        "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) " +
+        "in einem einzigen residenten Aufruf. symbol akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
+        "Teilbereiche koennen ueber includeCallers, includeTests, includeMetrics, includeViolations zu-/abgewaehlt werden. " +
+        "maxCallers und maxTests steuern das Limit (Default 10, Cap 50).";
 }

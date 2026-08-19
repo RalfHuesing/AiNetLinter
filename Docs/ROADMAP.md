@@ -736,5 +736,23 @@ Punktgenaue Symbol-Analyse (Methoden, Konstruktoren, Properties, Typen) in einem
 
 ---
 
+## Composite One-Shot-Exploration: `get_feature_context` (Feature 01)
+
+Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) in einem einzigen residenten Aufruf vor Feature-Edits/Refactorings:
+
+- [x] **Symbol-Auflösung & Composite Facade:**
+  - Unterstützt Name, `Datei.cs:Zeile`, `Datei.cs:Zeile:Spalte` und `DocCommentId` über `FindReferencesTool.ResolveSymbolAsync`.
+  - Aggregiert Deklarationsdaten, `MetricsLookupScanner`, `DiffImpactAnalyzer.FindCallSiteEntriesAsync`, residenten `TestCoverageScanner` und `LinterEngine`-Violations.
+- [x] **Steuerungs-Flags & Structured Content:**
+  - `includeCallers`, `includeTests`, `includeMetrics`, `includeViolations` (jeweils Default `true`).
+  - `maxCallers` und `maxTests` (Default 10, Cap 50) mit Truncation-Hinweisen.
+  - Vollständiges, typisiertes `FeatureContextPayload` in `structuredContent`.
+- [x] **Tests & Integration:**
+  - FastTests in `AiNetLinter.FastTests/Mcp/Tools/FeatureContext/` und `AiNetLinter.FastTests/Core/TestCoverageScannerTests.cs`.
+  - Registrierung in `AnalysisToolRegistrations.cs` und `ServerInstructions.cs`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
+
 

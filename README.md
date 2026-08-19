@@ -9,7 +9,7 @@ Das Tool läuft in zwei unabhängigen Modi:
 | Modus | Was es tut |
 | :--- | :--- |
 | **CLI-Batch-Modus** | Ein Lint-Lauf gegen eine Solution: Markdown-Report auf stdout, CI-tauglicher Exit-Code, optionaler Auto-Fixer für triviale Verstöße. |
-| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 23 einzeln abfragbare Tools (Symbolsuche, Referenzen, Impact-Analyse, Lint-Status, Namespace-Baum u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
+| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 25 einzeln abfragbare Tools (Symbolsuche, Referenzen, One-Shot Feature-Kontext, Impact-Analyse, Lint-Status, Namespace-Baum u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
 
 Beide Modi teilen sich dieselbe Analyse-Engine und dieselbe `rules.json`-Konfiguration.
 
@@ -74,6 +74,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 
 | Tool | Zweck |
 | :--- | :--- |
+| `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt Deklaration, Metriken, direkte Aufrufer, Test-Abdeckung und Linter-Violations |
 | `get_namespace_tree` | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) |
 | `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden |
 | `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`) |
@@ -86,6 +87,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `get_symbol_body` | Source-Body eines einzelnen Symbols per stabiler ID |
 | `get_index_scope` | Dateityp-Aufschlüsselung der geladenen Solution |
 | `get_hotspots` | Dateien nahe oder über dem `MaxLineCount`-Limit |
+| `metrics_lookup` | Punktgenaue Metriken (LOC, Komplexität, Parameter, AI-Footprint) und Schwellwert-Abgleich für ein Symbol |
 | `metrics_tree` | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (Code-Größe, Kommentaranteil, Lint-Verstöße, Komplexität), Ebene für Ebene explorierbar |
 | `get_violations` | Aktuelle Lint-Verstöße für einen Scope |
 | `pattern_detect` | Lint-Verstöße nach Pattern-Kategorie gruppiert (God-Class, async-void, lange Methoden, Public-API ohne Doc, leere Catch-Blöcke, Feature-Envy) statt flacher Datei-Liste |

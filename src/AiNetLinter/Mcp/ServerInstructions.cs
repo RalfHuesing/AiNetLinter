@@ -47,6 +47,7 @@ internal static class ServerInstructions
         "Verzeichnisknoten (Modi code_size/comment_density/violation_density/complexity) " +
         "und sortierten Top-N-Kindern je Ebene.\n" +
         "- metrics_lookup: Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein C#-Symbol.\n" +
+        "- get_feature_context: Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung, Linter-Violations) in einem einzigen Call vor Edits.\n" +
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
         "- safeguard: Liefert einen deterministischen 0-10-Quality-Score + Pass/Fail-Threshold " +
         "+ Top-Violations + Remediation-Hints fuer die geladene Solution (Quality-Gate).\n" +
@@ -68,7 +69,7 @@ internal static class ServerInstructions
         "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
         "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
-        "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, metrics_lookup, get_violations, safeguard, " +
+        "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, metrics_lookup, get_feature_context, get_violations, safeguard, " +
         "pattern_detect, find_magic_values, find_dead_code, get_symbol_body und find_duplicates " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +
@@ -83,6 +84,7 @@ internal static class ServerInstructions
         "sind weitere Tool-Calls mit angepassten Parametern der richtige naechste Schritt, " +
         "nicht Read/Grep.\n\n" +
         "Empfohlene Workflows:\n" +
+        "- Vor Edits & Refactoring: get_feature_context (One-Shot: Deklaration + Metriken + Callers + Tests + Violations) -> get_symbol_body\n" +
         "- Code erkunden: get_index_scope -> get_namespace_tree / metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body\n" +
         "- Refactoring & Impact: find_symbol -> find_references / get_call_tree -> get_impact / dependency_graph\n" +
         "- Quality-Gate vor Commit: safeguard -> get_violations -> find_magic_values / find_duplicates\n\n" +
