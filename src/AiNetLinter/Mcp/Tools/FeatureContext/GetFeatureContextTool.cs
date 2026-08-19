@@ -41,13 +41,8 @@ internal static class GetFeatureContextTool
             if (error is not null) return error;
             if (symbol is null) return McpToolResults.SymbolNotFound(options.Symbol);
 
-            var payload = await FeatureContextScanner.ScanAsync(
-                symbol,
-                solution,
-                state.Config,
-                state.Console,
-                options,
-                ct);
+            var scanContext = new FeatureContextScanContext(solution, state.Config, state.Console, options);
+            var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
 
             var markdown = FeatureContextFormatter.FormatReport(payload);
             return McpToolResults.Text(markdown, payload);

@@ -49,40 +49,14 @@ public static partial class TestCoverageScanner
 
         foreach (var project in solution.Projects)
         {
-            var isTestProject = IsTestProjectOrHasTestFiles(project);
-            if (!isTestProject) continue;
+            if (ct.IsCancellationRequested) break;
+            if (!IsTestProjectOrHasTestFiles(project)) continue;
 
-            foreach (var document in project.Documents)
-            {
-                if (ct.IsCancellationRequested) break;
-                if (document.FilePath is null) continue;
+            var projectResults = await ScanProjectDocumentsAsync(
+                project, solutionDir, targetSymbol, targetTypeName, targetMemberName, ct);
 
-                var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath);
-                if (!PathNormalizer.IsTestFile(relativePath)) continue;
-
-                var syntaxRoot = await document.GetSyntaxRootAsync(ct);
-                if (syntaxRoot is null) continue;
-
-                var semanticModel = await document.GetSemanticModelAsync(ct);
-                if (semanticModel is null) continue;
-
-                var (fileMatches, reason, matchingMethods, totalClassTests) = AnalyzeDocument(
-                    syntaxRoot, semanticModel, targetSymbol, targetTypeName, targetMemberName, relativePath);
-
-                if (fileMatches && matchingMethods.Count > 0)
-                {
-                    var category = DetermineCategory(syntaxRoot, relativePath);
-                    results.Add(new TestFileCoverageResult(
-                        FilePath: relativePath,
-                        TestClassName: ExtractFirstTestClassName(syntaxRoot) ?? Path.GetFileNameWithoutExtension(relativePath),
-                        Category: category,
-                        MatchReason: reason,
-                        TestMethods: matchingMethods,
-                        TotalClassTests: totalClassTests
-                    ));
-                    totalMatchingTests += matchingMethods.Count;
-                }
-            }
+            results.AddRange(projectResults);
+            totalMatchingTests += projectResults.Sum(r => r.TestMethods.Count);
         }
 
         var sorted = results
@@ -91,6 +65,68 @@ public static partial class TestCoverageScanner
             .ToList();
 
         return new TestCoverageScannerResult(totalMatchingTests, sorted);
+    }
+
+    private static async Task<List<TestFileCoverageResult>> ScanProjectDocumentsAsync(
+        Project project,
+        string solutionDir,
+        ISymbol targetSymbol,
+        string targetTypeName,
+        string? targetMemberName,
+        CancellationToken ct)
+    {
+        var results = new List<TestFileCoverageResult>();
+
+        foreach (var document in project.Documents)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (document.FilePath is null) continue;
+
+            var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath);
+            if (!PathNormalizer.IsTestFile(relativePath)) continue;
+
+            var result = await ProcessDocumentAsync(
+                document, relativePath, targetSymbol, targetTypeName, targetMemberName, ct);
+
+            if (result != null)
+            {
+                results.Add(result);
+            }
+        }
+
+        return results;
+    }
+
+    private static async Task<TestFileCoverageResult?> ProcessDocumentAsync(
+        Document document,
+        string relativePath,
+        ISymbol targetSymbol,
+        string targetTypeName,
+        string? targetMemberName,
+        CancellationToken ct)
+    {
+        var syntaxRoot = await document.GetSyntaxRootAsync(ct);
+        if (syntaxRoot is null) return null;
+
+        var semanticModel = await document.GetSemanticModelAsync(ct);
+        if (semanticModel is null) return null;
+
+        var (fileMatches, reason, matchingMethods, totalClassTests) = AnalyzeDocument(
+            syntaxRoot, semanticModel, targetSymbol, targetTypeName, targetMemberName);
+
+        if (!fileMatches || matchingMethods.Count == 0) return null;
+
+        var category = DetermineCategory(syntaxRoot, relativePath);
+        var className = ExtractFirstTestClassName(syntaxRoot) ?? Path.GetFileNameWithoutExtension(relativePath);
+
+        return new TestFileCoverageResult(
+            FilePath: relativePath,
+            TestClassName: className,
+            Category: category,
+            MatchReason: reason,
+            TestMethods: matchingMethods,
+            TotalClassTests: totalClassTests
+        );
     }
 
     private static bool IsTestProjectOrHasTestFiles(Project project)
@@ -104,145 +140,143 @@ public static partial class TestCoverageScanner
         SemanticModel semanticModel,
         ISymbol targetSymbol,
         string targetTypeName,
-        string? targetMemberName,
-        string relativePath)
+        string? targetMemberName)
     {
-        var testMethods = new List<(MethodDeclarationSyntax Syntax, string Name, bool IsDirectMatch)>();
-        var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
-        var coversComments = ExtractCoversComments(root);
-
-        var hasClassLevelCovers = coversComments.Any(c => string.Equals(c, targetTypeName, StringComparison.OrdinalIgnoreCase));
-        var classNameMatches = classDeclarations.Any(c => MatchesClassName(c.Identifier.Text, targetTypeName));
-        var hasClassLevelTypeof = false;
-
-        foreach (var typeOf in root.DescendantNodes().OfType<TypeOfExpressionSyntax>())
-        {
-            var symbol = semanticModel.GetSymbolInfo(typeOf.Type).Symbol;
-            if (symbol != null && (symbol.Name == targetTypeName || SymbolEqualityComparer.Default.Equals(symbol, targetSymbol.ContainingType ?? targetSymbol)))
-            {
-                hasClassLevelTypeof = true;
-                break;
-            }
-
-            var typeText = typeOf.Type.ToString();
-            if (typeText == targetTypeName || typeText.EndsWith("." + targetTypeName, StringComparison.Ordinal))
-            {
-                hasClassLevelTypeof = true;
-                break;
-            }
-        }
-
-        if (!hasClassLevelTypeof)
-        {
-            foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
-            {
-                if (invocation.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" } &&
-                    invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression is { } argExpr)
-                {
-                    var argText = argExpr.ToString();
-                    if (argText == targetTypeName || argText.EndsWith("." + targetTypeName, StringComparison.Ordinal))
-                    {
-                        hasClassLevelTypeof = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        var allMethodDeclarations = root.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
-        foreach (var method in allMethodDeclarations)
-        {
-            if (!IsTestMethod(method)) continue;
-
-            var methodName = method.Identifier.Text;
-            var isMethodMatch = false;
-
-            if (targetMemberName != null)
-            {
-                if (methodName.StartsWith(targetMemberName + "_", StringComparison.OrdinalIgnoreCase) ||
-                    methodName.Contains(targetMemberName, StringComparison.OrdinalIgnoreCase))
-                {
-                    isMethodMatch = true;
-                }
-                else if (CallsTargetSymbol(method, targetSymbol, targetMemberName, semanticModel))
-                {
-                    isMethodMatch = true;
-                }
-            }
-
-            testMethods.Add((method, methodName, isMethodMatch));
-        }
-
+        var testMethods = FindTestMethods(root, targetSymbol, targetMemberName, semanticModel);
         if (testMethods.Count == 0)
         {
             return (false, string.Empty, [], 0);
         }
 
-        var matchingMethodNames = new List<string>();
-        string reason;
+        var classNameMatches = MatchesAnyClassName(root, targetTypeName);
+        var hasCovers = HasCoversComment(root, targetTypeName);
+        var hasTypeof = HasTypeofReference(root, targetSymbol, targetTypeName, semanticModel);
 
+        return SelectMatchingMethodsAndReason(
+            testMethods, targetMemberName, classNameMatches, hasCovers, hasTypeof);
+    }
+
+    private static List<(string Name, bool IsDirectMatch)> FindTestMethods(
+        SyntaxNode root,
+        ISymbol targetSymbol,
+        string? targetMemberName,
+        SemanticModel semanticModel)
+    {
+        var list = new List<(string Name, bool IsDirectMatch)>();
+        var allMethods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+
+        foreach (var method in allMethods)
+        {
+            if (!IsTestMethod(method)) continue;
+
+            var methodName = method.Identifier.Text;
+            var isMethodMatch = targetMemberName != null &&
+                (IsNamedAfterMember(methodName, targetMemberName) ||
+                 CallsTargetSymbol(method, targetSymbol, targetMemberName, semanticModel));
+
+            list.Add((methodName, isMethodMatch));
+        }
+
+        return list;
+    }
+
+    private static bool IsNamedAfterMember(string testMethodName, string targetMemberName)
+    {
+        return testMethodName.StartsWith(targetMemberName + "_", StringComparison.OrdinalIgnoreCase) ||
+               testMethodName.Contains(targetMemberName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int TotalTests) SelectMatchingMethodsAndReason(
+        List<(string Name, bool IsDirectMatch)> testMethods,
+        string? targetMemberName,
+        bool classNameMatches,
+        bool hasCovers,
+        bool hasTypeof)
+    {
         if (targetMemberName != null)
         {
             var directMatches = testMethods.Where(m => m.IsDirectMatch).Select(m => m.Name).ToList();
             if (directMatches.Count > 0)
             {
-                matchingMethodNames = directMatches;
-                reason = "Direct Member Match / Invocation";
-            }
-            else if (classNameMatches)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Naming Convention Match";
-            }
-            else if (hasClassLevelCovers)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Explicit @covers Comment";
-            }
-            else if (hasClassLevelTypeof)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Direct typeof Reference";
-            }
-            else
-            {
-                return (false, string.Empty, [], testMethods.Count);
-            }
-        }
-        else
-        {
-            if (classNameMatches)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Naming Convention Match";
-            }
-            else if (hasClassLevelCovers)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Explicit @covers Comment";
-            }
-            else if (hasClassLevelTypeof)
-            {
-                matchingMethodNames = testMethods.Select(m => m.Name).ToList();
-                reason = "Direct typeof Reference";
-            }
-            else
-            {
-                return (false, string.Empty, [], testMethods.Count);
+                return (true, "Direct Member Match / Invocation", directMatches, testMethods.Count);
             }
         }
 
-        return (true, reason, matchingMethodNames, testMethods.Count);
+        var allNames = testMethods.Select(m => m.Name).ToList();
+        if (classNameMatches)
+        {
+            return (true, "Naming Convention Match", allNames, testMethods.Count);
+        }
+        if (hasCovers)
+        {
+            return (true, "Explicit @covers Comment", allNames, testMethods.Count);
+        }
+        if (hasTypeof)
+        {
+            return (true, "Direct typeof Reference", allNames, testMethods.Count);
+        }
+
+        return (false, string.Empty, [], testMethods.Count);
+    }
+
+    private static bool MatchesAnyClassName(SyntaxNode root, string targetTypeName)
+    {
+        return root.DescendantNodes()
+            .OfType<ClassDeclarationSyntax>()
+            .Any(c => MatchesClassName(c.Identifier.Text, targetTypeName));
     }
 
     private static bool MatchesClassName(string testClassName, string targetTypeName)
     {
-        if (testClassName.Equals(targetTypeName + "Tests", StringComparison.OrdinalIgnoreCase) ||
-            testClassName.Equals(targetTypeName + "Test", StringComparison.OrdinalIgnoreCase) ||
-            testClassName.Equals("Test" + targetTypeName, StringComparison.OrdinalIgnoreCase) ||
-            testClassName.StartsWith(targetTypeName + "Tests", StringComparison.OrdinalIgnoreCase))
+        return testClassName.Equals(targetTypeName + "Tests", StringComparison.OrdinalIgnoreCase) ||
+               testClassName.Equals(targetTypeName + "Test", StringComparison.OrdinalIgnoreCase) ||
+               testClassName.Equals("Test" + targetTypeName, StringComparison.OrdinalIgnoreCase) ||
+               testClassName.StartsWith(targetTypeName + "Tests", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasCoversComment(SyntaxNode root, string targetTypeName)
+    {
+        return ExtractCoversComments(root).Any(c => string.Equals(c, targetTypeName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool HasTypeofReference(
+        SyntaxNode root,
+        ISymbol targetSymbol,
+        string targetTypeName,
+        SemanticModel semanticModel)
+    {
+        foreach (var typeOf in root.DescendantNodes().OfType<TypeOfExpressionSyntax>())
         {
-            return true;
+            var symbol = semanticModel.GetSymbolInfo(typeOf.Type).Symbol;
+            var targetContainingType = targetSymbol.ContainingType ?? targetSymbol;
+            if (symbol != null && (symbol.Name == targetTypeName || SymbolEqualityComparer.Default.Equals(symbol, targetContainingType)))
+            {
+                return true;
+            }
+
+            var typeText = typeOf.Type.ToString();
+            if (typeText == targetTypeName || typeText.EndsWith("." + targetTypeName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return HasNameofReference(root, targetTypeName);
+    }
+
+    private static bool HasNameofReference(SyntaxNode root, string targetTypeName)
+    {
+        foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (invocation.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" } &&
+                invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression is { } argExpr)
+            {
+                var argText = argExpr.ToString();
+                if (argText == targetTypeName || argText.EndsWith("." + targetTypeName, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -255,8 +289,7 @@ public static partial class TestCoverageScanner
         {
             foreach (var attr in attrList.Attributes)
             {
-                var name = attr.Name.ToString();
-                var simpleName = name.Split('.').Last();
+                var simpleName = attr.Name.ToString().Split('.').Last();
                 if (TestAttributeNames.Contains(simpleName))
                 {
                     return true;
@@ -314,20 +347,38 @@ public static partial class TestCoverageScanner
 
     private static string DetermineCategory(SyntaxNode root, string relativePath)
     {
+        var traitCategory = ExtractTraitCategory(root);
+        if (!string.IsNullOrWhiteSpace(traitCategory))
+        {
+            return traitCategory;
+        }
+
+        return DeduceCategoryFromPath(relativePath);
+    }
+
+    private static string? ExtractTraitCategory(SyntaxNode root)
+    {
         foreach (var attr in root.DescendantNodes().OfType<AttributeSyntax>())
         {
             var name = attr.Name.ToString();
-            if (name.Contains("Trait", StringComparison.OrdinalIgnoreCase) && attr.ArgumentList != null)
+            if (!name.Contains("Trait", StringComparison.OrdinalIgnoreCase) || attr.ArgumentList == null)
             {
-                var args = attr.ArgumentList.Arguments;
-                if (args.Count >= 2 && args[0].ToString().Contains("Category", StringComparison.OrdinalIgnoreCase))
-                {
-                    var cat = args[1].ToString().Trim('"');
-                    if (!string.IsNullOrWhiteSpace(cat)) return cat;
-                }
+                continue;
+            }
+
+            var args = attr.ArgumentList.Arguments;
+            if (args.Count >= 2 && args[0].ToString().Contains("Category", StringComparison.OrdinalIgnoreCase))
+            {
+                var cat = args[1].ToString().Trim('"');
+                if (!string.IsNullOrWhiteSpace(cat)) return cat;
             }
         }
 
+        return null;
+    }
+
+    private static string DeduceCategoryFromPath(string relativePath)
+    {
         var normalized = PathNormalizer.NormalizeSeparators(relativePath);
         if (normalized.Contains(".FastTests/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/Unit/", StringComparison.OrdinalIgnoreCase))

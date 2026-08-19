@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
+using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
@@ -21,128 +22,137 @@ internal static class FeatureContextScanner
 {
     internal static async Task<FeatureContextPayload> ScanAsync(
         ISymbol symbol,
-        Solution solution,
-        ILinterEngineConfig config,
-        ILintConsole? console,
-        FeatureContextOptions options,
+        FeatureContextScanContext context,
         CancellationToken ct)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-
-        // 1. Symbol-Deklaration
+        var solutionDir = Path.GetDirectoryName(context.Solution.FilePath) ?? "";
         var declaration = ExtractDeclaration(symbol, solutionDir);
 
-        // 2. Metriken
-        MetricsLookupResultDto? metrics = null;
-        if (options.IncludeMetrics)
-        {
-            metrics = MetricsLookupScanner.ScanSymbol(symbol, config, solutionDir, ct);
-        }
+        var metrics = context.Options.IncludeMetrics
+            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct)
+            : null;
 
-        // 3. Callers
-        CallersReportDto? callers = null;
-        if (options.IncludeCallers)
-        {
-            var allCallers = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol, solution);
-            var maxCallers = Math.Clamp(options.MaxCallers, 1, 50);
-            var isTruncated = allCallers.Count > maxCallers;
-            var callersList = isTruncated ? allCallers.Take(maxCallers).ToList() : allCallers;
-            callers = new CallersReportDto(allCallers.Count, callersList, isTruncated);
-        }
+        var callers = context.Options.IncludeCallers
+            ? await CollectCallersAsync(symbol, context.Solution, context.Options.MaxCallers)
+            : null;
 
-        // 4. Tests
-        TestCoverageReportDto? tests = null;
-        if (options.IncludeTests)
-        {
-            var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
-            var maxTests = Math.Clamp(options.MaxTests, 1, 50);
-            var isTruncated = testResults.TestFiles.Count > maxTests;
-            var testFiles = isTruncated ? testResults.TestFiles.Take(maxTests).ToList() : testResults.TestFiles;
-            var dtos = testFiles.Select(f => new TestFileCoverageDto(
-                FilePath: f.FilePath,
-                TestClassName: f.TestClassName,
-                Category: f.Category,
-                MatchReason: f.MatchReason,
-                TestMethods: f.TestMethods,
-                TotalClassTests: f.TotalClassTests
-            )).ToList();
+        var tests = context.Options.IncludeTests
+            ? await CollectTestsAsync(symbol, context.Solution, context.Options.MaxTests, ct)
+            : null;
 
-            tests = new TestCoverageReportDto(testResults.TotalMatchingTests, testResults.TestFiles.Count, dtos, isTruncated);
-        }
-
-        // 5. Violations
-        ViolationsReportDto? violations = null;
-        if (options.IncludeViolations)
-        {
-            violations = await CollectViolationsAsync(solution, declaration, config, console, ct);
-        }
+        var violations = context.Options.IncludeViolations
+            ? await CollectViolationsAsync(context.Solution, declaration, context.Config, context.Console, ct)
+            : null;
 
         return new FeatureContextPayload(declaration, metrics, callers, tests, violations);
     }
 
+    private static async Task<CallersReportDto> CollectCallersAsync(
+        ISymbol symbol,
+        Solution solution,
+        int requestedMaxCallers)
+    {
+        var allCallers = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol, solution);
+        var maxCallers = Math.Clamp(requestedMaxCallers, 1, 50);
+        var isTruncated = allCallers.Count > maxCallers;
+        var callersList = isTruncated ? allCallers.Take(maxCallers).ToList() : allCallers;
+        return new CallersReportDto(allCallers.Count, callersList, isTruncated);
+    }
+
+    private static async Task<TestCoverageReportDto> CollectTestsAsync(
+        ISymbol symbol,
+        Solution solution,
+        int requestedMaxTests,
+        CancellationToken ct)
+    {
+        var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
+        var maxTests = Math.Clamp(requestedMaxTests, 1, 50);
+        var isTruncated = testResults.TestFiles.Count > maxTests;
+        var testFiles = isTruncated ? testResults.TestFiles.Take(maxTests).ToList() : testResults.TestFiles;
+        var dtos = testFiles.Select(f => new TestFileCoverageDto(
+            FilePath: f.FilePath,
+            TestClassName: f.TestClassName,
+            Category: f.Category,
+            MatchReason: f.MatchReason,
+            TestMethods: f.TestMethods,
+            TotalClassTests: f.TotalClassTests
+        )).ToList();
+
+        return new TestCoverageReportDto(testResults.TotalMatchingTests, testResults.TestFiles.Count, dtos, isTruncated);
+    }
+
     private static SymbolDeclarationDto ExtractDeclaration(ISymbol symbol, string solutionDir)
     {
-        var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
-        var filePath = "";
-        var startLine = 0;
-        var endLine = 0;
-
-        if (loc?.SourceTree != null)
-        {
-            filePath = PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath);
-            var lineSpan = loc.GetLineSpan();
-            startLine = lineSpan.StartLinePosition.Line + 1;
-            endLine = lineSpan.EndLinePosition.Line + 1;
-        }
-
+        var (filePath, startLine, endLine) = ExtractLocation(symbol, solutionDir);
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
-        var name = symbol.ToDisplayString();
-        var kind = symbol.Kind.ToString();
-        var accessibility = symbol.DeclaredAccessibility.ToString().ToLowerInvariant();
-        var containerType = symbol.ContainingType?.Name;
-
-        string? returnType = null;
-        var parameters = new List<string>();
-
-        if (symbol is IMethodSymbol method)
-        {
-            returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            parameters = method.Parameters
-                .Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}")
-                .ToList();
-        }
-        else if (symbol is IPropertySymbol prop)
-        {
-            returnType = prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-        }
-        else if (symbol is IFieldSymbol field)
-        {
-            returnType = field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-        }
-
-        string? docCommentId = null;
-        try
-        {
-            docCommentId = DocumentationCommentId.CreateDeclarationId(symbol);
-        }
-        catch
-        {
-            // Ignorieren falls nicht unterstuetzt
-        }
+        var (returnType, parameters) = ExtractTypeAndParameters(symbol);
+        var docCommentId = SafeCreateDeclarationId(symbol);
 
         return new SymbolDeclarationDto(
-            Name: name,
-            Kind: kind,
-            Accessibility: accessibility,
+            Name: symbol.ToDisplayString(),
+            Kind: symbol.Kind.ToString(),
+            Accessibility: symbol.DeclaredAccessibility.ToString().ToLowerInvariant(),
             FilePath: filePath,
             StartLine: startLine,
             EndLine: endLine,
             LineCount: lineCount,
-            ContainerType: containerType,
+            ContainerType: symbol.ContainingType?.Name,
             ReturnType: returnType,
             Parameters: parameters,
             DocCommentId: docCommentId
         );
+    }
+
+    private static (string FilePath, int StartLine, int EndLine) ExtractLocation(ISymbol symbol, string solutionDir)
+    {
+        var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
+        if (loc?.SourceTree == null)
+        {
+            return ("", 0, 0);
+        }
+
+        var filePath = PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath);
+        var lineSpan = loc.GetLineSpan();
+        var startLine = lineSpan.StartLinePosition.Line + 1;
+        var endLine = lineSpan.EndLinePosition.Line + 1;
+        return (filePath, startLine, endLine);
+    }
+
+    private static (string? ReturnType, IReadOnlyList<string> Parameters) ExtractTypeAndParameters(ISymbol symbol)
+    {
+        if (symbol is IMethodSymbol method)
+        {
+            var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            var parameters = method.Parameters
+                .Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}")
+                .ToList();
+            return (returnType, parameters);
+        }
+
+        if (symbol is IPropertySymbol prop)
+        {
+            return (prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), []);
+        }
+
+        if (symbol is IFieldSymbol field)
+        {
+            return (field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), []);
+        }
+
+        return (null, []);
+    }
+
+    private static string? SafeCreateDeclarationId(ISymbol symbol)
+    {
+        try
+        {
+            return DocumentationCommentId.CreateDeclarationId(symbol);
+        }
+        catch (Exception ignored)
+        {
+            _ = ignored;
+            return null;
+        }
     }
 
     private static async Task<ViolationsReportDto> CollectViolationsAsync(
@@ -160,43 +170,57 @@ internal static class FeatureContextScanner
         try
         {
             var concreteConfig = (Config)config;
-            var engine = new LinterEngine(
-                config: concreteConfig,
-                rulesJsonContent: null,
-                profiler: null,
-                console: console,
-                args: null);
-
+            var engine = new LinterEngine(concreteConfig, rulesJsonContent: null, profiler: null, console: console, args: null);
             var allViolations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
-            var normalizedTarget = PathNormalizer.NormalizeSeparators(declaration.FilePath);
 
-            var fileViolations = allViolations
-                .Where(v =>
-                {
-                    var normalizedV = PathNormalizer.NormalizeSeparators(v.FilePath);
-                    return normalizedV.Equals(normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
-                           normalizedV.EndsWith("/" + normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
-                           normalizedTarget.EndsWith("/" + normalizedV, StringComparison.OrdinalIgnoreCase);
-                })
-                .OrderBy(v => v.LineNumber)
-                .ToList();
-
-            var items = fileViolations.Select(v => new ViolationItemDto(
-                RuleId: v.RuleName,
-                Message: v.Details,
-                Line: v.LineNumber,
-                IsDirectlyOnSymbol: v.LineNumber >= declaration.StartLine && v.LineNumber <= declaration.EndLine
-            )).ToList();
-
-            var violationsOnSymbol = items.Count(i => i.IsDirectlyOnSymbol);
-            var isTruncated = items.Count > 50;
-            var displayItems = isTruncated ? items.Take(50).ToList() : items;
-
-            return new ViolationsReportDto(fileViolations.Count, violationsOnSymbol, displayItems, isTruncated);
+            return FilterViolationsForFile(allViolations, declaration);
         }
-        catch
+        catch (Exception ignored)
         {
+            _ = ignored;
             return new ViolationsReportDto(0, 0, [], false);
         }
     }
+
+    private static ViolationsReportDto FilterViolationsForFile(
+        IEnumerable<RuleViolation> allViolations,
+        SymbolDeclarationDto declaration)
+    {
+        var normalizedTarget = PathNormalizer.NormalizeSeparators(declaration.FilePath);
+        var fileViolations = allViolations
+            .Where(v => IsMatchingFilePath(v.FilePath, normalizedTarget))
+            .OrderBy(v => v.LineNumber)
+            .ToList();
+
+        var items = fileViolations.Select(v => new ViolationItemDto(
+            RuleId: v.RuleName,
+            Message: v.Details,
+            Line: v.LineNumber,
+            IsDirectlyOnSymbol: v.LineNumber >= declaration.StartLine && v.LineNumber <= declaration.EndLine
+        )).ToList();
+
+        var violationsOnSymbol = items.Count(i => i.IsDirectlyOnSymbol);
+        var isTruncated = items.Count > 50;
+        var displayItems = isTruncated ? items.Take(50).ToList() : items;
+
+        return new ViolationsReportDto(fileViolations.Count, violationsOnSymbol, displayItems, isTruncated);
+    }
+
+    private static bool IsMatchingFilePath(string filePath, string normalizedTarget)
+    {
+        var normalizedV = PathNormalizer.NormalizeSeparators(filePath);
+        return normalizedV.Equals(normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
+               normalizedV.EndsWith("/" + normalizedTarget, StringComparison.OrdinalIgnoreCase) ||
+               normalizedTarget.EndsWith("/" + normalizedV, StringComparison.OrdinalIgnoreCase);
+    }
 }
+
+/// <summary>
+/// Kontext-Parameter fuer die FeatureContext-Scan-Ausfuehrung.
+/// </summary>
+internal sealed record FeatureContextScanContext(
+    Solution Solution,
+    ILinterEngineConfig Config,
+    ILintConsole? Console,
+    FeatureContextOptions Options
+);
