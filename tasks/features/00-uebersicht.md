@@ -10,7 +10,7 @@ Die folgenden 25 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 | Kategorie | Tools | Beschreibung |
 |---|---|---|
-| **Feature & Kontext** | `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) in einem einzigen residenten Aufruf. |
+| **Feature & Kontext** | `get_feature_context`, `get_test_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt 5 Dimensionen (`get_feature_context`) sowie dedizierte Test-Isolation mit kopierbaren `dotnet test` Filterbefehlen (`get_test_context`). |
 | **Symbolgraph** | `find_symbol`, `find_references`, `get_call_tree`, `get_impact`, `get_type_hierarchy`, `dependency_graph` | Vollständige Roslyn-Symbolnavigation, Caller-Bäume (ASCII/Mermaid), Git-Diff-Blast-Radius und echte typbasierte Abhängigkeitsgraphen. |
 | **Dateistruktur & Navigation** | `get_namespace_tree`, `get_file_skeleton`, `get_class_structure`, `get_index_scope`, `get_hotspots` | Progressive Disclosure (Projekte ➔ Namespaces ➔ Typen), schnelle Übersicht über Signaturen, tabellarische Member-/Zeilen-Details und Erkennung von Dateien nahe dem Zeilenlimit. |
 | **Analyse & Quality Gates** | `metrics_lookup`, `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code`, `search_pattern` | Punktgenaue One-Shot-Metriken & Schwellwert-Abgleich (`metrics_lookup`), deterministisches 0-10 Quality-Gate (`safeguard`), Pattern-Gruppierung (God-Classes, async-void etc.), Literale/Secrets-Audit und Dead-Code-Detection. |
@@ -21,16 +21,12 @@ Die folgenden 25 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 ## 2. Priorisierte Abarbeitungs-Reihenfolge (ROI: Token-Save & Qualität)
 
-Die Reihenfolge minimiert Kontext-Roundtrips, senkt API-Kosten pro Agenten-Task und verhindert architektonischen Drift:
+Die verbleibenden Features minimieren Kontext-Roundtrips, senken API-Kosten pro Agenten-Task und verhindern architektonischen Drift:
 
-### Prio 1: Test-Coverage & Drift-Prävention
-1. **[02-test-context.md](02-test-context.md) — Test-Coverage-Awareness (`get_test_context`)** *(Prio 1 — Hohe Token-Ersparnis)*
-   * **Workflow- & Token-ROI:** Hoch. Exponiert den residenten `TestCoverageScanner` als eigenständiges MCP-Tool, um vor/nach Code-Änderungen sofort die exakten Unit-/Integrationstests einer Methode zu isolieren und gezielt auszuführen, ohne heuristisches Suchen.
-
-### Prio 2: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
-3. **[03-structural-drift-detection.md](03-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 3 — Höchster Qualitäts-Hebel für DRY)*
+### Prio 1: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
+1. **[03-structural-drift-detection.md](03-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 1 — Höchster Qualitäts-Hebel für DRY)*
    * **Qualitäts-ROI:** Maximal. Erkennt parallele Zwillingsmethoden (Typ-4-Drift wie redundante Enum-Switches / Kind-Mapper) über Merkmalsvektoren und Cosine-Similarity. Verhindert Code-Aufblähung nachhaltig.
-4. **[04-similar-names.md](04-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 4 — Hoher Qualitäts-Hebel)*
+2. **[04-similar-names.md](04-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 2 — Hoher Qualitäts-Hebel)*
    * **Qualitäts-ROI:** Hoch. Erkennt inkonsistente DTO-/Model-Familien (`UserDto`, `UserData`) und Hilfsfunktions-Drift rein lexikalisch und signaturbasiert über den Roslyn-Symbolgraphen.
 
 ---
