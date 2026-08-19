@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AiNetLinter.Configuration;
 using AiNetLinter.Models;
+using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Core.Checkers;
@@ -23,7 +24,7 @@ internal static class UiFileSeparationChecker
         if (!uiConfig.BlazorRequireCodeBehind && !uiConfig.BlazorRequireCssIsolation)
             return;
 
-        var projectDirs = GetProjectDirectories(state.Solution);
+        var projectDirs = WebFileCatalog.GetProjectDirectories(state.Solution, excludeTestProjects: true);
         foreach (var dir in projectDirs)
         {
             ScanDirectory(dir, state.Violations, uiConfig);
@@ -155,14 +156,5 @@ internal static class UiFileSeparationChecker
         catch { return string.Empty; }
     }
 
-    private static System.Collections.Generic.IEnumerable<string> GetProjectDirectories(Solution solution)
-    {
-        return solution.Projects
-            .Where(p => !string.IsNullOrEmpty(p.FilePath))
-            .Where(p => !TestDetector.IsTestProject(p))
-            .Select(p => Path.GetDirectoryName(p.FilePath)!)
-            .Where(d => !string.IsNullOrEmpty(d))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(Directory.Exists);
-    }
+
 }

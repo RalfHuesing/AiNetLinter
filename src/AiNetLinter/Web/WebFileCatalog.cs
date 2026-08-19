@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Web;
@@ -75,10 +76,11 @@ internal static class WebFileCatalog
     ///  dieselbe Projektverzeichnis-Enumeration fuer den.xaml/.html-Scan wiederverwenden
     /// kann, statt eine zweite, eigene Enumeration zu bauen — keine Verhaltensaenderung.
     /// </summary>
-    internal static IEnumerable<string> GetProjectDirectories(Solution solution)
+    internal static IEnumerable<string> GetProjectDirectories(Solution solution, bool excludeTestProjects = false)
     {
         return solution.Projects
             .Where(p => !string.IsNullOrEmpty(p.FilePath))
+            .Where(p => !excludeTestProjects || !TestDetector.IsTestProject(p))
             .Select(p => Path.GetDirectoryName(p.FilePath)!)
             .Where(d => !string.IsNullOrEmpty(d) && Directory.Exists(d))
             .Distinct(StringComparer.OrdinalIgnoreCase);

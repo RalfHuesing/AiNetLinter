@@ -273,42 +273,27 @@ public static class FindDeadCodeScanner
     private static IEnumerable<ISymbol> GetImplementedInterfaceMembers(ISymbol symbol)
     {
         if (symbol.ContainingType is null) return [];
-        if (symbol is IMethodSymbol method) return GetImplementedMethodMembers(method, symbol.ContainingType);
-        if (symbol is IPropertySymbol prop) return GetImplementedPropertyMembers(prop, symbol.ContainingType);
+        if (symbol is IMethodSymbol method) return GetImplementedInterfaceMembers(method, method.ExplicitInterfaceImplementations, symbol.ContainingType);
+        if (symbol is IPropertySymbol prop) return GetImplementedInterfaceMembers(prop, prop.ExplicitInterfaceImplementations, symbol.ContainingType);
         return [];
     }
 
-    private static IEnumerable<ISymbol> GetImplementedMethodMembers(IMethodSymbol method, INamedTypeSymbol containingType)
+    private static IEnumerable<ISymbol> GetImplementedInterfaceMembers<TSymbol>(
+        TSymbol member,
+        System.Collections.Immutable.ImmutableArray<TSymbol> explicitImplementations,
+        INamedTypeSymbol containingType)
+        where TSymbol : class, ISymbol
     {
-        foreach (var explicitImpl in method.ExplicitInterfaceImplementations)
+        foreach (var explicitImpl in explicitImplementations)
         {
             yield return explicitImpl;
         }
 
         foreach (var iface in containingType.AllInterfaces)
         {
-            foreach (var ifaceMember in iface.GetMembers().OfType<IMethodSymbol>())
+            foreach (var ifaceMember in iface.GetMembers().OfType<TSymbol>())
             {
-                if (SymbolEqualityComparer.Default.Equals(containingType.FindImplementationForInterfaceMember(ifaceMember), method))
-                {
-                    yield return ifaceMember;
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<ISymbol> GetImplementedPropertyMembers(IPropertySymbol prop, INamedTypeSymbol containingType)
-    {
-        foreach (var explicitImpl in prop.ExplicitInterfaceImplementations)
-        {
-            yield return explicitImpl;
-        }
-
-        foreach (var iface in containingType.AllInterfaces)
-        {
-            foreach (var ifaceMember in iface.GetMembers().OfType<IPropertySymbol>())
-            {
-                if (SymbolEqualityComparer.Default.Equals(containingType.FindImplementationForInterfaceMember(ifaceMember), prop))
+                if (SymbolEqualityComparer.Default.Equals(containingType.FindImplementationForInterfaceMember(ifaceMember), member))
                 {
                     yield return ifaceMember;
                 }
