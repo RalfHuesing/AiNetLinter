@@ -1,20 +1,28 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-    Erhoeht die Projektversion, pusht main und erzeugt ein GitHub-Release per Tag.
+    Erhoeht die Projektversion, laedt ausstehende Commits hoch und erzeugt ein GitHub-Release per Tag.
 
 .DESCRIPTION
-    1. Liest die Version aus src/AiNetLinter/AiNetLinter.csproj
-    2. Erhoeht die Patch-Version um 1 (z. B. 1.0.5 -> 1.0.6)
-    3. Fuehrt dotnet build/test aus
-    4. Committet die Versionsaenderung, pusht main und den Tag vX.Y.Z
-    5. Der GitHub-Workflow .github/workflows/release.yml erstellt das Release
+    1. Prueft, ob der Working Tree sauber ist (bricht bei uncommitteten Aenderungen ab)
+    2. Synchronisiert mit origin/main und laedt ausstehende lokale Commits vorab hoch
+    3. Liest die Version aus src/AiNetLinter/AiNetLinter.csproj
+    4. Erhoeht die Patch-Version um 1 (z. B. 1.0.5 -> 1.0.6)
+    5. Fuehrt dotnet build/test aus
+    6. Committet die Versionsaenderung, pusht main und den Tag vX.Y.Z
+    7. Der GitHub-Workflow .github/workflows/release.yml erstellt das Release
 
     Git-Authentifizierung erfolgt ueber die lokale Umgebung (Credential Manager / SSH).
     gh ist optional und wird nur zum Status-Monitoring genutzt, falls angemeldet.
 
+.PARAMETER Branch
+    Branch-Name, auf dem das Release durchgefuehrt wird (Standard: main).
+
 .PARAMETER DryRun
     Zeigt geplante Schritte ohne Aenderungen, Commit, Push oder Tag.
+
+.PARAMETER SkipTests
+    Ueberspringt die Testausfuehrung vor dem Release.
 
 .PARAMETER FullTests
     Fuehrt die vollstaendige Test-Suite inkl. Integrationstests (Category!=Stress) aus.
@@ -24,6 +32,7 @@
 #>
 [CmdletBinding()]
 param(
+    [string]$Branch = 'main',
     [switch]$DryRun,
     [switch]$SkipTests,
     [switch]$FullTests,
@@ -46,9 +55,56 @@ function Get-RepoRoot {
 }
 
 function Assert-CleanWorkingTree {
-    $status = git status --porcelain
-    if ($status) {
-        throw "Working tree ist nicht sauber:`n$status"
+    $status = @(git status --porcelain 2>$null)
+    if ($status.Count -gt 0) {
+        Write-Host '[ERROR] Es sind uncommittete Aenderungen im Working Tree vorhanden:' -ForegroundColor Red
+        foreach ($line in $status) {
+            Write-Host "        $line" -ForegroundColor Yellow
+        }
+        Write-Host '[ERROR] Bitte alle Aenderungen committen oder stashen, bevor das Release ausgefuehrt wird.' -ForegroundColor Red
+        throw "Working Tree ist nicht sauber ($($status.Count) geaenderte/untracked Datei(en)). Release abgebrochen."
+    }
+}
+
+function Sync-PreReleaseCommits {
+    param([string]$TargetBranch)
+
+    Write-Host "[INFO] Pruefe Branch- und Remote-Status ($TargetBranch)..." -ForegroundColor Cyan
+
+    $currentBranch = (git branch --show-current 2>$null)
+    if ($null -ne $currentBranch) { $currentBranch = $currentBranch.Trim() }
+
+    if (-not $currentBranch) {
+        throw 'Konnte aktuellen Git-Branch nicht ermitteln (Detached HEAD?).'
+    }
+
+    if ($currentBranch -ne $TargetBranch) {
+        throw "Aktueller Branch ist '$currentBranch', Release ist nur auf Branch '$TargetBranch' erlaubt."
+    }
+
+    Write-Host "[INFO] git fetch origin $TargetBranch..." -ForegroundColor Cyan
+    git fetch origin $TargetBranch 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Fehler beim Abrufen von Remote 'origin $TargetBranch'."
+    }
+
+    # Pruefen, ob lokaler Branch hinter origin/$TargetBranch liegt
+    $behindOutput = (git rev-list --count "HEAD..origin/$TargetBranch" 2>$null)
+    $behindCount = if ($behindOutput -match '^\d+$') { [int]$behindOutput.Trim() } else { 0 }
+    if ($behindCount -gt 0) {
+        throw "Lokaler Branch '$TargetBranch' ist um $behindCount Commit(s) hinter 'origin/$TargetBranch'. Bitte zuerst pullen/rebasen."
+    }
+
+    # Pruefen, ob ungesendete lokale Commits vor dem Release existieren
+    $aheadOutput = (git rev-list --count "origin/$TargetBranch..HEAD" 2>$null)
+    $aheadCount = if ($aheadOutput -match '^\d+$') { [int]$aheadOutput.Trim() } else { 0 }
+
+    if ($aheadCount -gt 0) {
+        Write-Host "[INFO] $aheadCount ungesendete(r) lokale(r) Commit(s) gefunden. Lade Commits vor dem Release hoch..." -ForegroundColor Cyan
+        Invoke-GitStep "git push origin $TargetBranch (Vorab-Sync)" { git push origin $TargetBranch }
+    }
+    else {
+        Write-Host "[INFO] Lokaler Branch ist bereits synchron mit origin/$TargetBranch." -ForegroundColor Green
     }
 }
 
@@ -180,6 +236,7 @@ $repoRoot = Get-RepoRoot
 Push-Location $repoRoot
 try {
     Assert-CleanWorkingTree
+    Sync-PreReleaseCommits -TargetBranch $Branch
 
     $projectPath = Join-Path $repoRoot $ProjectFile
     if (-not (Test-Path $projectPath)) {
@@ -193,6 +250,7 @@ try {
 
     Write-Host ''
     Write-Host "AiNetLinter Release" -ForegroundColor White
+    Write-Host "  Branch  : $Branch"
     Write-Host "  Aktuell : $currentVersion"
     Write-Host "  Neu     : $newVersion"
     Write-Host "  Tag     : $tagName"
@@ -203,14 +261,20 @@ try {
         throw "Tag $tagName existiert bereits lokal."
     }
 
+    $remoteTag = (git ls-remote --tags origin "refs/tags/$tagName" 2>$null)
+    if ($remoteTag) {
+        throw "Tag $tagName existiert bereits auf Remote 'origin'."
+    }
+
     if (-not $DryRun) {
         Invoke-DotNetValidation -RepoRoot $repoRoot
+        Assert-CleanWorkingTree
         Set-ProjectVersion -ProjectPath $projectPath -NewVersion $newVersion
     }
 
     Invoke-GitStep "git add $ProjectFile" { git add -- $ProjectFile }
-    Invoke-GitStep "git commit" { git commit -m $commitMessage }
-    Invoke-GitStep 'git push origin main' { git push origin main }
+    Invoke-GitStep "git commit -m `"$commitMessage`"" { git commit -m $commitMessage }
+    Invoke-GitStep "git push origin $Branch" { git push origin $Branch }
     Invoke-GitStep "git tag $tagName" { git tag $tagName }
     Invoke-GitStep "git push origin $tagName" { git push origin $tagName }
 
