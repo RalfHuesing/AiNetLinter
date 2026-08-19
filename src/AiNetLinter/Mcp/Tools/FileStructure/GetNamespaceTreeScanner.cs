@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
@@ -19,6 +20,16 @@ internal static class GetNamespaceTreeScanner
 {
     internal static bool IsValidKind(string? kind) => SymbolKindClassifier.IsValidTypeKind(kind);
 
+    internal static async Task<HashSet<SyntaxTree>> GetProjectSyntaxTreesAsync(
+        Project project,
+        string? solutionDir,
+        CancellationToken ct)
+    {
+        var validDocs = project.Documents.Where(d => SourceFileCatalog.IsValidDocument(d, solutionDir)).ToList();
+        var trees = await Task.WhenAll(validDocs.Select(d => d.GetSyntaxTreeAsync(ct)));
+        return trees.Where(t => t is not null).Select(t => t!).ToHashSet();
+    }
+
     /// <summary>
     /// Stufe 1: Solution-Ueberblick ueber alle Projekte.
     /// </summary>
@@ -26,6 +37,7 @@ internal static class GetNamespaceTreeScanner
         Solution solution, CancellationToken ct)
     {
         var solutionName = Path.GetFileName(solution.FilePath) ?? "Solution";
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var projectEntries = new List<ProjectOverviewEntry>();
 
         foreach (var project in solution.Projects)
@@ -38,7 +50,8 @@ internal static class GetNamespaceTreeScanner
                 continue;
             }
 
-            var (nsCount, typeCount) = CountNamespacesAndTypes(compilation.GlobalNamespace);
+            var projectTrees = await GetProjectSyntaxTreesAsync(project, solutionDir, ct);
+            var (nsCount, typeCount) = CountNamespacesAndTypes(compilation.GlobalNamespace, projectTrees);
             projectEntries.Add(new ProjectOverviewEntry(project.Name, projectType, nsCount, typeCount));
         }
 
@@ -90,6 +103,7 @@ internal static class GetNamespaceTreeScanner
             return ($"Projekt '{parameters.Project.Name}' konnte nicht kompiliert werden.", emptyPayload);
         }
 
+        var projectTrees = await GetProjectSyntaxTreesAsync(parameters.Project, parameters.SolutionDir, ct);
         var startNamespace = FindNamespace(compilation.GlobalNamespace, parameters.NamespacePrefix);
         if (startNamespace is null && !string.IsNullOrWhiteSpace(parameters.NamespacePrefix))
         {
@@ -110,17 +124,18 @@ internal static class GetNamespaceTreeScanner
 
         if (!string.IsNullOrWhiteSpace(parameters.NamespacePrefix) && parameters.IncludeTypes && parameters.Depth <= 1)
         {
-            return RenderNamespaceTypes(parameters, targetNs);
+            return RenderNamespaceTypes(parameters, targetNs, projectTrees);
         }
 
-        return RenderNamespaceTree(parameters, targetNs);
+        return RenderNamespaceTree(parameters, targetNs, projectTrees);
     }
 
     private static (string Text, NamespaceTreePayload Payload) RenderNamespaceTypes(
         NamespaceTreeScanParameters parameters,
-        INamespaceSymbol ns)
+        INamespaceSymbol ns,
+        HashSet<SyntaxTree> projectTrees)
     {
-        var allTypes = CollectSourceTypes(ns)
+        var allTypes = CollectSourceTypes(ns, projectTrees)
             .Where(t => SymbolKindClassifier.MatchesTypeKind(t, parameters.KindFilter))
             .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -129,17 +144,9 @@ internal static class GetNamespaceTreeScanner
         var shownTypes = allTypes.Take(parameters.MaxResults).ToList();
         var truncated = totalCount > parameters.MaxResults;
 
-        var typeEntries = shownTypes.Select(t =>
-        {
-            var location = t.Locations.FirstOrDefault(l => l.IsInSource);
-            var filePath = location?.SourceTree?.FilePath is not null
-                ? PathNormalizer.ToRelative(parameters.SolutionDir, location.SourceTree.FilePath)
-                : string.Empty;
-            var line = (location?.GetLineSpan().StartLinePosition.Line ?? 0) + 1;
-            var kindDesc = SymbolKindClassifier.DescribeNamedTypeKind(t, englishClass: false);
-            var visibility = SymbolVisibilityResolver.ResolveVisibility(t);
-            return new TypeNodeEntry(t.Name, kindDesc, filePath, line, visibility);
-        }).ToList();
+        var typeEntries = shownTypes
+            .Select(t => ToTypeEntry(t, parameters.SolutionDir, projectTrees))
+            .ToList();
 
         var sb = new StringBuilder();
         sb.AppendLine($"# Typen in Namespace '{parameters.NamespacePrefix}' (Projekt: {parameters.Project.Name}):\n");
@@ -162,6 +169,8 @@ internal static class GetNamespaceTreeScanner
             sb.Append($"[{totalCount} Typen gesamt, {shownTypes.Count} gezeigt — maxResults erhoehen]");
         }
 
+        AppendSubNamespaceHint(sb, ns, parameters.NamespacePrefix, projectTrees);
+
         var payload = new NamespaceTreePayload(
             SolutionName: null,
             Project: parameters.Project.Name,
@@ -177,19 +186,39 @@ internal static class GetNamespaceTreeScanner
         return (sb.ToString(), payload);
     }
 
+    private static void AppendSubNamespaceHint(
+        StringBuilder sb,
+        INamespaceSymbol ns,
+        string? namespacePrefix,
+        HashSet<SyntaxTree> projectTrees)
+    {
+        var directSubNamespaces = ns.GetNamespaceMembers()
+            .Where(sub => HasAnySourceTypesInHierarchy(sub, projectTrees))
+            .OrderBy(sub => sub.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (directSubNamespaces.Count == 0) return;
+
+        sb.AppendLine();
+        var examples = string.Join(", ", directSubNamespaces.Take(3).Select(s => s.ToDisplayString()));
+        if (directSubNamespaces.Count > 3) examples += ", ...";
+        sb.Append($"[Hinweis: Unter '{namespacePrefix}' existieren {directSubNamespaces.Count} weitere Sub-Namespaces ({examples}) — nutze depth=2 oder includeTypes=false fuer den Namespace-Baum]");
+    }
+
     private static (string Text, NamespaceTreePayload Payload) RenderNamespaceTree(
         NamespaceTreeScanParameters parameters,
-        INamespaceSymbol startNs)
+        INamespaceSymbol startNs,
+        HashSet<SyntaxTree> projectTrees)
     {
         var rootNodes = new List<NamespaceTreeNode>();
         var flatListForOutput = new List<(string DisplayName, int TypeCount, int Indent)>();
+        var traverseContext = new NamespaceTreeTraverseContext(parameters, projectTrees, flatListForOutput);
 
         CollectNamespaceTreeNodes(
             startNs,
-            parameters,
+            traverseContext,
             currentDepth: 1,
             resultNodes: rootNodes,
-            flatOutput: flatListForOutput,
             currentIndent: 0);
 
         var totalCount = flatListForOutput.Count;
@@ -247,43 +276,48 @@ internal static class GetNamespaceTreeScanner
             sb.AppendLine();
             var firstNs = shownList.FirstOrDefault().DisplayName;
             var nextHint = string.IsNullOrWhiteSpace(firstNs) ? parameters.Project.Name : firstNs;
-            sb.Append($"Tipp: Nutze get_namespace_tree(project=\"{parameters.Project.Name}\", namespacePrefix=\"{nextHint}\") fuer die Typen.");
+            if (parameters.Depth <= 1 && shownList.Count == 1 && shownList[0].TypeCount > 0)
+            {
+                sb.Append($"Tipp: Nutze depth=2 fuer Unter-Namespaces oder get_namespace_tree(project=\"{parameters.Project.Name}\", namespacePrefix=\"{nextHint}\") fuer die direkten Typen.");
+            }
+            else
+            {
+                sb.Append($"Tipp: Nutze get_namespace_tree(project=\"{parameters.Project.Name}\", namespacePrefix=\"{nextHint}\") fuer die Typen.");
+            }
         }
     }
 
     private static void CollectNamespaceTreeNodes(
         INamespaceSymbol ns,
-        NamespaceTreeScanParameters parameters,
+        NamespaceTreeTraverseContext context,
         int currentDepth,
         List<NamespaceTreeNode> resultNodes,
-        List<(string DisplayName, int TypeCount, int Indent)> flatOutput,
         int currentIndent)
     {
         var candidateNamespaces = ns.IsGlobalNamespace
-            ? FlattenToTopLevelMeaningfulNamespaces(ns)
-            : ns.GetNamespaceMembers().Where(HasAnySourceTypesInHierarchy).OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            ? FlattenToTopLevelMeaningfulNamespaces(ns, context.ProjectTrees)
+            : ns.GetNamespaceMembers().Where(n => HasAnySourceTypesInHierarchy(n, context.ProjectTrees)).OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
         foreach (var subNs in candidateNamespaces)
         {
-            var directTypes = CollectSourceTypes(subNs)
-                .Where(t => SymbolKindClassifier.MatchesTypeKind(t, parameters.KindFilter))
+            var directTypes = CollectSourceTypes(subNs, context.ProjectTrees)
+                .Where(t => SymbolKindClassifier.MatchesTypeKind(t, context.Parameters.KindFilter))
                 .ToList();
 
             var subTreeNodes = new List<NamespaceTreeNode>();
-            var typeEntries = parameters.IncludeTypes
-                ? directTypes.Select(t => ToTypeEntry(t, parameters.SolutionDir)).ToList()
+            var typeEntries = context.Parameters.IncludeTypes
+                ? directTypes.Select(t => ToTypeEntry(t, context.Parameters.SolutionDir, context.ProjectTrees)).ToList()
                 : null;
 
-            flatOutput.Add((subNs.ToDisplayString(), directTypes.Count, currentIndent));
+            context.FlatOutput.Add((subNs.ToDisplayString(), directTypes.Count, currentIndent));
 
-            if (currentDepth < parameters.Depth)
+            if (currentDepth < context.Parameters.Depth)
             {
                 CollectNamespaceTreeNodes(
                     subNs,
-                    parameters,
+                    context,
                     currentDepth + 1,
                     subTreeNodes,
-                    flatOutput,
                     currentIndent + 1);
             }
 
@@ -295,24 +329,28 @@ internal static class GetNamespaceTreeScanner
         }
     }
 
-    private static List<INamespaceSymbol> FlattenToTopLevelMeaningfulNamespaces(INamespaceSymbol globalNs)
+
+    private static List<INamespaceSymbol> FlattenToTopLevelMeaningfulNamespaces(
+        INamespaceSymbol globalNs,
+        HashSet<SyntaxTree> projectTrees)
     {
         var result = new List<INamespaceSymbol>();
-        foreach (var rootMember in globalNs.GetNamespaceMembers().Where(HasAnySourceTypesInHierarchy))
+        foreach (var rootMember in globalNs.GetNamespaceMembers().Where(n => HasAnySourceTypesInHierarchy(n, projectTrees)))
         {
             var current = rootMember;
-            while (!CollectSourceTypes(current).Any() && current.GetNamespaceMembers().Count(HasAnySourceTypesInHierarchy) == 1)
+            while (!CollectSourceTypes(current, projectTrees).Any() && current.GetNamespaceMembers().Count(n => HasAnySourceTypesInHierarchy(n, projectTrees)) == 1)
             {
-                current = current.GetNamespaceMembers().Single(HasAnySourceTypesInHierarchy);
+                current = current.GetNamespaceMembers().Single(n => HasAnySourceTypesInHierarchy(n, projectTrees));
             }
             result.Add(current);
         }
         return result.OrderBy(n => n.ToDisplayString(), StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private static TypeNodeEntry ToTypeEntry(INamedTypeSymbol t, string solutionDir)
+    private static TypeNodeEntry ToTypeEntry(INamedTypeSymbol t, string solutionDir, HashSet<SyntaxTree> projectTrees)
     {
-        var location = t.Locations.FirstOrDefault(l => l.IsInSource);
+        var location = t.Locations.FirstOrDefault(l => l.IsInSource && l.SourceTree is not null && projectTrees.Contains(l.SourceTree))
+            ?? t.Locations.FirstOrDefault(l => l.IsInSource);
         var filePath = location?.SourceTree?.FilePath is not null
             ? PathNormalizer.ToRelative(solutionDir, location.SourceTree.FilePath)
             : string.Empty;
@@ -320,20 +358,22 @@ internal static class GetNamespaceTreeScanner
         return new TypeNodeEntry(t.Name, SymbolKindClassifier.DescribeNamedTypeKind(t, englishClass: false), filePath, line, SymbolVisibilityResolver.ResolveVisibility(t));
     }
 
-    private static bool HasAnySourceTypesInHierarchy(INamespaceSymbol ns)
+    internal static bool HasAnySourceTypesInHierarchy(INamespaceSymbol ns, HashSet<SyntaxTree> projectTrees)
     {
-        if (CollectSourceTypes(ns).Any()) return true;
-        return ns.GetNamespaceMembers().Any(HasAnySourceTypesInHierarchy);
+        if (CollectSourceTypes(ns, projectTrees).Any()) return true;
+        return ns.GetNamespaceMembers().Any(sub => HasAnySourceTypesInHierarchy(sub, projectTrees));
     }
 
-    private static (int NamespaceCount, int TypeCount) CountNamespacesAndTypes(INamespaceSymbol globalNs)
+    private static (int NamespaceCount, int TypeCount) CountNamespacesAndTypes(
+        INamespaceSymbol globalNs,
+        HashSet<SyntaxTree> projectTrees)
     {
         var nsCount = 0;
         var typeCount = 0;
 
         void Traverse(INamespaceSymbol ns)
         {
-            var types = CollectSourceTypes(ns).ToList();
+            var types = CollectSourceTypes(ns, projectTrees).ToList();
             if (types.Count > 0)
             {
                 nsCount++;
@@ -350,11 +390,34 @@ internal static class GetNamespaceTreeScanner
         return (nsCount, typeCount);
     }
 
-    private static IEnumerable<INamedTypeSymbol> CollectSourceTypes(INamespaceSymbol ns)
+    private static IEnumerable<INamedTypeSymbol> CollectSourceTypes(
+        INamespaceSymbol ns,
+        HashSet<SyntaxTree> projectTrees)
     {
         return ns.GetTypeMembers()
-            .Where(t => t.Locations.Any(l => l.IsInSource) || t.DeclaringSyntaxReferences.Length > 0)
+            .Where(t => IsTypeInProjectTrees(t, projectTrees))
             .Where(t => !IsCompilerGenerated(t));
+    }
+
+    private static bool IsTypeInProjectTrees(INamedTypeSymbol t, HashSet<SyntaxTree> projectTrees)
+    {
+        foreach (var loc in t.Locations)
+        {
+            if (loc.IsInSource && loc.SourceTree is not null && projectTrees.Contains(loc.SourceTree))
+            {
+                return true;
+            }
+        }
+
+        foreach (var syntaxRef in t.DeclaringSyntaxReferences)
+        {
+            if (syntaxRef.SyntaxTree is not null && projectTrees.Contains(syntaxRef.SyntaxTree))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsCompilerGenerated(INamedTypeSymbol t)
@@ -381,9 +444,7 @@ internal static class GetNamespaceTreeScanner
         return false;
     }
 
-
-
-    private static INamespaceSymbol? FindNamespace(INamespaceSymbol root, string? namespacePrefix)
+    internal static INamespaceSymbol? FindNamespace(INamespaceSymbol root, string? namespacePrefix)
     {
         if (string.IsNullOrWhiteSpace(namespacePrefix)) return root;
 
@@ -400,3 +461,4 @@ internal static class GetNamespaceTreeScanner
         return current;
     }
 }
+

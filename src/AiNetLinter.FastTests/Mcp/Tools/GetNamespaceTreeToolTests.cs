@@ -161,4 +161,53 @@ public sealed class GetNamespaceTreeToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", textContent.Text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_NamespacePrefixWithoutProject_ResolvesUniqueProjectAutomatically()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(NamespacePrefix: "SymbolGraphMini"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("# Typen in Namespace 'SymbolGraphMini' (Projekt: SymbolGraphMini):", textContent.Text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NamespacePrefixWithoutProject_AmbiguousNamespace_ReturnsAmbiguousSymbol()
+    {
+        using var multiProjSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\Multi.slnx",
+            new ProjectSpec("App.Core", [("C1.cs", "namespace Shared.Common; public class C1 {}")]),
+            new ProjectSpec("App.Utils", [("U1.cs", "namespace Shared.Common; public class U1 {}")]));
+
+        using var multiContext = new McpInMemoryTestContext(multiProjSolution);
+        var state = multiContext.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(NamespacePrefix: "Shared.Common"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("AMBIGUOUS_SYMBOL", textContent.Text);
+        Assert.Contains("App.Core", textContent.Text);
+        Assert.Contains("App.Utils", textContent.Text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NamespacePrefixWithoutProject_NotFound_ReturnsInvalidArgument()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(NamespacePrefix: "NonExistent.Namespace"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text);
+        Assert.Contains("NonExistent.Namespace", textContent.Text);
+    }
 }
+

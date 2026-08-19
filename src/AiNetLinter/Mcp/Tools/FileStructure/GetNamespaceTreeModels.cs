@@ -66,3 +66,9 @@ public sealed record NamespaceTreePayload(
     IReadOnlyList<ProjectOverviewEntry>? Projects = null,
     IReadOnlyList<NamespaceTreeNode>? Namespaces = null,
     IReadOnlyList<TypeNodeEntry>? Types = null);
+
+internal sealed record NamespaceTreeTraverseContext(
+    NamespaceTreeScanParameters Parameters,
+    HashSet<SyntaxTree> ProjectTrees,
+    List<(string DisplayName, int TypeCount, int Indent)> FlatOutput);
+

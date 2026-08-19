@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -48,7 +49,12 @@ internal static class GetNamespaceTreeTool
         {
             if (string.IsNullOrWhiteSpace(input.Project))
             {
-                return await ExecuteSolutionOverviewAsync(solution, ct);
+                if (string.IsNullOrWhiteSpace(input.NamespacePrefix))
+                {
+                    return await ExecuteSolutionOverviewAsync(solution, ct);
+                }
+
+                return await ExecuteAutoProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct);
             }
 
             return await ExecuteProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct);
@@ -68,6 +74,60 @@ internal static class GetNamespaceTreeTool
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var textWithWarning = FindSymbolTool.PrependWarning(warning, overviewText);
         return McpToolResults.Text(textWithWarning, overviewPayload);
+    }
+
+    private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(
+        Solution solution,
+        GetNamespaceTreeInput input,
+        int clampedDepth,
+        int clampedMaxResults,
+        string solutionDir,
+        CancellationToken ct)
+    {
+        var matchingProjects = new List<Project>();
+
+        foreach (var project in solution.Projects)
+        {
+            var compilation = await project.GetCompilationAsync(ct);
+            if (compilation is null) continue;
+
+            var startNs = GetNamespaceTreeScanner.FindNamespace(compilation.GlobalNamespace, input.NamespacePrefix);
+            if (startNs is null) continue;
+
+            var projectTrees = await GetNamespaceTreeScanner.GetProjectSyntaxTreesAsync(project, solutionDir, ct);
+            if (GetNamespaceTreeScanner.HasAnySourceTypesInHierarchy(startNs, projectTrees))
+            {
+                matchingProjects.Add(project);
+            }
+        }
+
+        if (matchingProjects.Count == 0)
+        {
+            var available = string.Join(", ", solution.Projects.Select(p => p.Name));
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Namespace '{input.NamespacePrefix}' wurde in keinem Projekt der Solution gefunden.",
+                hint: $"Verfuegbare Projekte: {available}");
+        }
+
+        if (matchingProjects.Count > 1)
+        {
+            var candidates = matchingProjects.Select(p => $"- {p.Name} ({p.FilePath})");
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.AmbiguousSymbol,
+                $"Namespace '{input.NamespacePrefix}' existiert in mehreren Projekten — Zielprojekt bitte explizit angeben.",
+                context: string.Join("\n", candidates),
+                hint: "Parameter 'project' mit einem der oben genannten Projektnamen uebergeben.");
+        }
+
+        return await ExecuteProjectDrilldownInternalAsync(
+            solution,
+            matchingProjects[0],
+            input,
+            clampedDepth,
+            clampedMaxResults,
+            solutionDir,
+            ct);
     }
 
     private static async Task<CallToolResult> ExecuteProjectDrilldownAsync(
@@ -113,6 +173,26 @@ internal static class GetNamespaceTreeTool
 
             targetProject = matchingProjects[0];
         }
+
+        return await ExecuteProjectDrilldownInternalAsync(
+            solution,
+            targetProject,
+            input,
+            clampedDepth,
+            clampedMaxResults,
+            solutionDir,
+            ct);
+    }
+
+    private static async Task<CallToolResult> ExecuteProjectDrilldownInternalAsync(
+        Solution solution,
+        Project targetProject,
+        GetNamespaceTreeInput input,
+        int clampedDepth,
+        int clampedMaxResults,
+        string solutionDir,
+        CancellationToken ct)
+    {
         var scanParams = new NamespaceTreeScanParameters(
             Project: targetProject,
             NamespacePrefix: input.NamespacePrefix,
@@ -134,3 +214,4 @@ internal static class GetNamespaceTreeTool
         return McpToolResults.Text(finalText, treePayload);
     }
 }
+

@@ -293,4 +293,72 @@ public sealed class GetNamespaceTreeScannerTests
         Assert.Contains("App.Core.Services", text);
         Assert.NotNull(payload.Namespaces);
     }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_IsolatesTypesToRequestedProject_ExcludesReferencedProjectTypes()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [("CoreModel.cs", "namespace App.Core; public class CoreModel {}")]),
+            new ProjectSpec(
+                "App.Tests",
+                [("TestClass.cs", "namespace App.Tests; public class TestClass {}")],
+                ProjectReferences: ["App.Core"]));
+
+        var testsProject = testSolution.Solution.Projects.First(p => p.Name == "App.Tests");
+        var parameters = new NamespaceTreeScanParameters(
+            Project: testsProject,
+            NamespacePrefix: null,
+            Depth: 2,
+            IncludeTypes: false,
+            KindFilter: "all",
+            MaxResults: 50,
+            SolutionDir: @"C:\virtual");
+
+        var (text, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.Contains("App.Tests", text);
+        Assert.DoesNotContain("App.Core", text);
+
+        var (solutionText, solutionPayload) = await GetNamespaceTreeScanner.ScanSolutionProjectsAsync(
+            testSolution.Solution, CancellationToken.None);
+
+        Assert.Contains("App.Tests (Typ: Test, 1 Namespaces, 1 Typen)", solutionText);
+        Assert.Contains("App.Core (Typ: Lib, 1 Namespaces, 1 Typen)", solutionText);
+    }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_Level3_IncludesSubNamespaceGuidanceHintWhenSubNamespacesExist()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [
+                    ("RootClass.cs", "namespace App.Core; public class RootClass {}"),
+                    ("SubClass.cs", "namespace App.Core.Sub; public class SubClass {}"),
+                ]));
+
+        var project = testSolution.Solution.Projects.Single();
+        var parameters = new NamespaceTreeScanParameters(
+            Project: project,
+            NamespacePrefix: "App.Core",
+            Depth: 1,
+            IncludeTypes: true,
+            KindFilter: "all",
+            MaxResults: 50,
+            SolutionDir: @"C:\virtual");
+
+        var (text, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.Contains("RootClass (Klasse)", text);
+        Assert.Contains("[Hinweis: Unter 'App.Core' existieren 1 weitere Sub-Namespaces (App.Core.Sub)", text);
+    }
 }
+
