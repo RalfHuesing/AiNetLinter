@@ -21,27 +21,27 @@ internal static class GetTypeHierarchyTool
     internal const int DefaultMaxResults = 50;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? typeIdentifier, int maxResults, CancellationToken ct)
+        McpCodeGraphServer state, string? symbolIdentifier, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(typeIdentifier))
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'typeIdentifier' fehlt oder ist leer.",
-                hint: "typeIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
         }
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, typeIdentifier, ct);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
         if (error is not null) return error;
 
         if (symbol is not INamedTypeSymbol type)
         {
             return McpToolResults.InvalidArgument(
-                $"'{typeIdentifier}' loest zu '{symbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
+                $"'{symbolIdentifier}' loest zu '{symbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;

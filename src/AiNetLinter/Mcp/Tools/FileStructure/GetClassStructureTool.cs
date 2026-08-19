@@ -42,31 +42,31 @@ internal static class GetClassStructureTool
     internal const int MaxMembersCap = 200;
 
     internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbol, string? sortBy, CancellationToken ct) =>
-        ExecuteAsync(state, symbol, sortBy, DefaultMaxMembers, ct);
+        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
+        ExecuteAsync(state, symbolIdentifier, sortBy, DefaultMaxMembers, ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbol, string? sortBy, int maxMembers, CancellationToken ct)
+        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrWhiteSpace(symbol))
+        if (string.IsNullOrWhiteSpace(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbol' fehlt oder ist leer.",
-                hint: "symbol angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
         var clampedMaxMembers = Math.Clamp(maxMembers, 1, MaxMembersCap);
 
         try
         {
-            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbol, ct);
+            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
             if (error is not null) return error;
-            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbol);
+            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
 
             if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
             {
@@ -229,7 +229,8 @@ internal static class GetClassStructureTool
 
     private static ClassStructureMemberEntry CreateMemberEntry(ISymbol m, string solutionDir)
     {
-        var loc = m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
+        var syntaxNode = m.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
+        var loc = syntaxNode?.GetLocation() ?? m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
         var memberFilePath = loc?.SourceTree?.FilePath is not null
             ? PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath)
             : "";

@@ -49,7 +49,7 @@ public sealed class DependencyGraphToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
-        Assert.Contains("filePath ODER typeIdentifier", textContent.Text);
+        Assert.Contains("filePath ODER symbolIdentifier", textContent.Text);
         Assert.DoesNotContain("gitRef", textContent.Text);
     }
 
@@ -64,7 +64,7 @@ public sealed class DependencyGraphToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
-        Assert.Contains("filePath ODER typeIdentifier", textContent.Text);
+        Assert.Contains("filePath ODER symbolIdentifier", textContent.Text);
         Assert.DoesNotContain("gitRef", textContent.Text);
     }
 

@@ -125,8 +125,8 @@ internal static class SymbolGraphToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? typeIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
-                GetTypeHierarchyTool.ExecuteAsync(mcpState, typeIdentifier, maxResults, ct),
+            (string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+                GetTypeHierarchyTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_type_hierarchy",
@@ -137,7 +137,7 @@ internal static class SymbolGraphToolRegistrations
     private const string GetTypeHierarchyDescription =
         "Wann nutzen: Vererbungs-/Interface-Baum eines C#-Typs sehen (Basisklassen, " +
         "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "typeIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Datei.cs:10\" " +
+        "symbolIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Datei.cs:10\" " +
         "(Zeile ohne Spalte, siehe find_references) oder \"Klasse\". " +
         "maxResults begrenzt die abgeleiteten/implementierenden Typen (Default 50).";
 
@@ -146,9 +146,9 @@ internal static class SymbolGraphToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? filePath = null, string? typeIdentifier = null, string? direction = null,
+            (string? filePath = null, string? symbolIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
-                DependencyGraphTool.ExecuteAsync(mcpState, new DependencyGraphInput(filePath, typeIdentifier, direction, depth, maxResults), ct),
+                DependencyGraphTool.ExecuteAsync(mcpState, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
             new McpServerToolCreateOptions
             {
                 Name = "dependency_graph",
@@ -160,7 +160,7 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: welche Dateien/Typen von einer Datei oder einem Typ abhaengen (echte " +
         "SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
         "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
-        "typeIdentifier (ein Typ, engerer Scope) angeben, nie beide — typeIdentifier-Format wie " +
+        "symbolIdentifier (ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
         "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth " +
         "(Default 1, hard cap 3) traversiert transitiv auf Datei-Ebene, hart begrenzt auf 150 " +
         "besuchte Dateien. maxResults begrenzt die angezeigten Kanten (Default 50).";

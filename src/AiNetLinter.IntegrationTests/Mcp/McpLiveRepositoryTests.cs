@@ -110,7 +110,7 @@ public sealed class McpLiveRepositoryTests
             "get_type_hierarchy",
             new Dictionary<string, object?>
             {
-                ["typeIdentifier"] = "McpCodeGraphServer"
+                ["symbolIdentifier"] = "McpCodeGraphServer"
             });
 
         Assert.NotNull(text);

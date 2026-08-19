@@ -11,7 +11,7 @@ using Xunit;
 namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
-/// Umfassende E2E- und Edge-Case-Tests fuer alle 9 MCP-Tools.
+/// Umfassende E2E- und Edge-Case-Tests fuer alle MCP-Tools.
 /// Nutzt <see cref="ReadOnlyMcpHostFixture"/> zur einmaligen lazy Host-Instanziierung.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -84,7 +84,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var text = await _fixture.Client.CallToolGetTextAsync(
             "get_type_hierarchy",
-            new Dictionary<string, object?> { ["typeIdentifier"] = "Greeter" });
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter" });
 
         Assert.Contains("Basisklassen", text, StringComparison.Ordinal);
     }
@@ -94,7 +94,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy",
-            new Dictionary<string, object?> { ["typeIdentifier"] = "UnknownClass123" });
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "UnknownClass123" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -185,13 +185,6 @@ public sealed class McpServerAllToolsE2ETests
         await Assert.ThrowsAsync<McpProtocolException>(() => _fixture.Client.CallToolAsync("unknown_tool_name"));
     }
 
-    // Die folgenden Tests decken die SDK-Argument-Bindungsebene ab (ModelContextProtocol.Server),
-    // nicht nur die interne ExecuteAsync-Methode: fehlt ein Pflichtparameter im JSON-RPC-Aufruf
-    // ganz oder wird er falsch benannt uebergeben, muss die SDK-Bindung den Delegate trotzdem
-    // erreichen (Parameter optional mit Default null) statt vor dem Tool-Code mit einer rohen,
-    // nicht hilfreichen Fehlermeldung zu scheitern. Ein Unit-Test auf ExecuteAsync direkt wuerde
-    // das nicht abdecken, weil die interne Methode den Parameter ohnehin typisiert bekommt.
-
     [Fact]
     public async Task FindSymbol_MissingNamePattern_ReturnsRecoverableInvalidArgument()
     {
@@ -228,7 +221,7 @@ public sealed class McpServerAllToolsE2ETests
     }
 
     [Fact]
-    public async Task GetTypeHierarchy_MissingTypeIdentifier_ReturnsRecoverableInvalidArgument()
+    public async Task GetTypeHierarchy_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy", new Dictionary<string, object?>());
@@ -236,27 +229,23 @@ public sealed class McpServerAllToolsE2ETests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("typeIdentifier", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task GetTypeHierarchy_WrongParameterName_ReturnsRecoverableInvalidArgumentInsteadOfCrashing()
     {
-        // Reproduziert den gemeldeten Bug: ein Aufrufer uebergibt "symbolIdentifier" (der Name,
-        // den find_references/get_call_tree nutzen) statt get_type_hierarchys eigenem
-        // "typeIdentifier". Vor dem Fix scheiterte die SDK-Argument-Bindung mit einer rohen
-        // "An error occurred invoking..."-Meldung statt eines strukturierten [ERROR]-Ergebnisses.
         var result = await _fixture.Client.CallToolAsync(
-            "get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter" });
+            "get_type_hierarchy", new Dictionary<string, object?> { ["wrongParam"] = "Greeter" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("typeIdentifier", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GetSymbolBody_MissingIdentifier_ReturnsRecoverableInvalidArgument()
+    public async Task GetSymbolBody_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_symbol_body", new Dictionary<string, object?>());
@@ -264,7 +253,7 @@ public sealed class McpServerAllToolsE2ETests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("identifier", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

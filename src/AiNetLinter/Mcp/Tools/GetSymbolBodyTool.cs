@@ -31,25 +31,25 @@ internal static class GetSymbolBodyTool
     private const string TruncationMarker = "// ... truncated, total ";
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? identifier, int maxBodyLines, CancellationToken ct)
+        McpCodeGraphServer state, string? symbolIdentifier, int maxBodyLines, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(identifier))
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'identifier' fehlt oder ist leer.",
-                hint: "identifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
         }
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
             if (error is not null) return error;
-            if (symbol is null) return McpToolResults.SymbolNotFound(identifier);
+            if (symbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
 
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
             var idSuffix = TryGetDeclarationId(symbol);
@@ -73,7 +73,7 @@ internal static class GetSymbolBodyTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in get_symbol_body: {ex.Message}",
-                context: identifier);
+                context: symbolIdentifier);
         }
     }
 

@@ -70,10 +70,10 @@ internal static class FileStructureToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbol = null, string? sortBy = "lines",
+            (string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                GetClassStructureTool.ExecuteAsync(mcpState, symbol, sortBy, maxMembers, ct),
+                GetClassStructureTool.ExecuteAsync(mcpState, symbolIdentifier, sortBy, maxMembers, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_class_structure",
@@ -84,8 +84,8 @@ internal static class FileStructureToolRegistrations
     private static readonly string GetClassStructureDescription =
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
-        "vor Refactorings oder zur Identifikation langer Member). symbol (Pflicht): Typname, " +
-        "File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'. " +
+        "vor Refactorings oder zur Identifikation langer Member). symbolIdentifier (Pflicht): " +
+        "Typname, File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'. " +
         "maxMembers: Token-Budget-Limit (Default 50, Cap " +
         + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung Truncation-Meta-Zeile " +
         "und TotalMemberCount vs. ShownMemberCount im StructuredContent.";

@@ -117,7 +117,7 @@ public sealed class McpServerCommandContractTests
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>
-        await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["typeIdentifier"] = "BaseGreeting" }, "IGreeting");
+        await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "BaseGreeting" }, "IGreeting");
 
     private async Task AssertTextAsync(string tool, IReadOnlyDictionary<string, object?> arguments, string expected)
     {

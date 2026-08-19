@@ -246,4 +246,35 @@ public sealed class GetClassStructureToolTests
         Assert.True(lastParamIndex < firstNonParamIndex,
             $"PrimaryCtor-Params müssen vor den restlichen Membern stehen (last={lastParamIndex}, firstNonParam={firstNonParamIndex}).");
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MultiLineMethod_CalculatesAccurateLineCountAndSpan()
+    {
+        const string source = """
+            namespace TestNs;
+            public class Service
+            {
+                public void LongMethod()
+                {
+                    var x = 1;
+                    var y = 2;
+                    var z = x + y;
+                }
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("Service.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(state, "Service", "lines", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        var method = Assert.Single(payload!.Members.Where(m => m.Name == "LongMethod"));
+        Assert.Equal(4, method.StartLine);
+        Assert.Equal(9, method.EndLine);
+        Assert.Equal(6, method.LineCount);
+    }
 }

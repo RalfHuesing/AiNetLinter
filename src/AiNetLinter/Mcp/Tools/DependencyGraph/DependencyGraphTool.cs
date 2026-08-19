@@ -35,12 +35,12 @@ internal static class DependencyGraphTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var hasFilePath = !string.IsNullOrEmpty(input.FilePath);
-        var hasTypeIdentifier = !string.IsNullOrEmpty(input.TypeIdentifier);
-        if (hasFilePath == hasTypeIdentifier)
+        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.SymbolIdentifier);
+        if (hasFilePath == hasSymbolIdentifier)
         {
             return McpToolResults.InvalidArgument(
-                "filePath und typeIdentifier sind gegenseitig exklusiv — genau einen angeben, nie beide oder keins.",
-                hint: "Entweder filePath ODER typeIdentifier angeben, nie beide.");
+                "filePath und symbolIdentifier sind gegenseitig exklusiv — genau einen angeben, nie beide oder keins.",
+                hint: "Entweder filePath ODER symbolIdentifier angeben, nie beide.");
         }
 
         var (includeOutgoing, includeIncoming, directionError) = ParseDirection(input.Direction);
@@ -56,7 +56,7 @@ internal static class DependencyGraphTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in dependency_graph: {ex.Message}",
-                context: hasFilePath ? input.FilePath : input.TypeIdentifier);
+                context: hasFilePath ? input.FilePath : input.SymbolIdentifier);
         }
     }
 
@@ -93,17 +93,17 @@ internal static class DependencyGraphTool
     private static async Task<CallToolResult> ExecuteTypeScopeAsync(
         Solution solution, DependencyGraphInput input, bool includeOutgoing, bool includeIncoming, CancellationToken ct)
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.TypeIdentifier!, ct);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier!, ct);
         if (error is not null) return error;
 
         // Nicht-Typ-Symbole (Methode/Property/Feld) auf den einschliessenden Typ normalisieren —
-        // macht typeIdentifier fuer "Klasse.Member"-Eingaben genauso nutzbar wie fuer reine Typnamen.
+        // macht symbolIdentifier fuer "Klasse.Member"-Eingaben genauso nutzbar wie fuer reine Typnamen.
         var targetType = symbol as INamedTypeSymbol ?? symbol!.ContainingType;
         if (targetType is null)
         {
             return McpToolResults.InvalidArgument(
-                $"'{input.TypeIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
-                hint: "typeIdentifier muss auf einen Typen oder Typ-Member verweisen.");
+                $"'{input.SymbolIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
+                hint: "symbolIdentifier muss auf einen Typen oder Typ-Member verweisen.");
         }
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);

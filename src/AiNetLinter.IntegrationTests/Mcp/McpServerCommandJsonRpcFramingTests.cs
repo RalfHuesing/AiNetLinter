@@ -122,7 +122,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 "find_symbol" => "{\"namePattern\":\"Greeter\"}",
                 "find_references" => "{\"symbolIdentifier\":\"Greeter\"}",
                 "get_impact" => "{\"symbolIdentifier\":\"Greeter\"}",
-                "get_type_hierarchy" => "{\"typeIdentifier\":\"Greeter\"}",
+                "get_type_hierarchy" => "{\"symbolIdentifier\":\"Greeter\"}",
                 "get_file_skeleton" => "{\"filePath\":\"src/SymbolGraphMini/Greeter.cs\"}",
                 "search_pattern" => "{\"pattern\":\"Greeter\"}",
                 _ => "{}",
