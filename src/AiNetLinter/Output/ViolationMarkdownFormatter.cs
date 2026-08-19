@@ -58,17 +58,15 @@ public static class ViolationMarkdownFormatter
         string outputRoot)
     {
         var hasStructural = byRule.Any(r => StructuralRules.Contains(r.RuleName));
-        var sb = new StringBuilder();
-        sb.Append('\n');
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Regel")
+            .AddColumn("Gesamt", ColumnAlign.Right)
+            .AddColumn("Prod", ColumnAlign.Right)
+            .AddColumn("Tests", ColumnAlign.Right);
+
         if (hasStructural)
         {
-            sb.Append("| Regel | Gesamt | Prod | Tests | Struktur |\n");
-            sb.Append("|---|---:|---:|---:|:---:|\n");
-        }
-        else
-        {
-            sb.Append("| Regel | Gesamt | Prod | Tests |\n");
-            sb.Append("|---|---:|---:|---:|\n");
+            table.AddColumn("Struktur", ColumnAlign.Center);
         }
 
         foreach (var r in byRule)
@@ -85,13 +83,19 @@ public static class ViolationMarkdownFormatter
 
             if (hasStructural)
             {
-                sb.Append($"| {r.RuleName} | {r.Count} | {prodCount} | {testCount} | {structMarker} |\n");
+                table.AddRow(r.RuleName, r.Count, prodCount, testCount, structMarker);
             }
             else
             {
-                sb.Append($"| {r.RuleName} | {r.Count} | {prodCount} | {testCount} |\n");
+                table.AddRow(r.RuleName, r.Count, prodCount, testCount);
             }
         }
+
+        var sb = new StringBuilder();
+        sb.Append('\n');
+        var mb = new MarkdownBuilder();
+        mb.Table(table);
+        mb.AppendTo(sb);
 
         var hasWarnings = violations.Any(v =>
             v.EffectiveSeverity?.Equals("warning", StringComparison.OrdinalIgnoreCase) == true);

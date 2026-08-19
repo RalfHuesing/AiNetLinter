@@ -235,34 +235,50 @@ internal static class GetViolationsScanner
     private static void AppendSection(
         StringBuilder sb, string heading, IReadOnlyList<RuleViolation> violations, string solutionDir)
     {
-        sb.AppendLine($"## {heading}");
-        sb.AppendLine();
+        var mb = new MarkdownBuilder();
+        mb.Heading(2, heading).BlankLine();
 
         if (violations.Count == 0)
         {
-            sb.AppendLine("Keine.");
-            sb.AppendLine();
+            mb.AppendTo(sb);
+            sb.Append("Keine.\n\n");
             return;
         }
 
-        sb.AppendLine("| Datei | Zeile | Regel | Details |");
-        sb.AppendLine("|:---|---:|:---|:---|");
+        var columns = new (string Header, ColumnAlign Align)[]
+        {
+            ("Datei", ColumnAlign.Left),
+            ("Zeile", ColumnAlign.Right),
+            ("Regel", ColumnAlign.Left),
+            ("Details", ColumnAlign.Left),
+        };
+        var headerLine = "| " + string.Join(" | ", columns.Select(c => MarkdownTableBuilder.EscapeCell(c.Header))) + " |";
+        var separator = "|" + string.Join("", columns.Select(c => c.Align switch
+        {
+            ColumnAlign.Right => "---:",
+            ColumnAlign.Center => ":---:",
+            _ => ":---",
+        } + "|"));
+        mb.Line(headerLine);
+        mb.Line(separator);
+
         foreach (var v in violations.OrderBy(x => x.FilePath, StringComparer.OrdinalIgnoreCase)
                                     .ThenBy(x => x.LineNumber)
                                     .ThenBy(x => x.RuleName, StringComparer.OrdinalIgnoreCase))
         {
             var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
-            sb.AppendLine($"| {relativePath} | {v.LineNumber} | {v.RuleName} | {v.Details} |");
+            var cells = new[] { relativePath, v.LineNumber.ToString(), v.RuleName ?? string.Empty, v.Details ?? string.Empty };
+            var rowLine = "| " + string.Join(" | ", cells.Select(MarkdownTableBuilder.EscapeCell)) + " |";
+            mb.Line(rowLine);
             if (!string.IsNullOrWhiteSpace(v.Snippet))
             {
-                sb.AppendLine();
-                sb.AppendLine("```csharp");
-                sb.AppendLine(v.Snippet);
-                sb.AppendLine("```");
-                sb.AppendLine();
+                mb.CodeBlock("csharp", v.Snippet!);
+                mb.BlankLine();
             }
         }
-        sb.AppendLine();
+
+        mb.AppendTo(sb);
+        sb.Append('\n');
     }
 
 }

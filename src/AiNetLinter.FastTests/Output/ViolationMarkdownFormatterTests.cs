@@ -271,7 +271,7 @@ public sealed class ViolationMarkdownFormatterTests
 
         Assert.Contains("| Regel | Gesamt | Prod | Tests | Struktur |", result);
         Assert.Contains("| MaxPartialClassFiles | 1 | 1 | 0 | ⚠ |", result);
-        Assert.Contains("| EnforceSealedClasses | 1 | 1 | 0 |  |", result);
+        Assert.Contains("| EnforceSealedClasses | 1 | 1 | 0 | - |", result);
     }
 
     [Fact]
