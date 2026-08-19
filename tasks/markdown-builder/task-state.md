@@ -4,7 +4,7 @@ task: markdown-builder
 started_at: 2026-08-19
 last_updated: 2026-08-19
 rules_dir: .agents/rules
-total_steps: 0
+total_steps: 1
 current_step: step-001
 ---
 
@@ -13,9 +13,9 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-001`
+- **Aktueller Schritt:** `step-001` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-19
@@ -24,6 +24,8 @@ current_step: step-001
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
+|------|------|--------|-------|----------|-------|----------|--------|
+| step-001 | EPIC-01 | in_progress | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | - | - | - |
 |------|------|--------|-------|----------|-------|----------|--------|
 
 ## Config (optional)
