@@ -22,15 +22,6 @@ namespace AiNetLinter.Core;
 /// </summary>
 public static partial class TestCoverageScanner
 {
-    private static readonly HashSet<string> TestAttributeNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Fact", "FactAttribute",
-        "Theory", "TheoryAttribute",
-        "Test", "TestAttribute",
-        "TestMethod", "TestMethodAttribute",
-        "TestCase", "TestCaseAttribute"
-    };
-
     /// <summary>
     /// Findet alle Testdateien und Testmethoden, die das angegebene Symbol abdecken.
     /// </summary>
@@ -50,7 +41,7 @@ public static partial class TestCoverageScanner
         foreach (var project in solution.Projects)
         {
             if (ct.IsCancellationRequested) break;
-            if (!IsTestProjectOrHasTestFiles(project)) continue;
+            if (!TestDetector.IsTestProjectOrHasTestFiles(project)) continue;
 
             var projectResults = await ScanProjectDocumentsAsync(
                 project, solutionDir, targetSymbol, targetTypeName, targetMemberName, ct);
@@ -83,7 +74,7 @@ public static partial class TestCoverageScanner
             if (document.FilePath is null) continue;
 
             var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath);
-            if (!PathNormalizer.IsTestFile(relativePath)) continue;
+            if (!TestDetector.IsTestFile(relativePath)) continue;
 
             var result = await ProcessDocumentAsync(
                 document, relativePath, targetSymbol, targetTypeName, targetMemberName, ct);
@@ -116,12 +107,11 @@ public static partial class TestCoverageScanner
 
         if (!fileMatches || matchingMethods.Count == 0) return null;
 
-        var category = DetermineCategory(syntaxRoot, relativePath);
+        var category = TestDetector.DetermineCategory(syntaxRoot, relativePath);
         var className = ExtractFirstTestClassName(syntaxRoot) ?? Path.GetFileNameWithoutExtension(relativePath);
-        var projectDir = !string.IsNullOrEmpty(document.Project.FilePath)
-            ? PathNormalizer.ToRelative(document.Project.Solution.FilePath is { } slnPath ? Path.GetDirectoryName(slnPath) ?? "" : "", Path.GetDirectoryName(document.Project.FilePath)!)
-            : string.Empty;
-        if (projectDir == ".") projectDir = string.Empty;
+        var projectDir = TestDetector.GetProjectDirectory(
+            document.Project,
+            document.Project.Solution.FilePath is { } slnPath ? Path.GetDirectoryName(slnPath) ?? "" : "");
 
         return new TestFileCoverageResult(
             FilePath: relativePath,
@@ -132,12 +122,6 @@ public static partial class TestCoverageScanner
             TotalClassTests: totalClassTests,
             ProjectDirectory: projectDir
         );
-    }
-
-    private static bool IsTestProjectOrHasTestFiles(Project project)
-    {
-        if (project.Name.Contains("Test", StringComparison.OrdinalIgnoreCase)) return true;
-        return project.Documents.Any(d => d.FilePath != null && PathNormalizer.IsTestFile(d.FilePath));
     }
 
     private static (bool Matched, string Reason, List<string> MatchingMethods, int TotalTests) AnalyzeDocument(
@@ -172,7 +156,7 @@ public static partial class TestCoverageScanner
 
         foreach (var method in allMethods)
         {
-            if (!IsTestMethod(method)) continue;
+            if (!TestDetector.IsTestMethod(method)) continue;
 
             var methodName = method.Identifier.Text;
             var isMethodMatch = targetMemberName != null &&
@@ -228,22 +212,7 @@ public static partial class TestCoverageScanner
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .Any(c => MatchesClassName(c.Identifier.Text, targetTypeName));
-    }
-
-    private static readonly string[] ClassNameAffixes =
-    [
-        "Tests", "Test", "Specs", "Spec", "IntegrationTests", "UnitTests", "ComponentTests", "FastTests"
-    ];
-
-    private static bool MatchesClassName(string testClassName, string targetTypeName)
-    {
-        if (testClassName.Equals("Test" + targetTypeName, StringComparison.OrdinalIgnoreCase)) return true;
-        return ClassNameAffixes.Any(affix =>
-            testClassName.Equals(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
-            testClassName.StartsWith(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
-            testClassName.EndsWith(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
-            testClassName.Contains(targetTypeName + affix, StringComparison.OrdinalIgnoreCase));
+            .Any(c => TestDetector.MatchesTestClassName(c.Identifier.Text, targetTypeName));
     }
 
     private static bool HasCoversComment(SyntaxNode root, string targetTypeName)
@@ -285,24 +254,6 @@ public static partial class TestCoverageScanner
             {
                 var argText = argExpr.ToString();
                 if (argText == targetTypeName || argText.EndsWith("." + targetTypeName, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsTestMethod(MethodDeclarationSyntax method)
-    {
-        if (method.AttributeLists.Count == 0) return false;
-        foreach (var attrList in method.AttributeLists)
-        {
-            foreach (var attr in attrList.Attributes)
-            {
-                var simpleName = attr.Name.ToString().Split('.').Last();
-                if (TestAttributeNames.Contains(simpleName))
                 {
                     return true;
                 }
@@ -358,81 +309,8 @@ public static partial class TestCoverageScanner
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .FirstOrDefault(c => c.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(IsTestMethod))
+            .FirstOrDefault(c => c.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(TestDetector.IsTestMethod))
             ?.Identifier.Text;
-    }
-
-    private static string DetermineCategory(SyntaxNode root, string relativePath)
-    {
-        var traitCategory = ExtractTraitCategory(root);
-        if (!string.IsNullOrWhiteSpace(traitCategory))
-        {
-            return traitCategory;
-        }
-
-        return DeduceCategoryFromPath(relativePath);
-    }
-
-    private static string? ExtractTraitCategory(SyntaxNode root)
-    {
-        foreach (var attr in root.DescendantNodes().OfType<AttributeSyntax>())
-        {
-            var cat = ExtractCategoryFromAttribute(attr);
-            if (!string.IsNullOrWhiteSpace(cat)) return cat;
-        }
-
-        return null;
-    }
-
-    private static string? ExtractCategoryFromAttribute(AttributeSyntax attr)
-    {
-        if (attr.ArgumentList == null || attr.ArgumentList.Arguments.Count == 0) return null;
-        var name = attr.Name.ToString();
-        var args = attr.ArgumentList.Arguments;
-
-        if (name.Contains("Trait", StringComparison.OrdinalIgnoreCase) && args.Count >= 2)
-        {
-            if (args[0].ToString().Contains("Category", StringComparison.OrdinalIgnoreCase))
-            {
-                return args[1].ToString().Trim('"', ' ');
-            }
-        }
-
-        if (name.EndsWith("Category", StringComparison.OrdinalIgnoreCase) ||
-            name.EndsWith("CategoryAttribute", StringComparison.OrdinalIgnoreCase))
-        {
-            return args[0].ToString().Trim('"', ' ');
-        }
-
-        return null;
-    }
-
-    private static readonly string[] IntegrationPathMarkers =
-    [
-        "/Integration/", ".IntegrationTests/", "/IntegrationTests/", "/E2E/",
-        "/EndToEnd/", "/Functional/", "/Performance/", "/Stress/"
-    ];
-
-    private static readonly string[] ComponentPathMarkers =
-    [
-        "/Component/", ".ComponentTests/", "/ComponentTests/"
-    ];
-
-    private static string DeduceCategoryFromPath(string relativePath)
-    {
-        var normalized = PathNormalizer.NormalizeSeparators(relativePath);
-
-        if (IntegrationPathMarkers.Any(m => normalized.Contains(m, StringComparison.OrdinalIgnoreCase)))
-        {
-            return TestCategories.Integration;
-        }
-
-        if (ComponentPathMarkers.Any(m => normalized.Contains(m, StringComparison.OrdinalIgnoreCase)))
-        {
-            return TestCategories.Component;
-        }
-
-        return TestCategories.Unit;
     }
 
     private static int GetMatchReasonPriority(string reason) => reason switch

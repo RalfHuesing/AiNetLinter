@@ -28,32 +28,11 @@ public static class PathNormalizer
         return relative.Replace('\\', '/');
     }
 
-    private static readonly string[] TestPathSegments =
-    [
-        ".Tests/", ".UnitTests/", ".FastTests/", ".IntegrationTests/", ".ComponentTests/",
-        ".TestKit/", ".Specs/", "/tests/", "/test/", "/specs/"
-    ];
-
-    private static readonly string[] TestFileSuffixes =
-    [
-        "Tests.cs", "Test.cs", "Spec.cs", "Specs.cs"
-    ];
-
-    private static readonly string[] TestPathPrefixes =
-    [
-        "tests/", "test/"
-    ];
-
     /// <summary>
     /// Prüft, ob ein relativer Dateipfad eine Testdatei darstellt.
+    /// Delegiert an die zentrale <see cref="AiNetLinter.Core.TestDetector.IsTestFile"/>-Erkennung.
     /// </summary>
-    public static bool IsTestFile(string relativePath)
-    {
-        var normalized = NormalizeSeparators(relativePath);
-        if (TestPathPrefixes.Any(p => normalized.StartsWith(p, StringComparison.OrdinalIgnoreCase))) return true;
-        if (TestFileSuffixes.Any(s => normalized.EndsWith(s, StringComparison.OrdinalIgnoreCase))) return true;
-        return TestPathSegments.Any(seg => normalized.Contains(seg, StringComparison.OrdinalIgnoreCase));
-    }
+    public static bool IsTestFile(string relativePath) => AiNetLinter.Core.TestDetector.IsTestFile(relativePath);
 
     /// <summary>
     /// Normalisiert Pfad-Trennzeichen auf einheitliche Forward-Slashes ('/'),

@@ -128,28 +128,16 @@ internal static class GetTestContextTool
         string solutionDir)
     {
         var symbolName = symbol.Name.Split('.').Last().Split(':').First();
-        var preferredTestProj = FindPreferredTestProject(solution);
+        var preferredTestProj = TestDetector.FindPreferredTestProject(solution);
 
         if (preferredTestProj != null)
         {
-            var testProjDir = GetProjectDirectory(preferredTestProj, solutionDir);
+            var testProjDir = TestDetector.GetProjectDirectory(preferredTestProj, solutionDir);
             var subDir = ExtractSourceSubdirectory(solution, targetFilePath, solutionDir);
             return FormatSuggestedPath(testProjDir, subDir, symbolName);
         }
 
         return BuildFallbackTestPath(targetFilePath, symbolName);
-    }
-
-    private static Project? FindPreferredTestProject(Solution solution)
-    {
-        var testProjects = solution.Projects
-            .Where(p => TestProjectDetector.IsTestProject(p))
-            .ToList();
-
-        return testProjects.FirstOrDefault(p =>
-            p.Name.Contains("Unit", StringComparison.OrdinalIgnoreCase) ||
-            p.Name.Contains("Fast", StringComparison.OrdinalIgnoreCase) ||
-            p.Name.Contains("Spec", StringComparison.OrdinalIgnoreCase)) ?? testProjects.FirstOrDefault();
     }
 
     private static string ExtractSourceSubdirectory(Solution solution, string targetFilePath, string solutionDir)
@@ -160,7 +148,7 @@ internal static class GetTestContextTool
 
         if (sourceProj != null)
         {
-            var sourceProjDir = GetProjectDirectory(sourceProj, solutionDir);
+            var sourceProjDir = TestDetector.GetProjectDirectory(sourceProj, solutionDir);
             if (!string.IsNullOrEmpty(sourceProjDir) &&
                 targetFilePath.StartsWith(sourceProjDir + "/", StringComparison.OrdinalIgnoreCase))
             {
@@ -209,24 +197,5 @@ internal static class GetTestContextTool
         return string.IsNullOrEmpty(dir)
             ? $"tests/{symbolName}Tests.cs"
             : $"tests/{dir}/{symbolName}Tests.cs";
-    }
-
-    private static string GetProjectDirectory(Project project, string solutionDir)
-    {
-        if (!string.IsNullOrEmpty(project.FilePath))
-        {
-            var rel = PathNormalizer.ToRelative(solutionDir, Path.GetDirectoryName(project.FilePath)!);
-            return rel == "." ? string.Empty : rel;
-        }
-
-        var firstDoc = project.Documents.FirstOrDefault(d => d.FilePath != null);
-        if (firstDoc?.FilePath != null)
-        {
-            var relDoc = PathNormalizer.ToRelative(solutionDir, firstDoc.FilePath);
-            var dir = Path.GetDirectoryName(relDoc)?.Replace('\\', '/') ?? string.Empty;
-            return dir == "." ? string.Empty : dir;
-        }
-
-        return string.Empty;
     }
 }

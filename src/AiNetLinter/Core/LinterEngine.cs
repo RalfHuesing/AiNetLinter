@@ -256,7 +256,7 @@ public sealed class LinterEngine
 
         var solutionDir = GetSolutionDir(state.Solution);
         var relativePath = GetRelativePath(solutionDir, filePath);
-        bool isTestFile = isTestProj || IsTestFile(filePath);
+        bool isTestFile = isTestProj || TestDetector.IsTestFile(filePath);
 
         string? checksum = null;
         if (cache != null && File.Exists(filePath))
@@ -378,12 +378,5 @@ public sealed class LinterEngine
             semanticModel,
             index,
             effectiveConfig.TestSentinel);
-    }
-
-    private static bool IsTestFile(string file)
-    {
-        if (file.EndsWith("Tests.cs")) return true;
-        if (file.EndsWith("Test.cs")) return true;
-        return file.Contains($"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}");
     }
 }
