@@ -61,10 +61,10 @@ public sealed class FilterMiniFidelityTests
 
     private static void AssertTestProjectDetectionMatches(Solution disk, Solution inMemory)
     {
-        Assert.False(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini")));
-        Assert.True(TestProjectDetector.IsTestProject(GetProject(disk, "FilterMini.Tests")));
-        Assert.False(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini")));
-        Assert.True(TestProjectDetector.IsTestProject(GetProject(inMemory, "FilterMini.Tests")));
+        Assert.False(TestDetector.IsTestProject(GetProject(disk, "FilterMini")));
+        Assert.True(TestDetector.IsTestProject(GetProject(disk, "FilterMini.Tests")));
+        Assert.False(TestDetector.IsTestProject(GetProject(inMemory, "FilterMini")));
+        Assert.True(TestDetector.IsTestProject(GetProject(inMemory, "FilterMini.Tests")));
     }
 
     private static async Task AssertWidgetDescribeReturnTypeMatchesAsync(Solution disk, Solution inMemory)

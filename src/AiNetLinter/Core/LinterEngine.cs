@@ -221,7 +221,7 @@ public sealed class LinterEngine
             return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>([]);
         }
 
-        var isTestProject = TestProjectDetector.IsTestProject(project, testSuffixes);
+        var isTestProject = TestDetector.IsTestProject(project, testSuffixes);
         return Task.FromResult<IReadOnlyList<CatalogDocumentWorkItem>>(
             SourceFileCatalog.CollectValidDocuments(project, solutionDir, isTestProject));
     }

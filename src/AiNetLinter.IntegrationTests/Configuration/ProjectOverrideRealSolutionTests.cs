@@ -39,7 +39,7 @@ public sealed class ProjectOverrideRealSolutionTests
             Assert.False(resolved.Global.EnforceSealedClasses);
             Assert.Equal(100, resolved.Metrics.MaxMethodLineCount);
 
-            var isTestProject = TestProjectDetector.IsTestProject(project!, globalConfig!.TestSentinel.TestProjectNameSuffixes);
+            var isTestProject = TestDetector.IsTestProject(project!, globalConfig!.TestSentinel.TestProjectNameSuffixes);
             Assert.True(isTestProject);
         }
     }

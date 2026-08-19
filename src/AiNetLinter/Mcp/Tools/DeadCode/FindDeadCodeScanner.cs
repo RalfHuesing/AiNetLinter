@@ -448,7 +448,7 @@ public static class FindDeadCodeScanner
         foreach (var project in solution.Projects)
         {
             if (!project.SupportsCompilation) continue;
-            if (!args.IncludeTests && TestProjectDetector.IsTestProject(project)) continue;
+            if (!args.IncludeTests && TestDetector.IsTestProject(project)) continue;
 
             foreach (var doc in project.Documents)
             {

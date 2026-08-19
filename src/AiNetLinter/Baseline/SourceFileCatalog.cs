@@ -161,7 +161,7 @@ public sealed class SourceFileCatalog : IDisposable
     {
         if (!project.SupportsCompilation) return [];
 
-        var isTestProject = TestProjectDetector.IsTestProject(project);
+        var isTestProject = TestDetector.IsTestProject(project);
         return CollectValidDocuments(project, solutionDir, isTestProject);
     }
 
@@ -216,7 +216,7 @@ public sealed class SourceFileCatalog : IDisposable
     internal static bool ShouldIncludeProject(Project project, LinterArgs args, Config? config)
     {
         var testSuffixes = config?.TestSentinel?.TestProjectNameSuffixes;
-        var isTest = TestProjectDetector.IsTestProject(project, testSuffixes);
+        var isTest = TestDetector.IsTestProject(project, testSuffixes);
 
         if (args.ExcludeTests && isTest) return false;
         if (args.TestsOnly && !isTest) return false;

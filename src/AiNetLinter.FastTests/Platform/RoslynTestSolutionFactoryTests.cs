@@ -127,7 +127,7 @@ public sealed class RoslynTestSolutionFactoryTests
 
         var project = testSolution.Solution.Projects.Single();
 
-        Assert.False(TestProjectDetector.IsTestProject(project));
+        Assert.False(TestDetector.IsTestProject(project));
     }
 
     [Fact]

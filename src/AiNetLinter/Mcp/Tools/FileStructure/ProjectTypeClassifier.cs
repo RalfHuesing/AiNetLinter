@@ -12,7 +12,7 @@ internal static class ProjectTypeClassifier
 {
     internal static string Classify(Project project)
     {
-        if (TestProjectDetector.IsTestProject(project)) return "Test";
+        if (TestDetector.IsTestProject(project)) return "Test";
         if (IsExecutableProject(project)) return "Exe";
         return "Lib";
     }

@@ -9,7 +9,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Core;
 
 [Trait("Category", "Unit")]
-public sealed class TestProjectDetectorSuffixTests
+public sealed class TestDetectorSuffixTests
 {
     private static Project CreateProjectWithName(string projectName)
     {
@@ -34,7 +34,7 @@ public sealed class TestProjectDetectorSuffixTests
     public void DefaultSuffixes_IsRecognizedAsTestProject(string projectName)
     {
         var project = CreateProjectWithName(projectName);
-        Assert.True(TestProjectDetector.IsTestProject(project));
+        Assert.True(TestDetector.IsTestProject(project));
     }
 
     [Theory]
@@ -45,7 +45,7 @@ public sealed class TestProjectDetectorSuffixTests
     public void NonTestProjectName_IsNotRecognized(string projectName)
     {
         var project = CreateProjectWithName(projectName);
-        Assert.False(TestProjectDetector.IsTestProject(project));
+        Assert.False(TestDetector.IsTestProject(project));
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class TestProjectDetectorSuffixTests
     {
         var project = CreateProjectWithName("MyApp.Scenarios");
         var customSuffixes = new[] { "Scenarios" };
-        Assert.True(TestProjectDetector.IsTestProject(project, customSuffixes));
+        Assert.True(TestDetector.IsTestProject(project, customSuffixes));
     }
 
     [Fact]
@@ -61,13 +61,13 @@ public sealed class TestProjectDetectorSuffixTests
     {
         var project = CreateProjectWithName("MyApp.Tests");
         var emptySuffixes = Array.Empty<string>();
-        Assert.False(TestProjectDetector.IsTestProject(project, emptySuffixes));
+        Assert.False(TestDetector.IsTestProject(project, emptySuffixes));
     }
 
     [Fact]
     public void ProjectNameWithDotSuffix_IsRecognized()
     {
         var project = CreateProjectWithName("MyApp.IntegrationTests");
-        Assert.True(TestProjectDetector.IsTestProject(project));
+        Assert.True(TestDetector.IsTestProject(project));
     }
 }

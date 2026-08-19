@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -159,7 +159,7 @@ internal static class UiFileSeparationChecker
     {
         return solution.Projects
             .Where(p => !string.IsNullOrEmpty(p.FilePath))
-            .Where(p => !TestProjectDetector.IsTestProject(p))
+            .Where(p => !TestDetector.IsTestProject(p))
             .Select(p => Path.GetDirectoryName(p.FilePath)!)
             .Where(d => !string.IsNullOrEmpty(d))
             .Distinct(StringComparer.OrdinalIgnoreCase)

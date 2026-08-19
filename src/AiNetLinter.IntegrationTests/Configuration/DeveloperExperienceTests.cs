@@ -23,7 +23,7 @@ namespace AiNetLinter.IntegrationTests.Configuration;
 // @covers ConfigLoader
 // @covers ImpactExecutor
 // @covers PostAnalysisChecks
-// @covers TestProjectDetector
+// @covers TestDetector
 // @covers AgentRulesGenerator
 
 /// <summary>
