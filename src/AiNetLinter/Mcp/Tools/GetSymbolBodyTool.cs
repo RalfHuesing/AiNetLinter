@@ -131,11 +131,15 @@ internal static class GetSymbolBodyTool
 
         mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
         mb.BlankLine();
+        if (!string.Equals(identifier, idSuffix, StringComparison.Ordinal))
+        {
+            mb.Line($"angefordert: `{identifier}`");
+        }
         if (idSuffix is not null)
         {
             mb.Line($"id: `{idSuffix}`");
-            mb.BlankLine();
         }
+        mb.BlankLine();
         mb.CodeBlock("csharp", body);
         return null;
     }

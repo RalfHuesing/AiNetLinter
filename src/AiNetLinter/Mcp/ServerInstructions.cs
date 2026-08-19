@@ -59,7 +59,7 @@ internal static class ServerInstructions
         "Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) in C#-Quellcode durch.\n" +
         "- find_dead_code: Findet unreferenzierten/toten Code (Typen, Methoden, Properties, Felder) " +
         "mit Confidence-Stufen (high/low) und False-Positive-Schutz.\n" +
-        "- get_symbol_body: Liefert den Source-Body eines C#-Symbols per stabiler ID oder " +
+        "- get_symbol_body: Liefert den Source-Body eines oder mehrerer C#-Symbole (Batch-Support) per stabiler ID oder " +
         "Datei:Zeile:Spalte.\n" +
         "- search_pattern: Text- oder Regex-Suche ueber den gesamten Dateibestand, alle " +
         "Dateitypen.\n" +

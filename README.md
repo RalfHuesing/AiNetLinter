@@ -85,7 +85,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `dependency_graph` | Datei-/Typ-Abhängigkeiten (echte SemanticModel-Typreferenzen statt `using`-Direktiven), ein-/ausgehend, transitiv |
 | `get_file_skeleton` | Struktur-Skelett einer Datei (Signaturen ohne Bodies) |
 | `get_class_structure` | Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Signatur); `maxMembers` (Default 50, Cap 200) + `sortBy` (`lines`/`kind`/`name`); bei `record`-Typen werden Primary-Constructor-Parameter als eigene Zeilen ausgegeben |
-| `get_symbol_body` | Source-Body eines einzelnen Symbols per stabiler ID |
+| `get_symbol_body` | Source-Body eines oder mehrerer C#-Symbole (Batch-Support in 1 Turn) per stabiler ID oder Name |
 | `get_index_scope` | Dateityp-Aufschlüsselung der geladenen Solution |
 | `get_hotspots` | Dateien nahe oder über dem `MaxLineCount`-Limit |
 | `metrics_lookup` | Punktgenaue Metriken (LOC, Komplexität, Parameter, AI-Footprint) und Schwellwert-Abgleich für ein Symbol |

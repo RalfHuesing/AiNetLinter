@@ -132,7 +132,29 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("Prefix", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains($"id: `{stableId1}`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains($"id: `{stableId2}`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("---", textContent.Text, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleNamedIdentifiers_EmitsBothRequestedAndResolvedId()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            symbolIdentifier: null,
+            symbolIdentifiers: ["Greeter.Greet", "Greeter.Prefix"],
+            maxBodyLines: 80,
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("angefordert: `Greeter.Greet`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("angefordert: `Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `M:SymbolGraphMini.Greeter.Greet", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `P:SymbolGraphMini.Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -153,6 +175,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains($"id: `{stableId}`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }
