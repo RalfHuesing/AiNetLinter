@@ -33,6 +33,7 @@ Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `
 - **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
 - **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
 - **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
+- **Allgemeingültigkeit (Keine repo-spezifischen Hardcodings):** AiNetLinter ist ein universeller Linter und MCP-Server für beliebige .NET-Solutions. In der Engine, den Analyzern, Formattern und MCP-Tools dürfen NIEMALS repo-spezifische Annahmen, Projekt- oder Pfadliterale (wie `AiNetLinter`, `AiNetLinter.FastTests`, feste Pfade wie `src/AiNetLinter/`) hartcodiert werden. Alle Erkennungen (Testprojekte, Testdateien, Projektpfade, Testbefehle, Ordnerstrukturen) MÜSSEN generisch über Roslyn-Metadaten (`Project`, `Document`), einheitliche Heuristiken (`TestProjectDetector`, `PathNormalizer`) oder über die geladene Solution-Struktur ermittelt werden.
 
 ## 3. Windows-Umgebung & Tool-Regeln
 

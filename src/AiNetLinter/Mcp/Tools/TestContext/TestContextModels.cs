@@ -31,5 +31,6 @@ public sealed record TestContextPayload(
     IReadOnlyList<TestFileCoverageResult> TestFiles,
     IReadOnlyList<string> RecommendedTestCommands,
     bool IsUntested,
-    bool IsTruncated
+    bool IsTruncated,
+    string? SuggestedTestFilePath = null
 );

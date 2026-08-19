@@ -249,7 +249,7 @@ public sealed class GetTestContextToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Für dieses Symbol wurden keine direkten Tests gefunden", textContent.Text);
         Assert.Contains("Empfehlung:", textContent.Text);
-        Assert.Contains("src/AiNetLinter.FastTests/", textContent.Text);
+        Assert.Contains("tests/CoreLib.Tests/UntestedServiceTests.cs", textContent.Text);
 
         Assert.NotNull(result.StructuredContent);
         var structured = JsonSerializer.Deserialize<TestContextPayload>(
@@ -260,6 +260,7 @@ public sealed class GetTestContextToolTests
         Assert.True(structured.IsUntested);
         Assert.Equal(0, structured.TotalMatchingTests);
         Assert.Empty(structured.TestFiles);
+        Assert.Equal("tests/CoreLib.Tests/UntestedServiceTests.cs", structured.SuggestedTestFilePath);
     }
 
     [Fact]
@@ -298,5 +299,50 @@ public sealed class GetTestContextToolTests
         Assert.NotNull(structured);
         Assert.Equal(2, structured.TotalMatchingTests);
         Assert.Single(structured.TestFiles);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NUnitAndMSTestCategories_DetectedCorrectly()
+    {
+        using var solutionOwner = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\CustomFrameworkSolution.slnx",
+            new ProjectSpec("App.Domain", [
+                ("Order.cs", """
+                    namespace App.Domain;
+                    public class Order { public void Process() { } }
+                    """)
+            ], VirtualProjectDirectory: "src/App.Domain"),
+            new ProjectSpec("App.Domain.IntegrationTests", [
+                ("OrderIntegrationTests.cs", """
+                    namespace App.Domain.IntegrationTests;
+                    public class OrderIntegrationTests
+                    {
+                        [NUnit.Framework.Category("Integration")]
+                        [NUnit.Framework.Test]
+                        public void Process_IntegrationTest()
+                        {
+                            var o = new App.Domain.Order();
+                            o.Process();
+                        }
+                    }
+                    """)
+            ], VirtualProjectDirectory: "tests/App.Domain.IntegrationTests")
+        );
+
+        var state = CreateServer(solutionOwner.Solution);
+        var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("Order"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var structured = JsonSerializer.Deserialize<TestContextPayload>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default)!;
+
+        Assert.NotNull(structured);
+        Assert.False(structured.IsUntested);
+        var file = Assert.Single(structured.TestFiles);
+        Assert.Equal("Integration", file.Category);
+        Assert.Equal("tests/App.Domain.IntegrationTests", file.ProjectDirectory);
+        Assert.Contains(structured.RecommendedTestCommands, c => c.Contains("dotnet test tests/App.Domain.IntegrationTests --filter FullyQualifiedName~OrderIntegrationTests"));
     }
 }

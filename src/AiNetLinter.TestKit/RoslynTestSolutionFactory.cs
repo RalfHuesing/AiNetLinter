@@ -141,12 +141,18 @@ public static class RoslynTestSolutionFactory
             spec.OutputKind,
             nullableContextOptions: spec.Nullable);
 
+        var projectDirectory = spec.VirtualProjectDirectory ?? spec.Name;
+        var projectFilePath = solutionDirectory is null
+            ? null
+            : System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDirectory, projectDirectory, spec.Name + ".csproj"));
+
         var projectInfo = ProjectInfo.Create(
                 projectId,
                 VersionStamp.Create(),
                 spec.Name,
                 spec.Name,
-                LanguageNames.CSharp)
+                LanguageNames.CSharp,
+                filePath: projectFilePath)
             .WithMetadataReferences(references)
             .WithCompilationOptions(compilationOptions);
 
@@ -160,7 +166,6 @@ public static class RoslynTestSolutionFactory
         foreach (var (fileName, content) in spec.Documents)
         {
             var documentId = DocumentId.CreateNewId(projectId);
-            var projectDirectory = spec.VirtualProjectDirectory ?? spec.Name;
             var filePath = solutionDirectory is null
                 ? null
                 : System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDirectory, projectDirectory, fileName));

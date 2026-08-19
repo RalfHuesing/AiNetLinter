@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -302,12 +303,10 @@ internal static class DependencyGraphScanner
 
     private static bool IsDeclaredInSource(INamedTypeSymbol type) => type.Locations.Any(l => l.IsInSource);
 
-    /// <summary>Heuristik ueber den Solution-relativen Pfad — Test-Projekte folgen der Konvention
-    /// <c>&lt;ProjektName&gt;.Tests</c> (siehe <c>AiNetLinter.Tests</c>), erkennbar am Pfadsegment
-    /// <c>.Tests/</c>. Nur fuer die Truncation-Sortierreihenfolge relevant, siehe
-    /// <see cref="BuildResult"/>.</summary>
+    /// <summary>Heuristik ueber den Solution-relativen Pfad (delegiert an <see cref="PathNormalizer.IsTestFile"/>).
+    /// Nur fuer die Truncation-Sortierreihenfolge relevant, siehe <see cref="BuildResult"/>.</summary>
     private static bool IsTestProjectFile(string relativePath) =>
-        relativePath.Contains(".Tests/", StringComparison.Ordinal);
+        PathNormalizer.IsTestFile(relativePath);
 
     /// <summary>
     /// Liefert den Solution-relativen Pfad der primaeren Deklaration von <paramref name="type"/>.

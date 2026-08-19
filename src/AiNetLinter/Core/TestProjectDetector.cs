@@ -13,10 +13,11 @@ namespace AiNetLinter.Core;
 /// </summary>
 public static class TestProjectDetector
 {
-    private static readonly string[] TestKeywords = ["xunit", "nunit", "testplatform", "unittesting"];
+    private static readonly string[] TestKeywords =
+        ["xunit", "nunit", "testplatform", "unittesting", "mstest", "fluentassertions", "shouldly", "moq", "nsubstitute", "bogus"];
 
     private static readonly string[] DefaultTestProjectNameSuffixes =
-        ["Tests", "Test", "IntegrationTests", "FastTests", "TestKit", "Specs", "Spec"];
+        ["Tests", "Test", "UnitTests", "UnitTest", "IntegrationTests", "IntegrationTest", "FastTests", "ComponentTests", "TestKit", "Specs", "Spec"];
 
     /// <summary>
     /// Prüft, ob ein Projekt ein Testprojekt ist.
