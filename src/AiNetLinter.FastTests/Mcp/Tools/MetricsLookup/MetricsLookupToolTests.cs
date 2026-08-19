@@ -400,4 +400,48 @@ public sealed class MetricsLookupToolTests
         Assert.Equal(20, check.Limit);
         Assert.Equal(ThresholdStatus.Ok, check.Status);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleSymbols_ReturnsAllMetricsInSingleTurn()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await MetricsLookupTool.ExecuteAsync(
+            state,
+            symbolIdentifier: null,
+            symbolIdentifiers: ["Greeter.Greet", "Greeter.Prefix"],
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Greet", textContent.Text);
+        Assert.Contains("Prefix", textContent.Text);
+        Assert.Contains("---", textContent.Text);
+
+        Assert.NotNull(result.StructuredContent);
+        var dtos = JsonSerializer.Deserialize<List<MetricsLookupResultDto>>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default);
+
+        Assert.NotNull(dtos);
+        Assert.Equal(2, dtos.Count);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleSymbols_WithOneNotFound_ContinuesAndIncludesWarning()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await MetricsLookupTool.ExecuteAsync(
+            state,
+            symbolIdentifier: null,
+            symbolIdentifiers: ["Greeter.Greet", "DoesNotExistXyz"],
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Greet", textContent.Text);
+        Assert.Contains("DoesNotExistXyz", textContent.Text);
+        Assert.Contains("nicht aufgeloest", textContent.Text);
+    }
 }

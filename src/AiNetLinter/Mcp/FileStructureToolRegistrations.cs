@@ -95,8 +95,8 @@ internal static class FileStructureToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? filePath = null, CancellationToken ct = default) =>
-                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, ct),
+            (string? filePath = null, string[]? filePaths = null, CancellationToken ct = default) =>
+                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, filePaths, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_file_skeleton",
@@ -105,8 +105,9 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetFileSkeletonDescription =
-        "Wann nutzen: Ueberblick ueber Typen/Signaturen einer C#-Datei ohne die Bodies zu " +
-        "lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body.";
+        "Wann nutzen: Ueberblick ueber Typen/Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
+        "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
+        "filePath (einzeln) ODER filePaths (Array fuer Batch): relativ oder absolut.";
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,

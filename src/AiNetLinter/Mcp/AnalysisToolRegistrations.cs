@@ -132,8 +132,8 @@ internal static class AnalysisToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, CancellationToken ct = default) =>
-                MetricsLookupTool.ExecuteAsync(mcpState, symbolIdentifier, ct),
+            (string? symbolIdentifier = null, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
+                MetricsLookupTool.ExecuteAsync(mcpState, symbolIdentifier, symbolIdentifiers, ct),
             new McpServerToolCreateOptions
             {
                 Name = "metrics_lookup",
@@ -144,10 +144,10 @@ internal static class AnalysisToolRegistrations
     private const string MetricsLookupDescription =
         "Wann nutzen: punktgenaue Metriken (LOC, zyklomatische/kognitive Komplexitaet, " +
         "Parameteranzahl, AI-Context-Footprint, Member-Statistiken) und Schwellwert-Abgleich " +
-        "fuer ein einzelnes C#-Symbol (Methode, Konstruktor, Property, Klasse, Record, " +
-        "Struct, Interface, Enum) in einem Call abrufen. symbolIdentifier akzeptiert " +
+        "fuer ein oder mehrere C#-Symbole (Batch-Support in 1 Turn) abrufen. " +
+        "symbolIdentifier (einzeln) ODER symbolIdentifiers (Array fuer Batch): " +
         "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
-        "\"Datei.cs:Zeile\" oder qualifizierten Namen.";
+        "\"Datei.cs:Zeile\" oder qualifizierter Name.";
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,

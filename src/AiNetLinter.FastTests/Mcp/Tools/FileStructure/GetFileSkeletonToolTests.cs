@@ -93,4 +93,39 @@ public sealed class GetFileSkeletonToolTests
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
         Assert.Matches(@"CS\d{4}", text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleFiles_ReturnsCombinedSkeletonsInSingleTurn()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetFileSkeletonTool.ExecuteAsync(
+            state,
+            filePath: null,
+            filePaths: ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/Caller.cs"],
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter", text, StringComparison.Ordinal);
+        Assert.Contains("Caller", text, StringComparison.Ordinal);
+        Assert.Contains("---", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleFiles_WithOneNotFound_ContinuesAndIncludesWarning()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetFileSkeletonTool.ExecuteAsync(
+            state,
+            filePath: null,
+            filePaths: ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/NonExistent.cs"],
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter", text, StringComparison.Ordinal);
+        Assert.Contains("Datei nicht gefunden: `src/SymbolGraphMini/NonExistent.cs`", text, StringComparison.Ordinal);
+    }
 }

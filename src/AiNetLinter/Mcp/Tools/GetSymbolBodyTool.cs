@@ -144,29 +144,8 @@ internal static class GetSymbolBodyTool
         return null;
     }
 
-    private static List<string> ExtractIdentifiers(string? symbolIdentifier, string[]? symbolIdentifiers)
-    {
-        var list = new List<string>();
-        if (!string.IsNullOrWhiteSpace(symbolIdentifier))
-        {
-            list.Add(symbolIdentifier.Trim());
-        }
-        if (symbolIdentifiers != null)
-        {
-            foreach (var id in symbolIdentifiers)
-            {
-                if (!string.IsNullOrWhiteSpace(id))
-                {
-                    var trimmed = id.Trim();
-                    if (!list.Contains(trimmed, StringComparer.Ordinal))
-                    {
-                        list.Add(trimmed);
-                    }
-                }
-            }
-        }
-        return list;
-    }
+    private static List<string> ExtractIdentifiers(string? symbolIdentifier, string[]? symbolIdentifiers) =>
+        McpBatchArguments.Collect(symbolIdentifier, symbolIdentifiers, StringComparer.Ordinal);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {

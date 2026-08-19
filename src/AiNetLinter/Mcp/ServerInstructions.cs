@@ -37,7 +37,7 @@ internal static class ServerInstructions
         "optional transitiv (depth).\n" +
         "- get_namespace_tree: Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen).\n" +
         "- get_file_skeleton: Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) " +
-        "einer C#-Datei.\n" +
+        "einer oder mehrerer C#-Dateien (Batch-Support).\n" +
         "- get_class_structure: Liefert eine tabellarische Member- und Zeilen-Uebersicht eines C#-Typs.\n" +
         "- get_index_scope: Liefert eine Dateityp-Aufschluesselung der geladenen Solution — " +
         "guter erster Call vor find_symbol/search_pattern.\n" +
@@ -46,7 +46,7 @@ internal static class ServerInstructions
         "- metrics_tree: Liefert einen ASCII-Baum mit aggregierten Werten pro " +
         "Verzeichnisknoten (Modi code_size/comment_density/violation_density/complexity) " +
         "und sortierten Top-N-Kindern je Ebene.\n" +
-        "- metrics_lookup: Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein C#-Symbol.\n" +
+        "- metrics_lookup: Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support).\n" +
         "- get_feature_context: Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung, Linter-Violations) in einem einzigen Call vor Edits.\n" +
         "- get_test_context: Ermittelt Test-Dateien, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol.\n" +
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
