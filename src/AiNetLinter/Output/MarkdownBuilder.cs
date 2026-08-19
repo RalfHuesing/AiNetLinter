@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace AiNetLinter.Output;
@@ -37,18 +36,19 @@ internal sealed class MarkdownTableBuilder
         return this;
     }
 
-    internal void AppendTo(StringBuilder sb)
+    internal string BuildHeaderLine()
     {
-        if (_columns.Count == 0) return;
-
-        sb.Append("| ");
+        var parts = new string[_columns.Count];
         for (var i = 0; i < _columns.Count; i++)
         {
-            if (i > 0) sb.Append(" | ");
-            sb.Append(EscapeCell(_columns[i].Header));
+            parts[i] = EscapeCell(_columns[i].Header);
         }
-        sb.Append(" |\n");
+        return "| " + string.Join(" | ", parts) + " |";
+    }
 
+    internal string BuildSeparatorLine()
+    {
+        var sb = new StringBuilder();
         sb.Append('|');
         foreach (var (_, align) in _columns)
         {
@@ -59,17 +59,33 @@ internal sealed class MarkdownTableBuilder
                 _ => ":---|",
             });
         }
-        sb.Append('\n');
+        return sb.ToString();
+    }
 
+    internal string BuildRowLine(params object?[] cells)
+    {
+        var escaped = new string[_columns.Count];
+        for (var i = 0; i < _columns.Count; i++)
+        {
+            var raw = i < cells.Length ? cells[i]?.ToString() ?? string.Empty : string.Empty;
+            escaped[i] = EscapeCell(raw);
+        }
+        return FormatRow(escaped);
+    }
+
+    private static string FormatRow(string[] escapedCells)
+    {
+        return "| " + string.Join(" | ", escapedCells) + " |";
+    }
+
+    internal void AppendTo(StringBuilder sb)
+    {
+        if (_columns.Count == 0) return;
+        sb.Append(BuildHeaderLine()).Append('\n');
+        sb.Append(BuildSeparatorLine()).Append('\n');
         foreach (var row in _rows)
         {
-            sb.Append("| ");
-            for (var i = 0; i < row.Length; i++)
-            {
-                if (i > 0) sb.Append(" | ");
-                sb.Append(row[i]);
-            }
-            sb.Append(" |\n");
+            sb.Append(FormatRow(row)).Append('\n');
         }
     }
 

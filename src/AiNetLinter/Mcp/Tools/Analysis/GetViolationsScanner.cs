@@ -245,31 +245,21 @@ internal static class GetViolationsScanner
             return;
         }
 
-        var columns = new (string Header, ColumnAlign Align)[]
-        {
-            ("Datei", ColumnAlign.Left),
-            ("Zeile", ColumnAlign.Right),
-            ("Regel", ColumnAlign.Left),
-            ("Details", ColumnAlign.Left),
-        };
-        var headerLine = "| " + string.Join(" | ", columns.Select(c => MarkdownTableBuilder.EscapeCell(c.Header))) + " |";
-        var separator = "|" + string.Join("", columns.Select(c => c.Align switch
-        {
-            ColumnAlign.Right => "---:",
-            ColumnAlign.Center => ":---:",
-            _ => ":---",
-        } + "|"));
-        mb.Line(headerLine);
-        mb.Line(separator);
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Datei")
+            .AddColumn("Zeile", ColumnAlign.Right)
+            .AddColumn("Regel")
+            .AddColumn("Details");
+
+        mb.Line(table.BuildHeaderLine());
+        mb.Line(table.BuildSeparatorLine());
 
         foreach (var v in violations.OrderBy(x => x.FilePath, StringComparer.OrdinalIgnoreCase)
                                     .ThenBy(x => x.LineNumber)
                                     .ThenBy(x => x.RuleName, StringComparer.OrdinalIgnoreCase))
         {
             var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
-            var cells = new[] { relativePath, v.LineNumber.ToString(), v.RuleName ?? string.Empty, v.Details ?? string.Empty };
-            var rowLine = "| " + string.Join(" | ", cells.Select(MarkdownTableBuilder.EscapeCell)) + " |";
-            mb.Line(rowLine);
+            mb.Line(table.BuildRowLine(relativePath, v.LineNumber.ToString(), v.RuleName ?? string.Empty, v.Details ?? string.Empty));
             if (!string.IsNullOrWhiteSpace(v.Snippet))
             {
                 mb.CodeBlock("csharp", v.Snippet!);

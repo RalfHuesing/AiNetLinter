@@ -304,4 +304,76 @@ public class MarkdownBuilderTests
             "**bold**\n";
         Assert.Equal(expected, output);
     }
+
+    [Fact]
+    public void BuildHeaderLine_Standardfall_GibtEscapedHeaderMitPipes()
+    {
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Spalte A")
+            .AddColumn("Spalte B", ColumnAlign.Right);
+
+        var line = table.BuildHeaderLine();
+
+        Assert.Equal("| Spalte A | Spalte B |", line);
+    }
+
+    [Fact]
+    public void BuildHeaderLine_HeaderMitPipe_WirdEscaped()
+    {
+        var table = new MarkdownTableBuilder().AddColumn("A | B");
+
+        var line = table.BuildHeaderLine();
+
+        Assert.Equal(@"| A \| B |", line);
+    }
+
+    [Fact]
+    public void BuildSeparatorLine_LeftRightCenter_KorrekteFormatierung()
+    {
+        var table = new MarkdownTableBuilder()
+            .AddColumn("L")
+            .AddColumn("R", ColumnAlign.Right)
+            .AddColumn("C", ColumnAlign.Center);
+
+        var line = table.BuildSeparatorLine();
+
+        Assert.Equal("|:---|---:|:---:|", line);
+    }
+
+    [Fact]
+    public void BuildRowLine_Standardfall_GibtEscapedCellsMitPipes()
+    {
+        var table = new MarkdownTableBuilder()
+            .AddColumn("A")
+            .AddColumn("B");
+
+        var line = table.BuildRowLine("eins | zwei", "drei");
+
+        Assert.Equal(@"| eins \| zwei | drei |", line);
+    }
+
+    [Fact]
+    public void BuildRowLine_ZuWenigCells_FuellstandMitMinus()
+    {
+        var table = new MarkdownTableBuilder()
+            .AddColumn("A")
+            .AddColumn("B")
+            .AddColumn("C");
+
+        var line = table.BuildRowLine("nur", "eins");
+
+        Assert.Equal("| nur | eins | - |", line);
+    }
+
+    [Fact]
+    public void BuildRowLine_NullCells_WerdenMinus()
+    {
+        var table = new MarkdownTableBuilder()
+            .AddColumn("A")
+            .AddColumn("B");
+
+        var line = table.BuildRowLine(null, "x");
+
+        Assert.Equal("| - | x |", line);
+    }
 }
