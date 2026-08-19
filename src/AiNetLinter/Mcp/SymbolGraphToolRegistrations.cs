@@ -83,8 +83,8 @@ internal static class SymbolGraphToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, CancellationToken ct = default) =>
-                GetCallTreeTool.ExecuteAsync(mcpState, new GetCallTreeInput(symbolIdentifier, depth, format, topN), ct),
+            (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
+                GetCallTreeTool.ExecuteAsync(mcpState, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_call_tree",
@@ -93,11 +93,13 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetCallTreeDescription =
-        "Wann nutzen: echten Caller-Baum eines C#-Symbols sehen (wer ruft dieses Symbol auf, " +
+        "Wann nutzen: echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols sehen (wer ruft " +
+        "dieses Symbol auf bzw. wen ruft es auf), " +
         "transitiv, als Eltern-Kind-Struktur statt flacher Liste). symbolIdentifier wie " +
         "find_references. depth Default 2 (hard cap 5). format: \"ascii\" (Default) oder " +
-        "\"mermaid\" (flowchart TD). topN (Default 10) begrenzt Fan-Out pro Ebene, " +
-        "Traversierung hart begrenzt auf 250 Knoten.";
+        "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default), \"outgoing\" oder " +
+        "\"both\". topN (Default 10) begrenzt Fan-Out pro Ebene, Traversierung hart begrenzt " +
+        "auf 250 Knoten.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,

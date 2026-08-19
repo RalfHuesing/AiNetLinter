@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.FastTests.Fixtures;
@@ -153,5 +154,37 @@ public sealed class CallGraphTraversalTests
 
         Assert.Equal("Greeter.Greet", root.Name);
         Assert.Contains("Greeter.cs", root.DisplayLine, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildTreeAsync_Outgoing_ReturnsInvokedMethodsAndCreatedTypes()
+    {
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "SymbolGraphMini.Caller.Run", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
+            new CallTreeBuildRequest(_fixture.Solution, symbol!, 1, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        Assert.False(truncated);
+        Assert.Contains(root.Children, child => child.Name == "Greeter");
+        Assert.Contains(root.Children, child => child.Name == "Greeter.Greet");
+    }
+
+    [Fact]
+    public async Task BuildTreeAsync_Both_LabelsChildrenWithTheirDirection()
+    {
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "SymbolGraphMini.Caller.Run", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
+            new CallTreeBuildRequest(_fixture.Solution, symbol!, 1, 10, CallTreeDirection.Both),
+            CancellationToken.None);
+
+        Assert.False(truncated);
+        Assert.Contains(root.Children, child => child.Name == "[outgoing] Greeter");
+        Assert.Contains(root.Children, child => child.Name == "[outgoing] Greeter.Greet");
     }
 }

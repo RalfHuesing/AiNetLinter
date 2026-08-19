@@ -79,7 +79,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`) |
 | `get_impact` | Betroffene Call-Sites für uncommittete Änderungen oder ein Symbol |
 | `get_type_hierarchy` | Basisklassen, Interfaces, abgeleitete Typen, heuristische DI-Registrierungen |
-| `get_call_tree` | Caller-Baum eines Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid), transitiv über `depth` |
+| `get_call_tree` | Aufrufer- oder Aufgerufene-Baum eines Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid), Richtung `incoming`/`outgoing`/`both`, transitiv über `depth` |
 | `dependency_graph` | Datei-/Typ-Abhängigkeiten (echte SemanticModel-Typreferenzen statt `using`-Direktiven), ein-/ausgehend, transitiv |
 | `get_file_skeleton` | Struktur-Skelett einer Datei (Signaturen ohne Bodies) |
 | `get_class_structure` | Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Signatur); `maxMembers` (Default 50, Cap 200) + `sortBy` (`lines`/`kind`/`name`); bei `record`-Typen werden Primary-Constructor-Parameter als eigene Zeilen ausgegeben |

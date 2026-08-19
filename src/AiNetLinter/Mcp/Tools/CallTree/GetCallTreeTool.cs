@@ -14,12 +14,14 @@ namespace AiNetLinter.Mcp.Tools.CallTree;
 
 /// <summary>
 /// MCP-Tool <c>get_call_tree</c>: loest einen Symbol-Identifikator wie <see cref="FindReferencesTool"/>
-/// auf und liefert dessen transitiven Caller-Baum als echte Eltern-Kind-Struktur — im Unterschied
-/// zur flachen Top-N-Liste von <c>find_references</c>/<c>get_impact</c> mit <c>depth&gt;1</c>.
+/// auf und liefert dessen transitiven Aufrufer- oder Aufgerufene-Baum als echte Eltern-Kind-Struktur —
+/// im Unterschied zur flachen Top-N-Liste von <c>find_references</c>/<c>get_impact</c> mit <c>depth&gt;1</c>.
 /// Traversierung via <see cref="CallGraphTraversal.BuildTreeAsync"/> (eigene, hoehere Grenzwerte
 /// als die flache Aggregation), Ausgabe als ASCII-Baum (<see cref="MetricsTreeRenderer"/>,
 /// wiederverwendet aus <c>metrics_tree</c>) oder Mermaid-Flowchart
 /// (<see cref="CallTreeMermaidRenderer"/>). Deckt nur .cs-Dateien ab (Roslyn-Symbolgraph).
+/// Die Richtung ist standardmaessig eingehend (<c>incoming</c>); <c>outgoing</c> und <c>both</c> werden
+/// optional unterstuetzt. Deckt nur .cs-Dateien ab (Roslyn-Symbolgraph).
 /// </summary>
 internal static class GetCallTreeTool
 {
@@ -27,7 +29,7 @@ internal static class GetCallTreeTool
 
     /// <summary>
     /// Tool-Einstiegspunkt: prueft Solution-Ladezustand, loest den Identifikator auf, baut den
-    /// Caller-Baum und rendert ihn im angeforderten Format. Fehlerbehandlung/Warnhinweis-Muster
+    /// Aufrufer- oder Aufgerufene-Baum und rendert ihn im angeforderten Format. Fehlerbehandlung/Warnhinweis-Muster
     /// identisch zu <see cref="FindReferencesTool.ExecuteAsync"/> (Compile-Fehler-Warnhinweis,
     /// defensiver try/catch, Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse).
     /// </summary>
@@ -46,6 +48,14 @@ internal static class GetCallTreeTool
                 hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
         }
 
+        if (!TryParseDirection(input.Direction, out var direction))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Ungueltiger Wert fuer 'direction': '{input.Direction}'.",
+                hint: "direction muss 'incoming', 'outgoing' oder 'both' sein.");
+        }
+
         try
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier, ct);
@@ -53,7 +63,8 @@ internal static class GetCallTreeTool
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var topN = input.TopN < 1 ? 1 : input.TopN;
-            var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(solution, symbol!, input.Depth, topN, ct);
+            var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
+                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction), ct);
 
             var body = RenderTree(root, input.Format, topN);
             // "truncated" deckt nur den 250-Knoten-Hardcap von BuildTreeAsync ab. Der Renderer
@@ -79,6 +90,31 @@ internal static class GetCallTreeTool
         }
     }
 
+    private static bool TryParseDirection(string? value, out CallTreeDirection direction)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            string.Equals(value, "incoming", StringComparison.OrdinalIgnoreCase))
+        {
+            direction = CallTreeDirection.Incoming;
+            return true;
+        }
+
+        if (string.Equals(value, "outgoing", StringComparison.OrdinalIgnoreCase))
+        {
+            direction = CallTreeDirection.Outgoing;
+            return true;
+        }
+
+        if (string.Equals(value, "both", StringComparison.OrdinalIgnoreCase))
+        {
+            direction = CallTreeDirection.Both;
+            return true;
+        }
+
+        direction = default;
+        return false;
+    }
+
     private static string RenderTree(MetricsTreeNode root, string? format, int topN) =>
         string.Equals(format, MermaidFormat, StringComparison.OrdinalIgnoreCase)
             ? CallTreeMermaidRenderer.Render(root, topN)
@@ -92,10 +128,3 @@ internal static class GetCallTreeTool
         "[Baum trunkiert — mindestens eine Ebene hat mehr Kinder als topN, siehe " +
         "\"... und N weitere\"-Zeilen; topN erhoehen fuer einen vollstaendigeren Teilbaum]";
 }
-
-/// <summary>
-/// Parameter-Record fuer <see cref="GetCallTreeTool.ExecuteAsync"/>. Kapselt 4 Eingaben in einem
-/// Record, damit <c>MaxMethodParameterCount: 4</c> auf <see cref="GetCallTreeTool.ExecuteAsync"/>
-/// eingehalten wird — Solution wird separat ueber <c>state</c> aufgeloest.
-/// </summary>
-internal sealed record GetCallTreeInput(string? SymbolIdentifier, int Depth, string? Format, int TopN);

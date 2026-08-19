@@ -138,4 +138,33 @@ public sealed class GetCallTreeToolTests
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_OutgoingDirection_ReturnsCalleeNames()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("SymbolGraphMini.Caller.Run", 1, null, 10, "outgoing"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter.Greet", text, StringComparison.Ordinal);
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[outgoing]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidDirection_ReturnsRecoverableInvalidArgument()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 1, null, 10, "sideways"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("direction", text, StringComparison.Ordinal);
+    }
 }

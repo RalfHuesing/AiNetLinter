@@ -29,8 +29,9 @@ internal static class ServerInstructions
         "uncommittete Aenderungen) oder fuer ein einzelnes Symbol.\n" +
         "- get_type_hierarchy: Liefert Basisklassen, Interfaces, abgeleitete Typen und " +
         "heuristische DI-Registrierungen eines Typs.\n" +
-        "- get_call_tree: Liefert den echten Caller-Baum eines C#-Symbols (Eltern-Kind-Struktur, " +
-        "ASCII oder Mermaid), transitiv bis depth 5.\n" +
+         "- get_call_tree: Liefert den echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols " +
+         "(Eltern-Kind-Struktur, ASCII oder Mermaid), direction incoming/outgoing/both, " +
+         "transitiv bis depth 5.\n" +
         "- dependency_graph: Liefert Datei-/Typ-Abhaengigkeiten einer Datei oder eines Typs " +
         "(eingehend/ausgehend/beides, echte SemanticModel-Typreferenzen statt using-Direktiven), " +
         "optional transitiv (depth).\n" +
