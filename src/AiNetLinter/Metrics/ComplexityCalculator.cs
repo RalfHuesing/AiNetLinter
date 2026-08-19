@@ -10,12 +10,28 @@ namespace AiNetLinter.Metrics;
 public static class ComplexityCalculator
 {
     /// <summary>
+    /// Berechnet die Zyklomatische Komplexität (McCabe) für einen Syntaxknoten.
+    /// </summary>
+    public static int GetCyclomaticComplexity(SyntaxNode node)
+    {
+        var walker = new CyclomaticComplexityWalker();
+        walker.Visit(node);
+        return walker.Complexity;
+    }
+
+    /// <summary>
     /// Berechnet die Zyklomatische Komplexität (McCabe) für eine Methode oder Eigenschaft.
     /// </summary>
     public static int GetCyclomaticComplexity(MethodDeclarationSyntax method)
+        => GetCyclomaticComplexity((SyntaxNode)method);
+
+    /// <summary>
+    /// Berechnet die Kognitive Komplexität (SonarSource) für einen Syntaxknoten.
+    /// </summary>
+    public static int GetCognitiveComplexity(SyntaxNode node)
     {
-        var walker = new CyclomaticComplexityWalker();
-        walker.Visit(method);
+        var walker = new CognitiveComplexityWalker();
+        walker.Visit(node);
         return walker.Complexity;
     }
 
@@ -23,11 +39,7 @@ public static class ComplexityCalculator
     /// Berechnet die Kognitive Komplexität (SonarSource) für eine Methode oder Eigenschaft.
     /// </summary>
     public static int GetCognitiveComplexity(MethodDeclarationSyntax method)
-    {
-        var walker = new CognitiveComplexityWalker();
-        walker.Visit(method);
-        return walker.Complexity;
-    }
+        => GetCognitiveComplexity((SyntaxNode)method);
 
     /// <summary>
     /// Walker zur Berechnung der zyklomatischen Komplexität (McCabe).

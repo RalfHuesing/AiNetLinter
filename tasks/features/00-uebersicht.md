@@ -6,13 +6,13 @@ Dieses Dokument priorisiert die nächsten Features nach **Effizienz (Token-/Kost
 
 ## 1. Bereits erledigt & im Code verifiziert
 
-Die folgenden 23 MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
+Die folgenden 24 MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
 
 | Kategorie | Tools | Beschreibung |
 |---|---|---|
 | **Symbolgraph** | `find_symbol`, `find_references`, `get_call_tree`, `get_impact`, `get_type_hierarchy`, `dependency_graph` | Vollständige Roslyn-Symbolnavigation, Caller-Bäume (ASCII/Mermaid), Git-Diff-Blast-Radius und echte typbasierte Abhängigkeitsgraphen. |
 | **Dateistruktur & Navigation** | `get_namespace_tree`, `get_file_skeleton`, `get_class_structure`, `get_index_scope`, `get_hotspots` | Progressive Disclosure (Projekte ➔ Namespaces ➔ Typen), schnelle Übersicht über Signaturen, tabellarische Member-/Zeilen-Details und Erkennung von Dateien nahe dem Zeilenlimit. |
-| **Analyse & Quality Gates** | `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code`, `search_pattern` | Deterministisches 0-10 Quality-Gate (`safeguard`), Pattern-Gruppierung (God-Classes, async-void etc.), Literale/Secrets-Audit und Dead-Code-Detection. |
+| **Analyse & Quality Gates** | `metrics_lookup`, `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code`, `search_pattern` | Punktgenaue One-Shot-Metriken & Schwellwert-Abgleich (`metrics_lookup`), deterministisches 0-10 Quality-Gate (`safeguard`), Pattern-Gruppierung (God-Classes, async-void etc.), Literale/Secrets-Audit und Dead-Code-Detection. |
 | **DRY & Drift** | `find_duplicates` | Token-basiertes Clone-Detection (Exact/Near/Fuzzy) + Refactoring-Drift (`helperSymbol`) + `DuplicateCodeChecker` in `PostAnalysisChecks`. |
 | **Wartung & Observability** | `reload_config`, `get_server_health`, `report_observability_feedback` | Hot-Reload von `rules.json`, Status-/Health-Prüfung und Feedback-Kanal für Agenten. |
 
@@ -23,8 +23,8 @@ Die folgenden 23 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 Die Reihenfolge minimiert Kontext-Roundtrips, senkt API-Kosten pro Agenten-Task und verhindert architektonischen Drift:
 
 ### Phase 1: Maximale Token- & Roundtrip-Reduktion vor Edits
-1. **[02-metrics-lookup.md](02-metrics-lookup.md) — One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)** *(Prio 1.1)*
-   * **Token-ROI:** Sehr hoch. Liefert CC, CogC, LOC, ParamCount und AI-Context-Footprint für ein Einzelsymbol in einem kompakten Call (~50 Tokens statt ganze Datei mit 2.000 Tokens zu laden). Dient als Baustein für Feature-Kontext.
+1. **[02-metrics-lookup.md](02-metrics-lookup.md) — One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)** *(Prio 1.1 — Erledigt)*
+   * **Status:** Vollständig implementiert & verifiziert in `tasks/metrics-lookup/`. Liefert CC, CogC, LOC, ParamCount und AI-Context-Footprint für ein Einzelsymbol in einem kompakten Call (~50 Tokens). Dient als Baustein für Feature-Kontext.
 2. **[05-feature-context.md](05-feature-context.md) — Composite One-Shot-Exploration (`get_feature_context`)** *(Prio 1.2 — Höchster Workflow-Hebel)*
    * **Token-ROI:** Maximal. Bündelt Deklaration, Callers, Tests, Metriken/Budget und offene Violations für ein Ziel-Symbol. **Ersetzt 4–5 aufeinanderfolgende Tool-Calls durch genau 1 Call** vor jedem Refactoring.
 

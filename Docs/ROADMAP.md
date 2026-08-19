@@ -720,5 +720,21 @@ Strukturierter semantischer Drilldown entlang der logischen C#-Hierarchie (Proje
 
 ---
 
+## One-Shot Metriken & Context-Footprint: `metrics_lookup` (Feature 02)
+
+Punktgenaue Symbol-Analyse (Methoden, Konstruktoren, Properties, Typen) in einem einzigen MCP-Aufruf:
+
+- [x] **Symbol-Auflösung & Metriken:**
+  - Unterstützt DocCommentId (`M:...`), `Datei.cs:Zeile:Spalte`, `Datei.cs:Zeile`, qualifizierte und unqualifizierte Namen via `FindReferencesTool.ResolveSymbolAsync`.
+  - Liefert Netto-Codezeilen (`MethodLineCounter`), zyklomatische & kognitive Komplexität (`ComplexityCalculator`), Parameteranzahl (brutto/effektiv mit Ignored-Types-Filterung) und `AIContextFootprint` (`AIContextFootprintCalculator.CalculateDetailed`).
+  - Schwellwert-Abgleich gegen aktive `rules.json` (`[OK]`, `[WARN]`, `[VIOLATION]`).
+- [x] **Generalisierung von `ComplexityCalculator`:**
+  - `SyntaxNode`-Überladungen für Konstruktoren, Property-Accessoren und Lambdas.
+- [x] **Structured Output & Tests:**
+  - `MetricsLookupResultDto` in `structuredContent`.
+  - Vollständige FastTests- & IntegrationTests-Abdeckung.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
 

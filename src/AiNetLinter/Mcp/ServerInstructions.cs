@@ -46,6 +46,7 @@ internal static class ServerInstructions
         "- metrics_tree: Liefert einen ASCII-Baum mit aggregierten Werten pro " +
         "Verzeichnisknoten (Modi code_size/comment_density/violation_density/complexity) " +
         "und sortierten Top-N-Kindern je Ebene.\n" +
+        "- metrics_lookup: Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein C#-Symbol.\n" +
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
         "- safeguard: Liefert einen deterministischen 0-10-Quality-Score + Pass/Fail-Threshold " +
         "+ Top-Violations + Remediation-Hints fuer die geladene Solution (Quality-Gate).\n" +
@@ -67,7 +68,7 @@ internal static class ServerInstructions
         "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
         "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
-        "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, get_violations, safeguard, " +
+        "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, metrics_lookup, get_violations, safeguard, " +
         "pattern_detect, find_magic_values, find_dead_code, get_symbol_body und find_duplicates " +
         "arbeiten ausschliesslich auf .cs-Quellcode (Roslyn-Symbolgraph). Fuer Namen/Strings, die nur in .js, .razor, " +
         ".cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback " +

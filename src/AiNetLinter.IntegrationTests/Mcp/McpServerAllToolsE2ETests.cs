@@ -329,4 +329,27 @@ public sealed class McpServerAllToolsE2ETests
 
         Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task MetricsLookup_ValidMethod_ReturnsMetricsText()
+    {
+        var text = await _fixture.Client.CallToolGetTextAsync(
+            "metrics_lookup",
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" });
+
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+        Assert.Contains("Schwellwert-Abgleich", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MetricsLookup_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "metrics_lookup",
+            new Dictionary<string, object?> { ["symbolIdentifier"] = "UnknownClass123" });
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
+    }
 }

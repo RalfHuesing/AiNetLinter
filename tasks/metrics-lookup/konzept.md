@@ -1,6 +1,6 @@
 ---
 title: "metrics_lookup — One-Shot-Metriken & AI-Context-Footprint"
-status: ready
+status: completed
 type: konzept
 project_kind: brownfield
 estimated_scope: small

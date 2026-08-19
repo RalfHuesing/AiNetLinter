@@ -6,6 +6,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.DeadCode;
 using AiNetLinter.Mcp.Tools.MagicValues;
+using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;
@@ -15,26 +16,10 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>search_pattern</c>
-/// und <c>metrics_tree</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
-/// Tool-Collection. Aus <see cref="FileStructureToolRegistrations"/> ausgelagert, weil
-/// <c>get_violations</c> durch den transitiven Pull-in aus <c>LinterEngine</c> +
-/// <c>LinterAnalyzer</c> + allen Checkern den <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) der <see cref="FileStructureToolRegistrations"/>-Klasse ueber das
-/// 2500-Limit getrieben hat. <c>search_pattern</c> wurde 002 hier angegliedert, weil es ebenfalls
-/// datei-inhalts-basiert arbeitet (wie <c>get_violations</c>) und damit semantisch nicht zu
-/// <see cref="SymbolGraphToolRegistrations"/> (C#-Symbolgraph) oder
-/// <see cref="FileStructureToolRegistrations"/> (Datei-Struktur) passt. <c>metrics_tree</c> ist
-/// hier registriert, weil seine zwei neuen Roslyn-Modi (<c>violation_density</c>,
-/// <c>complexity</c>) denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> haben —
-/// derselbe Grund, aus dem <c>get_violations</c> hier registriert ist statt in
-/// <see cref="FileStructureToolRegistrations"/>. <c>pattern_detect</c> ist hier registriert,
-/// weil es denselben <c>LinterEngine</c>-Pull-in wie <c>get_violations</c> hat (reine
-/// Aggregation bereits erzeugter <c>RuleViolation</c>-Objekte nach Pattern-Kategorie, siehe
-/// <see cref="PatternCatalog"/>). <c>find_magic_values</c> ist hier registriert, weil es
-/// ebenfalls Roslyn-<c>SyntaxWalker</c>-basiert ueber die Solution iteriert und damit
-/// semantisch zu den analyse-orientierten Tools passt (kein Symbolgraph-Lookup, keine
-/// Datei-Struktur-Ausgabe, sondern On-Demand-Audit ueber Literale).
+/// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>safeguard</c>,
+/// <c>search_pattern</c>, <c>metrics_tree</c>, <c>metrics_lookup</c>, <c>pattern_detect</c>,
+/// <c>find_magic_values</c> und <c>find_dead_code</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// aufgebauten Tool-Collection.
 /// </summary>
 internal static class AnalysisToolRegistrations
 {
@@ -51,6 +36,7 @@ internal static class AnalysisToolRegistrations
         AddSafeguard(tools, mcpState);
         AddSearchPattern(tools, mcpState);
         AddMetricsTree(tools, mcpState);
+        AddMetricsLookup(tools, mcpState);
         AddPatternDetect(tools, mcpState);
         AddFindMagicValues(tools, mcpState);
         AddFindDeadCode(tools, mcpState);
@@ -136,6 +122,28 @@ internal static class AnalysisToolRegistrations
         "Top-N-Kinder. mode: code_size, comment_density, violation_density, complexity. " +
         "root grenzt auf einen Teilbaum ein (Default: Solution-Root), depth (1-5) begrenzt die " +
         "Baumtiefe, top_n die sichtbaren Kinder pro Ebene, file_filter (Regex) auf den Pfad.";
+
+    private static void AddMetricsLookup(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState)
+    {
+        tools.Add(McpServerTool.Create(
+            (string? symbolIdentifier = null, CancellationToken ct = default) =>
+                MetricsLookupTool.ExecuteAsync(mcpState, symbolIdentifier, ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "metrics_lookup",
+                Description = MetricsLookupDescription,
+            }));
+    }
+
+    private const string MetricsLookupDescription =
+        "Wann nutzen: punktgenaue Metriken (LOC, zyklomatische/kognitive Komplexitaet, " +
+        "Parameteranzahl, AI-Context-Footprint, Member-Statistiken) und Schwellwert-Abgleich " +
+        "fuer ein einzelnes C#-Symbol (Methode, Konstruktor, Property, Klasse, Record, " +
+        "Struct, Interface, Enum) in einem Call abrufen. symbolIdentifier akzeptiert " +
+        "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
+        "\"Datei.cs:Zeile\" oder qualifizierten Namen.";
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
