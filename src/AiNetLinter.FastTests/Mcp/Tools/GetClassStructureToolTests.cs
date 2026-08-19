@@ -148,6 +148,11 @@ public sealed class GetClassStructureToolTests
         Assert.NotNull(payload);
         Assert.Equal(2, payload!.Files.Count);
         Assert.Equal(2, payload.Members.Count(m => m.Kind == "Method"));
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("| Kind | Name | Visibility | File | Lines | LineCount | Signature |", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("MultiPart.A.cs", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("MultiPart.B.cs", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

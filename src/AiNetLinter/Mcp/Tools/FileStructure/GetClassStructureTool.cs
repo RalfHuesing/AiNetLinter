@@ -308,14 +308,7 @@ internal static class GetClassStructureTool
             return sb.ToString().TrimEnd();
         }
 
-        sb.AppendLine("| Kind | Name | Visibility | Lines | LineCount | Signature |");
-        sb.AppendLine("|:---|:---|:---|---:|---:|:---|");
-        foreach (var m in p.Members)
-        {
-            var linesStr = m.StartLine > 0 ? $"{m.StartLine}-{m.EndLine}" : "-";
-            var countStr = m.LineCount > 0 ? m.LineCount.ToString() : "-";
-            sb.AppendLine($"| {m.Kind} | {m.Name} | {m.Visibility} | {linesStr} | {countStr} | {m.Signature} |");
-        }
+        AppendMemberRows(sb, p.Members, p.Files.Count > 1);
 
         if (p.Truncated)
         {
@@ -324,5 +317,36 @@ internal static class GetClassStructureTool
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    private static void AppendMemberRows(StringBuilder sb, IReadOnlyList<ClassStructureMemberEntry> members, bool isMultiFile)
+    {
+        if (isMultiFile)
+        {
+            sb.AppendLine("| Kind | Name | Visibility | File | Lines | LineCount | Signature |");
+            sb.AppendLine("|:---|:---|:---|:---|---:|---:|:---|");
+        }
+        else
+        {
+            sb.AppendLine("| Kind | Name | Visibility | Lines | LineCount | Signature |");
+            sb.AppendLine("|:---|:---|:---|---:|---:|:---|");
+        }
+
+        foreach (var m in members)
+        {
+            sb.AppendLine(FormatMemberRow(m, isMultiFile));
+        }
+    }
+
+    private static string FormatMemberRow(ClassStructureMemberEntry m, bool isMultiFile)
+    {
+        var linesStr = m.StartLine > 0 ? $"{m.StartLine}-{m.EndLine}" : "-";
+        var countStr = m.LineCount > 0 ? m.LineCount.ToString() : "-";
+        if (isMultiFile)
+        {
+            var fileName = !string.IsNullOrEmpty(m.FilePath) ? Path.GetFileName(m.FilePath) : "-";
+            return $"| {m.Kind} | {m.Name} | {m.Visibility} | {fileName} | {linesStr} | {countStr} | {m.Signature} |";
+        }
+        return $"| {m.Kind} | {m.Name} | {m.Visibility} | {linesStr} | {countStr} | {m.Signature} |";
     }
 }
