@@ -17,21 +17,10 @@ internal static class SymbolKindClassifier
         "class", "klasse", "interface", "record", "struct", "enum", "delegate", "all",
     };
 
-    private static readonly HashSet<string> ValidSymbolKinds = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "class", "klasse", "interface", "record", "struct", "enum", "delegate", "method", "methode", "property", "all",
-    };
-
     internal static bool IsValidTypeKind(string? kind)
     {
         if (string.IsNullOrWhiteSpace(kind)) return true;
         return ValidTypeKinds.Contains(kind);
-    }
-
-    internal static bool IsValidSymbolKind(string? kind)
-    {
-        if (string.IsNullOrWhiteSpace(kind)) return true;
-        return ValidSymbolKinds.Contains(kind);
     }
 
     internal static bool MatchesTypeKind(INamedTypeSymbol type, string? kind)
