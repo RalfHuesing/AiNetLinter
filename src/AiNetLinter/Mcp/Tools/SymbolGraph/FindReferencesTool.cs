@@ -126,7 +126,7 @@ internal static class FindReferencesTool
         Solution solution, string identifier, CancellationToken ct)
     {
         var (symbol, error) = await ResolveSymbolCoreAsync(solution, identifier, ct);
-        return (NormalizeToOwningMember(symbol), error);
+        return (symbol.NormalizeToOwningMember(), error);
     }
 
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolCoreAsync(
@@ -150,8 +150,6 @@ internal static class FindReferencesTool
         return await ResolveByNameAsync(solution, identifier, ct);
     }
 
-    private static ISymbol? NormalizeToOwningMember(ISymbol? symbol) =>
-        symbol is IMethodSymbol { AssociatedSymbol: { } owner } ? owner : symbol;
 
     /// <summary>
     /// Loest Dokument, Syntaxbaum, Quelltext und SemanticModel fuer eine Datei:Zeile-Angabe auf

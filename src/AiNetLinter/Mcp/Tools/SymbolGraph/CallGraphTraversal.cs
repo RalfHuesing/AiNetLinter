@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
@@ -307,7 +308,7 @@ internal static class CallGraphTraversal
         var semanticModel = await referenceLocation.Document.GetSemanticModelAsync(ct);
         var callerSymbol = semanticModel is null
             ? null
-            : NormalizeCallerSymbol(semanticModel.GetEnclosingSymbol(location.SourceSpan.Start, ct));
+            : semanticModel.GetEnclosingSymbol(location.SourceSpan.Start, ct).NormalizeToOwningMember();
 
         if (callerSymbol is null)
         {
@@ -325,8 +326,6 @@ internal static class CallGraphTraversal
         group.Locations.Add(location);
     }
 
-    private static ISymbol? NormalizeCallerSymbol(ISymbol? symbol) =>
-        symbol is IMethodSymbol { AssociatedSymbol: { } owner } ? owner : symbol;
 
     private static CallTreeBuilderNode AddChild(
         CallTreeBuilderNode parent,

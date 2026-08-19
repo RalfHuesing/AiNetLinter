@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
@@ -52,7 +53,7 @@ internal static class GetSymbolBodyTool
             if (symbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
 
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var idSuffix = TryGetDeclarationId(symbol);
+            var idSuffix = symbol.TryGetDocCommentId();
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
             var isTruncated = body.Contains(TruncationMarker, StringComparison.Ordinal);
@@ -82,17 +83,7 @@ internal static class GetSymbolBodyTool
         }
     }
 
-    private static string? TryGetDeclarationId(ISymbol symbol)
-    {
-        try
-        {
-            return DocumentationCommentId.CreateDeclarationId(symbol);
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-    }
+
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {

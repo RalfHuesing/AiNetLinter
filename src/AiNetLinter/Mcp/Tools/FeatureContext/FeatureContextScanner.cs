@@ -86,7 +86,7 @@ internal static class FeatureContextScanner
         var (filePath, startLine, endLine) = ExtractLocation(symbol, solutionDir);
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
         var (returnType, parameters) = ExtractTypeAndParameters(symbol);
-        var docCommentId = SafeCreateDeclarationId(symbol);
+        var docCommentId = symbol.TryGetDocCommentId();
 
         return new SymbolDeclarationDto(
             Name: symbol.ToDisplayString(),
@@ -153,18 +153,6 @@ internal static class FeatureContextScanner
         return (null, []);
     }
 
-    private static string? SafeCreateDeclarationId(ISymbol symbol)
-    {
-        try
-        {
-            return DocumentationCommentId.CreateDeclarationId(symbol);
-        }
-        catch (Exception ignored)
-        {
-            _ = ignored;
-            return null;
-        }
-    }
 
     private static async Task<ViolationsReportDto> CollectViolationsAsync(
         Solution solution,

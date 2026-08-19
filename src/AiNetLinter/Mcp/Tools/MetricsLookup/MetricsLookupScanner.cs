@@ -27,7 +27,7 @@ internal static class MetricsLookupScanner
         var symbolName = symbol.Name;
         var symbolKind = symbol.Kind.ToString();
         var qualifiedName = symbol.ToDisplayString();
-        var docCommentId = TryGetDocCommentId(symbol);
+        var docCommentId = symbol.TryGetDocCommentId();
         var location = ExtractLocation(symbol, solutionRoot);
 
         MethodMetricsDto? methodMetrics = null;
@@ -306,15 +306,4 @@ internal static class MetricsLookupScanner
         );
     }
 
-    private static string? TryGetDocCommentId(ISymbol symbol)
-    {
-        try
-        {
-            return DocumentationCommentId.CreateDeclarationId(symbol);
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-    }
 }
