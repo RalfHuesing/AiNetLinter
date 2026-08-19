@@ -10,7 +10,7 @@ using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.DependencyGraph;
 
 /// <summary>
 /// Tests fuer <see cref="DependencyGraphTool"/> — Argument-Validierung (gegenseitig exklusive

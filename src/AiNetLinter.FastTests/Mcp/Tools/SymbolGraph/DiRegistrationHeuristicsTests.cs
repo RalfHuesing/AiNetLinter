@@ -8,7 +8,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
 [Trait("Category", "Component")]
 public sealed class DiRegistrationHeuristicsTests

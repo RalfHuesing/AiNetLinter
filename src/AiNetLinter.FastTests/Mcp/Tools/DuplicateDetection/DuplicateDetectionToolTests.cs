@@ -10,7 +10,7 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/> — Argument-Validierung, Fehlerbehandlung,

@@ -10,7 +10,7 @@ using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.FastTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.CallTree;
 
 [Trait("Category", "Component")]
 public sealed class CallGraphTraversalTests

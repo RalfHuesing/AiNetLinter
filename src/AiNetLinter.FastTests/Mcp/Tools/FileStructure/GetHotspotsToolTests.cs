@@ -14,7 +14,7 @@ using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 
 [Trait("Category", "Component")]
 public sealed class GetHotspotsToolTests

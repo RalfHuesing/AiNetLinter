@@ -9,7 +9,7 @@ using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 
 [Trait("Category", "Unit")]
 public sealed class GetNamespaceTreeScannerTests

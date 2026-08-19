@@ -9,7 +9,7 @@ using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.MetricsTree;
 
 [Trait("Category", "Component")]
 public sealed class MetricsTreeToolTests

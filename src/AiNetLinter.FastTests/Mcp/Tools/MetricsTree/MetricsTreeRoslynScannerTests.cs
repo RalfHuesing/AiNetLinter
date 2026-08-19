@@ -12,7 +12,7 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.MetricsTree;
 
 /// <summary>
 /// Tests fuer die zwei Roslyn-Modi <c>violation_density</c>/<c>complexity</c> von

@@ -10,7 +10,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
 [Trait("Category", "Component")]
 public sealed class FindSymbolToolTests

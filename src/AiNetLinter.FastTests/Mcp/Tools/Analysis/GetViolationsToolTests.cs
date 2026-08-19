@@ -16,7 +16,7 @@ using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.Analysis;
 
 [Trait("Category", "Component")]
 public sealed class GetViolationsToolTests

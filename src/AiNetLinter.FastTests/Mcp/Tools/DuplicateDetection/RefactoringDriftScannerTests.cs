@@ -10,7 +10,7 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.DuplicateDetection;
 
 [Trait("Category", "Component")]
 public sealed class RefactoringDriftScannerTests

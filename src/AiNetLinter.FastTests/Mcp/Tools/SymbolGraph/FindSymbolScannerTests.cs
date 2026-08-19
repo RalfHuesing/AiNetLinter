@@ -5,7 +5,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
 [Trait("Category", "Component")]
 public sealed class FindSymbolScannerTests

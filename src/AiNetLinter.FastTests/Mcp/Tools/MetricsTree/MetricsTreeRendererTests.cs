@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.MetricsTree;
 
 [Trait("Category", "Unit")]
 public sealed class MetricsTreeRendererTests

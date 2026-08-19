@@ -75,7 +75,17 @@ public sealed class McpObservabilityE2ETests
             var logFiles = Directory.GetFiles(logDir, "*.jsonl", SearchOption.AllDirectories);
             Assert.NotEmpty(logFiles);
 
-            var logLines = logFiles.SelectMany(File.ReadAllLines).ToArray();
+            var logLines = logFiles.SelectMany(f =>
+            {
+                using var stream = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var reader = new StreamReader(stream);
+                var lines = new List<string>();
+                while (reader.ReadLine() is { } line)
+                {
+                    lines.Add(line);
+                }
+                return lines;
+            }).ToArray();
             Assert.True(logLines.Length >= 2, "Erwartet mindestens 2 JSONL Zeilen");
 
             var foundToolCall = false;

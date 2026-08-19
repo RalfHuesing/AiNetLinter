@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.DependencyGraph;
 
 /// <summary>
 /// Tests fuer <see cref="DependencyGraphScanner"/> — kleine, gezielte In-Memory-Solutions

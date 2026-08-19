@@ -16,7 +16,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
 
 /// <summary>
 /// Tests fuer <see cref="SafeguardScanner"/>. Etabliert ein neues Scanner-Test-Pattern (es

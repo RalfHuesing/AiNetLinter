@@ -13,7 +13,7 @@ using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 
 /// <summary>
 /// Tests fuer <see cref="PatternDetectScanner"/> — deckt die Zuordnung je Pattern (1 Test pro

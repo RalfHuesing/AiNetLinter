@@ -11,7 +11,7 @@ using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 
 /// <summary>
 /// Tool-Layer-Tests fuer <see cref="PatternDetectTool"/>: Validierung (unbekannte pattern-IDs,

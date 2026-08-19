@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools;
+namespace AiNetLinter.FastTests.Mcp.Tools.CallTree;
 
 [Trait("Category", "Unit")]
 public sealed class CallTreeMermaidRendererTests
