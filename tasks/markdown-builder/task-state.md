@@ -15,7 +15,7 @@ current_step: step-002
 - **Task-Status:** `executing`
 - **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-002` (in_progress)
+- **Aktueller Schritt:** `step-002` (done — EPIC-01 abgeschlossen)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-19
@@ -25,8 +25,8 @@ current_step: step-002
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | done (Korrektur ausstehend) | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | fc603681 | step-001/step-review.md: issues | - |
-| step-002 | EPIC-01 | in_progress | MarkdownTableBuilder zeilenweise API + EPIC-01 DoD präzisieren | step-001 | - | - | - |
+| step-001 | EPIC-01 | done | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | fc603681 | step-001/step-review.md: issues | - |
+| step-002 | EPIC-01 | done | MarkdownTableBuilder zeilenweise API + EPIC-01 DoD präzisieren | step-001 | b1a39ab1 | step-002/step-review.md: approved | - |
 |------|------|--------|-------|----------|-------|----------|--------|
 
 ## Config (optional)
