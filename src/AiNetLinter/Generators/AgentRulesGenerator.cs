@@ -7,6 +7,7 @@ using System.Text;
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Output;
 
 namespace AiNetLinter.Generators;
 
@@ -179,8 +180,12 @@ public static class AgentRulesGenerator
 
         sb.AppendLine("## Compound Suppressions (kontextabhängige Limiten)");
         sb.AppendLine("Folgende Regeln gelten mit relaxiertem Limit wenn alle Bedingungen erfüllt sind:\n");
-        sb.AppendLine("| Regel | Bedingung | Effektives Limit | Severity | Grund |");
-        sb.AppendLine("|:--|:--|:--|:--|:--|");
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Regel")
+            .AddColumn("Bedingung")
+            .AddColumn("Effektives Limit")
+            .AddColumn("Severity")
+            .AddColumn("Grund");
 
         foreach (var s in suppressions)
         {
@@ -190,8 +195,11 @@ public static class AgentRulesGenerator
             var limit = s.RelaxedLimit.HasValue ? $"**{s.RelaxedLimit}**" : "supprimiert";
             var severity = s.SeverityOverride != null ? $"`{s.SeverityOverride}`" : "—";
             var reason = s.Reason ?? "—";
-            sb.AppendLine($"| `{s.TargetRule}` | {conditions} | {limit} | {severity} | {reason} |");
+            table.AddRow($"`{s.TargetRule}`", conditions, limit, severity, reason);
         }
+        var mb = new MarkdownBuilder();
+        mb.Table(table);
+        mb.AppendTo(sb);
         sb.AppendLine();
     }
 
@@ -258,13 +266,18 @@ public static class AgentRulesGenerator
     private static void AppendMetricsTable(StringBuilder sb, Config config)
     {
         sb.AppendLine("## Grenzwerte (Produktion)");
-        sb.AppendLine("| Regel | Limit | Praxis |");
-        sb.AppendLine("| :--- | :---: | :--- |");
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Regel")
+            .AddColumn("Limit", ColumnAlign.Center)
+            .AddColumn("Praxis");
         foreach (var metric in RuleRegistry.All.Where(r => r.IsMetric))
         {
             var val = metric.GetMetricLimit != null ? metric.GetMetricLimit(config) : 0;
-            sb.AppendLine($"| `{metric.RuleId}` | **{val}** | {metric.AgentHint} |");
+            table.AddRow($"`{metric.RuleId}`", $"**{val}**", metric.AgentHint);
         }
+        var mb = new MarkdownBuilder();
+        mb.Table(table);
+        mb.AppendTo(sb);
         sb.AppendLine();
     }
 

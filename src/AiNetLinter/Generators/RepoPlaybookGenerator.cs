@@ -314,8 +314,10 @@ public sealed class RepoPlaybookGenerator
     {
         sb.AppendLine("## 5. Empfohlene Agenten-Priorität (aus RuleMetadata + Counts)");
         sb.AppendLine();
-        sb.AppendLine("| Intent | Offene Verstöße (wave-ready) | Regeln |");
-        sb.AppendLine("| :--- | ---: | :--- |");
+        var table = new MarkdownTableBuilder()
+            .AddColumn("Intent")
+            .AddColumn("Offene Verstöße (wave-ready)", ColumnAlign.Right)
+            .AddColumn("Regeln");
         var intentGroups = waveReadyViolations
             .GroupBy(v => RuleMetadataRegistry.Resolve(v.RuleName ?? "", config).Intent)
             .Select(g => new { Intent = g.Key, Count = g.Count(), Rules = string.Join(", ", g.Select(v => v.RuleName).Distinct().OrderBy(r => r, StringComparer.Ordinal)) })
@@ -324,13 +326,16 @@ public sealed class RepoPlaybookGenerator
             .ToList();
         if (intentGroups.Count == 0)
         {
-            sb.AppendLine("| - | 0 | Keine offenen Verstöße |");
+            table.AddRow("-", 0, "Keine offenen Verstöße");
         }
         else
         {
             foreach (var group in intentGroups)
-                sb.AppendLine($"| {group.Intent} | {group.Count} | {group.Rules} |");
+                table.AddRow(group.Intent, group.Count, group.Rules);
         }
+        var mb = new MarkdownBuilder();
+        mb.Table(table);
+        mb.AppendTo(sb);
         sb.AppendLine();
     }
 
