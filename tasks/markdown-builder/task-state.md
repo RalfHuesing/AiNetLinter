@@ -4,8 +4,8 @@ task: markdown-builder
 started_at: 2026-08-19
 last_updated: 2026-08-19
 rules_dir: .agents/rules
-total_steps: 1
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: markdown-builder
@@ -13,9 +13,9 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-001` (in_progress)
+- **Aktueller Schritt:** `step-002` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-19
@@ -25,7 +25,8 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | in_progress | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | - | - | - |
+| step-001 | EPIC-01 | done (Korrektur ausstehend) | MarkdownBuilder-Foundation + Bug-Fix-Callsites umstellen | - | fc603681 | step-001/step-review.md: issues | - |
+| step-002 | EPIC-01 | in_progress | MarkdownTableBuilder zeilenweise API + EPIC-01 DoD präzisieren | step-001 | - | - | - |
 |------|------|--------|-------|----------|-------|----------|--------|
 
 ## Config (optional)
