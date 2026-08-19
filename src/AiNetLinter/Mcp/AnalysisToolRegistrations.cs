@@ -265,8 +265,8 @@ internal static class AnalysisToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string symbol, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
-                GetFeatureContextTool.ExecuteAsync(mcpState, new FeatureContextOptions(symbol, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct),
+            (string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+                GetFeatureContextTool.ExecuteAsync(mcpState, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_feature_context",
@@ -277,7 +277,7 @@ internal static class AnalysisToolRegistrations
     private const string GetFeatureContextDescription =
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) " +
-        "in einem einzigen residenten Aufruf. symbol akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
+        "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol) akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "Teilbereiche koennen ueber includeCallers, includeTests, includeMetrics, includeViolations zu-/abgewaehlt werden. " +
         "maxCallers und maxTests steuern das Limit (Default 10, Cap 50).";
 }

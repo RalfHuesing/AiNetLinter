@@ -27,19 +27,20 @@ internal static class GetFeatureContextTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrWhiteSpace(options.Symbol))
+        var targetSymbol = options.EffectiveSymbol;
+        if (string.IsNullOrWhiteSpace(targetSymbol))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbol' fehlt oder ist leer.",
-                hint: "symbol angeben: z. B. \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: z. B. \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
         }
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, options.Symbol, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, targetSymbol, ct);
             if (error is not null) return error;
-            if (symbol is null) return McpToolResults.SymbolNotFound(options.Symbol);
+            if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 
             var scanContext = new FeatureContextScanContext(solution, state.Config, state.Console, options);
             var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
@@ -51,7 +52,7 @@ internal static class GetFeatureContextTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in get_feature_context: {ex.Message}",
-                context: options.Symbol);
+                context: targetSymbol);
         }
     }
 }

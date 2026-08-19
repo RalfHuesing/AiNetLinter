@@ -139,6 +139,7 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("## 2. Metriken & Budget", text);
         Assert.Contains("Cyclomatic Complexity", text);
         Assert.Contains("Cognitive Complexity", text);
+        Assert.Contains("Budget verbleibend", text);
 
         // 3. Callers
         Assert.Contains("## 3. Direkte Aufrufer", text);
@@ -160,12 +161,28 @@ public sealed class GetFeatureContextToolTests
 
         Assert.NotNull(payload);
         Assert.Equal("Method", payload.Declaration.Kind);
+        Assert.True(payload.Declaration.LineCount >= 3);
         Assert.NotNull(payload.Metrics);
         Assert.NotNull(payload.Callers);
         Assert.Equal(2, payload.Callers.TotalCallers);
         Assert.NotNull(payload.Tests);
         Assert.True(payload.Tests.TotalMatchingTests >= 1);
         Assert.NotNull(payload.Violations);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithSymbolIdentifierProperty_ResolvesSameAsSymbol()
+    {
+        using var scenario = CreateFullTestScenario();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state, new FeatureContextOptions(SymbolIdentifier: "Calculator.Add"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("# Feature-Kontext: CoreLib.Calculator.Add(int, int)", textContent.Text);
     }
 
     [Fact]

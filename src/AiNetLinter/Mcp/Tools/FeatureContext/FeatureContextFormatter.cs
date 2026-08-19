@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 
@@ -158,50 +159,51 @@ internal static class FeatureContextFormatter
         if (metrics.MethodMetrics != null)
         {
             var m = metrics.MethodMetrics;
-            FormatCheckLine(sb, "Cyclomatic Complexity", m.CyclomaticComplexity, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Cognitive Complexity", m.CognitiveComplexity, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Method LOC", m.CodeLines, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Parameter", m.EffectiveParameters, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Cyclomatic Complexity", MetricNames.CyclomaticComplexity, m.CyclomaticComplexity, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Cognitive Complexity", MetricNames.CognitiveComplexity, m.CognitiveComplexity, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Method LOC", MetricNames.LineCount, m.CodeLines, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Parameter", MetricNames.ParameterCount, m.EffectiveParameters, metrics.ThresholdChecks);
             return;
         }
 
         if (metrics.TypeMetrics != null)
         {
             var t = metrics.TypeMetrics;
-            FormatCheckLine(sb, "Type LOC", t.CodeLines, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "AI-Context-Footprint", t.AiContextFootprint, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Public Members", t.PublicMemberCount, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Type LOC", MetricNames.LineCount, t.CodeLines, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "AI-Context-Footprint", LinterRuleIds.AIContextFootprint, t.AiContextFootprint, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Public Members", MetricNames.PublicMemberCount, t.PublicMemberCount, metrics.ThresholdChecks);
             return;
         }
 
         if (metrics.PropertyMetrics != null)
         {
             var p = metrics.PropertyMetrics;
-            FormatCheckLine(sb, "Cyclomatic Complexity", p.CyclomaticComplexity, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Cognitive Complexity", p.CognitiveComplexity, metrics.ThresholdChecks);
-            FormatCheckLine(sb, "Property LOC", p.CodeLines, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Cyclomatic Complexity", MetricNames.CyclomaticComplexity, p.CyclomaticComplexity, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Cognitive Complexity", MetricNames.CognitiveComplexity, p.CognitiveComplexity, metrics.ThresholdChecks);
+            FormatCheckLine(sb, "Property LOC", MetricNames.LineCount, p.CodeLines, metrics.ThresholdChecks);
             return;
         }
 
         foreach (var check in metrics.ThresholdChecks)
         {
-            FormatCheckLine(sb, check.Metric, check.Value, metrics.ThresholdChecks);
+            FormatCheckLine(sb, check.Metric, check.Metric, check.Value, metrics.ThresholdChecks);
         }
     }
 
     private static void FormatCheckLine(
-        StringBuilder sb, string metricLabel, int value, IReadOnlyList<ThresholdCheckDto> checks)
+        StringBuilder sb, string displayLabel, string metricKey, int value, IReadOnlyList<ThresholdCheckDto> checks)
     {
-        var match = checks.FirstOrDefault(c => string.Equals(c.Metric, metricLabel, StringComparison.OrdinalIgnoreCase) ||
-                                               c.Metric.Contains(metricLabel, StringComparison.OrdinalIgnoreCase));
+        var match = checks.FirstOrDefault(c => string.Equals(c.Metric, metricKey, StringComparison.OrdinalIgnoreCase) ||
+                                               string.Equals(c.Metric, displayLabel, StringComparison.OrdinalIgnoreCase) ||
+                                               c.Metric.Contains(metricKey, StringComparison.OrdinalIgnoreCase));
         if (match == null || match.Limit <= 0)
         {
-            sb.AppendLine($"- **{metricLabel}:** {value}");
+            sb.AppendLine($"- **{displayLabel}:** {value}");
             return;
         }
 
         var budget = match.Limit - value;
         var budgetText = budget >= 0 ? $"Budget verbleibend: {budget}" : $"Ueberschreitung: {-budget}";
-        sb.AppendLine($"- **{metricLabel}:** {value} / Limit: {match.Limit} (Status: {match.Status}, {budgetText})");
+        sb.AppendLine($"- **{displayLabel}:** {value} / Limit: {match.Limit} (Status: {match.Status}, {budgetText})");
     }
 }

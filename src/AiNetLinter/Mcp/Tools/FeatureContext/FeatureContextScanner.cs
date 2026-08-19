@@ -105,17 +105,28 @@ internal static class FeatureContextScanner
 
     private static (string FilePath, int StartLine, int EndLine) ExtractLocation(ISymbol symbol, string solutionDir)
     {
-        var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
-        if (loc?.SourceTree == null)
+        var syntaxRef = symbol.DeclaringSyntaxReferences.FirstOrDefault();
+        if (syntaxRef != null)
         {
-            return ("", 0, 0);
+            var syntax = syntaxRef.GetSyntax();
+            var lineSpan = syntax.GetLocation().GetLineSpan();
+            var filePath = PathNormalizer.ToRelative(solutionDir, lineSpan.Path);
+            var start = lineSpan.StartLinePosition.Line + 1;
+            var end = lineSpan.EndLinePosition.Line + 1;
+            return (filePath, start, end);
         }
 
-        var filePath = PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath);
-        var lineSpan = loc.GetLineSpan();
-        var startLine = lineSpan.StartLinePosition.Line + 1;
-        var endLine = lineSpan.EndLinePosition.Line + 1;
-        return (filePath, startLine, endLine);
+        var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
+        if (loc?.SourceTree != null)
+        {
+            var filePath = PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath);
+            var lineSpan = loc.GetLineSpan();
+            var start = lineSpan.StartLinePosition.Line + 1;
+            var end = lineSpan.EndLinePosition.Line + 1;
+            return (filePath, start, end);
+        }
+
+        return ("", 0, 0);
     }
 
     private static (string? ReturnType, IReadOnlyList<string> Parameters) ExtractTypeAndParameters(ISymbol symbol)
