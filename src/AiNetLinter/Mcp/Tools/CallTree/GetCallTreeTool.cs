@@ -93,19 +93,19 @@ internal static class GetCallTreeTool
     private static bool TryParseDirection(string? value, out CallTreeDirection direction)
     {
         if (string.IsNullOrWhiteSpace(value) ||
-            string.Equals(value, "incoming", StringComparison.OrdinalIgnoreCase))
+            string.Equals(value, CallTreeDirectionNames.Incoming, StringComparison.OrdinalIgnoreCase))
         {
             direction = CallTreeDirection.Incoming;
             return true;
         }
 
-        if (string.Equals(value, "outgoing", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(value, CallTreeDirectionNames.Outgoing, StringComparison.OrdinalIgnoreCase))
         {
             direction = CallTreeDirection.Outgoing;
             return true;
         }
 
-        if (string.Equals(value, "both", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(value, CallTreeDirectionNames.Both, StringComparison.OrdinalIgnoreCase))
         {
             direction = CallTreeDirection.Both;
             return true;

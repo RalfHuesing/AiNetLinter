@@ -25,7 +25,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// ohne die bestehende flache Aggregation fuer <c>find_references</c>/<c>get_impact</c> zu
 /// veraendern.
 /// </summary>
-internal static class CallGraphTraversal
+internal static partial class CallGraphTraversal
 {
     internal const int MaxRecursionDepth = 3;
     internal const int MaxRecursionNodes = 200;
@@ -207,24 +207,54 @@ internal static class CallGraphTraversal
     private static async Task<List<(CallerGroup Group, CallTreeDirection Direction)>> BuildGroupsAsync(
         TreeBuildState state, ISymbol symbol, CancellationToken ct)
     {
-        var groups = new List<(CallerGroup Group, CallTreeDirection Direction)>();
+        var incoming = new List<CallerGroup>();
+        var outgoing = new List<CallerGroup>();
         if (state.Direction is CallTreeDirection.Incoming or CallTreeDirection.Both)
         {
             var refs = await SymbolFinder.FindReferencesAsync(symbol, state.Solution, ct);
-            var incoming = await BuildSortedGroupsAsync(refs, state.Solution, ct);
-            groups.AddRange(incoming.Select(group => (Group: group, Direction: CallTreeDirection.Incoming)));
+            incoming = await BuildSortedGroupsAsync(refs, state.Solution, ct);
         }
 
         if (state.Direction is CallTreeDirection.Outgoing or CallTreeDirection.Both)
         {
-            var outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, ct);
-            groups.AddRange(outgoing.Select(group => (Group: group, Direction: CallTreeDirection.Outgoing)));
+            outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, ct);
         }
 
-        return groups
-            .OrderBy(item => FirstLocationPath(item.Group, state.Solution), StringComparer.Ordinal)
-            .ThenBy(item => FirstLocationLine(item.Group))
-            .ThenBy(item => item.Direction)
+        return state.Direction == CallTreeDirection.Both
+            ? InterleaveDirections(incoming, outgoing)
+            : CreateDirectionalGroups(incoming, outgoing, state.Direction);
+    }
+
+    private static List<(CallerGroup Group, CallTreeDirection Direction)> InterleaveDirections(
+        IReadOnlyList<CallerGroup> incoming, IReadOnlyList<CallerGroup> outgoing)
+    {
+        var groups = new List<(CallerGroup Group, CallTreeDirection Direction)>(
+            incoming.Count + outgoing.Count);
+        var maxCount = Math.Max(incoming.Count, outgoing.Count);
+        for (var index = 0; index < maxCount; index++)
+        {
+            if (index < incoming.Count)
+            {
+                groups.Add((incoming[index], CallTreeDirection.Incoming));
+            }
+
+            if (index < outgoing.Count)
+            {
+                groups.Add((outgoing[index], CallTreeDirection.Outgoing));
+            }
+        }
+
+        return groups;
+    }
+
+    private static List<(CallerGroup Group, CallTreeDirection Direction)> CreateDirectionalGroups(
+        IReadOnlyList<CallerGroup> incoming,
+        IReadOnlyList<CallerGroup> outgoing,
+        CallTreeDirection direction)
+    {
+        var selected = direction == CallTreeDirection.Incoming ? incoming : outgoing;
+        return selected
+            .Select(group => (group, direction))
             .ToList();
     }
 
@@ -311,7 +341,7 @@ internal static class CallGraphTraversal
             : FormatSymbolName(group.CallerSymbol, direction);
         if (includeDirection)
         {
-            name = $"[{direction.ToString().ToLowerInvariant()}] {name}";
+            name = $"[{CallTreeDirectionNames.For(direction)}] {name}";
         }
         var child = new CallTreeBuilderNode(group.CallerSymbol, name, displayLine);
         parent.Children.Add(child);
@@ -395,93 +425,4 @@ internal static class CallGraphTraversal
     private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node) =>
         new(node.Name, "", 0, 0, node.DisplayLine, node.Children.Select(ToMetricsTreeNode).ToList());
 
-    /// <summary>
-    /// Ein Aufrufer-Knoten waehrend des Baum-Aufbaus (mutable, wird nach Abschluss in einen
-    /// unveraenderlichen <see cref="MetricsTreeNode"/> ueberfuehrt). <see cref="Symbol"/> ist
-    /// <see langword="null"/> nur fuer "&lt;unbekannt&gt;"-Blaetter (Aufrufstelle ohne aufloesbaren
-    /// einschliessenden Symbol) — solche Knoten werden nie weiter expandiert.
-    /// </summary>
-    private sealed class CallTreeBuilderNode
-    {
-        internal CallTreeBuilderNode(ISymbol? symbol, string name, string displayLine)
-        {
-            Symbol = symbol;
-            Name = name;
-            DisplayLine = displayLine;
-        }
-
-        internal ISymbol? Symbol { get; }
-        internal string Name { get; }
-        internal string DisplayLine { get; }
-        internal List<CallTreeBuilderNode> Children { get; } = new();
-    }
-
-    /// <summary>
-    /// Buendelt alle Aufrufstellen, deren einschliessender Symbol identisch ist (z. B. zwei Aufrufe
-    /// derselben Methode im selben Caller) — ein Kindknoten pro Caller-Symbol statt pro Zeile.
-    /// </summary>
-    private sealed class CallerGroup
-    {
-        internal CallerGroup(ISymbol? callerSymbol, List<Location> locations)
-        {
-            CallerSymbol = callerSymbol;
-            Locations = locations;
-        }
-
-        internal ISymbol? CallerSymbol { get; }
-        internal List<Location> Locations { get; }
-    }
-
-    /// <summary>
-    /// Veraenderlicher BFS-Zustand fuer <see cref="BuildTreeAsync"/> — analog zu
-    /// <see cref="TraversalState"/>, aber mit Queue-Eintraegen, die auf echte Baumknoten statt auf
-    /// eine flache Locations-Liste zeigen.
-    /// </summary>
-    private sealed class TreeBuildState
-    {
-        private readonly Queue<(CallTreeBuilderNode Node, int Level)> _queue = new();
-        private readonly HashSet<(ISymbol Symbol, CallTreeDirection Direction)> _visited;
-
-        internal TreeBuildState(
-            Solution solution, ISymbol seedSymbol, int depth, int topN, CallTreeDirection direction)
-        {
-            Solution = solution;
-            Depth = depth;
-            TopN = topN;
-            Direction = direction;
-            Root = new CallTreeBuilderNode(seedSymbol, FormatSymbolName(seedSymbol), FormatRootDisplay(seedSymbol, solution));
-            _visited = new HashSet<(ISymbol Symbol, CallTreeDirection Direction)>(
-                new DirectionAwareSymbolComparer())
-            {
-                (seedSymbol, direction),
-            };
-            _queue.Enqueue((Root, 1));
-            NodeCount = 1;
-        }
-
-        internal Solution Solution { get; }
-        internal int Depth { get; }
-        internal int TopN { get; }
-        internal CallTreeDirection Direction { get; }
-        internal CallTreeBuilderNode Root { get; }
-        internal int NodeCount { get; set; }
-        internal bool Truncated { get; set; }
-        internal bool HasQueuedNodes => _queue.Count > 0;
-
-        internal (CallTreeBuilderNode Node, int Level) Dequeue() => _queue.Dequeue();
-        internal void Enqueue(CallTreeBuilderNode node, int level) => _queue.Enqueue((node, level));
-        internal bool MarkVisited(ISymbol symbol, CallTreeDirection direction) =>
-            _visited.Add((symbol, direction));
-
-        private sealed class DirectionAwareSymbolComparer : IEqualityComparer<(ISymbol Symbol, CallTreeDirection Direction)>
-        {
-            public bool Equals(
-                (ISymbol Symbol, CallTreeDirection Direction) x,
-                (ISymbol Symbol, CallTreeDirection Direction) y) =>
-                x.Direction == y.Direction && SymbolEqualityComparer.Default.Equals(x.Symbol, y.Symbol);
-
-            public int GetHashCode((ISymbol Symbol, CallTreeDirection Direction) obj) =>
-                HashCode.Combine(SymbolEqualityComparer.Default.GetHashCode(obj.Symbol), obj.Direction);
-        }
-    }
 }

@@ -11,6 +11,21 @@ internal enum CallTreeDirection
     Both,
 }
 
+internal static class CallTreeDirectionNames
+{
+    internal const string Incoming = "incoming";
+    internal const string Outgoing = "outgoing";
+    internal const string Both = "both";
+
+    internal static string For(CallTreeDirection direction) => direction switch
+    {
+        CallTreeDirection.Incoming => Incoming,
+        CallTreeDirection.Outgoing => Outgoing,
+        CallTreeDirection.Both => Both,
+        _ => string.Empty,
+    };
+}
+
 internal sealed record GetCallTreeInput(
     string? SymbolIdentifier,
     int Depth,

@@ -187,4 +187,37 @@ public sealed class CallGraphTraversalTests
         Assert.Contains(root.Children, child => child.Name == "[outgoing] Greeter");
         Assert.Contains(root.Children, child => child.Name == "[outgoing] Greeter.Greet");
     }
+
+    [Fact]
+    public async Task BuildTreeAsync_Both_TopNShowsBothDirectionsBeforeOverflow()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("Fairness", [
+            ("Calls.cs", """
+                namespace Fairness;
+                public class Target
+                {
+                    public void Run() { new Helper(); }
+                }
+                public class Helper
+                {
+                }
+                public class Caller
+                {
+                    public void Invoke() { new Target().Run(); }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "Fairness.Target.Run", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 1, 2, CallTreeDirection.Both),
+            CancellationToken.None);
+
+        Assert.False(truncated);
+        Assert.Equal(2, root.Children.Count);
+        Assert.StartsWith("[incoming] Caller.Invoke", root.Children[0].Name, System.StringComparison.Ordinal);
+        Assert.StartsWith("[outgoing]", root.Children[1].Name, System.StringComparison.Ordinal);
+    }
 }
