@@ -59,5 +59,12 @@ internal static class DuplicateDetectionToolRegistrations
         "nachbauen statt ihn aufzurufen ('absence-of-calls'-Heuristik). Ergebnis als Kandidaten, " +
         "nicht als Verstoesse (hoeheres False-Positive-Budget als mode='clone' — strukturelle " +
         "Aehnlichkeit ist nicht zwingend Drift). similarityThreshold wird in diesem Modus ignoriert " +
-        "(fester near-Schwellwert aus rules.json).";
+        "(fester near-Schwellwert aus rules.json). " +
+        "mode='structural': findet semantisch aehnliche Hilfsmethoden anhand eines Roslyn-" +
+        "Strukturprofils und Cosine-Similarity (Typ-4/Intended-Duplication, unabhaengige " +
+        "Namens-/Literal-Varianten). Ergebnis als manuell zu pruefende Kandidatencluster, " +
+        "keine automatische DuplicateCode-Violation. similarityThreshold filtert exact/near/fuzzy " +
+        "ueber eigene Cosine-Schwellwerte aus rules.json (StructuralDuplicate*Threshold), nicht " +
+        "ueber die Jaccard-DuplicateCode-Schwellwerte. helperSymbol wird in diesem Modus ignoriert. " +
+        "Kleine Helper oft nur mit minTokens unter dem Lint-Default 30 sichtbar.";
 }

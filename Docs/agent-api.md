@@ -243,7 +243,7 @@ Konsequenz für den Agent-Loop: 19 Tools sind C#-only (get_namespace_tree, find_
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Observability-Status (aktiv/deaktiviert) | nein | nein |
 | `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
-| `find_duplicates` | `mode?` (`clone` Default oder `refactoring-drift`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, nur `mode=clone`), `normalizeIdentifiers?` (Default `false`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten | ja | ja |
+| `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
 ### Structured Output
 
@@ -320,11 +320,31 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
       ]
     }
   ],
-  "summary": { "methodsScanned": 240, "totalClusters": 3, "shownClusters": 3, "truncated": false }
+  "summary": { "methodsScanned": 240, "totalClusters": 3, "shownClusters": 3, "truncated": false, "mode": "clone" }
 }
 ```
 
 `minTokens` filtert triviale Methoden (leere `Dispose`/`ToString`-Overrides) heraus; `bin/`, `obj/`, `.ainetlinter/` und `tests/Fixtures/`-Verzeichnisse sowie Methoden mit `[GeneratedCode]`-Attribut sind fest ausgeschlossen. `normalizeIdentifiers` (Default `false`) schaltet die Erkennung umbenannter Klone (Type-2) an, indem Identifier-/Literal-Tokens vor dem Vergleich normalisiert werden. `scopeDir` grenzt auf einen Teilbereich ein (case-insensitiver Substring-Abgleich auf den Dateipfad, wie `scopeFilter` bei `get_violations`). `maxResults` kappt die gezeigten Cluster (Default 20, aus `rules.json` überschreibbar) — `truncated: true` unterdrückt den Sufficiency-Hinweis und ergänzt stattdessen eine Trunkierungs-Meta-Zeile.
+
+**`find_duplicates mode=structural` — Structured Output im Detail:** Deterministisches Roslyn-Strukturprofil und Cosine-Similarity (keine Embeddings/Netzwerkzugriffe) zur Erkennung semantisch ähnlicher Hilfsmethoden mit unterschiedlichen Namen und Literalen (Typ-4/Intended Duplication). Das Profil enthält normalisierte Rückgabe-/Parametertypen, Kontrollfluss-Form, aufgelöste Zieltypen bei `switch`/Pattern-Interaktionen sowie grobe Verhaltensmarker (Purity, Literal-Klassen). `similarityThreshold` filtert über eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicateExactThreshold`/`NearThreshold`/`FuzzyThreshold`, Standard 0.90/0.80/0.70) — unabhängig von den Jaccard-`DuplicateCode*Threshold`-Werten. Ergebnisse sind manuell zu prüfende Kandidatencluster, keine automatischen Verstöße. `helperSymbol` wird ignoriert. Kleiner Helper oft nur mit `minTokens` unter dem Lint-Default 30 sichtbar. `StructuredContent` liefert dasselbe Schema wie `mode=clone`, ergänzt um `structureProfile` je Mitglied:
+
+```json
+{
+  "clusters": [
+    {
+      "bucket": "near",
+      "score": 0.87,
+      "members": [
+        { "filePath": "src/Tools/GetClassStructureTool.cs", "line": 42, "signatureName": "GetClassStructureTool.GetTypeKindDescription(INamedTypeSymbol)", "tokenCount": 18, "structureProfile": "ret=string; params=INamedTypeSymbol; cf=switch-expr; targets=TypeKind; lits=string; pure; form=switch" },
+        { "filePath": "src/Tools/GetNamespaceTreeScanner.cs", "line": 77, "signatureName": "GetNamespaceTreeScanner.DescribeTypeKind(INamedTypeSymbol)", "tokenCount": 16, "structureProfile": "ret=string; params=INamedTypeSymbol; cf=switch-expr; targets=TypeKind; lits=string; pure; form=switch" }
+      ]
+    }
+  ],
+  "summary": { "methodsScanned": 312, "totalClusters": 4, "shownClusters": 4, "truncated": false, "mode": "structural" }
+}
+```
+
+Ergebnisse sind Prüfempfehlungen, keine automatischen Verstöße — `DuplicateCodeChecker`/`safeguard` bleiben auf dem tokenbasierten Verhalten; die höhere False-Positive-Unsicherheit semantischer Ähnlichkeit fließt nicht als Lint-Gate-Verletzung ein.
 
 **`find_duplicates mode=refactoring-drift` — Structured Output im Detail:** Eigenes Response-Schema (nicht `clusters`/`bucket`) — findet Methoden, die strukturell einem per `helperSymbol` benannten Helfer `H` ähneln (Jaccard-Score ≥ `near`-Schwellwert aus `rules.json`, `DuplicateCodeNearThreshold`), ihn aber nachweislich nicht aufrufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005). `helperSymbol` wird wie bei `find_references` aufgelöst (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name); löst der Identifikator nicht auf ein Symbol oder mehrdeutig auf, liefert das Tool denselben `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL`-Fehler wie `find_references`. Nur gewöhnliche Methoden/lokale Funktionen sind als Helfer zulässig (Konstruktoren/Properties/Felder werden von der zugrunde liegenden Engine nicht fingerprinted) — `similarityThreshold` wird in diesem Modus ignoriert. `StructuredContent` liefert:
 

@@ -429,4 +429,33 @@ public sealed class McpLiveRepositoryTests
         Assert.Contains("# Namespaces in Projekt 'AiNetLinter'", tree, StringComparison.Ordinal);
         Assert.Contains("AiNetLinter", tree, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LiveDogfood_FindDuplicates_StructuralMode_ReturnsValidSchema()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_duplicates",
+            new Dictionary<string, object?>
+            {
+                ["mode"] = "structural",
+                ["scopeDir"] = "src/AiNetLinter/Mcp/Tools/DeadCode",
+                ["minTokens"] = 10,
+                ["maxResults"] = 10,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+
+        var json = JsonSerializer.Deserialize<JsonObject>(
+            result.StructuredContent!.Value.GetRawText())!;
+        Assert.True(json.ContainsKey("clusters"), "StructuredContent muss 'clusters' enthalten");
+        Assert.True(json.ContainsKey("summary"), "StructuredContent muss 'summary' enthalten");
+        Assert.IsType<JsonArray>(json["clusters"]);
+
+        var summary = json["summary"]!.AsObject();
+        Assert.True(summary.ContainsKey("mode"), "summary muss 'mode' enthalten");
+        Assert.Equal("structural", (string?)summary["mode"]);
+        Assert.True(summary.ContainsKey("methodsScanned"), "summary muss 'methodsScanned' enthalten");
+        Assert.True((int?)summary["methodsScanned"] >= 0);
+    }
 }

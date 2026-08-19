@@ -273,4 +273,22 @@ public sealed record GlobalConfig
     /// Jaccard-Score absteigend) — kein unbegrenzter Dump. Standard: <c>20</c>.
     /// </summary>
     public int DuplicateCodeMaxResults { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.MaxResults;
+
+    /// <summary>
+    /// Cosine-Schwellwert (inklusive) fuer <c>find_duplicates mode=structural</c> <c>exact</c>.
+    /// Unabhaengig von <see cref="DuplicateCodeExactThreshold"/>. Standard: <c>0.90</c>.
+    /// </summary>
+    public double StructuralDuplicateExactThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.StructuralExactThreshold;
+
+    /// <summary>
+    /// Cosine-Schwellwert (inklusive) fuer <c>find_duplicates mode=structural</c> <c>near</c>.
+    /// Unabhaengig von <see cref="DuplicateCodeNearThreshold"/>. Standard: <c>0.80</c>.
+    /// </summary>
+    public double StructuralDuplicateNearThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.StructuralNearThreshold;
+
+    /// <summary>
+    /// Cosine-Schwellwert (inklusive) fuer <c>find_duplicates mode=structural</c> <c>fuzzy</c>.
+    /// Unabhaengig von <see cref="DuplicateCodeFuzzyThreshold"/>. Standard: <c>0.70</c>.
+    /// </summary>
+    public double StructuralDuplicateFuzzyThreshold { get; init; } = AiNetLinter.Core.DuplicateDetection.DuplicateDetectionDefaults.StructuralFuzzyThreshold;
 }

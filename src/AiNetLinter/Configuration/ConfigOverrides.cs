@@ -229,6 +229,24 @@ public sealed record GlobalConfigOverride
     /// Global.DuplicateCodeMaxResults).
     /// </summary>
     public int? DuplicateCodeMaxResults { get; init; }
+
+    /// <summary>
+    /// Cosine-Schwellwert fuer structural-<c>exact</c> (Override fuer
+    /// Global.StructuralDuplicateExactThreshold).
+    /// </summary>
+    public double? StructuralDuplicateExactThreshold { get; init; }
+
+    /// <summary>
+    /// Cosine-Schwellwert fuer structural-<c>near</c> (Override fuer
+    /// Global.StructuralDuplicateNearThreshold).
+    /// </summary>
+    public double? StructuralDuplicateNearThreshold { get; init; }
+
+    /// <summary>
+    /// Cosine-Schwellwert fuer structural-<c>fuzzy</c> (Override fuer
+    /// Global.StructuralDuplicateFuzzyThreshold).
+    /// </summary>
+    public double? StructuralDuplicateFuzzyThreshold { get; init; }
 }
 
 /// <summary>

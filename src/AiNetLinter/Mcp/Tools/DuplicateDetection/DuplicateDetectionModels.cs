@@ -12,7 +12,9 @@ namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
 /// wurden als zusaetzliche, optionale Trailing-Felder ergaenzt (Teil C, Refactoring-Drift) — ohne
 /// bestehende Konstruktions-Aufrufe mit 5 Positionsargumenten umzusortieren (Default <see
 /// langword="null"/> haelt sie kompatibel). <see cref="Mode"/> ist <c>"clone"</c> (Default, Teil A)
-/// oder <c>"refactoring-drift"</c> (Teil C, <see cref="HelperSymbol"/> dann Pflicht) — Format von
+/// oder <c>"refactoring-drift"</c> (Teil C, <see cref="HelperSymbol"/> dann Pflicht) oder
+/// <c>"structural"</c> (Typ-4-Strukturprofile, Cosine-Similarity; <see cref="HelperSymbol"/>
+/// wird ignoriert) — Format von
 /// <see cref="HelperSymbol"/> identisch zu <c>find_references</c>/<c>get_impact</c>s
 /// <c>symbolIdentifier</c> (stabile DocumentationCommentId, Datei:Zeile:Spalte oder qualifizierter
 /// Name).
@@ -34,7 +36,8 @@ internal sealed record DuplicateClusterEntry(
     string FilePath,
     int Line,
     string SignatureName,
-    int TokenCount);
+    int TokenCount,
+    string? StructureProfile = null);
 
 /// <summary>Ein Klon-Cluster fuer die <c>find_duplicates</c>-Ausgabe. <see cref="Bucket"/> ist
 /// klein geschrieben (<c>exact</c>/<c>near</c>/<c>fuzzy</c>) fuer die JSON-Ausgabe.</summary>
@@ -50,7 +53,8 @@ internal sealed record DuplicateDetectionSummary(
     int MethodsScanned,
     int TotalClusters,
     int ShownClusters,
-    bool Truncated);
+    bool Truncated,
+    string Mode);
 
 /// <summary>StructuredContent-Wurzel fuer <c>find_duplicates</c> — in ein benanntes Objekt
 /// gewrappt statt eines nackten Arrays (siehe <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar).

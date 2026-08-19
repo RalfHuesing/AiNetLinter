@@ -11,6 +11,7 @@ internal enum DuplicateDetectionMode
 {
     Clone,
     RefactoringDrift,
+    Structural,
 }
 
 /// <summary>Parst den <c>mode</c>-Parameter von <c>find_duplicates</c>. Leer/<see langword="null"/>
@@ -25,6 +26,7 @@ internal static class DuplicateDetectionModeParser
         {
             "clone" => DuplicateDetectionMode.Clone,
             "refactoring-drift" => DuplicateDetectionMode.RefactoringDrift,
+            "structural" => DuplicateDetectionMode.Structural,
             _ => null,
         };
     }

@@ -34,8 +34,8 @@ internal static class DuplicateDetectionTool
         if (mode is null)
         {
             return McpToolResults.InvalidArgument(
-                $"Ungueltiger mode-Wert '{input.Mode}' — gueltig sind 'clone', 'refactoring-drift'.",
-                hint: "mode='clone' oder mode='refactoring-drift' angeben (Default: 'clone').");
+                $"Ungueltiger mode-Wert '{input.Mode}' — gueltig sind 'clone', 'refactoring-drift', 'structural'.",
+                hint: "mode='clone', 'refactoring-drift' oder 'structural' angeben (Default: 'clone').");
         }
         if (input.MinTokens is < 1)
         {
@@ -63,9 +63,12 @@ internal static class DuplicateDetectionTool
 
         try
         {
-            return mode.Value == DuplicateDetectionMode.RefactoringDrift
-                ? await ExecuteRefactoringDriftAsync(solution, config, input, ct)
-                : await ExecuteCloneAsync(solution, config, input, ct);
+            return mode.Value switch
+            {
+                DuplicateDetectionMode.RefactoringDrift => await ExecuteRefactoringDriftAsync(solution, config, input, ct),
+                DuplicateDetectionMode.Structural => await ExecuteStructuralAsync(solution, config, input, ct),
+                _ => await ExecuteCloneAsync(solution, config, input, ct),
+            };
         }
         catch (System.Exception ex) when (ex is not System.OperationCanceledException)
         {
@@ -81,7 +84,18 @@ internal static class DuplicateDetectionTool
         if (thresholdError is not null) return thresholdError;
 
         var result = await DuplicateDetectionScanner.ScanAsync(solution, config, input, minBucket, ct);
-        return BuildResponse(solution, result);
+        return BuildResponse(solution, result, "clone");
+    }
+
+    private static async Task<CallToolResult> ExecuteStructuralAsync(
+        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
+        CancellationToken ct)
+    {
+        var (minBucket, thresholdError) = ParseSimilarityThreshold(input.SimilarityThreshold);
+        if (thresholdError is not null) return thresholdError;
+
+        var result = await StructuralDuplicateScanner.ScanAsync(solution, config, input, minBucket, ct);
+        return BuildResponse(solution, result, "structural");
     }
 
     private static async Task<CallToolResult> ExecuteRefactoringDriftAsync(
@@ -118,12 +132,11 @@ internal static class DuplicateDetectionTool
         };
     }
 
-    private static CallToolResult BuildResponse(Microsoft.CodeAnalysis.Solution solution, DuplicateDetectionScanResultForTool result)
+    private static CallToolResult BuildResponse(
+        Microsoft.CodeAnalysis.Solution solution, DuplicateDetectionScanResultForTool result, string mode)
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        var body = RenderText(solutionDir, result);
-        // Trunkierungs-Meta-Zeile UND Sufficiency-Hinweis schliessen sich gegenseitig aus (siehe
-        // McpSufficiencyHints-Doc-Kommentar) — nur bei vollstaendigem Ergebnis den Hinweis anhaengen.
+        var body = RenderText(solutionDir, result, mode);
         var finalText = result.Truncated ? body : McpSufficiencyHints.Append(body);
 
         var payload = new DuplicateDetectionPayload(
@@ -132,7 +145,8 @@ internal static class DuplicateDetectionTool
                 MethodsScanned: result.MethodsScanned,
                 TotalClusters: result.TotalClusters,
                 ShownClusters: result.ShownClusters.Count,
-                Truncated: result.Truncated));
+                Truncated: result.Truncated,
+                Mode: mode));
 
         // In ein Objekt gewrappt statt eines nackten Arrays (siehe
         // McpToolResults.Text<T>-Doc-Kommentar).
@@ -146,7 +160,12 @@ internal static class DuplicateDetectionTool
             Members: cluster.Members.Select(m => ToEntry(solutionDir, m)).ToList());
 
     private static DuplicateClusterEntry ToEntry(string solutionDir, DuplicateClusterMember member) =>
-        new(PathNormalizer.ToRelative(solutionDir, member.FilePath), member.LineNumber, member.SignatureName, member.TokenCount);
+        new(
+            PathNormalizer.ToRelative(solutionDir, member.FilePath),
+            member.LineNumber,
+            member.SignatureName,
+            member.TokenCount,
+            member.StructureProfile);
 
     private static string BucketLabel(DuplicateSimilarityBucket bucket) => bucket switch
     {
@@ -155,15 +174,26 @@ internal static class DuplicateDetectionTool
         _ => "fuzzy",
     };
 
-    private static string RenderText(string solutionDir, DuplicateDetectionScanResultForTool result)
+    private static string RenderText(string solutionDir, DuplicateDetectionScanResultForTool result, string mode)
     {
+        var isStructural = mode == "structural";
         if (result.ShownClusters.Count == 0)
         {
-            return $"Keine Duplikat-Cluster gefunden ({result.MethodsScanned} Methoden gescannt).";
+            return isStructural
+                ? $"Keine strukturellen Kandidatencluster gefunden ({result.MethodsScanned} Methoden gescannt). Kandidaten, keine Verstoesse."
+                : $"Keine Duplikat-Cluster gefunden ({result.MethodsScanned} Methoden gescannt).";
         }
 
         var sb = new StringBuilder();
-        sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Cluster(n) ({result.MethodsScanned} Methoden gescannt):");
+        if (isStructural)
+        {
+            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} strukturelle(n) Kandidatencluster(n) ({result.MethodsScanned} Methoden gescannt). ");
+            sb.Append("Pruefempfehlungen, keine Verstoesse — semantische Aehnlichkeit ist nicht zwingend Duplikation:");
+        }
+        else
+        {
+            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Cluster(n) ({result.MethodsScanned} Methoden gescannt):");
+        }
 
         if (result.TotalClusters > 20 || result.ShownClusters.Count > 20)
         {
@@ -200,6 +230,10 @@ internal static class DuplicateDetectionTool
         {
             var relativePath = PathNormalizer.ToRelative(solutionDir, member.FilePath);
             sb.Append($"\n- {member.SignatureName} ({relativePath}:{member.LineNumber}, {member.TokenCount} Tokens)");
+            if (!string.IsNullOrEmpty(member.StructureProfile))
+            {
+                sb.Append($"\n  Profil: {member.StructureProfile}");
+            }
         }
     }
 }

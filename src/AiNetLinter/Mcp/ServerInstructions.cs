@@ -68,7 +68,8 @@ internal static class ServerInstructions
         "- report_observability_feedback: Meldet Probleme, False-Positives, unerwartete Ergebnisse oder Feature-Wünsche zu diesem MCP-Server, um AiNetLinter zu verbessern.\n" +
         "- find_duplicates: Findet Code-Duplikate (Token-basiertes Clone-Detection, " +
         "Jaccard-N-Gram, Method-Granularitaet) als transitiv gruppierte Cluster statt isolierter " +
-        "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit.\n\n" +
+        "Paare, gestaffelt nach exact/near/fuzzy-Aehnlichkeit; mode='structural' findet " +
+        "semantisch aehnliche Hilfsmethoden als pruefbare Kandidatencluster.\n\n" +
         "C#-only-Grenze: find_symbol, find_references, get_call_tree, get_impact, " +
         "get_type_hierarchy, dependency_graph, get_namespace_tree, get_file_skeleton, get_class_structure, metrics_lookup, get_feature_context, get_test_context, get_violations, safeguard, " +
         "pattern_detect, find_magic_values, find_dead_code, get_symbol_body und find_duplicates " +

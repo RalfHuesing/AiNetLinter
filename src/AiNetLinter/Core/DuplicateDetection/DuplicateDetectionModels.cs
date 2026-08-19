@@ -55,6 +55,9 @@ internal static class DuplicateDetectionDefaults
     internal const double FuzzyThreshold = 0.65;
     internal const bool NormalizeIdentifiers = false;
     internal const int MaxResults = 20;
+    internal const double StructuralExactThreshold = 0.90;
+    internal const double StructuralNearThreshold = 0.80;
+    internal const double StructuralFuzzyThreshold = 0.70;
 }
 
 /// <summary>
@@ -66,7 +69,8 @@ internal sealed record DuplicateClusterMember(
     string FilePath,
     int LineNumber,
     string SignatureName,
-    int TokenCount);
+    int TokenCount,
+    string? StructureProfile = null);
 
 /// <summary>
 /// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare).

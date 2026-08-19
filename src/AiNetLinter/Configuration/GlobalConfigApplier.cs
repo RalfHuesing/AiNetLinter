@@ -130,5 +130,8 @@ internal static class GlobalConfigApplier
             DuplicateCodeFuzzyThreshold      = o.DuplicateCodeFuzzyThreshold      ?? config.DuplicateCodeFuzzyThreshold,
             DuplicateCodeNormalizeIdentifiers = o.DuplicateCodeNormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
             DuplicateCodeMaxResults          = o.DuplicateCodeMaxResults          ?? config.DuplicateCodeMaxResults,
+            StructuralDuplicateExactThreshold = o.StructuralDuplicateExactThreshold ?? config.StructuralDuplicateExactThreshold,
+            StructuralDuplicateNearThreshold  = o.StructuralDuplicateNearThreshold  ?? config.StructuralDuplicateNearThreshold,
+            StructuralDuplicateFuzzyThreshold = o.StructuralDuplicateFuzzyThreshold ?? config.StructuralDuplicateFuzzyThreshold,
         };
 }

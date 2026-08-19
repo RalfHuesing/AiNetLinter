@@ -100,7 +100,10 @@
     "DuplicateCodeNearThreshold": 0.8,
     "DuplicateCodeFuzzyThreshold": 0.65,
     "DuplicateCodeNormalizeIdentifiers": false,
-    "DuplicateCodeMaxResults": 20
+    "DuplicateCodeMaxResults": 20,
+    "StructuralDuplicateExactThreshold": 0.9,
+    "StructuralDuplicateNearThreshold": 0.8,
+    "StructuralDuplicateFuzzyThreshold": 0.7
   },
   "Metrics": {
     "MaxLineCount": 500,

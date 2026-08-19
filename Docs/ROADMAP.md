@@ -509,7 +509,10 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
   (Default) liefert Cluster gestaffelt nach Aehnlichkeit; `mode="refactoring-drift"` (Idee C,
   "absence-of-calls"-Heuristik, Murphy-Hill 2005) findet Methoden, die einen per `helperSymbol`
   benannten Helper strukturell nachbauen statt ihn aufzurufen — als Kandidaten gelistet, fliesst
-  nicht in Lint/`safeguard` ein (On-Demand-only).
+  nicht in Lint/`safeguard` ein (On-Demand-only); `mode="structural"` (Typ-4/Intended Duplication)
+  erkennt semantisch aehnliche Hilfsmethoden anhand deterministischer Roslyn-Strukturprofile und
+  Cosine-Similarity — ebenfalls On-Demand-only, Kandidatencluster mit Strukturprofil-Kurzfassung,
+  eigene Cosine-Schwellwerte (`StructuralDuplicate*Threshold`, Standard 0.90/0.80/0.70).
 - [x] **Linter-Checker `DuplicateCodeChecker`**: solution-weite Nachpruefung (via
   `PostAnalysisChecks`, nicht Datei-Node-Walker wie die meisten anderen Checker). Meldet nur
   `exact`-Cluster (Severity `info`), ein Regelverstoss pro Cluster (repraesentatives Mitglied,
@@ -518,12 +521,13 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
   ~23 Einzel-Funde auf diesem Repo). Respektiert die dateiweite `// ainetlinter-disable
   DuplicateCode`-Suppression-Konvention ueber alle Cluster-Mitglieder.
 - [x] **Self-Audit-Skill** `.agents/skills/drift-audit/SKILL.md` (Idee F, projekteigen, nicht Teil
-  des generischen `Agent-Scaffolding`-Pakets) — Vier-Schritte-Playbook, Cadence pro Epic
-  verpflichtend / pro Step optional (Hinweis in `AGENTS.md`).
-- [x] `rules.json`-Config (`Global.DuplicateCode*`, 9 Keys) + `RuleRegistry`-Eintrag
-  (`--list-rules`/`--describe-rule`/`--search-rules`).
-- [x] 75+ neue Unit-/Integrationstests (Engine, Checker, Tool, Refactoring-Drift, Suppression) +
-  Live-Repo-Tests. Vollstaendige Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+  des generischen `Agent-Scaffolding`-Pakets) — Vier-Schritte-Playbook (+ struktureller Scan-Schritt
+  fuer Typ-4-Kandidaten), Cadence pro Epic verpflichtend / pro Step optional (Hinweis in `AGENTS.md`).
+- [x] `rules.json`-Config (`Global.DuplicateCode*`, 9 Keys + `StructuralDuplicate*Threshold`, 3 Keys)
+  + `RuleRegistry`-Eintrag (`--list-rules`/`--describe-rule`/`--search-rules`).
+- [x] 75+ neue Unit-/Integrationstests (Engine, Checker, Tool, Refactoring-Drift, Suppression,
+  Structural-Detector, Structural-Tool) + Live-Repo-Tests. Vollstaendige Tool-Referenz:
+  [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 - [x] Naming-Drift (Idee E), AST-CPD (Idee B) und Pattern-Cluster-Detection (Idee D) bewusst nicht
   umgesetzt — siehe `tasks/features/07-drift-audit-ideen.md`.
 

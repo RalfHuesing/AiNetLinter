@@ -393,6 +393,17 @@ zwischen den Methoden, keine pro Datei unabhängige).
 > Schütze (2008) für Jaccard/N-Gram/Inverted-Index. Details und Referenz-Tools (CCFinder, PMD CPD,
 > jscpd) sind in der wissenschaftlichen Literatur dokumentiert.
 
+**Struktureller Drift-Modus (`find_duplicates mode=structural`):**
+
+| Schlüssel | Typ | Standard |
+| --- | --- | --- |
+| `StructuralDuplicateExactThreshold` | `double` | `0.90` |
+| `StructuralDuplicateNearThreshold` | `double` | `0.80` |
+| `StructuralDuplicateFuzzyThreshold` | `double` | `0.70` |
+
+Cosine-Ähnlichkeits-Schwellwerte für `find_duplicates mode=structural`. Bewusst getrennt von den
+Jaccard-`DuplicateCode*Threshold`-Werten, damit Kalibrierung der Typ-4-Suche die Clone-Lint-Kalibrierung nicht verschiebt. Diese Schwellwerte erzeugen **keine automatischen Lint-Violations** — `mode=structural` liefert ausschließlich manuell zu prüfende Kandidatencluster.
+
 ### MaxLinqChainLength
 
 | Schlüssel            | Typ        | Standard                    |

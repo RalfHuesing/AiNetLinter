@@ -1,6 +1,6 @@
 ---
 name: drift-audit
-description: Vier-Schritte-Playbook, um vor Epic-Abschluss aktiv nach DRY-Verstößen (Code-Duplikation) und Refactoring-Drift (existierender Helper wird nicht aufgerufen, sondern nachgebaut) zu suchen. Nutzt ausschließlich das projekteigene MCP-Tool find_duplicates.
+description: Fuenf-Schritte-Playbook, um vor Epic-Abschluss aktiv nach DRY-Verstoessen (Code-Duplikation), Refactoring-Drift und semantisch aehnlichen Hilfsmethoden zu suchen. Nutzt ausschliesslich das projekteigene MCP-Tool find_duplicates.
 ---
 
 # Skill: Drift-Audit
@@ -80,6 +80,28 @@ nachweislich nicht aufrufen — explizit als **Kandidaten**, nicht als Verstöß
 nicht zwingend Drift). Jeden Kandidaten manuell prüfen, bevor er auf den Helper
 umgestellt wird.
 
+## Schritt 4 — Struktureller Scan (Typ-4/Intended Duplication)
+
+Für semantisch ähnliche Hilfsmethoden mit unterschiedlichen Namen und Literalen
+(z. B. mehrere unabhängig entstandene Typ-/Accessibility-Mapper), die vom tokenbasierten
+Scan in Schritt 1 nicht erfasst werden:
+
+```
+find_duplicates(mode="structural", scopeDir="src", minTokens=10)
+```
+
+Der `structural`-Modus analysiert Roslyn-Strukturprofile (normalisierte Return-/Parameter-Typen,
+Kontrollfluss-Form, Zieltypen in switch-/Pattern-Ausdrücken, Verhaltensmarker) und berechnet
+Cosine-Similarity — deterministisch, ohne externe Abhängigkeiten.
+
+**Triage-Pflicht:** Jeder Treffer ist eine Prüfungsempfehlung, keine automatische Violation.
+Vor jeder Konsolidierung:
+1. Signaturen und Parameterlisten vergleichen — abweichende Eingabetypen bedeuten unterschiedliche Absicht.
+2. Aufruforte der Kandidaten prüfen (`find_references`) — gemeinsame Aufrufer sprechen für Konsolidierung.
+3. Verhalten nachweislich prüfen — score ≥ 0.90 (exact-Bucket) allein reicht nicht.
+
+Kein automatisches Umschreiben auf Basis des Scores.
+
 ## Was dieser Skill nicht tut
 
 - Kein automatisches Umschreiben von Code — jeder Fund wird von dir bewertet, nicht
@@ -89,3 +111,5 @@ umgestellt wird.
   kein Ersatz dafür.
 - Keine Naming-Drift-Erkennung (unterschiedlich benannte, aber strukturell ähnliche
   Bezeichner) — nicht Teil von `find_duplicates`, aktuell zurückgestellt.
+- `mode=structural` erzeugt **keine automatischen Lint-Violations** — Kandidatencluster
+  sind Prüfempfehlungen und fließen nicht in `DuplicateCodeChecker`/`safeguard` ein.

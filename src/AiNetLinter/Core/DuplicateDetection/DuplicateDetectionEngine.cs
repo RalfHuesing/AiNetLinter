@@ -5,11 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
-using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Core.DuplicateDetection;
 
@@ -61,124 +58,25 @@ internal static class DuplicateDetectionEngine
     internal static async Task<List<MethodFingerprint>> CollectFingerprintsAsync(
         Solution solution, DuplicateDetectionOptions options, CancellationToken ct)
     {
-        var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        var result = new List<MethodFingerprint>();
-
-        foreach (var project in solution.Projects)
+        var eligible = await DuplicateMethodCollector.CollectAsync(solution, options, ct);
+        var result = new List<MethodFingerprint>(eligible.Count);
+        foreach (var method in eligible)
         {
-            if (!project.SupportsCompilation) continue;
-            var compilation = await project.GetCompilationAsync(ct);
-            if (compilation is null) continue;
-
-            foreach (var document in project.Documents)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (!IsEligibleDocument(document, solutionDir, options)) continue;
-                await CollectDocumentFingerprintsAsync(document, compilation, options, result, ct);
-            }
+            var fingerprint = TryBuildFingerprint(method, options);
+            if (fingerprint is not null) result.Add(fingerprint);
         }
         return result;
     }
 
-    private static bool IsEligibleDocument(Document document, string solutionDir, DuplicateDetectionOptions options)
+    private static MethodFingerprint? TryBuildFingerprint(EligibleMethod method, DuplicateDetectionOptions options)
     {
-        // Document.FilePath ist bei manchen In-Memory-Test-Solutions (AdhocWorkspace ohne
-        // explizites filePath) null — SourceFileCatalog.IsValidDocument laesst das bewusst durch
-        // (IsInSolutionDir gibt bei solutionDir/filePath == null true zurueck, siehe dortigen
-        // Kommentar), aber ohne echten Pfad kann diese Engine die Methode weder eindeutig einem
-        // Fundort zuordnen noch die Verzeichnis-Ausschluesse pruefen — daher hier zusaetzlich
-        // explizit ausgeschlossen.
-        if (string.IsNullOrEmpty(document.FilePath)) return false;
-        if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) return false;
-        var path = document.FilePath;
-        if (IsPermanentlyExcludedPath(path)) return false;
-        if (!PathNormalizer.MatchesScope(path, options.PathScopeFilter)) return false;
-        return MatchesScopeType(document, path, options.ScopeType);
-    }
-
-    private static bool MatchesScopeType(Document document, string path, string? scopeType)
-    {
-        if (string.IsNullOrEmpty(scopeType) || string.Equals(scopeType, "all", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var isTest = PathNormalizer.IsTestFile(path) ||
-                     document.Project.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
-                     document.Project.Name.EndsWith(".TestKit", StringComparison.OrdinalIgnoreCase);
-
-        return string.Equals(scopeType, "production", StringComparison.OrdinalIgnoreCase) ? !isTest : isTest;
-    }
-
-    /// <summary>
-    /// Zusaetzlich zu <see cref="SourceFileCatalog.IsGeneratedPath"/> (bin/obj/worktrees/*.g.cs)
-    /// ausgeschlossene Verzeichnisse, spezifisch fuer Drift-Audits (siehe Ideensammlung §A.3 und
-    /// Safeguard-Fix-Review-Lehre 2026-08-06: absichtlich regelverletzende Fixture-Verzeichnisse
-    /// duerfen nie in Audit-Ergebnisse einfliessen).
-    /// </summary>
-    private static bool IsPermanentlyExcludedPath(string path)
-    {
-        var normalized = PathNormalizer.NormalizeSeparators(path);
-        return normalized.Contains("/.ainetlinter/", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("/tests/fixtures/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static async Task CollectDocumentFingerprintsAsync(
-        Document document, Compilation compilation, DuplicateDetectionOptions options,
-        List<MethodFingerprint> result, CancellationToken ct)
-    {
-        var syntaxTree = await document.GetSyntaxTreeAsync(ct);
-        if (syntaxTree is null) return;
-        var root = await syntaxTree.GetRootAsync(ct);
-        var semanticModel = compilation.GetSemanticModel(syntaxTree);
-
-        foreach (var candidate in FindCandidateMethods(root))
-        {
-            ct.ThrowIfCancellationRequested();
-            var fingerprint = TryBuildFingerprint(candidate, document.FilePath!, semanticModel, options);
-            if (fingerprint is not null) result.Add(fingerprint);
-        }
-    }
-
-    private static IEnumerable<MethodCandidate> FindCandidateMethods(SyntaxNode root)
-    {
-        foreach (var node in root.DescendantNodes())
-        {
-            if (node is MethodDeclarationSyntax method)
-            {
-                var body = (SyntaxNode?)method.Body ?? method.ExpressionBody;
-                if (body is not null) yield return new MethodCandidate(method, body);
-            }
-            else if (node is LocalFunctionStatementSyntax localFunction)
-            {
-                var body = (SyntaxNode?)localFunction.Body ?? localFunction.ExpressionBody;
-                if (body is not null) yield return new MethodCandidate(localFunction, body);
-            }
-        }
-    }
-
-    private static MethodFingerprint? TryBuildFingerprint(
-        MethodCandidate candidate, string filePath, SemanticModel semanticModel, DuplicateDetectionOptions options)
-    {
-        var symbol = semanticModel.GetDeclaredSymbol(candidate.Declaration) as IMethodSymbol;
-        if (symbol is null || IsGenerated(symbol)) return null;
-
-        var tokens = candidate.Body.DescendantTokens().ToList();
-        if (tokens.Count < options.MinTokens) return null;
-
+        var tokens = method.Body.DescendantTokens().ToList();
         var ngramHashes = BuildNgramHashes(tokens, options.NgramSize, options.NormalizeIdentifiers);
         if (ngramHashes.Count == 0) return null;
 
-        var lineNumber = candidate.Declaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-        return new MethodFingerprint(filePath, lineNumber, symbol.ToDisplayString(), tokens.Count, ngramHashes, symbol);
+        return new MethodFingerprint(
+            method.FilePath, method.LineNumber, method.SignatureName, method.TokenCount, ngramHashes, method.Symbol);
     }
-
-    private static bool IsGenerated(IMethodSymbol symbol) =>
-        HasGeneratedCodeAttribute(symbol) || (symbol.ContainingType is { } t && HasGeneratedCodeAttribute(t));
-
-    private static bool HasGeneratedCodeAttribute(ISymbol symbol) =>
-        symbol.GetAttributes().Any(a =>
-            a.AttributeClass?.Name is "GeneratedCodeAttribute" or "GeneratedCode");
 
     // ── 2) N-Gram-Shingling ───────────────────────────────────────────────────────────────────
 
@@ -321,7 +219,7 @@ internal static class DuplicateDetectionEngine
     private static List<DuplicateCluster> BuildClusters(
         IReadOnlyList<MethodFingerprint> fingerprints, IReadOnlyList<FingerprintEdge> edges, DuplicateDetectionOptions options)
     {
-        var unionFind = new UnionFind(fingerprints.Count);
+        var unionFind = new DuplicateUnionFind(fingerprints.Count);
         foreach (var edge in edges) unionFind.Union(edge.A, edge.B);
 
         var groups = new Dictionary<int, List<int>>();
@@ -374,44 +272,12 @@ internal static class DuplicateDetectionEngine
         return new DuplicateCluster(members, minScore, ClassifyBucket(minScore, options));
     }
 
-    private static DuplicateSimilarityBucket ClassifyBucket(double score, DuplicateDetectionOptions options) => score switch
+    internal static DuplicateSimilarityBucket ClassifyBucket(double score, DuplicateDetectionOptions options) => score switch
     {
         _ when score >= options.ExactThreshold => DuplicateSimilarityBucket.Exact,
         _ when score >= options.NearThreshold => DuplicateSimilarityBucket.Near,
         _ => DuplicateSimilarityBucket.Fuzzy,
     };
 
-    private readonly record struct MethodCandidate(SyntaxNode Declaration, SyntaxNode Body);
-
     private readonly record struct FingerprintEdge(int A, int B, double Jaccard);
-
-    /// <summary>Minimaler Union-Find (Path-Compression, ohne Union-by-Rank — Methodenzahlen pro
-    /// Solution sind klein genug, dass Rank-Optimierung keinen messbaren Unterschied macht).</summary>
-    private sealed class UnionFind
-    {
-        private readonly int[] _parent;
-
-        internal UnionFind(int size)
-        {
-            _parent = new int[size];
-            for (var i = 0; i < size; i++) _parent[i] = i;
-        }
-
-        internal int Find(int x)
-        {
-            while (_parent[x] != x)
-            {
-                _parent[x] = _parent[_parent[x]];
-                x = _parent[x];
-            }
-            return x;
-        }
-
-        internal void Union(int a, int b)
-        {
-            var rootA = Find(a);
-            var rootB = Find(b);
-            if (rootA != rootB) _parent[rootA] = rootB;
-        }
-    }
 }
