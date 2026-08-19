@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -15,12 +16,9 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools;
 
 /// <summary>
-/// MCP-Tool <c>get_symbol_body</c>: liefert den vollstaendigen Body eines einzelnen C#-Symbols
-/// (Methode, Konstruktor, Property, Indexer, Event). Akzeptiert sowohl eine stabile
-/// DocumentationCommentId (z. B. <c>M:AiNetLinter.Mcp.Tools.GetSymbolBodyTool.ExecuteAsync</c>)
-/// als auch das klassische Datei:Zeile:Spalte-Format bzw. einen qualifizierten Namen.
-/// Hart gekappt bei <paramref name="maxBodyLines"/> Zeilen (Default 80), mit Ellipse-Indikator
-/// und Voll-Laengen-Hinweis am Ende. Deckt nur .cs-Dateien ab (Roslyn-Symbolgraph).
+/// MCP-Tool <c>get_symbol_body</c>: liefert den vollstaendigen Body eines oder mehrerer C#-Symbole
+/// (Methode, Konstruktor, Property, Indexer, Event). Akzeptiert sowohl einzelne Identifiers als auch
+/// Batch-Arrays fuer effizientes Laden in einem einzigen Turn.
 /// </summary>
 internal static class GetSymbolBodyTool
 {
@@ -31,59 +29,140 @@ internal static class GetSymbolBodyTool
     /// <see cref="ExecuteAsync"/> (siehe <see cref="McpSufficiencyHints"/>).</summary>
     private const string TruncationMarker = "// ... truncated, total ";
 
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state, string? symbolIdentifier, int maxBodyLines, CancellationToken ct) =>
+        ExecuteAsync(state, symbolIdentifier, null, maxBodyLines, ct);
+
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, int maxBodyLines, CancellationToken ct)
+        McpCodeGraphServer state,
+        string? symbolIdentifier,
+        string[]? symbolIdentifiers,
+        int maxBodyLines,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(symbolIdentifier))
+        var identifiers = ExtractIdentifiers(symbolIdentifier, symbolIdentifiers);
+        if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
-                hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+                "Pflichtparameter 'symbolIdentifier' oder 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder symbolIdentifiers: [\"M:Klasse.MethodeA\", \"M:Klasse.MethodeB\"].");
         }
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
-            if (error is not null) return error;
-            if (symbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
-
-            var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var idSuffix = symbol.TryGetDocCommentId();
-            var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-            var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
-            var isTruncated = body.Contains(TruncationMarker, StringComparison.Ordinal);
-
-            var mb = new MarkdownBuilder();
-            mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
-            mb.BlankLine();
-            if (idSuffix is not null)
-            {
-                mb.Line($"id: `{idSuffix}`");
-                mb.BlankLine();
-            }
-            mb.CodeBlock("csharp", body);
-            var markdown = mb.Build().TrimEnd();
-
-            // Sufficiency-Hinweis nur fuer den vollstaendigen Body — ein per maxBodyLines
-            // gekappter Body traegt bereits seinen eigenen "truncated, maxBodyLines erhoehen"-
-            // Hinweis (siehe ExtractSymbolBody), der widerspruechlich waere neben "vollstaendig".
-            var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, final));
+            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in get_symbol_body: {ex.Message}",
-                context: symbolIdentifier);
+                context: string.Join(", ", identifiers));
         }
     }
 
+    private static async Task<CallToolResult> RenderSymbolBodiesAsync(
+        Solution solution,
+        IReadOnlyList<string> identifiers,
+        int maxBodyLines,
+        CancellationToken ct)
+    {
+        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        var mb = new MarkdownBuilder();
 
+        for (var i = 0; i < identifiers.Count; i++)
+        {
+            if (i > 0) AppendDivider(mb);
+
+            var earlyError = await RenderSingleSymbolAsync(
+                solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, ct);
+
+            if (earlyError != null) return earlyError;
+        }
+
+        var markdown = mb.Build().TrimEnd();
+        var isTruncated = markdown.Contains(TruncationMarker, StringComparison.Ordinal);
+        var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, final));
+    }
+
+    private static void AppendDivider(MarkdownBuilder mb)
+    {
+        mb.BlankLine();
+        mb.Line("---");
+        mb.BlankLine();
+    }
+
+    private static async Task<CallToolResult?> RenderSingleSymbolAsync(
+        Solution solution,
+        string identifier,
+        int totalCount,
+        int maxBodyLines,
+        string outputRoot,
+        MarkdownBuilder mb,
+        CancellationToken ct)
+    {
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
+
+        if (error is not null)
+        {
+            if (totalCount == 1) return error;
+            mb.Heading(3, $"Symbol `{identifier}` nicht aufgeloest");
+            mb.BlankLine();
+            var errorText = error.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? "Fehler beim Aufloesen.";
+            mb.Line(errorText.Trim());
+            return null;
+        }
+
+        if (symbol is null)
+        {
+            if (totalCount == 1) return McpToolResults.SymbolNotFound(identifier);
+            mb.Heading(3, $"Symbol nicht gefunden: `{identifier}`");
+            return null;
+        }
+
+        var idSuffix = symbol.TryGetDocCommentId();
+        var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
+
+        mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
+        mb.BlankLine();
+        if (idSuffix is not null)
+        {
+            mb.Line($"id: `{idSuffix}`");
+            mb.BlankLine();
+        }
+        mb.CodeBlock("csharp", body);
+        return null;
+    }
+
+    private static List<string> ExtractIdentifiers(string? symbolIdentifier, string[]? symbolIdentifiers)
+    {
+        var list = new List<string>();
+        if (!string.IsNullOrWhiteSpace(symbolIdentifier))
+        {
+            list.Add(symbolIdentifier.Trim());
+        }
+        if (symbolIdentifiers != null)
+        {
+            foreach (var id in symbolIdentifiers)
+            {
+                if (!string.IsNullOrWhiteSpace(id))
+                {
+                    var trimmed = id.Trim();
+                    if (!list.Contains(trimmed, StringComparer.Ordinal))
+                    {
+                        list.Add(trimmed);
+                    }
+                }
+            }
+        }
+        return list;
+    }
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {

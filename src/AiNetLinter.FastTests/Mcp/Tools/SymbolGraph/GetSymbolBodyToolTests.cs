@@ -107,4 +107,53 @@ public sealed class GetSymbolBodyToolTests
         Assert.Contains("id: `P:SymbolGraphMini.Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleStableIds_ReturnsAllBodiesInSingleTurn()
+    {
+        var state = _fixture.CreateServer();
+
+        var (symbol1, _) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Greeter.Greet", CancellationToken.None);
+        var (symbol2, _) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Greeter.Prefix", CancellationToken.None);
+        Assert.NotNull(symbol1);
+        Assert.NotNull(symbol2);
+
+        var stableId1 = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol1!);
+        var stableId2 = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol2!);
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            symbolIdentifier: null,
+            symbolIdentifiers: [stableId1!, stableId2!],
+            maxBodyLines: 80,
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("Prefix", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("---", textContent.Text, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleIdentifiers_WithOneNotFound_ContinuesAndIncludesWarning()
+    {
+        var state = _fixture.CreateServer();
+
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            symbolIdentifier: null,
+            symbolIdentifiers: [stableId!, "DoesNotExistXyz"],
+            maxBodyLines: 80,
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
+    }
 }

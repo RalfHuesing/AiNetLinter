@@ -237,8 +237,7 @@ Konsequenz für den Agent-Loop: 19 Tools sind C#-only (get_namespace_tree, find_
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
 | `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste (siehe unten) | ja | ja (je Pattern) |
 | `find_magic_values` | `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 1, auch Einzelvorkommen), `maxResults?` (Default 50), `ignoreNumbers?` (optional), `includeTests?` (Default false; filtert `/Tests/`, `/FastTests/` aus dem relativen Pfad), `includeSuppressed?` (Default false; wirksam via `SyntaxTrivia`-Auswertung am Literal), `changedOnly?` (Default false; nutzt `DiffImpactAnalyzer.RunGitDiff` + `ParseGitDiffHunks`, leere Diffs → 0 Dateien) | Strukturierte Funde (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes, Buffer/Zeit-Konstanten, duplizierte `const`-Felder, enum-Kaskaden, `nameof`-Kandidaten, Security-Secrets, User-Facing-Exception-Messages) mit Ziel-Empfehlung (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX…`); alle 7 Heuristik-Kategorien aktiv (siehe unten) | ja | ja |
-| `find_dead_code` | `accessibility?` (Default `private_internal`), `confidence?` (`both` [Default] / `high` / `low`), `kind?` (`all` [Default] / `type` / `class` / `method` / `field` / `property` / `event` / `delegate`), `scopeFilter?`, `includeTests?` (Default false), `mode?` (`members` [Default] / `locals` / `both`), `maxResults?` (Default 50) | On-Demand-Audit nach totem / unreferenziertem Code mit Confidence-Stufen | ja | ja |
-| `get_symbol_body` | `symbolIdentifier` (stabile DocumentationCommentId, Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
+| `get_symbol_body` | `symbolIdentifier?` (einzelne ID), `symbolIdentifiers?` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Observability-Status (aktiv/deaktiviert) | nein | nein |
@@ -507,13 +506,16 @@ Drei neue Features erweitern den Symbolgraph um praxisrelevante Hebel:
 
 #### `get_symbol_body` und stabile Symbol-IDs (E.1)
 
-`get_symbol_body` liefert den Source-Body eines C#-Symbols per stabiler
+`get_symbol_body` liefert den Source-Body eines oder mehrerer C#-Symbole per stabiler
 `DocumentationCommentId` (z. B. `M:AiNetLinter.Mcp.Tools.GetSymbolBodyTool.ExecuteAsync`)
 oder per klassischem `Datei:Zeile:Spalte`-Format (Fallback ohne Spalte:
 `Datei:Zeile` — bei genau einem quelltext-eigenen Symbol auf der Zeile wird
 dieses aufgeloest, bei mehreren liefert das Tool `AMBIGUOUS_SYMBOL` mit
-Kandidatenliste analog zur Namensauflösung). `maxBodyLines` kappt
-hart (Default 80), die Ausgabe enthaelt einen Ellipse-Indikator plus
+Kandidatenliste analog zur Namensauflösung). 
+
+**Batch-Support:** Über `symbolIdentifiers: ["M:...1", "M:...2"]` können mehrere Symbol-Bodies
+in einem **einzigen Turn** geladen werden — spart massiv Roundtrips und Tool-Framing-Overhead.
+`maxBodyLines` kappt hart je Symbol (Default 80), die Ausgabe enthaelt einen Ellipse-Indikator plus
 Voll-Laengen-Hinweis am Ende. Token-Budget: 15 Zeilen Body statt 500
 Zeilen Datei.
 
@@ -521,7 +523,7 @@ Zeilen Datei.
 in derselben `DocumentationCommentId`-Notation. Damit kann der Agent:
 
 1. `get_file_skeleton` aufrufen, alle relevanten Members + stabile IDs einsammeln.
-2. `get_symbol_body` mit einer ausgewaehlten ID aufrufen, nur den Body dieses Members holen.
+2. `get_symbol_body` mit einer oder mehreren ausgewaehlten IDs aufrufen (`symbolIdentifiers`), um nur die Bodys genau dieser Member in 1 Turn zu laden.
 
 Die ID ueberlebt Zeilenverschiebungen (solange der Symbol-FQN stabil
 bleibt — Refactorings, die den FQN aendern, generieren eine neue ID, by

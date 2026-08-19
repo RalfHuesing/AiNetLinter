@@ -32,8 +32,8 @@ internal static class SymbolBodyToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, int maxBodyLines = 80, CancellationToken ct = default) =>
-                GetSymbolBodyTool.ExecuteAsync(mcpState, symbolIdentifier, maxBodyLines, ct),
+            (string? symbolIdentifier = null, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+                GetSymbolBodyTool.ExecuteAsync(mcpState, symbolIdentifier, symbolIdentifiers, maxBodyLines, ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_symbol_body",
@@ -42,9 +42,8 @@ internal static class SymbolBodyToolRegistrations
     }
 
     private const string GetSymbolBodyDescription =
-        "Wann nutzen: Source-Body eines C#-Symbols lesen, wenn Fundstelle/Signatur schon " +
-        "bekannt ist. symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
-        "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
-        "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
-        "Hart gekappt bei maxBodyLines (Default 80).";
+        "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support fuer 1 Turn). " +
+        "symbolIdentifier (einzeln) ODER symbolIdentifiers (Array fuer Batch): \"M:Namespace.Klasse.Methode\" " +
+        "oder \"Datei.cs:42:10\" oder \"Datei.cs:42\" oder \"Klasse.Methode\". " +
+        "Hart gekappt bei maxBodyLines je Symbol (Default 80).";
 }
