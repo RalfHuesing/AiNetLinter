@@ -47,6 +47,7 @@ public sealed class GetServerHealthToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Version:", text);
         Assert.Contains("Loaded", text);
         Assert.Contains(_fixture.RootPath, text, System.StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Uptime", text);
@@ -65,7 +66,8 @@ public sealed class GetServerHealthToolTests
         var payload = JsonSerializer.Deserialize<ServerHealthPayload>(
             result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
         Assert.NotNull(payload);
-        Assert.Equal("Loaded", payload!.LoadState);
+        Assert.False(string.IsNullOrWhiteSpace(payload!.Version));
+        Assert.Equal("Loaded", payload.LoadState);
         Assert.Equal(0, payload.RefreshCount);
         Assert.Null(payload.CallLog);
     }

@@ -59,6 +59,14 @@ internal static class McpServerOptionsFactory
 
     internal static string GetServerVersion()
     {
-        return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
+        var assembly = typeof(McpServerOptionsFactory).Assembly;
+        var infoVersion = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(infoVersion))
+        {
+            var plusIdx = infoVersion.IndexOf('+');
+            return plusIdx > 0 ? infoVersion[..plusIdx] : infoVersion;
+        }
+        var version = assembly.GetName().Version;
+        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
     }
 }

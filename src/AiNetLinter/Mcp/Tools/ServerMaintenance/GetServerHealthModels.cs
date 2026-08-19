@@ -14,6 +14,7 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// wurde (identisch zur Text-Fallunterscheidung in <c>DescribeCallLog</c>).
 /// </summary>
 internal sealed record ServerHealthPayload(
+    string Version,
     string LoadState,
     string? SolutionPath,
     bool UsedDefaultConfig,

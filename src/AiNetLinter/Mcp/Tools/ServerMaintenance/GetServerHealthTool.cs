@@ -36,10 +36,12 @@ internal static class GetServerHealthTool
 
         var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
         var isEnabled = observabilityService is null || observabilityService.IsEnabled;
+        var version = McpServerOptionsFactory.GetServerVersion();
 
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter MCP-Server — Health");
         sb.AppendLine();
+        sb.AppendLine($"- Version: {version}");
         sb.AppendLine($"- LoadState: {state.LoadState}");
         sb.AppendLine($"- Solution: {DescribeSolution(state)}");
         sb.AppendLine($"- Config: {DescribeConfig(state)}");
@@ -49,7 +51,7 @@ internal static class GetServerHealthTool
         sb.Append(DescribeObservability(isEnabled, effectiveLogPath));
 
         var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, effectiveLogPath)));
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, effectiveLogPath)));
     }
 
     /// <summary>
@@ -57,7 +59,7 @@ internal static class GetServerHealthTool
     /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
     /// wie "wird noch geladen").
     /// </summary>
-    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string? observabilityLogPath)
+    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string version, string? observabilityLogPath)
     {
         var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
         var callLogPayload = observabilityLogPath is null
@@ -65,6 +67,7 @@ internal static class GetServerHealthTool
             : new CallLogPayload(observabilityLogPath, 0, 0, new Dictionary<string, int>());
 
         return new ServerHealthPayload(
+            Version: version,
             LoadState: state.LoadState.ToString(),
             SolutionPath: state.LoadState == ServerLoadState.Loading ? null : state.GetCurrentSolution()?.FilePath,
             UsedDefaultConfig: usedDefaultConfig,
