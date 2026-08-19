@@ -11,6 +11,7 @@ using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;
+using AiNetLinter.Mcp.Tools.TestContext;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -19,7 +20,7 @@ namespace AiNetLinter.Mcp;
 /// <summary>
 /// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>safeguard</c>,
 /// <c>search_pattern</c>, <c>metrics_tree</c>, <c>metrics_lookup</c>, <c>pattern_detect</c>,
-/// <c>find_magic_values</c>, <c>find_dead_code</c> und <c>get_feature_context</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// <c>find_magic_values</c>, <c>find_dead_code</c>, <c>get_feature_context</c> und <c>get_test_context</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection.
 /// </summary>
 internal static class AnalysisToolRegistrations
@@ -42,6 +43,7 @@ internal static class AnalysisToolRegistrations
         AddFindMagicValues(tools, mcpState);
         AddFindDeadCode(tools, mcpState);
         AddGetFeatureContext(tools, mcpState);
+        AddGetTestContext(tools, mcpState);
     }
 
     private static void AddGetViolations(
@@ -280,4 +282,23 @@ internal static class AnalysisToolRegistrations
         "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol) akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "Teilbereiche koennen ueber includeCallers, includeTests, includeMetrics, includeViolations zu-/abgewaehlt werden. " +
         "maxCallers und maxTests steuern das Limit (Default 10, Cap 50).";
+
+    private static void AddGetTestContext(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpCodeGraphServer mcpState)
+    {
+        tools.Add(McpServerTool.Create(
+            (string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
+                GetTestContextTool.ExecuteAsync(mcpState, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct),
+            new McpServerToolCreateOptions
+            {
+                Name = "get_test_context",
+                Description = GetTestContextDescription,
+            }));
+    }
+
+    private const string GetTestContextDescription =
+        "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol (Klasse, Methode, Datei.cs:Zeile) abfragen. " +
+        "symbol (oder symbolIdentifier) spezifiziert das Ziel-Symbol, maxResults (Default 30) begrenzt die Anzahl Testdateien. " +
+        "Liefert Zuordnungsgruende, Test-Kategorien (Unit/Integration), kopierbare dotnet test Filterbefehle und Ungetestet-Diagnosen.";
 }

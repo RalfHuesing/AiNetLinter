@@ -41,5 +41,6 @@ public sealed class McpHandshakeToolRegistrationTests
 
         Assert.Contains(tools, t => t.Name == "find_symbol");
         Assert.Contains(tools, t => t.Name == "get_violations");
+        Assert.Contains(tools, t => t.Name == "get_test_context");
     }
 }

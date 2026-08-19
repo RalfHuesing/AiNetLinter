@@ -198,22 +198,22 @@ public static partial class TestCoverageScanner
             var directMatches = testMethods.Where(m => m.IsDirectMatch).Select(m => m.Name).ToList();
             if (directMatches.Count > 0)
             {
-                return (true, "Direct Member Match / Invocation", directMatches, testMethods.Count);
+                return (true, TestCoverageMatchReasons.DirectMemberMatch, directMatches, testMethods.Count);
             }
         }
 
         var allNames = testMethods.Select(m => m.Name).ToList();
         if (classNameMatches)
         {
-            return (true, "Naming Convention Match", allNames, testMethods.Count);
+            return (true, TestCoverageMatchReasons.NamingConventionMatch, allNames, testMethods.Count);
         }
         if (hasCovers)
         {
-            return (true, "Explicit @covers Comment", allNames, testMethods.Count);
+            return (true, TestCoverageMatchReasons.ExplicitCoversComment, allNames, testMethods.Count);
         }
         if (hasTypeof)
         {
-            return (true, "Direct typeof Reference", allNames, testMethods.Count);
+            return (true, TestCoverageMatchReasons.DirectTypeofReference, allNames, testMethods.Count);
         }
 
         return (false, string.Empty, [], testMethods.Count);
@@ -383,28 +383,49 @@ public static partial class TestCoverageScanner
         if (normalized.Contains(".FastTests/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/Unit/", StringComparison.OrdinalIgnoreCase))
         {
-            return "Unit";
+            return TestCategories.Unit;
         }
         if (normalized.Contains(".IntegrationTests/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/Integration/", StringComparison.OrdinalIgnoreCase))
         {
-            return "Integration";
+            return TestCategories.Integration;
         }
 
-        return "Unit";
+        return TestCategories.Unit;
     }
 
     private static int GetMatchReasonPriority(string reason) => reason switch
     {
-        "Direct Member Match / Invocation" => 1,
-        "Naming Convention Match" => 2,
-        "Explicit @covers Comment" => 3,
-        "Direct typeof Reference" => 4,
+        TestCoverageMatchReasons.DirectMemberMatch => 1,
+        TestCoverageMatchReasons.NamingConventionMatch => 2,
+        TestCoverageMatchReasons.ExplicitCoversComment => 3,
+        TestCoverageMatchReasons.DirectTypeofReference => 4,
         _ => 5
     };
 
     [GeneratedRegex(@"//\s*(?:@covers|covers)\s+([\w\.]+)", RegexOptions.CultureInvariant)]
     private static partial Regex CoversRegex();
+}
+
+/// <summary>
+/// Einheitliche Konstanten fuer Zuordnungsgruende von Testabdeckungen.
+/// </summary>
+public static class TestCoverageMatchReasons
+{
+    public const string DirectMemberMatch = "Direct Member Match / Invocation";
+    public const string NamingConventionMatch = "Naming Convention Match";
+    public const string ExplicitCoversComment = "Explicit @covers Comment";
+    public const string DirectTypeofReference = "Direct typeof Reference";
+}
+
+/// <summary>
+/// Einheitliche Konstanten fuer Test-Kategorien.
+/// </summary>
+public static class TestCategories
+{
+    public const string Unit = "Unit";
+    public const string Integration = "Integration";
+    public const string Component = "Component";
 }
 
 /// <summary>

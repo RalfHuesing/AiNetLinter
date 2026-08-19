@@ -753,6 +753,27 @@ Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-A
 
 ---
 
+## Test-Coverage-Awareness: `get_test_context` (Feature 02)
+
+Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, Test-Kategorien (Unit/Integration) und direkt ausführbare `dotnet test` Filterbefehle für ein C#-Symbol:
+
+- [x] **Fokussiertes MCP-Tool `get_test_context`:**
+  - Parameter `symbol` und `symbolIdentifier` (Alias) mit flexibler Symbolauflösung via `FindReferencesTool.ResolveSymbolAsync`.
+  - `maxResults` (Default 30, Cap 100) mit Truncation-Hinweisen.
+- [x] **Wiederverwendeter residenter Test-Scanner & Tech-Debt-Bereinigung:**
+  - Nutzt `TestCoverageScanner.FindTestsForSymbolAsync` ohne Duplikation.
+  - Auslagerung von Match-Reason- und Category-Literalen in typsichere `TestCoverageMatchReasons` und `TestCategories` Konstanten.
+- [x] **Diagnose & Structured Output:**
+  - Klare Diagnosehinweise und empfohlene Pfade für ungetestete Symbole.
+  - Vollständiges typisiertes `TestContextPayload` in `structuredContent`.
+  - Direkte `dotnet test --filter ...` Befehlsempfehlungen im Markdown-Report.
+- [x] **Tests & Dokumentation:**
+  - Vollständige FastTests in `AiNetLinter.FastTests/Mcp/Tools/TestContext/GetTestContextToolTests.cs`.
+  - Integrationstest-Absicherung in `McpHandshakeToolRegistrationTests.cs`.
+  - Synchronisation von `agent-api.md`, `integration.md`, `ROADMAP.md` und `README.md`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
 
 

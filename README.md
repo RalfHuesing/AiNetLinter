@@ -75,6 +75,7 @@ Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hä
 | Tool | Zweck |
 | :--- | :--- |
 | `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt Deklaration, Metriken, direkte Aufrufer, Test-Abdeckung und Linter-Violations |
+| `get_test_context` | Test-Coverage-Awareness für ein C#-Symbol: ermittelt zugeordnete Testdateien, Testklassen, Testmethoden, Kategorien und direkt ausführbare `dotnet test` Filterbefehle |
 | `get_namespace_tree` | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) |
 | `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden |
 | `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`) |
