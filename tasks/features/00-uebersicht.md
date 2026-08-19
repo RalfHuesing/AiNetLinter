@@ -1,6 +1,6 @@
 # Feature-Übersicht & Backlog (AiNetLinter MCP-Server)
 
-Dieses Dokument priorisiert die nächsten Features nach **Effizienz (Token-/Kosteneinsparung)** und **Code-Qualität (Prävention von Tech-Debt)**.
+Dieses Dokument priorisiert die verbleibenden Features nach **Effizienz (Token-/Kosteneinsparung)** und **Code-Qualität (Prävention von Tech-Debt)**.
 
 ---
 
@@ -22,25 +22,22 @@ Die folgenden 24 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 
 Die Reihenfolge minimiert Kontext-Roundtrips, senkt API-Kosten pro Agenten-Task und verhindert architektonischen Drift:
 
-### Phase 1: Maximale Token- & Roundtrip-Reduktion vor Edits
-1. **[02-metrics-lookup.md](02-metrics-lookup.md) — One-Shot-Metriken & AI-Context-Footprint (`metrics_lookup`)** *(Prio 1.1 — Erledigt)*
-   * **Status:** Vollständig implementiert & verifiziert in `tasks/metrics-lookup/`. Liefert CC, CogC, LOC, ParamCount und AI-Context-Footprint für ein Einzelsymbol in einem kompakten Call (~50 Tokens). Dient als Baustein für Feature-Kontext.
-2. **[05-feature-context.md](05-feature-context.md) — Composite One-Shot-Exploration (`get_feature_context`)** *(Prio 1.2 — Höchster Workflow-Hebel)*
+### Prio 1: Maximale Token- & Roundtrip-Reduktion vor Edits
+1. **[01-feature-context.md](01-feature-context.md) — Composite One-Shot-Exploration (`get_feature_context`)** *(Prio 1 — Höchster Workflow- & Token-Hebel)*
    * **Token-ROI:** Maximal. Bündelt Deklaration, Callers, Tests, Metriken/Budget und offene Violations für ein Ziel-Symbol. **Ersetzt 4–5 aufeinanderfolgende Tool-Calls durch genau 1 Call** vor jedem Refactoring.
+2. **[02-test-context.md](02-test-context.md) — Test-Coverage-Awareness (`get_test_context`)** *(Prio 2 — Hohe Token-Ersparnis & Baustein für Feature-Kontext)*
+   * **Workflow- & Token-ROI:** Hoch. Exponiert den residenten `TestCoverageResolver` als MCP-Tool, um vor/nach Code-Änderungen sofort die exakten Unit-/Integrationstests einer Methode zu isolieren und gezielt auszuführen, ohne heuristisches Suchen.
 
-### Phase 2: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
-3. **[08-structural-drift-detection.md](08-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 2.1)*
-   * **Qualitäts-ROI:** Maximal. Erkennt parallele Zwillingsmethoden (Typ-4-Drift wie redundante Enum-Switches) über Merkmalsvektoren und Cosine-Similarity. Verhindert Code-Aufblähung nachhaltig.
-4. **[03-similar-names.md](03-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 2.2)*
+### Prio 2: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
+3. **[03-structural-drift-detection.md](03-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 3 — Höchster Qualitäts-Hebel für DRY)*
+   * **Qualitäts-ROI:** Maximal. Erkennt parallele Zwillingsmethoden (Typ-4-Drift wie redundante Enum-Switches / Kind-Mapper) über Merkmalsvektoren und Cosine-Similarity. Verhindert Code-Aufblähung nachhaltig.
+4. **[04-similar-names.md](04-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 4 — Hoher Qualitäts-Hebel)*
    * **Qualitäts-ROI:** Hoch. Erkennt inkonsistente DTO-/Model-Familien (`UserDto`, `UserData`) und Hilfsfunktions-Drift rein lexikalisch und signaturbasiert über den Roslyn-Symbolgraphen.
-
-### Phase 3: Test-Sicherheit & Gezielte Testläufe
-5. **[04-test-context.md](04-test-context.md) — Test-Coverage-Awareness (`get_test_context`)** *(Prio 3.1)*
-   * **Workflow-ROI:** Hoch. Exponiert den residenten `TestCoverageResolver` als MCP-Tool, um vor/nach Code-Änderungen sofort die exakten Unit-/Integrationstests einer Methode zu isolieren und gezielt auszuführen.
 
 ---
 
 ## 3. Nachgelagerte Ideen & Verworfene Features
 
-* [06-bedingt-sinnvoll.md](06-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (ASP.NET-Framework-Analyzer-Suite).
-* [07-nicht-umsetzen.md](07-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
+* [05-bedingt-sinnvoll.md](05-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (ASP.NET-Framework-Analyzer-Suite).
+* [06-nicht-umsetzen.md](06-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
+

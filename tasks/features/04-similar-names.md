@@ -6,11 +6,11 @@ In längeren agentischen Entwicklungssessions tritt häufig **Naming-Drift** auf
 - **Methoden-Drift bei Hilfsfunktionen:** Verschiedene Hilfsmethoden werden mehrfach angelegt mit leicht abweichenden Namen, obwohl sie denselben Parameter-Typ transformieren (z. B. `GetTypeKindDescription`, `DescribeTypeKind`, `GetNamedTypeKindString`, `DescribeKind` — reale Erkenntnis aus Session 2026-08-19).
 - Dieser Drift wird durch syntaktische Linter-Regeln und Token-Clone-Detection nicht erfasst, da jede Klasse für sich syntaktisch und architektonisch gültig ist und unterschiedliche Strings/ASTs nutzt.
 
-Dies stellt die logische **Schicht 3** der Drift-Audit-Initiative dar:
+Dies stellt die logische **Schicht 4** der Drift-Audit-Initiative dar:
 * **Schicht 1:** `find_duplicates(mode="clone")` — Syntaktische Klone (Typ 1–3)
 * **Schicht 2:** `find_duplicates(mode="refactoring-drift")` — Helper-Nichtverwendung ("Absence-of-Calls")
-* **Schicht 3:** `similar_names` — Lexikalischer & Signatur-basierter Naming-Drift (Typen und Methoden)
-* **Schicht 4:** `find_scattered_switches` (`08-scattered-switches.md`) — Semantische Switch-Kaskaden über dieselben Enums
+* **Schicht 3:** `find_duplicates(mode="structural")` (`03-structural-drift-detection.md`) — Semantische AST- & Typ-Ebene (Typ-4-Drift / Zwillingsmethoden)
+* **Schicht 4:** `similar_names` — Lexikalischer & Signatur-basierter Naming-Drift (Typen und Methoden)
 
 ---
 

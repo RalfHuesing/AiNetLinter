@@ -105,10 +105,10 @@ Das Tool implementiert das **Composite-Muster** über bestehende interne Engines
 ## 6. Abhängigkeiten & Umsetzungs-Reihenfolge
 
 `get_feature_context` baut logisch auf den Core-Engines der anderen Werkzeuge auf:
-- **Voraussetzung 1:** `04-test-context.md` (`TestCoverageResolver` als saubere Core-Komponente stabilisiert).
-- **Voraussetzung 2:** `02-metrics-lookup.md` (`ComplexityCalculator` / `AIContextFootprintCalculator` Schnittstellen vereinheitlicht).
+- **Baustein 1:** `02-test-context.md` (`TestCoverageResolver` als saubere Core-Komponente stabilisiert).
+- **Baustein 2:** `metrics_lookup` (`ComplexityCalculator` / `AIContextFootprintCalculator` Schnittstellen — bereits resident implementiert).
 
-👉 **Reihenfolge:** Umsetzung direkt im Anschluss an `04-test-context` und `02-metrics-lookup`.
+👉 **Reihenfolge:** Umsetzung direkt auf Basis von `TestCoverageResolver` (aus `02-test-context.md`) und den residenten Metrik-Calculators.
 
 ---
 
