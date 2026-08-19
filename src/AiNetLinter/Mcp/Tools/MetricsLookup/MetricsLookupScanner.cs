@@ -84,10 +84,28 @@ internal static class MetricsLookupScanner
             IgnoredParameters: ignoredParams
         );
 
+        var lineLimit = config.Metrics.MaxMethodLineCount;
+        var methodMetricsDict = new Dictionary<string, int>
+        {
+            [MetricNames.LineCount] = codeLines,
+            [MetricNames.CyclomaticComplexity] = cc,
+            [MetricNames.CognitiveComplexity] = cogC
+        };
+        var lineSuppression = CompoundSuppressionEvaluator.Evaluate(
+            LinterRuleIds.MaxMethodLineCount, config.Metrics.CompoundSuppressions, methodMetricsDict);
+        if (lineSuppression > 0)
+        {
+            lineLimit = lineSuppression;
+        }
+        else if (lineSuppression == 0)
+        {
+            lineLimit = 0;
+        }
+
         var checks = new List<ThresholdCheckDto>
         {
             CheckThreshold(
-                MetricNames.LineCount, codeLines, config.Metrics.MaxMethodLineCount,
+                MetricNames.LineCount, codeLines, lineLimit,
                 LinterRuleIds.MaxMethodLineCount, config.Metrics.ComplexityNearMissTolerance),
             CheckThreshold(
                 MetricNames.CyclomaticComplexity, cc, config.Metrics.MaxCyclomaticComplexity,
@@ -114,10 +132,9 @@ internal static class MetricsLookupScanner
             config.Metrics.FootprintIgnoreNamespacePrefixes,
             config.Metrics.FootprintIgnoreTypeNames);
 
-        var members = type.GetMembers().Where(m => !m.IsImplicitlyDeclared).ToList();
-        var publicMembers = members.Count(m => m.DeclaredAccessibility == Accessibility.Public);
-        var methodCount = members.OfType<IMethodSymbol>()
-            .Count(m => m.MethodKind == MethodKind.Ordinary || m.MethodKind == MethodKind.Constructor);
+        var members = type.GetMembers().Where(IsCountableMember).ToList();
+        var publicMembers = members.Count(IsPublicMember);
+        var methodCount = members.OfType<IMethodSymbol>().Count();
         var propertyCount = members.OfType<IPropertySymbol>().Count();
 
         var topDepsDto = topDeps.Select(d => new TopDependencyDto(d.Name, d.Lines)).ToList();
@@ -131,6 +148,9 @@ internal static class MetricsLookupScanner
             PropertyCount: propertyCount,
             TopDependencies: topDepsDto
         );
+
+        var isPublicMembersExempt = config.Metrics.MaxPublicMembersPerTypeExemptSuffixes?.Any(
+            s => type.Name.EndsWith(s, StringComparison.OrdinalIgnoreCase)) == true;
 
         var checks = new List<ThresholdCheckDto>
         {
@@ -146,7 +166,7 @@ internal static class MetricsLookupScanner
         {
             checks.Add(CheckThreshold(
                 MetricNames.PublicMemberCount, publicMembers, config.Metrics.MaxPublicMembersPerType,
-                LinterRuleIds.MaxPublicMembersPerType, 0));
+                LinterRuleIds.MaxPublicMembersPerType, 0, isExempt: isPublicMembersExempt));
         }
 
         return (metrics, checks);
@@ -228,10 +248,10 @@ internal static class MetricsLookupScanner
     }
 
     private static ThresholdCheckDto CheckThreshold(
-        string metric, int value, int limit, string ruleId, int nearMissTolerance)
+        string metric, int value, int limit, string ruleId, int nearMissTolerance, bool isExempt = false)
     {
         string status;
-        if (limit <= 0)
+        if (limit <= 0 || isExempt)
         {
             status = ThresholdStatus.Ok;
         }
@@ -249,6 +269,27 @@ internal static class MetricsLookupScanner
         }
 
         return new ThresholdCheckDto(metric, value, limit, status, ruleId);
+    }
+
+    private static bool IsCountableMember(ISymbol member)
+    {
+        if (member.IsImplicitlyDeclared) return false;
+        if (member is IMethodSymbol method)
+        {
+            return method.MethodKind == MethodKind.Ordinary || method.MethodKind == MethodKind.Constructor;
+        }
+        return member is IPropertySymbol or IFieldSymbol or IEventSymbol;
+    }
+
+    private static bool IsPublicMember(ISymbol member)
+    {
+        if (!IsCountableMember(member)) return false;
+        if (member.DeclaredAccessibility != Accessibility.Public) return false;
+        if (member.IsOverride) return false;
+        if (member is IMethodSymbol method && method.ExplicitInterfaceImplementations.Length > 0) return false;
+        if (member is IPropertySymbol prop && prop.ExplicitInterfaceImplementations.Length > 0) return false;
+        if (member is IEventSymbol evt && evt.ExplicitInterfaceImplementations.Length > 0) return false;
+        return true;
     }
 
     private static SymbolLocationDto? ExtractLocation(ISymbol symbol, string solutionRoot)

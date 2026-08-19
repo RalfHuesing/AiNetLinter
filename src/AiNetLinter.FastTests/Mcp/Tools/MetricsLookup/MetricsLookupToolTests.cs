@@ -242,4 +242,162 @@ public sealed class MetricsLookupToolTests
         Assert.Single(dto.MethodMetrics.IgnoredParameters);
         Assert.Contains("ct (CancellationToken)", dto.MethodMetrics.IgnoredParameters[0]);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_TypeWithMultipleAutoProperties_DoesNotInflatePublicOrTotalMemberCounts()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\PropertyMemberCountTest.slnx",
+            new ProjectSpec("PropertyMemberCountTest", [
+                ("UserDto.cs", """
+                    namespace PropertyMemberCountTest;
+
+                    public class UserDto
+                    {
+                        public string FirstName { get; set; } = "";
+                        public string LastName { get; set; } = "";
+                        public int Age { get; init; }
+                        public string Email { get; set; } = "";
+
+                        public void DoWork() {}
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/PropertyMemberCountTest"));
+
+        using var fixture = new McpInMemoryTestContext(solution);
+        var state = fixture.CreateServer();
+
+        var result = await MetricsLookupTool.ExecuteAsync(state, "UserDto", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default);
+
+        Assert.NotNull(dto);
+        Assert.NotNull(dto.TypeMetrics);
+        // 4 properties + 1 method = 5 members (plus default ctor if emitted, exactly 5 countable declared members)
+        Assert.Equal(4, dto.TypeMetrics.PropertyCount);
+        Assert.Equal(1, dto.TypeMetrics.MethodCount);
+        Assert.Equal(5, dto.TypeMetrics.PublicMemberCount);
+        Assert.Equal(5, dto.TypeMetrics.TotalMemberCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TypeWithExemptSuffix_MarksMaxPublicMembersPerTypeAsOk()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ExemptSuffixTest.slnx",
+            new ProjectSpec("ExemptSuffixTest", [
+                ("AppSettingsConfig.cs", """
+                    namespace ExemptSuffixTest;
+
+                    public class AppSettingsConfig
+                    {
+                        public string P1 { get; set; } = "";
+                        public string P2 { get; set; } = "";
+                        public string P3 { get; set; } = "";
+                        public string P4 { get; set; } = "";
+                        public string P5 { get; set; } = "";
+                        public string P6 { get; set; } = "";
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/ExemptSuffixTest"));
+
+        using var fixture = new McpInMemoryTestContext(solution);
+        var config = new Config
+        {
+            Global = new(),
+            Metrics = new MetricsConfig
+            {
+                MaxPublicMembersPerType = 3,
+                MaxPublicMembersPerTypeExemptSuffixes = ["Config"]
+            }
+        };
+
+        var state = fixture.CreateServer(config: config);
+
+        var result = await MetricsLookupTool.ExecuteAsync(state, "AppSettingsConfig", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default);
+
+        Assert.NotNull(dto);
+        Assert.NotNull(dto.TypeMetrics);
+        Assert.Equal(6, dto.TypeMetrics.PublicMemberCount);
+        var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxPublicMembersPerType);
+        Assert.Equal(ThresholdStatus.Ok, check.Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MethodWithCompoundSuppression_AppliesRelaxedLimit()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\CompoundMethodTest.slnx",
+            new ProjectSpec("CompoundMethodTest", [
+                ("SimpleLongMethod.cs", """
+                    namespace CompoundMethodTest;
+
+                    public class Sample
+                    {
+                        public void LongSimpleMethod()
+                        {
+                            var a = 1;
+                            var b = 2;
+                            var c = 3;
+                            var d = 4;
+                            var e = 5;
+                            var f = 6;
+                            var g = 7;
+                            var h = 8;
+                            var i = 9;
+                            var j = 10;
+                        }
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/CompoundMethodTest"));
+
+        using var fixture = new McpInMemoryTestContext(solution);
+        var config = new Config
+        {
+            Global = new(),
+            Metrics = new MetricsConfig
+            {
+                MaxMethodLineCount = 5,
+                CompoundSuppressions =
+                [
+                    new CompoundSuppression
+                    {
+                        TargetRule = LinterRuleIds.MaxMethodLineCount,
+                        WhenAllOf =
+                        [
+                            new MetricCondition { Metric = MetricNames.CyclomaticComplexity, AtMost = 2 },
+                            new MetricCondition { Metric = MetricNames.CognitiveComplexity, AtMost = 2 }
+                        ],
+                        RelaxedLimit = 20
+                    }
+                ]
+            }
+        };
+
+        var state = fixture.CreateServer(config: config);
+
+        var result = await MetricsLookupTool.ExecuteAsync(state, "Sample.LongSimpleMethod", CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default);
+
+        Assert.NotNull(dto);
+        Assert.NotNull(dto.MethodMetrics);
+        var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxMethodLineCount);
+        Assert.Equal(20, check.Limit);
+        Assert.Equal(ThresholdStatus.Ok, check.Status);
+    }
 }
