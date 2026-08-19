@@ -30,55 +30,38 @@ internal static partial class FindMagicValuesScanner
     /// "Literale" sind — die Suppression-Pruefung auf einem <c>LiteralExpressionSyntax</c>
     /// wuerde hier nicht greifen, was methodisch sauber ist (Definition != Anwendung).</summary>
     private static async Task DetectDuplicateConstFieldsAsync(
-        List<RawMagicValue> sink, Solution solution, CancellationToken ct)
+        List<RawMagicValue> sink,
+        IReadOnlyList<(Document Document, string FilePath)> matchingDocuments,
+        CancellationToken ct)
     {
         var groups = new Dictionary<(string Type, string Value), List<DuplicateConstEntry>>(EqualityComparer<(string, string)>.Default);
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
 
-        foreach (var project in solution.Projects)
+        foreach (var (document, filePath) in matchingDocuments)
         {
-            foreach (var document in project.Documents)
-            {
-                ct.ThrowIfCancellationRequested();
-                await CollectFromDocumentAsync(document, solutionDir, groups, ct).ConfigureAwait(false);
-            }
+            ct.ThrowIfCancellationRequested();
+            await CollectFromDocumentAsync(document, filePath, groups, ct).ConfigureAwait(false);
         }
 
         EmitDuplicateConstGroups(sink, groups);
     }
 
-    /// <summary>Laedt die Syntax-Tree fuer ein einzelnes Document, filtert per
-    /// <see cref="IsProcessableDocument"/>, und sammelt Const-Feld-Duplikate. Aus
-    /// <see cref="DetectDuplicateConstFieldsAsync"/> extrahiert, um dessen kognitive
+    /// <summary>Laedt die Syntax-Tree fuer ein einzelnes Document und sammelt Const-Feld-Duplikate.
+    /// Aus <see cref="DetectDuplicateConstFieldsAsync"/> extrahiert, um dessen kognitive
     /// Komplexitaet unter dem 15-Limit zu halten.</summary>
     private static async Task CollectFromDocumentAsync(
         Document document,
-        string solutionDir,
+        string filePath,
         Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups,
         CancellationToken ct)
     {
-        if (!IsProcessableDocument(document)) return;
+        if (document.SourceCodeKind != SourceCodeKind.Regular) return;
 
         var tree = await document.GetSyntaxTreeAsync(ct).ConfigureAwait(false);
         if (tree is null) return;
         var root = await tree.GetRootAsync(ct).ConfigureAwait(false);
         if (root.ContainsDiagnostics) return;
 
-        var filePath = solutionDir.Length == 0
-            ? document.FilePath!
-            : Path.GetRelativePath(solutionDir, document.FilePath!).Replace('\\', '/');
-
         CollectDuplicateConstFields(root, filePath, groups);
-    }
-
-    /// <summary>Prueft, ob ein Document fuer die Const-Duplikat-Sammlung in Frage kommt
-    /// (regulaerer Source-Code, .cs-Endung).</summary>
-    private static bool IsProcessableDocument(Document document)
-    {
-        if (document.SourceCodeKind != SourceCodeKind.Regular) return false;
-        if (document.FilePath is null) return false;
-        if (!document.FilePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
-        return true;
     }
 
     /// <summary>Schreibt pro Const-Duplikat-Gruppe mit ≥ 2 Vorkommen in ≥ 2 verschiedenen

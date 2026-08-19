@@ -103,8 +103,8 @@ public sealed class Baz
 }";
         using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
             ("src/Production/Foo.cs", productionSource),
-            ("src/AiNetLinter.FastTests/BarTests.cs", testSource1),
-            ("src/AiNetLinter.IntegrationTests/BazTests.cs", testSource2));
+            ("tests/UnitTests/BarTests.cs", testSource1),
+            ("tests/IntegrationTests/BazTests.cs", testSource2));
 
         var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: false));
 

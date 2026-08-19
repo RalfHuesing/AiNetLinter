@@ -72,7 +72,7 @@ internal static partial class FindMagicValuesScanner
         // Per-Literal-SyntaxWalker, der pro Literal klassifiziert).
         if (raw.Count > 0 || malfunctionContext is null)
         {
-            await DetectDuplicateConstFieldsAsync(raw, p.Solution, p.CancellationToken);
+            await DetectDuplicateConstFieldsAsync(raw, matchingDocuments, p.CancellationToken);
         }
 
         // Wenn kein einziges Dokument erfolgreich war UND wir einen Fehler gesehen haben, ist
@@ -214,6 +214,11 @@ internal static partial class FindMagicValuesScanner
         var result = new List<(Document, string)>();
         foreach (var project in solution.Projects)
         {
+            if (!includeTests && TestDetector.IsTestProject(project))
+            {
+                continue;
+            }
+
             foreach (var document in project.Documents)
             {
                 if (TrySelectDocument(document, solutionDir, scopeFilter, includeTests, changedFiles, out var entry))
@@ -253,7 +258,7 @@ internal static partial class FindMagicValuesScanner
             return false;
         }
 
-        // includeTests=false: Datei mit "/Tests/" oder "/FastTests/" im Pfad ueberspringen.
+        // includeTests=false: Testdateien und Testpfade ueberspringen.
         if (!includeTests && LooksLikeTestPath(relativePath))
         {
             return false;
@@ -271,10 +276,10 @@ internal static partial class FindMagicValuesScanner
         return true;
     }
 
-    /// <summary>Erkennt Test-Pfade und Test-Dateien (delegiert an <see cref="PathNormalizer.IsTestFile"/>).</summary>
+    /// <summary>Erkennt Test-Pfade und Test-Dateien (delegiert an <see cref="TestDetector.IsTestFile"/>).</summary>
     private static bool LooksLikeTestPath(string path)
     {
-        return PathNormalizer.IsTestFile(path);
+        return TestDetector.IsTestFile(path);
     }
 
     private static IReadOnlyList<GroupedMagicValue> AggregateAndFilter(

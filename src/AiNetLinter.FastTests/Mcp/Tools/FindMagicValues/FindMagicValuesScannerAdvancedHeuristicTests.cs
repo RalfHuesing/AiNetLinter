@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.MagicValues;
@@ -241,6 +241,34 @@ public sealed class A
     private const int SharedConstant = 12345;
 }";
         var result = await FindMagicValuesTestHelpers.RunAsync(("A.cs", source), category: MagicValueCategory.ConstantCandidates);
+
+        Assert.Empty(result.Payload!.MagicValues);
+    }
+
+    [Fact]
+    public async Task Classify_DuplicateConstFields_InTestProject_ExcludedWhenIncludeTestsFalse()
+    {
+        var source1 = @"
+namespace Test.One;
+public sealed class A
+{
+    private const string SharedKey = ""MySuperSecretKey123"";
+}";
+        var source2 = @"
+namespace Test.Two;
+public sealed class BTests
+{
+    private const string SharedKey = ""MySuperSecretKey123"";
+}";
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\Solution.slnx",
+            new ProjectSpec("App.Core", [("A.cs", source1)], VirtualProjectDirectory: "src/App.Core"),
+            new ProjectSpec("App.Tests", [("BTests.cs", source2)], VirtualProjectDirectory: "tests/App.Tests"));
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(
+            testSolution.Solution,
+            category: MagicValueCategory.ConstantCandidates,
+            options: new FindMagicValuesRunOptions(IncludeTests: false));
 
         Assert.Empty(result.Payload!.MagicValues);
     }
