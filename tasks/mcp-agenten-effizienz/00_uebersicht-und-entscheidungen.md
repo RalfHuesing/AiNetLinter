@@ -23,7 +23,8 @@ AiNetLinter soll als allgemeiner MCP-Server in beliebigen C#/.NET-Codebasen eine
 1. übertragene und vom Host exponierte Kontextmenge,
 2. Eindeutigkeit und maschinelle Auswertbarkeit der Antworten,
 3. Anzahl notwendiger Folgeaufrufe,
-4. faktische Korrektheit der Tool-Verträge.
+4. faktische Korrektheit der Tool-Verträge,
+5. Kontextqualität bei repositoryweiter Text-/Regex-Suche.
 
 Nicht auf dieses Repository optimieren. Fixtures und Akzeptanztests müssen neutrale, mehrprojektige C#-Solutions verwenden.
 
@@ -61,6 +62,7 @@ Die wissenschaftliche Begründung ist bewusst begrenzt: Liu et al. zeigen, dass 
 5. **Strukturverlust bei Transitiver Analyse:** `find_references` und symbolbasiertes `get_impact` liefern bei `depth > 1` absichtlich nur Text, weil `CallGraphTraversal` intern Strings sammelt.
 6. **Diff-Kontext ist verteilt:** `get_impact` berechnet geänderte Symbole bereits intern, gibt im Git-Modus aber primär Call-Sites zurück. Tests und direkte Violations müssen anschließend symbolweise über andere Tools gesammelt werden.
 7. **Keine nutzbaren Cache-Hinweise:** Die statische Toolliste wird im modernen Protokoll als sofort veraltet und privat ausgeliefert.
+8. **Strukturverlust bei repositoryweiter Textsuche:** `search_pattern` erreicht bereits mehrere Dateitypen, liefert aber primär formatierte Trefferzeilen. Matchbereiche, Spalten, optionale Kontextlimits, Scope-Metadaten und eine getrennte Vollständigkeitsanzeige fehlen; C#-Semantik und Textsuche sind dadurch auf mehrere Folgeaufrufe verteilt.
 
 ## Priorisierte Umsetzung
 
@@ -69,15 +71,19 @@ Die wissenschaftliche Begründung ist bewusst begrenzt: Liu et al. zeigen, dass 
 | 1 | [01_dokumentations-und-begriffsdrift-beseitigen.md](01_dokumentations-und-begriffsdrift-beseitigen.md) | **erledigt** | P0 | keine | Verträge und Begriffe werden faktisch korrekt; keine veralteten hartcodierten Toolzahlen |
 | 2 | [02_discovery-kontextbudget-und-protokolltests.md](02_discovery-kontextbudget-und-protokolltests.md) | **erledigt** | P0 | Aufgabe 01 | mindestens 60 % weniger globale Instructions-Bytes; Legacy und MCP 2026-07-28 auf dem Wire abgesichert |
 | 3 | [03_transitive-symbolgraph-ausgaben-strukturieren.md](03_transitive-symbolgraph-ausgaben-strukturieren.md) | **erledigt** | P1 | Aufgabe 02 | `depth > 1` bleibt maschinell auswertbar und kommuniziert Vollständigkeit explizit |
-| 4 | [04_get-impact-zum-diff-kontext-erweitern.md](04_get-impact-zum-diff-kontext-erweitern.md) | offen | P2 | Aufgabe 03 | ein deterministischer Aufruf liefert Diff-Symbole, Impact, Test-Zuordnung und direkte Violations; behebt Traversierungs-Semantik in `ExpandAsync` auf echte Aufruferketten |
-| 5 | [05_tool-annotations-korrekt-setzen.md](05_tool-annotations-korrekt-setzen.md) | offen | P2 | Aufgabe 02 | Hosts erhalten korrekte Side-Effect- und Trust-Metadaten statt SDK-Defaults |
-| 6 | [06_tools-list-cachehinweise-setzen.md](06_tools-list-cachehinweise-setzen.md) | offen | P3 | Aufgabe 02 | standardkonforme Clients dürfen die statische Toolliste zwischenspeichern |
-| 7 | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen.md) | Entscheidung | P9 | fortlaufend | verhindert Tool-Proliferation und unbelegte Optimierungen |
+| 4 | [04_repositoryweite-hybridsuche-und-kontextbudget.md](04_repositoryweite-hybridsuche-und-kontextbudget.md) | offen | P1 | Aufgabe 02, Aufgabe 03 | `search_pattern` liefert repositoryweit strukturierte, budgetierte Treffer; optionale C#-Anreicherung verbessert Kontext ohne RAG oder LLM-Ranking |
+| 5 | [05_get-impact-zum-diff-kontext-erweitern.md](05_get-impact-zum-diff-kontext-erweitern.md) | offen | P2 | Aufgabe 03 | ein deterministischer Aufruf liefert Diff-Symbole, Impact, Test-Zuordnung und direkte Violations; behebt Traversierungs-Semantik in `ExpandAsync` auf echte Aufruferketten |
+| 6 | [06_tool-annotations-korrekt-setzen.md](06_tool-annotations-korrekt-setzen.md) | offen | P2 | Aufgabe 02 | Hosts erhalten korrekte Side-Effect- und Trust-Metadaten statt SDK-Defaults |
+| 7 | [07_tools-list-cachehinweise-setzen.md](07_tools-list-cachehinweise-setzen.md) | offen | P3 | Aufgabe 02 | standardkonforme Clients dürfen die statische Toolliste zwischenspeichern |
+| 8 | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen.md) | Entscheidung | P9 | fortlaufend | verhindert Tool-Proliferation und unbelegte Optimierungen |
 
 ## Architekturentscheidungen
 
 - Kein RAG, keine Embeddings, kein Semantic Kernel und kein zusätzlicher Vektorspeicher.
 - Kein neues `get_change_context`: `get_impact` wird additiv erweitert, damit Toolwahl und Toolkatalog nicht weiter wachsen.
+- Kein `rg`-Ersatz und kein Verbot direkter Agenten-Suche: `search_pattern` wird als strukturierte, kontextbudgetierte MCP-Sicht additiv erweitert; `rg` bleibt für rohe Ad-hoc-Suche verfügbar.
+- Kein harter `rg`-Runtimezwang: Der bestehende verwaltete Scanner bleibt die portable Basis. Ein `rg`-Backend darf nur optional und mit reproduzierbarem Fallback evaluiert werden.
+- Keine freie Relevanzheuristik: C#-Anreicherung darf nur deterministische Roslyn-Klassifikation und stabile Symbol-IDs liefern; Nicht-C# bleibt lexikalische Textsuche.
 - Keine modellabhängigen Token-Schätzungen in Tests. UTF-8-Bytes und JSON-Zeichen sind reproduzierbare Proxies.
 - Kein Ranking mit unbelegtem „Relevanz“-Score. Sortierungen müssen deterministisch und fachlich erklärbar sein.
 - Keine Breaking Removal bestehender Tools ohne Nutzungsdaten und Deprecation-Pfad.
@@ -85,8 +91,9 @@ Die wissenschaftliche Begründung ist bewusst begrenzt: Liu et al. zeigen, dass 
 
 ## Definition of Done für die Initiative
 
-- Alle sechs Umsetzungsaufgaben erfüllen ihre jeweilige Definition of Done.
+- Alle sieben Umsetzungsaufgaben erfüllen ihre jeweilige Definition of Done.
 - `README.md`, `Docs/integration.md`, `Docs/agent-api.md`, Overview-Resource und Toolregistrierung widersprechen einander nicht.
 - Raw-Wire-Tests decken Legacy-`initialize` und modernes `server/discover`/`tools/list` ab.
+- Die repositoryweite Suchfunktion liefert strukturierte Treffer mit expliziter Vollständigkeit und bleibt als Ergänzung zu direktem `rg` dokumentiert.
 - Kein neuer externer Retrieval-/AI-Stack wurde eingeführt.
 - Die vollständigen Nicht-Stress-Testläufe und `dotnet build` sind grün.

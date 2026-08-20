@@ -33,7 +33,7 @@ Ohne Embeddings/RAG kann eine freie Aufgabenbeschreibung nur lexikalisch gegen I
 
 ## 2. Kein neues `get_change_context`
 
-Ein weiteres Composite-Tool erhöht Toolkatalog und Auswahlraum. Git-Diff-Impact liegt bereits in `get_impact`; Aufgabe 04 erweitert genau dieses Tool additiv.
+Ein weiteres Composite-Tool erhöht Toolkatalog und Auswahlraum. Git-Diff-Impact liegt bereits in `get_impact`; Aufgabe 05 erweitert genau dieses Tool additiv.
 
 **Entscheidung:** bestehendes Tool erweitern, keinen Alias und kein zweites Schema registrieren.
 
@@ -88,4 +88,3 @@ AiNetLinter ist als allgemeines C#-Tool positioniert. Roslyn kann Razor-, XAML-,
 - Die Entscheidungen sind aus `00_uebersicht-und-entscheidungen.md` verlinkt.
 - Neue Roadmap-/Taskvorschläge widersprechen diesen Entscheidungen nicht ohne neue dokumentierte Evidenz.
 - Es wird keine verworfene Idee allein mit „könnte besser sein“ wieder geöffnet.
-
