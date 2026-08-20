@@ -2,16 +2,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
-using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp;
@@ -54,7 +50,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}",
         };
 
-        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -81,7 +77,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 "\"name\":\"find_symbol\",\"arguments\":{\"namePattern\":\"Greeter\"}}}",
         };
 
-        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -90,6 +86,55 @@ public sealed class McpServerCommandJsonRpcFramingTests
             using var doc = JsonDocument.Parse(line);
             Assert.Equal("2.0", doc.RootElement.GetProperty("jsonrpc").GetString());
         }
+    }
+
+    [Fact]
+    public async Task SymbolGraphDepthToolCall_RawStructuredContentRemainsJsonObject()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+
+        var frames = new List<string>
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"" + ProtocolVersion + "\"," +
+                "\"capabilities\":{},\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+        };
+        for (var id = 2; id <= 12; id++)
+        {
+            frames.Add(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "find_references",
+                    arguments = new { symbolIdentifier = "Greeter.Greet", depth = 2 },
+                },
+            }));
+        }
+
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            fixture.RootPath, frames.ToArray(), TimeSpan.FromSeconds(1));
+        JsonElement? response = null;
+        foreach (var line in observedLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var document = JsonDocument.Parse(line);
+            if (!document.RootElement.TryGetProperty("result", out var result) ||
+                !result.TryGetProperty("structuredContent", out _)) continue;
+            response = document.RootElement.Clone();
+            break;
+        }
+
+        Assert.True(response.HasValue, "Kein erfolgreicher find_references-Response mit structuredContent gefunden.");
+        var structuredContent = response.Value.GetProperty("result").GetProperty("structuredContent");
+
+        Assert.Equal(JsonValueKind.Object, structuredContent.ValueKind);
+        Assert.Equal(JsonValueKind.Array, structuredContent.GetProperty("callSites").ValueKind);
+        Assert.Equal(JsonValueKind.Object, structuredContent.GetProperty("completeness").ValueKind);
+        Assert.Equal(2, structuredContent.GetProperty("completeness").GetProperty("effectiveDepth").GetInt32());
     }
 
     [Fact]
@@ -139,7 +184,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             id++;
         }
 
-        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frameList.ToArray());
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frameList.ToArray());
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -169,7 +214,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
         };
 
-        var observedLines = await RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
 
         string? instructions = null;
         foreach (var line in observedLines)
@@ -217,9 +262,9 @@ public sealed class McpServerCommandJsonRpcFramingTests
     private static async Task<McpWireDiscoverySnapshot> ReadDiscoverySnapshotAsync(
         string targetDirectory, bool modern)
     {
-        var lines = await RunAndCollectStdoutAsync(targetDirectory, BuildDiscoveryFrames(modern));
-        var discoveryResponse = FindResponse(lines, 1);
-        var toolsResponse = FindResponse(lines, 2);
+        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(targetDirectory, BuildDiscoveryFrames(modern));
+        var discoveryResponse = McpRawWireTestHarness.FindResponse(lines, 1);
+        var toolsResponse = McpRawWireTestHarness.FindResponse(lines, 2);
         Assert.Equal("2.0", discoveryResponse.GetProperty("jsonrpc").GetString());
         Assert.Equal("2.0", toolsResponse.GetProperty("jsonrpc").GetString());
         if (!discoveryResponse.TryGetProperty("result", out var discoveryResult))
@@ -311,189 +356,10 @@ public sealed class McpServerCommandJsonRpcFramingTests
             .ToHashSet(StringComparer.Ordinal);
     }
 
-    private static JsonElement FindResponse(IEnumerable<string> lines, int id)
-    {
-        foreach (var line in lines)
-        {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            using var document = JsonDocument.Parse(line);
-            if (document.RootElement.TryGetProperty("id", out var responseId) &&
-                responseId.ValueKind == JsonValueKind.Number && responseId.GetInt32() == id)
-            {
-                return document.RootElement.Clone();
-            }
-        }
-
-        throw new InvalidOperationException($"Keine JSON-RPC-Antwort fuer id={id} gefunden.");
-    }
-
     private sealed record McpWireDiscoverySnapshot(
         string Instructions,
         IReadOnlySet<string> ToolNames,
         McpPayloadSize InstructionsSize,
         McpPayloadSize DiscoveryPayload,
         McpPayloadSize ToolsListPayload);
-
-    private static async Task<System.Collections.Generic.List<string>> RunAndCollectStdoutAsync(
-        string targetDirectory, string[] frames)
-    {
-        using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
-        var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
-        if (!File.Exists(exePath))
-        {
-            throw new FileNotFoundException(
-                $"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}. " +
-                "Test laeuft nur nach dotnet build.");
-        }
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = exePath,
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = targetDirectory,
-        };
-        psi.ArgumentList.Add("--mcp-server");
-        psi.ArgumentList.Add("--path");
-        psi.ArgumentList.Add(targetDirectory);
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("AiNetLinter-Subprozess konnte nicht gestartet werden.");
-
-        // stderr asynchron in einen Puffer mitlesen, damit der Subprozess sich nicht an einem
-        // vollen stderr-Puffer aufhaengt. Wird im Test-Output nicht direkt geprueft, der
-        // eigentliche Assert liegt auf stdout-Disziplin.
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        var expectedResponses = CountExpectedResponses(frames);
-
-        // Producer: schreibt die Frames auf stdin. Stdin bleibt offen, solange noch auf die
-        // erwarteten Antworten gewartet wird, damit der Server unter Volllauf-Last nicht
-        // vorzeitig durch ein vorzeitiges EOF abgebrochen wird.
-        var writer = process.StandardInput;
-        var writerTask = Task.Run(async () =>
-        {
-            foreach (var frame in frames)
-            {
-                await writer.WriteLineAsync(frame);
-                await writer.FlushAsync();
-            }
-        });
-
-        // stdout zeilenweise lesen, bis mindestens alle erwarteten Responses eingetroffen sind,
-        // der Prozess beendet oder der Timeout greift.
-        var observed = new System.Collections.Generic.List<string>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-        try
-        {
-            await ReadStdoutFramesAsync(process.StandardOutput, observed, expectedResponses, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Server hat zu lange gebraucht; Frames bis hierhin lesen und Assertion laufen lassen.
-        }
-
-        // Producer-Task sauber beenden und stdin schliessen, damit der Server graceful beendet.
-        try { await writerTask; } catch { /* Pipe-Close-Fehler ist hier OK */ }
-        try { writer.Close(); } catch { /* Pipe evtl. schon zu */ }
-
-        // Verbleibende Ausgaben bis zum Prozessende aufnehmen (z. B. nachlaufende stdout-Frames).
-        try
-        {
-            await DrainRemainingStdoutAsync(process.StandardOutput, observed, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Timeout beim Drain
-        }
-
-        await EnsureProcessTerminatedAsync(process, stderrTask);
-
-        return observed;
-    }
-
-    private static int CountExpectedResponses(string[] frames)
-    {
-        var count = 0;
-        foreach (var frame in frames)
-        {
-            if (frame.Contains("\"id\":", StringComparison.Ordinal))
-            {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private static async Task ReadStdoutFramesAsync(
-        StreamReader stdout,
-        System.Collections.Generic.List<string> observed,
-        int expectedResponses,
-        CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            var line = await stdout.ReadLineAsync(ct);
-            if (line is null) break;
-            observed.Add(line);
-            if (expectedResponses > 0 && observed.Count >= expectedResponses)
-            {
-                break;
-            }
-        }
-    }
-
-    private static async Task DrainRemainingStdoutAsync(
-        StreamReader stdout,
-        System.Collections.Generic.List<string> observed,
-        CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            var line = await stdout.ReadLineAsync(ct);
-            if (line is null) break;
-            observed.Add(line);
-        }
-    }
-
-    /// <summary>
-    /// Wartet auf graceful exit (kurzer Timeout), erzwingt danach einen Kill statt den Test
-    /// unbegrenzt haengen zu lassen, und deckelt anschliessend das Warten auf <paramref
-    /// name="stderrTask"/> (blockiert sonst bis stderr-EOF = Prozessende) mit einem eigenen
-    /// Timeout. Ausgelagert aus <see cref="RunAndCollectStdoutAsync"/>, damit dessen eigene
-    /// Komplexitaet unter <c>MaxCyclomaticComplexity</c>/<c>MaxCognitiveComplexity</c> bleibt —
-    /// vorher fehlte dieser gesamte Force-Kill-Pfad, was einen nie beendeten Subprozess unter
-    /// Last (konkurrierende Solution-Loads anderer parallel laufender Tests/Prozesse) den ganzen
-    /// Testlauf unbegrenzt blockieren liess, empirisch beobachtet als Volllauf-Haenger
-    /// 2026-08-11.
-    /// </summary>
-    private static async Task EnsureProcessTerminatedAsync(Process process, Task stderrTask)
-    {
-        if (!process.HasExited)
-        {
-            TryWaitOrKill(process);
-        }
-
-        // stderrTask kann nach einem erzwungenen Kill kurzzeitig offen bleiben (Pipe-Handle-
-        // Teardown ist nicht synchron mit dem Kill) — eigener Timeout statt unbegrenztem await,
-        // damit ein Edge-Case hier nie wieder den ganzen Testlauf blockieren kann.
-        await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10)));
-    }
-
-    private static void TryWaitOrKill(Process process)
-    {
-        try
-        {
-            if (!process.WaitForExit(TimeSpan.FromSeconds(10)) && !process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch
-        {
-            // Best-effort-Cleanup.
-        }
-    }
 }

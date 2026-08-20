@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Output;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
@@ -18,13 +19,13 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// Iterativer BFS ueber <see cref="SymbolFinder.FindReferencesAsync"/> mit konfigurierbarer
 /// Tiefe und separatem Knotenlimit. Wird von <see cref="FindReferencesTool"/> und
 /// <see cref="GetImpactTool"/> (Symbol-Branch) fuer den bestehenden <c>depth</c>-Parameter
-/// genutzt, damit transitive Aufrufstellen als kompakte Top-N-Antwort ermittelt werden koennen
-/// (<see cref="ExpandAndFormatAsync"/>). Fuer strukturelle Analyse liefert diese flache Liste
+/// genutzt, damit transitive Aufrufstellen als kompakte Top-N-Antwort ermittelt werden koennen.
+/// <see cref="ExpandAsync"/> sammelt die strukturierten Daten, waehrend
+/// <see cref="TransitiveCallGraphFormatter"/> das kompatible Textformat erzeugt. Fuer strukturelle Analyse liefert diese flache Liste
 /// jedoch keinen Baum — <see cref="BuildTreeAsync"/> (genutzt von <c>get_call_tree</c>, siehe
 /// <see cref="GetCallTreeTool"/>) ergaenzt daher eine echte Eltern-Kind-Baumtraversierung mit
 /// eigenen, hoeheren Grenzwerten (<see cref="MaxCallTreeDepth"/>/<see cref="MaxCallTreeNodes"/>),
-/// ohne die bestehende flache Aggregation fuer <c>find_references</c>/<c>get_impact</c> zu
-/// veraendern.
+/// ohne den separaten Baumvertrag von <c>get_call_tree</c> zu veraendern.
 /// </summary>
 internal static class CallGraphTraversal
 {
@@ -33,50 +34,94 @@ internal static class CallGraphTraversal
     internal const int MaxCallTreeDepth = 5;
     internal const int MaxCallTreeNodes = 250;
 
-    /// <summary>
-    /// Erweitert <paramref name="seedSymbol"/> iterativ bis <paramref name="requestedDepth"/>
-    /// Stufen und aggregiert die Fundstellen zu einer kompakten Top-N-Antwort.
-    /// <paramref name="maxResults"/> beschraenkt die Anzahl der angezeigten Locations,
-    /// unabhaengig vom <see cref="MaxRecursionNodes"/>-Hard-Cap, der exponentielle
-    /// Explosion bei grossen Symbolgraphen verhindert.
-    /// </summary>
-    internal static async Task<string> ExpandAndFormatAsync(
+    internal static Task<ReferenceTraversalResult> ExpandAsync(
         Solution solution,
         ISymbol seedSymbol,
         int requestedDepth,
         int maxResults,
-        CancellationToken ct)
+        CancellationToken ct) =>
+        ExpandAsync(new ReferenceTraversalRequest(
+            solution, seedSymbol, requestedDepth, maxResults, ct));
+
+    internal static async Task<ReferenceTraversalResult> ExpandAsync(ReferenceTraversalRequest request)
     {
-        var depth = Math.Clamp(requestedDepth, 1, MaxRecursionDepth);
-        var state = new TraversalState(seedSymbol, depth);
-        await TraverseAsync(solution, state, ct);
-        return AggregateAndTruncate(state.Locations, maxResults, depth);
+        var effectiveDepth = Math.Clamp(request.RequestedDepth, 1, MaxRecursionDepth);
+        var effectiveNodeLimit = request.NodeLimit ?? MaxRecursionNodes;
+        if (effectiveNodeLimit < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.NodeLimit));
+        }
+
+        var state = new TraversalState(request.SeedSymbol, effectiveDepth, effectiveNodeLimit);
+        await TraverseAsync(request.Solution, state, request.CancellationToken);
+        return state.CreateResult(
+            request.RequestedDepth, effectiveDepth, Math.Max(request.MaxResults, 1));
     }
 
     private static async Task TraverseAsync(Solution solution, TraversalState state, CancellationToken ct)
     {
-        while (state.HasMore && !state.IsAtNodeCap)
+        while (state.HasMore)
         {
             ct.ThrowIfCancellationRequested();
+            if (state.IsAtNodeCap)
+            {
+                state.TruncatedByNodeLimit = true;
+                break;
+            }
+
             var (current, level) = state.Dequeue();
+            state.MarkVisited();
             var refs = await SymbolFinder.FindReferencesAsync(current, solution, ct);
-            AppendReferenceLocations(refs, solution, state);
+            AppendReferenceLocations(refs, solution, current, level, state);
             EnqueueChildren(refs, level, state);
         }
     }
 
     private static void AppendReferenceLocations(
-        IEnumerable<ReferencedSymbol> refs, Solution solution, TraversalState state)
+        IEnumerable<ReferencedSymbol> refs,
+        Solution solution,
+        ISymbol reachedFromSymbol,
+        int depth,
+        TraversalState state)
     {
         foreach (var reference in refs)
         {
             foreach (var referenceLocation in reference.Locations)
             {
-                if (state.IsAtNodeCap) return;
-                state.Add(FormatReferenceLocation(referenceLocation, solution));
+                if (!referenceLocation.Location.IsInSource || referenceLocation.Location.SourceTree is null)
+                {
+                    continue;
+                }
+
+                state.Add(CreateCallSiteEntry(
+                    reference, referenceLocation, solution, reachedFromSymbol, depth));
             }
         }
     }
+
+    private static TransitiveCallSiteEntry CreateCallSiteEntry(
+        ReferencedSymbol reference,
+        ReferenceLocation referenceLocation,
+        Solution solution,
+        ISymbol reachedFromSymbol,
+        int depth)
+    {
+        var location = referenceLocation.Location;
+        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
+        var filePath = PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
+        var line = location.GetLineSpan().StartLinePosition.Line + 1;
+        return new TransitiveCallSiteEntry(
+            filePath,
+            line,
+            FormatSymbolName(reference.Definition),
+            referenceLocation.Document.Project.Name,
+            depth,
+            GetStableSymbolId(reachedFromSymbol));
+    }
+
+    private static string GetStableSymbolId(ISymbol symbol) =>
+        DocumentationCommentId.CreateDeclarationId(symbol) ??
+        symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
     private static void EnqueueChildren(
         IEnumerable<ReferencedSymbol> refs, int currentLevel, TraversalState state)
@@ -84,7 +129,7 @@ internal static class CallGraphTraversal
         if (currentLevel >= state.Depth) return;
         foreach (var reference in refs)
         {
-            if (state.MarkSeenAndEnqueue(reference.Definition, currentLevel + 1)) break;
+            state.MarkSeenAndEnqueue(reference.Definition, currentLevel + 1);
         }
     }
 
@@ -93,55 +138,63 @@ internal static class CallGraphTraversal
         private readonly Queue<(ISymbol Symbol, int Level)> _queue = new();
         private readonly HashSet<ISymbol> _seen;
 
-        public TraversalState(ISymbol seed, int depth)
+        public TraversalState(ISymbol seed, int depth, int nodeLimit)
         {
             Depth = depth;
+            NodeLimit = nodeLimit;
             _seen = new HashSet<ISymbol>(SymbolEqualityComparer.Default) { seed };
             _queue.Enqueue((seed, 1));
         }
 
         public int Depth { get; }
-        public List<string> Locations { get; } = new();
+        public int NodeLimit { get; }
+        public List<TransitiveCallSiteEntry> Locations { get; } = new();
+        public int VisitedNodeCount { get; private set; }
+        public bool TruncatedByNodeLimit { get; set; }
         public bool HasMore => _queue.Count > 0;
-        public bool IsAtNodeCap => Locations.Count >= MaxRecursionNodes;
+        public bool IsAtNodeCap => VisitedNodeCount >= NodeLimit;
 
         public (ISymbol Symbol, int Level) Dequeue() => _queue.Dequeue();
-        public void Add(string location) => Locations.Add(location);
-        public bool MarkSeenAndEnqueue(ISymbol definition, int level)
+        public void MarkVisited() => VisitedNodeCount++;
+        public void Add(TransitiveCallSiteEntry location) => Locations.Add(location);
+        public void MarkSeenAndEnqueue(ISymbol definition, int level)
         {
-            if (!_seen.Add(definition)) return false;
-            _queue.Enqueue((definition, level));
-            return false;
-        }
-    }
-
-    private static string AggregateAndTruncate(IReadOnlyList<string> allLocations, int maxResults, int depth)
-    {
-        if (allLocations.Count <= maxResults)
-        {
-            return string.Join("\n", allLocations);
+            if (_seen.Add(definition))
+            {
+                _queue.Enqueue((definition, level));
+            }
         }
 
-        var shown = allLocations.Take(maxResults).ToList();
-        var meta = $"[{allLocations.Count} Treffer gesamt (depth={depth}, hard-cap {MaxRecursionNodes}), " +
-                   $"{maxResults} gezeigt — depth reduzieren oder maxResults erhoehen]";
-        return string.Join("\n", shown) + "\n" + meta;
-    }
-
-    private static string FormatReferenceLocation(ReferenceLocation referenceLocation, Solution solution)
-    {
-        var location = referenceLocation.Location;
-        if (!location.IsInSource || location.SourceTree is null) return string.Empty;
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var path = Path.GetRelativePath(outputRoot, location.SourceTree.FilePath).Replace('\\', '/');
-        var lineSpan = location.GetLineSpan();
-        var line = lineSpan.StartLinePosition.Line + 1;
-        return $"{path}:{line} - transitiver Aufrufer";
+        public ReferenceTraversalResult CreateResult(
+            int requestedDepth, int effectiveDepth, int maxResults)
+        {
+            var ordered = Locations
+                .Distinct()
+                .OrderBy(location => location.Depth)
+                .ThenBy(location => location.FilePath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(location => location.FilePath, StringComparer.Ordinal)
+                .ThenBy(location => location.Line)
+                .ThenBy(location => location.SymbolName, StringComparer.Ordinal)
+                .ThenBy(location => location.ProjectName, StringComparer.Ordinal)
+                .ThenBy(location => location.ReachedFromSymbolId, StringComparer.Ordinal)
+                .ToList();
+            var shown = ordered.Take(maxResults).ToList();
+            var completeness = new TraversalCompleteness(
+                requestedDepth,
+                effectiveDepth,
+                VisitedNodeCount,
+                ordered.Count,
+                shown.Count,
+                ordered.Count > maxResults,
+                TruncatedByNodeLimit,
+                requestedDepth != effectiveDepth);
+            return new ReferenceTraversalResult(shown, completeness);
+        }
     }
 
     /// <summary>
     /// Baut einen echten Eltern-Kind-Baum der transitiven Aufrufer von <paramref name="seedSymbol"/>
-    /// (Caller-Tree, dieselbe Richtung wie <see cref="ExpandAndFormatAsync"/>). Im Unterschied zur
+    /// (Caller-Tree, dieselbe Richtung wie <see cref="ExpandAsync"/>). Im Unterschied zur
     /// flachen Aggregation wird pro Aufrufstelle der einschliessende Symbol via
     /// <see cref="SemanticModel.GetEnclosingSymbol(int, CancellationToken)"/> ermittelt und als
     /// eigener Kindknoten weiterverfolgt — erst das ergibt eine echte Baumstruktur (die flache
@@ -263,20 +316,22 @@ internal static class CallGraphTraversal
         IEnumerable<ReferencedSymbol> refs, Solution solution, CancellationToken ct)
     {
         var groups = await GroupByCallerAsync(refs, ct);
-        return groups
+        return SortGroups(groups, solution);
+    }
+
+    private static List<CallerGroup> SortGroups(
+        IEnumerable<CallerGroup> groups, Solution solution) =>
+        groups
             .OrderBy(g => FirstLocationPath(g, solution), StringComparer.Ordinal)
             .ThenBy(FirstLocationLine)
             .ToList();
-    }
 
     private static async Task<List<CallerGroup>> BuildSortedOutgoingGroupsAsync(
         ISymbol symbol, Solution solution, CancellationToken ct)
     {
         var groups = await OutgoingCallScanner.ScanAsync(symbol, solution, ct);
-        return groups.Select(group => new CallerGroup(group.Symbol, group.Locations.ToList()))
-            .OrderBy(group => FirstLocationPath(group, solution), StringComparer.Ordinal)
-            .ThenBy(FirstLocationLine)
-            .ToList();
+        return SortGroups(
+            groups.Select(group => new CallerGroup(group.Symbol, group.Locations.ToList())), solution);
     }
 
     private static async Task<List<CallerGroup>> GroupByCallerAsync(

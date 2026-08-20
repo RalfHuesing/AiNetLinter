@@ -75,8 +75,9 @@ internal static class SymbolGraphToolRegistrations
         "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
         "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
         "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
-        "depth>1 (hard cap 3) loest transitive Aufrufstellen auf, " +
-        "Traversierung hart begrenzt auf 200 Knoten.";
+        "depth (Default 1, hard cap 3) liefert immer structuredContent.callSites plus " +
+        "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
+        "Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -119,8 +120,9 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
         "Ohne Parameter: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
         "ODER symbolIdentifier angeben, nie beide — Identifikator-Format wie find_references. " +
-        "depth>1 (hard cap 3, Traversierung hart begrenzt auf 200 Knoten) wirkt nur im " +
-        "Symbol-Branch.";
+        "depth (hard cap 3) wirkt nur im Symbol-Branch und liefert dort dieselbe " +
+        "structuredContent.callSites/completeness-Struktur wie find_references; die " +
+        "Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -83,8 +83,8 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `get_test_context` | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zugeordnete Testdateien, Testklassen, Testmethoden, Kategorien und direkt ausführbare `dotnet test` Filterbefehle |
 | `get_namespace_tree` | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) |
 | `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden |
-| `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`) |
-| `get_impact` | Betroffene Call-Sites für uncommittete Änderungen oder ein Symbol |
+| `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`), mit strukturierten Treffern und Vollständigkeitsmetadaten |
+| `get_impact` | Betroffene Call-Sites für uncommittete Änderungen oder ein Symbol; der Symbol-Branch liefert dieselbe transitive Struktur wie `find_references` |
 | `get_type_hierarchy` | Basisklassen, Interfaces, abgeleitete Typen, heuristische DI-Registrierungen |
 | `get_call_tree` | Aufrufer- oder Aufgerufene-Baum eines Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid), Richtung `incoming`/`outgoing`/`both`, transitiv über `depth` |
 | `dependency_graph` | Datei-/Typ-Abhängigkeiten (echte SemanticModel-Typreferenzen statt `using`-Direktiven), ein-/ausgehend, transitiv |

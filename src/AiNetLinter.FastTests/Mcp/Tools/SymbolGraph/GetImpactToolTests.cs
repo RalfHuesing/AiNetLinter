@@ -65,7 +65,7 @@ public sealed class GetImpactToolTests
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
         var entries = result.StructuredContent!.Value.GetProperty("callSites")
-            .Deserialize<List<CallSiteEntry>>(McpJsonOptions.Default);
+            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
     }
@@ -135,5 +135,8 @@ public sealed class GetImpactToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        Assert.NotEmpty(result.StructuredContent!.Value.GetProperty("callSites").EnumerateArray());
+        Assert.Equal(2, result.StructuredContent.Value.GetProperty("completeness").GetProperty("effectiveDepth").GetInt32());
     }
 }

@@ -40,6 +40,7 @@ public sealed class McpProcessArchitectureGuardTests
         Assert.Equal(3, processCallsites.Count);
         Assert.All(processCallsites, source => Assert.True(
             source.Path.EndsWith(Path.Combine("Mcp", "McpServerCommandJsonRpcFramingTests.cs"), StringComparison.Ordinal) ||
+            source.Path.EndsWith(Path.Combine("Mcp", "Platform", "McpRawWireTestHarness.cs"), StringComparison.Ordinal) ||
             source.Path.EndsWith(Path.Combine("Mcp", "McpServerLifetimeTests.cs"), StringComparison.Ordinal) ||
             source.Path.EndsWith(Path.Combine("Fixtures", "FixtureWorkspaces.cs"), StringComparison.Ordinal),
             $"Nicht besitzende Process.Start-Callsite: {source.Path}"));

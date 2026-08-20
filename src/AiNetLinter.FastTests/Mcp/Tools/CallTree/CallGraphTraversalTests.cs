@@ -20,42 +20,62 @@ public sealed class CallGraphTraversalTests
     public CallGraphTraversalTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
-    public async Task ExpandAndFormatAsync_Depth1_ReturnsCallSiteFromCaller()
+    public async Task ExpandAsync_Depth1_FormatsCallSiteFromCaller()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
             _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
-        var text = await CallGraphTraversal.ExpandAndFormatAsync(
+        var result = await CallGraphTraversal.ExpandAsync(
             _fixture.Solution, symbol!, 1, 50, CancellationToken.None);
+        var text = TransitiveCallGraphFormatter.Format(result);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExpandAndFormatAsync_Depth2_FormatsWithDepthMarker()
+    public async Task ExpandAsync_Depth2_FormatsWithDepthMarker()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
             _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
-        var text = await CallGraphTraversal.ExpandAndFormatAsync(
+        var result = await CallGraphTraversal.ExpandAsync(
             _fixture.Solution, symbol!, 2, 50, CancellationToken.None);
+        var text = TransitiveCallGraphFormatter.Format(result);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExpandAndFormatAsync_DepthAboveCap_ClampsToThree()
+    public async Task ExpandAsync_DepthAboveCap_ClampsToThree()
     {
         var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
             _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         Assert.NotNull(symbol);
 
-        var text = await CallGraphTraversal.ExpandAndFormatAsync(
+        var result = await CallGraphTraversal.ExpandAsync(
             _fixture.Solution, symbol!, 99, 50, CancellationToken.None);
+        var text = TransitiveCallGraphFormatter.Format(result);
 
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExpandAsync_NodeLimit_ReportsNodeTruncationSeparately()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            fixture.Solution, "Contracts.IProcessor.Execute", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var result = await CallGraphTraversal.ExpandAsync(
+            new ReferenceTraversalRequest(
+                fixture.Solution, symbol!, 3, 50, CancellationToken.None, 1));
+
+        Assert.True(result.Completeness.TruncatedByNodeLimit);
+        Assert.False(result.Completeness.TruncatedByMaxResults);
+        Assert.Equal(1, result.Completeness.VisitedNodeCount);
     }
 
     // --- BuildTreeAsync (get_call_tree) ---

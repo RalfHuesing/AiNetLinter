@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -19,11 +18,11 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
 /// DocumentationCommentId, Datei:Zeile:Spalte oder qualifizierter/teil-qualifizierter Name) zu
-/// genau einem Roslyn-<see cref="ISymbol"/> auf und liefert dessen Aufrufstellen ueber
-/// <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>. Deckt nur .cs-Dateien ab
+/// genau einem Roslyn-<see cref="ISymbol"/> auf und liefert dessen Aufrufstellen ueber den
+/// gemeinsamen strukturierten Traversal-Result-Typ. Deckt nur .cs-Dateien ab
 /// (Roslyn-Symbolgraph). Optionaler <c>depth</c>-Parameter (Default 1, hard cap 3) loest
-/// transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf und aggregiert sie zu
-/// einer Top-N-Antwort.
+/// transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf; Text und
+/// <c>structuredContent</c> werden aus derselben aggregierten Trefferliste erzeugt.
 /// </summary>
 internal static class FindReferencesTool
 {
@@ -57,52 +56,19 @@ internal static class FindReferencesTool
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-            var clampedDepth = Math.Clamp(depth, 1, CallGraphTraversal.MaxRecursionDepth);
-            string body;
-            bool isTruncated;
-            // StructuredContent nur fuer den depth=1-Flachfall — CallGraphTraversal
-            // (depth>1) baut Locations intern als reine Strings ohne strukturiertes Zwischenmodell;
-            // eine strukturierte Erweiterung dort waere ein groesserer Umbau (bewusst ausgelassen).
-            IReadOnlyList<CallSiteEntry>? entries = null;
-
-            if (clampedDepth == 1)
+            var traversal = await CallGraphTraversal.ExpandAsync(
+                solution, symbol!, depth, normalizedMaxResults, ct);
+            var body = TransitiveCallGraphFormatter.Format(traversal);
+            if (traversal.Completeness.TotalCallSiteCount == 0)
             {
-                var callSiteEntries = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol!, solution);
-                if (callSiteEntries.Count == 0)
-                {
-                    // Zero Treffer ist ein vollstaendiges, definitives Ergebnis (kein Aufrufer
-                    // existiert) — Sufficiency-Hinweis gilt.
-                    return McpToolResults.Text(McpSufficiencyHints.Append(FindSymbolTool.PrependWarning(
-                        warning, $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'")));
-                }
-                isTruncated = callSiteEntries.Count > normalizedMaxResults;
-                var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
-                body = McpTruncation.TruncateLines(callSites, callSites.Count, normalizedMaxResults);
-                entries = callSiteEntries.Count <= normalizedMaxResults
-                    ? callSiteEntries
-                    : callSiteEntries.Take(normalizedMaxResults).ToList();
-            }
-            else
-            {
-                body = await CallGraphTraversal.ExpandAndFormatAsync(
-                    solution, symbol!, clampedDepth, normalizedMaxResults, ct);
-                // ExpandAndFormatAsync liefert keine getrennte Truncated-Flag; die eigene
-                // Meta-Zeile enthaelt "hard-cap" nur bei tatsaechlicher Kappung (siehe
-                // CallGraphTraversal.AggregateAndTruncate) — Marker statt Signatur-Aenderung,
-                // um den bestehenden String-Vertrag von ExpandAndFormatAsync nicht zu brechen.
-                isTruncated = body.Contains("hard-cap", StringComparison.Ordinal);
+                body = $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'";
             }
 
-            // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — ein trunkiertes
-            // Ergebnis traegt bereits seine eigene Meta-Zeile ("depth reduzieren oder maxResults
-            // erhoehen"), die implizit "weitere Calls noetig" signalisiert.
-            var finalBody = isTruncated ? body : McpSufficiencyHints.Append(body);
+            var finalBody = TransitiveCallGraphFormatter.IsComplete(traversal)
+                ? McpSufficiencyHints.Append(body)
+                : body;
             var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-            // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
-            // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-            return entries is null
-                ? McpToolResults.Text(finalText)
-                : McpToolResults.Text(finalText, new { CallSites = entries });
+            return McpToolResults.Text(finalText, traversal);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

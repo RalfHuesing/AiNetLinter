@@ -224,9 +224,9 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 | :--- | :--- | :--- | :--- | :---: |
 | `get_namespace_tree` | `project?` (Projektname/Substring), `namespacePrefix?` (Start-Namespace), `depth?` (1-3, Default 1), `includeTypes?` (Default true), `kind?` (class/interface/record/struct/enum/all, Default all), `maxResults?` (Default 50, Cap 200) | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) | ja | ja |
 | `find_symbol` | `namePattern` (Substring), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` | ja | ja |
-| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; >1 = transitive Aufrufstellen, aggregiert) | Alle Aufrufstellen | ja | ja |
+| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen | ja | ja |
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`) | Echter Aufrufer- oder Aufgerufene-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; `incoming` fragt, wer das Symbol aufruft, `outgoing` fragt, welche Source-Symbole es aufruft, `both` liefert beide Richtungen abwechselnd, damit `topN` nicht eine Richtung vollständig aus der sichtbaren Ebene verdrängt; Traversierung hart begrenzt auf 250 Knoten | ja | ja |
-| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references` | ja | ja |
 | `get_type_hierarchy` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50, nur für abgeleitete/implementierende Typen) | Basisklassen, implementierte Interfaces (untrunkiert), abgeleitete/implementierende Typen (trunkiert), heuristische DI-Registrierungen (letzte Sektion) | ja | ja (nur abgeleitete/implementierende Typen) |
 | `dependency_graph` | `filePath?` (ganze Datei) **oder** `symbolIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
 | `get_file_skeleton` | `filePath?` (einzelner Pfad), `filePaths?` (Array von Pfaden fuer Batch in 1 Turn; relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
@@ -252,7 +252,36 @@ Die Testinformationen von `get_feature_context` und `get_test_context` sind eine
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (nur `depth=1`), `get_impact` (Symbol- und Git-Diff-Branch, jeweils `depth=1`), `dependency_graph` (alle `depth`-Werte), `find_duplicates` und `find_magic_values` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. Bei `find_references`/`get_impact` mit `depth>1` bleibt `structuredContent` bewusst leer, weil die transitive Traversierung intern keine strukturierten Zwischendaten haelt — `dependency_graph` haelt seine BFS-Kanten dagegen durchgehend als strukturierte `DependencyEdge`-Records (siehe unten), daher bleibt `structuredContent` dort auch bei `depth>1` gefuellt.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates` und `find_magic_values` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt seine bestehende `CallSiteEntry`-Form.
+
+**`find_references` / `get_impact` (Symbol-Branch) — transitive Structured Response:** Beide Tools liefern ein JSON-Objekt mit deterministisch sortierten und deduplizierten Treffern. `filePath` ist solution-relativ mit Forward-Slashes; `depth` ist die Traversierungsstufe; `reachedFromSymbolId` ist die stabile `DocumentationCommentId` des in diesem Schritt untersuchten Symbols (bei fehlender ID ein deterministischer qualifizierter Anzeigename).
+
+```json
+{
+  "callSites": [
+    {
+      "filePath": "src/App/OrderService.cs",
+      "line": 42,
+      "symbolName": "OrderService.PlaceAsync",
+      "projectName": "App",
+      "depth": 2,
+      "reachedFromSymbolId": "M:App.OrderFacade.PlaceAsync"
+    }
+  ],
+  "completeness": {
+    "requestedDepth": 2,
+    "effectiveDepth": 2,
+    "visitedNodeCount": 8,
+    "totalCallSiteCount": 14,
+    "shownCallSiteCount": 14,
+    "truncatedByMaxResults": false,
+    "truncatedByNodeLimit": false,
+    "depthWasClamped": false
+  }
+}
+```
+
+`totalCallSiteCount` zählt die ungekappte Menge innerhalb des Traversierungs-Hard-Caps; `shownCallSiteCount` zählt die tatsächlich in `callSites` enthaltenen Einträge. `truncatedByMaxResults`, `truncatedByNodeLimit` und `depthWasClamped` sind unabhängig voneinander und können gleichzeitig `true` sein. Die Textantwort wird aus derselben gezeigten Trefferliste formatiert und bleibt für Textclients kompatibel.
 
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
@@ -540,11 +569,14 @@ in der ID disambiguiert (`ProcessOrder(int)` vs.
 #### `depth`-Parameter fuer `find_references` / `get_impact` (E.2)
 
 Beide Tools haben einen optionalen `depth`-Parameter (Default 1, hard
-cap 3). `depth = 1` liefert direkte Aufrufstellen. `depth > 1`
+cap 3). `depth = 1` liefert direkte Aufrufstellen; `depth > 1`
 loest transitive Aufrufstellen ueber `SymbolFinder.FindReferencesAsync`
-und aggregiert sie zu einer Top-N-Antwort mit explizitem `depth`-Marker
-in der Trunkierungs-Meta-Zeile. Separates Knotenlimit (200) verhindert
-exponentielle Explosion bei grossen Symbolgraphen.
+und aggregiert sie zu derselben strukturierten `callSites`/`completeness`-
+Antwortform. Die Eintraege werden vor der `maxResults`-Kappung dedupliziert
+und deterministisch nach Tiefe, Pfad, Zeile und Symbolname sortiert.
+`completeness` trennt `maxResults`, das Knotenlimit von 200 besuchten
+Symbolen und einen auf 3 gekappten Depth-Wert. Text und StructuredContent
+werden aus einer gemeinsamen Aggregation erzeugt.
 
 `get_impact` ignoriert `depth` im Git-Branch (es gibt keine Symboltiefe
 fuer `gitRef`-basierte Diff-Analyse).

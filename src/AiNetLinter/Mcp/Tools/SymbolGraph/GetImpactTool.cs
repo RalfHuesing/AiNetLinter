@@ -17,8 +17,10 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <paramref name="symbolIdentifier"/> (delegiert an
 /// <see cref="FindReferencesTool.ResolveSymbolAsync"/> + <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>).
 /// Optionaler <c>depth</c>-Parameter (Default 1, hard cap 3) wirkt nur im Symbol-Branch; der
-/// Git-Branch ignoriert ihn, weil eine Git-Diff-Symboltiefe nicht sinnvoll definiert ist.
-/// Bewusst duenner Dispatch ohne eigene Analyse-/Parsing-Logik. Deckt nur .cs-Dateien ab.
+/// Git-Branch ignoriert ihn, weil eine Git-Diff-Symboltiefe nicht sinnvoll definiert ist. Der
+/// Symbol-Branch liefert fuer jede erlaubte Tiefe dieselbe strukturierte Antwortform wie
+/// <c>find_references</c>. Bewusst duenner Dispatch ohne eigene Analyse-/Parsing-Logik. Deckt
+/// nur .cs-Dateien ab.
 /// </summary>
 internal static class GetImpactTool
 {
@@ -50,39 +52,16 @@ internal static class GetImpactTool
 
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
-        var clampedDepth = Math.Clamp(input.Depth, 1, CallGraphTraversal.MaxRecursionDepth);
-        string body;
-        // StructuredContent nur fuer den depth=1-Flachfall — siehe FindReferencesTool fuer
-        // die identische, dort ausfuehrlicher begruendete Entscheidung (CallGraphTraversal baut
-        // depth>1-Locations intern als reine Strings ohne strukturiertes Zwischenmodell).
-        IReadOnlyList<CallSiteEntry>? entries = null;
-
-        if (clampedDepth == 1)
+        var traversal = await CallGraphTraversal.ExpandAsync(
+            solution, symbol!, input.Depth, effectiveMax, ct);
+        var body = TransitiveCallGraphFormatter.Format(traversal);
+        if (traversal.Completeness.TotalCallSiteCount == 0)
         {
-            var callSiteEntries = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol!, solution);
-            if (callSiteEntries.Count == 0)
-            {
-                return McpToolResults.Text(FindSymbolTool.PrependWarning(
-                    warning, $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'"));
-            }
-            var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
-            body = McpTruncation.TruncateLines(callSites, callSites.Count, effectiveMax);
-            entries = callSiteEntries.Count <= effectiveMax
-                ? callSiteEntries
-                : callSiteEntries.Take(effectiveMax).ToList();
-        }
-        else
-        {
-            body = await CallGraphTraversal.ExpandAndFormatAsync(
-                solution, symbol!, clampedDepth, effectiveMax, ct);
+            body = $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'";
         }
 
         var finalText = FindSymbolTool.PrependWarning(warning, body);
-        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
-        // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        return entries is null
-            ? McpToolResults.Text(finalText)
-            : McpToolResults.Text(finalText, new { CallSites = entries });
+        return McpToolResults.Text(finalText, traversal);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input)

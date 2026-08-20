@@ -6,7 +6,7 @@ estimated_scope: large
 priority: P0
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
-last_updated: 2026-08-20
+last_updated: 2026-08-21
 open_questions: []
 ---
 
@@ -68,7 +68,7 @@ Die wissenschaftliche Begründung ist bewusst begrenzt: Liu et al. zeigen, dass 
 |---:|---|---|---|---|---|
 | 1 | [01_dokumentations-und-begriffsdrift-beseitigen.md](01_dokumentations-und-begriffsdrift-beseitigen.md) | **erledigt** | P0 | keine | Verträge und Begriffe werden faktisch korrekt; keine veralteten hartcodierten Toolzahlen |
 | 2 | [02_discovery-kontextbudget-und-protokolltests.md](02_discovery-kontextbudget-und-protokolltests.md) | **erledigt** | P0 | Aufgabe 01 | mindestens 60 % weniger globale Instructions-Bytes; Legacy und MCP 2026-07-28 auf dem Wire abgesichert |
-| 3 | [03_transitive-symbolgraph-ausgaben-strukturieren.md](03_transitive-symbolgraph-ausgaben-strukturieren.md) | offen | P1 | Aufgabe 02 | `depth > 1` bleibt maschinell auswertbar und kommuniziert Vollständigkeit explizit |
+| 3 | [03_transitive-symbolgraph-ausgaben-strukturieren.md](03_transitive-symbolgraph-ausgaben-strukturieren.md) | **erledigt** | P1 | Aufgabe 02 | `depth > 1` bleibt maschinell auswertbar und kommuniziert Vollständigkeit explizit |
 | 4 | [04_get-impact-zum-diff-kontext-erweitern.md](04_get-impact-zum-diff-kontext-erweitern.md) | offen | P2 | Aufgabe 03 | ein deterministischer Aufruf liefert für einen Diff Symbole, Impact, Test-Zuordnung und direkte Violations |
 | 5 | [05_tool-annotations-korrekt-setzen.md](05_tool-annotations-korrekt-setzen.md) | offen | P2 | Aufgabe 02 | Hosts erhalten korrekte Side-Effect- und Trust-Metadaten statt SDK-Defaults |
 | 6 | [06_tools-list-cachehinweise-setzen.md](06_tools-list-cachehinweise-setzen.md) | offen | P3 | Aufgabe 02 | standardkonforme Clients dürfen die statische Toolliste zwischenspeichern |

@@ -1,12 +1,12 @@
 ---
-status: ready
+status: done
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
 priority: P1
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
-last_updated: 2026-08-20
+last_updated: 2026-08-21
 open_questions: []
 ---
 
@@ -18,11 +18,11 @@ open_questions: []
 
 ## Warum / Kontext
 
-Die aktuelle Implementierung dokumentiert den Strukturverlust direkt im Code:
+Vor der Umsetzung dokumentierte die Implementierung den Strukturverlust direkt im Code:
 
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`: bei `depth > 1` wird kein `structuredContent` geliefert, weil `CallGraphTraversal` Strings erzeugt.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`: bei `depth > 1` wurde kein `structuredContent` geliefert, weil `CallGraphTraversal` Strings erzeugte.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/GetImpactTool.cs`: identische Einschränkung.
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`: `ExpandAndFormatAsync` und `TraversalState` aggregieren formatierte Locations statt eines Ergebnisobjekts.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`: `ExpandAndFormatAsync` und `TraversalState` aggregierten nur formatierte Locations statt eines Ergebnisobjekts.
 
 Textparsing ist unnötig fehleranfällig und verliert Tiefe, Herkunftskante und getrennte Trunkierungsgründe. Das ist ein konkret belegter Qualitätsverlust der API, unabhängig vom verwendeten LLM.
 
@@ -139,3 +139,11 @@ Bei recoverable Fehlern bleibt die bestehende `isError`-Policy erhalten; es muss
 - Dokumentation und Tool-Descriptions sind aktualisiert.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
 
+## Verifiziertes Ergebnis (2026-08-21)
+
+- `ReferenceTraversalResult` hält strukturierte Treffer und `TraversalCompleteness`; `find_references` und der Symbol-Branch von `get_impact` liefern diese Form für `depth=1` bis zum Hard-Cap.
+- Treffer werden vor `maxResults` dedupliziert und deterministisch sortiert; `maxResults`, Node-Cap und Depth-Clamp werden separat ausgewiesen.
+- Text und StructuredContent werden aus derselben gezeigten Trefferliste erzeugt; der Git-Diff-Branch behält `CallSiteEntry`.
+- Mehrprojekt-Fixture, `depth=3`, Herkunft/Tiefe, Node-Cap, stabile Reihenfolge und Raw-Wire-JSON-Objekt sind getestet.
+- DRY-Audit: keine Exact-Duplikate; strukturell ähnliche Sortierlogik wurde konsolidiert. Dead-Code-Audit: 0 Treffer. Magic-Value-Audit: keine neuen unbenannten Werte im geänderten Code.
+- Verifikation: `dotnet build`, `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` und `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`.
