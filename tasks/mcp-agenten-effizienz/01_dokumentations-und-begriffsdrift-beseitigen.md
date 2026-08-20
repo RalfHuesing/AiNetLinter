@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 type: konzept
 project_kind: brownfield
 estimated_scope: small

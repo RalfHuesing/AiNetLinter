@@ -743,7 +743,7 @@ Punktgenaue Symbol-Analyse (Methoden, Konstruktoren, Properties, Typen) in einem
 
 ## Composite One-Shot-Exploration: `get_feature_context` (Feature 01)
 
-Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) in einem einzigen residenten Aufruf vor Feature-Edits/Refactorings:
+Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) in einem einzigen residenten Aufruf vor Feature-Edits/Refactorings:
 
 - [x] **Symbol-Auflösung & Composite Facade:**
   - Unterstützt Name, `Datei.cs:Zeile`, `Datei.cs:Zeile:Spalte` und `DocCommentId` über `FindReferencesTool.ResolveSymbolAsync`.
@@ -758,7 +758,7 @@ Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-A
 
 ---
 
-## Test-Coverage-Awareness: `get_test_context` (Feature 02)
+## Statische Test-Zuordnung: `get_test_context` (Feature 02)
 
 Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, Test-Kategorien (Unit/Integration) und direkt ausführbare `dotnet test` Filterbefehle für ein C#-Symbol:
 
@@ -769,7 +769,7 @@ Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, T
   - Nutzt `TestCoverageScanner.FindTestsForSymbolAsync` ohne Duplikation.
   - Auslagerung von Match-Reason- und Category-Literalen in typsichere `TestCoverageMatchReasons` und `TestCategories` Konstanten.
 - [x] **Diagnose & Structured Output:**
-  - Klare Diagnosehinweise und empfohlene Pfade für ungetestete Symbole.
+  - Klare Diagnosehinweise und empfohlene Testpfade, wenn keine Tests statisch zugeordnet sind.
   - Vollständiges typisiertes `TestContextPayload` in `structuredContent`.
   - Direkte `dotnet test --filter ...` Befehlsempfehlungen im Markdown-Report.
 - [x] **Tests & Dokumentation:**
