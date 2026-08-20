@@ -157,6 +157,12 @@ public sealed class LinterArgs
     public string? McpLogPath { get; init; }
 
     /// <summary>
+    /// Optionale PID des Elternprozesses, dessen Ende den MCP-Server beendet.
+    /// Bei <see langword="null"/> wird die PID automatisch ermittelt.
+    /// </summary>
+    public int? ParentPid { get; init; }
+
+    /// <summary>
     /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
     /// </summary>
     public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()
@@ -203,6 +209,11 @@ public sealed class LinterArgs
         if (OnlyChanged && BaselinePath == null)
         {
             return "[ERROR]: --only-changed erfordert --baseline.";
+        }
+
+        if (ParentPid is <= 0)
+        {
+            return "[ERROR]: --parent-pid muss eine positive Prozess-ID sein.";
         }
 
         return ValidateIgnoreSuppressions();

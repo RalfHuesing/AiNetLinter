@@ -44,4 +44,13 @@ public sealed class ProgramParsingTests
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.True(parsed.SyncAgentRulesOnly);
     }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_ParentPid()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", "--parent-pid", "1234" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal(1234, parsed.ParentPid);
+    }
 }

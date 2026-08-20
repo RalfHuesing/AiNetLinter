@@ -65,7 +65,7 @@ internal static class GetFileSkeletonTool
 
         for (var i = 0; i < paths.Count; i++)
         {
-            if (i > 0) AppendDivider(mb);
+            if (i > 0) mb.Divider();
 
             var earlyError = await RenderSingleFileSkeletonAsync(
                 solution, paths[i], solutionDir, diagnosticsByFile, mb, paths.Count, ct);
@@ -75,13 +75,6 @@ internal static class GetFileSkeletonTool
 
         var markdown = mb.Build().TrimEnd();
         return McpToolResults.Text(markdown);
-    }
-
-    private static void AppendDivider(MarkdownBuilder mb)
-    {
-        mb.BlankLine();
-        mb.Line("---");
-        mb.BlankLine();
     }
 
     private static async Task<CallToolResult?> RenderSingleFileSkeletonAsync(

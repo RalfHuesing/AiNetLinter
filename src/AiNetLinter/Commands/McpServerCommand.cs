@@ -11,6 +11,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Output;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,13 @@ internal static class McpServerCommand
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;
+        if (args.ParentPid is <= 0)
+        {
+            c.WriteError("[ERROR]: --parent-pid muss eine positive Prozess-ID sein.");
+            return 1;
+        }
+
+        await using var lifetime = McpServerLifetime.Start(args.ParentPid, ct, c.WriteError);
         var solutionPath = ResolveSolutionPathOrError(args.TargetPath, c);
         if (solutionPath is null) return 1;
 
@@ -81,7 +89,14 @@ internal static class McpServerCommand
 
         var transport = new StdioServerTransport(serverOptions);
         await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);
-        await server.RunAsync(ct);
+        try
+        {
+            await server.RunAsync(lifetime.Token);
+        }
+        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
+        {
+        }
+
         return 0;
     }
 

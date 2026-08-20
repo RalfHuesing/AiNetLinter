@@ -37,9 +37,10 @@ public sealed class McpProcessArchitectureGuardTests
             $"Nicht besitzende StdioClientTransport-Callsite: {source.Path}"));
 
         var processCallsites = sources.Where(source => source.Text.Contains("Process.Start(", StringComparison.Ordinal)).ToList();
-        Assert.Equal(2, processCallsites.Count);
+        Assert.Equal(3, processCallsites.Count);
         Assert.All(processCallsites, source => Assert.True(
             source.Path.EndsWith(Path.Combine("Mcp", "McpServerCommandJsonRpcFramingTests.cs"), StringComparison.Ordinal) ||
+            source.Path.EndsWith(Path.Combine("Mcp", "McpServerLifetimeTests.cs"), StringComparison.Ordinal) ||
             source.Path.EndsWith(Path.Combine("Fixtures", "FixtureWorkspaces.cs"), StringComparison.Ordinal),
             $"Nicht besitzende Process.Start-Callsite: {source.Path}"));
 

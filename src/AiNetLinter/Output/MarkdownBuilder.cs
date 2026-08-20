@@ -125,6 +125,9 @@ internal sealed class MarkdownBuilder
         return this;
     }
 
+    internal MarkdownBuilder Divider() =>
+        BlankLine().Line("---").BlankLine();
+
     internal MarkdownBuilder BulletList(IEnumerable<string> items)
     {
         foreach (var item in items)

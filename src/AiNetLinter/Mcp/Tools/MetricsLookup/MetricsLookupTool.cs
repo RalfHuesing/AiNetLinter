@@ -71,7 +71,7 @@ internal static class MetricsLookupTool
 
         for (var i = 0; i < identifiers.Count; i++)
         {
-            if (i > 0) AppendDivider(mb);
+            if (i > 0) mb.Divider();
 
             var (dto, earlyError) = await RenderSingleLookupAsync(
                 solution, config, identifiers[i], solutionRoot, mb, identifiers.Count, ct);
@@ -87,13 +87,6 @@ internal static class MetricsLookupTool
         return identifiers.Count == 1 && dtos.Count == 1
             ? McpToolResults.Text(finalText, dtos[0])
             : McpToolResults.Text(finalText, dtos);
-    }
-
-    private static void AppendDivider(MarkdownBuilder mb)
-    {
-        mb.BlankLine();
-        mb.Line("---");
-        mb.BlankLine();
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(

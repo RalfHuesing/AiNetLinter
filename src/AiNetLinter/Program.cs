@@ -105,6 +105,7 @@ public static class Program
             IgnoreSuppressions = parsed.IgnoreSuppressions,
             McpServer = parsed.McpServer,
             McpLogPath = parsed.McpLog,
+            ParentPid = parsed.ParentPid,
         };
     }
 

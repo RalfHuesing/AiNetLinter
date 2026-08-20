@@ -93,6 +93,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
 | `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
 | `--mcp-log [pfad]` | string | Konfiguriert das Observability- & Tool-Call-Logging (Default: aktiv unter `%LOCALAPPDATA%`, 'off' zum Deaktivieren) |
+| `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
@@ -198,9 +199,12 @@ Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Curs
 ```bash
 ainetlinter --mcp-server            # sucht .sln/.slnx im aktuellen Verzeichnis
 ainetlinter --mcp-server --path <Datei/Verzeichnis>   # explizite Ziel-Solution
+ainetlinter --mcp-server --parent-pid <pid>            # optionale explizite Parent-PID
 ```
 
 Bei `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) skaliert mit der Solution-Größe; Tool-Calls arbeiten gegen den resident geladenen Workspace und benötigen keinen erneuten Solution-Load.
+
+Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
 Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
 

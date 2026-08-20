@@ -77,7 +77,7 @@ internal static class GetSymbolBodyTool
 
         for (var i = 0; i < identifiers.Count; i++)
         {
-            if (i > 0) AppendDivider(mb);
+            if (i > 0) mb.Divider();
 
             var earlyError = await RenderSingleSymbolAsync(
                 solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, ct);
@@ -89,13 +89,6 @@ internal static class GetSymbolBodyTool
         var isTruncated = markdown.Contains(TruncationMarker, StringComparison.Ordinal);
         var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
         return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, final));
-    }
-
-    private static void AppendDivider(MarkdownBuilder mb)
-    {
-        mb.BlankLine();
-        mb.Line("---");
-        mb.BlankLine();
     }
 
     private static async Task<CallToolResult?> RenderSingleSymbolAsync(

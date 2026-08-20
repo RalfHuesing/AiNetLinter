@@ -8,34 +8,16 @@ using Xunit;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
+using AiNetLinter.IntegrationTests;
 
 namespace AiNetLinter.IntegrationTests.Metrics;
 
 [Trait("Category", "Integration")]
 public sealed class MaxDirectoryChildrenTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("AiNetLinterDirTest_");
 
-    public MaxDirectoryChildrenTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AiNetLinterDirTest_" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
-        }
-        catch
-        {
-            // Ignored on test cleanup
-        }
-    }
+    public void Dispose() => _tempDir.Dispose();
 
     private static Config CreateConfig(int limit, string[]? exemptNames = null) =>
         new Config

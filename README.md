@@ -68,9 +68,12 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 ```bash
 ainetlinter --mcp-server                              # sucht .sln/.slnx im aktuellen Verzeichnis
 ainetlinter --mcp-server --path ./src/MeinProjekt.slnx # explizite Ziel-Solution
+ainetlinter --mcp-server --parent-pid 1234             # optionale explizite Parent-PID
 ```
 
 Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hält sie über die Prozesslaufzeit resident — Tool-Calls arbeiten gegen den geladenen Zustand statt gegen wiederholte Disk-Scans, und werden bei Dateiänderungen inkrementell aktualisiert (Datei-`mtime` + SHA-256-Hash-Vergleich, kein Komplett-Reload).
+
+Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und beendet sich bei dessen Ende sauber. Mit `--parent-pid <pid>` kann die zu überwachende Prozess-ID für Wrapper-Skripte oder Spezialumgebungen explizit gesetzt werden.
 
 | Tool | Zweck |
 | :--- | :--- |

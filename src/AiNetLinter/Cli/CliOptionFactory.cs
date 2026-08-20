@@ -207,6 +207,11 @@ internal static class CliOptionFactory
         Arity = ArgumentArity.ZeroOrOne,
     };
 
+    internal static Option<int?> CreateParentPidOption() => new("--parent-pid")
+    {
+        Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
+    };
+
     internal static Option<string[]> CreateIgnoreSuppressionsOption()
     {
         var opt = new Option<string[]>("--ignore-suppressions")

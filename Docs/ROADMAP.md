@@ -437,6 +437,7 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   - **Tests:** 14 Tests in `McpCallLogTests` (10 alt + 4 `ExecuteCallAsync` neu), 9 Tests in `McpServerCommandCallLogTests` (1 obsoleter Test geloescht, 3 auf neue 4-Parameter-Signatur umgestellt, 4 neue fuer Default-Pfad-Konstruktion inkl. `BuildDefaultLogPath`-Helper, 2 unveraenderte `ResolveMcpLogPath_*`), 4 neue `RecordError`-Tests (Schema, Lock-Reihenfolge, 4-KB-Stack-Trace-Cap), alle gruen; `dotnet test`-Volllauf 1279/1279 gruen.
 - [x] **EPIC-10 — `get_call_tree` (echter Baum, ASCII/Mermaid): umgesetzt** — fuenftes Symbolgraph-Tool (`SymbolGraphToolRegistrations`), Caller-Tree-Traversierung ueber `CallGraphTraversal.BuildTreeAsync` (eigene Grenzwerte: depth hard cap 5, Knoten hard cap 250, `topN`-Fan-Out-Kappung pro Ebene), Ausgabe als ASCII-Baum (`MetricsTreeRenderer`/`MetricsTreeNode` aus `metrics_tree` wiederverwendet statt eines dritten ASCII-Renderers) oder Mermaid-`flowchart TD` (neuer `CallTreeMermaidRenderer`). Revidiert die in `02-ainetlinter-mcp-current.md` dokumentierte fruehere Konzept-Entscheidung ("bewusst kein `get_call_tree`").
 - [x] **EPIC-10-Erweiterung — `direction` fuer `get_call_tree`:** `incoming` bleibt der Default; `outgoing` traversiert InvocationExpressions, ObjectCreation und MemberAccess per SemanticModel transitiv, `both` liefert beide Richtungen abwechselnd innerhalb des Fan-Outs. ASCII/Mermaid, `topN` und der 250-Knoten-Hardcap gelten fuer alle Richtungen; ungueltige Werte liefern recoverable `INVALID_ARGUMENT`.
+- [x] **EPIC-11 — MCP-Server-Lebenszyklus:** Parent-Prozess-Watchdog mit automatischer PID-Ermittlung (Windows `NtQueryInformationProcess`, Linux `/proc`, macOS `getppid()`), optionaler CLI-Option `--parent-pid <pid>`, CancellationToken-Verknüpfung und Exit-Code `0` bei Parent-Exit. Fast-Tests für Erkennung/Watchdog sowie ein E2E-Test für die Prozessbeendigung sichern das Verhalten ab.
 
 ### Nächste Phase — P0/P1-Rest-Erweiterungen (Konzept Z. 207-324)
 
@@ -779,5 +780,4 @@ Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, T
 ---
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
-
 

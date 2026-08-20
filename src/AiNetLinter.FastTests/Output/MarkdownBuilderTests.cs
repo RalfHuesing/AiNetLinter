@@ -202,6 +202,14 @@ public sealed class MarkdownBuilderTests
     }
 
     [Fact]
+    public void Divider_ErzeugtMarkdownTrennlinie()
+    {
+        var output = new MarkdownBuilder().Line("vor").Divider().Line("nach").Build();
+
+        Assert.Equal("vor\n\n---\n\nnach\n", output);
+    }
+
+    [Fact]
     public void BulletList_PraefixMinusProElement()
     {
         var mb = new MarkdownBuilder();

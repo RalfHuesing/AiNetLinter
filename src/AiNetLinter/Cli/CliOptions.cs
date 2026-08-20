@@ -42,7 +42,8 @@ internal sealed record CliOptions(
     Option<bool> PublicOnly,
     Option<string[]> IgnoreSuppressions,
     Option<bool> McpServer,
-    Option<string?> McpLog);
+    Option<string?> McpLog,
+    Option<int?> ParentPid);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Playbook, Verbose).
@@ -113,4 +114,5 @@ internal sealed record CliParsedArgs(
     bool PublicOnly,
     IReadOnlyList<string>? IgnoreSuppressions,
     bool McpServer,
-    string? McpLog);
+    string? McpLog,
+    int? ParentPid);

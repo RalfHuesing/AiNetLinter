@@ -247,6 +247,21 @@ Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder �
 
 **Opt-in Call-Log:** fuer Production-Monitoring kann der registrierte `ainetlinter`-Aufruf um `--mcp-log <pfad>` ergaenzt werden — siehe [Docs/agent-api.md#call-log-opt-in](agent-api.md#call-log-opt-in) fuer Format und Pfad-Aufloesung. Default: deaktiviert, kein File I/O.
 
+**Parent-Lebenszyklus:** Ohne weitere Argumente ermittelt der Server die PID des MCP-Hosts automatisch und beendet sich sauber, sobald dieser Prozess endet. Für Wrapper-Skripte kann die Ziel-PID mit `--parent-pid <pid>` explizit gesetzt werden:
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server", "--parent-pid", "1234"]
+    }
+  }
+}
+```
+
+Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-Prozess über das jeweilige Betriebssystem und löst bei dessen Ende den Server-Shutdown aus; ein separates Idle-Timeout oder eine Job-Object-Konfiguration ist nicht erforderlich.
+
 ### cwd-Verhalten
 
 Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.

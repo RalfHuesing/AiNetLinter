@@ -12,28 +12,9 @@ namespace AiNetLinter.IntegrationTests.Maps;
 [Trait("Category", "Integration")]
 public sealed class HotspotMapBuilderTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("HotspotMapTests_");
 
-    public HotspotMapBuilderTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "HotspotMapTests_" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
-        }
-        catch
-        {
-            // Ignored on test cleanup
-        }
-    }
+    public void Dispose() => _tempDir.Dispose();
 
     private string CreateTempFiles(params (string FileName, string Content)[] files)
     {
