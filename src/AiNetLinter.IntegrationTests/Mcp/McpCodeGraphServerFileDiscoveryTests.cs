@@ -91,4 +91,26 @@ public sealed class McpCodeGraphServerFileDiscoveryTests
 
         Assert.DoesNotContain(generatedFile, knownPaths);
     }
+
+    [Fact]
+    public async Task GetCurrentSolution_NewFileAddedInProjectDirectory_AppearsInMatchingProject()
+    {
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        _ = server.GetCurrentSolution();
+
+        var newFile = Path.Combine(fixture.RootPath, "src", "BaselineMini", "SubDir", "NewlyAddedClass.cs");
+        Directory.CreateDirectory(Path.GetDirectoryName(newFile)!);
+        File.WriteAllText(newFile, "namespace BaselineMini.SubDir; public class NewlyAddedClass { }");
+
+        var updatedSolution = server.GetCurrentSolution();
+        Assert.NotNull(updatedSolution);
+
+        var matchingProject = updatedSolution!.Projects.FirstOrDefault(p => p.Name == "BaselineMini");
+        Assert.NotNull(matchingProject);
+        Assert.Contains(matchingProject!.Documents, d => string.Equals(d.FilePath, newFile, System.StringComparison.OrdinalIgnoreCase));
+    }
 }

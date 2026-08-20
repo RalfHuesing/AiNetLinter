@@ -248,24 +248,34 @@ internal static class McpCodeGraphServerRefresh
     }
 
     /// <summary>
-    /// Heuristik fuer die Projekt-Wahl beim Verzeichnis-Sweep: erstes Nicht-Test-Projekt,
-    /// dessen Quellpfad-Praefix die neue Datei enthaelt. Best-Effort — bewusst ohne
-    /// Resolving von <c>&lt;Compile Remove=…&gt;</c>-Ausschluessen aus .csproj-Dateien,
-    /// weil das Mitlesen der MSBuild-Syntax die Verantwortlichkeit der Klasse sprengen
-    /// wuerde. Liefert <see langword="null"/>, wenn keine Projekt-Verzeichnis dem Pfad der
-    /// neuen Datei als Praefix entspricht — der Aufrufer ueberspringt die Datei dann
-    /// (kein Fallback auf "erstes Projekt der Solution" mehr, siehe <see cref="SweepForNewFiles"/>).
+    /// Ermittelt das passendste Projekt fuer eine neu entdeckte Datei anhand des
+    /// Projektverzeichnisses. Waehlt das Projekt mit dem laengsten uebereinstimmenden
+    /// Pfadpraefix (inkl. Verzeichnistrenner-Abgleich), sodass Unter- und Testprojekte
+    /// (z. B. src/AiNetLinter.FastTests) Vorrang vor uebergeordneten oder praefixaehnlichen
+    /// Projekten (z. B. src/AiNetLinter) erhalten. Liefert null, wenn die Datei in keinem
+    /// bekannten Projektverzeichnis liegt.
     /// </summary>
-    private static ProjectId? PickProjectForNewFile(Solution solution, string newFilePath)
+    internal static ProjectId? PickProjectForNewFile(Solution solution, string newFilePath)
     {
-        var dir = Path.GetDirectoryName(newFilePath);
-        if (string.IsNullOrEmpty(dir)) return null;
+        var fileDir = Path.GetDirectoryName(newFilePath);
+        if (string.IsNullOrEmpty(fileDir)) return null;
 
         return solution.Projects
-            .Where(p => !p.Name.Contains("Test", StringComparison.OrdinalIgnoreCase))
-            .FirstOrDefault(p => p.FilePath != null
-                && Path.GetDirectoryName(p.FilePath) is { } pdir
-                && dir.StartsWith(pdir, StringComparison.OrdinalIgnoreCase))
+            .Where(p => p.FilePath != null && IsDirectoryInside(fileDir, Path.GetDirectoryName(p.FilePath)!))
+            .OrderByDescending(p => Path.GetDirectoryName(p.FilePath)!.Length)
+            .FirstOrDefault()
             ?.Id;
+    }
+
+    private static bool IsDirectoryInside(string dir, string parentDir)
+    {
+        var normalizedDir = dir.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+                               .TrimEnd(Path.DirectorySeparatorChar);
+        var normalizedParent = parentDir.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+                                        .TrimEnd(Path.DirectorySeparatorChar);
+
+        if (string.Equals(normalizedDir, normalizedParent, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return normalizedDir.StartsWith(normalizedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 }
