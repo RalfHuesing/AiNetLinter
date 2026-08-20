@@ -61,7 +61,11 @@ public sealed class FindMagicValuesToolTests
             Config = options.Config,
             UsedDefaultConfig = options.UsedDefaultConfig,
             ResolvedConfigPath = options.ResolvedConfigPath,
-            LoadFunc = _ => neverCompletes.Task,
+            LoadFunc = async token =>
+            {
+                await neverCompletes.Task.WaitAsync(token);
+                return null;
+            },
         };
         using var state = new McpCodeGraphServer(optionsWithLoad);
 
