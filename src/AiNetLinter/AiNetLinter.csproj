@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>1.0.116</Version>
+    <Version>1.0.117</Version>
   </PropertyGroup>
 
   <ItemGroup>
