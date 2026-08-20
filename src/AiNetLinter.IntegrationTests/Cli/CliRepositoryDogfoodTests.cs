@@ -76,6 +76,7 @@ public sealed class CliRepositoryDogfoodTests
             Verbose = false,
             ConfigPath = configPath,
             SyncAgentRules = true,
+            AgentRulesPath = tempDir.GetPath("AiNetLinter.mdc"),
             PlaybookPath = tempPlaybookPath,
         };
         var console = new RecordingLintConsole();
