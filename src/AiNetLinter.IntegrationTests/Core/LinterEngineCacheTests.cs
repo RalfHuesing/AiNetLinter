@@ -17,30 +17,11 @@ namespace AiNetLinter.IntegrationTests.Core;
 [Trait("Category", "Integration")]
 public sealed class LinterEngineCacheTests : IDisposable
 {
-    private readonly string _tempDir;
-    private readonly string _exeDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-enginecache-");
+    private readonly string _exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-    public LinterEngineCacheTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ainetlinter-enginecache-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        _exeDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
-    }
+    public void Dispose() => _tempDir.Dispose();
 
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
-        }
-        catch (Exception ignored)
-        {
-            System.Diagnostics.Debug.WriteLine($"Cleanup failed: {ignored.Message}");
-        }
-    }
 
     private static Config CreateDefaultConfig()
     {
@@ -117,7 +98,7 @@ public class MyUnsealedClass
         var config = CreateDefaultConfig();
         // _tempDir contains a unique GUID → unique cache-file name per test run.
         // Without this, stale cache from a failed Dispose causes flakiness on re-runs.
-        var rulesJson = $"{{ \"Global\": {{ \"EnforceSealedClasses\": true }}, \"_testRun\": \"{_tempDir.Replace("\\", "\\\\")}\" }}";
+        var rulesJson = $"{{ \"Global\": {{ \"EnforceSealedClasses\": true }}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\" }}";
 
         // 2. Run engine first time — cache miss → fresh analysis
         var engine = new LinterEngine(config, rulesJson);
@@ -169,7 +150,7 @@ public class MyUnsealedClass
         var fileName = "MyUnsealedClass.cs";
         var solution = await CreateSolutionWithFileOnDiskAsync(fileName, source);
         var config = CreateDefaultConfig();
-        var rulesJson = $"{{\"Global\": {{\"EnforceSealedClasses\": true}}, \"_testRun\": \"{_tempDir.Replace("\\", "\\\\")}\"}}";
+        var rulesJson = $"{{\"Global\": {{\"EnforceSealedClasses\": true}}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\"}}";
 
         // 2. Wrap solution in a catalog that has loading errors
         var catalog = new SourceFileCatalog(solution, hasLoadingErrors: true);

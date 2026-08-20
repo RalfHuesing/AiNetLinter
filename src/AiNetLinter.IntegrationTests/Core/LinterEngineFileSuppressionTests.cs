@@ -44,9 +44,8 @@ public sealed class LinterEngineFileSuppressionTests
 
     private static async Task<Solution> CreateSolutionWithFileOnDiskAsync(string fileName, string content)
     {
-        var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"ainetlinter-engine-{Guid.NewGuid():N}")).FullName;
-        var filePath = Path.Combine(tempDir, fileName);
-        await File.WriteAllTextAsync(filePath, content);
+        var tempDir = TestTempDirectory.Create("ainetlinter-engine-");
+        var filePath = tempDir.CreateFile(fileName, content);
 
         var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId();

@@ -134,7 +134,7 @@ public sealed class RoslynTestSolutionFactoryTests
     public void CreateSolution_WithVirtualPath_AssignsNormalizedPathsWithoutMaterializingFiles()
     {
         var virtualSolutionFilePath = Path.Combine(
-            Path.GetTempPath(),
+            TestTempDirectory.RootTempDirectory,
             $"ainetlinter-virtual-{Guid.NewGuid():N}",
             "Virtual.slnx");
 

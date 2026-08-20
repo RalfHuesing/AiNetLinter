@@ -1,3 +1,6 @@
+#nullable enable
+
+using System.Collections.Generic;
 using AiNetLinter.Baseline;
 using Xunit;
 
@@ -9,55 +12,39 @@ public sealed class BaselineReaderWriterTests
     [Fact]
     public void WriteAndRead_Roundtrip_PreservesChecksums()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
-        try
-        {
-            var checksums = new Dictionary<string, string>
-            {
-                ["src/B.cs"] = "bbb",
-                ["src/A.cs"] = "aaa",
-            };
+        using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
+        var tempFile = tempDir.GetPath("baseline.json");
 
-            BaselineWriter.Write(tempFile, checksums);
-            var loaded = BaselineReader.Read(tempFile);
-
-            Assert.Equal(1, loaded.Version);
-            Assert.Equal("aaa", loaded.Files["src/A.cs"]);
-            Assert.Equal("bbb", loaded.Files["src/B.cs"]);
-        }
-        finally
+        var checksums = new Dictionary<string, string>
         {
-            if (File.Exists(tempFile))
-            {
-                File.Delete(tempFile);
-            }
-        }
+            ["src/B.cs"] = "bbb",
+            ["src/A.cs"] = "aaa",
+        };
+
+        BaselineWriter.Write(tempFile, checksums);
+        var loaded = BaselineReader.Read(tempFile);
+
+        Assert.Equal(1, loaded.Version);
+        Assert.Equal("aaa", loaded.Files["src/A.cs"]);
+        Assert.Equal("bbb", loaded.Files["src/B.cs"]);
     }
 
     [Fact]
     public void Write_SortsKeysDeterministically()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
-        try
-        {
-            BaselineWriter.Write(tempFile, new Dictionary<string, string>
-            {
-                ["src/Z.cs"] = "z",
-                ["src/A.cs"] = "a",
-            });
+        using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
+        var tempFile = tempDir.GetPath("baseline.json");
 
-            var json = File.ReadAllText(tempFile);
-            var aIndex = json.IndexOf("src/A.cs", StringComparison.Ordinal);
-            var zIndex = json.IndexOf("src/Z.cs", StringComparison.Ordinal);
-
-            Assert.True(aIndex < zIndex);
-        }
-        finally
+        BaselineWriter.Write(tempFile, new Dictionary<string, string>
         {
-            if (File.Exists(tempFile))
-            {
-                File.Delete(tempFile);
-            }
-        }
+            ["src/Z.cs"] = "z",
+            ["src/A.cs"] = "a",
+        });
+
+        var json = File.ReadAllText(tempFile);
+        var aIndex = json.IndexOf("src/A.cs", StringComparison.Ordinal);
+        var zIndex = json.IndexOf("src/Z.cs", StringComparison.Ordinal);
+
+        Assert.True(aIndex < zIndex);
     }
 }

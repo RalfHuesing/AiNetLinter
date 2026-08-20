@@ -73,7 +73,7 @@ public sealed class McpDocumentationSmokeTests
 
         Assert.Contains("Die Symbolgraph-Tools sind C#-only", docText, StringComparison.Ordinal);
         Assert.Contains("Die Struktur-Tools get_index_scope und get_hotspots sind nicht C#-beschränkt", docText, StringComparison.Ordinal);
-        Assert.DoesNotContain("Tools sind C#-only", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("alle Tools sind C#-only", docText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("`search_pattern` ist der vorgesehene Fallback", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, StringComparison.Ordinal);
     }

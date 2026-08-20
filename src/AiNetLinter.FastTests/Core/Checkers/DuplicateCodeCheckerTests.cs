@@ -27,18 +27,10 @@ namespace AiNetLinter.FastTests.Core.Checkers;
 [Trait("Category", "Unit")]
 public sealed class DuplicateCodeCheckerTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-dupchecker-");
 
-    public DuplicateCodeCheckerTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "ainetlinter-dupchecker-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
+    public void Dispose() => _tempDir.Dispose();
 
-    public void Dispose()
-    {
-        try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort cleanup */ }
-    }
 
     private static string BuildMethod(string className, string methodName) =>
         TestHelper.BuildCalibratedMethod(className, methodName);

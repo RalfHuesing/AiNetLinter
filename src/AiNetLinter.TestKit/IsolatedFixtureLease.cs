@@ -15,12 +15,12 @@ namespace AiNetLinter.TestKit;
 /// </summary>
 public sealed class IsolatedFixtureLease : IDisposable
 {
-    private readonly string tempDirectoryPath;
+    private readonly TestTempDirectory tempDir;
 
-    private IsolatedFixtureLease(string tempDirectoryPath)
+    private IsolatedFixtureLease(TestTempDirectory tempDir)
     {
-        this.tempDirectoryPath = tempDirectoryPath;
-        RootPath = tempDirectoryPath;
+        this.tempDir = tempDir;
+        RootPath = tempDir.DirectoryPath;
     }
 
     /// <summary>
@@ -38,28 +38,15 @@ public sealed class IsolatedFixtureLease : IDisposable
         string solutionRoot, string fixtureFolderName, string tempPrefix = "AiNetTestKit_")
     {
         var sourceRoot = Path.Combine(solutionRoot, "tests", "Fixtures", fixtureFolderName);
-        var destinationRoot = Directory.CreateTempSubdirectory(tempPrefix).FullName;
+        var tempDirectory = TestTempDirectory.Create(tempPrefix);
 
-        CopyDirectory(sourceRoot, destinationRoot);
+        CopyDirectory(sourceRoot, tempDirectory.DirectoryPath);
 
-        return new IsolatedFixtureLease(destinationRoot);
+        return new IsolatedFixtureLease(tempDirectory);
     }
 
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(tempDirectoryPath))
-            {
-                Directory.Delete(tempDirectoryPath, recursive: true);
-            }
-        }
-        catch (Exception ignored)
-        {
-            // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt.
-            _ = ignored;
-        }
-    }
+    public void Dispose() => tempDir.Dispose();
+
 
     private static void CopyDirectory(string sourceRoot, string destinationRoot)
     {

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.IO;
 using AiNetLinter.Configuration;
@@ -34,16 +34,10 @@ public sealed class ConfigLoaderRulesJsonTests
     [Fact]
     public void LoadRulesJsonContent_GibtInhaltZurueck_WennDateiExistiert()
     {
-        var tempFile = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(tempFile, "{\"test\": true}");
-            var result = ConfigLoader.LoadRulesJsonContent(tempFile);
-            Assert.Equal("{\"test\": true}", result);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
+        using var tempDir = TestTempDirectory.Create("cfg-rules-");
+        var tempFile = tempDir.CreateFile("rules.json", "{\"test\": true}");
+
+        var result = ConfigLoader.LoadRulesJsonContent(tempFile);
+        Assert.Equal("{\"test\": true}", result);
     }
 }

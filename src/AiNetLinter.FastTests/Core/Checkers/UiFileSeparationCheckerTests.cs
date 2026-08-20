@@ -14,15 +14,10 @@ namespace AiNetLinter.FastTests.Core.Checkers;
 [Trait("Category", "Unit")]
 public sealed class UiFileSeparationCheckerTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("AiNetLinterTests_");
 
-    public UiFileSeparationCheckerTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AiNetLinterTests_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
+    public void Dispose() => _tempDir.Dispose();
 
-    public void Dispose() => TestHelper.DeleteDirectoryIfExists(_tempDir);
 
     private static UiSeparationConfig AllEnabled() => new UiSeparationConfig
     {

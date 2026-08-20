@@ -16,77 +16,54 @@ public sealed class McpServerCommandTests
     [Fact]
     public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            File.WriteAllText(Path.Combine(tempDir, "First.slnx"), "");
-            File.WriteAllText(Path.Combine(tempDir, "Second.slnx"), "");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        tempDir.CreateFile("First.slnx", "");
+        tempDir.CreateFile("Second.slnx", "");
 
-            var console = new RecordingLintConsole();
-            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+        var console = new RecordingLintConsole();
+        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
 
-            Assert.Null(result);
-            var error = Assert.Single(console.ErrorLines);
-            Assert.Contains("AMBIGUOUS_SOLUTION", error);
-            Assert.Contains("First.slnx", error);
-            Assert.Contains("Second.slnx", error);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Null(result);
+        var error = Assert.Single(console.ErrorLines);
+        Assert.Contains("AMBIGUOUS_SOLUTION", error);
+        Assert.Contains("First.slnx", error);
+        Assert.Contains("Second.slnx", error);
     }
 
     [Fact]
     public void ResolveSolutionPathOrError_NoSolutionFound_ReportsResourceNotFound()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var console = new RecordingLintConsole();
-            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        var console = new RecordingLintConsole();
+        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
 
-            Assert.Null(result);
-            var error = Assert.Single(console.ErrorLines);
-            Assert.Contains("RESOURCE_NOT_FOUND", error);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Null(result);
+        var error = Assert.Single(console.ErrorLines);
+        Assert.Contains("RESOURCE_NOT_FOUND", error);
     }
 
     [Fact]
     public void ResolveSolutionPathOrError_SingleCandidate_ReturnsIt()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var sln = Path.Combine(tempDir, "Only.slnx");
-            File.WriteAllText(sln, "");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        var sln = tempDir.CreateFile("Only.slnx", "");
 
-            var console = new RecordingLintConsole();
-            var result = McpServerCommand.ResolveSolutionPathOrError(tempDir, console);
+        var console = new RecordingLintConsole();
+        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
 
-            Assert.Equal(sln, result);
-            Assert.Empty(console.ErrorLines);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Equal(sln, result);
+        Assert.Empty(console.ErrorLines);
     }
 
     [Fact]
     public void ResolveSolutionPathOrError_MissingPath_UsesCurrentDirectory()
     {
-        var tempDir = CreateTempDir();
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
         var originalDir = Directory.GetCurrentDirectory();
         try
         {
-            var sln = Path.Combine(tempDir, "Only.slnx");
-            File.WriteAllText(sln, "");
-            Directory.SetCurrentDirectory(tempDir);
+            var sln = tempDir.CreateFile("Only.slnx", "");
+            Directory.SetCurrentDirectory(tempDir.DirectoryPath);
 
             var console = new RecordingLintConsole();
             var result = McpServerCommand.ResolveSolutionPathOrError("", console);
@@ -97,28 +74,19 @@ public sealed class McpServerCommandTests
         finally
         {
             Directory.SetCurrentDirectory(originalDir);
-            Directory.Delete(tempDir, recursive: true);
         }
     }
 
     [Fact]
     public void ResolveMaxLineCount_ConfigWithCustomMaxLineCount_ReturnsConfiguredValue()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var configPath = Path.Combine(tempDir, "rules.json");
-            File.WriteAllText(configPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
-            var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir, Verbose = false };
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        var configPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+        var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir.DirectoryPath, Verbose = false };
 
-            var result = McpServerCommand.ResolveMaxLineCount(args);
+        var result = McpServerCommand.ResolveMaxLineCount(args);
 
-            Assert.Equal(5, result);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Equal(5, result);
     }
 
     [Fact]
@@ -134,22 +102,14 @@ public sealed class McpServerCommandTests
     [Fact]
     public void ResolveConfig_ConfigWithCustomMaxLineCount_UsesConfigFromArgs()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var configPath = Path.Combine(tempDir, "rules.json");
-            File.WriteAllText(configPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
-            var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir, Verbose = false };
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        var configPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+        var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir.DirectoryPath, Verbose = false };
 
-            var result = McpServerCommand.ResolveConfig(args);
+        var result = McpServerCommand.ResolveConfig(args);
 
-            Assert.NotNull(result);
-            Assert.Equal(5, result.Metrics.MaxLineCount);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Metrics.MaxLineCount);
     }
 
     [Fact]
@@ -166,72 +126,45 @@ public sealed class McpServerCommandTests
     [Fact]
     public void ResolveConfig_ExplicitConfigPath_TakesPrecedenceOverAutoDiscovered()
     {
-        var solutionDir = CreateTempDir();
-        var explicitDir = CreateTempDir();
-        try
-        {
-            var slnxPath = Path.Combine(solutionDir, "Only.slnx");
-            File.WriteAllText(slnxPath, "");
+        using var solutionDir = TestTempDirectory.Create("ainetlinter-mcp-sol-");
+        using var explicitDir = TestTempDirectory.Create("ainetlinter-mcp-exp-");
 
-            // Auto-discovered rules.json (next to the solution) with MaxLineCount: 7
-            var autoDiscoveredConfigPath = Path.Combine(solutionDir, "rules.json");
-            File.WriteAllText(autoDiscoveredConfigPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
+        var slnxPath = solutionDir.CreateFile("Only.slnx", "");
 
-            // Explicit rules.json in a separate dir with MaxLineCount: 5
-            var explicitConfigPath = Path.Combine(explicitDir, "rules.json");
-            File.WriteAllText(explicitConfigPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
+        // Auto-discovered rules.json (next to the solution) with MaxLineCount: 7
+        solutionDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
 
-            var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = slnxPath, Verbose = false };
+        // Explicit rules.json in a separate dir with MaxLineCount: 5
+        var explicitConfigPath = explicitDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
 
-            // TryResolveRulesJsonPath returns the explicit path, not the auto-discovered one
-            var resolved = McpServerCommand.TryResolveRulesJsonPath(args.ConfigPath, slnxPath);
-            Assert.Equal(explicitConfigPath, resolved);
+        var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = slnxPath, Verbose = false };
 
-            // ResolveConfig with the resolved path uses the explicit config (MaxLineCount: 5)
-            var config = McpServerCommand.ResolveConfig(args, resolved);
-            Assert.NotNull(config);
-            Assert.Equal(5, config.Metrics.MaxLineCount);
-        }
-        finally
-        {
-            Directory.Delete(solutionDir, recursive: true);
-            Directory.Delete(explicitDir, recursive: true);
-        }
+        // TryResolveRulesJsonPath returns the explicit path, not the auto-discovered one
+        var resolved = McpServerCommand.TryResolveRulesJsonPath(args.ConfigPath, slnxPath);
+        Assert.Equal(explicitConfigPath, resolved);
+
+        // ResolveConfig with the resolved path uses the explicit config (MaxLineCount: 5)
+        var config = McpServerCommand.ResolveConfig(args, resolved);
+        Assert.NotNull(config);
+        Assert.Equal(5, config.Metrics.MaxLineCount);
     }
 
     [Fact]
     public void ResolveConfig_NoExplicitConfigPath_AutoDiscoversRulesJsonInSolutionDirectory()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var slnxPath = Path.Combine(tempDir, "Only.slnx");
-            File.WriteAllText(slnxPath, "");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
+        var slnxPath = tempDir.CreateFile("Only.slnx", "");
+        var rulesJsonPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 11 } }""");
 
-            var rulesJsonPath = Path.Combine(tempDir, "rules.json");
-            File.WriteAllText(rulesJsonPath, """{ "Global": {}, "Metrics": { "MaxLineCount": 11 } }""");
+        var args = new LinterArgs { ConfigPath = null, TargetPath = tempDir.DirectoryPath, Verbose = false };
 
-            var args = new LinterArgs { ConfigPath = null, TargetPath = tempDir, Verbose = false };
+        // TryResolveRulesJsonPath auto-discovers the rules.json next to the solution
+        var resolved = McpServerCommand.TryResolveRulesJsonPath(null, slnxPath);
+        Assert.Equal(rulesJsonPath, resolved);
 
-            // TryResolveRulesJsonPath auto-discovers the rules.json next to the solution
-            var resolved = McpServerCommand.TryResolveRulesJsonPath(null, slnxPath);
-            Assert.Equal(rulesJsonPath, resolved);
-
-            // ResolveConfig with the resolved path uses the auto-discovered config
-            var config = McpServerCommand.ResolveConfig(args, resolved);
-            Assert.NotNull(config);
-            Assert.Equal(11, config.Metrics.MaxLineCount);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
-    }
-
-    private static string CreateTempDir()
-    {
-        var dir = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(dir);
-        return dir;
+        // ResolveConfig with the resolved path uses the auto-discovered config
+        var config = McpServerCommand.ResolveConfig(args, resolved);
+        Assert.NotNull(config);
+        Assert.Equal(11, config.Metrics.MaxLineCount);
     }
 }

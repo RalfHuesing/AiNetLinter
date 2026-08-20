@@ -1,3 +1,5 @@
+#nullable enable
+
 using AiNetLinter.Models;
 using AiNetLinter.Suppression;
 using Xunit;
@@ -10,32 +12,19 @@ public sealed class ViolationPathResolverTests
     [Fact]
     public void ResolveAbsolutePaths_ReturnsDistinctExistingFiles()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"ainetlinter-path-{Guid.NewGuid():N}");
-        var nestedDir = Path.Combine(tempDir, "src", "App");
-        Directory.CreateDirectory(nestedDir);
-        var filePath = Path.Combine(nestedDir, "Worker.cs");
-        File.WriteAllText(filePath, "namespace App;");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-path-");
+        var filePath = tempDir.CreateFile("src/App/Worker.cs", "namespace App;");
 
-        try
+        var violations = new[]
         {
-            var violations = new[]
-            {
-                CreateViolation("src/App/Worker.cs"),
-                CreateViolation("src/App/Worker.cs"),
-            };
+            CreateViolation("src/App/Worker.cs"),
+            CreateViolation("src/App/Worker.cs"),
+        };
 
-            var resolved = ViolationPathResolver.ResolveAbsolutePaths(violations, tempDir);
+        var resolved = ViolationPathResolver.ResolveAbsolutePaths(violations, tempDir.DirectoryPath);
 
-            Assert.Single(resolved);
-            Assert.Equal(filePath, resolved[0]);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
-        }
+        Assert.Single(resolved);
+        Assert.Equal(filePath, resolved[0]);
     }
 
     private static RuleViolation CreateViolation(string relativePath)

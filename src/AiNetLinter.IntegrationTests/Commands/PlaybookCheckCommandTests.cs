@@ -32,7 +32,7 @@ public sealed class PlaybookCheckCommandTests
             ConfigPath = null,
             Verbose = false,
             Check = true,
-            PlaybookPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}.md"),
+            PlaybookPath = Path.Combine(TestTempDirectory.RootTempDirectory, $"nonexistent-{Guid.NewGuid()}.md"),
         };
 
         var originalError = Console.Error;

@@ -1,3 +1,6 @@
+#nullable enable
+
+using System.IO;
 using AiNetLinter.Suppression;
 using Xunit;
 
@@ -69,21 +72,13 @@ public sealed class DisableAllCommentRemoverTests
     [Fact]
     public void TryRemoveFromFile_RemovesOnlyExactDisableAllLine()
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-remove-{Guid.NewGuid():N}.cs");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-remove-");
         const string source = "// ainetlinter-disable all\nnamespace Test;\n";
-        try
-        {
-            File.WriteAllText(filePath, source);
+        var filePath = tempDir.CreateFile("Test.cs", source);
 
-            var modified = DisableAllCommentRemover.TryRemoveFromFile(filePath);
+        var modified = DisableAllCommentRemover.TryRemoveFromFile(filePath);
 
-            Assert.True(modified);
-            Assert.Equal("namespace Test;\n", File.ReadAllText(filePath));
-        }
-        finally
-        {
-            TestHelper.DeleteFileIfExists(filePath);
-        }
+        Assert.True(modified);
+        Assert.Equal("namespace Test;\n", File.ReadAllText(filePath));
     }
-
 }

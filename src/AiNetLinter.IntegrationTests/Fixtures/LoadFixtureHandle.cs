@@ -1,7 +1,7 @@
 #nullable enable
 
 using System;
-using System.IO;
+using AiNetLinter.TestKit;
 
 namespace AiNetLinter.IntegrationTests.Fixtures;
 
@@ -12,12 +12,12 @@ namespace AiNetLinter.IntegrationTests.Fixtures;
 /// </summary>
 public sealed class LoadFixtureHandle : IDisposable
 {
-    private readonly string directoryPath;
+    private readonly TestTempDirectory tempDir;
 
-    public LoadFixtureHandle(string name, string directoryPath, string solutionPath)
+    public LoadFixtureHandle(string name, TestTempDirectory tempDir, string solutionPath)
     {
         Name = name;
-        this.directoryPath = directoryPath;
+        this.tempDir = tempDir;
         SolutionPath = solutionPath;
     }
 
@@ -25,23 +25,11 @@ public sealed class LoadFixtureHandle : IDisposable
     public string Name { get; }
 
     /// <summary>Wurzelverzeichnis der generierten Solution.</summary>
-    public string RootPath => directoryPath;
+    public string RootPath => tempDir.DirectoryPath;
 
     /// <summary>Absoluter Pfad zur generierten <c>.slnx</c>-Loesungsdatei.</summary>
     public string SolutionPath { get; }
 
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(directoryPath))
-            {
-                Directory.Delete(directoryPath, recursive: true);
-            }
-        }
-        catch
-        {
-            // Ignore temporary directory cleanup failures during test cleanup
-        }
-    }
+    public void Dispose() => tempDir.Dispose();
 }
+

@@ -1,3 +1,6 @@
+#nullable enable
+
+using System.IO;
 using AiNetLinter.Suppression;
 using Xunit;
 
@@ -30,44 +33,29 @@ public sealed class DisableAllCommentInjectorTests
     [Fact]
     public void TryInjectIntoFile_SkipsWhenDisableAllAlreadyPresent()
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-inject-{Guid.NewGuid():N}.cs");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-inject-");
         const string source = """
             // ainetlinter-disable all
             namespace Test;
             """;
-        try
-        {
-            File.WriteAllText(filePath, source);
+        var filePath = tempDir.CreateFile("Test.cs", source);
 
-            var modified = DisableAllCommentInjector.TryInjectIntoFile(filePath);
+        var modified = DisableAllCommentInjector.TryInjectIntoFile(filePath);
 
-            Assert.False(modified);
-            Assert.Equal(source, File.ReadAllText(filePath));
-        }
-        finally
-        {
-            TestHelper.DeleteFileIfExists(filePath);
-        }
+        Assert.False(modified);
+        Assert.Equal(source, File.ReadAllText(filePath));
     }
 
     [Fact]
     public void TryInjectIntoFile_PrependsCommentWhenMissing()
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-inject-{Guid.NewGuid():N}.cs");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-inject-");
         const string source = "namespace Test;";
-        try
-        {
-            File.WriteAllText(filePath, source);
+        var filePath = tempDir.CreateFile("Test.cs", source);
 
-            var modified = DisableAllCommentInjector.TryInjectIntoFile(filePath);
+        var modified = DisableAllCommentInjector.TryInjectIntoFile(filePath);
 
-            Assert.True(modified);
-            Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(filePath));
-        }
-        finally
-        {
-            TestHelper.DeleteFileIfExists(filePath);
-        }
+        Assert.True(modified);
+        Assert.StartsWith("// ainetlinter-disable all", File.ReadAllText(filePath));
     }
-
 }

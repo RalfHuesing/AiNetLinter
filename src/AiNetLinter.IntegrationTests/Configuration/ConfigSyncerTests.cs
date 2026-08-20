@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.IO;
 using System.Text.Json;
@@ -17,7 +17,8 @@ public sealed class ConfigSyncerTests
 
     private static string WriteTempJson(string content)
     {
-        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
+        Directory.CreateDirectory(TestTempDirectory.RootTempDirectory);
+        var path = Path.Combine(TestTempDirectory.RootTempDirectory, Path.GetRandomFileName() + ".json");
         File.WriteAllText(path, content);
         return path;
     }

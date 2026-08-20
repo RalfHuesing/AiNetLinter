@@ -70,44 +70,38 @@ public sealed class CliFixtureIntegrationTests
     public async Task GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
-        var tempPlaybookPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
+        using var tempDir = TestTempDirectory.Create("fixture-pb-");
+        var tempPlaybookPath = tempDir.GetPath("playbook.md");
 
-        try
+        // Erst generieren
+        var genArgs = new LinterArgs
         {
-            // Erst generieren
-            var genArgs = new LinterArgs
-            {
-                TargetPath = workspace.RootPath,
-                Verbose = false,
-                ConfigPath = workspace.ConfigPath,
-                PlaybookPath = tempPlaybookPath,
-            };
-            var genConsole = new RecordingLintConsole();
-            var genExitCode = await AuditCommand.RunAsync(genArgs, default, genConsole);
-            Assert.Equal(1, genExitCode); // BaselineMini hat Violations, aber Playbook wird erzeugt
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            ConfigPath = workspace.ConfigPath,
+            PlaybookPath = tempPlaybookPath,
+        };
+        var genConsole = new RecordingLintConsole();
+        var genExitCode = await AuditCommand.RunAsync(genArgs, default, genConsole);
+        Assert.Equal(1, genExitCode); // BaselineMini hat Violations, aber Playbook wird erzeugt
 
-            Assert.True(File.Exists(tempPlaybookPath));
+        Assert.True(File.Exists(tempPlaybookPath));
 
-            // Dann prüfen (--check)
-            var checkArgs = new LinterArgs
-            {
-                TargetPath = workspace.RootPath,
-                Verbose = false,
-                ConfigPath = workspace.ConfigPath,
-                PlaybookPath = tempPlaybookPath,
-                Check = true,
-            };
-            var checkConsole = new RecordingLintConsole();
-            var checkExitCode = await PlaybookCheckCommand.RunAsync(checkArgs, default, checkConsole);
-
-            Assert.True(checkExitCode == 0,
-                $"--playbook --check sollte Exit 0 liefern. Output: {checkConsole.OutputText}\nError: {checkConsole.ErrorText}");
-            Assert.Contains("[OK]", checkConsole.OutputText);
-        }
-        finally
+        // Dann prüfen (--check)
+        var checkArgs = new LinterArgs
         {
-            if (File.Exists(tempPlaybookPath)) File.Delete(tempPlaybookPath);
-        }
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            ConfigPath = workspace.ConfigPath,
+            PlaybookPath = tempPlaybookPath,
+            Check = true,
+        };
+        var checkConsole = new RecordingLintConsole();
+        var checkExitCode = await PlaybookCheckCommand.RunAsync(checkArgs, default, checkConsole);
+
+        Assert.True(checkExitCode == 0,
+            $"--playbook --check sollte Exit 0 liefern. Output: {checkConsole.OutputText}\nError: {checkConsole.ErrorText}");
+        Assert.Contains("[OK]", checkConsole.OutputText);
     }
 
     [Fact]

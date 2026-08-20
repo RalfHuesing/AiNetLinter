@@ -13,43 +13,29 @@ public sealed class OutputRootResolverTests
     [Fact]
     public void Resolve_ReturnsFullPathForDirectory()
     {
-        var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
+        using var tempDir = TestTempDirectory.Create("output-res-");
 
-        try
-        {
-            var result = OutputRootResolver.Resolve(tempDir);
+        var result = OutputRootResolver.Resolve(tempDir.DirectoryPath);
 
-            Assert.Equal(Path.GetFullPath(tempDir), result);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Equal(Path.GetFullPath(tempDir.DirectoryPath), result);
     }
 
     [Fact]
     public void Resolve_ReturnsParentDirectoryForSolutionFile()
     {
-        var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
-        var slnxPath = Path.Combine(tempDir, "App.slnx");
-        File.WriteAllText(slnxPath, "<Solution />");
+        using var tempDir = TestTempDirectory.Create("output-res-");
+        var slnxPath = tempDir.CreateFile("App.slnx", "<Solution />");
 
-        try
-        {
-            var result = OutputRootResolver.Resolve(slnxPath);
+        var result = OutputRootResolver.Resolve(slnxPath);
 
-            Assert.Equal(Path.GetFullPath(tempDir), result);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        Assert.Equal(Path.GetFullPath(tempDir.DirectoryPath), result);
     }
 
     [Fact]
     public void Resolve_ThrowsWhenPathDoesNotExist()
     {
-        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        using var tempDir = TestTempDirectory.Create("output-res-");
+        var missing = tempDir.GetPath("nonexistent");
 
         Assert.Throws<DirectoryNotFoundException>(() => OutputRootResolver.Resolve(missing));
     }

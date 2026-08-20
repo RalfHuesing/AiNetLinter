@@ -100,7 +100,7 @@ public sealed class CliAdapterExitCodeTests
     private static (string RootPath, string ConfigPath) CopyBaselineMiniFixture(bool makeCompliant)
     {
         var sourceRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
-        var destinationRoot = Path.Combine(Path.GetTempPath(), $"ainetlinter-cli-adapter-{Guid.NewGuid():N}");
+        var destinationRoot = Path.Combine(TestTempDirectory.RootTempDirectory, $"ainetlinter-cli-adapter-{Guid.NewGuid():N}");
         CopyFixtureDirectory(sourceRoot, destinationRoot);
 
         var configPath = Path.Combine(destinationRoot, "rules.json");

@@ -15,7 +15,7 @@ public sealed class PerformanceProfilerTests
     [Fact]
     public void ConfigLoader_LoadsEnablePerformanceProfiling()
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_config.json");
+        using var tempDir = TestTempDirectory.Create("prof-");
         var json = """
             {
                 "global": {
@@ -24,20 +24,11 @@ public sealed class PerformanceProfilerTests
                 "metrics": {}
             }
             """;
-        File.WriteAllText(tempPath, json);
-        try
-        {
-            var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
-            Assert.NotNull(result);
-            Assert.False(result.Global.EnablePerformanceProfiling);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
+        var tempPath = tempDir.CreateFile("config.json", json);
+
+        var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
+        Assert.NotNull(result);
+        Assert.False(result.Global.EnablePerformanceProfiling);
     }
 
     [Fact]

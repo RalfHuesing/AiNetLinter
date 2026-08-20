@@ -49,336 +49,216 @@ public sealed class NamespaceDirectoryMappingTests
     [Fact]
     public void ModeExact_WithMatchingPath_ReturnsNoViolations()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Features/Admin/Users/UserService.cs", """
+            namespace MyApp.Features.Admin.Users;
+            public class UserService {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Features", "Admin", "Users");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "UserService.cs");
-
-            const string source = """
-                namespace MyApp.Features.Admin.Users;
-                public class UserService {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "exact",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Empty(violations);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "exact",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void ModeExact_WithMismatchingPath_ReturnsViolation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Features/Admin/Users/UserService.cs", """
+            namespace MyApp.Features.Users;
+            public class UserService {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Features", "Admin", "Users");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "UserService.cs");
-
-            const string source = """
-                namespace MyApp.Features.Users;
-                public class UserService {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "exact",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Single(violations);
-            Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "exact",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Single(violations);
+        Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
     }
 
     [Fact]
     public void ModeSuffixMatch_WithIgnoreSegments_ReturnsNoViolations()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Handlers/Domains/Kalender/KalenderHandler.cs", """
+            namespace MyApp.Handlers.Kalender;
+            public class KalenderHandler {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Handlers", "Domains", "Kalender");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "KalenderHandler.cs");
-
-            const string source = """
-                namespace MyApp.Handlers.Kalender;
-                public class KalenderHandler {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "suffix-match",
-                    NamespaceDirectoryMappingIgnorePathSegments = new[] { "Domains" },
-                    NamespaceDirectoryMappingRequiredTrailingSegments = 2
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Empty(violations);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "suffix-match",
+                NamespaceDirectoryMappingIgnorePathSegments = new[] { "Domains" },
+                NamespaceDirectoryMappingRequiredTrailingSegments = 2
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void ModeSuffixMatch_WithMismatch_ReturnsViolation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Handlers/Domains/Firmenkalender/KalenderHandler.cs", """
+            namespace MyApp.Handlers.Kalender;
+            public class KalenderHandler {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Handlers", "Domains", "Firmenkalender");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "KalenderHandler.cs");
-
-            const string source = """
-                namespace MyApp.Handlers.Kalender;
-                public class KalenderHandler {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "suffix-match",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>(),
-                    NamespaceDirectoryMappingRequiredTrailingSegments = 2
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Single(violations);
-            Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "suffix-match",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>(),
+                NamespaceDirectoryMappingRequiredTrailingSegments = 2
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Single(violations);
+        Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
     }
 
     [Fact]
     public void ModeContainsAll_MatchesAllSegmentsOutOfOrder_ReturnsNoViolations()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Features/Admin/Users/UserService.cs", """
+            namespace MyApp.Users.Admin.Features;
+            public class UserService {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Features", "Admin", "Users");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "UserService.cs");
-
-            const string source = """
-                namespace MyApp.Users.Admin.Features;
-                public class UserService {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "contains-all",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Empty(violations);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "contains-all",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void ModeContainsAll_MissingOneSegment_ReturnsViolation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Features/Admin/Users/UserService.cs", """
+            namespace MyApp.Features.Users;
+            public class UserService {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Features", "Admin", "Users");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "UserService.cs");
-
-            const string source = """
-                namespace MyApp.Features.Users;
-                public class UserService {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "contains-all",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            Assert.Single(violations);
-            Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "contains-all",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>()
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        Assert.Single(violations);
+        Assert.Equal("EnforceNamespaceDirectoryMapping", violations.First().RuleName);
     }
 
     [Fact]
     public void EdgeCase_AllSegmentsIgnored_ReturnsNoViolations()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("src/Source/SomeClass.cs", """
+            namespace MyApp.CustomNamespace;
+            public class SomeClass {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "src", "Source");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "SomeClass.cs");
-
-            const string source = """
-                namespace MyApp.CustomNamespace;
-                public class SomeClass {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "exact",
-                    NamespaceDirectoryMappingIgnorePathSegments = new[] { "src", "Source" }
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            // Since all parts "src" and "Source" are ignored, relevantParts is empty, and we return immediately without violation.
-            Assert.Empty(violations);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "exact",
+                NamespaceDirectoryMappingIgnorePathSegments = new[] { "src", "Source" }
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        // Since all parts "src" and "Source" are ignored, relevantParts is empty, and we return immediately without violation.
+        Assert.Empty(violations);
     }
 
     [Fact]
     public void EdgeCase_RequiredTrailingLargerThanRelevantLength_TakesAllSegments()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("ns-map-");
+        tempDir.CreateFile("TestProj.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var filePath = tempDir.CreateFile("Features/SomeClass.cs", """
+            namespace MyApp.Features;
+            public class SomeClass {}
+            """);
+
+        var config = CreateDefaultConfig() with
         {
-            File.WriteAllText(Path.Combine(tempDir, "TestProj.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-            var subDir = Path.Combine(tempDir, "Features");
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, "SomeClass.cs");
-
-            const string source = """
-                namespace MyApp.Features;
-                public class SomeClass {}
-                """;
-
-            var config = CreateDefaultConfig() with
+            Global = CreateDefaultConfig().Global with
             {
-                Global = CreateDefaultConfig().Global with
-                {
-                    EnforceNamespaceDirectoryMapping = true,
-                    NamespaceDirectoryMappingMode = "suffix-match",
-                    NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>(),
-                    NamespaceDirectoryMappingRequiredTrailingSegments = 5
-                }
-            };
-
-            var (tree, model) = GetSemanticContext(source);
-            var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
-
-            // requiredTrailing is 5, but we only have 1 segment ("Features"). It should match since the namespace ends with "Features".
-            Assert.Empty(violations);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
+                EnforceNamespaceDirectoryMapping = true,
+                NamespaceDirectoryMappingMode = "suffix-match",
+                NamespaceDirectoryMappingIgnorePathSegments = Array.Empty<string>(),
+                NamespaceDirectoryMappingRequiredTrailingSegments = 5
             }
-        }
+        };
+
+        var (_, model) = GetSemanticContext(File.ReadAllText(filePath));
+        var violations = LinterAnalyzer.Analyze(filePath, model, config, isTestFile: false);
+
+        // requiredTrailing is 5, but we only have 1 segment ("Features"). It should match since the namespace ends with "Features".
+        Assert.Empty(violations);
     }
 }

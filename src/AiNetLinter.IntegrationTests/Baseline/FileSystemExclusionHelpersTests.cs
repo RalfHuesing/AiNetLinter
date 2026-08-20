@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using System.Linq;
@@ -60,7 +62,7 @@ public sealed class FileSystemExclusionHelpersTests
     [Fact]
     public void SafeEnumerateFiles_NonExistentDir_ReturnsEmpty()
     {
-        var nonExistent = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var nonExistent = Path.Combine(TestTempDirectory.RootTempDirectory, Guid.NewGuid().ToString("N"));
 
         var result = FileSystemExclusionHelpers.SafeEnumerateFiles(nonExistent).ToList();
 

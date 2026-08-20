@@ -72,11 +72,11 @@ public sealed class IsolatedFixtureLeaseTests
     /// </summary>
     private sealed class SyntheticSourceWithBinAndObj : IDisposable
     {
-        private readonly string tempRoot;
+        private readonly TestTempDirectory tempDir;
 
-        private SyntheticSourceWithBinAndObj(string tempRoot, string folderName)
+        private SyntheticSourceWithBinAndObj(TestTempDirectory tempDir, string folderName)
         {
-            this.tempRoot = tempRoot;
+            this.tempDir = tempDir;
             FolderName = folderName;
         }
 
@@ -84,15 +84,15 @@ public sealed class IsolatedFixtureLeaseTests
         /// Wurzelverzeichnis, das wie ein echter <c>solutionRoot</c>-Parameter fuer
         /// <see cref="IsolatedFixtureLease.CopyFixture"/> aussieht (enthaelt <c>tests/Fixtures/&lt;FolderName&gt;</c>).
         /// </summary>
-        public string SolutionRoot => tempRoot;
+        public string SolutionRoot => tempDir.DirectoryPath;
 
         public string FolderName { get; }
 
         public static SyntheticSourceWithBinAndObj Create(string solutionRoot)
         {
             const string folderName = "BaselineMini";
-            var tempRoot = Directory.CreateTempSubdirectory("AiNetSyntheticFixture_").FullName;
-            var destination = Path.Combine(tempRoot, "tests", "Fixtures", folderName);
+            var tempDir = TestTempDirectory.Create("AiNetSyntheticFixture_");
+            var destination = Path.Combine(tempDir.DirectoryPath, "tests", "Fixtures", folderName);
 
             CopyDirectory(Path.Combine(solutionRoot, "tests", "Fixtures", folderName), destination);
 
@@ -104,23 +104,10 @@ public sealed class IsolatedFixtureLeaseTests
             Directory.CreateDirectory(objDir);
             File.WriteAllText(Path.Combine(objDir, "dummy.cache"), "dummy");
 
-            return new SyntheticSourceWithBinAndObj(tempRoot, folderName);
+            return new SyntheticSourceWithBinAndObj(tempDir, folderName);
         }
 
-        public void Dispose()
-        {
-            try
-            {
-                if (Directory.Exists(tempRoot))
-                {
-                    Directory.Delete(tempRoot, recursive: true);
-                }
-            }
-            catch
-            {
-                // Cleanup-Fehler beim Test-Teardown werden bewusst verschluckt.
-            }
-        }
+        public void Dispose() => tempDir.Dispose();
 
         private static void CopyDirectory(string sourceRoot, string destinationRoot)
         {

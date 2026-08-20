@@ -33,8 +33,8 @@ public static class LoadFixtureBuilder
         if (filesPerProject < 1) throw new ArgumentOutOfRangeException(nameof(filesPerProject));
         if (linesPerFile < 3) throw new ArgumentOutOfRangeException(nameof(linesPerFile));
 
-        var tempDir = Directory.CreateTempSubdirectory($"ainetlinter-load-{SanitizeName(name)}-").FullName;
-        var solutionDir = tempDir;
+        var tempDir = TestTempDirectory.Create($"ainetlinter-load-{SanitizeName(name)}-");
+        var solutionDir = tempDir.DirectoryPath;
 
         for (var p = 0; p < projectCount; p++)
         {

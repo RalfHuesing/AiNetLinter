@@ -27,18 +27,13 @@ public sealed class PlaybookGeneratorRound2FileTests
             """;
 
         var solution = BuildSolution(source, "UpToDateProj");
-        var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
-        try
-        {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
-            var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution);
-            var writtenContent = await File.ReadAllTextAsync(tempPath);
-            Assert.Equal(generatedContent, writtenContent);
-        }
-        finally
-        {
-            if (File.Exists(tempPath)) File.Delete(tempPath);
-        }
+        using var tempDir = TestTempDirectory.Create("playbook-r2-");
+        var tempPath = tempDir.GetPath("playbook.md");
+
+        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
+        var generatedContent = await RepoPlaybookGenerator.BuildContentAsync(solution);
+        var writtenContent = await File.ReadAllTextAsync(tempPath);
+        Assert.Equal(generatedContent, writtenContent);
     }
 
     [Fact]
@@ -55,17 +50,12 @@ public sealed class PlaybookGeneratorRound2FileTests
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig()
         };
-        var tempPath = Path.Combine(Path.GetTempPath(), System.Guid.NewGuid().ToString() + "_playbook.md");
-        try
-        {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
-            var content = File.ReadAllText(tempPath);
-            Assert.Contains("Architektur-Slices (nach Ordner)", content);
-            Assert.DoesNotContain("Architektur-Slices (aus Namespace)", content);
-        }
-        finally
-        {
-            if (File.Exists(tempPath)) File.Delete(tempPath);
-        }
+        using var tempDir = TestTempDirectory.Create("playbook-r2-");
+        var tempPath = tempDir.GetPath("playbook.md");
+
+        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
+        var content = File.ReadAllText(tempPath);
+        Assert.Contains("Architektur-Slices (nach Ordner)", content);
+        Assert.DoesNotContain("Architektur-Slices (aus Namespace)", content);
     }
 }

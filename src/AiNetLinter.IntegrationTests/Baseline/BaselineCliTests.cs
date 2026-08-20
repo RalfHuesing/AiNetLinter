@@ -14,111 +14,96 @@ public sealed class BaselineCliTests
     public async Task CreateBaseline_WithoutConfig_WritesJsonAndReturnsSuccess()
     {
         var fixtureRoot = GetFixtureRoot();
-        var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
-        try
-        {
-            var args = new LinterArgs
-            {
-                TargetPath = fixtureRoot,
-                Verbose = false,
-                CreateBaselinePath = baselinePath,
-            };
-            var console = new RecordingLintConsole();
-            var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
+        using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
+        var baselinePath = tempDir.GetPath("baseline.json");
 
-            Assert.Equal(0, exitCode);
-            Assert.Contains("OK", console.OutputText);
-            Assert.True(File.Exists(baselinePath));
-
-            var baseline = BaselineReader.Read(baselinePath);
-            Assert.NotEmpty(baseline.Files);
-        }
-        finally
+        var args = new LinterArgs
         {
-            TestHelper.DeleteFileIfExists(baselinePath);
-        }
+            TargetPath = fixtureRoot,
+            Verbose = false,
+            CreateBaselinePath = baselinePath,
+        };
+        var console = new RecordingLintConsole();
+        var exitCode = await MaintenanceCommand.TryRunAsync(args, default, console);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("OK", console.OutputText);
+        Assert.True(File.Exists(baselinePath));
+
+        var baseline = BaselineReader.Read(baselinePath);
+        Assert.NotEmpty(baseline.Files);
     }
 
     [Fact]
     public async Task AuditWithBaseline_UnchangedFiles_ReturnsSuccess()
     {
         var fixtureRoot = GetFixtureRoot();
-        var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
+        var baselinePath = tempDir.GetPath("baseline.json");
         var configPath = Path.Combine(fixtureRoot, "rules.json");
-        try
-        {
-            var createArgs = new LinterArgs
-            {
-                TargetPath = fixtureRoot,
-                Verbose = false,
-                CreateBaselinePath = baselinePath,
-            };
-            var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
-            Assert.Equal(0, createExitCode);
 
-            var auditArgs = new LinterArgs
-            {
-                TargetPath = fixtureRoot,
-                Verbose = false,
-                ConfigPath = configPath,
-                BaselinePath = baselinePath,
-            };
-            var auditConsole = new RecordingLintConsole();
-            var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
-
-            Assert.Equal(0, auditExitCode);
-            Assert.Contains("OK", auditConsole.OutputText);
-        }
-        finally
+        var createArgs = new LinterArgs
         {
-            TestHelper.DeleteFileIfExists(baselinePath);
-        }
+            TargetPath = fixtureRoot,
+            Verbose = false,
+            CreateBaselinePath = baselinePath,
+        };
+        var createExitCode = await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
+        Assert.Equal(0, createExitCode);
+
+        var auditArgs = new LinterArgs
+        {
+            TargetPath = fixtureRoot,
+            Verbose = false,
+            ConfigPath = configPath,
+            BaselinePath = baselinePath,
+        };
+        var auditConsole = new RecordingLintConsole();
+        var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
+
+        Assert.Equal(0, auditExitCode);
+        Assert.Contains("OK", auditConsole.OutputText);
     }
 
     [Fact]
     public async Task AuditWithBaseline_ChangedFile_ReportsViolationsAndUpdatesBaseline()
     {
         using var workspace = new BaselineMiniFixtureWorkspace();
-        var baselinePath = Path.Combine(Path.GetTempPath(), $"ainetlinter-baseline-{Guid.NewGuid():N}.json");
+        using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
+        var baselinePath = tempDir.GetPath("baseline.json");
         var originalContent = File.ReadAllText(workspace.ViolatingClassPath);
-        try
+
+        var createArgs = new LinterArgs
         {
-            var createArgs = new LinterArgs
-            {
-                TargetPath = workspace.RootPath,
-                Verbose = false,
-                CreateBaselinePath = baselinePath,
-            };
-            await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
-            var baselineBefore = BaselineReader.Read(baselinePath);
-            var relativePath = baselineBefore.Files.Keys.First(k => k.EndsWith("ViolatingClass.cs", StringComparison.OrdinalIgnoreCase));
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            CreateBaselinePath = baselinePath,
+        };
+        await MaintenanceCommand.TryRunAsync(createArgs, default, new RecordingLintConsole());
+        var baselineBefore = BaselineReader.Read(baselinePath);
+        var relativePath = baselineBefore.Files.Keys.First(k => k.EndsWith("ViolatingClass.cs", StringComparison.OrdinalIgnoreCase));
 
-            File.WriteAllText(workspace.ViolatingClassPath, originalContent + Environment.NewLine);
+        File.WriteAllText(workspace.ViolatingClassPath, originalContent + Environment.NewLine);
 
-            var auditArgs = new LinterArgs
-            {
-                TargetPath = workspace.RootPath,
-                Verbose = false,
-                ConfigPath = workspace.ConfigPath,
-                BaselinePath = baselinePath,
-            };
-            var auditConsole = new RecordingLintConsole();
-            var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
-
-            Assert.Equal(1, auditExitCode);
-            Assert.Contains("EnforceSealedClasses", auditConsole.OutputText);
-
-            var baselineAfter = BaselineReader.Read(baselinePath);
-            Assert.NotEqual(baselineBefore.Files[relativePath], baselineAfter.Files[relativePath]);
-
-            var secondAuditConsole = new RecordingLintConsole();
-            var secondAuditExitCode = await AuditCommand.RunAsync(auditArgs, default, secondAuditConsole);
-            Assert.Equal(0, secondAuditExitCode);
-        }
-        finally
+        var auditArgs = new LinterArgs
         {
-            TestHelper.DeleteFileIfExists(baselinePath);
-        }
+            TargetPath = workspace.RootPath,
+            Verbose = false,
+            ConfigPath = workspace.ConfigPath,
+            BaselinePath = baselinePath,
+        };
+        var auditConsole = new RecordingLintConsole();
+        var auditExitCode = await AuditCommand.RunAsync(auditArgs, default, auditConsole);
+
+        Assert.Equal(1, auditExitCode);
+        Assert.Contains("EnforceSealedClasses", auditConsole.OutputText);
+
+        var baselineAfter = BaselineReader.Read(baselinePath);
+        Assert.NotEqual(baselineBefore.Files[relativePath], baselineAfter.Files[relativePath]);
+
+        var secondAuditConsole = new RecordingLintConsole();
+        var secondAuditExitCode = await AuditCommand.RunAsync(auditArgs, default, secondAuditConsole);
+        Assert.Equal(0, secondAuditExitCode);
     }
 
     [Fact]

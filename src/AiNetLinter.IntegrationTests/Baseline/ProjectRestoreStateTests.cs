@@ -11,32 +11,22 @@ namespace AiNetLinter.IntegrationTests.Baseline;
 [Trait("Category", "Integration")]
 public sealed class ProjectRestoreStateTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-restorestate-");
 
-    public ProjectRestoreStateTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ainetlinter-restorestate-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose() => TestHelper.TryDeleteDirectoryRecursive(_tempDir);
+    public void Dispose() => _tempDir.Dispose();
 
     private string CreateProjectFile(string name = "Sample.csproj")
     {
-        var path = Path.Combine(_tempDir, name);
-        File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-        return path;
+        return _tempDir.CreateFile(name, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
     }
 
     private string CreateProjectFileInOwnDirectory(string projectDirName, string fileName)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(_tempDir, projectDirName)).FullName;
-        var path = Path.Combine(dir, fileName);
-        File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
-        return path;
+        var relativePath = Path.Combine(projectDirName, fileName);
+        return _tempDir.CreateFile(relativePath, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
     }
 
-    private void CreateFreshProjectAssetsJson(string projectFilePath)
+    private static void CreateFreshProjectAssetsJson(string projectFilePath)
     {
         var objDir = Path.Combine(Path.GetDirectoryName(projectFilePath)!, "obj");
         Directory.CreateDirectory(objDir);
@@ -86,7 +76,7 @@ public sealed class ProjectRestoreStateTests : IDisposable
     [Fact]
     public void NeedsRestore_ReturnsFalse_WhenProjectFileDoesNotExist()
     {
-        var missingPath = Path.Combine(_tempDir, "DoesNotExist.csproj");
+        var missingPath = _tempDir.GetPath("DoesNotExist.csproj");
 
         Assert.False(ProjectRestoreState.NeedsRestore(missingPath));
     }

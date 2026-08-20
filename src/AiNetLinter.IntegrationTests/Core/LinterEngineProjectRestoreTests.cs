@@ -22,15 +22,9 @@ namespace AiNetLinter.IntegrationTests.Core;
 [Trait("Category", "Integration")]
 public sealed class LinterEngineProjectRestoreTests : IDisposable
 {
-    private readonly string _tempDir;
+    private readonly TestTempDirectory _tempDir = TestTempDirectory.Create("ainetlinter-restore-engine-");
 
-    public LinterEngineProjectRestoreTests()
-    {
-        _tempDir = Directory.CreateDirectory(
-            Path.Combine(Path.GetTempPath(), $"ainetlinter-restore-engine-{Guid.NewGuid():N}")).FullName;
-    }
-
-    public void Dispose() => TestHelper.TryDeleteDirectoryRecursive(_tempDir);
+    public void Dispose() => _tempDir.Dispose();
 
     private static Config CreateConfigWithPhantomCheck()
     {
@@ -50,15 +44,11 @@ public sealed class Foo
 
     private Solution CreateSolutionWithProjectFile(bool restored)
     {
-        var projectFile = Path.Combine(_tempDir, "Sample.csproj");
-        File.WriteAllText(projectFile, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        var projectFile = _tempDir.CreateFile("Sample.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
 
         if (restored)
         {
-            var objDir = Path.Combine(_tempDir, "obj");
-            Directory.CreateDirectory(objDir);
-            var assetsPath = Path.Combine(objDir, "project.assets.json");
-            File.WriteAllText(assetsPath, "{}");
+            var assetsPath = _tempDir.CreateFile("obj/project.assets.json", "{}");
             File.SetLastWriteTimeUtc(assetsPath, File.GetLastWriteTimeUtc(projectFile).AddSeconds(5));
         }
 

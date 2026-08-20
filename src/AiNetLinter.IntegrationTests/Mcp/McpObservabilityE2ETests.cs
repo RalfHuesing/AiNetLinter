@@ -26,105 +26,95 @@ public sealed class McpObservabilityE2ETests
         Assert.True(File.Exists(exePath), $"AiNetLinter.exe nicht gefunden: {exePath}");
 
         var fixtureRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
-        var logDir = Path.Combine(Path.GetTempPath(), "mcp-obs-process-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(logDir);
+        using var tempDir = TestTempDirectory.Create("mcp-obs-process-");
+        var logDir = tempDir.DirectoryPath;
 
-        try
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
-            var transport = new StdioClientTransport(new StdioClientTransportOptions
+            Name = "ainetlinter-observability-e2e-test",
+            Command = exePath,
+            Arguments = ["--mcp-server", "--path", fixtureRoot, "--mcp-log", logDir],
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+
+        // 1. tools/list pruefen
+        var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
+        Assert.Contains(tools, t => t.Name == "report_observability_feedback");
+        Assert.Contains(tools, t => t.Name == "find_symbol");
+
+        // 2. Regulären Tool-Call ausführen
+        var result = await client.CallToolAsync(
+            "get_index_scope",
+            new Dictionary<string, object?>(),
+            cancellationToken: cts.Token);
+        Assert.NotNull(result);
+
+        // 3. Feedback-Tool aufrufen
+        var feedbackResult = await client.CallToolAsync(
+            "report_observability_feedback",
+            new Dictionary<string, object?>
             {
-                Name = "ainetlinter-observability-e2e-test",
-                Command = exePath,
-                Arguments = ["--mcp-server", "--path", fixtureRoot, "--mcp-log", logDir],
-            });
+                ["feedbackType"] = "feature_request",
+                ["title"] = "Support für zusätzliche Sprachmuster",
+                ["description"] = "Erkennung von weiteren C# 14 Konstrukten gewünscht.",
+                ["relatedTool"] = "pattern_detect",
+                ["severity"] = "low"
+            },
+            cancellationToken: cts.Token);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
+        Assert.NotNull(feedbackResult);
+        Assert.False(feedbackResult.IsError == true);
 
-            // 1. tools/list pruefen
-            var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
-            Assert.Contains(tools, t => t.Name == "report_observability_feedback");
-            Assert.Contains(tools, t => t.Name == "find_symbol");
+        // 4. Client sauber schliessen, damit der Serverprozess flushed und beendet
+        await client.DisposeAsync();
 
-            // 2. Regulären Tool-Call ausführen
-            var result = await client.CallToolAsync(
-                "get_index_scope",
-                new Dictionary<string, object?>(),
-                cancellationToken: cts.Token);
-            Assert.NotNull(result);
+        var logFiles = Directory.GetFiles(logDir, "*.jsonl", SearchOption.AllDirectories);
+        Assert.NotEmpty(logFiles);
 
-            // 3. Feedback-Tool aufrufen
-            var feedbackResult = await client.CallToolAsync(
-                "report_observability_feedback",
-                new Dictionary<string, object?>
-                {
-                    ["feedbackType"] = "feature_request",
-                    ["title"] = "Support für zusätzliche Sprachmuster",
-                    ["description"] = "Erkennung von weiteren C# 14 Konstrukten gewünscht.",
-                    ["relatedTool"] = "pattern_detect",
-                    ["severity"] = "low"
-                },
-                cancellationToken: cts.Token);
-
-            Assert.NotNull(feedbackResult);
-            Assert.False(feedbackResult.IsError == true);
-
-            // 4. Client sauber schliessen, damit der Serverprozess flushed und beendet
-            await client.DisposeAsync();
-
-            var logFiles = Directory.GetFiles(logDir, "*.jsonl", SearchOption.AllDirectories);
-            Assert.NotEmpty(logFiles);
-
-            var logLines = logFiles.SelectMany(f =>
+        var logLines = logFiles.SelectMany(f =>
+        {
+            using var stream = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(stream);
+            var lines = new List<string>();
+            while (reader.ReadLine() is { } line)
             {
-                using var stream = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                using var reader = new StreamReader(stream);
-                var lines = new List<string>();
-                while (reader.ReadLine() is { } line)
-                {
-                    lines.Add(line);
-                }
-                return lines;
-            }).ToArray();
-            Assert.True(logLines.Length >= 2, "Erwartet mindestens 2 JSONL Zeilen");
-
-            var foundToolCall = false;
-            var foundFeedback = false;
-
-            foreach (var line in logLines)
-            {
-                using var doc = JsonDocument.Parse(line);
-                var root = doc.RootElement;
-                var recordType = root.GetProperty("recordType").GetString();
-                if (recordType == "tool_call")
-                {
-                    foundToolCall = true;
-                    Assert.Equal("ainetlinter", root.GetProperty("serverName").GetString());
-                    Assert.True(root.TryGetProperty("response", out var responseProp));
-                    Assert.False(string.IsNullOrEmpty(responseProp.GetString()));
-                    Assert.True(root.GetProperty("responseLength").GetInt32() > 0);
-                    Assert.True(root.GetProperty("responseLines").GetInt32() >= 1);
-                    Assert.False(root.GetProperty("responseTruncated").GetBoolean());
-                    Assert.Equal(0, root.GetProperty("nonTextContentBlocks").GetInt32());
-                }
-                else if (recordType == "feedback")
-                {
-                    foundFeedback = true;
-                    Assert.Equal("feature_request", root.GetProperty("feedbackType").GetString());
-                    Assert.Equal("Support für zusätzliche Sprachmuster", root.GetProperty("title").GetString());
-                    Assert.Equal("pattern_detect", root.GetProperty("relatedTool").GetString());
-                }
+                lines.Add(line);
             }
+            return lines;
+        }).ToArray();
+        Assert.True(logLines.Length >= 2, "Erwartet mindestens 2 JSONL Zeilen");
 
-            Assert.True(foundToolCall, "tool_call Record muss in JSONL vorhanden sein");
-            Assert.True(foundFeedback, "feedback Record muss in JSONL vorhanden sein");
-        }
-        finally
+        var foundToolCall = false;
+        var foundFeedback = false;
+
+        foreach (var line in logLines)
         {
-            if (Directory.Exists(logDir))
+            using var doc = JsonDocument.Parse(line);
+            var root = doc.RootElement;
+            var recordType = root.GetProperty("recordType").GetString();
+            if (recordType == "tool_call")
             {
-                try { Directory.Delete(logDir, recursive: true); } catch { }
+                foundToolCall = true;
+                Assert.Equal("ainetlinter", root.GetProperty("serverName").GetString());
+                Assert.True(root.TryGetProperty("response", out var responseProp));
+                Assert.False(string.IsNullOrEmpty(responseProp.GetString()));
+                Assert.True(root.GetProperty("responseLength").GetInt32() > 0);
+                Assert.True(root.GetProperty("responseLines").GetInt32() >= 1);
+                Assert.False(root.GetProperty("responseTruncated").GetBoolean());
+                Assert.Equal(0, root.GetProperty("nonTextContentBlocks").GetInt32());
+            }
+            else if (recordType == "feedback")
+            {
+                foundFeedback = true;
+                Assert.Equal("feature_request", root.GetProperty("feedbackType").GetString());
+                Assert.Equal("Support für zusätzliche Sprachmuster", root.GetProperty("title").GetString());
+                Assert.Equal("pattern_detect", root.GetProperty("relatedTool").GetString());
             }
         }
+
+        Assert.True(foundToolCall, "tool_call Record muss in JSONL vorhanden sein");
+        Assert.True(foundFeedback, "feedback Record muss in JSONL vorhanden sein");
     }
 }

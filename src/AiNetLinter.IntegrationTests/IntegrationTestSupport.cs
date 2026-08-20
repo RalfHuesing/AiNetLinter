@@ -50,23 +50,3 @@ internal static class TestHelper
     }
 }
 
-internal sealed class TestTempDirectory : IDisposable
-{
-    private TestTempDirectory(string directoryPath) => DirectoryPath = directoryPath;
-
-    public string DirectoryPath { get; }
-
-    public static TestTempDirectory Create(string prefix) => new(Directory.CreateTempSubdirectory(prefix).FullName);
-
-    public string CreateFile(string relativePath, string content = "")
-    {
-        var path = Path.Combine(DirectoryPath, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, content);
-        return path;
-    }
-
-    public void Dispose() => TestHelper.TryDeleteDirectoryRecursive(DirectoryPath);
-
-    public static implicit operator string(TestTempDirectory directory) => directory.DirectoryPath;
-}

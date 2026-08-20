@@ -73,7 +73,9 @@ public sealed class DeveloperExperienceTests
             {
                 EnforceSealedClasses = true,
                 EnforceExplicitStateImmutability = true,
-                AllowedExceptions = new[] { "Exception" },                PreventContextDependentOverloads = true,                EnforceNamespaceDirectoryMapping = true,
+                AllowedExceptions = new[] { "Exception" },
+                PreventContextDependentOverloads = true,
+                EnforceNamespaceDirectoryMapping = true,
                 DetectAndBanPhantomDependencies = true,
                 ImmutabilityExemptSuffixes = new[] { "Dto" },
                 SealedClassExemptSuffixes = new[] { "Base" }
@@ -89,8 +91,11 @@ public sealed class DeveloperExperienceTests
                 ["*.Tests"] = new()
                 {
                     Global = new GlobalConfigOverride
-                    {                        EnforceExplicitStateImmutability = false,
-                        AllowedExceptions = new[] { "CustomException" },                        PreventContextDependentOverloads = false,                        EnforceNamespaceDirectoryMapping = false,
+                    {
+                        EnforceExplicitStateImmutability = false,
+                        AllowedExceptions = new[] { "CustomException" },
+                        PreventContextDependentOverloads = false,
+                        EnforceNamespaceDirectoryMapping = false,
                         DetectAndBanPhantomDependencies = false,
                         ImmutabilityExemptSuffixes = new[] { "TestDto" },
                         SealedClassExemptSuffixes = new[] { "Exempt" }
@@ -177,24 +182,15 @@ public sealed class DeveloperExperienceTests
         var docId = DocumentId.CreateNewId(projectId);
         solution = solution.AddDocument(docId, "WorkClass.cs", source);
 
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
-        try
-        {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
+        using var tempDir = TestTempDirectory.Create("playbook-");
+        var tempPath = tempDir.GetPath("playbook.md");
+        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
 
-            Assert.True(File.Exists(tempPath));
-            var content = File.ReadAllText(tempPath);
-            Assert.Contains("AI Repository Playbook", content);
-            Assert.Contains("EnforceSemanticNaming:** 1 mal deaktiviert.", content);
-            Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
+        Assert.True(File.Exists(tempPath));
+        var content = File.ReadAllText(tempPath);
+        Assert.Contains("AI Repository Playbook", content);
+        Assert.Contains("EnforceSemanticNaming:** 1 mal deaktiviert.", content);
+        Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
     }
 
     [Fact]
@@ -229,23 +225,14 @@ public sealed class DeveloperExperienceTests
             },
         };
 
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
-        try
-        {
-            await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
+        using var tempDir = TestTempDirectory.Create("playbook-");
+        var tempPath = tempDir.GetPath("playbook.md");
+        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
 
-            Assert.True(File.Exists(tempPath));
-            var content = File.ReadAllText(tempPath);
-            // Since ArgumentNullException is allowed, the throws count should be 0.
-            Assert.Contains("Kontrollfluss-Exceptions:** 0", content);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
+        Assert.True(File.Exists(tempPath));
+        var content = File.ReadAllText(tempPath);
+        // Since ArgumentNullException is allowed, the throws count should be 0.
+        Assert.Contains("Kontrollfluss-Exceptions:** 0", content);
     }
 
     [Fact]
@@ -258,7 +245,7 @@ public sealed class DeveloperExperienceTests
     [Fact]
     public void ConfigLoader_WithValidJson_LoadsConfig()
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_config.json");
+        using var tempDir = TestTempDirectory.Create("cfg-");
         var json = """
             {
                 "global": {
@@ -270,28 +257,18 @@ public sealed class DeveloperExperienceTests
                 }
             }
             """;
-        File.WriteAllText(tempPath, json);
-        try
-        {
-            var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
-            Assert.NotNull(result);
-            Assert.True(result.Global.EnforceSealedClasses);
-            Assert.Contains("Base", result.Global.SealedClassExemptSuffixes);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
+        var tempPath = tempDir.CreateFile("config.json", json);
+
+        var result = ConfigLoader.TryLoadConfig(tempPath, isRequired: false);
+        Assert.NotNull(result);
+        Assert.True(result.Global.EnforceSealedClasses);
+        Assert.Contains("Base", result.Global.SealedClassExemptSuffixes);
     }
 
     [Fact]
     public void SyncAgentRules_GeneratesMdcFile_WritesSuccessfully()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(tempDir);
+        using var tempDir = TestTempDirectory.Create("sync-rules-");
 
         var config = TestHelper.CreateDefaultConfig() with
         {
@@ -325,27 +302,17 @@ public sealed class DeveloperExperienceTests
             }
         };
 
-        try
-        {
-            AgentRulesGenerator.Sync(tempDir, config, verbose: false);
+        AgentRulesGenerator.Sync(tempDir.DirectoryPath, config, verbose: false);
 
-            var mdcPath = Path.Combine(tempDir, ".agents", "rules", "AiNetLinter.mdc");
-            Assert.True(File.Exists(mdcPath));
+        var mdcPath = Path.Combine(tempDir.DirectoryPath, ".agents", "rules", "AiNetLinter.mdc");
+        Assert.True(File.Exists(mdcPath));
 
-            var content = File.ReadAllText(mdcPath);
-            Assert.Contains("description: C#-Codequalität", content);
-            Assert.Contains("MaxLineCount", content);
-            Assert.Contains("EnforceSealedClasses", content);
-            Assert.Contains("*Tests", content);
-            Assert.Contains("AiNetLinter.TestKit", content);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
-        }
+        var content = File.ReadAllText(mdcPath);
+        Assert.Contains("description: C#-Codequalität", content);
+        Assert.Contains("MaxLineCount", content);
+        Assert.Contains("EnforceSealedClasses", content);
+        Assert.Contains("*Tests", content);
+        Assert.Contains("AiNetLinter.TestKit", content);
     }
 
     [Fact]
@@ -392,5 +359,4 @@ public sealed class DeveloperExperienceTests
 
         Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
     }
-
 }

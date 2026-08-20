@@ -13,117 +13,69 @@ public sealed class SyncAgentRulesPolicyTests
     [Fact]
     public void ResolveBaseDirectory_ExistingDirectory_ReturnsSame()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncBaseDir_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-        try
-        {
-            var result = AgentRulesGenerator.ResolveBaseDirectory(tmpDir);
-            Assert.Equal(tmpDir, result);
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        using var tempDir = TestTempDirectory.Create("SyncBaseDir_");
+        var result = AgentRulesGenerator.ResolveBaseDirectory(tempDir.DirectoryPath);
+        Assert.Equal(tempDir.DirectoryPath, result);
     }
 
     [Fact]
     public void ResolveBaseDirectory_ExistingFile_ReturnsParentDirectory()
     {
-        var tmpFile = Path.GetTempFileName();
-        try
-        {
-            var result = AgentRulesGenerator.ResolveBaseDirectory(tmpFile);
-            Assert.Equal(Path.GetDirectoryName(tmpFile), result);
-        }
-        finally
-        {
-            File.Delete(tmpFile);
-        }
+        using var tempDir = TestTempDirectory.Create("SyncBaseFile_");
+        var tmpFile = tempDir.CreateFile("rules.json", "{}");
+        var result = AgentRulesGenerator.ResolveBaseDirectory(tmpFile);
+        Assert.Equal(tempDir.DirectoryPath, result);
     }
 
     [Fact]
     public void ResolveAgentRulesPath_CustomPathAsDirectory_AppendsDefaultFileName()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "ResolveCustomDir_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-        try
-        {
-            var result = AgentRulesGenerator.ResolveAgentRulesPath(tmpDir, tmpDir);
-            Assert.Equal(Path.Combine(tmpDir, "AiNetLinter.mdc"), result);
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        using var tempDir = TestTempDirectory.Create("ResolveCustomDir_");
+        var result = AgentRulesGenerator.ResolveAgentRulesPath(tempDir.DirectoryPath, tempDir.DirectoryPath);
+        Assert.Equal(Path.Combine(tempDir.DirectoryPath, "AiNetLinter.mdc"), result);
     }
 
     [Fact]
     public void ResolveAgentRulesPath_CustomPathAsMdcFile_ReturnsSame()
     {
-        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveCustomFile_" + Guid.NewGuid());
-        var customPath = Path.Combine(baseDir, "my_custom.mdc");
-        var result = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, customPath);
+        using var tempDir = TestTempDirectory.Create("ResolveCustomFile_");
+        var customPath = tempDir.GetPath("my_custom.mdc");
+        var result = AgentRulesGenerator.ResolveAgentRulesPath(tempDir.DirectoryPath, customPath);
         Assert.Equal(customPath, result);
     }
 
     [Fact]
     public void ResolveAgentRulesPath_Guessing_DefaultsToAgentsRules()
     {
-        var baseDir = Path.Combine(Path.GetTempPath(), "ResolveGuess_" + Guid.NewGuid());
-        var result = AgentRulesGenerator.ResolveAgentRulesPath(baseDir);
-        Assert.Equal(Path.Combine(baseDir, ".agents", "rules", "AiNetLinter.mdc"), result);
+        using var tempDir = TestTempDirectory.Create("ResolveGuess_");
+        var result = AgentRulesGenerator.ResolveAgentRulesPath(tempDir.DirectoryPath);
+        Assert.Equal(Path.Combine(tempDir.DirectoryPath, ".agents", "rules", "AiNetLinter.mdc"), result);
     }
 
     [Fact]
     public void DetectBaselineUsage_NoBaselineFileOrArg_ReturnsFalse()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_False_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-        try
-        {
-            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir);
-            Assert.False(result);
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        using var tempDir = TestTempDirectory.Create("DetectBaseline_False_");
+        var result = AgentRulesGenerator.DetectBaselineUsage(tempDir.DirectoryPath);
+        Assert.False(result);
     }
 
     [Fact]
     public void DetectBaselineUsage_BaselineJsonExists_ReturnsTrue()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_True_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-        var baselineFile = Path.Combine(tmpDir, "baseline.json");
-        File.WriteAllText(baselineFile, "{}");
-        try
-        {
-            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir);
-            Assert.True(result);
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        using var tempDir = TestTempDirectory.Create("DetectBaseline_True_");
+        tempDir.CreateFile("baseline.json", "{}");
+        var result = AgentRulesGenerator.DetectBaselineUsage(tempDir.DirectoryPath);
+        Assert.True(result);
     }
 
     [Fact]
     public void DetectBaselineUsage_BaselinePathArgExists_ReturnsTrue()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "DetectBaseline_Arg_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-        var customBaseline = Path.Combine(tmpDir, "my_custom_baseline.json");
-        File.WriteAllText(customBaseline, "{}");
-        try
-        {
-            var result = AgentRulesGenerator.DetectBaselineUsage(tmpDir, customBaseline);
-            Assert.True(result);
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        using var tempDir = TestTempDirectory.Create("DetectBaseline_Arg_");
+        var customBaseline = tempDir.CreateFile("my_custom_baseline.json", "{}");
+        var result = AgentRulesGenerator.DetectBaselineUsage(tempDir.DirectoryPath, customBaseline);
+        Assert.True(result);
     }
 
     [Fact]

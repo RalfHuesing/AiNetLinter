@@ -38,6 +38,8 @@ bld/
 [Aa]rtifacts/
 TestResults/
 *.trx
+[Tt]emp/
+
 
 ## NuGet Packages
 *.nupkg

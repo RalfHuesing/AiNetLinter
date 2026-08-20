@@ -37,36 +37,27 @@ public sealed class CliRepositoryDogfoodTests
     {
         var rootDir = SolutionRootLocator.Find();
         var configPath = Path.Combine(rootDir, "rules.json");
-        var playbookFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
+        using var tempDir = TestTempDirectory.Create("dogfood-pb-");
+        var playbookFile = tempDir.GetPath("playbook.md");
 
         Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
 
-        try
+        var args = new LinterArgs
         {
-            var args = new LinterArgs
-            {
-                TargetPath = rootDir,
-                Verbose = false,
-                ConfigPath = configPath,
-                PlaybookPath = playbookFile,
-            };
-            var console = new RecordingLintConsole();
-            var exitCode = await AuditCommand.RunAsync(args, default, console);
+            TargetPath = rootDir,
+            Verbose = false,
+            ConfigPath = configPath,
+            PlaybookPath = playbookFile,
+        };
+        var console = new RecordingLintConsole();
+        var exitCode = await AuditCommand.RunAsync(args, default, console);
 
-            Assert.True(exitCode == 0, $"Linter schlug mit Exit-Code {exitCode} fehl. Output:\n{console.OutputText}\nError:\n{console.ErrorText}");
-            Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
+        Assert.True(exitCode == 0, $"Linter schlug mit Exit-Code {exitCode} fehl. Output:\n{console.OutputText}\nError:\n{console.ErrorText}");
+        Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
 
-            var content = File.ReadAllText(playbookFile);
-            Assert.Contains("Auto-generiert durch AiNetLinter", content);
-            Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
-        }
-        finally
-        {
-            if (File.Exists(playbookFile))
-            {
-                File.Delete(playbookFile);
-            }
-        }
+        var content = File.ReadAllText(playbookFile);
+        Assert.Contains("Auto-generiert durch AiNetLinter", content);
+        Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
     }
 
     [Fact]
@@ -74,33 +65,27 @@ public sealed class CliRepositoryDogfoodTests
     {
         var rootDir = SolutionRootLocator.Find();
         var configPath = Path.Combine(rootDir, "rules.json");
-        var tempPlaybookPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_playbook.md");
+        using var tempDir = TestTempDirectory.Create("dogfood-pb-");
+        var tempPlaybookPath = tempDir.GetPath("playbook.md");
 
         Assert.True(File.Exists(configPath), $"Config nicht gefunden: {configPath}");
 
-        try
+        var args = new LinterArgs
         {
-            var args = new LinterArgs
-            {
-                TargetPath = rootDir,
-                Verbose = false,
-                ConfigPath = configPath,
-                SyncAgentRules = true,
-                PlaybookPath = tempPlaybookPath,
-            };
-            var console = new RecordingLintConsole();
-            var exitCode = await AuditCommand.RunAsync(args, default, console);
+            TargetPath = rootDir,
+            Verbose = false,
+            ConfigPath = configPath,
+            SyncAgentRules = true,
+            PlaybookPath = tempPlaybookPath,
+        };
+        var console = new RecordingLintConsole();
+        var exitCode = await AuditCommand.RunAsync(args, default, console);
 
-            Assert.True(exitCode == 0,
-                $"Kombinierter Aufruf fehlgeschlagen (Exit {exitCode}).\nOutput: {console.OutputText}\nError: {console.ErrorText}");
-            Assert.True(File.Exists(tempPlaybookPath),
-                $"Playbook wurde nicht erzeugt (P0-Bug). Output: {console.OutputText}");
-            var content = File.ReadAllText(tempPlaybookPath);
-            Assert.Contains("AI Repository Playbook", content);
-        }
-        finally
-        {
-            if (File.Exists(tempPlaybookPath)) File.Delete(tempPlaybookPath);
-        }
+        Assert.True(exitCode == 0,
+            $"Kombinierter Aufruf fehlgeschlagen (Exit {exitCode}).\nOutput: {console.OutputText}\nError: {console.ErrorText}");
+        Assert.True(File.Exists(tempPlaybookPath),
+            $"Playbook wurde nicht erzeugt (P0-Bug). Output: {console.OutputText}");
+        var content = File.ReadAllText(tempPlaybookPath);
+        Assert.Contains("AI Repository Playbook", content);
     }
 }

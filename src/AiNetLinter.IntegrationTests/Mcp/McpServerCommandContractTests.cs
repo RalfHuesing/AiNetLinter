@@ -129,7 +129,7 @@ public sealed class McpServerCommandContractTests
 
     private static string CreateTempDir()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-test-{Guid.NewGuid():N}");
+        var path = Path.Combine(TestTempDirectory.RootTempDirectory, $"ainetlinter-mcp-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(path);
         return path;
     }

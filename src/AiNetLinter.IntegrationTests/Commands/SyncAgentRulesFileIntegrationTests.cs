@@ -23,16 +23,14 @@ public sealed class SyncAgentRulesFileIntegrationTests
     [Fact]
     public void Run_CheckMode_WhenFileNotExists_ReturnsOne()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncAgentRulesTest_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
+        using var tempDir = TestTempDirectory.Create("SyncAgentRulesTest_");
 
         // Erstelle ein minimales rules.json damit Config geladen werden kann
-        var rulesPath = Path.Combine(tmpDir, "rules.json");
-        File.WriteAllText(rulesPath, "{}", Encoding.UTF8);
+        var rulesPath = tempDir.CreateFile("rules.json", "{}");
 
         var args = new LinterArgs
         {
-            TargetPath = tmpDir,
+            TargetPath = tempDir.DirectoryPath,
             ConfigPath = rulesPath,
             Verbose = false,
             Check = true,
@@ -50,38 +48,28 @@ public sealed class SyncAgentRulesFileIntegrationTests
         finally
         {
             Console.SetError(originalError);
-            Directory.Delete(tmpDir, recursive: true);
         }
     }
 
     [Fact]
     public void Run_WriteMode_CreatesFile()
     {
-        var tmpDir = Path.Combine(Path.GetTempPath(), "SyncAgentRulesTest_" + Guid.NewGuid());
-        Directory.CreateDirectory(tmpDir);
-
+        using var tempDir = TestTempDirectory.Create("SyncAgentRulesTest_");
         var rulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
 
         var args = new LinterArgs
         {
-            TargetPath = tmpDir,
+            TargetPath = tempDir.DirectoryPath,
             ConfigPath = rulesPath,
             Verbose = false,
             Check = false,
             SyncAgentRules = true,
         };
 
-        try
-        {
-            var result = SyncAgentRulesCommand.Run(args);
-            Assert.Equal(0, result);
+        var result = SyncAgentRulesCommand.Run(args);
+        Assert.Equal(0, result);
 
-            var mdcPath = Path.Combine(tmpDir, ".agents", "rules", "AiNetLinter.mdc");
-            Assert.True(File.Exists(mdcPath), "Die .mdc-Datei sollte erstellt worden sein.");
-        }
-        finally
-        {
-            Directory.Delete(tmpDir, recursive: true);
-        }
+        var mdcPath = Path.Combine(tempDir.DirectoryPath, ".agents", "rules", "AiNetLinter.mdc");
+        Assert.True(File.Exists(mdcPath), "Die .mdc-Datei sollte erstellt worden sein.");
     }
 }

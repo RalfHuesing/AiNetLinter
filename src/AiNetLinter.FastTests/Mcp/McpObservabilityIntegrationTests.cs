@@ -116,90 +116,80 @@ public sealed class McpObservabilityIntegrationTests
     [Fact]
     public async Task EndToEnd_ToolCallAndFeedback_WritesJsonlLogsWithResponseContent()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "mcp-obs-e2e-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        try
+        using var tempDir = TestTempDirectory.Create("mcp-obs-e2e-");
+
+        var clientToServer = new System.IO.Pipelines.Pipe();
+        var serverToClient = new System.IO.Pipelines.Pipe();
+
+        var clientTransport = new StreamClientTransport(
+            clientToServer.Writer.AsStream(),
+            serverToClient.Reader.AsStream());
+
+        var serverTransport = new StreamServerTransport(
+            clientToServer.Reader.AsStream(),
+            serverToClient.Writer.AsStream());
+
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+
+        var services = new ServiceCollection();
+        var builder = services.AddMcpServer();
+
+        var obsOptions = new McpObservabilityOptions
         {
-            var clientToServer = new System.IO.Pipelines.Pipe();
-            var serverToClient = new System.IO.Pipelines.Pipe();
+            Enabled = true,
+            EnableToolCallLogging = true,
+            EnableFeedbackTool = true,
+            EnableResponseLogging = true,
+            ServerName = "ainetlinter",
+            ServerVersion = "1.0.96",
+            LogDirectory = tempDir.DirectoryPath,
+        };
+        builder.WithObservability(obsOptions);
 
-            var clientTransport = new StreamClientTransport(
-                clientToServer.Writer.AsStream(),
-                serverToClient.Reader.AsStream());
-
-            var serverTransport = new StreamServerTransport(
-                clientToServer.Reader.AsStream(),
-                serverToClient.Writer.AsStream());
-
-            var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-
-            var services = new ServiceCollection();
-            var builder = services.AddMcpServer();
-
-            var obsOptions = new McpObservabilityOptions
-            {
-                Enabled = true,
-                EnableToolCallLogging = true,
-                EnableFeedbackTool = true,
-                EnableResponseLogging = true,
-                ServerName = "ainetlinter",
-                ServerVersion = "1.0.96",
-                LogDirectory = tempDir,
-            };
-            builder.WithObservability(obsOptions);
-
-            var sp = services.BuildServiceProvider();
-            var serverOptions = sp.GetRequiredService<IOptions<McpServerOptions>>().Value;
-            serverOptions.ServerInfo = new Implementation
-            {
-                Name = "ainetlinter",
-                Version = "1.0.96",
-            };
-            serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(state, sp);
-
-            await using var server = McpServer.Create(serverTransport, serverOptions, serviceProvider: sp);
-            using var cts = new CancellationTokenSource();
-            var serverTask = server.RunAsync(cts.Token);
-
-            await using var client = await McpClient.CreateAsync(clientTransport);
-
-            // 1. Tool auflisten
-            var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
-            Assert.Contains(tools, t => t.Name == "report_observability_feedback");
-            Assert.Contains(tools, t => t.Name == "get_index_scope");
-
-            // 2. Reguläres Tool aufrufen (wird als tool_call mit Request & Response geloggt)
-            var indexResult = await client.CallToolAsync("get_index_scope", new Dictionary<string, object?>(), cancellationToken: cts.Token);
-            Assert.NotNull(indexResult);
-
-            // 3. Feedback-Tool aufrufen (wird als tool_call und als feedback geloggt)
-            var feedbackResult = await client.CallToolAsync("report_observability_feedback", new Dictionary<string, object?>
-            {
-                ["feedbackType"] = "issue",
-                ["title"] = "Falsch-Positiv bei Nullable-Check",
-                ["description"] = "Die Regel meldet einen Verstoß, obwohl der Typ nicht nullable ist.",
-                ["relatedTool"] = "get_violations",
-                ["severity"] = "medium"
-            }, cancellationToken: cts.Token);
-
-            Assert.NotNull(feedbackResult);
-            await client.DisposeAsync();
-            await cts.CancelAsync();
-            try { await serverTask; } catch (OperationCanceledException) { }
-            await server.DisposeAsync();
-            if (sp is IAsyncDisposable asyncSp) await asyncSp.DisposeAsync();
-            else sp.Dispose();
-
-            // 4. Log-Datei validieren
-            await ValidateLoggedRecordsAsync(tempDir);
-        }
-        finally
+        var sp = services.BuildServiceProvider();
+        var serverOptions = sp.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        serverOptions.ServerInfo = new Implementation
         {
-            if (Directory.Exists(tempDir))
-            {
-                try { Directory.Delete(tempDir, true); } catch { }
-            }
-        }
+            Name = "ainetlinter",
+            Version = "1.0.96",
+        };
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(state, sp);
+
+        await using var server = McpServer.Create(serverTransport, serverOptions, serviceProvider: sp);
+        using var cts = new CancellationTokenSource();
+        var serverTask = server.RunAsync(cts.Token);
+
+        await using var client = await McpClient.CreateAsync(clientTransport);
+
+        // 1. Tool auflisten
+        var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
+        Assert.Contains(tools, t => t.Name == "report_observability_feedback");
+        Assert.Contains(tools, t => t.Name == "get_index_scope");
+
+        // 2. Reguläres Tool aufrufen (wird als tool_call mit Request & Response geloggt)
+        var indexResult = await client.CallToolAsync("get_index_scope", new Dictionary<string, object?>(), cancellationToken: cts.Token);
+        Assert.NotNull(indexResult);
+
+        // 3. Feedback-Tool aufrufen (wird als tool_call und als feedback geloggt)
+        var feedbackResult = await client.CallToolAsync("report_observability_feedback", new Dictionary<string, object?>
+        {
+            ["feedbackType"] = "issue",
+            ["title"] = "Falsch-Positiv bei Nullable-Check",
+            ["description"] = "Die Regel meldet einen Verstoß, obwohl der Typ nicht nullable ist.",
+            ["relatedTool"] = "get_violations",
+            ["severity"] = "medium"
+        }, cancellationToken: cts.Token);
+
+        Assert.NotNull(feedbackResult);
+        await client.DisposeAsync();
+        await cts.CancelAsync();
+        try { await serverTask; } catch (OperationCanceledException) { }
+        await server.DisposeAsync();
+        if (sp is IAsyncDisposable asyncSp) await asyncSp.DisposeAsync();
+        else sp.Dispose();
+
+        // 4. Log-Datei validieren
+        await ValidateLoggedRecordsAsync(tempDir.DirectoryPath);
     }
 
     private static async Task ValidateLoggedRecordsAsync(string tempDir)

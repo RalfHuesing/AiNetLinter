@@ -35,7 +35,7 @@ public sealed class SkeletonMapBuilderAdapterTests
     [Fact]
     public async Task BuildAsync_InvalidPath_ThrowsFileNotFoundException()
     {
-        var missingPath = Path.Combine(Path.GetTempPath(), $"AiNetLinterMissing_{Guid.NewGuid():N}");
+        var missingPath = Path.Combine(TestTempDirectory.RootTempDirectory, $"AiNetLinterMissing_{Guid.NewGuid():N}");
         var console = new RecordingLintConsole();
         var args = new LinterArgs { TargetPath = missingPath, Verbose = false };
 

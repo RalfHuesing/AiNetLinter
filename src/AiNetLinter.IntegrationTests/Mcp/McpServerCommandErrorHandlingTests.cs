@@ -133,7 +133,7 @@ public sealed class McpServerCommandErrorHandlingTests
 
     private static string CreateTempDir()
     {
-        var dir = Path.Combine(Path.GetTempPath(), $"ainetlinter-mcp-error-test-{Guid.NewGuid():N}");
+        var dir = Path.Combine(TestTempDirectory.RootTempDirectory, $"ainetlinter-mcp-error-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         return dir;
     }

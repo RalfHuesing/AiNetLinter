@@ -20,7 +20,7 @@ public sealed class McpServerCommandCallLogTests
     [Fact]
     public void ResolveObservabilityOptions_Null_ReturnsDefaultEnabledOptions()
     {
-        var solutionPath = Path.Combine(Path.GetTempPath(), "fake.slnx");
+        var solutionPath = Path.Combine(TestTempDirectory.RootTempDirectory, "fake.slnx");
 
         var options = McpServerCommand.ResolveObservabilityOptions(null, solutionPath);
 
@@ -41,7 +41,7 @@ public sealed class McpServerCommandCallLogTests
     [InlineData("OFF")]
     public void ResolveObservabilityOptions_DisabledKeywords_ReturnsDisabledOptions(string keyword)
     {
-        var solutionPath = Path.Combine(Path.GetTempPath(), "fake.slnx");
+        var solutionPath = Path.Combine(TestTempDirectory.RootTempDirectory, "fake.slnx");
 
         var options = McpServerCommand.ResolveObservabilityOptions(keyword, solutionPath);
 
@@ -55,7 +55,7 @@ public sealed class McpServerCommandCallLogTests
     [Fact]
     public void ResolveObservabilityOptions_Whitespace_ReturnsDefaultEnabledOptions()
     {
-        var solutionPath = Path.Combine(Path.GetTempPath(), "fake.slnx");
+        var solutionPath = Path.Combine(TestTempDirectory.RootTempDirectory, "fake.slnx");
 
         var options = McpServerCommand.ResolveObservabilityOptions("   ", solutionPath);
 
@@ -70,8 +70,8 @@ public sealed class McpServerCommandCallLogTests
     [Fact]
     public void ResolveObservabilityOptions_RelativePath_ResolvesRelativeToSolutionDir()
     {
-        var solutionDir = Path.Combine(Path.GetTempPath(), "mcp-log-rel-" + Guid.NewGuid().ToString("N"));
-        var solutionPath = Path.Combine(solutionDir, "Only.slnx");
+        using var tempDir = TestTempDirectory.Create("mcp-log-rel-");
+        var solutionPath = tempDir.CreateFile("Only.slnx", "");
         var relativeLog = ".mcp-log";
 
         var options = McpServerCommand.ResolveObservabilityOptions(relativeLog, solutionPath);
@@ -81,24 +81,24 @@ public sealed class McpServerCommandCallLogTests
         Assert.True(options.EnableFeedbackTool);
         Assert.True(options.EnableResponseLogging);
         Assert.Equal("ainetlinter", options.ServerName);
-        var expected = Path.Combine(solutionDir, ".mcp-log");
+        var expected = Path.Combine(tempDir.DirectoryPath, ".mcp-log");
         Assert.Equal(expected, options.LogDirectory);
     }
 
     [Fact]
     public void ResolveObservabilityOptions_AbsolutePath_UsesAbsolutePath()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "mcp-obs-dir-" + Guid.NewGuid().ToString("N"));
-        var fakeSolution = Path.Combine(Path.GetTempPath(), "fake.slnx");
+        using var tempDir = TestTempDirectory.Create("mcp-obs-dir-");
+        var fakeSolution = tempDir.GetPath("fake.slnx");
 
-        var options = McpServerCommand.ResolveObservabilityOptions(tempDir, fakeSolution);
+        var options = McpServerCommand.ResolveObservabilityOptions(tempDir.DirectoryPath, fakeSolution);
 
         Assert.True(options.Enabled);
         Assert.True(options.EnableToolCallLogging);
         Assert.True(options.EnableFeedbackTool);
         Assert.True(options.EnableResponseLogging);
         Assert.Equal("ainetlinter", options.ServerName);
-        Assert.Equal(tempDir, options.LogDirectory);
+        Assert.Equal(tempDir.DirectoryPath, options.LogDirectory);
     }
 
     [Fact]
