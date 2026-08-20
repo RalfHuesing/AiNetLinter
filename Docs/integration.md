@@ -241,6 +241,8 @@ Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleich
 
 Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter Pfad-Parameter nötig** — der Server sucht beim Start die Ziel-Solution selbst.
 
+Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
+
 **`args: ["--mcp-server"]` ohne `--config` ist die empfohlene Registrierung.** Der Server sucht automatisch nach `rules.json` neben der aufgelösten Solution-Datei (`McpServerCommand.TryResolveRulesJsonPath`). Wird keine gefunden, läuft er mit den `Config`-Default-Regeln und signalisiert das in `get_violations` durch eine sichtbare Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden` (siehe [Docs/agent-api.md](agent-api.md#default-config-markierung-in-get_violations)).
 
 **stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
@@ -266,9 +268,13 @@ Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-P
 
 Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.
 
-### Start-Sequenz: entkoppelter initialize-Handshake
+### Start-Sequenzen: initialize und server/discover
 
-Der MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen. Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
+Der Legacy-MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
+
+Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist nur auf C#-Symbolgraph/Fallback, `tools/list`, `ainetlinter://overview`, Sufficiency/Truncation, `isError` und kompakte Workflows; Tool-Schemas bleiben in `tools/list`. Die aktuelle Anleitung misst 724 UTF-8-Bytes und bleibt unter dem Engineering-Budget von 2.557 Bytes (Messung 2026-08-20).
+
+Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
 
 ### Mehrdeutigkeit: mehrere Solutions im cwd
 

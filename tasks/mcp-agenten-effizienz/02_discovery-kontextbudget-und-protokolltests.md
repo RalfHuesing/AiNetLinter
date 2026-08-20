@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
@@ -109,3 +109,9 @@ In `src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandJsonRpcFramingTests.cs`
 - Keine exakte Tokenersparnis wird behauptet.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
 
+## Verifiziertes Ergebnis (2026-08-20)
+
+- `ServerInstructions.Text`: 724 Zeichen und 724 UTF-8-Bytes; gegenüber der datierten Baseline von 6.393 Bytes entspricht das einer Reduktion um 88,7 % und liegt unter dem Budget von 2.557 Bytes.
+- Legacy-`initialize`: 981 Zeichen / 981 UTF-8-Bytes Gesamtantwort; `tools/list`: 20.894 Zeichen / 20.894 UTF-8-Bytes.
+- Modernes `server/discover`: 1.076 Zeichen / 1.076 UTF-8-Bytes Gesamtantwort; modernes `tools/list`: 21.041 Zeichen / 21.041 UTF-8-Bytes.
+- Beide Raw-Wire-Pfade liefern denselben Instructions-Text, eindeutige Toolnamen und dieselbe registrierte Toolmenge. Die Messwerte sind Zeichen-/UTF-8-Byte-Proxies, keine Token-Schätzung.

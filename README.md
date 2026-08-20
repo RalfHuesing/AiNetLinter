@@ -73,6 +73,8 @@ ainetlinter --mcp-server --parent-pid 1234             # optionale explizite Par
 
 Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hält sie über die Prozesslaufzeit resident — Tool-Calls arbeiten gegen den geladenen Zustand statt gegen wiederholte Disk-Scans, und werden bei Dateiänderungen inkrementell aktualisiert (Datei-`mtime` + SHA-256-Hash-Vergleich, kein Komplett-Reload).
 
+Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist auf `tools/list` und `ainetlinter://overview`, statt die Toolliste zu duplizieren.
+
 Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und beendet sich bei dessen Ende sauber. Mit `--parent-pid <pid>` kann die zu überwachende Prozess-ID für Wrapper-Skripte oder Spezialumgebungen explizit gesetzt werden.
 
 | Tool | Zweck |

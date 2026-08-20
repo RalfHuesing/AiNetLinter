@@ -71,10 +71,14 @@ public sealed class McpDocumentationSmokeTests
 
         var docText = File.ReadAllText(docPath);
 
-        Assert.Contains("Die Symbolgraph-Tools sind C#-only", docText, StringComparison.Ordinal);
-        Assert.Contains("Die Struktur-Tools get_index_scope und get_hotspots sind nicht C#-beschränkt", docText, StringComparison.Ordinal);
+        Assert.Contains("denselben zentralen `ServerInstructions`-Text", docText, StringComparison.Ordinal);
+        Assert.Contains("C#-Symbolgraph-Grenze", docText, StringComparison.Ordinal);
+        Assert.Contains("`tools/list`", docText, StringComparison.Ordinal);
+        Assert.Contains("`ainetlinter://overview`", docText, StringComparison.Ordinal);
+        Assert.Contains("| `get_index_scope` |", docText, StringComparison.Ordinal);
+        Assert.Contains("| `get_hotspots` |", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("alle Tools sind C#-only", docText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("`search_pattern` ist der vorgesehene Fallback", docText, StringComparison.Ordinal);
+        Assert.Contains("| `search_pattern` |", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, StringComparison.Ordinal);
     }
 }

@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using AiNetLinter.Mcp;
 using Xunit;
 
@@ -31,7 +32,7 @@ public sealed class McpServerOptionsFactoryTests
     }
 
     [Fact]
-    public void Create_ServerInstructionsContainsAllRegisteredTools()
+    public void Create_ServerInstructionsStaysWithinUtf8Budget()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
         var options = McpServerOptionsFactory.Create(state);
@@ -44,14 +45,15 @@ public sealed class McpServerOptionsFactoryTests
             OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
             registeredNames);
 
-        foreach (var name in registeredNames)
-        {
-            Assert.Contains($"- {name}:", ServerInstructions.Text, StringComparison.Ordinal);
-        }
+        Assert.InRange(
+            Encoding.UTF8.GetByteCount(ServerInstructions.Text),
+            1,
+            ServerInstructions.MaxUtf8Bytes);
+        Assert.DoesNotContain("\n- ", ServerInstructions.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ServerInstructions_MatchesOverviewResourceTools()
+    public void ToolRegistration_MatchesOverviewResourceTools()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
         var options = McpServerOptionsFactory.Create(state);
@@ -63,19 +65,18 @@ public sealed class McpServerOptionsFactoryTests
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.Equal(registeredNames, overviewNames);
-
-        foreach (var name in overviewNames)
-        {
-            Assert.Contains($"- {name}:", ServerInstructions.Text, StringComparison.Ordinal);
-        }
     }
 
     [Fact]
     public void Create_ServerInstructionsContainsWorkflowGuidance()
     {
-        Assert.Contains("Empfohlene Workflows:", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Code erkunden:", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Refactoring & Impact:", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Quality-Gate vor Commit:", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("C#-Symbolgraph-Grenze", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter://overview", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Sufficiency", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("isError=true", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Edits", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Impact", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Gate", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }

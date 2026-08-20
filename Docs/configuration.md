@@ -31,6 +31,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
+- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung übertragen. Tool-Schemas bleiben in `tools/list`, die Kurzliste in `ainetlinter://overview`; das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 
 ---
 

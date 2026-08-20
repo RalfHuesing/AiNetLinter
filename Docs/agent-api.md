@@ -202,7 +202,9 @@ ainetlinter --mcp-server --path <Datei/Verzeichnis>   # explizite Ziel-Solution
 ainetlinter --mcp-server --parent-pid <pid>            # optionale explizite Parent-PID
 ```
 
-Bei `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) skaliert mit der Solution-Größe; Tool-Calls arbeiten gegen den resident geladenen Workspace und benötigen keinen erneuten Solution-Load.
+Bei Legacy-MCP `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) skaliert mit der Solution-Größe; Tool-Calls arbeiten gegen den resident geladenen Workspace und benötigen keinen erneuten Solution-Load.
+
+MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
 Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
@@ -212,11 +214,9 @@ Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuil
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt beim `initialize`-Handshake folgenden zentralen `ServerInstructions`-Text an den Agent:
+Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, den Verweis auf `tools/list` und `ainetlinter://overview`, die Sufficiency-/Truncation-Regel, die `isError`-Policy und drei kompakte Startworkflows. Die vollständige Toolbeschreibung bleibt in `tools/list`; die vollständige Kurzliste und der Status stehen in der Overview-Resource.
 
-> Symbolgraph-Tools (get_namespace_tree, find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_class_structure, metrics_lookup, get_feature_context, get_test_context, get_violations, safeguard, pattern_detect, find_magic_values, find_dead_code, get_symbol_body, find_duplicates) arbeiten ausschliesslich auf C#/.cs-Quellcode. Fuer Namen, die nur in .js, .razor, .cshtml, .xaml, .html oder .css vorkommen, ist search_pattern der passende Fallback. Struktur-Tools ohne C#-Beschraenkung: get_index_scope, get_hotspots.
-
-Konsequenz für den Agent-Loop: Die Symbolgraph-Tools sind C#-only (get_namespace_tree, find_symbol, find_references, get_call_tree, get_impact, get_type_hierarchy, dependency_graph, get_file_skeleton, get_class_structure, metrics_lookup, get_feature_context, get_test_context, get_violations, safeguard, pattern_detect, find_magic_values, find_dead_code, get_symbol_body, find_duplicates). Die Struktur-Tools get_index_scope und get_hotspots sind nicht C#-beschränkt. `search_pattern` ist der vorgesehene Fallback für Treffer in `.js`/`.razor`/`.cshtml`/`.xaml`/`.html`/`.css` und ist selbst nicht C#-only.
+Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Eine reproduzierte Messung vom 2026-08-20 ergab 724 Zeichen und 724 UTF-8-Bytes. Die Bytezahl wird mit `Encoding.UTF8.GetByteCount` bestimmt; daraus wird keine exakte Tokenersparnis abgeleitet.
 
 ### Tool-Referenz
 
@@ -442,7 +442,7 @@ Neben der Tool-Referenz stellt der Server eine MCP-Resource bereit — ein bei j
 2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
 3. Empfohlene Workflows: kompakte Tool-Choreographie für die drei typischen Agenten-Pfade (Code erkunden, Refactoring & Impact, Quality-Gate vor Commit).
 
-Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — der `initialize`-Handshake weist in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
+Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — Legacy-`initialize` und modernes `server/discover` weisen in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
@@ -450,7 +450,7 @@ Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Be
 
 Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird statt `LinterConsole` die `McpLintConsole`-Implementierung aktiviert (in `Program.cs` als expliziter Parameter an `McpServerCommand.RunAsync` uebergeben), die `ILintConsole.WriteLine(...)` zwingend nach `stderr` umleitet. Ein unbeabsichtigter `Console.WriteLine`-Call in einer Tool-Implementierung oder einem Helper wuerde weiterhin ein Leak sein, aber der zentrale `ILintConsole`-Pfad ist abgesichert.
 
-Regressions-Schutz: ein E2E-Framing-Test in `McpServerCommandJsonRpcFramingTests` spawnt `AiNetLinter.exe` als Subprozess, schreibt `initialize` + `tools/list` + `tools/call`-Frames manuell auf stdin und prueft **jede** Zeile auf stdout als gueltigen JSON-RPC-Frame (`jsonrpc == "2.0"`). Kein SDK-Parser zwischen Subprozess und Assertions — ein zukuenftiger Leak wuerde als nicht-JSON-Zeile sichtbar.
+Regressions-Schutz: E2E-Framing-Tests in `McpServerCommandJsonRpcFramingTests` spawnen `AiNetLinter.exe` als Subprozess und schreiben Legacy-`initialize` beziehungsweise modernes `server/discover` mit anschließendem `tools/list` manuell auf stdin. Sie prüfen **jede** Zeile auf stdout als gültigen JSON-RPC-Frame (`jsonrpc == "2.0"`), vergleichen Instructions und Toolnamen mit der registrierten Collection und messen Zeichen sowie UTF-8-Bytes. Kein SDK-Parser zwischen Subprozess und Assertions — ein zukünftiger Leak würde als nicht-JSON-Zeile sichtbar.
 
 ### MCP-Observability & Feedback
 

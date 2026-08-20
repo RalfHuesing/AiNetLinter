@@ -67,7 +67,7 @@ Die wissenschaftliche Begründung ist bewusst begrenzt: Liu et al. zeigen, dass 
 | Reihenfolge | Aufgabe | Status | Priorität | Abhängigkeit | Erwarteter, überprüfbarer Effekt |
 |---:|---|---|---|---|---|
 | 1 | [01_dokumentations-und-begriffsdrift-beseitigen.md](01_dokumentations-und-begriffsdrift-beseitigen.md) | **erledigt** | P0 | keine | Verträge und Begriffe werden faktisch korrekt; keine veralteten hartcodierten Toolzahlen |
-| 2 | [02_discovery-kontextbudget-und-protokolltests.md](02_discovery-kontextbudget-und-protokolltests.md) | offen | P0 | Aufgabe 01 | mindestens 60 % weniger globale Instructions-Bytes; Legacy und MCP 2026-07-28 auf dem Wire abgesichert |
+| 2 | [02_discovery-kontextbudget-und-protokolltests.md](02_discovery-kontextbudget-und-protokolltests.md) | **erledigt** | P0 | Aufgabe 01 | mindestens 60 % weniger globale Instructions-Bytes; Legacy und MCP 2026-07-28 auf dem Wire abgesichert |
 | 3 | [03_transitive-symbolgraph-ausgaben-strukturieren.md](03_transitive-symbolgraph-ausgaben-strukturieren.md) | offen | P1 | Aufgabe 02 | `depth > 1` bleibt maschinell auswertbar und kommuniziert Vollständigkeit explizit |
 | 4 | [04_get-impact-zum-diff-kontext-erweitern.md](04_get-impact-zum-diff-kontext-erweitern.md) | offen | P2 | Aufgabe 03 | ein deterministischer Aufruf liefert für einen Diff Symbole, Impact, Test-Zuordnung und direkte Violations |
 | 5 | [05_tool-annotations-korrekt-setzen.md](05_tool-annotations-korrekt-setzen.md) | offen | P2 | Aufgabe 02 | Hosts erhalten korrekte Side-Effect- und Trust-Metadaten statt SDK-Defaults |

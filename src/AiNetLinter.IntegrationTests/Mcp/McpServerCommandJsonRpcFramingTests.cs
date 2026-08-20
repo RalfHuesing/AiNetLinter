@@ -1,12 +1,14 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.IntegrationTests.Platform;
@@ -16,8 +18,8 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// First-Principles-E2E-Test fuer das JSON-RPC-Framing des MCP-Servers: spawnt einen
-/// <c>AiNetLinter.exe --mcp-server</c>-Subprozess, schreibt <c>initialize</c> +
-/// <c>notifications/initialized</c> + <c>tools/list</c> + <c>tools/call</c> manuell als
+/// <c>AiNetLinter.exe --mcp-server</c>-Subprozess, schreibt Legacy-<c>initialize</c> oder
+/// modernes <c>server/discover</c> sowie <c>tools/list</c> und <c>tools/call</c> manuell als
 /// newline-delimited JSON auf stdin, liest stdout zeilenweise roh zurueck und verifiziert
 /// <b>jede</b> Zeile als gueltigen JSON-RPC-Frame (<c>jsonrpc == "2.0"</c>).
 /// Dieser Test umgeht bewusst den SDK-Parser zwischen Subprozess und Assertions - ein
@@ -30,8 +32,12 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 public sealed class McpServerCommandJsonRpcFramingTests
 {
     private const string ProtocolVersion = "2024-11-05";
+    private const string ModernProtocolVersion = "2026-07-28";
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
+    private readonly ITestOutputHelper output;
+
+    public McpServerCommandJsonRpcFramingTests(ITestOutputHelper output) => this.output = output;
 
     [Fact]
     public async Task HandshakeOnly_AllStdoutLinesAreValidJsonRpcFrames()
@@ -177,9 +183,156 @@ public sealed class McpServerCommandJsonRpcFramingTests
 
         Assert.False(string.IsNullOrEmpty(instructions));
         Assert.Contains("search_pattern", instructions, StringComparison.Ordinal);
-        Assert.Contains("Sufficiency-Doctrine", instructions, StringComparison.Ordinal);
+        Assert.Contains("Sufficiency", instructions, StringComparison.Ordinal);
         Assert.Contains("isError-Policy", instructions, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LegacyAndModernDiscovery_ExposeSameInstructionsAndRegisteredToolsWithinBudget()
+    {
+        using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
+        using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
+        var expectedToolNames = GetRegisteredToolNames();
+        var legacy = await ReadDiscoverySnapshotAsync(legacyFixture.RootPath, modern: false);
+        var modern = await ReadDiscoverySnapshotAsync(modernFixture.RootPath, modern: true);
+
+        Assert.Equal(legacy.Instructions, modern.Instructions);
+        Assert.Equal(legacy.InstructionsSize, modern.InstructionsSize);
+        Assert.True(expectedToolNames.SetEquals(legacy.ToolNames));
+        Assert.True(expectedToolNames.SetEquals(modern.ToolNames));
+        Assert.True(legacy.ToolNames.SetEquals(modern.ToolNames));
+        Assert.True(
+           legacy.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes,
+           $"ServerInstructions: {legacy.InstructionsSize.Utf8Bytes} Bytes, " +
+           $"Budget: {ServerInstructions.MaxUtf8Bytes} Bytes.");
+        Assert.True(modern.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes);
+
+        output.WriteLine($"Legacy discovery: {legacy.DiscoveryPayload}");
+        output.WriteLine($"Legacy tools/list: {legacy.ToolsListPayload}");
+        output.WriteLine($"Modern discovery: {modern.DiscoveryPayload}");
+        output.WriteLine($"Modern tools/list: {modern.ToolsListPayload}");
+        output.WriteLine($"Instructions: {legacy.InstructionsSize}");
+    }
+
+    private static async Task<McpWireDiscoverySnapshot> ReadDiscoverySnapshotAsync(
+        string targetDirectory, bool modern)
+    {
+        var lines = await RunAndCollectStdoutAsync(targetDirectory, BuildDiscoveryFrames(modern));
+        var discoveryResponse = FindResponse(lines, 1);
+        var toolsResponse = FindResponse(lines, 2);
+        Assert.Equal("2.0", discoveryResponse.GetProperty("jsonrpc").GetString());
+        Assert.Equal("2.0", toolsResponse.GetProperty("jsonrpc").GetString());
+        if (!discoveryResponse.TryGetProperty("result", out var discoveryResult))
+        {
+            throw new InvalidOperationException(
+                $"Discovery-Antwort ohne result (modern={modern}): {discoveryResponse.GetRawText()}");
+        }
+        if (modern)
+        {
+            var supportedVersions = discoveryResult.GetProperty("supportedVersions")
+                .EnumerateArray()
+                .Select(version => version.GetString())
+                .ToHashSet(StringComparer.Ordinal);
+            Assert.Contains(ModernProtocolVersion, supportedVersions);
+        }
+
+        var instructions = discoveryResult.GetProperty("instructions").GetString();
+        Assert.False(string.IsNullOrEmpty(instructions));
+        var instructionSize = McpPayloadMeasurement.Measure(instructions!);
+        if (!toolsResponse.TryGetProperty("result", out var toolsResult))
+        {
+            throw new InvalidOperationException(
+                $"tools/list-Antwort ohne result (modern={modern}): {toolsResponse.GetRawText()}");
+        }
+
+        var toolNames = toolsResult.GetProperty("tools")
+            .EnumerateArray()
+            .Select(tool => tool.GetProperty("name").GetString()!)
+            .ToArray();
+        Assert.Equal(toolNames.Length, toolNames.Distinct(StringComparer.Ordinal).Count());
+
+        return new McpWireDiscoverySnapshot(
+            instructions!,
+            toolNames.ToHashSet(StringComparer.Ordinal),
+            instructionSize,
+            McpPayloadMeasurement.MeasureJson(discoveryResponse),
+            McpPayloadMeasurement.MeasureJson(toolsResponse));
+    }
+
+    private static string[] BuildDiscoveryFrames(bool modern)
+    {
+        var meta = new Dictionary<string, object?>
+        {
+            ["io.modelcontextprotocol/protocolVersion"] = ModernProtocolVersion,
+            ["io.modelcontextprotocol/clientInfo"] = new { name = ClientName, version = ClientVersion },
+            ["io.modelcontextprotocol/clientCapabilities"] = new { },
+        };
+        var discoveryFrame = modern
+            ? JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "server/discover",
+                @params = new { _meta = meta },
+            })
+            : JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "initialize",
+                @params = new
+                {
+                    protocolVersion = ProtocolVersion,
+                    capabilities = new { },
+                    clientInfo = new { name = ClientName, version = ClientVersion },
+                },
+            });
+        var toolsListFrame = modern
+            ? JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 2,
+                method = "tools/list",
+                @params = new { _meta = meta },
+            })
+            : JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2, method = "tools/list" });
+        var initializedFrame = JsonSerializer.Serialize(new { jsonrpc = "2.0", method = "notifications/initialized" });
+        return modern
+            ? new[] { discoveryFrame, toolsListFrame }
+            : new[] { discoveryFrame, initializedFrame, toolsListFrame };
+    }
+
+    private static IReadOnlySet<string> GetRegisteredToolNames()
+    {
+        using var state = new McpCodeGraphServer(
+            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        return McpServerOptionsFactory.BuildToolCollection(state)
+            .Select(tool => tool.ProtocolTool.Name)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static JsonElement FindResponse(IEnumerable<string> lines, int id)
+    {
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var document = JsonDocument.Parse(line);
+            if (document.RootElement.TryGetProperty("id", out var responseId) &&
+                responseId.ValueKind == JsonValueKind.Number && responseId.GetInt32() == id)
+            {
+                return document.RootElement.Clone();
+            }
+        }
+
+        throw new InvalidOperationException($"Keine JSON-RPC-Antwort fuer id={id} gefunden.");
+    }
+
+    private sealed record McpWireDiscoverySnapshot(
+        string Instructions,
+        IReadOnlySet<string> ToolNames,
+        McpPayloadSize InstructionsSize,
+        McpPayloadSize DiscoveryPayload,
+        McpPayloadSize ToolsListPayload);
 
     private static async Task<System.Collections.Generic.List<string>> RunAndCollectStdoutAsync(
         string targetDirectory, string[] frames)
