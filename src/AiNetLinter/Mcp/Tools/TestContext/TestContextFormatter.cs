@@ -16,7 +16,7 @@ internal static class TestContextFormatter
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine($"# Test-Coverage-Kontext: {payload.TargetSymbol} ({payload.TargetKind})");
+        sb.AppendLine($"# Test-Kontext (statische Test-Zuordnung): {payload.TargetSymbol} ({payload.TargetKind})");
         sb.AppendLine();
         sb.AppendLine($"- **Zieldatei:** `{payload.TargetFilePath}`");
 
@@ -24,7 +24,7 @@ internal static class TestContextFormatter
         {
             sb.AppendLine();
             sb.AppendLine("> [!NOTE]");
-            sb.AppendLine("> Für dieses Symbol wurden keine direkten Tests gefunden (weder per Namenskonvention, typeof/nameof, @covers-Kommentar noch Methoden-Aufruf).");
+            sb.AppendLine("> In der statischen Test-Zuordnung wurden für dieses Symbol keine direkten Tests gefunden (weder per Namenskonvention, typeof/nameof, @covers-Kommentar noch Methoden-Aufruf).");
             var suggestedPath = payload.SuggestedTestFilePath ?? $"{payload.TargetSymbol}Tests.cs";
             sb.AppendLine($"> **Empfehlung:** Neue Unit-Tests unter `{suggestedPath}` anlegen.");
         }

@@ -278,7 +278,7 @@ internal static class AnalysisToolRegistrations
 
     private const string GetFeatureContextDescription =
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
-        "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung und Linter-Violations) " +
+        "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) " +
         "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol) akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "Teilbereiche koennen ueber includeCallers, includeTests, includeMetrics, includeViolations zu-/abgewaehlt werden. " +
         "maxCallers und maxTests steuern das Limit (Default 10, Cap 50).";
@@ -300,5 +300,5 @@ internal static class AnalysisToolRegistrations
     private const string GetTestContextDescription =
         "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol (Klasse, Methode, Datei.cs:Zeile) abfragen. " +
         "symbol (oder symbolIdentifier) spezifiziert das Ziel-Symbol, maxResults (Default 30) begrenzt die Anzahl Testdateien. " +
-        "Liefert Zuordnungsgruende, Test-Kategorien (Unit/Integration), kopierbare dotnet test Filterbefehle und Ungetestet-Diagnosen.";
+        "Liefert statische Zuordnungsgruende, Test-Kategorien (Unit/Integration), kopierbare dotnet test Filterbefehle und einen Hinweis, wenn keine Tests statisch zugeordnet wurden.";
 }

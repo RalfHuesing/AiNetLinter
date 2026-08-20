@@ -9,7 +9,7 @@ Das Tool läuft in zwei unabhängigen Modi:
 | Modus | Was es tut |
 | :--- | :--- |
 | **CLI-Batch-Modus** | Ein Lint-Lauf gegen eine Solution: Markdown-Report auf stdout, CI-tauglicher Exit-Code, optionaler Auto-Fixer für triviale Verstöße. |
-| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als 25 einzeln abfragbare Tools (Symbolsuche, Referenzen, One-Shot Feature-Kontext, Impact-Analyse, Lint-Status, Namespace-Baum u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
+| **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als einzeln abfragbare Tools (Symbolsuche, Referenzen, One-Shot Feature-Kontext, Impact-Analyse, Lint-Status, Namespace-Baum u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
 
 Beide Modi teilen sich dieselbe Analyse-Engine und dieselbe `rules.json`-Konfiguration.
 
@@ -77,8 +77,8 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 
 | Tool | Zweck |
 | :--- | :--- |
-| `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt Deklaration, Metriken, direkte Aufrufer, Test-Abdeckung und Linter-Violations |
-| `get_test_context` | Test-Coverage-Awareness für ein C#-Symbol: ermittelt zugeordnete Testdateien, Testklassen, Testmethoden, Kategorien und direkt ausführbare `dotnet test` Filterbefehle |
+| `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt Deklaration, Metriken, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations |
+| `get_test_context` | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zugeordnete Testdateien, Testklassen, Testmethoden, Kategorien und direkt ausführbare `dotnet test` Filterbefehle |
 | `get_namespace_tree` | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) |
 | `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden |
 | `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`) |

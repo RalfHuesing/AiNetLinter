@@ -93,4 +93,3 @@ Historische Roadmap-Einträge dürfen ihre damalige Zahl behalten, wenn Datum un
 - Keine öffentliche Behauptung verwechselt statische Zuordnung mit Runtime-Coverage.
 - Toolnamen-Parität ist ohne hartcodierte Toolanzahl getestet.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
-

@@ -101,12 +101,12 @@ internal static class FeatureContextFormatter
     {
         if (tests == null) return;
 
-        var header = $"## 4. Test-Abdeckung ({tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Tests)";
+        var header = $"## 4. Test-Kontext (statische Test-Zuordnung: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Tests)";
         sb.AppendLine(header);
 
         if (tests.TestFiles.Count == 0)
         {
-            sb.AppendLine("- Keine zugehoerigen Tests identifiziert (Symbol erscheint ungetestet).");
+            sb.AppendLine("- Keine Tests statisch zugeordnet.");
         }
         else
         {

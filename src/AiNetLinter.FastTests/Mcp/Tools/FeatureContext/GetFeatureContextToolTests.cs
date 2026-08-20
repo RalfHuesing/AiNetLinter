@@ -145,8 +145,8 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("## 3. Direkte Aufrufer", text);
         Assert.Contains("Consumer.cs", text);
 
-        // 4. Test-Abdeckung
-        Assert.Contains("## 4. Test-Abdeckung", text);
+        // 4. Test-Kontext
+        Assert.Contains("## 4. Test-Kontext (statische Test-Zuordnung", text);
         Assert.Contains("CalculatorTests.cs", text);
         Assert.Contains("Add_PositiveNumbers_ReturnsSum", text);
 
@@ -237,7 +237,7 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("## 1. Symbol & Deklaration", text);
         Assert.DoesNotContain("## 2. Metriken & Budget", text);
         Assert.DoesNotContain("## 3. Direkte Aufrufer", text);
-        Assert.DoesNotContain("## 4. Test-Abdeckung", text);
+        Assert.DoesNotContain("## 4. Test-Kontext", text);
         Assert.DoesNotContain("## 5. Offene Violations", text);
 
         Assert.NotNull(result.StructuredContent);

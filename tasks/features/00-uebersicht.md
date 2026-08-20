@@ -6,7 +6,7 @@ Dieses Dokument priorisiert die verbleibenden Features nach **Effizienz (Token-/
 
 ## 1. Bereits erledigt & im Code verifiziert
 
-Die folgenden 25 MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
+Die folgenden MCP-Tools und Kern-Mechanismen sind vollständig implementiert, resident auf `AiNetLinter.slnx` getestet und produktiv:
 
 | Kategorie | Tools | Beschreibung |
 |---|---|---|
@@ -33,4 +33,3 @@ Die verbleibenden Features minimieren Kontext-Roundtrips, senken API-Kosten pro 
 
 * [05-bedingt-sinnvoll.md](05-bedingt-sinnvoll.md) — Sammeldokument für nachgelagerte Ideen (ASP.NET-Framework-Analyzer-Suite).
 * [06-nicht-umsetzen.md](06-nicht-umsetzen.md) — Begründete Ausschlussliste (u. a. `validate_file`, `trace_flow`, `preview_refactor`, RAG/Vektorsuche, `get_fixes`).
-

@@ -153,7 +153,8 @@ public sealed class GetTestContextToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("# Test-Coverage-Kontext: CoreLib.Calculator", textContent.Text);
+        Assert.Contains("# Test-Kontext (statische Test-Zuordnung): CoreLib.Calculator", textContent.Text);
+        Assert.Contains("statische Test-Zuordnung", textContent.Text);
         Assert.Contains("CalculatorTests", textContent.Text);
         Assert.Contains("Add_ReturnsSum", textContent.Text);
         Assert.Contains("Multiply_ReturnsProduct", textContent.Text);
@@ -238,7 +239,7 @@ public sealed class GetTestContextToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UntestedSymbol_ReturnsUntestedNoticeAndPathSuggestion()
+    public async Task ExecuteAsync_NoStaticAssignment_ReturnsNoticeAndPathSuggestion()
     {
         using var solutionOwner = CreateTestScenario();
         var state = CreateServer(solutionOwner.Solution);
@@ -247,7 +248,7 @@ public sealed class GetTestContextToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Für dieses Symbol wurden keine direkten Tests gefunden", textContent.Text);
+        Assert.Contains("In der statischen Test-Zuordnung wurden für dieses Symbol keine direkten Tests gefunden", textContent.Text);
         Assert.Contains("Empfehlung:", textContent.Text);
         Assert.Contains("tests/CoreLib.Tests/UntestedServiceTests.cs", textContent.Text);
 

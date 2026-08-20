@@ -47,8 +47,8 @@ internal static class ServerInstructions
         "Verzeichnisknoten (Modi code_size/comment_density/violation_density/complexity) " +
         "und sortierten Top-N-Kindern je Ebene.\n" +
         "- metrics_lookup: Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support).\n" +
-        "- get_feature_context: Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken & Budget, direkte Aufrufer, Test-Abdeckung, Linter-Violations) in einem einzigen Call vor Edits.\n" +
-        "- get_test_context: Ermittelt Test-Dateien, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol.\n" +
+        "- get_feature_context: Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung, Linter-Violations) in einem einzigen Call vor Edits.\n" +
+        "- get_test_context: Ermittelt statische Test-Zuordnungen, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol.\n" +
         "- get_violations: Liefert aktuelle Lint-Regelverstoesse der geladenen Solution.\n" +
         "- safeguard: Liefert einen deterministischen 0-10-Quality-Score + Pass/Fail-Threshold " +
         "+ Top-Violations + Remediation-Hints fuer die geladene Solution (Quality-Gate).\n" +

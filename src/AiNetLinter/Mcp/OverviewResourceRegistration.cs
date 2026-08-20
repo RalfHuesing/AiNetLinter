@@ -54,8 +54,8 @@ internal static class OverviewResourceRegistration
         (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
         ("get_namespace_tree", "Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen)."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
-        ("get_feature_context", "Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken, Aufrufer, Tests, Violations) vor Edits."),
-        ("get_test_context", "Ermittelt Test-Dateien, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol."),
+        ("get_feature_context", "Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken, Aufrufer, statische Test-Zuordnung, Violations) vor Edits."),
+        ("get_test_context", "Ermittelt statische Test-Zuordnungen, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol."),
     ];
 
     internal static void Register(McpServerResourceCollection resources, McpCodeGraphServer mcpState)

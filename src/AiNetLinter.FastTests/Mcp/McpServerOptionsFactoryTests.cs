@@ -36,8 +36,13 @@ public sealed class McpServerOptionsFactoryTests
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
         var options = McpServerOptionsFactory.Create(state);
 
-        var registeredNames = options.ToolCollection!.Select(t => t.ProtocolTool.Name).ToList();
-        Assert.Equal(26, registeredNames.Count);
+        var registeredNames = options.ToolCollection!
+            .Select(t => t.ProtocolTool.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(
+            OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
+            registeredNames);
 
         foreach (var name in registeredNames)
         {
@@ -48,8 +53,16 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void ServerInstructions_MatchesOverviewResourceTools()
     {
-        var overviewNames = OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToList();
-        Assert.Equal(26, overviewNames.Count);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        var options = McpServerOptionsFactory.Create(state);
+        var registeredNames = options.ToolCollection!
+            .Select(t => t.ProtocolTool.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        var overviewNames = OverviewResourceRegistration.ToolSummaries
+            .Select(t => t.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(registeredNames, overviewNames);
 
         foreach (var name in overviewNames)
         {

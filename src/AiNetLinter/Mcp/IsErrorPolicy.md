@@ -23,7 +23,7 @@ erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im
 | Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
 | Solution wird noch im Hintergrund geladen (`McpToolResults.Loading()`) | **false** | Transienter Wartezustand, kein Fehler — der Text ist ein `[INFO]`-Hinweis, Client kann nach kurzer Pause retryn. |
 
-## Audit-Ergebnis pro Tool (20 Tools)
+## Audit-Ergebnis pro Tool
 
 Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je Tool, siehe
 `src/AiNetLinter/Mcp/Tools/*.cs`.
