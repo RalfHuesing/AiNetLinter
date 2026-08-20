@@ -35,7 +35,7 @@ public sealed class LoadFixtureMeasurementsTests
             linesPerFile: 20);
 
         var sw = Stopwatch.StartNew();
-        var catalog = await SourceFileCatalog.LoadAsync(handle.SolutionPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(handle.SolutionPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
         var solution = server.GetCurrentSolution();
@@ -58,7 +58,7 @@ public sealed class LoadFixtureMeasurementsTests
             filesPerProject: 200,
             linesPerFile: 10);
 
-        var catalog = await SourceFileCatalog.LoadAsync(handle.SolutionPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(handle.SolutionPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog)));
 

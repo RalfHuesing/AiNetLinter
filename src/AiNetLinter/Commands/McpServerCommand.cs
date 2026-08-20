@@ -59,7 +59,7 @@ internal static class McpServerCommand
         var maxLineCount = ResolveMaxLineCount(args, resolvedConfigPath);
         var config = ResolveConfig(args, resolvedConfigPath);
         var usedDefaultConfig = resolvedConfigPath is null;
-        using var mcpState = new McpCodeGraphServer(new McpCodeGraphServerOptions
+        await using var mcpState = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
             Catalog = null,
             Console = c,
@@ -76,7 +76,7 @@ internal static class McpServerCommand
         var builder = services.AddMcpServer();
         builder.WithObservability(obsOptions);
 
-        var serviceProvider = services.BuildServiceProvider();
+        using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         serverOptions.ServerInfo = new Implementation
         {

@@ -22,16 +22,18 @@ namespace AiNetLinter.Mcp;
 /// aktualisieren) liegt in <see cref="McpCodeGraphServerRefresh"/>, damit diese Klasse unter
 /// dem projektweiten <c>MaxAIContextFootprint</c>-Limit bleibt.
 /// </summary>
-internal sealed class McpCodeGraphServer : IDisposable
+internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
 {
     private readonly Lock _lock = new();
     private readonly ILintConsole _console;
     private readonly Dictionary<string, McpFileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private readonly Task<SourceFileCatalog?>? _loadTask;
+    private readonly CancellationTokenSource _loadCancellation = new();
     private readonly DateTime _startedAtUtc = DateTime.UtcNow;
     private SourceFileCatalog? _catalog;
     private DateTime? _lastSolutionDirMtimeUtc;
     private int _refreshCount;
+    private int _disposed;
     private readonly bool _isReadOnlySnapshot;
 
     // Input-Record als Parameter-Object, damit MaxConstructorDependencies: 5 eingehalten wird
@@ -59,7 +61,7 @@ internal sealed class McpCodeGraphServer : IDisposable
         {
             // Hintergrund-Load: der Server startet sofort, der Tool-Dispatch sieht
             // solange LoadState == Loading und antwortet mit McpToolResults.Loading().
-            _loadTask = Task.Run(() => loadFunc(CancellationToken.None));
+            _loadTask = Task.Run(() => loadFunc(_loadCancellation.Token));
         }
         else if (options.Catalog is { } catalog)
         {
@@ -149,7 +151,7 @@ internal sealed class McpCodeGraphServer : IDisposable
         string? solutionPath;
         lock (_lock)
         {
-            if (_isReadOnlySnapshot || _catalog is null) return false;
+            if (_disposed != 0 || _isReadOnlySnapshot || _catalog is null) return false;
             solutionPath = _catalog.Solution.FilePath;
         }
 
@@ -201,6 +203,8 @@ internal sealed class McpCodeGraphServer : IDisposable
     {
         lock (_lock)
         {
+            if (_disposed != 0) return null;
+
             if (_catalog is null && _loadTask is not null)
             {
                 // ainetlinter-disable BanBlockingTaskAccess — die sync-Methode darf im
@@ -228,18 +232,50 @@ internal sealed class McpCodeGraphServer : IDisposable
 
     public void Dispose()
     {
-        if (_loadTask is { IsCompleted: false })
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        _loadCancellation.Cancel();
+        SourceFileCatalog? loadedCatalog = null;
+        try
         {
-            // ainetlinter-disable BanBlockingTaskAccess — Dispose darf den Server-Thread nicht
-            // blockieren, aber ein laufender Hintergrund-Load muss vor Catalog-Dispose
-            // abgeschlossen sein, sonst laeuft der Load-Thread in einen disposed Workspace.
-            try { _loadTask.Wait(TimeSpan.FromSeconds(2)); }
-            // ainetlinter-disable EnforceNoSilentCatch — Server faehrt herunter, das
-            // Load-Ergebnis koennen wir nicht mehr verwenden, eine separate Fehlerausgabe
-            // ist nicht noetig, weil der Server sowieso terminiert.
-            catch (AggregateException) { }
+            if (_loadTask is not null)
+            {
+                try
+                {
+                    loadedCatalog = await _loadTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (_loadCancellation.IsCancellationRequested)
+                {
+                }
+                catch (Exception exception)
+                {
+                    _console.WriteError($"[WARN]: Hintergrund-Load konnte beim MCP-Shutdown nicht abgeschlossen werden: {exception.Message}");
+                }
+            }
+
+            SourceFileCatalog? catalog;
+            lock (_lock)
+            {
+                catalog = _catalog;
+                _catalog = null;
+            }
+
+            catalog?.Dispose();
+            if (loadedCatalog is not null && !ReferenceEquals(loadedCatalog, catalog))
+            {
+                loadedCatalog.Dispose();
+            }
         }
-        _catalog?.Dispose();
+        finally
+        {
+            _loadCancellation.Dispose();
+        }
     }
 
     private void InitializeFileState(Solution solution)

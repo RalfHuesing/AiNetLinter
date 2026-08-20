@@ -22,7 +22,7 @@ public sealed class GetImpactToolIntegrationTests
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
@@ -37,7 +37,7 @@ public sealed class GetImpactToolIntegrationTests
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
@@ -51,7 +51,7 @@ public sealed class GetImpactToolIntegrationTests
     public async Task ExecuteAsync_UnresolvableGitRef_ReturnsRecoverableAnalysisFailedNotEmptyResult()
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("does-not-exist-xyz", null, 50, 1), CancellationToken.None);
@@ -66,7 +66,7 @@ public sealed class GetImpactToolIntegrationTests
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();
         fixture.ChangeCalculatorAddBodyWithoutCommitting();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 2, 1), CancellationToken.None);
@@ -79,7 +79,7 @@ public sealed class GetImpactToolIntegrationTests
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
-        var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "ValidClassA.DoWork", 50, 1), CancellationToken.None);

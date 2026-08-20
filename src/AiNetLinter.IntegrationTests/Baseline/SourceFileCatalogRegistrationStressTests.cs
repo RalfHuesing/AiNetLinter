@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.IntegrationTests.Platform;
@@ -27,8 +28,8 @@ public sealed class SourceFileCatalogRegistrationStressTests
             Path.Combine(solutionRoot, "tests", "Fixtures", "CompileErrorMini"),
         };
 
-        var catalogs = new ConcurrentBag<SourceFileCatalog>();
         var exceptions = new ConcurrentBag<Exception>();
+        var successfulLoads = 0;
 
         var tasks = Enumerable.Range(0, 20)
             .Select(i => Task.Run(async () =>
@@ -36,8 +37,8 @@ public sealed class SourceFileCatalogRegistrationStressTests
                 try
                 {
                     var fixturePath = fixturePaths[i % fixturePaths.Length];
-                    var catalog = await SourceFileCatalog.LoadAsync(fixturePath);
-                    catalogs.Add(catalog);
+                    using var catalog = await SourceFileCatalog.LoadAsync(fixturePath);
+                    Interlocked.Increment(ref successfulLoads);
                 }
                 catch (Exception ex)
                 {
@@ -49,12 +50,6 @@ public sealed class SourceFileCatalogRegistrationStressTests
         await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
-        Assert.Equal(20, catalogs.Count);
-
-        foreach (var catalog in catalogs)
-        {
-            try { catalog.Dispose(); }
-            catch { /* ignore */ }
-        }
+        Assert.Equal(20, successfulLoads);
     }
 }

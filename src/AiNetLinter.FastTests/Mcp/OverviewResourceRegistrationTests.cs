@@ -75,7 +75,11 @@ public sealed class OverviewResourceRegistrationTests
             MaxLineCount = 700,
             Config = CreateConfig(),
             UsedDefaultConfig = false,
-            LoadFunc = _ => neverCompletes.Task,
+            LoadFunc = async token =>
+            {
+                await neverCompletes.Task.WaitAsync(token);
+                return null;
+            },
         });
 
         var text = OverviewResourceRegistration.BuildOverviewText(state);

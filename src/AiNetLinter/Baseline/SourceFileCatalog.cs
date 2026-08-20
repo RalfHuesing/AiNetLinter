@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using System.Threading;
 using AiNetLinter.Core;
 using AiNetLinter.Output;
 using AiNetLinter.Configuration;
@@ -13,6 +14,7 @@ namespace AiNetLinter.Baseline;
 public sealed class SourceFileCatalog : IDisposable
 {
     private readonly Workspace? _workspace;
+    private int _disposed;
 
     internal SourceFileCatalog(Workspace? workspace, Solution solution, bool hasLoadingErrors)
     {
@@ -119,7 +121,11 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Gibt den MSBuild-Workspace frei.
     /// </summary>
-    public void Dispose() => _workspace?.Dispose();
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _workspace?.Dispose();
+    }
 
     internal static bool IsValidDocument(Document document, string? solutionDir)
     {

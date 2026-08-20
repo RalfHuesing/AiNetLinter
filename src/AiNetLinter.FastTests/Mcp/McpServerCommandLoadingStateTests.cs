@@ -43,7 +43,11 @@ public sealed class McpServerCommandLoadingStateTests
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
             UsedDefaultConfig = false,
-            LoadFunc = _ => neverCompletes.Task,
+            LoadFunc = async token =>
+            {
+                await neverCompletes.Task.WaitAsync(token);
+                return null;
+            },
         });
 
         Assert.Equal(ServerLoadState.Loading, server.LoadState);
@@ -54,6 +58,47 @@ public sealed class McpServerCommandLoadingStateTests
         Assert.NotEqual(true, loadingResult!.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(loadingResult.Content!)).Text;
         Assert.Contains("Server laedt die Solution noch", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dispose_CancelsAndAwaitsBackgroundLoad()
+    {
+        var loadStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var loadCanceled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var server = new McpCodeGraphServer(new McpCodeGraphServerOptions
+        {
+            Catalog = null,
+            Console = AiNetLinter.Output.LinterConsole.Instance,
+            MaxLineCount = 700,
+            Config = new AiNetLinter.Configuration.Config
+            {
+                Global = new AiNetLinter.Configuration.GlobalConfig(),
+                Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+            },
+            UsedDefaultConfig = false,
+            LoadFunc = async token =>
+            {
+                loadStarted.TrySetResult(true);
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    loadCanceled.TrySetResult(true);
+                    throw;
+                }
+
+                return null;
+            },
+        });
+
+        Assert.True(loadStarted.Task.Wait(TimeSpan.FromSeconds(5)));
+
+        server.Dispose();
+
+        Assert.True(loadCanceled.Task.IsCompletedSuccessfully);
     }
 
     [Fact]

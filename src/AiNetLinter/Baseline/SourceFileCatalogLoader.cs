@@ -25,13 +25,25 @@ internal static class SourceFileCatalogLoader
         var diagnostics = new ConcurrentBag<string>();
         workspace.RegisterWorkspaceFailedHandler(e => diagnostics.Add(e.Diagnostic.Message));
 
-        var solution = await workspace.OpenSolutionAsync(solutionPath, cancellationToken: cancellationToken);
-        foreach (var message in diagnostics.Distinct(StringComparer.Ordinal))
+        try
         {
-            Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {message}");
-        }
+            var solution = await workspace.OpenSolutionAsync(solutionPath, cancellationToken: cancellationToken);
+            foreach (var message in diagnostics.Distinct(StringComparer.Ordinal))
+            {
+                Console.Error.WriteLine($"[WARN]: Workspace-Diagnose: {message}");
+            }
 
-        return new SourceFileCatalog(workspace, solution, !diagnostics.IsEmpty);
+            return new SourceFileCatalog(workspace, solution, !diagnostics.IsEmpty);
+        }
+        catch
+        {
+            // Die Ownership des Workspace geht erst mit dem erfolgreichen Catalog-Aufbau an
+            // SourceFileCatalog ueber. Bei Abbruch oder Fehler waere ein ungeordneter
+            // MSBuildWorkspace-Dispose ein BuildHost-/Named-Pipe-Leak und kann beim Prozessende
+            // den Roslyn-RpcServer mit "Pipe is broken" abstuerzen lassen.
+            workspace.Dispose();
+            throw;
+        }
     }
 
     private static void RegisterMSBuild()
