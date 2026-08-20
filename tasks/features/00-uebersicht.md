@@ -24,9 +24,7 @@ Die folgenden 25 MCP-Tools und Kern-Mechanismen sind vollständig implementiert,
 Die verbleibenden Features minimieren Kontext-Roundtrips, senken API-Kosten pro Agenten-Task und verhindern architektonischen Drift:
 
 ### Prio 1: Semantische Qualität & Drift-Prävention (DRY Schicht 3 & 4)
-1. **[03-structural-drift-detection.md](03-structural-drift-detection.md) — Semantische DRY-Erkennung via AST-Fingerprints (`find_duplicates` mit `mode="structural"`)** *(Prio 1 — Höchster Qualitäts-Hebel für DRY)*
-   * **Qualitäts-ROI:** Maximal. Erkennt parallele Zwillingsmethoden (Typ-4-Drift wie redundante Enum-Switches / Kind-Mapper) über Merkmalsvektoren und Cosine-Similarity. Verhindert Code-Aufblähung nachhaltig.
-2. **[04-similar-names.md](04-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 2 — Hoher Qualitäts-Hebel)*
+1. **[04-similar-names.md](04-similar-names.md) — Naming-Drift & Semantische Namensfamilien (`similar_names`)** *(Prio 2 — Hoher Qualitäts-Hebel)*
    * **Qualitäts-ROI:** Hoch. Erkennt inkonsistente DTO-/Model-Familien (`UserDto`, `UserData`) und Hilfsfunktions-Drift rein lexikalisch und signaturbasiert über den Roslyn-Symbolgraphen.
 
 ---
