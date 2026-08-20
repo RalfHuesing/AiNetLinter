@@ -52,6 +52,8 @@ maxTestsPerSymbol: int                       // Default 10, Cap 50
 - Pro geänderter Zeile wird die innerste passende Deklaration gewählt; dadurch werden nicht gleichzeitig Methode und enthaltender Typ als zwei Änderungen gemeldet. Partielle Typdeklarationen bleiben anhand Datei und Deklarationsspanne unterscheidbar.
 - Geänderte Symbole enthalten stabile ID, Accessibility, Kind, Anzeigename, Projekt, Datei und Deklarationszeilen.
 - Call-Sites verwenden das strukturierte Ergebnis aus Aufgabe 03.
+- **Traversierungs-Korrektur in `CallGraphTraversal.ExpandAsync`:** BFS-Kindknoten enqueuen den tatsächlichen einschließenden Aufrufer (`callerSymbol` via `SemanticModel.GetEnclosingSymbol().NormalizeToOwningMember()`) statt nur `reference.Definition`. Damit liefert `depth > 1` auch für reguläre Methoden echte mehrstufige Aufruferketten (`A -> B -> C`).
+- **Sufficiency-Hint Parität:** `GetImpactTool` (Symbol-Branch) hängt im Erfolgsfall bei vollständigen Ergebnissen konsistent `McpSufficiencyHints.Append` an (identisch zu `FindReferencesTool`).
 - Tests werden für alle gezeigten geänderten Symbole in einem gebatchten Solution-Scan zugeordnet; kein vollständiger Testprojekt-Scan pro Symbol.
 - Violations werden einmal solutionweit berechnet und danach auf geänderte Hunks bzw. Symbolspannen gefiltert.
 - Antwort enthält explizite Vollständigkeitsmetadaten für Symbol-, Call-Site- und Test-Caps.
@@ -157,6 +159,8 @@ Andere Violations derselben Datei werden nicht aufgenommen. Damit bleibt die Ant
 - Eine davon ist privat und hat keine externen Aufrufstellen; sie erscheint trotzdem im `change-context`.
 - Eine Änderung innerhalb einer Methode meldet nur die Methode, nicht zusätzlich den enthaltenden Typ.
 - Direkte und transitive Call-Sites stimmen mit `find_references` überein.
+- Echte Methoden-Aufruferkette (`MethodA -> MethodB -> MethodC`, nicht nur Interface-Overrides) liefert bei `depth=2` in `find_references` und `get_impact` Aufrufstellen auf Ebene 1 und Ebene 2 mit korrekter `Depth` und `ReachedFromSymbolId`.
+- `GetImpactTool` im Symbol-Branch hängt bei vollständigen Ergebnissen den Sufficiency-Hint `(Vollstaendig - keine weiteren Calls noetig)` an.
 - Test-Zuordnung enthält mindestens direkte Invocation und Namenskonvention als getrennte Evidenzarten.
 - Nur eine Violation innerhalb Hunk/Symbolspanne wird aufgenommen; benachbarte irrelevante Violation derselben Datei nicht.
 - `detailLevel=callers` bleibt snapshot-kompatibel.
@@ -167,6 +171,7 @@ Andere Violations derselben Datei werden nicht aufgenommen. Damit bleibt die Ant
 ## Definition of Done
 
 - Ein Git-Diff kann mit einem `get_impact(detailLevel="change-context")` vollständig lokalisiert werden.
+- `CallGraphTraversal.ExpandAsync` traversiert echte Aufruferketten über `GetEnclosingSymbol()`.
 - Kein neues MCP-Tool wurde registriert.
 - Keine N-malige Vollsolution-Abtastung pro geändertem Symbol.
 - Antwort ist deterministisch, gekappt und vollständigkeitsbewusst.
