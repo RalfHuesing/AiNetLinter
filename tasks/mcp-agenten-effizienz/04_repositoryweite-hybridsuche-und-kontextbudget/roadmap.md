@@ -18,7 +18,8 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
 - EPIC-02 ist abgeschlossen: StructuredContent, MatchRanges, Kontext und Legacy-Formatter stammen aus dem gemeinsamen Scanner-Ergebnis.
 - EPIC-03 ist abgeschlossen: Solution-Scope, Filter, Standardausschlüsse, Antwort-/Trefferbudgets und Completeness sind implementiert und getestet.
 - `step-003` und der approved Korrektur-Step `step-004` haben EPIC-04 sowie die unmittelbar erforderlichen EPIC-05-Vertrags- und Dokumentationsänderungen abgeschlossen. Der Schnitt liegt nach dem stabilisierten lexikalischen Kern und vor jeder Wirksamkeits-/Performance-Messung.
-- EPIC-06 ist die nächste große JIT-Einheit; insbesondere wird dafür weder ein `rg`-Produktionsbackend noch eine ungeprüfte Messbehauptung vorgezogen.
+- `step-005` ist als nächster großer JIT-Step für EPIC-06 geplant: Baseline-/Fixture-Evaluation, messbare Antwort-/Treffer-/Datei-/Laufzeit-/Cancellation-/Folgeaufruf-Proxies und eine objektive Abschlussentscheidung.
+- Der Drift-Audit-Nachweis bleibt unverändert maßgeblich: Im Such-/MCP-Scope gibt es keinen offenen auto-fixbaren Tech-Debt. Außerhalb liegende Audit-Cluster werden nicht opportunistisch konsolidiert.
 - `TD-003-001` wurde in `step-004` erledigt. Weitere Audit-Beobachtungen sind im `tech-debt.md` mit Begründung als außerhalb dieses Tasks liegend dokumentiert.
 
 ## Tech-Stack-Notiz
@@ -56,6 +57,8 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
   - Tool-Signatur und Beschreibung, `McpToolResults`-Struktur, Legacy-Text, Fehler-/Loading-Politik, Overview-Ressource und globale MCP-Hinweise konsistent erweitern; die knappe UTF-8-Grenze der Server-Instruktionen berücksichtigen.
   - Raw-Wire-, SDK-, Fixture-, Ressourcen- und Dokumentationstests ergänzen und README, `Docs/agent-api.md`, `Docs/integration.md`, Overview-/Tool-Beschreibungen sowie gegebenenfalls `Docs/ROADMAP.md` synchronisieren.
 
-- [ ] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (nächster großer JIT-Coding-Step nach `step-004`, einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
-  - Die neue Suche gegen die Baseline mit großen, gemischten und problematischen Dateien prüfen und Antwortgröße, Trefferverlust, Laufzeit, Abbruch- und Folgeaufrufverhalten nachvollziehbar messen.
-  - Einen optionalen `rg`-Vergleich nur als Diagnose-/Messprototyp bewerten; keine Produktionsabhängigkeit einführen, solange der verwaltete Scanner die Anforderungen erfüllt.
+- [ ] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (nächster großer JIT-Coding-Step `step-005` nach `step-004`, einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
+  - Die neue Suche mit dem bestehenden `SymbolGraphMini`-Fixture und kontrolliert erzeugten problematischen Dateien gegen einen unbudgetierten Fixture-Oracle prüfen; Plain-/Regex-, gemischte Dateitypen, C#-Opt-in, Kontext, Binär-/Encoding-/generierte Dateien, Regex-Timeout und Cancellation abdecken.
+  - UTF-8-Bytes von Legacy-Text, Structured-Payload und kombinierter Toolantwort sowie sichtbare/gesamte Treffer- und Dateizahlen, begründeten Verlust, Laufzeitverteilungen und explizite Folgeaufrufe messen. Tokenersparnis und allgemeine Performanceversprechen bleiben ausgeschlossen.
+  - Einen direkten `rg`-Vergleich nur optional und test-/diagnostikseitig ausführen; Verfügbarkeit, Trefferparität und Laufzeit getrennt dokumentieren, aber keine Produktionsabhängigkeit und kein Pflicht-Gate einführen.
+  - Nur bei belastbaren, wiederholbaren Ergebnissen öffentliche Aussagen in `README.md` oder `Docs/ROADMAP.md` ergänzen; andernfalls bleiben die Ergebnisse auf `step-005/step-result.md` beschränkt.

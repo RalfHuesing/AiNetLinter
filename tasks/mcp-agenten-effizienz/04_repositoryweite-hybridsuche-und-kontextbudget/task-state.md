@@ -2,10 +2,10 @@
 status: executing
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 started_at: 2026-08-21T01:20:00+02:00
-last_updated: 2026-08-21T19:10:00+02:00
+last_updated: 2026-08-21T15:24:48+02:00
 rules_dir: .agents/rules
-total_steps: 4
-current_step: step-004 (abgeschlossen)
+total_steps: 5
+current_step: step-005 (geplant)
 ---
 
 # Task State: 04_repositoryweite-hybridsuche-und-kontextbudget
@@ -13,8 +13,8 @@ current_step: step-004 (abgeschlossen)
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 4
-- **Aktueller Schritt:** `step-004` (abgeschlossen; EPIC-06 wird als nächster großer Step geplant)
+- **Steps gesamt:** 5
+- **Aktueller Schritt:** `step-005` (geplant; EPIC-06 als nächster großer Validierungs-Step)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`; `TD-003-001` ist erledigt
 - **Gestartet:** 2026-08-21T01:20:00+02:00
@@ -28,6 +28,7 @@ current_step: step-004 (abgeschlossen)
 | step-002 | EPIC-01 | done | Step-001 Findings korrigieren | step-001 | 518e0bc2 | approved | 518e0bc2 / 74664ede |
 | step-003 | EPIC-04 | done | Opt-in C#-Roslyn-Enrichment und MCP-Vertrag synchronisieren | - | 8252e232 | issues; durch step-004 behoben | 8252e232 / a7fd6794 |
 | step-004 | EPIC-04 | done | Cancellation-Fallback und Overview-Grenzen korrigieren | step-003 | 007ef3b1 | approved | 007ef3b1 / 10a071fa |
+| step-005 | EPIC-06 | open | Wirksamkeits-, Performance- und Abschlussvalidierung | - | - | - | - |
 
 ## Config
 
