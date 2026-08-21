@@ -86,3 +86,111 @@ Semantik, Dispose-Lebenszyklus, Tests). Nur bei belegtem Bedarf.
   TTL-Ablauf reflektiert (Staleness-Invalidierung bleibt intakt).
 - `get_server_health` weist die neuen Zähler aus (Verbindung zu Aufgabe 01).
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
+
+---
+
+# Audit zweiter Pass (2026-08-21): Funde und verschärfte Empfehlungen
+
+Zweiter Audit-Pass gegen den aktuellen Code (`McpCodeGraphServerRefresh.cs` vollständig,
+`FileSystemExclusionHelpers.cs`, `SourceFileCatalog.IsGeneratedPath`). Ergebnis: Die
+Befunde 1–4 halten, aber das Konzept hatte Lücken — zwei davon betreffen **Bestandsbugs**,
+die unabhängig von der Optimierung relevant sind.
+
+## A. Was der erste Pass korrekt festhielt (bestätigt, mit Präzisierung)
+
+- Walk bei jedem Call unter dem globalen Lock, kein Throttling (weiterhin verifiziert).
+- **Semantik präzisiert:** Der Max-mtime-Walk erkennt nur *strukturelle* Änderungen
+  (Eintrag hinzugefügt/entfernt/umbenannt) — Windows aktualisiert Verzeichnis-mtimes NICHT
+  bei reinen Inhaltsänderungen von Dateien. Inhaltsänderungen bekannter Dateien laufen
+  deshalb zu Recht über Phase 1/3 (mtime/Hash pro Dokument) und müssen von einer TTL
+  **ausgenommen** bleiben. Die TTL verzögert ausschließlich die Erkennung *neuer* Dateien.
+- `ReadOnlySnapshot`-Modus (Tests/Fixtures) ruft `RefreshStaleDocuments` nie auf — eine TTL
+  betrifft diesen Pfad nicht.
+
+## B. Übersehen 1: Bestandsbug — Junction-/Symlink-Zyklen im Walk
+
+`ComputeMaxDirMtimeUtc` nutzt das alte String-API-Overload
+(`Directory.EnumerateDirectories(..., SearchOption.AllDirectories)`). Dessen
+Enumeration überspringt **keine Reparse Points** — ein Junction-/Symlink-Zyklus
+(z. B. pnpm-Layouts, Worktree-Junctions, Backup-Tools) kann die Enumeration endlos laufen
+lassen oder massiv aufblähen — **unter dem globalen Lock**, d. h. der gesamte Server hängt.
+Der Hybridsuche-Scanner hat dasselbe Problem bereits gelöst:
+`FileSystemExclusionHelpers.SafeEnumerateFilesWithErrors` setzt
+`AttributesToSkip = FileAttributes.ReparsePoint`.
+
+**Konsequenz:** Der Walk muss auf `EnumerationOptions` mit
+`AttributesToSkip = FileAttributes.ReparsePoint` umgestellt werden — unabhängig von der TTL.
+
+## C. Übersehen 2: Bestandsbug — Ein unzugängliches Verzeichnis degradiert dauerhaft
+
+Wirft `MoveNext` des Enumerators mid-Rekursion eine `UnauthorizedAccessException`
+(gesperrter Ordner, Berechtigungsproblem), propagiert sie aus `ComputeMaxDirMtimeUtc` und
+wird in `HasSolutionDirChanged` mit `return true` ("geändert") beantwortet. Folge: Der
+Sweep läuft ab dann **bei jedem Tool-Call** (Walk + `*.cs`-Vollenumeration), solange der
+Ordner unzugänglich ist — genau der Worst Case, den diese Aufgabe beheben will, tritt dann
+dauerhaft ein. `FileSystemExclusionHelpers` löst das mit Fehlerzähler + kontrolliertem
+Abbruch des betroffenen Asts.
+
+**Konsequenz:** Fehlerhafte Teilbäume dürfen den Walk nicht in "immer geändert" kippen.
+Stattdessen: Fehler zählen und als Health-/Truncation-Metadaten ausweisen (Anschluss an
+`get_server_health`, siehe Aufgabe 01).
+
+## D. Übersehen 3: Es gibt bereits einen geteilten Ausschluss-Helper
+
+`FileSystemExclusionHelpers.IsSearchExcludedRelativePath` pflegt genau die benötigte
+Segmentliste (`.git`, `.hg`, `.svn`, `.vs`, `.idea`, `obj`, `bin`, `node_modules`,
+`worktrees`, `.worktrees`, `testresults`, `artifacts`, `coverage`, `temp`, `packages`) und
+wird bereits von WebFileCatalog, GetIndexScopeScanner und dem Hybridsuche-Scanner genutzt.
+Das Konzept darf **keine eigene vierte Ausschlussliste** einführen — Option b) ist als
+Wiederverwendung dieses Helpers zu spezifizieren. (Bewusste Aufteilung bleibt:
+`SourceFileCatalog.IsGeneratedPath` bleibt für Roslyn-Dokumente maßgeblich; der Walk nutzt
+die breitere Suchliste.)
+
+## E. Verschärfung von Option b): Walk nur über Projektverzeichnisse (b')
+
+Stärker als Namensausschlüsse und korrektheitsäquivalent: `PickProjectForNewFile`
+(`McpCodeGraphServerRefresh.cs:258-268`) liefert für Dateien **außerhalb jedes
+Projektverzeichnisses** `null` — der Sweep überspringt sie heute schon. Neue gültige
+Dokumente entstehen ausschließlich unterhalb bekannter Projektordner. Damit gilt:
+
+- Der Max-mtime-Walk darf auf die **Vereinigung der Projektverzeichnisse** beschränkt
+  werden, ohne dass eine erkennbare neue Datei übersehen wird. `.git`, `node_modules` und
+  Build-Artefakte außerhalb von Projektordnern fallen automatisch heraus.
+- Innerhalb von Projektordnern bleiben `obj`/`bin` namensbasiert auszuschließen (D) —
+  Projektgrenzen allein helfen dort nicht.
+- Der Sweep selbst (`EnumerateCsFilesSafe` ab Solution-Root) sollte dieselbe Grenze
+  nutzen; das macht ihn billiger und semantisch deckungsgleich mit `PickProjectForNewFile`.
+- Randfall unverändert: Eine neue Datei außerhalb aller Projektordner wird auch heute
+  schon bewusst ignoriert (Kommentar `McpCodeGraphServerRefresh.cs:93-101`).
+
+**Neue Empfehlungsreihenfolge: c) messen → b')+D) Projektgrenzen + Helper-Wiederverwendung
+(+ Reparse-Point-Fix aus B) → a) TTL nur falls noch nötig.** b' allein könnte den Walk so
+weit verkleinern, dass eine TTL gar nicht mehr erforderlich ist — das würde den
+sichtbaren Verhaltensunterschied (neue Dateien bis zu TTL verzögert) komplett vermeiden.
+
+## F. Implementierungsfallen für die TTL (falls a) gebaut wird)
+
+1. **Baseline-Nebenwirkung:** `HasSolutionDirChanged` aktualisiert
+   `_lastSolutionDirMtimeUtc` als Seiteneffekt. Wird der Check während der TTL nur
+   "aufgerufen und verworfen", verschiebt sich die Baseline ohne Sweep → **Änderungen
+   gehen verloren**. Die TTL muss das boolesche Ergebnis cachen, niemals den
+   Baseline-Vergleich während der Skip-Phase ausführen.
+2. **Sichtbarkeitsvertrag:** Neue Dateien bleiben bis zum nächsten Sweep (≤ TTL)
+   unsichtbar; Agent legt Datei an und fragt sofort `find_symbol` → `SYMBOL_NOT_FOUND`.
+   Dokumentieren (Description-Hint) und per Test fixieren. Gegenprobe: Inhaltsänderung
+   einer bekannten Datei muss weiterhin **sofort** sichtbar sein (Phase 3 ungehindert).
+3. **Clock-Injection** für deterministische Tests (bereits im DoD).
+
+## G. Ergänzte DoD-Punkte
+
+- Walk folgt keinen Reparse Points (Junction-Zyklus-Test mit temporärer Junction).
+- Ein unzugänglicher Teilbaum erhöht einen Fehlerzähler, kippt `changed` nicht dauerhaft
+  und erscheint in Health-Metadaten; der Sweep läuft NICHT bei jedem Call.
+- Walk- und Sweep-Grenze = Vereinigung der Projektverzeichnisse; Ausschlüsse stammen aus
+  `FileSystemExclusionHelpers` (keine neue Liste).
+- Test: Neue Datei innerhalb der TTL bleibt bis TTL-Ablauf unsichtbar (dokumentierter
+  Vertrag); Inhaltsänderung bekannter Datei ist sofort sichtbar.
+- Test: Baseline wird während TTL-Skip nicht verschoben (Änderung kurz nach Skip-Ende
+  wird erkannt).
+
+
