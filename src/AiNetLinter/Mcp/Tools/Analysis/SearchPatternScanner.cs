@@ -25,17 +25,6 @@ internal static class SearchPatternScanner
         "binary files",
     ];
 
-    internal static string SearchAndFormat(
-        Solution solution,
-        string pattern,
-        bool isRegex,
-        int maxResults)
-    {
-        var parameters = new SearchPatternScannerParameters(
-            solution, pattern, isRegex, maxResults, 0, 0, 0, null, null, null, default);
-        return SearchPatternLegacyFormatter.Format(Scan(parameters));
-    }
-
     internal static SearchPatternScanResult Scan(SearchPatternScannerParameters parameters)
     {
         var solutionRoot = GetSolutionRoot(parameters.Solution);

@@ -203,13 +203,25 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
     {
-        Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: deaktiviert (kein File I/O). Ohne Wert (ZeroOrOne): Default-Pfad <exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl wird automatisch konstruiert; bei nicht aufloesbarer Solution bricht der Server mit Exit 1 ab. Pfad-Aufloesung bei explizitem Wert: absolut -> wie angegeben; relativ -> relativ zum Solution-Verzeichnis. Beispiel: --mcp-log ./.mcp-log/calls.log",
+        Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: aktiv unter %LOCALAPPDATA%\\RalfHuesing\\McpObservability\\ainetlinter\\<yyyy-MM-dd>\\. Ohne Wert (ZeroOrOne) wird dieser Standardpfad verwendet; explizite Pfade werden absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest. Jeder Prozess schreibt eine eigene Datei mit PID und InstanceId. Beispiel: --mcp-log ./.mcp-log/",
         Arity = ArgumentArity.ZeroOrOne,
     };
 
     internal static Option<int?> CreateParentPidOption() => new("--parent-pid")
     {
         Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
+    };
+
+    internal static Option<string?> CreateAnalyzeMcpLogOption() => new("--analyze-mcp-log")
+    {
+        Description = "Offline-Auswertung eines MCP-Call-Logs: JSONL-Datei, Log-Verzeichnis oder Glob.",
+        Arity = ArgumentArity.ExactlyOne,
+    };
+
+    internal static Option<string?> CreateFormatOption() => new("--format")
+    {
+        Description = "Ausgabeformat fuer --analyze-mcp-log: text (Standard) oder json.",
+        DefaultValueFactory = _ => "text",
     };
 
     internal static Option<string[]> CreateIgnoreSuppressionsOption()

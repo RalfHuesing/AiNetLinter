@@ -2,10 +2,12 @@
 
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
+using AiNetLinter.Observability;
 using AiNetLinter.IntegrationTests.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -135,6 +137,30 @@ public sealed class GetServerHealthToolTests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Observability: deaktiviert.", text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithCallLog_ReportsAggregatesInTextAndStructuredContent()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+        using var tempDir = TestTempDirectory.Create("mcp-health-log-");
+        var logPath = tempDir.CreateFile(
+            "ainetlinter_123_abc.jsonl",
+            "{\"recordType\":\"tool_call\",\"toolName\":\"find_symbol\",\"isErrorResult\":false,\"success\":true}");
+        var obsService = new FakeObservabilityService(isEnabled: true, logFilePath: logPath);
+
+        var result = await GetServerHealthTool.ExecuteAsync(state, obsService);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Call-Log-Aggregate: 1 Eintraege, 0 isError-Ergebnisse", text);
+        Assert.Contains("find_symbol=1", text);
+        var payload = JsonSerializer.Deserialize<ServerHealthPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(1, payload!.CallLog!.EntryCount);
+        Assert.Equal(0, payload.CallLog.ErrorCount);
+        Assert.Equal(1, payload.CallLog.CallCountsByTool["find_symbol"]);
+        Assert.Null(payload.CallLog.AnalysisError);
     }
 
     private sealed class FakeObservabilityService(bool isEnabled, string? logFilePath = null) : RalfHuesing.Mcp.Observability.IMcpObservabilityService

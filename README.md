@@ -39,6 +39,15 @@ ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
 Der Linter gibt einen Markdown-Report auf stdout aus und beendet sich mit Exit-Code `0` (keine neuen Verstöße) oder `1` (Verstöße gefunden — CI-tauglich).
 
+MCP-Call-Logs können unabhängig vom Server und ohne Solution-Load ausgewertet werden:
+
+```bash
+ainetlinter --analyze-mcp-log "%LOCALAPPDATA%/RalfHuesing/McpObservability/ainetlinter" --format text
+ainetlinter --analyze-mcp-log "./.mcp-log/**/*.jsonl" --format json
+```
+
+Das Kommando durchsucht Verzeichnisse und Globs rekursiv, schließt Feedback-Logs aus und berichtet Tool-Nutzung, Fehler, Loading-Retry-Bursts, Antwortvollständigkeit sowie prozess-/dateibasierte Sequenzen.
+
 ### Agentische Integration
 
 Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explorativ zu verstehen und eigenständig in ein Projekt zu integrieren — ohne Vorab-Konfiguration durch den Entwickler.
@@ -104,7 +113,7 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer); `enrichCSharp=true` ordnet sichtbare Treffer geladener C#-Dokumente optional ein |
 | `report_observability_feedback` | Strukturierte Bug-Reports, False-Positives oder Feature-Wünsche von Agenten an das System melden |
 | `reload_config` | `rules.json` zur Laufzeit neu einlesen, ohne Server-Neustart |
-| `get_server_health` | LoadState, geladene Solution/Config, Uptime, Call-Statistik |
+| `get_server_health` | LoadState, geladene Solution/Config, Uptime, aktuelle Call-Log-Aggregate |
 
 Registrierung im MCP-Host (Claude Code, Cursor, eigene Agent-Loops):
 

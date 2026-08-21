@@ -247,7 +247,18 @@ Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Pro
 
 **stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
 
-**Opt-in Call-Log:** fuer Production-Monitoring kann der registrierte `ainetlinter`-Aufruf um `--mcp-log <pfad>` ergaenzt werden — siehe [Docs/agent-api.md#call-log-opt-in](agent-api.md#call-log-opt-in) fuer Format und Pfad-Aufloesung. Default: deaktiviert, kein File I/O.
+**MCP-Observability:** Das Tool-Call-Logging ist standardmaessig aktiv. Der Standardpfad liegt unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\`; jede Serverinstanz schreibt eine eigene Datei mit PID und InstanceId. Mit `--mcp-log <pfad>` kann ein eigenes Verzeichnis gesetzt werden, mit `--mcp-log off` wird Logging und Feedback deaktiviert. Format, Pfad-Aufloesung und Offline-Auswertung stehen in [Docs/agent-api.md#mcp-observability--feedback](agent-api.md#mcp-observability--feedback).
+
+### MCP-Observability und Offline-Auswertung
+
+Für eine Auswertung über mehrere Tagesordner oder parallel gestartete Serverinstanzen wird kein MCP-Server benötigt:
+
+```bash
+ainetlinter --analyze-mcp-log "%LOCALAPPDATA%/RalfHuesing/McpObservability/ainetlinter" --format text
+ainetlinter --analyze-mcp-log "./.mcp-log/**/*.jsonl" --format json
+```
+
+Das Kommando liest einzelne Dateien, Verzeichnisse oder Globs rekursiv, ignoriert Feedback-Logs und nutzt `FileShare.ReadWrite`, sodass auch ein laufender Logger analysiert werden kann. Es erzeugt deterministische Text- oder JSON-Reports über Tool-Nutzung, Fehler, Loading-Retry-Bursts, Antwortvollständigkeit und prozess-/dateibasierte Sequenzen. Die Loading-/Completeness-Erkennung ist eine dokumentierte Textmarker-Heuristik.
 
 **Parent-Lebenszyklus:** Ohne weitere Argumente ermittelt der Server die PID des MCP-Hosts automatisch und beendet sich sauber, sobald dieser Prozess endet. Für Wrapper-Skripte kann die Ziel-PID mit `--parent-pid <pid>` explizit gesetzt werden:
 

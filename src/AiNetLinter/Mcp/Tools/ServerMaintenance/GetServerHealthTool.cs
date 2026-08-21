@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AiNetLinter.Observability;
 using ModelContextProtocol.Protocol;
 using RalfHuesing.Mcp.Observability;
 
@@ -13,7 +14,8 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// <summary>
 /// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss des laufenden MCP-Server-Prozesses —
 /// <see cref="ServerLoadState"/>, geladene Solution/Config-Quelle, Uptime, Anzahl
-/// Solution-Refreshes seit Start und Observability-Status (Logging & Feedback-Kanal).
+/// Solution-Refreshes seit Start, Observability-Status (Logging & Feedback-Kanal) und aktuelle
+/// Call-Log-Aggregate.
 /// Reine Diagnose ohne Recoverable-Pfad; einzige Ausnahme
 /// <see cref="ServerLoadState.LoadFailed"/>, konsistent mit den anderen Tools' SOLUTION_NOT_LOADED-
 /// Kurzform.
@@ -37,6 +39,8 @@ internal static class GetServerHealthTool
         var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
         var isEnabled = observabilityService is null || observabilityService.IsEnabled;
         var version = McpServerOptionsFactory.GetServerVersion();
+        var callLogResult = isEnabled ? McpLogAnalyzer.TryAnalyze(effectiveLogPath ?? string.Empty) : null;
+        var callLogPayload = BuildCallLogPayload(effectiveLogPath, callLogResult);
 
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter MCP-Server — Health");
@@ -48,10 +52,10 @@ internal static class GetServerHealthTool
         sb.AppendLine($"- Uptime: {FormatUptime(state.Uptime)}");
         sb.AppendLine($"- Solution-Refreshes seit Start: {state.RefreshCount}");
         sb.AppendLine();
-        sb.Append(DescribeObservability(isEnabled, effectiveLogPath));
+        sb.Append(DescribeObservability(isEnabled, effectiveLogPath, callLogPayload));
 
         var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, effectiveLogPath)));
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, callLogPayload)));
     }
 
     /// <summary>
@@ -59,12 +63,9 @@ internal static class GetServerHealthTool
     /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
     /// wie "wird noch geladen").
     /// </summary>
-    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string version, string? observabilityLogPath)
+    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string version, CallLogPayload? callLogPayload)
     {
         var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
-        var callLogPayload = observabilityLogPath is null
-            ? null
-            : new CallLogPayload(observabilityLogPath, 0, 0, new Dictionary<string, int>());
 
         return new ServerHealthPayload(
             Version: version,
@@ -75,6 +76,32 @@ internal static class GetServerHealthTool
             UptimeSeconds: state.Uptime.TotalSeconds,
             RefreshCount: state.RefreshCount,
             CallLog: callLogPayload);
+    }
+
+    private static CallLogPayload? BuildCallLogPayload(
+        string? logPath,
+        McpLogAnalysisResult? analysisResult)
+    {
+        if (logPath is null)
+        {
+            return null;
+        }
+
+        if (analysisResult?.Report is { } report)
+        {
+            return new CallLogPayload(
+                LogPath: logPath,
+                EntryCount: report.ToolCallCount,
+                ErrorCount: report.ErrorResultCount,
+                CallCountsByTool: report.CallsPerTool);
+        }
+
+        return new CallLogPayload(
+            LogPath: logPath,
+            EntryCount: 0,
+            ErrorCount: 0,
+            CallCountsByTool: new Dictionary<string, int>(),
+            AnalysisError: analysisResult?.Error);
     }
 
     private static string DescribeSolution(McpCodeGraphServer state)
@@ -101,7 +128,7 @@ internal static class GetServerHealthTool
         return uptime.TotalMinutes >= 1 ? $"{(int)uptime.TotalMinutes}min {uptime.Seconds}s" : $"{uptime.Seconds}s";
     }
 
-    private static string DescribeObservability(bool isEnabled, string? logPath)
+    private static string DescribeObservability(bool isEnabled, string? logPath, CallLogPayload? callLog)
     {
         if (!isEnabled)
         {
@@ -112,6 +139,20 @@ internal static class GetServerHealthTool
         {
             return "Observability: aktiv (RalfHuesing.Mcp.Observability, Tool-Call Logging & Feedback-Kanal).";
         }
-        return $"Observability: aktiv ({logPath})";
+
+        var builder = new StringBuilder($"Observability: aktiv ({logPath})");
+        if (callLog?.AnalysisError is { } error)
+        {
+            builder.Append($"\n- Call-Log-Auswertung: nicht verfuegbar ({error})");
+            return builder.ToString();
+        }
+
+        builder.Append($"\n- Call-Log-Aggregate: {callLog?.EntryCount ?? 0} Eintraege, " +
+            $"{callLog?.ErrorCount ?? 0} isError-Ergebnisse");
+        builder.Append("\n- Calls pro Tool: ");
+        builder.Append(callLog is null || callLog.CallCountsByTool.Count == 0
+            ? "keine"
+            : string.Join(", ", callLog.CallCountsByTool.Select(item => $"{item.Key}={item.Value}")));
+        return builder.ToString();
     }
 }

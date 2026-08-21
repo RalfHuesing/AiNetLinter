@@ -1182,6 +1182,8 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--describe-rule <RuleId>` (String): Gibt die vollständige Beschreibung einer Regel aus (z. B. `--describe-rule EnforceNullableEnable`) (Optional).
 - `--search-rules <Stichwort>` (String): Durchsucht Regeln nach Stichwort (RuleId, Bezeichnung, Warum, Intent) (Optional).
 - `--mcp-server` (Flag): Startet einen stdio-basierten MCP-Server (Model Context Protocol) statt eines Batch-Laufs. `--path` optional, Default: aktuelles Arbeitsverzeichnis. Vollständige Referenz: [Docs/agent-api.md](agent-api.md) (Optional).
+- `--analyze-mcp-log <pfad|verzeichnis|glob>` (Pfad): Wertet MCP-Call-Logs offline aus. Verzeichnisse und Globs werden rekursiv nach `.jsonl` durchsucht; `.feedback.jsonl` wird ignoriert. Das Kommando benötigt keine Solution und startet keinen MCP-Server.
+- `--format <text|json>` (String): Ausgabeformat für `--analyze-mcp-log`, Standard `text`. Die Option ist nur zusammen mit `--analyze-mcp-log` gültig.
 
 ### Automatischer rules.json-Sync
 

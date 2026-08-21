@@ -43,7 +43,7 @@ public static class Program
                 // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
                 if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
 
-                if (linterArgs.Docs == null)
+                if (linterArgs.Docs == null && linterArgs.AnalyzeMcpLogPath == null)
                 {
                     var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
@@ -106,6 +106,9 @@ public static class Program
             McpServer = parsed.McpServer,
             McpLogPath = parsed.McpLog,
             ParentPid = parsed.ParentPid,
+            AnalyzeMcpLogPath = parsed.AnalyzeMcpLog,
+            McpLogFormat = parsed.Format ?? "text",
+            McpLogFormatSpecified = parsed.FormatSpecified,
         };
     }
 
@@ -140,6 +143,7 @@ public static class Program
         if (args.ListRules) return ListRulesCommand.ListAll();
         if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);
         if (args.SearchRules != null) return ListRulesCommand.Search(args.SearchRules);
+        if (args.AnalyzeMcpLogPath != null) return AnalyzeMcpLogCommand.Run(args.AnalyzeMcpLogPath, args.McpLogFormat);
         return null;
     }
 
