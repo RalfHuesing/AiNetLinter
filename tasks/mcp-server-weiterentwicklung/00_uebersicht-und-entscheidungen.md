@@ -6,8 +6,7 @@ priority: uebersicht
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
 last_updated: 2026-08-21
-open_questions:
-  - "Wann wird tasks/mcp-agenten-effizienz manuell geloescht? Erst NACH Abschluss der laufenden Hybridsuche-Umsetzung (siehe Warnung unten)."
+open_questions: []
 ---
 
 # MCP-Server-Weiterentwicklung: konsolidierte Aufgaben (Einstiegspunkt)
@@ -39,13 +38,11 @@ Definition of Done).
   nur bei Priorisierung, Status oder neuen Aufgaben.
 
 
-> [!WARNING]
-> **`tasks/mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/` wird
-> GERADE von einem anderen Agenten umgesetzt** (Arbeitsverzeichnis mit codemap/roadmap/
-> step-00x liegt dort). Diese Aufgabe ist hier bewusst **nicht dupliziert**. Das
-> Originalverzeichnis `tasks/mcp-agenten-effizienz/` darf erst **nach Abschluss** dieser
-> Umsetzung manuell gelöscht werden — vorher würde dem Agenten die Arbeitsgrundlage
-> entzogen. Nach Abschluss: Status hier in der Tabelle auf "erledigt" setzen, erst dann löschen.
+> [!NOTE]
+> **`tasks/mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/` wurde am
+> 2026-08-21 abgeschlossen** (Review approved, Ergebnis in `Docs/ROADMAP.md`). Das
+> Quellverzeichnis `tasks/mcp-agenten-effizienz/` ist nach Abschluss gelöscht; die
+> Arbeitsdokumente bleiben über die Git-Historie erreichbar.
 
 ## Ziel
 
@@ -72,7 +69,7 @@ verwenden neutrale, mehrprojektige C#-Solutions.
 
 | Reihenfolge | Aufgabe | Status | Priorität | Abhängigkeit | Herkunft |
 |---:|---|---|---|---|---|
-| — | Hybridsuche repositoryweit + Kontextbudget (Original: `../mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/`) | **in Umsetzung** (anderer Agent) | P1 | 01–03 dort erledigt | mcp-agenten-effizienz/04 |
+| — | Hybridsuche repositoryweit + Kontextbudget (Original: `../mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/`) | **erledigt** (2026-08-21, Review approved) | P1 | 01–03 dort erledigt | mcp-agenten-effizienz/04 |
 | 1 | [01_observability-calllog-fix-und-auswertung.md](01_observability-calllog-fix-und-auswertung/Konzept.md) | offen | P1 | keine | Review-Finding |
 | 2 | [02_staleness-check-performance.md](02_staleness-check-performance/Konzept.md) | offen | P1 | keine | Review-Finding |
 | 3 | [03_get-impact-zum-diff-kontext-erweitern.md](03_get-impact-zum-diff-kontext-erweitern/Konzept.md) | offen | P2 | Hybridsuche (strukturierte transitive Ausgaben, dort erledigt als deren Aufgabe 03) | mcp-agenten-effizienz/05 |
@@ -117,7 +114,7 @@ verwenden neutrale, mehrprojektige C#-Solutions.
 | mcp-agenten-effizienz/01 (Doku-/Begriffsdrift) | erledigt | nur Historie |
 | mcp-agenten-effizienz/02 (Discovery-Kontextbudget + Protokolltests) | erledigt | nur Historie |
 | mcp-agenten-effizienz/03 (transitive Symbolgraph-Ausgaben) | erledigt | nur Historie |
-| mcp-agenten-effizienz/04 (Hybridsuche) | **in Umsetzung** | bleibt im Original bis Abschluss |
+| mcp-agenten-effizienz/04 (Hybridsuche) | erledigt (2026-08-21) | Verzeichnis gelöscht; Historie über Git, Ergebnis in `Docs/ROADMAP.md` |
 | mcp-agenten-effizienz/05 (get_impact change-context) | offen | → 03 hier |
 | mcp-agenten-effizienz/06 (Tool-Annotations) | offen | → 04 hier |
 | mcp-agenten-effizienz/07 (tools/list Cache-Hinweise) | offen | → 07 hier |
