@@ -13,10 +13,10 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternTool.cs`** — Validierung, Loading-/Fehlerpfad und bestehende asynchrone Legacy-Textausgabe des `search_pattern`-Tools.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`** — Zentraler repositoryweiter Scanner für deterministische Treffer, Scope, Filter und Kontext-/Antwortbudgets.
-- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, strukturierte Treffer, MatchRanges, Scope-Metadaten und Completeness.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, strukturierte Treffer, Legacy-Status, MatchRanges, Scope-Metadaten und Completeness.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerCompleteness.cs`** — Aggregation von Sichtbar-/Gesamtzahlen, übersprungenen Dateien und Truncation-Gründen.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFormatter.cs`** — Reine Legacy-Textformatierung aus der sichtbaren strukturierten Trefferliste.
-- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFileHitScanner.cs`** — Unbudgetierter Legacy-Dateitrefferpfad für `GetFilesWithHits`.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFileHitScanner.cs`** — Unbudgetierter Legacy-Dateitrefferpfad für `GetFilesWithHits` mit auswertbarem Datei- und Regex-Status.
 - **`src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs`** — MCP-Registrierung, Tool-Signatur und Beschreibung von `search_pattern`.
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — Gemeinsamer Rückgabemechanismus für Legacy-Text, strukturierte Top-Level-Nutzlasten und Fehlerzustände.
 - **`src/AiNetLinter/Mcp/McpTruncation.cs`** — Bestehende Text- und Dateilisten-Trunkierung samt kompatibler Meta-Hinweise.
@@ -28,11 +28,11 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 ## Scope, Dateisystem und Roslyn
 
-- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — Zentrale Ausschluss-, sichere Enumerations- und Search-Pfadlogik für freie Dateisystemläufe.
+- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — Zentrale Generated-/Ausschluss- und cancellation-aware Enumerationslogik für freie Dateisystemläufe.
 - **`src/AiNetLinter/Web/WebFileCatalog.cs`** — Bestehende projektbezogene Verzeichnisse und mehrsprachige Web-Dateikatalogisierung.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeScanner.cs`** — Vorhandene Dateityp- und Scope-Inventarisierung über Roslyn- und Dateisystemquellen.
 - **`src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextScanner.cs`** — Roslyn-Positions-, Dokumentations-ID-, Projekt- und strukturierte Kontextmuster für optionale Anreicherung.
-- **`src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolScanner.cs`** — Bestehende Wiederverwendung von `GetFilesWithHits` für Hinweise bei fehlenden C#-Symboltreffern.
+- **`src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolScanner.cs`** — Legacy-Dateisuche und Statusformatierung für Hinweise bei fehlenden C#-Symboltreffern.
 - **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — Resident geladener Solution-Snapshot und zentrale Grundlage für Aktualität und Scope der Analyse.
 - **`src/AiNetLinter/Mcp/Tools/MagicValues/FindMagicValuesScannerRecords.cs`** — Bestehende Records und Nutzlastmuster für strukturierte Treffer mit Zeilen-/Spaltenangaben.
 
