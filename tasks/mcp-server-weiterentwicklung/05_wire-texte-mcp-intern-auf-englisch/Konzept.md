@@ -7,10 +7,9 @@ priority: P2
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
 last_updated: 2026-08-21
-audit: zweiter Pass 2026-08-21 abgeschlossen (Abschnitt unten)
-open_questions:
-  - "Phase 3 bestätigen: CLI-Violations-Ausgabe schaltet auf Englisch mit (empfohlen) oder Formatter-Split?"
-entscheidung: "2026-08-21 durch Nutzer bestaetigt"
+audit: zweiter Pass 2026-08-21 abgeschlossen (Abschnitt unten); Phase 3 durch Nutzer bestaetigt
+open_questions: []
+entscheidung: "2026-08-21 durch Nutzer bestaetigt; Phase-3-Folgeentscheidung (CLI schaltet mit) 2026-08-21 bestaetigt"
 ---
 
 # MCP-Kommunikation intern auf Englisch umstellen
@@ -116,7 +115,8 @@ ist also nicht MCP-lokal:
   auf Englisch umstellen; die CLI-Violations-Ausgabe schaltet damit bewusst mit.
   CLI ist keine "externe Doku" — die Sprachregelung verbietet das nicht, und ein
   Formatter-Split (CLI Deutsch / MCP Englisch) wäre dauerhafte Duplikation pro Regel.
-- Offene Frage zur Bestätigung im Frontmatter eingetragen.
+- **Bestätigt durch Nutzer 2026-08-21:** CLI-Violations-Ausgabe schaltet auf Englisch mit;
+  kein Formatter-Split. Phase 3 ist damit freigegeben (eigener Step, eigener Commit).
 - Umfang: ~30+ Regeln mit Warum/Remediation-Texten in `Core/RuleRegistry*.cs` —
   eigenständiger Coding-Step, nicht an Phase 1/2 dranhängen.
 
