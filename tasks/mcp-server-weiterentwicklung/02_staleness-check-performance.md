@@ -1,14 +1,19 @@
 ---
-status: vorschlag
-type: tech-debt
+status: ready
+type: konzept
+project_kind: brownfield
+estimated_scope: small-medium
 priority: P1
+agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
+rules_dir: .agents/rules
 last_updated: 2026-08-21
-verified_against: src/AiNetLinter/Mcp/McpCodeGraphServer.cs, McpCodeGraphServerRefresh.cs
+open_questions: []
+herkunft: Review-Finding 2026-08-21 (ox-alpha)
 ---
 
-# 01 — Staleness-Check: Verzeichnisbaum-Walk bei jedem Tool-Call
+# Staleness-Check: Verzeichnisbaum-Walk bei jedem Tool-Call drosseln
 
-## Befund (verifiziert)
+## Befund (verifiziert 2026-08-21)
 
 Der Aufrufpfad jedes MCP-Tools läuft über `McpCodeGraphServer.GetCurrentSolution()`
 (`McpCodeGraphServer.cs:202-231`). Dort wird bei jedem Aufruf unter dem globalen `_lock`
@@ -38,8 +43,8 @@ sondern die **Frequenz und der Umfang** des Walks.
 ## Warum das relevant ist
 
 - AiNetLinter positioniert sich als residenter Server für große fremde C#-Repos. Ein
-  Monorepo mit 20k+ Verzeichnissen (inkl. `.git`, npm-Artefakte) zahlt den Walk bei
-  **jedem** der schnell hintereinander folgenden Tool-Calls eines Agenten.
+  Monorepo mit 20k+ Verzeichnissen zahlt den Walk bei **jedem** der schnell hintereinander
+  folgenden Tool-Calls eines Agenten.
 - Gerade der typische Agenten-Loop (10–30 Tool-Calls in wenigen Minuten) trifft den
   Worst Case: viele Calls, kurze Abstände, gleicher Baum.
 - Auf Windows sind Directory-stat-Aufrufe relativ teuer; bei Netzlaufwerken/devcontainer-
@@ -51,10 +56,10 @@ sondern die **Frequenz und der Umfang** des Walks.
 Mindestabstand zwischen zwei vollständigen Staleness-Checks, z. B. 1000–2000 ms
 (konfigurierbar in `McpCodeGraphServerOptions`). Innerhalb der TTL wird der letzte
 bekannte Zustand geliefert. Deterministisch, wenige Zeilen, kein neues Subsystem.
-Restrisiko: ein innerhalb der TTL geänderte Datei wird erst beim nächsten Check gesehen —
-für Agenten-Workflows (Edit → nächster Tool-Call liegt i. d. R. > 1 s auseinander) akzeptabel;
-der mtime/Hash-Check der **bekannten** Dokumente (Phase 1/3) kann von der TTL ausgenommen
-bleiben, da er auf Cache-Zuständen arbeitet und billig ist.
+Restrisiko: eine innerhalb der TTL geänderte Datei wird erst beim nächsten Check gesehen —
+für Agenten-Workflows akzeptabel; der mtime/Hash-Check der **bekannten** Dokumente
+(Phase 1/3) kann von der TTL ausgenommen bleiben, da er auf Cache-Zuständen arbeitet
+und billig ist.
 
 ### b) Transiente Verzeichnisse vom Max-mtime-Walk ausschließen
 `.git`, `node_modules`, `bin`, `obj` (und generell alles, was `IsValidDocument` ohnehin
@@ -77,6 +82,7 @@ Semantik, Dispose-Lebenszyklus, Tests). Nur bei belegtem Bedarf.
   werden weiterhin bei jedem Call gegen mtime/Hash geprüft.
 - `.git`/`node_modules`/`bin`/`obj` erscheinen nicht im Walk.
 - Unit-Test: TTL-Verhalten deterministisch (injectable Clock), Ausschluss-Verhalten.
-- Integrationstest: Änderung einer Quelldatei wird auch innerhalb der TTL spätestens beim
-  nächsten Check nach TTL-Ablauf reflektiert (Staleness-Invalidierung bleibt intakt).
-- `get_server_health` weist die neuen Zähler aus (Verbindung zu Finding 02).
+- Integrationstest: Änderung einer Quelldatei wird spätestens beim nächsten Check nach
+  TTL-Ablauf reflektiert (Staleness-Invalidierung bleibt intakt).
+- `get_server_health` weist die neuen Zähler aus (Verbindung zu Aufgabe 01).
+- `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
