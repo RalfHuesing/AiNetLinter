@@ -89,6 +89,55 @@ public sealed class McpServerCommandJsonRpcFramingTests
     }
 
     [Fact]
+    public async Task SearchPatternCall_RawStructuredContentIsObjectAndLegacyTextRemains()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var frames = new List<string>
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"" + ProtocolVersion + "\",\"capabilities\":{}," +
+                "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+        };
+        for (var id = 2; id <= 8; id++)
+        {
+            frames.Add(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "search_pattern",
+                    arguments = new { pattern = "Greeter", contextLines = 1, maxFiles = 1 },
+                },
+            }));
+        }
+
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            fixture.RootPath,
+            frames.ToArray(),
+            TimeSpan.FromSeconds(5));
+        JsonElement? result = null;
+        foreach (var line in observedLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var document = JsonDocument.Parse(line);
+            if (!document.RootElement.TryGetProperty("result", out var candidate)
+                || !candidate.TryGetProperty("structuredContent", out _)) continue;
+            result = candidate.Clone();
+            break;
+        }
+
+        Assert.True(result.HasValue, "Kein structured search_pattern-Result auf dem Raw-Wire gefunden.");
+        var structured = result.Value.GetProperty("structuredContent");
+        Assert.Equal(JsonValueKind.Object, structured.ValueKind);
+        Assert.Equal(JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
+        Assert.Equal(JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
+        Assert.Contains("Greeter", result.Value.GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SymbolGraphDepthToolCall_RawStructuredContentRemainsJsonObject()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();

@@ -84,6 +84,29 @@ public sealed class McpServerCommandContractTests
         await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter" }, "Greeter.cs");
 
     [Fact]
+    public async Task RunAsync_ValidFixture_SearchPatternStructuredArgumentsBind()
+    {
+        var result = await (await fixture.GetHostAsync()).CallToolAsync(
+            "search_pattern",
+            new Dictionary<string, object?>
+            {
+                ["pattern"] = "Greeter",
+                ["maxFiles"] = 1,
+                ["contextLines"] = 1,
+                ["maxResponseBytes"] = 4096,
+                ["scope"] = "src",
+                ["includePatterns"] = new[] { "**/*.cs" },
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal(
+            System.Text.Json.JsonValueKind.Object,
+            result.StructuredContent!.Value.ValueKind);
+        Assert.True(result.StructuredContent.Value.GetProperty("matches").GetArrayLength() > 0);
+    }
+
+    [Fact]
     public async Task RunAsync_ValidFixture_FindSymbolReturnsMatch() =>
         await AssertTextAsync("find_symbol", new Dictionary<string, object?> { ["namePattern"] = "Greeter" }, "Greeter");
 

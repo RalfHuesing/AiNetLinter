@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace AiNetLinter.Baseline;
 
@@ -23,13 +24,40 @@ internal static class FileSystemExclusionHelpers
     /// Walk nicht abbricht — Aufrufer bekommen stattdessen die erreichbaren Dateien.
     /// </summary>
     internal static IEnumerable<string> SafeEnumerateFiles(string directory)
+        => SafeEnumerateFilesWithErrors(directory).Files;
+
+    internal static FileSystemEnumerationResult SafeEnumerateFilesWithErrors(string directory)
     {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = false,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        };
+        var files = new List<string>();
+        var errorCount = 0;
+
         try
         {
-            return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories);
+            files.AddRange(Directory.EnumerateFiles(directory, "*", options));
         }
-        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
-        catch (IOException) { return Array.Empty<string>(); }
+        catch (UnauthorizedAccessException ignored) { _ = ignored; errorCount++; }
+        catch (IOException ignored) { _ = ignored; errorCount++; }
+
+        return new FileSystemEnumerationResult(files, errorCount);
+    }
+
+    internal static bool IsSearchExcludedRelativePath(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/').Trim('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var excludedDirectories = new[]
+        {
+            ".git", ".hg", ".svn", ".vs", ".idea", "obj", "bin", "node_modules",
+            "worktrees", ".worktrees", "testresults", "artifacts", "coverage", "temp", "packages",
+        };
+
+        return segments.Any(segment => excludedDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -51,3 +79,5 @@ internal static class FileSystemExclusionHelpers
             || path.Contains($"{sep}.worktrees{sep}", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+internal sealed record FileSystemEnumerationResult(IReadOnlyList<string> Files, int ErrorCount);

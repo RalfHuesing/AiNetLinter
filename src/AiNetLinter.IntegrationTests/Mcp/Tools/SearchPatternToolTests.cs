@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -203,5 +204,137 @@ public sealed class SearchPatternToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StructuredContent_PreservesLegacyTextAndReturnsObjectPayload()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("Greeter", false, 50, 0, 0, 0, null, null, null),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
+        Assert.Equal(JsonValueKind.Array, result.StructuredContent.Value.GetProperty("matches").ValueKind);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("completeness").ValueKind);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("scope").ValueKind);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("snapshot").ValueKind);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultipleMatchesAndContext_ReturnRangesAndBoundedContext()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("search-anchor", false, 50, 0, 1, 0, null, null, null),
+            CancellationToken.None);
+
+        var matches = result.StructuredContent!.Value.GetProperty("matches").EnumerateArray().ToArray();
+        Assert.Equal(2, matches.Length);
+        var fixtureMatch = Assert.Single(matches.Where(match =>
+            match.GetProperty("filePath").GetString()!.EndsWith(".md", StringComparison.Ordinal)));
+        Assert.Equal(2, fixtureMatch.GetProperty("matchRanges").GetArrayLength());
+        Assert.True(fixtureMatch.GetProperty("contextBefore").GetArrayLength() <= 1);
+        Assert.True(fixtureMatch.GetProperty("contextAfter").GetArrayLength() <= 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxResultsAndMaxFiles_ReportVisibleAndTotalCounts()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("search-anchor", false, 50, 1, 0, 0, null, null, null),
+            CancellationToken.None);
+
+        var completeness = result.StructuredContent!.Value.GetProperty("completeness");
+        Assert.Equal(2, completeness.GetProperty("matchedFileCount").GetInt32());
+        Assert.Equal(1, completeness.GetProperty("shownMatchedFileCount").GetInt32());
+        Assert.Contains(
+            "maxFiles",
+            completeness.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxResponseBytes_SetsCompletenessReason()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("search-anchor", false, 50, 0, 1, 200, null, null, null),
+            CancellationToken.None);
+
+        var reasons = result.StructuredContent!.Value.GetProperty("completeness")
+            .GetProperty("truncatedBy")
+            .EnumerateArray()
+            .Select(item => item.GetString());
+        Assert.Contains("maxResponseBytes", reasons);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeAndFilters_RespectGenericRelativePaths()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments(
+                "search-anchor",
+                false,
+                50,
+                0,
+                0,
+                0,
+                "src/SymbolGraphMini",
+                new[] { "**/*.json" },
+                new[] { "**/*.md" }),
+            CancellationToken.None);
+
+        var matches = result.StructuredContent!.Value.GetProperty("matches").EnumerateArray().ToArray();
+        var match = Assert.Single(matches);
+        Assert.EndsWith("search-fixture.json", match.GetProperty("filePath").GetString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(matches, item => item.GetProperty("filePath").GetString()!.EndsWith(".md", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidBudgets_ReturnRecoverableInvalidArgument()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("Greeter", false, 50, -1, 0, 0, null, null, null),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains(
+            "INVALID_ARGUMENT",
+            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DefaultCall_RetainsLegacyOutputSemantics()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state, pattern: "does-not-exist", isRegex: false, maxResults: 50, CancellationToken.None);
+
+        Assert.Contains(
+            "0 Treffer",
+            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
+            StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Empty(result.StructuredContent!.Value.GetProperty("matches").EnumerateArray());
     }
 }

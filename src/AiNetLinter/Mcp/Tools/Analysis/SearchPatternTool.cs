@@ -9,35 +9,75 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
 
-/// <summary>
-/// MCP-Tool <c>search_pattern</c>: Plain-Text- oder Regex-Suche ueber den Solution-Dateibestand
-/// (alle Dateitypen, nicht nur C#) — Fallback fuer Namen/Strings, die kein C#-Symbol sind (z. B.
-/// JS-Funktionen in .js, Razor-Komponenten in .razor, WPF-Elemente in .xaml, Konfigwerte in .html/
-/// .css). Argument-Validierung lebt im Tool (nicht im Scanner), damit der Scanner reine Daten
-/// bekommt und einfacher unit-testbar bleibt. Bewusst duenner Dispatch auf
-/// <see cref="SearchPatternScanner.SearchAndFormat"/> — keine eigene Scan- oder Formatierungslogik
-///, damit dieser Klasse eigener
-/// <c>AIContextFootprint</c> (siehe <c> klein bleibt.
-/// </summary>
 internal static class SearchPatternTool
 {
-    /// <summary>
-   /// Scannt die resident gehaltene Solution nach <paramref name="pattern"/>. Liefert bei
-    /// ungueltiger Regex-Syntax (nur <paramref name="isRegex"/>=true) einen
-    /// <c>INVALID_ARGUMENT</c>-Fehler statt zu crashen (Result-Pattern, siehe
-    /// <c>. <see cref="Task.Run"/> umschliesst den
-    /// CPU-/IO-bound Scan, damit der <c>McpCodeGraphServer</c>-Lock nicht unnoetig gehalten wird
-    /// (Bewusst eingesetzt: <c>Task.Run</c> verhindert, dass der CPU-/IO-bound Scan den
-    /// <c>McpCodeGraphServer</c>-Lock blockiert.)
-    /// </summary>
-    internal static async Task<CallToolResult> ExecuteAsync(
+    internal static Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
         string? pattern,
         bool isRegex,
         int maxResults,
+        CancellationToken ct) =>
+        ExecuteAsync(
+            state,
+            new SearchPatternToolArguments(pattern, isRegex, maxResults, 0, 0, 0, null, null, null),
+            ct);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        SearchPatternToolArguments arguments,
         CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(pattern))
+        var validation = ValidateArguments(arguments);
+        if (validation is not null) return validation;
+
+        var normalizedMaxResults = arguments.MaxResults < 1 ? 1 : arguments.MaxResults;
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
+        var solution = state.GetCurrentSolution();
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        SearchPatternScanResult scan;
+        try
+        {
+            scan = await Task.Run(
+                () => SearchPatternScanner.Scan(
+                    new SearchPatternScannerParameters(
+                        solution,
+                        arguments.Pattern!,
+                        arguments.IsRegex,
+                        normalizedMaxResults,
+                        arguments.MaxFiles,
+                        arguments.ContextLines,
+                        arguments.MaxResponseBytes,
+                        arguments.Scope,
+                        arguments.IncludePatterns,
+                        arguments.ExcludePatterns,
+                        ct)),
+                CancellationToken.None);
+        }
+        catch (ArgumentException ex)
+        {
+            var hint = IsInvalidRegexArgument(arguments, ex)
+                ? "Pruefe pattern auf gueltige Regex-Syntax."
+                : "Pattern, Scope und Filter muessen gueltige solution-relative Werte sein.";
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                ex.Message,
+                hint: hint);
+        }
+
+        var text = SearchPatternLegacyFormatter.Format(scan);
+        if (scan.Payload.Completeness.CancellationRequested)
+        {
+            return McpToolResults.Text(text, scan.Payload);
+        }
+
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), scan.Payload);
+    }
+
+    private static CallToolResult? ValidateArguments(SearchPatternToolArguments arguments)
+    {
+        if (string.IsNullOrEmpty(arguments.Pattern))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
@@ -45,28 +85,23 @@ internal static class SearchPatternTool
                 hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
         }
 
-        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-
-        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
-        var solution = state.GetCurrentSolution();
-        if (solution is null) return McpToolResults.SolutionNotLoaded();
-
-        string text;
-        try
+        if (IsInvalidBudget(arguments))
         {
-            text = await Task.Run(
-                () => SearchPatternScanner.SearchAndFormat(solution, pattern, isRegex, normalizedMaxResults),
-                ct);
-        }
-        catch (ArgumentException ex)
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                $"Ungueltige Regex: {ex.Message}",
-                hint: "Pruefe pattern auf gueltige Regex-Syntax.");
+            return McpToolResults.InvalidArgument(
+                "maxFiles, contextLines und maxResponseBytes duerfen nicht negativ sein.");
         }
 
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text));
+        return null;
     }
+
+    private static bool IsInvalidBudget(SearchPatternToolArguments arguments) =>
+        arguments.MaxFiles < 0
+        || arguments.ContextLines < 0
+        || arguments.MaxResponseBytes < 0;
+
+    private static bool IsInvalidRegexArgument(
+        SearchPatternToolArguments arguments,
+        ArgumentException exception) =>
+        string.Equals(exception.ParamName, "pattern", StringComparison.Ordinal)
+        || (arguments.IsRegex && exception.Message.Contains("Invalid pattern", StringComparison.Ordinal));
 }

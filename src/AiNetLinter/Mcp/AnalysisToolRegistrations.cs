@@ -92,8 +92,30 @@ internal static class AnalysisToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? pattern = null, bool isRegex = false, int maxResults = 50, CancellationToken ct = default) =>
-                SearchPatternTool.ExecuteAsync(mcpState, pattern, isRegex, maxResults, ct),
+            (
+                string? pattern = null,
+                bool isRegex = false,
+                int maxResults = 50,
+                int maxFiles = 0,
+                int contextLines = 0,
+                int maxResponseBytes = 0,
+                string? scope = null,
+                string[]? includePatterns = null,
+                string[]? excludePatterns = null,
+                CancellationToken ct = default) =>
+                SearchPatternTool.ExecuteAsync(
+                    mcpState,
+                    new SearchPatternToolArguments(
+                        pattern,
+                        isRegex,
+                        maxResults,
+                        maxFiles,
+                        contextLines,
+                        maxResponseBytes,
+                        scope,
+                        includePatterns,
+                        excludePatterns),
+                    ct),
             new McpServerToolCreateOptions
             {
                 Name = "search_pattern",
@@ -104,7 +126,9 @@ internal static class AnalysisToolRegistrations
     private const string SearchPatternDescription =
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
         "JS-Funktion, Razor-Komponente, WPF-Element) oder allgemeine Textsuche. isRegex=true " +
-        "fuer Regex statt case-insensitive Substring.";
+        "fuer Regex statt case-insensitive Substring. maxFiles, contextLines und " +
+        "maxResponseBytes begrenzen die strukturierte Nutzlast; scope, includePatterns und " +
+        "excludePatterns steuern den solution-relativen Scope. Legacy-Text bleibt erhalten.";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

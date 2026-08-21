@@ -180,6 +180,30 @@ public sealed class McpServerAllToolsE2ETests
     }
 
     [Fact]
+    public async Task SearchPattern_StructuredResponse_ReturnsObjectWithRangesAndCompleteness()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "search_pattern",
+            new Dictionary<string, object?>
+            {
+                ["pattern"] = "userService",
+                ["contextLines"] = 1,
+                ["maxResponseBytes"] = 4096,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var structured = result.StructuredContent!.Value;
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, structured.ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
+        Assert.Contains(
+            "userService",
+            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task UnknownTool_Call_ThrowsMcpProtocolException()
     {
         await Assert.ThrowsAsync<McpProtocolException>(() => _fixture.Client.CallToolAsync("unknown_tool_name"));
