@@ -1,5 +1,5 @@
 ---
-status: ready
+status: Nochmal 360Grad Audit machen
 type: konzept
 project_kind: brownfield
 estimated_scope: small
@@ -22,7 +22,13 @@ Im MCP-2026-07-28-Pfad soll `tools/list` einen positiven `ttlMs`-Wert und `cache
 Der aktuelle Server liefert reproduzierbar:
 
 ```json
-{ "ttlMs": 0, "cacheScope": "private", "tools": [/* 26 Einträge */] }
+{
+    "ttlMs": 0,
+    "cacheScope": "private",
+    "tools": [
+        /* 26 Einträge */
+    ]
+}
 ```
 
 Die Toolcollection ist nach Prozessstart statisch. `reload_config` ändert Regeln, aber weder Toolnamen noch Input-Schemas. Die MCP-Spezifikation 2026-07-28 führt Cache-Hinweise für Listenresultate genau für diesen Fall ein. Quelle: [MCP 2026-07-28 – List results are cacheable](https://blog.modelcontextprotocol.io/posts/2026-07-28/#list-results-are-cacheable).
@@ -85,3 +91,4 @@ Damit bleibt die Umsetzung innerhalb des aktuellen Tech-Stacks.
 - Clientabhängigkeit ist dokumentiert; keine garantierte Tokenersparnis wird behauptet.
 - Kein neuer Cache- oder Infrastruktur-Stack wurde eingeführt.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
+

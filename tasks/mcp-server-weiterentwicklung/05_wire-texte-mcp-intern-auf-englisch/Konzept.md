@@ -1,5 +1,5 @@
 ---
-status: ready
+status: Nochmal 360Grad Audit machen
 type: konzept (entscheidung umgesetzt)
 project_kind: brownfield
 estimated_scope: medium-large
@@ -45,10 +45,10 @@ Die ASCII-Transliteration ist worst-of-both:
 
 1. **Phase 1 — Discovery-Ebene:** `ServerInstructions.Text` + alle Tool-Descriptions in
    `*ToolRegistrations.cs` + Kurzsummaries in `OverviewResourceRegistration.ToolSummaries`
-   + `BuildOverviewText`. Geschlossener Surface; Raw-Wire-Probes existieren bereits für die
-   Byte-Messung vorher/nachher.
+    - `BuildOverviewText`. Geschlossener Surface; Raw-Wire-Probes existieren bereits für die
+      Byte-Messung vorher/nachher.
 2. **Phase 2 — Antworttexte:** `[INFO]/[ERROR]`-Texte der Scanner und `McpToolResults`
-   (Loading-Text, Hints, Sufficiency-/Drilldown-Hints). Fehler-*Codes*
+   (Loading-Text, Hints, Sufficiency-/Drilldown-Hints). Fehler-_Codes_
    (SYMBOL_NOT_FOUND etc.) sind bereits englisch — Phase 2 macht die Antworten konsistent.
 3. **Phase 3 — Abhängige Artefakte prüfen:** Das generierte `.agents/rules/AiNetLinter.mdc`
    spiegelt u. U. Tool-Descriptions. Ergebnis dokumentieren (entweder: Sync folgt automatisch,
@@ -57,12 +57,12 @@ Die ASCII-Transliteration ist worst-of-both:
 
 ### Sprachregelung (fortgeltend, siehe auch 00_uebersicht)
 
-| Ebene | Sprache |
-|---|---|
-| Wire (Instructions, Descriptions, Antworten) | Englisch |
-| Fehler-Codes | Englisch (bereits so) |
-| `README.md`, `Docs/**` | Deutsch |
-| tasks/, `.agents/rules/*Richtlinien*`, Commit-Messages | Deutsch |
+| Ebene                                                  | Sprache               |
+| ------------------------------------------------------ | --------------------- |
+| Wire (Instructions, Descriptions, Antworten)           | Englisch              |
+| Fehler-Codes                                           | Englisch (bereits so) |
+| `README.md`, `Docs/**`                                 | Deutsch               |
+| tasks/, `.agents/rules/*Richtlinien*`, Commit-Messages | Deutsch               |
 
 ### Non-Goals
 
@@ -86,3 +86,4 @@ Die ASCII-Transliteration ist worst-of-both:
 - `Docs/agent-api.md` zeigt Beispielantworten in der neuen Sprache; README bleibt Deutsch.
 - Byte-Messung vorher/nachher dokumentiert.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
+
