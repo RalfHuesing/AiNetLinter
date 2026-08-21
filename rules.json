@@ -182,7 +182,8 @@
       "publish",
       "TestResults",
       ".vs",
-      "speedup-tests"
+      "speedup-tests",
+      "temp"
     ],
     "MaxPartialClassFiles": 2,
     "MaxPartialClassFilesExemptTypes": [
