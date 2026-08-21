@@ -17,9 +17,9 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
 - EPIC-01 ist durch `step-001` und den approved Korrektur-Step `step-002` abgeschlossen: Baseline, sicherer Scan, Cancellation und Legacy-Fehlerstatus sind im aktuellen Code geprüft.
 - EPIC-02 ist abgeschlossen: StructuredContent, MatchRanges, Kontext und Legacy-Formatter stammen aus dem gemeinsamen Scanner-Ergebnis.
 - EPIC-03 ist abgeschlossen: Solution-Scope, Filter, Standardausschlüsse, Antwort-/Trefferbudgets und Completeness sind implementiert und getestet.
-- `step-003` bündelt als nächste große Einheit EPIC-04 mit den unmittelbar erforderlichen EPIC-05-Vertrags- und Dokumentationsänderungen. Der Schnitt liegt nach dem stabilisierten lexikalischen Kern und vor jeder Wirksamkeits-/Performance-Messung.
-- EPIC-06 bleibt danach ein eigener Evaluationsschritt; insbesondere wird jetzt weder ein `rg`-Produktionsbackend noch ein Messprototyp vorgezogen.
-- Tech-Debt ist aktuell leer: Es existiert keine `tech-debt.md` und die beiden Reviews enthalten keine Tech-Debt-IDs. Später entstehende Debt wird nur dann im Coding-Step gebündelt, wenn der Kritiker sie ausdrücklich als `auto_fixable: ja` dokumentiert und sie unmittelbar denselben Bereich betrifft.
+- `step-003` und der approved Korrektur-Step `step-004` haben EPIC-04 sowie die unmittelbar erforderlichen EPIC-05-Vertrags- und Dokumentationsänderungen abgeschlossen. Der Schnitt liegt nach dem stabilisierten lexikalischen Kern und vor jeder Wirksamkeits-/Performance-Messung.
+- EPIC-06 ist die nächste große JIT-Einheit; insbesondere wird dafür weder ein `rg`-Produktionsbackend noch eine ungeprüfte Messbehauptung vorgezogen.
+- `TD-003-001` wurde in `step-004` erledigt. Weitere Audit-Beobachtungen sind im `tech-debt.md` mit Begründung als außerhalb dieses Tasks liegend dokumentiert.
 
 ## Tech-Stack-Notiz
 
@@ -48,14 +48,14 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
   - Einen sicheren, generischen Suchbereich mit Include-/Exclude-Filtern und konservativen Standardausschlüssen für Build-, VCS-, temporäre, generierte, binäre und minifizierte Dateien schaffen, ohne projekt- oder agentenspezifische Pfade fest einzubauen.
   - Treffer-, Datei-, Kontext- und Antwortbudgets sowie Regex-Timeout, Cancellation, Encoding/BOM, unlesbare Dateien und Vollständigkeitsstatus modellieren; Trunkierungsgründe und übersprungene Dateien maschinenlesbar machen.
 
-- [ ] **EPIC-04 — Optionale Roslyn-Anreicherung für C#** (nächster großer Coding-Step: `step-003`)
+- [x] **EPIC-04 — Optionale Roslyn-Anreicherung für C#** (`step-003`, Korrektur in `step-004`, approved)
   - Lexikalische Treffer bei expliziter Aktivierung mit stabilen C#-Kategorien, Symbol-/Dokumentations-IDs, Projektbezug und vorhandenen Roslyn-Positionen anreichern.
   - Unaufgelöste, mehrdeutige, außerhalb des Snapshots liegende oder nicht anwendbare Semantik explizit kennzeichnen und niemals aus Text allein ableiten.
 
-- [ ] **EPIC-05 — MCP-Vertrag, Registrierung, Ressourcen und Dokumentation** (mit `step-003` kompatibel gebündelt; nur der Vertrag der tatsächlich implementierten Enrichment-Felder)
+- [x] **EPIC-05 — MCP-Vertrag, Registrierung, Ressourcen und Dokumentation** (mit `step-003`/`step-004` kompatibel gebündelt und approved)
   - Tool-Signatur und Beschreibung, `McpToolResults`-Struktur, Legacy-Text, Fehler-/Loading-Politik, Overview-Ressource und globale MCP-Hinweise konsistent erweitern; die knappe UTF-8-Grenze der Server-Instruktionen berücksichtigen.
   - Raw-Wire-, SDK-, Fixture-, Ressourcen- und Dokumentationstests ergänzen und README, `Docs/agent-api.md`, `Docs/integration.md`, Overview-/Tool-Beschreibungen sowie gegebenenfalls `Docs/ROADMAP.md` synchronisieren.
 
-- [ ] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (nach `step-003`, einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
+- [ ] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (nächster großer JIT-Coding-Step nach `step-004`, einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
   - Die neue Suche gegen die Baseline mit großen, gemischten und problematischen Dateien prüfen und Antwortgröße, Trefferverlust, Laufzeit, Abbruch- und Folgeaufrufverhalten nachvollziehbar messen.
   - Einen optionalen `rg`-Vergleich nur als Diagnose-/Messprototyp bewerten; keine Produktionsabhängigkeit einführen, solange der verwaltete Scanner die Anforderungen erfüllt.

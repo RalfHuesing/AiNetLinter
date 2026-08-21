@@ -6,7 +6,7 @@ step: 003
 coded_by_model: GPT-5 (Codex)
 coded_by_model_knowledge_cutoff: nicht angegeben
 code_commit: 8252e232
-documentation_commit: pending
+documentation_commit: a7fd6794
 ---
 
 # Step 003 Ergebnis

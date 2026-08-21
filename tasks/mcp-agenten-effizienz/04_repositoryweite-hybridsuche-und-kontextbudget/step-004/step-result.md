@@ -7,7 +7,7 @@ corrects: step-003
 coded_by_model: GPT-5 (Codex)
 coded_by_model_knowledge_cutoff: nicht angegeben
 code_commit: 007ef3b1
-documentation_commit: pending
+documentation_commit: 10a071fa
 ---
 
 # Step 004 Ergebnis: Cancellation-Fallback und Overview-Grenzen korrigieren
