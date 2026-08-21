@@ -26,6 +26,21 @@ internal static class SearchPatternScannerCompleteness
             options.CancellationRequested,
             options.RegexTimedOut);
 
+    internal static SearchPatternCompleteness MarkCancellation(
+        SearchPatternCompleteness completeness)
+    {
+        var reasons = completeness.TruncatedBy.Contains("cancellation", StringComparer.Ordinal)
+            ? completeness.TruncatedBy
+            : completeness.TruncatedBy.Concat(["cancellation"]).ToArray();
+        return completeness with
+        {
+            ScanCompleted = false,
+            Truncated = true,
+            TruncatedBy = reasons,
+            CancellationRequested = true,
+        };
+    }
+
     internal static IReadOnlyList<string> DetermineTruncationReasons(SearchPatternTruncationOptions options)
     {
         var reasons = new List<string>();

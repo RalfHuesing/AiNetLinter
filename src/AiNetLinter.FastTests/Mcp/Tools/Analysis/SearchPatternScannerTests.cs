@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.TestKit;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.Analysis;
 
@@ -89,6 +91,57 @@ public sealed class SearchPatternScannerTests
         Assert.Equal("string", stringLiteral.Semantic!.Kind);
         Assert.Equal("not_applicable", stringLiteral.Semantic.Resolution);
         Assert.DoesNotContain(result.Payload.Matches, match => match.Semantic?.Kind == "symbol_reference");
+    }
+
+    [Fact]
+    public async Task Scan_CSharpEnrichmentCancellation_ReusesLexicalPayloadWithoutRescan()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-cancellation-");
+        const string source = "namespace Project; public sealed class Target { }";
+        using var solution = CreateSolution(tempDir.DirectoryPath, source);
+        File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "src", "Project", "Project.cs"), source);
+        using var cancellation = new CancellationTokenSource();
+        var parameters = CreateParameters(solution.Solution, new("Target")
+        {
+            EnrichCSharp = true,
+            CancellationToken = cancellation.Token,
+        });
+        var scanCalls = 0;
+
+        SearchPatternScanResult ScanOnce(SearchPatternScannerParameters scanParameters)
+        {
+            scanCalls++;
+            return SearchPatternScanner.Scan(scanParameters);
+        }
+
+        Task<IReadOnlyList<SearchPatternMatch>> CancelDuringEnrichment(
+            Solution solution,
+            IReadOnlyList<SearchPatternMatch> matches,
+            CancellationToken token)
+        {
+            _ = solution;
+            _ = matches;
+            cancellation.Cancel();
+            return Task.FromCanceled<IReadOnlyList<SearchPatternMatch>>(token);
+        }
+
+        var result = await SearchPatternScannerEnrichment.ScanAsync(
+            parameters,
+            ScanOnce,
+            CancelDuringEnrichment);
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Equal(1, scanCalls);
+        Assert.Equal("src/Project/Project.cs", match.FilePath);
+        Assert.Contains("Target", match.LineText, StringComparison.Ordinal);
+        Assert.Null(match.Semantic);
+        Assert.Equal(1, result.Payload.Completeness.MatchedFileCount);
+        Assert.Equal(1, result.Payload.Completeness.TotalMatchedLineCount);
+        Assert.False(result.Payload.Completeness.ScanCompleted);
+        Assert.True(result.Payload.Completeness.CancellationRequested);
+        Assert.Contains("cancellation", result.Payload.Completeness.TruncatedBy);
+        Assert.Equal("resident-solution", result.Payload.Snapshot.Source);
+        Assert.Equal(1, result.Payload.Snapshot.ProjectCount);
     }
 
     [Fact]

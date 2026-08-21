@@ -35,7 +35,6 @@ internal static class SearchPatternTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        SearchPatternScanResult scan;
         var scannerParameters = new SearchPatternScannerParameters(
             solution,
             arguments.Pattern!,
@@ -49,15 +48,12 @@ internal static class SearchPatternTool
             arguments.ExcludePatterns,
             ct,
             arguments.EnrichCSharp);
+        SearchPatternScanResult scan;
         try
         {
             scan = await Task.Run(
                 () => SearchPatternScannerEnrichment.ScanAsync(scannerParameters),
                 ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            scan = SearchPatternScanner.Scan(scannerParameters with { EnrichCSharp = false });
         }
         catch (ArgumentException ex)
         {

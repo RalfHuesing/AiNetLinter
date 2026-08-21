@@ -101,6 +101,18 @@ public sealed class OverviewResourceRegistrationTests
     }
 
     [Fact]
+    public void ToolSummaries_SearchPattern_DescribesEnrichmentBoundariesAndTruncationFollowUp()
+    {
+        var summary = Assert.Single(OverviewResourceRegistration.ToolSummaries,
+            item => item.Name == "search_pattern").Summary;
+
+        Assert.Contains("opt-in", summary, StringComparison.Ordinal);
+        Assert.Contains("Solution-/Projekt-Snapshots", summary, StringComparison.Ordinal);
+        Assert.Contains("ambiguous/unavailable", summary, StringComparison.Ordinal);
+        Assert.Contains("Pattern, Scope oder Limits verfeinern", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolSummaries_MatchesRegisteredToolNames()
     {
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));

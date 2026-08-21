@@ -48,7 +48,7 @@ internal static class OverviewResourceRegistration
         ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
         ("metrics_tree", "Liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (z. B. Code-Groesse, Kommentaranteil) zur Ebene-fuer-Ebene-Exploration."),
         ("metrics_lookup", "Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support)."),
-        ("search_pattern", "Text- oder Regex-Suche ueber alle Dateitypen; enrichCSharp=true reichert sichtbare C#-Treffer opt-in an."),
+        ("search_pattern", "Text- oder Regex-Suche ueber alle Dateitypen; enrichCSharp=true reichert sichtbare C#-Treffer opt-in innerhalb des geladenen Solution-/Projekt-Snapshots an, markiert ambiguous/unavailable und nennt bei Trunkierung die Folge: Pattern, Scope oder Limits verfeinern."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
         ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status."),
         (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
