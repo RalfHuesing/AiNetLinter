@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -144,7 +145,10 @@ internal static class SafeguardScanner
             Classes: classes,
             Config: concreteConfig,
             Threshold: p.MinScoreThreshold,
-            MaxRemediationEntries: p.MaxRemediationEntries));
+            MaxRemediationEntries: p.MaxRemediationEntries,
+            SolutionDir: string.IsNullOrEmpty(solution.FilePath)
+                ? ""
+                : Path.GetDirectoryName(solution.FilePath) ?? ""));
         return new SafeguardScoreResult(Score: score, IsMalfunction: false);
     }
 
@@ -174,7 +178,10 @@ internal static class SafeguardScanner
             .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
             .Take(Math.Max(0, p.MaxRemediationEntries))
             .Select(v => new ViolationEntry(
-                FilePath: v.FilePath,
+                // Solution-relativ (wie alle uebrigen MCP-Tools), damit Agenten Pfade über
+                // Tool-Antworten hinweg korrelieren koennen; Sortierung bleibt unberuehrt,
+                // weil die Relativierung die Ordnung innerhalb des Roots erhaelt.
+                FilePath: PathNormalizer.ToRelative(p.SolutionDir, v.FilePath),
                 LineNumber: v.LineNumber,
                 RuleName: v.RuleName,
                 Details: v.Details,

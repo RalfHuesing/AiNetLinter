@@ -50,4 +50,31 @@ public sealed class FindDeadCodeToolTests
         Assert.Contains("Zusammenfassung", textContent.Text);
         Assert.NotNull(result.StructuredContent);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFilterMatchesNoFiles_ReportsEmptyScopeInsteadOfCleanResult()
+    {
+        var state = _fixture.CreateServer();
+
+        var args = new FindDeadCodeToolArgs(
+            Accessibility: "all",
+            Confidence: "both",
+            Kind: "all",
+            ScopeFilter: "NoMatchingScopeFilterXyz",
+            Mode: "members",
+            MaxResults: 50);
+
+        var result = await FindDeadCodeTool.ExecuteAsync(state, args, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        // Leerer Scope ist kein vollstaendiges Analyseergebnis: expliziter Hinweis statt
+        // irrefuehrendem "kein toter Code" plus Sufficiency-Hint.
+        Assert.Contains("Keine Symbole im Scope gescannt", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("includeTests", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "vollstaendig fuer den angefragten Scope",
+            textContent.Text,
+            StringComparison.Ordinal);
+    }
 }

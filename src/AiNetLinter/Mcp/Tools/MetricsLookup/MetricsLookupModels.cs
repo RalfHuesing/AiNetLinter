@@ -93,3 +93,15 @@ public sealed record MetricsLookupResultDto(
     PropertyMetricsDto? PropertyMetrics,
     IReadOnlyList<ThresholdCheckDto> ThresholdChecks
 );
+
+/// <summary>
+/// StructuredContent-Hülle für den Batch-Modus (<c>symbolIdentifiers</c>). Das MCP-Protokoll
+/// verlangt <c>structuredContent</c> als JSON-Objekt — ein Top-Level-Array lässt reale Clients
+/// den kompletten Tool-Call schema-seitig ablehnen (siehe Doc-Kommentar
+/// <c>McpToolResults.Text``1</c>). Der Einzel-Symbol-Modus behält den bisherigen Vertrag
+/// (nacktes <see cref="MetricsLookupResultDto"/>).
+/// </summary>
+public sealed record MetricsLookupBatchDto(
+    IReadOnlyList<MetricsLookupResultDto> Results,
+    int RequestedCount
+);

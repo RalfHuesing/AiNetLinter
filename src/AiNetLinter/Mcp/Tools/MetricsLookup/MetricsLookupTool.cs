@@ -84,9 +84,12 @@ internal static class MetricsLookupTool
         var final = McpSufficiencyHints.Append(markdown);
         var finalText = FindSymbolTool.PrependWarning(warning, final);
 
+        // Beide Zwecke serialisieren zu JSON-Objekten: Einzel-Symbol als nacktes DTO (bisheriger
+        // Vertrag), Batch gewrappt — ein Top-Level-Array würde den Tool-Call clientseitig
+        // scheitern lassen (siehe McpToolResults.Text``1 und MetricsLookupBatchDto).
         return identifiers.Count == 1 && dtos.Count == 1
             ? McpToolResults.Text(finalText, dtos[0])
-            : McpToolResults.Text(finalText, dtos);
+            : McpToolResults.Text(finalText, new MetricsLookupBatchDto(dtos, identifiers.Count));
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(

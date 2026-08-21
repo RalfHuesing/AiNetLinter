@@ -351,7 +351,8 @@ public class Greeter { public string Hello() => ""hi""; }";
             Classes: manySealed,
             Config: config,
             Threshold: 8.0,
-            MaxRemediationEntries: 20));
+            MaxRemediationEntries: 20,
+            SolutionDir: @"C:\Solution"));
         Assert.InRange(highRaw.Score, 0.0, 10.0);
 
         // Roh < 0: keine Klassen (Sealed-Bonus = 0), viele Errors, die den Score unter 0 druecken.
@@ -371,9 +372,52 @@ public class Greeter { public string Hello() => ""hi""; }";
             Classes: Array.Empty<ScannedClass>(),
             Config: config,
             Threshold: 8.0,
-            MaxRemediationEntries: 20));
+            MaxRemediationEntries: 20,
+            SolutionDir: @"C:\Solution"));
         Assert.InRange(lowRaw.Score, 0.0, 10.0);
         Assert.False(lowRaw.Passed);
+    }
+
+    [Fact]
+    public void BuildScoreResult_ViolationFilePaths_AreSolutionRelative()
+    {
+        var config = CreateConfig();
+        var violations = new[]
+        {
+            new RuleViolation
+            {
+                FilePath = @"C:\Solution\src\Core\Foo.cs",
+                LineNumber = 1,
+                RuleName = "FakeRule",
+                Details = "x",
+                Guidance = "y",
+                EffectiveSeverity = "error",
+            },
+            new RuleViolation
+            {
+                FilePath = @"C:\Outside\Bar.cs",
+                LineNumber = 2,
+                RuleName = "FakeRule",
+                Details = "x",
+                Guidance = "y",
+                EffectiveSeverity = "error",
+            },
+        };
+
+        var result = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+            Violations: violations,
+            Classes: Array.Empty<ScannedClass>(),
+            Config: config,
+            Threshold: 8.0,
+            MaxRemediationEntries: 20,
+            SolutionDir: @"C:\Solution"));
+
+        var underRoot = Assert.Single(result.Violations, v => v.LineNumber == 1);
+        Assert.Equal("src/Core/Foo.cs", underRoot.FilePath);
+        // Pfad außerhalb des Solution-Roots: Fallback auf den Dateinamen (PathNormalizer-Vertrag),
+        // damit kein lokales Dateisystem-Layout in die Antwort gelangt.
+        var outsideRoot = Assert.Single(result.Violations, v => v.LineNumber == 2);
+        Assert.Equal("Bar.cs", outsideRoot.FilePath);
     }
 
     [Fact]

@@ -67,7 +67,9 @@ internal static class FindDeadCodeTool
         }
 
         var reportText = FormatTextReport(result, args);
-        var finalText = result.IsTruncated ? reportText : McpSufficiencyHints.Append(reportText);
+        var finalText = result.IsTruncated || result.Summary.ScannedSymbols == 0
+            ? reportText
+            : McpSufficiencyHints.Append(reportText);
 
         return McpToolResults.Text(finalText, new
         {
@@ -86,7 +88,20 @@ internal static class FindDeadCodeTool
         sb.AppendLine("Hinweis: Statische Dead-Code-Erkennung kann dynamische Bindungen (Reflection, DI, Serializer, Routing) nicht vollstaendig abbilden. Siehe 'limits' fuer Details.");
         sb.AppendLine();
 
-        if (result.DeadSymbols.Count == 0)
+        if (result.Summary.ScannedSymbols == 0)
+        {
+            // Leerer Scope ist kein "kein toter Code"-Ergebnis: Ohne expliziten Hinweis wuerde ein
+            // Agent ein fehlendes Scope-Matching (oder via includeTests=false ausgeschlossene
+            // Testprojekte) als saubere Analyse missdeuten. Analog zum Empty-Scope-Pfad von
+            // get_violations; Sufficiency-Hint wird deshalb nicht angehaengt.
+            var scopeSuffix = string.IsNullOrWhiteSpace(args.ScopeFilter)
+                ? ""
+                : $" (Filter: '{args.ScopeFilter}')";
+            sb.AppendLine($"Keine Symbole im Scope gescannt{scopeSuffix}.");
+            sb.AppendLine("Der scopeFilter matcht keine Datei, oder der Scope besteht ausschliesslich aus Testprojekten (includeTests=false).");
+            sb.AppendLine("includeTests=true setzen oder den scopeFilter (Projekt-Name oder Pfad-Substring) anpassen.");
+        }
+        else if (result.DeadSymbols.Count == 0)
         {
             sb.AppendLine("Kein unreferenzierter Code im angegebenen Scope gefunden.");
         }

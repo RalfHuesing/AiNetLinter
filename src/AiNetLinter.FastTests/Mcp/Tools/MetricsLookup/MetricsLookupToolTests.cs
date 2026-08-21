@@ -419,12 +419,16 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("---", textContent.Text);
 
         Assert.NotNull(result.StructuredContent);
-        var dtos = JsonSerializer.Deserialize<List<MetricsLookupResultDto>>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dtos);
-        Assert.Equal(2, dtos.Count);
+        Assert.NotNull(batch);
+        Assert.Equal(2, batch.RequestedCount);
+        Assert.Equal(2, batch.Results.Count);
+        // MCP-Vertrag: structuredContent ist immer ein JSON-Objekt — ein Top-Level-Array
+        // liess reale Clients den kompletten Tool-Call ablehnen.
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
     }
 
     [Fact]

@@ -22,7 +22,8 @@ internal sealed record BuildScoreResultParameters(
     IReadOnlyList<ScannedClass> Classes,
     Config Config,
     double Threshold,
-    int MaxRemediationEntries);
+    int MaxRemediationEntries,
+    string SolutionDir);
 
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
