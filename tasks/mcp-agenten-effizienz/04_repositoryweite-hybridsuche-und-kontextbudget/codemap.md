@@ -41,7 +41,9 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 ## Tests, Fixtures und Wire-Verträge
 
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternToolTests.cs`** — Aktuelle direkte Tests für Plain-/Regex-Suche, Limits, Ausschlüsse, ungültige Eingaben, Legacy-Text und opt-in-Semantik.
+- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternEvaluationTests.cs`** — LoadedFixture-Harness für gemischte Dateitypen, Legacy-/Structured-UTF-8-Bytes und den definierten Folgeaufruf-Proxy (zuletzt: step-005).
 - **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/SearchPatternScannerTests.cs`** — Schnelle Scanner-/Formatter-/Roslyn-Regressionen für Ranges, Kontext, Scope, Encoding, Cancellation, Completeness und semantische Kategorien.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/SearchPatternScannerEvaluationTests.cs`** — Isolierter Fixture-/Overlay-Harness für SearchPattern-Oracle, Budgets, Skip-Zähler, Timeout und Cancellation (zuletzt: step-005).
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`** — SDK-nahe End-to-End-Abdeckung für Plain-Suche, Regex-Suche und fehlende Parameter.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Tool-Vertrag, Toolbestand und Suchverhalten gegen die Integrations-Fixture.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandJsonRpcFramingTests.cs`** — Raw-Wire-JSON-RPC, stdout-Framing und maschinenlesbare Suchantworten.
