@@ -44,6 +44,19 @@ internal sealed record SearchPatternFileScanResult(
     bool RegexTimedOut,
     bool CancellationRequested);
 
+internal sealed record SearchPatternLegacyFileHitScanResult(
+    IReadOnlyList<string> Files,
+    int FileReadErrorCount,
+    bool RegexTimedOut)
+{
+    internal bool HasErrors => FileReadErrorCount > 0 || RegexTimedOut;
+}
+
+internal sealed record SearchPatternLegacyFileMatchResult(
+    bool Matches,
+    bool FileReadError,
+    bool RegexTimedOut);
+
 internal sealed record SearchPatternFileMatches(
     string RelativePath,
     string? ProjectName,

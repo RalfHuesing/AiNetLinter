@@ -74,10 +74,25 @@ internal static class SearchPatternScanner
             0,
             new SearchPatternScanFlags());
         var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var enumeration = FileSystemExclusionHelpers.SafeEnumerateFilesWithErrors(options.SolutionRoot);
+        var enumeration = FileSystemExclusionHelpers.SafeEnumerateFilesWithErrors(
+            options.SolutionRoot,
+            options.ScannerParameters.CancellationToken);
+        var filePaths = new List<string>();
+        foreach (var filePath in enumeration.Files)
+        {
+            filePaths.Add(filePath);
+        }
+
+        if (options.ScannerParameters.CancellationToken.IsCancellationRequested)
+        {
+            aggregation = aggregation with
+            {
+                ScanFlags = aggregation.ScanFlags with { CancellationRequested = true },
+            };
+        }
+
         aggregation = aggregation with { EnumerationErrors = enumeration.ErrorCount };
-        foreach (var filePath in enumeration.Files
-                     .OrderBy(path => path, StringComparer.Ordinal))
+        foreach (var filePath in filePaths.OrderBy(path => path, StringComparer.Ordinal))
         {
             if (aggregation.ScanFlags.Stop) break;
             if (options.ScannerParameters.CancellationToken.IsCancellationRequested)
@@ -188,6 +203,7 @@ internal static class SearchPatternScanner
         var relativePath = ToRelativePath(options.SolutionRoot, options.FilePath);
         if (relativePath is null || !MatchesScope(relativePath, options.EffectiveScope)
             || FileSystemExclusionHelpers.IsSearchExcludedRelativePath(relativePath)
+            || FileSystemExclusionHelpers.IsGeneratedPath(options.FilePath)
             || IsMinified(relativePath)
             || !MatchesFilters(relativePath, options.IncludePatterns, options.ExcludePatterns))
         {
@@ -480,5 +496,4 @@ internal static class SearchPatternScanner
             .Select(project => project.Name)
             .FirstOrDefault();
     }
-
 }

@@ -36,23 +36,27 @@ internal static class SearchPatternTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         SearchPatternScanResult scan;
+        var scannerParameters = new SearchPatternScannerParameters(
+            solution,
+            arguments.Pattern!,
+            arguments.IsRegex,
+            normalizedMaxResults,
+            arguments.MaxFiles,
+            arguments.ContextLines,
+            arguments.MaxResponseBytes,
+            arguments.Scope,
+            arguments.IncludePatterns,
+            arguments.ExcludePatterns,
+            ct);
         try
         {
             scan = await Task.Run(
-                () => SearchPatternScanner.Scan(
-                    new SearchPatternScannerParameters(
-                        solution,
-                        arguments.Pattern!,
-                        arguments.IsRegex,
-                        normalizedMaxResults,
-                        arguments.MaxFiles,
-                        arguments.ContextLines,
-                        arguments.MaxResponseBytes,
-                        arguments.Scope,
-                        arguments.IncludePatterns,
-                        arguments.ExcludePatterns,
-                        ct)),
-                CancellationToken.None);
+                () => SearchPatternScanner.Scan(scannerParameters),
+                ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            scan = SearchPatternScanner.Scan(scannerParameters);
         }
         catch (ArgumentException ex)
         {

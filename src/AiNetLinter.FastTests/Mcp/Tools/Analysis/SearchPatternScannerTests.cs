@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using AiNetLinter.Baseline;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.TestKit;
 
@@ -118,6 +119,57 @@ public sealed class SearchPatternScannerTests
         var match = Assert.Single(result.Payload.Matches);
         Assert.Equal("src/Project/scope.json", match.FilePath);
         Assert.DoesNotContain(result.Payload.Matches, m => m.FilePath.Contains("obj", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Scan_GeneratedFileNamesOutsideBuildDirectories_AreExcluded()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var projectDir = Path.Combine(tempDir.DirectoryPath, "src", "Project");
+        File.WriteAllText(Path.Combine(projectDir, "Generated.g.cs"), "anchor");
+        File.WriteAllText(Path.Combine(projectDir, "Project.AssemblyAttributes.cs"), "anchor");
+        File.WriteAllText(Path.Combine(projectDir, "regular.txt"), "anchor");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("anchor")));
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Equal("src/Project/regular.txt", match.FilePath);
+    }
+
+    [Fact]
+    public void SafeEnumeration_CancellationStopsBetweenEnumerationUnits()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-");
+        for (var index = 0; index < 3; index++)
+        {
+            File.WriteAllText(Path.Combine(tempDir.DirectoryPath, $"file-{index}.txt"), "content");
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        var enumeration = FileSystemExclusionHelpers.SafeEnumerateFilesWithErrors(
+            tempDir.DirectoryPath,
+            cancellation.Token);
+        using var files = enumeration.Files.GetEnumerator();
+
+        Assert.True(files.MoveNext());
+        cancellation.Cancel();
+
+        Assert.False(files.MoveNext());
+    }
+
+    [Fact]
+    public void LegacyScan_RegexTimeout_IsExposedAsStatus()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "legacy-timeout.txt");
+        File.WriteAllText(path, string.Concat(Enumerable.Repeat("a", 100_000)) + "!");
+
+        var result = SearchPatternLegacyFileHitScanner.Scan(solution.Solution, "^(a+)+$", isRegex: true);
+
+        Assert.True(result.RegexTimedOut);
+        Assert.True(result.HasErrors);
     }
 
     [Fact]

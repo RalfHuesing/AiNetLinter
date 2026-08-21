@@ -86,18 +86,36 @@ internal static class FindSymbolScanner
 
     private static string AppendMissHint(Solution solution, string namePattern, string baseText)
     {
-        var missHits = SearchPatternScanner.GetFilesWithHits(
+        var missScan = SearchPatternLegacyFileHitScanner.Scan(
             solution, namePattern, isRegex: false);
-        if (missHits.Count == 0)
+        if (missScan.Files.Count == 0 && !missScan.HasErrors)
         {
             return baseText;
         }
         // Trunkierung der Datei-Liste : Default 10 Dateien, Meta-Zeile via
         // McpTruncation.TruncateFileList. Forward-Slash-Pfade konsistent mit
         // SearchPatternScanner.GetFilesWithHits.
-        var fileList = McpTruncation.TruncateFileList(missHits, missHits.Count);
+        var status = FormatLegacySearchStatus(missScan);
+        if (missScan.Files.Count == 0)
+        {
+            return $"{baseText}\nHinweis: Die Legacy-Textsuche konnte keine Treffer auswerten ({status}).";
+        }
+
+        var fileList = McpTruncation.TruncateFileList(missScan.Files, missScan.Files.Count);
         return $"{baseText}\nHinweis: kein C#-Symbol, aber Textfund in {fileList} " +
-            $"(nicht Teil des Symbolgraphs — fuer Inhalte search_pattern nutzen).";
+            $"(nicht Teil des Symbolgraphs — fuer Inhalte search_pattern nutzen)." +
+            (string.IsNullOrEmpty(status) ? "" : $" {status}");
+    }
+
+    private static string FormatLegacySearchStatus(SearchPatternLegacyFileHitScanResult scan)
+    {
+        var status = new List<string>();
+        if (scan.FileReadErrorCount > 0)
+        {
+            status.Add($"{scan.FileReadErrorCount} Datei(en) konnten nicht gelesen werden");
+        }
+        if (scan.RegexTimedOut) status.Add("Regex-Timeout");
+        return string.Join(", ", status);
     }
 
     /// <summary>

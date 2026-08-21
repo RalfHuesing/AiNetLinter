@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace AiNetLinter.Baseline;
 
@@ -26,7 +27,9 @@ internal static class FileSystemExclusionHelpers
     internal static IEnumerable<string> SafeEnumerateFiles(string directory)
         => SafeEnumerateFilesWithErrors(directory).Files;
 
-    internal static FileSystemEnumerationResult SafeEnumerateFilesWithErrors(string directory)
+    internal static FileSystemEnumerationResult SafeEnumerateFilesWithErrors(
+        string directory,
+        CancellationToken cancellationToken = default)
     {
         var options = new EnumerationOptions
         {
@@ -34,17 +37,10 @@ internal static class FileSystemExclusionHelpers
             IgnoreInaccessible = false,
             AttributesToSkip = FileAttributes.ReparsePoint,
         };
-        var files = new List<string>();
         var errorCount = 0;
-
-        try
-        {
-            files.AddRange(Directory.EnumerateFiles(directory, "*", options));
-        }
-        catch (UnauthorizedAccessException ignored) { _ = ignored; errorCount++; }
-        catch (IOException ignored) { _ = ignored; errorCount++; }
-
-        return new FileSystemEnumerationResult(files, errorCount);
+        return new FileSystemEnumerationResult(
+            EnumerateFiles(directory, options, cancellationToken, () => errorCount++),
+            () => errorCount);
     }
 
     internal static bool IsSearchExcludedRelativePath(string relativePath)
@@ -76,8 +72,70 @@ internal static class FileSystemExclusionHelpers
             || path.Contains($"{sep}bin{sep}", StringComparison.OrdinalIgnoreCase)
             || path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase)
             || path.Contains($"{sep}worktrees{sep}", StringComparison.OrdinalIgnoreCase)
-            || path.Contains($"{sep}.worktrees{sep}", StringComparison.OrdinalIgnoreCase);
+            || path.Contains($"{sep}.worktrees{sep}", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".AssemblyAttributes.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> EnumerateFiles(
+        string directory,
+        EnumerationOptions options,
+        CancellationToken cancellationToken,
+        Action recordError)
+    {
+        IEnumerator<string>? enumerator;
+        try
+        {
+            enumerator = Directory.EnumerateFiles(directory, "*", options).GetEnumerator();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            recordError();
+            yield break;
+        }
+        catch (IOException)
+        {
+            recordError();
+            yield break;
+        }
+
+        using (enumerator)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                bool hasNext;
+                try
+                {
+                    hasNext = enumerator.MoveNext();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    recordError();
+                    yield break;
+                }
+                catch (IOException)
+                {
+                    recordError();
+                    yield break;
+                }
+
+                if (!hasNext) yield break;
+                yield return enumerator.Current;
+            }
+        }
     }
 }
 
-internal sealed record FileSystemEnumerationResult(IReadOnlyList<string> Files, int ErrorCount);
+internal sealed class FileSystemEnumerationResult
+{
+    private readonly Func<int> _errorCountProvider;
+
+    internal FileSystemEnumerationResult(IEnumerable<string> files, Func<int> errorCountProvider)
+    {
+        Files = files;
+        _errorCountProvider = errorCountProvider;
+    }
+
+    internal IEnumerable<string> Files { get; }
+    internal int ErrorCount => _errorCountProvider();
+}
