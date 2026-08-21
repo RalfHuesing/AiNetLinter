@@ -14,6 +14,14 @@ internal enum DuplicateDetectionMode
     Structural,
 }
 
+/// <summary>Wire-Label der Modi (Request-Parameter, Summary-Feld und Text-Report nutzen
+/// dieselben Strings) — zentrale Konstanten statt verteilter Literale.</summary>
+internal static class DuplicateDetectionModeLabels
+{
+    internal const string Clone = "clone";
+    internal const string Structural = "structural";
+}
+
 /// <summary>Parst den <c>mode</c>-Parameter von <c>find_duplicates</c>. Leer/<see langword="null"/>
 /// = Default <see cref="DuplicateDetectionMode.Clone"/> (Aufrufe ohne <c>mode</c>-Argument
 /// verhalten sich unveraendert).</summary>
@@ -24,9 +32,9 @@ internal static class DuplicateDetectionModeParser
         if (string.IsNullOrWhiteSpace(mode)) return DuplicateDetectionMode.Clone;
         return mode.Trim().ToLowerInvariant() switch
         {
-            "clone" => DuplicateDetectionMode.Clone,
+            DuplicateDetectionModeLabels.Clone => DuplicateDetectionMode.Clone,
             "refactoring-drift" => DuplicateDetectionMode.RefactoringDrift,
-            "structural" => DuplicateDetectionMode.Structural,
+            DuplicateDetectionModeLabels.Structural => DuplicateDetectionMode.Structural,
             _ => null,
         };
     }

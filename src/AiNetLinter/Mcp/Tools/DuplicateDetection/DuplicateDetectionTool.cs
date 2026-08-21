@@ -66,8 +66,7 @@ internal static class DuplicateDetectionTool
             return mode.Value switch
             {
                 DuplicateDetectionMode.RefactoringDrift => await ExecuteRefactoringDriftAsync(solution, config, input, ct),
-                DuplicateDetectionMode.Structural => await ExecuteStructuralAsync(solution, config, input, ct),
-                _ => await ExecuteCloneAsync(solution, config, input, ct),
+                _ => await ExecuteClusterScanAsync(new ClusterScanRequest(solution, config, input, mode.Value), ct),
             };
         }
         catch (System.Exception ex) when (ex is not System.OperationCanceledException)
@@ -76,26 +75,25 @@ internal static class DuplicateDetectionTool
         }
     }
 
-    private static async Task<CallToolResult> ExecuteCloneAsync(
-        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
-        CancellationToken ct)
+    private sealed record ClusterScanRequest(
+        Microsoft.CodeAnalysis.Solution Solution,
+        Configuration.GlobalConfig Config,
+        DuplicateDetectionInput Input,
+        DuplicateDetectionMode Mode);
+
+    /// <summary>Gemeinsamer Pfad beider Cluster-Modi (<see cref="DuplicateDetectionMode.Clone"/> und
+    /// <see cref="DuplicateDetectionMode.Structural"/>): identischer Threshold-Parse, Scan und
+    /// Response-Aufbau — nur der Scanner und das Wire-Label unterscheiden sich.</summary>
+    private static async Task<CallToolResult> ExecuteClusterScanAsync(ClusterScanRequest request, CancellationToken ct)
     {
-        var (minBucket, thresholdError) = ParseSimilarityThreshold(input.SimilarityThreshold);
+        var (minBucket, thresholdError) = ParseSimilarityThreshold(request.Input.SimilarityThreshold);
         if (thresholdError is not null) return thresholdError;
 
-        var result = await DuplicateDetectionScanner.ScanAsync(solution, config, input, minBucket, ct);
-        return BuildResponse(solution, result, "clone");
-    }
-
-    private static async Task<CallToolResult> ExecuteStructuralAsync(
-        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
-        CancellationToken ct)
-    {
-        var (minBucket, thresholdError) = ParseSimilarityThreshold(input.SimilarityThreshold);
-        if (thresholdError is not null) return thresholdError;
-
-        var result = await StructuralDuplicateScanner.ScanAsync(solution, config, input, minBucket, ct);
-        return BuildResponse(solution, result, "structural");
+        var isStructural = request.Mode == DuplicateDetectionMode.Structural;
+        var result = isStructural
+            ? await StructuralDuplicateScanner.ScanAsync(request.Solution, request.Config, request.Input, minBucket, ct)
+            : await DuplicateDetectionScanner.ScanAsync(request.Solution, request.Config, request.Input, minBucket, ct);
+        return BuildResponse(request.Solution, result, isStructural ? DuplicateDetectionModeLabels.Structural : DuplicateDetectionModeLabels.Clone);
     }
 
     private static async Task<CallToolResult> ExecuteRefactoringDriftAsync(
@@ -176,7 +174,7 @@ internal static class DuplicateDetectionTool
 
     private static string RenderText(string solutionDir, DuplicateDetectionScanResultForTool result, string mode)
     {
-        var isStructural = mode == "structural";
+        var isStructural = mode == DuplicateDetectionModeLabels.Structural;
         if (result.ShownClusters.Count == 0)
         {
             return isStructural

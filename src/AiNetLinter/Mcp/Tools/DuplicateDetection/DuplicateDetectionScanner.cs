@@ -27,9 +27,21 @@ internal static class DuplicateDetectionScanner
     {
         var options = BuildOptions(config, input);
         var scanResult = await DuplicateDetectionEngine.ScanAsync(solution, options, ct);
+        return BuildToolResult(scanResult, minBucket, input.MaxResults, config.DuplicateCodeMaxResults);
+    }
 
+    /// <summary>Gemeinsamer Nachlauf beider Cluster-Modi (<c>mode="clone"</c> und
+    /// <c>mode="structural"</c>): Bucket-Filter, Trunkierung auf <c>maxResults</c> und
+    /// Ergebnis-Record — zentral statt in beiden Scannern dupliziert, damit Aenderungen an der
+    /// Trunkierungsregel nicht driftet.</summary>
+    internal static DuplicateDetectionScanResultForTool BuildToolResult(
+        DuplicateDetectionScanResult scanResult,
+        DuplicateSimilarityBucket minBucket,
+        int? maxResultsInput,
+        int configMaxResults)
+    {
         var filtered = scanResult.Clusters.Where(c => c.Bucket >= minBucket).ToList();
-        var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);
+        var effectiveMax = Math.Max(1, maxResultsInput ?? configMaxResults);
         var shown = filtered.Count <= effectiveMax ? filtered : filtered.Take(effectiveMax).ToList();
         var truncated = filtered.Count > effectiveMax;
 

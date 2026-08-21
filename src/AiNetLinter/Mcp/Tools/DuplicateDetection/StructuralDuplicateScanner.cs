@@ -23,13 +23,7 @@ internal static class StructuralDuplicateScanner
     {
         var options = BuildOptions(config, input);
         var scanResult = await StructuralDuplicateDetector.ScanAsync(solution, options, ct);
-
-        var filtered = scanResult.Clusters.Where(c => c.Bucket >= minBucket).ToList();
-        var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);
-        var shown = filtered.Count <= effectiveMax ? filtered : filtered.Take(effectiveMax).ToList();
-        var truncated = filtered.Count > effectiveMax;
-
-        return new DuplicateDetectionScanResultForTool(shown, filtered.Count, scanResult.MethodsScanned, truncated);
+        return DuplicateDetectionScanner.BuildToolResult(scanResult, minBucket, input.MaxResults, config.DuplicateCodeMaxResults);
     }
 
     internal static DuplicateDetectionOptions BuildOptions(GlobalConfig config, DuplicateDetectionInput input) =>
