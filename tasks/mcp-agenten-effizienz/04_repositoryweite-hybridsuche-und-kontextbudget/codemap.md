@@ -13,7 +13,9 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternTool.cs`** — Validierung, Loading-/Fehlerpfad und bestehende asynchrone Legacy-Textausgabe des `search_pattern`-Tools.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`** — Zentraler repositoryweiter Scanner für deterministische Treffer, Scope, Filter und Kontext-/Antwortbudgets.
-- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, strukturierte Treffer, Legacy-Status, MatchRanges, Scope-Metadaten und Completeness.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerEnrichment.cs`** — Koordiniert die optionale Anreicherung der bereits sichtbaren Match-Liste ohne zweite Trefferenumeration.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternRoslynEnricher.cs`** — Kleine, cancellation-aware Roslyn-Anreicherung mit sicherer Dokument-/Snapshot-Zuordnung, Symbolauflösung und per-Datei-Cache.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, immutable semantische Trefferfelder, Legacy-Status, MatchRanges, Scope-Metadaten und Completeness.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerCompleteness.cs`** — Aggregation von Sichtbar-/Gesamtzahlen, übersprungenen Dateien und Truncation-Gründen.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFormatter.cs`** — Reine Legacy-Textformatierung aus der sichtbaren strukturierten Trefferliste.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFileHitScanner.cs`** — Unbudgetierter Legacy-Dateitrefferpfad für `GetFilesWithHits` mit auswertbarem Datei- und Regex-Status.
@@ -38,8 +40,8 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 ## Tests, Fixtures und Wire-Verträge
 
-- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternToolTests.cs`** — Aktuelle direkte Tests für Plain-/Regex-Suche, Limits, Ausschlüsse, ungültige Eingaben und Legacy-Text.
-- **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/SearchPatternScannerTests.cs`** — Schnelle Scanner-/Formatter-Regressionen für Ranges, Kontext, Scope, Encoding, Cancellation und Completeness.
+- **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternToolTests.cs`** — Aktuelle direkte Tests für Plain-/Regex-Suche, Limits, Ausschlüsse, ungültige Eingaben, Legacy-Text und opt-in-Semantik.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/SearchPatternScannerTests.cs`** — Schnelle Scanner-/Formatter-/Roslyn-Regressionen für Ranges, Kontext, Scope, Encoding, Cancellation, Completeness und semantische Kategorien.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`** — SDK-nahe End-to-End-Abdeckung für Plain-Suche, Regex-Suche und fehlende Parameter.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Tool-Vertrag, Toolbestand und Suchverhalten gegen die Integrations-Fixture.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandJsonRpcFramingTests.cs`** — Raw-Wire-JSON-RPC, stdout-Framing und maschinenlesbare Suchantworten.
