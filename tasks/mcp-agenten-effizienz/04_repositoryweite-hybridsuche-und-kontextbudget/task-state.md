@@ -2,10 +2,10 @@
 status: executing
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 started_at: 2026-08-21T01:20:00+02:00
-last_updated: 2026-08-21T13:05:00+02:00
+last_updated: 2026-08-21T13:20:00+02:00
 rules_dir: .agents/rules
 total_steps: 2
-current_step: step-002
+current_step: step-002 (abgeschlossen)
 ---
 
 # Task State: 04_repositoryweite-hybridsuche-und-kontextbudget
@@ -14,18 +14,18 @@ current_step: step-002
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 2
-- **Aktueller Schritt:** `step-002`
+- **Aktueller Schritt:** `step-002` (abgeschlossen; nächster Schritt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`, sobald der erste Review Einträge erzeugt
 - **Gestartet:** 2026-08-21T01:20:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-21T01:20:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-21T13:20:00+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | done (Korrektur ausstehend) | Strukturierte repositoryweite Suche mit Legacy-Kompatibilität und Kontextbudget | - | a166eb38 | issues | a166eb38 / 6dc2e34 |
-| step-002 | EPIC-01 | in_progress | Step-001 Findings korrigieren | step-001 | - | - | - |
+| step-001 | EPIC-01 | done | Strukturierte repositoryweite Suche mit Legacy-Kompatibilität und Kontextbudget | - | a166eb38 | issues; durch step-002 behoben | a166eb38 / 6dc2e34 |
+| step-002 | EPIC-01 | done | Step-001 Findings korrigieren | step-001 | 518e0bc2 | approved | 518e0bc2 / 74664ede |
 
 ## Config
 
