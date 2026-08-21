@@ -12,7 +12,11 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 ## MCP-Tool und Ergebnisvertrag
 
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternTool.cs`** — Validierung, Loading-/Fehlerpfad und bestehende asynchrone Legacy-Textausgabe des `search_pattern`-Tools.
-- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`** — Aktueller zeilenbasierter Dateisystem-Scanner, Regex-/Substring-Suche, Pfadnormalisierung und Treffertrunkierung.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`** — Zentraler repositoryweiter Scanner für deterministische Treffer, Scope, Filter und Kontext-/Antwortbudgets.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, strukturierte Treffer, MatchRanges, Scope-Metadaten und Completeness.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerCompleteness.cs`** — Aggregation von Sichtbar-/Gesamtzahlen, übersprungenen Dateien und Truncation-Gründen.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFormatter.cs`** — Reine Legacy-Textformatierung aus der sichtbaren strukturierten Trefferliste.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFileHitScanner.cs`** — Unbudgetierter Legacy-Dateitrefferpfad für `GetFilesWithHits`.
 - **`src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs`** — MCP-Registrierung, Tool-Signatur und Beschreibung von `search_pattern`.
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — Gemeinsamer Rückgabemechanismus für Legacy-Text, strukturierte Top-Level-Nutzlasten und Fehlerzustände.
 - **`src/AiNetLinter/Mcp/McpTruncation.cs`** — Bestehende Text- und Dateilisten-Trunkierung samt kompatibler Meta-Hinweise.
@@ -24,7 +28,7 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 ## Scope, Dateisystem und Roslyn
 
-- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — Zentrale Ausschluss- und sichere Enumerationslogik für freie Dateisystemläufe.
+- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — Zentrale Ausschluss-, sichere Enumerations- und Search-Pfadlogik für freie Dateisystemläufe.
 - **`src/AiNetLinter/Web/WebFileCatalog.cs`** — Bestehende projektbezogene Verzeichnisse und mehrsprachige Web-Dateikatalogisierung.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeScanner.cs`** — Vorhandene Dateityp- und Scope-Inventarisierung über Roslyn- und Dateisystemquellen.
 - **`src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextScanner.cs`** — Roslyn-Positions-, Dokumentations-ID-, Projekt- und strukturierte Kontextmuster für optionale Anreicherung.
@@ -35,6 +39,7 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 ## Tests, Fixtures und Wire-Verträge
 
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SearchPatternToolTests.cs`** — Aktuelle direkte Tests für Plain-/Regex-Suche, Limits, Ausschlüsse, ungültige Eingaben und Legacy-Text.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/SearchPatternScannerTests.cs`** — Schnelle Scanner-/Formatter-Regressionen für Ranges, Kontext, Scope, Encoding, Cancellation und Completeness.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`** — SDK-nahe End-to-End-Abdeckung für Plain-Suche, Regex-Suche und fehlende Parameter.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Tool-Vertrag, Toolbestand und Suchverhalten gegen die Integrations-Fixture.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandJsonRpcFramingTests.cs`** — Raw-Wire-JSON-RPC, stdout-Framing und maschinenlesbare Suchantworten.
@@ -46,6 +51,7 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 - **`src/AiNetLinter.IntegrationTests/Mcp/Platform/RepositoryMcpHostFixture.cs`** — Repository-basierte Host-Fixture für residenten Analysezustand und Dogfood-Szenarien.
 - **`src/AiNetLinter.IntegrationTests/Mcp/Platform/McpRawWireTestHarness.cs`** — Gemeinsamer Prozess- und JSON-RPC-Harness für Wire-Level-Tests.
 - **`tests/Fixtures/SymbolGraphMini`** — Mehrsprachige Testressourcen mit C#, JavaScript, CSS, Razor, XAML und HTML für Datei-unabhängige Suchfälle.
+- **`tests/Fixtures/SymbolGraphMini/src/SymbolGraphMini/search-fixture.md`** und **`wwwroot/search-fixture.json`** — Neutrale Markdown-/JSON-Suchmuster für Wiederholungen, Regex, Kontext und mehrere MatchRanges.
 
 ## Dokumentation und Projektvertrag
 
@@ -55,4 +61,3 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 - **`Docs/ROADMAP.md`** — Historische und laufende MCP-Epics einschließlich der bisherigen `search_pattern`-Meilensteine.
 - **`Docs/configuration.md`** — Konfigurations- und Filterregeln für Dateien, Projekte, generierte Inhalte und Build-Artefakte.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpDocumentationSmokeTests.cs`** — Dokumentationsregressionen für Toolnamen und die öffentlich beschriebene MCP-Oberfläche.
-
