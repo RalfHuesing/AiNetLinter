@@ -85,7 +85,26 @@ internal static class McpCodeGraphServerRefresh
         var knownPaths = BuildKnownPathSet(updated);
         var changed = false;
 
-        foreach (var path in EnumerateCsFilesSafe(solutionDir))
+        // Sweep-Grenze = Vereinigung der Projektverzeichnisse (Konzept 02, Option b'):
+        // PickProjectForNewFile haengt neue Dateien ausschliesslich unterhalb bekannter
+        // Projektverzeichnisse ein — alles andere kann keine gueltigen neuen Quelldokumente
+        // enthalten und wird deshalb gar nicht erst enumeriert (statt enumeriert und
+        // verworfen zu werden).
+        var sweepRoots = GetSweepRoots(updated, solutionDir);
+        if (sweepRoots.Count == 0) return false;
+
+        var candidates = new List<string>();
+        var walkStats = FileSystemExclusionHelpers.WalkFilteredTree(
+            sweepRoots,
+            filePattern: "*.cs",
+            visitDirectory: null,
+            visitFile: path => candidates.Add(path));
+        foreach (var warning in walkStats.Warnings)
+        {
+            writeWarn($"[WARN]: Verzeichnis-Sweep teilweise unzugänglich ({warning})");
+        }
+
+        foreach (var path in candidates)
         {
             if (SourceFileCatalog.IsGeneratedPath(path)) continue;
             if (knownPaths.Contains(path)) continue;
@@ -233,20 +252,6 @@ internal static class McpCodeGraphServerRefresh
         return true;
     }
 
-    private static IEnumerable<string> EnumerateCsFilesSafe(string solutionDir)
-    {
-        IEnumerable<string> files;
-        try
-        {
-            files = Directory.EnumerateFiles(solutionDir, "*.cs", SearchOption.AllDirectories);
-        }
-        catch (Exception ignored) when (ignored is IOException or UnauthorizedAccessException)
-        {
-            yield break;
-        }
-        foreach (var path in files) yield return path;
-    }
-
     /// <summary>
     /// Ermittelt das passendste Projekt fuer eine neu entdeckte Datei anhand des
     /// Projektverzeichnisses. Waehlt das Projekt mit dem laengsten uebereinstimmenden
@@ -265,6 +270,30 @@ internal static class McpCodeGraphServerRefresh
             .OrderByDescending(p => Path.GetDirectoryName(p.FilePath)!.Length)
             .FirstOrDefault()
             ?.Id;
+    }
+
+    /// <summary>
+    /// Vereinigung der Projektverzeichnisse als Walk-/Sweep-Grenze (Konzept 02, Option b'):
+    /// Neue gueltige Quelldokumente koennen ausschliesslich unterhalb bekannter
+    /// Projektordner entstehen (<see cref="PickProjectForNewFile"/> liefert ausserhalb
+    /// <see langword="null"/>) — der Staleness-Walk darf sich daher auf genau diese
+    /// Verzeichnisse beschraenken, ohne eine neue Datei zu uebersehen. Fallback auf das
+    /// Solution-Verzeichnis, wenn kein Projekt einen Dateipfad besitzt.
+    /// </summary>
+    internal static IReadOnlyList<string> GetSweepRoots(Solution solution, string? solutionDir)
+    {
+        var projectDirectories = solution.Projects
+            .Where(p => p.FilePath != null)
+            .Select(p => Path.GetDirectoryName(p.FilePath)!)
+            .Where(d => !string.IsNullOrEmpty(d) && Directory.Exists(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (projectDirectories.Count > 0) return projectDirectories;
+
+        return !string.IsNullOrEmpty(solutionDir) && Directory.Exists(solutionDir)
+            ? [solutionDir]
+            : [];
     }
 
     private static bool IsDirectoryInside(string dir, string parentDir)

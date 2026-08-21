@@ -21,6 +21,10 @@ internal sealed record ServerHealthPayload(
     string? ConfigPath,
     double UptimeSeconds,
     int RefreshCount,
+    long StalenessCheckCount,
+    double StalenessCheckDurationMs,
+    int StalenessWarningCount,
+    string? LastStalenessWarning,
     CallLogPayload? CallLog);
 
 /// <summary>

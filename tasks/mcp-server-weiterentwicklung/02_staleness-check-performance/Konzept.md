@@ -1,5 +1,5 @@
 ---
-status: ready
+status: erledigt (2026-08-21)
 type: konzept
 project_kind: brownfield
 estimated_scope: small-medium
@@ -9,6 +9,7 @@ rules_dir: .agents/rules
 last_updated: 2026-08-21
 open_questions: []
 herkunft: Review-Finding 2026-08-21 (ox-alpha)
+umsetzung: "2026-08-21 umgesetzt gemaess Empfehlungsreihenfolge des zweiten Passes: c) Mess-Zaehler (get_server_health: StalenessCheckCount/DurationMs/WarningCount/LastWarning via ServerStalenessStats) -> b')+D) Walk- und Sweep-Grenze = Projektverzeichnis-Vereinigung (McpCodeGraphServerRefresh.GetSweepRoots), Ausschluesse aus FileSystemExclusionHelpers (keine neue Liste) -> B) Reparse-Point-Schutz im gemeinsamen Walker -> C) Fehlerzaehler statt Dauer-Degradation. a) TTL bewusst NICHT gebaut: b' verkleinert den Walk auf die Groesse der geladenen Solution; die Mess-Zaehler liefern die Evidenz fuer eine spaetere TTL-/FileSystemWatcher-Entscheidung."
 ---
 
 # Staleness-Check: Verzeichnisbaum-Walk bei jedem Tool-Call drosseln

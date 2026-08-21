@@ -51,11 +51,24 @@ internal static class GetServerHealthTool
         sb.AppendLine($"- Config: {DescribeConfig(state)}");
         sb.AppendLine($"- Uptime: {FormatUptime(state.Uptime)}");
         sb.AppendLine($"- Solution-Refreshes seit Start: {state.RefreshCount}");
+        var staleness = state.LastStalenessStats;
+        AppendStalenessSection(sb, staleness);
         sb.AppendLine();
         sb.Append(DescribeObservability(isEnabled, effectiveLogPath, callLogPayload));
 
         var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, callLogPayload)));
+        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, callLogPayload, staleness)));
+    }
+
+    /// <summary>Staleness-Sektion (Konzept 02, c/C): Check-Frequenz und kumulierte Dauer als
+    /// Evidenzbasis, Warnungen fuer unzugängliche Teilbäume als Health-Metadaten.</summary>
+    private static void AppendStalenessSection(StringBuilder sb, ServerStalenessStats staleness)
+    {
+        sb.AppendLine($"- Staleness-Checks seit Start: {staleness.CheckCount} (kumuliert {staleness.TotalMilliseconds:F0} ms)");
+        if (staleness.LastWarning is { } warning)
+        {
+            sb.AppendLine($"- Staleness-Warnungen (letzter Walk): {staleness.WarningCount} unzugängliche Teilbäume, zuletzt: {warning}");
+        }
     }
 
     /// <summary>
@@ -63,7 +76,11 @@ internal static class GetServerHealthTool
     /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
     /// wie "wird noch geladen").
     /// </summary>
-    private static ServerHealthPayload BuildPayload(McpCodeGraphServer state, string version, CallLogPayload? callLogPayload)
+    private static ServerHealthPayload BuildPayload(
+        McpCodeGraphServer state,
+        string version,
+        CallLogPayload? callLogPayload,
+        ServerStalenessStats staleness)
     {
         var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
 
@@ -75,6 +92,10 @@ internal static class GetServerHealthTool
             ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
             UptimeSeconds: state.Uptime.TotalSeconds,
             RefreshCount: state.RefreshCount,
+            StalenessCheckCount: staleness.CheckCount,
+            StalenessCheckDurationMs: staleness.TotalMilliseconds,
+            StalenessWarningCount: staleness.WarningCount,
+            LastStalenessWarning: staleness.LastWarning,
             CallLog: callLogPayload);
     }
 

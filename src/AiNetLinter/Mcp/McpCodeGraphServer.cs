@@ -33,6 +33,10 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     private SourceFileCatalog? _catalog;
     private DateTime? _lastSolutionDirMtimeUtc;
     private int _refreshCount;
+    private long _stalenessCheckCount;
+    private double _stalenessCheckTotalMs;
+    private int _lastStalenessWarningCount;
+    private string? _lastStalenessWarning;
     private int _disposed;
     private readonly bool _isReadOnlySnapshot;
 
@@ -123,6 +127,18 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     /// Unter <see cref="_lock"/> gelesen, konsistent mit dem uebrigen Zugriffsmuster auf
     /// <see cref="_catalog"/>/<see cref="_fileState"/> in dieser Klasse.</summary>
     public int RefreshCount { get { lock (_lock) { return _refreshCount; } } }
+
+    /// <summary>Diagnose-Schnappschuss des Staleness-Subsystems: Check-Anzahl und kumulierte
+    /// Dauer (Konzept 02, c — Evidenzbasis fuer Kosten/Frequenz) sowie Warnungszähler und
+    /// letzte Warnmeldung fuer unzugängliche Teilbäume (Konzept 02, C — die Warnung kippt den
+    /// Zustand bewusst NICHT dauerhaft auf "geändert"). Als ein Record statt vier einzelner
+    /// Properties, damit die oeffentliche API-Oberflaeche unter MaxPublicMembersPerType bleibt.
+    /// Konsumiert von <c>get_server_health</c>. Unter <see cref="_lock"/> gelesen, konsistent
+    /// mit dem uebrigen Zugriffsmuster dieser Klasse.</summary>
+    internal ServerStalenessStats LastStalenessStats
+    {
+        get { lock (_lock) { return new ServerStalenessStats(_stalenessCheckCount, _stalenessCheckTotalMs, _lastStalenessWarningCount, _lastStalenessWarning); } }
+    }
 
     /// <summary>
     /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (<c>reload_config</c>-Tool).
@@ -289,62 +305,73 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
                 McpCodeGraphServerRefresh.CacheInitialFileState(document.FilePath!, _fileState, _console.WriteError);
             }
         }
+        // Baseline ueber dieselbe Walk-Grenze wie der spaetere Vergleich
+        // (Projektverzeichnis-Vereinigung, siehe HasSolutionDirChanged) — abweichende
+        // Grenzen wuerden eine permanente Schein-Aenderung erzeugen.
         if (!string.IsNullOrEmpty(solutionDir) && Directory.Exists(solutionDir))
         {
-            try { _lastSolutionDirMtimeUtc = ComputeMaxDirMtimeUtc(solutionDir); }
-            catch (IOException) { _lastSolutionDirMtimeUtc = null; }
-            catch (UnauthorizedAccessException) { _lastSolutionDirMtimeUtc = null; }
+            _lastSolutionDirMtimeUtc = ComputeStalenessMtime(solution);
         }
     }
 
     private void RefreshStaleDocuments()
     {
-        var (updated, anyChanged) = McpCodeGraphServerRefresh.Run(
-            _catalog!.Solution,
-            Path.GetDirectoryName(_catalog.Solution.FilePath),
-            new McpCodeGraphServerRefreshParameters(
-                FileState: _fileState,
-                WriteWarn: _console.WriteError,
-                ShouldSweep: () => HasSolutionDirChanged(Path.GetDirectoryName(_catalog!.Solution.FilePath))));
-        if (anyChanged)
+        _stalenessCheckCount++;
+        var startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        try
         {
-            _catalog = _catalog.WithUpdatedSolution(updated);
-            _refreshCount++;
+            var solution = _catalog!.Solution;
+            var (updated, anyChanged) = McpCodeGraphServerRefresh.Run(
+                solution,
+                Path.GetDirectoryName(solution.FilePath),
+                new McpCodeGraphServerRefreshParameters(
+                    FileState: _fileState,
+                    WriteWarn: _console.WriteError,
+                    ShouldSweep: () => HasSolutionDirChanged(solution)));
+            if (anyChanged)
+            {
+                _catalog = _catalog.WithUpdatedSolution(updated);
+                _refreshCount++;
+            }
+        }
+        finally
+        {
+            _stalenessCheckTotalMs += System.Diagnostics.Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
         }
     }
 
-    /// <summary>Vergleicht die maximale mtime ueber alle Verzeichnisse unterhalb <paramref name="solutionDir"/>
+    /// <summary>Vergleicht die maximale Verzeichnis-mtime ueber die Sweep-Wurzeln
+    /// (Projektverzeichnis-Vereinigung, siehe <see cref="McpCodeGraphServerRefresh.GetSweepRoots"/>)
     /// mit dem letzten Stand. Eine reine Root-mtime-Pruefung reicht auf Windows nicht, weil das
-    /// Root-mtime nur bei Aenderungen an der Root-Ebene selbst aktualisiert wird. Max-Aggregation
-    /// bleibt O(n_dirs) und damit deutlich guenstiger als der vollstaendige Datei-Walk in Phase 2.</summary>
-    private bool HasSolutionDirChanged(string? solutionDir)
+    /// Root-mtime nur bei Aenderungen an der Root-Ebene selbst aktualisiert wird. Baseline
+    /// (siehe <see cref="InitializeFileState"/>) und Vergleich nutzen dieselbe Walk-Grenze —
+    /// sonst wuerde jede Grenz-Aenderung eine permanente Schein-Aenderung erzeugen.</summary>
+    private bool HasSolutionDirChanged(Solution solution)
     {
-        if (string.IsNullOrEmpty(solutionDir)) return false;
-        DateTime current;
-        try { current = ComputeMaxDirMtimeUtc(solutionDir); }
-        catch (IOException) { return true; }
-        catch (UnauthorizedAccessException) { return true; }
+        var current = ComputeStalenessMtime(solution);
         if (_lastSolutionDirMtimeUtc == current) return false;
         _lastSolutionDirMtimeUtc = current;
         return true;
     }
 
-    private static DateTime ComputeMaxDirMtimeUtc(string solutionDir)
+    /// <summary>Berechnet die maximale Verzeichnis-mtime ueber die Sweep-Wurzeln via
+    /// <see cref="FileSystemExclusionHelpers.WalkFilteredTree"/> — mit Reparse-Point-Schutz,
+    /// Namens-Ausschluessen und Fehlerzaehler statt Abbruch. Unzugängliche Teilbäume werden
+    /// als Warnung vermerkt (Health-Metadaten), kippen aber nicht dauerhaft auf "geändert".</summary>
+    private DateTime ComputeStalenessMtime(Solution solution)
     {
-        var max = Directory.GetLastWriteTimeUtc(solutionDir);
-        foreach (var dir in Directory.EnumerateDirectories(solutionDir, "*", SearchOption.AllDirectories))
-        {
-            try
+        var max = DateTime.MinValue;
+        var stats = FileSystemExclusionHelpers.WalkFilteredTree(
+            McpCodeGraphServerRefresh.GetSweepRoots(solution, Path.GetDirectoryName(solution.FilePath)),
+            filePattern: null,
+            visitDirectory: directory =>
             {
-                var m = Directory.GetLastWriteTimeUtc(dir);
-                if (m > max) max = m;
-            }
-            // ainetlinter-disable EnforceNoSilentCatch — einzelne Subdirectories koennen
-            // unzugaenglich sein (gelockt, geloescht), die uebrigen mtimes sind trotzdem
-            // ein brauchbarer Cache-Hinweis.
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-        }
+                var mtime = Directory.GetLastWriteTimeUtc(directory);
+                if (mtime > max) max = mtime;
+            },
+            visitFile: null);
+        _lastStalenessWarningCount = stats.InaccessibleSubtreeCount;
+        _lastStalenessWarning = stats.Warnings.Count > 0 ? stats.Warnings[^1] : null;
         return max;
     }
 }

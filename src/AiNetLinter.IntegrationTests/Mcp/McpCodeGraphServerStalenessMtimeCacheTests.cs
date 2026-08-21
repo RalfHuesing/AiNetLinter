@@ -104,4 +104,23 @@ public sealed class McpCodeGraphServerStalenessMtimeCacheTests
 
         Assert.DoesNotContain(outsiderFile, knownPaths);
     }
+
+    [Fact]
+    public async Task GetCurrentSolution_TracksStalenessCheckCounters()
+    {
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        _ = server.GetCurrentSolution();
+        _ = server.GetCurrentSolution();
+        _ = server.GetCurrentSolution();
+
+        // Konzept 02 (c): Evidenzbasis fuer die Staleness-Kosten — jeder Nicht-Snapshot-Call
+        // zahlt genau einen Check; die kumulierte Dauer ist nicht-negativ.
+        var stats = server.LastStalenessStats;
+        Assert.Equal(3L, stats.CheckCount);
+        Assert.True(stats.TotalMilliseconds >= 0);
+    }
 }
