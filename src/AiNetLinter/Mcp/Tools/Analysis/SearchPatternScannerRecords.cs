@@ -33,6 +33,12 @@ internal sealed record SearchPatternScannerParameters(
     CancellationToken CancellationToken,
     bool EnrichCSharp = false);
 
+internal sealed record SearchPatternPayloadOptions(
+    SearchPatternScannerParameters ScannerParameters,
+    string EffectiveScope,
+    IReadOnlyList<string> IncludePatterns,
+    IReadOnlyList<string> ExcludePatterns);
+
 internal sealed record SearchPatternScanResult(
     SearchPatternPayload Payload,
     int TotalMatchedLineCount,

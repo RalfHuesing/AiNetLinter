@@ -43,17 +43,18 @@ internal static class FileSystemExclusionHelpers
             () => errorCount);
     }
 
+    internal static readonly string[] SearchExcludedDirectories =
+    [
+        ".git", ".hg", ".svn", ".vs", ".idea", "obj", "bin", "node_modules",
+        "worktrees", ".worktrees", "TestResults", "artifacts", "coverage", "temp", "packages",
+    ];
+
     internal static bool IsSearchExcludedRelativePath(string relativePath)
     {
         var normalized = relativePath.Replace('\\', '/').Trim('/');
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var excludedDirectories = new[]
-        {
-            ".git", ".hg", ".svn", ".vs", ".idea", "obj", "bin", "node_modules",
-            "worktrees", ".worktrees", "testresults", "artifacts", "coverage", "temp", "packages",
-        };
 
-        return segments.Any(segment => excludedDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
+        return segments.Any(segment => SearchExcludedDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -14,14 +14,14 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 
 internal static class SearchPatternScanner
 {
-    private const RegexOptions CompiledIgnoreCase =
+    internal const RegexOptions CompiledIgnoreCase =
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant;
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
+    internal static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     internal static readonly string[] DefaultExclusions =
     [
-        ".git", ".hg", ".svn", ".vs", ".idea", "obj", "bin", "node_modules", "worktrees",
-        ".worktrees", "TestResults", "artifacts", "coverage", "temp", "packages", "*.min.*",
+        ..FileSystemExclusionHelpers.SearchExcludedDirectories,
+        "*.min.*",
         "binary files",
     ];
 
@@ -184,10 +184,11 @@ internal static class SearchPatternScanner
         }
 
         var payload = BuildPayload(
-            options.ScannerParameters,
-            options.EffectiveScope,
-            options.IncludePatterns,
-            options.ExcludePatterns,
+            new(
+                options.ScannerParameters,
+                options.EffectiveScope,
+                options.IncludePatterns,
+                options.ExcludePatterns),
             visibleMatches,
             completeness);
         return new SearchPatternScanResult(
@@ -242,11 +243,8 @@ internal static class SearchPatternScanner
         bool isRegex)
         => SearchPatternLegacyFileHitScanner.GetFilesWithHits(solution, pattern, isRegex);
 
-    private static SearchPatternPayload BuildPayload(
-        SearchPatternScannerParameters parameters,
-        string effectiveScope,
-        IReadOnlyList<string> includes,
-        IReadOnlyList<string> excludes,
+    internal static SearchPatternPayload BuildPayload(
+        SearchPatternPayloadOptions options,
         IReadOnlyList<SearchPatternMatch> matches,
         SearchPatternCompleteness completeness) =>
         new(
@@ -254,15 +252,15 @@ internal static class SearchPatternScanner
             completeness,
             new SearchPatternScopeMetadata(
                 ".",
-                effectiveScope,
-                parameters.Scope,
-                includes,
-                excludes,
+                options.EffectiveScope,
+                options.ScannerParameters.Scope,
+                options.IncludePatterns,
+                options.ExcludePatterns,
                 DefaultExclusions),
             new SearchPatternSnapshotMetadata(
                 "resident-solution",
-                Path.GetFileName(parameters.Solution.FilePath),
-                parameters.Solution.ProjectIds.Count));
+                Path.GetFileName(options.ScannerParameters.Solution.FilePath),
+                options.ScannerParameters.Solution.ProjectIds.Count));
 
     private static List<SearchPatternFileMatches> SelectVisibleFiles(
         IReadOnlyList<SearchPatternFileMatches> files,

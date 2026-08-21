@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
 using AiNetLinter.Mcp;
@@ -94,20 +93,14 @@ internal static class SearchPatternScannerCompleteness
             options.Completeness.EnumerationErrorCount,
             options.Completeness.RegexTimedOut,
             options.Completeness.CancellationRequested));
-        var payload = new SearchPatternPayload(
-            options.Matches,
-            shown,
-            new SearchPatternScopeMetadata(
-                ".",
+        var payload = SearchPatternScanner.BuildPayload(
+            new(
+                options.ScannerParameters,
                 options.EffectiveScope,
-                options.ScannerParameters.Scope,
                 options.IncludePatterns,
-                options.ExcludePatterns,
-                SearchPatternScanner.DefaultExclusions),
-            new SearchPatternSnapshotMetadata(
-                "resident-solution",
-                Path.GetFileName(options.ScannerParameters.Solution.FilePath),
-                options.ScannerParameters.Solution.ProjectIds.Count));
+                options.ExcludePatterns),
+            options.Matches,
+            shown);
         return JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length
             > options.ScannerParameters.MaxResponseBytes;
     }

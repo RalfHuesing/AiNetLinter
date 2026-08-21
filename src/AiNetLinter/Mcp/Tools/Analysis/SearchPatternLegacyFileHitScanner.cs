@@ -19,8 +19,7 @@ internal static class SearchPatternLegacyFileHitScanner
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         Regex? regex = isRegex
-            ? new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant,
-                TimeSpan.FromMilliseconds(100))
+            ? new Regex(pattern, SearchPatternScanner.CompiledIgnoreCase, SearchPatternScanner.RegexTimeout)
             : null;
         var filesWithHits = new SortedSet<string>(StringComparer.Ordinal);
         var fileReadErrorCount = 0;
