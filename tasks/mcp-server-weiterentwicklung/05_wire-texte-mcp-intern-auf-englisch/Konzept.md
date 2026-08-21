@@ -1,5 +1,5 @@
 ---
-status: Nochmal 360Grad Audit machen
+status: ready (auditiert)
 type: konzept (entscheidung umgesetzt)
 project_kind: brownfield
 estimated_scope: medium-large
@@ -7,7 +7,9 @@ priority: P2
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
 last_updated: 2026-08-21
-open_questions: []
+audit: zweiter Pass 2026-08-21 abgeschlossen (Abschnitt unten)
+open_questions:
+  - "Phase 3 bestätigen: CLI-Violations-Ausgabe schaltet auf Englisch mit (empfohlen) oder Formatter-Split?"
 entscheidung: "2026-08-21 durch Nutzer bestaetigt"
 ---
 
@@ -86,4 +88,94 @@ Die ASCII-Transliteration ist worst-of-both:
 - `Docs/agent-api.md` zeigt Beispielantworten in der neuen Sprache; README bleibt Deutsch.
 - Byte-Messung vorher/nachher dokumentiert.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
+
+---
+
+# Audit zweiter Pass (2026-08-21): Funde, Scope-Korrektur, 360°-Blick
+
+Verifiziert per Code-/Test-Grep über `src/AiNetLinter/Mcp`, `Core/RuleRegistry*`,
+`Models/RuleViolation.cs`, `Output/RuleLegendRegistry.cs`, beide Testprojekte und
+`Docs/`. Kernbefund: Die Phasen 1–2 sind korrekt, aber der Wire enthält eine **zweite,
+bisher nicht gescoppte Textklasse** — die Regel-Fachtexte. Neu geordnet ergibt sich
+Phase 3; außerdem sechs Präzisierungen.
+
+## A. Neue Textklasse entdeckt: Regel-Fachtexte auf dem Wire (wird Phase 3)
+
+`get_violations` liefert je Treffer `Details` und `Guidance`
+(`Models/RuleViolation.cs:11-12`) — deutsche Fachtexte aus der `RuleRegistry`
+(z. B. Remediation "Methode zu 'async Task' umwandeln …", `RuleRegistry.cs:444`;
+Warum-Texte `RuleRegistry.DuplicateDetection.cs:15`). Das sind die **am häufigsten
+konsumierten Texte überhaupt** (jeder `get_violations`-Aufruf) — ein Englisch-Umbau,
+der sie auslässt, läge unter der eigenen Zielsetzung "komplett intern Englisch".
+
+**Komplikation:** Dieselben Texte erscheinen im CLI-Output
+(`Output/RuleLegendRegistry.cs` greift auf dieselben Registry-Felder zu). Die Umstellung
+ist also nicht MCP-lokal:
+
+- **Empfehlung (Phase 3):** RuleRegistry-Texte (`Details`/`Guidance`/Remediation/Warum)
+  auf Englisch umstellen; die CLI-Violations-Ausgabe schaltet damit bewusst mit.
+  CLI ist keine "externe Doku" — die Sprachregelung verbietet das nicht, und ein
+  Formatter-Split (CLI Deutsch / MCP Englisch) wäre dauerhafte Duplikation pro Regel.
+- Offene Frage zur Bestätigung im Frontmatter eingetragen.
+- Umfang: ~30+ Regeln mit Warum/Remediation-Texten in `Core/RuleRegistry*.cs` —
+  eigenständiger Coding-Step, nicht an Phase 1/2 dranhängen.
+
+## B. Bestätigt: Umfang der Framework-Texte (Phase 1+2)
+
+Verifizierte deutsche/transliterierte Wire-Quellen: alle 26 Tool-Descriptions
+("Wann nutzen: …" in den fünf `*ToolRegistrations.cs`), `ServerInstructions.Text`,
+`OverviewResourceRegistration` (Summaries + Overview-Markdown),
+`McpSufficiencyHints.Append` ("[HINWEIS]: Diese Daten sind vollstaendig …"),
+`McpDrillDownHints`, `McpToolResults.Loading()` ("[INFO]: Server laedt …"),
+`LinterErrorFormatter`-Messages/Hints je Fehlercode. Fehler-Codes sind bereits Englisch.
+
+## C. Test-Landschaft: 8 Dateien fixieren deutsche Strings
+
+Grep-Treffer für deutsche Serverstrings in Tests: u. a.
+`McpServerCommandLoadingStateTests`, `GetCallTreeToolTests`,
+`McpServerCommandErrorHandlingTests`, `McpCodeGraphServerStalenessMtimeCacheTests`,
+`MarkdownBuilderTests`, `AnalysisCacheManagerIsolationTests`,
+`LoadFixtureMeasurementsTests`, `McpProcessHost`.
+
+**Triage-Regel für die Umsetzung:** Nur Assertions auf **Wire-Texte des MCP-Pfads**
+stellen um. Assertions auf CLI-/Cache-interne deutsche Strings (CacheManager, Markdown-
+Builder, LoadFixtures) bleiben unverändert — sie gehören nicht zum MCP-Wire und würden
+sonst den Scope unbegründet aufblähen.
+
+## D. Budget-Konstante mitziehen
+
+`ServerInstructions.MaxUtf8Bytes = 2557` wird von
+`McpServerOptionsFactoryTests` gegen den aktuellen Text geprüft. Die englische Fassung
+ändert die Byte-Zahl in beide Richtungen möglich — die Konstante ist mit der neuen
+Fassung neu festzulegen (nicht blind zu übernehmen), und die Raw-Wire-Probes messen
+vorher/nachher gemäß Konzept.
+
+## E. Docs-Detail: Beispiele in Deutschsprachiger Doku werden englisch
+
+`Docs/agent-api.md` und `Docs/integration.md` enthalten jeweils mindestens einen
+deutschen Serverstring in Beispiel-Ausgaben; README laut Grep nicht. Präzisierung der
+Sprachregelung: Prosa bleibt Deutsch, **abgedruckte Server-Ausgaben** werden auf die
+neue Wire-Sprache gesetzt — sonst driftet die Doku sofort vom realen Verhalten
+(Verstoß gegen die Dokumentations-Objektivität, Richtlinien §1).
+
+## F. IsErrorPolicy.md ist Teil der Änderung
+
+Die Policy-Tabelle zitiert deutsche Hint-Formulierungen als Spezifikation der
+Antworttexte. Der Umbau ohne Mitführung der Policy-Datei erzeugt sofortige
+Spezifikations-Drift — Policy-Update gehört in denselben Step wie Phase 2.
+
+## G. Ergänzte DoD-Punkte
+
+- Phase 1/2 wie oben, ergänzt um: `McpSufficiencyHints`, `McpDrillDownHints`,
+  `LinterErrorFormatter`-Messages/Hints, `McpToolResults.Loading()`, Overview-Markdown.
+- `ServerInstructions.MaxUtf8Bytes` nach neuer Fassung neu festgelegt und im
+  Options-Factory-Test grün.
+- Test-Triage dokumentiert: Liste der umgestellten vs. bewusst nicht angefassten
+  Testdateien liegt dem Step-Result bei.
+- `Docs/agent-api.md`/`Docs/integration.md`: Beispiel-Ausgaben auf Wire-Sprache,
+  Prosa Deutsch.
+- Phase 3 (RuleRegistry) nur nach Bestätigung der offenen Frage; dann eigener Step mit
+  eigenem Commit, inkl. Review der CLI-Auswirkung (`RuleLegendRegistry`).
+
+
 
