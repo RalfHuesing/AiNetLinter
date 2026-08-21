@@ -2,14 +2,13 @@
 
 ## Offene Einträge
 
-### TD-003-001 — Overview-Grenzen vervollständigen
-
-- **Erzeugt in:** `step-003/step-review.md`
-- **Scope:** `OverviewResourceRegistration.ToolSummaries` und Discovery-Parität
-- **auto_fixable:** ja
-- **Erledigt in:** `step-004` (in Umsetzung)
-- **Nachweis:** wird nach erfolgreicher Korrektur auf erledigt gesetzt und im Step-Review referenziert.
+Keine.
 
 ## Erledigte Einträge
 
-Keine.
+### TD-003-001 — Overview-Grenzen vervollständigen
+
+- **Erzeugt in:** `step-003/step-review.md`
+- **Erledigt in:** `step-004`
+- **Status:** erledigt
+- **Nachweis:** `OverviewResourceRegistration.ToolSummaries` beschreibt `enrichCSharp=true` als Opt-in innerhalb des geladenen Solution-/Projekt-Snapshots, weist `ambiguous`/`unavailable` aus und nennt bei Trunkierung die Folge über Pattern, Scope oder Limits. `OverviewResourceRegistrationTests` prüft diese vier Vertragsbestandteile zusätzlich zur bestehenden Tool-Parität.

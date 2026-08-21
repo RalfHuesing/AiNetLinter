@@ -13,7 +13,7 @@ Die Einträge sind Pointer auf bestehende Anker für die spätere Umsetzung und 
 
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternTool.cs`** — Validierung, Loading-/Fehlerpfad und bestehende asynchrone Legacy-Textausgabe des `search_pattern`-Tools.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`** — Zentraler repositoryweiter Scanner für deterministische Treffer, Scope, Filter und Kontext-/Antwortbudgets.
-- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerEnrichment.cs`** — Koordiniert die optionale Anreicherung der bereits sichtbaren Match-Liste ohne zweite Trefferenumeration.
+- **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerEnrichment.cs`** — Koordiniert die optionale Anreicherung der bereits sichtbaren Match-Liste ohne zweite Trefferenumeration und liefert bei Roslyn-Cancellation den lexicalResult-Payload recoverable mit sichtbarem Cancellation-Status zurück.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternRoslynEnricher.cs`** — Kleine, cancellation-aware Roslyn-Anreicherung mit sicherer Dokument-/Snapshot-Zuordnung, Symbolauflösung und per-Datei-Cache.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`** — Interne Records für Scanneroptionen, immutable semantische Trefferfelder, Legacy-Status, MatchRanges, Scope-Metadaten und Completeness.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerCompleteness.cs`** — Aggregation von Sichtbar-/Gesamtzahlen, übersprungenen Dateien und Truncation-Gründen.
