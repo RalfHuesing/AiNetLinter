@@ -49,7 +49,7 @@ EPIC-09 schreibt bei Opt-in strukturierte JSONL-Einträge pro Tool-Call (inkl. E
 Eine Suche nach Auswertung/Analyse des Logs findet **nur** die CLI-Option
 (`Cli/CliOptionFactory.cs:204-206`) — kein Analyzer, kein Report, kein Kommando.
 
-Damit fehlt dem Projekt genau das, was `90_bewusst-nicht-umsetzen.md` als
+Damit fehlt dem Projekt genau das, was `90_bewusst-nicht-umsetzen/Konzept.md` als
 Wiederöffnungsbedingung fordert: **reproduzierbare Nutzungsdaten**. Konkret unentschieden
 bleiben aktuell: Tool-Entfernung/Zusammenlegung (Entscheidung Nr. 4 dort: "Erst
 Observability-Nutzungsdaten sammeln"), Tool-Profile (Nr. 5), Output-Schema-Pilot (Nr. 6).

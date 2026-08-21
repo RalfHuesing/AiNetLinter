@@ -33,7 +33,7 @@ Dies stellt die logische **Schicht 4** der Drift-Audit-Initiative dar:
 Ein MCP-Audit-Tool `similar_names`, das den residenten Roslyn-Symbolgraphen nach Namens-Clustern und verdächtigen Benennungs-Familien durchsucht — sowohl auf Typ-Ebene als auch auf Methoden-/Signatur-Ebene.
 
 > Hinweis aus der Konsolidierung 2026-08-21: Da dies ein **neues MCP-Tool** wäre, gilt die
-> Evidenzregel aus `90_bewusst-nicht-umsetzen.md`. Die Abgrenzung zu verworfenen Ideen ist
+> Evidenzregel aus `90_bewusst-nicht-umsetzen/Konzept.md`. Die Abgrenzung zu verworfenen Ideen ist
 > gegeben (deterministisch, kein Ranking-Heuristik-Tool wie das verworfene `locate_task`),
 > aber die Empfehlung lautet: erst Aufgabe 01 (Call-Log-Analyse) abschließen und damit
 > belegen, dass Naming-Drift-Anfragen real auftreten bzw. `find_duplicates`-Modi diese

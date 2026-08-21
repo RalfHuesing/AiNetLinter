@@ -28,6 +28,17 @@ Jede Einzelaufgabe ist eigenständig ausführbar und folgt dem Format der bewäh
 Aufgaben aus `mcp-agenten-effizienz` (Ziel / Warum / Vertrag / Scope / Tests /
 Definition of Done).
 
+## Verzeichniskonvention
+
+- Jede Aufgabe liegt in einem **eigenen Unterverzeichnis** (`NN_<name>/`) und dort als
+  `Konzept.md` — das ist der Einstiegspunkt und die Single Source of Truth des Tasks.
+- Umsetzungsschritte (falls verwendet) liegen als weitere Unterverzeichnisse daneben
+  (`NN_<name>/step-001/step-plan.md`, `step-result.md`, ...), analog zum Muster in
+  `tasks/mcp-agenten-effizienz/04_...`.
+- Diese Datei (`00_uebersicht-und-entscheidungen.md`) ist der **Index** und ändert sich
+  nur bei Priorisierung, Status oder neuen Aufgaben.
+
+
 > [!WARNING]
 > **`tasks/mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/` wird
 > GERADE von einem anderen Agenten umgesetzt** (Arbeitsverzeichnis mit codemap/roadmap/
@@ -62,17 +73,17 @@ verwenden neutrale, mehrprojektige C#-Solutions.
 | Reihenfolge | Aufgabe | Status | Priorität | Abhängigkeit | Herkunft |
 |---:|---|---|---|---|---|
 | — | Hybridsuche repositoryweit + Kontextbudget (Original: `../mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/`) | **in Umsetzung** (anderer Agent) | P1 | 01–03 dort erledigt | mcp-agenten-effizienz/04 |
-| 1 | [01_observability-calllog-fix-und-auswertung.md](01_observability-calllog-fix-und-auswertung.md) | offen | P1 | keine | Review-Finding |
-| 2 | [02_staleness-check-performance.md](02_staleness-check-performance.md) | offen | P1 | keine | Review-Finding |
-| 3 | [03_get-impact-zum-diff-kontext-erweitern.md](03_get-impact-zum-diff-kontext-erweitern.md) | offen | P2 | Hybridsuche (strukturierte transitive Ausgaben, dort erledigt als deren Aufgabe 03) | mcp-agenten-effizienz/05 |
-| 4 | [04_tool-annotations-korrekt-setzen.md](04_tool-annotations-korrekt-setzen.md) | offen | P2 | Byte-Messhelper aus Hybridsuche-Initiative (erledigt) | mcp-agenten-effizienz/06 |
-| 5 | [05_wire-texte-mcp-intern-auf-englisch.md](05_wire-texte-mcp-intern-auf-englisch.md) | offen | P2 | keine (Textumbau) | Review-Finding + Entscheidung |
-| 6 | [06_similar-names-naming-drift.md](06_similar-names-naming-drift.md) | offen | P2 | empfohlen: nach 01 (Nutzungsdaten für Audit-Tools) | features/04 |
-| 7 | [07_tools-list-cachehinweise-setzen.md](07_tools-list-cachehinweise-setzen.md) | offen | P3 | keine | mcp-agenten-effizienz/07 |
-| 8 | [08_config-resource-und-kleine-mcp-erweiterungen.md](08_config-resource-und-kleine-mcp-erweiterungen.md) | offen | P3 | 01 (Loading-/Nutzungsevidenz für Teile 2+3) | Review-Finding |
-| 9 | [09_regel-design-audit-kandidaten.md](09_regel-design-audit-kandidaten.md) | offen | P3 | 01 (Nutzungsevidenz), Hybridsuche | Review-Finding |
-| 10 | [10_architektur-monitoring.md](10_architektur-monitoring.md) | offen | P3 | laufend, keine harte Abhängigkeit | Review-Finding |
-| — | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen.md) | Festlegung | P9 | fortlaufend | konsolidiert |
+| 1 | [01_observability-calllog-fix-und-auswertung.md](01_observability-calllog-fix-und-auswertung/Konzept.md) | offen | P1 | keine | Review-Finding |
+| 2 | [02_staleness-check-performance.md](02_staleness-check-performance/Konzept.md) | offen | P1 | keine | Review-Finding |
+| 3 | [03_get-impact-zum-diff-kontext-erweitern.md](03_get-impact-zum-diff-kontext-erweitern/Konzept.md) | offen | P2 | Hybridsuche (strukturierte transitive Ausgaben, dort erledigt als deren Aufgabe 03) | mcp-agenten-effizienz/05 |
+| 4 | [04_tool-annotations-korrekt-setzen.md](04_tool-annotations-korrekt-setzen/Konzept.md) | offen | P2 | Byte-Messhelper aus Hybridsuche-Initiative (erledigt) | mcp-agenten-effizienz/06 |
+| 5 | [05_wire-texte-mcp-intern-auf-englisch.md](05_wire-texte-mcp-intern-auf-englisch/Konzept.md) | offen | P2 | keine (Textumbau) | Review-Finding + Entscheidung |
+| 6 | [06_similar-names-naming-drift.md](06_similar-names-naming-drift/Konzept.md) | offen | P2 | empfohlen: nach 01 (Nutzungsdaten für Audit-Tools) | features/04 |
+| 7 | [07_tools-list-cachehinweise-setzen.md](07_tools-list-cachehinweise-setzen/Konzept.md) | offen | P3 | keine | mcp-agenten-effizienz/07 |
+| 8 | [08_config-resource-und-kleine-mcp-erweiterungen.md](08_config-resource-und-kleine-mcp-erweiterungen/Konzept.md) | offen | P3 | 01 (Loading-/Nutzungsevidenz für Teile 2+3) | Review-Finding |
+| 9 | [09_regel-design-audit-kandidaten.md](09_regel-design-audit-kandidaten/Konzept.md) | offen | P3 | 01 (Nutzungsevidenz), Hybridsuche | Review-Finding |
+| 10 | [10_architektur-monitoring.md](10_architektur-monitoring/Konzept.md) | offen | P3 | laufend, keine harte Abhängigkeit | Review-Finding |
+| — | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen/Konzept.md) | Festlegung | P9 | fortlaufend | konsolidiert |
 
 ## Begründung der Reihenfolge
 

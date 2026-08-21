@@ -15,7 +15,7 @@ herkunft: Review-Finding 2026-08-21 (ox-alpha)
 # Config-Resource und kleine MCP-Erweiterungen (bedingt)
 
 Vier Kandidaten, bewusst klein und additiv gehalten. Jeder nennt die Bedingung, unter der
-er umgesetzt werden sollte — analog zur Entscheidungsregel in `90_bewusst-nicht-umsetzen.md`.
+er umgesetzt werden sollte — analog zur Entscheidungsregel in `90_bewusst-nicht-umsetzen/Konzept.md`.
 
 ## Teil 1: Effektive Regelkonfiguration als Resource (`ainetlinter://rules`) — empfohlen
 
@@ -47,7 +47,7 @@ transportiert.
 
 **Bedingung:** Nur umsetzen, wenn die Call-Log-Analyse (Aufgabe 01) zeigt, dass Agenten die
 empfohlenen Ketten **nicht** von selbst laufen, oder wenn ein konkreter Ziel-Host Prompts
-unterstützt. Sonst: in `90_bewusst-nicht-umsetzen.md` als verworfen nachtragen.
+unterstützt. Sonst: in `90_bewusst-nicht-umsetzen/Konzept.md` als verworfen nachtragen.
 
 ## Teil 3: Loading-Zustand präzisieren / Progress-Notification — Messung abwarten
 
