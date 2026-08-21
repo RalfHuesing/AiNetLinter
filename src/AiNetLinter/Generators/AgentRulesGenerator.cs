@@ -145,9 +145,8 @@ public static class AgentRulesGenerator
     public static string GenerateContent(Config config, string configPath, bool hasBaseline = false)
     {
         var sb = new StringBuilder();
-        var version = typeof(AgentRulesGenerator).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
-        AppendFrontmatter(sb, version, configPath);
+        AppendFrontmatter(sb, configPath);
         AppendKurzStil(sb, config);
         AppendMetricsTable(sb, config);
         AppendCompoundSuppressions(sb, config);
@@ -203,7 +202,7 @@ public static class AgentRulesGenerator
         sb.AppendLine();
     }
 
-    private static void AppendFrontmatter(StringBuilder sb, string version, string configPath)
+    private static void AppendFrontmatter(StringBuilder sb, string configPath)
     {
         var configFileName = string.IsNullOrWhiteSpace(configPath)
             ? "rules.json"
@@ -213,13 +212,16 @@ public static class AgentRulesGenerator
             configFileName = configPath;
         }
 
+        // Bewusst OHNE Versionsstempel: Das Artefakt beschreibt die aktiven Regeln, nicht die
+        // Generator-Version. Ein Version-Churn liess die committed Datei bei jedem Release
+        // driftet erscheinen (Drift-Check/Dogfood-Guard wuerde ohne Regeländerung anschlagen).
         sb.AppendLine("---");
         sb.AppendLine("description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)");
         sb.AppendLine("globs: *.cs");
         sb.AppendLine("alwaysApply: true");
         sb.AppendLine("---");
         sb.AppendLine("# C#-Codequalität (AiNetLinter)");
-        sb.AppendLine($"Auto-generiert durch AiNetLinter {version} aus `{configFileName}`. Neuen Produktionscode direkt konform schreiben.");
+        sb.AppendLine($"Auto-generiert durch AiNetLinter aus `{configFileName}`. Neuen Produktionscode direkt konform schreiben.");
         sb.AppendLine();
     }
 

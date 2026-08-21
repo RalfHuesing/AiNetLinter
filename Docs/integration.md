@@ -150,12 +150,19 @@ Drift-Check in CI (ohne Datei zu schreiben):
   ```cmd
   AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules-only --check
   ```
+  Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis gesucht.
 - Kombinierter Lauf (Linter-Prüfung + Agent-Regeln prüfen):
   ```cmd
   AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules --check
   ```
 
 Exit 1 wenn `.agents/rules/AiNetLinter.mdc` veraltet ist oder (im kombinierten Lauf) Code-Verstöße vorliegen.
+
+> [!NOTE]
+> Die generierte Regeldatei enthält bewusst **keinen Versionsstempel** — sie beschreibt die aktiven
+> Regeln, nicht die Generator-Version. Damit entsteht keine Drift durch Release-Bumps, und ein
+> Drift-Check schlägt ausschließlich bei echten Regeländerungen an (das AiNetLinter-Repository
+> sichert dies zusätzlich über einen Dogfood-Integrationstest ab).
 
 ---
 

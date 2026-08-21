@@ -21,13 +21,14 @@ internal static class SyncAgentRulesCommand
     internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;
-        var config = ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        var baseDir = AgentRulesGenerator.ResolveBaseDirectory(
+            string.IsNullOrWhiteSpace(args.TargetPath) ? Directory.GetCurrentDirectory() : args.TargetPath);
+        var config = LoadConfigForSync(args, baseDir, c);
         if (config == null)
         {
             return 1;
         }
 
-        string baseDir = AgentRulesGenerator.ResolveBaseDirectory(args.TargetPath);
         var mdcPath = AgentRulesGenerator.ResolveAgentRulesPath(baseDir, args.AgentRulesPath);
         var agentRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
@@ -40,6 +41,32 @@ internal static class SyncAgentRulesCommand
         }
 
         return RunWrite(agentRulesDir, mdcPath, content, c);
+    }
+
+    /// <summary>
+    /// Lädt die Konfiguration für den Sync. Ohne <c>--config</c> wird <c>rules.json</c> im
+    /// Zielverzeichnis per Auto-Discovery gesucht — damit funktioniert der dokumentierte
+    /// Aufruf <c>--sync-agent-rules-only</c> im Repo-Root ohne weitere Argumente, statt mit
+    /// der Audit-Fehlermeldung <c>CONFIG_REQUIRED</c> zu scheitern.
+    /// </summary>
+    private static Config? LoadConfigForSync(LinterArgs args, string baseDir, ILintConsole c)
+    {
+        if (!string.IsNullOrWhiteSpace(args.ConfigPath))
+        {
+            return ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
+        }
+
+        var discovered = Path.Combine(baseDir, "rules.json");
+        if (!File.Exists(discovered))
+        {
+            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ConfigNotFound,
+                "Keine rules.json gefunden (weder --config noch Auto-Discovery im Zielverzeichnis).",
+                context: discovered,
+                hint: "--config <pfad> angeben oder im Verzeichnis mit rules.json ausfuehren."));
+            return null;
+        }
+
+        return ConfigLoader.TryLoadConfig(discovered, isRequired: true);
     }
 
     private static int RunCheck(string mdcPath, string content, ILintConsole c)

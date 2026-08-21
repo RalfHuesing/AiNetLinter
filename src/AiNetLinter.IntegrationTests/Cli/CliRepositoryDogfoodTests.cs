@@ -89,4 +89,58 @@ public sealed class CliRepositoryDogfoodTests
         var content = File.ReadAllText(tempPlaybookPath);
         Assert.Contains("AI Repository Playbook", content);
     }
+
+    [Fact]
+    public void SyncAgentRulesCheck_CommittedRules_AreInSyncWithRulesJson()
+    {
+        var rootDir = SolutionRootLocator.Find();
+        var configPath = Path.Combine(rootDir, "rules.json");
+
+        Assert.True(File.Exists(configPath), $"Config nicht gefunden: {configPath}");
+
+        var args = new LinterArgs
+        {
+            TargetPath = rootDir,
+            Verbose = false,
+            ConfigPath = configPath,
+            SyncAgentRulesOnly = true,
+            Check = true,
+        };
+        var console = new RecordingLintConsole();
+
+        var exitCode = SyncAgentRulesCommand.Run(args, console);
+
+        // Drift-Guard (Dogfooding): Jede rules.json-Aenderung ohne erneuten
+        // `--sync-agent-rules-only`-Lauf laesst diesen Test rot — die committed
+        // .agents/rules/AiNetLinter.mdc bleibt damit garantiert synchron.
+        Assert.True(exitCode == 0,
+            $".agents/rules/AiNetLinter.mdc ist nicht mehr aktuell (rules.json geaendert ohne Sync?). " +
+            $"Behebung: dotnet run --project src/AiNetLinter -- --sync-agent-rules-only. " +
+            $"Output: {console.OutputText} Error: {console.ErrorText}");
+    }
+
+    [Fact]
+    public void SyncAgentRulesCheck_WithoutConfigPath_DiscoversRulesJsonInTargetDirectory()
+    {
+        var rootDir = SolutionRootLocator.Find();
+
+        var args = new LinterArgs
+        {
+            TargetPath = rootDir,
+            Verbose = false,
+            ConfigPath = null,
+            SyncAgentRulesOnly = true,
+            Check = true,
+        };
+        var console = new RecordingLintConsole();
+
+        var exitCode = SyncAgentRulesCommand.Run(args, console);
+
+        // Auto-Discovery-Vertrag: --sync-agent-rules-only ohne --config findet rules.json im
+        // Zielverzeichnis (dokumentierter Aufruf in AGENTS.md) und liefert keine
+        // CONFIG_REQUIRED-Fehlermeldung mehr.
+        Assert.True(exitCode == 0,
+            $"Sync ohne --config schlug fehl (Exit {exitCode}). Output: {console.OutputText} Error: {console.ErrorText}");
+        Assert.DoesNotContain("CONFIG_REQUIRED", console.ErrorText, StringComparison.Ordinal);
+    }
 }
