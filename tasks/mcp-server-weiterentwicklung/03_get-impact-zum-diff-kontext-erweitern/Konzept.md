@@ -60,11 +60,12 @@ maxTestsPerSymbol: int                       // Default 10, Cap 50
 - Antwort enthält explizite Vollständigkeitsmetadaten für Symbol-, Call-Site- und Test-Caps.
 - Textantwort ist eine kompakte Zusammenfassung; detaillierte Einträge stehen im `structuredContent`.
 - Bestehender `callers`-Modus bleibt abwärtskompatibel.
-
-### Nice-to-have
-
-- Deduplizierte `dotnet test`-Filterbefehle pro betroffenem Testprojekt.
-- `changedFiles` mit kompakten Hunk-Ranges statt Liste jeder einzelnen geänderten Zeile.
+- Deduplizierte `dotnet test`-Filterbefehle pro betroffenem Testprojekt (aus dem ehemaligen
+  Nice-to-have hochgestuft — das Antwortbeispiel enthält `recommendedTestCommands` bereits
+  als vertraglichen Bestandteil; ohne Umsetzung wäre das Beispiel falsch).
+- `changedFiles` mit kompakten Hunk-Ranges statt Liste jeder einzelnen geänderten Zeile
+  (aus dem ehemaligen Nice-to-have hochgestuft — das Antwortbeispiel definiert genau
+  dieses Format; Nice-to-haves gibt es in diesem Task nicht, siehe Audit-Abschnitt).
 
 ### Non-Goals
 
@@ -178,4 +179,101 @@ Andere Violations derselben Datei werden nicht aufgenommen. Damit bleibt die Ant
 - Antwort ist deterministisch, gekappt und vollständigkeitsbewusst.
 - Dokumentation nennt die Testdaten korrekt „statische Zuordnung“.
 - `dotnet build` sowie beide Nicht-Stress-Testprojekte sind grün.
+
+---
+
+# Audit zweiter Pass (2026-08-21): Funde und Präzisierungen
+
+Verifiziert gegen `CallGraphTraversal.cs`, `GetImpactTool.cs`, `DiffImpactAnalyzer.cs`
+(Skeleton + Schlüsselstellen) und `TestCoverageScanner.cs`. Die Kernbehauptungen des
+Konzepts halten alle; zusätzlich wurden Randfälle und ein Kompatibilitätsthema gefunden.
+
+## A. Verifizierte Kernbehauptungen
+
+1. **Traversierungs-Bug bestätigt, schärfer als beschrieben:** `EnqueueChildren`
+   (`CallGraphTraversal.cs:126-134`) enqueued `reference.Definition`. Für
+   `FindReferencesAsync(current)` ist `Definition` aber meist `current` selbst — das ist
+   bereits in `_seen`, wird also gar nicht enqueued. `depth > 1` expandiert heute faktisch
+   nur über Override-/Interface-Definitionen, nicht über Aufruferketten. Der vorgeschlagene
+   Fix (`GetEnclosingSymbol().NormalizeToOwningMember()` pro Referenzlocation) ist richtig.
+2. **Scope-Behauptung bestätigt:** `IsPublicOrInternal`
+   (`DiffImpactAnalyzer.cs:301`, genutzt in `GetValidChangedSymbol:280`) filtert den
+   heutigen Git-Modus auf public/internal — der breitere `change-context`-Scanner ist
+   tatsächlich neu.
+3. **Sufficiency-Hint-Lücke bestätigt:** `GetImpactTool.ExecuteSymbolBranchAsync`
+   hängt heute keinen Sufficiency-Hint an (`GetImpactTool.cs:47-65`), während
+   `FindReferencesTool` dies tut.
+4. **Git-einmal-pro-Call gilt heute schon** (`RunGitDiff` einmal in
+   `AnalyzeEntriesAsync`) — die Performance-Regel zielt auf die anderen beiden
+   N-mal-Muster, die real existieren (siehe C).
+
+## B. Kompatibilitätsthema: Der Traversierungs-Fix ändert Bestandsverhalten
+
+`ExpandAsync` wird von **zwei** Tools genutzt (`find_references`,
+`GetImpactTool` Symbol-Branch). Der Fix verändert deren `depth > 1`-Ausgabe von
+"faktisch leer/Override-only" zu "echte Aufruferketten". Das ist die Intention, aber:
+
+- Bestehende Tests (`CallGraphTraversalTests.ExpandAsync_Depth2_*`) können das alte,
+  defekte Verhalten als Erwartung kodieren — sie sind als Verhaltenstests zu prüfen und
+  ggf. bewusst umzustellen, nicht mechanisch grün zu zwingen (Symptom-Fixing-Verbot).
+- Die Änderung ist in `Docs/agent-api.md` als Verhaltenskorrektur (nicht nur additive
+  Erweiterung) auszuweisen.
+
+## C. Performance-Fundament ist größer als angedeutet
+
+Zwei existierende N-mal-Muster müssen für `change-context` aktiv konsolidiert werden:
+
+1. `FindAllCallSiteEntriesAsync` ruft `FindCallSiteEntriesAsync` **pro geändertem Symbol**
+   auf — jeder ein voller Solution-weiter `SymbolFinder.FindReferencesAsync`-Lauf.
+2. `TestCoverageScanner.FindTestsForSymbolAsync` ist per-Symbol-API und scannt bei jedem
+   Aufruf alle Testprojekte. Die geforderte Batch-Zuordnung erfordert echte Refactoring-
+   Arbeit: Testprojekte einmal parsen/semantisch auswerten und gegen **alle** gekappten
+   Symbole matchen.
+
+Das ist machbar, aber der größte Einzelblock des Tasks — `estimated_scope: large` ist
+korrekt.
+
+## D. Randfälle und Präzisierungen
+
+1. **Gelöschte Dateien erscheinen nicht:** `ParseGitDiffHunks` wertet nur `+++ b/`-Zeilen
+   aus; gelöschte Dateien (`+++ /dev/null`) liefern keine Hunks. Gelöschte Symbole können
+   folglich nie in `changedSymbols` auftreten (ihr Deklarationsknoten existiert nicht mehr
+   im Snapshot). Inhärente Grenze — muss in `Docs/agent-api.md` dokumentiert stehen,
+   nicht stillschweigend fehlen.
+2. **Umbenannte Dateien:** Mit Git-Rename-Detection landen Hunks unter dem neuen Pfad —
+   akzeptabel; ohne Detection entstehen Löschung+Neuanlage mit denselben Grenzen wie D.1.
+3. **`depth` im `change-context`:** Der Git-Branch ignoriert `depth` heute
+   (`GetImpactTool.cs:19-20`). Entscheidung: **`depth` bleibt im gesamten Git-Branch
+   wirkungslos** (auch in `change-context`); die Call-Site-Tiefe ergibt sich aus dem
+   Traversal-Ergebnis der strukturierten Ausgaben-Aufgabe. In den Vertragstext aufnehmen.
+4. **Stabile IDs für lokale Funktionen:** Lokale Funktionen haben keine
+   DocumentationCommentId; hier greift der Fallback (voll qualifizierter Display-String).
+   Vertrag formulieren als "DocCommentId oder deterministischer Fallback".
+5. **Linter-Kosten:** "Linter genau einmal" bedeutet einen vollständigen Solution-Lint pro
+   `change-context`-Aufruf. Auf großen Solutions spürbar; bewusst akzeptiert, da die
+   Violation-Filterung sonst nicht diffbezogen bliebe. Antwortbudgets decken die Größe,
+   nicht die Laufzeit.
+6. **Parameter-Record-Wachstum:** `GetImpactInput` hat bereits 4 Parameter
+   (`MaxMethodParameterCount: 4`). Neue Optionen (`detailLevel`, `maxChangedSymbols`,
+   `maxTestsPerSymbol`) kommen additiv mit Default-Werten in den Record; die
+   Linter-Regeln sind bei der Delegat-Signatur zu prüfen.
+7. **`BuildAggregateWarningAsync` mit `CancellationToken.None`** im Git-Branch
+   (`GetImpactTool.cs:87`) — beim Umbau an den echten `ct` anbinden.
+
+## E. Nice-to-have-Regel (Nutzerentscheidung 2026-08-21)
+
+Dieser Task kennt keine Nice-to-haves. Beide ehemaligen Punkte sind nach Muss-Have
+hochgestuft (Begründung dort), weil das Antwortbeispiel sie bereits als vertraglichen
+Bestandteil definiert. Alles, was nicht Muss ist, steht in Non-Goals.
+
+## F. Ergänzte DoD-/Test-Punkte
+
+- Test: Gelöschte Datei im Diff → taucht nicht in `changedSymbols` auf; Antwort bleibt
+  valide (dokumentierte Grenze, kein Fehlerfall).
+- Test: Bestehende `ExpandAsync_Depth2`-Tests wurden bewusst reviewed und entweder als
+  korrekt bestätigt oder als Kodifikation des Defekts umgestellt (Entscheidung dokumentieren).
+- Vertragstext: `depth` ist im gesamten Git-Branch wirkungslos (inkl. `change-context`).
+- Vertragstext: Stabile ID = DocCommentId oder deterministischer Fallback (lokale Funktionen).
+- `GetImpactInput` wächst nur additiv mit Default-Werten; Linter-Regeln bleiben eingehalten.
+
 
