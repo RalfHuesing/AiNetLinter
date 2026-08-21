@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-result
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 step: 005
@@ -10,7 +10,9 @@ coded_by_model: GPT-5 (Codex)
 coded_by_model_knowledge_cutoff: nicht angegeben
 coded_at: 2026-08-21
 code_commit_hash: 4899cf58
-status_after: done (pending audit)
+status_after: done
+review_commit_hash: dc11d39b
+review_verdict: approved
 blocker_category: n/a
 ---
 

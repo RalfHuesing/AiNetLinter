@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 derived_from: tasks/mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget.md
 created_at: 2026-08-21
@@ -18,7 +18,7 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
 - EPIC-02 ist abgeschlossen: StructuredContent, MatchRanges, Kontext und Legacy-Formatter stammen aus dem gemeinsamen Scanner-Ergebnis.
 - EPIC-03 ist abgeschlossen: Solution-Scope, Filter, Standardausschlüsse, Antwort-/Trefferbudgets und Completeness sind implementiert und getestet.
 - `step-003` und der approved Korrektur-Step `step-004` haben EPIC-04 sowie die unmittelbar erforderlichen EPIC-05-Vertrags- und Dokumentationsänderungen abgeschlossen. Der Schnitt liegt nach dem stabilisierten lexikalischen Kern und vor jeder Wirksamkeits-/Performance-Messung.
-- `step-005` ist als nächster großer JIT-Step für EPIC-06 geplant: Baseline-/Fixture-Evaluation, messbare Antwort-/Treffer-/Datei-/Laufzeit-/Cancellation-/Folgeaufruf-Proxies und eine objektive Abschlussentscheidung.
+- `step-005` hat EPIC-06 abgeschlossen: Baseline-/Fixture-Evaluation, messbare Antwort-/Treffer-/Datei-/Laufzeit-/Cancellation-/Folgeaufruf-Proxies und eine objektive Abschlussentscheidung liegen vor.
 - Der Drift-Audit-Nachweis bleibt unverändert maßgeblich: Im Such-/MCP-Scope gibt es keinen offenen auto-fixbaren Tech-Debt. Außerhalb liegende Audit-Cluster werden nicht opportunistisch konsolidiert.
 - `TD-003-001` wurde in `step-004` erledigt. Weitere Audit-Beobachtungen sind im `tech-debt.md` mit Begründung als außerhalb dieses Tasks liegend dokumentiert.
 
@@ -57,7 +57,7 @@ Diese Roadmap leitet grobe Umsetzungsepen aus dem Konzept ab. Sie erweitert das 
   - Tool-Signatur und Beschreibung, `McpToolResults`-Struktur, Legacy-Text, Fehler-/Loading-Politik, Overview-Ressource und globale MCP-Hinweise konsistent erweitern; die knappe UTF-8-Grenze der Server-Instruktionen berücksichtigen.
   - Raw-Wire-, SDK-, Fixture-, Ressourcen- und Dokumentationstests ergänzen und README, `Docs/agent-api.md`, `Docs/integration.md`, Overview-/Tool-Beschreibungen sowie gegebenenfalls `Docs/ROADMAP.md` synchronisieren.
 
-- [ ] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (nächster großer JIT-Coding-Step `step-005` nach `step-004`, einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
+- [x] **EPIC-06 — Effektivitäts-, Performance- und Abschlussvalidierung** (`step-005`, approved; einschließlich Entscheidung über einen rein diagnostischen `rg`-Vergleich)
   - Die neue Suche mit dem bestehenden `SymbolGraphMini`-Fixture und kontrolliert erzeugten problematischen Dateien gegen einen unbudgetierten Fixture-Oracle prüfen; Plain-/Regex-, gemischte Dateitypen, C#-Opt-in, Kontext, Binär-/Encoding-/generierte Dateien, Regex-Timeout und Cancellation abdecken.
   - UTF-8-Bytes von Legacy-Text, Structured-Payload und kombinierter Toolantwort sowie sichtbare/gesamte Treffer- und Dateizahlen, begründeten Verlust, Laufzeitverteilungen und explizite Folgeaufrufe messen. Tokenersparnis und allgemeine Performanceversprechen bleiben ausgeschlossen.
   - Einen direkten `rg`-Vergleich nur optional und test-/diagnostikseitig ausführen; Verfügbarkeit, Trefferparität und Laufzeit getrennt dokumentieren, aber keine Produktionsabhängigkeit und kein Pflicht-Gate einführen.

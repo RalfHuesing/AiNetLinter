@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 step: 005
