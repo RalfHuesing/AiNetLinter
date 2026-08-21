@@ -1,5 +1,5 @@
 ---
-status: ready
+status: erledigt (2026-08-21, Commit 7ef3faed)
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
@@ -9,6 +9,7 @@ rules_dir: .agents/rules
 last_updated: 2026-08-21
 open_questions: []
 herkunft: Review-Finding 2026-08-21 (ox-alpha)
+umsetzung: "2026-08-21 umgesetzt (Commit 7ef3faed, EPIC-12 in Docs/ROADMAP.md): get_server_health liefert echte Call-Log-Aggregate via McpLogAnalyzer.TryAnalyze (statt hartkodierter Nullen); CLI-Kommando --analyze-mcp-log <datei|verzeichnis|glob> [--format text|json] mit allen Konzept-Metriken (Calls pro Tool, Fehlercodes/isError-Rate, Loading-Retry-Bursts, Truncation-/Completeness-Heuristik, PID/InstanceId-Sessions). Doc-Sync: ROADMAP/agent-api/configuration/integration/README. Verifiziert 2026-08-21 gegen den Code (nicht nur Doku) inkl. Live-Health-Check."
 ---
 
 # Call-Log: Health-Nullen fixen und Log-Auswertung als CLI-Kommando
