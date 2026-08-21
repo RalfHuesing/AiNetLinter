@@ -101,7 +101,7 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `find_dead_code` | On-Demand-Audit nach totem/unreferenziertem C#-Code (Methoden, Typen, Properties) mit Confidence-Stufen |
 | `find_duplicates` | Token-basierte Duplikat-Suche (Clone-Detection, Jaccard-N-Gram) und Refactoring-Drift-Erkennung (Helper wird strukturell nachgebaut statt aufgerufen) |
 | `safeguard` | Deterministischer 0–10-Qualitätsscore inkl. Pass/Fail gegen einen Schwellenwert |
-| `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer) |
+| `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer); `enrichCSharp=true` ordnet sichtbare Treffer geladener C#-Dokumente optional ein |
 | `report_observability_feedback` | Strukturierte Bug-Reports, False-Positives oder Feature-Wünsche von Agenten an das System melden |
 | `reload_config` | `rules.json` zur Laufzeit neu einlesen, ohne Server-Neustart |
 | `get_server_health` | LoadState, geladene Solution/Config, Uptime, Call-Statistik |
@@ -120,6 +120,13 @@ Registrierung im MCP-Host (Claude Code, Cursor, eigene Agent-Loops):
 ```
 
 Vollständige Tool-Referenz (Parameter, Trunkierung, Error-Codes, Call-Log): [Docs/agent-api.md#mcp-server-modus](Docs/agent-api.md#mcp-server-modus). Registrierungs-Anleitung inkl. Mehrdeutigkeits-Behandlung und Tool-vs-`rg`-Empfehlung: [Docs/integration.md#mcp-server-registrieren](Docs/integration.md#mcp-server-registrieren).
+
+`search_pattern` behält den Legacy-Text und liefert zusätzlich ein strukturiertes Ergebnis mit
+solution-relativen Pfaden, Positionen, Match-Bereichen, Kontext und Vollständigkeitsstatus.
+`enrichCSharp` ist standardmäßig `false`; bei `true` ergänzt die Suche für sichtbare Treffer
+geladener C#-Dokumente ein `semantic`-Objekt. Kommentare und Strings werden als nicht anwendbar
+gekennzeichnet, während mehrdeutige oder außerhalb des Roslyn-Snapshots liegende Auflösungen als
+`ambiguous` bzw. `unavailable` sichtbar bleiben.
 
 ---
 

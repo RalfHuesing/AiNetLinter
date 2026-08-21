@@ -242,7 +242,7 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 | `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste (siehe unten) | ja | ja (je Pattern) |
 | `find_magic_values` | `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 1, auch Einzelvorkommen), `maxResults?` (Default 50), `ignoreNumbers?` (optional), `includeTests?` (Default false; filtert `/Tests/`, `/FastTests/` aus dem relativen Pfad), `includeSuppressed?` (Default false; wirksam via `SyntaxTrivia`-Auswertung am Literal), `changedOnly?` (Default false; nutzt `DiffImpactAnalyzer.RunGitDiff` + `ParseGitDiffHunks`, leere Diffs → 0 Dateien) | Strukturierte Funde (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes, Buffer/Zeit-Konstanten, duplizierte `const`-Felder, enum-Kaskaden, `nameof`-Kandidaten, Security-Secrets, User-Facing-Exception-Messages) mit Ziel-Empfehlung (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX…`); alle 7 Heuristik-Kategorien aktiv (siehe unten) | ja | ja |
 | `get_symbol_body` | `symbolIdentifier?` (einzelne ID), `symbolIdentifiers?` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
-| `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50) | Treffer im Dateibestand (alle Dateitypen) | nein (Fallback) | ja |
+| `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Observability-Status (aktiv/deaktiviert) | nein | nein |
 | `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
@@ -252,7 +252,37 @@ Die Testinformationen von `get_feature_context` und `get_test_context` sind eine
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates` und `find_magic_values` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt seine bestehende `CallSiteEntry`-Form.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt seine bestehende `CallSiteEntry`-Form.
+
+**`search_pattern` — strukturierte Treffer und C#-Enrichment:** Die gemeinsame sichtbare Match-Liste
+liefert `filePath`, 1-basierte `line`-/`matchRanges`-Positionen, unveränderten `lineText`, optional
+`contextBefore`/`contextAfter`, `projectName` sowie `completeness`, `scope` und `snapshot`. Bei
+`enrichCSharp=false` bleibt `semantic` nicht gesetzt. Bei `true` enthält es `kind`, `resolution`
+und, wenn Roslyn eine stabile ID liefert, `symbolId`:
+
+```json
+{
+  "filePath": "src/App/OrderService.cs",
+  "line": 42,
+  "matchRanges": [{ "column": 18, "length": 10 }],
+  "lineText": "    return await PlaceAsync(order);",
+  "projectName": "App",
+  "semantic": {
+    "kind": "symbol_reference",
+    "resolution": "resolved",
+    "symbolId": "M:App.OrderService.PlaceAsync"
+  }
+}
+```
+
+`kind` kann `declaration`, `symbol_reference`, `comment`, `string`, `code` oder `unknown` sein.
+`resolution` kann `resolved`, `not_applicable`, `unknown`, `ambiguous` oder `unavailable` sein.
+Kommentare und String-Literale werden nicht als Symbolreferenzen ausgegeben. Die Anreicherung nutzt
+nur eindeutig zuordenbare Dokumente des residenten Roslyn-Snapshots; fehlende Dokumente oder ein
+abweichender Snapshot-Zeilentext werden als `unavailable`, mehrdeutige Symbolkandidaten als
+`ambiguous` sichtbar. Die lexikalische Treffer-, Scope- und Budgetauswahl sowie der Legacy-Text
+bleiben unverändert. Bei Trunkierung oder `unavailable`/`ambiguous` sind Scope-Verfeinerung,
+niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene nächste Schritt.
 
 **`find_references` / `get_impact` (Symbol-Branch) — transitive Structured Response:** Beide Tools liefern ein JSON-Objekt mit deterministisch sortierten und deduplizierten Treffern. `filePath` ist solution-relativ mit Forward-Slashes; `depth` ist die Traversierungsstufe; `reachedFromSymbolId` ist die stabile `DocumentationCommentId` des in diesem Schritt untersuchten Symbols (bei fehlender ID ein deterministischer qualifizierter Anzeigename).
 

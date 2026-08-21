@@ -97,6 +97,7 @@ public sealed class OverviewResourceRegistrationTests
         Assert.Contains("Code erkunden", text, StringComparison.Ordinal);
         Assert.Contains("Refactoring & Impact", text, StringComparison.Ordinal);
         Assert.Contains("Quality-Gate vor Commit", text, StringComparison.Ordinal);
+        Assert.Contains("enrichCSharp=true", text, StringComparison.Ordinal);
     }
 
     [Fact]

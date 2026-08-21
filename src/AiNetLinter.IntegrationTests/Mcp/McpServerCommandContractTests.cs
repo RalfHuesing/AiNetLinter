@@ -3,12 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.Mcp;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -96,6 +98,7 @@ public sealed class McpServerCommandContractTests
                 ["maxResponseBytes"] = 4096,
                 ["scope"] = "src",
                 ["includePatterns"] = new[] { "**/*.cs" },
+                ["enrichCSharp"] = true,
             });
 
         Assert.NotEqual(true, result.IsError);
@@ -103,7 +106,24 @@ public sealed class McpServerCommandContractTests
         Assert.Equal(
             System.Text.Json.JsonValueKind.Object,
             result.StructuredContent!.Value.ValueKind);
-        Assert.True(result.StructuredContent.Value.GetProperty("matches").GetArrayLength() > 0);
+        var matches = result.StructuredContent.Value.GetProperty("matches").EnumerateArray().ToArray();
+        Assert.NotEmpty(matches);
+        Assert.Contains(matches, match => match.TryGetProperty("semantic", out var semantic)
+            && semantic.ValueKind == System.Text.Json.JsonValueKind.Object);
+    }
+
+    [Fact]
+    public void SearchPatternRegistration_AdvertisesOptInEnrichment()
+    {
+        using var state = new McpCodeGraphServer(
+            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        var tool = McpServerOptionsFactory.Create(state).ToolCollection!
+            .Single(candidate => candidate.ProtocolTool.Name == "search_pattern");
+
+        Assert.Contains("enrichCSharp", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("enrichCSharp=true", tool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("ambiguous", tool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("unavailable", tool.ProtocolTool.Description, StringComparison.Ordinal);
     }
 
     [Fact]

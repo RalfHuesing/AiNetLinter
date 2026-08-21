@@ -102,6 +102,7 @@ internal static class AnalysisToolRegistrations
                 string? scope = null,
                 string[]? includePatterns = null,
                 string[]? excludePatterns = null,
+                bool enrichCSharp = false,
                 CancellationToken ct = default) =>
                 SearchPatternTool.ExecuteAsync(
                     mcpState,
@@ -114,7 +115,8 @@ internal static class AnalysisToolRegistrations
                         maxResponseBytes,
                         scope,
                         includePatterns,
-                        excludePatterns),
+                        excludePatterns,
+                        enrichCSharp),
                     ct),
             new McpServerToolCreateOptions
             {
@@ -128,7 +130,10 @@ internal static class AnalysisToolRegistrations
         "JS-Funktion, Razor-Komponente, WPF-Element) oder allgemeine Textsuche. isRegex=true " +
         "fuer Regex statt case-insensitive Substring. maxFiles, contextLines und " +
         "maxResponseBytes begrenzen die strukturierte Nutzlast; scope, includePatterns und " +
-        "excludePatterns steuern den solution-relativen Scope. Legacy-Text bleibt erhalten.";
+        "excludePatterns steuern den solution-relativen Scope. enrichCSharp=true reichert " +
+        "sichtbare Treffer geladener C#-Dokumente opt-in an; Snapshot-Grenzen, mehrdeutige " +
+        "oder nicht verfuegbare Aufloesungen bleiben als ambiguous/unavailable im semantic-Feld " +
+        "sichtbar. Legacy-Text bleibt erhalten.";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

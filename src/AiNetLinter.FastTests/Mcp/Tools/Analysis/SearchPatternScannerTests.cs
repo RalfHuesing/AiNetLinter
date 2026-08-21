@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.TestKit;
@@ -31,6 +32,104 @@ public sealed class SearchPatternScannerTests
         Assert.Equal(new[] { "before" }, match.ContextBefore);
         Assert.Equal(new[] { "after" }, match.ContextAfter);
         Assert.Equal("Project", match.ProjectName);
+        Assert.Null(match.Semantic);
+    }
+
+    [Fact]
+    public async Task Scan_CSharpEnrichment_ResolvesDeclarationAndReference()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-roslyn-");
+        using var solution = CreateSolution(tempDir.DirectoryPath, "namespace Project;\npublic sealed class Target\n{\n    public string Run() => \"anchor\";\n}\npublic sealed class Caller\n{\n    public Target Create() => new Target();\n    public string Call() => new Target().Run();\n}");
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Project.cs");
+        File.WriteAllText(path, "namespace Project;\npublic sealed class Target\n{\n    public string Run() => \"anchor\";\n}\npublic sealed class Caller\n{\n    public Target Create() => new Target();\n    public string Call() => new Target().Run();\n}");
+
+        var declarationResult = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Target") { EnrichCSharp = true }));
+        var declaration = Assert.Single(declarationResult.Payload.Matches, match => match.Line == 2);
+        var reference = Assert.Single(declarationResult.Payload.Matches, match => match.Line == 8);
+
+        Assert.Equal(new SearchPatternMatchRange(21, 6), declaration.MatchRanges.Single());
+        Assert.Equal("declaration", declaration.Semantic!.Kind);
+        Assert.Equal("resolved", declaration.Semantic.Resolution);
+        Assert.Equal("T:Project.Target", declaration.Semantic.SymbolId);
+        Assert.Equal("symbol_reference", reference.Semantic!.Kind);
+        Assert.Equal("resolved", reference.Semantic.Resolution);
+        Assert.Equal("T:Project.Target", reference.Semantic.SymbolId);
+        Assert.Equal("Project", reference.ProjectName);
+
+        var methodResult = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Run") { EnrichCSharp = true }));
+        var methodDeclaration = Assert.Single(methodResult.Payload.Matches, match => match.Line == 4);
+        var methodReference = Assert.Single(methodResult.Payload.Matches, match => match.Line == 9);
+
+        Assert.Equal("declaration", methodDeclaration.Semantic!.Kind);
+        Assert.StartsWith("M:Project.Target.Run", methodDeclaration.Semantic.SymbolId, StringComparison.Ordinal);
+        Assert.Equal("symbol_reference", methodReference.Semantic!.Kind);
+        Assert.Equal(methodDeclaration.Semantic.SymbolId, methodReference.Semantic.SymbolId);
+    }
+
+    [Fact]
+    public async Task Scan_CSharpEnrichment_DoesNotResolveCommentsOrStrings()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-roslyn-");
+        const string source = "namespace Project;\npublic sealed class Target\n{\n    // Target in comment\n    public string Value => \"Target\";\n}";
+        using var solution = CreateSolution(tempDir.DirectoryPath, source);
+        File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "src", "Project", "Project.cs"), source);
+
+        var result = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Target") { EnrichCSharp = true }));
+
+        var comment = Assert.Single(result.Payload.Matches, match => match.Line == 4);
+        var stringLiteral = Assert.Single(result.Payload.Matches, match => match.Line == 5);
+        Assert.Equal("comment", comment.Semantic!.Kind);
+        Assert.Equal("not_applicable", comment.Semantic.Resolution);
+        Assert.Equal("string", stringLiteral.Semantic!.Kind);
+        Assert.Equal("not_applicable", stringLiteral.Semantic.Resolution);
+        Assert.DoesNotContain(result.Payload.Matches, match => match.Semantic?.Kind == "symbol_reference");
+    }
+
+    [Fact]
+    public async Task Scan_CSharpEnrichment_MarksAmbiguousAndUnavailableCases()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-roslyn-");
+        const string source = "using A;\nusing B;\nnamespace A { public sealed class Ambiguous { } }\nnamespace B { public sealed class Ambiguous { } }\nnamespace Project { public sealed class Use { public object Create() => new Ambiguous(); } }";
+        using var solution = CreateSolution(tempDir.DirectoryPath, source);
+        var projectDir = Path.Combine(tempDir.DirectoryPath, "src", "Project");
+        File.WriteAllText(Path.Combine(projectDir, "Project.cs"), source);
+        File.WriteAllText(Path.Combine(projectDir, "Orphan.cs"), "namespace Project; public sealed class Orphan { }");
+
+        var result = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Ambiguous") { EnrichCSharp = true }));
+
+        var ambiguous = Assert.Single(result.Payload.Matches, match => match.Line == 5);
+        Assert.Equal("unknown", ambiguous.Semantic!.Kind);
+        Assert.Equal("ambiguous", ambiguous.Semantic.Resolution);
+
+        var unavailableResult = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Orphan") { EnrichCSharp = true }));
+        var unavailable = Assert.Single(unavailableResult.Payload.Matches);
+        Assert.Equal("unknown", unavailable.Semantic!.Kind);
+        Assert.Equal("unavailable", unavailable.Semantic.Resolution);
+    }
+
+    [Fact]
+    public async Task Scan_EnrichmentDisabled_LeavesSemanticFieldUnset()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-roslyn-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "src", "Project", "Project.cs"),
+            "namespace Project; public sealed class Target { }");
+
+        var result = await SearchPatternScannerEnrichment.ScanAsync(CreateParameters(
+            solution.Solution,
+            new("Target")));
+
+        Assert.Null(Assert.Single(result.Payload.Matches).Semantic);
     }
 
     [Fact]
@@ -193,14 +292,14 @@ public sealed class SearchPatternScannerTests
         Assert.False(cancelledResult.Payload.Completeness.ScanCompleted);
     }
 
-    private static RoslynTestSolution CreateSolution(string root)
+    private static RoslynTestSolution CreateSolution(string root, string source = "namespace Project; public sealed class ProjectType { }")
     {
         Directory.CreateDirectory(Path.Combine(root, "src", "Project"));
         return RoslynTestSolutionFactory.CreateSolution(
             Path.Combine(root, "Fixture.slnx"),
             new ProjectSpec(
                 "Project",
-                [("Project.cs", "namespace Project; public sealed class ProjectType { }")],
+                [("Project.cs", source)],
                 VirtualProjectDirectory: Path.Combine("src", "Project")));
     }
 
@@ -218,7 +317,8 @@ public sealed class SearchPatternScannerTests
             options.Scope,
             options.IncludePatterns,
             null,
-            options.CancellationToken);
+            options.CancellationToken,
+            options.EnrichCSharp);
 
     private sealed record SearchPatternTestOptions(string Pattern)
     {
@@ -230,5 +330,6 @@ public sealed class SearchPatternScannerTests
         internal string? Scope { get; init; }
         internal string[]? IncludePatterns { get; init; }
         internal CancellationToken CancellationToken { get; init; }
+        internal bool EnrichCSharp { get; init; }
     }
 }

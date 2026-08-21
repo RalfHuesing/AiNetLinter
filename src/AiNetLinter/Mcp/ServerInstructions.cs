@@ -18,7 +18,8 @@ internal static class ServerInstructions
         "AiNetLinter analysiert die resident geladene .NET-Solution mit Roslyn.\n\n" +
         "C#-Symbolgraph-Grenze: C#-Symbole ueber die semantischen Tools abfragen; fuer " +
         "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
-        "search_pattern verwenden.\n\n" +
+        "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +
+        "C#-Dokumente opt-in an; ambiguous/unavailable bleiben sichtbar.\n\n" +
         "Schemas und Toolzwecke: tools/list. Kompakter Status und Workflows: " +
         "ainetlinter://overview.\n\n" +
         "Sufficiency: Vollstaendige Ergebnisse nicht redundant per Read/Grep pruefen; bei " +

@@ -298,7 +298,7 @@ Liegen im `cwd` mehrere `.sln`- oder `.slnx`-Dateien, bricht der Server-Start mi
 Wenn der MCP-Server registriert ist, sollten Agent-Loops **folgende Reihenfolge** einhalten:
 
 1. **Zuerst** symbolische Tools: `get_feature_context` (Composite One-Shot vor Edits/Refactoring), `get_test_context` (statische Test-Zuordnung & zugehörige Testmethoden), `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `get_symbol_body` (Body eines Symbols per stabiler ID), `metrics_lookup` (One-Shot-Metriken & Schwellwerte für ein Einzelsymbol), `find_references` / `get_impact` (Aufrufstellen, optional mit `depth`-Parameter für transitive Aggregation; jede erlaubte Tiefe liefert im Erfolgsfall strukturierte `callSites` und `completeness`), `get_type_hierarchy` (Vererbung inkl. heuristischer DI-Registrierungs-Hinweise), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
-2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster.
+2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.
 3. **Niemals** `rg` / `grep` für **C#-Symbole** (Klassen-, Methoden-, Property-Namen). Diese Tools durchsuchen Strings und Kommentare mit, produzieren False Positives in gleichnamigen Symbolen anderswo und liefern keine Typ-/Signatur-Information.
 
 Konkret:
@@ -307,6 +307,7 @@ Konkret:
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbol: "MyClass")`
 - Klassennamen suchen → `find_symbol(namePattern: "MyClass", kind: "Klasse")`
 - Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)` oder `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden
+- Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
 - Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifier: "MyClass.MyMethod")`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)

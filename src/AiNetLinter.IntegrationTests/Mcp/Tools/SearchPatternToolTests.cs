@@ -224,6 +224,30 @@ public sealed class SearchPatternToolTests
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("completeness").ValueKind);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("scope").ValueKind);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("snapshot").ValueKind);
+        Assert.DoesNotContain(
+            result.StructuredContent.Value.GetProperty("matches").EnumerateArray(),
+            match => match.TryGetProperty("semantic", out _));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EnrichCSharp_ReturnsSemanticObjectAndKeepsLegacyText()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("Greeter", false, 50, 0, 0, 0, null, null, null, true),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        var matches = result.StructuredContent!.Value.GetProperty("matches").EnumerateArray().ToArray();
+        var declaration = Assert.Single(matches.Where(match =>
+            match.GetProperty("semantic").GetProperty("kind").GetString() == "declaration"));
+        Assert.Equal("resolved", declaration.GetProperty("semantic").GetProperty("resolution").GetString());
+        Assert.Equal("T:SymbolGraphMini.Greeter", declaration.GetProperty("semantic").GetProperty("symbolId").GetString());
+        Assert.Contains(matches, match =>
+            match.GetProperty("semantic").GetProperty("kind").GetString() == "symbol_reference");
     }
 
     [Fact]

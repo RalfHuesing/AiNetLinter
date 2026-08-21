@@ -29,6 +29,8 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".xaml", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("enrichCSharp=true", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("unavailable", options.ServerInstructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -78,5 +80,6 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("Edits", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("Impact", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("Gate", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("enrichCSharp=true", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }

@@ -80,5 +80,8 @@ public sealed class McpDocumentationSmokeTests
         Assert.DoesNotContain("alle Tools sind C#-only", docText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("| `search_pattern` |", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("search_pattern nutzt auch Nicht-C#-Dateien", docText, StringComparison.Ordinal);
+        Assert.Contains("enrichCSharp", docText, StringComparison.Ordinal);
+        Assert.Contains("ambiguous", docText, StringComparison.Ordinal);
+        Assert.Contains("unavailable", docText, StringComparison.Ordinal);
     }
 }

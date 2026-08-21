@@ -109,7 +109,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 @params = new
                 {
                     name = "search_pattern",
-                    arguments = new { pattern = "Greeter", contextLines = 1, maxFiles = 1 },
+                    arguments = new { pattern = "Greeter", contextLines = 1, maxFiles = 1, enrichCSharp = true },
                 },
             }));
         }
@@ -134,6 +134,10 @@ public sealed class McpServerCommandJsonRpcFramingTests
         Assert.Equal(JsonValueKind.Object, structured.ValueKind);
         Assert.Equal(JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
         Assert.Equal(JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
+        Assert.Contains(
+            structured.GetProperty("matches").EnumerateArray(),
+            match => match.TryGetProperty("semantic", out var semantic)
+                && semantic.ValueKind == JsonValueKind.Object);
         Assert.Contains("Greeter", result.Value.GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
     }
 

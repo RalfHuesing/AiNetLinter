@@ -47,16 +47,17 @@ internal static class SearchPatternTool
             arguments.Scope,
             arguments.IncludePatterns,
             arguments.ExcludePatterns,
-            ct);
+            ct,
+            arguments.EnrichCSharp);
         try
         {
             scan = await Task.Run(
-                () => SearchPatternScanner.Scan(scannerParameters),
-                ct);
+                () => SearchPatternScannerEnrichment.ScanAsync(scannerParameters),
+                ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            scan = SearchPatternScanner.Scan(scannerParameters);
+            scan = SearchPatternScanner.Scan(scannerParameters with { EnrichCSharp = false });
         }
         catch (ArgumentException ex)
         {

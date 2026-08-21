@@ -16,7 +16,8 @@ internal sealed record SearchPatternToolArguments(
     int MaxResponseBytes,
     string? Scope,
     string[]? IncludePatterns,
-    string[]? ExcludePatterns);
+    string[]? ExcludePatterns,
+    bool EnrichCSharp = false);
 
 internal sealed record SearchPatternScannerParameters(
     Solution Solution,
@@ -29,7 +30,8 @@ internal sealed record SearchPatternScannerParameters(
     string? Scope,
     IReadOnlyList<string>? IncludePatterns,
     IReadOnlyList<string>? ExcludePatterns,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    bool EnrichCSharp = false);
 
 internal sealed record SearchPatternScanResult(
     SearchPatternPayload Payload,
@@ -179,9 +181,15 @@ internal sealed record SearchPatternMatch(
     string LineText,
     IReadOnlyList<string> ContextBefore,
     IReadOnlyList<string> ContextAfter,
-    string? ProjectName);
+    string? ProjectName,
+    SearchPatternSemantic? Semantic = null);
 
 internal sealed record SearchPatternMatchRange(int Column, int Length);
+
+internal sealed record SearchPatternSemantic(
+    string Kind,
+    string Resolution,
+    string? SymbolId);
 
 internal sealed record SearchPatternCompleteness(
     bool ScanCompleted,
