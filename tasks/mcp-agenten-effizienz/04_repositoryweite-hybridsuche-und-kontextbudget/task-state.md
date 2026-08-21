@@ -2,10 +2,10 @@
 status: executing
 task: 04_repositoryweite-hybridsuche-und-kontextbudget
 started_at: 2026-08-21T01:20:00+02:00
-last_updated: 2026-08-21T01:20:00+02:00
+last_updated: 2026-08-21T11:35:00+02:00
 rules_dir: .agents/rules
-total_steps: 0
-current_step: null
+total_steps: 1
+current_step: step-001
 ---
 
 # Task State: 04_repositoryweite-hybridsuche-und-kontextbudget
@@ -13,8 +13,8 @@ current_step: null
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0
-- **Aktueller Schritt:** `null`
+- **Steps gesamt:** 1
+- **Aktueller Schritt:** `step-001`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`, sobald der erste Review Einträge erzeugt
 - **Gestartet:** 2026-08-21T01:20:00+02:00
@@ -24,6 +24,7 @@ current_step: null
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
+| step-001 | EPIC-01 | in_progress | Strukturierte repositoryweite Suche mit Legacy-Kompatibilität und Kontextbudget | - | - | - | - |
 
 ## Config
 
