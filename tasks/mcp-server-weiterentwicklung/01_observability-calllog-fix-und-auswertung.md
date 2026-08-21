@@ -54,6 +54,47 @@ Wiederöffnungsbedingung fordert: **reproduzierbare Nutzungsdaten**. Konkret une
 bleiben aktuell: Tool-Entfernung/Zusammenlegung (Entscheidung Nr. 4 dort: "Erst
 Observability-Nutzungsdaten sammeln"), Tool-Profile (Nr. 5), Output-Schema-Pilot (Nr. 6).
 
+## Befund C (verifiziert 2026-08-21): Mehrere parallele Agenten/Server sind log-technisch unkritisch
+
+Auslöser: Der Nutzer nutzt `--mcp-log` nicht, weil es früher Probleme gab, wenn mehrere
+Agenten gleichzeitig "denselben" MCP-Server starteten. Code-Review der Log-Kette
+(inkl. Paketquelle `c:\Daten\Entwicklung\Ralf\RalfHuesing.Mcp.Observability`, lokal,
+Version 1.0.3 = referenzierte Version):
+
+1. **Ein File pro Prozess:** `ObservabilityContext` erzeugt
+   `{ServerName}_{PID}_{InstanceId}.jsonl` (PID + GUID, `ObservabilityContext.cs:45-46`,
+   `:103`). Zwei Server-Prozesse schreiben **niemals** in dieselbe Datei — auch nicht bei
+   gemeinsamem explizitem `--mcp-log`-Verzeichnis. Das frühere Kollisionsrisiko
+   (mehrere Prozesse appenden auf eine gemeinsame `calls.jsonl`) ist im aktuellen Stand
+   konstruktiv ausgeschlossen.
+2. **Thread-Sicherheit innerhalb des Prozesses:** `JsonlLogWriterBase` serialisiert über
+   `SemaphoreSlim`, öffnet den Stream lazy im Append-Modus für die Prozesslaufzeit,
+   `FileShare.ReadWrite` erlaubt gleichzeitiges Lesen (Tests, Analyzer).
+3. **Feedback-Log ebenfalls prozessisoliert** (`..._{PID}_{InstanceId}.feedback.jsonl`).
+
+**Konsequenz:** `--mcp-log` kann wieder genutzt werden. Falls die ursprünglichen Probleme
+nicht vom Log kamen, bleiben als plausible Ursachen: RAM/CPU-Druck durch N residente
+Solution-Loads, obj/bin-Lock-Konflikte zwischen laufenden Builds und geladenen
+Workspaces, bzw. das harte Exit-1 beim Start mit parameterlosem `--mcp-log`, wenn die
+Solution noch nicht auflösbar war (EPIC-09-Verhalten). Diese Hypothesen sind hier nicht
+verifiziert und bedürfen ggf. separater Klärung.
+
+**Doku-Drift nebenbei gefunden:** `Docs/ROADMAP.md` (EPIC-09) beschreibt als Default-Pfad
+noch `<exeDir>/logs/<solutionName>/<yyyy-MM-dd>/calls.jsonl` mit hartem Abbruch bei
+nicht auflösbarer Solution. Tatsächlich ist der Default heute
+`%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\` mit
+prozessunique Dateinamen und ohne Abbruch (`McpServerCommand.cs:104-141`,
+`ObservabilityContext.cs:85-107`). Bei Gelegenheit korrigieren (passt in die Tradition
+von "01_dokumentations-und-begriffsdrift-beseitigen").
+
+**Anpassung des Analyzer-Designs (Teil 2 dieses Tasks):**
+- Eingabe ist ein **Verzeichnis oder Glob** (`{serverName}_*_*.jsonl` über Tagesordner),
+  nie eine einzelne Datei.
+- **Session-Korrelation wird trivial:** Eine Datei = ein Prozess = eine Session. Die
+  bisherige Metrik "Session-/Prozess-Korrelation" entfällt als Analyseproblem; stattdessen
+  Aggregation über Dateien plus Ausweisung von PID/InstanceId je Report-Abschnitt.
+
+
 ## Vorschlag: Offline-Auswertung als CLI-Kommando (kein neues MCP-Tool)
 
 Bewusst **nicht** als MCP-Tool (Anti-Proliferations-Entscheidung), sondern als
