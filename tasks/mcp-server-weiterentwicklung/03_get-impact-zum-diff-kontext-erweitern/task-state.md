@@ -4,8 +4,8 @@ task: 03_get-impact-zum-diff-kontext-erweitern
 started_at: 2026-08-22
 last_updated: 2026-08-22
 rules_dir: .agents/rules
-total_steps: 3
-current_step: step-003
+total_steps: 4
+current_step: step-004
 ---
 
 # Task State: 03_get-impact-zum-diff-kontext-erweitern
@@ -33,6 +33,7 @@ current_step: step-003
 | step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
 | step-002 | EPIC-2 | done | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | 5b26c63b | approved | 59331e2e / 52f18833 |
 | step-003 | EPIC-2 | done | Breiter Diff-Symbolscanner mit kollisionsfreien stabilen IDs | - | 85c7fdce | approved | e31006dd / bb34d3a7 |
+| step-004 | EPIC-3+EPIC-4 | in_progress | Testfundament, gebatchte Test-Zuordnung & recommendedTestCommands | - | - | - | - |
 
 ## Config
 
