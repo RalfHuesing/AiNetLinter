@@ -174,3 +174,9 @@ Tests:
   — Subprozess-/Protokoll-Level-Tests von `get_impact`; Absicherung der
   Abwärtskompatibilität des `callers`-Modus (EPIC-3/EPIC-6). (zuletzt:
   roadmap)
+- **`src/AiNetLinter.IntegrationTests/Fixtures/FixtureWorkspaces.cs`** —
+  Disposable Fixture-Workspaces inkl. `GitImpactMiniFixtureWorkspace`
+  (echtes Temp-Git-Repo mit Initial-Commit; Basis der bestehenden
+  get_impact-Git-Branch-Integrationstests); Wiederverwendungsquelle für
+  Analyzer-Ergebnisobjekt-Tests (EPIC-2) und die instrumentierte
+  Einmal-Ausführungs-Messung (EPIC-3). (zuletzt: step-002-Planung)

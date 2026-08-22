@@ -4,8 +4,8 @@ task: 03_get-impact-zum-diff-kontext-erweitern
 started_at: 2026-08-22
 last_updated: 2026-08-22
 rules_dir: .agents/rules
-total_steps: 1
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: 03_get-impact-zum-diff-kontext-erweitern
@@ -13,9 +13,9 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** keiner (step-001 done; nächster Step-Modus-Aufruf steht aus)
+- **Aktueller Schritt:** `step-002` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-22
@@ -26,6 +26,7 @@ current_step: step-001
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
+| step-002 | EPIC-2 | in_progress | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | - | - | - |
 
 ## Config
 

@@ -83,7 +83,7 @@ Endergebnis inkl. EPIC-1-Verhaltenskorrektur). Querschnitts-Constraint aus
 alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
 (§Non-Goals) und werden hier bewusst nicht als Epics geführt.
 
-- [ ] EPIC-1: Traversierungs-Korrektur & Hint-Parität im Symbolgraph —
+- [x] EPIC-1: Traversierungs-Korrektur & Hint-Parität im Symbolgraph —
       `CallGraphTraversal.ExpandAsync`/`EnqueueChildren` enqueut künftig den
       tatsächlichen einschließenden Aufrufer
       (`GetEnclosingSymbol().NormalizeToOwningMember()`) statt
@@ -114,6 +114,10 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Projekt, Datei, Deklarationszeilen. Der bisherige `callers`-Scope
       (public/internal Methoden/Konstruktoren) bleibt unverändert
       (Konzept §Scope Must-have, Audit A.2/D.4).
+      *Planungsnotiz (Step-Modus 2026-08-22):* Epic wird in zwei Steps geführt —
+      step-002 (strukturiertes `DiffImpactAnalysis`-Ergebnisobjekt, Wrapper-Analyse,
+      kompakte Hunk-Ranges, `ChangedSymbolEntry` mit stabiler ID; Scanner-Scope noch
+      unverändert schmal), danach ein Step für den breiten Scannerpfad.
 - [ ] EPIC-3: Testfundament & Einmal-Ausführungs-Nachweis — neutrale
       Test-Fixture (mind. zwei Produktionsprojekte + ein Testprojekt; Diff
       ändert zwei Methoden in zwei Dateien, davon eine privat ohne externe
