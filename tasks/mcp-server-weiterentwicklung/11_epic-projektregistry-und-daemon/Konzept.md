@@ -158,6 +158,12 @@ verbindliche Verträge ergänzt (Details an den jeweiligen Stellen):
 7. Cancellation: Client-Disconnect bricht in-flight Calls der Verbindung ab (B.2).
 8. Escape-Hinweis: Hermes filtert Env-Vars von MCP-Subprozessen — `AINETLINTER_NO_DAEMON` erreicht den
    Prozess nur via `env:`-Block der Registrierung (B.3, Doku).
+9. Konfigurationsdrift: daemon-level Flags gelten daemon-weit; Divergenz wird per welcome-Handshake
+   sichtbar gemacht und laut gemeldet (Details B.2).
+10. Idle-Exit während laufender Loads ist ausgeschlossen (graceful, Details B.3).
+11. Kalt-Load-Rennen mit parallelen Builds (`dotnet build` hält Dateien gerade offen) endet im
+    bestehenden PROJECT_LOAD_FAILED-Vertrag mit Retry — bewusst KEINE Locking-Gegenmaßnahmen
+    (Details End-to-End-Abschnitt).
 
 ---
 
@@ -427,6 +433,11 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
   der Client den Daemon NICHT herunter, sondern bricht mit `VERSION_CONFLICT` ab (macht die
   Konfigurations-Inkonsistenz sichtbar statt einen Neustart-Wettlauf zu verlieren). Shutdown nur bei
   null weiteren Verbindungen.
+  **Konfigurations-Sichtbarkeit** (Self-Audit 14): Das `welcome` trägt zusätzlich die EFFEKTIVE
+  Daemon-Konfiguration der daemon-level Flags (`maxProjects`, `idleExitMinutes`, Log-Ziel). Der
+  Thin-Client vergleicht sie mit seinen eigenen Argumenten; bei Divergenz `[WARN]` auf stderr +
+  Observability-Ereignis — nie still. Regel: daemon-level Flags gehören zum DAEMON-Leben (wirksam ist,
+  wer ihn gestartet hat); per-Call-Verträge (`projectRoot`, Definitionsdatei) sind davon unberührt.
   - Danach: opake Byte-/JSON-RPC-Pump in beide Richtungen; der Thin-Client interpretiert MCP-Inhalte
     NICHT (Decoupling vom SDK-Standalone).
 - **Pipe-Abbruch mitten im Call** (Self-Audit 12): Stirbt der Daemon zwischen Request und Response,
@@ -446,7 +457,7 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 | Mechanismus | Regel |
 |---|---|
 | Start | Lazy durch ersten Client; liest MRU-State und wärmt die letzten ≤ maxProjects Keys im Hintergrund — **über denselben Resolve-/Dedupe-Pfad wie interaktive Calls, mit gebundener Konkurrenz (max 2 parallele Warmup-Loads)**. Ein interaktiver Load wartet NIE hinter der Warmup-Queue (Self-Audit 9). Tote Pfade (Projekt gelöscht, Definitionsdatei weg) werden verworfen UND aus dem MRU-State entfernt (Self-Audit 10); fehlgeschlagene Warmups blockieren den Daemonbetrieb nicht. |
-| Idle-Exit | Keine verbundene Clients UND Idle ≥ `--mcp-daemon-idle-exit-minutes` (Default 10) → graceful Shutdown inkl. Dispose aller Keys und MRU-Persistierung. |
+| Idle-Exit | Keine verbundene Clients UND Idle ≥ `--mcp-daemon-idle-exit-minutes` (Default 10) → graceful Shutdown inkl. Dispose aller Keys und MRU-Persistierung. LAUFENDE Loads/Warmups verschieben den Exit (Self-Audit 15): Shutdown beginnt erst, nachdem keine Load-Tasks mehr aktiv sind — niemals Dispose unter halbfertigem Load. |
 | Hänger-Schutz | Thin-Client-Ping mit Timeout; bei Hänger darf der Client den Daemon terminieren und neu starten (er hängt ja für alle) — Ereignis ins Call-Log. |
 | Kein Parent-Bindung | Der Daemon nutzt den `--parent-pid`-Reaper bewusst NICHT (er überlebt einzelne Clients gewollt); seine Sicherheit ist Idle-Exit + Versions-Handshake. |
 | Debug-Escape | Env `AINETLINTER_NO_DAEMON=1` → Thin-Client läuft klassisch in-proc (für Fehlersuche). Explizit dokumentiertes Debug-Ventil, KEIN Konfigurationsfeature. |
