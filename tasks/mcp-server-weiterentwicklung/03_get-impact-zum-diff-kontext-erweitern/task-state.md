@@ -15,7 +15,7 @@ current_step: step-002
 - **Task-Status:** `executing`
 - **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-002` (in_progress)
+- **Aktueller Schritt:** keiner (step-002 done; nächster Step-Modus-Aufruf steht aus)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-22
@@ -26,7 +26,7 @@ current_step: step-002
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
-| step-002 | EPIC-2 | in_progress | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | - | - | - |
+| step-002 | EPIC-2 | done | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | 5b26c63b | approved | 59331e2e / 52f18833 |
 
 ## Config
 

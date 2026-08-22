@@ -2,7 +2,7 @@
 task: 03_get-impact-zum-diff-kontext-erweitern
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-22T19:35:42+02:00
+last_updated: 2026-08-22T20:55:00+02:00
 ---
 
 # Tech-Debt-Log: 03_get-impact-zum-diff-kontext-erweitern
@@ -31,6 +31,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
 | TD-001 | `src/AiNetLinter.FastTests/Fixtures/McpInMemoryTestContext.cs` | niedrig | nein | `CreateScenario` liefert kein Server-Handle — Tool-Level-Ad-hoc-Tests brauchen Boilerplate-Wrapper |
+| TD-002 | `src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs` (`GetStableSymbolId`) | mittel | nein | Lokale Funktionen erben die Doc-ID der einschließenden Methode — Kollisionsrisiko stabiler IDs, sobald der breite Scanner (EPIC-2 Teil 2) sie einschließt |
 
 ## Einträge
 
@@ -57,6 +58,44 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 - **Auto-Fixable:** nein — Design-Entscheidung an geteilter
   Fixture-Infrastruktur (Architektur-Ermessen), kein rein mechanischer
   Fix.
+- **Status:** offen  # offen | erledigt | verworfen — Änderung ist
+  manuell (Nutzer) bzw. automatisch auf „erledigt" nach erfolgreicher
+  Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
+  Status eines `nein`-Eintrags selbst
+
+### TD-002 — Stabile-ID-Kollision bei lokalen Funktionen [Priorität: mittel] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-22; vom Coder in
+  den step-result-Beobachtungen gemeldet, vom Kritiker gegen Code und Test
+  bestätigt)
+- **Ort:** `src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`
+  (`GetStableSymbolId`, Z. 121–123); Wirkstellen:
+  `ChangedSymbolEntry.SymbolId`
+  (`src/AiNetLinter/Core/DiffImpactAnalyzer.cs`, `CreateChangedSymbolEntry`)
+  und `TransitiveCallSiteEntry.ReachedFromSymbolId` (`BuildReferencesAsync`)
+- **Befund:** `DocumentationCommentId.CreateDeclarationId` liefert für
+  lokale Funktionen nicht `null`, sondern die Doc-ID der einschließenden
+  Methode (empirisch im Test
+  `CreateChangedSymbolEntry_ForLocalFunction_UsesSharedStableIdLogic`
+  gepinnt). Der Fallback-Pfad greift dort nie. Schließt der breite Scanner
+  (EPIC-2 Teil 2, lokale Funktionen sind explizit im Scope) sie über diese
+  gemeinsame ID-Logik ein, erhalten ALLE lokalen Funktionen derselben
+  Methode denselben `SymbolId`-Wert — Einträge wären dann nur noch über
+  DisplayName/Deklarationszeile unterscheidbar, `ReachedFromSymbolId`
+  mehrdeutig. Auch der geplante EPIC-7-Vertragstext „stabile ID =
+  DocCommentId oder deterministischer Fallback (lokale Funktionen)“ trifft
+  in dieser Form nicht das reale Verhalten (Konzept Audit D.4/F-Prämisse).
+- **Warum nicht sofort gefixt:** Außerhalb des Scopes von step-002 — der
+  schmale `callers`-Scanner (Methoden+Konstruktoren) enthält keine lokalen
+  Funktionen; heute kein Defekt. Die ID-Schema-Entscheidung (Ermessen)
+  gehört in den Plan des nächsten Steps, nicht in einen Korrektur-Step.
+- **Vorschlag:** Für lokale Funktionen einen deterministischen Sonderfall
+  definieren, der Name + Deklarationsposition einbezieht (oder Eindeutigkeit
+  über Zusatzfelder sicherstellen); EPIC-7-Dokumentation zur stabilen ID
+  entsprechend korrigieren.
+- **Auto-Fixable:** nein — Design-Entscheidung am gemeinsamen ID-Schema
+  mit Auswirkung auf künftige Vertragsfelder, keine rein mechanische
+  Korrektur.
 - **Status:** offen  # offen | erledigt | verworfen — Änderung ist
   manuell (Nutzer) bzw. automatisch auf „erledigt" nach erfolgreicher
   Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
