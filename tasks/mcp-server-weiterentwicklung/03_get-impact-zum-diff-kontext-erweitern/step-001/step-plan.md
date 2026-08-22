@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: 03_get-impact-zum-diff-kontext-erweitern
 step: 001               # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner

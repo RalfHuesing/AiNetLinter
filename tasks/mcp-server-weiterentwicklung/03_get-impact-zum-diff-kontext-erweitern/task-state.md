@@ -15,7 +15,7 @@ current_step: step-001
 - **Task-Status:** `executing`
 - **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-001` (in_progress)
+- **Aktueller Schritt:** keiner (step-001 done; nächster Step-Modus-Aufruf steht aus)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-22
@@ -25,7 +25,7 @@ current_step: step-001
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-1 | in_progress | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | - | - | - |
+| step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
 
 ## Config
 
