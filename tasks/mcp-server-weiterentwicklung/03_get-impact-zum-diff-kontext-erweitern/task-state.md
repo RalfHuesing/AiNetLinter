@@ -4,8 +4,8 @@ task: 03_get-impact-zum-diff-kontext-erweitern
 started_at: 2026-08-22
 last_updated: 2026-08-22
 rules_dir: .agents/rules
-total_steps: 0
-current_step: -
+total_steps: 1
+current_step: step-001
 ---
 
 # Task State: 03_get-impact-zum-diff-kontext-erweitern
@@ -13,9 +13,9 @@ current_step: -
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 1 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** keiner (Roadmap-Modus läuft)
+- **Aktueller Schritt:** `step-001` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-22
@@ -25,7 +25,7 @@ current_step: -
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| - | - | - | (noch keine Steps — Roadmap wird erstellt) | - | - | - | - |
+| step-001 | EPIC-1 | in_progress | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | - | - | - |
 
 ## Config
 

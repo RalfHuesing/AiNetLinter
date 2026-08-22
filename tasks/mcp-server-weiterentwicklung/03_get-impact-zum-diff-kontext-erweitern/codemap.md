@@ -130,6 +130,11 @@ Doku:
 
 Tests:
 
+- **`src/AiNetLinter.FastTests/Fixtures/McpInMemoryTestContext.cs`** —
+  In-memory-Roslyn-Solution-Fixture mit `CreateScenario(ProjectSpec)` für
+  Ad-hoc-Miniszenarien (mehrzeilige Inline-Quelltexte); Wiederverwendungs-
+  quelle für Aufruferketten-Tests (EPIC-1) und die neutrale
+  Konzept-Fixture (EPIC-3). (zuletzt: planer, step-001-Planung)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/CallTree/CallGraphTraversalTests.cs`**
   — Unit-Tests der Traversierung, enthält die `ExpandAsync_Depth2_*`-Tests,
   die ggf. das defekte Altverhalten kodieren — bewusst reviewen/umstellen,
