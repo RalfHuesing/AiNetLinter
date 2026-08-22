@@ -77,14 +77,19 @@ Produktionscode:
   `AnalyzeChangeContextAsync` = ChangeContext) auf dem gemeinsamen
   Request-Record `DiffAnalysisRequest`; Symbolermittlung delegiert an
   `DiffSymbolScanner`; `CreateChangedSymbolEntry` mit knotenbasierter
-  Location-Überladung; 447/500 Zeilen. (zuletzt: step-003)
+  Location-Überladung. Seit step-004 trägt `DiffAnalysisRequest` optionale
+  `Counters`; der gemeinsame Kern `RunAnalysisAsync` ist internal und
+  inkrementiert GitRuns unmittelbar vor dem einzigen Git-Aufruf.
+  (zuletzt: step-004)
 - **`src/AiNetLinter/Core/DiffImpactAnalysisModels.cs`** (neu in
   step-002) — Records `HunkRange`, `ChangedFileRange`,
   `ChangedSymbolEntry`, `DiffImpactAnalysis`; referenziert bewusst
   `AiNetLinter.Mcp.Tools.SymbolGraph` (Monolith, keine Verschiebung der
   TransitiveCallGraphModels). FilePath-Bedeutungen im XML-Doc;
   SymbolId-Vertrag nennt seit step-003 den lokalen-Funktions-Sonderfall.
-  (zuletzt: step-003)
+  Seit step-004 zusaetzlich `DiffImpactCounters` (GitRuns/TestSolutionScans/
+  LintRuns-Felder, Interlocked-Inkremente an den Stufen, Null-Verhalten ohne
+  Uebergabe). (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
   flache BFS-Aufrufer-Traversierung für `find_references` und den
   `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
@@ -129,12 +134,23 @@ Produktionscode:
   kompakte Textzusammenfassung von `change-context` (EPIC-6). (zuletzt:
   roadmap)
 - **`src/AiNetLinter/Core/TestCoverageScanner.cs`** — statische
-  Test-Zuordnung als per-Symbol-API (scannt je Aufruf alle Testprojekte);
-  Refactoring-Ziel für die gebatchte Zuordnung gegen alle gekappten
-  Symbole (EPIC-4). (zuletzt: roadmap)
-- **`src/AiNetLinter/Mcp/Tools/TestContext/`** — `get_test_context`-Tool
-  inkl. Ermittlung direkt ausführbarer `dotnet test`-Filterbefehle;
-  Formatvorlage für `recommendedTestCommands` (EPIC-4). (zuletzt: roadmap)
+  Test-Zuordnung; seit step-004 duenner per-Symbol-Wrapper auf die Batch-API,
+  gemeinsame Treffer-Nachbearbeitung (`BuildFileCoverageResult`) und die
+  Batch-Ergebnis-Records (`TestCoverageBatchScanResult`,
+  `TestCoverageBatchSymbolResult`) am Dateiende. (zuletzt: step-004)
+- **`src/AiNetLinter/Core/TestCoverageBatchScan.cs`** (neu in step-004) —
+  gebatchte Scanner-Haelfte (partial `TestCoverageScanner`):
+  `FindTestsForSymbolsAsync` (oeffentlich) / `FindTestsForSymbolsCoreAsync`
+  (internal, optionaler `DiffImpactCounters`-Zaehler); Projekte/Dokumente
+  genau einmal je Aufruf, Root/Model je Dokument einmal, Match gegen alle
+  Ziele; solutionweite Dedup-Info (DistinctTestFilePaths, ordinal).
+  (zuletzt: step-004)
+- **`src/AiNetLinter/Mcp/Tools/TestContext/`** — `get_test_context`-Tool;
+  seit step-004 mit `TestRecommendationBuilder.cs` (neu): gemeinsame Quelle
+  der ausfuehrbaren `dotnet test`-Befehle (EIN Befehl je Testprojekt,
+  Filter = Vereinigung der Trefferklassen, ordinal sortiert) fuer das Tool
+  und `recommendedTestCommands`; `GetTestContextTool.BuildRecommendedCommands`
+  ist nur noch Weiterleitung. (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs`** —
   Violations-Ermittlung (solutionweit/scoped) für `get_violations`; Basis
   für „Linter genau einmal" plus diffbezogene Filterung auf Hunks/
@@ -197,8 +213,19 @@ Tests:
   ChangeContext, Innerste-Deklaration, Property/Feld/Event, partielle Typen,
   `#lf:`-ID-Pinning und Displayname-Verträge. (zuletzt: step-003)
 - **`src/AiNetLinter.FastTests/Core/TestCoverageScannerTests.cs`** —
-  Unit-Tests der per-Symbol-Testzuordnung; erweitert um Batch-Zuordnung
-  (EPIC-4). (zuletzt: roadmap)
+  Unit-Tests der per-Symbol-Testzuordnung (Wrapper; unveraendert gruen).
+  (zuletzt: roadmap)
+- **`src/AiNetLinter.FastTests/Core/TestCoverageBatchScannerTests.cs`** (neu
+  in step-004) — Batch-Zuordnung auf der ChangeContextScenarioFactory: beide
+  Ziele aus einem Scan (`TestSolutionScans==1`) mit getrennten Evidenzarten,
+  private Methode ohne Call-Sites per Naming Convention, Wrapper≡Batch,
+  Command-Dedup je Testprojekt, leere Zielliste ohne Scan.
+  (zuletzt: step-004)
+- **`src/AiNetLinter.IntegrationTests/Core/DiffImpactAnalyzerOnceOnlyTests.cs`**
+  (neu in step-004) — zusammengesetzter change-context-Lauf auf dem
+  `ChangeContextMiniWorkspace`: GitRuns==1 UND TestSolutionScans==1 bei N=2
+  Symbolen, LintRuns bleibt 0 (Nachweis inkl. Linter folgt mit EPIC-5).
+  (zuletzt: step-004)
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs`**
   — Integrationstests von `get_impact` im echten Server-Kontext; seit
   step-002 direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf der
@@ -214,9 +241,23 @@ Tests:
   (echtes Temp-Git-Repo mit Initial-Commit; Basis der bestehenden
   get_impact-Git-Branch-Integrationstests); seit step-003 zusätzlich
   `ChangeCalculatorNormalizeBodyWithoutCommitting()` für die Änderung einer
-  privaten Methode. Wiederverwendungsquelle für Analyzer-Ergebnisobjekt-Tests
-  (EPIC-2) und die instrumentierte Einmal-Ausführungs-Messung (EPIC-3).
-  (zuletzt: step-003)
+  privaten Methode. Seit step-004: `ChangeContextMiniWorkspace` (Temp-Git-Repo
+  mit den Szenario-Quellen der ChangeContextScenarioFactory, uncommittete
+  Body-Aenderung beider Methoden), geteilter `FixtureGit.Run`-Helper und
+  `FixtureFileAttributes.NormalizeTree`. Wiederverwendungsquelle für
+  Analyzer-Ergebnisobjekt-Tests (EPIC-2) und die instrumentierte
+  Einmal-Ausführungs-Messung (EPIC-3). (zuletzt: step-004)
+- **`src/AiNetLinter.TestKit/ChangeContextScenarioFactory.cs`** (neu in
+  step-004) — neutrale Mehrprojekt-Fixture fuer die change-context-Kette:
+  `App.Core`→`App`→`App.Tests`, zwei geaenderte Methoden in zwei Dateien
+  (public `PlaceAsync` mit Call-Sites, private `LogInternal` ohne),
+  Quelldatei-Konstanten original/geaendert, virtuelle und root-basierte
+  Solution-Variante, Symbol-Handles (`ResolveSymbolsAsync`) und synthetische
+  Hunk-Ranges; Grundlage der Batch-/Counter-/Konzept-Tests dieses UND der
+  folgenden Steps. (zuletzt: step-004)
+- **`src/AiNetLinter.TestKit/ChangeContextScenarioSymbols.cs`** (neu in
+  step-004) — `ScenarioSymbols`-Record (PlaceAsync + LogInternal) auf
+  Namespace-Ebene. (zuletzt: step-004)
 - **`tests/Fixtures/GitImpactMini/`** — Fixture-Vorlage des Mini-Git-Repos,
   die die Workspace-Klassen kopieren; `Calculator.cs` trägt seit step-003
   neben `Add` eine private, nie aufgerufene Methode `Normalize` (Teil des

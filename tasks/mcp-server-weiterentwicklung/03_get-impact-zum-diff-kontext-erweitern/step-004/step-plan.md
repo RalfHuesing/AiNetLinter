@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: 03_get-impact-zum-diff-kontext-erweitern
 step: 004
