@@ -78,6 +78,33 @@ public sealed class GetImpactToolIntegrationTests
     }
 
     [Fact]
+    public async Task AnalyzeChangeContextAsync_OnModifiedPrivateMethod_ListsSymbolWithoutCallSites_AndCallersWrapperOmitsIt()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.ChangeCalculatorNormalizeBodyWithoutCommitting();
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+        var solution = state.GetCurrentSolution()!;
+
+        var analysis = await DiffImpactAnalyzer.AnalyzeChangeContextAsync(solution, fixture.RootPath, gitSinceRef: null, verbose: false);
+        var callersEntries = await DiffImpactAnalyzer.AnalyzeEntriesAsync(solution, fixture.RootPath, gitSinceRef: null, verbose: false);
+
+        Assert.NotNull(analysis);
+        // Die private Methode erscheint im breiten Scope auch ohne jegliche Call-Sites.
+        var privateEntry = Assert.Single(analysis.ChangedSymbols);
+        Assert.Equal("M:GitImpactMini.Calculator.Normalize(System.Int32)~System.Int32", privateEntry.SymbolId);
+        Assert.Equal(Accessibility.Private, privateEntry.Accessibility);
+        Assert.Equal("Method", privateEntry.Kind);
+        Assert.Empty(analysis.References.CallSites);
+        Assert.Equal(1, analysis.References.Completeness.VisitedNodeCount);
+        Assert.Equal(analysis.References.CallSites.Count, analysis.References.Completeness.TotalCallSiteCount);
+        Assert.False(analysis.References.Completeness.TruncatedByMaxResults);
+        Assert.False(analysis.References.Completeness.TruncatedByNodeLimit);
+        // Der schmale callers-Pfad auf derselben Workspace enthaelt sie nicht.
+        Assert.Empty(callersEntries);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_NoGitRefUncommittedChange_ReturnsChangedMethodCallSite()
     {
         using var fixture = new GitImpactMiniFixtureWorkspace();

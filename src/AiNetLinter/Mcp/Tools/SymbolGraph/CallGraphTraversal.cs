@@ -116,11 +116,34 @@ internal static class CallGraphTraversal
 
     /// <summary>
     /// Gemeinsame Quelle stabiler Symbol-IDs ueber Traversal- und Diff-Impact-Analyse hinaus:
-    /// DocCommentId, sonst deterministischer FullyQualified-Fallback (z. B. lokale Funktionen).
+    /// DocCommentId, sonst deterministischer FullyQualified-Fallback. Lokale Funktionen
+    /// (<see cref="MethodKind.LocalFunction"/>) erhalten eine kollisionsfreie ID aus der stabilen
+    /// ID des naechsten einschliessenden Members plus dem deterministischen Suffix
+    /// <c>#lf:&lt;Name&gt;@&lt;Zeile&gt;:&lt;Spalte&gt;</c> (1-basierte Deklarationsstartposition) —
+    /// ihre DocumentationCommentId wuerde sonst die des einschliessenden Members liefern, sodass
+    /// alle lokalen Funktionen einer Methode auf derselben ID kollidieren wuerden.
     /// </summary>
     internal static string GetStableSymbolId(ISymbol symbol) =>
-        DocumentationCommentId.CreateDeclarationId(symbol) ??
-        symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        symbol is IMethodSymbol { MethodKind: MethodKind.LocalFunction } localFunction
+            ? FormatLocalFunctionId(localFunction)
+            : DocumentationCommentId.CreateDeclarationId(symbol) ??
+              symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    // Verschachtelte lokale Funktionen steigen ueber ContainingSymbol bis zum naechsten
+    // nicht-lokalen Member auf und teilen sich dessen Basis-ID — das Positionssuffix macht sie
+    // dennoch einzeln unterscheidbar, gleicher Codezustand liefert dieselbe ID.
+    private static string FormatLocalFunctionId(IMethodSymbol localFunction)
+    {
+        var container = localFunction.ContainingSymbol;
+        while (container is IMethodSymbol { MethodKind: MethodKind.LocalFunction })
+        {
+            container = container.ContainingSymbol;
+        }
+
+        var start = localFunction.Locations.First(location => location.IsInSource)
+            .GetLineSpan().StartLinePosition;
+        return $"{GetStableSymbolId(container!)}#lf:{localFunction.Name}@{start.Line + 1}:{start.Character + 1}";
+    }
 
     /// <summary>
     /// Enqueued fuer die naechste BFS-Ebene das tatsaechlich einschliessende Aufrufer-Member je

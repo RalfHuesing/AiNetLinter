@@ -8,8 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
@@ -53,38 +51,54 @@ public sealed class DiffImpactAnalyzer
     }
 
     /// <summary>
-    /// Strukturierter Analyse-Kern: baut ein <see cref="DiffImpactAnalysis"/> (Repository-Wurzel,
-    /// angefragter Ref, geaenderte Dateien mit kompakten Hunk-Ranges, geaenderte Symbole mit
-    /// stabiler ID, Aufrufstellen als Traversal-Ergebnis). Git läuft pro Aufruf genau einmal
-    /// (<see cref="RunGitDiff"/>); nicht aufloesender <paramref name="gitSinceRef"/> wirft
-    /// <see cref="GitDiffFailedException"/> unverändert durch, kein Repo oder leerer Diff
-    /// liefert null.
+    /// Strukturierter Analyse-Kern im bisherigen <c>callers</c>-Scope: baut ein
+    /// <see cref="DiffImpactAnalysis"/> (Repository-Wurzel, angefragter Ref, geaenderte Dateien
+    /// mit kompakten Hunk-Ranges, geaenderte Symbole mit stabiler ID, Aufrufstellen als
+    /// Traversal-Ergebnis). Git läuft pro Aufruf genau einmal (<see cref="RunGitDiff"/>); nicht
+    /// aufloesender <paramref name="gitSinceRef"/> wirft <see cref="GitDiffFailedException"/>
+    /// unverändert durch, kein Repo oder leerer Diff liefert null.
     /// </summary>
-    internal static async Task<DiffImpactAnalysis?> AnalyzeDiffAsync(
-        Solution solution, string targetPath, string? gitSinceRef, bool verbose)
+    internal static Task<DiffImpactAnalysis?> AnalyzeDiffAsync(
+        Solution solution, string targetPath, string? gitSinceRef, bool verbose) =>
+        RunAnalysisAsync(new DiffAnalysisRequest(solution, targetPath, gitSinceRef, verbose, DiffSymbolScope.Callers));
+
+    /// <summary>
+    /// Strukturierter Analyse-Kern im breiten <c>change-context</c>-Scope: identische Mechanik
+    /// wie <see cref="AnalyzeDiffAsync"/> (ein Git-Lauf, gleiches Ergebnisobjekt, gleiche
+    /// Referenz-Stufe), aber ohne Accessibility-Filter und mit vollem Symbolscope inklusive
+    /// privater Symbole, Properties/Indexer, Events, Felder, Typdeklarationen und lokaler
+    /// Funktionen (Ermittlung über <see cref="DiffSymbolScanner"/>).
+    /// </summary>
+    internal static Task<DiffImpactAnalysis?> AnalyzeChangeContextAsync(
+        Solution solution, string targetPath, string? gitSinceRef, bool verbose) =>
+        RunAnalysisAsync(new DiffAnalysisRequest(
+            solution, targetPath, gitSinceRef, verbose, DiffSymbolScope.ChangeContext));
+
+    private static async Task<DiffImpactAnalysis?> RunAnalysisAsync(DiffAnalysisRequest request)
     {
-        var repoRoot = GitRepositoryLocator.FindRoot(targetPath);
+        var repoRoot = GitRepositoryLocator.FindRoot(request.TargetPath);
         if (repoRoot == null)
         {
-            LogGitWarning(verbose);
+            LogGitWarning(request.Verbose);
             return null;
         }
 
-        var diffOutput = RunGitDiff(repoRoot, gitSinceRef);
+        var diffOutput = RunGitDiff(repoRoot, request.GitSinceRef);
         if (string.IsNullOrEmpty(diffOutput))
         {
             return null;
         }
 
         var hunkRanges = ParseGitDiffHunkRanges(diffOutput);
-        var changedSymbols = await GetChangedSymbolsFromHunksAsync(solution, repoRoot, hunkRanges);
+        var changedSymbols = await GetChangedSymbolsFromHunksAsync(
+            request.Solution, repoRoot, hunkRanges, request.Scope);
 
         return new DiffImpactAnalysis(
             repoRoot,
-            gitSinceRef,
+            request.GitSinceRef,
             BuildChangedFiles(hunkRanges),
             changedSymbols.Select(match => match.Entry).ToList(),
-            await BuildReferencesAsync(changedSymbols, solution));
+            await BuildReferencesAsync(changedSymbols, request.Solution));
     }
 
     private static void LogGitWarning(bool verbose)
@@ -254,7 +268,7 @@ public sealed class DiffImpactAnalyzer
     }
 
     private static async Task<List<ChangedSymbolMatch>> GetChangedSymbolsFromHunksAsync(
-        Solution solution, string repoRoot, Dictionary<string, List<HunkRange>> hunks)
+        Solution solution, string repoRoot, Dictionary<string, List<HunkRange>> hunks, DiffSymbolScope scope)
     {
         var changedSymbols = new List<ChangedSymbolMatch>();
         foreach (var pair in hunks)
@@ -263,102 +277,42 @@ public sealed class DiffImpactAnalyzer
             var document = FindDocumentByPath(solution, absolutePath);
             if (document == null) continue;
 
-            var symbols = await GetChangedSymbolsAsync(document, pair.Value);
-            changedSymbols.AddRange(symbols.Select(symbol => new ChangedSymbolMatch(
-                symbol, CreateChangedSymbolEntry(symbol, document))));
+            changedSymbols.AddRange(
+                await DiffSymbolScanner.FindChangedSymbolsAsync(document, pair.Value, scope));
         }
+
         return changedSymbols;
     }
 
-    private static async Task<List<ISymbol>> GetChangedSymbolsAsync(Document document, IReadOnlyList<HunkRange> ranges)
+    internal static ChangedSymbolEntry CreateChangedSymbolEntry(ISymbol symbol, Document document) =>
+        CreateChangedSymbolEntry(symbol, document, symbol.Locations.First(location => location.IsInSource));
+
+    /// <summary>
+    /// Knotenbasierte Variante: Datei und Spanne stammen aus der uebergebenen
+    /// Deklarations-Location statt aus der ersten Symbol-Location, damit partielle Deklarationen
+    /// je geaenderter Teildeklaration erscheinen (gleiches Symbol, verschiedene Datei/Spanne).
+    /// </summary>
+    internal static ChangedSymbolEntry CreateChangedSymbolEntry(
+        ISymbol symbol, Document document, Location declarationLocation)
     {
-        var root = await document.GetSyntaxRootAsync();
-        var semanticModel = await document.GetSemanticModelAsync();
-        if (root == null || semanticModel == null) return [];
-
-        var symbols = new List<ISymbol>();
-
-        var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
-        AddChangedSymbols(methods, semanticModel, ranges, symbols);
-
-        var constructors = root.DescendantNodes().OfType<ConstructorDeclarationSyntax>();
-        AddChangedSymbols(constructors, semanticModel, ranges, symbols);
-
-        return symbols;
-    }
-
-    private static void AddChangedSymbols(
-        IEnumerable<SyntaxNode> nodes, SemanticModel semanticModel, IReadOnlyList<HunkRange> ranges, List<ISymbol> symbols)
-    {
-        foreach (var node in nodes)
-        {
-            var symbol = GetValidChangedSymbol(node, semanticModel, ranges);
-            if (symbol != null)
-            {
-                symbols.Add(symbol);
-            }
-        }
-    }
-
-    private static ISymbol? GetValidChangedSymbol(SyntaxNode node, SemanticModel semanticModel, IReadOnlyList<HunkRange> ranges)
-    {
-        if (!IntersectsWithChangedLines(node, ranges))
-        {
-            return null;
-        }
-
-        var symbol = semanticModel.GetDeclaredSymbol(node);
-        if (symbol == null || !IsPublicOrInternal(symbol))
-        {
-            return null;
-        }
-
-        return symbol;
-    }
-
-    // Ueberlappungspruefung auf Hunk-Ranges; semantisch identisch zur frueheren
-    // Einzellinien-Mitgliedschaft (count=0-Ranges expandieren zu keiner Zeile).
-    private static bool IntersectsWithChangedLines(SyntaxNode node, IReadOnlyList<HunkRange> ranges)
-    {
-        var span = node.GetLocation().GetLineSpan();
-        var start = span.StartLinePosition.Line + 1;
-        var end = span.EndLinePosition.Line + 1;
-
-        foreach (var range in ranges)
-        {
-            if (range.LineCount <= 0) continue;
-            var rangeEnd = range.StartLine + range.LineCount - 1;
-            if (rangeEnd >= start && range.StartLine <= end) return true;
-        }
-        return false;
-    }
-
-    private static bool IsPublicOrInternal(ISymbol symbol)
-    {
-        var accessibility = symbol.DeclaredAccessibility;
-        return accessibility == Accessibility.Public ||
-               accessibility == Accessibility.Internal ||
-               accessibility == Accessibility.Protected ||
-               accessibility == Accessibility.ProtectedOrInternal;
-    }
-
-    internal static ChangedSymbolEntry CreateChangedSymbolEntry(ISymbol symbol, Document document)
-    {
-        var location = symbol.Locations.First(location => location.IsInSource);
-        var lineSpan = location.GetLineSpan();
+        var lineSpan = declarationLocation.GetLineSpan();
         var outputRoot = Path.GetDirectoryName(document.Project.Solution.FilePath) ?? "";
         return new ChangedSymbolEntry(
             CallGraphTraversal.GetStableSymbolId(symbol),
-            FormatMemberDisplayName(symbol),
+            DiffSymbolScanner.FormatDisplayName(symbol),
             symbol.Kind.ToString(),
             symbol.DeclaredAccessibility,
             document.Project.Name,
-            PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath),
+            PathNormalizer.ToRelative(outputRoot, declarationLocation.SourceTree!.FilePath),
             lineSpan.StartLinePosition.Line + 1,
             lineSpan.EndLinePosition.Line + 1);
     }
 
-    private static string FormatMemberDisplayName(ISymbol symbol) =>
+    /// <summary>
+    /// Mitgliedsschema „EnthaltenderTyp.Name“ — gemeinsame Quelle der Member-Anzeigenamen fuer
+    /// Call-Sites und geaenderte Symbole.
+    /// </summary>
+    internal static string FormatMemberDisplayName(ISymbol symbol) =>
         $"{symbol.ContainingType?.Name}.{symbol.Name}";
 
     // Bewusst ohne TraversalState.CreateResult: das dedupliziert und sortiert mehrstufig — die
@@ -465,6 +419,14 @@ public sealed class DiffImpactAnalyzer
 /// Call-Site-Suche.
 /// </summary>
 internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Entry);
+
+/// <summary>
+/// Eingangsdaten eines Analyse-Kern-Laufs: Solution, Ziel-Pfad, Git-Ref, Protokollierung und der
+/// Symbolermittlungs-Scope (<see cref="DiffSymbolScope"/>) — Parameter-Object fuer den gemeinsamen
+/// Kern beider benannter Eintrittspunkte.
+/// </summary>
+internal sealed record DiffAnalysisRequest(
+    Solution Solution, string TargetPath, string? GitSinceRef, bool Verbose, DiffSymbolScope Scope);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle

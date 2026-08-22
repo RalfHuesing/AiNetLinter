@@ -61,6 +61,13 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
             "public int Add(int a, int b) => a + b;", "public int Add(int a, int b) => a + b + 0;"));
     }
 
+    public void ChangeCalculatorNormalizeBodyWithoutCommitting()
+    {
+        var content = File.ReadAllText(CalculatorPath);
+        File.WriteAllText(CalculatorPath, content.Replace(
+            "private int Normalize(int value) => value * 2;", "private int Normalize(int value) => value * 3;"));
+    }
+
     public void CommitCalculatorAddBodyChange()
     {
         ChangeCalculatorAddBodyWithoutCommitting();

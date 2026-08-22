@@ -24,7 +24,8 @@ internal sealed record ChangedFileRange(string FilePath, IReadOnlyList<HunkRange
 /// <summary>
 /// Ein vom Diff getroffenes Symbol mit stabiler Identitaet und Kontext. <see cref="SymbolId"/> ist
 /// die gemeinsame stabile ID (<see cref="CallGraphTraversal.GetStableSymbolId"/>: DocCommentId oder
-/// deterministischer Fallback), <see cref="DisplayName"/> das Format
+/// deterministischer Fallback; lokale Funktionen mit deterministischem <c>#lf:</c>-Sonderfall aus
+/// Name + Deklarationsposition), <see cref="DisplayName"/> das Format
 /// „EnthaltenderTyp.Membername“ konsistent zu <see cref="CallSiteEntry.SymbolName"/>, und
 /// <see cref="FilePath"/> ist solution-relativ (wie <see cref="CallSiteEntry.FilePath"/>) — nicht
 /// repo-root-relativ wie <see cref="ChangedFileRange.FilePath"/>.
