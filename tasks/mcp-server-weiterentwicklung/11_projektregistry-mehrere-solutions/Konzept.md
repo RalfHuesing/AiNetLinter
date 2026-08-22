@@ -69,6 +69,78 @@ Angelehnt an und weiter konsistent mit `90_bewusst-nicht-umsetzen.md`:
 
 ## Architektur
 
+### Verifizierte Code-Findings (Stand 2026-08-22, gegen HEAD geprüft)
+
+Diese Findings wurden direkt im Quellcode verifiziert und bestimmen den Umsetzungsweg:
+
+| # | Finding | Beleg |
+|---|---|---|
+| F1 | **`McpCodeGraphServer` ist bereits vollständig instanzbasiert.** Sämtlicher Zustand (`_catalog`, `_fileState`, `_lock`, `Config`/`UsedDefaultConfig`/`ResolvedConfigPath`, Staleness-Zähler) liegt als Instanzfelder vor; es gibt kein statisches Mutable-State. Die Klasse muss für N Projekte NICHT umgebaut werden — sie wird einfach N-mal instanziiert. | `McpCodeGraphServer.cs:25-75` (Felder + Konstruktor), `:27-41` |
+| F2 | **Die „Globalität" steckt ausschließlich im Wiring, an genau zwei Stellen:** (1) `McpServerCommand.RunAsync` erzeugt EINE Instanz prozessweit, (2) `McpServerOptionsFactory.Create(mcpState)` bäckt diese eine Instanz per Closure in alle Tool-Lambdas und die Resource-Collection ein. | `McpServerCommand.cs:62-70`; `McpServerOptionsFactory.cs:27-57` |
+| F3 | **Tools erreichen den State per Delegate-Closure:** Jede Registrierung erzeugt `McpServerTool.Create((args…) => XxxTool.ExecuteAsync(mcpState, …))`. Ersetzt man das eingefangene `mcpState` durch einen Resolver-Delegaten und ergänzt `projectRoot` im Lambda, ändert sich am SDK-Kontrakt nichts — der Parameter erscheint automatisch als Pflichtfeld im JSON-Schema (nicht-defaulteter Parameter). | `SymbolGraphToolRegistrations.cs:44-51` (find_symbol als Muster) |
+| F4 | **TestKit kann bereits N Server bauen:** `McpInMemoryTestContext.CreateServer()` konstruiert Instanzen per Options-Record — Registry-Tests sind ohne Prozessstart in-memory möglich. | `FastTests/Fixtures/McpInMemoryTestContext.cs:25-29` |
+| F5 | **Lifecycle-Bausteine existieren pro Instanz:** atomarer Config-Hot-Swap (`ReloadConfig`), Solution-Reload mit Dispose nach Swap (`ReloadSolutionAsync`), volles `DisposeAsync` inkl. LoadTask-Abbruch, Health-Zähler je Instanz (`RefreshCount`, `LastStalenessStats`, `Uptime`). Eviction = Registry entfernt Key und ruft `DisposeAsync` der Instanz. | `McpCodeGraphServer.cs:150-158, 165-198, 249-295, 129-141` |
+| F6 | **Agenten-sichtbarer Init-Vertrag hat eine Single-Source-of-Truth:** `ServerInstructions.Text` geht in den initialize-Handshake; dort gehört der projectRoot-Vertrag hin (einmalig statt 26 Tool-Descriptions volltextlich zu duplizieren). | `ServerInstructions.cs:9-13`; `McpServerOptionsFactory.cs:31` |
+| F7 | **Lint-Grenzen beachten:** `MaxAIContextFootprint` auf `McpCodeGraphServer` (deshalb sind Refresh/Factory/Registrations bereits ausgelagert) sowie `MaxConstructorDependencies: 5` (deshalb Options-Record statt langer Parameterliste). Neue Klassen (Registry) entsprechend schlank halten bzw. Options-Record nutzen. | Klassendoku `McpCodeGraphServer.cs:15-24`; `McpCodeGraphServerOptions.cs:71-74`; Kommentar `McpCodeGraphServer.cs:43-45` |
+| F8 | **`ResolveSolutionPathOrError` wird im MCP-Pfad NICHT mehr gebraucht:** Da die Definitionsdatei Solution UND Rules explizit benennt, ist die projectRoot-Prüfung streng und trivial — Verzeichnis muss existieren und `<root>/ainetlinter.project.json` muss vorhanden sein. Auto-Suche/Mehrdeutigkeitslogik bleiben allein dem Batch-Modus. (Korrektur zum ersten Entwurf dieses Konzepts.) | `McpServerCommand.cs:232-280` bleibt Batch-only |
+
+### Minimaler Umsetzungspfad (konkrete Skizzen)
+
+Wegen F1/F2 ist der Umbau ein **Wiring-Change plus neue Registry**, kein Refactoring der Serverklasse.
+Reihenfolge:
+
+**1) Neue `ProjectRegistry`** (schlank wegen F7):
+
+```csharp
+internal sealed record ProjectDefinition(string SolutionPath, string RulesPath); // beide absolut, validiert
+
+internal sealed class ProjectRegistryOptions
+{
+    public required int MaxProjects { get; init; }        // Default 4
+    public required TimeSpan IdleTtl { get; init; }       // Default 45 min
+    public required ILintConsole Console { get; init; }
+}
+
+internal sealed class ProjectRegistry : IAsyncDisposable
+{
+    // Key = kanonisierter Root-Pfad (OrdinalIgnoreCase), Value = geladenes Projekt
+    private readonly Dictionary<string, ProjectEntry> _projects = new(StringComparer.OrdinalIgnoreCase);
+    // Resolve: HIT -> entry.Touch(); MISS -> Definition laden (hart), Server instanziieren,
+    //          bei maxProjects zuerst LRU-Eviction (DisposeAsync), dann Eintrag anlegen.
+    internal McpCodeGraphServer Resolve(string? projectRoot);
+}
+```
+
+**2) Definitionsdatei laden** — neuer kleiner Loader (`ProjectDefinitionLoader`): liest
+`ainetlinter.project.json`, verlangt beide Felder, löst Pfade relativ zur Datei auf, prüft Existenz
+beider Zieldateien. Kein Fallback-Zweig, exakt die Fehlerverträge aus der Tabelle oben.
+
+**3) Wiring umstellen** (F2/F3) — vorher/nachher am Muster `find_symbol`:
+
+```csharp
+// VORHER (SymbolGraphToolRegistrations.cs:44-46): Closure auf DIE EINE Instanz
+(string? namePattern = null, ...) => FindSymbolTool.ExecuteAsync(mcpState, namePattern, ...)
+
+// NACHER: Closure auf den Resolver; projectRoot ist nicht-defaultet => Pflichtfeld im Schema
+(string projectRoot, string? namePattern = null, ...)
+    => FindSymbolTool.ExecuteAsync(registry.Resolve(projectRoot), namePattern, ...)
+```
+
+- Alle sechs Registration-Klassen analog ändern; `OverviewResourceRegistration` bekommt denselben
+  Resolver (Resource braucht ebenfalls projectRoot).
+- `McpServerOptionsFactory.Create(McpCodeGraphServer mcpState)` wird zu
+  `Create(ProjectRegistry registry)` — der Parameter-Typ dokumentiert die neue Welt.
+- `McpServerCommand.RunAsync` hält keine `mcpState`-Instanz mehr, sondern die `ProjectRegistry`
+  (plus TTL-Timer); `reload_config`/`get_server_health` werden über denselben Resolver geroutet,
+  Health aggregiert über alle Keys (F5 liefert die Pro-Instanz-Werte).
+
+**4) Instructions erweitern** (F6): Der projectRoot-Vertrag („Pflicht bei jedem Tool- und Resource-
+Aufruf; Verzeichnis muss `ainetlinter.project.json` enthalten") steht einmalig in
+`ServerInstructions.Text` — nicht 26× in Description-Duplikaten.
+
+**5) Tests** (F4): Registry-Unit-Tests bauen N In-Memory-Server via `McpInMemoryTestContext`;
+Eviction mit injizierbarer Clock; Contract-Tests für jeden Fehlercode der Tabelle.
+
 ### Datenmodell
 
 ```csharp
@@ -196,8 +268,9 @@ Unit (FastTests, Category=Unit):
 - Definitionsdatei-Parsing: Pflichtfelder `solution` UND `rules`, relative→absolute Auflösung
   (Anker = Definitionsdatei), fehlerhaftes JSON / fehlendes Feld → klarer Fehler, keine
   Teil-Initialisierung.
-- projectRoot-Auflösung: Datei vs. Verzeichnis vs. nicht existent (Wiederverwendung
-  `ResolveSolutionPathOrError`-Semantik).
+- projectRoot-Auflösung (F8): nicht-existentes Verzeichnis → Fehler; fehlende
+  `ainetlinter.project.json` → PROJECT_NOT_INITIALIZED; KEINE Auto-Suche nach Solutions im
+  MCP-Pfad (Auto-Suche bleibt Batch-only).
 - Uniforme Pflicht: `projectRoot` fehlt → PROJECT_ROOT_REQUIRED — bei beliebigem Registry-Stand
   (auch bei genau einem geladenen Key).
 - Kein-Fallback-Vertrag: rules nicht angegeben → RULES_NOT_FOUND (Nachbar-Suche darf nie greifen);
@@ -257,7 +330,7 @@ bekommt einen harten Fehler (unbekanntes Argument) statt stiller Kompatibilität
 
 | Risiko | Mitigation |
 |---|---|
-| Refactoring-Tiefe: `McpCodeGraphServer` von Global- zu Per-Project-State | Größter Einzelposten; Delegate-Closure-Muster (Übersicht: „Tools erreichen den residenten Serverzustand per Delegate-Closure") bleibt erhalten, nur Zielobjekt wird der Key-Server. Schrittweise Umsetzung, Contract-Tests zuerst. |
+| Umfang des Wiring-Umbaus über 6 Registration-Klassen + Resource | Mechanische, identische Änderung je Klasse (F3); Contract-Tests zuerst, dann Klassen einzeln umstellen. Kein Refactoring der Serverklasse nötig (F1) — das ursprünglich befürchtete größte Risiko entfällt. |
 | Doppelte Tools/Keys bei Hosts, die pro Chat spawnen | Kein Schaden: jeder Prozess hält meist 1 Key; TTL räumt auf. |
 | Vergessene `projectRoot`-Angabe durch Agent | Harter deterministischer Fehler (PROJECT_ROOT_REQUIRED); AGENTS.md-Ritual dokumentiert die Pflicht. |
 | RAM-Wachstum bei langen Host-Sessions | TTL + maxProjects + bestehender Reaper; Monitoring via get_server_health. |
