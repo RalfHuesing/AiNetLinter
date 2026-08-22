@@ -64,39 +64,45 @@ Steps abgeschlossen, daher überall „(zuletzt: roadmap)".
 
 Produktionscode:
 
+- **`src/AiNetLinter/Core/DiffSymbolScanner.cs`** (neu in step-003) —
+  breiter Diff-Symbolscanner: Enum `DiffSymbolScope` (`Callers`/
+  `ChangeContext`), Kandidatensammlung je Scope, Range-Überlappung,
+  Innerste-Deklarations-Regel, Accessibility-Filter, knotenbasierte
+  Entry-Bildung und artabhängige Displaynames; beide Scopes laufen durch
+  dieselbe Pipeline. (zuletzt: step-003)
 - **`src/AiNetLinter/Core/DiffImpactAnalyzer.cs`** — Git-Diff-Auswertung
   (`RunGitDiff`, Range-Parsing `ParseGitDiffHunkRanges`, DRY-Expansion in
-  `ParseGitDiffHunks`) bis zu den Call-Sites; Kern `AnalyzeDiffAsync` baut
-  seit step-002 das strukturierte Ergebnisobjekt, `AnalyzeEntriesAsync`
-  ist feld-/reihenfolgetreuer Wrapper, Symbolfilter
-  (`IsPublicOrInternal`) weiterhin schmal; mit 485/500 Zeilen am
-  MaxLineCount-Limit — der breite Scannerpfad (EPIC-2 Teil 2, als
-  step-003 geplant) bekommt deshalb eine eigene Core-Datei und wird hier
-  nur über klar benannte Eintrittspunkte eingehängt. (zuletzt:
-  step-003-Planung)
+  `ParseGitDiffHunks`) bis zu den Call-Sites; seit step-003 zwei klar
+  benannte Eintrittspunkte (`AnalyzeDiffAsync` = Callers,
+  `AnalyzeChangeContextAsync` = ChangeContext) auf dem gemeinsamen
+  Request-Record `DiffAnalysisRequest`; Symbolermittlung delegiert an
+  `DiffSymbolScanner`; `CreateChangedSymbolEntry` mit knotenbasierter
+  Location-Überladung; 447/500 Zeilen. (zuletzt: step-003)
 - **`src/AiNetLinter/Core/DiffImpactAnalysisModels.cs`** (neu in
   step-002) — Records `HunkRange`, `ChangedFileRange`,
   `ChangedSymbolEntry`, `DiffImpactAnalysis`; referenziert bewusst
   `AiNetLinter.Mcp.Tools.SymbolGraph` (Monolith, keine Verschiebung der
-  TransitiveCallGraphModels). FilePath-Bedeutungen im XML-Doc.
-  (zuletzt: step-002)
+  TransitiveCallGraphModels). FilePath-Bedeutungen im XML-Doc;
+  SymbolId-Vertrag nennt seit step-003 den lokalen-Funktions-Sonderfall.
+  (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
   flache BFS-Aufrufer-Traversierung für `find_references` und den
   `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
   `EnqueueChildrenAsync` enqueued je Referenzlocation den einschließenden
   Aufrufer über den gemeinsamen Helper `ResolveEnclosingMemberAsync`
   (internal, wird auch vom Caller-Baum genutzt); `GetStableSymbolId`
-  seit step-002 internal und gemeinsame Quelle der stabilen Symbol-IDs
-  mit dem Diff-Impact-Analyzer. Nach dem Split des Tree-Paths in
-  `CallGraphTreeBuilder` wieder unter dem MaxLineCount-Limit.
-  (zuletzt: step-002)
+  internal und gemeinsame Quelle der stabilen Symbol-IDs — seit step-003
+  mit deterministischem `#lf:`-Sonderfall für lokale Funktionen
+  (TD-002-Auflösung IN der gemeinsamen Quelle). Nach dem Split des
+  Tree-Paths in `CallGraphTreeBuilder` unter dem MaxLineCount-Limit.
+  (zuletzt: step-003)
 - **`src/AiNetLinter/Core/RoslynSymbolExtensions.cs`** — zentrale
   ISymbol-Extensions: `NormalizeToOwningMember` (mappt Accessoren auf
   Property/Event, lokale Funktionen aber NICHT hoch — deshalb können
-  LF-Aufrufstellen im Traversal als Reached-From-Knoten auftauchen) und
-  `TryGetDocCommentId` (fehlerresistente Doc-ID). Kontext für die
-  Stabile-ID-Fragen um TD-002 (EPIC-2 Teil 2). (zuletzt:
-  step-003-Planung)
+  LF-Aufrufstellen im Traversal als Reached-From-Knoten auftauchen und
+  tragen seit step-003 eindeutige `#lf:`-IDs) und `TryGetDocCommentId`
+  (fehlerresistente Doc-ID). Datei selbst unverändert. (zuletzt:
+  step-001; step-003 nur Verhaltenskontext)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTreeBuilder.cs`** (neu
   in step-001) — Caller-Tree-Aufbau für `get_call_tree`
   (`BuildTreeAsync`, Tree-Konstanten, Gruppierungs-/Formatierhelfer),
@@ -185,14 +191,20 @@ Tests:
   Unit-Tests zu Hunks/Symbolermittlung; seit step-002 kompakte
   Range-Parsing-/Expansions-Äquivalenz-, `ChangedSymbolEntry`-Mapping-
   (inkl. lokale Funktion) und Wrapper-Mapping-Tests. (zuletzt: step-002)
+- **`src/AiNetLinter.FastTests/Core/DiffImpactAnalyzerBroadScopeTests.cs`**
+  (neu in step-003) — Unit-Tests des breiten Scannerpfads über
+  `CreateScenario` + synthetische Hunk-Ranges: Differential Callers vs.
+  ChangeContext, Innerste-Deklaration, Property/Feld/Event, partielle Typen,
+  `#lf:`-ID-Pinning und Displayname-Verträge. (zuletzt: step-003)
 - **`src/AiNetLinter.FastTests/Core/TestCoverageScannerTests.cs`** —
   Unit-Tests der per-Symbol-Testzuordnung; erweitert um Batch-Zuordnung
   (EPIC-4). (zuletzt: roadmap)
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs`**
   — Integrationstests von `get_impact` im echten Server-Kontext; seit
-  step-002 zusätzlich direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf
-  der `GitImpactMiniFixtureWorkspace` (Ergebnisobjekt + Wrapper-
-  Äquivalenz). (zuletzt: step-002)
+  step-002 direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf der
+  `GitImpactMiniFixtureWorkspace`, seit step-003 zusätzlich
+  `AnalyzeChangeContextAsync` an geänderter privater Methode (ohne Call-Sites,
+  callers-Wrapper omitiert sie). (zuletzt: step-003)
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandGetImpactTests.cs`**
   — Subprozess-/Protokoll-Level-Tests von `get_impact`; Absicherung der
   Abwärtskompatibilität des `callers`-Modus (EPIC-3/EPIC-6). (zuletzt:
@@ -200,6 +212,13 @@ Tests:
 - **`src/AiNetLinter.IntegrationTests/Fixtures/FixtureWorkspaces.cs`** —
   Disposable Fixture-Workspaces inkl. `GitImpactMiniFixtureWorkspace`
   (echtes Temp-Git-Repo mit Initial-Commit; Basis der bestehenden
-  get_impact-Git-Branch-Integrationstests); Wiederverwendungsquelle für
-  Analyzer-Ergebnisobjekt-Tests (EPIC-2) und die instrumentierte
-  Einmal-Ausführungs-Messung (EPIC-3). (zuletzt: step-002-Planung)
+  get_impact-Git-Branch-Integrationstests); seit step-003 zusätzlich
+  `ChangeCalculatorNormalizeBodyWithoutCommitting()` für die Änderung einer
+  privaten Methode. Wiederverwendungsquelle für Analyzer-Ergebnisobjekt-Tests
+  (EPIC-2) und die instrumentierte Einmal-Ausführungs-Messung (EPIC-3).
+  (zuletzt: step-003)
+- **`tests/Fixtures/GitImpactMini/`** — Fixture-Vorlage des Mini-Git-Repos,
+  die die Workspace-Klassen kopieren; `Calculator.cs` trägt seit step-003
+  neben `Add` eine private, nie aufgerufene Methode `Normalize` (Teil des
+  Initial-Commits), damit Diffs bestehende private Methoden treffen können.
+  (zuletzt: step-003)
