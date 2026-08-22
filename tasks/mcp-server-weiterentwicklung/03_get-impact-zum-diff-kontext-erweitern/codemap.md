@@ -70,16 +70,26 @@ Produktionscode:
   Umbauziel für das `DiffImpactAnalysis`-Ergebnisobjekt und den zweiten
   Scannerpfad mit breitem Symbolscope (EPIC-2). (zuletzt: roadmap)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
-  BFS-Aufrufer-Traversierung für `find_references` und den
-  `get_impact`-Symbol-Branch; `EnqueueChildren` enqueued aktuell
-  `reference.Definition` statt des einschließenden Aufrufers — Fixstelle
-  der depth>1-Korrektur (EPIC-1). (zuletzt: roadmap)
+  flache BFS-Aufrufer-Traversierung für `find_references` und den
+  `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
+  `EnqueueChildrenAsync` enqueued je Referenzlocation den einschließenden
+  Aufrufer über den gemeinsamen Helper `ResolveEnclosingMemberAsync`
+  (internal, wird auch vom Caller-Baum genutzt). Nach dem Split des
+  Tree-Pfads in `CallGraphTreeBuilder` wieder unter dem MaxLineCount-Limit.
+  (zuletzt: step-001)
+- **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTreeBuilder.cs`** (neu
+  in step-001) — Caller-Tree-Aufbau für `get_call_tree`
+  (`BuildTreeAsync`, Tree-Konstanten, Gruppierungs-/Formatierhelfer),
+  aus `CallGraphTraversal` herausgelöst; Verhalten unverändert, nutzt
+  `CallGraphTraversal.ResolveEnclosingMemberAsync`/`FormatSymbolName`.
+  (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/GetImpactTool.cs`** —
   `get_impact`-Dispatch zwischen Git- und Symbol-Branch inkl.
-  `GetImpactInput`-Record (bisher 4 Parameter); Hauptort des neuen
-  `detailLevel=change-context`-Vertrags, der Antwortform und der
-  Parameter-/Validierungsregeln (EPIC-1 Hint-Parität, EPIC-6). (zuletzt:
-  roadmap)
+  `GetImpactInput`-Record (bisher 4 Parameter); Hint-Parität im
+  Symbol-Branch umgesetzt (`McpSufficiencyHints.Append` bei vollständigen
+  Traversal-Ergebnissen, exakt wie `FindReferencesTool`). Hauptort des
+  neuen `detailLevel=change-context`-Vertrags, der Antwortform und der
+  Parameter-/Validierungsregeln (EPIC-6). (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`** —
   Referenz-Tool mit `ResolveSymbolAsync` und angehängtem Sufficiency-Hint;
   Paritäts-Vorbild für den `GetImpactTool`-Symbol-Branch (EPIC-1).
@@ -136,13 +146,21 @@ Tests:
   quelle für Aufruferketten-Tests (EPIC-1) und die neutrale
   Konzept-Fixture (EPIC-3). (zuletzt: planer, step-001-Planung)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/CallTree/CallGraphTraversalTests.cs`**
-  — Unit-Tests der Traversierung, enthält die `ExpandAsync_Depth2_*`-Tests,
-  die ggf. das defekte Altverhalten kodieren — bewusst reviewen/umstellen,
-  nicht mechanisch grün zwingen (EPIC-1, Audit B/F). (zuletzt: roadmap)
+  — Unit-Tests der Traversierung; `ExpandAsync_Depth2_FormatsWithDepthMarker`
+  wurde als schwache Assertion bewusst gestärkt (Kettenabschluss auf der
+  Default-Fixture), neu dazu gekommen ist der echte Ketten-Nachweis
+  `ExpandAsync_Depth2_RealCallerChain_ResolvesBothLevels` über
+  `CreateScenario` (EPIC-1, Audit F). (zuletzt: step-001)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/FindReferencesToolTests.cs`**
+  — Tool-Level-Tests von `find_references`; erweitert um
+  `ExecuteAsync_Depth2_RealCallerChain_ReturnsBothLevels` (echte
+  Aufruferkette A<-B<-C auf Ad-hoc-Szenario, EPIC-1). (zuletzt: step-001)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/GetImpactToolTests.cs`**
   — Unit-Tests des `get_impact`-Dispatchs/der Antwortform; erweitert um
-  `change-context`-Vertrag und `INVALID_ARGUMENT`-Fälle (EPIC-6).
-  (zuletzt: roadmap)
+  Symbol-Branch-Kettentest (`Depth2RealCallerChain`) und die
+  Sufficiency-Hint-Parität (vollständig → Hinweis, trunkiert → Meta-Zeile,
+  EPIC-1); Zielort für `change-context`-Vertrag und
+  `INVALID_ARGUMENT`-Fälle (EPIC-6). (zuletzt: step-001)
 - **`src/AiNetLinter.FastTests/Core/DiffImpactAnalyzerTests.cs`** —
   Unit-Tests zu Hunks/Symbolermittlung; erweitert um Ergebnisobjekt und
   breiten Scannerpfad (EPIC-2). (zuletzt: roadmap)
