@@ -114,10 +114,13 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Projekt, Datei, Deklarationszeilen. Der bisherige `callers`-Scope
       (public/internal Methoden/Konstruktoren) bleibt unverändert
       (Konzept §Scope Must-have, Audit A.2/D.4).
-      *Planungsnotiz (Step-Modus 2026-08-22):* Epic wird in zwei Steps geführt —
-      step-002 (strukturiertes `DiffImpactAnalysis`-Ergebnisobjekt, Wrapper-Analyse,
-      kompakte Hunk-Ranges, `ChangedSymbolEntry` mit stabiler ID; Scanner-Scope noch
-      unverändert schmal), danach ein Step für den breiten Scannerpfad.
+      *Planungsnotiz:* Epic wird in zwei Steps geführt — step-002 (Teil 1:
+      strukturiertes `DiffImpactAnalysis`-Ergebnisobjekt, Wrapper-Analyse,
+      kompakte Hunk-Ranges, `ChangedSymbolEntry` mit stabiler ID;
+      Scanner-Scope blieb schmal; done/approved, Commit 5b26c63b) und
+      step-003 (Teil 2: breiter Scannerpfad inkl. TD-002-ID-Sonderfall
+      für lokale Funktionen; in Arbeit). Epic erst abhaken, wenn beide
+      Teile erledigt sind.
 - [ ] EPIC-3: Testfundament & Einmal-Ausführungs-Nachweis — neutrale
       Test-Fixture (mind. zwei Produktionsprojekte + ein Testprojekt; Diff
       ändert zwei Methoden in zwei Dateien, davon eine privat ohne externe

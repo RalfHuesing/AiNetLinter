@@ -69,8 +69,11 @@ Produktionscode:
   `ParseGitDiffHunks`) bis zu den Call-Sites; Kern `AnalyzeDiffAsync` baut
   seit step-002 das strukturierte Ergebnisobjekt, `AnalyzeEntriesAsync`
   ist feld-/reihenfolgetreuer Wrapper, Symbolfilter
-  (`IsPublicOrInternal`) weiterhin schmal; Zielort des breiten
-  Scannerpfads (EPIC-2, nächster Step). (zuletzt: step-002)
+  (`IsPublicOrInternal`) weiterhin schmal; mit 485/500 Zeilen am
+  MaxLineCount-Limit — der breite Scannerpfad (EPIC-2 Teil 2, als
+  step-003 geplant) bekommt deshalb eine eigene Core-Datei und wird hier
+  nur über klar benannte Eintrittspunkte eingehängt. (zuletzt:
+  step-003-Planung)
 - **`src/AiNetLinter/Core/DiffImpactAnalysisModels.cs`** (neu in
   step-002) — Records `HunkRange`, `ChangedFileRange`,
   `ChangedSymbolEntry`, `DiffImpactAnalysis`; referenziert bewusst
@@ -87,6 +90,13 @@ Produktionscode:
   mit dem Diff-Impact-Analyzer. Nach dem Split des Tree-Paths in
   `CallGraphTreeBuilder` wieder unter dem MaxLineCount-Limit.
   (zuletzt: step-002)
+- **`src/AiNetLinter/Core/RoslynSymbolExtensions.cs`** — zentrale
+  ISymbol-Extensions: `NormalizeToOwningMember` (mappt Accessoren auf
+  Property/Event, lokale Funktionen aber NICHT hoch — deshalb können
+  LF-Aufrufstellen im Traversal als Reached-From-Knoten auftauchen) und
+  `TryGetDocCommentId` (fehlerresistente Doc-ID). Kontext für die
+  Stabile-ID-Fragen um TD-002 (EPIC-2 Teil 2). (zuletzt:
+  step-003-Planung)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTreeBuilder.cs`** (neu
   in step-001) — Caller-Tree-Aufbau für `get_call_tree`
   (`BuildTreeAsync`, Tree-Konstanten, Gruppierungs-/Formatierhelfer),
