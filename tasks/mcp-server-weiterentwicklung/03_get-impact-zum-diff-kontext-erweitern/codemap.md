@@ -65,18 +65,28 @@ Steps abgeschlossen, daher überall „(zuletzt: roadmap)".
 Produktionscode:
 
 - **`src/AiNetLinter/Core/DiffImpactAnalyzer.cs`** — Git-Diff-Auswertung
-  (`RunGitDiff`, `ParseGitDiffHunks`) plus public/internal-Symbolfilter
-  (`IsPublicOrInternal`, `GetValidChangedSymbol`) bis zu den Call-Sites;
-  Umbauziel für das `DiffImpactAnalysis`-Ergebnisobjekt und den zweiten
-  Scannerpfad mit breitem Symbolscope (EPIC-2). (zuletzt: roadmap)
+  (`RunGitDiff`, Range-Parsing `ParseGitDiffHunkRanges`, DRY-Expansion in
+  `ParseGitDiffHunks`) bis zu den Call-Sites; Kern `AnalyzeDiffAsync` baut
+  seit step-002 das strukturierte Ergebnisobjekt, `AnalyzeEntriesAsync`
+  ist feld-/reihenfolgetreuer Wrapper, Symbolfilter
+  (`IsPublicOrInternal`) weiterhin schmal; Zielort des breiten
+  Scannerpfads (EPIC-2, nächster Step). (zuletzt: step-002)
+- **`src/AiNetLinter/Core/DiffImpactAnalysisModels.cs`** (neu in
+  step-002) — Records `HunkRange`, `ChangedFileRange`,
+  `ChangedSymbolEntry`, `DiffImpactAnalysis`; referenziert bewusst
+  `AiNetLinter.Mcp.Tools.SymbolGraph` (Monolith, keine Verschiebung der
+  TransitiveCallGraphModels). FilePath-Bedeutungen im XML-Doc.
+  (zuletzt: step-002)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
   flache BFS-Aufrufer-Traversierung für `find_references` und den
   `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
   `EnqueueChildrenAsync` enqueued je Referenzlocation den einschließenden
   Aufrufer über den gemeinsamen Helper `ResolveEnclosingMemberAsync`
-  (internal, wird auch vom Caller-Baum genutzt). Nach dem Split des
-  Tree-Pfads in `CallGraphTreeBuilder` wieder unter dem MaxLineCount-Limit.
-  (zuletzt: step-001)
+  (internal, wird auch vom Caller-Baum genutzt); `GetStableSymbolId`
+  seit step-002 internal und gemeinsame Quelle der stabilen Symbol-IDs
+  mit dem Diff-Impact-Analyzer. Nach dem Split des Tree-Paths in
+  `CallGraphTreeBuilder` wieder unter dem MaxLineCount-Limit.
+  (zuletzt: step-002)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTreeBuilder.cs`** (neu
   in step-001) — Caller-Tree-Aufbau für `get_call_tree`
   (`BuildTreeAsync`, Tree-Konstanten, Gruppierungs-/Formatierhelfer),
@@ -162,14 +172,17 @@ Tests:
   EPIC-1); Zielort für `change-context`-Vertrag und
   `INVALID_ARGUMENT`-Fälle (EPIC-6). (zuletzt: step-001)
 - **`src/AiNetLinter.FastTests/Core/DiffImpactAnalyzerTests.cs`** —
-  Unit-Tests zu Hunks/Symbolermittlung; erweitert um Ergebnisobjekt und
-  breiten Scannerpfad (EPIC-2). (zuletzt: roadmap)
+  Unit-Tests zu Hunks/Symbolermittlung; seit step-002 kompakte
+  Range-Parsing-/Expansions-Äquivalenz-, `ChangedSymbolEntry`-Mapping-
+  (inkl. lokale Funktion) und Wrapper-Mapping-Tests. (zuletzt: step-002)
 - **`src/AiNetLinter.FastTests/Core/TestCoverageScannerTests.cs`** —
   Unit-Tests der per-Symbol-Testzuordnung; erweitert um Batch-Zuordnung
   (EPIC-4). (zuletzt: roadmap)
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs`**
-  — Integrationstests von `get_impact` im echten Server-Kontext; Zielort
-  der Konzept-End-to-End-Fälle (Fixture aus EPIC-3). (zuletzt: roadmap)
+  — Integrationstests von `get_impact` im echten Server-Kontext; seit
+  step-002 zusätzlich direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf
+  der `GitImpactMiniFixtureWorkspace` (Ergebnisobjekt + Wrapper-
+  Äquivalenz). (zuletzt: step-002)
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandGetImpactTests.cs`**
   — Subprozess-/Protokoll-Level-Tests von `get_impact`; Absicherung der
   Abwärtskompatibilität des `callers`-Modus (EPIC-3/EPIC-6). (zuletzt:
