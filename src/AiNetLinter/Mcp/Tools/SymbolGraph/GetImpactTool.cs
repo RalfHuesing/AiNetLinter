@@ -60,7 +60,12 @@ internal static class GetImpactTool
             body = $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'";
         }
 
-        var finalText = FindSymbolTool.PrependWarning(warning, body);
+        // Wie find_references: auch ein leeres, aber vollstaendiges Ergebnis gilt als
+        // abschliessend und bekommt den Sufficiency-Hinweis statt stillschweigend zu enden.
+        var finalBody = TransitiveCallGraphFormatter.IsComplete(traversal)
+            ? McpSufficiencyHints.Append(body)
+            : body;
+        var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
         return McpToolResults.Text(finalText, traversal);
     }
 

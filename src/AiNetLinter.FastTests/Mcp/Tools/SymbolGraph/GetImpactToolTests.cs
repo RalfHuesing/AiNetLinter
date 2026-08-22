@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -138,5 +140,75 @@ public sealed class GetImpactToolTests
         Assert.NotNull(result.StructuredContent);
         Assert.NotEmpty(result.StructuredContent!.Value.GetProperty("callSites").EnumerateArray());
         Assert.Equal(2, result.StructuredContent.Value.GetProperty("completeness").GetProperty("effectiveDepth").GetInt32());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifier_Depth2RealCallerChain_ReturnsBothLevels()
+    {
+        // Symbol-Branch auf echter Kette A <- B <- C: Ebene 1 (Aufruf in B) und Ebene 2
+        // (Aufruf in C) im StructuredContent mit korrekter Herkunft je Ebene.
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("ChainProbe", [
+                ("Chain.cs", """
+                    namespace ChainProbe;
+
+                    public class Runner
+                    {
+                        public void MethodA() { }
+                        public void MethodB() { MethodA(); }
+                        public void MethodC() { MethodB(); }
+                    }
+                    """)
+            ])));
+        var (symbolB, _) = await FindReferencesTool.ResolveSymbolAsync(
+            context.Solution, "ChainProbe.Runner.MethodB", CancellationToken.None);
+        Assert.NotNull(symbolB);
+        var state = context.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "ChainProbe.Runner.MethodA", 50, 2), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = result.StructuredContent!.Value.GetProperty("callSites")
+            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        var level1 = entries!.Single(entry => entry.Depth == 1);
+        Assert.Equal("Runner.MethodA", level1.SymbolName);
+        Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
+        var level2 = entries!.Single(entry => entry.Depth == 2);
+        Assert.Equal("Runner.MethodB", level2.SymbolName);
+        Assert.Equal(DocumentationCommentId.CreateDeclarationId(symbolB!), level2.ReachedFromSymbolId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifierCompleteResult_AppendsSufficiencyHint()
+    {
+        // Hint-Paritaet zum find_references-Zweig: ein vollstaendiges (nicht trunkiertes)
+        // Ergebnis traegt den Sufficiency-Hinweis, damit der Agent nicht redundant nachliest.
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifierTruncatedResult_OmitsSufficiencyHint()
+    {
+        // Gegenstueck: ein trunkiertes Ergebnis traegt seine Trunkierungs-Meta-Zeile und
+        // gerade NICHT den Vollstaendigkeits-Hinweis (die beiden schliessen sich aus).
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "Greeter.Greet", 2, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
     }
 }

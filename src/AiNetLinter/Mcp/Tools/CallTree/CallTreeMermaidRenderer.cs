@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Tools.MetricsTree;
 namespace AiNetLinter.Mcp.Tools.CallTree;
 
 /// <summary>
-/// Rendert dieselbe <see cref="MetricsTreeNode"/>-Baumstruktur, die <see cref="CallGraphTraversal.BuildTreeAsync"/>
+/// Rendert dieselbe <see cref="MetricsTreeNode"/>-Baumstruktur, die <see cref="CallGraphTreeBuilder.BuildTreeAsync"/>
 /// liefert, als Mermaid-<c>flowchart TD</c>-Block fuer <c>get_call_tree</c> mit <c>format=mermaid</c>.
 /// Eigenstaendiger Renderer statt einer Erweiterung von <see cref="MetricsTreeRenderer"/>, weil das
 /// Zielformat (eindeutige Knoten-IDs + gerichtete Kanten statt Einrueckung/Praefix-Zeichen)

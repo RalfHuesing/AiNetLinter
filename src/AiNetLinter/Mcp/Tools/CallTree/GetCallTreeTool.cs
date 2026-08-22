@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Tools.CallTree;
 /// MCP-Tool <c>get_call_tree</c>: loest einen Symbol-Identifikator wie <see cref="FindReferencesTool"/>
 /// auf und liefert dessen transitiven Aufrufer- oder Aufgerufene-Baum als echte Eltern-Kind-Struktur —
 /// im Unterschied zur flachen Top-N-Liste von <c>find_references</c>/<c>get_impact</c> mit <c>depth&gt;1</c>.
-/// Traversierung via <see cref="CallGraphTraversal.BuildTreeAsync"/> (eigene, hoehere Grenzwerte
+/// Traversierung via <see cref="CallGraphTreeBuilder.BuildTreeAsync"/> (eigene, hoehere Grenzwerte
 /// als die flache Aggregation), Ausgabe als ASCII-Baum (<see cref="MetricsTreeRenderer"/>,
 /// wiederverwendet aus <c>metrics_tree</c>) oder Mermaid-Flowchart
 /// (<see cref="CallTreeMermaidRenderer"/>). Deckt nur .cs-Dateien ab (Roslyn-Symbolgraph).
@@ -63,7 +63,7 @@ internal static class GetCallTreeTool
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var topN = input.TopN < 1 ? 1 : input.TopN;
-            var (root, truncated) = await CallGraphTraversal.BuildTreeAsync(
+            var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
                 new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction), ct);
 
             var body = RenderTree(root, input.Format, topN);
@@ -121,7 +121,7 @@ internal static class GetCallTreeTool
             : MetricsTreeRenderer.Render(root, topN, sortDescending: false);
 
     private static string BuildTruncationMeta() =>
-        $"[Baum trunkiert — hard-cap {CallGraphTraversal.MaxCallTreeNodes} Knoten erreicht, " +
+        $"[Baum trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht, " +
         "depth oder topN reduzieren fuer einen vollstaendigeren Teilbaum]";
 
     private static string BuildTopNTruncationMeta() =>

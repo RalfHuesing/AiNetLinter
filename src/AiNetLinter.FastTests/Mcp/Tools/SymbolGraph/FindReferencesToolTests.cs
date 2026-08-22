@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -249,6 +250,45 @@ public sealed class FindReferencesToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Depth2_RealCallerChain_ReturnsBothLevels()
+    {
+        // Tool-Level-Kette A <- B <- C: find_references mit depth=2 muss Aufrufstellen auf
+        // Ebene 1 UND 2 liefern — Ebene 2 mit ReachedFromSymbolId der Ebene-1-Methode.
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("ChainProbe", [
+                ("Chain.cs", """
+                    namespace ChainProbe;
+
+                    public class Runner
+                    {
+                        public void MethodA() { }
+                        public void MethodB() { MethodA(); }
+                        public void MethodC() { MethodB(); }
+                    }
+                    """)
+            ])));
+        var (symbolB, _) = await FindReferencesTool.ResolveSymbolAsync(
+            context.Solution, "ChainProbe.Runner.MethodB", CancellationToken.None);
+        Assert.NotNull(symbolB);
+        using var state = context.CreateServer();
+
+        var result = await FindReferencesTool.ExecuteAsync(
+            state, "ChainProbe.Runner.MethodA", maxResults: 50, depth: 2, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = result.StructuredContent!.Value.GetProperty("callSites")
+            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
+        Assert.NotNull(entries);
+        var level1 = entries!.Single(entry => entry.Depth == 1);
+        Assert.Equal("Runner.MethodA", level1.SymbolName);
+        Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
+        var level2 = entries!.Single(entry => entry.Depth == 2);
+        Assert.Equal("Runner.MethodB", level2.SymbolName);
+        Assert.Equal(DocumentationCommentId.CreateDeclarationId(symbolB!), level2.ReachedFromSymbolId);
     }
 
     [Fact]

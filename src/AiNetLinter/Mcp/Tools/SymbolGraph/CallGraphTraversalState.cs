@@ -46,7 +46,7 @@ internal sealed class CallerGroup
 }
 
 /// <summary>
-/// Veränderlicher BFS-Zustand für <see cref="CallGraphTraversal.BuildTreeAsync"/> mit richtungsbewusstem Visited-Set.
+/// Veränderlicher BFS-Zustand für <see cref="CallGraphTreeBuilder.BuildTreeAsync"/> mit richtungsbewusstem Visited-Set.
 /// </summary>
 internal sealed class TreeBuildState
 {
@@ -60,7 +60,7 @@ internal sealed class TreeBuildState
         Depth = depth;
         TopN = topN;
         Direction = direction;
-        Root = new CallTreeBuilderNode(seedSymbol, CallGraphTraversal.FormatSymbolName(seedSymbol), CallGraphTraversal.FormatRootDisplay(seedSymbol, solution));
+        Root = new CallTreeBuilderNode(seedSymbol, CallGraphTraversal.FormatSymbolName(seedSymbol), CallGraphTreeBuilder.FormatRootDisplay(seedSymbol, solution));
         _visited = new HashSet<(ISymbol Symbol, CallTreeDirection Direction)>(
             new DirectionAwareSymbolComparer())
         {
