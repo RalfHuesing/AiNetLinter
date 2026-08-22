@@ -100,26 +100,12 @@ internal static class GetTestContextTool
         return string.Empty;
     }
 
-    private static IReadOnlyList<string> BuildRecommendedCommands(IReadOnlyList<TestFileCoverageResult> testFiles)
-    {
-        var commands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in testFiles)
-        {
-            var className = file.TestClassName;
-            if (string.IsNullOrWhiteSpace(className)) continue;
-
-            if (!string.IsNullOrWhiteSpace(file.ProjectDirectory) && file.ProjectDirectory != ".")
-            {
-                commands.Add($"dotnet test {file.ProjectDirectory} --filter FullyQualifiedName~{className}");
-            }
-            else
-            {
-                commands.Add($"dotnet test --filter FullyQualifiedName~{className}");
-            }
-        }
-
-        return commands.OrderBy(c => c).ToList();
-    }
+    /// <summary>
+    /// Schmale Weiterleitung auf den gemeinsamen <see cref="TestRecommendationBuilder"/> —
+    /// einzige Quelle der Wahrheit fuer ausfuehrbare Testbefehle (Tool und Batch-Antwort).
+    /// </summary>
+    internal static IReadOnlyList<string> BuildRecommendedCommands(IReadOnlyList<TestFileCoverageResult> testFiles) =>
+        TestRecommendationBuilder.BuildDotNetTestCommands(testFiles);
 
     private static string SuggestTestFilePath(
         ISymbol symbol,

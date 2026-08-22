@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Threading;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using Microsoft.CodeAnalysis;
 
@@ -53,3 +54,23 @@ internal sealed record DiffImpactAnalysis(
     IReadOnlyList<ChangedFileRange> ChangedFiles,
     IReadOnlyList<ChangedSymbolEntry> ChangedSymbols,
     ReferenceTraversalResult References);
+
+/// <summary>
+/// Instrumentierte Laufzaehler fuer die Einmal-Ausfuehrungs-Nachweise des diff-bezogenen
+/// Analysepfads (Git genau einmal, Testsolution genau einmal, Linter genau einmal). Die
+/// Uebergabe ist optional: Ohne Zaehler verhaelt sich der Produktivpfad exakt wie bisher.
+/// Inkrementiert wird an der jeweiligen Stufe per <see cref="Interlocked"/> — genau ein
+/// Inkrement je Durchlauf, nicht je Symbol. Der Linter-Zaehler hat noch keine
+/// Inkrement-Stelle; er folgt mit der Violations-Stufe, das Feld existiert bereits.
+/// </summary>
+internal sealed class DiffImpactCounters
+{
+    /// <summary>Anzahl tatsaechlich ausgefuehrter Git-Diff-Laeufe.</summary>
+    public int GitRuns;
+
+    /// <summary>Anzahl gebatchter Solution-Durchlaeufe der Testzuordnung (nicht je Symbol).</summary>
+    public int TestSolutionScans;
+
+    /// <summary>Anzahl solutionweiter Linter-Laeufe (wird von der Violations-Stufe inkrementiert).</summary>
+    public int LintRuns;
+}

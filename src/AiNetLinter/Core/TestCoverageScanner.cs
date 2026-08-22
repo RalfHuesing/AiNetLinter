@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -24,97 +23,41 @@ public static partial class TestCoverageScanner
 {
     /// <summary>
     /// Findet alle Testdateien und Testmethoden, die das angegebene Symbol abdecken.
+    /// Duenner Wrapper auf die gebatchte Zuordnung (<see cref="FindTestsForSymbolsAsync"/>)
+    /// mit genau einem Ziel — Signatur, Verhalten und Ergebnisform bleiben unveraendert.
     /// </summary>
     public static async Task<TestCoverageScannerResult> FindTestsForSymbolAsync(
         ISymbol targetSymbol,
         Solution solution,
         CancellationToken ct = default)
     {
-        var targetType = targetSymbol is INamedTypeSymbol named ? named : targetSymbol.ContainingType;
-        var targetTypeName = targetType?.Name ?? targetSymbol.Name;
-        var targetMemberName = targetSymbol is not INamedTypeSymbol ? targetSymbol.Name : null;
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-
-        var results = new List<TestFileCoverageResult>();
-        var totalMatchingTests = 0;
-
-        foreach (var project in solution.Projects)
-        {
-            if (ct.IsCancellationRequested) break;
-            if (!TestDetector.IsTestProjectOrHasTestFiles(project)) continue;
-
-            var projectResults = await ScanProjectDocumentsAsync(
-                project, solutionDir, targetSymbol, targetTypeName, targetMemberName, ct);
-
-            results.AddRange(projectResults);
-            totalMatchingTests += projectResults.Sum(r => r.TestMethods.Count);
-        }
-
-        var sorted = results
-            .OrderBy(r => GetMatchReasonPriority(r.MatchReason))
-            .ThenBy(r => r.FilePath)
-            .ToList();
-
-        return new TestCoverageScannerResult(totalMatchingTests, sorted);
+        var batch = await FindTestsForSymbolsAsync([targetSymbol], solution, ct);
+        var single = batch.Symbols[0];
+        return new TestCoverageScannerResult(single.TotalMatchingTests, single.TestFiles);
     }
 
-    private static async Task<List<TestFileCoverageResult>> ScanProjectDocumentsAsync(
-        Project project,
-        string solutionDir,
-        ISymbol targetSymbol,
-        string targetTypeName,
-        string? targetMemberName,
-        CancellationToken ct)
+    /// <summary>Bereits geladener Testdokument-Kontext (Dokument, relativer Pfad, SyntaxRoot).</summary>
+    private sealed record LoadedTestDocument(Document Document, string RelativePath, SyntaxNode Root);
+
+    /// <summary>
+    /// Gemeinsame Nachbearbeitung einer gematchten Testdatei (Kategorie, Klassenname,
+    /// Projektverzeichnis) fuer den per-Symbol-Wrapper und den Batch-Durchlauf.
+    /// </summary>
+    private static TestFileCoverageResult BuildFileCoverageResult(
+        LoadedTestDocument loadedDocument,
+        string reason,
+        List<string> matchingMethods,
+        int totalClassTests)
     {
-        var results = new List<TestFileCoverageResult>();
-
-        foreach (var document in project.Documents)
-        {
-            if (ct.IsCancellationRequested) break;
-            if (document.FilePath is null) continue;
-
-            var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath);
-            if (!TestDetector.IsTestFile(relativePath)) continue;
-
-            var result = await ProcessDocumentAsync(
-                document, relativePath, targetSymbol, targetTypeName, targetMemberName, ct);
-
-            if (result != null)
-            {
-                results.Add(result);
-            }
-        }
-
-        return results;
-    }
-
-    private static async Task<TestFileCoverageResult?> ProcessDocumentAsync(
-        Document document,
-        string relativePath,
-        ISymbol targetSymbol,
-        string targetTypeName,
-        string? targetMemberName,
-        CancellationToken ct)
-    {
-        var syntaxRoot = await document.GetSyntaxRootAsync(ct);
-        if (syntaxRoot is null) return null;
-
-        var semanticModel = await document.GetSemanticModelAsync(ct);
-        if (semanticModel is null) return null;
-
-        var (fileMatches, reason, matchingMethods, totalClassTests) = AnalyzeDocument(
-            syntaxRoot, semanticModel, targetSymbol, targetTypeName, targetMemberName);
-
-        if (!fileMatches || matchingMethods.Count == 0) return null;
-
-        var category = TestDetector.DetermineCategory(syntaxRoot, relativePath);
-        var className = ExtractFirstTestClassName(syntaxRoot) ?? Path.GetFileNameWithoutExtension(relativePath);
+        var category = TestDetector.DetermineCategory(loadedDocument.Root, loadedDocument.RelativePath);
+        var className = ExtractFirstTestClassName(loadedDocument.Root)
+            ?? Path.GetFileNameWithoutExtension(loadedDocument.RelativePath);
         var projectDir = TestDetector.GetProjectDirectory(
-            document.Project,
-            document.Project.Solution.FilePath is { } slnPath ? Path.GetDirectoryName(slnPath) ?? "" : "");
+            loadedDocument.Document.Project,
+            loadedDocument.Document.Project.Solution.FilePath is { } slnPath ? Path.GetDirectoryName(slnPath) ?? "" : "");
 
         return new TestFileCoverageResult(
-            FilePath: relativePath,
+            FilePath: loadedDocument.RelativePath,
             TestClassName: className,
             Category: category,
             MatchReason: reason,
@@ -367,3 +310,24 @@ public sealed record TestFileCoverageResult(
     int TotalClassTests,
     string? ProjectDirectory = null
 );
+
+/// <summary>
+/// Ergebnis eines gebatchten Test-Zuordnungslaufs ueber alle Ziel-Symbole.
+/// </summary>
+/// <param name="Symbols">Je Ziel-Symbol (in Eingabereihenfolge) die zugeordneten Testdateien.</param>
+/// <param name="DistinctTestFileCount">Solutionweite Dedup-Info: Anzahl verschiedener Testdateien
+/// ueber alle Ziele hinweg (Pfadvergleich case-insensitive).</param>
+/// <param name="DistinctTestFilePaths">Dieselben Pfade dedupliziert und deterministisch (ordinal) sortiert.</param>
+public sealed record TestCoverageBatchScanResult(
+    IReadOnlyList<TestCoverageBatchSymbolResult> Symbols,
+    int DistinctTestFileCount,
+    IReadOnlyList<string> DistinctTestFilePaths);
+
+/// <summary>
+/// Testzuordnung fuer ein einzelnes Ziel aus dem Batch-Durchlauf — feldgleich zur
+/// per-Symbol-API (<see cref="TestCoverageScannerResult"/>), ergaenzt um die stabile Symbol-ID.
+/// </summary>
+public sealed record TestCoverageBatchSymbolResult(
+    string SymbolId,
+    int TotalMatchingTests,
+    IReadOnlyList<TestFileCoverageResult> TestFiles);

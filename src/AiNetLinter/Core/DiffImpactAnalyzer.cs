@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -74,13 +75,24 @@ public sealed class DiffImpactAnalyzer
         RunAnalysisAsync(new DiffAnalysisRequest(
             solution, targetPath, gitSinceRef, verbose, DiffSymbolScope.ChangeContext));
 
-    private static async Task<DiffImpactAnalysis?> RunAnalysisAsync(DiffAnalysisRequest request)
+    /// <summary>
+    /// Gemeinsamer Analyse-Kern hinter beiden benannten Eintrittspunkten; internal, damit
+    /// auch instrumentierte Laeufe (optionale <see cref="DiffImpactCounters"/>) durch
+    /// exakt denselben Pfad gehen wie die Produktion. Git läuft pro Aufruf genau einmal —
+    /// der Zaehler wird unmittelbar vor dem einzigen <see cref="RunGitDiff"/>-Aufruf inkrementiert.
+    /// </summary>
+    internal static async Task<DiffImpactAnalysis?> RunAnalysisAsync(DiffAnalysisRequest request)
     {
         var repoRoot = GitRepositoryLocator.FindRoot(request.TargetPath);
         if (repoRoot == null)
         {
             LogGitWarning(request.Verbose);
             return null;
+        }
+
+        if (request.Counters is { } counters)
+        {
+            Interlocked.Increment(ref counters.GitRuns);
         }
 
         var diffOutput = RunGitDiff(repoRoot, request.GitSinceRef);
@@ -423,10 +435,11 @@ internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Ent
 /// <summary>
 /// Eingangsdaten eines Analyse-Kern-Laufs: Solution, Ziel-Pfad, Git-Ref, Protokollierung und der
 /// Symbolermittlungs-Scope (<see cref="DiffSymbolScope"/>) — Parameter-Object fuer den gemeinsamen
-/// Kern beider benannter Eintrittspunkte.
+/// Kern beider benannter Eintrittspunkte. Die Zaehler sind optional (Null-Verhalten ohne Uebergabe).
 /// </summary>
 internal sealed record DiffAnalysisRequest(
-    Solution Solution, string TargetPath, string? GitSinceRef, bool Verbose, DiffSymbolScope Scope);
+    Solution Solution, string TargetPath, string? GitSinceRef, bool Verbose, DiffSymbolScope Scope,
+    DiffImpactCounters? Counters = null);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle

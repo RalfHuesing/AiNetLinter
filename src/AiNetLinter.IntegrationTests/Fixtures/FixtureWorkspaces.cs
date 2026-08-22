@@ -71,37 +71,49 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
     public void CommitCalculatorAddBodyChange()
     {
         ChangeCalculatorAddBodyWithoutCommitting();
-        RunGit("add -A");
-        RunGit("commit -m change");
+        FixtureGit.Run(RootPath, "add -A");
+        FixtureGit.Run(RootPath, "commit -m change");
     }
 
-    protected override void PrepareForDelete()
-    {
-        if (!Directory.Exists(RootPath)) return;
-        foreach (var path in Directory.EnumerateFileSystemEntries(RootPath, "*", SearchOption.AllDirectories))
-        {
-            File.SetAttributes(path, FileAttributes.Normal);
-        }
-        File.SetAttributes(RootPath, FileAttributes.Normal);
-    }
+    protected override void PrepareForDelete() => FixtureFileAttributes.NormalizeTree(RootPath);
 
     private void InitializeGitRepository()
     {
-        RunGit("init");
-        RunGit("config user.email ainetlinter-test@example.com");
-        RunGit("config user.name AiNetLinterTest");
-        RunGit("add -A");
-        RunGit("commit -m initial");
+        FixtureGit.Run(RootPath, "init");
+        FixtureGit.Run(RootPath, "config user.email ainetlinter-test@example.com");
+        FixtureGit.Run(RootPath, "config user.name AiNetLinterTest");
+        FixtureGit.Run(RootPath, "add -A");
+        FixtureGit.Run(RootPath, "commit -m initial");
     }
+}
 
+// Setzt Datei- und Ordnerattribute auf Normal, damit read-only Git-Objekte beim Teardown loeschbar sind.
+internal static class FixtureFileAttributes
+{
+    internal static void NormalizeTree(string rootPath)
+    {
+        if (!Directory.Exists(rootPath)) return;
+
+        foreach (var path in Directory.EnumerateFileSystemEntries(rootPath, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+
+        File.SetAttributes(rootPath, FileAttributes.Normal);
+    }
+}
+
+// Gemeinsamer synchroner git-Aufrufer der Fixture-Workspaces.
+internal static class FixtureGit
+{
     // ainetlinter-disable BanBlockingTaskAccess
-    private void RunGit(string arguments)
+    internal static void Run(string workingDirectory, string arguments)
     {
         var startInfo = new ProcessStartInfo
         {
             FileName = "git",
             Arguments = arguments,
-            WorkingDirectory = RootPath,
+            WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
@@ -115,6 +127,63 @@ internal sealed class GitImpactMiniFixtureWorkspace : FixtureWorkspace
         process.WaitForExit();
         Task.WaitAll(stdoutTask, stderrTask);
         if (process.ExitCode != 0) throw new InvalidOperationException($"git {arguments} schlug fehl: {stderrTask.Result}");
+    }
+}
+
+/// <summary>
+/// Mini-Git-Workspace fuer das Change-Context-Szenario: legt die Produktionsquelldateien
+/// der <see cref="ChangeContextScenarioFactory"/> physisch ab, committet sie initial und
+/// erlaubt uncommittete Body-Aenderungen beider Methoden. Das naechstliegende .git ist das
+/// des Workspaces — ein Analyzer-Diff-Lauf sieht exakt die Szenario-Aenderungen.
+/// </summary>
+internal sealed class ChangeContextMiniWorkspace : IDisposable
+{
+    private readonly TestTempDirectory tempDirectory;
+
+    public ChangeContextMiniWorkspace()
+    {
+        tempDirectory = TestTempDirectory.Create("change-context-scenario-");
+        RootPath = tempDirectory.DirectoryPath;
+        WriteScenarioFiles();
+        InitializeGitRepository();
+    }
+
+    public string RootPath { get; }
+
+    public RoslynTestSolution CreateSolution() => ChangeContextScenarioFactory.CreateSolution(RootPath);
+
+    /// <summary>Aendert beide Methoden-Body-Zeilen uncommittet — je eine Hunk-Zeile pro Datei.</summary>
+    public void ChangeBothMethodBodiesWithoutCommitting()
+    {
+        foreach (var (projectName, fileName, content) in ChangeContextScenarioFactory.GetChangedProductionSources())
+        {
+            File.WriteAllText(Path.Combine(RootPath, projectName, fileName), content);
+        }
+    }
+
+    public void Dispose()
+    {
+        FixtureFileAttributes.NormalizeTree(RootPath);
+        tempDirectory.Dispose();
+    }
+
+    private void WriteScenarioFiles()
+    {
+        foreach (var (projectName, fileName, content) in ChangeContextScenarioFactory.GetProductionSources())
+        {
+            var path = Path.Combine(RootPath, projectName, fileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, content);
+        }
+    }
+
+    private void InitializeGitRepository()
+    {
+        FixtureGit.Run(RootPath, "init");
+        FixtureGit.Run(RootPath, "config user.email change-context-scenario@example.com");
+        FixtureGit.Run(RootPath, "config user.name ChangeContextScenario");
+        FixtureGit.Run(RootPath, "add -A");
+        FixtureGit.Run(RootPath, "commit -m initial");
     }
 }
 
