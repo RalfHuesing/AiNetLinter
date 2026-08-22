@@ -258,6 +258,8 @@ Wiring (mechanisch, identisches Muster je Klasse):
 - `McpServerCommand.RunAsync` hält keine Serverinstanz mehr, sondern die Registry (+ Eviction-Timer);
   `reload_config` und `get_server_health` routen über denselben Resolver; Health aggregiert pro Key
   (F5 liefert Pro-Instanz-Werte: Root/Solution/Rules/lastUsed/RefreshCount/Staleness/Uptime).
+- `reload_config` ist ein ganz normales Tool unter dem Vertrag: es wirkt auf den EINEN per
+  `projectRoot` adressierten Key (Config-Hot-Swap, F5), nicht prozessweit.
 - projectRoot-Vertrag einmalig in `ServerInstructions.Text` (F6).
 - Lint-Grenzen F7 einhalten (Registry-Klassen klein, Options-Records).
 
@@ -267,6 +269,23 @@ MISS: unter kurzem Lock prüfen → Load-Task starten (ohne Lock) → parallele 
 Root awaiten dieselbe Task (Dictionary `rootPath → Task<LoadedProject>`, Eintrag wird nach Abschluss
 zum festen Entry). Fehlgeschlagene Loads werfen den Platzhalter weg; der nächste Call versucht neu
 (kein negatives Caching).
+
+**Key-Kanonisierung (Final-Pass):** Key = `Path.GetFullPath(projectRoot)` mit abschließenden
+Trennern (`\` und `/`) entfernt. GetFullPath vereinheitlicht Groß/Kleinschreibung-Normalisierung
+nicht selbst — der Dictionary-Comparer `OrdinalIgnoreCase` (oben) deckt sie; entscheidend ist, dass
+`C:/repos/foo` und `C:\repos\foo` (unterschiedliche Clients schreiben das unterschiedlich) auf
+denselben Key mappen. Unit-Test fixiert genau diese Äquivalenz.
+
+**Hinweis zur Erreichbarkeit von PROJECT_ROOT_REQUIRED (Final-Pass):** Das MCP-SDK validiert
+Pflichtparameter üblicherweise bereits am JSON-Schema und lehnt fehlendes `projectRoot` selbst ab —
+der eigene Fehlercode ist Defense-in-Depth für Hosts mit laxer Validierung, kein Normalfall. Der
+Contract-Test prüft das Schema (required), NICHT die Erreichbarkeit des Codes über den SDK-Pfad.
+
+**Overview-Ressource (Final-Pass-Entscheidung):** MCP-Resources nehmen keine Tool-Argumente; die
+bisherige statische URI ist bei mehreren Projekten nicht adressierbar. Die Ressource erhält ein
+URI-Template mit Query-Parameter: `ainetlinter://overview?projectRoot=<url-encoded>` (URL-kodierter,
+absoluter Pfad; fehlt/ungültig → gleiche Fehlerverträge wie bei Tools). KEIN neuer Tool-Ersatz — die
+Toolanzahl bleibt eingefroren (Non-Goal „keine Tool-Removal/neue Tools" bleibt unangetastet).
 
 ## A.5 Fehlerverträge (alle deterministisch, englisch, mit Bauanleitung)
 
@@ -309,6 +328,8 @@ Kanäle:
 - **Idle-TTL:** Timer (Default 5 Min Takt) disposed Keys mit `lastUsed > 45 Min`
   (konfigurierbar: `--mcp-project-ttl-minutes`, `--mcp-max-projects` — statische Parameter, erlaubt
   in Client-Konfiguration, da projektagnostisch). Reload beim nächsten Call = frischer Stand garantiert.
+  Flag-Werte werden als **decimal Minuten** geparst (InvariantCulture, z. B. `0.05` ≈ 3 s) — so können
+  Integrationstests kurze TTLs setzen; ungültiger Wert → harter Startfehler.
 - **maxProjects (Default 4) + LRU:** neuer Key bei vollem Registry verdrängt ältesten.
 - Caveats (dokumentiert): .NET gibt GC-RAM träge ans OS (Kurve sägt); Solution-Reload kostet Sekunden
   bis Minuten — TTL nicht aggressiv setzen; Dispose muss Workspace-/Catalog-Referenzen konsequent
@@ -471,6 +492,8 @@ gehen ausschließlich nach stderr oder ins Observability-Log; per Contract-Test 
 `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`:
 Array `{ rootPath, lastUsedUtc }`, max maxProjects, geschrieben bei jedem Touch (debounced) und beim
 Shutdown. Nur ein Warmstart-Hinweis, niemals Wahrheitsquelle: Definitionsdatei ist immer der Vertrag.
+Debounce grob: frühestens 30 s nach dem letzten Touch schreiben (ein Timer, kein Per-Touch-Spawn);
+Schreibfehler (gesperrte Datei) werden geloggt und ignoriert — der State ist verzichtbar.
 
 ## B.5 Umsetzungspfad (Epic B)
 
@@ -499,11 +522,16 @@ Integration (Category=Integration):
 - Echter Daemon-Prozess (Test spawnt EXE): zwei Thin-Clients parallel, Calls je `projectRoot` korrekt;
   zweiter Client profitiert (kein zweiter vollständiger Load — RefreshCount/Staleness-Zähler belegen
   Shared-Warmth).
-- Versions-Mismatch: Daemon alter Version → Client löst sauberen Neustart aus, danach kompatibel.
 - Idle-Exit: Clients trennen → Daemon beendet sich innerhalb TTL; MRU-State geschrieben.
 - Kaltstart-Warmup: Daemon-Start wärmt MRU-Keys; erster Client-Call gegen gewärmten Key ist schnell.
-- Hänger-Pfad: nicht reagierender Daemon (Test-Injektion) → Client killt/neu startet, Call-Log-Eintrag.
+- Hänger-Pfad: nicht reagierender Daemon → Client killt/neu startet, Call-Log-Eintrag. Umsetzung:
+  Stellvertreter-Prozess (Test startet einen Prozess, der die Pipe bindet und nie antwortet) statt
+  Injektion in die echte EXE — deterministisch, kein Timing-Glück.
 - Escape: `AINETLINTER_NO_DAEMON=1` → In-proc-Modus ohne Daemon-Prozess.
+
+Versions-Mismatch wird NICHT als Zwei-Prozess-Integrationstest geführt (es gibt keine alte EXE zum
+Spawnen) — die Versionsvergleichslogik ist über einen injizierbaren Versionsprovider vollständig
+unit-getestet (kompatibel / Mismatch / Anti-Ping-Pong-Fall mit simulierten Verbindungen).
 
 Stress-frei halten: Prozess-Orchestrierungstests bewusst klein halten (wenige E2E), Daemon-Logik
 selbst in-proc testen (Richtlinien §2: lastintensive Parallelläufe gehören nach `Category=Stress`,
