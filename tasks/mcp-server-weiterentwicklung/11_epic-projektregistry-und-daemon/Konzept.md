@@ -315,6 +315,29 @@ Fehlermodus. Umsetzung: Eviction markiert Key als „eviction pending" und dispo
 in-flight Call (oder beim nächsten Idle-Tick). Ein neuer Call gegen einen pending-Key startet normal
 einen frischen Load.
 
+### Solution-Zustand: zweistufiger Fehlervertrag (Build-Fehler, kaputte Projekte)
+
+Unterschieden wird, WOHER der Zustandswechsel kommt:
+
+| Pfad | Fehlerfall | Vertrag |
+|---|---|---|
+| **Kalt-Load** (Registry-Miss, Eviction-Reload, Warmup) | Solution/Rules nicht ladbar (kaputtes `.sln`/`.csproj`, fehlende Packages) | Harter Fehler `PROJECT_LOAD_FAILED` mit Ursprungsmeldung (+ Restore-Hint); KEIN Registry-Eintrag; nächster Call versucht neu (kein negatives Caching). |
+| **Inkrementeller Staleness-Refresh** (bekannte/neue/geänderte Dateien, csproj-Änderung) | Re-Evaluation schlägt fehl | **LETZTER GUTER STAND bleibt resident**; Analyse läuft weiter; Antworten auf diesem Key tragen bis zur erfolgreichen Aktualisierung einen `[WARN]`-Kopf; Health führt pro Key `LastGoodStateUtc` + `LastLoadError`. |
+
+Syntaxfehler in einzelnen `.cs`-Dateien sind KEIN Load-Fehler (Roslyn toleriert sie; Diagnose erscheint
+ohnehin in Tool-Antworten) — der Vertrag greift erst auf MSBuild-/Solution-Ebene. Das Praxis-Szenario
+„ein Agent baut Mist, die Solution lädt nicht neu" ist damit deterministisch abgedeckt: Weiterarbeiten
+auf last-good (sichtbar markiert), Reparatur durch den schreibenden Agent, nächster Refresh heilt.
+
+### Gleichzeitigkeit & Snapshot-Semantik
+
+Mehrere Clients am SELBEN Key teilen sich dieselbe Serverinstanz: Der Staleness-Check serialisiert
+unter dem Instanz-Lock, Analysen laufen außerhalb des Locks auf unveränderlichen Roslyn-Solution-
+Snapshots (thread-sicher lesend). Gewollte Konsequenz: Ein nur-lesender Zusatz-Agent sieht die
+Änderungen des schreibenden Agenten spätestens mit seinem nächsten Call — geteilter warmer Stand
+statt veralteter Prozesskopien. Konsistenzgrenze ist bewusst PRO CALL (Snapshot), nie innerhalb
+eines Calls.
+
 ## A.8 Tests (Epic A)
 
 Unit (FastTests, Category=Unit):
@@ -332,6 +355,11 @@ Unit (FastTests, Category=Unit):
 - Busy-Guard (Audit 2): laufender Call schützt den Key vor TTL/LRU-Eviction; danach greift sie.
 - Eviction: TTL mit injizierbarer Clock; LRU-Reihenfolge; maxProjects-Grenze; Dispose wird gerufen.
 - Contract-Tests: jedes Tool-Schema enthält `projectRoot` als required (tools/list-Assertion).
+- Zweistufiger Zustandsvertrag: Kalt-Load-Fehler → `PROJECT_LOAD_FAILED` ohne Registry-Eintrag;
+  inkrementeller Refresh-Fehler → last-good bleibt resident, `[WARN]`-Kopf gesetzt, Health-Felder
+  (`LastGoodStateUtc`/`LastLoadError`) gefüllt; erfolgreicher Refresh heilt die Markierung.
+- Snapshot-Semantik: parallele Calls mehrerer simulierter Clients auf denselben Key liefern je Call
+  konsistente Ergebnisse; eine zwischen zwei Calls erfolgte Änderung ist im Folge-Call sichtbar.
 
 Integration (Category=Integration):
 
@@ -395,8 +423,20 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
   - Daemon → Client: `{ "welcome": { "protocolVersion": 1, "daemonVersion": "1.0.y", "pid": n } }`
   - **Versions-Handshake:** `daemonVersion != exeVersion` → Client sendet `shutdown`, wartet auf Exit,
     startet Daemon neu (löst das „alter Daemon nach Update“-Problem sauber statt per Kill).
+  **Anti-Ping-Pong** (Self-Audit 11): Stehen beim Versions-Mismatch noch ANDERE Verbindungen, fährt
+  der Client den Daemon NICHT herunter, sondern bricht mit `VERSION_CONFLICT` ab (macht die
+  Konfigurations-Inkonsistenz sichtbar statt einen Neustart-Wettlauf zu verlieren). Shutdown nur bei
+  null weiteren Verbindungen.
   - Danach: opake Byte-/JSON-RPC-Pump in beide Richtungen; der Thin-Client interpretiert MCP-Inhalte
     NICHT (Decoupling vom SDK-Standalone).
+- **Pipe-Abbruch mitten im Call** (Self-Audit 12): Stirbt der Daemon zwischen Request und Response,
+  wiederholt DER Thin-Client denselben Call GENAU EINMAL automatisch (Connect-or-Start neu) — zulässig,
+  weil alle Tools read-only und damit idempotent sind. Ein zweiter Fehlschlag wird roh an den Agenten
+  durchgereicht (kein stiller Retry-Loop).
+- **Reaper-Erbe** (Self-Audit 13): Der Thin-Client erbt den bestehenden `--parent-pid`-Reaper gegen
+  SEINEN Agent-Prozess: stirbt der Agent, stirbt der Thin-Client, die Pipe-Verbindung endet — der
+  Daemon sieht den Disconnect und kann idle-exiten. Damit gibt es keine Waisen-Verbindungen, die den
+  Daemon ewig festhalten; der DAEMON selbst nutzt weiterhin keinen Reaper.
 - **Single-Instance-Race:** Client versucht zuerst Connect (kurzes Timeout); scheitert er, spawnt er
   den Daemon (detached, ohne Parent-Bindung) und retried bis zu N Sekunden. Zwei gleichzeitige Starter:
   der Verlierer des Pipe-Greifens verbindet sich einfach.
@@ -405,7 +445,7 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 
 | Mechanismus | Regel |
 |---|---|
-| Start | Lazy durch ersten Client; lädt MRU-State und wärmt die letzten ≤ maxProjects Keys **sequenziell im Hintergrund** (Definitionsdateien werden erneut gelesen; fehlt eine → Eintrag verwerfen, kein Fehler). |
+| Start | Lazy durch ersten Client; liest MRU-State und wärmt die letzten ≤ maxProjects Keys im Hintergrund — **über denselben Resolve-/Dedupe-Pfad wie interaktive Calls, mit gebundener Konkurrenz (max 2 parallele Warmup-Loads)**. Ein interaktiver Load wartet NIE hinter der Warmup-Queue (Self-Audit 9). Tote Pfade (Projekt gelöscht, Definitionsdatei weg) werden verworfen UND aus dem MRU-State entfernt (Self-Audit 10); fehlgeschlagene Warmups blockieren den Daemonbetrieb nicht. |
 | Idle-Exit | Keine verbundene Clients UND Idle ≥ `--mcp-daemon-idle-exit-minutes` (Default 10) → graceful Shutdown inkl. Dispose aller Keys und MRU-Persistierung. |
 | Hänger-Schutz | Thin-Client-Ping mit Timeout; bei Hänger darf der Client den Daemon terminieren und neu starten (er hängt ja für alle) — Ereignis ins Call-Log. |
 | Kein Parent-Bindung | Der Daemon nutzt den `--parent-pid`-Reaper bewusst NICHT (er überlebt einzelne Clients gewollt); seine Sicherheit ist Idle-Exit + Versions-Handshake. |
@@ -515,6 +555,28 @@ Konfigurationen, dann Doku. Kein Epic wird halb verlassen — jedes endet mit ei
 | Race zweier Erststarter | Connect-first/spawn-second Pattern; Pipe-Greifen entscheidet. |
 | IPC-Fehlersuche schwer | Observability in BEIDEN Prozessen mit gemeinsamer Connection-ID; Debug-Escape `AINETLINTER_NO_DAEMON=1`. |
 | GC-Trägheit verfälscht RAM-Erwartung | Dokumentiert; Monitoring über Health statt Task-Manager-Impressionen. |
+
+# End-to-End-Durchlauf (Referenzszenario, verifiziert gegen die Verträge)
+
+Frischer Rechner, 4 Solutions, 4 verschiedene Agent-Clients werden gestaffelt (~10 s Abstand) gestartet,
+dazu später ein fünfter Nur-Lese-Agent auf Solution 1:
+
+| T | Ereignis | Ablauf laut Vertrag |
+|---|---|---|
+| +0s | Rechner frisch | Kein Daemon. Keine Prozesse. |
+| +10s | Agent 1 (S1) startet | Thin-Client: Pipe fehlt → detached Daemon-Spawn → Retry bis Handshake ok. Erster Call: Registry-Miss → interaktiver Load S1 (Warmup konkurriert gebunden, wartet nie vor ihm). |
+| +20–40s | Agents 2–4 (S2–S4) | Jeweils eigener Thin-Client (Clients spawnen unabhängig — gewollt), Connect zum lebenden Daemon, MISS → je ein Load. Registry bei 4/4. |
+| +50s | Agent 5 (Nur-Lese, S1) | HIT: warm, sofortige Antwort. Teilt Serverinstanz mit Agent 1; Snapshot-Semantik pro Call (siehe Gleichzeitigkeit). |
+| später | Schreib-Agent macht csproj kaputt | Inkrementeller Refresh schlägt fehl → last-good bleibt resident, `[WARN]`-Kopf, Health zeigt LastLoadError. Lesen weiter möglich; Reparatur heilt beim nächsten Refresh. |
+| später | Solution 1 tagelang unbenutzt | TTL evictet Key (busy-safe); nächster Call = Kalt-Load. |
+| Ende des Tages | Letzter Agent zu | Alle Verbindungen zu → Idle-Timer läuft ab → graceful Shutdown, MRU-State geschrieben. Nächster Morgen: Kaltstart einmalig, dann warm via MRU. |
+
+Bewusst akzeptierte Grenzfälle (dokumentiert, keine Behandlung): derselbe physische Pfad unter zwei
+Schreibweisen/Subst-Laufwerken erzeugt zwei Keys (praxisfern; Kanonisierung deckt Groß/Klein und
+Slash-Richtung ab); >4 wirklich gleichzeitige aktive Solutions erzeugen LRU-Churn (bewusstes Limit);
+Kaltstart-Latenz des allerersten Calls (Host-Timeouts 120–300 s reichen locker; Retry trifft deduplizierten/warmen
+Load); AV/EDR könnte detached Spawn oder Named Pipes einschränken → Escape-Variablen + stderr-Diagnose
+machen es sichtbar.
 
 # Bewusst später (nicht Teil dieses Epics)
 
