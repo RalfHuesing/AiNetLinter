@@ -15,7 +15,7 @@ current_step: step-003
 - **Task-Status:** `executing`
 - **Steps gesamt:** 2 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-003` (in_progress)
+- **Aktueller Schritt:** keiner (step-003 done; step-004-Konsolidierungsplan folgt)
 
 > **Nutzerentscheidung 2026-08-22 (Straffung):** Die restlichen Epics werden
 > zu größeren Steps konsolidiert (EPIC-3+4 → step-004, EPIC-5+6+7 → step-005).
@@ -32,7 +32,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
 | step-002 | EPIC-2 | done | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | 5b26c63b | approved | 59331e2e / 52f18833 |
-| step-003 | EPIC-2 | in_progress | Breiter Diff-Symbolscanner mit kollisionsfreien stabilen IDs | - | - | - | - |
+| step-003 | EPIC-2 | done | Breiter Diff-Symbolscanner mit kollisionsfreien stabilen IDs | - | 85c7fdce | approved | e31006dd / bb34d3a7 |
 
 ## Config
 

@@ -2,7 +2,7 @@
 task: 03_get-impact-zum-diff-kontext-erweitern
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-22T20:55:00+02:00
+last_updated: 2026-08-22T22:10:00+02:00
 ---
 
 # Tech-Debt-Log: 03_get-impact-zum-diff-kontext-erweitern
@@ -96,7 +96,11 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 - **Auto-Fixable:** nein — Design-Entscheidung am gemeinsamen ID-Schema
   mit Auswirkung auf künftige Vertragsfelder, keine rein mechanische
   Korrektur.
-- **Status:** offen  # offen | erledigt | verworfen — Änderung ist
+- **Status:** erledigt (step-003, Kritiker-Review vom 2026-08-22:
+  deterministischer `#lf:`-Sonderfall sitzt IN `GetStableSymbolId` —
+  gemeinsame Quelle für `ChangedSymbolEntry.SymbolId` und
+  `ReachedFromSymbolId` — und ist per Unit-/Integrationstests gegen Code
+  bestätigt)  # offen | erledigt | verworfen — Änderung ist
   manuell (Nutzer) bzw. automatisch auf „erledigt" nach erfolgreicher
   Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
   Status eines `nein`-Eintrags selbst
