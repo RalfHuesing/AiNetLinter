@@ -205,6 +205,37 @@ Tool-Call(projectRoot="C:/repos/foo", ...)
   Präzedenz: `global.json`, `nuget.config`). Suffix `-project`, weil die Datei Ziel **und** Regelwerk
   definiert — sie beschreibt das Lint-Projekt, nicht nur eine Solution.
 
+### Self-Service: Agenten erzeugen die Definitionsdatei selbst
+
+Die Definitionsdatei ist bewusst so einfach (zwei Pflichtfelder), dass ein Coding-Agent sie **ohne
+menschliche Hilfe** anlegen kann. Der Wissenstransport läuft über drei Kanäle, ohne dass der Agent
+unsere Docs gelesen haben muss:
+
+1. **Fehlertext als primärer Kanal (in-band):** `PROJECT_NOT_INITIALIZED` enthält den erwarteten
+   Pfad UND das kopierfähige Minimal-Template mit Feldsemantik. Deterministischer Selbstheilungs-Loop:
+   Call schlägt fehl → Agent legt Datei an (Solution/Rules findet er selbst im Verzeichnisbaum) →
+   Retry gelingt. Vorgeschriebener Hinweisteil des Fehlertexts (exakt dieser Block, englisch):
+
+   ```text
+   Create <root>/ainetlinter.project.json with:
+   {
+     "solution": "<path/to/your.slnx or .sln>",  // relative to this file, or absolute
+     "rules":    "<path/to/rules.json>"          // relative to this file, or absolute; MUST exist
+   }
+   Then retry the call with the same projectRoot.
+   ```
+
+2. **`ServerInstructions.Text`** (F6): eine Zeile zum Dateivertrag im initialize-Handshake — der
+   Agent weiß vor dem ersten Aufruf, dass `projectRoot` auf ein Verzeichnis mit
+   `ainetlinter.project.json` zeigen muss.
+3. **`Docs/agent-api.md`**: Referenzabschnitt „ainetlinter.project.json" (Feldtabelle, relativer Anker,
+   Beispiele) für Menschen und Agents mit Doc-Zugriff; zusätzlich AGENTS.md-Abschnitt in diesem Repo
+   (Migrationsplan).
+
+Keine Magie nötig: Die Datei ist einmalige Projekt-Infrastruktur (wie `global.json`) — vorhanden heißt
+gelesen, fehlend heißt deterministischer Fehler mit Bauanleitung. Bewusst KEIN `init`-Generator-Kommando
+(Non-Goal): Das Template im Fehlertext macht einen Generator überflüssig; bei real Bedarf wiedervorlegen.
+
 ### Parameter-Strategie
 
 | Ebene | Neu | Bestehend |
@@ -251,7 +282,7 @@ Alle Fehler strukturiert, deterministisch, mit Handlungsanweisung (englisch, kon
 | Fall | Code (neu) | Textbaustein |
 |---|---|---|
 | `projectRoot` fehlt | `PROJECT_ROOT_REQUIRED` | Parameter ist ausnahmslos Pflicht |
-| Definitionsdatei fehlt | `PROJECT_NOT_INITIALIZED` | Erwarteter Pfad `<root>/ainetlinter.project.json` |
+| Definitionsdatei fehlt | `PROJECT_NOT_INITIALIZED` | Erwarteter Pfad `<root>/ainetlinter.project.json` + kopierfähiges Minimal-Template (siehe „Self-Service") |
 | Feld `solution`/`rules` fehlt oder JSON defekt | `PROJECT_DEFINITION_INVALID` | Betroffenes Feld + Definitionsdatei-Pfad |
 | Solution laut Definitionsdatei nicht gefunden | `SOLUTION_NOT_FOUND` | Aufgelöster absoluter Pfad (Anker: Definitionsdatei) |
 | rules laut Definitionsdatei nicht vorhanden | `RULES_NOT_FOUND` | Aufgeloster absoluter Pfad; kein Default, kein Raten |
@@ -275,6 +306,9 @@ Unit (FastTests, Category=Unit):
   (auch bei genau einem geladenen Key).
 - Kein-Fallback-Vertrag: rules nicht angegeben → RULES_NOT_FOUND (Nachbar-Suche darf nie greifen);
   Solution-Pfad existiert nicht → SOLUTION_NOT_FOUND mit aufgelöstem absolutem Pfad.
+- Self-Service-Vertrag: Fehlertext von PROJECT_NOT_INITIALIZED enthält den vorgeschriebenen
+  Template-Block (Unit, Text-Assertion); Integration: Call ohne Definitionsdatei → Fehler → Datei
+  gemäß Template anlegen → Retry mit gleichem projectRoot gelingt.
 - Eviction: TTL mit injizierbarer Clock; LRU-Reihenfolge; maxProjects-Grenze.
 - Dispose-Korrektheit: Nach Eviction werden Catalog/Workspace disposet (kein Leakszenario im Test
   assertierbar, aber Dispose-Aufruf und Registry-Entfernung).
