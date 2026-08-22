@@ -8,7 +8,7 @@ agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
 last_updated: 2026-08-22
 open_questions: []
-herkunft: "Diskussion 2026-08-22 (ox-alpha + Nutzer): MCP-Server wurde global mit hartkodierter --path/--config-Registrierung genutzt; in Multi-Projekt-/Multi-Agent-Setups bindet er still an die falsche Solution."
+herkunft: "Diskussion 2026-08-22 (ox-alpha + Nutzer): MCP-Server wurde global mit hartkodierter --path/--config-Registrierung genutzt; in Multi-Projekt-/Multi-Agent-Setups bindet er still an die falsche Solution. Nachschärfung 2026-08-22: harter Cut statt Migration, alle Parameter Pflicht, Definitionsdatei ainetlinter.project.json."
 ---
 
 # Konzept 11: Projektregistry — deterministische Mehrfach-Solution-Bindung für den MCP-Server
@@ -61,9 +61,10 @@ Angelehnt an und weiter konsistent mit `90_bewusst-nicht-umsetzen.md`:
 | **Kein Auto-Init aus cwd** | Reproduziert exakt die stille Fehl-Bindung, die dieses Konzept beseitigt. Init nur durch explizite Übergabe von `projectRoot` im Call. |
 | **Kein Lock-/Claim-File zwischen Prozessen** | Stale-Locks nach Abstürzen, Cross-Process-Konflikte, kein Nutzen für Single-User-Linter. |
 | **Keine Heuristiken/„magische" Lösungsvorschläge bei Fehlern** | Fehlermeldungen sind deterministisch und nennen den Fix; keine Rate-Vorschläge des Servers. |
-| **Kein FileSystemWatcher-basiertes yaml-Reload** | yaml wird nur beim Key-Load gelesen; Re-Init läuft über erneutes `activate_project`. Konsistent mit 02-Staleness-Entscheidung (Messung vor Watcher). |
+| **Kein FileSystemWatcher-basiertes Definitions-Reload** | Die Definitionsdatei wird nur beim Key-Load gelesen; Refresh = Key-Eviction/Neuladen. Konsistent mit 02-Staleness-Entscheidung (Messung vor Watcher). |
 | **Kein Umbau der Batch-Pipeline** | `--path`/`--config` bleiben für Batch-Lint vollständig erhalten; Änderungen betreffen ausschließlich den MCP-Modus. |
 | **Keine Entfernung bestehender Tools** | Alle 26 Tools bleiben; es kommt ein Initialisierungsvertrag hinzu, keine Removal (konsistent mit `90 §B.1`). |
+| **Keine Deprecations-/Übergangsphase** | Harter Cut: interne Toolkette, alle Client-Konfigurationen sind selbst verwaltet; alte Parameter = unbekanntes Argument = harter Fehler. |
 | **Kein Multi-Agent-Installer / Detached-Daemon / Cloud** | Weiter gültig (`90 §C.5`, `§C.6`). |
 
 ## Architektur
@@ -77,7 +78,7 @@ record LoadedProject(
     string RootPath,            // kanonisierter projectRoot
     string DefinitionPath,      // aufgelöster Pfad der Definitionsdatei
     string SolutionPath,        // aus Definitionsdatei (relativ → absolut zur Definitionsdatei)
-    string? RulesPath,          // aus Definitionsdatei oder Fallback "neben Solution"
+    string RulesPath,           // aus Definitionsdatei (Pflichtfeld, kein Fallback)
     McpCodeGraphServer Server)  // bestehender residenter Server ZU DIESEM Projekt (kein Globalzustand mehr)
 ```
 
@@ -95,15 +96,16 @@ Tool-Call(projectRoot="C:/repos/foo", ...)
   1. projectRoot normalisieren/kanonisieren (vollständig qualifiziert; OrdinalIgnoreCase-Key)
   2. Registry-Lookup:
      - HIT  → lastUsed aktualisieren → Dispatch gegen registrierten Server
-     - MISS → Definitionsdatei suchen:
-         a) <projectRoot>/.ai-netlinter.json vorhanden → laden
-         b) fehlt → [ERROR] PROJECT_NOT_INITIALIZED mit Schema-Hilfe (kein Raten!)
+     - MISS → Definitionsdatei prüfen:
+         a) <projectRoot>/ainetlinter.project.json vorhanden → laden (solution + rules beide Pflicht)
+         b) fehlt → [ERROR] PROJECT_NOT_INITIALIZED (kein Raten!)
   3. Lazy-Init: Solution+Rules laden (bestehende LoadAsync-Pipeline),
      maxProjects geprüft (sonst LRU-Eviction), Registry-Eintrag anlegen
-  4. Dispatch + Antwort mit Binding-Header: "[Project]: <root> · Solution: X · rules: Y"
+  4. Dispatch gegen den registrierten Projekt-Server; keine Bindungs-Metadaten in
+     Analyse-Antworten (Registry-Sichtbarkeit ausschließlich über get_server_health)
 ```
 
-### Definitionsdatei `.ai-netlinter.json`
+### Definitionsdatei `ainetlinter.project.json`
 
 **Formatentscheidung JSON, nicht YAML** — Gründe:
 
@@ -121,26 +123,27 @@ Tool-Call(projectRoot="C:/repos/foo", ...)
 }
 ```
 
-(`$schema`-Verweis optional ergänzbar; ob und wo ein JSON-Schema publiziert wird, entscheidet sich bei der
-Umsetzung — das Beispiel oben zeigt bewusst nur die Pflicht-/Optional-Felder.)
-
 - `solution` (**Pflicht**): relativ zur **Definitionsdatei**, nicht zum cwd — dieselbe Datei funktioniert
   auf jedem Checkout. Absoluter Pfad ebenfalls erlaubt.
-- `rules` (optional): relativ zur Definitionsdatei; fehlt es → bewährter Nachbar-Fallback („rules.json
-  neben der Solution"), wie heute (`TryResolveRulesJsonPath`).
-- Dateiname: **`.ai-netlinter.json`** (dot-prefixed = fällt in gängigen Explorer-Views auf, signalisiert
-  „Tool-Config"; Alternativen `ainetlinter.json`/`AiNetLinter.json` verworfen, um Verwechslung mit
-  `rules.json` zu vermeiden).
+- `rules` (**Pflicht**): relativ zur Definitionsdatei aufgelöst; kein Fallback, kein Raten — Feld fehlt
+  oder Datei existiert nicht → harter Fehler. Der Nachbar-Fallback (`TryResolveRulesJsonPath`) stirbt
+  damit im MCP-Pfad ersatzlos.
+- Dateiname: **`ainetlinter.project.json`** — ohne führenden Punkt (Windows-Explorer blendet Dotfiles
+  ohnehin nicht aus; maschinell wird exakt per Pfad geprüft, Sichtbarkeit hilft Menschen beim Review;
+  Präzedenz: `global.json`, `nuget.config`). Suffix `-project`, weil die Datei Ziel **und** Regelwerk
+  definiert — sie beschreibt das Lint-Projekt, nicht nur eine Solution.
 
 ### Parameter-Strategie
 
 | Ebene | Neu | Bestehend |
 |---|---|---|
 | **Client-Konfiguration** | nur `command` (+ optional statisches `--mcp-log`) | `--path`/`--config` **entfallen im MCP-Modus** |
-| **Pro Call** | `projectRoot` (Pflicht bei ≥2 geladenen Keys; optional bei genau 1) | — |
+| **Pro Call** | `projectRoot` (ausnahmslos Pflicht — kein bedingter Vertrag) | — |
 
-**Boilerplate-Abmilderung:** Ist **genau ein** Projekt geladen, darf `projectRoot` entfallen (Fallback
-auf das eine). Ab **zwei** geladenen Keys: Pflicht, bei Fehlen harter Fehler mit Key-Liste. Nie still raten.
+**Keine Ausnahmen:** Auch bei genau einem geladenen Key ist `projectRoot` Pflicht. Ein bedingter Vertrag
+(„darf entfallen, wenn …") wäre für Agenten nicht entscheidbar — der Agent weiß nicht, wie viele Keys der
+geteilte Prozess aktuell hält. Uniforme Pflicht bedeutet null Inferenzlast, deterministische Fehler und
+einfachere Tests. Mehraufwand: ~5 Tokens pro Call.
 
 ### Eviction & RAM-Hygiene
 
@@ -161,13 +164,13 @@ Caveats (bewusst dokumentiert):
 - Bestehende Prozesshygiene bleibt unberührt: `--parent-pid`-Reaper räumt tote Hosts ab; Eviction ist
   die **projektinterne** zweite Hygiene-Ebene (orthogonal, ersetzt nichts).
 
-### Sichtbarkeit (Binding-Header)
+### Sichtbarkeit: ausschließlich get_server_health
 
-Jede Tool-Antwort trägt eine Kopfzeile mit der tatsächlichen Bindung:
-`[Project]: C:/repos/foo · Solution: foo.slnx · rules: rules.json`.
-Damit wird die (seltene) Restgefahr — Chat A arbeitet gegen Projekt Y, obwohl es „dacht" Projekt X —
-sofort sichtbar. Strukturell zusätzlich als `structuredContent.project` ausweisen (Modelle vergleichen
-strukturierte Felder verlässlicher als Fließtext).
+Bewusst KEIN Binding-Echo in Analyse-Antworten: Da `projectRoot` ausnahmslos Pflicht ist, ist die Bindung
+pro Call konstruktiv korrekt. Ein Echo würde bei jedem der 26 Tools Tokens kosten, wäre implementierungs-
+invasiv und setzte obendrein darauf, dass ein LLM einen Fließtext vergleicht — nicht deterministisch.
+Sichtbarkeit der Registry läuft ausschließlich über `get_server_health`: pro Key Root/Solution/Rules/
+lastUsed sowie TTL- und maxProjects-Konfiguration.
 
 ### Fehlerverträge (Uninitialized / Defekt)
 
@@ -175,26 +178,30 @@ Alle Fehler strukturiert, deterministisch, mit Handlungsanweisung (englisch, kon
 
 | Fall | Code (neu) | Textbaustein |
 |---|---|---|
-| Kein `projectRoot` bei ≥2 Keys | `PROJECT_ROOT_REQUIRED` | Liste der aktiven Keys + Hinweis auf AGENTS.md-Ritual |
-| Definitionsdatei fehlt | `PROJECT_NOT_INITIALIZED` | Erwarteter Pfad + minimales JSON-Schema-Beispiel |
-| Solution laut json nicht gefunden | `SOLUTION_NOT_FOUND` | Aufgelöster Pfad + Hinweis Relativität zur Definitionsdatei |
-| ≥2 Solutions laut json mehrdeutig | `AMBIGUOUS_SOLUTION` | Kandidatenliste (nutzt bestehende Logik) |
-| rules.json weder angegeben noch findbar | `RULES_NOT_FOUND` | Bewusster Default-Rules-Hinweis |
+| `projectRoot` fehlt | `PROJECT_ROOT_REQUIRED` | Parameter ist ausnahmslos Pflicht |
+| Definitionsdatei fehlt | `PROJECT_NOT_INITIALIZED` | Erwarteter Pfad `<root>/ainetlinter.project.json` |
+| Feld `solution`/`rules` fehlt oder JSON defekt | `PROJECT_DEFINITION_INVALID` | Betroffenes Feld + Definitionsdatei-Pfad |
+| Solution laut Definitionsdatei nicht gefunden | `SOLUTION_NOT_FOUND` | Aufgelöster absoluter Pfad (Anker: Definitionsdatei) |
+| rules laut Definitionsdatei nicht vorhanden | `RULES_NOT_FOUND` | Aufgeloster absoluter Pfad; kein Default, kein Raten |
 
-Bestehende Fehlercodes (`ResourceNotFound`, `AmbiguousSolution`, …) werden wiederverwendet, wo sie passen;
-neue Codes ergänzen den Katalog (Doku in `Docs/agent-api.md`).
+`AMBIGUOUS_SOLUTION` entfällt im MCP-Pfad: Die Definitionsdatei benennt konkrete Dateien, Mehrdeutigkeit
+kann gar nicht erst entstehen (bestehende Auflösungslogik bleibt dem Batch-Modus vorbehalten). Neue Codes
+ergänzen den Katalog (Doku in `Docs/agent-api.md`).
 
 ## Tests
 
 Unit (FastTests, Category=Unit):
 
 - Registry: Key-Normalisierung (case-insensitive, Trailing-Slashes), HIT/MISS, lastUsed-Aktualisierung.
-- Definitionsdatei-Parsing: Pflichtfeld `solution`, optionale `rules`, relative→absolute Auflösung
-  (Anker = Definitionsdatei), fehlerhaftes JSON → klarer Fehler, keine Teil-Initialisierung.
+- Definitionsdatei-Parsing: Pflichtfelder `solution` UND `rules`, relative→absolute Auflösung
+  (Anker = Definitionsdatei), fehlerhaftes JSON / fehlendes Feld → klarer Fehler, keine
+  Teil-Initialisierung.
 - projectRoot-Auflösung: Datei vs. Verzeichnis vs. nicht existent (Wiederverwendung
   `ResolveSolutionPathOrError`-Semantik).
-- Boilerplate-Regel: 0 Keys → PROJECT_NOT_INITIALIZED; 1 Key → projectRoot optional; ≥2 Keys ohne
-  projectRoot → PROJECT_ROOT_REQUIRED mit Keyliste.
+- Uniforme Pflicht: `projectRoot` fehlt → PROJECT_ROOT_REQUIRED — bei beliebigem Registry-Stand
+  (auch bei genau einem geladenen Key).
+- Kein-Fallback-Vertrag: rules nicht angegeben → RULES_NOT_FOUND (Nachbar-Suche darf nie greifen);
+  Solution-Pfad existiert nicht → SOLUTION_NOT_FOUND mit aufgelöstem absolutem Pfad.
 - Eviction: TTL mit injizierbarer Clock; LRU-Reihenfolge; maxProjects-Grenze.
 - Dispose-Korrektheit: Nach Eviction werden Catalog/Workspace disposet (kein Leakszenario im Test
   assertierbar, aber Dispose-Aufruf und Registry-Entfernung).
@@ -202,8 +209,8 @@ Unit (FastTests, Category=Unit):
 Integration (IntegrationTests, Category=Integration):
 
 - End-to-End über MCP-Handshake: zwei Projekte (Fixtures: neutrale, kleine C#-Solutions gemäß
-  Übersicht — „Fixtures verwenden neutrale, mehrprojektige C#-Solutions") aktivieren, Calls routen
-  korrekt je Key; Antwort-Header zeigt richtige Bindung.
+  Übersicht — „Fixtures verwenden neutrale, mehrprojektige C#-Solutions") per projectRoot aktivieren,
+  Calls routen korrekt je Key; Bindungs-Verifikation über get_server_health (pro-Key-Zustände).
 - Lazy-Init-Perf: erster Call gegen neuen Key dauert messbar länger (Reload-Pfad), zweite sofort.
 - Staleness-Walk bleibt auf Projektgrenzen begrenzt (kein Regression zu 02).
 - Observability: Call-Log enthält projectRoot/Key (Anschluss Aufgabe 01-Auswertung).
@@ -211,33 +218,40 @@ Integration (IntegrationTests, Category=Integration):
 
 Dogfood:
 
-- Eigenes Repo mit `.ai-netlinter.json` im Root versehen (Migration, s. u.) und Live-Tests
-  (`McpLiveRepositoryTests`-Muster) gegen beide Wege fahren.
+- Eigenes Repo mit `ainetlinter.project.json` im Root versehen (gleicher Task, s. Migrationsplan) und
+  Live-Tests
+  (`McpLiveRepositoryTests`-Muster) gegen den neuen Vertrag fahren.
 
 Definition of Done (gesamt):
 
 - `dotnet build` grün, beide Nicht-Stress-Testprojekte grün (Richtlinien §2).
 - Alle oben genannten Tests implementiert und grün.
 - `get_server_health` weist pro-Key-Zustände aus (geladene Keys, lastUsed, TTL/MaxProjects).
-- Doku aktualisiert: `Docs/agent-api.md` (Init-Vertrag, neue Fehlercodes, Binding-Header),
+- Doku aktualisiert: `Docs/agent-api.md` (Init-Vertrag, neue Fehlercodes),
   `Docs/configuration.md` (CLI-Parameteränderungen MCP-Modus), `Docs/integration.md`
-  (Registrierungsbeispiele Hermes/Claude Code/Cline ohne `--path`), `Docs/ROADMAP.md`,
+  (Registrierungsbeispiele Hermes/Claude Code/Cline ohne `--path` + ainetlinter.project.json),
+  `Docs/ROADMAP.md`,
   `README.md` (Update-Pflicht Richtlinien §4), `.agents/rules/AiNetLinter.mdc` via
   `--sync-agent-rules-only` falls Regel-/CLI-Texte betroffen sind.
-- Migration dieses Repos: `.ai-netlinter.json` im Repo-Root, AGENTS.md-Abschnitt „MCP-Init",
-  eigene Hermes-Registrierung umgestellt.
+- Harter Cut umgesetzt: MCP-Modus lehnt `--path`/`--config` mit unbekanntes-Argument-Fehler ab;
+  Batch-Modus unverändert. Eigenes Repo in derselben Änderung migriert: `ainetlinter.project.json`
+  im Repo-Root, AGENTS.md-Abschnitt „MCP-Init", Hermes-Registrierung (config.yaml) auf
+  `command + --mcp-server` reduziert, Repo-`.mcp.json` entsprechend angepasst.
 
 ## Migrationsplan
 
-1. **Phase 1 (dieser Task):** Registry + `projectRoot` + `.ai-netlinter.json` + Binding-Header +
-   Health-Erweiterung. `--path`/`--config` im MCP-Modus weiterhin honorieren, aber mit
-   `[WARN]: Deprecation — --path/--config im MCP-Modus werden ab vNext ignoriert; nutze .ai-netlinter.json + projectRoot`.
-   Grund: Bestehende Registrierungen (Hermes config.yaml, `.mcp.json` im Repo) leben schon draußen.
-2. **Phase 2 (Folgetask):** Flags im MCP-Modus entfernen (Breaking, eigene Release-Note), Batch-Modus
-   unverändert. AGENTS.md dieses Repos und `.mcp.json` umstellen; Hermes-Registrierung (config.yaml)
-   auf `command + --mcp-server` reduzieren.
-3. **Bewusst nicht Teil dieses Tasks:** Automatische Konvertierung alter Registrierungen, Support für
-   YAML/TOML-Definitionsdateien, Multi-Solution-pro-yaml (benannte Projekte) — erst bei real Bedarf.
+**Harter Cut, keine Übergangsphase** (Entscheidung 2026-08-22): Es ist ein internes Tool; alle
+Client-Konfigurationen (Hermes config.yaml, Repo-`.mcp.json`, ggf. weitere Agenten) sind selbst
+verwaltet und werden **im selben Task** umgestellt. Wer die EXE danach mit alten Parametern startet,
+bekommt einen harten Fehler (unbekanntes Argument) statt stiller Kompatibilität.
+
+1. **Dieser Task:** Registry + Pflicht-`projectRoot` + `ainetlinter.project.json` + Health-Erweiterung;
+   Entfernen von `--path`/`--config` aus dem MCP-Argumentparsing (Batch behält beide); Entfernen des
+   Rules-Nachbar-Fallbacks (`TryResolveRulesJsonPath`) aus dem MCP-Pfad; Umstellung aller eigenen
+   Registrierungen + AGENTS.md + Repo-Definitionsdatei.
+2. **Bewusst nicht:** Deprecations-Warnungen, Kompatibilitäts-Flags, automatische Konvertierung alter
+   Konfigurationen, YAML/TOML-Support, Multi-Solution-pro-Definitionsdatei (benannte Projekte) —
+   erst bei real Bedarf.
 
 ## Risiken
 
@@ -245,5 +259,5 @@ Definition of Done (gesamt):
 |---|---|
 | Refactoring-Tiefe: `McpCodeGraphServer` von Global- zu Per-Project-State | Größter Einzelposten; Delegate-Closure-Muster (Übersicht: „Tools erreichen den residenten Serverzustand per Delegate-Closure") bleibt erhalten, nur Zielobjekt wird der Key-Server. Schrittweise Umsetzung, Contract-Tests zuerst. |
 | Doppelte Tools/Keys bei Hosts, die pro Chat spawnen | Kein Schaden: jeder Prozess hält meist 1 Key; TTL räumt auf. |
-| Vergessene `projectRoot`-Angabe durch Agent | Binding-Header + harter Fehler bei Mehrdeutigkeit; AGENTS.md-Ritual dokumentiert. |
+| Vergessene `projectRoot`-Angabe durch Agent | Harter deterministischer Fehler (PROJECT_ROOT_REQUIRED); AGENTS.md-Ritual dokumentiert die Pflicht. |
 | RAM-Wachstum bei langen Host-Sessions | TTL + maxProjects + bestehender Reaper; Monitoring via get_server_health. |
