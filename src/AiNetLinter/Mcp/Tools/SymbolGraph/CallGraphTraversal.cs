@@ -114,7 +114,11 @@ internal static class CallGraphTraversal
             GetStableSymbolId(reachedFromSymbol));
     }
 
-    private static string GetStableSymbolId(ISymbol symbol) =>
+    /// <summary>
+    /// Gemeinsame Quelle stabiler Symbol-IDs ueber Traversal- und Diff-Impact-Analyse hinaus:
+    /// DocCommentId, sonst deterministischer FullyQualified-Fallback (z. B. lokale Funktionen).
+    /// </summary>
+    internal static string GetStableSymbolId(ISymbol symbol) =>
         DocumentationCommentId.CreateDeclarationId(symbol) ??
         symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 

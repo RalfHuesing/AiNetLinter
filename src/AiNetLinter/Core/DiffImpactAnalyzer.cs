@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Core;
@@ -41,29 +42,49 @@ public sealed class DiffImpactAnalyzer
     /// <summary>
     /// Wie <see cref="AnalyzeAsync"/>, liefert die <see cref="CallSiteEntry"/>-Liste statt fertig
     /// formatierter Strings — Grundlage fuer <c>get_impact</c>s <c>StructuredContent</c>
-    /// (Git-Diff-Zweig). <see cref="AnalyzeAsync"/> ist ein duenner Wrapper darauf (bestehende
-    /// Signatur/bestehendes Verhalten fuer den CLI-Aufrufer <c>ImpactCommand</c> unveraendert).
+    /// (Git-Diff-Zweig). Duenner Wrapper auf <see cref="AnalyzeDiffAsync"/>: die Ausgabe (inklusive
+    /// Reihenfolge) bleibt feldidentisch zum Traversal-Ergebnis des strukturierten Kerns.
     /// </summary>
     internal static async Task<List<CallSiteEntry>> AnalyzeEntriesAsync(
+        Solution solution, string targetPath, string? gitSinceRef, bool verbose)
+    {
+        var analysis = await AnalyzeDiffAsync(solution, targetPath, gitSinceRef, verbose);
+        return analysis is null ? [] : ToCallSiteEntries(analysis.References);
+    }
+
+    /// <summary>
+    /// Strukturierter Analyse-Kern: baut ein <see cref="DiffImpactAnalysis"/> (Repository-Wurzel,
+    /// angefragter Ref, geaenderte Dateien mit kompakten Hunk-Ranges, geaenderte Symbole mit
+    /// stabiler ID, Aufrufstellen als Traversal-Ergebnis). Git läuft pro Aufruf genau einmal
+    /// (<see cref="RunGitDiff"/>); nicht aufloesender <paramref name="gitSinceRef"/> wirft
+    /// <see cref="GitDiffFailedException"/> unverändert durch, kein Repo oder leerer Diff
+    /// liefert null.
+    /// </summary>
+    internal static async Task<DiffImpactAnalysis?> AnalyzeDiffAsync(
         Solution solution, string targetPath, string? gitSinceRef, bool verbose)
     {
         var repoRoot = GitRepositoryLocator.FindRoot(targetPath);
         if (repoRoot == null)
         {
             LogGitWarning(verbose);
-            return [];
+            return null;
         }
 
         var diffOutput = RunGitDiff(repoRoot, gitSinceRef);
         if (string.IsNullOrEmpty(diffOutput))
         {
-            return [];
+            return null;
         }
 
-        var hunks = ParseGitDiffHunks(diffOutput);
-        var changedSymbols = await GetChangedSymbolsFromHunksAsync(solution, repoRoot, hunks);
+        var hunkRanges = ParseGitDiffHunkRanges(diffOutput);
+        var changedSymbols = await GetChangedSymbolsFromHunksAsync(solution, repoRoot, hunkRanges);
 
-        return await FindAllCallSiteEntriesAsync(changedSymbols, solution);
+        return new DiffImpactAnalysis(
+            repoRoot,
+            gitSinceRef,
+            BuildChangedFiles(hunkRanges),
+            changedSymbols.Select(match => match.Entry).ToList(),
+            await BuildReferencesAsync(changedSymbols, solution));
     }
 
     private static void LogGitWarning(bool verbose)
@@ -121,9 +142,24 @@ public sealed class DiffImpactAnalyzer
         return null;
     }
 
+    /// <summary>
+    /// Eine Parse-Wahrheit: die bestehende Zeilen-Expansion wird aus den kompakten
+    /// <see cref="HunkRange"/>s abgeleitet, damit Range- und Zeilen-Sicht nicht auseinanderdriften.
+    /// Signatur/Verhalten unveraendert (Nutzer: find_magic_values changedOnly, Bestandstest).
+    /// </summary>
     internal static Dictionary<string, List<int>> ParseGitDiffHunks(string gitDiffOutput)
     {
         var result = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in ParseGitDiffHunkRanges(gitDiffOutput))
+        {
+            result[pair.Key] = ExpandHunkRanges(pair.Value);
+        }
+        return result;
+    }
+
+    internal static Dictionary<string, List<HunkRange>> ParseGitDiffHunkRanges(string gitDiffOutput)
+    {
+        var result = new Dictionary<string, List<HunkRange>>(StringComparer.OrdinalIgnoreCase);
         var lines = gitDiffOutput.Split('\n');
         string? currentFile = null;
 
@@ -135,7 +171,7 @@ public sealed class DiffImpactAnalyzer
         return result;
     }
 
-    private static string? ProcessDiffLine(string line, string? currentFile, Dictionary<string, List<int>> result)
+    private static string? ProcessDiffLine(string line, string? currentFile, Dictionary<string, List<HunkRange>> result)
     {
         if (line.StartsWith(FilePathPrefix, StringComparison.Ordinal))
         {
@@ -150,18 +186,20 @@ public sealed class DiffImpactAnalyzer
         return currentFile;
     }
 
-    internal static void ParseHunkLine(string line, string currentFile, Dictionary<string, List<int>> result)
+    private static void ParseHunkLine(string line, string currentFile, Dictionary<string, List<HunkRange>> result)
     {
         if (!TryExtractHunkRange(line, out var startLine, out var count))
         {
             return;
         }
 
-        var list = GetOrCreateLineList(currentFile, result);
-        for (int i = 0; i < count; i++)
+        if (!result.TryGetValue(currentFile, out var ranges))
         {
-            list.Add(startLine + i);
+            ranges = [];
+            result[currentFile] = ranges;
         }
+
+        ranges.Add(new HunkRange(startLine, count));
     }
 
     private static bool TryExtractHunkRange(string line, out int startLine, out int count)
@@ -187,14 +225,17 @@ public sealed class DiffImpactAnalyzer
         return true;
     }
 
-    private static List<int> GetOrCreateLineList(string currentFile, Dictionary<string, List<int>> result)
+    internal static List<int> ExpandHunkRanges(IReadOnlyList<HunkRange> ranges)
     {
-        if (!result.TryGetValue(currentFile, out var list))
+        var lines = new List<int>();
+        foreach (var range in ranges)
         {
-            list = new List<int>();
-            result[currentFile] = list;
+            for (var i = 0; i < range.LineCount; i++)
+            {
+                lines.Add(range.StartLine + i);
+            }
         }
-        return list;
+        return lines;
     }
 
     /// <summary>
@@ -212,10 +253,10 @@ public sealed class DiffImpactAnalyzer
         return null;
     }
 
-    private static async Task<List<ISymbol>> GetChangedSymbolsFromHunksAsync(
-        Solution solution, string repoRoot, Dictionary<string, List<int>> hunks)
+    private static async Task<List<ChangedSymbolMatch>> GetChangedSymbolsFromHunksAsync(
+        Solution solution, string repoRoot, Dictionary<string, List<HunkRange>> hunks)
     {
-        var changedSymbols = new List<ISymbol>();
+        var changedSymbols = new List<ChangedSymbolMatch>();
         foreach (var pair in hunks)
         {
             var absolutePath = Path.GetFullPath(Path.Combine(repoRoot, pair.Key));
@@ -223,45 +264,35 @@ public sealed class DiffImpactAnalyzer
             if (document == null) continue;
 
             var symbols = await GetChangedSymbolsAsync(document, pair.Value);
-            changedSymbols.AddRange(symbols);
+            changedSymbols.AddRange(symbols.Select(symbol => new ChangedSymbolMatch(
+                symbol, CreateChangedSymbolEntry(symbol, document))));
         }
         return changedSymbols;
     }
 
-    private static async Task<List<CallSiteEntry>> FindAllCallSiteEntriesAsync(List<ISymbol> symbols, Solution solution)
-    {
-        var result = new List<CallSiteEntry>();
-        foreach (var symbol in symbols.Distinct<ISymbol>(SymbolEqualityComparer.Default))
-        {
-            var entries = await FindCallSiteEntriesAsync(symbol, solution);
-            result.AddRange(entries);
-        }
-        return result;
-    }
-
-    private static async Task<List<ISymbol>> GetChangedSymbolsAsync(Document document, List<int> changedLines)
+    private static async Task<List<ISymbol>> GetChangedSymbolsAsync(Document document, IReadOnlyList<HunkRange> ranges)
     {
         var root = await document.GetSyntaxRootAsync();
         var semanticModel = await document.GetSemanticModelAsync();
         if (root == null || semanticModel == null) return [];
 
         var symbols = new List<ISymbol>();
-        
+
         var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
-        AddChangedSymbols(methods, semanticModel, changedLines, symbols);
+        AddChangedSymbols(methods, semanticModel, ranges, symbols);
 
         var constructors = root.DescendantNodes().OfType<ConstructorDeclarationSyntax>();
-        AddChangedSymbols(constructors, semanticModel, changedLines, symbols);
+        AddChangedSymbols(constructors, semanticModel, ranges, symbols);
 
         return symbols;
     }
 
     private static void AddChangedSymbols(
-        IEnumerable<SyntaxNode> nodes, SemanticModel semanticModel, List<int> changedLines, List<ISymbol> symbols)
+        IEnumerable<SyntaxNode> nodes, SemanticModel semanticModel, IReadOnlyList<HunkRange> ranges, List<ISymbol> symbols)
     {
         foreach (var node in nodes)
         {
-            var symbol = GetValidChangedSymbol(node, semanticModel, changedLines);
+            var symbol = GetValidChangedSymbol(node, semanticModel, ranges);
             if (symbol != null)
             {
                 symbols.Add(symbol);
@@ -269,9 +300,9 @@ public sealed class DiffImpactAnalyzer
         }
     }
 
-    private static ISymbol? GetValidChangedSymbol(SyntaxNode node, SemanticModel semanticModel, List<int> changedLines)
+    private static ISymbol? GetValidChangedSymbol(SyntaxNode node, SemanticModel semanticModel, IReadOnlyList<HunkRange> ranges)
     {
-        if (!IntersectsWithChangedLines(node, changedLines))
+        if (!IntersectsWithChangedLines(node, ranges))
         {
             return null;
         }
@@ -285,15 +316,19 @@ public sealed class DiffImpactAnalyzer
         return symbol;
     }
 
-    private static bool IntersectsWithChangedLines(SyntaxNode node, List<int> changedLines)
+    // Ueberlappungspruefung auf Hunk-Ranges; semantisch identisch zur frueheren
+    // Einzellinien-Mitgliedschaft (count=0-Ranges expandieren zu keiner Zeile).
+    private static bool IntersectsWithChangedLines(SyntaxNode node, IReadOnlyList<HunkRange> ranges)
     {
         var span = node.GetLocation().GetLineSpan();
         var start = span.StartLinePosition.Line + 1;
         var end = span.EndLinePosition.Line + 1;
 
-        foreach (var line in changedLines)
+        foreach (var range in ranges)
         {
-            if (line >= start && line <= end) return true;
+            if (range.LineCount <= 0) continue;
+            var rangeEnd = range.StartLine + range.LineCount - 1;
+            if (rangeEnd >= start && range.StartLine <= end) return true;
         }
         return false;
     }
@@ -305,6 +340,60 @@ public sealed class DiffImpactAnalyzer
                accessibility == Accessibility.Internal ||
                accessibility == Accessibility.Protected ||
                accessibility == Accessibility.ProtectedOrInternal;
+    }
+
+    internal static ChangedSymbolEntry CreateChangedSymbolEntry(ISymbol symbol, Document document)
+    {
+        var location = symbol.Locations.First(location => location.IsInSource);
+        var lineSpan = location.GetLineSpan();
+        var outputRoot = Path.GetDirectoryName(document.Project.Solution.FilePath) ?? "";
+        return new ChangedSymbolEntry(
+            CallGraphTraversal.GetStableSymbolId(symbol),
+            FormatMemberDisplayName(symbol),
+            symbol.Kind.ToString(),
+            symbol.DeclaredAccessibility,
+            document.Project.Name,
+            PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath),
+            lineSpan.StartLinePosition.Line + 1,
+            lineSpan.EndLinePosition.Line + 1);
+    }
+
+    private static string FormatMemberDisplayName(ISymbol symbol) =>
+        $"{symbol.ContainingType?.Name}.{symbol.Name}";
+
+    // Bewusst ohne TraversalState.CreateResult: das dedupliziert und sortiert mehrstufig — die
+    // bestehende Ausgabe ist unsortiert/undedupliziert (nur die Symbole werden vorab per
+    // Distinct vereinigt) und muss feld- und reihenfolgetreu erhalten bleiben. Die Completeness
+    // dokumentiert den Ist-Zustand (eine Ebene, keine Kappung); Kappung bleibt Sache des Tools.
+    private static async Task<ReferenceTraversalResult> BuildReferencesAsync(
+        List<ChangedSymbolMatch> changedSymbols, Solution solution)
+    {
+        var callSites = new List<TransitiveCallSiteEntry>();
+        var evaluatedSymbols = 0;
+
+        foreach (var symbol in changedSymbols.Select(match => match.Symbol)
+                     .Distinct<ISymbol>(SymbolEqualityComparer.Default))
+        {
+            evaluatedSymbols++;
+            var symbolId = CallGraphTraversal.GetStableSymbolId(symbol);
+            foreach (var callSite in await FindCallSiteEntriesAsync(symbol, solution))
+            {
+                callSites.Add(new TransitiveCallSiteEntry(
+                    callSite.FilePath, callSite.Line, callSite.SymbolName, callSite.ProjectName,
+                    Depth: 1, ReachedFromSymbolId: symbolId));
+            }
+        }
+
+        var completeness = new TraversalCompleteness(
+            RequestedDepth: 1,
+            EffectiveDepth: 1,
+            VisitedNodeCount: evaluatedSymbols,
+            TotalCallSiteCount: callSites.Count,
+            ShownCallSiteCount: callSites.Count,
+            TruncatedByMaxResults: false,
+            TruncatedByNodeLimit: false,
+            DepthWasClamped: false);
+        return new ReferenceTraversalResult(callSites, completeness);
     }
 
     /// <summary>
@@ -343,7 +432,7 @@ public sealed class DiffImpactAnalyzer
                 var relativePath = PathNormalizer.ToRelative(outputRoot, filePath);
 
                 entries.Add(new CallSiteEntry(
-                    relativePath, line, $"{symbol.ContainingType?.Name}.{symbol.Name}", location.Document.Project.Name));
+                    relativePath, line, FormatMemberDisplayName(symbol), location.Document.Project.Name));
             }
         }
 
@@ -355,7 +444,27 @@ public sealed class DiffImpactAnalyzer
     /// <c>StructuredContent</c> nie auseinanderdriften.</summary>
     internal static string FormatCallSite(CallSiteEntry entry) =>
         $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
+
+    /// <summary>
+    /// Bildet die Traversal-Call-Sites feld- und reihenfolgetreu auf <see cref="CallSiteEntry"/>
+    /// ab — reine Funktion, weder Sortierung noch Deduplizierung.
+    /// </summary>
+    internal static List<CallSiteEntry> ToCallSiteEntries(ReferenceTraversalResult references) =>
+        references.CallSites.Select(ToCallSiteEntry).ToList();
+
+    private static CallSiteEntry ToCallSiteEntry(TransitiveCallSiteEntry entry) =>
+        new(entry.FilePath, entry.Line, entry.SymbolName, entry.ProjectName);
+
+    private static List<ChangedFileRange> BuildChangedFiles(Dictionary<string, List<HunkRange>> hunkRanges) =>
+        hunkRanges.Select(pair => new ChangedFileRange(pair.Key, pair.Value)).ToList();
 }
+
+/// <summary>
+/// Interne Paarung eines geaenderten Roslyn-Symbols mit seinem strukturierten Eintrag — der
+/// Eintrag geht ins <see cref="DiffImpactAnalysis"/>-Ergebnisobjekt, das Symbol in die
+/// Call-Site-Suche.
+/// </summary>
+internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Entry);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
