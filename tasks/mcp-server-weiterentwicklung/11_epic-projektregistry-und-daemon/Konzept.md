@@ -85,6 +85,80 @@ Diese Findings wurden direkt im Quellcode verifiziert; sie bestimmen den Umsetzu
 | F8 | **`ResolveSolutionPathOrError` wird im MCP-Pfad nicht mehr gebraucht:** Die Definitionsdatei benennt Solution UND Rules explizit; die projectRoot-Prüfung ist streng und trivial (Verzeichnis existiert + Definitionsdatei existiert). Auto-Suche/Mehrdeutigkeit bleiben Batch-only. (Korrektur zum ersten Entwurf dieses Konzepts.) | `McpServerCommand.cs:232-280` |
 | F9 | **Observability-Grundlage vorhanden:** `RalfHuesing.Mcp.Observability` schreibt Call-Logs unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<Datum>\`; `get_server_health` liest sie aus. Erweiterung (Connection-ID, Modus) baut darauf auf. | `csproj` Paketliste; Health-Output vom Live-Test 2026-08-22 |
 
+### Abhängigkeiten (Entscheidung: BCL-only, kein neues NuGet)
+
+Für beide Epics ist **alles im BCL-Lieferumfang von .NET 9 enthalten** — es werden KEINE neuen
+NuGet-Pakete eingeführt:
+
+- `System.Text.Json` — Definitionsdatei, MRU-State, Handshake-Framing (bereits im Einsatz).
+- `System.IO.Pipes` (inkl. ACL-Support, auf Windows inbox) — Daemon-Transport.
+- `System.Diagnostics.Process` — detached Daemon-Spawn durch den Thin-Client.
+- `TimeProvider` (BCL seit .NET 8) — injizierbare Clock für TTL-/Idle-Exit-Tests.
+- `ModelContextProtocol` (bereits referenziert) — wird im DAEMON je Verbindung als MCP-Session gegen
+  die geteilte Registry wiederverwendet ⇒ Tool-Schemas können nicht driften.
+
+Bewusst abgelehnt: `StreamJsonRpc` oder vergleichbare RPC-Frameworks — der Thin-Client pumpt opake
+Bytes (kein RPC-Bedarf), der Daemon spricht MCP nativ über das bestehende SDK. Einziger externer
+Touchpunkt: `RalfHuesing.Mcp.Observability` (eigenes Paket) benötigt ggf. eine kleine Erweiterung für
+`connectionId`/`mode`-Felder. Vorgehen: prüfen, ob die bestehende API beliebige Metadaten erlaubt;
+wenn ja, auf Anwendungsebene anreichern; wenn nein, Paket-Version minor-bumpen (eigener Scope, eigener
+Commit).
+
+### Verzeichnis- und Klassenstruktur (verbindlich)
+
+Namenskonventionen wie im Bestand: `internal sealed`, file-scoped namespaces, Konstruktor-Abhängigkeiten
+über Options-Records (F7).
+
+```text
+src/AiNetLinter/
+├── Program.cs                          [ÄNDERN] Routing: --mcp-server | --daemon-start | Batch (unverändert)
+├── Commands/
+│   └── McpServerCommand.cs             [ÄNDERN] hält ProjectRegistry statt McpCodeGraphServer;
+│                                                --path/--config im MCP-Zweig entfernen; neue statische Flags
+└── Mcp/
+    ├── McpServerOptionsFactory.cs      [ÄNDERN] Create(ProjectRegistry registry) statt (McpCodeGraphServer)
+    ├── ServerInstructions.cs           [ÄNDERN] projectRoot-/Definitionsdatei-Vertrag (einmalig, F6)
+    ├── Projects/                        [NEU — Epic A]
+    │   ├── ProjectDefinition.cs              record(SolutionPath, RulesPath) — absolut + existenzgeprüft
+    │   ├── ProjectDefinitionLoader.cs        liest ainetlinter.project.json; Fehlerverträge A.5; kein Fallback
+    │   ├── ProjectEntry.cs                   RootPath, Definition, Server, LastUsedUtc, InFlightCount
+    │   └── ProjectRegistry.cs                Resolve/LRU/TTL-Timer/Busy-Guard/IAsyncDisposable
+    └── Daemon/                          [NEU — Epic B]
+        ├── DaemonConstants.cs                 Pipe-Name (inkl. Username-Suffix), Protokollversion
+        ├── DaemonHandshake.cs                 hello/welcome-Records + Versionsvergleichslogik
+        ├── DaemonPipeServer.cs                NamedPipeServerStream-Akzeptanz-Loop je Verbindung
+        ├── DaemonHost.cs                      Registry + MCP-Session je Verbindung; Idle-Exit; MRU-Warmup
+        ├── MruStateStore.cs                   daemon-state.json (debounced schreiben, tolerant lesen)
+        ├── ThinClientProxy.cs                 Connect-or-Start → Handshake → opake Byte-Pump (stdio⇄Pipe)
+        └── ThinClientLauncher.cs              detached Spawn der eigenen EXE mit --daemon-start
+
+src/AiNetLinter.FastTests/Mcp/Projects/        [NEU] Registry-/Loader-/Eviction-Unit-Tests (F4: in-memory)
+src/AiNetLinter.FastTests/Mcp/Daemon/          [NEU] Handshake-/Idle-Exit-/MRU-/Race-Unit-Tests (in-proc)
+src/AiNetLinter.IntegrationTests/Mcp/Daemon/   [NEU] echte Zwei-Prozess-E2E (sparsam, siehe B.6)
+```
+
+Bewusst KEINE neuen Top-Level-Namespaces außer `AiNetLinter.Mcp.Projects` und `AiNetLinter.Mcp.Daemon`;
+keine Änderungen unter `Rules/`, `Generators/`, `Core/`.
+
+### Self-Audit (2026-08-22): geschlossene Lücken
+
+Das eigene Konzept wurde gegen Laufzeit-/Betriebsrealität auditiert; folgende Punkte sind als
+verbindliche Verträge ergänzt (Details an den jeweiligen Stellen):
+
+1. Load-Dedupe: parallele Erst-Calls auf denselben Root teilen sich EINEN Load; der Registry-Lock
+   deckt nie einen Solution-Load (A.4).
+2. Busy-Guard für Eviction: Keys mit laufendem Call werden nicht disposet (A.7).
+3. `projectRoot` muss absolut sein; relative Pfade bekommen einen harten Fehler (A.3) — der Daemon-cwd
+   ist für Agenten bedeutungslos, Auflösung wäre Nichtdeterminismus.
+4. Ausnahmeregelung `get_server_health`: optionaler Filter-Parameter statt Pflicht (A.3) — wohldefiniert,
+   kein Raten; alle Analyse-Tools bleiben ausnahmslos pflichtparametrig.
+5. Stdio-Purity: Der Thin-Client schreibt AUSSCHLIESSLICH Protokollbytes auf stdout; Diagnose geht nach
+   stderr bzw. Observability (B.3).
+6. Pipe-Name enthält den Benutzernamen (Multi-User-Maschine) (B.2).
+7. Cancellation: Client-Disconnect bricht in-flight Calls der Verbindung ab (B.2).
+8. Escape-Hinweis: Hermes filtert Env-Vars von MCP-Subprozessen — `AINETLINTER_NO_DAEMON` erreicht den
+   Prozess nur via `env:`-Block der Registrierung (B.3, Doku).
+
 ---
 
 # Epic A — Projektregistry (transportneutral)
@@ -128,6 +202,13 @@ Liegtpflichtig im Projektroot (= Wert von `projectRoot`). Format **JSON** (keine
 bedingter Vertrag wäre für Agenten nicht entscheidbar, weil sie den Registry-Stand des (ggf. geteilten)
 Prozesses nicht kennen. Uniforme Pflicht = null Inferenzlast, deterministische Fehler, einfachere Tests.
 Kosten: ~5 Tokens pro Call.
+
+**projectRoot muss ABSOLUT sein** (Self-Audit 3): Relative Pfade → harter Fehler (`PROJECT_ROOT_INVALID`).
+Der cwd des Serverprozesses ist für einen Agenten bedeutungslos (beim Daemon erst recht) — jede
+relative Auflösung wäre Nichtdeterminismus. Die einzigen bewussten Ausnahmen von der Pflicht:
+- `get_server_health` erhält einen OPTIONALEN Filter-Parameter (`projectRoot` angegeben → nur dieser
+  Key; fehlt → alle Keys). Wohldefinierte Semantik, kein Raten; alle Analyse-Tools bleiben
+  ausnahmslos pflichtparametrig.
 
 ## A.4 Architektur & Umsetzungspfad
 
@@ -174,11 +255,19 @@ Wiring (mechanisch, identisches Muster je Klasse):
 - projectRoot-Vertrag einmalig in `ServerInstructions.Text` (F6).
 - Lint-Grenzen F7 einhalten (Registry-Klassen klein, Options-Records).
 
+**Load-Dedupe & Lock-Hygiene** (Self-Audit 1): Der Registry-Lock deckt NIE einen Solution-Load —
+ein Load dauert Sekunden bis Minuten und würde alle anderen Projekte einfrieren. Resolve-Ablauf bei
+MISS: unter kurzem Lock prüfen → Load-Task starten (ohne Lock) → parallele Erst-Calls auf denselben
+Root awaiten dieselbe Task (Dictionary `rootPath → Task<LoadedProject>`, Eintrag wird nach Abschluss
+zum festen Entry). Fehlgeschlagene Loads werfen den Platzhalter weg; der nächste Call versucht neu
+(kein negatives Caching).
+
 ## A.5 Fehlerverträge (alle deterministisch, englisch, mit Bauanleitung)
 
 | Fall | Code (neu) | Textinhalt |
 |---|---|---|
 | `projectRoot` fehlt | `PROJECT_ROOT_REQUIRED` | Parameter ist ausnahmslos Pflicht |
+| `projectRoot` relativ | `PROJECT_ROOT_INVALID` | Absoluten Pfad verlangen (Server-cwd ist bedeutungslos) |
 | Definitionsdatei fehlt | `PROJECT_NOT_INITIALIZED` | Erwarteter Pfad + **kopierfähiges Minimal-Template** (unten) |
 | Feld fehlt / JSON defekt | `PROJECT_DEFINITION_INVALID` | Betroffenes Feld + Definitionsdatei-Pfad |
 | Solution nicht gefunden | `SOLUTION_NOT_FOUND` | Aufgelöster absoluter Pfad (Anker: Definitionsdatei) |
@@ -220,6 +309,12 @@ Kanäle:
   freigeben (Muster F5).
 - Bestehende Prozesshygiene unberührt: `--parent-pid`-Reaper bleibt (in Epic B bewusst NICHT im Daemon).
 
+**Busy-Guard für Eviction** (Self-Audit 2): Ein Key mit laufendem Call (`InFlightCount > 0`) wird weder
+von TTL noch LRU disposet — eine ObjectDisposedException mitten in einer Analyse ist der schlimmstmögliche
+Fehlermodus. Umsetzung: Eviction markiert Key als „eviction pending" und disposed erst nach dem letzten
+in-flight Call (oder beim nächsten Idle-Tick). Ein neuer Call gegen einen pending-Key startet normal
+einen frischen Load.
+
 ## A.8 Tests (Epic A)
 
 Unit (FastTests, Category=Unit):
@@ -228,8 +323,13 @@ Unit (FastTests, Category=Unit):
 - Loader: Pflichtfelder beide; relative→absolute Auflösung (Anker Definitionsdatei); defektes JSON/
   fehlendes Feld → Fehler, keine Teil-Initialisierung; KEINE Auto-Suche im MCP-Pfad (F8).
 - Uniforme Pflicht: fehlendes `projectRoot` → PROJECT_ROOT_REQUIRED bei beliebigem Registry-Stand.
+- Root-Validierung (Audit 3): relativer projectRoot → PROJECT_ROOT_INVALID; get_server_health ohne
+  Filter liefert alle Keys.
 - Kein-Fallback-Vertrag: rules fehlt → RULES_NOT_FOUND (Nachbar-Suche greift nie).
-- Self-Service-Vertrag: PROJECT_NOT_INITIALIZED-Text enthält Template-Block (Text-Assertion).
+- Self-Service-Vertrag: PROJECT_NOT_INITIALIZED-Text enthält den vorgeschriebenen Template-Block (Text-Assertion).
+- Load-Dedupe (Audit 1): zwei parallele Erst-Calls auf denselben Root erzeugen genau EINEN Load;
+  während des Loads bleiben Calls auf ANDERE Roots bedienbar (Lock-Hygiene).
+- Busy-Guard (Audit 2): laufender Call schützt den Key vor TTL/LRU-Eviction; danach greift sie.
 - Eviction: TTL mit injizierbarer Clock; LRU-Reihenfolge; maxProjects-Grenze; Dispose wird gerufen.
 - Contract-Tests: jedes Tool-Schema enthält `projectRoot` als required (tools/list-Assertion).
 
@@ -281,11 +381,15 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 ## B.2 Transport & Protokoll
 
 - **Named Pipes** (.NET `NamedPipeServerStream`/`NamedPipeClientStream`; Windows-first, POSIX-kompatibel
-  benennbar): Pipe-Name fest `ainetlinter.analyzer.v1`. ACL auf aktuellen User. Kein Port, kein Auth-
-  Protokoll, kein Firewall-Thema.
+  benennbar): Pipe-Name `ainetlinter.analyzer.v1.<username>` — Username-Suffix wegen Mehrnutzer-
+  Maschinen mit geteilten Pipe-Namespaces (Self-Audit 6); ACL zusätzlich auf aktuellen User.
+  Kein Port, kein Auth-Protokoll, kein Firewall-Thema.
 - **Verbindungsmodell:** Daemon bedient mehrere gleichzeitige Clients (je Verbindung eine eigene
   MCP-Session gegen die geteilte Registry). Registry-Resolve unter Lock; Serverinstanzen intern
   gesichert (F1/F5).
+  **Cancellation** (Self-Audit 7): Trennt sich ein Client, werden seine in-flight Calls abgebrochen
+  (CancellationToken je Verbindung bis in den Tool-Dispatch) — Registry und Keys bleiben davon
+  unberührt und warm für andere Clients.
 - **Handshake (vor dem MCP-Durchsatz), JSON über die Pipe:**
   - Client → Daemon: `{ "hello": { "protocolVersion": 1, "exeVersion": "1.0.x" } }`
   - Daemon → Client: `{ "welcome": { "protocolVersion": 1, "daemonVersion": "1.0.y", "pid": n } }`
@@ -306,6 +410,10 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 | Hänger-Schutz | Thin-Client-Ping mit Timeout; bei Hänger darf der Client den Daemon terminieren und neu starten (er hängt ja für alle) — Ereignis ins Call-Log. |
 | Kein Parent-Bindung | Der Daemon nutzt den `--parent-pid`-Reaper bewusst NICHT (er überlebt einzelne Clients gewollt); seine Sicherheit ist Idle-Exit + Versions-Handshake. |
 | Debug-Escape | Env `AINETLINTER_NO_DAEMON=1` → Thin-Client läuft klassisch in-proc (für Fehlersuche). Explizit dokumentiertes Debug-Ventil, KEIN Konfigurationsfeature. |
+
+**Stdio-Purity** (Self-Audit 5): Der Thin-Client-Prozess schreibt AUSSCHLIESSLICH MCP-Protokollbytes auf
+stdout — ein einziges streunendes `Console.WriteLine` zerschießt die Client-Session. Diagnoseausgaben
+gehen ausschließlich nach stderr oder ins Observability-Log; per Contract-Test absichern.
 
 ## B.4 MRU-State
 
