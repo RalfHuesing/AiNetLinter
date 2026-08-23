@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 
@@ -26,4 +28,16 @@ internal sealed class ReadOnlyMcpHostClient
     public async Task<string> CallToolGetTextAsync(
         string toolName, IReadOnlyDictionary<string, object?>? arguments = null) =>
         await (await host.Value.ConfigureAwait(false)).CallToolGetTextAsync(toolName, arguments).ConfigureAwait(false);
+
+    public async Task<IList<McpClientTool>> ListToolsAsync() =>
+        await (await host.Value.ConfigureAwait(false)).ListToolsAsync().ConfigureAwait(false);
+
+    public async Task<IList<McpClientResource>> ListResourcesAsync() =>
+        await (await host.Value.ConfigureAwait(false)).ListResourcesAsync().ConfigureAwait(false);
+
+    public async Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync() =>
+        await (await host.Value.ConfigureAwait(false)).ListResourceTemplatesAsync().ConfigureAwait(false);
+
+    public async Task<ReadResourceResult> ReadResourceAsync(string uri) =>
+        await (await host.Value.ConfigureAwait(false)).ReadResourceAsync(uri).ConfigureAwait(false);
 }

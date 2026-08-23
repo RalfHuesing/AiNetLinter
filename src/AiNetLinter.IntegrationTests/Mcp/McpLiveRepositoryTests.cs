@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp;
@@ -39,6 +40,40 @@ public sealed class McpLiveRepositoryTests
         Assert.NotNull(text);
         Assert.NotEmpty(text);
         Assert.Contains("LinterEngine", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_OverviewResourceRead_UsesEncodedRepositoryRoot()
+    {
+        var repoRoot = SolutionRootLocator.Find();
+        var resourceUri = $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(repoRoot)}";
+        var templates = await _fixture.Client.ListResourceTemplatesAsync();
+        var resources = await _fixture.Client.ListResourcesAsync();
+        var tools = await _fixture.Client.ListToolsAsync();
+        var readResult = await _fixture.Client.ReadResourceAsync(resourceUri);
+        var content = Assert.Single(readResult.Contents);
+        var textContent = Assert.IsType<TextResourceContents>(content);
+        var expectedToolGroups = new[]
+        {
+            new[] { "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph" },
+            new[] { "get_symbol_body" },
+            new[] { "get_namespace_tree", "get_class_structure", "get_file_skeleton", "get_index_scope", "get_hotspots" },
+            new[] { "get_violations", "safeguard", "search_pattern", "metrics_tree", "metrics_lookup", "pattern_detect", "find_magic_values", "find_dead_code", "get_feature_context", "get_test_context" },
+            new[] { "find_duplicates" },
+            new[] { "reload_config", "get_server_health", "report_observability_feedback" }
+        };
+
+        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?projectRoot}");
+        Assert.Empty(resources);
+        Assert.Equal(26, tools.Count);
+        Assert.Equal(
+            expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal),
+            tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal));
+        Assert.Equal(resourceUri, textContent.Uri);
+        Assert.Equal("text/markdown", textContent.MimeType);
+        Assert.Contains(repoRoot, textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("- Solution:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("- Regeln:", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

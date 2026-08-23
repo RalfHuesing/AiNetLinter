@@ -117,6 +117,18 @@ internal sealed class McpProcessHost : IAsyncDisposable
     public ValueTask<IList<McpClientTool>> ListToolsAsync(CancellationToken cancellationToken = default) =>
         client.ListToolsAsync(cancellationToken: cancellationToken);
 
+    public ValueTask<IList<McpClientResource>> ListResourcesAsync(CancellationToken cancellationToken = default) =>
+        client.ListResourcesAsync(cancellationToken: cancellationToken);
+
+    public ValueTask<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(
+        CancellationToken cancellationToken = default) =>
+        client.ListResourceTemplatesAsync(cancellationToken: cancellationToken);
+
+    public ValueTask<ReadResourceResult> ReadResourceAsync(
+        string uri,
+        CancellationToken cancellationToken = default) =>
+        client.ReadResourceAsync(uri, cancellationToken: cancellationToken);
+
     public async ValueTask DisposeAsync()
     {
         try { await client.DisposeAsync().ConfigureAwait(false); }
