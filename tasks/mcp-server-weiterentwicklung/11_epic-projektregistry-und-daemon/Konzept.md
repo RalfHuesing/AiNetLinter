@@ -256,10 +256,14 @@ Wiring (mechanisch, identisches Muster je Klasse):
 (string? namePattern = null, ...) => FindSymbolTool.ExecuteAsync(mcpState, namePattern, ...)
 
 // NACHER — Lease per 'using': Increment/Decrement strukturell paarweise (Review 7)
-(string projectRoot, string? namePattern = null, ...) =>
+(// WICHTIG (Review R2/A): Das Lambda MUSS async sein und AWAiTEN — ein nacktes
+ // 'return ExecuteAsync(...)' würde das using am Ende des SYNCHRONEN Scopes disposen,
+ // also VOR Task-Abschluss. InFlightCount fiele auf 0, während der Call noch läuft;
+ // der Busy-Guard wäre wirkungslos. 26× mechanisch repliziert — Muster unverändert lassen.)
+async (string projectRoot, string? namePattern = null, ...) =>
 {
     using var lease = _registry.Lease(projectRoot);
-    return FindSymbolTool.ExecuteAsync(lease.Server, namePattern, ...);
+    return await FindSymbolTool.ExecuteAsync(lease.Server, namePattern, ...);
 }
 ```
 
@@ -363,6 +367,9 @@ Kanäle:
   Flag-Werte werden als **decimal Minuten** geparst (InvariantCulture, z. B. `0.05` ≈ 3 s) — so können
   Integrationstests kurze TTLs setzen; ungültiger Wert → harter Startfehler.
 - **maxProjects (Default 4) + LRU:** neuer Key bei vollem Registry verdrängt ältesten.
+- **FAILED-Einträge räumen sich schnell auf (Review R2/B):** Der TTL-Tick entfernt Einträge mit
+  `LoadState == LoadFailed` SOFORT (unabhängig von lastUsed) — es gibt keinen Grund, einen toten
+  Eintrag 45 Min zu halten. Zwischen zwei Ticks bleibt er als FAILED-Marker adressierbar (Hit-Pfad).
 - Caveats (dokumentiert): .NET gibt GC-RAM träge ans OS (Kurve sägt); Solution-Reload kostet Sekunden
   bis Minuten — TTL nicht aggressiv setzen; Dispose muss Workspace-/Catalog-Referenzen konsequent
   freigeben (Muster F5).
@@ -391,7 +398,7 @@ Unterschieden wird, WOHER der Zustandswechsel kommt:
 
 | Pfad | Fehlerfall | Vertrag |
 |---|---|---|
-| **Kalt-Load** (Registry-Miss, Eviction-Reload, Warmup) | Solution/Rules nicht ladbar (kaputtes `.sln`/`.csproj`, fehlende Packages) | Harter Fehler `PROJECT_LOAD_FAILED` mit Ursprungsmeldung (+ Restore-Hint); KEIN Registry-Eintrag; nächster Call versucht neu (kein negatives Caching). |
+| **Kalt-Load** (Registry-Miss, Eviction-Reload, Warmup) | Solution/Rules nicht ladbar (kaputtes `.sln`/`.csproj`, fehlende Packages) | Dispatch antwortet `PROJECT_LOAD_FAILED` mit Ursprungsmeldung (+ Restore-Hint). Der Eintrag bleibt als FAILED-Marker in der Registry (Widerspruch aus früheren Fassungen aufgelöst, Review R2/B: mit dem Sync-Lease-Design entsteht der Eintrag sofort, der Load läuft im Hintergrund); nächster Hit erkennt `LoadState == LoadFailed`, entfernt ihn und lädt frisch — kein negatives Caching über den Fehlschlag hinaus. |
 | **Inkrementeller Staleness-Refresh** (bekannte/neue/geänderte Dateien, csproj-Änderung) | Re-Evaluation schlägt fehl | **LETZTER GUTER STAND bleibt resident**; Analyse läuft weiter; Antworten auf diesem Key tragen bis zur erfolgreichen Aktualisierung einen `[WARN]`-Kopf; Health führt pro Key `LastGoodStateUtc` + `LastLoadError`. |
 
 Syntaxfehler in einzelnen `.cs`-Dateien sind KEIN Load-Fehler (Roslyn toleriert sie; Diagnose erscheint
@@ -456,6 +463,11 @@ Unit (FastTests, Category=Unit):
 - Pending-Adoption (Review 8/13): Call gegen eviction-pending Key adoptiert den Eintrag (kein neuer
   Load, kein zweiter Workspace); ohne Adoption bis zum nächsten Tick wird disposed.
 - Lease-Disziplin: Lease.Dispose senkt InFlightCount genau einmal; Doppel-Dispose ist no-op.
+- Lease-Lifetime (Review R2/A): Mit async/await-Wiring bleibt InFlightCount während des GESAMTEN
+  Tool-Calls > 0 (verzögerter Test-Task) und fällt erst nach Abschluss auf 0 — das nacktes-
+  return-Muster würde diesen Test NICHT bestehen.
+- FAILED-Marker (Review R2/B): Hit nach LoadFailed entfernt den Eintrag und startet frischen Load;
+  TTL-Tick räumt FAILED-Einträge sofort weg.
 
 Integration (Category=Integration):
 
@@ -580,6 +592,10 @@ bewirkt schlicht „kein Warmup“, niemals einen Fehler.
 2. **Daemon-Host:** `AiNetLinter.exe --daemon-start` (intern, nicht für Clients gedacht): hostet
    `ProjectRegistry` + `McpServerOptionsFactory`-Stack über Pipe-Transport; Observability mit
    `connectionId` + `mode=daemon`.
+   CLI-Details (Review R2/C): `--daemon-start` erscheint in `--help`, als `[internal]` markiert
+   (versteckte Argumente erschweren Fehlersuche). Doppelstart bei bereits laufendem Daemon: die Pipe
+   ist belegt → sauberer Fehler auf stderr + Exit-Code ≠ 0 — kein Ersetzen des laufenden Daemons,
+   keine unbehandelte Exception.
 3. **Thin-Client-Modus:** `--mcp-server` verhält sich nach außen identisch wie heute, intern:
    Connect-or-Start → Handshake → Pump. Statistische Parameter (`--mcp-log`, TTL/MaxProjects) reicht
    der Thin-Client beim Daemon-Spawn durch.
