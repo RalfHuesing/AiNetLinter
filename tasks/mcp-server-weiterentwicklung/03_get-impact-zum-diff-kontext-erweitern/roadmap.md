@@ -154,7 +154,7 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       `RunSolutionLintAsync` + LintRuns-Inkrement + 7 FastTests + Tripel-
       Nachweis GitRuns/TestSolutionScans/LintRuns==1; done/approved,
       Commit 8bc3e919). Tool-Anschluss an den Antwortvertrag bleibt EPIC-6.
-- [ ] EPIC-6: `get_impact`-Vertrag „change-context" & strukturierte Antwort —
+- [x] EPIC-6: `get_impact`-Vertrag „change-context" & strukturierte Antwort —
       neue Optionen additiv in `GetImpactInput`: `detailLevel` (`callers` |
       `change-context`, Default `callers`), `maxChangedSymbols` (Default 20,
       Cap 100), `maxTestsPerSymbol` (Default 10, Cap 50); Delegat-Signatur/
@@ -174,9 +174,10 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Source-Bodies, keine zwei Vollkopien langer Bodies; `callers` bleibt
       abwärts-/snapshot-kompatibel (Konzept §Öffentlicher Vertrag,
       §StructuredContent, §Performance- und Größenregeln, §Tests).
-      *Planungsnotiz:* in Arbeit → step-008 (gesamtes Epic als einzelner
-      Step: Parameter + Validierung + Kappung im Analyzer-Kern +
-      strukturierte Antwort + ct-Bindung + Tests; Doku bleibt EPIC-7).
+      *Abgeschlossen:* step-008 (gesamtes Epic als einzelner Step:
+      Parameter + Validierung + Kappung im Analyzer-Kern + strukturierte
+      Antwort + ct-Bindung + Tests; done/approved, Commit 5425f95f; Doku
+      bleibt EPIC-7).
 - [ ] EPIC-7: Dokumentation in `Docs/agent-api.md` inkl. Grenzen —
       JSON-Feldnamen des StructuredContent exakt dokumentieren (additive
       Felder); den `ExpandAsync`-Fix als **Verhaltenskorrektur** von
@@ -189,3 +190,6 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Zuordnung" benannt (DoD); README-MCP-Tabellenzeile zu `get_impact`
       aktualisieren; nach Task-Abschluss `Docs/ROADMAP.md`-Eintrag ergänzen
       (Update-Pflicht Richtlinien §4).
+      *Planungsnotiz:* in Arbeit → step-009 (gesamtes Epic als einzelner
+      Step: agent-api.md-Vertrag/-Grenzen/-Verhaltenskorrektur, README-Zeile,
+      ROADMAP-Eintrag; danach keine offenen Epics mehr → Loop-Ende).

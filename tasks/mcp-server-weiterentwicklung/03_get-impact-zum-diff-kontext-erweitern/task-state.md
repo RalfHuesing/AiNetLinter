@@ -4,8 +4,8 @@ task: 03_get-impact-zum-diff-kontext-erweitern
 started_at: 2026-08-22
 last_updated: 2026-08-23
 rules_dir: .agents/rules
-total_steps: 8
-current_step: step-008
+total_steps: 9
+current_step: step-009
 ---
 
 # Task State: 03_get-impact-zum-diff-kontext-erweitern
@@ -13,9 +13,9 @@ current_step: step-008
 ## Übersicht
 
 - **Task-Status:** `executing` (Fortsetzung nach Nutzer-Revision 2026-08-23)
-- **Steps gesamt:** 8 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 9 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** keiner (step-008 approved; Planer plant als Nächstes EPIC-7)
+- **Aktueller Schritt:** `step-009` (in_progress)
 
 > **Nutzerentscheidung 2026-08-22 (Straffung):** Die restlichen Epics wurden
 > zu größeren Steps konsolidiert (EPIC-3+4 → step-004). Die konsolidierten
@@ -70,6 +70,7 @@ MCP-Server läuft proaktiv mit (bei Bedarf get_server_health).
 | step-006 | EPIC-3+EPIC-4 | done | Korrektur step-004: Quoting des Mehrklassen-Filters | step-004 | 4b53579a | approved | 9399714c / a766f727 |
 | step-007 | EPIC-5 | done | Solutionweite Violations & diffbezogene Filterung (interne Stufe) | - | 8bc3e919 | approved | b4925761 / 7f44405c |
 | step-008 | EPIC-6 | done | get_impact-Vertrag change-context & strukturierte Antwort | - | 5425f95f | approved | 0791aec9 / 448acb2a |
+| step-009 | EPIC-7 | in_progress | Doku agent-api.md inkl. Grenzen + README + ROADMAP | - | - | - | - |
 
 ## Config
 
