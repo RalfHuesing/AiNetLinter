@@ -46,7 +46,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-A | in_progress | Projektregistry-Grundlage: Definitionsdatei, Loader, Fehlerverträge, Config-Materialisierung | - | - | - | Plan: b7524b0f |
+| step-001 | EPIC-A | done | Projektregistry-Grundlage: Definitionsdatei, Loader, Fehlerverträge, Config-Materialisierung | - | e0b25033 | 2026-08-23 (approved) | e0b25033 / 7ee7d805 |
 
 ## Config (optional)
 
