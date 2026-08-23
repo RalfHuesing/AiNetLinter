@@ -216,18 +216,20 @@ Doku:
   `get_impact`/`find_references`-Verträge, Structured-Output-Schemata,
   Trunkierungs-Format); Doku-Ziel dieses Tasks: JSON-Feldnamen exakt,
   Verhaltenskorrektur depth>1 ausweisen, Grenzen dokumentieren (EPIC-7).
-  Ist-Stand bei step-009-Planung: get_impact-Tabellenzeile kennt die drei
-  neuen Parameter nicht, kein change-context-Abschnitt vorhanden,
-  Structured-Output-Intro behauptet die CallSiteEntry-Form für den ganzen
-  Git-Branch, E.2-depth-Abschnitt ohne Verhaltenskorrektur. (zuletzt:
-  step-009-Planung)
+  Seit step-009 dokumentiert: get_impact-Tabellenzeile mit allen drei
+  Parametern, change-context-Detailabschnitt (JSON-Feldnamen,
+  Vertragsregeln, sechs Grenzen), korrigiertes Structured-Output-Intro
+  (CallSiteEntry-Form nur noch für callers), Reached-From-`#lf:`-
+  Anmerkung im transitiven Abschnitt, E.2 mit Verhaltenskorrektur,
+  Trunkierungs-Ausnahme des change-context-Modus. (zuletzt: step-009)
 - **`README.md`** — MCP-Tool-Tabelle mit Zeile zu `get_impact`; bei
-  Vertragsänderung mitzupflegen (EPIC-7); Zeile (Z. 96) ist noch ohne
-  change-context-Erwähnung. (zuletzt: step-009-Planung)
+  Vertragsänderung mitzupflegen (EPIC-7); Zeile (Z. 96) nennt seit
+  step-009 den change-context-Modus samt Payload-Inhalt.
+  (zuletzt: step-009)
 - **`Docs/ROADMAP.md`** — Projekt-Roadmap mit abgeschlossenen Feature-
   Abschnitten (`## Titel` + `[x]`-Bullets, GitHub-Footer am Dateiende);
-  neuer Abschnitt zum change-context-Feature ist EPIC-7-Bestandteil
-  (Update-Pflicht Richtlinien §4). (zuletzt: step-009-Planung)
+  seit step-009 Abschnitt „Strukturierter Diff-Kontext“ am Dateiende
+  vor dem Footer (Update-Pflicht Richtlinien §4). (zuletzt: step-009)
 
 Tests:
 
