@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T01:26:00+02:00
+last_updated: 2026-08-24T01:39:39+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 8  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-008
+total_steps: 9  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-009
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -19,10 +19,10 @@ current_step: step-008
   nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
   dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
-- **Steps gesamt:** 8 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 9 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-008` (done — EPIC-A-Abschluss mit Drift-Audit,
-  Overview-Liveprüfung und Meilenstein-Doku; EPIC-B als nächstes freigegeben)
+- **Aktueller Schritt:** `step-009` (in_progress — EPIC-B Transport-/Handshake-
+  Grundlage)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
@@ -64,6 +64,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-006 | EPIC-A | done | Race-Interleavings in den Abnahmetests deterministisch verankern | step-005 | 05b2e157 / 3dac2e2c | 2026-08-23 (issues; korrigiert) | 05b2e157 / 3dac2e2c / e7e0fdfe |
 | step-007 | EPIC-A | done | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | 73695524 / 91d9aae2 | 2026-08-24 (approved) | 73695524 / 91d9aae2 |
 | step-008 | EPIC-A | done | EPIC-A-Abschluss: Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku | - | 3c01d78a / 2760cf5e | 2026-08-24 (approved) | 3c01d78a / 2760cf5e |
+| step-009 | EPIC-B | in_progress | Transport-/Handshake-Grundlage für den Daemon | - | - | - | Plan erstellt |
 
 ## Config (optional)
 

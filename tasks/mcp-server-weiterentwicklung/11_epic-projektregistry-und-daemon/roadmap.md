@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-24T01:26:00+02:00
+last_updated: 2026-08-24T01:34:06+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -194,7 +194,10 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps.
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-009**
+      (JIT-Start mit der fachlichen Transport-/Handshake-Grundlage und
+      in-proc Contract-Tests; weitere Steps werden erst nach dem tatsächlichen
+      Ergebnis dieses Steps geplant).
   - [ ] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
         (+ ACL auf aktuellen User), newline-delimited JSON, je Verbindung ein async
         Read/Write-Loop; Disconnect bricht in-flight Calls DER Verbindung ab —
