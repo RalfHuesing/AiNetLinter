@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T13:16:00+02:00
+last_updated: 2026-08-23T13:54:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -67,11 +67,11 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   ablehnen) und die neuen statischen Flags `--mcp-project-ttl-minutes`,
   `--mcp-max-projects`, `--mcp-daemon-idle-exit-minutes`. (zuletzt: initial)
 - **`src/AiNetLinter/Commands/McpServerCommand.cs`** — statischer MCP-Einstieg
-  (`RunAsync` hält heute DIE eine `McpCodeGraphServer`-Instanz); enthält die
-  Config-Pipeline (`ResolveConfig`/`ResolveMaxLineCount`/`TryResolveRulesJsonPath`)
-  und die Solution-Auto-Suche (`FindSolutionCandidates`/`ReportAmbiguousSolution`
-  — laut Konzept F8 künftig Batch-only); hier landet ProjectRegistry + Eviction-Timer.
-  (zuletzt: initial)
+  (`RunAsync` hält heute DIE eine `McpCodeGraphServer`-Instanz); `ResolveConfig`/
+  `ResolveMaxLineCount` delegieren seit step-001 auf `ProjectInstanceFactory.MaterializeRules`
+  (geteilter Kern mit dem Registry-Pfad), während Pfadauflösung inkl.
+  `TryResolveRulesJsonPath` und Solution-Auto-Suche batch-seitig hier bleiben (F8);
+  hier landet ProjectRegistry + Eviction-Timer. (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — instanzbasierter Analysekern
   (F1, kein statisches Mutable-State): Options-Record-Konstruktor, Config-Hot-Swap
   (`ReloadConfig`), `ReloadSolutionAsync`, `DisposeAsync` mit LoadTask-Abbruch,
@@ -121,9 +121,16 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   heute von `McpServerCommand` aufgerufen; wird als gemeinsame Materialisierung in
   `ProjectInstanceFactory` gezogen (geteilt Batch + Registry, Review 3).
   (zuletzt: initial)
-- **`src/AiNetLinter/Mcp/Projects/` und `src/AiNetLinter/Mcp/Daemon/`** — existieren
-  noch NICHT; verbindliche Zielstruktur steht im Konzept-Strukturbaum. Einträge
-  folgen, sobald der Coder die Klassen anlegt. (zuletzt: initial)
+- **`src/AiNetLinter/Mcp/Projects/`** — seit step-001 angelegt: `ProjectDefinition`
+  (Record, absolut + existenzgeprüft via Loader), `ProjectDefinitionLoader`
+  (Pflichtfelder, Anker Definitionsdatei, kein Fallback, Fehlerverträge mit
+  Template-Text), `ProjectDefinitionLoadResult` (flacher Result-Record),
+  `ProjectErrorCodes` (alle sechs A.5-Codes; `PROJECT_ROOT_*` erst im Wiring aktiv)
+  und `ProjectInstanceFactory` (`MaterializeRules` = geteilter Config-Kern Batch +
+  Registry, `Create(Definition)` → Options via `From(...)`). `ProjectEntry`,
+  `ProjectLease`, `ProjectRegistry` folgen in späteren Steps. (zuletzt: step-001)
+- **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
+  Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
 ### Tests
 
@@ -133,8 +140,12 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter.FastTests/Mcp/**`** — bestehende Unit-/Component-Tests zu
   Command/Factory/Registrations/Overview (u. a. `McpServerOptionsFactoryTests`,
   `SymbolGraphToolRegistrationsTests`, `OverviewResourceRegistrationTests`,
-  LoadingState-/CacheBypass-/CallLog-Tests); Contract-Tests (`projectRoot` required)
-  und `FastTests/Mcp/Projects|Daemon/` kommen hier dazu. (zuletzt: initial)
+  LoadingState-/CacheBypass-/CallLog-Tests); seit step-001 dazu
+  `FastTests/Mcp/Projects/` mit `ProjectDefinitionLoaderTests` (Ankerregel,
+  Fehlerverträge inkl. Template-Text-Assertion, Kein-Fallback) und
+  `ProjectInstanceFactoryTests` (Materialisierung + Gleichheit mit der
+  Batch-Pipeline). Contract-Tests (`projectRoot` required) und
+  `FastTests/Mcp/Daemon/` kommen später dazu. (zuletzt: step-001)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die sparsamen Daemon-Zwei-Prozess-E2E
