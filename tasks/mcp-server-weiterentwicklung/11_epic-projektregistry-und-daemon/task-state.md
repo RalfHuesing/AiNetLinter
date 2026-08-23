@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T00:52:12+02:00
+last_updated: 2026-08-24T01:26:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 8  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-008
@@ -21,8 +21,8 @@ current_step: step-008
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 8 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-008` (in_progress — EPIC-A-Abschluss mit
-  Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku)
+- **Aktueller Schritt:** `step-008` (done — EPIC-A-Abschluss mit Drift-Audit,
+  Overview-Liveprüfung und Meilenstein-Doku; EPIC-B als nächstes freigegeben)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
@@ -63,7 +63,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-005 | EPIC-A | done | FAILED-Freigabe und Registry-Reservation atomar absichern | step-004 | a50bff9a / 1cd75558 | 2026-08-23 (issues; korrigiert) | a50bff9a / 1cd75558 / 1059cfcb |
 | step-006 | EPIC-A | done | Race-Interleavings in den Abnahmetests deterministisch verankern | step-005 | 05b2e157 / 3dac2e2c | 2026-08-23 (issues; korrigiert) | 05b2e157 / 3dac2e2c / e7e0fdfe |
 | step-007 | EPIC-A | done | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | 73695524 / 91d9aae2 | 2026-08-24 (approved) | 73695524 / 91d9aae2 |
-| step-008 | EPIC-A | in_progress | EPIC-A-Abschluss: Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku | - | - | - | Plan erstellt |
+| step-008 | EPIC-A | done | EPIC-A-Abschluss: Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku | - | 3c01d78a / 2760cf5e | 2026-08-24 (approved) | 3c01d78a / 2760cf5e |
 
 ## Config (optional)
 
