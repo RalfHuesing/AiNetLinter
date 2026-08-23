@@ -15,7 +15,7 @@ current_step: step-006
 - **Task-Status:** `executing` (Fortsetzung nach Nutzer-Revision 2026-08-23)
 - **Steps gesamt:** 6 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-006` (Korrektur step-004) — Resume-Punkt für die nächste Session
+- **Aktueller Schritt:** keiner (step-006 approved; Planer plant als Nächstes EPIC-5 einzeln)
 
 > **Nutzerentscheidung 2026-08-22 (Straffung):** Die restlichen Epics wurden
 > zu größeren Steps konsolidiert (EPIC-3+4 → step-004). Die konsolidierten
@@ -66,8 +66,8 @@ MCP-Server läuft proaktiv mit (bei Bedarf get_server_health).
 | step-001 | EPIC-1 | done | Traversierungs-Korrektur (EnqueueChildren) & Sufficiency-Hint-Parität | - | 232aec64 | approved | fe91bab8 / acd21e23 |
 | step-002 | EPIC-2 | done | Strukturiertes DiffImpactAnalysis-Ergebnisobjekt im DiffImpactAnalyzer | - | 5b26c63b | approved | 59331e2e / 52f18833 |
 | step-003 | EPIC-2 | done | Breiter Diff-Symbolscanner mit kollisionsfreien stabilen IDs | - | 85c7fdce | approved | e31006dd / bb34d3a7 |
-| step-004 | EPIC-3+EPIC-4 | done (Korrektur ausstehend) | Testfundament, gebatchte Test-Zuordnung & recommendedTestCommands | - | 7b3b0284 | issues | 5a1c9952 / 1588160a |
-| step-006 | EPIC-3+EPIC-4 | open | Korrektur step-004: Quoting des Mehrklassen-Filters | step-004 | - | - | - |
+| step-004 | EPIC-3+EPIC-4 | done | Testfundament, gebatchte Test-Zuordnung & recommendedTestCommands | - | 7b3b0284 | approved (via 006) | 5a1c9952 / 1588160a |
+| step-006 | EPIC-3+EPIC-4 | done | Korrektur step-004: Quoting des Mehrklassen-Filters | step-004 | 4b53579a | approved | 9399714c / a766f727 |
 | step-005 | EPIC-5+EPIC-6+EPIC-7 | open | Violations-Stufe, get_impact-Vertrag change-context & Doku | - | - | - | - |
 
 ## Config
