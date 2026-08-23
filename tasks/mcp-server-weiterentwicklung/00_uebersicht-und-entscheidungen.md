@@ -5,9 +5,13 @@ project_kind: brownfield
 priority: uebersicht
 agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
 rules_dir: .agents/rules
-last_updated: 2026-08-21
+last_updated: 2026-08-24
 open_questions: []
 ---
+**EPIC-A-Status (2026-08-24):** Die transportneutrale Multi-Solution-Registry
+ist umgesetzt; absolute `projectRoot`-Adressierung, die eigene
+Definitionsdatei-/MCP-Migration und der Overview-Resource-Read sind in
+`11_epic-projektregistry-und-daemon/step-008` nachgewiesen.
 
 # MCP-Server-Weiterentwicklung: konsolidierte Aufgaben (Einstiegspunkt)
 
@@ -131,4 +135,3 @@ verwenden neutrale, mehrprojektige C#-Solutions.
   laufenden Hybridsuche gelöscht werden, ohne Inhalt zu verlieren).
 - Keine Aufgabe existiert doppelt; die laufende Hybridsuche wird nur referenziert.
 - Die Ausführungsreihenfolge ist priorisiert und mit Abhängigkeiten begründet.
-

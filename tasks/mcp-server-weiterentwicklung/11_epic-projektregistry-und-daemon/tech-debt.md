@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-23T15:35:00+02:00
+last_updated: 2026-08-24T01:15:00+02:00
 ---
 
 # Tech-Debt-Log: 11_epic-projektregistry-und-daemon
@@ -35,6 +35,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | TD-003 | `src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs` | niedrig | nein | Load(null/leerer projectRoot) löst implizit cwd-relativ auf — Ankerregel formal verletzt bis der Wiring-Guard existiert |
 | TD-004 | `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | mittel | nein | Soft-Cap: bei nur-busy Register wächst der Bestand über MaxProjects; TTL-Tick reklamiert Überhang nicht aktiv — Kapazitätsentscheidung fehlt bis Epic B |
 | TD-005 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` + `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | niedrig | nein | Disposal faulted Loads über den Sync-Eviction-Pfad schreibt [WARN] auf den nicht injizierbaren Console-Kanal (verwandt TD-002) |
+| TD-006 | `src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs` + `src/AiNetLinter.TestKit/TestConfigFactory.cs` | niedrig | nein | Exact-Duplikat der leeren Config-Erzeugung in getrennten Test-/TestKit-Grenzen; gemeinsame Ablage braucht eine Abhängigkeitsentscheidung |
 
 ## Einträge
 
@@ -136,4 +137,23 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Verbindung/Key); bis dahin die mögliche `[WARN]`-Zeile beim FAILED-Räumungspfad als bekannt
   einstufen.
 - **Auto-Fixable:** nein — API-/Signaturänderung mit Integrationsentscheidung.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-006 — Exact-Duplikat der leeren Test-Config über Testgrenzen [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-008 (einmaliger Epic-Drift-Audit vom 2026-08-24)
+- **Ort:** `TrackingServerFactory.MinimalConfig()` und
+  `TestConfigFactory.CreateEmpty()`; beide liefern `Config` mit `GlobalConfig`
+  und `MetricsConfig`.
+- **Befund:** Der tokenbasierte Audit meldete einen exact-Cluster. Die Methoden
+  sind semantisch gleich, werden aber in unterschiedlichen Grenzen verwendet:
+  der erste Helper ist privat im Registry-Test-Double, der zweite ist eine
+  öffentliche TestKit-Fabrik mit Aufrufern in Fast- und IntegrationTests.
+- **Warum nicht sofort gefixt:** Eine Konsolidierung in das TestKit würde die
+  Abhängigkeitsrichtung und die Zuständigkeit des Registry-Test-Doubles ändern;
+  das ist keine entscheidungsfreie Änderung im EPIC-A-Abschluss-Step.
+- **Vorschlag:** Bei einer späteren Testinfrastruktur-Konsolidierung prüfen, ob
+  `TrackingServerFactory` die öffentliche TestKit-Fabrik verwenden kann, ohne
+  Test-Intent oder Projektabhängigkeiten zu verschieben.
+- **Auto-Fixable:** nein — Testinfrastruktur-/Abhängigkeitsentscheidung.
 - **Status:** offen  # offen | erledigt | verworfen

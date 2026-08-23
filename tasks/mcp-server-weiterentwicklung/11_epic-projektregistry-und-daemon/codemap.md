@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-24T00:28:00+02:00
+last_updated: 2026-08-24T01:15:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -174,9 +174,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die Prozess-Harnesses starten MCP
   jetzt nur mit `--mcp-server`, legen die Fixture-Definition an und ergänzen
-  `projectRoot` in Tool-Calls; `McpServerCommandContractTests` verankert zusätzlich
-  den Loading→Fault→Release-Vertrag mit erstem `PROJECT_LOAD_FAILED`, direkter
-  Originalexception-Assertion und anschließendem frischem Retry. (zuletzt: step-007)
+  `projectRoot` in Tool-Calls; `McpProcessHost`/`ReadOnlyMcpHostClient` bieten
+  zusätzlich SDK-Discovery und Resource-Read, der Repository-Live-Test prüft
+  das URL-kodierte Overview-Template und den 26er-Toolvertrag. (zuletzt: step-008)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)

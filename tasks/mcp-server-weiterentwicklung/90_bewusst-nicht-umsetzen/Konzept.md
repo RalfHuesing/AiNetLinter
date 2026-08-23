@@ -158,9 +158,20 @@ Host-Support heterogen; Workflows sind bereits über Instructions und Overview t
 **Bedingung zur Wiederöffnung:** Call-Log-Analyse (Aufgabe 01) zeigt, dass Agenten die
 empfohlenen Ketten nicht von selbst laufen, oder ein konkreter Ziel-Host unterstützt Prompts.
 
-### D.4 Multi-Solution-Unterstützung — zurückgestellt (aus Aufgabe 08, Teil 4)
-Eine Solution pro Prozess ist ein sauberes Muster (mehrere Server-Instanzen). Hohe
-Beweislast: Nur bei belegtem Scheitern des Multi-Server-Setups in der Praxis.
+### D.4 Multi-Solution-Unterstützung — EPIC-A umgesetzt (aus Aufgabe 08, Teil 4)
+Die frühere Annahme „eine Solution pro Prozess“ wurde wegen der belegten
+Host-Realität wieder geöffnet. EPIC-A implementiert die transportneutrale
+Registry für mehrere Projekte: Jeder Tool- und Overview-Resource-Aufruf wird
+über den absoluten `projectRoot` an einen Registry-Key gebunden; die
+Definitionsdatei `ainetlinter.project.json` liefert `solution` und `rules`.
+Die eigene Repo-/Hermes-Registrierung und der URL-kodierte Overview-Resource-
+Read sind in `11_epic-projektregistry-und-daemon/step-008` read-only bzw. live
+nachgewiesen. Der erreichte Host akzeptierte das Query-Template, daher wurde
+kein Resource→Tool-Rückfall eingeführt.
+
+**Entscheidung:** Multi-Solution-Routing bleibt als transportneutrale
+Registry-Fachlichkeit umgesetzt. Transport-, Thin-Client- und Daemon-
+Lebenszyklusfragen sind nicht Bestandteil dieses Vermerks.
 
 ---
 
@@ -170,4 +181,3 @@ Beweislast: Nur bei belegtem Scheitern des Multi-Server-Setups in der Praxis.
 - Neue Roadmap-/Taskvorschläge widersprechen diesen Entscheidungen nicht ohne neue
   dokumentierte Evidenz.
 - Es wird keine verworfene Idee allein mit „könnte besser sein" wieder geöffnet.
-
