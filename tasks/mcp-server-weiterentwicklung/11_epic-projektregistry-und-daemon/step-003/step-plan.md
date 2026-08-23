@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done (Korrektur ausstehend)
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 003               # flach, Task-weite Sequenz — auch Korrekturen liegen hier, nie in einem Unterordner
