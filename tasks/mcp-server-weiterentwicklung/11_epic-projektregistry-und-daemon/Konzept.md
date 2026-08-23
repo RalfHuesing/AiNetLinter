@@ -121,8 +121,10 @@ src/AiNetLinter/
     ├── Projects/                        [NEU — Epic A]
     │   ├── ProjectDefinition.cs              record(SolutionPath, RulesPath) — absolut + existenzgeprüft
     │   ├── ProjectDefinitionLoader.cs        liest ainetlinter.project.json; Fehlerverträge A.5; kein Fallback
-    │   ├── ProjectEntry.cs                   RootPath, Definition, Server, LastUsedUtc, InFlightCount
-    │   └── ProjectRegistry.cs                Resolve/LRU/TTL-Timer/Busy-Guard/IAsyncDisposable
+    │   ├── ProjectEntry.cs                   RootPath, Definition, Server, LastUsedUtc, PendingEviction
+    │   ├── ProjectLease.cs                   { Server } + Dispose => Lease-Ende (InFlight-Tracking)
+    │   ├── ProjectInstanceFactory.cs         Materialisiert Server-Options aus Definition (Config-Pipeline, geteilt mit Batch)
+    │   └── ProjectRegistry.cs                Lease/LRU/TTL-Timer/Pending-Adoption/IAsyncDisposable
     └── Daemon/                          [NEU — Epic B]
         ├── DaemonConstants.cs                 Pipe-Name (inkl. Username-Suffix), Protokollversion
         ├── DaemonHandshake.cs                 hello/welcome-Records + Versionsvergleichslogik
@@ -139,6 +141,12 @@ src/AiNetLinter.IntegrationTests/Mcp/Daemon/   [NEU] echte Zwei-Prozess-E2E (spa
 
 Bewusst KEINE neuen Top-Level-Namespaces außer `AiNetLinter.Mcp.Projects` und `AiNetLinter.Mcp.Daemon`;
 keine Änderungen unter `Rules/`, `Generators/`, `Core/`.
+
+**Zielplattform (Final-Pass, Nutzerentscheidung):** AiNetLinter wird aktuell AUSSCHLIESSLICH für
+Windows entwickelt und betrieben. Pipe-ACL via `PipeSecurity` ist damit Windows-only und korrekt so
+gebaut (Review 9); POSIX-Portabilität (Unix Domain Sockets, ACL-Guards) ist kein Ziel dieser Epics
+und wird nirgends vorbereitet. Der Daemon-Spawn nutzt `ProcessStartInfo` mit `UseShellExecute=false`,
+`CreateNoWindow=true`, ohne stdout/stderr-Redirect (Daemon schreibt ins Observability-Log) — Review 10.
 
 ### Self-Audit (2026-08-22): geschlossene Lücken
 
@@ -230,10 +238,10 @@ internal sealed class ProjectRegistry : IAsyncDisposable
     // Key = kanonisierter Root-Pfad (OrdinalIgnoreCase), Value = geladenes Projekt
     private readonly Dictionary<string, ProjectEntry> _projects = new(StringComparer.OrdinalIgnoreCase);
 
-    // HIT  -> entry.Touch(); Server zurueckgeben
-    // MISS -> ProjectDefinitionLoader laden (hart, Fehlervertraege unten),
-    //         bei maxProjects zuerst LRU-Eviction (DisposeAsync), dann Eintrag anlegen
-    internal McpCodeGraphServer Resolve(string projectRoot);
+    // Sync-Rueckgabe (Review 1): HIT -> Touch + Lease zurueckgeben. MISS -> Definition
+    // laden (harte Fehler HIER, A.5), Instanz MIT Hintergrund-Load erzeugen (LoadFunc,
+    // LoadState=Loading) und sofort zurueckgeben. Bei maxProjects zuerst LRU-Eviction.
+    internal ProjectLease Lease(string projectRoot);
 }
 
 // neu: src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs
@@ -247,9 +255,12 @@ Wiring (mechanisch, identisches Muster je Klasse):
 // VORHER (SymbolGraphToolRegistrations.cs:44-46)
 (string? namePattern = null, ...) => FindSymbolTool.ExecuteAsync(mcpState, namePattern, ...)
 
-// NACHER
-(string projectRoot, string? namePattern = null, ...)
-    => FindSymbolTool.ExecuteAsync(_registry.Resolve(projectRoot), namePattern, ...)
+// NACHER — Lease per 'using': Increment/Decrement strukturell paarweise (Review 7)
+(string projectRoot, string? namePattern = null, ...) =>
+{
+    using var lease = _registry.Lease(projectRoot);
+    return FindSymbolTool.ExecuteAsync(lease.Server, namePattern, ...);
+}
 ```
 
 - Alle sechs Registration-Klassen (`SymbolGraph`, `FileStructure`, `Analysis`, `SymbolBody`,
@@ -260,15 +271,31 @@ Wiring (mechanisch, identisches Muster je Klasse):
   (F5 liefert Pro-Instanz-Werte: Root/Solution/Rules/lastUsed/RefreshCount/Staleness/Uptime).
 - `reload_config` ist ein ganz normales Tool unter dem Vertrag: es wirkt auf den EINEN per
   `projectRoot` adressierten Key (Config-Hot-Swap, F5), nicht prozessweit.
+  Ohne `configPath` liest es den `rules`-Pfad AUS DER Definitionsdatei des Keys neu ein (Review 4) —
+  keine Nachbar-Suche, konsistent mit dem Kein-Fallback-Vertrag; mit `configPath` überschreibt es für
+  diesen einen Hot-Swap.
 - projectRoot-Vertrag einmalig in `ServerInstructions.Text` (F6).
+  **Byte-Budget (Review 12):** `ServerInstructions` hat ein bewusstes Limit (`MaxUtf8Bytes ≈ 2557`).
+  Der neue Vertragsblock wird KOMPRIMIERT gefasst, um ins Budget zu passen (Budget-Rechnung gehört
+  in den Task); eine Limit-Erhöhung ist nur mit Begründung im Commit erlaubt — das Limit schützt die
+  Größe des initialize-Payloads.
 - Lint-Grenzen F7 einhalten (Registry-Klassen klein, Options-Records).
 
-**Load-Dedupe & Lock-Hygiene** (Self-Audit 1): Der Registry-Lock deckt NIE einen Solution-Load —
-ein Load dauert Sekunden bis Minuten und würde alle anderen Projekte einfrieren. Resolve-Ablauf bei
-MISS: unter kurzem Lock prüfen → Load-Task starten (ohne Lock) → parallele Erst-Calls auf denselben
-Root awaiten dieselbe Task (Dictionary `rootPath → Task<LoadedProject>`, Eintrag wird nach Abschluss
-zum festen Entry). Fehlgeschlagene Loads werfen den Platzhalter weg; der nächste Call versucht neu
-(kein negatives Caching).
+**Load-Dedupe & Lock-Hygiene (Review 1, entscheidungstragend):** `Lease` kehrt SYNCHRON zurück und
+liefert die Instanz im `Loading`-Zustand — der Dedupe lebt im BESTEHENDEN Instanzmuster (`_loadTask`,
+Adoption beim ersten Dispatch, `McpToolResults.Loading()` solange der Load läuft), NICHT in der
+Registry. Der Registry-Lock deckt nur Dictionary-Zugriffe, nie einen Solution-Load. Parallele
+Erst-Calls auf denselben Root erhalten dieselbe Instanz ⇒ genau EIN Load; der bestehende Tool-Dispatch
+und sein Loading-Antwortmuster bleiben unangetastet. Schlägt der Hintergrund-Load fehl, antwortet der
+Dispatch mit PROJECT_LOAD_FAILED; der tote Eintrag wird beim nächsten Hit an
+`LoadState == LoadFailed` erkannt, entfernt und frisch geladen (kein negatives Caching). Die früher
+skizzierte Registry-eigene Task-Dedupe-Map entfällt damit ersatzlos.
+
+**Config-Materialisierung (Review 3):** Die Pipeline „rules.json laden → `ConfigLoader.TryLoadConfig` →
+MaxLineCount/MetricsConfig-Defaults" existiert heute in `McpServerCommand` (Batch). Sie wandert in
+eine gemeinsame Helper-Klasse (`ProjectInstanceFactory`, Baum oben), die sowohl das Batch-Kommando
+als auch die Registry je Definition aufrufen — null Duplizierung, identische Semantik. Die
+Existenzprüfung der rules bleibt im Loader (RULES_NOT_FOUND), das Laden in der Factory.
 
 **Key-Kanonisierung (Final-Pass):** Key = `Path.GetFullPath(projectRoot)` mit abschließenden
 Trennern (`\` und `/`) entfernt. GetFullPath vereinheitlicht Groß/Kleinschreibung-Normalisierung
@@ -286,6 +313,11 @@ bisherige statische URI ist bei mehreren Projekten nicht adressierbar. Die Resso
 URI-Template mit Query-Parameter: `ainetlinter://overview?projectRoot=<url-encoded>` (URL-kodierter,
 absoluter Pfad; fehlt/ungültig → gleiche Fehlerverträge wie bei Tools). KEIN neuer Tool-Ersatz — die
 Toolanzahl bleibt eingefroren (Non-Goal „keine Tool-Removal/neue Tools" bleibt unangetastet).
+**Rückfallplan (Review 5):** URI-Template-Unterstützung variiert je MCP-Client. Der Umsetzende prüft
+beim Epic-A-Bau das SDK-Matching (Resource-Template-Expansion) und verifiziert in Hermes + Claude Code
+live. Scheitert ein Host am Query-Parameter, wird die Overview als TOOL exponiert (einzige erlaubte
+Ausnahme vom Tool-Freeze — besser als eine kaputte Resource); die Entscheidung wird im Task-Log
+dokumentiert.
 
 ## A.5 Fehlerverträge (alle deterministisch, englisch, mit Bauanleitung)
 
@@ -339,8 +371,19 @@ Kanäle:
 **Busy-Guard für Eviction** (Self-Audit 2): Ein Key mit laufendem Call (`InFlightCount > 0`) wird weder
 von TTL noch LRU disposet — eine ObjectDisposedException mitten in einer Analyse ist der schlimmstmögliche
 Fehlermodus. Umsetzung: Eviction markiert Key als „eviction pending" und disposed erst nach dem letzten
-in-flight Call (oder beim nächsten Idle-Tick). Ein neuer Call gegen einen pending-Key startet normal
-einen frischen Load.
+in-flight Call (oder beim nächsten Idle-Tick). Ein neuer Call gegen einen pending-Key ADOPTIERT den
+Eintrag (siehe unten) — er startet keinen frischen Load.
+
+**InFlight-Tracking-Mechanismus (Review 7, verbindlich):** Das Zählen passiert STRUKTURELL im
+Lease-Lifetime, nie manuell: `ProjectRegistry.Lease()` inkrementiert, `ProjectLease.Dispose()`
+dekrementiert; jedes Tool-/Resource-Lambda nutzt `using var lease = …` (Muster oben) — vergessen kann
+das Paar nicht werden. Kein Wrapper-Subsystem nötig, kein try/finally im Tool-Code.
+
+**Pending-Eviction: ADOPTION statt Doppel-Load (Review 8):** Ein neuer Call gegen einen eviction-
+pending Key ADOPTIERT den Eintrag: Pending-Flag zurücksetzen, Touch erneuern, Lease ausgeben — der
+residente Workspace bleibt, es entsteht KEIN zweiter paralleler Roslyn-Workspace für dasselbe Projekt
+(RAM-Risiko bei großen Solutions vermieden). Disposed wird ein pending Entry nur, wenn bis zum
+nächsten Idle-Tick keine Adoption erfolgte und InFlightCount 0 ist. Unit-Test fixiert beide Wege.
 
 ### Solution-Zustand: zweistufiger Fehlervertrag (Build-Fehler, kaputte Projekte)
 
@@ -364,6 +407,11 @@ Snapshots (thread-sicher lesend). Gewollte Konsequenz: Ein nur-lesender Zusatz-A
 Änderungen des schreibenden Agenten spätestens mit seinem nächsten Call — geteilter warmer Stand
 statt veralteter Prozesskopien. Konsistenzgrenze ist bewusst PRO CALL (Snapshot), nie innerhalb
 eines Calls.
+**Explizit dokumentierter Trade-off (Review 2):** Der Instanz-Lock umfasst den kompletten
+Staleness-Check + Refresh (`GetCurrentSolution` hält ihn über den gesamten Check) — parallele Clients
+am SELBEN Key warten hier also aufeinander (Konsistenz > Throughput, bewusst). Verschiedene Keys
+blockieren sich NICHT. Ein Staleness-Throttle (max. 1 Check/Sekunde/Key, Review 14) ist als
+bekanntes Follow-up nach Epic B notiert und wird in v1 NICHT gebaut.
 
 ## A.8 Tests (Epic A)
 
@@ -387,6 +435,9 @@ Unit (FastTests, Category=Unit):
   (`LastGoodStateUtc`/`LastLoadError`) gefüllt; erfolgreicher Refresh heilt die Markierung.
 - Snapshot-Semantik: parallele Calls mehrerer simulierter Clients auf denselben Key liefern je Call
   konsistente Ergebnisse; eine zwischen zwei Calls erfolgte Änderung ist im Folge-Call sichtbar.
+- Pending-Adoption (Review 8/13): Call gegen eviction-pending Key adoptiert den Eintrag (kein neuer
+  Load, kein zweiter Workspace); ohne Adoption bis zum nächsten Tick wird disposed.
+- Lease-Disziplin: Lease.Dispose senkt InFlightCount genau einmal; Doppel-Dispose ist no-op.
 
 Integration (Category=Integration):
 
@@ -450,6 +501,9 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
   - Daemon → Client: `{ "welcome": { "protocolVersion": 1, "daemonVersion": "1.0.y", "pid": n } }`
   - **Versions-Handshake:** `daemonVersion != exeVersion` → Client sendet `shutdown`, wartet auf Exit,
     startet Daemon neu (löst das „alter Daemon nach Update“-Problem sauber statt per Kill).
+  `shutdown` ist ein EIGENES Handshake-Protokoll-Kommando auf Pipe-Ebene (Review 11) — zu diesem
+  Zeitpunkt existiert noch keine MCP-Session; es gibt kein MCP-Level-shutdown. Framing wie gehabt
+  (newline-delimited JSON).
   **Anti-Ping-Pong** (Self-Audit 11): Stehen beim Versions-Mismatch noch ANDERE Verbindungen, fährt
   der Client den Daemon NICHT herunter, sondern bricht mit `VERSION_CONFLICT` ab (macht die
   Konfigurations-Inkonsistenz sichtbar statt einen Neustart-Wettlauf zu verlieren). Shutdown nur bei
@@ -472,6 +526,10 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 - **Single-Instance-Race:** Client versucht zuerst Connect (kurzes Timeout); scheitert er, spawnt er
   den Daemon (detached, ohne Parent-Bindung) und retried bis zu N Sekunden. Zwei gleichzeitige Starter:
   der Verlierer des Pipe-Greifens verbindet sich einfach.
+- **Transport-Boundary (Review 6):** Die Byte-Pump ist bewusst opak und gilt NUR für stdio als
+  Client-Vertrag. Ein künftiger Transportwechsel des MCP-Standards (z. B. Streamable HTTP als
+  Client-Pflicht) oder client-seitige SDK-Features (sampling/elicitation im Thin-Client) würden den
+  Thin-Client-Ansatz fundamental ändern — das ist akzeptiert und gehört nicht in diese Epics.
 
 ## B.3 Lifecycle
 
@@ -494,6 +552,8 @@ Array `{ rootPath, lastUsedUtc }`, max maxProjects, geschrieben bei jedem Touch 
 Shutdown. Nur ein Warmstart-Hinweis, niemals Wahrheitsquelle: Definitionsdatei ist immer der Vertrag.
 Debounce grob: frühestens 30 s nach dem letzten Touch schreiben (ein Timer, kein Per-Touch-Spawn);
 Schreibfehler (gesperrte Datei) werden geloggt und ignoriert — der State ist verzichtbar.
+Schreiben ATOMAR: temp-Datei + `File.Move` mit Überschreiben (Review 15); eine defekte/leere Datei
+bewirkt schlicht „kein Warmup“, niemals einen Fehler.
 
 ## B.5 Umsetzungspfad (Epic B)
 
@@ -623,3 +683,5 @@ machen es sichtbar.
 - HTTP-/Remote-Transport, Multi-User.
 - Benannte Mehrfach-Projekte pro Definitionsdatei (v1: eine Solution+Rules je Datei).
 - Generator-Kommando für die Definitionsdatei (Template im Fehler reicht).
+- Staleness-Throttle pro Key (max. 1 Check/Sekunde, Review 14) — erst bei belegtem Bottleneck im
+  Multi-Client-Daemon; Konzept 02 liefert die Messzähler als Evidenzbasis.
