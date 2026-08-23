@@ -18,11 +18,22 @@ internal sealed class ProjectEntry(string rootPath, ProjectDefinition definition
     // Wird nur unter dem Registry-Lock geschrieben und gelesen.
     internal bool PendingEviction { get; set; }
 
+    // Wird nur unter dem Registry-Lock geschrieben und gelesen.
+    internal bool FailureLeaseReleased { get; set; }
+
     internal int InFlightCount => Interlocked.CompareExchange(ref inFlightCount, 0, 0);
 
-    internal ProjectLease OpenLease()
+    internal ProjectLease OpenLease(Action? onReleased = null)
     {
         Interlocked.Increment(ref inFlightCount);
-        return new ProjectLease(RootPath, Definition, Server, () => Interlocked.Decrement(ref inFlightCount));
+        return new ProjectLease(
+            RootPath,
+            Definition,
+            Server,
+            () =>
+            {
+                Interlocked.Decrement(ref inFlightCount);
+                onReleased?.Invoke();
+            });
     }
 }

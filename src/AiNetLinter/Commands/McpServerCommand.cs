@@ -192,9 +192,8 @@ internal static class McpServerCommand
             isRequired: false).Config;
 
     /// <summary>
-    /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird nur geloggt (Console.Error) und
-    /// <see langword="null"/> geliefert — der Server startet trotzdem, der Aufrufer haelt den
-    /// geladenen <see cref="SourceFileCatalog"/> resident (siehe <see cref="RunAsync"/>).
+    /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird der Fehler nach dem Warn-Log
+    /// weitergereicht, damit der Server den originalen Fehler im LoadFailed-Vertrag ausgeben kann.
     /// </summary>
     internal static async Task<SourceFileCatalog?> TryLoadSolutionAsync(string solutionPath, CancellationToken ct, ILintConsole console)
     {
@@ -211,7 +210,7 @@ internal static class McpServerCommand
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             console.WriteError($"[WARN]: MCP-Server startet ohne geladene Solution ({solutionPath}): {ex.Message}");
-            return null;
+            throw;
         }
     }
 }

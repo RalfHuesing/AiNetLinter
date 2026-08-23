@@ -200,7 +200,7 @@ public sealed class WiringContractTests
         using var tempDir = TestTempDirectory.Create("wiring-cold-fault-");
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
         var console = new RecordingLintConsole();
-        var faultingServer = FaultingLoadServer(console);
+        var faultingServer = OverviewTestServers.FaultingLoadServer(console);
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(faultingServer));
 
         string? failedText = null;
@@ -222,6 +222,8 @@ public sealed class WiringContractTests
 
         Assert.NotNull(failedText);
         Assert.Contains("[ERROR]: PROJECT_LOAD_FAILED", failedText, StringComparison.Ordinal);
+        Assert.Contains(root, failedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("automatisch neu", failedText, StringComparison.Ordinal);
         Assert.Contains("Simulierter Kalt-Load-Fehler", failedText, StringComparison.Ordinal);
     }
 
@@ -309,7 +311,7 @@ public sealed class WiringContractTests
     {
         using var tempDir = TestTempDirectory.Create("wiring-overview-");
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
-        var pendingServer = PendingLoadServer();
+        var pendingServer = OverviewTestServers.PendingLoadServer();
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(pendingServer));
         var leaseResult = registry.Lease(root);
         Assert.True(leaseResult.Succeeded);
@@ -361,31 +363,6 @@ public sealed class WiringContractTests
 
     private static SourceFileCatalog CreateCatalog() =>
         new(WiringScenario.Solution, hasLoadingErrors: false);
-
-    private static McpCodeGraphServer PendingLoadServer() =>
-        new(new McpCodeGraphServerOptions
-        {
-            Catalog = null,
-            Console = LinterConsole.Instance,
-            Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
-            LoadFunc = token =>
-            {
-                var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                token.Register(() => pending.TrySetCanceled(token));
-                return pending.Task;
-            },
-        });
-
-    private static McpCodeGraphServer FaultingLoadServer(ILintConsole console) =>
-        new(new McpCodeGraphServerOptions
-        {
-            Catalog = null,
-            Console = console,
-            Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
-            LoadFunc = _ => Task.FromException<SourceFileCatalog?>(new InvalidOperationException("Simulierter Kalt-Load-Fehler")),
-        });
 
     private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
     {

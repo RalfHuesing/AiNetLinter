@@ -6,11 +6,15 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Configuration;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -25,7 +29,7 @@ public sealed class McpServerCommandContractTests
     public McpServerCommandContractTests(ReadOnlyMcpHostFixture fixture) => this.fixture = fixture;
 
     [Fact]
-    public async Task TryLoadSolutionAsync_BrokenSlnx_LogsWarningWithoutThrowing()
+    public async Task TryLoadSolutionAsync_BrokenSlnx_LogsWarningAndPropagatesOriginalException()
     {
         var path = CreateTempDir();
         try
@@ -33,13 +37,82 @@ public sealed class McpServerCommandContractTests
             var slnx = Path.Combine(path, "Broken.slnx");
             File.WriteAllText(slnx, "<this-is-not-a-valid-slnx-document>");
             var console = new RecordingLintConsole();
-            var exception = await Record.ExceptionAsync(async () =>
+            var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
                 await McpServerCommand.TryLoadSolutionAsync(slnx, CancellationToken.None, console));
 
-            Assert.Null(exception);
-            Assert.Contains(console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
+            var warning = Assert.Single(console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
+            Assert.Contains(exception.Message, warning, StringComparison.Ordinal);
         }
         finally { Directory.Delete(path, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ProductionColdLoad_BrokenSlnx_ReturnsOriginalLoadFailedContract()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-production-cold-load-");
+        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "broken");
+        var solutionPath = Path.Combine(root, "app.slnx");
+        File.WriteAllText(solutionPath, "<this-is-not-a-valid-slnx-document>");
+        var loadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseLoad = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var console = new RecordingLintConsole();
+        var factoryCalls = 0;
+        McpCodeGraphServer? server = null;
+        await using var registry = ProjectRegistryFixture.Create(_ =>
+        {
+            Interlocked.Increment(ref factoryCalls);
+            server = new McpCodeGraphServer(new McpCodeGraphServerOptions
+            {
+                Catalog = null,
+                Console = console,
+                Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+                UsedDefaultConfig = false,
+                LoadFunc = async cancellationToken =>
+                {
+                    loadStarted.TrySetResult();
+                    await releaseLoad.Task.WaitAsync(cancellationToken);
+                    return await McpServerCommand.TryLoadSolutionAsync(
+                        solutionPath,
+                        cancellationToken,
+                        console);
+                },
+            });
+            return ProjectInstanceCreation.Resident(server);
+        });
+
+        var initial = registry.Lease(root);
+        Assert.True(initial.Succeeded);
+        var initialLease = initial.Lease!;
+        await loadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        var loading = await ProjectToolCall.ExecuteAsync(
+            registry,
+            root,
+            _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+        Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
+
+        releaseLoad.TrySetResult();
+        await Assert.ThrowsAnyAsync<Exception>(() => server!.LoadTask!);
+
+        var failed = await ProjectToolCall.ExecuteAsync(
+            registry,
+            root,
+            _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+        var failedText = Assert.IsType<TextContentBlock>(Assert.Single(failed.Content)).Text;
+        var warning = Assert.Single(console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
+        var originalMessage = warning[(warning.LastIndexOf(": ", StringComparison.Ordinal) + 2)..];
+        Assert.Contains("PROJECT_LOAD_FAILED", failedText, StringComparison.Ordinal);
+        Assert.NotEmpty(originalMessage);
+        Assert.Contains(originalMessage, failedText, StringComparison.Ordinal);
+        Assert.Contains(solutionPath, failedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("automatisch neu", failedText, StringComparison.Ordinal);
+
+        var failedServer = server;
+        initialLease.Dispose();
+        var retry = registry.Lease(root);
+        using var retryLease = retry.Lease;
+        Assert.Equal(2, Volatile.Read(ref factoryCalls));
+        Assert.NotSame(failedServer, retryLease!.Server);
     }
 
     [Fact]

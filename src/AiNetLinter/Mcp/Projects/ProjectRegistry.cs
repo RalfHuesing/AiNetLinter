@@ -34,6 +34,7 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 {
     private readonly Lock gate = new();
     private readonly Dictionary<string, ProjectEntry> projects = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProjectCreationReservation> reservations = new(StringComparer.OrdinalIgnoreCase);
     private readonly ProjectRegistryOptions options;
     private readonly TimeSpan idleTtl;
     private readonly CancellationTokenSource tickSource = new();
@@ -59,6 +60,15 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
 
         return result;
+    }
+
+    internal int PendingCreationWaiters(string projectRoot)
+    {
+        var key = Canonicalize(projectRoot);
+        lock (gate)
+        {
+            return reservations.TryGetValue(key, out var reservation) ? reservation.WaiterCount : 0;
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -133,13 +143,90 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             return ProjectLeaseResult.Success(resident);
         }
 
+        var reservation = ReserveCreation(key);
+        ProjectCreationAttempt attempt;
+        try
+        {
+            attempt = reservation.GetValue();
+        }
+        catch
+        {
+            RemoveReservation(key, reservation);
+            throw;
+        }
+
+        return PublishCreation(key, reservation, attempt, retired);
+    }
+
+    private ProjectCreationReservation ReserveCreation(string key)
+    {
+        lock (gate)
+        {
+            if (reservations.TryGetValue(key, out var existing))
+            {
+                return existing;
+            }
+
+            var reservation = new ProjectCreationReservation(() => CreateInstance(key));
+            reservations.Add(key, reservation);
+            return reservation;
+        }
+    }
+
+    private ProjectCreationAttempt CreateInstance(string key)
+    {
         var definition = ProjectDefinitionLoader.Load(key);
         if (!definition.Succeeded)
         {
-            return ProjectLeaseResult.Failure(definition.ErrorCode!, definition.Message!);
+            return new(null, ProjectInstanceCreation.Failed(definition.ErrorCode!, definition.Message!));
         }
 
-        return InsertResident(key, definition.Definition!, retired);
+        return new(definition.Definition, options.InstanceFactory(definition.Definition!));
+    }
+
+    private ProjectLeaseResult PublishCreation(
+        string key,
+        ProjectCreationReservation reservation,
+        ProjectCreationAttempt attempt,
+        List<McpCodeGraphServer> retired)
+    {
+        var created = attempt.Creation;
+        if (!created.Succeeded)
+        {
+            RemoveReservation(key, reservation);
+            return ProjectLeaseResult.Failure(created.ErrorCode!, created.ErrorMessage!);
+        }
+
+        lock (gate)
+        {
+            if (projects.TryGetValue(key, out var raced))
+            {
+                RemoveReservationUnderLock(key, reservation);
+                return ProjectLeaseResult.Success(Adopt(raced));
+            }
+
+            EvictLeastRecentlyUsed(retired);
+            var entry = new ProjectEntry(key, attempt.Definition!, created.Server!, UtcNow());
+            projects.Add(key, entry);
+            RemoveReservationUnderLock(key, reservation);
+            return ProjectLeaseResult.Success(entry.OpenLease(() => ReleaseEntry(entry)));
+        }
+    }
+
+    private void RemoveReservation(string key, ProjectCreationReservation reservation)
+    {
+        lock (gate)
+        {
+            RemoveReservationUnderLock(key, reservation);
+        }
+    }
+
+    private void RemoveReservationUnderLock(string key, ProjectCreationReservation reservation)
+    {
+        if (reservations.TryGetValue(key, out var current) && ReferenceEquals(current, reservation))
+        {
+            reservations.Remove(key);
+        }
     }
 
     private ProjectLease? FindAdoptable(string key, List<McpCodeGraphServer> retired)
@@ -151,7 +238,9 @@ internal sealed class ProjectRegistry : IAsyncDisposable
                 return null;
             }
 
-            if (entry.Server.LoadState == ServerLoadState.LoadFailed)
+            if (entry.Server.LoadState == ServerLoadState.LoadFailed
+                && entry.FailureLeaseReleased
+                && entry.InFlightCount == 0)
             {
                 projects.Remove(key);
                 retired.Add(entry.Server);
@@ -160,38 +249,6 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
             return Adopt(entry);
         }
-    }
-
-    private ProjectLeaseResult InsertResident(string key, ProjectDefinition definition, List<McpCodeGraphServer> retired)
-    {
-        var created = options.InstanceFactory(definition);
-        if (!created.Succeeded)
-        {
-            return ProjectLeaseResult.Failure(created.ErrorCode!, created.ErrorMessage!);
-        }
-
-        ProjectLease lease;
-        lock (gate)
-        {
-            if (projects.TryGetValue(key, out var raced))
-            {
-                if (raced.Server.LoadState != ServerLoadState.LoadFailed)
-                {
-                    retired.Add(created.Server!);
-                    return ProjectLeaseResult.Success(Adopt(raced));
-                }
-
-                projects.Remove(key);
-                retired.Add(raced.Server);
-            }
-
-            EvictLeastRecentlyUsed(retired);
-            var entry = new ProjectEntry(key, definition, created.Server!, UtcNow());
-            projects.Add(key, entry);
-            lease = entry.OpenLease();
-        }
-
-        return ProjectLeaseResult.Success(lease);
     }
 
     internal IReadOnlyList<ProjectSnapshot> Snapshots()
@@ -211,6 +268,20 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
     }
 
+    internal ProjectSnapshot SnapshotFor(ProjectLease lease)
+    {
+        lock (gate)
+        {
+            if (!projects.TryGetValue(lease.RootPath, out var entry)
+                || !ReferenceEquals(entry.Server, lease.Server))
+            {
+                throw new InvalidOperationException("Der Projekt-Lease ist nicht mehr resident.");
+            }
+
+            return SnapshotOf(entry);
+        }
+    }
+
     private static ProjectSnapshot SnapshotOf(ProjectEntry entry) =>
         new(entry.RootPath, entry.Definition, entry.LastUsedUtc, entry.Server);
 
@@ -218,7 +289,21 @@ internal sealed class ProjectRegistry : IAsyncDisposable
     {
         entry.PendingEviction = false;
         entry.LastUsedUtc = UtcNow();
-        return entry.OpenLease();
+        return entry.OpenLease(() => ReleaseEntry(entry));
+    }
+
+    private void ReleaseEntry(ProjectEntry entry)
+    {
+        lock (gate)
+        {
+            if (entry.Server.LoadState == ServerLoadState.LoadFailed
+                && entry.InFlightCount == 0
+                && projects.TryGetValue(entry.RootPath, out var current)
+                && ReferenceEquals(current, entry))
+            {
+                entry.FailureLeaseReleased = true;
+            }
+        }
     }
 
     private void EvictLeastRecentlyUsed(List<McpCodeGraphServer> retired)
@@ -228,7 +313,9 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             ProjectEntry? victim = null;
             foreach (var candidate in projects.Values)
             {
-                if (candidate.InFlightCount == 0 && (victim is null || candidate.LastUsedUtc < victim.LastUsedUtc))
+                if (candidate.InFlightCount == 0
+                    && (candidate.Server.LoadState != ServerLoadState.LoadFailed || candidate.FailureLeaseReleased)
+                    && (victim is null || candidate.LastUsedUtc < victim.LastUsedUtc))
                 {
                     victim = candidate;
                 }
@@ -262,7 +349,7 @@ internal sealed class ProjectRegistry : IAsyncDisposable
     {
         if (entry.Server.LoadState == ServerLoadState.LoadFailed)
         {
-            return true;
+            return entry.InFlightCount == 0 && entry.FailureLeaseReleased;
         }
 
         var idleBeyondTtl = now - entry.LastUsedUtc > idleTtl;

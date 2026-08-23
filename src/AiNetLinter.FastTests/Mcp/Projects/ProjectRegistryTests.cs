@@ -118,6 +118,10 @@ public sealed class ProjectRegistryTests
         var firstCall = Task.Run(() => registry.Lease(root));
         await factoryEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
         var secondCall = Task.Run(() => registry.Lease(root));
+        Assert.True(SpinWait.SpinUntil(
+            () => registry.PendingCreationWaiters(root) >= 2,
+            TimeSpan.FromSeconds(10)));
+        Assert.False(secondCall.IsCompleted);
         releaseFactory.Set();
 
         var first = await firstCall.WaitAsync(TimeSpan.FromSeconds(15));
@@ -129,6 +133,7 @@ public sealed class ProjectRegistryTests
         Assert.True(second.Succeeded);
         Assert.Equal(1, factory.InstancesCreated);
         Assert.Same(firstLease!.Server, secondLease!.Server);
+        Assert.Equal(0, factory.LoadsCancelled);
     }
 
     [Fact]
@@ -363,6 +368,14 @@ public sealed class ProjectRegistryTests
         var failed = registry.Lease(root);
         var failedServer = failed.Lease!.Server;
         await Assert.ThrowsAsync<InvalidOperationException>(() => failedServer.LoadTask!);
+        await registry.RunEvictionTickAsync();
+
+        var stillFailed = registry.Lease(root);
+        using var stillFailedLease = stillFailed.Lease;
+        Assert.Same(failedServer, stillFailedLease!.Server);
+        Assert.Equal(1, factory.InstancesCreated);
+
+        stillFailedLease.Dispose();
         failed.Lease!.Dispose();
         await registry.RunEvictionTickAsync();
 

@@ -84,30 +84,42 @@ internal static class OverviewResourceRegistration
             }));
     }
 
-    internal static ReadResourceResult BuildTemplatedResult(ProjectRegistry registry, string? projectRoot)
+    internal static ReadResourceResult BuildTemplatedResult(ProjectRegistry registry, string? projectRoot) =>
+        BuildTemplatedResult(registry, projectRoot, BuildResult);
+
+    internal static ReadResourceResult BuildTemplatedResult(
+        ProjectRegistry registry,
+        string? projectRoot,
+        Func<ProjectSnapshot, ReadResourceResult> render)
     {
         var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
         if (guard is not null)
         {
-            throw new McpException(FormatGuard(guard));
+            throw new McpException(ProjectToolCall.FormatGuard(guard));
         }
 
-        var snapshot = registry.FindSnapshot(projectRoot!);
-        if (snapshot is null)
+        var leaseResult = registry.Lease(projectRoot!);
+        if (!leaseResult.Succeeded || leaseResult.Lease is null)
         {
             throw new McpException(LinterErrorFormatter.Format(
-                ProjectErrorCodes.ProjectNotInitialized,
-                $"Fuer '{projectRoot}' existiert kein residenter Projekt-Key.",
-                context: projectRoot,
-                hint: $"Ersten Tool-Aufruf mit projectRoot='{projectRoot}' senden; der Server legt " +
-                      "den Key lazy ueber eine Definitionsdatei ainetlinter.project.json im Projektroot an."));
+                leaseResult.ErrorCode!,
+                leaseResult.ErrorMessage!,
+                hint: ProjectToolCall.RecoverHint(leaseResult.ErrorCode!)));
         }
 
-        return BuildResult(snapshot);
-    }
+        using var lease = leaseResult.Lease;
+        if (lease.Server.LoadState == ServerLoadState.LoadFailed)
+        {
+            var failure = ProjectToolCall.BuildLoadFailure(lease.Server, lease);
+            throw new McpException(LinterErrorFormatter.Format(
+                ProjectErrorCodes.ProjectLoadFailed,
+                failure.Message,
+                context: failure.Context,
+                hint: failure.Hint));
+        }
 
-    private static string FormatGuard(ProjectRootGuardFailure guard) =>
-        LinterErrorFormatter.Format(guard.Code, guard.Message, hint: guard.Hint);
+        return render(registry.SnapshotFor(lease));
+    }
 
     private static string BuildCanonicalUri(string projectRoot) =>
         $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(projectRoot)}";

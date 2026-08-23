@@ -4,6 +4,8 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Projects;
 
+using AiNetLinter.Output;
+
 /// <summary>
 /// Gemeinsamer Dispatch-Weg aller projektgebundenen Tool-Aufrufe: validiert den
 /// Pflicht-Parameter <c>projectRoot</c> auf Argumentebene (Defense-in-Depth zur
@@ -73,16 +75,28 @@ internal static class ProjectToolCall
     private static CallToolResult GuardResult(ProjectRootGuardFailure guard) =>
         McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
 
+    internal static string FormatGuard(ProjectRootGuardFailure guard) =>
+        LinterErrorFormatter.Format(guard.Code, guard.Message, hint: guard.Hint);
+
     private static CallToolResult LoadFailedResult(McpCodeGraphServer server, ProjectLease lease)
+    {
+        var failure = BuildLoadFailure(server, lease);
+        return McpToolResults.Error(
+            ProjectErrorCodes.ProjectLoadFailed,
+            failure.Message,
+            context: failure.Context,
+            hint: failure.Hint);
+    }
+
+    internal static ProjectLoadFailure BuildLoadFailure(McpCodeGraphServer server, ProjectLease lease)
     {
         var detail = server.LastLoadError
             ?? $"Hintergrund-Load lieferte keine Solution ({lease.Definition.SolutionPath}).";
-        return McpToolResults.Error(
-            ProjectErrorCodes.ProjectLoadFailed,
+        return new(
             $"Solution-Load fehlgeschlagen: {detail}",
-            context: lease.Definition.SolutionPath,
-            hint: "Ursache beheben (Solution-/Build-Fehler); der naechste Aufruf startet den Load " +
-                  "automatisch neu, fehlgeschlagene Loads werden nicht negativ gecacht.");
+            lease.Definition.SolutionPath,
+            "Ursache beheben (Solution-/Build-Fehler); der naechste Aufruf startet den Load " +
+            "automatisch neu, fehlgeschlagene Loads werden nicht negativ gecacht.");
     }
 
     private static CallToolResult WithDegradedHeader(McpCodeGraphServer server, CallToolResult result)
@@ -103,7 +117,7 @@ internal static class ProjectToolCall
         return new CallToolResult { IsError = result.IsError, Content = content };
     }
 
-    private static string? RecoverHint(string errorCode)
+    internal static string? RecoverHint(string errorCode)
     {
         return errorCode switch
         {
