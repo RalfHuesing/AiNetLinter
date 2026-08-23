@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T21:05:07+02:00
+last_updated: 2026-08-23T22:35:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -83,10 +83,11 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       `projectRoot`; kein Projektbezug mehr in der Client-Konfiguration. Vollständiger
       Umfang: `konzept.md` A.1–A.9. Dimensioniert für 3–5 Steps. Status: Grundlagen
       erledigt (step-001, step-002, jeweils approved); Restfachlichkeit inkl. Migration
-      des eigenen Repos → step-003 umgesetzt; Korrektur der drei Review-Findings
-      (Kalt-Load, Erstzugriffs-Dedupe, Overview-Lease) → step-004; Abschluss
-      (drift-audit, Live-Verifikation Overview, Meilenstein-Doku, §D.4) → nächster
-      regulärer Step nach der Korrektur.
+      des eigenen Repos → step-003 umgesetzt; step-004 korrigierte Kalt-Load-,
+      Erstzugriffs-Dedupe- und Overview-Lease-Verträge, hat aber zwei weitere
+      Race-Fenster im Review offengelegt; deren mechanische Korrektur läuft in
+      step-005. Abschluss (drift-audit, Live-Verifikation Overview,
+      Meilenstein-Doku, §D.4) → nächster regulärer Step nach step-005.
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
@@ -120,7 +121,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Key-Kanonisierung (`Path.GetFullPath`, Comparer `OrdinalIgnoreCase`);
         Load-Dedupe im bestehenden Instanzmuster (Review 1) — der Registry-Lock deckt
         nie einen Solution-Load. Grund-Wiring → step-003; belastbare Erstzugriffs-
-        Dedupe und Overview-Lease → step-004.
+        Dedupe und Overview-Lease → step-004; Lookup-/Reservation-Race → step-005.
   - [ ] A.7 Eviction & RAM-Hygiene: TTL-Timer (Default 45 Min idle, 5 Min Takt) +
         maxProjects (Default 4) + LRU; InFlight-Tracking strukturell über Lease
         (Review 7); Busy-Guard + Pending-Eviction mit Adoption statt Doppel-Load
@@ -131,7 +132,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Refresh-Fehler → last-good bleibt resident, `[WARN]`-Kopf, Health-Felder
         `LastGoodStateUtc`/`LastLoadError`; Heilung beim nächsten erfolgreichen Refresh.
         (FAILED-Marker-Grundlage erledigt → step-002; Wiring-/Dispatch-Korrektur
-        → step-004 nach Review von step-003)
+        → step-004; FAILED-Freigabe-Race → step-005)
   - [ ] A.4 Overview-Ressource auf URI-Template
         `ainetlinter://overview?projectRoot=<url-encoded>` umstellen; Rückfallplan
         (Review 5): scheitert ein Host am Query-Parameter → Exposition als Tool
@@ -148,7 +149,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         async-Wiring-Nachweis, FAILED-Marker) + Integration-Katalog (Routing je Key,
         Bindungsverifikation via `get_server_health`, Lazy-Init, Staleness-Grenzen,
         Observability mit projectRoot, Reaper unverändert). (Teile erledigt →
-        step-001/-002; Restkatalog step-003; belastbare Korrekturtests → step-004)
+        step-001/-002; Restkatalog step-003; belastbare Korrekturtests → step-004/
+        step-005)
   - [ ] A.9 DoD: Build grün; beide TestSuites ohne Stress grün; harter Cut aktiv
         (MCP-Modus lehnt `--path`/`--config` ab, Batch unverändert); eigenes Repo
         migriert (`ainetlinter.project.json` im Root, AGENTS.md-Abschnitt
@@ -157,7 +159,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `--sync-agent-rules-only` synchronisiert; Wiederöffnungsvermerk in
         `90_bewusst-nicht-umsetzen/Konzept.md` §D.4. (Migration des eigenen Repos
         **→ step-003** — der harte Cut macht die eigenen Registrierungen sonst
-        unbrauchbar; die drei Review-Korrekturen → step-004; drift-audit,
+        unbrauchbar; die Review-Korrekturen → step-004/step-005; drift-audit,
         Live-Verifikation Overview, §D.4-Vermerk → nächster regulärer Step)
   - [ ] A.x Doku-Sammelpflichten (im fachlich berührenden Step, keine Mini-Doku-Steps):
         `Docs/agent-api.md` (Init-Vertrag, Referenzabschnitt „ainetlinter.project.json",

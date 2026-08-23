@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-23T21:05:07+02:00
+last_updated: 2026-08-23T22:35:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 4  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-004
+total_steps: 5  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-005
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -15,8 +15,8 @@ current_step: step-004
 - **Task-Status:** `executing`
 - **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-004` (in_progress — Korrektur-Step für die drei
-  Major-Findings aus dem Review von step-003)
+- **Aktueller Schritt:** `step-005` (in_progress — mechanische Korrektur der
+  zwei Race-Fenster aus dem Review von step-004)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
@@ -50,7 +50,8 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-001 | EPIC-A | done | Projektregistry-Grundlage: Definitionsdatei, Loader, Fehlerverträge, Config-Materialisierung | - | e0b25033 | 2026-08-23 (approved) | e0b25033 / 7ee7d805 |
 | step-002 | EPIC-A | done | Projektregistry-Kern: Lease, Entry, Registry inkl. Eviction und FAILED-Marker | - | a80ec821 | 2026-08-23 (approved) | a80ec821 / e8b4e367 |
 | step-003 | EPIC-A | done (Korrektur ausstehend) | MCP-Wiring auf die Projektregistry: Tool-Leases, harter Cut, Health-/Reload-/Overview-Vertrag | - | ccf7b33a / 790ce251 | 2026-08-23 (issues) | ccf7b33a / 790ce251 / b055ca4e |
-| step-004 | EPIC-A | in_progress | Produktions-Kalt-Load, Erstzugriffs-Dedupe und leasegeschützte Overview korrigieren | step-003 | - | - | Plan erstellt |
+| step-004 | EPIC-A | done (Korrektur ausstehend) | Produktions-Kalt-Load, Erstzugriffs-Dedupe und leasegeschützte Overview korrigieren | step-003 | 2ed8bcc0 / 190a1a25 | 2026-08-23 (issues) | 2ed8bcc0 / 190a1a25 / d56e9b59 |
+| step-005 | EPIC-A | in_progress | FAILED-Freigabe und Registry-Reservation atomar absichern | step-004 | - | - | Plan erstellt |
 
 ## Config (optional)
 
