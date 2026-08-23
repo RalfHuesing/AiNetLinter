@@ -14,6 +14,10 @@ Deine Rolle: `.agents/Agent-Scaffolding/dev-loop/drift-loop/orchestrator.md`.
 Setze diesen Task um:
 `tasks/mcp-server-weiterentwicklung/11_epic-projektregistry-und-daemon`
 
+Der vollständige Task ist umzusetzen: EPIC-A vollständig abschließen und
+anschließend auch EPIC-B vollständig planen, implementieren, verifizieren und
+dokumentieren. Nicht nach EPIC-A oder an einem Zwischen-Check-in stoppen.
+
 ## Effizienzvorgaben
 
 Diese Vorgaben sind in JEDE Subagenten-Prompt zu übernehmen:
@@ -65,5 +69,7 @@ unverändert; nur dieser Task nutzt die verdoppelten Overrides.
 - Bei Kontextverlust den aktuellen Stand aus `task-state.md`, `roadmap.md`,
   `codemap.md`, dem letzten `step-result.md`/`step-review.md` und diesem
   Initialauftrag rekonstruieren.
+- Der Scope endet erst, wenn EPIC-A und anschließend EPIC-B gemäß ihrer
+  jeweiligen Definition of Done abgeschlossen und reviewed sind.
 - Vor jedem Commit die MCP-Quality-Gates ausführen; Stress-Tests nur auf
   ausdrückliche Anforderung.

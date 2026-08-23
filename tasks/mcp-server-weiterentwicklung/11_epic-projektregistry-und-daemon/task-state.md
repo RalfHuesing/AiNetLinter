@@ -13,6 +13,8 @@ current_step: step-007
 ## Übersicht
 
 - **Task-Status:** `executing`
+- **Nutzer-Scope:** vollständigen Task einschließlich EPIC-A und EPIC-B
+  umsetzen; nicht nach dem Abschluss von EPIC-A stoppen.
 - **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
 - **Aktueller Schritt:** `step-007` (in_progress — direkte Originalfehler-
