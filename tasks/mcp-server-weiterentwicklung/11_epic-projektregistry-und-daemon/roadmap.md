@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T15:58:00+02:00
+last_updated: 2026-08-23T21:05:07+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -83,8 +83,10 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       `projectRoot`; kein Projektbezug mehr in der Client-Konfiguration. Vollständiger
       Umfang: `konzept.md` A.1–A.9. Dimensioniert für 3–5 Steps. Status: Grundlagen
       erledigt (step-001, step-002, jeweils approved); Restfachlichkeit inkl. Migration
-      des eigenen Repos → step-003; Abschluss (drift-audit, Live-Verifikation Overview,
-      Meilenstein-Doku, §D.4) → step-004.
+      des eigenen Repos → step-003 umgesetzt; Korrektur der drei Review-Findings
+      (Kalt-Load, Erstzugriffs-Dedupe, Overview-Lease) → step-004; Abschluss
+      (drift-audit, Live-Verifikation Overview, Meilenstein-Doku, §D.4) → nächster
+      regulärer Step nach der Korrektur.
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
@@ -103,7 +105,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         entfernt — unbekanntes Argument = harter Fehler; Batch unverändert; neue
         statische Flags `--mcp-project-ttl-minutes`, `--mcp-max-projects`
         (Decimal-Minuten, InvariantCulture, ungültiger Wert → harter Startfehler).
-        **→ step-003**
+        **[x] umgesetzt → step-003** (MCP-Argumentgrenze und invariant-parsende
+        Flags aktiv; Contract-/Integrationstests grün)
   - [ ] A.5 Fehlerverträge: `PROJECT_ROOT_REQUIRED`, `PROJECT_ROOT_INVALID`,
         `PROJECT_NOT_INITIALIZED` (mit vorgeschriebenem kopierfähigem Template-Block),
         `PROJECT_DEFINITION_INVALID`, `SOLUTION_NOT_FOUND`, `RULES_NOT_FOUND` —
@@ -116,7 +119,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         sein und awaiten (Review R2/A); `McpServerOptionsFactory.Create(ProjectRegistry)`;
         Key-Kanonisierung (`Path.GetFullPath`, Comparer `OrdinalIgnoreCase`);
         Load-Dedupe im bestehenden Instanzmuster (Review 1) — der Registry-Lock deckt
-        nie einen Solution-Load. **→ step-003**
+        nie einen Solution-Load. Grund-Wiring → step-003; belastbare Erstzugriffs-
+        Dedupe und Overview-Lease → step-004.
   - [ ] A.7 Eviction & RAM-Hygiene: TTL-Timer (Default 45 Min idle, 5 Min Takt) +
         maxProjects (Default 4) + LRU; InFlight-Tracking strukturell über Lease
         (Review 7); Busy-Guard + Pending-Eviction mit Adoption statt Doppel-Load
@@ -126,11 +130,13 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         FAILED-Marker in der Registry, kein negatives Caching; inkrementeller
         Refresh-Fehler → last-good bleibt resident, `[WARN]`-Kopf, Health-Felder
         `LastGoodStateUtc`/`LastLoadError`; Heilung beim nächsten erfolgreichen Refresh.
-        (FAILED-Marker erledigt → step-002; Wiring-/Dispatch-Seite → step-003)
+        (FAILED-Marker-Grundlage erledigt → step-002; Wiring-/Dispatch-Korrektur
+        → step-004 nach Review von step-003)
   - [ ] A.4 Overview-Ressource auf URI-Template
         `ainetlinter://overview?projectRoot=<url-encoded>` umstellen; Rückfallplan
         (Review 5): scheitert ein Host am Query-Parameter → Exposition als Tool
-        (einzige erlaubte Ausnahme vom Tool-Freeze), Entscheidung im Task-Log. **→ step-003**
+        (einzige erlaubte Ausnahme vom Tool-Freeze), Entscheidung im Task-Log. URI-
+        Template in step-003 umgesetzt; Lease-/Fehlervertrags-Korrektur → step-004.
   - [ ] A.4/F6 projectRoot-/Definitionsdatei-Vertrag einmalig in `ServerInstructions.Text`,
         komprimiert ins Byte-Budget (`MaxUtf8Bytes` ≈ 2557); Limit-Erhöhung nur mit
         Begründung im Commit. **→ step-003**
@@ -142,7 +148,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         async-Wiring-Nachweis, FAILED-Marker) + Integration-Katalog (Routing je Key,
         Bindungsverifikation via `get_server_health`, Lazy-Init, Staleness-Grenzen,
         Observability mit projectRoot, Reaper unverändert). (Teile erledigt →
-        step-001/-002; Restkatalog → step-003)
+        step-001/-002; Restkatalog step-003; belastbare Korrekturtests → step-004)
   - [ ] A.9 DoD: Build grün; beide TestSuites ohne Stress grün; harter Cut aktiv
         (MCP-Modus lehnt `--path`/`--config` ab, Batch unverändert); eigenes Repo
         migriert (`ainetlinter.project.json` im Root, AGENTS.md-Abschnitt
@@ -151,7 +157,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `--sync-agent-rules-only` synchronisiert; Wiederöffnungsvermerk in
         `90_bewusst-nicht-umsetzen/Konzept.md` §D.4. (Migration des eigenen Repos
         **→ step-003** — der harte Cut macht die eigenen Registrierungen sonst
-        unbrauchbar; drift-audit, Live-Verifikation Overview, §D.4-Vermerk → step-004)
+        unbrauchbar; die drei Review-Korrekturen → step-004; drift-audit,
+        Live-Verifikation Overview, §D.4-Vermerk → nächster regulärer Step)
   - [ ] A.x Doku-Sammelpflichten (im fachlich berührenden Step, keine Mini-Doku-Steps):
         `Docs/agent-api.md` (Init-Vertrag, Referenzabschnitt „ainetlinter.project.json",
         neue Fehlercodes), `Docs/configuration.md` (entfernte/neue Flags),
@@ -159,7 +166,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `Docs/ROADMAP.md`, `README.md`,
         `tasks/mcp-server-weiterentwicklung/00_uebersicht-und-entscheidungen.md` (Zeile 11).
         (Fach-Dokus agent-api/configuration/integration + README-Registrierungsbeispiele +
-        Sync mdc → step-003; Meilensteinzeilen Docs/ROADMAP.md + 00_uebersicht → step-004)
+        Sync mdc → step-003; Meilensteinzeilen Docs/ROADMAP.md + 00_uebersicht →
+        nächster regulärer Step)
 
 - [ ] **EPIC-B: Daemon-Modus (geteilter, langlebiger Analysekern)** — Die fertige
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
