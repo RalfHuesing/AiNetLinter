@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T14:32:00+02:00
+last_updated: 2026-08-23T15:58:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -81,7 +81,10 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
 - [ ] **EPIC-A: Projektregistry (transportneutral)** — Der MCP-Server hält mehrere
       Projekte gleichzeitig vor, deterministisch adressiert pro Aufruf über
       `projectRoot`; kein Projektbezug mehr in der Client-Konfiguration. Vollständiger
-      Umfang: `konzept.md` A.1–A.9. Dimensioniert für 3–5 Steps.
+      Umfang: `konzept.md` A.1–A.9. Dimensioniert für 3–5 Steps. Status: Grundlagen
+      erledigt (step-001, step-002, jeweils approved); Restfachlichkeit inkl. Migration
+      des eigenen Repos → step-003; Abschluss (drift-audit, Live-Verifikation Overview,
+      Meilenstein-Doku, §D.4) → step-004.
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
@@ -91,41 +94,46 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         (`ProjectDefinition`, `ProjectDefinitionLoader`, `ProjectEntry`, `ProjectLease`,
         `ProjectInstanceFactory`, `ProjectRegistry`) — schlank wegen Lint-Grenzen (F7,
         Options-Records); Config-Materialisierung als gemeinsamer Helper für Batch und
-        Registry (Review 3). (Teil 1 erledigt → step-001: ProjectDefinition/-Loader/
-        -InstanceFactory + ProjectErrorCodes; Entry/Lease/Registry in Arbeit → step-002)
+        Registry (Review 3). **[x] erledigt → step-001** (ProjectDefinition/-Loader/
+        -InstanceFactory + ProjectErrorCodes) **und → step-002** (ProjectEntry/-Lease/
+        -LeaseResult/-Registry inkl. Eviction, Busy-Guard/Pending-Adoption,
+        FAILED-Marker; 14 Unit-Tests approved)
   - [ ] A.3 Harter Cut: `projectRoot` ausnahmslos Pflicht UND absolut (einzige Ausnahme:
         optionaler Filter bei `get_server_health`); `--path`/`--config` im MCP-Modus
         entfernt — unbekanntes Argument = harter Fehler; Batch unverändert; neue
         statische Flags `--mcp-project-ttl-minutes`, `--mcp-max-projects`
         (Decimal-Minuten, InvariantCulture, ungültiger Wert → harter Startfehler).
+        **→ step-003**
   - [ ] A.5 Fehlerverträge: `PROJECT_ROOT_REQUIRED`, `PROJECT_ROOT_INVALID`,
         `PROJECT_NOT_INITIALIZED` (mit vorgeschriebenem kopierfähigem Template-Block),
         `PROJECT_DEFINITION_INVALID`, `SOLUTION_NOT_FOUND`, `RULES_NOT_FOUND` —
         deterministisch, englisch, mit Bauanleitung; `AMBIGUOUS_SOLUTION` entfällt im
         MCP-Pfad. (loader-seitig **erledigt → step-001**: NOT_INITIALIZED/DEFINITION_INVALID/
         SOLUTION_NOT_FOUND/RULES_NOT_FOUND inkl. wörtlichem Template-Block, text-assertiert;
-        ROOT_* mit dem Wiring-Step)
+        ROOT_* → step-003)
   - [ ] A.4 Wiring: alle 6 Registration-Klassen + `OverviewResourceRegistration` auf
         `using var lease = _registry.Lease(projectRoot)` umstellen — Lambda MUSS async
         sein und awaiten (Review R2/A); `McpServerOptionsFactory.Create(ProjectRegistry)`;
         Key-Kanonisierung (`Path.GetFullPath`, Comparer `OrdinalIgnoreCase`);
         Load-Dedupe im bestehenden Instanzmuster (Review 1) — der Registry-Lock deckt
-        nie einen Solution-Load.
+        nie einen Solution-Load. **→ step-003**
   - [ ] A.7 Eviction & RAM-Hygiene: TTL-Timer (Default 45 Min idle, 5 Min Takt) +
         maxProjects (Default 4) + LRU; InFlight-Tracking strukturell über Lease
         (Review 7); Busy-Guard + Pending-Eviction mit Adoption statt Doppel-Load
         (Reviews 8/13); FAILED-Einträge räumt der TTL-Tick sofort weg (Review R2/B).
+        (Registry-seitig **erledigt → step-002**; Flags-Anbindung → step-003)
   - [ ] A.7 Zweistufiger Zustandsvertrag: Kalt-Load-Fehler → `PROJECT_LOAD_FAILED` +
         FAILED-Marker in der Registry, kein negatives Caching; inkrementeller
         Refresh-Fehler → last-good bleibt resident, `[WARN]`-Kopf, Health-Felder
         `LastGoodStateUtc`/`LastLoadError`; Heilung beim nächsten erfolgreichen Refresh.
+        (FAILED-Marker erledigt → step-002; Wiring-/Dispatch-Seite → step-003)
   - [ ] A.4 Overview-Ressource auf URI-Template
         `ainetlinter://overview?projectRoot=<url-encoded>` umstellen; Rückfallplan
         (Review 5): scheitert ein Host am Query-Parameter → Exposition als Tool
-        (einzige erlaubte Ausnahme vom Tool-Freeze), Entscheidung im Task-Log.
+        (einzige erlaubte Ausnahme vom Tool-Freeze), Entscheidung im Task-Log. **→ step-003**
   - [ ] A.4/F6 projectRoot-/Definitionsdatei-Vertrag einmalig in `ServerInstructions.Text`,
         komprimiert ins Byte-Budget (`MaxUtf8Bytes` ≈ 2557); Limit-Erhöhung nur mit
-        Begründung im Commit.
+        Begründung im Commit. **→ step-003**
   - [ ] A.8 Tests: Unit-Katalog vollständig (Key-Normalisierung, Loader/Pflichtfelder/
         keine Auto-Suche, uniforme Pflicht + Root-Validierung, Kein-Fallback,
         Self-Service-Template-Assertion, Load-Dedupe/Lock-Hygiene, Busy-Guard, Eviction
@@ -133,20 +141,25 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Zustandsvertrag, Snapshot-Semantik, Pending-Adoption, Lease-Disziplin inkl.
         async-Wiring-Nachweis, FAILED-Marker) + Integration-Katalog (Routing je Key,
         Bindungsverifikation via `get_server_health`, Lazy-Init, Staleness-Grenzen,
-        Observability mit projectRoot, Reaper unverändert).
+        Observability mit projectRoot, Reaper unverändert). (Teile erledigt →
+        step-001/-002; Restkatalog → step-003)
   - [ ] A.9 DoD: Build grün; beide TestSuites ohne Stress grün; harter Cut aktiv
         (MCP-Modus lehnt `--path`/`--config` ab, Batch unverändert); eigenes Repo
         migriert (`ainetlinter.project.json` im Root, AGENTS.md-Abschnitt
         „AiNetLinter-MCP: Initialisierung“, Repo-`.mcp.json` + Hermes config.yaml auf
         `command + --mcp-server` reduziert); `.agents/rules/AiNetLinter.mdc` via
         `--sync-agent-rules-only` synchronisiert; Wiederöffnungsvermerk in
-        `90_bewusst-nicht-umsetzen/Konzept.md` §D.4.
+        `90_bewusst-nicht-umsetzen/Konzept.md` §D.4. (Migration des eigenen Repos
+        **→ step-003** — der harte Cut macht die eigenen Registrierungen sonst
+        unbrauchbar; drift-audit, Live-Verifikation Overview, §D.4-Vermerk → step-004)
   - [ ] A.x Doku-Sammelpflichten (im fachlich berührenden Step, keine Mini-Doku-Steps):
         `Docs/agent-api.md` (Init-Vertrag, Referenzabschnitt „ainetlinter.project.json",
         neue Fehlercodes), `Docs/configuration.md` (entfernte/neue Flags),
         `Docs/integration.md` (Registrierungsbeispiele ohne `--path`/`--config`),
         `Docs/ROADMAP.md`, `README.md`,
         `tasks/mcp-server-weiterentwicklung/00_uebersicht-und-entscheidungen.md` (Zeile 11).
+        (Fach-Dokus agent-api/configuration/integration + README-Registrierungsbeispiele +
+        Sync mdc → step-003; Meilensteinzeilen Docs/ROADMAP.md + 00_uebersicht → step-004)
 
 - [ ] **EPIC-B: Daemon-Modus (geteilter, langlebiger Analysekern)** — Die fertige
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
