@@ -23,17 +23,17 @@ internal sealed class ProjectEntry(string rootPath, ProjectDefinition definition
 
     internal int InFlightCount => Interlocked.CompareExchange(ref inFlightCount, 0, 0);
 
-    internal ProjectLease OpenLease(Action? onReleased = null)
+    internal ProjectLease OpenLease(Action<ProjectLease>? onReleased = null)
     {
         Interlocked.Increment(ref inFlightCount);
         return new ProjectLease(
             RootPath,
             Definition,
             Server,
-            () =>
+            lease =>
             {
                 Interlocked.Decrement(ref inFlightCount);
-                onReleased?.Invoke();
+                onReleased?.Invoke(lease);
             });
     }
 }

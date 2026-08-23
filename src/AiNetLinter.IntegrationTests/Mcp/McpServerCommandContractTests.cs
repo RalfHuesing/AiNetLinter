@@ -55,29 +55,42 @@ public sealed class McpServerCommandContractTests
         File.WriteAllText(solutionPath, "<this-is-not-a-valid-slnx-document>");
         var loadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseLoad = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var loadingLeaseReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var console = new RecordingLintConsole();
         var factoryCalls = 0;
+        var releaseHookCalls = 0;
         McpCodeGraphServer? server = null;
-        await using var registry = ProjectRegistryFixture.Create(_ =>
-        {
-            Interlocked.Increment(ref factoryCalls);
-            server = new McpCodeGraphServer(new McpCodeGraphServerOptions
+        await using var registry = new ProjectRegistry(new ProjectRegistryOptions(_ =>
             {
-                Catalog = null,
-                Console = console,
-                Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-                UsedDefaultConfig = false,
-                LoadFunc = async cancellationToken =>
+                Interlocked.Increment(ref factoryCalls);
+                server = new McpCodeGraphServer(new McpCodeGraphServerOptions
                 {
-                    loadStarted.TrySetResult();
-                    await releaseLoad.Task.WaitAsync(cancellationToken);
-                    return await McpServerCommand.TryLoadSolutionAsync(
-                        solutionPath,
-                        cancellationToken,
-                        console);
-                },
-            });
-            return ProjectInstanceCreation.Resident(server);
+                    Catalog = null,
+                    Console = console,
+                    Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+                    UsedDefaultConfig = false,
+                    LoadFunc = async cancellationToken =>
+                    {
+                        loadStarted.TrySetResult();
+                        await releaseLoad.Task.WaitAsync(cancellationToken);
+                        return await McpServerCommand.TryLoadSolutionAsync(
+                            solutionPath,
+                            cancellationToken,
+                            console);
+                    },
+                });
+                return ProjectInstanceCreation.Resident(server);
+            },
+            TimeProvider.System)
+        {
+            BeforeLeaseRelease = () =>
+            {
+                if (Interlocked.Exchange(ref releaseHookCalls, 1) == 0)
+                {
+                    loadingLeaseReleased.TrySetResult();
+                    releaseLoad.TrySetResult();
+                }
+            },
         });
 
         var initial = registry.Lease(root);
@@ -90,8 +103,8 @@ public sealed class McpServerCommandContractTests
             root,
             _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
+        await loadingLeaseReleased.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
-        releaseLoad.TrySetResult();
         await Assert.ThrowsAnyAsync<Exception>(() => server!.LoadTask!);
 
         var failed = await ProjectToolCall.ExecuteAsync(

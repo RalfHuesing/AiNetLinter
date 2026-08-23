@@ -18,7 +18,10 @@ internal sealed record ProjectRegistryOptions(
     TimeProvider Clock,
     int MaxProjects = ProjectRegistryDefaults.MaxProjects,
     TimeSpan IdleTtl = default,
-    TimeSpan TickInterval = default);
+    TimeSpan TickInterval = default)
+{
+    internal Action? BeforeLeaseRelease { get; init; }
+}
 
 /// <summary>
 /// Read-Only-Blick auf einen residenten Key fuer Statusabfragen ohne Lease-Seiteneffekt:
@@ -137,13 +140,18 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
     private ProjectLeaseResult TryAdoptOrCreate(string key, List<McpCodeGraphServer> retired)
     {
-        var resident = FindAdoptable(key, retired);
-        if (resident is not null)
+        ProjectCreationReservation reservation;
+        lock (gate)
         {
-            return ProjectLeaseResult.Success(resident);
+            var resident = FindAdoptable(key, retired);
+            if (resident is not null)
+            {
+                return ProjectLeaseResult.Success(resident);
+            }
+
+            reservation = ReserveCreationUnderLock(key);
         }
 
-        var reservation = ReserveCreation(key);
         ProjectCreationAttempt attempt;
         try
         {
@@ -158,19 +166,16 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         return PublishCreation(key, reservation, attempt, retired);
     }
 
-    private ProjectCreationReservation ReserveCreation(string key)
+    private ProjectCreationReservation ReserveCreationUnderLock(string key)
     {
-        lock (gate)
+        if (reservations.TryGetValue(key, out var existing))
         {
-            if (reservations.TryGetValue(key, out var existing))
-            {
-                return existing;
-            }
-
-            var reservation = new ProjectCreationReservation(() => CreateInstance(key));
-            reservations.Add(key, reservation);
-            return reservation;
+            return existing;
         }
+
+        var reservation = new ProjectCreationReservation(() => CreateInstance(key));
+        reservations.Add(key, reservation);
+        return reservation;
     }
 
     private ProjectCreationAttempt CreateInstance(string key)
@@ -202,6 +207,11 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             if (projects.TryGetValue(key, out var raced))
             {
                 RemoveReservationUnderLock(key, reservation);
+                if (created.Server is not null && !ReferenceEquals(created.Server, raced.Server))
+                {
+                    retired.Add(created.Server);
+                }
+
                 return ProjectLeaseResult.Success(Adopt(raced));
             }
 
@@ -209,7 +219,7 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             var entry = new ProjectEntry(key, attempt.Definition!, created.Server!, UtcNow());
             projects.Add(key, entry);
             RemoveReservationUnderLock(key, reservation);
-            return ProjectLeaseResult.Success(entry.OpenLease(() => ReleaseEntry(entry)));
+            return ProjectLeaseResult.Success(Adopt(entry));
         }
     }
 
@@ -231,24 +241,21 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
     private ProjectLease? FindAdoptable(string key, List<McpCodeGraphServer> retired)
     {
-        lock (gate)
+        if (!projects.TryGetValue(key, out var entry))
         {
-            if (!projects.TryGetValue(key, out var entry))
-            {
-                return null;
-            }
-
-            if (entry.Server.LoadState == ServerLoadState.LoadFailed
-                && entry.FailureLeaseReleased
-                && entry.InFlightCount == 0)
-            {
-                projects.Remove(key);
-                retired.Add(entry.Server);
-                return null;
-            }
-
-            return Adopt(entry);
+            return null;
         }
+
+        if (entry.Server.LoadState == ServerLoadState.LoadFailed
+            && entry.FailureLeaseReleased
+            && entry.InFlightCount == 0)
+        {
+            projects.Remove(key);
+            retired.Add(entry.Server);
+            return null;
+        }
+
+        return Adopt(entry);
     }
 
     internal IReadOnlyList<ProjectSnapshot> Snapshots()
@@ -289,15 +296,19 @@ internal sealed class ProjectRegistry : IAsyncDisposable
     {
         entry.PendingEviction = false;
         entry.LastUsedUtc = UtcNow();
-        return entry.OpenLease(() => ReleaseEntry(entry));
+        return entry.OpenLease(lease =>
+        {
+            options.BeforeLeaseRelease?.Invoke();
+            ReleaseEntry(entry, lease.LoadFailedResponseEmitted);
+        });
     }
 
-    private void ReleaseEntry(ProjectEntry entry)
+    private void ReleaseEntry(ProjectEntry entry, bool loadFailedResponseEmitted)
     {
         lock (gate)
         {
-            if (entry.Server.LoadState == ServerLoadState.LoadFailed
-                && entry.InFlightCount == 0
+            if (loadFailedResponseEmitted
+                && entry.Server.LoadState == ServerLoadState.LoadFailed
                 && projects.TryGetValue(entry.RootPath, out var current)
                 && ReferenceEquals(current, entry))
             {

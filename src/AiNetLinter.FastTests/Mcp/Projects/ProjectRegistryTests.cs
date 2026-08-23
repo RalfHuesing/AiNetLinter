@@ -137,6 +137,49 @@ public sealed class ProjectRegistryTests
     }
 
     [Fact]
+    public async Task Lease_AtomicLookupAndReservation_CreatesAndDisposesOnlyTheWinner()
+    {
+        using var tempDir = TestTempDirectory.Create("project-registry-atomic-reservation-");
+        var root = CreateProjectRoot(tempDir, "proj");
+        var clock = new FakeClock();
+        var factory = new TrackingServerFactory();
+        var factoryEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var releaseFactory = new ManualResetEventSlim(false);
+        await using var registry = new ProjectRegistry(new ProjectRegistryOptions(
+            definition =>
+            {
+                factoryEntered.TrySetResult();
+                releaseFactory.Wait(TimeSpan.FromSeconds(30));
+                return ProjectInstanceCreation.Resident(factory.CreateServer(definition));
+            },
+            clock));
+
+        var firstCall = Task.Run(() => registry.Lease(root));
+        await factoryEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var secondCall = Task.Run(() => registry.Lease(root));
+        Assert.True(SpinWait.SpinUntil(
+            () => registry.PendingCreationWaiters(root) >= 2,
+            TimeSpan.FromSeconds(10)));
+
+        releaseFactory.Set();
+        var first = await firstCall.WaitAsync(TimeSpan.FromSeconds(15));
+        var second = await secondCall.WaitAsync(TimeSpan.FromSeconds(15));
+        using var firstLease = first.Lease;
+        using var secondLease = second.Lease;
+        Assert.True(SpinWait.SpinUntil(() => factory.LoadsStarted == 1, TimeSpan.FromSeconds(10)));
+
+        Assert.True(first.Succeeded);
+        Assert.True(second.Succeeded);
+        Assert.Equal(1, factory.InstancesCreated);
+        Assert.Equal(1, factory.LoadsStarted);
+        Assert.Equal(0, factory.ServersDisposed);
+        Assert.Same(firstLease!.Server, secondLease!.Server);
+
+        await registry.DisposeAsync();
+        Assert.Equal(1, factory.ServersDisposed);
+    }
+
+    [Fact]
     public async Task Lease_DuringRunningBackgroundLoad_OtherRootsStayServiceable()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-hygiene-");
@@ -344,6 +387,7 @@ public sealed class ProjectRegistryTests
         var failedServer = failed.Lease!.Server;
         await Assert.ThrowsAsync<InvalidOperationException>(() => failedServer.LoadTask!);
         Assert.Equal(ServerLoadState.LoadFailed, failedServer.LoadState);
+        failed.Lease!.MarkLoadFailedResponseEmitted();
         failed.Lease!.Dispose();
 
         factory.FailLoads = false;
@@ -375,6 +419,7 @@ public sealed class ProjectRegistryTests
         Assert.Same(failedServer, stillFailedLease!.Server);
         Assert.Equal(1, factory.InstancesCreated);
 
+        stillFailedLease.MarkLoadFailedResponseEmitted();
         stillFailedLease.Dispose();
         failed.Lease!.Dispose();
         await registry.RunEvictionTickAsync();
@@ -413,86 +458,4 @@ public sealed class ProjectRegistryTests
             "{ \"solution\": \"app.slnx\", \"rules\": \"rules.json\" }");
         return root;
     }
-}
-
-[Trait("Category", "Unit")]
-internal sealed class FakeClock : TimeProvider
-{
-    private long utcTicks = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks;
-
-    public override DateTimeOffset GetUtcNow() => new(Volatile.Read(ref utcTicks), TimeSpan.Zero);
-
-    public void Advance(TimeSpan delta) => Interlocked.Add(ref utcTicks, delta.Ticks);
-
-    public void AdvanceMinutes(int minutes) => Advance(TimeSpan.FromMinutes(minutes));
-}
-
-[Trait("Category", "Unit")]
-internal sealed class TrackingServerFactory
-{
-    private int instancesCreated;
-    private int loadsCancelled;
-    private int failLoads;
-
-    internal int InstancesCreated => instancesCreated;
-
-    internal int LoadsCancelled => loadsCancelled;
-
-    internal bool FailLoads
-    {
-        get => Volatile.Read(ref failLoads) == 1;
-        set => Volatile.Write(ref failLoads, value ? 1 : 0);
-    }
-
-    internal Func<ProjectDefinition, ProjectInstanceCreation> Factory =>
-        definition => ProjectInstanceCreation.Resident(CreateServer(definition));
-
-    internal McpCodeGraphServer CreateServer(ProjectDefinition definition)
-    {
-        Interlocked.Increment(ref instancesCreated);
-        return FailLoads ? CreateFailedLoadServer() : CreatePendingLoadServer();
-    }
-
-    internal McpCodeGraphServer CreatePendingLoadServer()
-    {
-        return new McpCodeGraphServer(new McpCodeGraphServerOptions
-        {
-            Catalog = null,
-            Console = LinterConsole.Instance,
-            Config = MinimalConfig(),
-            UsedDefaultConfig = false,
-            LoadFunc = token =>
-            {
-                var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                token.Register(() =>
-                {
-                    Interlocked.Increment(ref loadsCancelled);
-                    pending.TrySetCanceled(token);
-                });
-                return pending.Task;
-            },
-        });
-    }
-
-    private McpCodeGraphServer CreateFailedLoadServer()
-    {
-        return new McpCodeGraphServer(new McpCodeGraphServerOptions
-        {
-            Catalog = null,
-            Console = LinterConsole.Instance,
-            Config = MinimalConfig(),
-            UsedDefaultConfig = false,
-            LoadFunc = token =>
-            {
-                token.Register(() => Interlocked.Increment(ref loadsCancelled));
-                return Task.FromException<SourceFileCatalog?>(new InvalidOperationException("Katalog kann nicht geladen werden."));
-            },
-        });
-    }
-
-    private static Config MinimalConfig() => new()
-    {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
 }

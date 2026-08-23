@@ -39,7 +39,9 @@ internal static class ProjectToolCall
             case ServerLoadState.Loading:
                 return McpToolResults.Loading();
             case ServerLoadState.LoadFailed:
-                return LoadFailedResult(server, lease);
+                var loadFailed = LoadFailedResult(server, lease);
+                lease.MarkLoadFailedResponseEmitted();
+                return loadFailed;
         }
 
         var result = await call(lease);

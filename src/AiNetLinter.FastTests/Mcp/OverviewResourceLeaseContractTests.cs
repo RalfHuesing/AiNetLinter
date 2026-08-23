@@ -21,7 +21,7 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class OverviewResourceLeaseContractTests
 {
     [Fact]
-    public async Task LoadFailed_UsesToolContractAndReleasesMarkerAfterResponse()
+    public async Task LoadFailed_UsesToolContractAndReleasesAfterExplicitToolResponse()
     {
         using var tempDir = TestTempDirectory.Create("overview-failed-");
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
@@ -52,6 +52,11 @@ public sealed class OverviewResourceLeaseContractTests
         Assert.Contains("Overview-Kalt-Load-Fehler", exception.Message, StringComparison.Ordinal);
         Assert.Contains(Path.Combine(root, "app.slnx"), exception.Message, StringComparison.Ordinal);
         Assert.Contains("automatisch neu", exception.Message, StringComparison.Ordinal);
+
+        await ProjectToolCall.ExecuteAsync(
+            registry,
+            root,
+            _ => Task.FromResult(McpToolResults.Text("sollte nie erreicht werden")));
 
         var retry = registry.Lease(root);
         using var retryLease = retry.Lease;
