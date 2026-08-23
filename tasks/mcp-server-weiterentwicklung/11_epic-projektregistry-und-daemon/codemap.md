@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T15:17:00+02:00
+last_updated: 2026-08-23T23:05:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -142,7 +142,7 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   injizierbarer BCL-TimeProvider; `ProjectToolCall` ergänzt den Root-Guard und
   `ProjectRootGuardFailure` hält den Fehlervertrag außerhalb verschachtelter Typen;
   Step-004-Anker sind zusätzlich `ProjectCreationReservation` und `ProjectLoadFailure`.
-  (zuletzt: step-004)
+  (zuletzt: step-005)
 - **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
   Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
@@ -162,12 +162,15 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Pending-Adoption, FAILED-Marker; Harness `FakeClock`/`TrackingServerFactory` mit
   Disposal-Nachweis über Fake-LoadFunc-Cancellation) und `ProjectLeaseTests`
   (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
-  vollständige Nicht-Stress-Lauf umfasst 1680 grüne Tests. (zuletzt: step-004)
+  vollständige Nicht-Stress-Lauf umfasst 1681 grüne Tests. (zuletzt: step-005)
+- **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
+  gemeinsame FakeClock-/Factory-Doubles für die Registry-Tests. (zuletzt: step-005)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die Prozess-Harnesses starten MCP
   jetzt nur mit `--mcp-server`, legen die Fixture-Definition an und ergänzen
-  `projectRoot` in Tool-Calls. (zuletzt: step-004)
+  `projectRoot` in Tool-Calls; der LoadFailed-Vertrag ist hier abgesichert.
+  (zuletzt: step-005)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)
