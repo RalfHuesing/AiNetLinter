@@ -1,8 +1,11 @@
 #nullable enable
 
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -38,12 +41,28 @@ public sealed class DiffImpactAnalyzerOnceOnlyTests
         var batch = await TestCoverageScanner.FindTestsForSymbolsCoreAsync(
             [symbols.PlaceAsync, symbols.LogInternal], solutionOwner.Solution, counters);
 
+        // Violations-Stufe: dieselben Hunks/Zeiger-Symbole, derselbe Counters-Kanal —
+        // genau ein solutionweiter Lint-Lauf auf der Workspace-Solution.
+        var violationsStage = await DiffViolationScanner.CollectAsync(new DiffViolationScanRequest(
+            solutionOwner.Solution,
+            CreateAdHocLintConfig(),
+            LinterConsole.Instance,
+            workspace.RootPath,
+            analysis.ChangedFiles,
+            analysis.ChangedSymbols,
+            counters));
+
+        Assert.False(violationsStage.IsMalfunction);
         Assert.Equal(1, counters.GitRuns);
         Assert.Equal(1, counters.TestSolutionScans);
-        // LintRuns hat in dieser Stufe noch keine Inkrement-Stelle; der Nachweis folgt
-        // mit der Violations-Stufe — hier wird nur das Nicht-Anwachsen gepinnt.
-        Assert.Equal(0, counters.LintRuns);
+        Assert.Equal(1, counters.LintRuns);
 
         Assert.Equal(3, batch.DistinctTestFileCount);
     }
+
+    private static Config CreateAdHocLintConfig() => new()
+    {
+        Global = new GlobalConfig(),
+        Metrics = new MetricsConfig()
+    };
 }

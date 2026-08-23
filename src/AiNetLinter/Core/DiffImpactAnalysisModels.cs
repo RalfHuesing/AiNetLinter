@@ -60,8 +60,10 @@ internal sealed record DiffImpactAnalysis(
 /// Analysepfads (Git genau einmal, Testsolution genau einmal, Linter genau einmal). Die
 /// Uebergabe ist optional: Ohne Zaehler verhaelt sich der Produktivpfad exakt wie bisher.
 /// Inkrementiert wird an der jeweiligen Stufe per <see cref="Interlocked"/> — genau ein
-/// Inkrement je Durchlauf, nicht je Symbol. Der Linter-Zaehler hat noch keine
-/// Inkrement-Stelle; er folgt mit der Violations-Stufe, das Feld existiert bereits.
+/// Inkrement je Durchlauf, nicht je Symbol; jedes Feld hat genau eine Produktions-Inkrement-Stelle:
+/// GitRuns im Analyzer-Kern vor dem Git-Aufruf, TestSolutionScans im gebatchten
+/// Testzuordnungs-Kern, LintRuns in der diff-bezogenen Violations-Stufe (DiffViolationScanner)
+/// unmittelbar vor dem einen Lint-Lauf.
 /// </summary>
 internal sealed class DiffImpactCounters
 {
@@ -71,6 +73,9 @@ internal sealed class DiffImpactCounters
     /// <summary>Anzahl gebatchter Solution-Durchlaeufe der Testzuordnung (nicht je Symbol).</summary>
     public int TestSolutionScans;
 
-    /// <summary>Anzahl solutionweiter Linter-Laeufe (wird von der Violations-Stufe inkrementiert).</summary>
+    /// <summary>
+    /// Anzahl solutionweiter Linter-Laeufe der diff-bezogenen Violations-Stufe. Bei leerem Input
+    /// (keine Hunks UND keine gezeigten Symbole) wird weder gelaufen noch inkrementiert.
+    /// </summary>
     public int LintRuns;
 }

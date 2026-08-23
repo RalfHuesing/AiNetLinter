@@ -62,24 +62,13 @@ internal static class GetViolationsScanner
         var ct = p.CancellationToken;
         var usedDefaultConfig = p.UsedDefaultConfig;
         var maxResults = p.MaxResults < 1 ? 1 : p.MaxResults;
-        // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
-        // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
-        // von Config implementiert, der Downcast ist daher nicht spekulativ.
-        var concreteConfig = (Config)config;
-
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
 
         IReadOnlyCollection<RuleViolation> violations;
         try
         {
-            var engine = new LinterEngine(
-                config: concreteConfig,
-                rulesJsonContent: null,
-                profiler: null,
-                console: console,
-                args: null);
-            violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
+            violations = await RunSolutionLintAsync(solution, config, console, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -126,6 +115,29 @@ internal static class GetViolationsScanner
             // Gleiche Trunkierung wie FormatReport — StructuredContent zeigt exakt die Violations,
             // die auch im Text-Report auftauchen.
             Violations: shown);
+    }
+
+    /// <summary>
+    /// Einzige Stelle, die die <see cref="LinterEngine"/> konstruiert und solutionweit laufen laesst —
+    /// geteilt von <c>get_violations</c> und der diff-bezogenen Violations-Stufe
+    /// (<see cref="DiffViolationScanner"/>), damit es genau eine Engine-Beschaffung gibt. Immer mit
+    /// <c>noCache: true</c>: der Disk-Cache ist fuer den resident laufenden Server irrelevant (er dient
+    /// der Vermeidung von Re-Compilation zwischen unabhaengigen CLI-Prozessen).
+    /// </summary>
+    internal static async Task<IReadOnlyCollection<RuleViolation>> RunSolutionLintAsync(
+        Solution solution, ILinterEngineConfig config, ILintConsole console, CancellationToken ct)
+    {
+        // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
+        // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
+        // von Config implementiert, der Downcast ist daher nicht spekulativ.
+        var concreteConfig = (Config)config;
+        var engine = new LinterEngine(
+            config: concreteConfig,
+            rulesJsonContent: null,
+            profiler: null,
+            console: console,
+            args: null);
+        return await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
     }
 
     private static async Task<string?> ExtractSnippetAsync(
