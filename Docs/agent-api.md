@@ -228,7 +228,7 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 | `find_symbol` | `namePattern` (Substring), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` | ja | ja |
 | `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen | ja | ja |
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`) | Echter Aufrufer- oder Aufgerufene-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; `incoming` fragt, wer das Symbol aufruft, `outgoing` fragt, welche Source-Symbole es aufruft, `both` liefert beide Richtungen abwechselnd, damit `topN` nicht eine Richtung vollständig aus der sichtbaren Ebene verdrängt; Traversierung hart begrenzt auf 250 Knoten | ja | ja |
-| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, Git-Branch ignoriert) | Betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references` | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, im gesamten Git-Branch (callers UND change-context) wirkungslos), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100), `maxTestsPerSymbol?` (Default 10, Cap 50) | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. `change-context`: strukturiertes Objekt mit geänderten Dateien und Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations, empfohlenen `dotnet test`-Befehlen und Completeness-Metadaten (siehe Detailabschnitt unten) | ja | ja |
 | `get_type_hierarchy` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50, nur für abgeleitete/implementierende Typen) | Basisklassen, implementierte Interfaces (untrunkiert), abgeleitete/implementierende Typen (trunkiert), heuristische DI-Registrierungen (letzte Sektion) | ja | ja (nur abgeleitete/implementierende Typen) |
 | `dependency_graph` | `filePath?` (ganze Datei) **oder** `symbolIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
 | `get_file_skeleton` | `filePath?` (einzelner Pfad), `filePaths?` (Array von Pfaden fuer Batch in 1 Turn; relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
@@ -250,11 +250,11 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 | `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
-Die Testinformationen von `get_feature_context` und `get_test_context` sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
+Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
 
 ### Structured Output
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt seine bestehende `CallSiteEntry`-Form.
+Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt im Default `detailLevel="callers"` seine bestehende `CallSiteEntry`-Form, mit `detailLevel="change-context"` liefert er stattdessen ein eigenes Payload-Objekt (siehe Detailabschnitt unten).
 
 **`search_pattern` — strukturierte Treffer und C#-Enrichment:** Die gemeinsame sichtbare Match-Liste
 liefert `filePath`, 1-basierte `line`-/`matchRanges`-Positionen, unveränderten `lineText`, optional
@@ -286,7 +286,7 @@ abweichender Snapshot-Zeilentext werden als `unavailable`, mehrdeutige Symbolkan
 bleiben unverändert. Bei Trunkierung oder `unavailable`/`ambiguous` sind Scope-Verfeinerung,
 niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene nächste Schritt.
 
-**`find_references` / `get_impact` (Symbol-Branch) — transitive Structured Response:** Beide Tools liefern ein JSON-Objekt mit deterministisch sortierten und deduplizierten Treffern. `filePath` ist solution-relativ mit Forward-Slashes; `depth` ist die Traversierungsstufe; `reachedFromSymbolId` ist die stabile `DocumentationCommentId` des in diesem Schritt untersuchten Symbols (bei fehlender ID ein deterministischer qualifizierter Anzeigename).
+**`find_references` / `get_impact` (Symbol-Branch) — transitive Structured Response:** Beide Tools liefern ein JSON-Objekt mit deterministisch sortierten und deduplizierten Treffern. `filePath` ist solution-relativ mit Forward-Slashes; `depth` ist die Traversierungsstufe; `reachedFromSymbolId` ist die stabile `DocumentationCommentId` des in diesem Schritt untersuchten Symbols (bei fehlender ID ein deterministischer qualifizierter Anzeigename). Call-Sites, deren Aufrufer eine lokale Funktion ist, tragen in `reachedFromSymbolId` die eindeutige Sonderform `<ID des einschließenden Members>#lf:<Name>@<Zeile>:<Spalte>` — ohne diesen Sonderfall wuerde die Doc-ID der lokalen Funktion mit der ihres einschliessenden Members kollidieren; der String-Wert aenderte sich dadurch von der (geerbten, mehrdeutigen) Methoden-ID zu einer eindeutigen ID.
 
 ```json
 {
@@ -314,6 +314,71 @@ niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene n�
 ```
 
 `totalCallSiteCount` zählt die ungekappte Menge innerhalb des Traversierungs-Hard-Caps; `shownCallSiteCount` zählt die tatsächlich in `callSites` enthaltenen Einträge. `truncatedByMaxResults`, `truncatedByNodeLimit` und `depthWasClamped` sind unabhängig voneinander und können gleichzeitig `true` sein. Die Textantwort wird aus derselben gezeigten Trefferliste formatiert und bleibt für Textclients kompatibel.
+
+**`get_impact` (`detailLevel=change-context`) — Structured Output im Detail:** Der Git-Diff-Zweig liefert bei `detailLevel="change-context"` ein eigenes Payload-Objekt statt der `CallSiteEntry`-Liste des Default-Modus. `StructuredContent` liefert:
+
+```json
+{
+  "mode": "gitDiff",
+  "detailLevel": "change-context",
+  "changedFiles": [
+    { "filePath": "src/App/OrderService.cs", "ranges": [{ "startLine": 40, "lineCount": 8 }] }
+  ],
+  "changedSymbols": [
+    {
+      "documentationCommentId": "M:App.OrderService.PlaceAsync",
+      "displayName": "OrderService.PlaceAsync",
+      "kind": "Method",
+      "accessibility": "Public",
+      "projectName": "App",
+      "filePath": "src/App/OrderService.cs",
+      "startLine": 37,
+      "endLine": 61
+    }
+  ],
+  "callSites": [],
+  "testAssociations": [
+    {
+      "symbolId": "M:App.OrderService.PlaceAsync",
+      "filePath": "tests/App.Tests/OrderServiceTests.cs",
+      "testMethods": ["PlaceAsync_ValidOrder_Persists"],
+      "matchReason": "Direct Member Match / Invocation"
+    }
+  ],
+  "violations": [
+    { "filePath": "src/App/OrderService.cs", "lineNumber": 44, "ruleName": "...", "severity": "warning", "details": "..." }
+  ],
+  "recommendedTestCommands": ["dotnet test tests/App.Tests --filter FullyQualifiedName~OrderServiceTests"],
+  "completeness": {
+    "changedSymbolsTotal": 3,
+    "changedSymbolsShown": 3,
+    "symbolsTruncated": false,
+    "callSitesTruncated": false,
+    "testsTruncated": false
+  }
+}
+```
+
+Die Feldnamen sind vertraglich exakt (zentrale CamelCase-Policy, durch Vertragstests gepinnt); `accessibility` ist bewusst ein String (z. B. `"Public"`), keine Zahl. `callSites` verwendet dieselbe `TransitiveCallSiteEntry`-Struktur wie der transitive Abschnitt oben. `matchReason` traegt die getrennten Evidenzarten der statischen Zuordnung in ihren Literal-Formen — `"Direct Member Match / Invocation"`, `"Naming Convention Match"`, `"Explicit @covers Comment"`, `"Direct typeof Reference"` — priorisiert in dieser Reihenfolge.
+
+Vertragsregeln:
+
+- `detailLevel="change-context"` ist nur im Git-Diff-Modus zulaessig. Die Validierung ist case-insensitive; die Kombination mit `symbolIdentifier` und jeder unbekannte `detailLevel`-Wert liefern ein recoverable `INVALID_ARGUMENT` — im Kombinationsfall mit dem Hinweis, fuer den Kontext eines einzelnen Symbols `get_feature_context` zu nutzen. Weglassen, leer oder `"callers"` waehlt das bestehende Call-Site-Verhalten (Default).
+- `maxChangedSymbols` (Default 20, Cap 100) und `maxTestsPerSymbol` (Default 10, Cap 50) werden geklemmt: Werte unter 1 laufen auf den jeweiligen Default zurueck, Werte ueber dem Cap auf den Cap. Die Symbol-Kappung sitzt im Analyzer-Kern nach der Symbolermittlung und VOR den teuren Call-Site-, Test- und Violations-Analysen; die Kappungsreihenfolge ist deterministisch (Projekt → Datei → Startzeile → Symbol-ID), weggekappte Symbole erscheinen nirgends in der Antwort, `completeness.changedSymbolsTotal` spiegelt die Zahl vor der Kappung.
+- `maxResults` (Default 50) kappet in diesem Modus nur die Symbol-/Violation-Toplisten der Textantwort, nicht das strukturierte Objekt.
+- Die Textantwort ist eine kompakte Zusammenfassung (Kennzahlen, Symbol- und Violation-Topliste, empfohlene Befehle). Bei vollstaendigem Ergebnis haengt der Sufficiency-Hinweis an, sonst eine Trunkierungs-Meta-Zeile mit den Kappungsgruenden.
+- „Kein Git-Repository oder leerer Diff" ist kein Fehlerfall: das Tool liefert ein leeres, aber vertragsgueltiges Objekt (alle Listen leer, `completeness` mit `0`/`false`).
+- `violations` sind bewusst kompakt — ohne Snippets oder Source-Ausschnitte.
+- `recommendedTestCommands` ist dedupliziert: genau ein Befehl je betroffenem Testprojekt, dessen Filter die Vereinigung der Trefferklassen des Projekts enthaelt (nur aus den GEZEIGTEN Testtreffern gebaut).
+
+**Dokumentierte Grenzen** des change-context-Modus:
+
+- **Gelöschte Dateien** liefern keine Hunks — der Diff-Parser wertet `+++ /dev/null` nicht aus. Gelöschte Dateien erscheinen daher weder in `changedFiles` noch in `changedSymbols`; das ist eine dokumentierte Grenze, kein Fehlerfall.
+- **Umbenennungen:** Mit Git-Rename-Detection landen die Hunks unter dem neuen Pfad; ohne Detection erscheinen Löschung und Neuanlage als getrennte Ereignisse — die Löschseite faellt unter dieselbe Grenze wie gelöschte Dateien.
+- **`depth` ist im gesamten Git-Branch wirkungslos** (callers UND change-context); die Tiefe der gelieferten Call-Sites ergibt sich aus dem Traversal-Ergebnis, nicht aus dem Parameter.
+- **Die stabile ID** (`documentationCommentId`, `testAssociations[].symbolId`) ist eine `DocumentationCommentId`; fehlt diese, greift ein deterministischer FullyQualified-Fallback. Lokale Funktionen erhalten die ID des einschliessenden Members plus das eindeutige Suffix `#lf:<Name>@<Zeile>:<Spalte>`.
+- **Die Testinformationen sind eine statische Zuordnung** (siehe Notiz unter der Tool-Tabelle) — keine Laufzeit-Coverage, keine Coverage-Dateien.
+- **Multi-Hunk-Container-Regel:** Die innerste Deklaration wird dateiweit ueber alle Hunks entschieden. Trifft ein Hunk einen Member und ein zweiter Hunk derselben Datei die Deklarationszeile des enthaltenen Typs, erscheint nur der Member.
 
 **`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
 
@@ -491,6 +556,8 @@ Vier Listen-Tools (`find_symbol`, `find_references`, `get_impact`, `search_patte
 
 Beide Meta-Zeilen sind wortwörtlich aus `src/AiNetLinter/Mcp/McpTruncation.cs` übernommen — der Code ist die Source of Truth.
 
+Ausnahme: der `get_impact`-Zweig `detailLevel="change-context"` respektiert `maxResults` ebenfalls (Default 50), kappet damit aber nur die Symbol-/Violation-Toplisten seiner Textzusammenfassung und haengt bei Trunkierung statt dieser einheitlichen Meta-Zeile eine eigene `[Teilergebnis: …]`-Zeile an (siehe Detailabschnitt oben).
+
 ### Miss-Hint (find_symbol Fallback)
 
 Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
@@ -621,8 +688,19 @@ und deterministisch nach Tiefe, Pfad, Zeile und Symbolname sortiert.
 Symbolen und einen auf 3 gekappten Depth-Wert. Text und StructuredContent
 werden aus einer gemeinsamen Aggregation erzeugt.
 
-`get_impact` ignoriert `depth` im Git-Branch (es gibt keine Symboltiefe
-fuer `gitRef`-basierte Diff-Analyse).
+**Verhaltenskorrektur bei `depth > 1` (nicht nur additive Erweiterung):**
+Die Kinder-Expansion enqueued je Referenzlocation das einschliessende
+Aufrufer-Member statt der referenzierten Definition. `depth > 1` liefert
+seit dieser Korrektur echte mehrstufige Aufruferketten (`A → B → C`) mit
+korrekter `Depth`-/`reachedFromSymbolId`-Zuordnung statt faktisch nur
+Override-/Interface-Expansion; lokale Funktionen erscheinen dabei als
+Reached-From-Knoten mit eindeutigen `#lf:`-IDs. Die Korrektur aendert
+Bestandsausgaben und betrifft `find_references` UND den `get_impact`-
+Symbol-Branch.
+
+`get_impact` ignoriert `depth` im gesamten Git-Branch (callers und
+change-context — es gibt keine Symboltiefe fuer `gitRef`-basierte
+Diff-Analyse).
 
 #### DI-Registrierungs-Hinweis in `get_type_hierarchy` (E.3)
 

@@ -781,4 +781,26 @@ Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, T
 
 ---
 
+## Strukturierter Diff-Kontext: `get_impact` mit `detailLevel=change-context`
+
+Der Git-Diff-Zweig von `get_impact` liefert auf `detailLevel=change-context` den vollen Änderungs-Kontext einer Codeänderung als strukturierte Antwort:
+
+- [x] **Vertrag & Parameter:**
+  - `detailLevel` (`"callers"` Default, `"change-context"`; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier` — sonst recoverable `INVALID_ARGUMENT` mit Hinweis auf `get_feature_context`), case-insensitive.
+  - `maxChangedSymbols` (Default 20, Cap 100) und `maxTestsPerSymbol` (Default 10, Cap 50) mit Clamp (`< 1` → Default, `> Cap` → Cap).
+  - Strukturiertes Payload in `structuredContent`: geänderte Dateien mit Hunk-Ranges, geänderte Symbole, Call-Sites, statisch zugeordnete Tests (`testAssociations`), diffbezogene Violations ohne Snippets, empfohlene `dotnet test`-Befehle und Completeness-Metadaten; kompakte Textform mit Sufficiency-Hinweis bei vollständigem Ergebnis, sonst Trunkierungs-Meta-Zeile; „kein Repo / leerer Diff" liefert ein leeres, vertragsgültiges Objekt.
+- [x] **Deterministische Symbol-Kappung vor Folgeanalysen:**
+  - Kappung im Analyzer-Kern nach Symbolermittlung und VOR Call-Site-/Test-/Violations-Analysen, Sortierung Projekt → Datei → Startzeile → Symbol-ID; weggekappte Symbole erscheinen nirgends in der Antwort, die Gesamtzahl wird gespiegelt.
+  - Der `callers`-Pfad bleibt ohne wirksamen Cap verhaltensidentisch (Snapshot-Tests unangetastet grün).
+- [x] **Solutionweite Violations-Stufe („Linter genau einmal"):**
+  - Genau ein Lint-Lauf pro Aufruf über den gemeinsamen Helper, diffbezogene Filterung auf Hunks und Spannen gezeigter Symbole, zentrale Pfadnormalisierung der drei Pfadsemantiken.
+- [x] **Gebatchte Test-Zuordnung:**
+  - Ein Solution-Durchlauf für alle geänderten Symbole (Evidenzarten und Prioritäten des statischen Testscanners unverändert), Testmethoden je Symbol gekappt; `recommendedTestCommands` dedupliziert — genau ein Befehl je betroffenem Testprojekt.
+- [x] **depth>1-Verhaltenskorrektur:**
+  - Die Traversierung enqueued das einschließende Aufrufer-Member statt der referenzierten Definition — `depth > 1` liefert echte mehrstufige Aufruferketten für `find_references` und den `get_impact`-Symbol-Branch (Verhaltenskorrektur mit geänderten Bestandsausgaben, nicht nur additive Erweiterung); lokale Funktionen tragen eindeutige `#lf:`-IDs.
+- [x] **Dokumentation & Grenzen:**
+  - change-context-Vertrag (Feldnamen, Defaults/Caps, Fehlerfälle) samt sechs dokumentierten Grenzen in `Docs/agent-api.md`; `README.md`-Toolzeile synchronisiert.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
