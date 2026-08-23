@@ -15,7 +15,7 @@ current_step: step-007
 - **Task-Status:** `executing` (Fortsetzung nach Nutzer-Revision 2026-08-23)
 - **Steps gesamt:** 7 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-007` (in_progress)
+- **Aktueller Schritt:** keiner (step-007 approved; Planer plant als Nächstes EPIC-6 einzeln)
 
 > **Nutzerentscheidung 2026-08-22 (Straffung):** Die restlichen Epics wurden
 > zu größeren Steps konsolidiert (EPIC-3+4 → step-004). Die konsolidierten
@@ -68,7 +68,7 @@ MCP-Server läuft proaktiv mit (bei Bedarf get_server_health).
 | step-003 | EPIC-2 | done | Breiter Diff-Symbolscanner mit kollisionsfreien stabilen IDs | - | 85c7fdce | approved | e31006dd / bb34d3a7 |
 | step-004 | EPIC-3+EPIC-4 | done | Testfundament, gebatchte Test-Zuordnung & recommendedTestCommands | - | 7b3b0284 | approved (via 006) | 5a1c9952 / 1588160a |
 | step-006 | EPIC-3+EPIC-4 | done | Korrektur step-004: Quoting des Mehrklassen-Filters | step-004 | 4b53579a | approved | 9399714c / a766f727 |
-| step-007 | EPIC-5 | in_progress | Solutionweite Violations & diffbezogene Filterung (interne Stufe) | - | - | - | - |
+| step-007 | EPIC-5 | done | Solutionweite Violations & diffbezogene Filterung (interne Stufe) | - | 8bc3e919 | approved | b4925761 / 7f44405c |
 
 ## Config
 

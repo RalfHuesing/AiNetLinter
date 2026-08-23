@@ -32,6 +32,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 |---|---|---|---|---|
 | TD-001 | `src/AiNetLinter.FastTests/Fixtures/McpInMemoryTestContext.cs` | niedrig | nein | `CreateScenario` liefert kein Server-Handle — Tool-Level-Ad-hoc-Tests brauchen Boilerplate-Wrapper |
 | TD-002 | `src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs` (`GetStableSymbolId`) | mittel | nein | Lokale Funktionen erben die Doc-ID der einschließenden Methode — Kollisionsrisiko stabiler IDs, sobald der breite Scanner (EPIC-2 Teil 2) sie einschließt |
+| TD-003 | `src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeRoslynScanner.cs` (`ComputeViolationDensityMetricsAsync`) | niedrig | nein | Baut die LinterEngine identisch selbst statt den gemeinsamen Helper `GetViolationsScanner.RunSolutionLintAsync` zu nutzen |
 
 ## Einträge
 
@@ -101,6 +102,25 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   gemeinsame Quelle für `ChangedSymbolEntry.SymbolId` und
   `ReachedFromSymbolId` — und ist per Unit-/Integrationstests gegen Code
   bestätigt)  # offen | erledigt | verworfen — Änderung ist
-  manuell (Nutzer) bzw. automatisch auf „erledigt" nach erfolgreicher
+  manuell (Nutzer) bzw. automatisch auf „erledigt“ nach erfolgreicher
   Bündelung eines `auto_fixable: ja`-Eintrags; kein Subagent ändert den
-  Status eines `nein`-Eintrags selbst
+
+### TD-003 — MetricsTree baut LinterEngine selbst statt gemeinsamen Helper [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-007 (Kritiker-Review vom 2026-08-23; vom Coder in den
+  step-result-Beobachtungen gemeldet, vom Kritiker gegen Code bestätigt)
+- **Ort:** `src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeRoslynScanner.cs`
+  (`ComputeViolationDensityMetricsAsync`, Z. 70–79)
+- **Befund:** Die Methode baut die LinterEngine identisch selbst
+  ((Config)-Downcast + Konstruktor + `RunAsync(noCache:true)`), obwohl seit
+  step-007 `GetViolationsScanner.RunSolutionLintAsync` die gemeinsame
+  Beschaffungsstelle für den MCP-Pfad ist.
+- **Warum nicht sofort gefixt:** Außerhalb des step-007-Scopes — der Plan
+  schloss den Helper bewusst auf `get_violations` + die neue Violations-Stufe.
+- **Vorschlag:** Umstellung wäre Einzeiler; zu klären ist die
+  Architektur-Entscheidung, ob MetricsTree auf den Analysis-Namespace koppeln
+  darf bzw. wohin der Helper langfristig gehört.
+- **Auto-Fixable:** nein — Architektur-Ermessen (Namespace-Kopplung/Hilfsort),
+  keine rein mechanische Korrektur.
+- **Status:** offen  # offen | erledigt | verworfen — Änderung ist
+  manuell (Nutzer); kein `auto_fixable`-Eintrag.
