@@ -71,5 +71,11 @@ unverändert; nur dieser Task nutzt die verdoppelten Overrides.
   Initialauftrag rekonstruieren.
 - Der Scope endet erst, wenn EPIC-A und anschließend EPIC-B gemäß ihrer
   jeweiligen Definition of Done abgeschlossen und reviewed sind.
+- Bei einem Konflikt zwischen einer Review-Forderung und der inzwischen
+  erreichten Architektur nicht weiter raten: den Konflikt als Blocker bzw.
+  Konzept-Entscheidung dokumentieren, die betroffene Annahme transparent
+  markieren und mit dem nächsten fachlichen Schritt fortfahren. Auf eine
+  spätere Nutzerentscheidung nur dann warten, wenn sie für den nächsten
+  sicheren Schritt tatsächlich erforderlich ist.
 - Vor jedem Commit die MCP-Quality-Gates ausführen; Stress-Tests nur auf
   ausdrückliche Anforderung.

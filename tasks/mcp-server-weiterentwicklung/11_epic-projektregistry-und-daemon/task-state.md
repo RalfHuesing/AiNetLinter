@@ -15,6 +15,10 @@ current_step: step-007
 - **Task-Status:** `executing`
 - **Nutzer-Scope:** vollständigen Task einschließlich EPIC-A und EPIC-B
   umsetzen; nicht nach dem Abschluss von EPIC-A stoppen.
+- **Konfliktregel:** Review-Forderungen gegen inzwischen erreichte Architektur
+  nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
+  dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
+  sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
 - **Aktueller Schritt:** `step-007` (in_progress — direkte Originalfehler-
