@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T14:32:00+02:00
+last_updated: 2026-08-23T15:17:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -125,14 +125,20 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   heute von `McpServerCommand` aufgerufen; wird als gemeinsame Materialisierung in
   `ProjectInstanceFactory` gezogen (geteilt Batch + Registry, Review 3).
   (zuletzt: initial)
-- **`src/AiNetLinter/Mcp/Projects/`** — seit step-001 angelegt: `ProjectDefinition`
-  (Record, absolut + existenzgeprüft via Loader), `ProjectDefinitionLoader`
-  (Pflichtfelder, Anker Definitionsdatei, kein Fallback, Fehlerverträge mit
-  Template-Text), `ProjectDefinitionLoadResult` (flacher Result-Record),
-  `ProjectErrorCodes` (alle sechs A.5-Codes; `PROJECT_ROOT_*` erst im Wiring aktiv)
-  und `ProjectInstanceFactory` (`MaterializeRules` = geteilter Config-Kern Batch +
-  Registry, `Create(Definition)` → Options via `From(...)`). `ProjectEntry`,
-  `ProjectLease`, `ProjectRegistry` folgen in späteren Steps. (zuletzt: step-001)
+- **`src/AiNetLinter/Mcp/Projects/`** — Registry-Fachschicht komplett (step-001 +
+  step-002): `ProjectDefinition` (Record, absolut + existenzgeprüft via Loader),
+  `ProjectDefinitionLoader` (Pflichtfelder, Anker Definitionsdatei, kein Fallback,
+  Fehlerverträge mit Template-Text), `ProjectDefinitionLoadResult` (flacher Result-Record),
+  `ProjectErrorCodes` (alle sechs A.5-Codes; `PROJECT_ROOT_*` erst im Wiring aktiv),
+  `ProjectInstanceFactory` (`MaterializeRules` = geteilter Config-Kern Batch + Registry,
+  `Create(Definition)` → Options via `From(...)`) sowie seit step-002 `ProjectEntry`
+  (residenter Zustand pro Key, InFlightCount via Interlocked), `ProjectLease` (Dispose
+  genau-einmal), `ProjectLeaseResult` und `ProjectRegistry` (+ Options/Defaults am
+  Dateianfang): synchrones `Lease` mit Key-Kanonisierung, LRU/TTL-Eviction inkl.
+  Busy-Guard/Pending-Adoption, FAILED-Marker ohne negatives Caching, TTL-Tick nach
+  ParentProcessWatchdog-Muster (`RunEvictionTickAsync` intern auch testtriggerbar),
+  injizierbarer BCL-TimeProvider; Fabrik-Delegat ist vertraglich nicht-blockierend
+  (Komposition mit `TryLoadSolutionAsync` erst im Wiring). (zuletzt: step-002)
 - **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
   Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
@@ -144,12 +150,15 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter.FastTests/Mcp/**`** — bestehende Unit-/Component-Tests zu
   Command/Factory/Registrations/Overview (u. a. `McpServerOptionsFactoryTests`,
   `SymbolGraphToolRegistrationsTests`, `OverviewResourceRegistrationTests`,
-  LoadingState-/CacheBypass-/CallLog-Tests); seit step-001 dazu
-  `FastTests/Mcp/Projects/` mit `ProjectDefinitionLoaderTests` (Ankerregel,
-  Fehlerverträge inkl. Template-Text-Assertion, Kein-Fallback) und
-  `ProjectInstanceFactoryTests` (Materialisierung + Gleichheit mit der
-  Batch-Pipeline). Contract-Tests (`projectRoot` required) und
-  `FastTests/Mcp/Daemon/` kommen später dazu. (zuletzt: step-001)
+  LoadingState-/CacheBypass-/CallLog-Tests); in `FastTests/Mcp/Projects/` dazu
+  seit step-001 `ProjectDefinitionLoaderTests` (Ankerregel, Fehlerverträge inkl.
+  Template-Text-Assertion, Kein-Fallback) und `ProjectInstanceFactoryTests`
+  (Materialisierung + Gleichheit mit der Batch-Pipeline), seit step-002
+  `ProjectRegistryTests` (12 Tests: Dedupe/Lock-Hygiene, TTL/LRU, Busy-Guard,
+  Pending-Adoption, FAILED-Marker; Harness `FakeClock`/`TrackingServerFactory` mit
+  Disposal-Nachweis über Fake-LoadFunc-Cancellation) und `ProjectLeaseTests`
+  (Lease-Disziplin). Contract-Tests (`projectRoot` required) und
+  `FastTests/Mcp/Daemon/` kommen später dazu. (zuletzt: step-002)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die sparsamen Daemon-Zwei-Prozess-E2E
