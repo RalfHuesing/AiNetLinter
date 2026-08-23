@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T23:58:00+02:00
+last_updated: 2026-08-24T00:48:56+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -88,8 +88,9 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Race-Fenster im Review offengelegt; die Produktionskorrektur läuft in
       step-005, die Interleaving-Testanker in step-006 und die letzten direkten
       Fehler-/Loser-Assertions in step-007. Abschluss (drift-audit,
-      Live-Verifikation Overview, Meilenstein-Doku, §D.4) → nächster regulärer
-      Step nach step-007.
+      Live-Verifikation Overview, Meilenstein-Doku, §D.4) ist als ein
+      zusammenhängender regulärer step-008 geplant; EPIC-B bleibt bis zur
+      Abnahme von EPIC-A ungeplant.
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
@@ -165,8 +166,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `90_bewusst-nicht-umsetzen/Konzept.md` §D.4. (Migration des eigenen Repos
         **→ step-003** — der harte Cut macht die eigenen Registrierungen sonst
         unbrauchbar; die Review-Korrekturen → step-004/step-005/step-006/step-007;
-        drift-audit, Live-Verifikation Overview, §D.4-Vermerk → nächster
-        regulärer Step)
+        drift-audit, Live-Verifikation Overview, §D.4-Vermerk → step-008)
   - [ ] A.x Doku-Sammelpflichten (im fachlich berührenden Step, keine Mini-Doku-Steps):
         `Docs/agent-api.md` (Init-Vertrag, Referenzabschnitt „ainetlinter.project.json",
         neue Fehlercodes), `Docs/configuration.md` (entfernte/neue Flags),
@@ -175,7 +175,19 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `tasks/mcp-server-weiterentwicklung/00_uebersicht-und-entscheidungen.md` (Zeile 11).
         (Fach-Dokus agent-api/configuration/integration + README-Registrierungsbeispiele +
         Sync mdc → step-003; Meilensteinzeilen Docs/ROADMAP.md + 00_uebersicht →
-        nächster regulärer Step)
+        step-008)
+
+  - **Step-008-Planstatus (2026-08-24):** Die EPIC-A-Fachlichkeit sowie die
+    Review-Korrekturen aus step-001 bis step-007 sind laut step-007-Review
+    `approved`; Registry-, Wiring-, Fehler-, Eviction- und Testverträge gelten
+    als erledigt. Offen bleiben ausschließlich der einmalige Epic-Drift-Audit
+    (im Planerlauf bereits ausgeführt und zu dokumentieren), die sichere
+    Live-Prüfung des Overview-URI-Templates/Resource-Reads über die bestehende
+    C#-MCP-Testinfrastruktur, die Meilensteinpflege in `Docs/ROADMAP.md` und
+    `00_uebersicht-und-entscheidungen.md` Zeile 11 sowie der Abschlussvermerk
+    zu §D.4. Die vorhandenen Repo-/Hermes-Registrierungen und
+    `ainetlinter.project.json` sind bereits migriert; EPIC-B wird nicht
+    vorgeplant.
 
 - [ ] **EPIC-B: Daemon-Modus (geteilter, langlebiger Analysekern)** — Die fertige
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
