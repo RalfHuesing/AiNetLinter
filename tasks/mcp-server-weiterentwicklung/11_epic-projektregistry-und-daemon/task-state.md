@@ -64,10 +64,10 @@ Falls `<task-dir>/config.md` existiert, hier die Overrides dokumentieren.
 Andernfalls gelten die Defaults aus `../spec.md`.
 
 ```
-max_fix_rounds_per_step: 6        # Nutzerbewusst verdoppelt; Kettenlänge über `corrects`, siehe ../spec.md §10.5
-soft_step_checkin_interval: 40    # weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
-max_batch_items: 8          # siehe ../spec.md §10.6 (Micro-Batches innerhalb eines Epics)
-max_batch_diff_lines: 40    # siehe ../spec.md §10.6
+max_fix_rounds_per_step: 6        # Nutzerbewusst verdoppelt (3 → 6); Kettenlänge über `corrects`, siehe ../spec.md §10.5
+soft_step_checkin_interval: 80    # Nutzerbewusst verdoppelt (40 → 80); weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
+max_batch_items: 16               # Nutzerbewusst verdoppelt (8 → 16); siehe ../spec.md §10.6
+max_batch_diff_lines: 80          # Nutzerbewusst verdoppelt (40 → 80); siehe ../spec.md §10.6
 build_command: dotnet build
 test_command: dotnet test src/AiNetLinter.FastTests --filter Category!=Stress && dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
 target_branch: main

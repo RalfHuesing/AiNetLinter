@@ -44,11 +44,18 @@ Arbeite autonom weiter bis zum nächsten `blocked`- oder Check-in-Punkt.
 
 ## Erweiterte Korrekturfreigabe
 
-Der Nutzer hebt die Verdict-/Korrekturketten-Schranke für diesen Task bewusst
-auf das Doppelte an: `max_fix_rounds_per_step` wird von 3 auf 6 erhöht. Bei
-weiteren `issues`-Verdicts die Korrektursteps daher bis zu diesem neuen Limit
-normal fortsetzen und nicht vorzeitig wegen des ursprünglichen Limits
-unterbrechen.
+Der Nutzer hebt die Verdict-/Workflow-Schranken für diesen Task bewusst auf
+das Doppelte an. Die lokalen Task-Overrides sind daher:
+
+- `max_fix_rounds_per_step`: 3 → 6
+- `soft_step_checkin_interval`: 40 → 80
+- `max_batch_items`: 8 → 16
+- `max_batch_diff_lines`: 40 → 80
+
+Bei weiteren `issues`-Verdicts die Korrektursteps bis zum neuen Kettenlimit
+normal fortsetzen und nicht vorzeitig wegen der ursprünglichen Limits
+unterbrechen. Die globalen Defaults in den Workflow-Spezifikationen bleiben
+unverändert; nur dieser Task nutzt die verdoppelten Overrides.
 
 ## Fortsetzungsregeln
 
