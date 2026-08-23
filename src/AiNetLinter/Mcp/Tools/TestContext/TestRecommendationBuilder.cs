@@ -59,7 +59,9 @@ internal static class TestRecommendationBuilder
 
     private static string BuildCommand(string projectDir, IReadOnlyList<string> classNames)
     {
-        var filter = string.Join("|", classNames.Select(name => $"FullyQualifiedName~{name}"));
+        // Ab zwei Klassen enthaelt der Filter ein | und muss als Shell-Zeile gequotet sein.
+        var filterValue = string.Join("|", classNames.Select(name => $"FullyQualifiedName~{name}"));
+        var filter = classNames.Count > 1 ? $"\"{filterValue}\"" : filterValue;
         return projectDir.Length == 0
             ? $"dotnet test --filter {filter}"
             : $"dotnet test {projectDir} --filter {filter}";

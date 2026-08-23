@@ -104,9 +104,9 @@ public sealed class TestCoverageBatchScannerTests
         var command = Assert.Single(commands);
         Assert.Equal(
             "dotnet test App.Tests"
-            + " --filter FullyQualifiedName~AuditLoggerTests"
+            + " --filter \"FullyQualifiedName~AuditLoggerTests"
             + "|FullyQualifiedName~OrderServiceInvocationTests"
-            + "|FullyQualifiedName~OrderServiceTests",
+            + "|FullyQualifiedName~OrderServiceTests\"",
             command);
         Assert.Equal(commands.ToArray(), commandsAgain.ToArray());
     }
