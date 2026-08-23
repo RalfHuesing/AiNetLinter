@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 007

@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-23T23:58:00+02:00
+last_updated: 2026-08-24T00:40:11+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 7  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-007
@@ -62,7 +62,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-004 | EPIC-A | done (Korrektur ausstehend) | Produktions-Kalt-Load, Erstzugriffs-Dedupe und leasegeschützte Overview korrigieren | step-003 | 2ed8bcc0 / 190a1a25 | 2026-08-23 (issues) | 2ed8bcc0 / 190a1a25 / d56e9b59 |
 | step-005 | EPIC-A | done (Korrektur ausstehend) | FAILED-Freigabe und Registry-Reservation atomar absichern | step-004 | a50bff9a / 1cd75558 | 2026-08-23 (issues) | a50bff9a / 1cd75558 / 1059cfcb |
 | step-006 | EPIC-A | done (Korrektur ausstehend) | Race-Interleavings in den Abnahmetests deterministisch verankern | step-005 | 05b2e157 / 3dac2e2c | 2026-08-23 (issues) | 05b2e157 / 3dac2e2c / e7e0fdfe |
-| step-007 | EPIC-A | in_progress | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | - | - | Plan erstellt |
+| step-007 | EPIC-A | done | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | 73695524 / 91d9aae2 | 2026-08-24 (approved) | 73695524 / 91d9aae2 |
 
 ## Config (optional)
 
