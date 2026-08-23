@@ -401,6 +401,24 @@ auf last-good (sichtbar markiert), Reparatur durch den schreibenden Agent, näch
 
 ### Gleichzeitigkeit & Snapshot-Semantik
 
+### Threading-Modell (verbindlich)
+
+„Ein Daemon" heißt NICHT „ein Thread": Der Prozess enthält viele Threads, aber wir bauen keine selbst —
+es gilt das .NET-Standardmuster **async I/O + Thread Pool**:
+
+- **Pipe-Verbindungen:** Je Verbindung ein async Read/Write-Loop (`ReadAsync`/`WriteAsync`). Eine
+  wartende Verbindung blockiert keinen Thread; N verbundene Clients kosten fast null Threads.
+- **Tool-Calls:** Das MCP-SDK dispatcht jeden Aufruf als async-Invocation auf einem Thread-Pool-
+  Thread. Calls VERSCHIEDENER Clients laufen damit echt gleichzeitig; Calls derselben Verbindung
+  je nach Host-Verhalten (z. B. `supports_parallel_tool_calls`) seriell oder parallel.
+- **Roslyn-Analyse:** bleibt normaler synchroner Code INNERHALB der async-Methoden (CPU-Arbeit,
+  nichts zu awaiten, kein `Task.Run`, keine eigenen Threads).
+
+Regel: **async an den I/O-Grenzen** (Pipe, Solution-Hintergrund-Load, MRU-Schreiben, Timer),
+**sync im Compute** — alles andere wäre Overhead. Bewusst serialisierte Stellen bleiben wie spezifiziert:
+Staleness-Check am selben Key unter dem Instanz-Lock (Review-2-Trade-off), kurzer Registry-Lock,
+Lease-Zähler per Interlocked. Verschiedene Keys blockieren sich nie.
+
 Mehrere Clients am SELBEN Key teilen sich dieselbe Serverinstanz: Der Staleness-Check serialisiert
 unter dem Instanz-Lock, Analysen laufen außerhalb des Locks auf unveränderlichen Roslyn-Solution-
 Snapshots (thread-sicher lesend). Gewollte Konsequenz: Ein nur-lesender Zusatz-Agent sieht die
