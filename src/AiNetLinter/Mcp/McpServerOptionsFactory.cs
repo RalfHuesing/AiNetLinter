@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Reflection;
+using AiNetLinter.Mcp.Projects;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -18,41 +19,41 @@ internal static class McpServerOptionsFactory
     internal const string ServerName = "ainetlinter";
 
     /// <summary>
-    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Tools erreichen
-    /// den resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure — kein
-    /// DI-Container (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Die
-    /// <c>initialize</c>-Handshake-Instructions kommen aus <see cref="ServerInstructions.Text"/>
-    /// (Single-Source-of-Truth, siehe dort).
+    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Die Lambdas
+    /// erreichen die residenten Instanzen ausschliesslich ueber die <paramref name="registry"/>
+    /// (Lease je projectRoot) — kein DI-Container (Architektur-Verbot, siehe
+    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Die <c>initialize</c>-Handshake-Instructions
+    /// kommen aus <see cref="ServerInstructions.Text"/> (Single-Source-of-Truth, siehe dort).
     /// </summary>
-    internal static McpServerOptions Create(McpCodeGraphServer mcpState, IServiceProvider? serviceProvider = null)
+    internal static McpServerOptions Create(ProjectRegistry registry, IServiceProvider? serviceProvider = null)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions.Text)
-            .WithToolCollection(BuildToolCollection(mcpState, serviceProvider))
-            .WithResourceCollection(BuildResourceCollection(mcpState))
+            .WithToolCollection(BuildToolCollection(registry, serviceProvider))
+            .WithResourceCollection(BuildResourceCollection(registry))
             .Build();
     }
 
-    internal static McpServerResourceCollection BuildResourceCollection(McpCodeGraphServer mcpState)
+    internal static McpServerResourceCollection BuildResourceCollection(ProjectRegistry registry)
     {
         var resources = new McpServerResourceCollection();
-        OverviewResourceRegistration.Register(resources, mcpState);
+        OverviewResourceRegistration.Register(resources, registry);
         return resources;
     }
 
     internal static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
-        McpCodeGraphServer mcpState,
+        ProjectRegistry registry,
         IServiceProvider? serviceProvider = null)
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
-        SymbolGraphToolRegistrations.Register(tools, mcpState);
-        FileStructureToolRegistrations.Register(tools, mcpState);
-        AnalysisToolRegistrations.Register(tools, mcpState);
-        SymbolBodyToolRegistrations.Register(tools, mcpState);
-        ServerMaintenanceToolRegistrations.Register(tools, mcpState, serviceProvider);
-        DuplicateDetectionToolRegistrations.Register(tools, mcpState);
+        SymbolGraphToolRegistrations.Register(tools, registry);
+        FileStructureToolRegistrations.Register(tools, registry);
+        AnalysisToolRegistrations.Register(tools, registry);
+        SymbolBodyToolRegistrations.Register(tools, registry);
+        ServerMaintenanceToolRegistrations.Register(tools, registry, serviceProvider);
+        DuplicateDetectionToolRegistrations.Register(tools, registry);
 
         return tools;
     }

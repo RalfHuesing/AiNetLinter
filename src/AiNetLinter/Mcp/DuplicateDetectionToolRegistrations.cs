@@ -2,8 +2,8 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -15,25 +15,30 @@ namespace AiNetLinter.Mcp;
 /// <see cref="SymbolGraphToolRegistrations"/>, weil <c>find_duplicates</c> weder den
 /// <c>LinterEngine</c>-Pull-in der Analysis-Tools noch die Symbolgraph-Traversierungslogik der
 /// Symbolgraph-Tools teilt — es nutzt ausschliesslich die eigenstaendige
-/// <see cref="Core.DuplicateDetection.DuplicateDetectionEngine"/> (Core/DuplicateDetection/, auch
-/// vom Linter-Checker <c>DuplicateCodeChecker</c> genutzt).
+/// <see cref="AiNetLinter.Core.DuplicateDetection.DuplicateDetectionEngine"/> (Core/DuplicateDetection/, auch
+/// vom Linter-Checker <c>DuplicateCodeChecker</c> genutzt). Das Lambda ist projektgebunden:
+/// <c>projectRoot</c> ist Pflicht und adressiert den Lease-geschuetzten Registry-Key.
 /// </summary>
 internal static class DuplicateDetectionToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
+            async (string projectRoot, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
                 string? scopeType = null,
                 CancellationToken ct = default) =>
-            {
-                var input = new DuplicateDetectionInput(
-                    minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
-                return DuplicateDetectionTool.ExecuteAsync(mcpState, input, ct);
-            },
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease =>
+                    {
+                        var input = new DuplicateDetectionInput(
+                            minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
+                        return DuplicateDetectionTool.ExecuteAsync(lease.Server, input, ct);
+                    }),
             new McpServerToolCreateOptions
             {
                 Name = "find_duplicates",

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Observability;
 using ModelContextProtocol.Protocol;
 using RalfHuesing.Mcp.Observability;
@@ -12,91 +13,136 @@ using RalfHuesing.Mcp.Observability;
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 /// <summary>
-/// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss des laufenden MCP-Server-Prozesses —
-/// <see cref="ServerLoadState"/>, geladene Solution/Config-Quelle, Uptime, Anzahl
-/// Solution-Refreshes seit Start, Observability-Status (Logging & Feedback-Kanal) und aktuelle
-/// Call-Log-Aggregate.
-/// Reine Diagnose ohne Recoverable-Pfad; einzige Ausnahme
-/// <see cref="ServerLoadState.LoadFailed"/>, konsistent mit den anderen Tools' SOLUTION_NOT_LOADED-
-/// Kurzform.
+/// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss der residenten Projekt-Keys —
+/// pro Key <see cref="ServerLoadState"/>, Solution-/Config-Quelle, LastUsedUtc, Uptime,
+/// Refresh-Zaehler, Staleness-Aggregate und die Health-Felder des zweistufigen
+/// Zustandsvertrags (<c>LastGoodStateUtc</c>/<c>LastLoadError</c>); dazu der prozessweite
+/// Observability-Teil (Logging &amp; Feedback-Kanal) mit Call-Log-Aggregaten.
+/// Einzige Pflicht-Ausnahme vom projectRoot-Kontrakt: Ohne Filter wird ueber ALLE Keys
+/// aggregiert; mit Filter antwortet nur dieser Key (Guards wie bei allen Tools). Reine
+/// Diagnose ohne Recoverable-Pfad.
 /// </summary>
 internal static class GetServerHealthTool
 {
     internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ProjectRegistry registry,
+        IMcpObservabilityService? observabilityService = null,
+        string? projectRoot = null,
         string? observabilityLogPath = null)
     {
-        return ExecuteAsync(state, observabilityService: null, observabilityLogPath: observabilityLogPath);
+        IReadOnlyList<ProjectSnapshot> snapshots;
+        if (projectRoot is not null)
+        {
+            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+            if (guard is not null)
+            {
+                return Task.FromResult(McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint));
+            }
+
+            var snapshot = registry.FindSnapshot(projectRoot);
+            if (snapshot is null) return Task.FromResult(ProjectNotInitialized(projectRoot));
+            snapshots = [snapshot];
+        }
+        else
+        {
+            snapshots = registry.Snapshots();
+        }
+
+        return Task.FromResult(BuildResult(snapshots, observabilityService, observabilityLogPath));
     }
 
-    internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+    private static CallToolResult BuildResult(
+        IReadOnlyList<ProjectSnapshot> snapshots,
         IMcpObservabilityService? observabilityService,
-        string? observabilityLogPath = null)
+        string? observabilityLogPath)
     {
-        if (state.LoadState == ServerLoadState.LoadFailed) return Task.FromResult(McpToolResults.SolutionNotLoaded());
-
-        var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
         var isEnabled = observabilityService is null || observabilityService.IsEnabled;
-        var version = McpServerOptionsFactory.GetServerVersion();
+        var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
         var callLogResult = isEnabled ? McpLogAnalyzer.TryAnalyze(effectiveLogPath ?? string.Empty) : null;
         var callLogPayload = BuildCallLogPayload(effectiveLogPath, callLogResult);
 
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter MCP-Server — Health");
         sb.AppendLine();
-        sb.AppendLine($"- Version: {version}");
-        sb.AppendLine($"- LoadState: {state.LoadState}");
-        sb.AppendLine($"- Solution: {DescribeSolution(state)}");
-        sb.AppendLine($"- Config: {DescribeConfig(state)}");
-        sb.AppendLine($"- Uptime: {FormatUptime(state.Uptime)}");
-        sb.AppendLine($"- Solution-Refreshes seit Start: {state.RefreshCount}");
-        var staleness = state.LastStalenessStats;
-        AppendStalenessSection(sb, staleness);
+        sb.AppendLine($"- Version: {McpServerOptionsFactory.GetServerVersion()}");
         sb.AppendLine();
-        sb.Append(DescribeObservability(isEnabled, effectiveLogPath, callLogPayload));
+        sb.AppendLine($"## Projekte ({snapshots.Count})");
+        sb.AppendLine();
+        foreach (var snapshot in snapshots)
+        {
+            AppendProjectSection(sb, snapshot);
+        }
 
-        var text = sb.ToString().TrimEnd();
-        return Task.FromResult(McpToolResults.Text(text, BuildPayload(state, version, callLogPayload, staleness)));
+        sb.Append(DescribeObservability(isEnabled, effectiveLogPath, callLogPayload));
+        var entries = snapshots.Select(ToEntry).ToList();
+        var payload = new ServerHealthAggregatePayload(
+            Version: McpServerOptionsFactory.GetServerVersion(),
+            Projects: entries,
+            CallLog: callLogPayload);
+        return McpToolResults.Text(sb.ToString().TrimEnd(), payload);
     }
 
-    /// <summary>Staleness-Sektion (Konzept 02, c/C): Check-Frequenz und kumulierte Dauer als
-    /// Evidenzbasis, Warnungen fuer unzugängliche Teilbäume als Health-Metadaten.</summary>
+    private static void AppendProjectSection(StringBuilder sb, ProjectSnapshot snapshot)
+    {
+        var server = snapshot.Server;
+        sb.AppendLine($"### {snapshot.RootPath}");
+        sb.AppendLine($"- LoadState: {server.LoadState}");
+        sb.AppendLine($"- Solution: {(server.LoadState == ServerLoadState.Loading ? "wird noch geladen" : server.GetCurrentSolution()?.FilePath ?? "unbekannt")}");
+        var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
+        sb.AppendLine($"- Config: {(usedDefaultConfig ? "Default-Regeln" : resolvedConfigPath ?? "unbekannt")}");
+        sb.AppendLine($"- Zuletzt genutzt (UTC): {FormatTimestamp(snapshot.LastUsedUtc)}");
+        sb.AppendLine($"- Uptime: {FormatUptime(server.Uptime)}");
+        sb.AppendLine($"- Solution-Refreshes seit Start: {server.RefreshCount}");
+        AppendStalenessSection(sb, server.LastStalenessStats);
+        if (server.LastGoodStateUtc is { } lastGoodState)
+        {
+            sb.AppendLine($"- Letzter guter Zustand (UTC): {FormatTimestamp(lastGoodState)}");
+        }
+        if (server.LastLoadError is { } lastLoadError)
+        {
+            sb.AppendLine($"- Letzter Ladefehler: {lastLoadError}");
+        }
+        sb.AppendLine();
+    }
+
+    private static ProjectHealthEntry ToEntry(ProjectSnapshot snapshot)
+    {
+        var server = snapshot.Server;
+        var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
+        var staleness = server.LastStalenessStats;
+        return new ProjectHealthEntry(
+            ProjectRoot: snapshot.RootPath,
+            LoadState: server.LoadState.ToString(),
+            SolutionPath: server.LoadState == ServerLoadState.Loading ? null : server.GetCurrentSolution()?.FilePath,
+            UsedDefaultConfig: usedDefaultConfig,
+            ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
+            LastUsedUtc: snapshot.LastUsedUtc,
+            UptimeSeconds: server.Uptime.TotalSeconds,
+            RefreshCount: server.RefreshCount,
+            StalenessCheckCount: staleness.CheckCount,
+            StalenessCheckDurationMs: staleness.TotalMilliseconds,
+            StalenessWarningCount: staleness.WarningCount,
+            LastStalenessWarning: staleness.LastWarning,
+            LastGoodStateUtc: server.LastGoodStateUtc,
+            LastLoadError: server.LastLoadError);
+    }
+
+    /// <summary>Strukturierter Fehler fuer einen adressierten, aber nicht residenten Key.</summary>
+    private static CallToolResult ProjectNotInitialized(string projectRoot) =>
+        McpToolResults.Error(
+            ProjectErrorCodes.ProjectNotInitialized,
+            $"Fuer '{projectRoot}' existiert kein residenter Projekt-Key.",
+            context: projectRoot,
+            hint: "Ersten Tool-Aufruf mit diesem projectRoot senden; der Server legt den Key lazy " +
+                  "ueber eine Definitionsdatei ainetlinter.project.json im Projektroot an.");
+
     private static void AppendStalenessSection(StringBuilder sb, ServerStalenessStats staleness)
     {
         sb.AppendLine($"- Staleness-Checks seit Start: {staleness.CheckCount} (kumuliert {staleness.TotalMilliseconds:F0} ms)");
         if (staleness.LastWarning is { } warning)
         {
-            sb.AppendLine($"- Staleness-Warnungen (letzter Walk): {staleness.WarningCount} unzugängliche Teilbäume, zuletzt: {warning}");
+            sb.AppendLine($"- Staleness-Warnungen (letzter Lauf): {staleness.WarningCount}, zuletzt: {warning}");
         }
-    }
-
-    /// <summary>
-    /// StructuredContent mit denselben Rohwerten wie die Text-Sektionen oben — additiv,
-    /// keine eigene Formatierungslogik (Text bleibt die Quelle der Wahrheit fuer Sonderfaelle
-    /// wie "wird noch geladen").
-    /// </summary>
-    private static ServerHealthPayload BuildPayload(
-        McpCodeGraphServer state,
-        string version,
-        CallLogPayload? callLogPayload,
-        ServerStalenessStats staleness)
-    {
-        var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
-
-        return new ServerHealthPayload(
-            Version: version,
-            LoadState: state.LoadState.ToString(),
-            SolutionPath: state.LoadState == ServerLoadState.Loading ? null : state.GetCurrentSolution()?.FilePath,
-            UsedDefaultConfig: usedDefaultConfig,
-            ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
-            UptimeSeconds: state.Uptime.TotalSeconds,
-            RefreshCount: state.RefreshCount,
-            StalenessCheckCount: staleness.CheckCount,
-            StalenessCheckDurationMs: staleness.TotalMilliseconds,
-            StalenessWarningCount: staleness.WarningCount,
-            LastStalenessWarning: staleness.LastWarning,
-            CallLog: callLogPayload);
     }
 
     private static CallLogPayload? BuildCallLogPayload(
@@ -125,23 +171,7 @@ internal static class GetServerHealthTool
             AnalysisError: analysisResult?.Error);
     }
 
-    private static string DescribeSolution(McpCodeGraphServer state)
-    {
-        return state.LoadState == ServerLoadState.Loading
-            ? "wird noch geladen"
-            : state.GetCurrentSolution()?.FilePath ?? "unbekannt";
-    }
-
-    private static string DescribeConfig(McpCodeGraphServer state)
-    {
-        // Atomarer Schnappschuss statt zweier getrennter Property-Zugriffe: sonst koennte ein
-        // gleichzeitiger reload_config-Aufruf eine zerrissene Kombination liefern (siehe
-        // McpCodeGraphServer.GetConfigSnapshot).
-        var (_, usedDefaultConfig, resolvedConfigPath) = state.GetConfigSnapshot();
-        return usedDefaultConfig
-            ? "keine rules.json gefunden — Default-Regeln"
-            : resolvedConfigPath ?? "unbekannt";
-    }
+    private static string FormatTimestamp(DateTime utc) => utc.ToString("yyyy-MM-dd HH:mm:ss");
 
     private static string FormatUptime(TimeSpan uptime)
     {

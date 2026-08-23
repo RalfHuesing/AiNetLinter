@@ -1,7 +1,13 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Output;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RalfHuesing.Mcp.Observability;
@@ -9,17 +15,21 @@ using RalfHuesing.Mcp.Observability;
 namespace AiNetLinter.Mcp;
 
 /// <summary>
-/// Registriert die MCP-Resource <c>ainetlinter://overview</c>: ein kurzer, bei jedem
-/// <c>resources/read</c> frisch generierter Markdown-Ueberblick fuer Agenten, die den Server
-/// noch nicht kennen — welche Tools es gibt (Kurzbeschreibung, nicht die volle Tool-Description)
-/// und mit welcher Solution/Config-Quelle der Prozess tatsaechlich laeuft (z. B. ob eine
-/// projekteigene <c>rules.json</c> gefunden wurde oder der Server mit Default-Regeln laeuft).
-/// Ergaenzt <c>tools/list</c>, ersetzt es nicht — dort stehen die vollstaendigen
-/// Parameter-Schemas.
+/// Registriert die MCP-Resource <c>ainetlinter://overview</c> als Resource-Template mit dem
+/// Pflicht-Query-Parameter <c>projectRoot</c>: ein kurzer, bei jedem <c>resources/read</c>
+/// frisch generierter Markdown-Ueberblick fuer Agenten, die den Server noch nicht kennen —
+/// welche Tools es gibt (Kurzbeschreibung, nicht die volle Tool-Description) und mit welcher
+/// Solution/Config-Quelle der adressierte Key tatsaechlich laeuft. MCP-Resources nehmen keine
+/// Tool-Argumente, daher adressiert der URL-kodierte Projektroot den Registry-Key; Guards und
+/// Fehlervertraege entsprechen denen der Tools (PROJECT_ROOT_REQUIRED/_INVALID,
+/// PROJECT_NOT_INITIALIZED). Ergaenzt <c>tools/list</c>, ersetzt es nicht — dort stehen die
+/// vollstaendigen Parameter-Schemas.
 /// </summary>
 internal static class OverviewResourceRegistration
 {
-    private const string OverviewUri = "ainetlinter://overview";
+    // RFC-6570-Form-Expansion: ainetlinter://overview{?projectRoot} expandiert zu
+    // ainetlinter://overview?projectRoot=<url-encoded>.
+    private const string OverviewUriTemplate = "ainetlinter://overview{?projectRoot}";
 
     /// <summary>
     /// Kurzbeschreibungen aller registrierten Tools (ein Satz, keine Parameter-Details — die
@@ -50,7 +60,7 @@ internal static class OverviewResourceRegistration
         ("metrics_lookup", "Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support)."),
         ("search_pattern", "Text- oder Regex-Suche ueber alle Dateitypen; enrichCSharp=true reichert sichtbare C#-Treffer opt-in innerhalb des geladenen Solution-/Projekt-Snapshots an, markiert ambiguous/unavailable und nennt bei Trunkierung die Folge: Pattern, Scope oder Limits verfeinern."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
-        ("get_server_health", "Liefert LoadState, Uptime, Solution-Refreshes und Observability-Status."),
+        ("get_server_health", "Liefert pro Projekt-Key LoadState, Uptime, Solution-Refreshes und Observability-Status."),
         (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
         ("get_namespace_tree", "Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen)."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
@@ -58,22 +68,51 @@ internal static class OverviewResourceRegistration
         ("get_test_context", "Ermittelt statische Test-Zuordnungen, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol."),
     ];
 
-    internal static void Register(McpServerResourceCollection resources, McpCodeGraphServer mcpState)
+    internal static void Register(McpServerResourceCollection resources, ProjectRegistry registry)
     {
         resources.Add(McpServerResource.Create(
-            () => BuildResult(mcpState),
+            (string projectRoot) => BuildTemplatedResult(registry, projectRoot),
             new McpServerResourceCreateOptions
             {
-                UriTemplate = OverviewUri,
+                UriTemplate = OverviewUriTemplate,
                 Name = "overview",
                 Description = "Kurzueberblick fuer Agenten: alle Tools in einem Satz je Zeile, " +
-                    "plus aktueller Server-Status (geladene Solution, verwendete rules.json " +
-                    "oder Default-Regeln). Bei jedem Read frisch generiert.",
+                    "plus aktueller Server-Status des adressierten Projekts (geladene Solution, " +
+                    "verwendete rules.json oder Default-Regeln). Pflicht: Query-Parameter " +
+                    "projectRoot mit absolutem Projektroot (URL-kodiert). Bei jedem Read frisch generiert.",
                 MimeType = "text/markdown",
             }));
     }
 
-    private static ReadResourceResult BuildResult(McpCodeGraphServer mcpState)
+    internal static ReadResourceResult BuildTemplatedResult(ProjectRegistry registry, string? projectRoot)
+    {
+        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+        if (guard is not null)
+        {
+            throw new McpException(FormatGuard(guard));
+        }
+
+        var snapshot = registry.FindSnapshot(projectRoot!);
+        if (snapshot is null)
+        {
+            throw new McpException(LinterErrorFormatter.Format(
+                ProjectErrorCodes.ProjectNotInitialized,
+                $"Fuer '{projectRoot}' existiert kein residenter Projekt-Key.",
+                context: projectRoot,
+                hint: $"Ersten Tool-Aufruf mit projectRoot='{projectRoot}' senden; der Server legt " +
+                      "den Key lazy ueber eine Definitionsdatei ainetlinter.project.json im Projektroot an."));
+        }
+
+        return BuildResult(snapshot);
+    }
+
+    private static string FormatGuard(ProjectToolCall.RootGuardFailure guard) =>
+        LinterErrorFormatter.Format(guard.Code, guard.Message, hint: guard.Hint);
+
+    private static string BuildCanonicalUri(string projectRoot) =>
+        $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(projectRoot)}";
+
+    private static ReadResourceResult BuildResult(ProjectSnapshot snapshot)
     {
         return new ReadResourceResult
         {
@@ -81,16 +120,16 @@ internal static class OverviewResourceRegistration
             [
                 new TextResourceContents
                 {
-                    Uri = OverviewUri,
+                    Uri = BuildCanonicalUri(snapshot.RootPath),
                     MimeType = "text/markdown",
-                    Text = BuildOverviewText(mcpState),
+                    Text = BuildOverviewText(snapshot),
                 },
             ],
         };
     }
 
     /// <summary>Reine Text-Bau-Funktion, direkt unit-testbar ohne MCP-Protokoll-Umweg.</summary>
-    internal static string BuildOverviewText(McpCodeGraphServer mcpState)
+    internal static string BuildOverviewText(ProjectSnapshot snapshot)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter MCP-Server — Kurzueberblick");
@@ -100,10 +139,11 @@ internal static class OverviewResourceRegistration
             "stdio-MCP-Server und macht die geladene .NET-Solution ueber die unten gelisteten " +
             "Tools abfragbar.");
         sb.AppendLine();
-        sb.AppendLine("## Server-Status (dieser Prozess)");
+        sb.AppendLine($"## Server-Status (Projekt {snapshot.RootPath})");
         sb.AppendLine();
-        sb.AppendLine($"- Solution: {DescribeSolution(mcpState)}");
-        sb.AppendLine($"- Regeln: {DescribeConfig(mcpState)}");
+        sb.AppendLine($"- Solution: {DescribeSolution(snapshot.Server)}");
+        sb.AppendLine($"- Regeln: {DescribeConfig(snapshot.Server)}");
+        sb.AppendLine($"- Zuletzt genutzt (UTC): {snapshot.LastUsedUtc:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
         sb.AppendLine($"## Tools ({ToolSummaries.Count})");
         sb.AppendLine();
@@ -132,7 +172,7 @@ internal static class OverviewResourceRegistration
         return mcpState.LoadState switch
         {
             ServerLoadState.Loading => "wird noch geladen",
-            ServerLoadState.LoadFailed => "Laden fehlgeschlagen — jeder Tool-Call liefert SOLUTION_NOT_LOADED",
+            ServerLoadState.LoadFailed => "Laden fehlgeschlagen — jeder Tool-Call liefert PROJECT_LOAD_FAILED bis zur Neuanlage des Keys",
             _ => mcpState.GetCurrentSolution()?.FilePath ?? "unbekannt",
         };
     }

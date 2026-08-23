@@ -2,11 +2,11 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -16,34 +16,39 @@ namespace AiNetLinter.Mcp;
 /// <c>get_impact</c>, <c>get_type_hierarchy</c>, <c>get_call_tree</c>, <c>dependency_graph</c>) an
 /// der von <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
 /// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst.
+/// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst. Jedes Lambda ist
+/// projektgebunden: <c>projectRoot</c> ist Pflicht und adressiert den Lease-geschuetzten
+/// Registry-Key (<see cref="ProjectToolCall"/>).
 /// </summary>
 internal static class SymbolGraphToolRegistrations
 {
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die sechs Symbolgraph-Tools hinzu. Tools erreichen den
-    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
+    /// Fuegt <paramref name="tools"/> die sechs Symbolgraph-Tools hinzu. Tools erreichen die
+    /// residente Instanz ihres Keys per Lease-Closure - kein DI-Container
     /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
-        AddFindSymbol(tools, mcpState);
-        AddFindReferences(tools, mcpState);
-        AddGetCallTree(tools, mcpState);
-        AddGetImpact(tools, mcpState);
-        AddGetTypeHierarchy(tools, mcpState);
-        AddDependencyGraph(tools, mcpState);
+        AddFindSymbol(tools, registry);
+        AddFindReferences(tools, registry);
+        AddGetCallTree(tools, registry);
+        AddGetImpact(tools, registry);
+        AddGetTypeHierarchy(tools, registry);
+        AddDependencyGraph(tools, registry);
     }
 
     private static void AddFindSymbol(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
-                FindSymbolTool.ExecuteAsync(mcpState, namePattern, kind, maxResults, ct),
+            async (string projectRoot, string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => FindSymbolTool.ExecuteAsync(lease.Server, namePattern, kind, maxResults, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "find_symbol",
@@ -58,11 +63,14 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-                FindReferencesTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, depth, ct),
+            async (string projectRoot, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "find_references",
@@ -81,11 +89,14 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
-                GetCallTreeTool.ExecuteAsync(mcpState, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
+            async (string projectRoot, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_call_tree",
@@ -104,18 +115,21 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
+            async (string projectRoot, string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
                 string? detailLevel = null,
                 int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
                 CancellationToken ct = default) =>
-                GetImpactTool.ExecuteAsync(
-                    mcpState,
-                    new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
-                    ct),
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetImpactTool.ExecuteAsync(
+                        lease.Server,
+                        new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                        ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_impact",
@@ -141,11 +155,14 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
-                GetTypeHierarchyTool.ExecuteAsync(mcpState, symbolIdentifier, maxResults, ct),
+            async (string projectRoot, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_type_hierarchy",
@@ -162,12 +179,15 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? filePath = null, string? symbolIdentifier = null, string? direction = null,
+            async (string projectRoot, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
-                DependencyGraphTool.ExecuteAsync(mcpState, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "dependency_graph",

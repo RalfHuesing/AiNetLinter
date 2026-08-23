@@ -198,7 +198,7 @@ internal static class CliOptionFactory
 
     internal static Option<bool> CreateMcpServerOption() => new("--mcp-server")
     {
-        Description = "Startet einen stdio-basierten MCP-Server (Model Context Protocol) statt eines Batch-Laufs. --path optional, Default: aktuelles Arbeitsverzeichnis.",
+        Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder Tool-Aufruf adressiert per projectRoot einen Projekt-Key aus der Definitionsdatei ainetlinter.project.json im Projektroot.",
     };
 
     internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
@@ -210,6 +210,16 @@ internal static class CliOptionFactory
     internal static Option<int?> CreateParentPidOption() => new("--parent-pid")
     {
         Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
+    };
+
+    internal static Option<decimal?> CreateMcpProjectTtlOption() => new("--mcp-project-ttl-minutes")
+    {
+        Description = "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.",
+    };
+
+    internal static Option<int?> CreateMcpMaxProjectsOption() => new("--mcp-max-projects")
+    {
+        Description = "Optionale maximale Anzahl residenter Projekt-Keys in der Projekt-Registry (LRU-Rahmen). Ohne Flag gilt der Default von 4.",
     };
 
     internal static Option<string?> CreateAnalyzeMcpLogOption() => new("--analyze-mcp-log")

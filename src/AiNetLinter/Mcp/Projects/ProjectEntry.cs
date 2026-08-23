@@ -23,6 +23,6 @@ internal sealed class ProjectEntry(string rootPath, ProjectDefinition definition
     internal ProjectLease OpenLease()
     {
         Interlocked.Increment(ref inFlightCount);
-        return new ProjectLease(Server, () => Interlocked.Decrement(ref inFlightCount));
+        return new ProjectLease(RootPath, Definition, Server, () => Interlocked.Decrement(ref inFlightCount));
     }
 }

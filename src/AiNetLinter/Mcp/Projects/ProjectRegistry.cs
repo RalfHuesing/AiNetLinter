@@ -11,13 +11,24 @@ internal static class ProjectRegistryDefaults
 
 // InstanceFactory muss nicht-blockierend sein: Sie konstruiert die Instanz und
 // startet nur den Hintergrund-Load, wartet ihn aber nicht ab. Nur dadurch darf
-// die Registry den Factory-Aufruf unter ihrem kurzen Lock ausfuehren.
+// die Registry den Factory-Aufruf ausserhalb ihres kurzen Locks ausfuehren. Ein
+// Factory-Fehler (z. B. ungueltige Regeldatei) erzeugt keinen Entry.
 internal sealed record ProjectRegistryOptions(
-    Func<ProjectDefinition, McpCodeGraphServer> InstanceFactory,
+    Func<ProjectDefinition, ProjectInstanceCreation> InstanceFactory,
     TimeProvider Clock,
     int MaxProjects = ProjectRegistryDefaults.MaxProjects,
     TimeSpan IdleTtl = default,
     TimeSpan TickInterval = default);
+
+/// <summary>
+/// Read-Only-Blick auf einen residenten Key fuer Statusabfragen ohne Lease-Seiteneffekt:
+/// LastUsedUtc wird nicht angefasst und kein Load angestossen.
+/// </summary>
+internal sealed record ProjectSnapshot(
+    string RootPath,
+    ProjectDefinition Definition,
+    DateTime LastUsedUtc,
+    McpCodeGraphServer Server);
 
 internal sealed class ProjectRegistry : IAsyncDisposable
 {
@@ -153,6 +164,12 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
     private ProjectLeaseResult InsertResident(string key, ProjectDefinition definition, List<McpCodeGraphServer> retired)
     {
+        var created = options.InstanceFactory(definition);
+        if (!created.Succeeded)
+        {
+            return ProjectLeaseResult.Failure(created.ErrorCode!, created.ErrorMessage!);
+        }
+
         ProjectLease lease;
         lock (gate)
         {
@@ -168,13 +185,33 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             }
 
             EvictLeastRecentlyUsed(retired);
-            var entry = new ProjectEntry(key, definition, options.InstanceFactory(definition), UtcNow());
+            var entry = new ProjectEntry(key, definition, created.Server!, UtcNow());
             projects.Add(key, entry);
             lease = entry.OpenLease();
         }
 
         return ProjectLeaseResult.Success(lease);
     }
+
+    internal IReadOnlyList<ProjectSnapshot> Snapshots()
+    {
+        lock (gate)
+        {
+            return projects.Values.Select(entry => SnapshotOf(entry)).ToList();
+        }
+    }
+
+    internal ProjectSnapshot? FindSnapshot(string projectRoot)
+    {
+        var key = Canonicalize(projectRoot);
+        lock (gate)
+        {
+            return projects.TryGetValue(key, out var entry) ? SnapshotOf(entry) : null;
+        }
+    }
+
+    private static ProjectSnapshot SnapshotOf(ProjectEntry entry) =>
+        new(entry.RootPath, entry.Definition, entry.LastUsedUtc, entry.Server);
 
     private ProjectLease Adopt(ProjectEntry entry)
     {

@@ -37,6 +37,8 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     private double _stalenessCheckTotalMs;
     private int _lastStalenessWarningCount;
     private string? _lastStalenessWarning;
+    private DateTime? _lastGoodStateUtc;
+    private string? _lastRefreshError;
     private int _disposed;
     private readonly bool _isReadOnlySnapshot;
 
@@ -60,6 +62,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
         {
             _catalog = new SourceFileCatalog(snapshot, hasLoadingErrors: false);
             _isReadOnlySnapshot = true;
+            _lastGoodStateUtc = DateTime.UtcNow;
         }
         else if (options.LoadFunc is { } loadFunc)
         {
@@ -71,6 +74,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
         {
             _catalog = catalog;
             InitializeFileState(catalog.Solution);
+            _lastGoodStateUtc = DateTime.UtcNow;
         }
     }
 
@@ -140,6 +144,40 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
         get { lock (_lock) { return new ServerStalenessStats(_stalenessCheckCount, _stalenessCheckTotalMs, _lastStalenessWarningCount, _lastStalenessWarning); } }
     }
 
+    /// <summary>Zeitpunkt, an dem der zuletzt resident gute Solution-Zustand entstanden ist
+    /// (erfolgreicher Kalt-Load, adoptierter Hintergrund-Load oder erfolgreicher Refresh).
+    /// <see langword="null"/>, solange kein guter Zustand existiert. Zweistufiger Fehlervertrag:
+    /// Analyse-Antworten basieren nach einem fehlgeschlagenen Refresh weiterhin auf diesem Stand.</summary>
+    public DateTime? LastGoodStateUtc { get { lock (_lock) { return _lastGoodStateUtc; } } }
+
+    /// <summary>Ursprungsmeldung des letzten Ladefehlers: Fault des Kalt-Loads (lazy aus
+    /// <see cref="_loadTask"/> abgeleitet) oder fehlgeschlagener Reload/Sweep. Ein Erfolg heilt:
+    /// erfolgreicher Load/Refresh setzt den Wert zurueck.</summary>
+    public string? LastLoadError
+    {
+        get
+        {
+            lock (_lock)
+            {
+                if (_lastRefreshError is not null) return _lastRefreshError;
+                return _loadTask switch
+                {
+                    { IsFaulted: true } task => task.Exception?.InnerException?.Message ?? task.Exception?.Message,
+                    { IsCanceled: true } => "Hintergrund-Load wurde abgebrochen.",
+                    _ => null,
+                };
+            }
+        }
+    }
+
+    /// <summary>True, waehrend ein geladener Zustand durch einen fehlgeschlagenen Refresh
+    /// ueberschattet wird — Antworten auf dieser Instanz tragen einen [WARN]-Kopf, bis ein
+    /// erfolgreicher Refresh heilt.</summary>
+    internal bool HasDegradedAnswerState
+    {
+        get { lock (_lock) { return _lastRefreshError is not null && _catalog is not null; } }
+    }
+
     /// <summary>
     /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (<c>reload_config</c>-Tool).
     /// <paramref name="newConfig"/> ist bereits erfolgreich geladen/validiert. Unter <see cref="_lock"/>
@@ -187,11 +225,18 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
                 InitializeFileState(newCatalog.Solution);
                 oldCatalog?.Dispose();
                 _refreshCount++;
+                _lastGoodStateUtc = DateTime.UtcNow;
+                _lastRefreshError = null;
             }
             return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            lock (_lock)
+            {
+                _lastRefreshError = ex.Message;
+            }
+
             _console.WriteError($"[WARN]: Solution konnte beim Reload nicht neu geladen werden ({solutionPath}): {ex.Message}");
             return false;
         }
@@ -232,6 +277,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
                 {
                     _catalog = loaded;
                     InitializeFileState(loaded.Solution);
+                    _lastGoodStateUtc = DateTime.UtcNow;
                 }
                 else
                 {
@@ -332,7 +378,17 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
             {
                 _catalog = _catalog.WithUpdatedSolution(updated);
                 _refreshCount++;
+                _lastGoodStateUtc = DateTime.UtcNow;
+                _lastRefreshError = null;
             }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Zweistufiger Fehlervertrag: der letzte gute Stand bleibt resident, die Analyse
+            // laeuft weiter; Antworten auf dieser Instanz tragen bis zur Heilung einen
+            // [WARN]-Kopf (siehe HasDegradedAnswerState).
+            _lastRefreshError = ex.Message;
+            _console.WriteError($"[WARN]: Inkrementeller Refresh fehlgeschlagen, letzter guter Stand bleibt aktiv: {ex.Message}");
         }
         finally
         {

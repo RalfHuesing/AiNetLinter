@@ -21,37 +21,32 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 internal static class ReloadConfigTool
 {
     /// <summary>
-    /// Ohne <paramref name="configPath"/> wird der zuletzt verwendete Pfad
-    /// (<see cref="McpCodeGraphServer.ResolvedConfigPath"/>) erneut geladen; lief der Server mit
-    /// Default-Regeln, wird — wie beim Server-Start
-    /// (<see cref="AiNetLinter.Commands.McpServerCommand.TryResolveRulesJsonPath"/>) — erneut neben
-    /// der Solution nach einer inzwischen angelegten <c>rules.json</c> gesucht. Datei fehlt oder ist
-    /// ungueltiges JSON: <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive
-    /// Config bleibt unveraendert, kein Datenverlust, kein Absturz.
+    /// Ohne <paramref name="configPath"/> wird der <c>rules</c>-Pfad aus der Definitionsdatei des
+    /// adressierten Keys (<paramref name="defaultRulesPath"/>) erneut geladen; mit
+    /// <paramref name="configPath"/> gilt dieser Pfad als Hot-Swap-Override fuer genau diesen Key.
+    /// Es gibt keine Nachbar-Suche mehr. Datei fehlt oder ist ungueltiges JSON:
+    /// <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive Config bleibt
+    /// unveraendert, kein Datenverlust, kein Absturz.
     /// </summary>
-    internal static async Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, string? configPath, CancellationToken ct)
+    internal static async Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        string defaultRulesPath,
+        string? configPath,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var targetPath = ResolveTargetPath(configPath, state, solution.FilePath);
-        if (targetPath is null)
-        {
-            await state.ReloadSolutionAsync(ct);
-            return McpToolResults.Text(
-                "Keine rules.json gefunden (weder expliziter configPath noch neben der Solution) — " +
-                "Server laeuft weiterhin unveraendert mit den eingebauten Default-Regeln.");
-        }
-
+        var targetPath = string.IsNullOrWhiteSpace(configPath) ? defaultRulesPath : configPath;
         if (!File.Exists(targetPath))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigNotFound,
                 $"Konfigurationsdatei nicht gefunden: {targetPath}",
                 context: targetPath,
-                hint: "Pfad pruefen (relativ zum Solution-Verzeichnis oder absolut) oder configPath " +
-                      "weglassen, um erneut neben der Solution zu suchen. Bisherige Konfiguration bleibt aktiv.");
+                hint: "Pfad pruefen bzw. den rules-Pfad in der Definitionsdatei ainetlinter.project.json " +
+                      "korrigieren. Bisherige Konfiguration bleibt aktiv.");
         }
 
         var newConfig = ConfigLoader.TryLoadConfig(targetPath, isRequired: false);
@@ -68,20 +63,6 @@ internal static class ReloadConfigTool
         state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: targetPath);
         await state.ReloadSolutionAsync(ct);
         return McpToolResults.Text(summary);
-    }
-
-    /// <summary>
-    /// Explizit &gt; zuletzt verwendeter Pfad &gt; frische Auto-Discovery neben der Solution
-    /// (wiederverwendet <see cref="AiNetLinter.Commands.McpServerCommand.TryResolveRulesJsonPath"/>,
-    /// damit die Discovery-Regel nicht dupliziert wird).
-    /// </summary>
-    private static string? ResolveTargetPath(string? configPath, McpCodeGraphServer state, string? solutionPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configPath)) return configPath;
-        if (state.ResolvedConfigPath is { } existing) return existing;
-        return string.IsNullOrEmpty(solutionPath)
-            ? null
-            : Commands.McpServerCommand.TryResolveRulesJsonPath(null, solutionPath);
     }
 
     private static string BuildSummary(McpCodeGraphServer state, string newPath, Config newConfig)

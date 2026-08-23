@@ -1,10 +1,7 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -12,6 +9,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Lifetime;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -22,55 +20,39 @@ using RalfHuesing.Mcp.Observability;
 namespace AiNetLinter.Commands;
 
 /// <summary>
-/// Startet einen stdio-basierten MCP-Server (Model Context Protocol) fuer die aufgeloeste Solution.
-/// Laeuft, bis der Client die Verbindung trennt oder das Cancellation-Token signalisiert wird.
+/// Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug in der Client-Konfiguration:
+/// Jeder Tool-/Resource-Aufruf adressiert per absolutem <c>projectRoot</c> einen Lease-geschuetzten
+/// Key der <see cref="ProjectRegistry"/>, dessen Instanzen lazy aus einer Definitionsdatei
+/// (<c>ainetlinter.project.json</c> im Projektroot) entstehen. Laeuft, bis der Client die
+/// Verbindung trennt oder das Cancellation-Token signalisiert wird.
 /// </summary>
 internal static class McpServerCommand
 {
     /// <summary>
-    /// Loest die Ziel-Solution auf, laedt sie (bester Versuch, kein Absturz bei Fehlschlag) und
-    /// startet danach den MCP-Server mit dem registrierten Tool-Set. Der Solution-Load
-    /// laeuft im Hintergrund — der MCP-Transport antwortet auf <c>initialize</c> sofort, Tools
-    /// waehrend des Loads reagieren mit <see cref="McpToolResults.Loading"/>.
+    /// Validiert die CLI-Argumente (inklusive hartem Cut fuer --path/--config im MCP-Modus),
+    /// startet die Projektregistry und danach den MCP-Server mit dem registrierten Tool-Set.
+    /// Der Solution-Load je Key laeuft im Hintergrund — der MCP-Transport antwortet auf
+    /// <c>initialize</c> sofort, Tools waehrend des Loads reagieren mit
+    /// <see cref="McpToolResults.Loading"/>.
     /// </summary>
     internal static async Task<int> RunAsync(LinterArgs args, CancellationToken ct = default, ILintConsole? console = null)
     {
         var c = console ?? LinterConsole.Instance;
-        if (args.ParentPid is <= 0)
+        var validationError = args.Validate();
+        if (validationError is not null)
         {
-            c.WriteError("[ERROR]: --parent-pid muss eine positive Prozess-ID sein.");
+            c.WriteError(validationError);
             return 1;
         }
 
         await using var lifetime = McpServerLifetime.Start(args.ParentPid, ct, c.WriteError);
-        var solutionPath = ResolveSolutionPathOrError(args.TargetPath, c);
-        if (solutionPath is null) return 1;
+        await using var registry = new ProjectRegistry(new ProjectRegistryOptions(
+            InstanceFactory: definition => CreateResidentInstance(definition, c),
+            Clock: TimeProvider.System,
+            MaxProjects: args.McpMaxProjects ?? ProjectRegistryDefaults.MaxProjects,
+            IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
 
-        var resolvedConfigPath = TryResolveRulesJsonPath(args.ConfigPath, solutionPath);
-        if (resolvedConfigPath is null && string.IsNullOrWhiteSpace(args.ConfigPath))
-        {
-            var solutionDir = Path.GetDirectoryName(solutionPath);
-            c.WriteError($"[WARN]: Keine rules.json neben der Solution gefunden ({solutionDir}); get_violations laeuft mit Default-Regeln.");
-        }
-
-        // LoadFunc deferriert den synchronen Wait auf MSBuildWorkspace.OpenSolutionAsync in
-        // einen Hintergrund-Task, den McpCodeGraphServer selbst startet. So blockiert der
-        // MCP-Transport-Handshake nicht mehr auf der Loesungs-Ladezeit.
-        var maxLineCount = ResolveMaxLineCount(args, resolvedConfigPath);
-        var config = ResolveConfig(args, resolvedConfigPath);
-        var usedDefaultConfig = resolvedConfigPath is null;
-        await using var mcpState = new McpCodeGraphServer(new McpCodeGraphServerOptions
-        {
-            Catalog = null,
-            Console = c,
-            MaxLineCount = maxLineCount,
-            Config = config,
-            UsedDefaultConfig = usedDefaultConfig,
-            ResolvedConfigPath = resolvedConfigPath,
-            LoadFunc = innerCt => TryLoadSolutionAsync(solutionPath, innerCt, c),
-        });
-
-        var obsOptions = ResolveObservabilityOptions(args.McpLogPath, solutionPath);
+        var obsOptions = ResolveObservabilityOptions(args.McpLogPath, solutionPath: null);
 
         var services = new ServiceCollection();
         var builder = services.AddMcpServer();
@@ -84,8 +66,8 @@ internal static class McpServerCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(mcpState, serviceProvider);
-        serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(mcpState);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, serviceProvider);
+        serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StdioServerTransport(serverOptions);
         await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);
@@ -99,6 +81,26 @@ internal static class McpServerCommand
 
         return 0;
     }
+
+    /// <summary>
+    /// Komposition des Factory-Delegaten je Key: Die Regeldatei wird streng geladen (eine lesbare,
+    /// aber ungueltige rules.json scheitert deterministisch statt Default-Regeln einzusetzen);
+    /// erst bei Erfolg entsteht eine Server-Instanz, deren Hintergrund-Load die Solution der
+    /// Definition laedt. Dedupe und Lock-Hygiene liegen in der Registry bzw. im Instanzmuster.
+    /// </summary>
+    private static ProjectInstanceCreation CreateResidentInstance(ProjectDefinition definition, ILintConsole console) =>
+        ProjectInstanceFactory.TryCreate(
+            definition,
+            baseOptions => ProjectInstanceCreation.Resident(new McpCodeGraphServer(new McpCodeGraphServerOptions
+            {
+                Catalog = null,
+                Console = console,
+                MaxLineCount = baseOptions.MaxLineCount,
+                Config = baseOptions.Config,
+                UsedDefaultConfig = false,
+                ResolvedConfigPath = baseOptions.ResolvedConfigPath,
+                LoadFunc = innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console),
+            })));
 
     /// <summary>
     /// Loest die <see cref="McpObservabilityOptions"/> anhand des CLI-Wertes <paramref name="mcpLogPath"/> auf.
@@ -163,39 +165,15 @@ internal static class McpServerCommand
     }
 
     /// <summary>
-    /// Loest den effektiven <c>rules.json</c>-Pfad auf: bei explizit gesetztem
-    /// <see cref="LinterArgs.ConfigPath"/> wird dieser 1:1 zurueckgegeben (die Existenzpruefung
-    /// uebernimmt spaeter <see cref="ConfigLoader.TryLoadConfig"/>), sonst wird neben der
-    /// aufgeloesten Solution-Datei nach <c>rules.json</c> gesucht. Liefert <see langword="null"/>,
-    /// wenn weder explizit noch per Auto-Discovery ein Pfad gefunden wurde — der Aufrufer faellt
-    /// in diesem Fall auf die Config-Defaults zurueck und signalisiert das per [WARN] auf stderr
-    /// bzw. Header-Zeile in <c>get_violations</c>.
-    /// </summary>
-    internal static string? TryResolveRulesJsonPath(string? configPath, string solutionPath)
-    {
-        if (!string.IsNullOrWhiteSpace(configPath))
-        {
-            return configPath;
-        }
-
-        var solutionDir = Path.GetDirectoryName(solutionPath);
-        if (string.IsNullOrEmpty(solutionDir)) return null;
-
-        var candidate = Path.Combine(solutionDir, "rules.json");
-        return File.Exists(candidate) ? candidate : null;
-    }
-
-    /// <summary>
     /// Loest den konfigurierten Zeilen-Grenzwert auf — bei gesetztem <paramref name="resolvedConfigPath"/>
     /// wird die zugehoerige <c>rules.json</c> geladen (best effort), sonst der
     /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
     /// auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive Defaults
     /// delegiert an <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>,
-    /// denselben geteilten Kern wie der Registry-Pfad; die Pfadaufloesung (Auto-Discovery,
-    /// Nachbar-Fallback) bleibt batch-seitig.
+    /// denselben geteilten Kern wie der Registry-Pfad.
     /// </summary>
     internal static int ResolveMaxLineCount(LinterArgs args, string? resolvedConfigPath = null) =>
-        AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules(
+        ProjectInstanceFactory.MaterializeRules(
             resolvedConfigPath ?? args.ConfigPath,
             isRequired: false).MaxLineCount;
 
@@ -206,69 +184,12 @@ internal static class McpServerCommand
     /// CLI-Lint-Lauf auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive
     /// Defaults delegiert an
     /// <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>, denselben
-    /// geteilten Kern wie der Registry-Pfad; die Pfadaufloesung (Auto-Discovery, Nachbar-Fallback)
-    /// bleibt batch-seitig.
+    /// geteilten Kern wie der Registry-Pfad.
     /// </summary>
     internal static Config ResolveConfig(LinterArgs args, string? resolvedConfigPath = null) =>
-        AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules(
+        ProjectInstanceFactory.MaterializeRules(
             resolvedConfigPath ?? args.ConfigPath,
             isRequired: false).Config;
-
-    /// <summary>
-    /// Loest den Ziel-Solution-Pfad auf (Datei direkt, Verzeichnis mit Auto-Suche, Default = cwd).
-    /// Bricht bei 0 oder &gt;=2 gefundenen Kandidaten mit einer strukturierten [ERROR]-Ausgabe ab
-    /// und liefert dann <see langword="null"/>. Reine Funktion ohne MSBuild/Solution-Load, daher
-    /// unabhaengig von <see cref="RunAsync"/> testbar.
-    /// </summary>
-    internal static string? ResolveSolutionPathOrError(string targetPath, ILintConsole console)
-    {
-        var basePath = string.IsNullOrEmpty(targetPath) ? Directory.GetCurrentDirectory() : targetPath;
-
-        if (File.Exists(basePath)) return basePath;
-
-        if (!Directory.Exists(basePath))
-        {
-            console.WriteError(LinterErrorFormatter.Format(
-                LinterErrorCodes.ResourceNotFound,
-                $"Pfad nicht gefunden: {basePath}"));
-            return null;
-        }
-
-        var candidates = FindSolutionCandidates(basePath);
-        return candidates.Count switch
-        {
-            0 => ReportNoSolutionFound(basePath, console),
-            1 => candidates[0],
-            _ => ReportAmbiguousSolution(candidates, console),
-        };
-    }
-
-    private static IReadOnlyList<string> FindSolutionCandidates(string directory)
-    {
-        return Directory.GetFiles(directory, "*.slnx")
-            .Concat(Directory.GetFiles(directory, "*.sln"))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static string? ReportNoSolutionFound(string directory, ILintConsole console)
-    {
-        console.WriteError(LinterErrorFormatter.Format(
-            LinterErrorCodes.ResourceNotFound,
-            $"Keine .sln oder .slnx Datei im Verzeichnis gefunden: {directory}",
-            hint: "Pfad direkt auf eine konkrete Solution-Datei zeigen lassen (--path <Datei>)."));
-        return null;
-    }
-
-    private static string? ReportAmbiguousSolution(IReadOnlyList<string> candidates, ILintConsole console)
-    {
-        console.WriteError(LinterErrorFormatter.Format(
-            LinterErrorCodes.AmbiguousSolution,
-            "Mehrere Solution-Dateien gefunden, Auswahl ist nicht eindeutig.",
-            context: string.Join(", ", candidates),
-            hint: "Konkrete Solution-Datei ueber --path <Datei> angeben."));
-        return null;
-    }
 
     /// <summary>
     /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird nur geloggt (Console.Error) und

@@ -2,9 +2,9 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -17,40 +17,46 @@ namespace AiNetLinter.Mcp;
 /// JIT-Kontext). <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
 /// eigene <see cref="AnalysisToolRegistrations"/>-Klasse ausgelagert, weil ihr <c>LinterEngine</c>-
 /// bzw. Roslyn-Syntax-Pull-in den Footprint dieser Klasse ueber das 2500-Limit getrieben hat/haette.
+/// Alle Lambdas sind projektgebunden: <c>projectRoot</c> ist Pflicht und adressiert den
+/// Lease-geschuetzten Registry-Key (<see cref="ProjectToolCall"/>).
 /// </summary>
 internal static class FileStructureToolRegistrations
 {
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die dateistruktur-orientierten Tools hinzu. Tools erreichen den
-    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
+    /// Fuegt <paramref name="tools"/> die dateistruktur-orientierten Tools hinzu. Tools erreichen die
+    /// residente Instanz ihres Keys per Lease-Closure - kein DI-Container
     /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
-        AddGetNamespaceTree(tools, mcpState);
-        AddGetFileSkeleton(tools, mcpState);
-        AddGetClassStructure(tools, mcpState);
-        AddGetIndexScope(tools, mcpState);
-        AddGetHotspots(tools, mcpState);
+        AddGetNamespaceTree(tools, registry);
+        AddGetFileSkeleton(tools, registry);
+        AddGetClassStructure(tools, registry);
+        AddGetIndexScope(tools, registry);
+        AddGetHotspots(tools, registry);
     }
 
     private static void AddGetNamespaceTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? project = null, string? namespacePrefix = null,
+            async (string projectRoot, string? project = null, string? namespacePrefix = null,
                 int depth = GetNamespaceTreeTool.DefaultDepth,
                 bool includeTypes = true,
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
                 CancellationToken ct = default) =>
-            {
-                var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
-                return GetNamespaceTreeTool.ExecuteAsync(mcpState, input, ct);
-            },
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease =>
+                    {
+                        var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
+                        return GetNamespaceTreeTool.ExecuteAsync(lease.Server, input, ct);
+                    }),
             new McpServerToolCreateOptions
             {
                 Name = "get_namespace_tree",
@@ -67,13 +73,16 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, string? sortBy = "lines",
+            async (string projectRoot, string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                GetClassStructureTool.ExecuteAsync(mcpState, symbolIdentifier, sortBy, maxMembers, ct),
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_class_structure",
@@ -92,11 +101,14 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? filePath = null, string[]? filePaths = null, CancellationToken ct = default) =>
-                GetFileSkeletonTool.ExecuteAsync(mcpState, filePath, filePaths, ct),
+            async (string projectRoot, string? filePath = null, string[]? filePaths = null, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePath, filePaths, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_file_skeleton",
@@ -111,11 +123,14 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (CancellationToken ct = default) =>
-                GetIndexScopeTool.ExecuteAsync(mcpState, ct),
+            async (string projectRoot, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetIndexScopeTool.ExecuteAsync(lease.Server, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_index_scope",
@@ -130,11 +145,14 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetHotspots(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? scopeFilter = null, CancellationToken ct = default) =>
-                GetHotspotsTool.ExecuteAsync(mcpState, scopeFilter, ct),
+            async (string projectRoot, string? scopeFilter = null, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetHotspotsTool.ExecuteAsync(lease.Server, scopeFilter, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_hotspots",

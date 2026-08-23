@@ -44,6 +44,8 @@ internal sealed record CliOptions(
     Option<bool> McpServer,
     Option<string?> McpLog,
     Option<int?> ParentPid,
+    Option<decimal?> McpProjectTtlMinutes,
+    Option<int?> McpMaxProjects,
     Option<string?> AnalyzeMcpLog,
     Option<string?> Format);
 
@@ -118,6 +120,8 @@ internal sealed record CliParsedArgs(
     bool McpServer,
     string? McpLog,
     int? ParentPid,
+    decimal? McpProjectTtlMinutes,
+    int? McpMaxProjects,
     string? AnalyzeMcpLog,
     string? Format,
     bool FormatSpecified);

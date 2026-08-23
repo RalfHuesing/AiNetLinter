@@ -2,8 +2,8 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -14,26 +14,29 @@ namespace AiNetLinter.Mcp;
 /// <see cref="SymbolGraphToolRegistrations"/>), weil die Symbolgraph-Registrar-Klasse bereits
 /// an ihrem 2850-PathOverride haengt und ein zusaetzliches Tool in derselben Klasse das
 /// verbleibende Sicherheits-Polster gegen weitere Erweiterungen aufgebraucht haette. Bewusst
-/// duenner Dispatch auf <see cref="GetSymbolBodyTool.ExecuteAsync"/>. Kein DI-Container
-/// (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2). Optionaler
-/// <paramref name="callLog"/> zeichnet den Tool-Aufruf auf, wenn aktiv.
+/// duenner Dispatch auf <see cref="GetSymbolBodyTool.ExecuteAsync"/> ueber den
+/// projektgebundenen Lease-Weg (<see cref="ProjectToolCall"/>). Kein DI-Container
+/// (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
 /// </summary>
 internal static class SymbolBodyToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
-        AddGetSymbolBody(tools, mcpState);
+        AddGetSymbolBody(tools, registry);
     }
 
     private static void AddGetSymbolBody(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
-                GetSymbolBodyTool.ExecuteAsync(mcpState, symbolIdentifier, symbolIdentifiers, maxBodyLines, ct),
+            async (string projectRoot, string? symbolIdentifier = null, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifier, symbolIdentifiers, maxBodyLines, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_symbol_body",

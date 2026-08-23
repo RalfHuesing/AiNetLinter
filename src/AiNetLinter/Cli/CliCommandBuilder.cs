@@ -25,6 +25,8 @@ internal static class CliCommandBuilder
             options.McpServer,
             options.McpLog,
             options.ParentPid,
+            options.McpProjectTtlMinutes,
+            options.McpMaxProjects,
             options.AnalyzeMcpLog,
             options.Format,
         };
@@ -71,6 +73,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateMcpServerOption(),
             CliOptionFactory.CreateMcpLogOption(),
             CliOptionFactory.CreateParentPidOption(),
+            CliOptionFactory.CreateMcpProjectTtlOption(),
+            CliOptionFactory.CreateMcpMaxProjectsOption(),
             CliOptionFactory.CreateAnalyzeMcpLogOption(),
             CliOptionFactory.CreateFormatOption());
     }
@@ -128,6 +132,8 @@ internal static class CliCommandBuilder
             McpServer: parseResult.GetValue(options.McpServer),
             McpLog: parseResult.GetResult(options.McpLog) is null ? null : (parseResult.GetValue(options.McpLog) ?? string.Empty),
             ParentPid: parseResult.GetValue(options.ParentPid),
+            McpProjectTtlMinutes: parseResult.GetValue(options.McpProjectTtlMinutes),
+            McpMaxProjects: parseResult.GetValue(options.McpMaxProjects),
             AnalyzeMcpLog: parseResult.GetValue(options.AnalyzeMcpLog),
             Format: parseResult.GetValue(options.Format),
             FormatSpecified: parseResult.GetResult(options.Format) is { Implicit: false });

@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.DeadCode;
@@ -12,7 +13,6 @@ using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Mcp.Tools.TestContext;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -26,33 +26,36 @@ namespace AiNetLinter.Mcp;
 internal static class AnalysisToolRegistrations
 {
     /// <summary>
-    /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen den
-    /// resident gehaltenen <paramref name="mcpState"/> per Delegate-Closure - kein DI-Container
+    /// Fuegt <paramref name="tools"/> die analyse-orientierten Tools hinzu. Tools erreichen die
+    /// residente Instanz ihres Keys per Lease-Closure - kein DI-Container
     /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
-        AddGetViolations(tools, mcpState);
-        AddSafeguard(tools, mcpState);
-        AddSearchPattern(tools, mcpState);
-        AddMetricsTree(tools, mcpState);
-        AddMetricsLookup(tools, mcpState);
-        AddPatternDetect(tools, mcpState);
-        AddFindMagicValues(tools, mcpState);
-        AddFindDeadCode(tools, mcpState);
-        AddGetFeatureContext(tools, mcpState);
-        AddGetTestContext(tools, mcpState);
+        AddGetViolations(tools, registry);
+        AddSafeguard(tools, registry);
+        AddSearchPattern(tools, registry);
+        AddMetricsTree(tools, registry);
+        AddMetricsLookup(tools, registry);
+        AddPatternDetect(tools, registry);
+        AddFindMagicValues(tools, registry);
+        AddFindDeadCode(tools, registry);
+        AddGetFeatureContext(tools, registry);
+        AddGetTestContext(tools, registry);
     }
 
     private static void AddGetViolations(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-                GetViolationsTool.ExecuteAsync(mcpState, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct),
+            async (string projectRoot, string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_violations",
@@ -68,11 +71,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-                SafeguardTool.ExecuteAsync(mcpState, scopeFilter, minScore, maxViolations, ct),
+            async (string projectRoot, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => SafeguardTool.ExecuteAsync(lease.Server, scopeFilter, minScore, maxViolations, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "safeguard",
@@ -89,10 +95,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (
+            async (
+                string projectRoot,
                 string? pattern = null,
                 bool isRegex = false,
                 int maxResults = 50,
@@ -104,20 +111,23 @@ internal static class AnalysisToolRegistrations
                 string[]? excludePatterns = null,
                 bool enrichCSharp = false,
                 CancellationToken ct = default) =>
-                SearchPatternTool.ExecuteAsync(
-                    mcpState,
-                    new SearchPatternToolArguments(
-                        pattern,
-                        isRegex,
-                        maxResults,
-                        maxFiles,
-                        contextLines,
-                        maxResponseBytes,
-                        scope,
-                        includePatterns,
-                        excludePatterns,
-                        enrichCSharp),
-                    ct),
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => SearchPatternTool.ExecuteAsync(
+                        lease.Server,
+                        new SearchPatternToolArguments(
+                            pattern,
+                            isRegex,
+                            maxResults,
+                            maxFiles,
+                            contextLines,
+                            maxResponseBytes,
+                            scope,
+                            includePatterns,
+                            excludePatterns,
+                            enrichCSharp),
+                        ct)),
             new McpServerToolCreateOptions
             {
                 Name = "search_pattern",
@@ -137,11 +147,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
-                MetricsTreeTool.ExecuteAsync(mcpState, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct),
+            async (string projectRoot, string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "metrics_tree",
@@ -158,11 +171,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
-                MetricsLookupTool.ExecuteAsync(mcpState, symbolIdentifier, symbolIdentifiers, ct),
+            async (string projectRoot, string? symbolIdentifier = null, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifier, symbolIdentifiers, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "metrics_lookup",
@@ -180,11 +196,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
-                PatternDetectTool.ExecuteAsync(mcpState, patterns, scopeFilter, maxResultsPerPattern, ct),
+            async (string projectRoot, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter, maxResultsPerPattern, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "pattern_detect",
@@ -203,10 +222,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddFindMagicValues(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (
+            async (
+                string projectRoot,
                 string? scopeFilter = null,
                 string? valueType = "all",
                 string? categoryFilter = "all",
@@ -217,19 +237,23 @@ internal static class AnalysisToolRegistrations
                 bool includeSuppressed = false,
                 bool changedOnly = false,
                 CancellationToken ct = default) =>
-            {
-                var effective = new FindMagicValuesToolArgs(
-                    ScopeFilter: scopeFilter,
-                    ValueType: valueType ?? "all",
-                    CategoryFilter: categoryFilter ?? "all",
-                    MinOccurrences: minOccurrences,
-                    MaxResults: maxResults,
-                    IgnoreNumbers: ignoreNumbers,
-                    IncludeTests: includeTests,
-                    IncludeSuppressed: includeSuppressed,
-                    ChangedOnly: changedOnly);
-                return FindMagicValuesTool.ExecuteAsync(mcpState, effective, ct);
-            },
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease =>
+                    {
+                        var effective = new FindMagicValuesToolArgs(
+                            ScopeFilter: scopeFilter,
+                            ValueType: valueType ?? "all",
+                            CategoryFilter: categoryFilter ?? "all",
+                            MinOccurrences: minOccurrences,
+                            MaxResults: maxResults,
+                            IgnoreNumbers: ignoreNumbers,
+                            IncludeTests: includeTests,
+                            IncludeSuppressed: includeSuppressed,
+                            ChangedOnly: changedOnly);
+                        return FindMagicValuesTool.ExecuteAsync(lease.Server, effective, ct);
+                    }),
             new McpServerToolCreateOptions
             {
                 Name = "find_magic_values",
@@ -239,7 +263,7 @@ internal static class AnalysisToolRegistrations
 
     private const string FindMagicValuesDescription =
         "Wann nutzen: On-Demand-Audit nach Magic Values (Strings, Zahlen, URLs, Pfaden, " +
-        "Timeouts, Format-Strings, Schwellenwerten, HTTP-Statuscodes) in C#-Quellcode. " +
+        "Timeouts, Format-Strings, Schwellwerten, HTTP-Statuscodes) in C#-Quellcode. " +
         "valueType (Default 'all': strings, numbers, all) filtert nach Literal-Datentyp, " +
         "categoryFilter (Default 'all': config_candidates, constant_candidates, " +
         "enum_candidates, nameof_candidates, localization_candidates, standard_candidates, " +
@@ -252,10 +276,11 @@ internal static class AnalysisToolRegistrations
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (
+            async (
+                string projectRoot,
                 string? accessibility = "private_internal",
                 string? confidence = "both",
                 string? kind = "all",
@@ -264,17 +289,21 @@ internal static class AnalysisToolRegistrations
                 string? mode = "members",
                 int maxResults = 50,
                 CancellationToken ct = default) =>
-            {
-                var effective = new FindDeadCodeToolArgs(
-                    Accessibility: accessibility,
-                    Confidence: confidence,
-                    Kind: kind,
-                    ScopeFilter: scopeFilter,
-                    IncludeTests: includeTests,
-                    Mode: mode,
-                    MaxResults: maxResults);
-                return FindDeadCodeTool.ExecuteAsync(mcpState, effective, ct);
-            },
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease =>
+                    {
+                        var effective = new FindDeadCodeToolArgs(
+                            Accessibility: accessibility,
+                            Confidence: confidence,
+                            Kind: kind,
+                            ScopeFilter: scopeFilter,
+                            IncludeTests: includeTests,
+                            Mode: mode,
+                            MaxResults: maxResults);
+                        return FindDeadCodeTool.ExecuteAsync(lease.Server, effective, ct);
+                    }),
             new McpServerToolCreateOptions
             {
                 Name = "find_dead_code",
@@ -293,11 +322,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
-                GetFeatureContextTool.ExecuteAsync(mcpState, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct),
+            async (string projectRoot, string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetFeatureContextTool.ExecuteAsync(lease.Server, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_feature_context",
@@ -314,11 +346,14 @@ internal static class AnalysisToolRegistrations
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        McpCodeGraphServer mcpState)
+        ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            (string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
-                GetTestContextTool.ExecuteAsync(mcpState, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct),
+            async (string projectRoot, string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteAsync(
+                    registry,
+                    projectRoot,
+                    lease => GetTestContextTool.ExecuteAsync(lease.Server, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_test_context",

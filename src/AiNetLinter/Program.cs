@@ -106,6 +106,8 @@ public static class Program
             McpServer = parsed.McpServer,
             McpLogPath = parsed.McpLog,
             ParentPid = parsed.ParentPid,
+            McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
+            McpMaxProjects = parsed.McpMaxProjects,
             AnalyzeMcpLogPath = parsed.AnalyzeMcpLog,
             McpLogFormat = parsed.Format ?? "text",
             McpLogFormatSpecified = parsed.FormatSpecified,

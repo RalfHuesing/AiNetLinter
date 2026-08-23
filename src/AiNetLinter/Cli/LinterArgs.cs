@@ -150,6 +150,18 @@ public sealed class LinterArgs
     public bool McpServer { get; init; }
 
     /// <summary>
+    /// Optionale Idle-TTL der Projektregistry in Minuten (Dezimalwerte erlaubt, InvariantCulture,
+    /// z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Registry-Default (45 Minuten).
+    /// </summary>
+    public decimal? McpProjectTtlMinutes { get; init; }
+
+    /// <summary>
+    /// Optionale maximale Anzahl residenter Projekt-Keys in der Projektregistry (LRU-Rahmen).
+    /// Ohne Flag gilt der Registry-Default (4).
+    /// </summary>
+    public int? McpMaxProjects { get; init; }
+
+    /// <summary>
     /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). Der Default ist aktiv und wird vom
     /// Observability-Paket unter <c>%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\&lt;yyyy-MM-dd&gt;\</c> angelegt.
     /// Ein expliziter Pfad wird absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest.
@@ -211,6 +223,12 @@ public sealed class LinterArgs
     /// </summary>
     public string? Validate()
     {
+        if (McpServer)
+        {
+            var mcpError = ValidateMcpMode();
+            if (mcpError != null) return mcpError;
+        }
+
         if (IsPathMissing())
         {
             return "[ERROR]: --path ist erforderlich (außer bei --docs, --list-rules, --describe-rule, --search-rules).";
@@ -237,6 +255,35 @@ public sealed class LinterArgs
         }
 
         return ValidateIgnoreSuppressions();
+    }
+
+    private string? ValidateMcpMode()
+    {
+        // Harter Cut: im MCP-Modus traegt jeder Aufruf seinen Projektbezug selbst (projectRoot +
+        // Definitionsdatei ainetlinter.project.json); --path/--config haben keinen Sinn mehr.
+        if (!string.IsNullOrWhiteSpace(TargetPath))
+        {
+            return "[ERROR]: --path ist im MCP-Modus (--mcp-server) nicht zulaessig. Der Projektbezug " +
+                   "kommt je Tool-Aufruf ueber projectRoot aus der Definitionsdatei ainetlinter.project.json im Projektroot.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(ConfigPath))
+        {
+            return "[ERROR]: --config ist im MCP-Modus (--mcp-server) nicht zulaessig. Regeldateien " +
+                   "werden je Key aus der Definitionsdatei gelesen; ein Override je Aufruf ist via reload_config moeglich.";
+        }
+
+        if (McpProjectTtlMinutes is <= 0)
+        {
+            return "[ERROR]: --mcp-project-ttl-minutes muss groesser als 0 sein.";
+        }
+
+        if (McpMaxProjects is <= 0)
+        {
+            return "[ERROR]: --mcp-max-projects muss groesser als 0 sein.";
+        }
+
+        return null;
     }
 
     private bool IsPathMissing()
