@@ -11,9 +11,8 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Test fuer: ein Zielverzeichnis
-/// mit mehreren .sln/.slnx-Kandidaten ohne explizites <c>--path</c> auf eine Datei fuehrt
-/// zu einem Server-Start-Abbruch mit klarer Fehlermeldung auf stderr statt einer
-/// stillschweigend falschen Solution-Auswahl. Unit-Test in <c>McpServerCommandTests.cs</c>
+/// mit dem verbotenen Legacy-Argument <c>--path</c> auf eine Datei fuehrt
+/// zu einem deterministischen Server-Start-Abbruch mit klarer Fehlermeldung auf stderr.
 /// beweist die Helper-Logik; dieser Test beweist das Verhalten des realen Server-Subprozesses.
 ///
 /// Da der Server bei Mehrdeutigkeit bereits vor <c>McpServer.Create</c> abbricht, ist
@@ -29,7 +28,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 public sealed class McpServerCommandAmbiguityE2ETests
 {
     [Fact]
-    public async Task RunAsync_DirectoryWithTwoSlnx_AbortsWithAmbiguousSolutionError()
+    public async Task RunAsync_McpServerWithPath_AbortsWithHardCutError()
     {
         using var tempDir = TestTempDirectory.Create("ainetlinter-ambiguity-");
         tempDir.CreateFile("First.slnx", "");
@@ -54,8 +53,6 @@ public sealed class McpServerCommandAmbiguityE2ETests
             !result.TimedOut,
             "Server-Prozess hat nicht innerhalb 10s beendet — vermutlich blockiert er im MCP-Wartemodus.");
         Assert.NotEqual(0, result.ExitCode);
-        Assert.Contains("AMBIGUOUS_SOLUTION", result.Error, StringComparison.Ordinal);
-        Assert.Contains("First.slnx", result.Error, StringComparison.Ordinal);
-        Assert.Contains("Second.slnx", result.Error, StringComparison.Ordinal);
+        Assert.Contains("--path ist im MCP-Modus", result.Error, StringComparison.Ordinal);
     }
 }

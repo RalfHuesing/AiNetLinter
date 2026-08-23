@@ -32,7 +32,7 @@ internal static class ProjectWiringFixtures
         int maxProjects = 4,
         TimeSpan? idleTtl = null) =>
         ProjectRegistryFixture.Create(
-            _ => ProjectInstanceCreation.Resident((createServer ?? CreateLoadedServer)()),
+            _ => ProjectInstanceCreation.Resident((createServer ?? (() => CreateLoadedServer()))()),
             clock,
             maxProjects,
             idleTtl);

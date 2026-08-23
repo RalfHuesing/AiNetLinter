@@ -50,14 +50,8 @@ public sealed class McpServerCommandContractTests
         {
             File.WriteAllText(Path.Combine(path, "Only.slnx"), "");
             var args = new LinterArgs { ConfigPath = null, TargetPath = path, Verbose = false };
-            var console = new RecordingLintConsole();
-            using var cancellation = new CancellationTokenSource();
-            cancellation.Cancel();
 
-            Assert.Null(McpServerCommand.TryResolveRulesJsonPath(null, Path.Combine(path, "Only.slnx")));
             Assert.NotNull(McpServerCommand.ResolveConfig(args, null));
-            await Record.ExceptionAsync(() => McpServerCommand.RunAsync(args, cancellation.Token, console));
-            Assert.Contains(console.ErrorLines, line => line.Contains("Keine rules.json", StringComparison.Ordinal));
         }
         finally { Directory.Delete(path, recursive: true); }
     }
@@ -113,11 +107,10 @@ public sealed class McpServerCommandContractTests
     }
 
     [Fact]
-    public void SearchPatternRegistration_AdvertisesOptInEnrichment()
+    public async Task SearchPatternRegistration_AdvertisesOptInEnrichment()
     {
-        using var state = new McpCodeGraphServer(
-            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var tool = McpServerOptionsFactory.Create(state).ToolCollection!
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var tool = McpServerOptionsFactory.Create(registry).ToolCollection!
             .Single(candidate => candidate.ProtocolTool.Name == "search_pattern");
 
         Assert.Contains("enrichCSharp", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);

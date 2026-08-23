@@ -5,10 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp;
@@ -43,7 +46,7 @@ public sealed class OverviewResourceRegistrationTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
-                null, UsedDefaultConfig: false, ResolvedConfigPath: @"C:\Projekt\rules.json"));
+                null, UsedDefaultConfig: false, ResolvedConfigPath: @"C:\Projekt\rules.json")));
         using var harness = OverviewSnapshotHarness.Create(state);
 
         var text = OverviewResourceRegistration.BuildOverviewText(harness.Snapshot);
@@ -122,9 +125,18 @@ public sealed class OverviewResourceRegistrationTests
         {
             Catalog = null,
             Console = LinterConsole.Instance,
-            Config = null,
+            Config = new AiNetLinter.Configuration.Config
+            {
+                Global = new AiNetLinter.Configuration.GlobalConfig(),
+                Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+            },
             UsedDefaultConfig = false,
-            LoadFunc = _ => new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously).Task,
+            LoadFunc = token =>
+            {
+                var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                token.Register(() => pending.TrySetCanceled(token));
+                return pending.Task;
+            },
         });
 }
 

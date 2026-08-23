@@ -30,7 +30,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_McpServerWithConfig_IsHardError()
     {
-        var args = new LinterArgs { McpServer = true, ConfigPath = "rules.json", Verbose = false };
+        var args = new LinterArgs { McpServer = true, ConfigPath = "rules.json", TargetPath = string.Empty, Verbose = false };
 
         var error = args.Validate();
 
@@ -42,7 +42,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_McpServerWithoutProjectFlags_Passes()
     {
-        var args = new LinterArgs { McpServer = true, Verbose = false };
+        var args = new LinterArgs { McpServer = true, TargetPath = string.Empty, Verbose = false };
 
         Assert.Null(args.Validate());
     }
@@ -50,7 +50,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_McpServer_NonPositiveTtlMinutes_IsHardError()
     {
-        var args = new LinterArgs { McpServer = true, McpProjectTtlMinutes = 0m, Verbose = false };
+        var args = new LinterArgs { McpServer = true, McpProjectTtlMinutes = 0m, TargetPath = string.Empty, Verbose = false };
 
         var error = args.Validate();
 
@@ -64,6 +64,7 @@ public sealed class McpServerCommandTests
         var args = new LinterArgs
         {
             McpServer = true,
+            TargetPath = string.Empty,
             McpProjectTtlMinutes = 0.05m,
             McpMaxProjects = 4,
             Verbose = false,
@@ -75,7 +76,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_McpServer_NonPositiveMaxProjects_IsHardError()
     {
-        var args = new LinterArgs { McpServer = true, McpMaxProjects = -1, Verbose = false };
+        var args = new LinterArgs { McpServer = true, McpMaxProjects = -1, TargetPath = string.Empty, Verbose = false };
 
         var error = args.Validate();
 
@@ -86,7 +87,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_BatchWithoutPath_StillRequiresPath()
     {
-        var args = new LinterArgs { Verbose = false };
+        var args = new LinterArgs { TargetPath = string.Empty, Verbose = false };
 
         var error = args.Validate();
 

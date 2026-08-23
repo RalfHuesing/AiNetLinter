@@ -77,6 +77,7 @@ public sealed class ProgramParsingTests
 
         var args = new LinterArgs
         {
+            TargetPath = string.Empty,
             McpServer = parsed.McpServer,
             McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
             McpMaxProjects = parsed.McpMaxProjects,

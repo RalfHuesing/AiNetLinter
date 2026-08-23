@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
@@ -33,8 +35,11 @@ internal sealed class McpProcessHost : IAsyncDisposable
     public static Task<McpProcessHost> StartAsync(
         FixtureWorkspace workspace,
         TimeSpan timeout,
-        CancellationToken cancellationToken = default) =>
-        StartAsync(new McpProcessTarget(workspace.RootPath, workspace), timeout, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        McpFixtureProjectDefinition.Ensure(workspace.RootPath);
+        return StartAsync(new McpProcessTarget(workspace.RootPath, workspace), timeout, cancellationToken);
+    }
 
     public static async Task<McpProcessHost> StartAsync(
         McpProcessTarget target,
@@ -54,7 +59,8 @@ internal sealed class McpProcessHost : IAsyncDisposable
                     {
                         Name = "ainetlinter-integration-mcp-host",
                         Command = exePath,
-                        Arguments = ["--mcp-server", "--path", target.RootPath],
+                        Arguments = ["--mcp-server"],
+                        WorkingDirectory = target.RootPath,
                     });
                     using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                     timeoutSource.CancelAfter(timeout);
@@ -78,18 +84,27 @@ internal sealed class McpProcessHost : IAsyncDisposable
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        var effectiveArguments = arguments is null
+            ? new Dictionary<string, object?> { ["projectRoot"] = target.RootPath }
+            : arguments.ContainsKey("projectRoot")
+                ? arguments
+                : new Dictionary<string, object?>(arguments)
+                {
+                    ["projectRoot"] = target.RootPath,
+                };
+
         for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
         {
             using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutSource.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
-            var result = await client.CallToolAsync(toolName, arguments, cancellationToken: timeoutSource.Token).ConfigureAwait(false);
+            var result = await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: timeoutSource.Token).ConfigureAwait(false);
             if (!IsLoadingResponse(result)) return result;
             await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(false);
         }
 
         using var finalTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         finalTimeout.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
-        return await client.CallToolAsync(toolName, arguments, cancellationToken: finalTimeout.Token).ConfigureAwait(false);
+        return await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: finalTimeout.Token).ConfigureAwait(false);
     }
 
     public async Task<string> CallToolGetTextAsync(string toolName, IReadOnlyDictionary<string, object?>? arguments = null)
@@ -151,6 +166,30 @@ internal sealed class McpProcessHost : IAsyncDisposable
         throw new InvalidOperationException(
             $"MCP-Client-Connect scheiterte nach {retryOptions.MaxRetries + 1} Versuchen.",
             lastException);
+    }
+}
+
+internal static class McpFixtureProjectDefinition
+{
+    internal static void Ensure(string rootPath)
+    {
+        var definitionPath = Path.Combine(rootPath, "ainetlinter.project.json");
+        if (File.Exists(definitionPath)) return;
+
+        var solutionPath = Directory.EnumerateFiles(rootPath, "*.slnx", SearchOption.TopDirectoryOnly).Single();
+        var rulesPath = Path.Combine(rootPath, "rules.json");
+        if (!File.Exists(rulesPath))
+        {
+            var repositoryRulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
+            File.Copy(repositoryRulesPath, rulesPath);
+        }
+
+        var definition = new
+        {
+            solution = Path.GetRelativePath(rootPath, solutionPath),
+            rules = "rules.json",
+        };
+        File.WriteAllText(definitionPath, JsonSerializer.Serialize(definition));
     }
 }
 

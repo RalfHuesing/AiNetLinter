@@ -47,11 +47,11 @@ internal static class ProjectToolCall
     /// <summary>Der SDK-Schema-Check ist der Normalfall; dieser Code-Guard ist die
     /// Ruefallebene fuer direkte Resolver-Aufrufe (Tools) und die Pflichtpruefung der
     /// Overview-Resource. Liefert null bei validem absolutem Projektroot.</summary>
-    internal static RootGuardFailure? GuardRequiredAbsoluteRoot(string? projectRoot)
+    internal static ProjectRootGuardFailure? GuardRequiredAbsoluteRoot(string? projectRoot)
     {
         if (string.IsNullOrWhiteSpace(projectRoot))
         {
-            return new RootGuardFailure(
+            return new ProjectRootGuardFailure(
                 ProjectErrorCodes.ProjectRootRequired,
                 "Der Parameter 'projectRoot' ist erforderlich.",
                 "Absoluten Projektroot uebergeben, z. B. C:/repos/mein-projekt.");
@@ -59,7 +59,7 @@ internal static class ProjectToolCall
 
         if (!Path.IsPathRooted(projectRoot))
         {
-            return new RootGuardFailure(
+            return new ProjectRootGuardFailure(
                 ProjectErrorCodes.ProjectRootInvalid,
                 $"Der Parameter 'projectRoot' muss ein absoluter Verzeichnispfad sein: '{projectRoot}'.",
                 "Relativpfade sind nicht zulaessig; Projektroot absolut angeben.");
@@ -70,9 +70,7 @@ internal static class ProjectToolCall
 
     /// <summary>Fehlerinfo eines verletzten Root-Guards; Konsumenten wandeln sie in ihren
     /// jeweiligen Antwortkanal um (Tool-Ergebnis bzw. Resource-Fehler).</summary>
-    internal sealed record RootGuardFailure(string Code, string Message, string Hint);
-
-    private static CallToolResult GuardResult(RootGuardFailure guard) =>
+    private static CallToolResult GuardResult(ProjectRootGuardFailure guard) =>
         McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
 
     private static CallToolResult LoadFailedResult(McpCodeGraphServer server, ProjectLease lease)

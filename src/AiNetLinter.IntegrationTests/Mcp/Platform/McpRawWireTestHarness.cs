@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Platform;
@@ -33,6 +34,7 @@ internal static class McpRawWireTestHarness
     internal static async Task<List<string>> RunAndCollectStdoutAsync(
         string targetDirectory, string[] frames, TimeSpan? interFrameDelay = null)
     {
+        McpFixtureProjectDefinition.Ensure(targetDirectory);
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         if (!File.Exists(exePath))
@@ -53,8 +55,6 @@ internal static class McpRawWireTestHarness
             WorkingDirectory = targetDirectory,
         };
         psi.ArgumentList.Add("--mcp-server");
-        psi.ArgumentList.Add("--path");
-        psi.ArgumentList.Add(targetDirectory);
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("AiNetLinter-Subprozess konnte nicht gestartet werden.");
@@ -66,7 +66,7 @@ internal static class McpRawWireTestHarness
         {
             foreach (var frame in frames)
             {
-                await writer.WriteLineAsync(frame);
+                await writer.WriteLineAsync(AddProjectRootToToolCall(frame, targetDirectory));
                 await writer.FlushAsync();
                 if (interFrameDelay is { } delay)
                 {
@@ -104,6 +104,31 @@ internal static class McpRawWireTestHarness
 
     private static int CountExpectedResponses(IEnumerable<string> frames) =>
         frames.Count(frame => frame.Contains("\"id\":", StringComparison.Ordinal));
+
+    private static string AddProjectRootToToolCall(string frame, string projectRoot)
+    {
+        try
+        {
+            var root = JsonNode.Parse(frame)?.AsObject();
+            if (root is null || !string.Equals(root["method"]?.GetValue<string>(), "tools/call", StringComparison.Ordinal))
+                return frame;
+
+            var parameters = root["params"]?.AsObject();
+            var arguments = parameters?["arguments"]?.AsObject();
+            if (arguments is null || arguments.ContainsKey("projectRoot")) return frame;
+
+            arguments["projectRoot"] = projectRoot;
+            return root.ToJsonString();
+        }
+        catch (JsonException)
+        {
+            return frame;
+        }
+        catch (InvalidOperationException)
+        {
+            return frame;
+        }
+    }
 
     private static async Task ReadStdoutFramesAsync(
         StreamReader stdout, List<string> observed, int expectedResponses, CancellationToken ct)

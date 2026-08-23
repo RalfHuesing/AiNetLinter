@@ -27,16 +27,17 @@ public sealed class McpServerCommandErrorHandlingTests
     private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
 
     [Fact]
-    public async Task RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError()
+    public async Task RunAsync_MissingSolutionInDefinition_ReturnsSolutionNotFoundError()
     {
-        // Bewusst kaputte .slnx analog McpServerCommandTests.TryLoadSolutionAsync_BrokenSlnx_...
-        // Der Server muss starten (kein Crash beim Load-Fehler), jeder Tool-Call liefert dann
-        // [ERROR]: SOLUTION_NOT_LOADED statt einer unbehandelten Exception.
+        // Die MCP-Projektdefinition ist die einzige Quelle fuer die Solution. Eine fehlende
+        // Referenz muss als recoverable Registry-Fehler erscheinen, ohne den Server zu beenden.
         var tempDir = CreateTempDir();
         try
         {
-            var brokenSln = Path.Combine(tempDir, "Broken.slnx");
-            File.WriteAllText(brokenSln, "<this-is-not-a-valid-slnx-document>");
+            File.Copy(Path.Combine(SolutionRootLocator.Find(), "rules.json"), Path.Combine(tempDir, "rules.json"));
+            File.WriteAllText(
+                Path.Combine(tempDir, "ainetlinter.project.json"),
+                "{\"solution\":\"Missing.slnx\",\"rules\":\"rules.json\"}");
 
             var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
             Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
@@ -45,7 +46,8 @@ public sealed class McpServerCommandErrorHandlingTests
             {
                 Name = "ainetlinter-mcp-broken-test-client",
                 Command = exePath,
-                Arguments = ["--mcp-server", "--path", brokenSln],
+                Arguments = ["--mcp-server"],
+                WorkingDirectory = tempDir,
             });
 
             // 60s statt 30s: das Budget deckt Gate-Wartezeit + echten Subprozess-Start +
@@ -58,12 +60,16 @@ public sealed class McpServerCommandErrorHandlingTests
             var result = await CallToolWithLoadingRetryAsync(
                 client,
                 "find_symbol",
-                new Dictionary<string, object?> { ["namePattern"] = "Anything" },
+                new Dictionary<string, object?>
+                {
+                    ["namePattern"] = "Anything",
+                    ["projectRoot"] = tempDir,
+                },
                 cts.Token);
 
-            Assert.True(result.IsError);
+            Assert.NotEqual(true, result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-            Assert.Contains("[ERROR]: SOLUTION_NOT_LOADED", textContent.Text, StringComparison.Ordinal);
+            Assert.Contains("[ERROR]: SOLUTION_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
         }
         finally
         {
@@ -78,6 +84,7 @@ public sealed class McpServerCommandErrorHandlingTests
         // Datei muss den
         // unstrukturierter Output.
         using var fixture = new CompileErrorMiniFixtureWorkspace();
+        McpFixtureProjectDefinition.Ensure(fixture.RootPath);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
 
@@ -85,17 +92,22 @@ public sealed class McpServerCommandErrorHandlingTests
         {
             Name = "ainetlinter-mcp-compile-error-test-client",
             Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixture.RootPath],
+            Arguments = ["--mcp-server"],
+            WorkingDirectory = fixture.RootPath,
         });
 
-        // 60s statt 30s, siehe Begruendung in RunAsync_BrokenSlnx_ToolCallReturnsSolutionNotLoadedError.
+        // 60s statt 30s, damit der Subprozess unter Volllauf-Last sicher handshaken kann.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cts.Token);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: cts.Token);
         var result = await CallToolWithLoadingRetryAsync(
             client,
             "get_file_skeleton",
-            new Dictionary<string, object?> { ["filePath"] = "src/CompileErrorMini/BrokenClassA.cs" },
+            new Dictionary<string, object?>
+            {
+                ["filePath"] = "src/CompileErrorMini/BrokenClassA.cs",
+                ["projectRoot"] = fixture.RootPath,
+            },
             cts.Token);
 
         Assert.NotEqual(true, result.IsError);

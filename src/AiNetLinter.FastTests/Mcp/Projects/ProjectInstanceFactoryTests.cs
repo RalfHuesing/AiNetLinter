@@ -28,7 +28,8 @@ public sealed class ProjectInstanceFactoryTests
 
         var captured = CaptureOptions(definition);
 
-        Assert.True(captured.Creation.Succeeded);
+        Assert.False(captured.Creation.Succeeded);
+        Assert.Equal("TEST_CAPTURE", captured.Creation.ErrorCode);
         Assert.Equal(definition.RulesPath, captured.Options!.ResolvedConfigPath);
         Assert.False(captured.Options.UsedDefaultConfig);
         Assert.Equal(42, captured.Options.MaxLineCount);
@@ -78,7 +79,9 @@ public sealed class ProjectInstanceFactoryTests
         using var tempDir = TestTempDirectory.Create("project-factory-missing-");
         tempDir.CreateFile("proj/app.slnx", "");
         WriteDefinition(tempDir, rulesRelative: "config/fehlt.json");
-        var definition = LoadDefinition(tempDir);
+        var definition = new ProjectDefinition(
+            Path.Combine(tempDir.DirectoryPath, "proj", "app.slnx"),
+            Path.Combine(tempDir.DirectoryPath, "proj", "config", "fehlt.json"));
 
         var creation = ProjectInstanceFactory.TryCreate(
             definition,

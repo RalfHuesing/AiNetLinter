@@ -106,7 +106,7 @@ internal static class OverviewResourceRegistration
         return BuildResult(snapshot);
     }
 
-    private static string FormatGuard(ProjectToolCall.RootGuardFailure guard) =>
+    private static string FormatGuard(ProjectRootGuardFailure guard) =>
         LinterErrorFormatter.Format(guard.Code, guard.Message, hint: guard.Hint);
 
     private static string BuildCanonicalUri(string projectRoot) =>

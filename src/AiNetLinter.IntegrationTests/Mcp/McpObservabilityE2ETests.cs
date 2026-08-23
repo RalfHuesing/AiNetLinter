@@ -6,6 +6,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Client;
 using Xunit;
 
@@ -25,7 +27,9 @@ public sealed class McpObservabilityE2ETests
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"AiNetLinter.exe nicht gefunden: {exePath}");
 
-        var fixtureRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        var fixtureRoot = fixture.RootPath;
+        McpFixtureProjectDefinition.Ensure(fixtureRoot);
         using var tempDir = TestTempDirectory.Create("mcp-obs-process-");
         var logDir = tempDir.DirectoryPath;
 
@@ -33,7 +37,8 @@ public sealed class McpObservabilityE2ETests
         {
             Name = "ainetlinter-observability-e2e-test",
             Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixtureRoot, "--mcp-log", logDir],
+            Arguments = ["--mcp-server", "--mcp-log", logDir],
+            WorkingDirectory = fixtureRoot,
         });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -47,7 +52,7 @@ public sealed class McpObservabilityE2ETests
         // 2. Regulären Tool-Call ausführen
         var result = await client.CallToolAsync(
             "get_index_scope",
-            new Dictionary<string, object?>(),
+            new Dictionary<string, object?> { ["projectRoot"] = fixtureRoot },
             cancellationToken: cts.Token);
         Assert.NotNull(result);
 
@@ -60,7 +65,8 @@ public sealed class McpObservabilityE2ETests
                 ["title"] = "Support für zusätzliche Sprachmuster",
                 ["description"] = "Erkennung von weiteren C# 14 Konstrukten gewünscht.",
                 ["relatedTool"] = "pattern_detect",
-                ["severity"] = "low"
+                ["severity"] = "low",
+                ["projectRoot"] = fixtureRoot,
             },
             cancellationToken: cts.Token);
 

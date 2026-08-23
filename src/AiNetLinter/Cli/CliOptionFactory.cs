@@ -1,6 +1,8 @@
 #nullable enable
 
 using System.CommandLine;
+using System.Globalization;
+using System.Linq;
 
 namespace AiNetLinter.Cli;
 
@@ -212,10 +214,29 @@ internal static class CliOptionFactory
         Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
     };
 
-    internal static Option<decimal?> CreateMcpProjectTtlOption() => new("--mcp-project-ttl-minutes")
+    internal static Option<decimal?> CreateMcpProjectTtlOption()
     {
-        Description = "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.",
-    };
+        var option = new Option<decimal?>("--mcp-project-ttl-minutes")
+        {
+            Description = "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.",
+        };
+        option.CustomParser = result =>
+        {
+            var raw = result.Tokens.SingleOrDefault()?.Value;
+            if (decimal.TryParse(
+                    raw,
+                    NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture,
+                    out var value))
+            {
+                return value;
+            }
+
+            result.AddError("Wert muss eine Dezimalzahl im InvariantCulture-Format sein.");
+            return null;
+        };
+        return option;
+    }
 
     internal static Option<int?> CreateMcpMaxProjectsOption() => new("--mcp-max-projects")
     {

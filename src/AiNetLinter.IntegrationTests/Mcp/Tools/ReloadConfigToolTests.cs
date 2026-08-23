@@ -28,7 +28,7 @@ public sealed class ReloadConfigToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(state, string.Empty, null, CancellationToken.None);
 
         Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -46,7 +46,7 @@ public sealed class ReloadConfigToolTests
 
         var missingPath = Path.Combine(fixture.RootPath, "does-not-exist.json");
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, missingPath, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(state, string.Empty, missingPath, CancellationToken.None);
 
         // isError-Policy: eine fehlende rules.json ist ein behebbarer Pfadfehler (Tippfehler,
         // falscher Ordner) — IsError bleibt false, siehe IsErrorPolicy.md.
@@ -71,7 +71,7 @@ public sealed class ReloadConfigToolTests
         var invalidPath = Path.Combine(fixture.RootPath, "broken-rules.json");
         await File.WriteAllTextAsync(invalidPath, "{ this is not valid json ");
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, invalidPath, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(state, string.Empty, invalidPath, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -93,7 +93,7 @@ public sealed class ReloadConfigToolTests
         var newPath = Path.Combine(fixture.RootPath, "new-rules.json");
         await File.WriteAllTextAsync(newPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, newPath, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(state, string.Empty, newPath, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -117,7 +117,7 @@ public sealed class ReloadConfigToolTests
         // Nutzer aendert die rules.json waehrend der Server laeuft.
         await File.WriteAllTextAsync(existingPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(state, existingPath, null, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.False(state.Config.Global.BanAsyncVoid);
@@ -132,32 +132,41 @@ public sealed class ReloadConfigToolTests
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(
+            state,
+            Path.Combine(fixture.RootPath, "missing-rules.json"),
+            null,
+            CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Default-Regeln", text);
+        Assert.Contains("CONFIG_NOT_FOUND", text);
         Assert.True(state.UsedDefaultConfig);
     }
 
     [Fact]
-    public async Task ExecuteAsync_NoConfigPathButRulesJsonAppearedNextToSolution_AutoDiscoversAndReloadsIt()
+    public async Task ExecuteAsync_NoConfigPath_DoesNotSearchNextToSolution()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
 
-        // Server lief mit Default-Regeln (keine rules.json beim Start); Nutzer legt jetzt eine an.
+        // Eine benachbarte rules.json ist kein Fallback fuer den Definitionspfad.
         var discoveredPath = Path.Combine(fixture.RootPath, "rules.json");
         await File.WriteAllTextAsync(discoveredPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+        var result = await ReloadConfigTool.ExecuteAsync(
+            state,
+            Path.Combine(fixture.RootPath, "missing-rules.json"),
+            null,
+            CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.False(state.UsedDefaultConfig);
-        Assert.Equal(discoveredPath, state.ResolvedConfigPath);
-        Assert.False(state.Config.Global.BanAsyncVoid);
+        Assert.Contains("CONFIG_NOT_FOUND", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.True(state.UsedDefaultConfig);
+        Assert.Null(state.ResolvedConfigPath);
+        Assert.True(state.Config.Global.BanAsyncVoid);
     }
 
     [Fact]
@@ -170,7 +179,9 @@ public sealed class ReloadConfigToolTests
 
         var initialRefreshCount = state.RefreshCount;
 
-        var result = await ReloadConfigTool.ExecuteAsync(state, null, CancellationToken.None);
+        var rulesPath = Path.Combine(fixture.RootPath, "rules.json");
+        await File.WriteAllTextAsync(rulesPath, "{ \"Global\": {}, \"Metrics\": {} }");
+        var result = await ReloadConfigTool.ExecuteAsync(state, rulesPath, null, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.True(state.RefreshCount > initialRefreshCount);

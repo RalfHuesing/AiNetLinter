@@ -290,7 +290,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
     {
         using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
         using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
-        var expectedToolNames = GetRegisteredToolNames();
+        var expectedToolNames = await GetRegisteredToolNames();
         var legacy = await ReadDiscoverySnapshotAsync(legacyFixture.RootPath, modern: false);
         var modern = await ReadDiscoverySnapshotAsync(modernFixture.RootPath, modern: true);
 
@@ -400,11 +400,10 @@ public sealed class McpServerCommandJsonRpcFramingTests
             : new[] { discoveryFrame, initializedFrame, toolsListFrame };
     }
 
-    private static IReadOnlySet<string> GetRegisteredToolNames()
+    private static async Task<IReadOnlySet<string>> GetRegisteredToolNames()
     {
-        using var state = new McpCodeGraphServer(
-            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        return McpServerOptionsFactory.BuildToolCollection(state)
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        return McpServerOptionsFactory.BuildToolCollection(registry)
             .Select(tool => tool.ProtocolTool.Name)
             .ToHashSet(StringComparer.Ordinal);
     }

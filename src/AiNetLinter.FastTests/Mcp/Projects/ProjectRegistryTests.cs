@@ -111,7 +111,7 @@ public sealed class ProjectRegistryTests
             {
                 factoryEntered.TrySetResult();
                 releaseFactory.Wait(TimeSpan.FromSeconds(30));
-                return factory.CreateServer(definition);
+                return ProjectInstanceCreation.Resident(factory.CreateServer(definition));
             },
             clock));
 

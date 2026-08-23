@@ -170,8 +170,8 @@ public sealed class FindMagicValuesToolTests
     [Fact]
     public async Task AddFindMagicValues_ToolAppearsInRegistrationList()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(registry);
 
         var findMagicValues = options.ToolCollection!.SingleOrDefault(t =>
             string.Equals(t.ProtocolTool.Name, "find_magic_values", StringComparison.Ordinal));

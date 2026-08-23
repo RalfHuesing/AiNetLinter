@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
@@ -150,11 +151,12 @@ public sealed class WiringContractTests
         File.WriteAllText(Path.Combine(root, "rules.json"), "{ broken");
         var created = 0;
 
-        await using var registry = ProjectRegistryFixture.Create(_ =>
-        {
-            Interlocked.Increment(ref created);
-            throw new InvalidOperationException("Fabrik darf bei ungueltigen Regeln nicht erreichen.");
-        });
+        await using var registry = ProjectRegistryFixture.Create(definition =>
+            ProjectInstanceFactory.TryCreate(definition, _ =>
+            {
+                Interlocked.Increment(ref created);
+                throw new InvalidOperationException("Fabrik darf bei ungueltigen Regeln nicht erreichen.");
+            }));
 
         var lease = registry.Lease(root);
 
@@ -232,13 +234,13 @@ public sealed class WiringContractTests
         var attempt = 0;
         var server = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
-            Catalog = null,
+            Catalog = CreateCatalog(),
             Console = console,
-            Config = null,
+            Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
             UsedDefaultConfig = false,
             LoadFunc = _ =>
             {
-                if (Interlocked.Increment(ref attempt) == 2)
+                if (Interlocked.Increment(ref attempt) == 1)
                 {
                     throw new InvalidOperationException("Simulierter Refresh-Fehler");
                 }
@@ -260,7 +262,7 @@ public sealed class WiringContractTests
         var degraded = await ProjectToolCall.ExecuteAsync(registry, root, _ => Task.FromResult(McpToolResults.Text("kernantwort")));
         var degradedText = TextOf(degraded);
         Assert.StartsWith("[WARN]", degradedText, StringComparison.Ordinal);
-        Assert.Contains("letzter guter Solution-Stand", degradedText, StringComparison.Ordinal);
+        Assert.Contains("letzten guten Solution-Stand", degradedText, StringComparison.Ordinal);
         Assert.Contains("kernantwort", degradedText, StringComparison.Ordinal);
 
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
@@ -365,9 +367,14 @@ public sealed class WiringContractTests
         {
             Catalog = null,
             Console = LinterConsole.Instance,
-            Config = null,
+            Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
             UsedDefaultConfig = false,
-            LoadFunc = _ => new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously).Task,
+            LoadFunc = token =>
+            {
+                var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                token.Register(() => pending.TrySetCanceled(token));
+                return pending.Task;
+            },
         });
 
     private static McpCodeGraphServer FaultingLoadServer(ILintConsole console) =>
@@ -375,7 +382,7 @@ public sealed class WiringContractTests
         {
             Catalog = null,
             Console = console,
-            Config = null,
+            Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
             UsedDefaultConfig = false,
             LoadFunc = _ => Task.FromException<SourceFileCatalog?>(new InvalidOperationException("Simulierter Kalt-Load-Fehler")),
         });

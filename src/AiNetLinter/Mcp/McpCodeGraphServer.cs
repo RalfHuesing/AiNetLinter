@@ -28,6 +28,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     private readonly ILintConsole _console;
     private readonly Dictionary<string, McpFileState> _fileState = new(StringComparer.OrdinalIgnoreCase);
     private readonly Task<SourceFileCatalog?>? _loadTask;
+    private readonly Func<CancellationToken, Task<SourceFileCatalog?>>? _loadFunc;
     private readonly CancellationTokenSource _loadCancellation = new();
     private readonly DateTime _startedAtUtc = DateTime.UtcNow;
     private SourceFileCatalog? _catalog;
@@ -64,17 +65,19 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
             _isReadOnlySnapshot = true;
             _lastGoodStateUtc = DateTime.UtcNow;
         }
-        else if (options.LoadFunc is { } loadFunc)
-        {
-            // Hintergrund-Load: der Server startet sofort, der Tool-Dispatch sieht
-            // solange LoadState == Loading und antwortet mit McpToolResults.Loading().
-            _loadTask = Task.Run(() => loadFunc(_loadCancellation.Token));
-        }
         else if (options.Catalog is { } catalog)
         {
+            _loadFunc = options.LoadFunc;
             _catalog = catalog;
             InitializeFileState(catalog.Solution);
             _lastGoodStateUtc = DateTime.UtcNow;
+        }
+        else if (options.LoadFunc is { } loadFunc)
+        {
+            _loadFunc = loadFunc;
+            // Hintergrund-Load: der Server startet sofort, der Tool-Dispatch sieht
+            // solange LoadState == Loading und antwortet mit McpToolResults.Loading().
+            _loadTask = Task.Run(() => loadFunc(_loadCancellation.Token));
         }
     }
 
@@ -209,14 +212,21 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
             solutionPath = _catalog.Solution.FilePath;
         }
 
-        if (string.IsNullOrEmpty(solutionPath) || !File.Exists(solutionPath))
+        if (_loadFunc is null && (string.IsNullOrEmpty(solutionPath) || !File.Exists(solutionPath)))
         {
             return false;
         }
 
         try
         {
-            var newCatalog = await SourceFileCatalog.LoadAsync(solutionPath, ct);
+            var newCatalog = _loadFunc is not null
+                ? await _loadFunc(ct).ConfigureAwait(false)
+                : await SourceFileCatalog.LoadAsync(solutionPath!, ct).ConfigureAwait(false);
+            if (newCatalog is null)
+            {
+                throw new InvalidOperationException("Solution-Reload lieferte keinen Katalog.");
+            }
+
             lock (_lock)
             {
                 var oldCatalog = _catalog;
@@ -237,7 +247,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
                 _lastRefreshError = ex.Message;
             }
 
-            _console.WriteError($"[WARN]: Solution konnte beim Reload nicht neu geladen werden ({solutionPath}): {ex.Message}");
+            _console.WriteError($"[WARN]: Solution konnte beim Reload nicht neu geladen werden ({solutionPath ?? "unbekannter Pfad"}): {ex.Message}");
             return false;
         }
     }

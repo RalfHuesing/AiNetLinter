@@ -4,6 +4,8 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Fixtures;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Client;
 using Xunit;
 
@@ -25,13 +27,16 @@ public sealed class McpHandshakeToolRegistrationTests
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}");
 
-        var fixtureRoot = Path.Combine(SolutionRootLocator.Find(), "tests", "Fixtures", "BaselineMini");
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        var fixtureRoot = fixture.RootPath;
+        McpFixtureProjectDefinition.Ensure(fixtureRoot);
 
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "ainetlinter-mse-mcp-handshake-test",
             Command = exePath,
-            Arguments = ["--mcp-server", "--path", fixtureRoot],
+            Arguments = ["--mcp-server"],
+            WorkingDirectory = fixtureRoot,
         });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

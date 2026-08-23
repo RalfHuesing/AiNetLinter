@@ -177,6 +177,7 @@ internal sealed class ProjectRegistry : IAsyncDisposable
             {
                 if (raced.Server.LoadState != ServerLoadState.LoadFailed)
                 {
+                    retired.Add(created.Server!);
                     return ProjectLeaseResult.Success(Adopt(raced));
                 }
 

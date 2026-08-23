@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.IntegrationTests.Platform;
 using Xunit;
 
@@ -19,6 +20,7 @@ public sealed class McpServerLifetimeTests
     {
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        McpFixtureProjectDefinition.Ensure(fixture.RootPath);
         using var parentProcess = StartLongRunningParentProcess();
         var serverProcess = StartMcpServer(fixture.RootPath, parentProcess.Id);
         var stderrTask = serverProcess.StandardError.ReadToEndAsync();
@@ -84,8 +86,6 @@ public sealed class McpServerLifetimeTests
             WorkingDirectory = solutionPath,
         };
         startInfo.ArgumentList.Add("--mcp-server");
-        startInfo.ArgumentList.Add("--path");
-        startInfo.ArgumentList.Add(solutionPath);
         startInfo.ArgumentList.Add("--parent-pid");
         startInfo.ArgumentList.Add(parentProcessId.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add("--mcp-log");
