@@ -49,82 +49,38 @@ public sealed class McpServerCommandContractTests
     [Fact]
     public async Task ProductionColdLoad_BrokenSlnx_ReturnsOriginalLoadFailedContract()
     {
-        using var tempDir = TestTempDirectory.Create("mcp-production-cold-load-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "broken");
-        var solutionPath = Path.Combine(root, "app.slnx");
-        File.WriteAllText(solutionPath, "<this-is-not-a-valid-slnx-document>");
-        var loadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var releaseLoad = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var loadingLeaseReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var console = new RecordingLintConsole();
-        var factoryCalls = 0;
-        var releaseHookCalls = 0;
-        McpCodeGraphServer? server = null;
-        await using var registry = new ProjectRegistry(new ProjectRegistryOptions(_ =>
-            {
-                Interlocked.Increment(ref factoryCalls);
-                server = new McpCodeGraphServer(new McpCodeGraphServerOptions
-                {
-                    Catalog = null,
-                    Console = console,
-                    Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-                    UsedDefaultConfig = false,
-                    LoadFunc = async cancellationToken =>
-                    {
-                        loadStarted.TrySetResult();
-                        await releaseLoad.Task.WaitAsync(cancellationToken);
-                        return await McpServerCommand.TryLoadSolutionAsync(
-                            solutionPath,
-                            cancellationToken,
-                            console);
-                    },
-                });
-                return ProjectInstanceCreation.Resident(server);
-            },
-            TimeProvider.System)
-        {
-            BeforeLeaseRelease = () =>
-            {
-                if (Interlocked.Exchange(ref releaseHookCalls, 1) == 0)
-                {
-                    loadingLeaseReleased.TrySetResult();
-                    releaseLoad.TrySetResult();
-                }
-            },
-        });
-
-        var initial = registry.Lease(root);
+        await using var scenario = new BrokenColdLoadHarness();
+        var initial = scenario.Registry.Lease(scenario.Root);
         Assert.True(initial.Succeeded);
-        var initialLease = initial.Lease!;
-        await loadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await scenario.LoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        initial.Lease!.Dispose();
+        scenario.ArmReleaseHook();
 
         var loading = await ProjectToolCall.ExecuteAsync(
-            registry,
-            root,
+            scenario.Registry,
+            scenario.Root,
             _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
-        await loadingLeaseReleased.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        await Assert.ThrowsAnyAsync<Exception>(() => server!.LoadTask!);
+        var originalException = await scenario.LoadFailure.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.NotEmpty(originalException.Message);
 
         var failed = await ProjectToolCall.ExecuteAsync(
-            registry,
-            root,
+            scenario.Registry,
+            scenario.Root,
             _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
         var failedText = Assert.IsType<TextContentBlock>(Assert.Single(failed.Content)).Text;
-        var warning = Assert.Single(console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
+        var warning = Assert.Single(scenario.Console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
         var originalMessage = warning[(warning.LastIndexOf(": ", StringComparison.Ordinal) + 2)..];
         Assert.Contains("PROJECT_LOAD_FAILED", failedText, StringComparison.Ordinal);
         Assert.NotEmpty(originalMessage);
         Assert.Contains(originalMessage, failedText, StringComparison.Ordinal);
-        Assert.Contains(solutionPath, failedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(scenario.SolutionPath, failedText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("automatisch neu", failedText, StringComparison.Ordinal);
 
-        var failedServer = server;
-        initialLease.Dispose();
-        var retry = registry.Lease(root);
+        var failedServer = scenario.Server;
+        var retry = scenario.Registry.Lease(scenario.Root);
         using var retryLease = retry.Lease;
-        Assert.Equal(2, Volatile.Read(ref factoryCalls));
+        Assert.Equal(2, scenario.FactoryCalls);
         Assert.NotSame(failedServer, retryLease!.Server);
     }
 
@@ -240,6 +196,96 @@ public sealed class McpServerCommandContractTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>
         await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "BaseGreeting" }, "IGreeting");
+
+    private sealed class BrokenColdLoadHarness : IAsyncDisposable
+    {
+        private readonly TestTempDirectory tempDir;
+        private readonly TaskCompletionSource releaseLoad = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim loadFaultPublished = new(false);
+        private int factoryCalls;
+        private int releaseHookArmed;
+        private int faultReleaseHookCalls;
+
+        internal BrokenColdLoadHarness()
+        {
+            tempDir = TestTempDirectory.Create("mcp-production-cold-load-");
+            Root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "broken");
+            SolutionPath = Path.Combine(Root, "app.slnx");
+            File.WriteAllText(SolutionPath, "<this-is-not-a-valid-slnx-document>");
+            LoadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            LoadFailure = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Console = new RecordingLintConsole();
+            Registry = new ProjectRegistry(new ProjectRegistryOptions(CreateInstance, TimeProvider.System)
+            {
+                BeforeLeaseRelease = BeforeLeaseRelease,
+            });
+        }
+
+        internal string Root { get; }
+
+        internal string SolutionPath { get; }
+
+        internal RecordingLintConsole Console { get; }
+
+        internal TaskCompletionSource LoadStarted { get; }
+
+        internal TaskCompletionSource<Exception> LoadFailure { get; }
+
+        internal ProjectRegistry Registry { get; }
+
+        internal McpCodeGraphServer? Server { get; private set; }
+
+        internal int FactoryCalls => Volatile.Read(ref factoryCalls);
+
+        internal void ArmReleaseHook() => Volatile.Write(ref releaseHookArmed, 1);
+
+        public async ValueTask DisposeAsync()
+        {
+            await Registry.DisposeAsync();
+            loadFaultPublished.Dispose();
+            tempDir.Dispose();
+        }
+
+        private ProjectInstanceCreation CreateInstance(ProjectDefinition definition)
+        {
+            Interlocked.Increment(ref factoryCalls);
+            Server = new McpCodeGraphServer(new McpCodeGraphServerOptions
+            {
+                Catalog = null,
+                Console = Console,
+                Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+                UsedDefaultConfig = false,
+                LoadFunc = LoadSolutionAsync,
+            });
+            return ProjectInstanceCreation.Resident(Server);
+        }
+
+        private async Task<SourceFileCatalog?> LoadSolutionAsync(CancellationToken cancellationToken)
+        {
+            LoadStarted.TrySetResult();
+            await releaseLoad.Task.WaitAsync(cancellationToken);
+            try
+            {
+                return await McpServerCommand.TryLoadSolutionAsync(SolutionPath, cancellationToken, Console);
+            }
+            catch (Exception exception)
+            {
+                LoadFailure.TrySetResult(exception);
+                loadFaultPublished.Set();
+                throw;
+            }
+        }
+
+        private void BeforeLeaseRelease()
+        {
+            if (Volatile.Read(ref releaseHookArmed) == 1
+                && Interlocked.Exchange(ref faultReleaseHookCalls, 1) == 0)
+            {
+                releaseLoad.TrySetResult();
+                Assert.True(loadFaultPublished.Wait(TimeSpan.FromSeconds(10)));
+            }
+        }
+    }
 
     private async Task AssertTextAsync(string tool, IReadOnlyDictionary<string, object?> arguments, string expected)
     {

@@ -141,42 +141,60 @@ public sealed class ProjectRegistryTests
     {
         using var tempDir = TestTempDirectory.Create("project-registry-atomic-reservation-");
         var root = CreateProjectRoot(tempDir, "proj");
+        var otherRoot = CreateProjectRoot(tempDir, "other");
         var clock = new FakeClock();
         var factory = new TrackingServerFactory();
-        var factoryEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var releaseFactory = new ManualResetEventSlim(false);
+        var otherFactory = new TrackingServerFactory();
+        var lookupReached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var releaseLookup = new ManualResetEventSlim(false);
+        var barrierCalls = 0;
         await using var registry = new ProjectRegistry(new ProjectRegistryOptions(
-            definition =>
+            definition => string.Equals(
+                Path.GetDirectoryName(definition.SolutionPath),
+                Path.GetFullPath(root),
+                StringComparison.OrdinalIgnoreCase)
+                ? factory.Factory(definition)
+                : otherFactory.Factory(definition),
+            clock)
+        {
+            BeforeCreationReservation = () =>
             {
-                factoryEntered.TrySetResult();
-                releaseFactory.Wait(TimeSpan.FromSeconds(30));
-                return ProjectInstanceCreation.Resident(factory.CreateServer(definition));
+                if (Interlocked.Exchange(ref barrierCalls, 1) == 0)
+                {
+                    lookupReached.TrySetResult();
+                    Assert.True(releaseLookup.Wait(TimeSpan.FromSeconds(30)));
+                }
             },
-            clock));
+        });
 
         var firstCall = Task.Run(() => registry.Lease(root));
-        await factoryEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await lookupReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
         var secondCall = Task.Run(() => registry.Lease(root));
-        Assert.True(SpinWait.SpinUntil(
-            () => registry.PendingCreationWaiters(root) >= 2,
-            TimeSpan.FromSeconds(10)));
+        var otherCall = Task.Run(() => registry.Lease(otherRoot));
 
-        releaseFactory.Set();
-        var first = await firstCall.WaitAsync(TimeSpan.FromSeconds(15));
         var second = await secondCall.WaitAsync(TimeSpan.FromSeconds(15));
-        using var firstLease = first.Lease;
+        var other = await otherCall.WaitAsync(TimeSpan.FromSeconds(15));
         using var secondLease = second.Lease;
-        Assert.True(SpinWait.SpinUntil(() => factory.LoadsStarted == 1, TimeSpan.FromSeconds(10)));
+        using var otherLease = other.Lease;
+        Assert.True(second.Succeeded);
+        Assert.True(other.Succeeded);
+        Assert.NotSame(secondLease!.Server, otherLease!.Server);
+        Assert.Equal(1, otherFactory.InstancesCreated);
+
+        releaseLookup.Set();
+        var first = await firstCall.WaitAsync(TimeSpan.FromSeconds(15));
+        using var firstLease = first.Lease;
 
         Assert.True(first.Succeeded);
-        Assert.True(second.Succeeded);
         Assert.Equal(1, factory.InstancesCreated);
         Assert.Equal(1, factory.LoadsStarted);
         Assert.Equal(0, factory.ServersDisposed);
+        Assert.Equal(1, otherFactory.LoadsStarted);
         Assert.Same(firstLease!.Server, secondLease!.Server);
 
         await registry.DisposeAsync();
         Assert.Equal(1, factory.ServersDisposed);
+        Assert.Equal(1, otherFactory.ServersDisposed);
     }
 
     [Fact]

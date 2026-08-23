@@ -21,6 +21,9 @@ internal sealed record ProjectRegistryOptions(
     TimeSpan TickInterval = default)
 {
     internal Action? BeforeLeaseRelease { get; init; }
+
+    // Test-only barrier for the former lookup-to-reservation interleaving; production leaves it null.
+    internal Action? BeforeCreationReservation { get; init; }
 }
 
 /// <summary>
@@ -140,6 +143,17 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
     private ProjectLeaseResult TryAdoptOrCreate(string key, List<McpCodeGraphServer> retired)
     {
+        if (options.BeforeCreationReservation is not null)
+        {
+            var observed = FindResidentBeforeCreationBarrier(key, retired);
+            if (observed is not null)
+            {
+                return ProjectLeaseResult.Success(observed);
+            }
+
+            options.BeforeCreationReservation();
+        }
+
         ProjectCreationReservation reservation;
         lock (gate)
         {
@@ -164,6 +178,14 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
 
         return PublishCreation(key, reservation, attempt, retired);
+    }
+
+    private ProjectLease? FindResidentBeforeCreationBarrier(string key, List<McpCodeGraphServer> retired)
+    {
+        lock (gate)
+        {
+            return FindAdoptable(key, retired);
+        }
     }
 
     private ProjectCreationReservation ReserveCreationUnderLock(string key)
