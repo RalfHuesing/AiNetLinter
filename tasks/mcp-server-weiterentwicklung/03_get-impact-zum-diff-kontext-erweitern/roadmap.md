@@ -142,16 +142,18 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       hochgestuft — Konzept §Must-have/E).
       *Abgeschlossen:* step-004 (done/approved, Commit 7b3b0284) inkl.
       Korrektur step-006 (Filter-Quoting, approved, Commit 4b53579a).
-- [ ] EPIC-5: Solutionweite Violations & diffbezogene Filterung — Violations
+- [x] EPIC-5: Solutionweite Violations & diffbezogene Filterung — Violations
       werden einmal solutionweit berechnet („Linter genau einmal") und danach
       auf geänderte Hunks bzw. Deklarationsspannen gezeigter Symbole
       gefiltert; andere Violations derselben Datei bleiben außen vor, damit
       die Antwort diffbezogen bleibt und kein zweites ungescoptes
       `get_violations` entsteht (Konzept §Filterregeln, §Performance-Regeln;
       Basis `GetViolationsScanner`).
-      *Planungsnotiz:* in Arbeit → step-007 (interne Violations-Stufe:
-      Berechnung + diffbezogene Filterung + LintRuns-Inkrement + Tests;
-      Tool-Anschluss bleibt EPIC-6).
+      *Abgeschlossen:* step-007 (interne Violations-Stufe
+      `DiffViolationScanner.CollectAsync` + gemeinsamer Helper
+      `RunSolutionLintAsync` + LintRuns-Inkrement + 7 FastTests + Tripel-
+      Nachweis GitRuns/TestSolutionScans/LintRuns==1; done/approved,
+      Commit 8bc3e919). Tool-Anschluss an den Antwortvertrag bleibt EPIC-6.
 - [ ] EPIC-6: `get_impact`-Vertrag „change-context" & strukturierte Antwort —
       neue Optionen additiv in `GetImpactInput`: `detailLevel` (`callers` |
       `change-context`, Default `callers`), `maxChangedSymbols` (Default 20,
@@ -172,6 +174,9 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Source-Bodies, keine zwei Vollkopien langer Bodies; `callers` bleibt
       abwärts-/snapshot-kompatibel (Konzept §Öffentlicher Vertrag,
       §StructuredContent, §Performance- und Größenregeln, §Tests).
+      *Planungsnotiz:* in Arbeit → step-008 (gesamtes Epic als einzelner
+      Step: Parameter + Validierung + Kappung im Analyzer-Kern +
+      strukturierte Antwort + ct-Bindung + Tests; Doku bleibt EPIC-7).
 - [ ] EPIC-7: Dokumentation in `Docs/agent-api.md` inkl. Grenzen —
       JSON-Feldnamen des StructuredContent exakt dokumentieren (additive
       Felder); den `ExpandAsync`-Fix als **Verhaltenskorrektur** von
