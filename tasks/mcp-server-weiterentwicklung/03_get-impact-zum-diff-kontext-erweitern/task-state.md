@@ -1,21 +1,23 @@
 ---
-status: executing
+status: done
 task: 03_get-impact-zum-diff-kontext-erweitern
 started_at: 2026-08-22
 last_updated: 2026-08-23
 rules_dir: .agents/rules
 total_steps: 9
-current_step: step-009
+current_step: -
 ---
 
 # Task State: 03_get-impact-zum-diff-kontext-erweitern
 
 ## Übersicht
 
-- **Task-Status:** `executing` (Fortsetzung nach Nutzer-Revision 2026-08-23)
+- **Task-Status:** `done` (abgeschlossen 2026-08-23)
 - **Steps gesamt:** 9 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-009` (in_progress)
+- **Aktueller Schritt:** keiner — Task abgeschlossen, siehe `task-summary.md`
+- **Roadmap:** alle 7 Epics abgehakt
+- **Tech-Debt:** TD-001 (offen, niedrig), TD-002 (erledigt), TD-003 (offen, niedrig)
 
 > **Nutzerentscheidung 2026-08-22 (Straffung):** Die restlichen Epics wurden
 > zu größeren Steps konsolidiert (EPIC-3+4 → step-004). Die konsolidierten

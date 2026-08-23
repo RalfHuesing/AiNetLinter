@@ -178,7 +178,7 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Parameter + Validierung + Kappung im Analyzer-Kern + strukturierte
       Antwort + ct-Bindung + Tests; done/approved, Commit 5425f95f; Doku
       bleibt EPIC-7).
-- [ ] EPIC-7: Dokumentation in `Docs/agent-api.md` inkl. Grenzen —
+- [x] EPIC-7: Dokumentation in `Docs/agent-api.md` inkl. Grenzen —
       JSON-Feldnamen des StructuredContent exakt dokumentieren (additive
       Felder); den `ExpandAsync`-Fix als **Verhaltenskorrektur** von
       `find_references`/`get_impact` (Symbol-Branch) ausweisen, nicht nur
