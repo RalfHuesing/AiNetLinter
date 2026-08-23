@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T23:25:00+02:00
+last_updated: 2026-08-23T23:58:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -86,9 +86,10 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       des eigenen Repos → step-003 umgesetzt; step-004 korrigierte Kalt-Load-,
       Erstzugriffs-Dedupe- und Overview-Lease-Verträge, hat aber zwei weitere
       Race-Fenster im Review offengelegt; die Produktionskorrektur läuft in
-      step-005, die beiden regressionsstarken Testanker in step-006. Abschluss
-      (drift-audit, Live-Verifikation Overview, Meilenstein-Doku, §D.4) → nächster
-      regulärer Step nach step-006.
+      step-005, die Interleaving-Testanker in step-006 und die letzten direkten
+      Fehler-/Loser-Assertions in step-007. Abschluss (drift-audit,
+      Live-Verifikation Overview, Meilenstein-Doku, §D.4) → nächster regulärer
+      Step nach step-007.
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
@@ -123,7 +124,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Load-Dedupe im bestehenden Instanzmuster (Review 1) — der Registry-Lock deckt
         nie einen Solution-Load. Grund-Wiring → step-003; belastbare Erstzugriffs-
         Dedupe und Overview-Lease → step-004; Lookup-/Reservation-Race → step-005;
-        belastbarer Testanker → step-006.
+        belastbarer Testanker → step-006; vollständige Loser-/Fehlerassertionen
+        → step-007.
   - [ ] A.7 Eviction & RAM-Hygiene: TTL-Timer (Default 45 Min idle, 5 Min Takt) +
         maxProjects (Default 4) + LRU; InFlight-Tracking strukturell über Lease
         (Review 7); Busy-Guard + Pending-Eviction mit Adoption statt Doppel-Load
@@ -134,7 +136,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Refresh-Fehler → last-good bleibt resident, `[WARN]`-Kopf, Health-Felder
         `LastGoodStateUtc`/`LastLoadError`; Heilung beim nächsten erfolgreichen Refresh.
         (FAILED-Marker-Grundlage erledigt → step-002; Wiring-/Dispatch-Korrektur
-        → step-004; FAILED-Freigabe-Race → step-005; Regressionstest → step-006)
+        → step-004; FAILED-Freigabe-Race → step-005; Regressionstest → step-006/
+        step-007)
   - [ ] A.4 Overview-Ressource auf URI-Template
         `ainetlinter://overview?projectRoot=<url-encoded>` umstellen; Rückfallplan
         (Review 5): scheitert ein Host am Query-Parameter → Exposition als Tool
@@ -152,7 +155,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Bindungsverifikation via `get_server_health`, Lazy-Init, Staleness-Grenzen,
         Observability mit projectRoot, Reaper unverändert). (Teile erledigt →
         step-001/-002; Restkatalog step-003; belastbare Korrekturtests → step-004/
-        step-005/step-006)
+        step-005/step-006/step-007)
   - [ ] A.9 DoD: Build grün; beide TestSuites ohne Stress grün; harter Cut aktiv
         (MCP-Modus lehnt `--path`/`--config` ab, Batch unverändert); eigenes Repo
         migriert (`ainetlinter.project.json` im Root, AGENTS.md-Abschnitt
@@ -161,7 +164,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `--sync-agent-rules-only` synchronisiert; Wiederöffnungsvermerk in
         `90_bewusst-nicht-umsetzen/Konzept.md` §D.4. (Migration des eigenen Repos
         **→ step-003** — der harte Cut macht die eigenen Registrierungen sonst
-        unbrauchbar; die Review-Korrekturen → step-004/step-005/step-006;
+        unbrauchbar; die Review-Korrekturen → step-004/step-005/step-006/step-007;
         drift-audit, Live-Verifikation Overview, §D.4-Vermerk → nächster
         regulärer Step)
   - [ ] A.x Doku-Sammelpflichten (im fachlich berührenden Step, keine Mini-Doku-Steps):

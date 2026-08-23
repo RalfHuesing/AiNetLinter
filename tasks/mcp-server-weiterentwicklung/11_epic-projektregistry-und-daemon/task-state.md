@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-23T23:25:00+02:00
+last_updated: 2026-08-23T23:58:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 6  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-006
+total_steps: 7  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-007
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -15,8 +15,8 @@ current_step: step-006
 - **Task-Status:** `executing`
 - **Steps gesamt:** 4 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-006` (in_progress — deterministische
-  Regressionstest-Korrektur für die zwei Findings aus step-005)
+- **Aktueller Schritt:** `step-007` (in_progress — direkte Originalfehler-
+  und Creation-Loser-Assertions für die zwei Findings aus step-006)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
@@ -55,7 +55,8 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-003 | EPIC-A | done (Korrektur ausstehend) | MCP-Wiring auf die Projektregistry: Tool-Leases, harter Cut, Health-/Reload-/Overview-Vertrag | - | ccf7b33a / 790ce251 | 2026-08-23 (issues) | ccf7b33a / 790ce251 / b055ca4e |
 | step-004 | EPIC-A | done (Korrektur ausstehend) | Produktions-Kalt-Load, Erstzugriffs-Dedupe und leasegeschützte Overview korrigieren | step-003 | 2ed8bcc0 / 190a1a25 | 2026-08-23 (issues) | 2ed8bcc0 / 190a1a25 / d56e9b59 |
 | step-005 | EPIC-A | done (Korrektur ausstehend) | FAILED-Freigabe und Registry-Reservation atomar absichern | step-004 | a50bff9a / 1cd75558 | 2026-08-23 (issues) | a50bff9a / 1cd75558 / 1059cfcb |
-| step-006 | EPIC-A | in_progress | Race-Interleavings in den Abnahmetests deterministisch verankern | step-005 | - | - | Plan erstellt |
+| step-006 | EPIC-A | done (Korrektur ausstehend) | Race-Interleavings in den Abnahmetests deterministisch verankern | step-005 | 05b2e157 / 3dac2e2c | 2026-08-23 (issues) | 05b2e157 / 3dac2e2c / e7e0fdfe |
+| step-007 | EPIC-A | in_progress | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | - | - | Plan erstellt |
 
 ## Config (optional)
 
