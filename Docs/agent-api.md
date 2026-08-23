@@ -94,6 +94,8 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
 | `--mcp-log [pfad]` | string | Konfiguriert das Observability- & Tool-Call-Logging (Default: aktiv unter `%LOCALAPPDATA%`, 'off' zum Deaktivieren) |
 | `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
+| `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
+| `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
 | `--analyze-mcp-log <pfad|verzeichnis|glob>` | string | Wertet MCP-Call-Logs offline über alle passenden `.jsonl`-Dateien aus; Feedback-Dateien werden ausgeschlossen |
 | `--format <text|json>` | string | Ausgabeformat für `--analyze-mcp-log` (Standard: `text`; nur gemeinsam mit `--analyze-mcp-log`) |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
@@ -199,12 +201,26 @@ Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server
 Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Cursor, eigene Agent-Loops). Start:
 
 ```bash
-ainetlinter --mcp-server            # sucht .sln/.slnx im aktuellen Verzeichnis
-ainetlinter --mcp-server --path <Datei/Verzeichnis>   # explizite Ziel-Solution
-ainetlinter --mcp-server --parent-pid <pid>            # optionale explizite Parent-PID
+ainetlinter --mcp-server                         # projectRoot kommt je Tool-Aufruf
+ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-PID
 ```
 
-Bei Legacy-MCP `initialize` (Handshake) lädt der Server die Solution einmal via `MSBuildWorkspace` und hält sie über die gesamte Prozesslaufzeit **resident** — Tool-Calls laden die Solution nicht neu. Der Cold-Start (Solution-Load) skaliert mit der Solution-Größe; Tool-Calls arbeiten gegen den resident geladenen Workspace und benötigen keinen erneuten Solution-Load.
+Bei Legacy-MCP `initialize` (Handshake) hält der Server mehrere Projekt-Keys
+resident. Jeder projektgebundene Tool-Aufruf erhält den absoluten Parameter
+`projectRoot`; `get_server_health` darf diesen Filter weglassen. Im Root liegt
+`ainetlinter.project.json` mit `solution` und `rules`:
+
+```json
+{
+  "solution": "src/MeinProjekt.slnx",
+  "rules": "rules.json"
+}
+```
+
+Relative Pfade werden zur Definitionsdatei aufgelöst. Fehlt die Datei oder ist
+ein Ziel ungültig, antwortet der adressierte Key mit einem deterministischen
+Fehlervertrag statt mit geratenen Defaults. `--path` und `--config` sind im
+MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
 
 MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
@@ -212,7 +228,9 @@ Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden
 
 Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
 
-Wenn beim Start keine Solution geladen werden kann (Solution-Datei fehlt, MSBuild-Fehler), startet der Server trotzdem — jeder Tool-Call liefert dann einen `SOLUTION_NOT_LOADED`-Fehler statt eines Crashs.
+Wenn ein Projekt-Key nicht geladen werden kann (Solution-Datei fehlt, MSBuild-
+Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call liefert
+`PROJECT_LOAD_FAILED` mit Ursprungsmeldung und Restore-Hinweis statt eines Crashs.
 
 ### Scope-Hinweis (C#-only)
 
@@ -221,6 +239,11 @@ Der Server schickt bei Legacy-`initialize` und modernem `server/discover` densel
 Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Eine reproduzierte Messung vom 2026-08-20 ergab 724 Zeichen und 724 UTF-8-Bytes. Die Bytezahl wird mit `Encoding.UTF8.GetByteCount` bestimmt; daraus wird keine exakte Tokenersparnis abgeleitet.
 
 ### Tool-Referenz
+
+Für jedes projektgebundene Tool ist `projectRoot` der erste Pflichtparameter;
+die folgenden Zeilen listen die jeweiligen fachlichen Zusatzparameter. Die
+einzige Tool-Ausnahme ist `get_server_health` mit optionalem Filter; das
+prozessweite `report_observability_feedback` ist nicht projektgebunden.
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :--- | :---: |
@@ -239,14 +262,14 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 | `metrics_lookup` | `symbolIdentifier?` (einzelne ID/Name), `symbolIdentifiers?` (Array fuer Batch-Abgleich in 1 Turn) | Punktgenaue Metriken (Netto-LOC, zyklomatische/kognitive Komplexität, effektive Parameteranzahl, AI-Context-Footprint, Member-Counts) und Schwellwert-Abgleich gegen aktive `rules.json` für ein oder mehrere C#-Symbole; liefert lesbares Markdown mit Status-Badges (`[OK]`, `[WARN]`, `[VIOLATION]`) und stark typisiertes `MetricsLookupResultDto` in `structuredContent` | ja | nein |
 | `get_feature_context` | `symbol` (Pflicht: Typname, Methode, Property, Datei:Zeile oder DocCommentId), `includeCallers?` (Default `true`), `includeTests?` (Default `true`), `includeMetrics?` (Default `true`), `includeViolations?` (Default `true`), `maxCallers?` (Default 10, Cap 50), `maxTests?` (Default 10, Cap 50) | Composite One-Shot-Exploration für ein C#-Symbol vor Edits/Refactorings: bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) in einem einzigen Aufruf; liefert strukturiertes Markdown und typisiertes `FeatureContextPayload` in `structuredContent` | ja | ja |
 | `get_test_context` | `symbol` (Pflicht: Typname, Methode, Datei:Zeile oder DocCommentId), `symbolIdentifier?` (Alias), `maxResults?` (Default 30, Cap 100) | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zielgerichtet alle zugeordneten Testdateien, Testklassen, Testmethoden, Test-Kategorien (Unit/Integration), Zuordnungsgründe und direkt ausführbare `dotnet test` Filterbefehle; liefert strukturiertes Markdown und typisiertes `TestContextPayload` in `structuredContent` | ja | ja |
-| `get_violations` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResults?` (Default 50), `contextLines?` (0-5, Default 2), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße inkl. Regel-ID pro Eintrag; optional Quellcode-Snippets via `includeSnippet=true` mit `contextLines` (Snippet zeigt `contextLines` Zeilen davor + verletzende Zeile + `contextLines` Zeilen danach); prependet eine Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden`, wenn der Server ohne `--config` gestartet wurde und keine `rules.json` neben der Solution-Datei findet | ja | ja |
+| `get_violations` | `projectRoot` (Pflicht), `scopeFilter?`, `maxResults?` (Default 50), `contextLines?` (0-5, Default 2), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße für den adressierten Projekt-Key inkl. Regel-ID und optionalen Quellcode-Snippets | ja | ja |
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
 | `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste (siehe unten) | ja | ja (je Pattern) |
 | `find_magic_values` | `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 1, auch Einzelvorkommen), `maxResults?` (Default 50), `ignoreNumbers?` (optional), `includeTests?` (Default false; filtert `/Tests/`, `/FastTests/` aus dem relativen Pfad), `includeSuppressed?` (Default false; wirksam via `SyntaxTrivia`-Auswertung am Literal), `changedOnly?` (Default false; nutzt `DiffImpactAnalyzer.RunGitDiff` + `ParseGitDiffHunks`, leere Diffs → 0 Dateien) | Strukturierte Funde (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes, Buffer/Zeit-Konstanten, duplizierte `const`-Felder, enum-Kaskaden, `nameof`-Kandidaten, Security-Secrets, User-Facing-Exception-Messages) mit Ziel-Empfehlung (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX…`); alle 7 Heuristik-Kategorien aktiv (siehe unten) | ja | ja |
 | `get_symbol_body` | `symbolIdentifier?` (einzelne ID), `symbolIdentifiers?` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
-| `reload_config` | `configPath?` (Default: zuletzt geladener Pfad bzw. frische Auto-Discovery neben der Solution) | Liest die `rules.json` zur Laufzeit neu ein, ohne Server-Neustart; Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | — | LoadState, geladene Solution/Config-Quelle, Uptime, Anzahl Solution-Refreshes seit Start, Observability-Status sowie aus dem aktuellen JSONL-Log berechnete Call-Log-Aggregate | nein | nein |
+| `reload_config` | `projectRoot` (Pflicht), `configPath?` (optional, Override für diesen Key) | Liest standardmäßig die `rules`-Datei des adressierten Keys neu ein; ein expliziter `configPath` ist ein Hot-Swap-Override. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
+| `get_server_health` | `projectRoot?` (optionaler Key-Filter) | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config-Quelle, LastUsedUtc, Uptime, Refresh-/Staleness-Werte, LastGoodState/LastLoadError und Observability-Status | nein | nein |
 | `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
@@ -562,15 +585,15 @@ Ausnahme: der `get_impact`-Zweig `detailLevel="change-context"` respektiert `max
 
 Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
 
-### Resource `ainetlinter://overview`
+### Resource `ainetlinter://overview?projectRoot=<url-encoded>`
 
 Neben der Tool-Referenz stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit drei Teilen:
 
 1. Kurzbeschreibung aller verfügbaren Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
-2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis) und die tatsaechlich verwendete Regel-Quelle — entweder der Pfad der geladenen `rules.json` oder ein expliziter Hinweis, dass der Server mit eingebauten Default-Regeln laeuft (kein `rules.json` gefunden).
+2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis), der adressierte Projektroot und die tatsaechlich verwendete Regel-Quelle.
 3. Empfohlene Workflows: kompakte Tool-Choreographie für die drei typischen Agenten-Pfade (Code erkunden, Refactoring & Impact, Quality-Gate vor Commit).
 
-Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — Legacy-`initialize` und modernes `server/discover` weisen in `ServerInstructions` explizit auf die Resource hin. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview"}`.
+Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — Legacy-`initialize` und modernes `server/discover` weisen in `ServerInstructions` explizit auf die Resource hin. Der Query-Parameter adressiert den Projekt-Key und wird URL-dekodiert. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
@@ -720,13 +743,15 @@ Hierarchie-Typs enthalten. Convention-basierte und Factory-basierte
 Registrierungen werden bewusst nicht über Reflection erkannt. Bei
 0 Treffern wird die Sektion weggelassen.
 
-Wenn der Server ohne `--config` gestartet wurde **und** keine `rules.json` neben der aufgelösten Solution-Datei findet, läuft er mit den `Config`-Defaults. `get_violations` prependet in diesem Fall vor den eigentlichen Lint-Output eine sichtbare Header-Zeile:
+Wenn die Definitionsdatei auf keine gültige Regeldatei zeigt, wird der Projekt-Key
+nicht mit Default-Regeln angelegt. Der Fehler enthält den betroffenen Pfad und
+die Bauanleitung; ein `reload_config`-Fehler bleibt recoverable und lässt die
+aktive Config unverändert.
 
-```
-Basis: Default-Regeln, keine rules.json gefunden
-```
-
-Zusätzlich erscheint beim Server-Start ein `[WARN]: Keine rules.json neben der Solution gefunden (…)` auf `stderr`. **Empfehlung an den Agent-Loop:** beim Auftauchen dieser Header-Zeile den Nutzer darauf hinweisen, dass die Lint-Ergebnisse nicht aus der projekteigenen `rules.json` stammen — entweder `args: ["--mcp-server", "--config", "<pfad>"]` setzen oder `rules.json` neben der Solution-Datei anlegen.
+Eine fehlende oder ungültige Definition ist über `PROJECT_NOT_INITIALIZED`,
+`PROJECT_DEFINITION_INVALID`, `SOLUTION_NOT_FOUND`, `RULES_NOT_FOUND` oder
+`RULES_INVALID` sichtbar; es gibt keine Nachbarsuche und keinen stillen Default-
+Fallback.
 
 ### Error-Reporting
 
@@ -753,11 +778,18 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
 | `RESOURCE_NOT_FOUND` | Datei/Solution-Pfad nicht gefunden (Server-Start oder `get_file_skeleton`) |
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
-| `AMBIGUOUS_SOLUTION` | Mehrere `.sln`/`.slnx` im `cwd` ohne `--path` |
-| `SOLUTION_NOT_LOADED` | Server startete ohne geladene Solution; Tool-Calls liefern diesen Fehler |
+| `AMBIGUOUS_SOLUTION` | Batch-Modus: mehrere `.sln`/`.slnx` im `cwd` ohne `--path`; MCP lehnt `--path` stattdessen per Hard-Cut ab |
 | `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
 | `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
 | `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt |
+| `PROJECT_ROOT_REQUIRED` | Projektgebundener Tool-Aufruf ohne `projectRoot` |
+| `PROJECT_ROOT_INVALID` | `projectRoot` ist kein absoluter Pfad |
+| `PROJECT_NOT_INITIALIZED` | Keine `ainetlinter.project.json` im adressierten Projektroot; Antwort enthält ein kopierfähiges Template |
+| `PROJECT_DEFINITION_INVALID` | Definitionsdatei ist ungültig oder enthält nicht die Pflichtfelder `solution` und `rules` |
+| `SOLUTION_NOT_FOUND` | Die Solution aus der Definitionsdatei existiert nicht |
+| `RULES_NOT_FOUND` | Die Regeldatei aus der Definitionsdatei existiert nicht |
+| `RULES_INVALID` | Die Regeldatei ist lesbar, aber nicht gültig; es werden keine Default-Regeln geladen |
+| `PROJECT_LOAD_FAILED` | Kalt-Load eines Projekt-Keys fehlgeschlagen; der nächste Aufruf versucht den Load erneut |
 
 ### Verhalten bei fehlendem oder falsch benanntem Pflichtparameter
 
@@ -776,7 +808,12 @@ Parameternamen (semantisch passend zum jeweiligen Identifikator-Typ) bleiben dav
 
 ### Verhalten bei nicht-ladbarer Solution
 
-Schlägt der `SourceFileCatalog.LoadAsync` beim Server-Start fehl, wird nur ein `[WARN]: MCP-Server startet ohne geladene Solution (...)` auf `stderr` geschrieben, der Server startet trotzdem und jeder Tool-Call liefert einen `SOLUTION_NOT_LOADED`-Fehler (siehe Error-Codes-Tabelle). Der Server stürzt nicht ab.
+Schlägt der Kalt-Load eines Projekt-Keys fehl, bleibt der Transport verfügbar.
+Der adressierte Tool-Aufruf liefert `PROJECT_LOAD_FAILED` mit Ursprungsmeldung
+und Restore-Hinweis; der FAILED-Marker wird nicht negativ gecacht. Ein späterer
+Aufruf versucht den Key erneut. Ein Fehler beim inkrementellen Refresh lässt den
+letzten guten Stand resident; Antworten tragen bis zur Heilung einen `[WARN]`-
+Kopf und Health meldet `LastGoodStateUtc` sowie `LastLoadError`.
 
 ### Drei-Zustands-Lifecycle des MCP-Servers
 
@@ -786,7 +823,7 @@ Der Server-Start entkoppelt den MCP-Transport-Handshake vom Solution-Load: `init
 | :--- | :--- | :--- |
 | **Loading** (transient) | `[INFO]: Server laedt die Solution noch. ...` (kein `isError`) | Kurz warten und erneut versuchen (Polling im Sekunden-Takt). Echte Tool-Ergebnisse erscheinen, sobald der Load abgeschlossen ist. |
 | **Loaded** (regulär) | Volle Tool-Antworten, `[ERROR]: ...` nur bei tatsächlichen Problemen | Normale Workflow-Schritte ausführen. |
-| **LoadFailed** (terminal) | `[ERROR]: SOLUTION_NOT_LOADED: ...` | Server-Log auf `[WARN]`-Zeilen prüfen, Pfad/Config korrigieren, Server neu starten. |
+| **LoadFailed** (für diesen Key) | `[ERROR]: PROJECT_LOAD_FAILED: ...` | Solution-/Build-Ursache prüfen und denselben Projekt-Key erneut aufrufen. |
 
 Der `Loading`-Zustand ist bewusst **kein** Fehler (`isError == false`), weil der Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden für den ersten Solution-Load. MCP-Hosts (Claude Desktop, eigene Test-Harness) erkennen den Info-Text und können den Aufruf nach kurzer Pause wiederholen.
 

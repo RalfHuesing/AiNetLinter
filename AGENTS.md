@@ -24,6 +24,42 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 > [!IMPORTANT]
 > Dieses Repository registriert sich selbst als **MCP-Server `ainetlinter`** (`.mcp.json`) — für C#-Symbol-/Violation-Abfragen (`get_feature_context`, `find_symbol`, `find_references`, `get_impact`, `get_violations`, `safeguard`, `get_hotspots`, …) **vor** `rg`/`grep` verwenden, siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §1 und `Docs/integration.md` Abschnitt „Tool-vs-`rg`-Empfehlung für Agent-Loops".
 
+### AiNetLinter-MCP: Initialisierung
+
+Der MCP-Server wird ohne projektbezogene `--path`- oder `--config`-Argumente
+registriert:
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server"]
+    }
+  }
+}
+```
+
+Im jeweiligen Projektroot liegt `ainetlinter.project.json` mit den Pflichtfeldern
+`solution` und `rules`. Beide Pfade werden relativ zu dieser Definitionsdatei
+aufgelöst und müssen auf vorhandene Dateien zeigen. Jeder projektgebundene
+Tool-Aufruf erhält zusätzlich den absoluten Parameter `projectRoot`; der einzige
+optionale Filter ist `get_server_health`.
+
+Kopierfähiges Definitionsdatei-Template:
+
+```json
+{
+  "solution": "src/MeinProjekt.slnx",
+  "rules": "rules.json"
+}
+```
+
+`--path` und `--config` bleiben dem Batch-Modus vorbehalten. Die Registry-Defaults
+betragen 45 Minuten Idle-TTL und höchstens 4 residente Projekt-Keys; sie können
+im MCP-Modus mit `--mcp-project-ttl-minutes` und `--mcp-max-projects` angepasst
+werden.
+
 ---
 
 ## 2. Entwicklungs- & Test-Workflow

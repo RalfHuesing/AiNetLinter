@@ -65,20 +65,22 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `CliCommandBuilder.cs`, `LinterArgs.cs`) — System.CommandLine-Argumentparsing;
   Anker für den harten Cut (`--path`/`--config` im MCP-Zweig als harter Fehler
   ablehnen) und die neuen statischen Flags `--mcp-project-ttl-minutes`,
-  `--mcp-max-projects`, `--mcp-daemon-idle-exit-minutes`. (zuletzt: initial)
+  `--mcp-max-projects`, `--mcp-daemon-idle-exit-minutes`; die beiden Registry-
+  Flags sind in step-003 verdrahtet. (zuletzt: step-003)
 - **`src/AiNetLinter/Commands/McpServerCommand.cs`** — statischer MCP-Einstieg
   (`RunAsync` hält heute DIE eine `McpCodeGraphServer`-Instanz); `ResolveConfig`/
   `ResolveMaxLineCount` delegieren seit step-001 auf `ProjectInstanceFactory.MaterializeRules`
   (geteilter Kern mit dem Registry-Pfad), während Pfadauflösung inkl.
   `TryResolveRulesJsonPath` und Solution-Auto-Suche batch-seitig hier bleiben (F8);
-  hier landet ProjectRegistry + Eviction-Timer. (zuletzt: step-001)
+  hier landet ProjectRegistry + Eviction-Timer. (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — instanzbasierter Analysekern
   (F1, kein statisches Mutable-State): Options-Record-Konstruktor, Config-Hot-Swap
   (`ReloadConfig`), `ReloadSolutionAsync`, `DisposeAsync` mit LoadTask-Abbruch,
   Health-Zähler (`Uptime`/`RefreshCount`/`LastStalenessStats`) — wird je Projektkey
   instanziiert, nicht umgebaut. `ServerLoadState` (`Mcp/ServerLoadState.cs`: Loading/Loaded/
   LoadFailed) und die `_loadTask`-Adoption sind der Zustands-/Dedupe-Anker, den ProjectRegistry
-  liest (Review 1: Dedupe im Instanzmuster, nie in der Registry). (zuletzt: initial)
+  liest; der Reload-Pfad unterstützt zusätzlich testbare Registry-Load-Funktionen.
+  (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/McpCodeGraphServerRefresh.cs`** — ausgelagerte
   Staleness-/Refresh-Helper (`Run`/`CacheInitialFileState`/`SweepForNewFiles`),
   wegen der Klassengrenzen aus dem Kern extrahiert (F7); Ansatzpunkt für den
@@ -86,9 +88,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter/Mcp/ServerStalenessStats.cs`** — Staleness-Zähler einer
   Serverinstanz; geht in die pro-Key-Health-Aggregation von Epic A ein.
   (zuletzt: initial)
-- **`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs`** — bäckt heute die eine
-  Serverinstanz per Closure in alle Tool-Lambdas und die Resource-Collection (F2);
-  wird auf `Create(ProjectRegistry registry)` umgestellt. (zuletzt: initial)
+- **`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs`** — baut Tool- und Resource-
+  Collections aus der ProjectRegistry; die projektgebundenen Delegates eröffnen
+  während des vollständigen async-Aufrufs einen Lease. (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — zentraler Result-Builder für Tool-/Resource-
   Antworten (`Error(code, message, context, hint)`, `Recoverable`, `Loading`); Anker für die
   A.5-Fehlerverträge des Epics A (Codes künftig zentral in `Mcp/Projects/ProjectErrorCodes`).
@@ -111,8 +113,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `DuplicateDetection…`, `ServerMaintenance…`) — die 7 Wiring-Stellen (F3):
   Delegate-Closures `(args…) => XxxTool.ExecuteAsync(mcpState, …)`; werden
   mechanisch auf `async (string projectRoot, …) { using var lease =
-  _registry.Lease(projectRoot); return await …(lease.Server, …); }` umgestellt.
-  (zuletzt: initial)
+  _registry.Lease(projectRoot); return await …(lease.Server, …); }` umgestellt;
+  Overview nutzt das URL-kodierte `projectRoot`-Template. (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/Tools/**`** — Tool-Implementierungen mit statischer
   `ExecuteAsync(mcpState, …)`-Signatur; erster Parameter wird zum Lease-Server
   (26× mechanische Anpassung, `projectRoot` erscheint automatisch required im
@@ -137,8 +139,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Dateianfang): synchrones `Lease` mit Key-Kanonisierung, LRU/TTL-Eviction inkl.
   Busy-Guard/Pending-Adoption, FAILED-Marker ohne negatives Caching, TTL-Tick nach
   ParentProcessWatchdog-Muster (`RunEvictionTickAsync` intern auch testtriggerbar),
-  injizierbarer BCL-TimeProvider; Fabrik-Delegat ist vertraglich nicht-blockierend
-  (Komposition mit `TryLoadSolutionAsync` erst im Wiring). (zuletzt: step-002)
+  injizierbarer BCL-TimeProvider; `ProjectToolCall` ergänzt den Root-Guard und
+  `ProjectRootGuardFailure` hält den Fehlervertrag außerhalb verschachtelter Typen.
+  (zuletzt: step-003)
 - **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
   Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
@@ -157,12 +160,13 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `ProjectRegistryTests` (12 Tests: Dedupe/Lock-Hygiene, TTL/LRU, Busy-Guard,
   Pending-Adoption, FAILED-Marker; Harness `FakeClock`/`TrackingServerFactory` mit
   Disposal-Nachweis über Fake-LoadFunc-Cancellation) und `ProjectLeaseTests`
-  (Lease-Disziplin). Contract-Tests (`projectRoot` required) und
-  `FastTests/Mcp/Daemon/` kommen später dazu. (zuletzt: step-002)
+  (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
+  vollständige Nicht-Stress-Lauf umfasst 1678 grüne Tests. (zuletzt: step-003)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
-  Lifetime-/Staleness-/Framing-/E2E-Tests); die sparsamen Daemon-Zwei-Prozess-E2E
-  (B.6) ergänzen diesen Bereich. (zuletzt: initial)
+  Lifetime-/Staleness-/Framing-/E2E-Tests); die Prozess-Harnesses starten MCP
+  jetzt nur mit `--mcp-server`, legen die Fixture-Definition an und ergänzen
+  `projectRoot` in Tool-Calls. (zuletzt: step-003)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)
@@ -173,10 +177,14 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   **`Docs/ROADMAP.md`** · **`README.md`** — Doku-Sammelpflicht-Ziele: Init-Vertrag +
   Definitionsdatei-Referenz, CLI-Flagänderungen, Registrierungsbeispiele/Daemon-Abschnitt,
   Meilensteine, neues Nutzungsmodell; **`AGENTS.md`** (Repo-Root) erhält den Abschnitt
-  „AiNetLinter-MCP: Initialisierung“. (zuletzt: initial)
+  „AiNetLinter-MCP: Initialisierung“; Definitionsdatei-, Hard-Cut-, Health-,
+  Reload- und Overview-Vertrag sind dokumentiert. (zuletzt: step-003)
 - **`.mcp.json` (Repo-Root) + Hermes `config.yaml`** — eigene MCP-Registrierungen;
   Epic-A-DoD reduziert sie auf `command + --mcp-server`, Epic-B-DoD prüft sie live
-  auf Daemon-Modus. (zuletzt: initial)
+  auf Daemon-Modus. (zuletzt: step-003)
+- **`ainetlinter.project.json` (Repo-Root)** — selbstreferenzierende MCP-
+  Definitionsdatei mit `AiNetLinter.slnx` und `rules.json` relativ zur Datei.
+  (zuletzt: step-003)
 - **`.agents/rules/AiNetLinter.mdc`** — auto-generiertes Sync-Target
   (`dotnet run --project src/AiNetLinter -- --sync-agent-rules-only`), sobald
   Regel-/CLI-Texte betroffen sind. (zuletzt: initial)

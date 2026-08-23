@@ -246,11 +246,34 @@ Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleich
 }
 ```
 
-Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter Pfad-Parameter nötig** — der Server sucht beim Start die Ziel-Solution selbst.
+Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder Tool-Aufruf adressiert sein Projekt über den absoluten `projectRoot`.
+
+### Projektdefinition
+
+Im adressierten Projektroot liegt `ainetlinter.project.json`:
+
+```json
+{
+  "solution": "src/MeinProjekt.slnx",
+  "rules": "rules.json"
+}
+```
+
+`solution` und `rules` sind Pflichtfelder. Relative Pfade werden relativ zur
+Definitionsdatei aufgelöst; eine Nachbarsuche oder ein Default-Fallback findet
+im Registry-Pfad nicht statt. Analyse-, Wartungs- und Audit-Tools erwarten
+`projectRoot` als Pflichtparameter. `get_server_health` darf den Parameter als
+optionalen Filter weglassen und aggregiert ohne Filter alle residenten Keys.
 
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
-**`args: ["--mcp-server"]` ohne `--config` ist die empfohlene Registrierung.** Der Server sucht automatisch nach `rules.json` neben der aufgelösten Solution-Datei (`McpServerCommand.TryResolveRulesJsonPath`). Wird keine gefunden, läuft er mit den `Config`-Default-Regeln und signalisiert das in `get_violations` durch eine sichtbare Header-Zeile `Basis: Default-Regeln, keine rules.json gefunden` (siehe [Docs/agent-api.md](agent-api.md#default-config-markierung-in-get_violations)).
+**`args: ["--mcp-server"]` ist die empfohlene Registrierung.** Der Server
+liest die Regeldatei aus `ainetlinter.project.json`; fehlt die Definition oder
+ist sie ungültig, liefert der adressierte Key einen deterministischen Fehler
+mit Template bzw. Restore-Hinweis. `--path` und `--config` werden im MCP-Modus
+abgelehnt. Die Projektregistry verwendet standardmäßig 45 Minuten Idle-TTL und
+höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
+`--mcp-max-projects` angepasst werden.
 
 **stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
 
@@ -284,7 +307,10 @@ Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-P
 
 ### cwd-Verhalten
 
-Der Server läuft im `cwd` des Host-Prozesses. Mit `args: ["--mcp-server"]` (ohne `--path`) sucht er im `cwd` nach genau einer `.sln`- oder `.slnx`-Datei und lädt sie. **Empfehlung:** MCP-Server pro Projekt registrieren, nicht global, damit das `cwd` zum jeweiligen Projekt-Root passt und keine Mehrdeutigkeit entsteht. Die `rules.json`-Auto-Discovery läuft unabhängig vom `cwd` des Host-Prozesses — sie erfolgt relativ zur **aufgelösten** Solution-Pfad-Komponente, nicht zum `cwd`.
+Der MCP-Server benötigt für projektgebundene Aufrufe keinen Projektbezug im
+Host-`cwd`. Der Projektroot wird als absoluter `projectRoot` je Aufruf übergeben;
+die Definitionsdatei löst `solution` und `rules` relativ zu sich selbst auf.
+Damit können mehrere Projekt-Keys in einer Serverinstanz resident sein.
 
 ### Start-Sequenzen: initialize und server/discover
 
@@ -294,22 +320,16 @@ Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten
 
 Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
 
-### Mehrdeutigkeit: mehrere Solutions im cwd
+### Projektauflösung im MCP-Modus
 
-Liegen im `cwd` mehrere `.sln`- oder `.slnx`-Dateien, bricht der Server-Start mit einem `[ERROR]: AMBIGUOUS_SOLUTION`-Fehler ab. Abhilfe: explizit `--path <Datei>` in den `args` setzen:
+Der MCP-Modus löst keine Solution aus dem Host-`cwd` auf und akzeptiert keine
+Legacy-Projektargumente. `--path` oder `--config` in der Registrierung führen
+zu einem deterministischen Startfehler. Stattdessen müssen `solution` und
+`rules` in `ainetlinter.project.json` auf Dateien relativ zur Definition zeigen.
 
-```json
-{
-  "mcpServers": {
-    "ainetlinter": {
-      "command": "ainetlinter",
-      "args": ["--mcp-server", "--path", "./src/MeinProjekt.slnx"]
-    }
-  }
-}
-```
-
-`--path` akzeptiert sowohl eine direkte Solution-Datei (relativ oder absolut) als auch ein Verzeichnis, in dem dann ebenfalls nach genau einer `.sln`/`.slnx` gesucht wird. `0` Kandidaten führen analog zu `[ERROR]: RESOURCE_NOT_FOUND`.
+Die frühere Mehrdeutigkeitsprüfung mehrerer `.sln`/`.slnx`-Dateien bleibt dem
+Batch-Modus vorbehalten; dort gelten weiterhin `--path` und die dokumentierte
+Auto-Discovery.
 
 ### Tool-vs-`rg`-Empfehlung für Agent-Loops
 
@@ -331,9 +351,13 @@ Konkret:
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
 
-### Erstorientierung: Resource `ainetlinter://overview`
+### Erstorientierung: Resource `ainetlinter://overview?projectRoot=<url-encoded>`
 
-Ein Agent, der den Server zum ersten Mal sieht, kann per `resources/read` (`{"uri": "ainetlinter://overview"}`) einen kurzen Ueberblick abrufen: alle Tools in einem Satz sowie den aktuellen Server-Status (geladene Solution, tatsaechlich verwendete `rules.json` oder Hinweis auf Default-Regeln). Details: [Docs/agent-api.md#resource-ainetlinteroverview](agent-api.md#resource-ainetlinteroverview).
+Ein Agent, der den Server zum ersten Mal sieht, kann per `resources/read` mit
+einem URL-kodierten `projectRoot` einen kurzen Ueberblick abrufen: alle Tools in
+einem Satz sowie den Status des adressierten Keys. Beispiel:
+`{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
+Details: [Docs/agent-api.md](agent-api.md).
 
 ### Mehrere parallele Server-Instanzen
 

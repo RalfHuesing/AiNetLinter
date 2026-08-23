@@ -11,7 +11,9 @@ Das Tool läuft in zwei unabhängigen Modi:
 | **CLI-Batch-Modus** | Ein Lint-Lauf gegen eine Solution: Markdown-Report auf stdout, CI-tauglicher Exit-Code, optionaler Auto-Fixer für triviale Verstöße. |
 | **MCP-Server-Modus** (`--mcp-server`) | Stdio-basierter [MCP](https://modelcontextprotocol.io)-Server, der dieselbe Roslyn-basierte Solution-Analyse als einzeln abfragbare Tools (Symbolsuche, Referenzen, One-Shot Feature-Kontext, Impact-Analyse, Lint-Status, Namespace-Baum u. a.) direkt in einen laufenden AI-Coding-Agenten einbindet, statt nur einen fertigen Report auszugeben. |
 
-Beide Modi teilen sich dieselbe Analyse-Engine und dieselbe `rules.json`-Konfiguration.
+Beide Modi teilen sich dieselbe Analyse-Engine. Im Batch-Modus wird die Config
+über `--config` oder die bestehende Batch-Auflösung gewählt; im MCP-Modus wird
+sie je Projekt-Key aus `ainetlinter.project.json` gelesen.
 
 ---
 
@@ -75,12 +77,27 @@ Vollständige Agent-API-Referenz (alle Flags, Workflows, Error-Format): [Docs/ag
 ## MCP-Server-Modus
 
 ```bash
-ainetlinter --mcp-server                              # sucht .sln/.slnx im aktuellen Verzeichnis
-ainetlinter --mcp-server --path ./src/MeinProjekt.slnx # explizite Ziel-Solution
-ainetlinter --mcp-server --parent-pid 1234             # optionale explizite Parent-PID
+ainetlinter --mcp-server                    # Projekt-Keys werden je Tool-Aufruf adressiert
+ainetlinter --mcp-server --parent-pid 1234   # optionale explizite Parent-PID
 ```
 
-Der Server lädt die Solution einmal beim Start über `MSBuildWorkspace` und hält sie über die Prozesslaufzeit resident — Tool-Calls arbeiten gegen den geladenen Zustand statt gegen wiederholte Disk-Scans, und werden bei Dateiänderungen inkrementell aktualisiert (Datei-`mtime` + SHA-256-Hash-Vergleich, kein Komplett-Reload).
+Der MCP-Server hält mehrere Projekt-Keys resident. Jeder projektgebundene
+Tool-Aufruf benötigt den absoluten Parameter `projectRoot`; `get_server_health`
+kann ohne Filter den Gesamtbestand oder mit Filter einen einzelnen Key liefern.
+Im adressierten Projektroot muss `ainetlinter.project.json` liegen:
+
+```json
+{
+  "solution": "src/MeinProjekt.slnx",
+  "rules": "rules.json"
+}
+```
+
+Die beiden Pfade werden relativ zur Definitionsdatei aufgelöst. Tool-Calls
+arbeiten gegen den residenten Zustand und werden bei Dateiänderungen inkrementell
+aktualisiert (Datei-`mtime` + SHA-256-Hash-Vergleich, kein Komplett-Reload).
+`--path` und `--config` sind im MCP-Modus nicht zulässig; die Registry verwendet
+standardmäßig 45 Minuten Idle-TTL und höchstens 4 Projekt-Keys.
 
 Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist auf `tools/list` und `ainetlinter://overview`, statt die Toolliste zu duplizieren.
 
@@ -112,8 +129,8 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `safeguard` | Deterministischer 0–10-Qualitätsscore inkl. Pass/Fail gegen einen Schwellenwert |
 | `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer); `enrichCSharp=true` ordnet sichtbare Treffer geladener C#-Dokumente optional ein |
 | `report_observability_feedback` | Strukturierte Bug-Reports, False-Positives oder Feature-Wünsche von Agenten an das System melden |
-| `reload_config` | `rules.json` zur Laufzeit neu einlesen, ohne Server-Neustart |
-| `get_server_health` | LoadState, geladene Solution/Config, Uptime, aktuelle Call-Log-Aggregate |
+| `reload_config` | Die Regeldatei des adressierten Keys oder einen expliziten Override zur Laufzeit neu einlesen |
+| `get_server_health` | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config, Uptime und Call-Log-Aggregate |
 
 Registrierung im MCP-Host (Claude Code, Cursor, eigene Agent-Loops):
 
