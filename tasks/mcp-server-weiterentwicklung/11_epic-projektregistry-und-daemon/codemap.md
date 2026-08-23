@@ -72,7 +72,7 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `ResolveMaxLineCount` delegieren seit step-001 auf `ProjectInstanceFactory.MaterializeRules`
   (geteilter Kern mit dem Registry-Pfad), während Pfadauflösung inkl.
   `TryResolveRulesJsonPath` und Solution-Auto-Suche batch-seitig hier bleiben (F8);
-  hier landet ProjectRegistry + Eviction-Timer. (zuletzt: step-003)
+  hier landet ProjectRegistry + Eviction-Timer. (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — instanzbasierter Analysekern
   (F1, kein statisches Mutable-State): Options-Record-Konstruktor, Config-Hot-Swap
   (`ReloadConfig`), `ReloadSolutionAsync`, `DisposeAsync` mit LoadTask-Abbruch,
@@ -114,7 +114,7 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Delegate-Closures `(args…) => XxxTool.ExecuteAsync(mcpState, …)`; werden
   mechanisch auf `async (string projectRoot, …) { using var lease =
   _registry.Lease(projectRoot); return await …(lease.Server, …); }` umgestellt;
-  Overview nutzt das URL-kodierte `projectRoot`-Template. (zuletzt: step-003)
+  Overview nutzt das URL-kodierte `projectRoot`-Template. (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Tools/**`** — Tool-Implementierungen mit statischer
   `ExecuteAsync(mcpState, …)`-Signatur; erster Parameter wird zum Lease-Server
   (26× mechanische Anpassung, `projectRoot` erscheint automatisch required im
@@ -140,8 +140,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Busy-Guard/Pending-Adoption, FAILED-Marker ohne negatives Caching, TTL-Tick nach
   ParentProcessWatchdog-Muster (`RunEvictionTickAsync` intern auch testtriggerbar),
   injizierbarer BCL-TimeProvider; `ProjectToolCall` ergänzt den Root-Guard und
-  `ProjectRootGuardFailure` hält den Fehlervertrag außerhalb verschachtelter Typen.
-  (zuletzt: step-003)
+  `ProjectRootGuardFailure` hält den Fehlervertrag außerhalb verschachtelter Typen;
+  Step-004-Anker sind zusätzlich `ProjectCreationReservation` und `ProjectLoadFailure`.
+  (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
   Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
@@ -161,12 +162,12 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Pending-Adoption, FAILED-Marker; Harness `FakeClock`/`TrackingServerFactory` mit
   Disposal-Nachweis über Fake-LoadFunc-Cancellation) und `ProjectLeaseTests`
   (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
-  vollständige Nicht-Stress-Lauf umfasst 1678 grüne Tests. (zuletzt: step-003)
+  vollständige Nicht-Stress-Lauf umfasst 1680 grüne Tests. (zuletzt: step-004)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die Prozess-Harnesses starten MCP
   jetzt nur mit `--mcp-server`, legen die Fixture-Definition an und ergänzen
-  `projectRoot` in Tool-Calls. (zuletzt: step-003)
+  `projectRoot` in Tool-Calls. (zuletzt: step-004)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)
