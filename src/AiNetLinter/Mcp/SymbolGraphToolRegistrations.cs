@@ -107,8 +107,15 @@ internal static class SymbolGraphToolRegistrations
         McpCodeGraphServer mcpState)
     {
         tools.Add(McpServerTool.Create(
-            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-                GetImpactTool.ExecuteAsync(mcpState, new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth), ct),
+            (string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
+                string? detailLevel = null,
+                int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
+                int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
+                CancellationToken ct = default) =>
+                GetImpactTool.ExecuteAsync(
+                    mcpState,
+                    new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                    ct),
             new McpServerToolCreateOptions
             {
                 Name = "get_impact",
@@ -120,9 +127,17 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
         "Ohne Parameter: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
         "ODER symbolIdentifier angeben, nie beide — Identifikator-Format wie find_references. " +
-        "depth (hard cap 3) wirkt nur im Symbol-Branch und liefert dort dieselbe " +
-        "structuredContent.callSites/completeness-Struktur wie find_references; die " +
-        "Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
+        "detailLevel: 'callers' (Default) oder 'change-context'. change-context ist nur im " +
+        "Git-Diff-Modus zulaessig und nie zusammen mit symbolIdentifier (fuer den Kontext eines " +
+        "einzelnen Symbols get_feature_context nutzen) und liefert ein strukturiertes Objekt mit " +
+        "geaenderten Dateien/Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen " +
+        "Violations und empfohlenen dotnet test-Befehlen; maxChangedSymbols (Default 20, Cap 100) " +
+        "kappt die geaenderten Symbole deterministisch VOR Call-Site-/Test-/Violation-Analyse, " +
+        "maxTestsPerSymbol (Default 10, Cap 50) die Testmethoden je Symbol, maxResults kappet nur " +
+        "die Text-Topliste. depth wirkt nur im Symbol-Branch und ist im gesamten Git-Branch " +
+        "(callers UND change-context) wirkungslos; im Symbol-Branch liefert depth (Default 1, " +
+        "hard cap 3) dieselbe structuredContent.callSites/completeness-Struktur wie " +
+        "find_references; die Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -2,14 +2,17 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -161,6 +164,93 @@ public sealed class GetImpactToolIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ChangeContext_ReturnsFullContractOnMiniWorkspace()
+    {
+        using var workspace = new ChangeContextMiniWorkspace();
+        workspace.ChangeBothMethodBodiesWithoutCommitting();
+        using var solutionOwner = workspace.CreateSolution();
+        using var state = CreateChangeContextServer(solutionOwner);
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, null, 50, 1, DetailLevel: "change-context"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var structured = result.StructuredContent!.Value;
+        var raw = structured.GetRawText();
+
+        // Beide geaenderten Methoden inkl. der privaten LogInternal erscheinen als changedSymbols.
+        Assert.Equal(2, structured.GetProperty("changedSymbols").GetArrayLength());
+        Assert.Contains("OrderService.PlaceAsync", raw, StringComparison.Ordinal);
+        Assert.Contains("AuditLogger.LogInternal", raw, StringComparison.Ordinal);
+        var privateEntry = structured.GetProperty("changedSymbols").EnumerateArray()
+            .Single(symbol => symbol.GetProperty("documentationCommentId").GetString()!.Contains("LogInternal", StringComparison.Ordinal));
+        Assert.Equal("Private", privateEntry.GetProperty("accessibility").GetString());
+
+        // Call-Sites fuer PlaceAsync (Invocation im Testprojekt).
+        var callSites = structured.GetProperty("callSites");
+        Assert.True(callSites.GetArrayLength() > 0);
+        Assert.Contains(callSites.EnumerateArray(), callSite => callSite.GetProperty("symbolName").GetString() == "OrderService.PlaceAsync");
+
+        // Nicht-leere statische Test-Zuordnung plus empfohlene dotnet test-Befehle.
+        Assert.NotEmpty(structured.GetProperty("testAssociations").EnumerateArray());
+        var commands = structured.GetProperty("recommendedTestCommands");
+        Assert.True(commands.GetArrayLength() > 0);
+        Assert.All(commands.EnumerateArray(), command => Assert.StartsWith("dotnet test ", command.GetString()!, StringComparison.Ordinal));
+
+        // Vollstaendigkeit: nichts trunkiert bei zwei Symbolen gegen den Default-Cap.
+        var completeness = structured.GetProperty("completeness");
+        Assert.Equal(2, completeness.GetProperty("changedSymbolsTotal").GetInt32());
+        Assert.Equal(2, completeness.GetProperty("changedSymbolsShown").GetInt32());
+        Assert.False(completeness.GetProperty("symbolsTruncated").GetBoolean());
+        Assert.False(completeness.GetProperty("testsTruncated").GetBoolean());
+
+        // Violations sind strikt diffbezogen: nur aus Hunks oder Spannen GEZEIGTER Symbole.
+        AssertViolationsWithinHunksOrShownSpans(structured, workspace.RootPath);
+
+        // Textform: Counts-Zeile plus Sufficiency-Hint (vollstaendiges Ergebnis).
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Change-Context:", text, StringComparison.Ordinal);
+        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeContextWithCap_ShowsDeterministicSubsetWithMetadata()
+    {
+        using var workspace = new ChangeContextMiniWorkspace();
+        workspace.ChangeBothMethodBodiesWithoutCommitting();
+        using var solutionOwner = workspace.CreateSolution();
+        using var state = CreateChangeContextServer(solutionOwner);
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state,
+            new GetImpactInput(null, null, 50, 1, DetailLevel: "change-context", MaxChangedSymbols: 1),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var structured = result.StructuredContent!.Value;
+        var raw = structured.GetRawText();
+
+        var completeness = structured.GetProperty("completeness");
+        Assert.Equal(2, completeness.GetProperty("changedSymbolsTotal").GetInt32());
+        Assert.Equal(1, completeness.GetProperty("changedSymbolsShown").GetInt32());
+        Assert.True(completeness.GetProperty("symbolsTruncated").GetBoolean());
+
+        // Deterministische Kappung nach Projekt → Datei → Startzeile → Symbol-ID:
+        // App.OrderService.PlaceAsync (Projekt "App") zeigt, App.Core.AuditLogger.LogInternal faellt weg.
+        var shown = Assert.Single(structured.GetProperty("changedSymbols").EnumerateArray().ToArray());
+        Assert.Contains("PlaceAsync", shown.GetProperty("documentationCommentId").GetString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("LogInternal", raw, StringComparison.Ordinal);
+
+        // Der weggekappte Symbol-Eintrag taucht NIRGENDS auf — auch nicht in callSites/
+        // testAssociations/violations (der komplette Raw-Text enthaelt ihn bereits nicht).
+
+        // Textform: Meta-Zeile statt Sufficiency-Hint.
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", text, StringComparison.Ordinal);
+        Assert.Contains("[Teilergebnis:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GitImpactMiniFixtureWorkspace_DisposeTwice_DeletesRootWithoutThrowing()
     {
         var workspace = new GitImpactMiniFixtureWorkspace();
@@ -172,4 +262,41 @@ public sealed class GetImpactToolIntegrationTests
         Assert.Null(exception);
         Assert.False(Directory.Exists(rootPath));
     }
+
+    private static McpCodeGraphServer CreateChangeContextServer(RoslynTestSolution solutionOwner) =>
+        new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
+            Catalog: null,
+            // Deterministische Violation-Regel fuer die diffbezogene Filterung (Klassendeklarationen).
+            Config: new Config
+            {
+                Global = new GlobalConfig { EnforceSealedClasses = true },
+                Metrics = new MetricsConfig()
+            },
+            ReadOnlySolutionSnapshot: solutionOwner.Solution)));
+
+    private static void AssertViolationsWithinHunksOrShownSpans(JsonElement structured, string rootPath)
+    {
+        foreach (var violation in structured.GetProperty("violations").EnumerateArray())
+        {
+            var violationPath = Path.GetFullPath(violation.GetProperty("filePath").GetString()!);
+            var line = violation.GetProperty("lineNumber").GetInt32();
+            var inHunks = structured.GetProperty("changedFiles").EnumerateArray().Any(file =>
+                SameWorkspaceFile(rootPath, file.GetProperty("filePath").GetString()!, violationPath)
+                && file.GetProperty("ranges").EnumerateArray().Any(range =>
+                    range.GetProperty("startLine").GetInt32() <= line
+                    && line < range.GetProperty("startLine").GetInt32()
+                    + range.GetProperty("lineCount").GetInt32()));
+            var inSpan = structured.GetProperty("changedSymbols").EnumerateArray().Any(symbol =>
+                SameWorkspaceFile(rootPath, symbol.GetProperty("filePath").GetString()!, violationPath)
+                && symbol.GetProperty("startLine").GetInt32() <= line
+                && line <= symbol.GetProperty("endLine").GetInt32());
+            Assert.True(inHunks || inSpan, $"Violation ausserhalb von Hunk/Spanne: {violationPath}:{line}");
+        }
+    }
+
+    private static bool SameWorkspaceFile(string rootPath, string relativePath, string absolutePath) =>
+        string.Equals(
+            Path.GetFullPath(Path.Combine(rootPath, relativePath)),
+            absolutePath,
+            StringComparison.OrdinalIgnoreCase);
 }

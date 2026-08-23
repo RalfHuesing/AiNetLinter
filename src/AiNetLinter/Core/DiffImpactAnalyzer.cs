@@ -104,13 +104,41 @@ public sealed class DiffImpactAnalyzer
         var hunkRanges = ParseGitDiffHunkRanges(diffOutput);
         var changedSymbols = await GetChangedSymbolsFromHunksAsync(
             request.Solution, repoRoot, hunkRanges, request.Scope);
+        var shown = ApplyChangedSymbolCap(changedSymbols, request.ChangedSymbolCap);
 
         return new DiffImpactAnalysis(
             repoRoot,
             request.GitSinceRef,
             BuildChangedFiles(hunkRanges),
-            changedSymbols.Select(match => match.Entry).ToList(),
-            await BuildReferencesAsync(changedSymbols, request.Solution));
+            shown.Matches.Select(match => match.Entry).ToList(),
+            await BuildReferencesAsync(shown.Matches, request.Solution),
+            shown.TotalBeforeCap,
+            shown.Matches.Select(match => match.Symbol).ToList());
+    }
+
+    /// <summary>
+    /// Deterministische Kappung der geaenderten Symbole NACH der Symbolermittlung und VOR der
+    /// teuren Referenz-Stufe: bei wirksamem Cap wird erst nach Projekt → Datei → Startzeile →
+    /// Symbol-ID sortiert (Pfadvergleich ordinal case-insensitive konsistent zum Bestand) und
+    /// dann gekappt, sodass Call-Site-Suche und Folgeanalysen nur noch GEZEIGTE Symbole sehen.
+    /// Ohne wirksamen Cap bleibt die bestehende Reihenfolge unangetastet — der callers-Pfad ist
+    /// damit verhaltensidentisch. Die Gesamtzahl VOR der Kappung wird mitgeliefert.
+    /// </summary>
+    private static (List<ChangedSymbolMatch> Matches, int TotalBeforeCap) ApplyChangedSymbolCap(
+        List<ChangedSymbolMatch> matches, int cap)
+    {
+        if (matches.Count <= cap)
+        {
+            return (matches, matches.Count);
+        }
+
+        var ordered = matches
+            .OrderBy(match => match.Entry.ProjectName, StringComparer.Ordinal)
+            .ThenBy(match => match.Entry.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(match => match.Entry.StartLine)
+            .ThenBy(match => match.Entry.SymbolId, StringComparer.Ordinal)
+            .ToList();
+        return (ordered.Take(cap).ToList(), matches.Count);
     }
 
     private static void LogGitWarning(bool verbose)
@@ -436,10 +464,18 @@ internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Ent
 /// Eingangsdaten eines Analyse-Kern-Laufs: Solution, Ziel-Pfad, Git-Ref, Protokollierung und der
 /// Symbolermittlungs-Scope (<see cref="DiffSymbolScope"/>) — Parameter-Object fuer den gemeinsamen
 /// Kern beider benannter Eintrittspunkte. Die Zaehler sind optional (Null-Verhalten ohne Uebergabe).
+/// <see cref="ChangedSymbolCap"/> ist die Obergrenze GEZEIGTER geaenderter Symbole; die Kappung
+/// greift im Kern VOR der Referenz-Stufe. Default <see cref="int.MaxValue"/> = unbegrenzt
+/// (Bestandsverhalten beider Scopes).
 /// </summary>
 internal sealed record DiffAnalysisRequest(
-    Solution Solution, string TargetPath, string? GitSinceRef, bool Verbose, DiffSymbolScope Scope,
-    DiffImpactCounters? Counters = null);
+    Solution Solution,
+    string TargetPath,
+    string? GitSinceRef,
+    bool Verbose,
+    DiffSymbolScope Scope,
+    DiffImpactCounters? Counters = null,
+    int ChangedSymbolCap = int.MaxValue);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle

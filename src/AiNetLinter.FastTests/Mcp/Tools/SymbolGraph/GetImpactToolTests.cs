@@ -211,4 +211,78 @@ public sealed class GetImpactToolTests
         Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Treffer gesamt", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeContextWithSymbolIdentifier_ReturnsRecoverableInvalidArgumentWithFeatureContextHint()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "Greeter.Greet", 50, 1, DetailLevel: "change-context"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("get_feature_context", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownDetailLevel_ReturnsRecoverableInvalidArgumentWithAllowedValues()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, null, 50, 1, DetailLevel: "deep-dive"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("callers", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("change-context", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("callers")]
+    [InlineData("CALLERS")]
+    public async Task ExecuteAsync_DetailLevelCallersVariants_SelectLegacyGitBranch(string? detailLevel)
+    {
+        // null/leer/"callers" (auch gross/klein) waehlt den unveraenderten Bestands-Pfad.
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, null, 50, 1, DetailLevel: detailLevel), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Keine betroffenen Aufrufstellen gefunden", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeContextWithoutRepository_ReturnsEmptyContractStructureWithSufficiencyHint()
+    {
+        // Kein Repo / leerer Diff ist KEIN Fehlerfall: leere, aber vertragsgueltige Struktur
+        // samt Sufficiency-Hinweis (nichts wurde trunkiert).
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, null, 50, 1, DetailLevel: "Change-Context"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+
+        Assert.NotNull(result.StructuredContent);
+        var structured = result.StructuredContent!.Value;
+        Assert.Equal("gitDiff", structured.GetProperty("mode").GetString());
+        Assert.Equal("change-context", structured.GetProperty("detailLevel").GetString());
+        Assert.Empty(structured.GetProperty("changedFiles").EnumerateArray());
+        Assert.Empty(structured.GetProperty("changedSymbols").EnumerateArray());
+        Assert.Empty(structured.GetProperty("testAssociations").EnumerateArray());
+        Assert.Empty(structured.GetProperty("violations").EnumerateArray());
+        var completeness = structured.GetProperty("completeness");
+        Assert.Equal(0, completeness.GetProperty("changedSymbolsTotal").GetInt32());
+        Assert.False(completeness.GetProperty("symbolsTruncated").GetBoolean());
+    }
 }

@@ -48,12 +48,19 @@ internal sealed record ChangedSymbolEntry(
 /// dieses Objekt; die bestehende <see cref="DiffImpactAnalyzer.AnalyzeEntriesAsync"/>-Ausgabe ist
 /// der feldidentische Wrapper auf <see cref="References.CallSites"/>.
 /// </summary>
+/// <param name="ChangedSymbolsTotal">Anzahl erkannter geaenderter Symbole VOR einer Kappung; ohne
+/// wirksamen Cap identisch mit <c>ChangedSymbols.Count</c>.</param>
+/// <param name="ShownSymbolHandles">Die ISymbol-Handles der GEZEIGTEN (ggf. gekappten) Symbole in
+/// identischer Reihenfolge wie <see cref="DiffImpactAnalysis.ChangedSymbols"/> — Basis fuer
+/// Folgeanalysen ohne Symbol-Re-Resolution.</param>
 internal sealed record DiffImpactAnalysis(
     string RepositoryRoot,
     string? SinceRef,
     IReadOnlyList<ChangedFileRange> ChangedFiles,
     IReadOnlyList<ChangedSymbolEntry> ChangedSymbols,
-    ReferenceTraversalResult References);
+    ReferenceTraversalResult References,
+    int ChangedSymbolsTotal = 0,
+    IReadOnlyList<ISymbol>? ShownSymbolHandles = null);
 
 /// <summary>
 /// Instrumentierte Laufzaehler fuer die Einmal-Ausfuehrungs-Nachweise des diff-bezogenen
