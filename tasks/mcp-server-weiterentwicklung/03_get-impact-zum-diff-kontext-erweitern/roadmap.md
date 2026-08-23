@@ -3,7 +3,7 @@ status: active  # active | done
 task: 03_get-impact-zum-diff-kontext-erweitern
 derived_from: konzept.md
 created_at: 2026-08-22
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 created_by_model: ox-alpha
 created_by_model_knowledge_cutoff: unbekannt
 ---
@@ -96,7 +96,7 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       `GetImpactTool.ExecuteSymbolBranchAsync` hängt bei vollständigen
       Ergebnissen konsistent `McpSufficiencyHints.Append` an wie
       `FindReferencesTool` (Audit A.3).
-- [ ] EPIC-2: Analyzer-Kern — strukturiertes `DiffImpactAnalysis`-Ergebnis &
+- [x] EPIC-2: Analyzer-Kern — strukturiertes `DiffImpactAnalysis`-Ergebnis &
       breiter Diff-Symbolscanner — `DiffImpactAnalyzer` liefert intern ein
       strukturiertes Ergebnisobjekt (RepositoryRoot, SinceRef,
       ChangedFiles inkl. kompakter Hunk-Ranges, ChangedSymbols, References),
@@ -114,22 +114,23 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       Projekt, Datei, Deklarationszeilen. Der bisherige `callers`-Scope
       (public/internal Methoden/Konstruktoren) bleibt unverändert
       (Konzept §Scope Must-have, Audit A.2/D.4).
-      *Planungsnotiz:* Epic wird in zwei Steps geführt — step-002 (Teil 1:
+      *Planungsnotiz:* Epic wurde in zwei Steps geführt — step-002 (Teil 1:
       strukturiertes `DiffImpactAnalysis`-Ergebnisobjekt, Wrapper-Analyse,
       kompakte Hunk-Ranges, `ChangedSymbolEntry` mit stabiler ID;
-      Scanner-Scope blieb schmal; done/approved, Commit 5b26c63b) und
+      done/approved, Commit 5b26c63b) und
       step-003 (Teil 2: breiter Scannerpfad inkl. TD-002-ID-Sonderfall
-      für lokale Funktionen; in Arbeit). Epic erst abhaken, wenn beide
-      Teile erledigt sind.
-- [ ] EPIC-3: Testfundament & Einmal-Ausführungs-Nachweis — neutrale
+      für lokale Funktionen; done/approved, Commit 85c7fdce). Beide Teile
+      erledigt → Epic abgehakt.
+- [x] EPIC-3: Testfundament & Einmal-Ausführungs-Nachweis — neutrale
       Test-Fixture (mind. zwei Produktionsprojekte + ein Testprojekt; Diff
       ändert zwei Methoden in zwei Dateien, davon eine privat ohne externe
       Aufrufstellen) als gemeinsame Grundlage der Konzept-Testfälle;
       instrumentierter Test/Counter weist pro `change-context`-Aufruf nach:
       Git einmal, Testsolution einmal, Linter einmal (Konzept §Tests, DoD;
-      Audit C/D.5). Grundlage für die Snapshot-Kompatibilitätsverifikation
-      des `callers`-Modus über alle folgenden Umbauten hinweg.
-- [ ] EPIC-4: Gebatchte Test-Zuordnung & recommendedTestCommands —
+      Audit C/D.5). *Abgeschlossen:* step-004 (Fixture, Batch-Zuordnung,
+      Counter-Kanal; approved via Korrektur step-006); der Linter-Beleg
+      (LintRuns) folgt mit EPIC-5/step-007.
+- [x] EPIC-4: Gebatchte Test-Zuordnung & recommendedTestCommands —
       `TestCoverageScanner` um echte Batch-Zuordnung erweitern: Testdokumente
       pro Aufruf höchstens einmal parsen/semantisch auswerten und gegen
       **alle** gekappten geänderten Symbole matchen — kein vollständiger
@@ -139,6 +140,8 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       deduplizierte `dotnet test`-Filterbefehle pro betroffenem Testprojekt
       als vertragliches `recommendedTestCommands` (ehemals Nice-to-have,
       hochgestuft — Konzept §Must-have/E).
+      *Abgeschlossen:* step-004 (done/approved, Commit 7b3b0284) inkl.
+      Korrektur step-006 (Filter-Quoting, approved, Commit 4b53579a).
 - [ ] EPIC-5: Solutionweite Violations & diffbezogene Filterung — Violations
       werden einmal solutionweit berechnet („Linter genau einmal") und danach
       auf geänderte Hunks bzw. Deklarationsspannen gezeigter Symbole
@@ -146,6 +149,9 @@ alle Epics erweitern `get_impact` additiv. Non-Goals stehen im Konzept
       die Antwort diffbezogen bleibt und kein zweites ungescoptes
       `get_violations` entsteht (Konzept §Filterregeln, §Performance-Regeln;
       Basis `GetViolationsScanner`).
+      *Planungsnotiz:* in Arbeit → step-007 (interne Violations-Stufe:
+      Berechnung + diffbezogene Filterung + LintRuns-Inkrement + Tests;
+      Tool-Anschluss bleibt EPIC-6).
 - [ ] EPIC-6: `get_impact`-Vertrag „change-context" & strukturierte Antwort —
       neue Optionen additiv in `GetImpactInput`: `detailLevel` (`callers` |
       `change-context`, Default `callers`), `maxChangedSymbols` (Default 20,

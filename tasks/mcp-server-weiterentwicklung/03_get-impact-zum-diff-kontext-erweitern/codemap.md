@@ -2,7 +2,7 @@
 task: 03_get-impact-zum-diff-kontext-erweitern
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 ---
 
 # CodeMap: 03_get-impact-zum-diff-kontext-erweitern
@@ -153,8 +153,19 @@ Produktionscode:
   ist nur noch Weiterleitung. (zuletzt: step-004)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs`** —
   Violations-Ermittlung (solutionweit/scoped) für `get_violations`; Basis
-  für „Linter genau einmal" plus diffbezogene Filterung auf Hunks/
-  Symbolspannen (EPIC-5). (zuletzt: roadmap)
+  für „Linter genau einmal“ plus diffbezogene Filterung auf Hunks/
+  Symbolspannen (EPIC-5). Enthält die LinterEngine-Beschaffung (konkreter
+  `Config`-Downcast, `noCache: true`) und das Result-Muster
+  (`GetViolationsResult` mit IsMalfunction/IsTruncated). (zuletzt: roadmap)
+- **`src/AiNetLinter/Mcp/Tools/Analysis/ViolationScopeFilter.cs`** —
+  gemeinsame Scope-Filter-/Sortierlogik (Datei→Projekt-Map, stabile
+  FilePath→Zeile→Regel-Sortierung) für `get_violations`/`pattern_detect`;
+  Ordnungs- und Pfadvergleichs-Muster für die diffbezogene
+  Violation-Filterung (EPIC-5). (zuletzt: step-007-Planung)
+- **`src/AiNetLinter/Core/LinterEngine.cs`** — `RunAsync(Solution, noCache,
+  cacheTtlMinutes, ct)` als einzige Lint-Ausführungsquelle; Wiederverwendungs-
+  punkt für „Linter genau einmal“ in der internen Violations-Stufe (EPIC-5).
+  (zuletzt: step-007-Planung)
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — Antwort-Helper (`Text<T>`
   mit structuredContent, `Recoverable`, `InvalidArgument`); Formatkanal
   für die strukturierte `change-context`-Antwort (EPIC-6). (zuletzt:
