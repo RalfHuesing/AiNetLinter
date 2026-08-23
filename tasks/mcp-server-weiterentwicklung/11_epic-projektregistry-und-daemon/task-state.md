@@ -63,7 +63,7 @@ Falls `<task-dir>/config.md` existiert, hier die Overrides dokumentieren.
 Andernfalls gelten die Defaults aus `../spec.md`.
 
 ```
-max_fix_rounds_per_step: 3        # Kettenlänge über `corrects`, siehe ../spec.md §10.5
+max_fix_rounds_per_step: 6        # Nutzerbewusst verdoppelt; Kettenlänge über `corrects`, siehe ../spec.md §10.5
 soft_step_checkin_interval: 40    # weicher Deckel, kein Hard-Abort — siehe ../spec.md §10.5
 max_batch_items: 8          # siehe ../spec.md §10.6 (Micro-Batches innerhalb eines Epics)
 max_batch_diff_lines: 40    # siehe ../spec.md §10.6

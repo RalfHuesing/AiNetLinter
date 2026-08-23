@@ -42,6 +42,14 @@ Testkatalog) bleiben unverändert.
 
 Arbeite autonom weiter bis zum nächsten `blocked`- oder Check-in-Punkt.
 
+## Erweiterte Korrekturfreigabe
+
+Der Nutzer hebt die Verdict-/Korrekturketten-Schranke für diesen Task bewusst
+auf das Doppelte an: `max_fix_rounds_per_step` wird von 3 auf 6 erhöht. Bei
+weiteren `issues`-Verdicts die Korrektursteps daher bis zu diesem neuen Limit
+normal fortsetzen und nicht vorzeitig wegen des ursprünglichen Limits
+unterbrechen.
+
 ## Fortsetzungsregeln
 
 - Keine Historienmanipulation und kein Push.
