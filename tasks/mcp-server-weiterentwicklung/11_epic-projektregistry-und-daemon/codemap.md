@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T23:05:00+02:00
+last_updated: 2026-08-24T00:28:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -143,7 +143,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `ProjectRootGuardFailure` hält den Fehlervertrag außerhalb verschachtelter Typen;
   Step-004-Anker sind zusätzlich `ProjectCreationReservation` und `ProjectLoadFailure`;
   `ProjectRegistryOptions.BeforeCreationReservation` ist der ausdrücklich test-only
-  Seam für das deterministische Lookup→Reservation-Interleaving. (zuletzt: step-006)
+  Seam für das deterministische Lookup→Reservation-Interleaving sowie der
+  test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
   Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
 
@@ -165,16 +166,17 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
   `ProjectRegistryTests` verankert zusätzlich den Lookup→Reservation-Race-Anker
   mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
-  Nicht-Stress-Lauf umfasst 1681 grüne Tests. (zuletzt: step-006)
+  Nicht-Stress-Lauf umfasst 1682 grüne Tests. (zuletzt: step-007)
+- **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
-  gemeinsame FakeClock-/Factory-Doubles für die Registry-Tests. (zuletzt: step-005)
+  gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)
 - **`src/AiNetLinter.IntegrationTests/Mcp/**`** — Subprozess-/JSON-RPC-Integrationstests
   (u. a. `McpHandshakeToolRegistrationTests`, `McpServerCommandContractTests`,
   Lifetime-/Staleness-/Framing-/E2E-Tests); die Prozess-Harnesses starten MCP
   jetzt nur mit `--mcp-server`, legen die Fixture-Definition an und ergänzen
   `projectRoot` in Tool-Calls; `McpServerCommandContractTests` verankert zusätzlich
-  den Loading→Fault→Release-Vertrag mit erstem `PROJECT_LOAD_FAILED` und anschließendem
-  frischem Retry. (zuletzt: step-006)
+  den Loading→Fault→Release-Vertrag mit erstem `PROJECT_LOAD_FAILED`, direkter
+  Originalexception-Assertion und anschließendem frischem Retry. (zuletzt: step-007)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)
