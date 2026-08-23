@@ -18,6 +18,9 @@ current_step: step-006
 - **Aktueller Schritt:** `step-006` (in_progress — deterministische
   Regressionstest-Korrektur für die zwei Findings aus step-005)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
+- **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
+  Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
+  Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
 - **Zuletzt aktualisiert:** 2026-08-23T12:48:00+02:00
