@@ -2,7 +2,7 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-23T16:00:00+02:00
+last_updated: 2026-08-23T18:45:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 3  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-003
@@ -15,7 +15,8 @@ current_step: step-003
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-003` (in_progress)
+- **Aktueller Schritt:** `step-003` (in_progress — PAUSIERT auf Nutzeranweisung,
+  Übergabe an anderes Modell, siehe `UEBERGABE.md`; WIP als eigener Commit gesichert)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
