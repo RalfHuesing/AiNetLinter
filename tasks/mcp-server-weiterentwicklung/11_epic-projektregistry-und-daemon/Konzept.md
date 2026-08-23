@@ -1,12 +1,12 @@
 ---
-status: offen
+status: ready
 type: konzept (epic-roadmap, autonom umsetzbar)
 project_kind: brownfield
 estimated_scope: large
 priority: P1
-agent_role: .agents/Agent-Scaffolding/dev-loop/planning/orchestrator.md
+agent_role: .agents/Agent-Scaffolding/dev-loop/drift-loop/orchestrator.md
 rules_dir: .agents/rules
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 open_questions: []
 herkunft: "Diskussion 2026-08-22 (ox-alpha + Nutzer): Global registrierter MCP-Server mit hartkodierter --path-Bindung versagt im Multi-Projekt-/Multi-Agent-Alltag (stille Fehl-Bindung, wiederholte Solution-Loads, Loading-Waits). Epic-Roadmap in zwei Epics: A Projektregistry (transportneutral), B Daemon-Modus."
 ---
