@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T12:58:00+02:00
+last_updated: 2026-08-23T13:16:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -87,6 +87,14 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs`** — bäckt heute die eine
   Serverinstanz per Closure in alle Tool-Lambdas und die Resource-Collection (F2);
   wird auf `Create(ProjectRegistry registry)` umgestellt. (zuletzt: initial)
+- **`src/AiNetLinter/Mcp/McpToolResults.cs`** — zentraler Result-Builder für Tool-/Resource-
+  Antworten (`Error(code, message, context, hint)`, `Recoverable`, `Loading`); Anker für die
+  A.5-Fehlerverträge des Epics A (Codes künftig zentral in `Mcp/Projects/ProjectErrorCodes`).
+  Verifiziert per Skeleton 2026-08-23. (zuletzt: initial)
+- **`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`** — Options-Record (`required
+  Catalog/Console/Config`, `LoadFunc`) mit bestehender `From(Parameters)`-Fabrik;
+  Materialisierungsziel von `ProjectInstanceFactory` (Review 3) — kein zweites Options-Muster
+  erfinden. Verifiziert per Skeleton 2026-08-23. (zuletzt: initial)
 - **`src/AiNetLinter/Mcp/McpServerOptionsBuilder.cs`** — fluenter Builder rund um
   `McpServerOptions` (Name/Version/Instructions/Tool-/ResourceCollections).
   (zuletzt: initial)

@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-23T12:58:00+02:00
+last_updated: 2026-08-23T13:16:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -85,12 +85,13 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
   - [ ] A.2 Definitionsdatei `ainetlinter.project.json`: Pflichtfelder `solution` +
         `rules`, relativ zur Definitionsdatei aufgelöst (nie zum cwd), Existenzprüfung
         beider Ziele, kein Fallback/Raten (Nachbar-Fallback `TryResolveRulesJsonPath`
-        stirbt im MCP-Pfad ersatzlos).
+        stirbt im MCP-Pfad ersatzlos). (in Arbeit → step-001)
   - [ ] A.4 Neue Klassen unter `src/AiNetLinter/Mcp/Projects/` gemäß Strukturbaum
         (`ProjectDefinition`, `ProjectDefinitionLoader`, `ProjectEntry`, `ProjectLease`,
         `ProjectInstanceFactory`, `ProjectRegistry`) — schlank wegen Lint-Grenzen (F7,
         Options-Records); Config-Materialisierung als gemeinsamer Helper für Batch und
-        Registry (Review 3).
+        Registry (Review 3). (Teil 1 in Arbeit → step-001: ProjectDefinition/-Loader/
+        -InstanceFactory + ProjectErrorCodes; Entry/Lease/Registry folgen)
   - [ ] A.3 Harter Cut: `projectRoot` ausnahmslos Pflicht UND absolut (einzige Ausnahme:
         optionaler Filter bei `get_server_health`); `--path`/`--config` im MCP-Modus
         entfernt — unbekanntes Argument = harter Fehler; Batch unverändert; neue
@@ -100,7 +101,8 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `PROJECT_NOT_INITIALIZED` (mit vorgeschriebenem kopierfähigem Template-Block),
         `PROJECT_DEFINITION_INVALID`, `SOLUTION_NOT_FOUND`, `RULES_NOT_FOUND` —
         deterministisch, englisch, mit Bauanleitung; `AMBIGUOUS_SOLUTION` entfällt im
-        MCP-Pfad.
+        MCP-Pfad. (loader-seitig in Arbeit → step-001: NOT_INITIALIZED/DEFINITION_INVALID/
+        SOLUTION_NOT_FOUND/RULES_NOT_FOUND; ROOT_* mit dem Wiring-Step)
   - [ ] A.4 Wiring: alle 6 Registration-Klassen + `OverviewResourceRegistration` auf
         `using var lease = _registry.Lease(projectRoot)` umstellen — Lambda MUSS async
         sein und awaiten (Review R2/A); `McpServerOptionsFactory.Create(ProjectRegistry)`;
