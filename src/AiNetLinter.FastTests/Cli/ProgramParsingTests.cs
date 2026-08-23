@@ -53,4 +53,58 @@ public sealed class ProgramParsingTests
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.Equal(1234, parsed.ParentPid);
     }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_ProjectTtl_AsDecimalInvariant()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", "--mcp-project-ttl-minutes", "0.05" });
+        Assert.Empty(result.Errors);
+
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal(0.05m, parsed.McpProjectTtlMinutes);
+    }
+
+    [Fact]
+    public void CliCommandBuilder_WithoutProjectFlags_RegistryDefaultsRemainEffective()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server" });
+        var parsed = CliCommandBuilder.Parse(result, options);
+
+        Assert.Null(parsed.McpProjectTtlMinutes);
+        Assert.Null(parsed.McpMaxProjects);
+
+        var args = new LinterArgs
+        {
+            McpServer = parsed.McpServer,
+            McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
+            McpMaxProjects = parsed.McpMaxProjects,
+            Verbose = false,
+        };
+        Assert.Null(args.Validate());
+    }
+
+    [Fact]
+    public void CliCommandBuilder_Parses_MaxProjects()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", "--mcp-max-projects", "7" });
+        Assert.Empty(result.Errors);
+
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal(7, parsed.McpMaxProjects);
+    }
+
+    [Theory]
+    [InlineData("--mcp-project-ttl-minutes", "abc")]
+    [InlineData("--mcp-project-ttl-minutes", "1,5")]
+    [InlineData("--mcp-max-projects", "vier")]
+    public void CliCommandBuilder_InvalidFlagValues_AreHardParseErrors(string flag, string value)
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", flag, value });
+
+        Assert.NotEmpty(result.Errors);
+    }
 }

@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
@@ -13,68 +12,86 @@ namespace AiNetLinter.FastTests.Mcp;
 [Trait("Category", "Unit")]
 public sealed class McpServerCommandTests
 {
+    // Harter Cut: im MCP-Modus traegt jeder Aufruf seinen Projektbezug selbst (projectRoot +
+    // Definitionsdatei); --path/--config sind harte Startfehler.
+
     [Fact]
-    public void ResolveSolutionPathOrError_TwoSlnxFiles_ReportsAmbiguousSolution()
+    public void Validate_McpServerWithPath_IsHardError()
     {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        tempDir.CreateFile("First.slnx", "");
-        tempDir.CreateFile("Second.slnx", "");
+        var args = new LinterArgs { McpServer = true, TargetPath = @"C:\repos\proj\App.slnx", Verbose = false };
 
-        var console = new RecordingLintConsole();
-        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
+        var error = args.Validate();
 
-        Assert.Null(result);
-        var error = Assert.Single(console.ErrorLines);
-        Assert.Contains("AMBIGUOUS_SOLUTION", error);
-        Assert.Contains("First.slnx", error);
-        Assert.Contains("Second.slnx", error);
+        Assert.NotNull(error);
+        Assert.Contains("--path", error, StringComparison.Ordinal);
+        Assert.Contains("nicht zulaessig", error, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ResolveSolutionPathOrError_NoSolutionFound_ReportsResourceNotFound()
+    public void Validate_McpServerWithConfig_IsHardError()
     {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var console = new RecordingLintConsole();
-        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
+        var args = new LinterArgs { McpServer = true, ConfigPath = "rules.json", Verbose = false };
 
-        Assert.Null(result);
-        var error = Assert.Single(console.ErrorLines);
-        Assert.Contains("RESOURCE_NOT_FOUND", error);
+        var error = args.Validate();
+
+        Assert.NotNull(error);
+        Assert.Contains("--config", error, StringComparison.Ordinal);
+        Assert.Contains("nicht zulaessig", error, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ResolveSolutionPathOrError_SingleCandidate_ReturnsIt()
+    public void Validate_McpServerWithoutProjectFlags_Passes()
     {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var sln = tempDir.CreateFile("Only.slnx", "");
+        var args = new LinterArgs { McpServer = true, Verbose = false };
 
-        var console = new RecordingLintConsole();
-        var result = McpServerCommand.ResolveSolutionPathOrError(tempDir.DirectoryPath, console);
-
-        Assert.Equal(sln, result);
-        Assert.Empty(console.ErrorLines);
+        Assert.Null(args.Validate());
     }
 
     [Fact]
-    public void ResolveSolutionPathOrError_MissingPath_UsesCurrentDirectory()
+    public void Validate_McpServer_NonPositiveTtlMinutes_IsHardError()
     {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var originalDir = Directory.GetCurrentDirectory();
-        try
+        var args = new LinterArgs { McpServer = true, McpProjectTtlMinutes = 0m, Verbose = false };
+
+        var error = args.Validate();
+
+        Assert.NotNull(error);
+        Assert.Contains("--mcp-project-ttl-minutes", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_McpServer_FractionalTtlAndPositiveMaxProjects_Pass()
+    {
+        var args = new LinterArgs
         {
-            var sln = tempDir.CreateFile("Only.slnx", "");
-            Directory.SetCurrentDirectory(tempDir.DirectoryPath);
+            McpServer = true,
+            McpProjectTtlMinutes = 0.05m,
+            McpMaxProjects = 4,
+            Verbose = false,
+        };
 
-            var console = new RecordingLintConsole();
-            var result = McpServerCommand.ResolveSolutionPathOrError("", console);
+        Assert.Null(args.Validate());
+    }
 
-            Assert.Equal(sln, result);
-            Assert.Empty(console.ErrorLines);
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(originalDir);
-        }
+    [Fact]
+    public void Validate_McpServer_NonPositiveMaxProjects_IsHardError()
+    {
+        var args = new LinterArgs { McpServer = true, McpMaxProjects = -1, Verbose = false };
+
+        var error = args.Validate();
+
+        Assert.NotNull(error);
+        Assert.Contains("--mcp-max-projects", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_BatchWithoutPath_StillRequiresPath()
+    {
+        var args = new LinterArgs { Verbose = false };
+
+        var error = args.Validate();
+
+        Assert.NotNull(error);
+        Assert.Contains("--path ist erforderlich", error, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -124,47 +141,16 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public void ResolveConfig_ExplicitConfigPath_TakesPrecedenceOverAutoDiscovered()
+    public void ResolveConfig_BatchResolutionStaysExplicitOverGivenResolvedPath()
     {
-        using var solutionDir = TestTempDirectory.Create("ainetlinter-mcp-sol-");
         using var explicitDir = TestTempDirectory.Create("ainetlinter-mcp-exp-");
 
-        var slnxPath = solutionDir.CreateFile("Only.slnx", "");
-
-        // Auto-discovered rules.json (next to the solution) with MaxLineCount: 7
-        solutionDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
-
-        // Explicit rules.json in a separate dir with MaxLineCount: 5
         var explicitConfigPath = explicitDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
 
-        var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = slnxPath, Verbose = false };
+        var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = "", Verbose = false };
 
-        // TryResolveRulesJsonPath returns the explicit path, not the auto-discovered one
-        var resolved = McpServerCommand.TryResolveRulesJsonPath(args.ConfigPath, slnxPath);
-        Assert.Equal(explicitConfigPath, resolved);
-
-        // ResolveConfig with the resolved path uses the explicit config (MaxLineCount: 5)
-        var config = McpServerCommand.ResolveConfig(args, resolved);
+        var config = McpServerCommand.ResolveConfig(args, explicitConfigPath);
         Assert.NotNull(config);
         Assert.Equal(5, config.Metrics.MaxLineCount);
-    }
-
-    [Fact]
-    public void ResolveConfig_NoExplicitConfigPath_AutoDiscoversRulesJsonInSolutionDirectory()
-    {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var slnxPath = tempDir.CreateFile("Only.slnx", "");
-        var rulesJsonPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 11 } }""");
-
-        var args = new LinterArgs { ConfigPath = null, TargetPath = tempDir.DirectoryPath, Verbose = false };
-
-        // TryResolveRulesJsonPath auto-discovers the rules.json next to the solution
-        var resolved = McpServerCommand.TryResolveRulesJsonPath(null, slnxPath);
-        Assert.Equal(rulesJsonPath, resolved);
-
-        // ResolveConfig with the resolved path uses the auto-discovered config
-        var config = McpServerCommand.ResolveConfig(args, resolved);
-        Assert.NotNull(config);
-        Assert.Equal(11, config.Metrics.MaxLineCount);
     }
 }

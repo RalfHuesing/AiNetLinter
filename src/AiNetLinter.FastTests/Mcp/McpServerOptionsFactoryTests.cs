@@ -4,27 +4,26 @@ using System;
 using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Tests fuer <see cref="McpServerOptionsFactory"/>: konzentriert auf den zentralen Scope-Hint,
-/// der via <c>McpServerOptions.ServerInstructions</c> in der
-/// <c>initialize</c>-Antwort des Servers landet. Aus <c>McpServerCommandTests.cs</c> ausgelagert,
-/// weil diese Datei bereits am <c>MaxLineCount</c>-Limit (500) liegt und das Hinzufuegen
-/// weiterer Tests dort <c>CliIntegrationTests</c> brechen wuerde.
+/// Tests fuer <see cref="McpServerOptionsFactory"/>: zentraler Instructions-Vertrag
+/// (projectRoot-Pflicht + Definitionsdatei) inkl. UTF8-Budget und Toolbestands-Paritaet.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpServerOptionsFactoryTests
 {
     [Fact]
-    public void Create_ServerInstructionsContainsScopeHint()
+    public void Create_ServerInstructionsCarriesProjectRootContract()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
+        Assert.Contains("projectRoot", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter.project.json", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);
@@ -36,8 +35,7 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void Create_ServerInstructionsStaysWithinUtf8Budget()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
         var registeredNames = options.ToolCollection!
             .Select(t => t.ProtocolTool.Name)
@@ -57,8 +55,7 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void ToolRegistration_MatchesOverviewResourceTools()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
         var registeredNames = options.ToolCollection!
             .Select(t => t.ProtocolTool.Name)
             .ToHashSet(StringComparer.Ordinal);
@@ -77,9 +74,11 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("ainetlinter://overview", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("Sufficiency", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("isError=true", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Edits", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Impact", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Gate", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("get_feature_context -> get_symbol_body", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("find_references/get_impact", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("get_violations", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("enrichCSharp=true", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("RULES_INVALID", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("PROJECT_NOT_INITIALIZED", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }

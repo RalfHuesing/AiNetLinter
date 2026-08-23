@@ -1,9 +1,11 @@
 #nullable enable
 
+using System;
 using System.IO;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -14,7 +16,7 @@ namespace AiNetLinter.FastTests.Mcp.Projects;
 public sealed class ProjectInstanceFactoryTests
 {
     [Fact]
-    public void Create_FromDefinition_LoadsConfigFromDefinitionRulesPath()
+    public void TryCreate_FromDefinition_MaterializesConfigFromDefinitionRulesPath()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-");
         tempDir.CreateFile("proj/app.slnx", "");
@@ -24,16 +26,17 @@ public sealed class ProjectInstanceFactoryTests
         WriteDefinition(tempDir);
         var definition = LoadDefinition(tempDir);
 
-        var options = ProjectInstanceFactory.Create(definition);
+        var captured = CaptureOptions(definition);
 
-        Assert.Equal(definition.RulesPath, options.ResolvedConfigPath);
-        Assert.False(options.UsedDefaultConfig);
-        Assert.Equal(42, options.MaxLineCount);
-        Assert.Equal(42, options.Config.Metrics.MaxLineCount);
+        Assert.True(captured.Creation.Succeeded);
+        Assert.Equal(definition.RulesPath, captured.Options!.ResolvedConfigPath);
+        Assert.False(captured.Options.UsedDefaultConfig);
+        Assert.Equal(42, captured.Options.MaxLineCount);
+        Assert.Equal(42, captured.Options.Config.Metrics.MaxLineCount);
     }
 
     [Fact]
-    public void Create_MaxLineCount_MatchesLegacyBatchPipeline()
+    public void TryCreate_MaxLineCount_MatchesLegacyBatchPipeline()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-legacy-");
         tempDir.CreateFile("proj/app.slnx", "");
@@ -42,12 +45,47 @@ public sealed class ProjectInstanceFactoryTests
             """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
         WriteDefinition(tempDir);
 
-        var options = ProjectInstanceFactory.Create(LoadDefinition(tempDir));
+        var captured = CaptureOptions(LoadDefinition(tempDir));
         var legacy = McpServerCommand.ResolveMaxLineCount(
             new LinterArgs { TargetPath = tempDir.DirectoryPath, Verbose = false },
             rulesPath);
 
-        Assert.Equal(legacy, options.MaxLineCount);
+        Assert.Equal(legacy, captured.Options!.MaxLineCount);
+    }
+
+    [Fact]
+    public void TryCreate_ReadableButInvalidRules_FailsWithRulesInvalidInsteadOfDefaults()
+    {
+        using var tempDir = TestTempDirectory.Create("project-factory-invalid-");
+        tempDir.CreateFile("proj/app.slnx", "");
+        tempDir.CreateFile("proj/config/rules.json", "{ this is not valid json ");
+        WriteDefinition(tempDir);
+        var definition = LoadDefinition(tempDir);
+
+        var creation = ProjectInstanceFactory.TryCreate(
+            definition,
+            _ => throw new InvalidOperationException("Ungueltige Regeldatei darf keine Options erzeugen."));
+
+        Assert.False(creation.Succeeded);
+        Assert.Null(creation.Server);
+        Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
+        Assert.Contains(definition.RulesPath, creation.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryCreate_MissingRulesFile_FailsWithRulesNotFound()
+    {
+        using var tempDir = TestTempDirectory.Create("project-factory-missing-");
+        tempDir.CreateFile("proj/app.slnx", "");
+        WriteDefinition(tempDir, rulesRelative: "config/fehlt.json");
+        var definition = LoadDefinition(tempDir);
+
+        var creation = ProjectInstanceFactory.TryCreate(
+            definition,
+            _ => throw new InvalidOperationException("Fehlende Regeldatei darf keine Options erzeugen."));
+
+        Assert.False(creation.Succeeded);
+        Assert.Equal(ProjectErrorCodes.RulesNotFound, creation.ErrorCode);
     }
 
     [Fact]
@@ -59,6 +97,22 @@ public sealed class ProjectInstanceFactoryTests
         Assert.Equal(new MetricsConfig().MaxLineCount, result.Config.Metrics.MaxLineCount);
     }
 
+    /// <summary>
+    /// Materialisiert die Options fuer einen Definitionssatz, ohne eine Serverinstanz zu bauen:
+    /// der Callback fängt die Options ab und meldet einen Test-Marker statt einer Instanz.
+    /// </summary>
+    private static (ProjectInstanceCreation Creation, McpCodeGraphServerOptions? Options) CaptureOptions(
+        ProjectDefinition definition)
+    {
+        McpCodeGraphServerOptions? captured = null;
+        var creation = ProjectInstanceFactory.TryCreate(definition, options =>
+        {
+            captured = options;
+            return ProjectInstanceCreation.Failed("TEST_CAPTURE", "Test materialisiert nur die Options.");
+        });
+        return (creation, captured);
+    }
+
     private static ProjectDefinition LoadDefinition(TestTempDirectory tempDir)
     {
         var result = ProjectDefinitionLoader.Load(Path.Combine(tempDir.DirectoryPath, "proj"));
@@ -66,8 +120,8 @@ public sealed class ProjectInstanceFactoryTests
         return result.Definition!;
     }
 
-    private static void WriteDefinition(TestTempDirectory tempDir) =>
+    private static void WriteDefinition(TestTempDirectory tempDir, string rulesRelative = "config/rules.json") =>
         tempDir.CreateFile(
             Path.Combine("proj", "ainetlinter.project.json"),
-            """{ "solution": "app.slnx", "rules": "config/rules.json" }""");
+            $$"""{ "solution": "app.slnx", "rules": "{{rulesRelative}}" }""");
 }

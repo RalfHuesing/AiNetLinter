@@ -431,7 +431,8 @@ internal sealed class TrackingServerFactory
         set => Volatile.Write(ref failLoads, value ? 1 : 0);
     }
 
-    internal Func<ProjectDefinition, McpCodeGraphServer> Factory => CreateServer;
+    internal Func<ProjectDefinition, ProjectInstanceCreation> Factory =>
+        definition => ProjectInstanceCreation.Resident(CreateServer(definition));
 
     internal McpCodeGraphServer CreateServer(ProjectDefinition definition)
     {

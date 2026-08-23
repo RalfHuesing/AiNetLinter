@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using AiNetLinter.Mcp;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp;
@@ -21,8 +22,7 @@ public sealed class SymbolGraphToolRegistrationsTests
     [Fact]
     public void ToolDescriptions_FindReferencesAndGetImpact_MentionNodeHardCap()
     {
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
         var descriptions = options.ToolCollection!
             .ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool.Description!);

@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.TestKit;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,8 +30,7 @@ public sealed class McpObservabilityIntegrationTests
     [Fact]
     public void McpServerOptionsFactory_RegistersAllExpectedTools()
     {
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
-        var options = McpServerOptionsFactory.Create(state);
+        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
         Assert.NotNull(options.ToolCollection);
         Assert.True(options.ToolCollection.Count >= 20);
@@ -129,7 +129,8 @@ public sealed class McpObservabilityIntegrationTests
             clientToServer.Reader.AsStream(),
             serverToClient.Writer.AsStream());
 
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
+        var registry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
 
         var services = new ServiceCollection();
         var builder = services.AddMcpServer();
@@ -153,7 +154,7 @@ public sealed class McpObservabilityIntegrationTests
             Name = "ainetlinter",
             Version = "1.0.96",
         };
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(state, sp);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, sp);
 
         await using var server = McpServer.Create(serverTransport, serverOptions, serviceProvider: sp);
         using var cts = new CancellationTokenSource();
@@ -167,7 +168,10 @@ public sealed class McpObservabilityIntegrationTests
         Assert.Contains(tools, t => t.Name == "get_index_scope");
 
         // 2. Reguläres Tool aufrufen (wird als tool_call mit Request & Response geloggt)
-        var indexResult = await client.CallToolAsync("get_index_scope", new Dictionary<string, object?>(), cancellationToken: cts.Token);
+        var indexResult = await client.CallToolAsync(
+            "get_index_scope",
+            new Dictionary<string, object?> { ["projectRoot"] = root },
+            cancellationToken: cts.Token);
         Assert.NotNull(indexResult);
 
         // 3. Feedback-Tool aufrufen (wird als tool_call und als feedback geloggt)
