@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-23T14:45:00+02:00
+last_updated: 2026-08-23T16:00:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 2  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-002
+total_steps: 3  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-003
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -15,7 +15,7 @@ current_step: step-002
 - **Task-Status:** `executing`
 - **Steps gesamt:** 0 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-002` (in_progress)
+- **Aktueller Schritt:** `step-003` (in_progress)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
@@ -48,6 +48,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-A | done | Projektregistry-Grundlage: Definitionsdatei, Loader, Fehlerverträge, Config-Materialisierung | - | e0b25033 | 2026-08-23 (approved) | e0b25033 / 7ee7d805 |
 | step-002 | EPIC-A | done | Projektregistry-Kern: Lease, Entry, Registry inkl. Eviction und FAILED-Marker | - | a80ec821 | 2026-08-23 (approved) | a80ec821 / e8b4e367 |
+| step-003 | EPIC-A | in_progress | MCP-Wiring auf die Projektregistry: Tool-Leases, harter Cut, Health-/Reload-/Overview-Vertrag | - | - | - | Plan: 10c9ea79 |
 
 ## Config (optional)
 
