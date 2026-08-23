@@ -189,39 +189,30 @@ internal static class McpServerCommand
     /// Loest den konfigurierten Zeilen-Grenzwert auf — bei gesetztem <paramref name="resolvedConfigPath"/>
     /// wird die zugehoerige <c>rules.json</c> geladen (best effort), sonst der
     /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
-    /// auf derselben Solution respektieren wuerde. <paramref name="resolvedConfigPath"/> wird von
-    /// <see cref="RunAsync"/> aus <see cref="TryResolveRulesJsonPath"/> durchgereicht, damit
-    /// Auto-Discovery und explizites <c>--config</c> strukturell gleich behandelt werden.
-    /// <see langword="internal"/> statt <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
+    /// auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive Defaults
+    /// delegiert an <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>,
+    /// denselben geteilten Kern wie der Registry-Pfad; die Pfadaufloesung (Auto-Discovery,
+    /// Nachbar-Fallback) bleibt batch-seitig.
     /// </summary>
-    internal static int ResolveMaxLineCount(LinterArgs args, string? resolvedConfigPath = null)
-    {
-        var path = resolvedConfigPath ?? args.ConfigPath;
-        if (string.IsNullOrWhiteSpace(path))
-            return new MetricsConfig().MaxLineCount;
-
-        var config = ConfigLoader.TryLoadConfig(path, isRequired: false);
-        return config?.Metrics.MaxLineCount ?? new MetricsConfig().MaxLineCount;
-    }
+    internal static int ResolveMaxLineCount(LinterArgs args, string? resolvedConfigPath = null) =>
+        AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules(
+            resolvedConfigPath ?? args.ConfigPath,
+            isRequired: false).MaxLineCount;
 
     /// <summary>
     /// Loest die vollstaendige Linter-<see cref="Config"/> auf — bei gesetztem
     /// <paramref name="resolvedConfigPath"/> wird die zugehoerige <c>rules.json</c> geladen (best
     /// effort), sonst der <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein
-    /// CLI-Lint-Lauf auf derselben Solution respektieren wuerde. <paramref name="resolvedConfigPath"/>
-    /// wird von <see cref="RunAsync"/> aus <see cref="TryResolveRulesJsonPath"/> durchgereicht, damit
-    /// Auto-Discovery und explizites <c>--config</c> strukturell gleich behandelt werden.
-    /// <see langword="internal"/> statt <c>private</c>, damit die Config-Verdrahtung direkt testbar ist.
+    /// CLI-Lint-Lauf auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive
+    /// Defaults delegiert an
+    /// <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>, denselben
+    /// geteilten Kern wie der Registry-Pfad; die Pfadaufloesung (Auto-Discovery, Nachbar-Fallback)
+    /// bleibt batch-seitig.
     /// </summary>
-    internal static Config ResolveConfig(LinterArgs args, string? resolvedConfigPath = null)
-    {
-        var path = resolvedConfigPath ?? args.ConfigPath;
-        if (string.IsNullOrWhiteSpace(path))
-            return new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
-
-        return ConfigLoader.TryLoadConfig(path, isRequired: false)
-            ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() };
-    }
+    internal static Config ResolveConfig(LinterArgs args, string? resolvedConfigPath = null) =>
+        AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules(
+            resolvedConfigPath ?? args.ConfigPath,
+            isRequired: false).Config;
 
     /// <summary>
     /// Loest den Ziel-Solution-Pfad auf (Datei direkt, Verzeichnis mit Auto-Suche, Default = cwd).
