@@ -89,7 +89,8 @@ Produktionscode:
   SymbolId-Vertrag nennt seit step-003 den lokalen-Funktions-Sonderfall.
   Seit step-004 zusaetzlich `DiffImpactCounters` (GitRuns/TestSolutionScans/
   LintRuns-Felder, Interlocked-Inkremente an den Stufen, Null-Verhalten ohne
-  Uebergabe). (zuletzt: step-004)
+  Uebergabe); seit step-007 hat jedes Feld seine benannte Produktions-
+  Inkrement-Stelle — LintRuns in der Violations-Stufe. (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
   flache BFS-Aufrufer-Traversierung für `find_references` und den
   `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
@@ -151,12 +152,24 @@ Produktionscode:
   Filter = Vereinigung der Trefferklassen, ordinal sortiert) fuer das Tool
   und `recommendedTestCommands`; `GetTestContextTool.BuildRecommendedCommands`
   ist nur noch Weiterleitung. (zuletzt: step-004)
+- **`src/AiNetLinter/Mcp/Tools/Analysis/DiffViolationScanner.cs`** (neu in
+  step-007) — interne Violations-Stufe des diff-bezogenen Pfads:
+  `CollectAsync(DiffViolationScanRequest)` führt den Linter GENAU EINMAL
+  solutionweit über den gemeinsamen Helper aus und inkrementiert LintRuns
+  unmittelbar davor (Skip-empty: leerer Input → kein Lauf, kein Inkrement);
+  pure `FilterDiffRelevantViolations` behält Hunk-Treffer ∪
+  Spannen-Treffer GEZEIGTER Symbole (Dedup, Sortierung analog
+  Scope-Sortierung) und normalisiert zentral die drei Pfadsemantiken
+  (Hunks repo-root-relativ, Symbole solution-relativ, Violations absolut).
+  EPIC-6 bindet diese Stufe an den Antwortvertrag. (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/GetViolationsScanner.cs`** —
   Violations-Ermittlung (solutionweit/scoped) für `get_violations`; Basis
   für „Linter genau einmal“ plus diffbezogene Filterung auf Hunks/
-  Symbolspannen (EPIC-5). Enthält die LinterEngine-Beschaffung (konkreter
-  `Config`-Downcast, `noCache: true`) und das Result-Muster
-  (`GetViolationsResult` mit IsMalfunction/IsTruncated). (zuletzt: roadmap)
+  Symbolspannen (EPIC-5). Seit step-007 sitzt hier die EINZIGE
+  LinterEngine-Beschaffung als gemeinsamer Helper `RunSolutionLintAsync`
+  (konkreter `Config`-Downcast, `noCache: true`; geteilt von `get_violations`
+  und der Violations-Stufe) plus das Result-Muster (`GetViolationsResult`
+  mit IsMalfunction/IsTruncated). (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Tools/Analysis/ViolationScopeFilter.cs`** —
   gemeinsame Scope-Filter-/Sortierlogik (Datei→Projekt-Map, stabile
   FilePath→Zeile→Regel-Sortierung) für `get_violations`/`pattern_detect`;
@@ -232,11 +245,19 @@ Tests:
   private Methode ohne Call-Sites per Naming Convention, Wrapper≡Batch,
   Command-Dedup je Testprojekt, leere Zielliste ohne Scan.
   (zuletzt: step-004)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/Analysis/DiffViolationFilterTests.cs`**
+  (neu in step-007) — 7 Unit-Tests der diffbezogenen Violations-Stufe:
+  Hunk-/Spannen-/Randwert-Semantik inkl. `LineCount=0`-Hunks, zentrale
+  Pfadnormalisierung (repo-relativ ↔ solution-relativ ↔ absolut, Trenner/
+  Case tolerant), Dedup bei Doppelbedingung + deterministische Sortierung
+  sowie Stage-Tests mit echter LinterEngine auf der ScenarioFactory
+  (LintRuns==1; leerer Input → kein Lint/Inkrement). (zuletzt: step-007)
 - **`src/AiNetLinter.IntegrationTests/Core/DiffImpactAnalyzerOnceOnlyTests.cs`**
   (neu in step-004) — zusammengesetzter change-context-Lauf auf dem
-  `ChangeContextMiniWorkspace`: GitRuns==1 UND TestSolutionScans==1 bei N=2
-  Symbolen, LintRuns bleibt 0 (Nachweis inkl. Linter folgt mit EPIC-5).
-  (zuletzt: step-004)
+  `ChangeContextMiniWorkspace`: seit step-007 weist er das volle Tripel
+  GitRuns==1 && TestSolutionScans==1 && LintRuns==1 nach (Violations-Stufe
+  läuft mit DEMSELBEN Counters-Objekt über echte Workspace-Hunks/-Symbole).
+  (zuletzt: step-007)
 - **`src/AiNetLinter.IntegrationTests/Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs`**
   — Integrationstests von `get_impact` im echten Server-Kontext; seit
   step-002 direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf der
