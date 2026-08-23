@@ -70,10 +70,10 @@ public sealed class McpServerCommandContractTests
             _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
         var failedText = Assert.IsType<TextContentBlock>(Assert.Single(failed.Content)).Text;
         var warning = Assert.Single(scenario.Console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
-        var originalMessage = warning[(warning.LastIndexOf(": ", StringComparison.Ordinal) + 2)..];
+        Assert.Contains("[WARN]", warning, StringComparison.Ordinal);
+        Assert.Contains(originalException.Message, warning, StringComparison.Ordinal);
         Assert.Contains("PROJECT_LOAD_FAILED", failedText, StringComparison.Ordinal);
-        Assert.NotEmpty(originalMessage);
-        Assert.Contains(originalMessage, failedText, StringComparison.Ordinal);
+        Assert.Contains(originalException.Message, failedText, StringComparison.Ordinal);
         Assert.Contains(scenario.SolutionPath, failedText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("automatisch neu", failedText, StringComparison.Ordinal);
 

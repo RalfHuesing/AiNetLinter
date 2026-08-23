@@ -24,6 +24,8 @@ internal sealed record ProjectRegistryOptions(
 
     // Test-only barrier for the former lookup-to-reservation interleaving; production leaves it null.
     internal Action? BeforeCreationReservation { get; init; }
+
+    internal Func<string, ProjectCreationAttempt, ProjectCreationAttempt?>? BeforePublishCreation { get; init; }
 }
 
 /// <summary>
@@ -175,6 +177,16 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         {
             RemoveReservation(key, reservation);
             throw;
+        }
+
+        if (options.BeforePublishCreation is { } beforePublishCreation)
+        {
+            var winnerAttempt = beforePublishCreation(key, attempt);
+            if (winnerAttempt is not null)
+            {
+                var winner = PublishCreation(key, reservation, winnerAttempt, retired);
+                winner.Lease?.Dispose();
+            }
         }
 
         return PublishCreation(key, reservation, attempt, retired);

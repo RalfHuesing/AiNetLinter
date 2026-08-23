@@ -28,6 +28,7 @@ internal sealed class TrackingServerFactory
     private int loadsCancelled;
     private int serversDisposed;
     private int failLoads;
+    private readonly Dictionary<McpCodeGraphServer, int> disposalCounts = new();
 
     internal int InstancesCreated => instancesCreated;
 
@@ -36,6 +37,16 @@ internal sealed class TrackingServerFactory
     internal int LoadsStarted => Volatile.Read(ref loadsStarted);
 
     internal int ServersDisposed => Volatile.Read(ref serversDisposed);
+
+    internal Action<McpCodeGraphServer>? OnServerDisposed { get; set; }
+
+    internal int DisposalsFor(McpCodeGraphServer server)
+    {
+        lock (disposalCounts)
+        {
+            return DisposalsForUnderLock(server);
+        }
+    }
 
     internal bool FailLoads
     {
@@ -54,7 +65,8 @@ internal sealed class TrackingServerFactory
 
     internal McpCodeGraphServer CreatePendingLoadServer()
     {
-        return new McpCodeGraphServer(new McpCodeGraphServerOptions
+        McpCodeGraphServer? server = null;
+        server = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
             Catalog = null,
             Console = LinterConsole.Instance,
@@ -67,17 +79,19 @@ internal sealed class TrackingServerFactory
                 token.Register(() =>
                 {
                     Interlocked.Increment(ref loadsCancelled);
-                    Interlocked.Increment(ref serversDisposed);
+                    RecordDisposal(server!);
                     pending.TrySetCanceled(token);
                 });
                 return pending.Task;
             },
         });
+        return server;
     }
 
     private McpCodeGraphServer CreateFailedLoadServer()
     {
-        return new McpCodeGraphServer(new McpCodeGraphServerOptions
+        McpCodeGraphServer? server = null;
+        server = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
             Catalog = null,
             Console = LinterConsole.Instance,
@@ -89,11 +103,28 @@ internal sealed class TrackingServerFactory
                 token.Register(() =>
                 {
                     Interlocked.Increment(ref loadsCancelled);
-                    Interlocked.Increment(ref serversDisposed);
+                    RecordDisposal(server!);
                 });
                 return Task.FromException<SourceFileCatalog?>(new InvalidOperationException("Katalog kann nicht geladen werden."));
             },
         });
+        return server;
+    }
+
+    private void RecordDisposal(McpCodeGraphServer server)
+    {
+        Interlocked.Increment(ref serversDisposed);
+        lock (disposalCounts)
+        {
+            disposalCounts[server] = DisposalsForUnderLock(server) + 1;
+        }
+
+        OnServerDisposed?.Invoke(server);
+    }
+
+    private int DisposalsForUnderLock(McpCodeGraphServer server)
+    {
+        return disposalCounts.TryGetValue(server, out var count) ? count : 0;
     }
 
     private static Config MinimalConfig() => new()
