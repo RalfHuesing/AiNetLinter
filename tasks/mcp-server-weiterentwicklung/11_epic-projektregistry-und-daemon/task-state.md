@@ -47,7 +47,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-A | done | Projektregistry-Grundlage: Definitionsdatei, Loader, Fehlerverträge, Config-Materialisierung | - | e0b25033 | 2026-08-23 (approved) | e0b25033 / 7ee7d805 |
-| step-002 | EPIC-A | in_progress | Projektregistry-Kern: Lease, Entry, Registry inkl. Eviction und FAILED-Marker | - | - | - | Plan: 46efe531 |
+| step-002 | EPIC-A | done | Projektregistry-Kern: Lease, Entry, Registry inkl. Eviction und FAILED-Marker | - | a80ec821 | 2026-08-23 (approved) | a80ec821 / e8b4e367 |
 
 ## Config (optional)
 

@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-23T14:05:41+02:00
+last_updated: 2026-08-23T15:35:00+02:00
 ---
 
 # Tech-Debt-Log: 11_epic-projektregistry-und-daemon
@@ -33,6 +33,8 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | TD-001 | `src/AiNetLinter/Mcp/Projects/ProjectInstanceFactory.cs` + `src/AiNetLinter/Configuration/ConfigLoader.cs` | mittel | nein | Defekte (lesbare, aber ungültige) rules.json fällt im künftigen Registry-Pfad stumm auf Defaults zurück — kein deterministischer Fehlervertrag dafür |
 | TD-002 | `src/AiNetLinter/Configuration/ConfigLoader.cs` | niedrig | nein | Diagnosen von TryLoadConfig gehen hart auf Console.Error (Kanal nicht injizierbar) — Misch-Thema erst mit dem Daemon (Epic B) |
 | TD-003 | `src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs` | niedrig | nein | Load(null/leerer projectRoot) löst implizit cwd-relativ auf — Ankerregel formal verletzt bis der Wiring-Guard existiert |
+| TD-004 | `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | mittel | nein | Soft-Cap: bei nur-busy Register wächst der Bestand über MaxProjects; TTL-Tick reklamiert Überhang nicht aktiv — Kapazitätsentscheidung fehlt bis Epic B |
+| TD-005 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` + `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | niedrig | nein | Disposal faulted Loads über den Sync-Eviction-Pfad schreibt [WARN] auf den nicht injizierbaren Console-Kanal (verwandt TD-002) |
 
 ## Einträge
 
@@ -95,4 +97,43 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Root erfolgt; dort sinnvoll einen Contract-Test ergänzen, der das absichert (z. B. über
   die Argumentvalidierung vor dem ersten Registry-Zugriff).
 - **Auto-Fixable:** nein — Verhaltensfrage (wo validiert wird) mit Test-Entscheidung.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-004 — Soft-Cap: kein aktives Reklamieren von Überhang über MaxProjects [Priorität: mittel] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-23; vom Coder im step-result.md selbst gemeldet)
+- **Ort:** `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs:186-207` (`EvictLeastRecentlyUsed`) und `:154-177` (`InsertResident`)
+- **Befund:** Ist das Register voll und sind ALLE Entries busy (`InFlightCount > 0`), bricht die
+  LRU-Eviction ergebnislos ab und der neue Entry wird trotzdem angelegt — der Bestand liegt
+  kurzzeitig über `MaxProjects`. Der TTL-Tick reklamiert solchen Überhang nicht aktiv; er räumt
+  nur nach Idle-TTL, FAILED oder ausgereifter PendingEviction. Überhang baut sich erst wieder
+  über Idle-TTL bzw. LRU-Druck bei künftigen Inserts ab. Die implementierte Semantik folgt
+  zwingend aus zwei Konzept-Regeln (Sync-Lease darf weder blockieren noch ablehnen;
+  Busy-Guard verbietet Eviction laufender Calls) — das Konzept A.7 adressiert den entstehenden
+  Überschuss aber nicht. Für Epic B (langlebiger Daemon, RAM-Hygiene) ist eine explizite
+  Kapazitätsentscheidung nötig.
+- **Warum nicht sofort gefixt:** Jede harte Kapazitätsdurchsetzung (Call blocken/rejecten/queeuen)
+  ändert den Lease-Vertrag und wäre eine Konzept-Erweiterung — außerhalb des Step-Scopes.
+- **Vorschlag:** Mit Epic-B-Kapazitätsplanung entscheiden: entweder dokumentiertes Soft-Cap als
+  Vertrag (Überschuss nur transient) oder tick-seitige Cap-Reklamation/harte Ablehnung bei
+  vollem Register. Bis dahin dokumentiert dieser Eintrag die bekannte Ecke.
+- **Auto-Fixable:** nein — Vertrags- und Architekturentscheidung (Verhalten bei Volllast).
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-005 — [WARN] auf Console-Kanal beim Disposal faulted Loads im Sync-Eviction-Pfad [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-002 (Kritiker-Review vom 2026-08-23; verwandt zu TD-002, vom Coder im step-result.md gemeldet)
+- **Ort:** `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (`DisposeAsync`, `WriteError` bei nicht-abbrechbarem Hintergrund-Load); Auslöser: `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs:45-48` (Sync-Pfad disposed verdrängte Server über `Dispose()`)
+- **Befund:** Räumt der synchrone `Lease`-Pfad einen FAILED-Marker (oder einen sonstwie
+  faulted Load), läuft der Bestands-Wrapper `McpCodeGraphServer.Dispose()` → `DisposeAsync()`
+  und schreibt bei nicht abbrechbarem Hintergrund-Load eine `[WARN]`-Zeile über den
+  Console-Kanal. Der Kanal ist nicht injizierbar (gleiches Grundthema wie TD-002, dort für
+  `ConfigLoader` festgehalten); im Daemon-Betrieb (Epic B, Stdio-Purity B.3) mischen sich solche
+  Zeilen ohne Key-/Verbindungsbezug unter den Protokollpfad.
+- **Warum nicht sofort gefixt:** Bestandscode außerhalb des Step-Scopes; Injektion des Kanals
+  betrifft Signaturen und mehrere Call-Sites — dieselbe Entscheidung wie TD-002, erst mit Epic B.
+- **Vorschlag:** Zusammen mit TD-002 in Epic B lösen (injizierbarer Diagnosekanal je
+  Verbindung/Key); bis dahin die mögliche `[WARN]`-Zeile beim FAILED-Räumungspfad als bekannt
+  einstufen.
+- **Auto-Fixable:** nein — API-/Signaturänderung mit Integrationsentscheidung.
 - **Status:** offen  # offen | erledigt | verworfen
