@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-23T13:54:00+02:00
+last_updated: 2026-08-23T14:32:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -76,7 +76,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   (F1, kein statisches Mutable-State): Options-Record-Konstruktor, Config-Hot-Swap
   (`ReloadConfig`), `ReloadSolutionAsync`, `DisposeAsync` mit LoadTask-Abbruch,
   Health-Zähler (`Uptime`/`RefreshCount`/`LastStalenessStats`) — wird je Projektkey
-  instanziiert, nicht umgebaut. (zuletzt: initial)
+  instanziiert, nicht umgebaut. `ServerLoadState` (`Mcp/ServerLoadState.cs`: Loading/Loaded/
+  LoadFailed) und die `_loadTask`-Adoption sind der Zustands-/Dedupe-Anker, den ProjectRegistry
+  liest (Review 1: Dedupe im Instanzmuster, nie in der Registry). (zuletzt: initial)
 - **`src/AiNetLinter/Mcp/McpCodeGraphServerRefresh.cs`** — ausgelagerte
   Staleness-/Refresh-Helper (`Run`/`CacheInitialFileState`/`SweepForNewFiles`),
   wegen der Klassengrenzen aus dem Kern extrahiert (F7); Ansatzpunkt für den
@@ -94,7 +96,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`** — Options-Record (`required
   Catalog/Console/Config`, `LoadFunc`) mit bestehender `From(Parameters)`-Fabrik;
   Materialisierungsziel von `ProjectInstanceFactory` (Review 3) — kein zweites Options-Muster
-  erfinden. Verifiziert per Skeleton 2026-08-23. (zuletzt: initial)
+  erfinden. `LoadFunc: Func<CancellationToken, Task<SourceFileCatalog?>>?` ist der Hintergrund-
+  Load-Hook des Registry-MISS-Pfads; produktiv setzt ihn bisher nur `McpServerCommand.RunAsync`
+  (wrapt `TryLoadSolutionAsync`). Verifiziert per Skeleton/find_references 2026-08-23. (zuletzt: initial)
 - **`src/AiNetLinter/Mcp/McpServerOptionsBuilder.cs`** — fluenter Builder rund um
   `McpServerOptions` (Name/Version/Instructions/Tool-/ResourceCollections).
   (zuletzt: initial)
