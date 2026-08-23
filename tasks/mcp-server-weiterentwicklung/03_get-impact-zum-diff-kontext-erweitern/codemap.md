@@ -80,7 +80,11 @@ Produktionscode:
   Location-Überladung. Seit step-004 trägt `DiffAnalysisRequest` optionale
   `Counters`; der gemeinsame Kern `RunAnalysisAsync` ist internal und
   inkrementiert GitRuns unmittelbar vor dem einzigen Git-Aufruf.
-  (zuletzt: step-004)
+  Seit step-008 kappet ein optionaler `ChangedSymbolCap` am Request die
+  geaenderten Symbole im Kern VOR der Referenz-Stufe (`ApplyChangedSymbolCap`,
+  deterministische Sortierung Projekt→Datei→Zeile→ID, No-op ohne wirksamen
+  Cap); das Ergebnis traegt `ChangedSymbolsTotal` + `ShownSymbolHandles`.
+  (zuletzt: step-008)
 - **`src/AiNetLinter/Core/DiffImpactAnalysisModels.cs`** (neu in
   step-002) — Records `HunkRange`, `ChangedFileRange`,
   `ChangedSymbolEntry`, `DiffImpactAnalysis`; referenziert bewusst
@@ -90,7 +94,9 @@ Produktionscode:
   Seit step-004 zusaetzlich `DiffImpactCounters` (GitRuns/TestSolutionScans/
   LintRuns-Felder, Interlocked-Inkremente an den Stufen, Null-Verhalten ohne
   Uebergabe); seit step-007 hat jedes Feld seine benannte Produktions-
-  Inkrement-Stelle — LintRuns in der Violations-Stufe. (zuletzt: step-007)
+  Inkrement-Stelle — LintRuns in der Violations-Stufe. Seit step-008
+  traegt `DiffImpactAnalysis` additive optionale Member
+  `ChangedSymbolsTotal`/`ShownSymbolHandles`. (zuletzt: step-008)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/CallGraphTraversal.cs`** —
   flache BFS-Aufrufer-Traversierung für `find_references` und den
   `get_impact`-Symbol-Branch; depth>1-Korrektur umgesetzt:
@@ -117,11 +123,19 @@ Produktionscode:
   (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/GetImpactTool.cs`** —
   `get_impact`-Dispatch zwischen Git- und Symbol-Branch inkl.
-  `GetImpactInput`-Record (bisher 4 Parameter); Hint-Parität im
-  Symbol-Branch umgesetzt (`McpSufficiencyHints.Append` bei vollständigen
-  Traversal-Ergebnissen, exakt wie `FindReferencesTool`). Hauptort des
-  neuen `detailLevel=change-context`-Vertrags, der Antwortform und der
-  Parameter-/Validierungsregeln (EPIC-6). (zuletzt: step-001)
+  `GetImpactInput`-Record (seit step-008 mit detailLevel/maxChangedSymbols/
+  maxTestsPerSymbol); Hint-Parität im Symbol-Branch (`McpSufficiencyHints.
+  Append`). Seit step-008 Hauptort des `detailLevel=change-context`-
+  Vertrags: INVALID_ARGUMENT-Validierung vor dem Dispatch, Cap-Normali-
+  sierung, Verdrahtung von Analyzer-/Batch-Test-/Violations-Stufe,
+  kompakte Textform mit Sufficiency-Hint bzw. Meta-Zeile; ct-Bindung
+  (Audit D.7) geschlossen. (zuletzt: step-008)
+- **`src/AiNetLinter/Mcp/Tools/SymbolGraph/ChangeContextResponseModels.cs`**
+  (neu in step-008) — Antwort-DTOs des change-context-Vertrags mit den
+  vertraglich exakten JSON-Feldnamen (`ChangeContextPayload` samt
+  Sub-Records), `ChangeContextContract` (Default-/Cap-Konstanten + Clamp)
+  und `ChangeContextResponseMapper` (Mapping der drei Stufen → Payload,
+  Test-Kappung je Symbol, Completeness-Spiegelung). (zuletzt: step-008)
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`** —
   Referenz-Tool mit `ResolveSymbolAsync` und angehängtem Sufficiency-Hint;
   Paritäts-Vorbild für den `GetImpactTool`-Symbol-Branch (EPIC-1).
@@ -192,7 +206,9 @@ Produktionscode:
 - **`src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs`** — Registrierung
   der Symbolgraph-Tools inkl. `get_impact` (Z.111 ff.) — Kontrollstelle für
   die DoD-Regel „kein neues MCP-Tool wurde registriert"; neuer Vertrag
-  läuft über den bestehenden Eintrag (EPIC-6). (zuletzt: roadmap)
+  läuft über den bestehenden Eintrag — dieser ist seit step-008 ADDITIV
+  erweitert (drei neue Parameter + Beschreibungstext), kein neues Tool.
+  (zuletzt: step-008)
 
 Doku:
 
@@ -226,7 +242,15 @@ Tests:
   Symbol-Branch-Kettentest (`Depth2RealCallerChain`) und die
   Sufficiency-Hint-Parität (vollständig → Hinweis, trunkiert → Meta-Zeile,
   EPIC-1); Zielort für `change-context`-Vertrag und
-  `INVALID_ARGUMENT`-Fälle (EPIC-6). (zuletzt: step-001)
+  `INVALID_ARGUMENT`-Fälle (EPIC-6); seit step-008 die Vertragstests des
+  change-context-Modus (INVALID_ARGUMENT-Fälle, Cap-Normalisierung,
+  StructuredContent-Feldnamen inkl. accessibility als String,
+  Komplettmetadaten, testsTruncated, Textform). (zuletzt: step-008)
+- **`src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/ChangeContextResponseModelTests.cs`**
+  (neu in step-008) — reine Mapping-/Vertragstests des
+  `ChangeContextResponseMapper` bzw. der DTOs: Feldnamen-Pinning,
+  Accessibility-String-Mapping, Completeness-Spiegelung, Test-Kappung je
+  Symbol, leeres Payload. (zuletzt: step-008)
 - **`src/AiNetLinter.FastTests/Core/DiffImpactAnalyzerTests.cs`** —
   Unit-Tests zu Hunks/Symbolermittlung; seit step-002 kompakte
   Range-Parsing-/Expansions-Äquivalenz-, `ChangedSymbolEntry`-Mapping-
@@ -263,7 +287,9 @@ Tests:
   step-002 direkter `AnalyzeDiffAsync`-Ende-zu-Ende-Test auf der
   `GitImpactMiniFixtureWorkspace`, seit step-003 zusätzlich
   `AnalyzeChangeContextAsync` an geänderter privater Methode (ohne Call-Sites,
-  callers-Wrapper omitiert sie). (zuletzt: step-003)
+  callers-Wrapper omitiert sie). Seit step-008 E2E
+  `detailLevel="change-context"` auf `ChangeContextMiniWorkspace`;
+  callers-Subprozess-Tests unangetastet. (zuletzt: step-008)
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandGetImpactTests.cs`**
   — Subprozess-/Protokoll-Level-Tests von `get_impact`; Absicherung der
   Abwärtskompatibilität des `callers`-Modus (EPIC-3/EPIC-6). (zuletzt:
