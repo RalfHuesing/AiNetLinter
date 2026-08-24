@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 011
@@ -282,8 +282,8 @@ Cancellation und genau einmalige Bereinigung.
       Drift-Audit und kein Tech-Debt-Fix in diesem Step.
 - [ ] Vollständiger Nicht-Stress-Teststack und Build sind gemäß Task-State genau
       einmal durch den Coder gelaufen; `step-011/step-result.md` ist geschrieben.
-- [ ] Dieser Plan wird nach Umsetzung auf `done (pending audit)` gesetzt; der
-      Coder übernimmt die Overrides `max_fix_rounds_per_step=6`,
+- [x] Dieser Plan ist nach Umsetzung und der approved-Korrektur in step-012
+      gemäß Workflow `done`; der Coder übernahm die Overrides `max_fix_rounds_per_step=6`,
       `soft_step_checkin_interval=80`, `max_batch_items=16` und
       `max_batch_diff_lines=80` unverändert.
 

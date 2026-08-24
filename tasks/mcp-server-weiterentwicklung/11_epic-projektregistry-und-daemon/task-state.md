@@ -2,7 +2,7 @@
 status: done (pending audit)  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T10:30:00+02:00
+last_updated: 2026-08-24T06:42:49+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 13  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-013
@@ -12,24 +12,33 @@ current_step: step-013
 
 ## Übersicht
 
-- **Task-Status:** `done (pending audit)`
+- **Task-Status:** `done (pending audit)` — Check-in nach Coder-Lauf;
+  Kritiker-Abnahme von Step-013 steht aus (siehe `resume-note.md`).
 - **Nutzer-Scope:** vollständigen Task einschließlich EPIC-A und EPIC-B
   umsetzen; nicht nach dem Abschluss von EPIC-A stoppen.
 - **Konfliktregel:** Review-Forderungen gegen inzwischen erreichte Architektur
   nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
   dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
-- **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
 - **Aktueller Schritt:** `step-013` (done (pending audit) — ThinClient-, Health-
-  und EPIC-B-Abschluss; Vollparallel-Ausnahmen sind im Step-Result dokumentiert)
+  und EPIC-B-Abschluss; Vollparallel-Ausnahmen sind im Step-Result dokumentiert;
+  nächster Schritt: Kritiker-Abnahme)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T08:30:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T06:42:49+02:00
+
+## Check-in / Wiederaufnahme
+
+Der Loop ist nach Nutzeranweisung pausiert, nachdem der Coder Step-013 mit
+`b9605ea5` und `759da1bf` abgeschlossen hat. Es wurde noch kein Kritiker-
+Verdict erzeugt. Die verbindliche Wiederaufnahme-Reihenfolge und die
+dokumentierten Vollsuite-Races stehen in `resume-note.md`.
 
 ## Nutzer-Vorgaben (Effizienz, 2026-08-23)
 

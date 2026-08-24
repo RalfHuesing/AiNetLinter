@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 012

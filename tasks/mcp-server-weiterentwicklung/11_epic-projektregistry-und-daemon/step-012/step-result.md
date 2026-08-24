@@ -10,7 +10,7 @@ coded_by_model: GPT-5
 coded_by_model_knowledge_cutoff: 2024-06
 coded_at: 2026-08-24T06:14:00+02:00
 code_commit_hash: ffb60157
-status_after: approved
+status_after: done
 blocker_category: n/a
 ---
 

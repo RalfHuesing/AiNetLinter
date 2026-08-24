@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-review
 task: 11_epic-projektregistry-und-daemon
 step: 011
@@ -10,6 +10,7 @@ reviewed_by_model: GPT-5
 reviewed_by_model_knowledge_cutoff: 2024-06
 reviewed_at: 2026-08-24T04:00:00+02:00
 verdict: issues
+resolved_by: step-012
 tech_debt_ids: []
 ---
 

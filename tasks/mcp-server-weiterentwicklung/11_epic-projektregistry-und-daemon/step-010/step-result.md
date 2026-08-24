@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-result
 task: 11_epic-projektregistry-und-daemon
 step: 010
@@ -92,6 +92,7 @@ meldete `get_violations` jeweils 0 Verstöße und `safeguard` jeweils
 
 ## Status
 
-Step-010 ist `done (Korrektur ausstehend)`. Die vier Review-Findings werden in
-step-011 korrigiert; der Drift-Audit bleibt weiterhin dem EPIC-B-Abschluss
-vorbehalten.
+Step-010 ist gemäß Workflow `done`. Die vier ursprünglichen Review-Findings
+wurden in step-011 korrigiert und durch step-012 mit den direkten
+Prozess-/Pipe-Contracts vollständig geschlossen; der Drift-Audit bleibt dem
+EPIC-B-Abschluss vorbehalten.

@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-review
 task: 11_epic-projektregistry-und-daemon
 step: 010
@@ -10,6 +10,9 @@ reviewed_by_model: GPT-5
 reviewed_by_model_knowledge_cutoff: nicht deklariert
 reviewed_at: 2026-08-24T03:13:53+02:00
 verdict: issues
+resolved_by:
+  - step-011
+  - step-012
 tech_debt_ids: []
 ---
 
@@ -68,4 +71,3 @@ Gezielte Doppelstartprobe → zwei Debug-Host-Prozesse gleichzeitig aktiv; zweit
 3. `src/AiNetLinter/Mcp/Daemon/MruStateStore.cs:57-91, 242-246` sowie `src/AiNetLinter/Mcp/Daemon/DaemonHost.cs:274-317` — **[MAJOR] [Logik]** Eingelesene Roots werden in `Read` ungekanonisiert in `entries` übernommen, während `Remove`/`Touch` über `CanonicalizeRoot` mit `Path.GetFullPath(...).TrimEnd(...)` arbeiten. Ein gültiger, aber anders geschriebener State-Eintrag wie `C:\repo\.` oder `C:\repo\` kann beim fehlgeschlagenen Warmup nicht aus `entries` entfernt werden; `WarmupCandidateAsync` ruft zwar `Remove` auf, der rohe Schlüssel bleibt jedoch bestehen und wird beim nächsten Shutdown erneut persistiert. **Fix:** Jeden validierten Eintrag vor Grouping, Speicherung und Rückgabe kanonisieren, ungültige Ergebnisse verwerfen und die deduplizierte kanonische Form als alleinigen MRU-Schlüssel verwenden; dafür einen Contract mit einem toten Root in alternativer Schreibweise ergänzen.
 
 4. `src/AiNetLinter/Mcp/Daemon/DaemonHost.cs:163-173, 175-221` und `src/AiNetLinter.FastTests/Mcp/Daemon/` — **[MAJOR] [Logik/Plan]** `RegisterConnection` startet `HandleConnectionAsync` vor dem Eintragen von Task und Handle in `connections`/`connectionHandles`. Bei einem synchron beendeten Read (z. B. schneller Disconnect/EOF) kann der Handler im `finally` bereits entfernen, bevor die Dictionaries befüllt werden; danach bleibt ein abgeschlossener Handle als scheinbar aktive Verbindung zurück und `IsIdleExitDue` blockiert den Idle-Exit trotz `clientCount == 0`. Für `RunAsync`, `AcceptLoopAsync` und `HandleConnectionAsync` existiert kein direkter Lifecycle-Contract; die vorhandenen Tests benutzen nur Test-Seams und prüfen weder Handshake/Session noch diesen Race. **Fix:** Die Verbindung unter dem Lifecycle-Lock registrieren, bevor der Handler gestartet wird, oder den Abschluss-Race so synchronisieren, dass ein bereits beendeter Handler seinen Eintrag zuverlässig wieder entfernt; ergänzend einen in-proc Contract für schnellen Disconnect, Clientzählung, Handshake-vor-Session, Session-Cancellation und genau einmaliges Registry-/MCP-Dispose hinzufügen.
-

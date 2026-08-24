@@ -1,5 +1,5 @@
 ---
-status: done (Korrektur ausstehend)
+status: done
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 010
@@ -276,8 +276,8 @@ bis zum späteren ThinClient-Step unverändert.
 - [ ] Genau ein vollständiger Nicht-Stress-Teststack wurde vom Coder vor dem
       Step-Abschluss ausgeführt; der Kritiker wiederholt ihn nicht; Stress wurde nicht
       ausgeführt.
-- [ ] `step-010/step-result.md` ist geschrieben und dieser Plan wird nach Umsetzung
-      auf `done (pending audit)` gesetzt.
+- [x] `step-010/step-result.md` ist geschrieben; der Step ist durch
+      `step-011` und `step-012` vollständig korrigiert und gemäß Workflow `done`.
 - [ ] Der spätere Coder-/Kritiker-Prompt übernimmt unverändert die Nutzer-Overrides:
       `max_fix_rounds_per_step=6`, `soft_step_checkin_interval=80`,
       `max_batch_items=16`, `max_batch_diff_lines=80`.
