@@ -1,0 +1,51 @@
+#nullable enable
+
+using AiNetLinter.Mcp.Daemon;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
+namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
+
+[Trait("Category", "Integration")]
+public sealed class DaemonHostMcpProcessContractTests
+{
+    [Fact]
+    public async Task HostPipeHandshakeThenMcpInitializeListsToolsAndExitsIdle()
+    {
+        using var fixture = new BaselineMiniFixtureWorkspace();
+        using var temp = TestTempDirectory.Create("daemon-mcp-process-contract-");
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        using var endpointLease = await DaemonProcessContractHarness
+            .AcquireEndpointAsync(cancellation.Token)
+            .ConfigureAwait(false);
+        var spec = new DaemonProcessSpec(fixture.RootPath, temp.DirectoryPath, 0.1m);
+
+        await using var daemon = await DaemonProcessContractHarness
+            .StartAsync(spec, cancellation.Token)
+            .ConfigureAwait(false);
+        await using (var connection = await DaemonProcessContractHarness
+            .ConnectWhenReadyAsync(cancellation.Token)
+            .ConfigureAwait(false))
+        {
+            var welcome = await DaemonProcessContractHarness
+                .PerformHandshakeAsync(connection, spec, cancellation.Token)
+                .ConfigureAwait(false);
+            Assert.Equal(DaemonProtocol.Welcome, welcome.Type);
+            Assert.Equal(DaemonProtocol.Version, welcome.ProtocolVersion);
+
+            var clientTransport = new StreamClientTransport(connection.Stream, connection.Stream);
+            await using var client = await McpClient
+                .CreateAsync(clientTransport, cancellationToken: cancellation.Token)
+                .ConfigureAwait(false);
+            var tools = await client.ListToolsAsync(cancellationToken: cancellation.Token).ConfigureAwait(false);
+
+            Assert.Contains(tools, tool => tool.Name == "find_symbol");
+            Assert.Contains(tools, tool => tool.Name == "get_violations");
+        }
+
+        var result = await daemon.WaitForExitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+        Assert.False(result.TimedOut, result.Error);
+        Assert.Equal(0, result.ExitCode);
+    }
+}
