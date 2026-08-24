@@ -8,7 +8,7 @@
     allerdings komplett lokal ohne Git-Push, Tags oder GitHub-Abhaengigkeit:
     1. dotnet build & test (optional ueberspringbar oder mit Filtern)
     2. dotnet publish (Release, self-contained, win-x64 oder konfigurierbares RID)
-    3. rules.json und README.md in das Publish-Verzeichnis kopieren
+    3. rules.json, appsettings.json und README.md in das Publish-Verzeichnis kopieren
     4. AiNetLinter-<RID>.zip erstellen
     5. Optional: Entpacken / Kopieren in ein lokales Tools-Verzeichnis (-DestinationPath)
 
@@ -121,6 +121,11 @@ try {
     $rulesFile = Join-Path $repoRoot 'rules.json'
     if (Test-Path $rulesFile) {
         Copy-Item $rulesFile (Join-Path $publishDir 'rules.json') -Force
+    }
+
+    $appSettingsFile = Join-Path $repoRoot 'appsettings.json'
+    if (Test-Path $appSettingsFile) {
+        Copy-Item $appSettingsFile (Join-Path $publishDir 'appsettings.json') -Force
     }
 
     $readmeFile = Join-Path $repoRoot 'README.md'
