@@ -143,12 +143,15 @@ internal static class DaemonBytePump
     {
         if (callerToken.IsCancellationRequested) return null;
         if (completedTask == inputTask && inputTask.Status == TaskStatus.RanToCompletion) return null;
-        if (pumpCancelled && inputTask.IsCanceled && outputTask.IsCanceled) return null;
-        return inputFailure ??
-               outputFailure ??
-               (completedTask == outputTask && outputTask.IsCanceled
-                   ? new TimeoutException("Die Daemon-Pipe antwortete nicht innerhalb des Hanger-Schutz-Zeitlimits.")
-                   : null);
+        if (pumpCancelled && inputTask.IsCanceled && outputTask.IsCanceled)
+        {
+            // Reines Idle-Timeout: beide Pump-Tasks werden beim Erreichen des
+            // Idle-Limits gemeinsam ueber den linked Token gecancelt. Diese
+            // Haenger-Signatur darf nicht als unbekannter Pipe-Fehler enden.
+            return new TimeoutException("Die Daemon-Pipe antwortete nicht innerhalb des Hanger-Schutz-Zeitlimits.");
+        }
+
+        return inputFailure ?? outputFailure;
     }
 
     private static async Task<Exception?> ObserveAsync(Task task)

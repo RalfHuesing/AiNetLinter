@@ -1,0 +1,117 @@
+#nullable enable
+
+using System.IO.Pipelines;
+using AiNetLinter.Mcp.Daemon;
+using AiNetLinter.TestKit;
+using Xunit;
+
+namespace AiNetLinter.FastTests.Mcp.Daemon;
+
+[Trait("Category", "Unit")]
+public sealed class ThinClientConnectOrStartTests
+{
+    [Fact]
+    public async Task ConnectOrStart_UsesExistingMockPipeWithoutSpawn()
+    {
+        var transport = new ScriptedMockPipeTransport(initialConnectFailures: 0);
+        var console = new RecordingLintConsole();
+        var spawnCount = 0;
+
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            CreateLaunchOptions(),
+            CreateContext(console, transport, (_, _) =>
+            {
+                Interlocked.Increment(ref spawnCount);
+                return true;
+            })).ConfigureAwait(false);
+
+        Assert.Equal(4711, connection.ProcessId);
+        Assert.Equal(1, transport.ConnectAttempts);
+        Assert.Equal(0, Volatile.Read(ref spawnCount));
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_SpawnsDetachedOnceAndRetriesUntilWelcome()
+    {
+        var transport = new ScriptedMockPipeTransport(initialConnectFailures: 2);
+        var console = new RecordingLintConsole();
+        var spawnCount = 0;
+
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            CreateLaunchOptions(),
+            CreateContext(console, transport, (_, _) =>
+            {
+                Interlocked.Increment(ref spawnCount);
+                return true;
+            })).ConfigureAwait(false);
+
+        Assert.Equal(4711, connection.ProcessId);
+        Assert.Equal(1, Volatile.Read(ref spawnCount));
+        Assert.Equal(3, transport.ConnectAttempts);
+        Assert.Equal(
+            1,
+            console.ErrorLines.Count(line => line.Contains("[INFO]: Daemon-Connect-first fehlgeschlagen", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_PropagatesStartFailureWithoutReadinessLoop()
+    {
+        var transport = new ScriptedMockPipeTransport(initialConnectFailures: int.MaxValue);
+        var console = new RecordingLintConsole();
+
+        var exception = await Assert.ThrowsAsync<IOException>(() =>
+            ThinClientProxy.ConnectOrStartAsync(
+                CreateLaunchOptions(),
+                CreateContext(console, transport, (_, _) => false))).ConfigureAwait(false);
+
+        Assert.Contains("noch nicht bereit", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(1, transport.ConnectAttempts);
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_ConcurrentStartersConvergeOnSingleMockPipe()
+    {
+        var spawnCount = 0;
+        // Erfolg erst, wenn beide Starter gespawnt haben: erzwingt, dass jeder
+        // Starter den Connect-first-Fehler, genau einen Spawn und den
+        // Readiness-Retry gegen denselben Mock-Endpunkt durchlaeuft.
+        var transport = new ScriptedMockPipeTransport(
+            initialConnectFailures: 2,
+            acceptWhen: () => Volatile.Read(ref spawnCount) >= 2);
+        var console = new RecordingLintConsole();
+        bool StartDetached(ThinClientLaunchOptions _, Action<string> __)
+        {
+            Interlocked.Increment(ref spawnCount);
+            return true;
+        }
+
+        var context = CreateContext(console, transport, StartDetached);
+        var connections = await Task.WhenAll(
+            ThinClientProxy.ConnectOrStartAsync(CreateLaunchOptions(), context),
+            ThinClientProxy.ConnectOrStartAsync(CreateLaunchOptions(), context)).ConfigureAwait(false);
+
+        Assert.All(connections, connection => Assert.Equal(4711, connection.ProcessId));
+        Assert.NotEqual(connections[0].ConnectionId, connections[1].ConnectionId);
+        Assert.Equal(2, Volatile.Read(ref spawnCount));
+        Assert.True(transport.ConnectAttempts > 2, $"Erwartete mehr als zwei Verbindungsversuche, gemessen {transport.ConnectAttempts}.");
+    }
+
+    private static ThinClientLaunchOptions CreateLaunchOptions() =>
+        new(null, null, null, null);
+
+    private static ThinClientSessionContext CreateContext(
+        RecordingLintConsole console,
+        ScriptedMockPipeTransport transport,
+        Func<ThinClientLaunchOptions, Action<string>, bool> startDetached)
+    {
+        var idleInput = new Pipe();
+        var idleOutput = new Pipe();
+        var session = new ThinClientSessionOptions(
+            transport.ConnectAsync,
+            startDetached,
+            TimeSpan.FromSeconds(30),
+            idleInput.Reader.AsStream(),
+            idleOutput.Writer.AsStream());
+        return new ThinClientSessionContext(CancellationToken.None, console, session);
+    }
+}

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -10,8 +11,12 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Platform;
-
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
+
+internal sealed record McpRawWireRunResult(
+    IReadOnlyList<string> StdoutLines,
+    string StderrText,
+    int ExitCode);
 
 internal static class McpRawWireTestHarness
 {
@@ -36,6 +41,22 @@ internal static class McpRawWireTestHarness
         string[] frames,
         TimeSpan? interFrameDelay = null,
         bool noDaemon = true)
+    {
+        var result = await RunAndCollectWithDiagnosticsAsync(
+            targetDirectory,
+            frames,
+            interFrameDelay,
+            noDaemon).ConfigureAwait(false);
+        return result.StdoutLines.ToList();
+    }
+
+    internal static async Task<McpRawWireRunResult> RunAndCollectWithDiagnosticsAsync(
+        string targetDirectory,
+        string[] frames,
+        TimeSpan? interFrameDelay = null,
+        bool noDaemon = true,
+        double? daemonIdleExitMinutes = null,
+        string? localAppDataOverride = null)
     {
         McpFixtureProjectDefinition.Ensure(targetDirectory);
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
@@ -67,7 +88,15 @@ internal static class McpRawWireTestHarness
         else
         {
             psi.ArgumentList.Add("--mcp-daemon-idle-exit-minutes");
-            psi.ArgumentList.Add("0.01");
+            psi.ArgumentList.Add((daemonIdleExitMinutes ?? 0.01).ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (localAppDataOverride is not null)
+        {
+            // Isoliert den daemonseitigen MRU-/State-Pfad vom echten Benutzerprofil;
+            // der detached Spawn erbt die Umgebung des Thin-Clients.
+            Directory.CreateDirectory(localAppDataOverride);
+            psi.Environment["LOCALAPPDATA"] = localAppDataOverride;
         }
 
         using var process = Process.Start(psi)
@@ -112,8 +141,8 @@ internal static class McpRawWireTestHarness
             // Timeout beim Drain: der Prozess wird im Anschluss sicher beendet.
         }
 
-        await EnsureProcessTerminatedAsync(process, stderrTask);
-        return observed;
+        var (exitCode, stderrText) = await EnsureProcessTerminatedAsync(process, stderrTask).ConfigureAwait(false);
+        return new McpRawWireRunResult(observed, stderrText, exitCode);
     }
 
     private static int CountExpectedResponses(IEnumerable<string> frames) =>
@@ -173,14 +202,30 @@ internal static class McpRawWireTestHarness
         }
     }
 
-    private static async Task EnsureProcessTerminatedAsync(Process process, Task stderrTask)
+    private static async Task<(int ExitCode, string StderrText)> EnsureProcessTerminatedAsync(
+        Process process,
+        Task<string> stderrTask)
     {
         if (!process.HasExited)
         {
             TryWaitOrKill(process);
         }
 
-        await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10)));
+        var stderrText = string.Empty;
+        var completed = await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10))).ConfigureAwait(false);
+        if (completed == stderrTask)
+        {
+            stderrText = await stderrTask.ConfigureAwait(false);
+        }
+
+        try
+        {
+            return (process.ExitCode, stderrText);
+        }
+        catch (InvalidOperationException)
+        {
+            return (int.MinValue, stderrText);
+        }
     }
 
     private static void TryWaitOrKill(Process process)
@@ -195,6 +240,59 @@ internal static class McpRawWireTestHarness
         catch
         {
             // Best-effort-Cleanup nach einem bereits beendeten oder gesperrten Prozess.
+        }
+    }
+}
+
+// Stellvertreterprozess fuer den Haenger-Pfad (Konzept B.6 „Stellvertreter statt
+// Injektion"): laeuft lange genug, ist per Welcome-PID identifizierbar und vom
+// Client deterministisch kill-bar. Bewusst hier im Harness-Owner, damit alle
+// Process.Start-Callsites in der Guard-Whitelist bleiben.
+internal sealed class StandInProcess : IDisposable
+{
+    public StandInProcess()
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c ping -n 30 127.0.0.1 > nul",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        Process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Stellvertreterprozess konnte nicht gestartet werden.");
+    }
+
+    public Process Process { get; }
+
+    public async Task<bool> WaitForExitAsync(TimeSpan limit)
+    {
+        var deadline = DateTime.UtcNow + limit;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (Process.HasExited) return true;
+            await Task.Delay(100).ConfigureAwait(false);
+        }
+
+        return Process.HasExited;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (!Process.HasExited) Process.Kill(entireProcessTree: true);
+            Process.WaitForExit(2000);
+        }
+        catch (InvalidOperationException)
+        {
+            // Prozess war bereits vollstaendig beendet.
+        }
+        finally
+        {
+            Process.Dispose();
         }
     }
 }

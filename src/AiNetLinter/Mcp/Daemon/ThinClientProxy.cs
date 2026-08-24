@@ -9,6 +9,31 @@ using AiNetLinter.Output;
 
 namespace AiNetLinter.Mcp.Daemon;
 
+// Kollaborateure einer Thin-Client-Sitzung: Der Default baut Produktions-
+// Transport, detached Spawn und Konsolen-Streams; Tests injizieren hier,
+// um Connect-or-Start, Retry-Fenster und Haenger-Pfad deterministisch zu fahren.
+internal sealed record ThinClientSessionOptions(
+    Func<CancellationToken, ValueTask<DaemonPipeConnection>> ConnectAsync,
+    Func<ThinClientLaunchOptions, Action<string>, bool> StartDetached,
+    TimeSpan PumpIdleTimeout,
+    Stream StandardInput,
+    Stream StandardOutput)
+{
+    internal static ThinClientSessionOptions Default(TimeSpan pumpIdleTimeout) => new(
+        cancellationToken => new DaemonPipeTransport().ConnectAsync(cancellationToken),
+        ThinClientLauncher.TryStartDetached,
+        pumpIdleTimeout,
+        Console.OpenStandardInput(),
+        Console.OpenStandardOutput());
+}
+
+internal sealed record ThinClientSessionContext(
+    CancellationToken Token,
+    ILintConsole Console,
+    ThinClientSessionOptions Session);
+
+internal sealed record ThinClientConnection(DaemonPipeConnection Pipe, int ProcessId, int ConnectionId);
+
 internal static class ThinClientProxy
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(350);
@@ -35,35 +60,39 @@ internal static class ThinClientProxy
         }
 
         await using var lifetime = McpServerLifetime.Start(args.ParentPid, cancellationToken, clientConsole.WriteError);
-        var launchOptions = new ThinClientLaunchOptions(
-            args.McpProjectTtlMinutes,
-            args.McpMaxProjects,
-            args.McpDaemonIdleExitMinutes,
-            args.McpLogPath);
+        var session = ThinClientSessionOptions.Default(PumpIdleTimeout);
+        var context = new ThinClientSessionContext(lifetime.Token, clientConsole, session);
+        return await RunSessionAsync(CreateLaunchOptions(args), context).ConfigureAwait(false);
+    }
+
+    internal static async Task<int> RunSessionAsync(
+        ThinClientLaunchOptions launchOptions,
+        ThinClientSessionContext context)
+    {
         var replayFrame = (byte[]?)null;
         try
         {
             for (var attempt = 0; attempt <= MaximumRetries; attempt++)
             {
-                var connection = await ConnectOrStartAsync(launchOptions, lifetime.Token, clientConsole).ConfigureAwait(false);
+                var connection = await ConnectOrStartAsync(launchOptions, context).ConfigureAwait(false);
                 try
                 {
                     var pumpResult = await DaemonBytePump.RunAsync(
-                        Console.OpenStandardInput(),
-                        Console.OpenStandardOutput(),
+                        context.Session.StandardInput,
+                        context.Session.StandardOutput,
                         connection.Pipe.Stream,
-                        new DaemonPumpOptions(PumpIdleTimeout, replayFrame),
-                        lifetime.Token).ConfigureAwait(false);
+                        new DaemonPumpOptions(context.Session.PumpIdleTimeout, replayFrame),
+                        context.Token).ConfigureAwait(false);
                     if (pumpResult.Completed) return 0;
 
-                    ReportPumpFailure(clientConsole, attempt, connection, pumpResult.Failure);
+                    ReportPumpFailure(context.Console, attempt, connection, pumpResult.Failure);
                     replayFrame = pumpResult.ReplayFrame;
                     if (attempt == MaximumRetries)
                     {
                         return 2;
                     }
 
-                    TerminateIdentifiedDaemon(connection.ProcessId, clientConsole);
+                    TerminateIdentifiedDaemon(connection.ProcessId, context.Console);
                 }
                 finally
                 {
@@ -71,7 +100,7 @@ internal static class ThinClientProxy
                 }
             }
         }
-        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
+        catch (OperationCanceledException) when (context.Token.IsCancellationRequested)
         {
             return 0;
         }
@@ -79,29 +108,33 @@ internal static class ThinClientProxy
         return 2;
     }
 
-    private static async Task<ThinClientConnection> ConnectOrStartAsync(
+    private static ThinClientLaunchOptions CreateLaunchOptions(LinterArgs args) => new(
+        args.McpProjectTtlMinutes,
+        args.McpMaxProjects,
+        args.McpDaemonIdleExitMinutes,
+        args.McpLogPath);
+
+    internal static async Task<ThinClientConnection> ConnectOrStartAsync(
         ThinClientLaunchOptions options,
-        CancellationToken cancellationToken,
-        ILintConsole console)
+        ThinClientSessionContext context)
     {
-        var firstAttempt = await TryConnectFirstAsync(options, cancellationToken, console).ConfigureAwait(false);
+        var firstAttempt = await TryConnectFirstAsync(options, context).ConfigureAwait(false);
         if (firstAttempt.Connection is not null) return firstAttempt.Connection;
-        if (!ThinClientLauncher.TryStartDetached(options, console.WriteError))
+        if (!context.Session.StartDetached(options, context.Console.WriteError))
         {
             throw firstAttempt.Failure ?? new IOException("Der Daemon konnte nicht gestartet werden.");
         }
 
-        return await WaitForReadinessAsync(options, cancellationToken, console).ConfigureAwait(false);
+        return await WaitForReadinessAsync(options, context).ConfigureAwait(false);
     }
 
     private static async Task<ConnectAttempt> TryConnectFirstAsync(
         ThinClientLaunchOptions options,
-        CancellationToken cancellationToken,
-        ILintConsole console)
+        ThinClientSessionContext context)
     {
         try
         {
-            var connection = await ConnectAsync(options, ConnectTimeout, cancellationToken, console).ConfigureAwait(false);
+            var connection = await ConnectAsync(options, ConnectTimeout, context.Token, context).ConfigureAwait(false);
             return new ConnectAttempt(connection, null);
         }
         catch (ThinClientVersionConflictException)
@@ -110,23 +143,22 @@ internal static class ThinClientProxy
         }
         catch (Exception exception)
         {
-            console.WriteError($"[INFO]: Daemon-Connect-first fehlgeschlagen: {exception.Message}");
+            context.Console.WriteError($"[INFO]: Daemon-Connect-first fehlgeschlagen: {exception.Message}");
             return new ConnectAttempt(null, exception);
         }
     }
 
     private static async Task<ThinClientConnection> WaitForReadinessAsync(
         ThinClientLaunchOptions options,
-        CancellationToken cancellationToken,
-        ILintConsole console)
+        ThinClientSessionContext context)
     {
-        using var readiness = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var readiness = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
         readiness.CancelAfter(ReadinessTimeout);
         while (true)
         {
             try
             {
-                return await ConnectAsync(options, ConnectTimeout, readiness.Token, console).ConfigureAwait(false);
+                return await ConnectAsync(options, ConnectTimeout, readiness.Token, context).ConfigureAwait(false);
             }
             catch (ThinClientVersionConflictException)
             {
@@ -134,11 +166,11 @@ internal static class ThinClientProxy
             }
             catch (OperationCanceledException)
             {
-                await DelayReadinessRetryAsync(readiness, cancellationToken).ConfigureAwait(false);
+                await DelayReadinessRetryAsync(readiness, context.Token).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or TimeoutException)
             {
-                await DelayReadinessRetryAsync(readiness, cancellationToken).ConfigureAwait(false);
+                await DelayReadinessRetryAsync(readiness, context.Token).ConfigureAwait(false);
             }
         }
     }
@@ -160,12 +192,11 @@ internal static class ThinClientProxy
         ThinClientLaunchOptions options,
         TimeSpan timeout,
         CancellationToken cancellationToken,
-        ILintConsole console)
+        ThinClientSessionContext context)
     {
         using var connect = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         connect.CancelAfter(timeout);
-        var transport = new DaemonPipeTransport();
-        var pipe = await transport.ConnectAsync(connect.Token).ConfigureAwait(false);
+        var pipe = await context.Session.ConnectAsync(connect.Token).ConfigureAwait(false);
         try
         {
             var hello = new DaemonHello(
@@ -175,7 +206,7 @@ internal static class ThinClientProxy
             await pipe.WriteJsonFrameAsync(hello, connect.Token).ConfigureAwait(false);
             var response = await pipe.ReadFrameAsync(connect.Token).ConfigureAwait(false)
                 ?? throw new EndOfStreamException("Daemon beendete den Handshake ohne Antwort.");
-            return ReadHandshakeResponse(pipe, response, CreateConfiguration(options), console);
+            return ReadHandshakeResponse(pipe, response, CreateConfiguration(options), context.Console);
         }
         catch
         {
@@ -255,8 +286,6 @@ internal static class ThinClientProxy
         string.Equals(Environment.GetEnvironmentVariable("AINETLINTER_NO_DAEMON"), "1", StringComparison.Ordinal);
 
     private sealed record ConnectAttempt(ThinClientConnection? Connection, Exception? Failure);
-
-    private sealed record ThinClientConnection(DaemonPipeConnection Pipe, int ProcessId, int ConnectionId);
 
     private sealed class ThinClientVersionConflictException(string message) : IOException(message);
 }
