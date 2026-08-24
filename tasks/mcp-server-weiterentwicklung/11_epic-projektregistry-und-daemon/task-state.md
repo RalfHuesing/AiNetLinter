@@ -2,10 +2,10 @@
 status: done  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T15:40:00+02:00
+last_updated: 2026-08-24T18:06:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-015
+total_steps: 16  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-016
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -20,16 +20,19 @@ current_step: step-015
   nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
   dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
-- **Steps gesamt:** 15 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 16 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** keiner — Task abgeschlossen (globaler Kritiker-Lauf `done`)
+- **Aktueller Schritt:** `step-016` (open — Tech-Debt-Pflegepaket nach
+  Nutzerentscheidungen vom 2026-08-24: TD-008/TD-001/TD-003/TD-010 fixen,
+  TD-004 „Überlauf erlaubt" als Akzeptanz festnageln; Task bleibt formal
+  `done`, der Step ist angehängte Pflege)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T15:40:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T18:06:00+02:00
 
 ## Check-in / Wiederaufnahme
 
@@ -84,6 +87,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-013 | EPIC-B | done | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (issues; Korrektur step-014 approved) | b9605ea5 / 759da1bf |
 | step-014 | EPIC-B | done | Step-013-Korrektur: fehlende Contract-Nachweise (F1) und erreichbare Timeout-Diagnostik (F2) | step-013 | 683a3e4f | 2026-08-24 (approved) | 683a3e4f / 26898fba |
 | step-015 | EPIC-B | done | Task-weites Drift-Audit: Duplicates, Magic Values, Dead Code — prüfen und bereinigen | - | 7a1431d9 | 2026-08-24 (approved) | 7a1431d9 / 9e12a0a3 |
+| step-016 | EPIC-B | open | Tech-Debt-Pflegepaket: TD-008, TD-001, TD-003, TD-010 fixen; TD-004 als Akzeptanz verankern | - | - | - | - |
 
 ## Config (optional)
 
