@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-24T03:49:16+02:00
+last_updated: 2026-08-24T04:06:32+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -194,12 +194,14 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-011 (done, pending audit)**
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (Korrektur von step-011)**
       (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelte
       DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup und ist mit vier konkreten
       Findings abgeschlossen; step-011 korrigiert Exklusivität, MRU-Normalisierung
-      und Connection-Registration-Race mit direkten Host-/MCP-Contracts.
-      ThinClient, Connect-or-Start und Health bleiben weiterhin nachgelagert.)
+      und Connection-Registration-Race mit in-proc Contracts. Das Review zu
+      step-011 verlangt in step-012 noch die zwei direkten Prozess-/Pipe-Contracts
+      für Doppelstart und Host/MCP. ThinClient, Connect-or-Start und Health
+      bleiben weiterhin nachgelagert.)
   - [x] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
         (+ ACL auf aktuellen User), newline-delimited JSON, je Verbindung ein async
         Read/Write-Loop; Disconnect bricht in-flight Calls DER Verbindung ab —
@@ -267,3 +269,11 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     Entfernung toter Alias-Roots und der Connection-Registration-Race benötigen
     einen einzigen fokussierten Korrektur-Step. step-011 bleibt im B.3–B.5-
     Cluster und führt keine ThinClient-/Connect-or-Start-Logik vorweg.
+
+  - **Step-011-Review (2026-08-24):** Die Produktionskorrekturen und
+    in-proc Contracts sind vorhanden, aber zwei MAJOR-Nachweise fehlen:
+    ein echter Zwei-Prozess-Doppelstart über `--daemon-start`/Named Pipe sowie
+    ein direkter Host-/MCP-Contract mit realem Daemon-Handshake und MCP-SDK-
+    Request. Diese beiden Findings werden fokussiert in step-012 korrigiert;
+    ThinClient, Connect-or-Start, Retry/Hänger-Schutz und externes Wiring
+    bleiben außerhalb dieses Fixes.

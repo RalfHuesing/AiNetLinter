@@ -2,10 +2,10 @@
 status: executing  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T03:49:16+02:00
+last_updated: 2026-08-24T04:06:32+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 11  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-011
+total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-012
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -19,11 +19,10 @@ current_step: step-011
   nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
   dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
-- **Steps gesamt:** 11 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-011` (done (pending audit) — Korrektur von step-010:
-  deterministische Host-Exklusivität, MRU-Normalisierung und echte
-  Lifecycle-/MCP-Contracts)
+- **Aktueller Schritt:** `step-012` (open — Korrektur von step-011:
+  echte Zwei-Prozess-/Pipe- und Host-/MCP-Contracts)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
@@ -67,7 +66,8 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-008 | EPIC-A | done | EPIC-A-Abschluss: Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku | - | 3c01d78a / 2760cf5e | 2026-08-24 (approved) | 3c01d78a / 2760cf5e |
 | step-009 | EPIC-B | done | Transport-/Handshake-Grundlage für den Daemon | - | a6a6c40d | 2026-08-24 (approved) | a6a6c40d / 7897dd1b / b5715865 |
 | step-010 | EPIC-B | done (Korrektur ausstehend) | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues) | 424a781b |
-| step-011 | EPIC-B | done (pending audit) | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | - | 1c7ee714 / (Doku folgt) |
+| step-011 | EPIC-B | done (Korrektur ausstehend) | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (issues) | 1c7ee714 |
+| step-012 | EPIC-B | open | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | - | - | - |
 
 ## Config (optional)
 
