@@ -84,6 +84,7 @@ verwenden neutrale, mehrprojektige C#-Solutions.
 | 8 | [08_config-resource-und-kleine-mcp-erweiterungen.md](08_config-resource-und-kleine-mcp-erweiterungen/Konzept.md) | offen | P3 | 01 (Loading-/Nutzungsevidenz für Teile 2+3) | Review-Finding |
 | 9 | [09_regel-design-audit-kandidaten.md](09_regel-design-audit-kandidaten/Konzept.md) | offen | P3 | 01 (Nutzungsevidenz), Hybridsuche | Review-Finding |
 | 10 | [10_architektur-monitoring.md](10_architektur-monitoring/Konzept.md) | offen | P3 | laufend, keine harte Abhängigkeit | Review-Finding |
+| 13 | [13_find-symbol-batch-namepatterns/Konzept.md](13_find-symbol-batch-namepatterns/Konzept.md) | **erledigt** (2026-08-25) | P1 | keine | MCP-Batch-Konsolidierung |
 | — | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen/Konzept.md) | Festlegung | P9 | fortlaufend | konsolidiert |
 
 ## Begründung der Reihenfolge

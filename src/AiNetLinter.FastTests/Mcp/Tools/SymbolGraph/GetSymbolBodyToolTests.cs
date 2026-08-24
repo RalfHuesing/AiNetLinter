@@ -2,10 +2,10 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -23,11 +23,33 @@ public sealed class GetSymbolBodyToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, "irrelevant", 80, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, ["irrelevant"], 80, CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text);
+    }
+
+    public static IEnumerable<object?[]> EmptyCases =>
+    [
+        [null],
+        [System.Array.Empty<string>()],
+        [new[] { "", "   " }]
+    ];
+
+    [Theory]
+    [MemberData(nameof(EmptyCases))]
+    public async Task ExecuteAsync_EmptySymbolIdentifiers_ReturnsRecoverableInvalidArgument(string[]? symbolIdentifiers)
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, symbolIdentifiers, 80, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text);
+        Assert.Contains("Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.", textContent.Text);
+        Assert.Contains("symbolIdentifiers: [\"M:Klasse.Methode\"]", textContent.Text);
     }
 
     [Fact]
@@ -41,7 +63,7 @@ public sealed class GetSymbolBodyToolTests
         var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
         Assert.NotNull(stableId);
 
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, stableId!, 80, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, [stableId!], 80, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -60,7 +82,7 @@ public sealed class GetSymbolBodyToolTests
             _fixture.Solution, "Greeter.Greet", CancellationToken.None);
         var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
 
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, stableId!, 1, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, [stableId!], 1, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -75,7 +97,7 @@ public sealed class GetSymbolBodyToolTests
         var state = _fixture.CreateServer();
 
         var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:5:19";
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, identifier, 80, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, [identifier], 80, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -87,7 +109,7 @@ public sealed class GetSymbolBodyToolTests
     {
         var state = _fixture.CreateServer();
 
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, "DoesNotExistXyz", 80, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, ["DoesNotExistXyz"], 80, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -100,7 +122,7 @@ public sealed class GetSymbolBodyToolTests
         var state = _fixture.CreateServer();
 
         var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:7:28";
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, identifier, 80, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, [identifier], 80, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -123,7 +145,6 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(
             state,
-            symbolIdentifier: null,
             symbolIdentifiers: [stableId1!, stableId2!],
             maxBodyLines: 80,
             ct: CancellationToken.None);
@@ -144,7 +165,6 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(
             state,
-            symbolIdentifier: null,
             symbolIdentifiers: ["Greeter.Greet", "Greeter.Prefix"],
             maxBodyLines: 80,
             ct: CancellationToken.None);
@@ -167,7 +187,6 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(
             state,
-            symbolIdentifier: null,
             symbolIdentifiers: [stableId!, "DoesNotExistXyz"],
             maxBodyLines: 80,
             ct: CancellationToken.None);

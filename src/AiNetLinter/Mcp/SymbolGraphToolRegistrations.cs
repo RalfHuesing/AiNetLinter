@@ -44,11 +44,11 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? namePattern = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+            async (string projectRoot, string[]? namePatterns = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
                 await ProjectToolCall.ExecuteAsync(
                     registry,
                     projectRoot,
-                    lease => FindSymbolTool.ExecuteAsync(lease.Server, namePattern, kind, maxResults, ct)),
+                    lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "find_symbol",
@@ -57,9 +57,10 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindSymbolDescription =
-        "Wann nutzen: Fundstelle(n) eines C#-Symbols per Namens-Substring finden, wenn der " +
-        "exakte Ort unbekannt ist. Beispiel: namePattern: \"Greeter\", kind: \"Class\". Bei 0 " +
-        "C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien.";
+        "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
+        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern (auch fuer genau einen Namen; " +
+        "Batch loest N sequentielle Calls ab, max. 10 pro Call). Beispiel: namePatterns: [\"Greeter\"], " +
+        "kind: \"Class\". Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,

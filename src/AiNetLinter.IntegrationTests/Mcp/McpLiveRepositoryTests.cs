@@ -33,7 +33,7 @@ public sealed class McpLiveRepositoryTests
             "find_symbol",
             new Dictionary<string, object?>
             {
-                ["namePattern"] = "LinterEngine",
+                ["namePatterns"] = new[] { "LinterEngine" },
                 ["maxResults"] = 5
             });
 
@@ -160,7 +160,7 @@ public sealed class McpLiveRepositoryTests
             "get_file_skeleton",
             new Dictionary<string, object?>
             {
-                ["filePath"] = "src/AiNetLinter/Program.cs"
+                ["filePaths"] = new[] { "src/AiNetLinter/Program.cs" }
             });
 
         Assert.NotNull(text);

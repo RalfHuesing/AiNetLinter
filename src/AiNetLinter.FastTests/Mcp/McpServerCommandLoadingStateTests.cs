@@ -190,7 +190,7 @@ public sealed class McpServerCommandLoadingStateTests
 }
 
 /// <summary>
-/// Direkter Aufruf von <see cref="AiNetLinter.Mcp.Tools.FindSymbolTool"/> ohne den
+/// Direkter Aufruf von <see cref="AiNetLinter.Mcp.Tools.SymbolGraph.FindSymbolTool"/> ohne den
 /// MCP-Transport, damit der Loading-Zustand ohne das vollstaendige stdio-Setup geprueft
 /// werden kann. Die Tool-Implementierung selbst ist die zu testende Einheit.
 /// </summary>
@@ -203,7 +203,7 @@ internal static class McpServerCommandLoadingStateHarness
         // expliziter Sync-Adapter, kein async-faehiger Kontext.
         return AiNetLinter.Mcp.Tools.SymbolGraph.FindSymbolTool.ExecuteAsync(
             server,
-            namePattern: "Anything",
+            namePatterns: ["Anything"],
             kind: null,
             maxResults: 10,
             CancellationToken.None).GetAwaiter().GetResult();

@@ -37,7 +37,7 @@ public sealed class McpServerCommandStalenessTests
         // 1) Initial: CallerRenamedXyz existiert noch nicht in Caller.cs.
         var initial = await client.CallToolAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "CallerRenamedXyz" });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "CallerRenamedXyz" } });
         Assert.NotEqual(true, initial.IsError);
         var initialText = Assert.IsType<TextContentBlock>(Assert.Single(initial.Content)).Text;
         Assert.Contains("Keine Treffer fuer 'CallerRenamedXyz'", initialText, StringComparison.Ordinal);
@@ -56,7 +56,7 @@ public sealed class McpServerCommandStalenessTests
         // des Servers noch der Initial-Snapshot ohne CallerRenamedXyz.
         var updated = await client.CallToolAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "CallerRenamedXyz" });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "CallerRenamedXyz" } });
         Assert.NotEqual(true, updated.IsError);
         var updatedText = Assert.IsType<TextContentBlock>(Assert.Single(updated.Content)).Text;
 

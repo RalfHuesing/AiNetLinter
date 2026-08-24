@@ -24,7 +24,7 @@ public sealed class McpServerCommandMissHintTests
         var host = await fixture.GetHostAsync();
         var text = await host.CallToolGetTextAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "userService" });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "userService" } });
 
         Assert.Contains("Keine Treffer fuer 'userService'", text, StringComparison.Ordinal);
         Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", text, StringComparison.Ordinal);

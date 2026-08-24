@@ -26,9 +26,17 @@ internal static class McpToolResults
     internal const string SymbolIdentifierHint =
         "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".";
 
-    /// <summary>Hinweis fuer fehlende Batch-Argumente (<c>symbolIdentifier</c>/<c>symbolIdentifiers</c>).</summary>
-    internal const string SymbolIdentifierBatchHint =
-        "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder symbolIdentifiers: [\"M:Klasse.MethodeA\", \"M:Klasse.MethodeB\"].";
+    /// <summary>Hinweis fuer fehlende <c>symbolIdentifiers</c>-Batch-Argumente.</summary>
+    internal const string SymbolIdentifiersBatchHint =
+        "symbolIdentifiers: [\"M:Klasse.Methode\"] oder symbolIdentifiers: [\"M:Klasse.MethodeA\", \"M:Klasse.MethodeB\"].";
+
+    /// <summary>Hinweis fuer fehlende <c>filePaths</c>-Batch-Argumente.</summary>
+    internal const string FilePathsBatchHint =
+        "filePaths: [\"src/MyClass.cs\"] oder filePaths: [\"src/ClassA.cs\", \"src/ClassB.cs\"].";
+
+    /// <summary>Hinweis fuer fehlende <c>namePatterns</c>-Batch-Argumente.</summary>
+    internal const string NamePatternsBatchHint =
+        "namePatterns: [\"Greeter\"] oder namePatterns: [\"Greeter\", \"GreetingService\"].";
 
     /// <summary>
     /// Baut ein Fehlerergebnis: <see cref="CallToolResult.IsError"/> ist <see langword="true"/>, der

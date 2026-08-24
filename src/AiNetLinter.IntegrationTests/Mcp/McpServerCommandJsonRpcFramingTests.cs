@@ -74,7 +74,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{" +
-                "\"name\":\"find_symbol\",\"arguments\":{\"namePattern\":\"Greeter\"}}}",
+                "\"name\":\"find_symbol\",\"arguments\":{\"namePatterns\":[\"Greeter\"]}}}",
         };
 
         var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
@@ -223,11 +223,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
         {
             var args = toolName switch
             {
-                "find_symbol" => "{\"namePattern\":\"Greeter\"}",
+                "find_symbol" => "{\"namePatterns\":[\"Greeter\"]}",
                 "find_references" => "{\"symbolIdentifier\":\"Greeter\"}",
                 "get_impact" => "{\"symbolIdentifier\":\"Greeter\"}",
                 "get_type_hierarchy" => "{\"symbolIdentifier\":\"Greeter\"}",
-                "get_file_skeleton" => "{\"filePath\":\"src/SymbolGraphMini/Greeter.cs\"}",
+                "get_file_skeleton" => "{\"filePaths\":[\"src/SymbolGraphMini/Greeter.cs\"]}",
                 "search_pattern" => "{\"pattern\":\"Greeter\"}",
                 _ => "{}",
             };

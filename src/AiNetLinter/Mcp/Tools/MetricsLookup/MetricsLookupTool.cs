@@ -22,13 +22,8 @@ namespace AiNetLinter.Mcp.Tools.MetricsLookup;
 /// </summary>
 internal static class MetricsLookupTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, CancellationToken ct) =>
-        ExecuteAsync(state, symbolIdentifier, null, ct);
-
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string? symbolIdentifier,
         string[]? symbolIdentifiers,
         CancellationToken ct)
     {
@@ -36,13 +31,13 @@ internal static class MetricsLookupTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = ExtractIdentifiers(symbolIdentifier, symbolIdentifiers);
+        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' oder 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifierBatchHint);
+                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifiersBatchHint);
         }
 
         try
@@ -84,12 +79,7 @@ internal static class MetricsLookupTool
         var final = McpSufficiencyHints.Append(markdown);
         var finalText = FindSymbolTool.PrependWarning(warning, final);
 
-        // Beide Zwecke serialisieren zu JSON-Objekten: Einzel-Symbol als nacktes DTO (bisheriger
-        // Vertrag), Batch gewrappt — ein Top-Level-Array würde den Tool-Call clientseitig
-        // scheitern lassen (siehe McpToolResults.Text``1 und MetricsLookupBatchDto).
-        return identifiers.Count == 1 && dtos.Count == 1
-            ? McpToolResults.Text(finalText, dtos[0])
-            : McpToolResults.Text(finalText, new MetricsLookupBatchDto(dtos, identifiers.Count));
+        return McpToolResults.Text(finalText, new MetricsLookupBatchDto(dtos, identifiers.Count));
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(
@@ -126,7 +116,4 @@ internal static class MetricsLookupTool
 
         return (dto, null);
     }
-
-    private static List<string> ExtractIdentifiers(string? symbolIdentifier, string[]? symbolIdentifiers) =>
-        McpBatchArguments.Collect(symbolIdentifier, symbolIdentifiers, StringComparer.Ordinal);
 }

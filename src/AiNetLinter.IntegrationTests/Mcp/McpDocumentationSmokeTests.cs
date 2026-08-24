@@ -29,7 +29,7 @@ public sealed class McpDocumentationSmokeTests
     {
         var text = await _fixture.Client.CallToolGetTextAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "LinterEngine" });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "LinterEngine" } });
         Assert.NotNull(text);
         Assert.NotEmpty(text);
         Assert.Contains("LinterEngine", text, StringComparison.OrdinalIgnoreCase);
@@ -52,7 +52,7 @@ public sealed class McpDocumentationSmokeTests
             "find_symbol",
             new Dictionary<string, object?>
             {
-                ["namePattern"] = "Get",
+                ["namePatterns"] = new[] { "Get" },
                 ["maxResults"] = 1,
             });
         Assert.NotNull(text);

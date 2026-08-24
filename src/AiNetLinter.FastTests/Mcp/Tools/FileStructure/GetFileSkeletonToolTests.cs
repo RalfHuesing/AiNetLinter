@@ -3,10 +3,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.FastTests.Fixtures;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -24,11 +24,33 @@ public sealed class GetFileSkeletonToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await GetFileSkeletonTool.ExecuteAsync(state, "irrelevant.cs", CancellationToken.None);
+        var result = await GetFileSkeletonTool.ExecuteAsync(state, ["irrelevant.cs"], CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text);
+    }
+
+    public static IEnumerable<object?[]> EmptyCases =>
+    [
+        [null],
+        [System.Array.Empty<string>()],
+        [new[] { "", "   " }]
+    ];
+
+    [Theory]
+    [MemberData(nameof(EmptyCases))]
+    public async Task ExecuteAsync_EmptyFilePaths_ReturnsRecoverableInvalidArgument(string[]? filePaths)
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetFileSkeletonTool.ExecuteAsync(state, filePaths, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text);
+        Assert.Contains("Pflichtparameter 'filePaths' fehlt oder ist leer.", textContent.Text);
+        Assert.Contains("filePaths: [\"src/MyClass.cs\"]", textContent.Text);
     }
 
     [Fact]
@@ -37,7 +59,7 @@ public sealed class GetFileSkeletonToolTests
         var state = _fixture.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
-            state, "src/SymbolGraphMini/DoesNotExist.cs", CancellationToken.None);
+            state, ["src/SymbolGraphMini/DoesNotExist.cs"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -50,7 +72,7 @@ public sealed class GetFileSkeletonToolTests
         var state = _fixture.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
-            state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
+            state, ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -66,9 +88,9 @@ public sealed class GetFileSkeletonToolTests
         var state = _fixture.CreateServer();
 
         var relativeResult = await GetFileSkeletonTool.ExecuteAsync(
-            state, "src/SymbolGraphMini/Greeter.cs", CancellationToken.None);
+            state, ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
         var absoluteResult = await GetFileSkeletonTool.ExecuteAsync(
-            state, SymbolGraphMiniSolutionSpec.GreeterPath, CancellationToken.None);
+            state, [SymbolGraphMiniSolutionSpec.GreeterPath], CancellationToken.None);
 
         Assert.NotEqual(true, relativeResult.IsError);
         Assert.NotEqual(true, absoluteResult.IsError);
@@ -85,7 +107,7 @@ public sealed class GetFileSkeletonToolTests
         using var state = context.CreateServer();
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
-            state, "src/CompileErrorMini/BrokenClassA.cs", CancellationToken.None);
+            state, ["src/CompileErrorMini/BrokenClassA.cs"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -101,7 +123,6 @@ public sealed class GetFileSkeletonToolTests
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state,
-            filePath: null,
             filePaths: ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/Caller.cs"],
             ct: CancellationToken.None);
 
@@ -119,7 +140,6 @@ public sealed class GetFileSkeletonToolTests
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state,
-            filePath: null,
             filePaths: ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/NonExistent.cs"],
             ct: CancellationToken.None);
 

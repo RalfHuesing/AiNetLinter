@@ -11,21 +11,16 @@ namespace AiNetLinter.Mcp;
 internal static class McpBatchArguments
 {
     /// <summary>
-    /// Kombiniert ein optionales Einzelelement und ein optionales Batch-Array zu einer deduplizierten Liste nicht-leerer Strings.
+    /// Bereinigt ein optionales Batch-Array zu einer deduplizierten Liste getrimmter, nicht-leerer Strings.
     /// </summary>
-    internal static List<string> Collect(string? single, string[]? multiple, StringComparer? comparer = null)
+    internal static List<string> Normalize(string[]? values, StringComparer? comparer = null)
     {
         var list = new List<string>();
+        if (values is null) return list;
+
         var effectiveComparer = comparer ?? StringComparer.Ordinal;
 
-        if (!string.IsNullOrWhiteSpace(single))
-        {
-            list.Add(single.Trim());
-        }
-
-        if (multiple is null) return list;
-
-        foreach (var item in multiple)
+        foreach (var item in values)
         {
             if (string.IsNullOrWhiteSpace(item)) continue;
             var trimmed = item.Trim();

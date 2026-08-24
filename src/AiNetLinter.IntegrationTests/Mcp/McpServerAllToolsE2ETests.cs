@@ -31,7 +31,7 @@ public sealed class McpServerAllToolsE2ETests
             "find_symbol",
             new Dictionary<string, object?>
             {
-                ["namePattern"] = "Greeter",
+                ["namePatterns"] = new[] { "Greeter" },
                 ["kind"] = "Class"
             });
 
@@ -43,7 +43,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var text = await _fixture.Client.CallToolGetTextAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "NonExistentSymbol999" });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "NonExistentSymbol999" } });
 
         Assert.Contains("Keine Treffer", text, StringComparison.Ordinal);
     }
@@ -106,7 +106,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton",
-            new Dictionary<string, object?> { ["filePath"] = "src/DoesNotExist.cs" });
+            new Dictionary<string, object?> { ["filePaths"] = new[] { "src/DoesNotExist.cs" } });
 
         Assert.NotNull(result);
     }
@@ -116,7 +116,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton",
-            new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/wwwroot/Page.xaml" });
+            new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/wwwroot/Page.xaml" } });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -269,7 +269,19 @@ public sealed class McpServerAllToolsE2ETests
     }
 
     [Fact]
-    public async Task GetSymbolBody_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
+    public async Task FindSymbol_MissingNamePatterns_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_symbol", new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("namePatterns", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetSymbolBody_MissingSymbolIdentifiers_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_symbol_body", new Dictionary<string, object?>());
@@ -277,11 +289,11 @@ public sealed class McpServerAllToolsE2ETests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifiers", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GetFileSkeleton_MissingFilePath_ReturnsRecoverableInvalidArgument()
+    public async Task GetFileSkeleton_MissingFilePaths_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton", new Dictionary<string, object?>());
@@ -289,7 +301,7 @@ public sealed class McpServerAllToolsE2ETests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("filePath", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("filePaths", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -359,7 +371,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var text = await _fixture.Client.CallToolGetTextAsync(
             "metrics_lookup",
-            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" });
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "Greeter.Greet" } });
 
         Assert.Contains("Greet", text, StringComparison.Ordinal);
         Assert.Contains("Schwellwert-Abgleich", text, StringComparison.Ordinal);
@@ -370,7 +382,7 @@ public sealed class McpServerAllToolsE2ETests
     {
         var result = await _fixture.Client.CallToolAsync(
             "metrics_lookup",
-            new Dictionary<string, object?> { ["symbolIdentifier"] = "UnknownClass123" });
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "UnknownClass123" } });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

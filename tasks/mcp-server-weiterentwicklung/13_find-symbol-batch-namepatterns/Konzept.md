@@ -1,5 +1,5 @@
 ---
-status: offen
+status: erledigt
 type: konzept
 project_kind: brownfield
 estimated_scope: medium

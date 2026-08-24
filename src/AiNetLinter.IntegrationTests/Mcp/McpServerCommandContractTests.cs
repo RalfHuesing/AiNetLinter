@@ -166,7 +166,7 @@ public sealed class McpServerCommandContractTests
 
     [Fact]
     public async Task RunAsync_ValidFixture_FindSymbolReturnsMatch() =>
-        await AssertTextAsync("find_symbol", new Dictionary<string, object?> { ["namePattern"] = "Greeter" }, "Greeter");
+        await AssertTextAsync("find_symbol", new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greeter" } }, "Greeter");
 
     [Fact]
     public async Task RunAsync_ValidFixture_FindReferencesReturnsCallSite() =>
@@ -194,7 +194,7 @@ public sealed class McpServerCommandContractTests
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature() =>
-        await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/Greeter.cs" }, "Greet");
+        await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" } }, "Greet");
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>

@@ -66,7 +66,7 @@ public sealed class McpServerCommandErrorHandlingTests
                 "find_symbol",
                 new Dictionary<string, object?>
                 {
-                    ["namePattern"] = "Anything",
+                    ["namePatterns"] = new[] { "Anything" },
                     ["projectRoot"] = tempDir,
                 },
                 cts.Token);
@@ -113,7 +113,7 @@ public sealed class McpServerCommandErrorHandlingTests
             "get_file_skeleton",
             new Dictionary<string, object?>
             {
-                ["filePath"] = "src/CompileErrorMini/BrokenClassA.cs",
+                ["filePaths"] = new[] { "src/CompileErrorMini/BrokenClassA.cs" },
                 ["projectRoot"] = fixture.RootPath,
             },
             cts.Token);

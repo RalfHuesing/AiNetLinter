@@ -36,9 +36,11 @@ internal static class FindSymbolTool
         "class", "klasse", "interface", "method", "methode", "property",
     };
 
+    internal const int MaxPatternsPerCall = 10;
+
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
-    /// Stellt dem Scanner-Output einen
+    /// Stellt dem Scanner-Output einen Warnhinweis voran, falls die Solution
     /// Compile-Fehler in einzelnen Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst
     /// nicht, dass die Antwort unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt
     /// unerwartete Roslyn-Exceptions ab und liefert einen strukturierten [ERROR]-Antwort statt
@@ -46,17 +48,26 @@ internal static class FindSymbolTool
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string? namePattern,
+        string[]? namePatterns,
         string? kind,
         int maxResults,
         CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(namePattern))
+        var patterns = McpBatchArguments.Normalize(namePatterns);
+        if (patterns.Count == 0)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "namePattern darf nicht leer sein.",
-                hint: "Pattern angeben — leeres Pattern ist nicht erlaubt.");
+                "Pflichtparameter 'namePatterns' fehlt oder ist leer.",
+                hint: McpToolResults.NamePatternsBatchHint);
+        }
+
+        if (patterns.Count > MaxPatternsPerCall)
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Maximal {MaxPatternsPerCall} namePatterns pro Call erlaubt (angefordert: {patterns.Count}).",
+                hint: "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).");
         }
 
         if (kind is not null && !ValidKinds.Contains(kind))
@@ -75,18 +86,30 @@ internal static class FindSymbolTool
 
         try
         {
-            var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
-                solution, namePattern, kind, normalizedMaxResults);
+            var results = new List<FindSymbolPatternResultDto>(patterns.Count);
+            var mb = new MarkdownBuilder();
+
+            for (var i = 0; i < patterns.Count; i++)
+            {
+                if (i > 0) mb.Divider();
+                var pattern = patterns[i];
+                var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
+                    solution, pattern, kind, normalizedMaxResults);
+                results.Add(new FindSymbolPatternResultDto(pattern, entries));
+
+                mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
+                mb.Line(text.TrimEnd());
+            }
+
             var warning = await BuildAggregateWarningAsync(solution, ct);
-            // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
-            // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-            return McpToolResults.Text(PrependWarning(warning, text), new { Matches = entries });
+            var markdown = mb.Build().TrimEnd();
+            return McpToolResults.Text(PrependWarning(warning, markdown), new FindSymbolBatchDto(results));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in find_symbol: {ex.Message}",
-                context: namePattern);
+                context: string.Join(", ", patterns));
         }
     }
 
@@ -148,6 +171,16 @@ internal static class FindSymbolTool
         return string.IsNullOrEmpty(warning) ? text : warning + "\n\n" + text;
     }
 }
+
+/// <summary>
+/// StructuredContent-Hülle für <c>find_symbol</c> — enthält die Ergebnisliste aller angefragten Namens-Muster.
+/// </summary>
+internal sealed record FindSymbolBatchDto(IReadOnlyList<FindSymbolPatternResultDto> Results);
+
+/// <summary>
+/// Ein Einzelergebnis für ein angefragtes Namens-Muster in <c>find_symbol</c>.
+/// </summary>
+internal sealed record FindSymbolPatternResultDto(string NamePattern, IReadOnlyList<SymbolLocationEntry> Matches);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_symbol</c> — eine Quell-Fundstelle eines Symbols

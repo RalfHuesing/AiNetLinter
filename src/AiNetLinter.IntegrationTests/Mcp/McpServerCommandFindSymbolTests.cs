@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp;
 
+
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandFindSymbolTests
 {
@@ -22,7 +23,7 @@ public sealed class McpServerCommandFindSymbolTests
         var host = await fixture.GetHostAsync();
         var text = await host.CallToolGetTextAsync(
             "find_symbol",
-            new Dictionary<string, object?> { ["namePattern"] = "Greet", ["maxResults"] = 2 });
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greet" }, ["maxResults"] = 2 });
 
         Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);

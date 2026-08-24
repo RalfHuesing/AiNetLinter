@@ -174,11 +174,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
+            async (string projectRoot, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
                 await ProjectToolCall.ExecuteAsync(
                     registry,
                     projectRoot,
-                    lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifier, symbolIdentifiers, ct)),
+                    lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "metrics_lookup",
@@ -190,7 +190,7 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: punktgenaue Metriken (LOC, zyklomatische/kognitive Komplexitaet, " +
         "Parameteranzahl, AI-Context-Footprint, Member-Statistiken) und Schwellwert-Abgleich " +
         "fuer ein oder mehrere C#-Symbole (Batch-Support in 1 Turn) abrufen. " +
-        "symbolIdentifier (einzeln) ODER symbolIdentifiers (Array fuer Batch): " +
+        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): " +
         "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
         "\"Datei.cs:Zeile\" oder qualifizierter Name.";
 

@@ -22,24 +22,20 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetFileSkeletonTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? filePath, CancellationToken ct) =>
-        ExecuteAsync(state, filePath, null, ct);
-
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? filePath, string[]? filePaths, CancellationToken ct)
+        McpCodeGraphServer state, string[]? filePaths, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var paths = ExtractFilePaths(filePath, filePaths);
+        var paths = McpBatchArguments.Normalize(filePaths, StringComparer.OrdinalIgnoreCase);
         if (paths.Count == 0)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'filePath' oder 'filePaths' fehlt oder ist leer.",
-                hint: "filePath: \"src/MyClass.cs\" oder filePaths: [\"src/ClassA.cs\", \"src/ClassB.cs\"].");
+                "Pflichtparameter 'filePaths' fehlt oder ist leer.",
+                hint: McpToolResults.FilePathsBatchHint);
         }
 
         try
@@ -121,7 +117,4 @@ internal static class GetFileSkeletonTool
 
         return null;
     }
-
-    private static List<string> ExtractFilePaths(string? filePath, string[]? filePaths) =>
-        McpBatchArguments.Collect(filePath, filePaths, StringComparer.OrdinalIgnoreCase);
 }

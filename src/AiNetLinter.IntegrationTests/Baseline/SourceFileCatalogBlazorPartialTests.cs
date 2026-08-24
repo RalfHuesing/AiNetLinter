@@ -1,41 +1,35 @@
-using System.Linq;
+#nullable enable
+
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Baseline;
+using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
-using AiNetLinter.IntegrationTests.Platform;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Baseline;
 
-/// <summary>
-/// Belegt, dass die vom Razor-Source-Generator erzeugte zweite Partial-Deklaration einer
-/// .razor-Komponente (mit dem impliziten ": ComponentBase"-Basistyp) korrekt in die von
-/// SourceFileCatalog.LoadAsync geladene Compilation einfliesst. Die .razor.cs-Codebehind-Klasse
-/// hat dadurch einen Basistyp, und ihre override-Lifecycle-Methoden matchen gegen die
-/// entsprechenden virtuellen Methoden von ComponentBase — kein CS0115. get_file_skeleton zeigt
-/// den Basistyp jetzt ebenfalls an, semantisch aufgeloest ueber das gemergte Partial-Symbol, mit
-/// einem Hinweis, dass er aus einer anderen Partial-Deklaration stammt.
-/// </summary>
 [Trait("Category", "Integration")]
 public sealed class SourceFileCatalogBlazorPartialTests
 {
     [Fact]
-    public async Task LoadAsync_BlazorPartialFixture_ResolvesComponentBaseWithoutCompileErrors()
+    public async Task FindSymbol_BlazorPartialFixture_FindsRazorGeneratedComponentBaseAndNoCompileError()
     {
         using var fixture = new BlazorPartialMiniFixtureWorkspace();
-        using var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
-        var errorsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(catalog.Solution, CancellationToken.None);
-        Assert.False(errorsByFile.TryGetValue(fixture.SiteViewCsPath, out _));
+        var result = await FindSymbolTool.ExecuteAsync(
+            state, ["SiteView"], kind: null, maxResults: 50, CancellationToken.None);
 
-        var project = catalog.Solution.Projects.Single();
-        var compilation = await project.GetCompilationAsync();
-        var siteView = compilation!.GetTypeByMetadataName("BlazorPartialMini.SiteView");
-        Assert.Equal("Microsoft.AspNetCore.Components.ComponentBase", siteView?.BaseType?.ToDisplayString());
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("Hinweis:", text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("Compile-Fehler", text, System.StringComparison.Ordinal);
+        Assert.Contains("SiteView", text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -61,7 +55,7 @@ public sealed class SourceFileCatalogBlazorPartialTests
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
 
         var result = await GetFileSkeletonTool.ExecuteAsync(
-            state, "src/BlazorPartialMini/SiteView.razor.cs", CancellationToken.None);
+            state, ["src/BlazorPartialMini/SiteView.razor.cs"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

@@ -484,7 +484,7 @@ public sealed class FindReferencesToolTests
         var state = _fixture.CreateServer();
         var identifier = $"{SymbolGraphMiniSolutionSpec.OtherCallerPath}:5";
 
-        var result = await GetSymbolBodyTool.ExecuteAsync(state, identifier, GetSymbolBodyTool.DefaultMaxBodyLines, CancellationToken.None);
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, [identifier], GetSymbolBodyTool.DefaultMaxBodyLines, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

@@ -24,23 +24,33 @@ public sealed class MetricsLookupToolTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null)));
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "irrelevant", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["irrelevant"], CancellationToken.None);
 
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_EmptyIdentifier_ReturnsRecoverableInvalidArgument()
+    public static IEnumerable<object?[]> EmptyCases =>
+    [
+        [null],
+        [System.Array.Empty<string>()],
+        [new[] { "", "   " }]
+    ];
+
+    [Theory]
+    [MemberData(nameof(EmptyCases))]
+    public async Task ExecuteAsync_EmptySymbolIdentifiers_ReturnsRecoverableInvalidArgument(string[]? symbolIdentifiers)
     {
         var state = _fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, symbolIdentifiers, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
+        Assert.Contains("Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.", textContent.Text);
+        Assert.Contains("symbolIdentifiers: [\"M:Klasse.Methode\"]", textContent.Text);
     }
 
     [Fact]
@@ -48,7 +58,7 @@ public sealed class MetricsLookupToolTests
     {
         var state = _fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "NonExistentClass.NonExistentMethod", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["NonExistentClass.NonExistentMethod"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -56,11 +66,30 @@ public sealed class MetricsLookupToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SingleSymbol_AlwaysReturnsBatchDto()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["Greeter.Greet"], CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
+            result.StructuredContent.Value.GetRawText(),
+            McpJsonOptions.Default);
+
+        Assert.NotNull(batch);
+        Assert.Equal(1, batch.RequestedCount);
+        var dto = Assert.Single(batch.Results);
+        Assert.Equal("Greet", dto.SymbolName);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MethodSymbol_ReturnsMethodMetricsAndThresholds()
     {
         var state = _fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "Greeter.Greet", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["Greeter.Greet"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -69,11 +98,12 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("[OK]", textContent.Text);
 
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.Equal("Greet", dto.SymbolName);
         Assert.NotNull(dto.MethodMetrics);
         Assert.Equal(1, dto.MethodMetrics.TotalParameters);
@@ -89,7 +119,7 @@ public sealed class MetricsLookupToolTests
     {
         var state = _fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "Greeter", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["Greeter"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -97,11 +127,12 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("AI-Context-Footprint", textContent.Text);
 
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.Equal("Greeter", dto.SymbolName);
         Assert.NotNull(dto.TypeMetrics);
         Assert.True(dto.TypeMetrics.CodeLines > 0);
@@ -116,18 +147,19 @@ public sealed class MetricsLookupToolTests
     {
         var state = _fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "Greeter.Prefix", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["Greeter.Prefix"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Prefix", textContent.Text);
 
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.Equal("Prefix", dto.SymbolName);
         Assert.NotNull(dto.PropertyMetrics);
         Assert.True(dto.PropertyMetrics.HasGetter);
@@ -177,15 +209,16 @@ public sealed class MetricsLookupToolTests
 
         var state = customFixture.CreateServer(config: config);
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "ComplexClass.ComplexMethod", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["ComplexClass.ComplexMethod"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.NotNull(dto.MethodMetrics);
         Assert.Equal(5, dto.MethodMetrics.TotalParameters);
         Assert.Equal(5, dto.MethodMetrics.EffectiveParameters);
@@ -227,15 +260,16 @@ public sealed class MetricsLookupToolTests
 
         var state = fixture.CreateServer(config: config);
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "ParamTestClass.Execute", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["ParamTestClass.Execute"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.NotNull(dto.MethodMetrics);
         Assert.Equal(3, dto.MethodMetrics.TotalParameters);
         Assert.Equal(2, dto.MethodMetrics.EffectiveParameters);
@@ -267,15 +301,16 @@ public sealed class MetricsLookupToolTests
         using var fixture = new McpInMemoryTestContext(solution);
         var state = fixture.CreateServer();
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "UserDto", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["UserDto"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.NotNull(dto.TypeMetrics);
         // 4 properties + 1 method = 5 members (plus default ctor if emitted, exactly 5 countable declared members)
         Assert.Equal(4, dto.TypeMetrics.PropertyCount);
@@ -318,15 +353,16 @@ public sealed class MetricsLookupToolTests
 
         var state = fixture.CreateServer(config: config);
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "AppSettingsConfig", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["AppSettingsConfig"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.NotNull(dto.TypeMetrics);
         Assert.Equal(6, dto.TypeMetrics.PublicMemberCount);
         var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxPublicMembersPerType);
@@ -386,15 +422,16 @@ public sealed class MetricsLookupToolTests
 
         var state = fixture.CreateServer(config: config);
 
-        var result = await MetricsLookupTool.ExecuteAsync(state, "Sample.LongSimpleMethod", CancellationToken.None);
+        var result = await MetricsLookupTool.ExecuteAsync(state, ["Sample.LongSimpleMethod"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var dto = JsonSerializer.Deserialize<MetricsLookupResultDto>(
+        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
             result.StructuredContent.Value.GetRawText(),
             McpJsonOptions.Default);
 
-        Assert.NotNull(dto);
+        Assert.NotNull(batch);
+        var dto = Assert.Single(batch.Results);
         Assert.NotNull(dto.MethodMetrics);
         var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxMethodLineCount);
         Assert.Equal(20, check.Limit);
@@ -408,7 +445,6 @@ public sealed class MetricsLookupToolTests
 
         var result = await MetricsLookupTool.ExecuteAsync(
             state,
-            symbolIdentifier: null,
             symbolIdentifiers: ["Greeter.Greet", "Greeter.Prefix"],
             ct: CancellationToken.None);
 
@@ -438,7 +474,6 @@ public sealed class MetricsLookupToolTests
 
         var result = await MetricsLookupTool.ExecuteAsync(
             state,
-            symbolIdentifier: null,
             symbolIdentifiers: ["Greeter.Greet", "DoesNotExistXyz"],
             ct: CancellationToken.None);
 

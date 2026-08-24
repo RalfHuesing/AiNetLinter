@@ -109,18 +109,18 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `get_feature_context` | Composite One-Shot-Exploration vor Edits/Refactorings: bündelt Deklaration, Metriken, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations |
 | `get_test_context` | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zugeordnete Testdateien, Testklassen, Testmethoden, Kategorien und direkt ausführbare `dotnet test` Filterbefehle |
 | `get_namespace_tree` | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) |
-| `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden |
+| `find_symbol` | Klassen/Methoden/Properties/Interfaces per Namensmuster finden (Batch-Support für bis zu 10 Patterns in 1 Turn) |
 | `find_references` | Aufrufstellen eines Symbols (optional transitiv über `depth`), mit strukturierten Treffern und Vollständigkeitsmetadaten |
 | `get_impact` | Betroffene Call-Sites für uncommittete Änderungen oder ein Symbol (Symbol-Branch mit derselben transitiven Struktur wie `find_references`); optional `detailLevel=change-context` mit geänderten Dateien/Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations und empfohlenen `dotnet test`-Befehlen |
 | `get_type_hierarchy` | Basisklassen, Interfaces, abgeleitete Typen, heuristische DI-Registrierungen |
 | `get_call_tree` | Aufrufer- oder Aufgerufene-Baum eines Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid), Richtung `incoming`/`outgoing`/`both`, transitiv über `depth` |
 | `dependency_graph` | Datei-/Typ-Abhängigkeiten (echte SemanticModel-Typreferenzen statt `using`-Direktiven), ein-/ausgehend, transitiv |
-| `get_file_skeleton` | Struktur-Skelett einer oder mehrerer C#-Dateien (Batch-Support in 1 Turn) |
+| `get_file_skeleton` | Struktur-Skelett einer oder mehrerer C#-Dateien per `filePaths`-Array (Batch in 1 Turn) |
 | `get_class_structure` | Tabellarische Member- und Zeilen-Übersicht eines Typs (Kind, Name, Visibility, Start-/End-Zeile, Signatur); `maxMembers` (Default 50, Cap 200) + `sortBy` (`lines`/`kind`/`name`); bei `record`-Typen werden Primary-Constructor-Parameter als eigene Zeilen ausgegeben |
-| `get_symbol_body` | Source-Body eines oder mehrerer C#-Symbole (Batch-Support in 1 Turn) per stabiler ID oder Name |
+| `get_symbol_body` | Source-Body eines oder mehrerer C#-Symbole per `symbolIdentifiers`-Array (Batch in 1 Turn) per stabiler ID oder Name |
 | `get_index_scope` | Dateityp-Aufschlüsselung der geladenen Solution |
 | `get_hotspots` | Dateien nahe oder über dem `MaxLineCount`-Limit |
-| `metrics_lookup` | Punktgenaue Metriken (LOC, Komplexität, Parameter, AI-Footprint) und Schwellwert-Abgleich für ein oder mehrere Symbole (Batch-Support in 1 Turn) |
+| `metrics_lookup` | Punktgenaue Metriken (LOC, Komplexität, Parameter, AI-Footprint) und Schwellwert-Abgleich für ein oder mehrere Symbole per `symbolIdentifiers`-Array (Batch in 1 Turn) |
 | `metrics_tree` | ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (Code-Größe, Kommentaranteil, Lint-Verstöße, Komplexität), Ebene für Ebene explorierbar |
 | `get_violations` | Aktuelle Lint-Verstöße für einen Scope |
 | `pattern_detect` | Lint-Verstöße nach Pattern-Kategorie gruppiert (God-Class, async-void, lange Methoden, Public-API ohne Doc, leere Catch-Blöcke, Feature-Envy) statt flacher Datei-Liste |

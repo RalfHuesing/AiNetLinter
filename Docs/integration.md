@@ -368,10 +368,10 @@ Konkret:
 
 - Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbol: "MyClass.MyMethod")`
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbol: "MyClass")`
-- Klassennamen suchen → `find_symbol(namePattern: "MyClass", kind: "Klasse")`
+- Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "Klasse")`
 - Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)` oder `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
-- Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifier: "MyClass.MyMethod")`
+- Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`

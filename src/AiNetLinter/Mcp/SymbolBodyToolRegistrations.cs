@@ -32,11 +32,11 @@ internal static class SymbolBodyToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+            async (string projectRoot, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
                 await ProjectToolCall.ExecuteAsync(
                     registry,
                     projectRoot,
-                    lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifier, symbolIdentifiers, maxBodyLines, ct)),
+                    lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
             new McpServerToolCreateOptions
             {
                 Name = "get_symbol_body",
@@ -46,7 +46,7 @@ internal static class SymbolBodyToolRegistrations
 
     private const string GetSymbolBodyDescription =
         "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support fuer 1 Turn). " +
-        "symbolIdentifier (einzeln) ODER symbolIdentifiers (Array fuer Batch): \"M:Namespace.Klasse.Methode\" " +
+        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): \"M:Namespace.Klasse.Methode\" " +
         "oder \"Datei.cs:42:10\" oder \"Datei.cs:42\" oder \"Klasse.Methode\". " +
         "Hart gekappt bei maxBodyLines je Symbol (Default 80).";
 }

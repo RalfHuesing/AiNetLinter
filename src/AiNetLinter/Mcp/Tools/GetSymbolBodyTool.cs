@@ -29,13 +29,8 @@ internal static class GetSymbolBodyTool
     /// <see cref="ExecuteAsync"/> (siehe <see cref="McpSufficiencyHints"/>).</summary>
     private const string TruncationMarker = "// ... truncated, total ";
 
-    internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, int maxBodyLines, CancellationToken ct) =>
-        ExecuteAsync(state, symbolIdentifier, null, maxBodyLines, ct);
-
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string? symbolIdentifier,
         string[]? symbolIdentifiers,
         int maxBodyLines,
         CancellationToken ct)
@@ -44,13 +39,13 @@ internal static class GetSymbolBodyTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = ExtractIdentifiers(symbolIdentifier, symbolIdentifiers);
+        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' oder 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifierBatchHint);
+                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifiersBatchHint);
         }
 
         try
@@ -136,9 +131,6 @@ internal static class GetSymbolBodyTool
         mb.CodeBlock("csharp", body);
         return null;
     }
-
-    private static List<string> ExtractIdentifiers(string? symbolIdentifier, string[]? symbolIdentifiers) =>
-        McpBatchArguments.Collect(symbolIdentifier, symbolIdentifiers, StringComparer.Ordinal);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {
