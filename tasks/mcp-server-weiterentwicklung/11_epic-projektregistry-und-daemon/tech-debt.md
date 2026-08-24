@@ -37,6 +37,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | TD-005 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` + `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | niedrig | nein | Disposal faulted Loads über den Sync-Eviction-Pfad schreibt [WARN] auf den nicht injizierbaren Console-Kanal (verwandt TD-002) |
 | TD-006 | `src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs` + `src/AiNetLinter.TestKit/TestConfigFactory.cs` | niedrig | nein | Exact-Duplikat der leeren Config-Erzeugung in getrennten Test-/TestKit-Grenzen; gemeinsame Ablage braucht eine Abhängigkeitsentscheidung |
 | TD-007 | `src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs`, `McpRawWireTestHarness.cs` + Legacy-MCP-Prozesstests | niedrig | nein | Abdeckungsasymmetrie nach ThinClient-Umstellung: Bestandssuiten fixiert im Escape-Pfad, produktiver Daemon-Pfad nur durch wenige dedizierte Contracts gedeckt |
+| TD-008 | `src/AiNetLinter.IntegrationTests/**` (benutzergebundener Pipe-Endpunkt) | mittel | nein | Suite-weite Flakiness-Quelle: überlebende Fremd-Daemons am gemeinsamen Endpunkt stören parallele Integrationsläufe (empirisch belegt) — suite-weites Cleanup/Gating-Fixture fehlt |
 
 ## Einträge
 
@@ -189,4 +190,29 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   für `noDaemon: false`, Zwei-Clients-Varianten), ohne die Serialisierungs-
   verbote von Richtlinien §4 zu verletzen.
 - **Auto-Fixable:** nein — Testdesign-/Isolationsentscheidung.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-008 — Überlebende Daemons am gemeinsamen Endpunkt als suite-weite Flakiness-Quelle [Priorität: mittel] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-014 (Kritiker-Review vom 2026-08-24)
+- **Ort:** `src/AiNetLinter.IntegrationTests/**` — der benutzergebundene
+  Pipe-Endpunkt `ainetlinter.analyzer.v1.<username>` wird suite-weit geteilt;
+  neue Daemon-Läufe gate zwar über `AcquireEndpointAsync`
+  (`DaemonProcessContractHarness`), aber kein Fixture räumt
+  *fremde/überlebende* Daemons weg, bevor Tests am Endpunkt binden.
+- **Befund:** Im Vollstack-Lauf des Coders störte ein einziger überlebender,
+  detached gespawnter Daemon (Default-Idle-Exit 10 min, aus einer manuellen
+  MCP-Gate-Session) vier Bestands-/Neue Tests gleichzeitig (Doppelstart-Lock,
+  fremder Repo-Key in Health-Antworten, Exit 1 beim Handshake-Lauf). Auch im
+  isolierten Kritiker-Nachlauf des N4-Contracts blieb der Daemon einige
+  Sekunden nach dem Teardown-Kill sichtbar, bevor er sich selbst beendete —
+  im parallelen Volllauf ist dieses Fenster eine reale Störquelle. Die
+  Step-013-Isolation (Escape-Pinning) mildert das für die Bestandssuiten; die
+  seit step-014 wachsende Zahl echter Daemon-Läufe erhöht die Exposition
+  erneut. Kein Defekt dieses Steps — strukturelle Testumgebungs-Schwäche.
+- **Richtung (Nutzer-Entscheid):** Suite-weites Cleanup-/Gating-Fixture
+  (z. B. Endpunkt-Claim mit Fremd-Daemon-Erkennung und kontrolliertem Kill
+  oder dedizierter Test-Endpunkt via Env), bevor weitere Daemon-Pfad-Tests
+  dazukommen; Serialisierungsverbote von Richtlinien §4 bleiben gewahrt.
+- **Auto-Fixable:** nein — Architektur- und Isolationsentscheidung.
 - **Status:** offen  # offen | erledigt | verworfen

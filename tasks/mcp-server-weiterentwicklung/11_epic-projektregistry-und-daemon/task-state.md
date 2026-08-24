@@ -2,7 +2,7 @@
 status: done (pending audit)  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T12:52:00+02:00
+last_updated: 2026-08-24T14:05:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 14  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-014
@@ -22,16 +22,16 @@ current_step: step-014
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 14 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-014` (open — Korrektur von step-013:
-  fehlende Contract-Nachweise F1 und unerreichbare Timeout-Diagnostik F2;
-  mechanisches Transkript aus dem Review ohne Planer-Aufruf)
+- **Aktueller Schritt:** `step-014` (done — Korrektur approved;
+  F1/F2 geschlossen, damit sind EPIC-A und EPIC-B fachlich vollständig;
+  offen: Drift-Audit-Step gemäß Nutzervorgabe, dann globaler Abschluss)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T12:52:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T14:05:00+02:00
 
 ## Check-in / Wiederaufnahme
 
@@ -40,8 +40,11 @@ Step-013 geprüft — Verdict `issues` (zwei MAJOR: F1 fehlende Contract-
 Nachweise, F2 unerreichbare Timeout-Diagnostik in `DaemonBytePump`). Die
 Vollstack-Abweichungen wurden als Testisolation/Harness-Drift eingeordnet,
 keine Vertragsregressionen. Review committet als `690f838d`; die Korrektur
-läuft als step-014 (`corrects: step-013`, mechanisches Transkript).
-TD-007 ist neu im Tech-Debt-Index.
+step-014 (`corrects: step-013`, mechanisches Transkript) wurde umgesetzt
+(`683a3e4f`/`26898fba`) und vom Kritiker `approved` — F1/F2 geschlossen,
+damit step-013 und step-014 `done`. TD-007 und TD-008 sind neu im
+Tech-Debt-Index. Der Nutzer hat den Konzept-Entscheidungsbedarf AK 5
+entschieden (Option A: stderr-[WARN]-Ereignisse genügen).
 
 ## Nutzer-Vorgaben (Effizienz, 2026-08-23)
 
@@ -80,8 +83,8 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-010 | EPIC-B | done | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues; durch step-011/step-012 geschlossen) | 424a781b |
 | step-011 | EPIC-B | done | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (issues; durch step-012 geschlossen) | 1c7ee714 / ffb60157 |
 | step-012 | EPIC-B | done | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
-| step-013 | EPIC-B | done (Korrektur ausstehend) | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (issues; Korrektur step-014) | b9605ea5 / 759da1bf |
-| step-014 | EPIC-B | in_progress | Step-013-Korrektur: fehlende Contract-Nachweise (F1) und erreichbare Timeout-Diagnostik (F2) | step-013 | - | - | - |
+| step-013 | EPIC-B | done | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (issues; Korrektur step-014 approved) | b9605ea5 / 759da1bf |
+| step-014 | EPIC-B | done | Step-013-Korrektur: fehlende Contract-Nachweise (F1) und erreichbare Timeout-Diagnostik (F2) | step-013 | 683a3e4f | 2026-08-24 (approved) | 683a3e4f / 26898fba |
 
 ## Config (optional)
 
