@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.ComponentModel;
+using AiNetLinter.Cli;
 
 namespace AiNetLinter.Mcp.Daemon;
 
@@ -58,11 +59,11 @@ internal static class ThinClientLauncher
             startInfo.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
         }
 
-        startInfo.ArgumentList.Add("--daemon-start");
-        AddOption(startInfo, "--mcp-project-ttl-minutes", options.ProjectTtlMinutes);
-        AddOption(startInfo, "--mcp-max-projects", options.MaxProjects);
-        AddOption(startInfo, "--mcp-daemon-idle-exit-minutes", options.IdleExitMinutes);
-        AddOption(startInfo, "--mcp-log", options.LogPath);
+        startInfo.ArgumentList.Add(CliOptionFactory.DaemonStart);
+        AddOption(startInfo, CliOptionFactory.McpProjectTtlMinutes, options.ProjectTtlMinutes);
+        AddOption(startInfo, CliOptionFactory.McpMaxProjects, options.MaxProjects);
+        AddOption(startInfo, CliOptionFactory.McpDaemonIdleExitMinutes, options.IdleExitMinutes);
+        AddOption(startInfo, CliOptionFactory.McpLog, options.LogPath);
         return startInfo;
     }
 

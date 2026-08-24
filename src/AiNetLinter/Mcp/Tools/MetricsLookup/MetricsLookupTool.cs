@@ -42,7 +42,7 @@ internal static class MetricsLookupTool
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "Pflichtparameter 'symbolIdentifier' oder 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder symbolIdentifiers: [\"M:Klasse.MethodeA\", \"M:Klasse.MethodeB\"].");
+                hint: McpToolResults.SymbolIdentifierBatchHint);
         }
 
         try

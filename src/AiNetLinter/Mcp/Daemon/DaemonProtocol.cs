@@ -34,8 +34,6 @@ internal static class DaemonProtocol
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
         return PipeNamePrefix + userName;
     }
-
-    internal static string GetCurrentUserPipeName() => GetPipeName(CurrentUserName);
 }
 
 internal sealed record EffectiveDaemonConfiguration(

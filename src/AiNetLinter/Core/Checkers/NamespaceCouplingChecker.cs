@@ -20,7 +20,7 @@ internal static class NamespaceCouplingChecker
             if (!NamespaceMatches(referencedNamespace, rule.TargetNamespace)) continue;
 
             ctx.ReportViolation(node, new ViolationDescription(
-                "ForbiddenNamespaceDependency",
+                LinterRuleIds.ForbiddenNamespaceDependency,
                 $"Der Namespace '{ctx.CurrentNamespace}' darf nicht vom Namespace '{referencedNamespace}' abhaengen (Referenz gefunden: '{node}').",
                 "Entferne die Abhaengigkeit oder nutze Abstraktion/Events statt direkter Kopplung."));
         }

@@ -1,7 +1,5 @@
 #nullable enable
 
-using System.Text;
-
 namespace AiNetLinter.Mcp;
 
 /// <summary>
@@ -37,6 +35,4 @@ internal static class ServerInstructions
         "oder Malfunction vorbehalten.\n\n" +
         "Start: get_feature_context -> get_symbol_body; find_symbol -> find_references/get_impact; " +
         "safeguard -> get_violations.";
-
-    internal static bool FitsBudget => Encoding.UTF8.GetByteCount(Text) <= MaxUtf8Bytes;
 }

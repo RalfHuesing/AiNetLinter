@@ -22,6 +22,14 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class McpToolResults
 {
+    /// <summary>Hinweis fuer fehlenden/leeren <c>symbolIdentifier</c> (Einzel-Symbol-Tools).</summary>
+    internal const string SymbolIdentifierHint =
+        "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".";
+
+    /// <summary>Hinweis fuer fehlende Batch-Argumente (<c>symbolIdentifier</c>/<c>symbolIdentifiers</c>).</summary>
+    internal const string SymbolIdentifierBatchHint =
+        "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder symbolIdentifiers: [\"M:Klasse.MethodeA\", \"M:Klasse.MethodeB\"].";
+
     /// <summary>
     /// Baut ein Fehlerergebnis: <see cref="CallToolResult.IsError"/> ist <see langword="true"/>, der
     /// Text folgt dem bestehenden <c>[ERROR]</c>-Format aus <see cref="LinterErrorFormatter"/>. Nur

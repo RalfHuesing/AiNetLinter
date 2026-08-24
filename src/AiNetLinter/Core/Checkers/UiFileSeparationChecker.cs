@@ -69,11 +69,11 @@ internal static class UiFileSeparationChecker
         {
             var cssPath = razorFile + ".css";
             var needsCss = !config.BlazorCssIsolationOnlyWhenStylesNeeded || RazorNeedsCss(fileContent);
-            if (needsCss && !File.Exists(cssPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCssIsolation"))
+            if (needsCss && !File.Exists(cssPath) && !IsRazorSuppressed(fileContent, LinterRuleIds.BlazorRequireCssIsolation))
             {
                 violations.Add(CreateViolation(
                     razorFile,
-                    "BlazorRequireCssIsolation",
+                    LinterRuleIds.BlazorRequireCssIsolation,
                     $"Die Razor-Komponente '{Path.GetFileName(razorFile)}' enthaelt native HTML-Elemente oder class=/style=-Attribute, aber keine '{Path.GetFileName(cssPath)}'-CSS-Isolationsdatei.",
                     "Erstelle eine separate '.razor.css'-Datei fuer komponentenspezifische Styles (Blazor CSS-Isolation). " +
                     "Verschiebe alle '<style>'-Bloecke aus der '.razor'-Datei dorthin. " +

@@ -45,7 +45,7 @@ internal static class GetCallTreeTool
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
-                hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+                hint: McpToolResults.SymbolIdentifierHint);
         }
 
         if (!TryParseDirection(input.Direction, out var direction))

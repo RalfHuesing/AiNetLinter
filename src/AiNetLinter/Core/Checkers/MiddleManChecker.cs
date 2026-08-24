@@ -39,7 +39,7 @@ internal static class MiddleManChecker
         {
             var className = node.Identifier.Text;
             ctx.ReportViolation(node, new ViolationDescription(
-                "AvoidExcessiveMiddleMen",
+                LinterRuleIds.AvoidExcessiveMiddleMen,
                 $"Die Klasse '{className}' hat ein hohes Weiterleitungs-Verhältnis ({ratio:P0} > {maxRatio:P0}).",
                 $"Diese Klasse fungiert mit {forwardingCount} von {members.Count} Weiterleitungen primär als 'Middle Man' und erhöht die Indirektionstiefe. " +
                 "Erwägen Sie, die Klasse aufzuteilen, Logik zu konsolidieren oder die Aufrufe direkt an die Collaborators zu richten."));

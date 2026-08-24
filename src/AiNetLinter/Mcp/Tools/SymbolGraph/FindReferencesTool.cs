@@ -46,7 +46,7 @@ internal static class FindReferencesTool
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
-                hint: "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".");
+                hint: McpToolResults.SymbolIdentifierHint);
         }
 
         try

@@ -25,13 +25,6 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// </summary>
 internal static class PatternCatalog
 {
-    /// <summary>
-    /// "AvoidExcessiveMiddleMen" hat keine <see cref="LinterRuleIds"/>-Konstante (analog zu
-    /// <c>RuleRegistry.General.cs</c>, das dieselbe RuleId ebenfalls als Literal führt) —
-    /// deshalb hier ebenfalls als Literal statt via nameof().
-    /// </summary>
-    private const string AvoidExcessiveMiddleMenRuleId = "AvoidExcessiveMiddleMen";
-
     internal static readonly IReadOnlyList<PatternDefinition> Patterns =
     [
         new PatternDefinition(
@@ -58,7 +51,7 @@ internal static class PatternCatalog
             "feature-envy",
             "Klassen, die ueberwiegend Aufrufe an ein anderes Objekt weiterleiten (Middle-Man — " +
             "die naechste existierende Naeherung, kein 1:1-Match zum klassischen Feature-Envy-Begriff).",
-            [AvoidExcessiveMiddleMenRuleId]),
+            [LinterRuleIds.AvoidExcessiveMiddleMen]),
     ];
 }
 

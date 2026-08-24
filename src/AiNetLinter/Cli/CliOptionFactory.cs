@@ -11,6 +11,14 @@ namespace AiNetLinter.Cli;
 /// </summary>
 internal static class CliOptionFactory
 {
+    // Optionsnamen als Konstanten fuer Stellen, die Flags ohne Option-Objekt uebergeben
+    // (z. B. der detached Daemon-Spawn): Parsing und Spawn bleiben so konsistent.
+    internal const string DaemonStart = "--daemon-start";
+    internal const string McpLog = "--mcp-log";
+    internal const string McpProjectTtlMinutes = "--mcp-project-ttl-minutes";
+    internal const string McpMaxProjects = "--mcp-max-projects";
+    internal const string McpDaemonIdleExitMinutes = "--mcp-daemon-idle-exit-minutes";
+
     internal static Option<string?> CreateConfigOption() => new("--config", "-c")
     {
         Description = "Pfad zur JSON-Konfigurationsdatei (rules.json)",
@@ -203,12 +211,12 @@ internal static class CliOptionFactory
         Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder Tool-Aufruf adressiert per projectRoot einen Projekt-Key aus der Definitionsdatei ainetlinter.project.json im Projektroot.",
     };
 
-    internal static Option<bool> CreateDaemonStartOption() => new("--daemon-start")
+    internal static Option<bool> CreateDaemonStartOption() => new(DaemonStart)
     {
         Description = "[internal] Startet den lokalen DaemonHost fuer Named-Pipe-Verbindungen.",
     };
 
-    internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
+    internal static Option<string?> CreateMcpLogOption() => new(McpLog, "-mcp-log")
     {
         Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: aktiv unter %LOCALAPPDATA%\\RalfHuesing\\McpObservability\\ainetlinter\\<yyyy-MM-dd>\\. Ohne Wert (ZeroOrOne) wird dieser Standardpfad verwendet; explizite Pfade werden absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest. Jeder Prozess schreibt eine eigene Datei mit PID und InstanceId. Beispiel: --mcp-log ./.mcp-log/",
         Arity = ArgumentArity.ZeroOrOne,
@@ -221,7 +229,7 @@ internal static class CliOptionFactory
 
     internal static Option<decimal?> CreateMcpProjectTtlOption()
     {
-        var option = new Option<decimal?>("--mcp-project-ttl-minutes")
+        var option = new Option<decimal?>(McpProjectTtlMinutes)
         {
             Description = "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.",
         };
@@ -243,14 +251,14 @@ internal static class CliOptionFactory
         return option;
     }
 
-    internal static Option<int?> CreateMcpMaxProjectsOption() => new("--mcp-max-projects")
+    internal static Option<int?> CreateMcpMaxProjectsOption() => new(McpMaxProjects)
     {
         Description = "Optionale maximale Anzahl residenter Projekt-Keys in der Projekt-Registry (LRU-Rahmen). Ohne Flag gilt der Default von 4.",
     };
 
     internal static Option<decimal?> CreateMcpDaemonIdleExitOption()
     {
-        var option = new Option<decimal?>("--mcp-daemon-idle-exit-minutes")
+        var option = new Option<decimal?>(McpDaemonIdleExitMinutes)
         {
             Description = "Idle-Exit des internen DaemonHosts in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt der Default von 10 Minuten.",
         };

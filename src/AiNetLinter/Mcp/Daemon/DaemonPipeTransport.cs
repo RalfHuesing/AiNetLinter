@@ -20,9 +20,6 @@ internal sealed record DaemonPipeEndpoint(
             userName,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
     }
-
-    internal static DaemonPipeEndpoint ForCurrentUser() =>
-        ForUser(DaemonProtocol.CurrentUserName);
 }
 
 internal interface IDaemonPipeTransport

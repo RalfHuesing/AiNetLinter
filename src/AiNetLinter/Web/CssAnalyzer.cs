@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 using AiNetLinter.Models;
 using ExCSS;
 
@@ -73,7 +74,7 @@ internal static class CssAnalyzer
 
         violations.Add(CreateViolation(
             filePath,
-            "CSS_MaxCssLineCount",
+            LinterRuleIds.CSS_MaxCssLineCount,
             $"CSS-Datei hat {lineCount} Zeilen (erlaubt: {config.MaxCssLineCount}).",
             "CSS-Datei nach Features aufteilen oder in Scoped CSS (.razor.css) verschieben. " +
             "Hintergrund: Lange Stylesheets uebersteigen das Kontextfenster und fuehren zu " +
@@ -91,7 +92,7 @@ internal static class CssAnalyzer
 
         violations.Add(CreateViolation(
             filePath,
-            "CSS_PreferScopedCss",
+            LinterRuleIds.CSS_PreferScopedCss,
             $"Globale CSS-Datei enthaelt {ruleCount} Stil-Regeln " +
             $"(Schwellenwert: {config.PreferScopedCssMinRuleCount}). " +
             "Verschiebe komponentenspezifische Stile in eine '.razor.css'-Scoped-CSS-Datei, " +
@@ -116,7 +117,7 @@ internal static class CssAnalyzer
             {
                 FilePath = filePath,
                 LineNumber = rule.StylesheetText?.Range.Start.Line ?? 1,
-                RuleName = "CSS_MaxCssSelectorComplexity",
+                RuleName = LinterRuleIds.CSS_MaxCssSelectorComplexity,
                 Details = $"CSS-Selektor '{Truncate(selectorText, 80)}' ist zu komplex " +
                     $"(Tiefe: {depth}, erlaubt: {maxComplexity}).",
                 Guidance = "Nutze Scoped CSS (.razor.css) oder vereinfache den Selektor. " +
