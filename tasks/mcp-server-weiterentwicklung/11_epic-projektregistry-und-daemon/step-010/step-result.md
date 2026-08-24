@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done (Korrektur ausstehend)
 type: step-result
 task: 11_epic-projektregistry-und-daemon
 step: 010
@@ -92,5 +92,6 @@ meldete `get_violations` jeweils 0 Verstöße und `safeguard` jeweils
 
 ## Status
 
-Step-010 ist `done (pending audit)`. Der Planstatus und die Codemap sind
-aktualisiert.
+Step-010 ist `done (Korrektur ausstehend)`. Die vier Review-Findings werden in
+step-011 korrigiert; der Drift-Audit bleibt weiterhin dem EPIC-B-Abschluss
+vorbehalten.
