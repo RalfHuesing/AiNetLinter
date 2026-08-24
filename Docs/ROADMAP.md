@@ -459,11 +459,6 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 - [x] **EPIC-06 — Fehlerbehandlung:** 8 der damals 9 Tools prependieren einen aggregierten Compile-Fehler-Warnhinweis; `get_file_skeleton` nutzt einen datei-spezifischen Warnhinweis; nicht-ladbare Solution führt zu Server-Start mit `[WARN]` und Tool-Calls liefern `SOLUTION_NOT_LOADED` statt Crash; Defensiv-Wrapper fangen unerwartete Roslyn-Exceptions ab.
 - [x] **EPIC-07 — Test-Infrastruktur:** 9 neue Test-Klassen + Erweiterung der `McpLiveRepositoryTests`/`McpTestClient`-Harness + neue Fixtures (`CompileErrorMiniFixture`, `McpLiveRepositoryFixture`, u. a.); Volllauf 1161/1161 grün.
 - [x] **EPIC-08 — Doku & Symbolgraph-Erweiterungen:** Sektion „MCP-Server-Modus" in `agent-api.md`, „MCP-Server registrieren" in `integration.md` inkl. Tool-vs-`rg`-Empfehlung, README-Hinweis; verifiziert durch `McpDocumentationSmokeTests`. Zusätzlich: `get_symbol_body` mit stabilen Symbol-IDs, `depth`-Parameter für `find_references`/`get_impact`, DI-Registrierungs-Hinweis in `get_type_hierarchy` (siehe „Nächste Phase" unten für Details).
-- [x] **EPIC-09 — MCP-Call-Log-Erweiterung (prozesssichere JSONL-Logs + Error-Sink):** `--mcp-log` nutzt die Observability-Paket-Implementierung mit standardmäßig aktivem Logging, prozess- und instanzspezifischen JSONL-Dateien unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\`, nebenläufig lesbar über `FileShare.ReadWrite`, sowie strukturiertem Feedback-Log. `off` deaktiviert Logging und Feedback.
-  - Die paketinterne Wrapper-Hülle schreibt Tool-Calls und unbehandelte Handler-Fehler mit standardisiertem Schema; der Logdateiname enthält PID und InstanceId, sodass parallele Serverprozesse nicht in dieselbe Datei schreiben.
-  - `--mcp-log` akzeptiert weiterhin einen optionalen expliziten Pfad; relative Pfade werden zum Solution-Verzeichnis aufgelöst.
-  - Die frühere Dokumentation des Solution-/EXE-Unterordners und eines erzwungenen Exit-Codes 1 bei fehlender Solution ist damit korrigiert.
-- [x] **EPIC-12 — Health-Aggregate und Offline-Call-Log-Auswertung:** `get_server_health` berechnet bei aktivem Logging echte Entry-/Error-/Tool-Aggregate aus der aktuellen JSONL-Datei und liefert sie in Text sowie `structuredContent`. Das neue CLI-Kommando `--analyze-mcp-log <datei|verzeichnis|glob> [--format text|json]` aggregiert rekursiv über prozessspezifische Logs, schließt Feedback-Dateien aus und berichtet Tool-Nutzung, Fehlercodes, `isError`-Rate, Loading-Retry-Bursts, Truncation-/Completeness-Heuristiken sowie PID-/InstanceId-Sequenzen. Text- und JSON-Reports sind deterministisch; Tests decken Fixture-JSONL, Glob-Discovery, CLI-Parsing/-Ausgabe und Health-StructuredContent ab.
 - [x] **EPIC-10 — `get_call_tree` (echter Baum, ASCII/Mermaid): umgesetzt** — fuenftes Symbolgraph-Tool (`SymbolGraphToolRegistrations`), Caller-Tree-Traversierung ueber `CallGraphTraversal.BuildTreeAsync` (eigene Grenzwerte: depth hard cap 5, Knoten hard cap 250, `topN`-Fan-Out-Kappung pro Ebene), Ausgabe als ASCII-Baum (`MetricsTreeRenderer`/`MetricsTreeNode` aus `metrics_tree` wiederverwendet statt eines dritten ASCII-Renderers) oder Mermaid-`flowchart TD` (neuer `CallTreeMermaidRenderer`). Revidiert die in `02-ainetlinter-mcp-current.md` dokumentierte fruehere Konzept-Entscheidung ("bewusst kein `get_call_tree`").
 - [x] **EPIC-10-Erweiterung — `direction` fuer `get_call_tree`:** `incoming` bleibt der Default; `outgoing` traversiert InvocationExpressions, ObjectCreation und MemberAccess per SemanticModel transitiv, `both` liefert beide Richtungen abwechselnd innerhalb des Fan-Outs. ASCII/Mermaid, `topN` und der 250-Knoten-Hardcap gelten fuer alle Richtungen; ungueltige Werte liefern recoverable `INVALID_ARGUMENT`.
 - [x] **EPIC-11 — MCP-Server-Lebenszyklus:** Parent-Prozess-Watchdog mit automatischer PID-Ermittlung (Windows `NtQueryInformationProcess`, Linux `/proc`, macOS `getppid()`), optionaler CLI-Option `--parent-pid <pid>`, CancellationToken-Verknüpfung und Exit-Code `0` bei Parent-Exit. Fast-Tests für Erkennung/Watchdog sowie ein E2E-Test für die Prozessbeendigung sichern das Verhalten ab.
@@ -480,7 +475,6 @@ Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. 
 - **`rules.json`-Auto-Discovery** — ohne `--config` neben der aufgelösten Solution-Datei nach `rules.json` suchen; wird keine gefunden, `[WARN]` auf stderr **und** Vermerk in `get_violations`-Antwort. Status: **umgesetzt in EPIC-04** (B.1).
 - **stdout strukturell als reiner Protokollkanal** — eigene `ILintConsole`-Implementierung für den MCP-Modus, die auch `WriteLine` nach stderr leitet. Status: **umgesetzt in EPIC-06** (B.6) — `McpLintConsole` mit `Instance`-Singleton, Aktivierung in `Program.cs:43`, E2E-Regressions-Test in `McpServerCommandJsonRpcFramingTests` (Integration, spawned `AiNetLinter.exe` und verifiziert jede stdout-Zeile als gültigen JSON-RPC-Frame).
 - **Generierte Last-Fixture** — synthetische Solution definierter Größe (z. B. 500/5.000 Dateien) als Skalierungsnachweis; Messlauf für Kaltstart-Zeit und Tool-Call-Dauer. Status: **umgesetzt in EPIC-05** (B.3).
-- **MCP-Call-Log (`--mcp-log`)** — schlankes Call-Log (Zeitstempel, Tool-Name, Parameter, Ergebniszeilen, Trunkierung ja/nein, Dauer, Leermenge), standardmäßig aktiv. Status: **umgesetzt in EPIC-09 und EPIC-12** — prozessspezifische JSONL-Dateien, strukturierter Error-/Feedback-Sink, `get_server_health`-Aggregate und Offline-Report über `--analyze-mcp-log`.
 - **Tool-vs-`rg`-Empfehlung in `Docs/integration.md`** — reine Doku, kein Code. Status: **umgesetzt in 008** (siehe `integration.md#mcp-server-registrieren`).
 - **Discovery-Kontextbudget und Protokollpfade** — globale `ServerInstructions` auf 724 UTF-8-Bytes gekürzt; Legacy-`initialize` sowie MCP-2026-07-28-`server/discover` und jeweils `tools/list` per Raw-Wire gegen die registrierte Toolcollection geprüft. Status: **umgesetzt am 2026-08-20** (Aufgabe `tasks/mcp-agenten-effizienz/02`).
 - **Transitive Symbolgraph-Ausgaben** — `find_references` und der Symbol-Branch von `get_impact` liefern für jede erlaubte Tiefe dieselbe strukturierte `callSites`/`completeness`-Antwort; Trunkierung nach `maxResults`, besuchten Knoten und Depth-Clamp wird getrennt ausgewiesen. Status: **umgesetzt am 2026-08-21** (Aufgabe `tasks/mcp-agenten-effizienz/03`).
@@ -835,14 +829,14 @@ Der Git-Diff-Zweig von `get_impact` liefert auf `detailLevel=change-context` den
 
 ## System-Logging: Prozess-Lifecycle in `logs/` (`appsettings.json`)
 
-Neues prozessinternes System-Logging (Serilog-Datei-Sink, getrennt vom Observability-
-Call-Log), das Prozess- und Verbindungs-Lifecycle sichtbar macht:
+Prozessinternes System-Logging (Serilog-Datei-Sink), das Prozess- und Verbindungs-
+Lifecycle aller Prozessrollen in einer gemeinsamen Tagesdatei sichtbar macht:
 
 - [x] **Konfiguration über `appsettings.json` neben der EXE** (im Release-Archiv enthalten):
   `Logging:MinimumLevel` (Default `Debug`), `Logging:Directory` (Default `logs`, relativ zur EXE),
   `Logging:RetainedFileCount` (Default `14`). Fehlende Datei = Built-in-Defaults; defekte oder
-  ungültige Datei = harter Abbruch mit `[CONFIG]`-Meldung und Bootstrap-Logeintrag
-  (`logs/bootstrap-<Datum>.log`); unbekannte Schlüssel werden abgelehnt.
+  ungültige Datei = harter Abbruch mit `[CONFIG]`-Meldung in derselben System-Logdatei;
+  unbekannte Schlüssel werden abgelehnt.
 - [x] **Täglich rollende Logdateien `logs/ainetlinter-<yyyy-MM-dd>.log`** mit Prozessrolle
   (`cli`/`thin-client`/`daemon`) im jeder Zeile; Thin-Client und Daemon teilen einen Sink,
   sodass eine Session prozessübergreifend lesbar ist. Keine stdout/stderr-Belastung —

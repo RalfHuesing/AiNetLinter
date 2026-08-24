@@ -32,14 +32,11 @@ internal sealed record ProjectHealthEntry(
 
 /// <summary>
 /// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
-/// Projekt-Key plus prozessweiter Observability-Teil. <see cref="CallLog"/> ist
-/// <see langword="null"/>, wenn Observability deaktiviert ist oder kein Log-Pfad vom
-/// Observability-Dienst bereitgestellt wird.
+/// Projekt-Key und optional die Laufzeitdaten des Daemons.
 /// </summary>
 internal sealed record ServerHealthAggregatePayload(
     string Version,
     IReadOnlyList<ProjectHealthEntry> Projects,
-    CallLogPayload? CallLog,
     DaemonHealthPayload? Daemon = null);
 
 internal sealed record DaemonHealthPayload(
@@ -50,15 +47,3 @@ internal sealed record DaemonHealthPayload(
     double UptimeSeconds,
     IReadOnlyList<string> Keys,
     string DaemonVersion);
-
-/// <summary>
-/// Call-Log-Aggregat-Teil von <see cref="ServerHealthAggregatePayload"/>. Die Werte stammen aus dem
-/// aktuell geoeffneten JSONL-Call-Log und werden mit demselben Auswerter wie beim Offline-CLI-
-/// Kommando berechnet.
-/// </summary>
-internal sealed record CallLogPayload(
-    string LogPath,
-    int EntryCount,
-    int ErrorCount,
-    IReadOnlyDictionary<string, int> CallCountsByTool,
-    string? AnalysisError = null);

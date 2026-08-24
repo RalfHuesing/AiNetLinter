@@ -8,8 +8,7 @@ namespace AiNetLinter.Logging;
 
 /// <summary>
 /// Konfiguration des prozessinternen System-Loggings (Serilog-Datei-Sink).
-/// Bewusst getrennt vom Observability-Call-Log: Hier geht es um Lifecycle-
-/// und Diagnose-Ausgaben des Prozesses, nicht um MCP-Tool-Aufrufe.
+/// Alle Prozessrollen schreiben in den gemeinsamen System-Log-Sink.
 /// </summary>
 internal sealed record LoggingConfig(
     string MinimumLevel,

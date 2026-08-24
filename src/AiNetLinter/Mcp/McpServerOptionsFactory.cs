@@ -27,13 +27,12 @@ internal static class McpServerOptionsFactory
     /// </summary>
     internal static McpServerOptions Create(
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider = null,
         Daemon.DaemonRuntimeContext? runtimeContext = null)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions.Text)
-            .WithToolCollection(BuildToolCollection(registry, serviceProvider, runtimeContext))
+            .WithToolCollection(BuildToolCollection(registry, runtimeContext))
             .WithResourceCollection(BuildResourceCollection(registry))
             .Build();
     }
@@ -47,7 +46,6 @@ internal static class McpServerOptionsFactory
 
     internal static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider = null,
         Daemon.DaemonRuntimeContext? runtimeContext = null)
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
@@ -56,7 +54,7 @@ internal static class McpServerOptionsFactory
         FileStructureToolRegistrations.Register(tools, registry);
         AnalysisToolRegistrations.Register(tools, registry);
         SymbolBodyToolRegistrations.Register(tools, registry);
-        ServerMaintenanceToolRegistrations.Register(tools, registry, serviceProvider, runtimeContext);
+        ServerMaintenanceToolRegistrations.Register(tools, registry, runtimeContext);
         DuplicateDetectionToolRegistrations.Register(tools, registry);
 
         return tools;

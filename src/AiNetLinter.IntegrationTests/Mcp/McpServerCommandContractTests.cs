@@ -24,6 +24,11 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandContractTests
 {
+    private static readonly TimeSpan LoadStatePollInterval = TimeSpan.FromMilliseconds(25);
+    private static readonly TimeSpan LoadingRetryDelay = TimeSpan.FromMilliseconds(500);
+    private const int LoadingRetryCount = 120;
+    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
+
     private readonly ReadOnlyMcpHostFixture fixture;
 
     public McpServerCommandContractTests(ReadOnlyMcpHostFixture fixture) => this.fixture = fixture;
@@ -62,12 +67,10 @@ public sealed class McpServerCommandContractTests
             _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
         var originalException = await scenario.LoadFailure.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await scenario.LoadFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.NotEmpty(originalException.Message);
 
-        var failed = await ProjectToolCall.ExecuteAsync(
-            scenario.Registry,
-            scenario.Root,
-            _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+        var failed = await WaitForLoadFailureAsync(scenario);
         var failedText = Assert.IsType<TextContentBlock>(Assert.Single(failed.Content)).Text;
         var warning = Assert.Single(scenario.Console.ErrorLines, line => line.Contains("[WARN]", StringComparison.Ordinal));
         Assert.Contains("[WARN]", warning, StringComparison.Ordinal);
@@ -102,7 +105,7 @@ public sealed class McpServerCommandContractTests
     public async Task RunAsync_ValidFixture_ServerRespondsWithAllTools()
     {
         var tools = await (await fixture.GetHostAsync()).ListToolsAsync();
-        Assert.Equal(26, tools.Count);
+        Assert.Equal(25, tools.Count);
     }
 
     [Fact]
@@ -214,6 +217,7 @@ public sealed class McpServerCommandContractTests
             File.WriteAllText(SolutionPath, "<this-is-not-a-valid-slnx-document>");
             LoadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
             LoadFailure = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            LoadFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Console = new RecordingLintConsole();
             Registry = new ProjectRegistry(new ProjectRegistryOptions(CreateInstance, TimeProvider.System)
             {
@@ -230,6 +234,8 @@ public sealed class McpServerCommandContractTests
         internal TaskCompletionSource LoadStarted { get; }
 
         internal TaskCompletionSource<Exception> LoadFailure { get; }
+
+        internal TaskCompletionSource LoadFinished { get; }
 
         internal ProjectRegistry Registry { get; }
 
@@ -274,6 +280,10 @@ public sealed class McpServerCommandContractTests
                 loadFaultPublished.Set();
                 throw;
             }
+            finally
+            {
+                LoadFinished.TrySetResult();
+            }
         }
 
         private void BeforeLeaseRelease()
@@ -289,10 +299,36 @@ public sealed class McpServerCommandContractTests
 
     private async Task AssertTextAsync(string tool, IReadOnlyDictionary<string, object?> arguments, string expected)
     {
-        var result = await (await fixture.GetHostAsync()).CallToolAsync(tool, arguments);
+        var host = await fixture.GetHostAsync();
+        CallToolResult result = null!;
+        for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
+        {
+            result = await host.CallToolAsync(tool, arguments);
+            var loadingText = result.Content?.FirstOrDefault() as TextContentBlock;
+            if (loadingText?.Text?.StartsWith(LoadingMessagePrefix, StringComparison.Ordinal) != true) break;
+            await Task.Delay(LoadingRetryDelay);
+        }
+
         Assert.NotEqual(true, result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var content = result.Content ?? [];
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(content)).Text;
         Assert.Contains(expected, text, StringComparison.Ordinal);
+    }
+
+    private static async Task<CallToolResult> WaitForLoadFailureAsync(BrokenColdLoadHarness scenario)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (true)
+        {
+            var result = await ProjectToolCall.ExecuteAsync(
+                scenario.Registry,
+                scenario.Root,
+                _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+            var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+            if (text.Contains("PROJECT_LOAD_FAILED", StringComparison.Ordinal)) return result;
+
+            await Task.Delay(LoadStatePollInterval, timeout.Token);
+        }
     }
 
     private static string CreateTempDir()

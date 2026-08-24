@@ -21,8 +21,8 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Vertragstests des Registry-Wirings: eingefrorener 26er-Toolbestand mit projectRoot-Pflicht
-/// (einzige Ausnahmen: get_server_health-Filter optional, report_observability_feedback ohne),
+/// Vertragstests des Registry-Wirings: eingefrorener 25er-Toolbestand mit projectRoot-Pflicht
+/// (einzige Ausnahme: get_server_health-Filter optional),
 /// Defense-in-Depth-Guards am ProjectToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
 /// RULES_INVALID statt Default-Fallback, Health-Aggregation je Key, Overview-Template-Aufloesung,
 /// zweistufiger Zustandsvertrag (PROJECT_LOAD_FAILED, [WARN]-Kopf, Heilung) und das
@@ -37,7 +37,7 @@ public sealed class WiringContractTests
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
 
-        Assert.Equal(26, tools.Count);
+        Assert.Equal(25, tools.Count);
         Assert.Equal(
             OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
             tools.Keys.ToHashSet());
@@ -49,11 +49,6 @@ public sealed class WiringContractTests
             {
                 Assert.DoesNotContain("projectRoot", required);
                 Assert.Contains("\"projectRoot\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
-            }
-            else if (tool.Name == "report_observability_feedback")
-            {
-                Assert.DoesNotContain("projectRoot", required);
-                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
             else
             {
@@ -293,7 +288,6 @@ public sealed class WiringContractTests
         Assert.Contains("Uptime:", allText, StringComparison.Ordinal);
         Assert.Contains("Solution-Refreshes seit Start:", allText, StringComparison.Ordinal);
         Assert.Contains("Letzter guter Zustand (UTC):", allText, StringComparison.Ordinal);
-        Assert.Contains("Observability:", allText, StringComparison.Ordinal);
 
         var filtered = await GetServerHealthTool.ExecuteAsync(registry, projectRoot: rootB);
         var filteredText = TextOf(filtered);

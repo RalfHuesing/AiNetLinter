@@ -92,14 +92,11 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--no-cache` | bool | Deaktiviert den Analyse-Cache für diesen Lauf |
 | `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
 | `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
-| `--mcp-log [pfad]` | string | Konfiguriert das Observability- & Tool-Call-Logging (Default: aktiv unter `%LOCALAPPDATA%`, 'off' zum Deaktivieren) |
 | `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
 | `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
 | `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
 | `--daemon-start` | bool | Startet den internen Named-Pipe-Daemonpfad (nicht für externe Client-Registrierungen) |
 | `--mcp-daemon-idle-exit-minutes <minuten>` | decimal | Idle-Exit des internen DaemonHosts (Standard 10 Minuten) |
-| `--analyze-mcp-log <pfad|verzeichnis|glob>` | string | Wertet MCP-Call-Logs offline über alle passenden `.jsonl`-Dateien aus; Feedback-Dateien werden ausgeschlossen |
-| `--format <text|json>` | string | Ausgabeformat für `--analyze-mcp-log` (Standard: `text`; nur gemeinsam mit `--analyze-mcp-log`) |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
@@ -261,7 +258,7 @@ opak weiter.
 - Die Pipe-Level-Nachrichten `hello`, `welcome` und `shutdown` verwenden
   Protokollversion `1`. `welcome` enthält `daemonVersion`,
   `executableVersion`, `processId` und die effektive `configuration` mit
-  `maxProjects`, `idleExitMinutes` und `logTarget`. `projectRoot` gehört nicht
+  `maxProjects` und `idleExitMinutes`. `projectRoot` gehört nicht
   in diesen Handshake.
 - Eine nicht unterstützte Protokollversion wird mit
   `PROTOCOL_VERSION_UNSUPPORTED` abgewiesen. Bei abweichender
@@ -295,8 +292,7 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Ein
 
 Für jedes projektgebundene Tool ist `projectRoot` der erste Pflichtparameter;
 die folgenden Zeilen listen die jeweiligen fachlichen Zusatzparameter. Die
-einzige Tool-Ausnahme ist `get_server_health` mit optionalem Filter; das
-prozessweite `report_observability_feedback` ist nicht projektgebunden.
+einzige Tool-Ausnahme ist `get_server_health` mit optionalem Filter.
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :--- | :---: |
@@ -322,8 +318,7 @@ prozessweite `report_observability_feedback` ist nicht projektgebunden.
 | `get_symbol_body` | `symbolIdentifier?` (einzelne ID), `symbolIdentifiers?` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `projectRoot` (Pflicht), `configPath?` (optional, Override für diesen Key) | Liest standardmäßig die `rules`-Datei des adressierten Keys neu ein; ein expliziter `configPath` ist ein Hot-Swap-Override. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | `projectRoot?` (optionaler Key-Filter) | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config-Quelle, LastUsedUtc, Uptime, Refresh-/Staleness-Werte, LastGoodState/LastLoadError und Observability-Status | nein | nein |
-| `report_observability_feedback` | `feedbackType` (`issue` \| `feature_request`), `title`, `description`, `relatedTool?`, `severity?` (`low` \| `medium` \| `high` \| `critical`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Ermöglicht LLM-Agenten, strukturierte Bug-Reports, Falsch-Positive bei Lint-Regeln oder Feature-Wünsche direkt an das Observability-System zu melden | nein | nein |
+| `get_server_health` | `projectRoot?` (optionaler Key-Filter) | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config-Quelle, LastUsedUtc, Uptime, Refresh-/Staleness-Werte und LastGoodState/LastLoadError | nein | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
 Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
@@ -655,47 +650,6 @@ Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Be
 Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird statt `LinterConsole` die `McpLintConsole`-Implementierung aktiviert (in `Program.cs` als expliziter Parameter an `McpServerCommand.RunAsync` uebergeben), die `ILintConsole.WriteLine(...)` zwingend nach `stderr` umleitet. Ein unbeabsichtigter `Console.WriteLine`-Call in einer Tool-Implementierung oder einem Helper wuerde weiterhin ein Leak sein, aber der zentrale `ILintConsole`-Pfad ist abgesichert.
 
 Regressions-Schutz: E2E-Framing-Tests in `McpServerCommandJsonRpcFramingTests` spawnen `AiNetLinter.exe` als Subprozess und schreiben Legacy-`initialize` beziehungsweise modernes `server/discover` mit anschließendem `tools/list` manuell auf stdin. Sie prüfen **jede** Zeile auf stdout als gültigen JSON-RPC-Frame (`jsonrpc == "2.0"`), vergleichen Instructions und Toolnamen mit der registrierten Collection und messen Zeichen sowie UTF-8-Bytes. Kein SDK-Parser zwischen Subprozess und Assertions — ein zukünftiger Leak würde als nicht-JSON-Zeile sichtbar.
-
-### MCP-Observability & Feedback
-
-AiNetLinter integriert das Paket `RalfHuesing.Mcp.Observability` für standardisiertes Tool-Call-Logging, Performance-Metriken und strukturierte Agent-Feedbacks.
-
-**Status:** Standardmäßig aktiv.
-
-```bash
-# Standard-Start (prozessspezifische Log-Datei unter %LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<Datum>\)
-ainetlinter --mcp-server
-
-# Explizites Log-Verzeichnis angeben:
-ainetlinter --mcp-server --mcp-log ./.mcp-log/
-
-# Observability komplett deaktivieren:
-ainetlinter --mcp-server --mcp-log off
-```
-
-Format: JSONL-Dateien mit standardisierten Records:
-1. `recordType: "tool_call"`: Enthält `serverName`, `serverVersion`, `processId`, `instanceId`, `toolName`, `arguments`, `durationMs`, `success`, `isErrorResult`, `errorMessage`, `response` (sanitisiertes Text-Ergebnis), `responseLength`, `responseLines`, `responseTruncated`, `nonTextContentBlocks` und Zeitstempel.
-2. `recordType: "feedback"`: Wird geschrieben, wenn ein LLM-Agent das Tool `report_observability_feedback` aufruft, um Fehler, False-Positives oder Feature-Requests zu melden.
-
-### MCP-Call-Log offline auswerten
-
-Die vorhandenen JSONL-Logs lassen sich ohne Solution-Load und ohne MCP-Server-Aufruf reproduzierbar auswerten:
-
-```bash
-ainetlinter --analyze-mcp-log "%LOCALAPPDATA%/RalfHuesing/McpObservability/ainetlinter/2026-08-21" --format text
-ainetlinter --analyze-mcp-log "./.mcp-log/**/*.jsonl" --format json
-```
-
-Als Eingabe sind eine einzelne Call-Log-Datei, ein Log-Verzeichnis oder ein Glob zulässig. Verzeichnisse und Globs werden rekursiv durchsucht; `*.feedback.jsonl` wird ausgeschlossen. Der Report enthält Calls pro Tool, Fehlercodes und `isError`-Rate, Loading-Retry-Bursts, Truncation-/Completeness-Zählungen sowie prozess- und dateibasierte Session-Sequenzen. Textmarker für Loading und Vollständigkeit sind ausdrücklich heuristisch; nicht klassifizierbare Antworten erscheinen als `unknown`. Text- und JSON-Ausgabe sind bei gleicher Eingabe deterministisch.
-
-**Feedback-Tool (`report_observability_feedback`):**
-Agenten können dieses Tool nutzen, um Probleme bei der Code-Analyse direkt zu melden:
-- `feedbackType`: `"issue"` oder `"feature_request"`
-- `title`: Prägnante Überschrift
-- `description`: Detaillierte Fehlerbeschreibung
-- `relatedTool`: Optional Name des betroffenen Tools (z. B. `get_violations`)
-- `severity`: `"low"`, `"medium"`, `"high"`, `"critical"`
-- `expectedBehavior`, `actualBehavior`, `additionalContext`: Optionale strukturierte Kontext-Felder.
 
 ### Compile-Fehler-Warnhinweis
 

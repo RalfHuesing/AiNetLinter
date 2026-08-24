@@ -6,17 +6,15 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
-using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
-using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Registriert die server-eigenen Wartungs-/Diagnose-Tools (<c>reload_config</c>,
-/// <c>get_server_health</c>, <c>report_observability_feedback</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
+/// <c>get_server_health</c>) an der von <see cref="McpServerOptionsFactory"/> aufgebauten
 /// Tool-Collection. Eigene Registrar-Klasse statt Anhaengen an eine bestehende Gruppe, weil diese
-/// Tools semantisch den Server-Prozess selbst betreffen (Config-Reload, Health-Snapshot, Feedback) statt die
+/// Tools semantisch den Server-Prozess selbst betreffen (Config-Reload, Health-Snapshot) statt die
 /// Solution/den Symbolgraph zu befragen — passt zu keiner der bestehenden Gruppen (Symbolgraph,
 /// Dateistruktur, Analyse, Symbol-Body).
 /// </summary>
@@ -31,12 +29,10 @@ internal static class ServerMaintenanceToolRegistrations
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider = null,
         Daemon.DaemonRuntimeContext? runtimeContext = null)
     {
         AddReloadConfig(tools, registry);
-        AddGetServerHealth(tools, registry, serviceProvider, runtimeContext);
-        AddReportObservabilityFeedback(tools, serviceProvider);
+        AddGetServerHealth(tools, registry, runtimeContext);
     }
 
     private static void AddReloadConfig(
@@ -66,15 +62,13 @@ internal static class ServerMaintenanceToolRegistrations
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider,
         Daemon.DaemonRuntimeContext? runtimeContext)
     {
-        var obsService = serviceProvider?.GetService<IMcpObservabilityService>();
         tools.Add(McpServerTool.Create(
             async (string? projectRoot = null, CancellationToken ct = default) =>
                 await GetServerHealthTool.ExecuteAsync(
                     registry,
-                    new GetServerHealthOptions(obsService, projectRoot, RuntimeContext: runtimeContext)),
+                    new GetServerHealthOptions(projectRoot, runtimeContext)),
             new McpServerToolCreateOptions
             {
                 Name = "get_server_health",
@@ -85,14 +79,7 @@ internal static class ServerMaintenanceToolRegistrations
     private const string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekte resident sind. Ohne " +
         "projectRoot: ein Abschnitt pro geladenem Key (Root, Solution, rules.json, LastUsedUtc, " +
-        "LoadState, RefreshCount, Staleness, Uptime, LastGoodStateUtc/LastLoadError) plus " +
-        "prozessweiter Observability-Teil. Mit projectRoot: nur dieser Key (absoluter Pfad, " +
+        "LoadState, RefreshCount, Staleness, Uptime, LastGoodStateUtc/LastLoadError). Mit " +
+        "projectRoot: nur dieser Key (absoluter Pfad, " +
         "Pflichtformat wie bei allen Tools).";
-
-    private static void AddReportObservabilityFeedback(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        IServiceProvider? serviceProvider)
-    {
-        tools.AddFeedbackTool(serviceProvider);
-    }
 }

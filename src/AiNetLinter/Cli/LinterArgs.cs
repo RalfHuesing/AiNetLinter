@@ -172,32 +172,10 @@ public sealed class LinterArgs
     public decimal? McpDaemonIdleExitMinutes { get; init; }
 
     /// <summary>
-    /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). Der Default ist aktiv und wird vom
-    /// Observability-Paket unter <c>%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\&lt;yyyy-MM-dd&gt;\</c> angelegt.
-    /// Ein expliziter Pfad wird absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest.
-    /// </summary>
-    public string? McpLogPath { get; init; }
-
-    /// <summary>
     /// Optionale PID des Elternprozesses, dessen Ende den MCP-Server beendet.
     /// Bei <see langword="null"/> wird die PID automatisch ermittelt.
     /// </summary>
     public int? ParentPid { get; init; }
-
-    /// <summary>
-    /// Pfad, Verzeichnis oder Glob eines MCP-Call-Logs fuer die Offline-Auswertung.
-    /// </summary>
-    public string? AnalyzeMcpLogPath { get; init; }
-
-    /// <summary>
-    /// Ausgabeformat der MCP-Call-Log-Auswertung (<c>text</c> oder <c>json</c>).
-    /// </summary>
-    public string McpLogFormat { get; init; } = "text";
-
-    /// <summary>
-    /// Gibt an, ob <c>--format</c> explizit angegeben wurde.
-    /// </summary>
-    public bool McpLogFormatSpecified { get; init; }
 
     /// <summary>
     /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
@@ -259,11 +237,6 @@ public sealed class LinterArgs
             return "[ERROR]: --parent-pid muss eine positive Prozess-ID sein.";
         }
 
-        if (McpLogFormatSpecified && AnalyzeMcpLogPath is null)
-        {
-            return "[ERROR]: --format erfordert --analyze-mcp-log.";
-        }
-
         return ValidateIgnoreSuppressions();
     }
 
@@ -312,7 +285,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart || SyncAgentRulesOnly || AnalyzeMcpLogPath != null;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart || SyncAgentRulesOnly;
 
     private string? ValidateIgnoreSuppressions()
     {

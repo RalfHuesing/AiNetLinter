@@ -1171,7 +1171,6 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`).
 - `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`). Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
 - `-arp`, `--agent-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Agent-Regeln (Optional).
-- `-mcp-log`, `--mcp-log` (Pfad, MCP-Modus): Konfiguriert das Observability- und Tool-Call-Logging (unter Verwendung von `RalfHuesing.Mcp.Observability`). Standardmäßig aktiv mit Speicherort unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\AiNetLinter\<SolutionName>\<yyyy-MM-dd>\`. Kann mit `--mcp-log <pfad>` auf ein benutzerdefiniertes Log-Verzeichnis umgeleitet oder mit `--mcp-log off` / `false` / `disabled` deaktiviert werden. Protokolliert Tool-Calls und Agent-Feedback (`report_observability_feedback`) im JSONL-Format. Format und Details: [Docs/agent-api.md#mcp-observability--feedback](agent-api.md#mcp-observability--feedback).
 - `--parent-pid <pid>` (MCP-Modus): Der ThinClient überwacht die angegebene Parent-Prozess-ID und beendet sich bei deren Ende sauber. Ohne Angabe wird die Parent-PID automatisch über die Betriebssystem-Schnittstelle ermittelt; der detached Daemon erbt diesen Reaper nicht.
 - `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten, mit Dezimalpunkt im InvariantCulture-Format (Standard: `45`).
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
@@ -1187,8 +1186,6 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--search-rules <Stichwort>` (String): Durchsucht Regeln nach Stichwort (RuleId, Bezeichnung, Warum, Intent) (Optional).
 - `--mcp-server` (Flag): Startet den ThinClient des stdio-basierten MCP-Servers. Er verbindet sich zuerst mit dem Daemon und startet ihn bei Bedarf; stdout bleibt reiner MCP-Wire. Im MCP-Modus sind `--path` und `--config` nicht zulässig; jeder Tool-Aufruf adressiert einen absoluten `projectRoot` mit `ainetlinter.project.json`. Vollständige Referenz: [Docs/agent-api.md](agent-api.md) (Optional).
 - `AINETLINTER_NO_DAEMON=1` (Umgebungsvariable): Expliziter Debug-Escape auf den bisherigen direkten In-Proc-Stdio-Pfad; kein neuer Registry- oder Transportvertrag.
-- `--analyze-mcp-log <pfad|verzeichnis|glob>` (Pfad): Wertet MCP-Call-Logs offline aus. Verzeichnisse und Globs werden rekursiv nach `.jsonl` durchsucht; `.feedback.jsonl` wird ignoriert. Das Kommando benötigt keine Solution und startet keinen MCP-Server.
-- `--format <text|json>` (String): Ausgabeformat für `--analyze-mcp-log`, Standard `text`. Die Option ist nur zusammen mit `--analyze-mcp-log` gültig.
 
 ### Automatischer rules.json-Sync
 
@@ -1669,9 +1666,8 @@ ainetlinter --config rules.json --path . --ignore-suppressions cs,razor
 
 ## 14. System-Logging (`appsettings.json`)
 
-AiNetLinter schreibt ein prozessinternes System-Logging (Serilog, Datei-Sink), das vom
-MCP-Call-Log (Observability) getrennt ist: Es protokolliert Prozess- und Verbindungs-
-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente, Daemon-Connect-or-Start,
+AiNetLinter schreibt ein gemeinsames prozessinternes System-Logging (Serilog, Datei-Sink):
+Es protokolliert Prozess- und Verbindungs-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente, Daemon-Connect-or-Start,
 Handshake-Ergebnisse inklusive Ablehnungen (Versionskonflikt, Protokollversion),
 Pipe-Pump-Fehler, Idle-Exit und Exit-Codes. Damit sind Client-/Transport-Probleme
 (z. B. „Transport closed" einzelner MCP-Clients) nachvollziehbar, ohne stderr zu belasten.
@@ -1681,7 +1677,7 @@ Pipe-Pump-Fehler, Idle-Exit und Exit-Codes. Damit sind Client-/Transport-Problem
 Die Datei `appsettings.json` liegt neben der ausführbaren Datei und wird im Release-
 Archiv ausgeliefert. Fehlt sie, gelten Built-in-Defaults; eine defekte oder ungültige
 Datei führt zu einem harten Abbruch mit `[CONFIG]`-Fehlermeldung (kein stilles Zurück-
-fallen). Ein Bootstrap-Logeintrag verbleibt in `logs/bootstrap-<Datum>.log`.
+fallen). Auch dieser Fehler wird in die gemeinsame System-Logdatei geschrieben.
 
 ```json
 {

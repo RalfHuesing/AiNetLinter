@@ -60,12 +60,12 @@ public sealed class McpLiveRepositoryTests
             new[] { "get_namespace_tree", "get_class_structure", "get_file_skeleton", "get_index_scope", "get_hotspots" },
             new[] { "get_violations", "safeguard", "search_pattern", "metrics_tree", "metrics_lookup", "pattern_detect", "find_magic_values", "find_dead_code", "get_feature_context", "get_test_context" },
             new[] { "find_duplicates" },
-            new[] { "reload_config", "get_server_health", "report_observability_feedback" }
+            new[] { "reload_config", "get_server_health" }
         };
 
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?projectRoot}");
         Assert.Empty(resources);
-        Assert.Equal(26, tools.Count);
+        Assert.Equal(25, tools.Count);
         Assert.Equal(
             expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal),
             tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal));

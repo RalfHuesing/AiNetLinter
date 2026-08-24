@@ -23,14 +23,11 @@ internal static class CliCommandBuilder
             options.IncludeProjects, options.ExcludeProjects, options.IncludeNamespaces, options.ExcludeNamespaces,
             options.ExcludeTests, options.TestsOnly, options.PublicOnly, options.IgnoreSuppressions,
             options.McpServer,
-            options.McpLog,
             options.ParentPid,
             options.McpProjectTtlMinutes,
             options.McpMaxProjects,
             options.DaemonStart,
             options.McpDaemonIdleExitMinutes,
-            options.AnalyzeMcpLog,
-            options.Format,
         };
 
         return (root, options);
@@ -73,14 +70,11 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreatePublicOnlyOption(),
             CliOptionFactory.CreateIgnoreSuppressionsOption(),
             CliOptionFactory.CreateMcpServerOption(),
-            CliOptionFactory.CreateMcpLogOption(),
             CliOptionFactory.CreateParentPidOption(),
             CliOptionFactory.CreateMcpProjectTtlOption(),
             CliOptionFactory.CreateMcpMaxProjectsOption(),
             CliOptionFactory.CreateDaemonStartOption(),
-            CliOptionFactory.CreateMcpDaemonIdleExitOption(),
-            CliOptionFactory.CreateAnalyzeMcpLogOption(),
-            CliOptionFactory.CreateFormatOption());
+            CliOptionFactory.CreateMcpDaemonIdleExitOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
@@ -134,15 +128,11 @@ internal static class CliCommandBuilder
             PublicOnly: parseResult.GetValue(options.PublicOnly),
             IgnoreSuppressions: ignoreSuppressions,
             McpServer: parseResult.GetValue(options.McpServer),
-            McpLog: parseResult.GetResult(options.McpLog) is null ? null : (parseResult.GetValue(options.McpLog) ?? string.Empty),
             ParentPid: parseResult.GetValue(options.ParentPid),
             McpProjectTtlMinutes: parseResult.GetValue(options.McpProjectTtlMinutes),
             McpMaxProjects: parseResult.GetValue(options.McpMaxProjects),
             DaemonStart: parseResult.GetValue(options.DaemonStart),
-            McpDaemonIdleExitMinutes: parseResult.GetValue(options.McpDaemonIdleExitMinutes),
-            AnalyzeMcpLog: parseResult.GetValue(options.AnalyzeMcpLog),
-            Format: parseResult.GetValue(options.Format),
-            FormatSpecified: parseResult.GetResult(options.Format) is { Implicit: false });
+            McpDaemonIdleExitMinutes: parseResult.GetValue(options.McpDaemonIdleExitMinutes));
     }
 
     private static System.Collections.Generic.IReadOnlyList<string> ParseCommaSeparated(string[]? values)

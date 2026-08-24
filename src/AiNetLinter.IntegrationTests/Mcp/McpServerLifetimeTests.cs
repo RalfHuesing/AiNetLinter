@@ -94,9 +94,6 @@ public sealed class McpServerLifetimeTests
         startInfo.Environment["AINETLINTER_NO_DAEMON"] = "1";
         startInfo.ArgumentList.Add("--parent-pid");
         startInfo.ArgumentList.Add(parentProcessId.ToString(CultureInfo.InvariantCulture));
-        startInfo.ArgumentList.Add("--mcp-log");
-        startInfo.ArgumentList.Add("off");
-
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException("MCP-Serverprozess konnte nicht gestartet werden.");
     }

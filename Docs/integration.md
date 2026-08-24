@@ -306,24 +306,14 @@ Loads oder Warmups. Ein debounced MRU-State unter `%LOCALAPPDATA%` hält bis zu
 vier zuletzt verwendete Projektroots; beim Start werden höchstens zwei davon
 parallel vorgewärmt. Der ThinClient verwendet einen begrenzten Readiness-
 Handshake und genau einen Replay-/Reconnect-Versuch für den read-only Wire;
-der zweite Rohfehler wird ohne Retry-Schleife beendet. `welcome` liefert dabei
+der zweite Rohfehler wird ohne Retry-Schleife beendet. Idle MCP-Sessions werden
+nicht anhand eines festen Zeitfensters beendet; EOF und der Parent-Watchdog bleiben
+die regulären Beendigungssignale. Konkurrierende Detached-Starts werden pro Benutzer
+serialisiert und vor dem Spawn nochmals gegen den bestehenden Daemon geprüft. `welcome` liefert dabei
 die identifizierte Daemon-PID und connectionId für Diagnose und sichere
 Beendigung. `get_server_health` zeigt in Daemon-Sessions Modus, Verbindungen,
 PID, Uptime, Keys, connectionId und Daemon-Version. `--parent-pid` gilt nur
 für den ThinClient, nicht für den detached Daemon.
-
-**MCP-Observability:** Das Tool-Call-Logging ist standardmaessig aktiv. Der Standardpfad liegt unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\`; jede Serverinstanz schreibt eine eigene Datei mit PID und InstanceId. Mit `--mcp-log <pfad>` kann ein eigenes Verzeichnis gesetzt werden, mit `--mcp-log off` wird Logging und Feedback deaktiviert. Format, Pfad-Aufloesung und Offline-Auswertung stehen in [Docs/agent-api.md#mcp-observability--feedback](agent-api.md#mcp-observability--feedback).
-
-### MCP-Observability und Offline-Auswertung
-
-Für eine Auswertung über mehrere Tagesordner oder parallel gestartete Serverinstanzen wird kein MCP-Server benötigt:
-
-```bash
-ainetlinter --analyze-mcp-log "%LOCALAPPDATA%/RalfHuesing/McpObservability/ainetlinter" --format text
-ainetlinter --analyze-mcp-log "./.mcp-log/**/*.jsonl" --format json
-```
-
-Das Kommando liest einzelne Dateien, Verzeichnisse oder Globs rekursiv, ignoriert Feedback-Logs und nutzt `FileShare.ReadWrite`, sodass auch ein laufender Logger analysiert werden kann. Es erzeugt deterministische Text- oder JSON-Reports über Tool-Nutzung, Fehler, Loading-Retry-Bursts, Antwortvollständigkeit und prozess-/dateibasierte Sequenzen. Die Loading-/Completeness-Erkennung ist eine dokumentierte Textmarker-Heuristik.
 
 **Parent-Lebenszyklus:** Ohne weitere Argumente ermittelt der Server die PID des MCP-Hosts automatisch und beendet sich sauber, sobald dieser Prozess endet. Für Wrapper-Skripte kann die Ziel-PID mit `--parent-pid <pid>` explizit gesetzt werden:
 

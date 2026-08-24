@@ -57,7 +57,7 @@ public static class Program
 
                 SystemLog.Initialize(ProcessRoles.Cli);
 
-                if (linterArgs.Docs == null && linterArgs.AnalyzeMcpLogPath == null)
+                if (linterArgs.Docs == null)
                 {
                     var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
@@ -123,14 +123,10 @@ public static class Program
             IgnoreSuppressions = parsed.IgnoreSuppressions,
             McpServer = parsed.McpServer,
             DaemonStart = parsed.DaemonStart,
-            McpLogPath = parsed.McpLog,
             ParentPid = parsed.ParentPid,
             McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
             McpMaxProjects = parsed.McpMaxProjects,
             McpDaemonIdleExitMinutes = parsed.McpDaemonIdleExitMinutes,
-            AnalyzeMcpLogPath = parsed.AnalyzeMcpLog,
-            McpLogFormat = parsed.Format ?? "text",
-            McpLogFormatSpecified = parsed.FormatSpecified,
         };
     }
 
@@ -165,7 +161,6 @@ public static class Program
         if (args.ListRules) return ListRulesCommand.ListAll();
         if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);
         if (args.SearchRules != null) return ListRulesCommand.Search(args.SearchRules);
-        if (args.AnalyzeMcpLogPath != null) return AnalyzeMcpLogCommand.Run(args.AnalyzeMcpLogPath, args.McpLogFormat);
         return null;
     }
 

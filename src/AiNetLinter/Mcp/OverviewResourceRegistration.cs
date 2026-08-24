@@ -10,7 +10,6 @@ using AiNetLinter.Output;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp;
 
@@ -60,8 +59,7 @@ internal static class OverviewResourceRegistration
         ("metrics_lookup", "Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support)."),
         ("search_pattern", "Text- oder Regex-Suche ueber alle Dateitypen; enrichCSharp=true reichert sichtbare C#-Treffer opt-in innerhalb des geladenen Solution-/Projekt-Snapshots an, markiert ambiguous/unavailable und nennt bei Trunkierung die Folge: Pattern, Scope oder Limits verfeinern."),
         ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
-        ("get_server_health", "Liefert pro Projekt-Key LoadState, Uptime, Solution-Refreshes und Observability-Status."),
-        (McpObservabilityTools.FeedbackToolName, "Meldet Probleme, False-Positives oder Feature-Wünsche zu diesem Server."),
+        ("get_server_health", "Liefert pro Projekt-Key LoadState, Uptime und Solution-Refreshes."),
         ("get_namespace_tree", "Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen)."),
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
         ("get_feature_context", "Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken, Aufrufer, statische Test-Zuordnung, Violations) vor Edits."),

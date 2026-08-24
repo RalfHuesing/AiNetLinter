@@ -41,15 +41,6 @@ ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
 Der Linter gibt einen Markdown-Report auf stdout aus und beendet sich mit Exit-Code `0` (keine neuen Verstöße) oder `1` (Verstöße gefunden — CI-tauglich).
 
-MCP-Call-Logs können unabhängig vom Server und ohne Solution-Load ausgewertet werden:
-
-```bash
-ainetlinter --analyze-mcp-log "%LOCALAPPDATA%/RalfHuesing/McpObservability/ainetlinter" --format text
-ainetlinter --analyze-mcp-log "./.mcp-log/**/*.jsonl" --format json
-```
-
-Das Kommando durchsucht Verzeichnisse und Globs rekursiv, schließt Feedback-Logs aus und berichtet Tool-Nutzung, Fehler, Loading-Retry-Bursts, Antwortvollständigkeit sowie prozess-/dateibasierte Sequenzen.
-
 ### Agentische Integration
 
 Die eingebauten Discovery-Commands ermöglichen einem KI-Agenten, das Tool explorativ zu verstehen und eigenständig in ein Projekt zu integrieren — ohne Vorab-Konfiguration durch den Entwickler.
@@ -138,9 +129,8 @@ Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und 
 | `find_duplicates` | Token-basierte Duplikat-Suche (Clone-Detection, Jaccard-N-Gram) und Refactoring-Drift-Erkennung (Helper wird strukturell nachgebaut statt aufgerufen) |
 | `safeguard` | Deterministischer 0–10-Qualitätsscore inkl. Pass/Fail gegen einen Schwellenwert |
 | `search_pattern` | Text-/Regex-Suche über alle Dateitypen (Fallback für Nicht-C#-Treffer); `enrichCSharp=true` ordnet sichtbare Treffer geladener C#-Dokumente optional ein |
-| `report_observability_feedback` | Strukturierte Bug-Reports, False-Positives oder Feature-Wünsche von Agenten an das System melden |
 | `reload_config` | Die Regeldatei des adressierten Keys oder einen expliziten Override zur Laufzeit neu einlesen |
-| `get_server_health` | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config, Uptime und Call-Log-Aggregate |
+| `get_server_health` | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config und Uptime |
 
 Registrierung im MCP-Host (Claude Code, Cursor, eigene Agent-Loops):
 
@@ -180,7 +170,7 @@ gekennzeichnet, während mehrdeutige oder außerhalb des Roslyn-Snapshots liegen
 | **Globales Scope-Filtering** (`--project`, `--namespace`) | Eingrenzung der Analyse auf bestimmte Projekte oder C#-Namespaces (inkl. Wildcard-Unterstützung und Ausschluss-Shortcut für Test-Projekte). |
 | **Suppression-Bypass** (`--ignore-suppressions`) | Umgeht Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) dynamisch beim Linter-Lauf für konfigurierte Sprachklassen (`all`, `cs`/`c#`, `razor`, `js`, `css`). |
 | **Web-Asset-Linting** (CSS, JS, Razor) | Analyse für CSS (ExCSS), JS (Esprima) und Razor: Dateigrößen-Limits, ES6-Modul-Pflicht, Verbot globaler `window`-Zuweisungen, HTML-Verschachtelungstiefe, Control-Flow-Blöcke, Komponenten-Parameter, Ternaries in HTML-Attributen. Opt-in über `Web.IsEnabled = true`. |
-| **System-Logging** (`appsettings.json` → `logs/`) | Prozessinternes Serilog-Datei-Logging des Prozess-/Verbindungs-Lifecycle (Start, Handshake, Pipe-Fehler, Idle-Exit, Exit-Codes) für CLI, Thin-Client und Daemon — getrennt vom MCP-Call-Log, ohne stdout/stderr-Belastung. Level/Verzeichnis/Aufbewahrung konfigurierbar; Details: [Docs/configuration.md](Docs/configuration.md), Abschnitt „System-Logging". |
+| **System-Logging** (`appsettings.json` → `logs/`) | Gemeinsames prozessinternes Serilog-Datei-Logging des Prozess-/Verbindungs-Lifecycle (Start, Handshake, Pipe-Fehler, Idle-Exit, Exit-Codes) für CLI, Thin-Client und Daemon in einer Tagesdatei — ohne stdout/stderr-Belastung. Level/Verzeichnis/Aufbewahrung konfigurierbar; Details: [Docs/configuration.md](Docs/configuration.md), Abschnitt „System-Logging". |
 
 Vollständige, aktuelle Regel-Liste: `ainetlinter --list-rules`. Vollständige Konfigurationsreferenz: [Docs/configuration.md](Docs/configuration.md).
 

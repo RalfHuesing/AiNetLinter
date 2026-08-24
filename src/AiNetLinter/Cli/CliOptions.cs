@@ -42,14 +42,11 @@ internal sealed record CliOptions(
     Option<bool> PublicOnly,
     Option<string[]> IgnoreSuppressions,
     Option<bool> McpServer,
-    Option<string?> McpLog,
     Option<int?> ParentPid,
     Option<decimal?> McpProjectTtlMinutes,
     Option<int?> McpMaxProjects,
     Option<bool> DaemonStart,
-    Option<decimal?> McpDaemonIdleExitMinutes,
-    Option<string?> AnalyzeMcpLog,
-    Option<string?> Format);
+    Option<decimal?> McpDaemonIdleExitMinutes);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Playbook, Verbose).
@@ -120,12 +117,8 @@ internal sealed record CliParsedArgs(
     bool PublicOnly,
     IReadOnlyList<string>? IgnoreSuppressions,
     bool McpServer,
-    string? McpLog,
     int? ParentPid,
     decimal? McpProjectTtlMinutes,
     int? McpMaxProjects,
     bool DaemonStart,
-    decimal? McpDaemonIdleExitMinutes,
-    string? AnalyzeMcpLog,
-    string? Format,
-    bool FormatSpecified);
+    decimal? McpDaemonIdleExitMinutes);

@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Commands;
 
@@ -52,11 +50,8 @@ internal static class McpServerCommand
             MaxProjects: args.McpMaxProjects ?? ProjectRegistryDefaults.MaxProjects,
             IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
 
-        var obsOptions = ResolveObservabilityOptions(args.McpLogPath, solutionPath: null);
-
         var services = new ServiceCollection();
-        var builder = services.AddMcpServer();
-        builder.WithObservability(obsOptions);
+        services.AddMcpServer();
 
         using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
@@ -66,7 +61,7 @@ internal static class McpServerCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, serviceProvider);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry);
         serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StdioServerTransport(serverOptions);
@@ -101,68 +96,6 @@ internal static class McpServerCommand
                 ResolvedConfigPath = baseOptions.ResolvedConfigPath,
                 LoadFunc = innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console),
             })));
-
-    /// <summary>
-    /// Loest die <see cref="McpObservabilityOptions"/> anhand des CLI-Wertes <paramref name="mcpLogPath"/> auf.
-    /// Default (<c>null</c>): Observability und Feedback-Tool sind aktiv, LogDirectory ist null (schreibt
-    /// in Standardordner %LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\).
-    /// Bei Werten wie "off", "false", "disabled", "none" wird Observability komplett deaktiviert.
-    /// Bei einem Pfad wird das angegebene Verzeichnis verwendet (relativ zum Solution-Pfad oder absolut).
-    /// </summary>
-    internal static McpObservabilityOptions ResolveObservabilityOptions(string? mcpLogPath, string? solutionPath)
-    {
-        var serverVersion = McpServerOptionsFactory.GetServerVersion();
-
-        if (IsObservabilityDisabledKeyword(mcpLogPath))
-        {
-            return new McpObservabilityOptions
-            {
-                Enabled = false,
-                EnableToolCallLogging = false,
-                EnableFeedbackTool = false,
-                EnableResponseLogging = false,
-                ServerName = McpServerOptionsFactory.ServerName,
-                ServerVersion = serverVersion,
-                LogDirectory = null,
-            };
-        }
-
-        var logDirectory = string.IsNullOrWhiteSpace(mcpLogPath)
-            ? null
-            : ResolveMcpLogPath(mcpLogPath.Trim(), solutionPath ?? string.Empty);
-
-        return new McpObservabilityOptions
-        {
-            Enabled = true,
-            EnableToolCallLogging = true,
-            EnableFeedbackTool = true,
-            EnableResponseLogging = true,
-            ServerName = McpServerOptionsFactory.ServerName,
-            ServerVersion = serverVersion,
-            LogDirectory = logDirectory,
-        };
-    }
-
-    private static bool IsObservabilityDisabledKeyword(string? mcpLogPath)
-    {
-        if (mcpLogPath is null) return false;
-        var trimmed = mcpLogPath.Trim();
-        return trimmed.Equals("off", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.Equals("false", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.Equals("disabled", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.Equals("none", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Aufloesung des expliziten Log-Verzeichnisses: absolut -> wie angegeben; relativ -> relativ zum
-    /// Solution-Verzeichnis (nicht zum exeDir, damit die Log-Dateien zur Solution gehoeren).
-    /// </summary>
-    internal static string ResolveMcpLogPath(string mcpLogPath, string solutionPath)
-    {
-        if (Path.IsPathRooted(mcpLogPath)) return Path.GetFullPath(mcpLogPath);
-        var solutionDir = Path.GetDirectoryName(solutionPath) ?? string.Empty;
-        return Path.GetFullPath(Path.Combine(solutionDir, mcpLogPath));
-    }
 
     /// <summary>
     /// Loest den konfigurierten Zeilen-Grenzwert auf — bei gesetztem <paramref name="resolvedConfigPath"/>

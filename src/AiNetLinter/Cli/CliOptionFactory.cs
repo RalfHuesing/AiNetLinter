@@ -14,7 +14,6 @@ internal static class CliOptionFactory
     // Optionsnamen als Konstanten fuer Stellen, die Flags ohne Option-Objekt uebergeben
     // (z. B. der detached Daemon-Spawn): Parsing und Spawn bleiben so konsistent.
     internal const string DaemonStart = "--daemon-start";
-    internal const string McpLog = "--mcp-log";
     internal const string McpProjectTtlMinutes = "--mcp-project-ttl-minutes";
     internal const string McpMaxProjects = "--mcp-max-projects";
     internal const string McpDaemonIdleExitMinutes = "--mcp-daemon-idle-exit-minutes";
@@ -216,12 +215,6 @@ internal static class CliOptionFactory
         Description = "[internal] Startet den lokalen DaemonHost fuer Named-Pipe-Verbindungen.",
     };
 
-    internal static Option<string?> CreateMcpLogOption() => new(McpLog, "-mcp-log")
-    {
-        Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: aktiv unter %LOCALAPPDATA%\\RalfHuesing\\McpObservability\\ainetlinter\\<yyyy-MM-dd>\\. Ohne Wert (ZeroOrOne) wird dieser Standardpfad verwendet; explizite Pfade werden absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest. Jeder Prozess schreibt eine eigene Datei mit PID und InstanceId. Beispiel: --mcp-log ./.mcp-log/",
-        Arity = ArgumentArity.ZeroOrOne,
-    };
-
     internal static Option<int?> CreateParentPidOption() => new("--parent-pid")
     {
         Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
@@ -279,18 +272,6 @@ internal static class CliOptionFactory
         };
         return option;
     }
-
-    internal static Option<string?> CreateAnalyzeMcpLogOption() => new("--analyze-mcp-log")
-    {
-        Description = "Offline-Auswertung eines MCP-Call-Logs: JSONL-Datei, Log-Verzeichnis oder Glob.",
-        Arity = ArgumentArity.ExactlyOne,
-    };
-
-    internal static Option<string?> CreateFormatOption() => new("--format")
-    {
-        Description = "Ausgabeformat fuer --analyze-mcp-log: text (Standard) oder json.",
-        DefaultValueFactory = _ => "text",
-    };
 
     internal static Option<string[]> CreateIgnoreSuppressionsOption()
     {

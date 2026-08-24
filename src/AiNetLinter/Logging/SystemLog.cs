@@ -29,7 +29,7 @@ internal static class SystemLog
         ["Fatal"] = LogEventLevel.Fatal,
     };
 
-    private static ILogger? bootstrapLogger;
+    private const string LogFileName = "ainetlinter-.log";
 
     internal static LoggingConfig Config { get; private set; } = LoggingConfig.CreateDefault();
 
@@ -56,7 +56,20 @@ internal static class SystemLog
 
         if (alreadyInitialized) return;
 
-        var config = TryLoadConfig(processRole);
+        LoggingConfig config;
+        try
+        {
+            config = LoggingConfigLoader.Load();
+        }
+        catch (Exception exception)
+        {
+            config = LoggingConfig.CreateDefault();
+            Config = config;
+            ConfigureRoot(config, processRole);
+            Log.Fatal(exception, "System-Logging: Konfiguration defekt - Abbruch ({ProcessRole})", processRole);
+            throw;
+        }
+
         Config = config;
         ConfigureRoot(config, processRole);
 
@@ -83,10 +96,7 @@ internal static class SystemLog
     }
 
     /// <summary>Wird von Program.cs beim Ende von Main aufgerufen.</summary>
-    internal static void CloseAndFlush()
-    {
-        (Log.Logger as IDisposable)?.Dispose();
-    }
+    internal static void CloseAndFlush() => Log.CloseAndFlush();
 
     internal static LogEventLevel? Classify(string message)
     {
@@ -98,31 +108,6 @@ internal static class SystemLog
         return null;
     }
 
-    private static LoggingConfig TryLoadConfig(string processRole)
-    {
-        try
-        {
-            return LoggingConfigLoader.Load();
-        }
-        catch (Exception exception)
-        {
-            bootstrapLogger ??= CreateBootstrapLogger();
-            bootstrapLogger.Fatal(exception, "System-Logging: Konfiguration defekt - Abbruch ({ProcessRole})", processRole);
-            throw;
-        }
-    }
-
-    private static ILogger CreateBootstrapLogger()
-    {
-        return new LoggerConfiguration()
-            .MinimumLevel.Fatal()
-            .WriteTo.File(
-                Path.Combine(AppContext.BaseDirectory, "logs", "bootstrap-.log"),
-                rollingInterval: RollingInterval.Day,
-                shared: true)
-            .CreateLogger();
-    }
-
     private static void ConfigureRoot(LoggingConfig config, string processRole)
     {
         var levelSwitch = new Serilog.Core.LoggingLevelSwitch(LevelMap[config.MinimumLevel]);
@@ -131,7 +116,7 @@ internal static class SystemLog
             .Enrich.WithProperty("ProcessRole", processRole)
             .Enrich.WithProperty("Pid", Environment.ProcessId)
             .WriteTo.File(
-                Path.Combine(config.ResolveDirectory(), "ainetlinter-.log"),
+                Path.Combine(config.ResolveDirectory(), LogFileName),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: config.RetainedFileCount,
                 shared: true,
