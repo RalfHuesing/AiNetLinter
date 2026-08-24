@@ -567,7 +567,7 @@ Hermes      ─┘        Named Pipe          ├─ MRU-State (%LOCALAPPDATA%)
 |---|---|
 | Start | Lazy durch ersten Client; liest MRU-State und wärmt die letzten ≤ maxProjects Keys im Hintergrund — **über denselben Resolve-/Dedupe-Pfad wie interaktive Calls, mit gebundener Konkurrenz (max 2 parallele Warmup-Loads)**. Ein interaktiver Load wartet NIE hinter der Warmup-Queue (Self-Audit 9). Tote Pfade (Projekt gelöscht, Definitionsdatei weg) werden verworfen UND aus dem MRU-State entfernt (Self-Audit 10); fehlgeschlagene Warmups blockieren den Daemonbetrieb nicht. |
 | Idle-Exit | Keine verbundene Clients UND Idle ≥ `--mcp-daemon-idle-exit-minutes` (Default 10) → graceful Shutdown inkl. Dispose aller Keys und MRU-Persistierung. LAUFENDE Loads/Warmups verschieben den Exit (Self-Audit 15): Shutdown beginnt erst, nachdem keine Load-Tasks mehr aktiv sind — niemals Dispose unter halbfertigem Load. |
-| Hänger-Schutz | Thin-Client-Ping mit Timeout; bei Hänger darf der Client den Daemon terminieren und neu starten (er hängt ja für alle) — Ereignis ins Call-Log. |
+| Hänger-Schutz | Thin-Client-Ping mit Timeout; bei Hänger darf der Client den Daemon terminieren und neu starten (er hängt ja für alle) — Ereignis als signaturhaltige stderr-[WARN]-Zeile des Thin-Clients (Nutzerentscheid 2026-08-24, „Option A“: kein Observability-Sink im SDK-freien Client; Unterscheidbarkeit Retry/Hänger/Konflikt über die Ereignis-Signaturen). |
 | Kein Parent-Bindung | Der Daemon nutzt den `--parent-pid`-Reaper bewusst NICHT (er überlebt einzelne Clients gewollt); seine Sicherheit ist Idle-Exit + Versions-Handshake. |
 | Debug-Escape | Env `AINETLINTER_NO_DAEMON=1` → Thin-Client läuft klassisch in-proc (für Fehlersuche). Explizit dokumentiertes Debug-Ventil, KEIN Konfigurationsfeature. |
 
@@ -618,7 +618,7 @@ Integration (Category=Integration):
   Shared-Warmth).
 - Idle-Exit: Clients trennen → Daemon beendet sich innerhalb TTL; MRU-State geschrieben.
 - Kaltstart-Warmup: Daemon-Start wärmt MRU-Keys; erster Client-Call gegen gewärmten Key ist schnell.
-- Hänger-Pfad: nicht reagierender Daemon → Client killt/neu startet, Call-Log-Eintrag. Umsetzung:
+- Hänger-Pfad: nicht reagierender Daemon → Client killt/neu startet; Ereignis als stderr-[WARN]-Zeile (Nutzerentscheid 2026-08-24). Umsetzung:
   Stellvertreter-Prozess (Test startet einen Prozess, der die Pipe bindet und nie antwortet) statt
   Injektion in die echte EXE — deterministisch, kein Timing-Glück.
 - Escape: `AINETLINTER_NO_DAEMON=1` → In-proc-Modus ohne Daemon-Prozess.
@@ -683,7 +683,7 @@ Konfigurationen, dann Doku. Kein Epic wird halb verlassen — jedes endet mit ei
 | Wiring-Umbau über 6 Registration-Klassen + Resource | Mechanisch identische Änderung je Klasse (F3); Contract-Tests zuerst, Klassen einzeln umstellen. Kein Serverklasse-Refactoring nötig (F1). |
 | Vergessenes `projectRoot` durch Agent | Harter deterministischer Fehler; Ritual in AGENTS.md + ServerInstructions. |
 | RAM-Wachstum langer Host-Sessions | TTL + maxProjects (Epic A), im Daemon zusätzlich Idle-Exit + Dispose-all. |
-| Daemon hängt/leakt | Ping-Timeout + Client-seitiger Kill/Restart; Ereignisse im Call-Log; Idle-Exit begrenzt Lebenszeit grundsätzlich. |
+| Daemon hängt/leakt | Ping-Timeout + Client-seitiger Kill/Restart; Ereignisse als stderr-[WARN]-Zeilen; Idle-Exit begrenzt Lebenszeit grundsätzlich. |
 | Alter Daemon nach Update | Versions-Handshake mit sauberem Restart (B.2), nicht Kill-by-hope. |
 | Race zweier Erststarter | Connect-first/spawn-second Pattern; Pipe-Greifen entscheidet. |
 | IPC-Fehlersuche schwer | Observability in BEIDEN Prozessen mit gemeinsamer Connection-ID; Debug-Escape `AINETLINTER_NO_DAEMON=1`. |
