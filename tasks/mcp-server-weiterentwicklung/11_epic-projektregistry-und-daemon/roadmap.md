@@ -194,7 +194,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (done, pending audit)**
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (approved)**
       (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelte
       DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup und ist mit vier konkreten
       Findings abgeschlossen; step-011 korrigiert Exklusivität, MRU-Normalisierung
@@ -275,7 +275,7 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     in-proc Contracts sind vorhanden, aber zwei MAJOR-Nachweise fehlen:
     ein echter Zwei-Prozess-Doppelstart über `--daemon-start`/Named Pipe sowie
     ein direkter Host-/MCP-Contract mit realem Daemon-Handshake und MCP-SDK-
-    Request. Diese beiden Findings werden fokussiert in step-012 korrigiert;
+    Request. Diese beiden Findings wurden fokussiert in step-012 korrigiert;
     ThinClient, Connect-or-Start, Retry/Hänger-Schutz und externes Wiring
     bleiben außerhalb dieses Fixes.
 
@@ -286,3 +286,4 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     `tools/list`. Die Tests bleiben Integration (nicht Stress), verwenden die
     vorhandene Subprozess-/Fixture-Infrastruktur und nehmen ThinClient,
     Connect-or-Start, Retry/Hänger-Schutz und externes Wiring nicht vorweg.
+    Review: approved.

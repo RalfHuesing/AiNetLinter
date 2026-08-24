@@ -21,7 +21,7 @@ current_step: step-012
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-012` (done (pending audit) — Korrektur von step-011:
+- **Aktueller Schritt:** `step-012` (approved — Korrektur von step-011:
   echte Zwei-Prozess-/Pipe- und Host-/MCP-Contracts)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
@@ -67,7 +67,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-009 | EPIC-B | done | Transport-/Handshake-Grundlage für den Daemon | - | a6a6c40d | 2026-08-24 (approved) | a6a6c40d / 7897dd1b / b5715865 |
 | step-010 | EPIC-B | done (Korrektur ausstehend) | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues) | 424a781b |
 | step-011 | EPIC-B | done (korrigiert durch step-012) | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (Findings geschlossen) | 1c7ee714 / ffb60157 |
-| step-012 | EPIC-B | done (pending audit) | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | pending audit | ffb60157 |
+| step-012 | EPIC-B | approved | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
 
 ## Config (optional)
 

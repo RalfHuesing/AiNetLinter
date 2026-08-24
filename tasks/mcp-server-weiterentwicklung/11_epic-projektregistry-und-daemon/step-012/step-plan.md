@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: approved
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 012
@@ -165,7 +165,7 @@ Nachweis.
 - [ ] Ein gezielter Conventional-Commit enthält nur die Korrekturdateien und
       den aktualisierten Step-Status/Task-Plan.
 - [ ] `step-012/step-result.md` ist geschrieben und der Step-Status nach
-      Umsetzung auf `done (pending audit)` gesetzt.
+      Umsetzung auf `approved` gesetzt.
 
 ## Rules-Refs
 

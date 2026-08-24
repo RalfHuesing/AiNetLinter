@@ -10,7 +10,7 @@ coded_by_model: GPT-5
 coded_by_model_knowledge_cutoff: 2024-06
 coded_at: 2026-08-24T06:14:00+02:00
 code_commit_hash: ffb60157
-status_after: done (pending audit)
+status_after: approved
 blocker_category: n/a
 ---
 
@@ -78,7 +78,7 @@ Testdiagnostik und keine Fehler dieses Steps.
 Der Contract verwendet bewusst den realen benutzergebundenen Named-Pipe-
 Endpoint und behandelt fremde, außerhalb der Tests gestartete Daemonen als
 Umgebungsstörung. Der Drift-Audit bleibt gemäß Task-Vorgabe bis zum EPIC-B-
-Abschluss offen; dieser Step ist daher `done (pending audit)`.
+Abschluss offen; dieser Step ist nach dem Review `approved`.
 
 ## Review-Findings
 
