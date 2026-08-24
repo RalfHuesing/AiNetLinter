@@ -145,7 +145,11 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Step-004-Anker sind zusätzlich `ProjectCreationReservation` und `ProjectLoadFailure`;
   `ProjectRegistryOptions.BeforeCreationReservation` ist der ausdrücklich test-only
   Seam für das deterministische Lookup→Reservation-Interleaving sowie der
-  test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
+  test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. Step-016:
+  Soft-Cap-Überlauf-Semantik als bewusste Entscheidung an `EvictLeastRecentlyUsed`
+  dokumentiert; `ProjectDefinitionLoader.Load` mit PROJECT_ROOT_REQUIRED-Guard und
+  Self-Service-Template; `RULES_INVALID`-Vertrag (`ProjectInstanceFactory.TryCreate`)
+  um kopierfähige rules.json-Bauanleitung erweitert. (zuletzt: step-016)
 - **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection,
   unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim, DaemonHost,
   Registry-Fassade, MRU-State sowie ThinClientLauncher/Proxy und opaker
@@ -174,8 +178,11 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Disposal-Nachweis über Fake-LoadFunc-Cancellation) und `ProjectLeaseTests`
   (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
   `ProjectRegistryTests` verankert zusätzlich den Lookup→Reservation-Race-Anker
-  mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
-  Nicht-Stress-Lauf umfasst 1693 grüne Tests. (zuletzt: step-009)
+ mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
+ Nicht-Stress-Lauf umfasst 1693 grüne Tests. Step-016 ergänzt
+ `ProjectRegistryCapacityContractTests` (Soft-Cap-Überlauf-Vertrag) sowie
+ Root-Required-Theorie und RULES_INVALID-Template-Assertions in den
+ Bestandstestklassen. (zuletzt: step-016)
 - **`src/AiNetLinter.FastTests/Mcp/Daemon/`** — in-proc Contract-Tests für
   Handshake-Zustände, Pipe-Framing, Benutzerbindung, endpointgebundene
   Exklusivität, isolierte Cancellation, vollständigen Host-Run/Accept-Pfad,

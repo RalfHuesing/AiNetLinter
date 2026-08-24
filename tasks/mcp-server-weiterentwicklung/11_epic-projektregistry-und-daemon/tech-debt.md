@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-24T17:35:00+02:00
+last_updated: 2026-08-24T15:20:00+02:00
 ---
 
 # Tech-Debt-Log: 11_epic-projektregistry-und-daemon
@@ -30,16 +30,16 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
-| TD-001 | `src/AiNetLinter/Mcp/Projects/ProjectInstanceFactory.cs` + `src/AiNetLinter/Configuration/ConfigLoader.cs` | mittel | nein | Defekte (lesbare, aber ungültige) rules.json fällt im künftigen Registry-Pfad stumm auf Defaults zurück — kein deterministischer Fehlervertrag dafür |
+| TD-001 | `src/AiNetLinter/Mcp/Projects/ProjectInstanceFactory.cs` + `src/AiNetLinter/Configuration/ConfigLoader.cs` | mittel | nein | **[erledigt — step-016]** Deterministischer RULES_INVALID-Vertrag im Registry-Pfad (bestand bereits seit Epic-Wiring) um kopierfähige Bauanleitung ergänzt — kein Default-Fallback |
 | TD-002 | `src/AiNetLinter/Configuration/ConfigLoader.cs` | niedrig | nein | Diagnosen von TryLoadConfig gehen hart auf Console.Error (Kanal nicht injizierbar) — Misch-Thema erst mit dem Daemon (Epic B) |
-| TD-003 | `src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs` | niedrig | nein | Load(null/leerer projectRoot) löst implizit cwd-relativ auf — Ankerregel formal verletzt bis der Wiring-Guard existiert |
-| TD-004 | `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | mittel | nein | Soft-Cap: bei nur-busy Register wächst der Bestand über MaxProjects; TTL-Tick reklamiert Überhang nicht aktiv — Kapazitätsentscheidung fehlt bis Epic B |
+| TD-003 | `src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs` | niedrig | nein | **[erledigt — step-016]** Loader-Guard PROJECT_ROOT_REQUIRED mit Self-Service-Template schließt cwd-relative Restauflösung auf Load-Ebene |
+| TD-004 | `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | mittel | nein | **[erledigt — step-016, Akzeptanz]** Soft-Cap-Überlauf bei nur-busy Registern als gewollte Semantik festgenagelt (XML-Doc + Contract-Test) |
 | TD-005 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` + `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | niedrig | nein | Disposal faulted Loads über den Sync-Eviction-Pfad schreibt [WARN] auf den nicht injizierbaren Console-Kanal (verwandt TD-002) |
 | TD-006 | `src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs` + `src/AiNetLinter.TestKit/TestConfigFactory.cs` | niedrig | nein | Exact-Duplikat der leeren Config-Erzeugung in getrennten Test-/TestKit-Grenzen; gemeinsame Ablage braucht eine Abhängigkeitsentscheidung |
 | TD-007 | `src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs`, `McpRawWireTestHarness.cs` + Legacy-MCP-Prozesstests | niedrig | nein | Abdeckungsasymmetrie nach ThinClient-Umstellung: Bestandssuiten fixiert im Escape-Pfad, produktiver Daemon-Pfad nur durch wenige dedizierte Contracts gedeckt |
-| TD-008 | `src/AiNetLinter.IntegrationTests/**` (benutzergebundener Pipe-Endpunkt) | mittel | nein | Suite-weite Flakiness-Quelle: überlebende Fremd-Daemons am gemeinsamen Endpunkt stören parallele Integrationsläufe (empirisch belegt) — suite-weites Cleanup/Gating-Fixture fehlt |
+| TD-008 | `src/AiNetLinter.IntegrationTests/**` (benutzergebundener Pipe-Endpunkt) | mittel | nein | **[erledigt — step-016]** Suite-weites Cleanup/Gating: DaemonEndpointJanitor-Fixture räumt eigene Repo-Builds weg und skippt bei Fremdbelegung; ungeschützter Spawn-Pfad (McpServerLifetimeTests) auf Escape-Pfad gepinnt |
 | TD-009 | `src/AiNetLinter/Mcp/*ToolRegistrations.cs` + `OverviewResourceRegistration.cs` (+ Prosa in `ServerInstructions`) | niedrig | nein | Jeder MCP-Toolname liegt als Literal an Registrierung UND Overview-Tabelle (plus Prosa-Nennungen); Rename-Drift Registrierung↔Tabelle ist zwar testbewacht, bleibt aber Doppel-Pflege |
-| TD-010 | `Docs/agent-api.md:834` | niedrig | nein | Fehlertabelle beschreibt `AMBIGUOUS_SOLUTION` als aktiv, obwohl kein Emitter mehr existiert (seit EPIC-A-Wiring) — Verstoß gegen Dokumentations-Objektivität §1 |
+| TD-010 | `Docs/agent-api.md` (Fehlertabelle) | niedrig | nein | **[erledigt — step-016]** Stale AMBIGUOUS_SOLUTION-Zeile entfernt; übrige Tabelle gegen Emittenten verifiziert |
 
 ## Einträge
 
@@ -66,7 +66,11 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Tool-Antwortpfad (`UsedDefaultConfig=true` auswerten). Bis dahin dokumentiert dieser
   Eintrag die bekannte Lücke.
 - **Auto-Fixable:** nein — Verhaltens- und Vertragsentscheidung mit Architektur-Ermessen.
-- **Status:** offen  # offen | erledigt | verworfen
+- **Status:** erledigt (step-016)  # offen | erledigt | verworfen
+  Umsetzung: Der deterministische `RULES_INVALID`-Vertrag bestand im Registry-Pfad
+  (`ProjectInstanceFactory.TryCreate`) bereits seit dem Epic-Wiring; step-016 ergänzte
+  die fehlende kopierfähige Bauanleitung (minimales rules.json-Skelett im Fehlertext)
+  samt Testabsicherung. Batch-Pfad unverändert (dokumentierter Default-Fallback).
 
 ### TD-002 — Diagnosekanal von ConfigLoader nicht injizierbar [Priorität: niedrig] [Auto-Fixable: nein]
 
@@ -102,7 +106,11 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Root erfolgt; dort sinnvoll einen Contract-Test ergänzen, der das absichert (z. B. über
   die Argumentvalidierung vor dem ersten Registry-Zugriff).
 - **Auto-Fixable:** nein — Verhaltensfrage (wo validiert wird) mit Test-Entscheidung.
-- **Status:** offen  # offen | erledigt | verworfen
+- **Status:** erledigt (step-016)  # offen | erledigt | verworfen
+  Umsetzung: Guard am Anfang von `ProjectDefinitionLoader.Load` — null/leer/Whitespace
+  liefert sofort `Failure(PROJECT_ROOT_REQUIRED, RootRequiredTemplate())` mit wörtlichem
+  Self-Service-Template (Stil wie `NotInitializedTemplate`); Theory-Test deckt
+  null/""/"   " ab. Gültige absolute Roots unverändert.
 
 ### TD-004 — Soft-Cap: kein aktives Reklamieren von Überhang über MaxProjects [Priorität: mittel] [Auto-Fixable: nein]
 
@@ -123,7 +131,12 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   Vertrag (Überschuss nur transient) oder tick-seitige Cap-Reklamation/harte Ablehnung bei
   vollem Register. Bis dahin dokumentiert dieser Eintrag die bekannte Ecke.
 - **Auto-Fixable:** nein — Vertrags- und Architekturentscheidung (Verhalten bei Volllast).
-- **Status:** offen  # offen | erledigt | verworfen
+- **Status:** erledigt (Akzeptanz, Nutzerentscheid 2026-08-24; step-016)  # offen | erledigt | verworfen
+  Umsetzung: KEINE Verhaltensänderung — Überlauf bei nur-busy Registern ist gewollte
+  Semantik. Festgenagelt durch XML-Doc an `ProjectRegistry.EvictLeastRecentlyUsed`
+  (mit Nutzerentscheid-Datum) und Contract-Test
+  `ProjectRegistryCapacityContractTests.Lease_AllSlotsBusy_AllowsOverflowUntilSlotFreesThenEvictsAgain`
+  (injizierbare Clock wie bestehende Eviction-Tests).
 
 ### TD-005 — [WARN] auf Console-Kanal beim Disposal faulted Loads im Sync-Eviction-Pfad [Priorität: niedrig] [Auto-Fixable: nein]
 
@@ -217,7 +230,16 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   oder dedizierter Test-Endpunkt via Env), bevor weitere Daemon-Pfad-Tests
   dazukommen; Serialisierungsverbote von Richtlinien §4 bleiben gewahrt.
 - **Auto-Fixable:** nein — Architektur- und Isolationsentscheidung.
-- **Status:** offen  # offen | erledigt | verworfen
+- **Status:** erledigt (step-016)  # offen | erledigt | verworfen
+  Umsetzung: `DaemonEndpointJanitor` als xUnit-v3-Assembly-Fixture — beendet vor dem
+  ersten Endpunkt-Zugriff Daemon-Prozesse eigener Bauart (Bildpfad = Test-EXE bzw.
+  Build-Ausgabe dieses Repos; nie blinde Namens-Matches, unlesbare Bildpfade unangetastet),
+  verifiziert den Endpunkt per Client-Probe und skippt transparent mit Begründung bei
+  nicht behebbarer Fremdbelegung. Choke-Point ist `AcquireEndpointAsync`; zusätzlich
+  wurde der letzte ungeschützte Spawn-Pfad (`McpServerLifetimeTests`, startete Daemons
+  mit Default-10-min-Idle-Exit = empirisch belegte Kontaminationsquelle in zwei
+  Vollstack-Läufen) auf den Escape-Pfad gepinnt. Simulation eines hängenden Daemons
+  wurde nachgewiesen: Janitor identifizierte/beendete ihn, Contract-Test lief grün.
 
 ### TD-009 — MCP-Toolnamen doppelt gepflegt: Registrierung ↔ Overview-Tabelle (+ Prosa) [Priorität: niedrig] [Auto-Fixable: nein]
 
@@ -237,4 +259,8 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 - **Warum nicht sofort gefixt:** Außerhalb des Step-Scopes; die korrekte Ersatzformulierung verlangt die Verifikation des heutigen Batch-Restverhaltens bei mehreren Solutions im cwd (nicht durch diesen Review geleistet) plus Formulierungsurteil.
 - **Vorschlag:** In einem Doku-Pflicht-Step die Tabellenzeile an das tatsächliche Verhalten anpassen (Hard-Cut-Halbsatz behalten, `AMBIGUOUS_SOLUTION` entfernen bzw. als historisch kennzeichnen) und stichprobenartig die übrige Tabelle gegen `McpToolResults`/`LinterErrorCodes` prüfen.
 - **Auto-Fixable:** nein — Inhaltliche Verifikation des Batch-Restverhaltens und Formulierungsurteil nötig, kein blindes Edit.
-- **Status:** offen  # offen | erledigt | verworfen
+- **Status:** erledigt (step-016)  # offen | erledigt | verworfen
+  Umsetzung: `AMBIGUOUS_SOLUTION`-Zeile aus der Fehlertabelle entfernt. Die übrige
+  Tabelle wurde vollständig gegen die Emittenten verifiziert (Konstanten in
+  `LinterErrorCodes`/`ProjectErrorCodes` + Nutzungsstellen) — kein weiterer toter
+  Code gefunden.
