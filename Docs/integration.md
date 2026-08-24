@@ -277,6 +277,31 @@ höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
 
 **stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
 
+### Daemon-Transport: aktueller Stand
+
+Die transportneutrale Grundlage für einen späteren geteilten Daemon ist bereits
+als `Mcp/Daemon/`-Vertrag vorhanden, aber noch nicht an die Registrierung oder
+an `--mcp-server` angeschlossen. Diese Registrierung startet daher weiterhin
+den bestehenden Stdio-/In-Proc-MCP-Pfad; ein aktiver Daemon-Modus wird hier
+nicht vorausgesetzt.
+
+Die Grundlage verwendet den benutzergebundenen Named-Pipe-Namen
+`ainetlinter.analyzer.v1.<username>` mit `PipeOptions.CurrentUserOnly` und
+newline-delimited JSON-Objekten. Der Pipe-Level-Handshake ist von der
+MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
+Versions-/PID-Daten und die effektive Daemon-Konfiguration. Eine unbekannte
+Protokollversion wird abgewiesen; ein Versions-Mismatch entscheidet bei null
+weiteren Verbindungen höchstens einmal über `shutdown` und liefert bei
+konkurrierenden oder weiteren Verbindungen `VERSION_CONFLICT`. Eine
+Konfigurationsdivergenz ist als einmaliges strukturiertes Warnereignis
+auswertbar. Die Cancellation-Grenze liegt pro Pipe-Verbindung; opake
+MCP-/JSON-RPC-Bytes werden nach dem Handshake nicht interpretiert oder
+umgeschrieben.
+
+DaemonHost, ThinClient, Idle-Exit, MRU-Persistierung und Health-/Observability-
+Wiring sind nicht Bestandteil dieses Integrationsstands und werden erst mit
+der späteren Verdrahtung dokumentiert.
+
 **MCP-Observability:** Das Tool-Call-Logging ist standardmaessig aktiv. Der Standardpfad liegt unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\`; jede Serverinstanz schreibt eine eigene Datei mit PID und InstanceId. Mit `--mcp-log <pfad>` kann ein eigenes Verzeichnis gesetzt werden, mit `--mcp-log off` wird Logging und Feedback deaktiviert. Format, Pfad-Aufloesung und Offline-Auswertung stehen in [Docs/agent-api.md#mcp-observability--feedback](agent-api.md#mcp-observability--feedback).
 
 ### MCP-Observability und Offline-Auswertung

@@ -226,6 +226,42 @@ MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält u
 
 Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
+### Daemon-Pipe-Vertrag (Transport-Grundlage)
+
+Die wiederverwendbare Pipe-/Handshake-Grundlage liegt unter
+`Mcp/Daemon/`; sie ist in diesem Stand noch nicht in `--mcp-server` oder einen
+Daemon-Prozess verdrahtet. Der bestehende MCP-SDK-Handshake über stdio bleibt
+unverändert.
+
+- Der Named-Pipe-Endpunkt lautet ausschließlich
+  `ainetlinter.analyzer.v1.<username>` für den aktuellen Windows-Benutzer.
+  Der Server erstellt ihn mit `PipeOptions.CurrentUserOnly`; dadurch ist der
+  Pipe-Zugriff auf den aktuellen Benutzer begrenzt.
+- Jede Pipe-Nachricht ist genau ein JSON-Objekt in einer einzelnen
+  newline-delimited-Zeile. Leere, mehrzeilige, ungültige oder nicht-objektartige
+  Frames werden abgewiesen. Nach dem Pipe-Level-Handshake werden die MCP-/JSON-
+  RPC-Nutzdaten als validierte, aber nicht umgeschriebene Bytes weitergereicht.
+- Die Pipe-Level-Nachrichten `hello`, `welcome` und `shutdown` verwenden
+  Protokollversion `1`. `welcome` enthält `daemonVersion`,
+  `executableVersion`, `processId` und die effektive `configuration` mit
+  `maxProjects`, `idleExitMinutes` und `logTarget`. `projectRoot` gehört nicht
+  in diesen Handshake.
+- Eine nicht unterstützte Protokollversion wird mit
+  `PROTOCOL_VERSION_UNSUPPORTED` abgewiesen. Bei abweichender
+  `executableVersion` darf die Zustandslogik bei null weiteren Verbindungen
+  genau eine `shutdown`-Entscheidung erzeugen; bei konkurrierenden oder danach
+  folgenden Verbindungen lautet der Fehler `VERSION_CONFLICT`. Damit löst ein
+  Versionskonflikt keinen Ping-Pong-Neustart aus.
+- Weicht die vom Client gemeldete Konfiguration von der effektiven
+  Daemon-Konfiguration ab, wird ein strukturiertes
+  `CONFIGURATION_DIVERGENCE`-Warnereignis höchstens einmal je
+  Handshake-State-Machine ausgelöst. Es ändert weder `projectRoot` noch die
+  Registry-Semantik.
+- Jede `DaemonPipeConnection` besitzt ein eigenes Cancellation-Token.
+  Disconnect bricht nur die in-flight Lese-/Schreibarbeit dieser Verbindung
+  ab; andere Verbindungen und ihr gemeinsamer Warm-State werden vom Transport
+  nicht verändert.
+
 Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
 
 Wenn ein Projekt-Key nicht geladen werden kann (Solution-Datei fehlt, MSBuild-

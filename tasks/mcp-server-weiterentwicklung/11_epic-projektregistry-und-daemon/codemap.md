@@ -145,8 +145,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `ProjectRegistryOptions.BeforeCreationReservation` ist der ausdrücklich test-only
   Seam für das deterministische Lookup→Reservation-Interleaving sowie der
   test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
-- **`src/AiNetLinter/Mcp/Daemon/`** — existiert noch NICHT (Epic B); verbindliche
-  Zielstruktur steht im Konzept-Strukturbaum. (zuletzt: initial)
+- **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection und
+  unabhängige Handshake-Verträge für die spätere Daemon-Verdrahtung. (zuletzt: step-009)
 
 ### Tests
 
@@ -166,7 +166,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   (Lease-Disziplin) sowie step-003-Contract-/Wiring-/Overview-Tests; der
   `ProjectRegistryTests` verankert zusätzlich den Lookup→Reservation-Race-Anker
   mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
-  Nicht-Stress-Lauf umfasst 1682 grüne Tests. (zuletzt: step-007)
+  Nicht-Stress-Lauf umfasst 1693 grüne Tests. (zuletzt: step-009)
+- **`src/AiNetLinter.FastTests/Mcp/Daemon/`** — in-proc Contract-Tests für
+  Handshake-Zustände, Pipe-Framing, Benutzerbindung und isolierte Cancellation. (zuletzt: step-009)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
   gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)
