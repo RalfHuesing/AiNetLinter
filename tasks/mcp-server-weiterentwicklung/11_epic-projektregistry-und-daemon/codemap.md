@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-24T03:49:16+02:00
+last_updated: 2026-08-24T06:14:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -149,7 +149,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection,
   unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim sowie
   `DaemonHost`, Registry-Fassade und debounced/kanonisch persistierter MRU-State
-  für den internen Lifecycle. (zuletzt: step-011)
+  für den internen Lifecycle; die direkten Prozess-Contracts nutzen diesen
+  Produktionspfad unverändert. (zuletzt: step-012)
 
 ### Tests
 
@@ -184,6 +185,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `projectRoot` in Tool-Calls; `McpProcessHost`/`ReadOnlyMcpHostClient` bieten
   zusätzlich SDK-Discovery und Resource-Read, der Repository-Live-Test prüft
   das URL-kodierte Overview-Template und den 26er-Toolvertrag. (zuletzt: step-008)
+- **`src/AiNetLinter.IntegrationTests/Mcp/Daemon/`** — echte Zwei-Prozess-
+  Named-Pipe-Contracts für Daemon-Doppelstart/Lock-Freigabe sowie Host-
+  Handshake, MCP-SDK-Initialize und `tools/list`. (zuletzt: step-012)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)

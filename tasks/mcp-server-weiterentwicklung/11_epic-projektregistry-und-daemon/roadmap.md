@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-24T04:06:32+02:00
+last_updated: 2026-08-24T06:14:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -194,14 +194,15 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (Korrektur von step-011)**
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (done, pending audit)**
       (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelte
       DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup und ist mit vier konkreten
       Findings abgeschlossen; step-011 korrigiert Exklusivität, MRU-Normalisierung
       und Connection-Registration-Race mit in-proc Contracts. Das Review zu
-      step-011 verlangt in step-012 noch die zwei direkten Prozess-/Pipe-Contracts
-      für Doppelstart und Host/MCP. ThinClient, Connect-or-Start und Health
-      bleiben weiterhin nachgelagert.)
+      step-011 verlangte noch die zwei direkten Prozess-/Pipe-Contracts für
+      Doppelstart und Host/MCP; diese sind in step-012 umgesetzt und die Findings
+      geschlossen. ThinClient, Connect-or-Start und Health bleiben weiterhin
+      nachgelagert.)
   - [x] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
         (+ ACL auf aktuellen User), newline-delimited JSON, je Verbindung ein async
         Read/Write-Loop; Disconnect bricht in-flight Calls DER Verbindung ab —
@@ -277,3 +278,11 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     Request. Diese beiden Findings werden fokussiert in step-012 korrigiert;
     ThinClient, Connect-or-Start, Retry/Hänger-Schutz und externes Wiring
     bleiben außerhalb dieses Fixes.
+
+  - **Step-012-Abschluss (2026-08-24):** Die beiden MAJOR-Findings aus dem
+    step-011-Review sind geschlossen: Ein echter Zwei-Prozess-Contract prüft
+    Named-Pipe-Doppelstart, stderr, Exitcode und Lock-Freigabe; ein zweiter
+    echter Prozess-Contract prüft Daemon-Handshake, MCP-SDK-Initialize und
+    `tools/list`. Die Tests bleiben Integration (nicht Stress), verwenden die
+    vorhandene Subprozess-/Fixture-Infrastruktur und nehmen ThinClient,
+    Connect-or-Start, Retry/Hänger-Schutz und externes Wiring nicht vorweg.
