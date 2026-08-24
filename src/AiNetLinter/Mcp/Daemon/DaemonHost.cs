@@ -195,24 +195,29 @@ internal sealed class DaemonHost : IAsyncDisposable
         {
             await using var activeConnection = connection;
             var hello = await activeConnection.ReadJsonFrameAsync<DaemonHello>().ConfigureAwait(false);
-            if (hello is null) return;
+            if (hello is null)
+            {
+                Serilog.Log.Warning("Daemon: Verbindung {ConnectionId} brach vor dem Handshake ab (kein Hello empfangen)", connectionId);
+                return;
+            }
 
             var otherConnections = Math.Max(0, ActiveConnectionCount - 1);
             var result = handshake.HandleHello(hello, otherConnections);
             if (result.IsAccepted && result.Welcome is not null)
             {
-                result = result with
-                {
-                    Welcome = result.Welcome with
-                    {
-                        ConnectionId = connectionId,
-                    },
-                };
+                result = ApplyConnectionId(result, connectionId);
             }
 
             await WriteHandshakeResultAsync(activeConnection, result).ConfigureAwait(false);
+            Serilog.Log.Information(
+                "Daemon: Handshake fuer Verbindung {ConnectionId} abgeschlossen (Status={Status}, ClientPid={ClientPid}, AktiveVerbindungen={AktiveVerbindungen})",
+                connectionId,
+                result.Status,
+                hello.ProcessId,
+                ActiveConnectionCount);
             if (result.Status == DaemonHandshakeStatus.ShutdownRequested)
             {
+                Serilog.Log.Warning("Daemon: Kontrollierter Neustart angefordert (ExecutableVersionMismatch) - Shutdown");
                 shutdownSource.Cancel();
             }
 
@@ -224,27 +229,34 @@ internal sealed class DaemonHost : IAsyncDisposable
         catch (OperationCanceledException) when (connection.CancellationToken.IsCancellationRequested)
         {
         }
-        catch (IOException exception)
-        {
-            options.Console.WriteError($"[WARN]: Daemon-Verbindung {connectionId} wurde getrennt: {exception.Message}");
-        }
-        catch (InvalidDataException exception)
-        {
-            options.Console.WriteError($"[WARN]: Daemon-Verbindung {connectionId} enthielt einen ungueltigen Handshake: {exception.Message}");
-        }
-        catch (JsonException exception)
-        {
-            options.Console.WriteError($"[WARN]: Daemon-Verbindung {connectionId} enthielt kein gueltiges Handshake-JSON: {exception.Message}");
-        }
         catch (Exception exception)
         {
-            options.Console.WriteError($"[WARN]: Daemon-Verbindung {connectionId} wurde mit einem Sitzungsfehler beendet: {exception.Message}");
+            ReportConnectionFailure(exception, connectionId, options.Console);
         }
         finally
         {
             CompleteConnection(connectionId, completion);
         }
     }
+
+    private static void ReportConnectionFailure(Exception exception, int connectionId, ILintConsole console) =>
+        console.WriteError(exception switch
+        {
+            // Reihenfolge: InvalidDataException erbt von IOException und muss zuerst pruefen.
+            InvalidDataException invalid => $"[WARN]: Daemon-Verbindung {connectionId} enthielt einen ungueltigen Handshake: {invalid.Message}",
+            IOException io => $"[WARN]: Daemon-Verbindung {connectionId} wurde getrennt: {io.Message}",
+            JsonException json => $"[WARN]: Daemon-Verbindung {connectionId} enthielt kein gueltiges Handshake-JSON: {json.Message}",
+            _ => $"[WARN]: Daemon-Verbindung {connectionId} wurde mit einem Sitzungsfehler beendet: {exception.Message}",
+        });
+
+    private static DaemonHandshakeResult ApplyConnectionId(DaemonHandshakeResult result, int connectionId) =>
+        result with
+        {
+            Welcome = result.Welcome! with
+            {
+                ConnectionId = connectionId,
+            },
+        };
 
     private static async Task WriteHandshakeResultAsync(
         DaemonPipeConnection connection,
@@ -277,6 +289,7 @@ internal sealed class DaemonHost : IAsyncDisposable
                 TouchResidentProjects();
                 if (IsIdleExitDue())
                 {
+                    Serilog.Log.Information("Daemon: Idle-Exit nach {IdleExit} ohne aktive Verbindung - Shutdown", options.IdleExit);
                     linked.Cancel();
                     return;
                 }
@@ -433,6 +446,7 @@ internal sealed class DaemonHost : IAsyncDisposable
 
         if (wasRegistered)
         {
+            Serilog.Log.Debug("Daemon: Verbindung {ConnectionId} geschlossen (Restverbindungen={Rest})", connectionId, ActiveConnectionCount);
             UnregisterClient();
         }
 

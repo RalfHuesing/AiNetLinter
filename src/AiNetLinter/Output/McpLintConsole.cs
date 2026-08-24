@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using AiNetLinter.Logging;
 
 namespace AiNetLinter.Output;
 
@@ -18,6 +19,15 @@ internal sealed class McpLintConsole : ILintConsole
 
     private McpLintConsole() { }
 
-    public void WriteLine(string message) => Console.Error.WriteLine(message);
-    public void WriteError(string message) => Console.Error.WriteLine(message);
+    public void WriteLine(string message)
+    {
+        SystemLog.WriteConsoleMirror(message);
+        Console.Error.WriteLine(message);
+    }
+
+    public void WriteError(string message)
+    {
+        SystemLog.WriteConsoleMirror(message);
+        Console.Error.WriteLine(message);
+    }
 }

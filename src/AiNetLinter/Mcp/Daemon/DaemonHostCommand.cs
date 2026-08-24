@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RalfHuesing.Mcp.Observability;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Daemon;
 
@@ -51,7 +52,10 @@ internal static class DaemonHostCommand
             SessionRunner: CreateSessionRunner(projectRegistry)));
 
         await using var activeHost = host;
-        return await activeHost.RunAsync(cancellationToken).ConfigureAwait(false);
+        Log.Information("Daemon: Host startet (IdleExit={IdleExitMinutes} Min, MaxProjects={MaxProjects}, LogTarget={LogTarget})", idleMinutes, maxProjects, args.McpLogPath ?? "stderr");
+        var exitCode = await activeHost.RunAsync(cancellationToken).ConfigureAwait(false);
+        Log.Information("Daemon: Host beendet, ExitCode={ExitCode}", exitCode);
+        return exitCode;
     }
 
     private static Func<DaemonPipeConnection, Task> CreateSessionRunner(
@@ -64,6 +68,7 @@ internal static class DaemonHostCommand
     {
         var services = new ServiceCollection();
         var runtimeContext = connection.RuntimeContext;
+        Serilog.Log.Debug("Daemon: MCP-Session startet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
         var observabilityOptions = McpServerCommand.ResolveObservabilityOptions(null, null);
         if (runtimeContext is not null)
         {

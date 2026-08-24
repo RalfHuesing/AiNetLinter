@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Logging;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Output;
 
@@ -42,30 +43,44 @@ public static class Program
 
                 // Schneller Pfad: --mcp-server. Kein stdout-Header, da das JSON-RPC-Framing
                 // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
-                if (linterArgs.McpServer) return await ThinClientProxy.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
+                if (linterArgs.McpServer)
+                {
+                    SystemLog.Initialize(ProcessRoles.ThinClient);
+                    return await ThinClientProxy.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance).ConfigureAwait(false);
+                }
 
-                if (linterArgs.DaemonStart) return await DaemonHostCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
+                if (linterArgs.DaemonStart)
+                {
+                    SystemLog.Initialize(ProcessRoles.Daemon);
+                    return await DaemonHostCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance).ConfigureAwait(false);
+                }
+
+                SystemLog.Initialize(ProcessRoles.Cli);
 
                 if (linterArgs.Docs == null && linterArgs.AnalyzeMcpLogPath == null)
                 {
                     var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
                     Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
                 }
-                return await ExecuteLinterAsync(linterArgs, cts.Token);
+                return await ExecuteLinterAsync(linterArgs, cts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
+                Serilog.Log.Error("Prozess abgebrochen (OperationCanceled), ExitCode=2");
                 Console.Error.WriteLine("[INFO]: Abgebrochen.");
                 return 2;
             }
             catch (Exception ex)
             {
+                Serilog.Log.Fatal(ex, "Prozess mit unerwartetem Fehler beendet, ExitCode=2");
                 Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex}");
                 return 2;
             }
         });
 
-        return await root.Parse(args).InvokeAsync();
+        var exitCode = await root.Parse(args).InvokeAsync().ConfigureAwait(false);
+        SystemLog.CloseAndFlush();
+        return exitCode;
     }
 
     private static LinterArgs ToLinterArgs(CliParsedArgs parsed)

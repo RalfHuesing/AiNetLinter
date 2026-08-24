@@ -12,6 +12,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="RalfHuesing.Mcp.Observability" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="ExCSS" />
     <PackageReference Include="Esprima" />
@@ -25,6 +27,12 @@
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
     <EmbeddedResource Include="..\..\Docs\ROADMAP.md" LogicalName="Docs/ROADMAP.md" />
     <EmbeddedResource Include="..\..\rules.json" LogicalName="rules.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System-Logging-Konfiguration: bewusst als lose Datei ausgeliefert (nicht eingebettet),
+         damit sie im Deployment ohne Neubuild angepasst werden kann. -->
+    <Content Include="..\..\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

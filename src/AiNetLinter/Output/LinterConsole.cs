@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using AiNetLinter.Logging;
 
 namespace AiNetLinter.Output;
 
@@ -10,6 +11,15 @@ internal sealed class LinterConsole : ILintConsole
 
     private LinterConsole() { }
 
-    public void WriteLine(string message) => Console.WriteLine(message);
-    public void WriteError(string message) => Console.Error.WriteLine(message);
+    public void WriteLine(string message)
+    {
+        SystemLog.WriteConsoleMirror(message);
+        Console.WriteLine(message);
+    }
+
+    public void WriteError(string message)
+    {
+        SystemLog.WriteConsoleMirror(message);
+        Console.Error.WriteLine(message);
+    }
 }

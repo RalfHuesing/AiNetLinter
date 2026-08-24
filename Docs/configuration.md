@@ -1667,4 +1667,56 @@ ainetlinter --config rules.json --path . --ignore-suppressions cs,razor
 
 ---
 
+## 14. System-Logging (`appsettings.json`)
+
+AiNetLinter schreibt ein prozessinternes System-Logging (Serilog, Datei-Sink), das vom
+MCP-Call-Log (Observability) getrennt ist: Es protokolliert Prozess- und Verbindungs-
+Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente, Daemon-Connect-or-Start,
+Handshake-Ergebnisse inklusive Ablehnungen (Versionskonflikt, Protokollversion),
+Pipe-Pump-Fehler, Idle-Exit und Exit-Codes. Damit sind Client-/Transport-Probleme
+(z. B. „Transport closed" einzelner MCP-Clients) nachvollziehbar, ohne stderr zu belasten.
+
+### Konfigurationsdatei
+
+Die Datei `appsettings.json` liegt neben der ausführbaren Datei und wird im Release-
+Archiv ausgeliefert. Fehlt sie, gelten Built-in-Defaults; eine defekte oder ungültige
+Datei führt zu einem harten Abbruch mit `[CONFIG]`-Fehlermeldung (kein stilles Zurück-
+fallen). Ein Bootstrap-Logeintrag verbleibt in `logs/bootstrap-<Datum>.log`.
+
+```json
+{
+  "Logging": {
+    "MinimumLevel": "Debug",
+    "Directory": "logs",
+    "RetainedFileCount": 14
+  }
+}
+```
+
+| Schlüssel | Default | Bedeutung |
+|:----------|:--------|:----------|
+| `MinimumLevel` | `Debug` | `Verbose`, `Debug`, `Information`, `Warning`, `Error`, `Fatal` |
+| `Directory` | `logs` | Log-Verzeichnis, relativ zur EXE (absoluter Pfad erlaubt) |
+| `RetainedFileCount` | `14` | Anzahl behaltener Tagesdateien (1–365) |
+
+Unbekannte Schlüssel innerhalb des `Logging`-Abschnitts sind ebenfalls ein harter Fehler.
+
+### Log-Format und Ablage
+
+Täglich rollende Dateien `ainetlinter-<yyyy-MM-dd>.log` im konfigurierten Verzeichnis:
+
+```
+2026-08-24 20:31:37.233 +02:00 [INF] [thin-client] System-Logging initialisiert (Level=Debug, ...)
+2026-08-24 20:31:38.499 +02:00 [INF] [daemon] Daemon: Handshake fuer Verbindung 1 abgeschlossen (Status="Accepted", ClientPid=13336, AktiveVerbindungen=1)
+```
+
+Das Feld hinter dem Level ist die Prozessrolle: `cli`, `thin-client`, `daemon` oder
+`mcp-server`. Thin-Client und Daemon schreiben in dieselbe Tagesdatei (gemeinsam
+genutzter Sink), sodass eine Client-Session über beide Prozesse hinweg lesbar ist.
+Alle Diagnoseausgaben der Konsole (`[INFO]`, `[WARN]`, `[ERROR]`, `[FATAL ERROR]`)
+werden zusätzlich ins Log gespiegelt — das Log ist damit die vollständige Diagnose-
+quelle, während stdout/stderr im MCP-Modus unberührt bleiben.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

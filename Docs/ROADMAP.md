@@ -833,4 +833,32 @@ Der Git-Diff-Zweig von `get_impact` liefert auf `detailLevel=change-context` den
 
 ---
 
+## System-Logging: Prozess-Lifecycle in `logs/` (`appsettings.json`)
+
+Neues prozessinternes System-Logging (Serilog-Datei-Sink, getrennt vom Observability-
+Call-Log), das Prozess- und Verbindungs-Lifecycle sichtbar macht:
+
+- [x] **Konfiguration über `appsettings.json` neben der EXE** (im Release-Archiv enthalten):
+  `Logging:MinimumLevel` (Default `Debug`), `Logging:Directory` (Default `logs`, relativ zur EXE),
+  `Logging:RetainedFileCount` (Default `14`). Fehlende Datei = Built-in-Defaults; defekte oder
+  ungültige Datei = harter Abbruch mit `[CONFIG]`-Meldung und Bootstrap-Logeintrag
+  (`logs/bootstrap-<Datum>.log`); unbekannte Schlüssel werden abgelehnt.
+- [x] **Täglich rollende Logdateien `logs/ainetlinter-<yyyy-MM-dd>.log`** mit Prozessrolle
+  (`cli`/`thin-client`/`daemon`) im jeder Zeile; Thin-Client und Daemon teilen einen Sink,
+  sodass eine Session prozessübergreifend lesbar ist. Keine stdout/stderr-Belastung —
+  der MCP-Wire-Verkehr bleibt unangetastet.
+- [x] **Lifecycle-Instrumentierung:** Prozessstart (PID, Rolle, Version, Argumente),
+  Daemon-Connect-or-Start inklusive detached Spawn, Handshake-Ergebnisse mit
+  Client-PID/Versionen/Konfigurationsabweichungen, Ablehnungen (Versionskonflikt,
+  Protokollversion), Pipe-Pump-Fehler mit Replay-Fenster, Idle-Exit und Exit-Codes
+  beider Prozesse.
+- [x] **Konsolen-Spiegelung:** Alle `[INFO]`-/`[WARN]`-/`[ERROR]`-/`[FATAL ERROR]`-Diagnose-
+  zeilen von `LinterConsole`/`McpLintConsole` werden severity-klassifiziert ins Log gespiegelt
+  ([FATAL ERROR]→Fatal, [ERROR]→Error, [WARN]→Warning, [INFO]→Information).
+- [x] **Tests & Dokumentation:** 17 Unit-Tests (Loader-Validierung inkl. Defekt-Fälle,
+  Defaults, Bereichsprüfungen, Severity-Klassifizierung) in `AiNetLinter.FastTests/Logging/`;
+  Abschnitt „System-Logging" in `Docs/configuration.md`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

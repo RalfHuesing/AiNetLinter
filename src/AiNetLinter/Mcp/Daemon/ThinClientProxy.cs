@@ -6,6 +6,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Output;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Daemon;
 
@@ -49,6 +50,7 @@ internal static class ThinClientProxy
         var clientConsole = console ?? LinterConsole.Instance;
         if (IsEscapeEnabled())
         {
+            Log.Debug("ThinClient: Debug-Escape aktiv (AINETLINTER_NO_DAEMON=1) - direkter In-Proc-Stdio-Pfad ohne Daemon");
             return await McpServerCommand.RunAsync(args, cancellationToken, clientConsole).ConfigureAwait(false);
         }
 
@@ -83,12 +85,14 @@ internal static class ThinClientProxy
                         connection.Pipe.Stream,
                         new DaemonPumpOptions(context.Session.PumpIdleTimeout, replayFrame),
                         context.Token).ConfigureAwait(false);
+                    Log.Information("ThinClient: Pump beendet (Completed={Completed}, Attempt={Attempt}, DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", pumpResult.Completed, attempt, connection.ProcessId, connection.ConnectionId);
                     if (pumpResult.Completed) return 0;
 
                     ReportPumpFailure(context.Console, attempt, connection, pumpResult.Failure);
                     replayFrame = pumpResult.ReplayFrame;
                     if (attempt == MaximumRetries)
                     {
+                        Log.Error("ThinClient: Kein Retry mehr moeglich, ExitCode=2 (Replay-Fenster={HasReplayFrame})", replayFrame is not null);
                         return 2;
                     }
 
@@ -102,9 +106,11 @@ internal static class ThinClientProxy
         }
         catch (OperationCanceledException) when (context.Token.IsCancellationRequested)
         {
+            Log.Information("ThinClient: Session durch Client-Abbruch beendet, ExitCode=0");
             return 0;
         }
 
+        Log.Error("ThinClient: Session unerwartet beendet, ExitCode=2");
         return 2;
     }
 
@@ -119,13 +125,22 @@ internal static class ThinClientProxy
         ThinClientSessionContext context)
     {
         var firstAttempt = await TryConnectFirstAsync(options, context).ConfigureAwait(false);
-        if (firstAttempt.Connection is not null) return firstAttempt.Connection;
+        if (firstAttempt.Connection is not null)
+        {
+            Log.Information("ThinClient: Mit bestehendem Daemon verbunden (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", firstAttempt.Connection.ProcessId, firstAttempt.Connection.ConnectionId);
+            return firstAttempt.Connection;
+        }
+
+        Log.Information("ThinClient: Kein Daemon erreichbar ({Reason}) - starte detached", firstAttempt.Failure?.GetType().Name ?? "unbekannt");
         if (!context.Session.StartDetached(options, context.Console.WriteError))
         {
+            Log.Error("ThinClient: Detached-Start fehlgeschlagen, ExitCode=2");
             throw firstAttempt.Failure ?? new IOException("Der Daemon konnte nicht gestartet werden.");
         }
 
-        return await WaitForReadinessAsync(options, context).ConfigureAwait(false);
+        var connection = await WaitForReadinessAsync(options, context).ConfigureAwait(false);
+        Log.Information("ThinClient: Daemon nach Start bereit (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", connection.ProcessId, connection.ConnectionId);
+        return connection;
     }
 
     private static async Task<ConnectAttempt> TryConnectFirstAsync(
@@ -229,6 +244,7 @@ internal static class ThinClientProxy
         {
             var welcome = JsonSerializer.Deserialize<DaemonWelcome>(response, DaemonProtocol.JsonOptions)
                 ?? throw new InvalidDataException("Daemon-Welcome konnte nicht gelesen werden.");
+            Log.Debug("ThinClient: Handshake Welcome empfangen (DaemonPid={DaemonPid}, DaemonVersion={DaemonVersion}, ExecutableVersion={ExecutableVersion}, IdleExit={IdleExitMinutes}, MaxProjects={MaxProjects})", welcome.ProcessId, welcome.DaemonVersion, welcome.ExecutableVersion, welcome.Configuration.IdleExitMinutes, welcome.Configuration.MaxProjects);
             if (!expectedConfiguration.Matches(welcome.Configuration))
             {
                 console.WriteError("[WARN]: Daemon-Konfiguration weicht von den Client-Flags ab.");
@@ -245,7 +261,13 @@ internal static class ThinClientProxy
         var error = JsonSerializer.Deserialize<DaemonError>(response, DaemonProtocol.JsonOptions);
         if (error?.Code == DaemonProtocol.VersionConflict)
         {
+            Log.Error("ThinClient: Handshake abgelehnt - Versionskonflikt ({Message})", error.Message);
             throw new ThinClientVersionConflictException(error.Message);
+        }
+
+        if (error?.Code == DaemonProtocol.UnsupportedProtocolVersion)
+        {
+            Log.Error("ThinClient: Handshake abgelehnt - Protokollversion nicht unterstuetzt ({Message})", error.Message);
         }
 
         throw new InvalidDataException(error?.Message ?? "Daemon-Handshake wurde abgewiesen.");
