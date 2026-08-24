@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-24T14:30:00+02:00
+last_updated: 2026-08-24T03:49:16+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -147,8 +147,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Seam für das deterministische Lookup→Reservation-Interleaving sowie der
   test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection,
-  unabhängige Handshake-Verträge sowie `DaemonHost`, Registry-Fassade und
-  debounced MRU-State für den internen Lifecycle. (zuletzt: step-010)
+  unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim sowie
+  `DaemonHost`, Registry-Fassade und debounced/kanonisch persistierter MRU-State
+  für den internen Lifecycle. (zuletzt: step-011)
 
 ### Tests
 
@@ -170,8 +171,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
   Nicht-Stress-Lauf umfasst 1693 grüne Tests. (zuletzt: step-009)
 - **`src/AiNetLinter.FastTests/Mcp/Daemon/`** — in-proc Contract-Tests für
-  Handshake-Zustände, Pipe-Framing, Benutzerbindung, isolierte Cancellation,
-  Host-Idle-Exit, MRU-Persistenz und Warmup-Begrenzung. (zuletzt: step-010)
+  Handshake-Zustände, Pipe-Framing, Benutzerbindung, endpointgebundene
+  Exklusivität, isolierte Cancellation, vollständigen Host-Run/Accept-Pfad,
+  Host-Idle-Exit, MRU-Normalisierung/Persistenz und Warmup-Begrenzung. (zuletzt: step-011)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
   gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)

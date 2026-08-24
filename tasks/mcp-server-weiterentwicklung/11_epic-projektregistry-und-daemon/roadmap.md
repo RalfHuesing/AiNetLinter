@@ -3,7 +3,7 @@ status: active  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-24T03:21:39+02:00
+last_updated: 2026-08-24T03:49:16+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -194,10 +194,11 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-011**
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-011 (done, pending audit)**
       (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelte
       DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup und ist mit vier konkreten
-      Findings abgeschlossen; die Korrektur läuft fokussiert in step-011.
+      Findings abgeschlossen; step-011 korrigiert Exklusivität, MRU-Normalisierung
+      und Connection-Registration-Race mit direkten Host-/MCP-Contracts.
       ThinClient, Connect-or-Start und Health bleiben weiterhin nachgelagert.)
   - [x] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
         (+ ACL auf aktuellen User), newline-delimited JSON, je Verbindung ein async
@@ -215,9 +216,9 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         MRU-Persistierung; laufende Loads/Warmups verschieben den Exit; MRU-Warmup
         gebunden (max 2 parallele Loads), interaktiver Load wartet nie dahinter; tote
         MRU-Pfade verworfen UND aus dem State entfernt; Doppelstart → sauberer
-        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon. **In Arbeit →
-        step-010; die Korrektur von Doppelstart, MRU-Normalisierung und
-        Connection-Registration-Race läuft in step-011.**
+        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon. **Korrigiert →
+        step-010/step-011; ThinClient, Connect-or-Start und Health bleiben
+        nachgelagert.**
   - [ ] B.2/B.3 ThinClient (`ThinClientProxy`/`ThinClientLauncher`): nach außen
         identisches `--mcp-server`; intern Connect-or-Start-Race (Connect first,
         detached Spawn `UseShellExecute=false`/`CreateNoWindow`, Retry-Fenster;
