@@ -18,11 +18,11 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 - **Integration Tests**: `src/AiNetLinter.IntegrationTests/` (xUnit, Datei-I/O-, CLI-, Dogfood-, Performance- und Stress-Tests).
 - **TestKit**: `src/AiNetLinter.TestKit/` (Wiederverwendbare Test-Infrastruktur, Fixtures, InMemory-Lösungen und Assertions).
 - **Konfiguration**: `rules.json` definiert das aktive Regelwerk und Parameter.
-- **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `rules.json`, Linter-Metriken) und `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt). Details siehe Abschnitt 6.
+- **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `rules.json`, Linter-Metriken), `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt) und `McpWorkflow.mdc` (verbindlicher 3-Phasen-Entwicklungszyklus und MCP-Tool-Auswahl). Details siehe Abschnitt 6.
 - **Dokumentation**: `Docs/` enthält Systemdokumentation, CLI-Referenzen und Anleitungen.
 
 > [!IMPORTANT]
-> Dieses Repository registriert sich selbst als **MCP-Server `ainetlinter`** — für C#-Symbol-/Violation-Abfragen (`get_feature_context`, `find_symbol`, `find_references`, `get_impact`, `get_violations`, `safeguard`, `get_hotspots`, …) **vor** `rg`/`grep` verwenden, siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §1 und `Docs/integration.md` Abschnitt „Tool-vs-`rg`-Empfehlung für Agent-Loops".
+> Dieses Repository registriert sich selbst als **MCP-Server `ainetlinter`** — für C#-Symbol-/Violation-Abfragen (`get_feature_context`, `find_symbol`, `find_references`, `get_impact`, `get_violations`, `safeguard`, `get_hotspots`, …) **vor** `rg`/`grep` verwenden, siehe `.agents/rules/McpWorkflow.mdc` und `Docs/integration.md` Abschnitt „Tool-vs-`rg`-Empfehlung für Agent-Loops".
 
 ### AiNetLinter-MCP: Initialisierung
 
