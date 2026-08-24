@@ -70,6 +70,17 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         return result;
     }
 
+    internal int ActiveLoadCount
+    {
+        get
+        {
+            lock (gate)
+            {
+                return projects.Values.Count(entry => entry.Server.LoadState == ServerLoadState.Loading);
+            }
+        }
+    }
+
     internal int PendingCreationWaiters(string projectRoot)
     {
         var key = Canonicalize(projectRoot);

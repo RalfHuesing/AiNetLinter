@@ -162,6 +162,16 @@ public sealed class LinterArgs
     public int? McpMaxProjects { get; init; }
 
     /// <summary>
+    /// Gibt an, ob der interne DaemonHost statt des stdio-MCP-Servers gestartet werden soll.
+    /// </summary>
+    public bool DaemonStart { get; init; }
+
+    /// <summary>
+    /// Positive Idle-Exit-Zeit des internen DaemonHosts in Minuten.
+    /// </summary>
+    public decimal? McpDaemonIdleExitMinutes { get; init; }
+
+    /// <summary>
     /// Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Tool-Call). Der Default ist aktiv und wird vom
     /// Observability-Paket unter <c>%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\&lt;yyyy-MM-dd&gt;\</c> angelegt.
     /// Ein expliziter Pfad wird absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest.
@@ -223,7 +233,7 @@ public sealed class LinterArgs
     /// </summary>
     public string? Validate()
     {
-        if (McpServer)
+        if (McpServer || DaemonStart)
         {
             var mcpError = ValidateMcpMode();
             if (mcpError != null) return mcpError;
@@ -259,6 +269,11 @@ public sealed class LinterArgs
 
     private string? ValidateMcpMode()
     {
+        if (McpServer && DaemonStart)
+        {
+            return "[ERROR]: --mcp-server und --daemon-start koennen nicht gemeinsam verwendet werden.";
+        }
+
         // Harter Cut: im MCP-Modus traegt jeder Aufruf seinen Projektbezug selbst (projectRoot +
         // Definitionsdatei ainetlinter.project.json); --path/--config haben keinen Sinn mehr.
         if (!string.IsNullOrWhiteSpace(TargetPath))
@@ -283,6 +298,11 @@ public sealed class LinterArgs
             return "[ERROR]: --mcp-max-projects muss groesser als 0 sein.";
         }
 
+        if (McpDaemonIdleExitMinutes is <= 0)
+        {
+            return "[ERROR]: --mcp-daemon-idle-exit-minutes muss groesser als 0 sein.";
+        }
+
         return null;
     }
 
@@ -292,7 +312,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || SyncAgentRulesOnly || AnalyzeMcpLogPath != null;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart || SyncAgentRulesOnly || AnalyzeMcpLogPath != null;
 
     private string? ValidateIgnoreSuppressions()
     {

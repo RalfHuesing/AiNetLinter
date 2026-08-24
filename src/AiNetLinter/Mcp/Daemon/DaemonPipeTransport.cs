@@ -185,6 +185,8 @@ internal sealed class DaemonPipeConnection : IAsyncDisposable
         this.stream = stream ?? throw new ArgumentNullException(nameof(stream));
     }
 
+    internal Stream Stream => stream;
+
     internal CancellationToken CancellationToken => cancellation.Token;
 
     internal void Disconnect()

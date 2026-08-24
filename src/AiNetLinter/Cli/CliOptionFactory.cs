@@ -203,6 +203,11 @@ internal static class CliOptionFactory
         Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder Tool-Aufruf adressiert per projectRoot einen Projekt-Key aus der Definitionsdatei ainetlinter.project.json im Projektroot.",
     };
 
+    internal static Option<bool> CreateDaemonStartOption() => new("--daemon-start")
+    {
+        Description = "[internal] Startet den lokalen DaemonHost fuer Named-Pipe-Verbindungen.",
+    };
+
     internal static Option<string?> CreateMcpLogOption() => new("--mcp-log", "-mcp-log")
     {
         Description = "Optionaler Pfad fuer das MCP-Call-Log (JSONL-Format, ein Eintrag pro Zeile). Default: aktiv unter %LOCALAPPDATA%\\RalfHuesing\\McpObservability\\ainetlinter\\<yyyy-MM-dd>\\. Ohne Wert (ZeroOrOne) wird dieser Standardpfad verwendet; explizite Pfade werden absolut wie angegeben oder relativ zum Solution-Verzeichnis aufgeloest. Jeder Prozess schreibt eine eigene Datei mit PID und InstanceId. Beispiel: --mcp-log ./.mcp-log/",
@@ -242,6 +247,30 @@ internal static class CliOptionFactory
     {
         Description = "Optionale maximale Anzahl residenter Projekt-Keys in der Projekt-Registry (LRU-Rahmen). Ohne Flag gilt der Default von 4.",
     };
+
+    internal static Option<decimal?> CreateMcpDaemonIdleExitOption()
+    {
+        var option = new Option<decimal?>("--mcp-daemon-idle-exit-minutes")
+        {
+            Description = "Idle-Exit des internen DaemonHosts in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt der Default von 10 Minuten.",
+        };
+        option.CustomParser = result =>
+        {
+            var raw = result.Tokens.SingleOrDefault()?.Value;
+            if (decimal.TryParse(
+                    raw,
+                    NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture,
+                    out var value))
+            {
+                return value;
+            }
+
+            result.AddError("Wert muss eine Dezimalzahl im InvariantCulture-Format sein.");
+            return null;
+        };
+        return option;
+    }
 
     internal static Option<string?> CreateAnalyzeMcpLogOption() => new("--analyze-mcp-log")
     {

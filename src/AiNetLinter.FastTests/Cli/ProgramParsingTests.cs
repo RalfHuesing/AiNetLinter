@@ -97,10 +97,47 @@ public sealed class ProgramParsingTests
         Assert.Equal(7, parsed.McpMaxProjects);
     }
 
+    [Fact]
+    public void CliCommandBuilder_Parses_DaemonStartAndIdleExit()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--daemon-start", "--mcp-daemon-idle-exit-minutes", "0.25" });
+        Assert.Empty(result.Errors);
+
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.True(parsed.DaemonStart);
+        Assert.Equal(0.25m, parsed.McpDaemonIdleExitMinutes);
+
+        var args = new LinterArgs
+        {
+            TargetPath = string.Empty,
+            DaemonStart = parsed.DaemonStart,
+            McpDaemonIdleExitMinutes = parsed.McpDaemonIdleExitMinutes,
+            Verbose = false,
+        };
+        Assert.Null(args.Validate());
+    }
+
+    [Fact]
+    public void LinterArgs_RejectsNonPositiveDaemonIdleExit()
+    {
+        var args = new LinterArgs
+        {
+            TargetPath = string.Empty,
+            DaemonStart = true,
+            McpDaemonIdleExitMinutes = 0m,
+            Verbose = false,
+        };
+
+        Assert.Contains("mcp-daemon-idle-exit-minutes", args.Validate());
+    }
+
     [Theory]
     [InlineData("--mcp-project-ttl-minutes", "abc")]
     [InlineData("--mcp-project-ttl-minutes", "1,5")]
     [InlineData("--mcp-max-projects", "vier")]
+    [InlineData("--mcp-daemon-idle-exit-minutes", "abc")]
+    [InlineData("--mcp-daemon-idle-exit-minutes", "1,5")]
     public void CliCommandBuilder_InvalidFlagValues_AreHardParseErrors(string flag, string value)
     {
         var (root, options) = CliCommandBuilder.Build();

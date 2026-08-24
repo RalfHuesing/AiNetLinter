@@ -46,6 +46,8 @@ internal sealed record CliOptions(
     Option<int?> ParentPid,
     Option<decimal?> McpProjectTtlMinutes,
     Option<int?> McpMaxProjects,
+    Option<bool> DaemonStart,
+    Option<decimal?> McpDaemonIdleExitMinutes,
     Option<string?> AnalyzeMcpLog,
     Option<string?> Format);
 
@@ -122,6 +124,8 @@ internal sealed record CliParsedArgs(
     int? ParentPid,
     decimal? McpProjectTtlMinutes,
     int? McpMaxProjects,
+    bool DaemonStart,
+    decimal? McpDaemonIdleExitMinutes,
     string? AnalyzeMcpLog,
     string? Format,
     bool FormatSpecified);

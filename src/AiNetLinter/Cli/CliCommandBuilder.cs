@@ -27,6 +27,8 @@ internal static class CliCommandBuilder
             options.ParentPid,
             options.McpProjectTtlMinutes,
             options.McpMaxProjects,
+            options.DaemonStart,
+            options.McpDaemonIdleExitMinutes,
             options.AnalyzeMcpLog,
             options.Format,
         };
@@ -75,6 +77,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateParentPidOption(),
             CliOptionFactory.CreateMcpProjectTtlOption(),
             CliOptionFactory.CreateMcpMaxProjectsOption(),
+            CliOptionFactory.CreateDaemonStartOption(),
+            CliOptionFactory.CreateMcpDaemonIdleExitOption(),
             CliOptionFactory.CreateAnalyzeMcpLogOption(),
             CliOptionFactory.CreateFormatOption());
     }
@@ -134,6 +138,8 @@ internal static class CliCommandBuilder
             ParentPid: parseResult.GetValue(options.ParentPid),
             McpProjectTtlMinutes: parseResult.GetValue(options.McpProjectTtlMinutes),
             McpMaxProjects: parseResult.GetValue(options.McpMaxProjects),
+            DaemonStart: parseResult.GetValue(options.DaemonStart),
+            McpDaemonIdleExitMinutes: parseResult.GetValue(options.McpDaemonIdleExitMinutes),
             AnalyzeMcpLog: parseResult.GetValue(options.AnalyzeMcpLog),
             Format: parseResult.GetValue(options.Format),
             FormatSpecified: parseResult.GetResult(options.Format) is { Implicit: false });

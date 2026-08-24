@@ -88,7 +88,7 @@ internal static class McpServerCommand
     /// erst bei Erfolg entsteht eine Server-Instanz, deren Hintergrund-Load die Solution der
     /// Definition laedt. Dedupe und Lock-Hygiene liegen in der Registry bzw. im Instanzmuster.
     /// </summary>
-    private static ProjectInstanceCreation CreateResidentInstance(ProjectDefinition definition, ILintConsole console) =>
+    internal static ProjectInstanceCreation CreateResidentInstance(ProjectDefinition definition, ILintConsole console) =>
         ProjectInstanceFactory.TryCreate(
             definition,
             baseOptions => ProjectInstanceCreation.Resident(new McpCodeGraphServer(new McpCodeGraphServerOptions
