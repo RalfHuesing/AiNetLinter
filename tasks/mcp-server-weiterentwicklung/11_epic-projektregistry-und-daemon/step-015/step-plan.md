@@ -1,5 +1,5 @@
 ---
-status: open
+status: done (pending audit)
 type: step-plan
 task: 11_epic-projektregistry-und-daemon
 step: 015
@@ -78,25 +78,27 @@ kann auf einem sauberen Stand laufen.
 
 ## Tests
 
-- [ ] Build grün nach allen Bereinigungen (0 Warnungen, 0 Fehler)
-- [ ] Vollständiger Nicht-Stress-Stack GENAU EINMAL vor Step-Abschluss:
+- [x] Build grün nach allen Bereinigungen (0 Warnungen, 0 Fehler)
+- [x] Vollständiger Nicht-Stress-Stack GENAU EINMAL vor Step-Abschluss:
       FastTests `Category!=Stress` und IntegrationTests `Category!=Stress`
-- [ ] Falls reine Konstanten-/Dead-Code-Fixes: betroffene Unit-Klassen gezielt
+- [x] Falls reine Konstanten-/Dead-Code-Fixes: betroffene Unit-Klassen gezielt
       gefiltert zusätzlich zum Schlusslauf
-- [ ] `Category=Stress` niemals ausführen
+- [x] `Category=Stress` niemals ausführen
 
 ## Definition of Done
 
-- [ ] Alle drei Werkzeuge ausgeführt und Ergebnisse im Step-Result dokumentiert
+- [x] Alle drei Werkzeuge ausgeführt und Ergebnisse im Step-Result dokumentiert
       (je Werkzeug: Fundanzahl, bewertete Funde, Entscheidung fix/TD/No-op)
-- [ ] Ergiebige Produktionsfunde bereinigt; Verhalten unverändert
-- [ ] Neue TD-Einträge mit Indexzeile + Volltext in `tech-debt.md`
-- [ ] MCP-Quality-Gates vor jedem Commit (`get_violations`, `safeguard`)
-- [ ] Build + beide Suiten ohne Stress grün (genau ein Vollstack)
-- [ ] Commit(s) Conventional Commit, Deutsch, imperativ,
+- [x] Ergiebige Produktionsfunde bereinigt; Verhalten unverändert
+- [x] Neue TD-Einträge mit Indexzeile + Volltext in `tech-debt.md`
+      (entfallen: kein nicht-fixbarer Fund mit Folgeteil-Bedarf; Begründungen im Result)
+- [x] MCP-Quality-Gates vor jedem Commit (`get_violations`, `safeguard`)
+- [x] Build + beide Suiten ohne Stress grün (genau ein Vollstack;
+      2 klassifizierte Ausnahmen der bekannten TD-008-Klasse, isoliert grün)
+- [x] Commit(s) Conventional Commit, Deutsch, imperativ,
       Suffix `[11_epic-projektregistry-und-daemon]`
-- [ ] `step-015/step-result.md` geschrieben
-- [ ] `status` in diesem Plan auf `done (pending audit)` gesetzt
+- [x] `step-015/step-result.md` geschrieben
+- [x] `status` in diesem Plan auf `done (pending audit)` gesetzt
 
 ## Rules-Refs
 
