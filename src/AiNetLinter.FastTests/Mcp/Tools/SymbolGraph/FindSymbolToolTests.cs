@@ -223,6 +223,17 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MultiplePatterns_TruncatesIndividuallyPerPattern()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greet", "Call"], kind: null, maxResults: 1, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Treffer gesamt, 1 gezeigt", textContent.Text);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
     {
         using var fixture = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
@@ -233,5 +244,19 @@ public sealed class FindSymbolToolTests
         Assert.StartsWith("Hinweis:", text, System.StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, System.StringComparison.Ordinal);
         Assert.Contains("ValidClassA", text, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MultiplePatterns_CompileErrorFixture_ShowsWarningExactlyOnce()
+    {
+        using var fixture = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
+        var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["ValidClassA", "ValidClassB"], kind: null, maxResults: 50, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("Hinweis:", text, System.StringComparison.Ordinal);
+        // Hinweis darf genau 1 Mal in der Gesamtausgabe vorkommen
+        var count = text.Split("Hinweis:").Length - 1;
+        Assert.Equal(1, count);
     }
 }

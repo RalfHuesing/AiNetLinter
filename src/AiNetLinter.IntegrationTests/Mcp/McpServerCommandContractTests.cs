@@ -200,6 +200,37 @@ public sealed class McpServerCommandContractTests
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>
         await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "BaseGreeting" }, "IGreeting");
 
+    [Theory]
+    [InlineData("find_symbol", "namePatterns")]
+    [InlineData("get_file_skeleton", "filePaths")]
+    [InlineData("get_symbol_body", "symbolIdentifiers")]
+    [InlineData("metrics_lookup", "symbolIdentifiers")]
+    public async Task RunAsync_ValidFixture_MissingArrayParameter_ReturnsRecoverableInvalidArgument(string toolName, string parameterName)
+    {
+        var host = await fixture.GetHostAsync();
+        var result = await host.CallToolAsync(toolName, new Dictionary<string, object?>());
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains($"Pflichtparameter '{parameterName}' fehlt oder ist leer.", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_MetricsLookup_SingleSymbol_ReturnsBatchStructuredContent()
+    {
+        var host = await fixture.GetHostAsync();
+        var result = await host.CallToolAsync(
+            "metrics_lookup",
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "Greeter" } });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var rawText = result.StructuredContent!.Value.GetRawText();
+        Assert.Contains("\"results\":", rawText, StringComparison.Ordinal);
+        Assert.Contains("\"requestedCount\":1", rawText, StringComparison.Ordinal);
+    }
+
     private sealed class BrokenColdLoadHarness : IAsyncDisposable
     {
         private readonly TestTempDirectory tempDir;

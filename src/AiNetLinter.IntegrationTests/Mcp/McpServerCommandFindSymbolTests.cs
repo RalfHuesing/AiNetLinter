@@ -28,4 +28,18 @@ public sealed class McpServerCommandFindSymbolTests
         Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_BatchCallWithMatchAndMiss_ReturnsSectionsAndMissHint()
+    {
+        var host = await fixture.GetHostAsync();
+        var text = await host.CallToolGetTextAsync(
+            "find_symbol",
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greeter", "NonExistentFooBar" } });
+
+        Assert.Contains("Symbol-Suche: `Greeter`", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        Assert.Contains("Symbol-Suche: `NonExistentFooBar`", text, StringComparison.Ordinal);
+        Assert.Contains("Keine Treffer fuer 'NonExistentFooBar'", text, StringComparison.Ordinal);
+    }
 }
