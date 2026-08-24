@@ -19,7 +19,10 @@ internal sealed record McpProcessTarget(string RootPath, IDisposable? Owner = nu
 internal sealed class McpProcessHost : IAsyncDisposable
 {
     private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
-    private const int LoadingRetryCount = 30;
+    // Große Dogfood-Workspaces können nach dem MCP-Handshake noch deutlich
+    // länger als 15 Sekunden laden; der Loading-Vertrag bleibt dabei gültig.
+    private const int LoadingRetryCount = 120;
+    private static readonly TimeSpan DefaultCallTimeout = TimeSpan.FromSeconds(60);
     private static readonly McpConnectRetryOptions DefaultConnectRetryOptions = new();
     private readonly McpClient client;
     private readonly McpProcessTarget target;
@@ -100,14 +103,14 @@ internal sealed class McpProcessHost : IAsyncDisposable
         for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
         {
             using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutSource.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
+            timeoutSource.CancelAfter(timeout ?? DefaultCallTimeout);
             var result = await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: timeoutSource.Token).ConfigureAwait(false);
             if (!IsLoadingResponse(result)) return result;
             await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(false);
         }
 
         using var finalTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        finalTimeout.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
+        finalTimeout.CancelAfter(timeout ?? DefaultCallTimeout);
         return await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: finalTimeout.Token).ConfigureAwait(false);
     }
 

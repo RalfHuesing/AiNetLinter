@@ -162,7 +162,7 @@ public sealed class DaemonHostLifecycleTests
             new DaemonPipeTransport(() => "daemon-host-tests"),
             clock,
             idleExit,
-            new EffectiveDaemonConfiguration(4, (decimal)idleExit.TotalMinutes, "stderr"),
+            new EffectiveDaemonConfiguration(4, (decimal)idleExit.TotalMinutes),
             LinterConsole.Instance,
             _ => Task.CompletedTask));
 

@@ -60,6 +60,22 @@ public sealed class DaemonPipeTransportContractTests
     }
 
     [Fact]
+    public async Task StartupGate_SerializesDetachedStartupAndTimesOutWhileHeld()
+    {
+        var userName = "startup-gate-tests-" + Guid.NewGuid().ToString("N");
+        await using var first = await DaemonStartupGate
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName)
+            .ConfigureAwait(false);
+
+        var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
+            DaemonStartupGate
+                .AcquireAsync(CancellationToken.None, TimeSpan.FromMilliseconds(100), userName)
+                .AsTask()).ConfigureAwait(false);
+
+        Assert.Contains("Startup-Gate", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Frame_RoundTripsOneJsonObjectPerLineWithoutChangingBytes()
     {
         var payload = Encoding.UTF8.GetBytes("{ \"jsonrpc\": \"2.0\", \"id\": 7, \"text\": \"Grüße\" }");

@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using RalfHuesing.Mcp.Observability;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Daemon;
@@ -47,12 +46,12 @@ internal static class DaemonHostCommand
             new DaemonPipeTransport(),
             TimeProvider.System,
             TimeSpan.FromMinutes((double)idleMinutes),
-            new EffectiveDaemonConfiguration(maxProjects, idleMinutes, args.McpLogPath ?? DaemonProtocol.DefaultLogTarget),
+            new EffectiveDaemonConfiguration(maxProjects, idleMinutes),
             daemonConsole,
             SessionRunner: CreateSessionRunner(projectRegistry)));
 
         await using var activeHost = host;
-        Log.Information("Daemon: Host startet (IdleExit={IdleExitMinutes} Min, MaxProjects={MaxProjects}, LogTarget={LogTarget})", idleMinutes, maxProjects, args.McpLogPath ?? "stderr");
+        Log.Information("Daemon: Host startet (IdleExit={IdleExitMinutes} Min, MaxProjects={MaxProjects})", idleMinutes, maxProjects);
         var exitCode = await activeHost.RunAsync(cancellationToken).ConfigureAwait(false);
         Log.Information("Daemon: Host beendet, ExitCode={ExitCode}", exitCode);
         return exitCode;
@@ -69,14 +68,7 @@ internal static class DaemonHostCommand
         var services = new ServiceCollection();
         var runtimeContext = connection.RuntimeContext;
         Serilog.Log.Debug("Daemon: MCP-Session startet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
-        var observabilityOptions = McpServerCommand.ResolveObservabilityOptions(null, null);
-        if (runtimeContext is not null)
-        {
-            observabilityOptions.ServerName = $"{McpServerOptionsFactory.ServerName}-daemon-c{runtimeContext.ConnectionId}";
-            observabilityOptions.ServerVersion = $"{McpServerOptionsFactory.GetServerVersion()}; mode=daemon; connectionId={runtimeContext.ConnectionId}";
-        }
-
-        services.AddMcpServer().WithObservability(observabilityOptions);
+        services.AddMcpServer();
         await using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         serverOptions.ServerInfo = new Implementation
@@ -85,7 +77,7 @@ internal static class DaemonHostCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, serviceProvider, runtimeContext);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, runtimeContext);
         serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StreamServerTransport(connection.Stream, connection.Stream);

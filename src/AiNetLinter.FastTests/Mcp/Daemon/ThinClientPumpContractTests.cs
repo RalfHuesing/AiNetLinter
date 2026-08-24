@@ -84,6 +84,44 @@ public sealed class ThinClientPumpContractTests
     }
 
     [Fact]
+    public async Task BytePump_DisabledIdleTimeoutWaitsForCallerCancellation()
+    {
+        using var source = new CancellationTokenSource();
+        using var session = PumpSession.StartIdle(idleTimeout: TimeSpan.Zero, externalToken: source.Token);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(250)).ConfigureAwait(false);
+        Assert.False(session.Result.IsCompleted);
+
+        source.Cancel();
+        var result = await session.Result.ConfigureAwait(false);
+
+        Assert.Null(result.Failure);
+        Assert.Null(result.ReplayFrame);
+    }
+
+    [Fact]
+    public async Task BytePump_ResetsIdleTimeoutAfterForwardingActivity()
+    {
+        using var session = PumpSession.StartIdle(idleTimeout: TimeSpan.FromMilliseconds(500));
+        await session.SendRequestFrameAsync("req-1");
+        Assert.Equal("req-1", await session.ReadDaemonFrameAsync().ConfigureAwait(false));
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300)).ConfigureAwait(false);
+        await session.SendRequestFrameAsync("req-2");
+        Assert.Equal("req-2", await session.ReadDaemonFrameAsync().ConfigureAwait(false));
+
+        var completed = await Task.WhenAny(
+            session.Result,
+            Task.Delay(TimeSpan.FromMilliseconds(300))).ConfigureAwait(false);
+        Assert.NotSame(session.Result, completed);
+
+        session.AbortDaemonSide();
+        var result = await session.Result.ConfigureAwait(false);
+        Assert.False(result.Completed);
+        Assert.IsType<EndOfStreamException>(result.Failure);
+    }
+
+    [Fact]
     public async Task BytePump_CallerCancellationStaysUnattributedInsteadOfTimeout()
     {
         using var source = new CancellationTokenSource();

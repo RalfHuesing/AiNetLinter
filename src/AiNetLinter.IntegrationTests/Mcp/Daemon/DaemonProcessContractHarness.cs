@@ -16,8 +16,7 @@ internal sealed record DaemonProcessSpec(
 {
     internal EffectiveDaemonConfiguration Configuration => new(
         MaxProjects,
-        IdleExitMinutes,
-        DaemonProtocol.DefaultLogTarget);
+        IdleExitMinutes);
 }
 
 internal static class DaemonProcessContractHarness

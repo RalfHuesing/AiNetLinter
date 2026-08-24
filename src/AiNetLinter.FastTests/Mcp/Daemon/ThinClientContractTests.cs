@@ -14,7 +14,7 @@ public sealed class ThinClientContractTests
     [Fact]
     public void Launcher_ForwardsDaemonFlagsWithoutOwningStdoutOrStderr()
     {
-        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(3.5m, 2, 0.25m, "stderr"));
+        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(3.5m, 2, 0.25m));
 
         Assert.False(startInfo.UseShellExecute);
         Assert.True(startInfo.CreateNoWindow);
@@ -25,7 +25,14 @@ public sealed class ThinClientContractTests
         Assert.Contains("--mcp-project-ttl-minutes", startInfo.ArgumentList);
         Assert.Contains("--mcp-max-projects", startInfo.ArgumentList);
         Assert.Contains("--mcp-daemon-idle-exit-minutes", startInfo.ArgumentList);
-        Assert.Contains("--mcp-log", startInfo.ArgumentList);
+    }
+
+    [Fact]
+    public void DefaultSession_DisablesPumpIdleTimeoutForLegitimatelyIdleMcpConnections()
+    {
+        var session = ThinClientSessionOptions.Default(ThinClientProxy.DefaultPumpIdleTimeout);
+
+        Assert.Equal(TimeSpan.Zero, session.PumpIdleTimeout);
     }
 
     [Fact]

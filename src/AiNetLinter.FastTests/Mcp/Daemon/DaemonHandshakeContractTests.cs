@@ -8,7 +8,7 @@ namespace AiNetLinter.FastTests.Mcp.Daemon;
 public sealed class DaemonHandshakeContractTests
 {
     private static readonly EffectiveDaemonConfiguration Configuration =
-        new(4, 10m, "stderr");
+        new(4, 10m);
 
     [Fact]
     public void HandleHello_WithMatchingProtocolAndVersion_ReturnsWelcome()
@@ -74,7 +74,7 @@ public sealed class DaemonHandshakeContractTests
         var warnings = new List<DaemonConfigurationDivergence>();
         var handshake = CreateHandshake();
         handshake.ConfigurationWarning += warnings.Add;
-        var requested = new EffectiveDaemonConfiguration(2, 5m, "file");
+        var requested = new EffectiveDaemonConfiguration(2, 5m);
         var hello = new DaemonHello("exe-1", 99, requested);
 
         var first = handshake.HandleHello(hello, activeConnectionCount: 0);

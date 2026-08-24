@@ -18,7 +18,6 @@ internal static class DaemonProtocol
     internal const string ConfigurationDivergence = "CONFIGURATION_DIVERGENCE";
     internal const int DefaultMaxProjects = 4;
     internal const decimal DefaultIdleExitMinutes = 10m;
-    internal const string DefaultLogTarget = "stderr";
 
     internal static JsonSerializerOptions JsonOptions { get; } = new()
     {
@@ -38,13 +37,11 @@ internal static class DaemonProtocol
 
 internal sealed record EffectiveDaemonConfiguration(
     int MaxProjects,
-    decimal IdleExitMinutes,
-    string LogTarget)
+    decimal IdleExitMinutes)
 {
     internal static EffectiveDaemonConfiguration Default { get; } = new(
         DaemonProtocol.DefaultMaxProjects,
-        DaemonProtocol.DefaultIdleExitMinutes,
-        DaemonProtocol.DefaultLogTarget);
+        DaemonProtocol.DefaultIdleExitMinutes);
 
     internal bool Matches(EffectiveDaemonConfiguration? other) =>
         other is not null && this == other;

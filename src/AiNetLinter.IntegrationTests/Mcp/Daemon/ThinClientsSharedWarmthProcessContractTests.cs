@@ -13,7 +13,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 public sealed class ThinClientsSharedWarmthProcessContractTests
 {
     private const int FirstHealthId = 3;
-    private const int LastHealthId = 22;
+    private const int LastHealthId = 42;
     private const int SecondaryLastHealthId = 8;
     private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(1);
 
@@ -24,6 +24,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
     {
         // Endpunkt-Gate: der echte Daemon bindet den benutzergebundenen Pipe-Namen.
         var gate = await DaemonProcessContractHarness.AcquireEndpointAsync(CancellationToken.None).ConfigureAwait(false);
+        var sharedPid = 0;
         try
         {
             using var fixture = new SymbolGraphMiniFixtureWorkspace();
@@ -59,7 +60,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             Assert.Equal("daemon", daemonFirst.GetProperty("mode").GetString());
             Assert.Equal("daemon", daemonSecond.GetProperty("mode").GetString());
 
-            var sharedPid = daemonFirst.GetProperty("processId").GetInt32();
+            sharedPid = daemonFirst.GetProperty("processId").GetInt32();
             Assert.True(sharedPid > 0);
             Assert.Equal(sharedPid, daemonSecond.GetProperty("processId").GetInt32());
 
@@ -87,11 +88,12 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
                 keys.EnumerateArray(),
                 key => string.Equals(key.GetString(), fixture.RootPath, StringComparison.OrdinalIgnoreCase));
 
-            // Teardown vor dem Fixture: Der Daemon haelt sonst Handles auf die Temp-Kopie.
-            TryKill(sharedPid);
         }
         finally
         {
+            // Auch bei einem fruehen Assert muss der Daemon vor dem Fixture-Teardown
+            // beendet werden, sonst sperrt er Build-Artefakte und den Endpoint.
+            if (sharedPid > 0) TryKill(sharedPid);
             gate.Dispose();
         }
     }

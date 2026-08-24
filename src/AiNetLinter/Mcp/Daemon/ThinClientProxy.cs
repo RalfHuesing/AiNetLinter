@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Diagnostics;
 using System.Text.Json;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
@@ -18,14 +17,16 @@ internal sealed record ThinClientSessionOptions(
     Func<ThinClientLaunchOptions, Action<string>, bool> StartDetached,
     TimeSpan PumpIdleTimeout,
     Stream StandardInput,
-    Stream StandardOutput)
+    Stream StandardOutput,
+    Func<CancellationToken, TimeSpan, ValueTask<IAsyncDisposable>>? AcquireStartupGateAsync = null)
 {
     internal static ThinClientSessionOptions Default(TimeSpan pumpIdleTimeout) => new(
         cancellationToken => new DaemonPipeTransport().ConnectAsync(cancellationToken),
         ThinClientLauncher.TryStartDetached,
         pumpIdleTimeout,
         Console.OpenStandardInput(),
-        Console.OpenStandardOutput());
+        Console.OpenStandardOutput(),
+        DaemonStartupGate.AcquireAsync);
 }
 
 internal sealed record ThinClientSessionContext(
@@ -39,7 +40,10 @@ internal static class ThinClientProxy
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan ReadinessTimeout = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan PumpIdleTimeout = TimeSpan.FromMinutes(2);
+    // Eine MCP-Verbindung darf ohne Wire-Aktivitaet idle bleiben. EOF und der
+    // Parent-Watchdog bleiben die Produktions-Beendigungssignale; ein Pump-
+    // Timeout ist nur ueber explizite Test-/Sonderpfad-Optionen aktiv.
+    internal static readonly TimeSpan DefaultPumpIdleTimeout = TimeSpan.Zero;
     private const int MaximumRetries = 1;
 
     internal static async Task<int> RunAsync(
@@ -62,7 +66,7 @@ internal static class ThinClientProxy
         }
 
         await using var lifetime = McpServerLifetime.Start(args.ParentPid, cancellationToken, clientConsole.WriteError);
-        var session = ThinClientSessionOptions.Default(PumpIdleTimeout);
+        var session = ThinClientSessionOptions.Default(DefaultPumpIdleTimeout);
         var context = new ThinClientSessionContext(lifetime.Token, clientConsole, session);
         return await RunSessionAsync(CreateLaunchOptions(args), context).ConfigureAwait(false);
     }
@@ -96,7 +100,6 @@ internal static class ThinClientProxy
                         return 2;
                     }
 
-                    TerminateIdentifiedDaemon(connection.ProcessId, context.Console);
                 }
                 finally
                 {
@@ -117,8 +120,7 @@ internal static class ThinClientProxy
     private static ThinClientLaunchOptions CreateLaunchOptions(LinterArgs args) => new(
         args.McpProjectTtlMinutes,
         args.McpMaxProjects,
-        args.McpDaemonIdleExitMinutes,
-        args.McpLogPath);
+        args.McpDaemonIdleExitMinutes);
 
     internal static async Task<ThinClientConnection> ConnectOrStartAsync(
         ThinClientLaunchOptions options,
@@ -132,6 +134,16 @@ internal static class ThinClientProxy
         }
 
         Log.Information("ThinClient: Kein Daemon erreichbar ({Reason}) - starte detached", firstAttempt.Failure?.GetType().Name ?? "unbekannt");
+        var acquireStartupGate = context.Session.AcquireStartupGateAsync ?? DaemonStartupGate.AcquireAsync;
+        await using var startupGate = await acquireStartupGate(context.Token, ReadinessTimeout).ConfigureAwait(false);
+
+        var recheck = await TryConnectFirstAsync(options, context, reportFailure: false).ConfigureAwait(false);
+        if (recheck.Connection is not null)
+        {
+            Log.Information("ThinClient: Mit bestehendem Daemon verbunden (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", recheck.Connection.ProcessId, recheck.Connection.ConnectionId);
+            return recheck.Connection;
+        }
+
         if (!context.Session.StartDetached(options, context.Console.WriteError))
         {
             Log.Error("ThinClient: Detached-Start fehlgeschlagen, ExitCode=2");
@@ -145,7 +157,8 @@ internal static class ThinClientProxy
 
     private static async Task<ConnectAttempt> TryConnectFirstAsync(
         ThinClientLaunchOptions options,
-        ThinClientSessionContext context)
+        ThinClientSessionContext context,
+        bool reportFailure = true)
     {
         try
         {
@@ -158,7 +171,11 @@ internal static class ThinClientProxy
         }
         catch (Exception exception)
         {
-            context.Console.WriteError($"[INFO]: Daemon-Connect-first fehlgeschlagen: {exception.Message}");
+            if (reportFailure)
+            {
+                context.Console.WriteError($"[INFO]: Daemon-Connect-first fehlgeschlagen: {exception.Message}");
+            }
+
             return new ConnectAttempt(null, exception);
         }
     }
@@ -276,8 +293,7 @@ internal static class ThinClientProxy
     private static EffectiveDaemonConfiguration CreateConfiguration(ThinClientLaunchOptions options) =>
         new(
             options.MaxProjects ?? DaemonProtocol.DefaultMaxProjects,
-            options.IdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes,
-            options.LogPath ?? DaemonProtocol.DefaultLogTarget);
+            options.IdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes);
 
     private static void ReportPumpFailure(
         ILintConsole console,
@@ -288,20 +304,6 @@ internal static class ThinClientProxy
         var message = failure?.Message ?? "unbekannter Pipe-Fehler";
         var suffix = attempt == 0 ? "; genau ein read-only Replay wird versucht" : "; kein weiterer Retry";
         console.WriteError($"[WARN]: Daemon-Pipe connectionId={connection.ConnectionId} PID={connection.ProcessId} abgebrochen ({message}){suffix}.");
-    }
-
-    private static void TerminateIdentifiedDaemon(int processId, ILintConsole console)
-    {
-        if (processId <= 0 || processId == Environment.ProcessId) return;
-        try
-        {
-            using var process = Process.GetProcessById(processId);
-            if (!process.HasExited) process.Kill();
-        }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            console.WriteError($"[WARN]: Identifizierter Daemon PID={processId} konnte nicht beendet werden: {exception.Message}");
-        }
     }
 
     private static bool IsEscapeEnabled() =>

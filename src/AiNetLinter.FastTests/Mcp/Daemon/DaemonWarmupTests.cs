@@ -27,7 +27,7 @@ public sealed class DaemonWarmupTests
             new DaemonPipeTransport(() => "daemon-warmup-tests"),
             TimeProvider.System,
             TimeSpan.FromMinutes(10),
-            new EffectiveDaemonConfiguration(4, 10m, "stderr"),
+            new EffectiveDaemonConfiguration(4, 10m),
             LinterConsole.Instance,
             _ => Task.CompletedTask));
         using var cancellation = new CancellationTokenSource();

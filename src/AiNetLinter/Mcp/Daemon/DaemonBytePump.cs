@@ -31,9 +31,17 @@ internal static class DaemonBytePump
             linked.CancelAfter(options.IdleTimeout);
         }
 
+        void ResetIdleTimeout()
+        {
+            if (options.IdleTimeout > TimeSpan.Zero)
+            {
+                linked.CancelAfter(options.IdleTimeout);
+            }
+        }
+
         var replay = new ReplayWindow(options.ReplayFrame);
-        var inputTask = PumpInputAsync(standardInput, pipe, replay, options.ReplayFrame, linked.Token);
-        var outputTask = PumpOutputAsync(pipe, standardOutput, replay, linked.Token);
+        var inputTask = PumpInputAsync(standardInput, pipe, replay, options.ReplayFrame, ResetIdleTimeout, linked.Token);
+        var outputTask = PumpOutputAsync(pipe, standardOutput, replay, ResetIdleTimeout, linked.Token);
         var completed = await Task.WhenAny(inputTask, outputTask).ConfigureAwait(false);
         linked.Cancel();
         if (completed == inputTask && inputTask.Status == TaskStatus.RanToCompletion)
@@ -67,11 +75,13 @@ internal static class DaemonBytePump
         Stream pipe,
         ReplayWindow replay,
         byte[]? initialReplayFrame,
+        Action resetIdleTimeout,
         CancellationToken cancellationToken)
     {
         if (initialReplayFrame is not null)
         {
             await WriteFrameAsync(pipe, initialReplayFrame, cancellationToken).ConfigureAwait(false);
+            resetIdleTimeout();
         }
 
         while (true)
@@ -81,6 +91,7 @@ internal static class DaemonBytePump
 
             replay.Set(frame);
             await WriteFrameAsync(pipe, frame, cancellationToken).ConfigureAwait(false);
+            resetIdleTimeout();
         }
     }
 
@@ -88,6 +99,7 @@ internal static class DaemonBytePump
         Stream pipe,
         Stream output,
         ReplayWindow replay,
+        Action resetIdleTimeout,
         CancellationToken cancellationToken)
     {
         while (true)
@@ -96,6 +108,7 @@ internal static class DaemonBytePump
                 ?? throw new EndOfStreamException("Die Daemon-Pipe wurde ohne Antwort beendet.");
             await WriteFrameAsync(output, frame, cancellationToken).ConfigureAwait(false);
             replay.Clear();
+            resetIdleTimeout();
         }
     }
 

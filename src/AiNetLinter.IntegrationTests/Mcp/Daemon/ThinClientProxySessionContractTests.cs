@@ -124,7 +124,7 @@ public sealed class ThinClientProxySessionContractTests
     }
 
     [Fact]
-    public async Task HangTimeout_KillsIdentifiedStandIn_EmitsSingleDistinguishableEvent()
+    public async Task HangTimeout_ReplaysWithoutKillingIdentifiedDaemon_EmitsSingleDistinguishableEvent()
     {
         using var standIn = new StandInProcess();
         var servers = new ScriptedServerQueue();
@@ -152,12 +152,12 @@ public sealed class ThinClientProxySessionContractTests
             var warning = Assert.Single(console.ErrorLines.ToList());
             Assert.Contains("[WARN]", warning, StringComparison.Ordinal);
             Assert.Contains("Hanger-Schutz-Zeitlimit", warning, StringComparison.Ordinal);
-            Assert.True(
-                await standIn.WaitForExitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false),
-                "Der per Welcome-PID identifizierte Stellvertreterprozess wurde nicht beendet.");
 
             var secondServer = servers[1];
             await CompleteHandshakeAsync(secondServer, processId: 0, connectionId: 2).ConfigureAwait(false);
+            Assert.False(
+                await standIn.WaitForExitAsync(TimeSpan.FromMilliseconds(250)).ConfigureAwait(false),
+                "Ein einzelner Pipe-Haenger darf den gemeinsam genutzten Daemon-Prozess nicht beenden.");
             await stdin.Writer.CompleteAsync().ConfigureAwait(false);
 
             var exitCode = await session.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
@@ -208,7 +208,7 @@ public sealed class ThinClientProxySessionContractTests
     }
 
     private static ThinClientLaunchOptions CreateLaunchOptions() =>
-        new(null, null, null, null);
+        new(null, null, null);
 
     private static ThinClientSessionContext CreateContext(
         RecordingLintConsole console,
