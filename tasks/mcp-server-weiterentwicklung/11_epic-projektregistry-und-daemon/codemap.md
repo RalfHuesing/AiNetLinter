@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-24T06:14:00+02:00
+last_updated: 2026-08-24T09:35:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -150,7 +150,12 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim, DaemonHost,
   Registry-Fassade, MRU-State sowie ThinClientLauncher/Proxy und opaker
   BytePump; RuntimeContext verbindet ConnectionId, Health und Observability,
-  ohne MCP-SDK im Client. (zuletzt: step-013)
+  ohne MCP-SDK im Client. Step-014: `DaemonBytePump.ReadFailure` erkennt den
+  reinen Idle-Timeout-Fall vor dem Null-Zweig und liefert die
+  `TimeoutException`-Haenger-Signatur; `ThinClientProxy` stellt den Sitzungskern
+  als `RunSessionAsync` mit injizierbaren `ThinClientSessionOptions`
+  (Connect-Delegate, Spawn-Delegate, Pump-Idle-Timeout, Stdio-Streams) bereit.
+  (zuletzt: step-014)
 
 ### Tests
 
@@ -175,7 +180,13 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Handshake-Zustände, Pipe-Framing, Benutzerbindung, endpointgebundene
   Exklusivität, isolierte Cancellation, vollständigen Host-Run/Accept-Pfad,
   Host-Idle-Exit, MRU-Normalisierung/Persistenz, Warmup-Begrenzung und
-  ThinClient-Flag-/Opaque-Pump-/ConnectionId-Verträge. (zuletzt: step-013)
+  ThinClient-Flag-/Opaque-Pump-/ConnectionId-Verträge. Step-014 ergänzt
+  `ThinClientPumpContractTests` (genau-ein Replay-Fenster inkl.
+  Fenster-Reset nach Antwort, Replay-Vorrang beim Wiederanlauf,
+  `TimeoutException`-Haengersignatur am Idle-Limit, Caller-Cancel ohne
+  Haenger-Attribuierung) und `ThinClientConnectOrStartTests`
+  (Connect-or-Start-Transitions und konkurrierende Starter am Mock-Pipe).
+  (zuletzt: step-014)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
   gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)
@@ -189,10 +200,19 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter.IntegrationTests/Mcp/Daemon/`** — echte Zwei-Prozess-
   Named-Pipe-Contracts für Daemon-Doppelstart/Lock-Freigabe sowie Host-
   Handshake, MCP-SDK-Initialize und `tools/list`; der Raw-Wire-Harness deckt
-  den normalen ThinClient-Connect-or-Start-Pfad und stdout-Purity ab. (zuletzt: step-013)
+  den normalen ThinClient-Connect-or-Start-Pfad und stdout-Purity ab.
+  Step-014 ergänzt `ThinClientProxySessionContractTests` (getakteter
+  Mock-Server: zweiter Rohfehler ohne dritte Runde inkl. Replay-Vorrang,
+  Haenger-Timeout → Kill des per Welcome-PID identifizierten
+  Stellvertreterprozesses + genau ein unterscheidbares Ereignis) und
+  `ThinClientsSharedWarmthProcessContractTests` (zwei Thin-Clients teilen
+  denselben Daemon; Shared-Warmth über Keys/RefreshCount/Instanz-Uptime).
+  (zuletzt: step-014)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
-  Definitionsdatei-Fixtures. (zuletzt: initial)
+  Definitionsdatei-Fixtures. Step-014: `ThinClientPipeTestDoubles`
+  (Duplex-Paare, ScriptedMockPipeTransport, Welcome-Skripte) als gemeinsame
+  Pump-/Proxy-Test-Doubles beider Suiten. (zuletzt: step-014)
 
 ### Doku-/Sync-Ziele (Konzept-Doku-Tabelle)
 
