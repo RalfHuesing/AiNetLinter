@@ -93,6 +93,21 @@ public sealed class ProjectDefinitionLoaderTests
         Assert.Contains(definitionPath, failed.Message);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Load_MissingOrWhitespaceRoot_ReportsProjectRootRequired(string? projectRoot)
+    {
+        var failed = AsFailed(ProjectDefinitionLoader.Load(projectRoot));
+
+        Assert.Equal(ProjectErrorCodes.ProjectRootRequired, failed.ErrorCode);
+        Assert.Contains("'projectRoot' is required", failed.Message, StringComparison.Ordinal);
+        Assert.Contains("\"solution\"", failed.Message, StringComparison.Ordinal);
+        Assert.Contains("\"rules\"", failed.Message, StringComparison.Ordinal);
+        Assert.Contains("absolute projectRoot", failed.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Load_MissingDefinitionFile_ReportsNotInitializedWithVerbatimTemplate()
     {

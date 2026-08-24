@@ -17,6 +17,8 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
     private const int SecondaryLastHealthId = 8;
     private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(1);
 
+    public ThinClientsSharedWarmthProcessContractTests(DaemonEndpointJanitorFixture janitor) => _ = janitor;
+
     [Fact]
     public async Task TwoThinClients_ConnectToSameDaemon_AndReuseWarmProjectKey()
     {

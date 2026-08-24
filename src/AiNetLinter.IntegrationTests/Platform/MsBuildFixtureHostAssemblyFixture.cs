@@ -12,3 +12,4 @@ using AiNetLinter.IntegrationTests.Platform;
 [assembly: AssemblyFixture(typeof(AiNetLinter.IntegrationTests.Mcp.Tools.SymbolGraphCatalogFixture))]
 [assembly: AssemblyFixture(typeof(AiNetLinter.IntegrationTests.Mcp.Platform.ReadOnlyMcpHostFixture))]
 [assembly: AssemblyFixture(typeof(AiNetLinter.IntegrationTests.Mcp.Platform.RepositoryMcpHostFixture))]
+[assembly: AssemblyFixture(typeof(AiNetLinter.IntegrationTests.Mcp.Daemon.DaemonEndpointJanitorFixture))]

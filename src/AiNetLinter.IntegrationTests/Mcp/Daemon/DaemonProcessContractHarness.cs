@@ -30,9 +30,27 @@ internal static class DaemonProcessContractHarness
         BackoffFactor = 1.2,
     };
 
+    /// <summary>
+    /// Vergibt die Endnutzung des benutzergebundenen Daemon-Pipe-Endpunkts exklusiv. Wird das
+    /// Gate erworben, laeuft suite-weit genau einmal der <see cref="DaemonEndpointJanitor"/>
+    /// (Ueberbleibsel der eigenen EXE beenden, Endpunkt-Probe) — innerhalb des Gates, damit nie
+    /// ein legitimer, parallel laufender Endpunkt-Nutzer desselben Builds getroffen wird. Bei
+    /// nicht behebbarer Fremdbelegung wird der rufende Test transparent geskippt statt am
+    /// Doppelstart-Lock zu scheitern.
+    /// </summary>
     internal static async Task<IDisposable> AcquireEndpointAsync(CancellationToken cancellationToken)
     {
         await EndpointGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await DaemonEndpointJanitor.SkipIfEndpointBlockedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            EndpointGate.Release();
+            throw;
+        }
+
         return new EndpointLease(EndpointGate);
     }
 

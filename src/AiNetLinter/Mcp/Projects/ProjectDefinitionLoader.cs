@@ -17,7 +17,10 @@ internal static class ProjectDefinitionLoader
 
     internal static ProjectDefinitionLoadResult Load(string? projectRoot)
     {
-        var definitionPath = Path.Combine(projectRoot ?? string.Empty, DefinitionFileName);
+        if (string.IsNullOrWhiteSpace(projectRoot))
+            return Fail(ProjectErrorCodes.ProjectRootRequired, RootRequiredTemplate());
+
+        var definitionPath = Path.Combine(projectRoot, DefinitionFileName);
 
         if (!File.Exists(definitionPath))
             return Fail(ProjectErrorCodes.ProjectNotInitialized, NotInitializedTemplate(definitionPath));
@@ -114,6 +117,18 @@ internal static class ProjectDefinitionLoader
             "  \"rules\":    \"<path/to/rules.json>\"          // relative to this file, or absolute; MUST exist",
             "}",
             "Then retry the call with the same projectRoot.");
+
+    private static string RootRequiredTemplate() =>
+        string.Join(
+            Environment.NewLine,
+            "The parameter 'projectRoot' is required; null, empty or whitespace-only values are rejected.",
+            "Pass an absolute project root directory, e.g. C:/repos/mein-projekt.",
+            "If the project is not initialized yet, create ainetlinter.project.json in that root with:",
+            "{",
+            "  \"solution\": \"<path/to/your.slnx or .sln>\",  // relative to this file, or absolute",
+            "  \"rules\":    \"<path/to/rules.json>\"          // relative to this file, or absolute; MUST exist",
+            "}",
+            "Then retry the call with the same absolute projectRoot.");
 
     private static ProjectDefinitionLoadResult Fail(string errorCode, string message) =>
         ProjectDefinitionLoadResult.Failure(errorCode, message);

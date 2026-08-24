@@ -7,12 +7,17 @@ namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 [Trait("Category", "Integration")]
 public sealed class DaemonHostProcessContractTests
 {
+    public DaemonHostProcessContractTests(DaemonEndpointJanitorFixture janitor) => _ = janitor;
+
     [Fact]
     public async Task TwoDaemonProcessesOnOneEndpointRejectSecondAndReleaseLock()
     {
         using var fixture = new BaselineMiniFixtureWorkspace();
         using var temp = TestTempDirectory.Create("daemon-process-contract-");
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        // Das Endpunkt-Gate ist exklusiv und wird von bis zu vier Daemon-Contracts geteilt;
+        // die Wartezeit auf den eigenen Turn ist legitim und muss das Budget ueberleben,
+        // nicht der Hang-Schutz des eigentlichen Testablaufs (der hat eigene Timeouts).
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(240));
         using var endpointLease = await DaemonProcessContractHarness
             .AcquireEndpointAsync(cancellation.Token)
             .ConfigureAwait(false);

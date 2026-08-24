@@ -71,6 +71,10 @@ public sealed class ProjectInstanceFactoryTests
         Assert.Null(creation.Server);
         Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
         Assert.Contains(definition.RulesPath, creation.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("keine Default-Regeln geladen", creation.ErrorMessage, StringComparison.Ordinal);
+        // Kopierfaehige Bauanleitung: minimales, gueltiges rules.json-Skelett im Fehlertext.
+        Assert.Contains("\"Global\": {},", creation.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("\"MaxLineCount\": 700", creation.ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]

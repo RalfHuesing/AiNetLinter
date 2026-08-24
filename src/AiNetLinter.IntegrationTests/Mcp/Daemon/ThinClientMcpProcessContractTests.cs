@@ -9,6 +9,8 @@ namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 [Trait("Category", "Integration")]
 public sealed class ThinClientMcpProcessContractTests
 {
+    public ThinClientMcpProcessContractTests(DaemonEndpointJanitorFixture janitor) => _ = janitor;
+
     [Fact]
     public async Task NoDaemonEscape_UsesDirectInProcStdioPath()
     {
@@ -30,6 +32,13 @@ public sealed class ThinClientMcpProcessContractTests
     [Fact]
     public async Task NormalMcpServerPath_ConnectsThroughDaemon_AndReportsRuntimeHealth()
     {
+        // Der Thin-Client bindet denselben benutzergebundenen Pipe-Endpunkt wie die
+        // Daemon-Contracts; deshalb ueber dasselbe Endpunkt-Gate laufen (Janitor + Skip).
+        // Budget deckt die legitime Wartezeit auf den eigenen Turn ab.
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(240));
+        using var endpointLease = await DaemonProcessContractHarness
+            .AcquireEndpointAsync(cancellation.Token)
+            .ConfigureAwait(false);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var frames = new[]
         {

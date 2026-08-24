@@ -362,6 +362,15 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Versucht vor einem Insert, das Register unter <see cref="ProjectRegistryOptions.MaxProjects"/>
+    /// zu verkleinern. Sind alle Entries busy (oder nicht verdraengbar), bricht die Raeumung
+    /// ergebnislos ab und der neue Entry wird trotzdem registriert — der Bestand darf dann
+    /// ueber MaxProjects wachsen. Das ist bewusste Kapazitaetsentscheidung (Nutzerentscheid
+    /// vom 2026-08-24: Ueberlauf erlaubt), kein Defekt: Der Sync-Lease darf weder blockieren
+    /// noch ablehnen. Der TTL-Tick reklamiert den Ueberschuss nicht aktiv; er raeumt erst,
+    /// wenn Slots frei werden (Idle-TTL bzw. LRU-Druck bei kuenftigen Inserts).
+    /// </summary>
     private void EvictLeastRecentlyUsed(List<McpCodeGraphServer> retired)
     {
         while (projects.Count >= options.MaxProjects)

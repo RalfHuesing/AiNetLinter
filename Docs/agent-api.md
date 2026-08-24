@@ -831,7 +831,6 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
 | `RESOURCE_NOT_FOUND` | Datei/Solution-Pfad nicht gefunden (Server-Start oder `get_file_skeleton`) |
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
-| `AMBIGUOUS_SOLUTION` | Batch-Modus: mehrere `.sln`/`.slnx` im `cwd` ohne `--path`; MCP lehnt `--path` stattdessen per Hard-Cut ab |
 | `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
 | `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
 | `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt |

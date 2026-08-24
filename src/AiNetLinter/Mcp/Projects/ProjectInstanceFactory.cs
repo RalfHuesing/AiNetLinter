@@ -43,8 +43,17 @@ internal static class ProjectInstanceFactory
         {
             return ProjectInstanceCreation.Failed(
                 ProjectErrorCodes.RulesInvalid,
-                $"Regeldatei ist lesbar, aber ungueltig (JSON-Syntax/Felder pruefen): {definition.RulesPath}. " +
-                "Es wurden bewusst keine Default-Regeln geladen.");
+                string.Join(
+                    Environment.NewLine,
+                    $"Regeldatei ist lesbar, aber ungueltig: {definition.RulesPath}.",
+                    "JSON-Syntax und Felder gegen das Schema pruefen; es wurden bewusst keine " +
+                    "Default-Regeln geladen.",
+                    "Minimale gueltige rules.json zum Kopieren:",
+                    "{",
+                    "  \"Global\": {},",
+                    "  \"Metrics\": { \"MaxLineCount\": 700 }",
+                    "}",
+                    "Danach den Aufruf mit demselben projectRoot wiederholen."));
         }
 
         var options = McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(

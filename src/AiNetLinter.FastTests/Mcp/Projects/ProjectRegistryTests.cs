@@ -393,6 +393,8 @@ public sealed class ProjectRegistryTests
         Assert.NotSame(serverB, recreatedLease!.Server);
     }
 
+
+
     [Fact]
     public async Task Lease_AfterFailedColdLoad_NextHitStartsFreshLoad()
     {

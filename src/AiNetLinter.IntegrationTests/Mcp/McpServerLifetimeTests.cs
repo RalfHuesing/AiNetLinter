@@ -86,6 +86,12 @@ public sealed class McpServerLifetimeTests
             WorkingDirectory = solutionPath,
         };
         startInfo.ArgumentList.Add("--mcp-server");
+        // Escape-Pin (Muster wie McpProcessHost/McpRawWireTestHarness): Ohne Pin wuerde der
+        // Thin-Client einen detached Daemon mit Default-Idle-Exit (10 min) starten, der den
+        // Test ueberlebt und am benutzergebundenen Endpunkt nachfolgende Daemon-Contracts
+        // stoert. Der Parent-Pid-Watchdog, den dieser Test prueft, läuft im Escape-Modus
+        // im selben Subprozess identisch.
+        startInfo.Environment["AINETLINTER_NO_DAEMON"] = "1";
         startInfo.ArgumentList.Add("--parent-pid");
         startInfo.ArgumentList.Add(parentProcessId.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add("--mcp-log");
