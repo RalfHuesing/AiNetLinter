@@ -275,7 +275,7 @@ abgelehnt. Die Projektregistry verwendet standardmäßig 45 Minuten Idle-TTL und
 höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
 `--mcp-max-projects` angepasst werden.
 
-**stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Andere Verwendungen (CI-Log-Parsing, Debug-Ausgaben via `Console.WriteLine`, Pipe-Redirect auf `tee`, o. ä.) wuerden das JSON-RPC-Framing zerstoeren und sind nicht zulaessig. Status- und Fehlerausgaben gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
+**stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Der ThinClient startet bei Bedarf den detached Daemon, verarbeitet nur den Pipe-Level-Handshake und pumpt die MCP-Bytes danach opak; weder MCP-SDK noch JSON-RPC werden im ThinClient geladen. Status-, Retry- und Hängerdiagnosen gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
 
 ### Daemon-Transport: interner Hostpfad
 
@@ -283,7 +283,10 @@ höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
 `Mcp/Daemon/`-Transportvertrag. Der Host akzeptiert benutzergebundene Named
 Pipes, führt den Pipe-Level-Handshake aus und erstellt je Verbindung eine
 MCP-SDK-Session gegen eine gemeinsame `ProjectRegistry`. Der bestehende
-`--mcp-server`-Stdio-/In-Proc-MCP-Pfad bleibt unverändert.
+`--mcp-server`-Stdio-Vertrag bleibt nach außen unverändert; intern verbindet
+der ThinClient zuerst und startet den Host erst bei Bedarf. Mit
+`AINETLINTER_NO_DAEMON=1` kann der direkte In-Proc-Pfad für Debugging gewählt
+werden.
 
 Die Grundlage verwendet den benutzergebundenen Named-Pipe-Namen
 `ainetlinter.analyzer.v1.<username>` mit `PipeOptions.CurrentUserOnly` und
@@ -301,9 +304,13 @@ umgeschrieben.
 Der Host beendet sich nach standardmäßig 10 Minuten ohne aktive Verbindungen,
 Loads oder Warmups. Ein debounced MRU-State unter `%LOCALAPPDATA%` hält bis zu
 vier zuletzt verwendete Projektroots; beim Start werden höchstens zwei davon
-parallel vorgewärmt. Der ThinClient, Connect-or-Start, externe Client-
-Registrierungen sowie eine spätere Health-/Observability-Verdrahtung sind nicht
-Bestandteil dieses Steps.
+parallel vorgewärmt. Der ThinClient verwendet einen begrenzten Readiness-
+Handshake und genau einen Replay-/Reconnect-Versuch für den read-only Wire;
+der zweite Rohfehler wird ohne Retry-Schleife beendet. `welcome` liefert dabei
+die identifizierte Daemon-PID und connectionId für Diagnose und sichere
+Beendigung. `get_server_health` zeigt in Daemon-Sessions Modus, Verbindungen,
+PID, Uptime, Keys, connectionId und Daemon-Version. `--parent-pid` gilt nur
+für den ThinClient, nicht für den detached Daemon.
 
 **MCP-Observability:** Das Tool-Call-Logging ist standardmaessig aktiv. Der Standardpfad liegt unter `%LOCALAPPDATA%\RalfHuesing\McpObservability\ainetlinter\<yyyy-MM-dd>\`; jede Serverinstanz schreibt eine eigene Datei mit PID und InstanceId. Mit `--mcp-log <pfad>` kann ein eigenes Verzeichnis gesetzt werden, mit `--mcp-log off` wird Logging und Feedback deaktiviert. Format, Pfad-Aufloesung und Offline-Auswertung stehen in [Docs/agent-api.md#mcp-observability--feedback](agent-api.md#mcp-observability--feedback).
 

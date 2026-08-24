@@ -101,8 +101,13 @@ standardmäßig 45 Minuten Idle-TTL und höchstens 4 Projekt-Keys.
 
 Für den internen Daemon-Lifecycle kann `--daemon-start` verwendet werden. Der
 Host nutzt den Named-Pipe-Handshake, beendet sich standardmäßig nach 10 Minuten
-Leerlauf und wärmt bis zu zwei MRU-Projekte vor. Der externe ThinClient und
-Connect-or-Start folgen später; `--mcp-server` bleibt der stdio-basierte Einstieg.
+Leerlauf und wärmt bis zu zwei MRU-Projekte vor. `--mcp-server` startet davor
+einen ThinClient: Er verbindet sich zuerst mit diesem Host und startet ihn nur
+bei fehlendem Endpunkt detached. Nach dem Handshake werden die MCP-Bytes opak
+zwischen stdin/stdout und Named Pipe gepumpt; Diagnose bleibt auf stderr.
+`AINETLINTER_NO_DAEMON=1` aktiviert den bisherigen direkten In-Proc-Pfad für
+Debugging. Die ThinClient-Überwachung nutzt `--parent-pid`; der Daemon selbst
+erbt diesen Reaper nicht.
 
 Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist auf `tools/list` und `ainetlinter://overview`, statt die Toolliste zu duplizieren.
 

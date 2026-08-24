@@ -435,15 +435,19 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   Repo-/Hermes-Registrierungen und Entscheidungsregister steht in
   `tasks/mcp-server-weiterentwicklung/11_epic-projektregistry-und-daemon/step-008/step-result.md`.
 
-### EPIC-B — DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup (Step-010 umgesetzt am 2026-08-24)
+### EPIC-B — Geteilter Daemon mit ThinClient (umgesetzt am 2026-08-24)
 
 - [x] Interner `--daemon-start`-Pfad mit Named-Pipe-Akzeptanz, Pipe-Level-
-  Handshake, geteilter Projektregistry und einer MCP-SDK-Session je Verbindung.
+  Handshake, geteilter Projektregistry und einer MCP-SDK-Session je Verbindung;
+  `--mcp-server` verbindet sich über den ThinClient zuerst und startet den Host
+  bei fehlendem Endpunkt detached.
 - [x] Idle-Exit mit injizierbarer Zeitquelle; aktive Verbindungen, Loads und
   Warmups verhindern den Exit. Standardwert: 10 Minuten.
 - [x] Debounced MRU-State unter `%LOCALAPPDATA%` mit tolerantem Laden und
-  maximal zwei parallelen Warmups; der externe ThinClient, Connect-or-Start,
-  Stdio-Pump und Parent-Reaper-Vererbung bleiben spätere Schritte.
+  maximal zwei parallelen Warmups; opaker Stdio-Pump, begrenzter Readiness-/
+  Replay-Retry, ThinClient-Parent-Reaper und `AINETLINTER_NO_DAEMON=1` sind
+  aktiv. Health weist Daemon-Modus, connectionId, PID, Uptime, Keys und Version
+  aus; der Daemon selbst bleibt parent-ungebunden.
 
 ### Abgeschlossen
 

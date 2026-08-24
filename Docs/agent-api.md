@@ -207,8 +207,13 @@ ainetlinter --mcp-server                         # projectRoot kommt je Tool-Auf
 ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-PID
 ```
 
-Bei Legacy-MCP `initialize` (Handshake) hält der Server mehrere Projekt-Keys
-resident. Jeder projektgebundene Tool-Aufruf erhält den absoluten Parameter
+Bei Legacy-MCP `initialize` (Handshake) hält der Daemon mehrere Projekt-Keys
+resident. Der registrierte `--mcp-server`-Prozess arbeitet dabei als ThinClient:
+Er verbindet sich zuerst mit dem Named-Pipe-Daemon und startet genau einen
+detached `--daemon-start`, falls kein Endpunkt erreichbar ist. Nach `hello` /
+`welcome` werden stdio-Frames ohne MCP-SDK- oder JSON-RPC-Interpretation
+weitergereicht; stdout bleibt ausschließlich MCP-Protokoll. Jeder
+projektgebundene Tool-Aufruf erhält den absoluten Parameter
 `projectRoot`; `get_server_health` darf diesen Filter weglassen. Im Root liegt
 `ainetlinter.project.json` mit `solution` und `rules`:
 
@@ -228,20 +233,22 @@ MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält u
 
 Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
-Der interne Entwicklungsstart `--daemon-start` ist davon getrennt. Er startet den
-`DaemonHost` mit Named-Pipe-Handshake, geteilter Projektregistry und einer MCP-
-Session je Pipe-Verbindung. Nach standardmäßig 10 Minuten ohne Verbindungen,
-aktive Loads oder Warmups beendet sich der Host; bis zu zwei zuletzt verwendete
-Projekte werden aus dem MRU-Zustand vorgeladen. Der externe ThinClient und
-Connect-or-Start-Verdrahtung folgen in einem späteren Step. `--mcp-server` bleibt
-der unveränderte stdio-Einstieg.
+Der interne Start `--daemon-start` startet den `DaemonHost` mit Named-Pipe-
+Handshake, geteilter Projektregistry und einer MCP-Session je Pipe-Verbindung.
+Nach standardmäßig 10 Minuten ohne Verbindungen, aktive Loads oder Warmups
+beendet sich der Host; bis zu zwei zuletzt verwendete Projekte werden aus dem
+MRU-Zustand vorgeladen. Ein einzelner unterbrochener, read-only Wire-Abschnitt
+kann roh replayed werden; ein zweiter Fehler beendet die Session ohne Schleife.
+Readiness und Pipe-Pump besitzen Hänger-Zeitlimits. `AINETLINTER_NO_DAEMON=1`
+schaltet ausschließlich für Debugging auf den direkten In-Proc-Stdio-Pfad um.
 
 ### Daemon-Pipe-Vertrag (Transport-Grundlage)
 
 Die Pipe-/Handshake-Grundlage liegt unter `Mcp/Daemon/` und wird vom internen
-`--daemon-start`-Pfad für den `DaemonHost` verwendet. Der bestehende MCP-SDK-
-Handshake über `--mcp-server`/stdio bleibt unverändert; ThinClient und externe
-Connect-or-Start-Registrierung sind bewusst noch nicht verdrahtet.
+`--daemon-start`-Pfad für den `DaemonHost` verwendet. Der MCP-SDK-Handshake
+über `--mcp-server`/stdio bleibt nach außen unverändert; der ThinClient
+verdrahtet Connect-or-Start und reicht die Nutzdaten nach dem Pipe-Handshake
+opak weiter.
 
 - Der Named-Pipe-Endpunkt lautet ausschließlich
   `ainetlinter.analyzer.v1.<username>` für den aktuellen Windows-Benutzer.

@@ -1,18 +1,18 @@
 ---
-status: executing  # executing | done | aborted
+status: done (pending audit)  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T06:14:00+02:00
+last_updated: 2026-08-24T10:30:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 12  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-012
+total_steps: 13  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-013
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `done (pending audit)`
 - **Nutzer-Scope:** vollständigen Task einschließlich EPIC-A und EPIC-B
   umsetzen; nicht nach dem Abschluss von EPIC-A stoppen.
 - **Konfliktregel:** Review-Forderungen gegen inzwischen erreichte Architektur
@@ -21,15 +21,15 @@ current_step: step-012
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 12 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-012` (approved — Korrektur von step-011:
-  echte Zwei-Prozess-/Pipe- und Host-/MCP-Contracts)
+- **Aktueller Schritt:** `step-013` (done (pending audit) — ThinClient-, Health-
+  und EPIC-B-Abschluss; Vollparallel-Ausnahmen sind im Step-Result dokumentiert)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T03:21:39+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T08:30:00+02:00
 
 ## Nutzer-Vorgaben (Effizienz, 2026-08-23)
 
@@ -65,9 +65,10 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-007 | EPIC-A | done | Originalfehler und Creation-Loser im Testvertrag vollständig assertieren | step-006 | 73695524 / 91d9aae2 | 2026-08-24 (approved) | 73695524 / 91d9aae2 |
 | step-008 | EPIC-A | done | EPIC-A-Abschluss: Drift-Audit, Overview-Liveprüfung und Meilenstein-Doku | - | 3c01d78a / 2760cf5e | 2026-08-24 (approved) | 3c01d78a / 2760cf5e |
 | step-009 | EPIC-B | done | Transport-/Handshake-Grundlage für den Daemon | - | a6a6c40d | 2026-08-24 (approved) | a6a6c40d / 7897dd1b / b5715865 |
-| step-010 | EPIC-B | done (Korrektur ausstehend) | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues) | 424a781b |
-| step-011 | EPIC-B | done (korrigiert durch step-012) | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (Findings geschlossen) | 1c7ee714 / ffb60157 |
-| step-012 | EPIC-B | approved | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
+| step-010 | EPIC-B | done | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues; durch step-011/step-012 geschlossen) | 424a781b |
+| step-011 | EPIC-B | done | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (issues; durch step-012 geschlossen) | 1c7ee714 / ffb60157 |
+| step-012 | EPIC-B | done | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
+| step-013 | EPIC-B | done (pending audit) | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (Coderlauf; gezielte Contracts grün, Vollparallel-Ausnahmen dokumentiert) | b9605ea5 / Doku folgt |
 
 ## Config (optional)
 

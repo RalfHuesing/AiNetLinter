@@ -127,14 +127,16 @@ Orientierungsbedarf ab.
 **Entscheidung:** nicht implementieren.
 
 ### C.5 Kein Multi-Agent-Installer & kein unbegründeter Detached-Daemon
-Der interne `--daemon-start`-Host ist für den geplanten Named-Pipe-Lifecycle mit
-Idle-Exit und MRU-Warmup umgesetzt. Das öffnet nicht automatisch die externe
-Client-Integration: ThinClient, Connect-or-Start, Client-Registrierungen,
-Stdio-Pump und Parent-Reaper-Vererbung bleiben bewusst spätere Schritte.
-Ein Windows-Service, Autostart oder Multi-Agent-Installer wird weiterhin nicht
+Der interne `--daemon-start`-Host ist für den Named-Pipe-Lifecycle mit
+Idle-Exit und MRU-Warmup umgesetzt. Step-013 hat die fachlich begründete
+ThinClient-Integration ergänzt: `--mcp-server` verbindet sich zuerst und
+startet den Host nur bei fehlendem Endpunkt; der Daemon bleibt parent-ungebunden.
+Der opake Stdio-Pump, die begrenzte Readiness-/Replay-Logik, Health-Daten und
+die eigenen Registrierungen sind damit aktiv. Ein Windows-Service, Autostart,
+Multi-Agent-Installer oder Remote-/Multi-User-Betrieb wird weiterhin nicht
 implementiert.
-**Entscheidung:** Host-Lifecycle umsetzen; externe Detached-Daemon-Verankerung
-und Installer nicht vorwegnehmen.
+**Entscheidung:** Host-Lifecycle und begründete lokale Detached-Verankerung
+umsetzen; Installer und ausgedehnte Betriebsmodelle nicht vorwegnehmen.
 
 ### C.6 Keine Cloud-/Enterprise-Features (Multi-Tenancy, OAuth, OTel-Export, Cluster)
 AiNetLinter ist ein schlankes lokales Entwickler- und Agenten-Tool, kein Cloud-Service.

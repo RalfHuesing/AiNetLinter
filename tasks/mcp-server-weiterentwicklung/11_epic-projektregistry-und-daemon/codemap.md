@@ -59,8 +59,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 ### Produktionscode — direkt betroffen
 
 - **`src/AiNetLinter/Program.cs`** — Einstieg: CLI-Parsing → `LinterArgs` →
-  Routing (Batch, Standalone-Commands, stdio-MCP und interner DaemonHost über
-  `--daemon-start`). (zuletzt: step-010)
+  Routing (Batch, Standalone-Commands, ThinClient-stdio-MCP und interner
+  DaemonHost über `--daemon-start`). (zuletzt: step-013)
 - **`src/AiNetLinter/Cli/`** (`CliOptions.cs`, `CliOptionFactory.cs`,
   `CliCommandBuilder.cs`, `LinterArgs.cs`) — System.CommandLine-Argumentparsing;
   Anker für den harten Cut (`--path`/`--config` im MCP-Zweig als harter Fehler
@@ -90,8 +90,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Serverinstanz; geht in die pro-Key-Health-Aggregation von Epic A ein.
   (zuletzt: initial)
 - **`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs`** — baut Tool- und Resource-
-  Collections aus der ProjectRegistry; die projektgebundenen Delegates eröffnen
-  während des vollständigen async-Aufrufs einen Lease. (zuletzt: step-003)
+  Collections aus der ProjectRegistry; optionale DaemonRuntime-Kontexte speisen
+  Health-/Observability-Daten je Pipe-Verbindung ein. (zuletzt: step-013)
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — zentraler Result-Builder für Tool-/Resource-
   Antworten (`Error(code, message, context, hint)`, `Recoverable`, `Loading`); Anker für die
   A.5-Fehlerverträge des Epics A (Codes künftig zentral in `Mcp/Projects/ProjectErrorCodes`).
@@ -147,10 +147,10 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   Seam für das deterministische Lookup→Reservation-Interleaving sowie der
   test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
 - **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection,
-  unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim sowie
-  `DaemonHost`, Registry-Fassade und debounced/kanonisch persistierter MRU-State
-  für den internen Lifecycle; die direkten Prozess-Contracts nutzen diesen
-  Produktionspfad unverändert. (zuletzt: step-012)
+  unabhängige Handshake-Verträge, endpointgebundener Daemon-Claim, DaemonHost,
+  Registry-Fassade, MRU-State sowie ThinClientLauncher/Proxy und opaker
+  BytePump; RuntimeContext verbindet ConnectionId, Health und Observability,
+  ohne MCP-SDK im Client. (zuletzt: step-013)
 
 ### Tests
 
@@ -174,7 +174,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`src/AiNetLinter.FastTests/Mcp/Daemon/`** — in-proc Contract-Tests für
   Handshake-Zustände, Pipe-Framing, Benutzerbindung, endpointgebundene
   Exklusivität, isolierte Cancellation, vollständigen Host-Run/Accept-Pfad,
-  Host-Idle-Exit, MRU-Normalisierung/Persistenz und Warmup-Begrenzung. (zuletzt: step-011)
+  Host-Idle-Exit, MRU-Normalisierung/Persistenz, Warmup-Begrenzung und
+  ThinClient-Flag-/Opaque-Pump-/ConnectionId-Verträge. (zuletzt: step-013)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
   gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)
@@ -187,7 +188,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   das URL-kodierte Overview-Template und den 26er-Toolvertrag. (zuletzt: step-008)
 - **`src/AiNetLinter.IntegrationTests/Mcp/Daemon/`** — echte Zwei-Prozess-
   Named-Pipe-Contracts für Daemon-Doppelstart/Lock-Freigabe sowie Host-
-  Handshake, MCP-SDK-Initialize und `tools/list`. (zuletzt: step-012)
+  Handshake, MCP-SDK-Initialize und `tools/list`; der Raw-Wire-Harness deckt
+  den normalen ThinClient-Connect-or-Start-Pfad und stdout-Purity ab. (zuletzt: step-013)
 - **`src/AiNetLinter.TestKit/**`** — zentrale Test-Infrastruktur; Pflicht
   `TestTempDirectory` statt OS-Temp (Richtlinien §4) gilt auch für die
   Definitionsdatei-Fixtures. (zuletzt: initial)
@@ -212,6 +214,6 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`AiNetLinter.slnx` / `rules.json` (Repo-Root)** — Solution + Regelwerk dieses
   Repos; das eigene `ainetlinter.project.json` (Epic-A-Migration) zeigt genau darauf.
   (zuletzt: initial)
-- **`90_bewusst-nicht-umsetzen/Konzept.md`** — Entscheidungsregister; enthält
-  den Wiederöffnungsvermerk §C.5 zum internen Host-Lifecycle und den weiterhin
-  ausgeklammerten externen Daemon-Verträgen. (zuletzt: step-010)
+- **`90_bewusst-nicht-umsetzen/Konzept.md`** — Entscheidungsregister; §C.5
+  dokumentiert die abgeschlossene lokale ThinClient-/Detached-Verankerung und
+  die weiterhin ausgeklammerten Installer-/Remote-Betriebsmodelle. (zuletzt: step-013)

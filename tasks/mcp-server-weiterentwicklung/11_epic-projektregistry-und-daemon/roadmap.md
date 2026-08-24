@@ -1,9 +1,9 @@
 ---
-status: active  # active | done
+status: done (pending audit)  # active | done
 task: 11_epic-projektregistry-und-daemon
 derived_from: konzept.md
 created_at: 2026-08-23T12:58:00+02:00
-last_updated: 2026-08-24T06:14:00+02:00
+last_updated: 2026-08-24T10:30:00+02:00
 created_by_model: stealth/ox-alpha (openrouter)
 created_by_model_knowledge_cutoff: nicht deklariert (kein Cutoff im eigenen System-Prompt angegeben)
 ---
@@ -190,11 +190,12 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     `ainetlinter.project.json` sind bereits migriert; die Live-Prüfung lief
     erfolgreich. EPIC-B ist nun als nächstes Epic freigegeben.
 
-- [ ] **EPIC-B: Daemon-Modus (geteilter, langlebiger Analysekern)** — Die fertige
+- [x] **EPIC-B: Daemon-Modus (geteilter, langlebiger Analysekern)** — Die fertige
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-012 (approved)**
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: done (pending audit) → step-013
+      (letzter Fachcluster abgeschlossen)**
       (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelte
       DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup und ist mit vier konkreten
       Findings abgeschlossen; step-011 korrigiert Exklusivität, MRU-Normalisierung
@@ -213,16 +214,17 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         `VERSION_CONFLICT` (Anti-Ping-Pong); `welcome` trägt die effektive
         Daemon-Konfiguration → `[WARN]` + Observability-Ereignis bei Divergenz.
         **Erledigt → step-009 (approved).**
-  - [ ] B.3 DaemonHost (`--daemon-start`, intern, in `--help` als `[internal]`):
+  - [x] B.3 DaemonHost (`--daemon-start`, intern, in `--help` als `[internal]`):
         Registry + MCP-Session je Verbindung gegen die geteilte Registry; Idle-Exit
         (Default 10 Min, keine Clients + idle) graceful inkl. Dispose aller Keys +
         MRU-Persistierung; laufende Loads/Warmups verschieben den Exit; MRU-Warmup
         gebunden (max 2 parallele Loads), interaktiver Load wartet nie dahinter; tote
         MRU-Pfade verworfen UND aus dem State entfernt; Doppelstart → sauberer
-        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon. **Korrigiert →
-        step-010/step-011; ThinClient, Connect-or-Start und Health bleiben
-        nachgelagert.**
-  - [ ] B.2/B.3 ThinClient (`ThinClientProxy`/`ThinClientLauncher`): nach außen
+        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon. **Erledigt →
+        step-010/step-011/step-012 (Lifecycle, MRU-Normalisierung, Prozess- und
+        Host/MCP-Contracts approved); ThinClient, Connect-or-Start und Health
+        bleiben nachgelagert.**
+  - [x] B.2/B.3 ThinClient (`ThinClientProxy`/`ThinClientLauncher`): nach außen
         identisches `--mcp-server`; intern Connect-or-Start-Race (Connect first,
         detached Spawn `UseShellExecute=false`/`CreateNoWindow`, Retry-Fenster;
         Verlierer des Pipe-Greifens verbindet); opake Byte-Pump stdio⇄Pipe ohne
@@ -232,32 +234,38 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         Hänger-Schutz (Ping-Timeout → Kill/Restart, Call-Log-Ereignis); Reaper-Erbe
         (`--parent-pid`) gegen den Agent-Prozess; Escape `AINETLINTER_NO_DAEMON=1` →
         klassisch in-proc (Debug-Ventil, dokumentiert inkl. Hermes-env:-Block-Hinweis);
-        statistische Flags werden beim Daemon-Spawn durchgereicht.
-  - [ ] B.4 MruStateStore: `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`,
+         statische Flags werden beim Daemon-Spawn durchgereicht. **Erledigt →
+         step-013.**
+  - [x] B.4 MruStateStore: `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`,
         Array `{rootPath, lastUsedUtc}` max maxProjects, debounced schreiben (~30 s
         nach letztem Touch) + beim Shutdown, atomar (temp + `File.Move`), korrupt/leer
-        = „kein Warmup" — niemals Wahrheitsquelle.
-  - [ ] B.5 Health/Observability: `get_server_health` weist Modus/Verbindungen/PID/
+         = „kein Warmup" — niemals Wahrheitsquelle. **Erledigt → step-010/step-011;
+         finaler ThinClient-/Restart-Regressionstest → step-013.**
+  - [x] B.5 Health/Observability: `get_server_health` weist Modus/Verbindungen/PID/
         Uptime/Keys/Daemon-Version aus; Call-Log um `connectionId`/`mode=daemon`
-        erweitert (Observability-Paket ggf. minor-bump — eigener Scope, eigener Commit).
-  - [ ] B.6 Tests: Unit in-proc (Handshake-/Versionsvergleichslogik inkl.
+         erweitert (Observability-Paket ggf. minor-bump — eigener Scope, eigener Commit).
+         **Erledigt → step-013; Observability-Paketgrenze im Result dokumentiert.**
+  - [x] B.6 Tests: Unit in-proc (Handshake-/Versionsvergleichslogik inkl.
         Anti-Ping-Pong über injizierbaren Versionsprovider, Idle-Exit-Timer mit
         injizierbarer Clock, MRU schreiben/lesen/korrupt/tote Pfade,
         Connect-or-Start-State-Machine am Mock-Pipe); Integration sparsam echter
         Zwei-Prozess-Betrieb (zwei Thin-Clients teilen Warmth, via RefreshCount belegt;
         Idle-Exit innerhalb TTL schreibt MRU; Kaltstart-Warmup beschleunigt den ersten
         Call; Hänger-Pfad via Stellvertreter-Prozess statt EXE-Injektion; Escape) —
-        Versions-Mismatch NICHT als Zwei-Prozess-Test; nichts Neues in `Category=Stress`.
-  - [ ] B.7 DoD: Build grün; beide TestSuites ohne Stress grün; Epic-A-Suite weiterhin
+         Versions-Mismatch NICHT als Zwei-Prozess-Test; nichts Neues in `Category=Stress`.
+         **Restkatalog ThinClient/Health/Live-Dogfood → step-013 umgesetzt; bereits erledigte
+         Host-/MRU-/Prozess-Contracts bleiben Regression.**
+  - [x] B.7 DoD: Build grün; beide TestSuites ohne Stress grün; Epic-A-Suite weiterhin
         grün (Contract unverändert); Live-Dogfood (eigene Hermes-Registrierung +
         Repo-`.mcp.json` nutzen den Daemon-Modus; `get_server_health` weist
         Modus/Verbindungen/PID/Keys aus); Wiederöffnungsvermerk in
-        `90_bewusst-nicht-umsetzen/Konzept.md` §C.5.
-  - [ ] B.x Doku-Sammelpflichten (im fachlich berührenden Step):
+         `90_bewusst-nicht-umsetzen/Konzept.md` §C.5. **Erledigt → step-013; Vollparallel-Ausnahmen im Result dokumentiert.**
+  - [x] B.x Doku-Sammelpflichten (im fachlich berührenden Step):
         `Docs/agent-api.md` (Transport-/Lifecycle-Abschnitt), `Docs/integration.md`
         (Abschnitt „Daemon-Modus": Verhalten, Update-Handling, Debug-Escape),
         `Docs/configuration.md` (`--mcp-daemon-idle-exit-minutes`), `Docs/ROADMAP.md`,
-        `README.md` (kurzer Abschnitt zum neuen Nutzungsmodell).
+         `README.md` (kurzer Abschnitt zum neuen Nutzungsmodell). **Erledigt → step-013;
+         keine Mini-Doku-Steps.**
 
   - **Step-009-Abschluss (2026-08-24):** Transport und Pipe-Level-Handshake sind
     laut Review `approved` umgesetzt; der bestehende `--mcp-server`-Stdio-Pfad
@@ -286,4 +294,5 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
     `tools/list`. Die Tests bleiben Integration (nicht Stress), verwenden die
     vorhandene Subprozess-/Fixture-Infrastruktur und nehmen ThinClient,
     Connect-or-Start, Retry/Hänger-Schutz und externes Wiring nicht vorweg.
-    Review: approved.
+     Review: approved. Der Korrekturpfad step-010 → step-011 → step-012 ist damit
+     vollständig `done`; der nächste fachliche Cluster ist step-013.
