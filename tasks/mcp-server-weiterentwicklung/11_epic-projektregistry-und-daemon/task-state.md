@@ -2,10 +2,10 @@
 status: done (pending audit)  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T06:42:49+02:00
+last_updated: 2026-08-24T12:52:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
-total_steps: 13  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
-current_step: step-013
+total_steps: 14  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
+current_step: step-014
 ---
 
 # Task State: 11_epic-projektregistry-und-daemon
@@ -20,25 +20,28 @@ current_step: step-013
   nicht erraten oder blind rückbauen; Konflikt als Blocker/Konzept-Entscheidung
   dokumentieren und mit dem nächsten sicheren fachlichen Schritt fortfahren,
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
-- **Steps gesamt:** 13 (regulär + Korrekturen — weicher Check-in bei
+- **Steps gesamt:** 14 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-013` (done (pending audit) — ThinClient-, Health-
-  und EPIC-B-Abschluss; Vollparallel-Ausnahmen sind im Step-Result dokumentiert;
-  nächster Schritt: Kritiker-Abnahme)
+- **Aktueller Schritt:** `step-014` (open — Korrektur von step-013:
+  fehlende Contract-Nachweise F1 und unerreichbare Timeout-Diagnostik F2;
+  mechanisches Transkript aus dem Review ohne Planer-Aufruf)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T06:42:49+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T12:52:00+02:00
 
 ## Check-in / Wiederaufnahme
 
-Der Loop ist nach Nutzeranweisung pausiert, nachdem der Coder Step-013 mit
-`b9605ea5` und `759da1bf` abgeschlossen hat. Es wurde noch kein Kritiker-
-Verdict erzeugt. Die verbindliche Wiederaufnahme-Reihenfolge und die
-dokumentierten Vollsuite-Races stehen in `resume-note.md`.
+Wiederaufnahme am 2026-08-24 nach der Check-in-Pause: Der Kritiker hat
+Step-013 geprüft — Verdict `issues` (zwei MAJOR: F1 fehlende Contract-
+Nachweise, F2 unerreichbare Timeout-Diagnostik in `DaemonBytePump`). Die
+Vollstack-Abweichungen wurden als Testisolation/Harness-Drift eingeordnet,
+keine Vertragsregressionen. Review committet als `690f838d`; die Korrektur
+läuft als step-014 (`corrects: step-013`, mechanisches Transkript).
+TD-007 ist neu im Tech-Debt-Index.
 
 ## Nutzer-Vorgaben (Effizienz, 2026-08-23)
 
@@ -77,7 +80,8 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-010 | EPIC-B | done | DaemonHost-Lifecycle: interner Startpfad, Idle-Exit und MRU-Warmup | - | 424a781b | 2026-08-24 (issues; durch step-011/step-012 geschlossen) | 424a781b |
 | step-011 | EPIC-B | done | DaemonHost-Korrektur: deterministische Exklusivität, MRU-Normalisierung und echte Lifecycle-Contracts | step-010 | 1c7ee714 | 2026-08-24 (issues; durch step-012 geschlossen) | 1c7ee714 / ffb60157 |
 | step-012 | EPIC-B | done | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
-| step-013 | EPIC-B | done (pending audit) | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (Coderlauf; gezielte Contracts grün, Vollparallel-Ausnahmen dokumentiert) | b9605ea5 / Doku folgt |
+| step-013 | EPIC-B | done (Korrektur ausstehend) | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (issues; Korrektur step-014) | b9605ea5 / 759da1bf |
+| step-014 | EPIC-B | in_progress | Step-013-Korrektur: fehlende Contract-Nachweise (F1) und erreichbare Timeout-Diagnostik (F2) | step-013 | - | - | - |
 
 ## Config (optional)
 
