@@ -2,6 +2,7 @@
 
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Logging;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +69,8 @@ internal static class DaemonHostCommand
         var services = new ServiceCollection();
         var runtimeContext = connection.RuntimeContext;
         Serilog.Log.Debug("Daemon: MCP-Session startet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
-        services.AddMcpServer();
+        var serverBuilder = services.AddMcpServer();
+        McpCallLoggingFilter.Configure(serverBuilder, runtimeContext?.ConnectionId);
         await using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         serverOptions.ServerInfo = new Implementation
@@ -82,6 +84,19 @@ internal static class DaemonHostCommand
 
         var transport = new StreamServerTransport(connection.Stream, connection.Stream);
         await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);
-        await server.RunAsync(connection.CancellationToken).ConfigureAwait(false);
+        try
+        {
+            await server.RunAsync(connection.CancellationToken).ConfigureAwait(false);
+            Serilog.Log.Debug("Daemon: MCP-Session normal beendet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
+        }
+        catch (OperationCanceledException) when (connection.CancellationToken.IsCancellationRequested)
+        {
+            Serilog.Log.Information("Daemon: MCP-Session abgebrochen (ConnectionId={ConnectionId}, Ursache=ConnectionCancellation)", runtimeContext?.ConnectionId);
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Error(exception, "Daemon: MCP-Session mit Ausnahme beendet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
+            throw;
+        }
     }
 }

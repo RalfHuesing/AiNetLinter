@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,63 +26,88 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        var processRole = DetermineProcessRole(args);
+        var exitCode = 2;
+        try
+        {
+            exitCode = await RunMainAsync(args, processRole).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            Serilog.Log.Error("Prozess abgebrochen (OperationCanceled), ExitCode=2");
+            Console.Error.WriteLine("[INFO]: Abgebrochen.");
+            exitCode = 2;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Fatal(ex, "Prozess mit unerwartetem Fehler beendet, ExitCode=2");
+            Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex}");
+            exitCode = 2;
+        }
+        finally
+        {
+            if (SystemLog.IsInitialized)
+            {
+                Serilog.Log.Information("Prozess beendet: ExitCode={ExitCode}, Rolle={ProcessRole}", exitCode, processRole);
+                SystemLog.CloseAndFlush();
+            }
+        }
 
-        using var cts = new CancellationTokenSource();
+        return exitCode;
+    }
+
+    private static async Task<int> RunMainAsync(string[] args, string processRole)
+    {
+        SystemLog.Initialize(processRole);
+        using var cancellation = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            cts.Cancel();
+            cancellation.Cancel();
         };
 
         var (root, options) = CliCommandBuilder.Build();
-
-        root.SetAction(async parseResult =>
+        root.SetAction(parseResult => RunParsedCommandAsync(parseResult, options, cancellation.Token));
+        var parseResult = root.Parse(args);
+        if (parseResult.Errors.Count != 0)
         {
-            try
-            {
-                var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
+            Serilog.Log.Error("CLI-Parsefehler: {ErrorCount} Fehler erkannt", parseResult.Errors.Count);
+        }
 
-                // Schneller Pfad: --mcp-server. Kein stdout-Header, da das JSON-RPC-Framing
-                // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
-                if (linterArgs.McpServer)
-                {
-                    SystemLog.Initialize(ProcessRoles.ThinClient);
-                    return await ThinClientProxy.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance).ConfigureAwait(false);
-                }
-
-                if (linterArgs.DaemonStart)
-                {
-                    SystemLog.Initialize(ProcessRoles.Daemon);
-                    return await DaemonHostCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance).ConfigureAwait(false);
-                }
-
-                SystemLog.Initialize(ProcessRoles.Cli);
-
-                if (linterArgs.Docs == null)
-                {
-                    var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
-                    Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
-                }
-                return await ExecuteLinterAsync(linterArgs, cts.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                Serilog.Log.Error("Prozess abgebrochen (OperationCanceled), ExitCode=2");
-                Console.Error.WriteLine("[INFO]: Abgebrochen.");
-                return 2;
-            }
-            catch (Exception ex)
-            {
-                Serilog.Log.Fatal(ex, "Prozess mit unerwartetem Fehler beendet, ExitCode=2");
-                Console.Error.WriteLine($"[FATAL ERROR]: Ein unerwarteter Fehler ist aufgetreten: {ex}");
-                return 2;
-            }
-        });
-
-        var exitCode = await root.Parse(args).InvokeAsync().ConfigureAwait(false);
-        SystemLog.CloseAndFlush();
-        return exitCode;
+        return await parseResult.InvokeAsync().ConfigureAwait(false);
     }
+
+    private static async Task<int> RunParsedCommandAsync(
+        System.CommandLine.ParseResult parseResult,
+        CliOptions options,
+        CancellationToken cancellationToken)
+    {
+        var linterArgs = ToLinterArgs(CliCommandBuilder.Parse(parseResult, options));
+        if (linterArgs.McpServer)
+        {
+            return await ThinClientProxy.RunAsync(linterArgs, cancellationToken, McpLintConsole.Instance).ConfigureAwait(false);
+        }
+
+        if (linterArgs.DaemonStart)
+        {
+            return await DaemonHostCommand.RunAsync(linterArgs, cancellationToken, McpLintConsole.Instance).ConfigureAwait(false);
+        }
+
+        if (linterArgs.Docs == null)
+        {
+            var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
+            Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
+        }
+
+        return await ExecuteLinterAsync(linterArgs, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string DetermineProcessRole(string[] args) =>
+        args.Any(argument => string.Equals(argument, CliOptionFactory.McpServer, StringComparison.OrdinalIgnoreCase))
+            ? ProcessRoles.ThinClient
+            : args.Any(argument => string.Equals(argument, CliOptionFactory.DaemonStart, StringComparison.OrdinalIgnoreCase))
+                ? ProcessRoles.Daemon
+                : ProcessRoles.Cli;
 
     private static LinterArgs ToLinterArgs(CliParsedArgs parsed)
     {

@@ -215,6 +215,10 @@ internal sealed class DaemonHost : IAsyncDisposable
                 result.Status,
                 hello.ProcessId,
                 ActiveConnectionCount);
+            if (!result.IsAccepted)
+            {
+                Serilog.Log.Warning("Daemon: Handshake fuer Verbindung {ConnectionId} abgelehnt (Status={Status}, ErrorCode={ErrorCode})", connectionId, result.Status, result.Error?.Code);
+            }
             if (result.Status == DaemonHandshakeStatus.ShutdownRequested)
             {
                 Serilog.Log.Warning("Daemon: Kontrollierter Neustart angefordert (ExecutableVersionMismatch) - Shutdown");
@@ -231,6 +235,7 @@ internal sealed class DaemonHost : IAsyncDisposable
         }
         catch (Exception exception)
         {
+            Serilog.Log.Warning(exception, "Daemon: Verbindung {ConnectionId} mit Handshake-/Session-Ausnahme beendet", connectionId);
             ReportConnectionFailure(exception, connectionId, options.Console);
         }
         finally

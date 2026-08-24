@@ -20,6 +20,7 @@ public sealed class LoggingConfigLoaderTests
         Assert.Equal(LoggingConfig.DefaultMinimumLevel, config.MinimumLevel);
         Assert.Equal(LoggingConfig.DefaultDirectoryName, config.Directory);
         Assert.Equal(LoggingConfig.DefaultRetainedFileCount, config.RetainedFileCount);
+        Assert.True(config.McpCallLogging);
     }
 
     [Fact]
@@ -33,7 +34,8 @@ public sealed class LoggingConfigLoaderTests
               "Logging": {
                 "MinimumLevel": "Warning",
                 "Directory": "C:/temp/meine-logs",
-                "RetainedFileCount": 7
+              "RetainedFileCount": 7,
+              "McpCallLogging": false
               }
             }
             """);
@@ -43,6 +45,7 @@ public sealed class LoggingConfigLoaderTests
         Assert.Equal("Warning", config.MinimumLevel);
         Assert.Equal("C:/temp/meine-logs", config.Directory);
         Assert.Equal(7, config.RetainedFileCount);
+        Assert.False(config.McpCallLogging);
     }
 
     [Fact]
@@ -57,6 +60,7 @@ public sealed class LoggingConfigLoaderTests
         Assert.Equal("Information", config.MinimumLevel);
         Assert.Equal(LoggingConfig.DefaultDirectoryName, config.Directory);
         Assert.Equal(LoggingConfig.DefaultRetainedFileCount, config.RetainedFileCount);
+        Assert.True(config.McpCallLogging);
     }
 
     [Fact]
@@ -111,6 +115,19 @@ public sealed class LoggingConfigLoaderTests
         File.WriteAllText(path, $$"""{ "Logging": { "RetainedFileCount": {{retainedFileCount}} } }""");
 
         Assert.Throws<InvalidDataException>(() => LoggingConfigLoader.Load(tempDir.DirectoryPath));
+    }
+
+    [Fact]
+    public void Load_UngueltigerMcpCallLoggingWert_WirftHarteFehlermeldung()
+    {
+        using var tempDir = TestTempDirectory.Create("logging-config-mcp-call-logging-");
+        var path = Path.Combine(tempDir.DirectoryPath, LoggingConfigLoader.FileName);
+        File.WriteAllText(path, """{ "Logging": { "McpCallLogging": "yes" } }""");
+
+        var exception = Assert.Throws<InvalidDataException>(
+            () => LoggingConfigLoader.Load(tempDir.DirectoryPath));
+
+        Assert.Contains("McpCallLogging", exception.Message);
     }
 
     [Fact]

@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Lifetime;
 
@@ -36,6 +37,7 @@ internal sealed class McpServerLifetime : IAsyncDisposable
         try
         {
             var parentProcessId = configuredParentProcessId ?? ParentProcessDetector.TryGetParentProcessId(report);
+            Log.Debug("MCP-Lifetime erstellt (ConfiguredParentPid={ConfiguredParentPid}, DetectedParentPid={DetectedParentPid})", configuredParentProcessId, parentProcessId);
             var watchdog = parentProcessId is { } id
                 ? ParentProcessWatchdog.Start(id, linkedSource, report: report)
                 : null;
@@ -57,6 +59,7 @@ internal sealed class McpServerLifetime : IAsyncDisposable
             await watchdog.DisposeAsync().ConfigureAwait(false);
         }
 
+        Log.Debug("MCP-Lifetime beendet");
         linkedSource.Dispose();
     }
 }

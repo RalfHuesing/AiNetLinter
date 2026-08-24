@@ -7,7 +7,8 @@ internal sealed record DaemonPumpOptions(TimeSpan IdleTimeout, byte[]? ReplayFra
 internal sealed record DaemonPumpResult(
     bool Completed,
     byte[]? ReplayFrame,
-    Exception? Failure);
+    Exception? Failure,
+    string TerminationReason);
 
 internal static class DaemonBytePump
 {
@@ -64,10 +65,14 @@ internal static class DaemonBytePump
             cancellationToken);
         if (completed == inputTask && failure is null)
         {
-            return new DaemonPumpResult(true, null, null);
+            return new DaemonPumpResult(true, null, null, "StdinEof");
         }
 
-        return new DaemonPumpResult(false, replay.Take(), failure);
+        return new DaemonPumpResult(
+            false,
+            replay.Take(),
+            failure,
+            DetermineTerminationReason(completed, inputTask, outputTask, failure, cancellationToken));
     }
 
     private static async Task PumpInputAsync(
@@ -165,6 +170,22 @@ internal static class DaemonBytePump
         }
 
         return inputFailure ?? outputFailure;
+    }
+
+    private static string DetermineTerminationReason(
+        Task completedTask,
+        Task inputTask,
+        Task outputTask,
+        Exception? failure,
+        CancellationToken callerToken)
+    {
+        if (callerToken.IsCancellationRequested) return "CallerCancellation";
+        if (failure is TimeoutException) return "IdleTimeout";
+        if (failure is EndOfStreamException && completedTask == outputTask) return "DaemonPipeEof";
+        if (failure is EndOfStreamException && completedTask == inputTask) return "StdinEofMidFrame";
+        if (failure is not null) return "PumpFailure";
+        if (inputTask.IsCanceled && outputTask.IsCanceled) return "PumpCancellation";
+        return "PumpEndedWithoutResult";
     }
 
     private static async Task<Exception?> ObserveAsync(Task task)

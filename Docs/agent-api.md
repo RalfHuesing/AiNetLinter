@@ -239,6 +239,17 @@ kann roh replayed werden; ein zweiter Fehler beendet die Session ohne Schleife.
 Readiness und Pipe-Pump besitzen Hänger-Zeitlimits. `AINETLINTER_NO_DAEMON=1`
 schaltet ausschließlich für Debugging auf den direkten In-Proc-Stdio-Pfad um.
 
+### System-Log für MCP-Tool-Calls
+
+Der tatsächliche MCP-SDK-Server schreibt standardmäßig genau ein abgeschlossenes
+Tool-Call-Event in das bestehende Serilog-System-Log. Das Event enthält `ToolName`,
+`DurationMs` und `IsError`; bei einem Fehler kommt `ErrorCode` hinzu. Im Daemon-Modus
+trägt das Event zusätzlich `ConnectionId`. Argumente und Response-Payloads werden nicht
+geloggt. Der ThinClient reicht die Wire-Frames nur durch und schreibt kein zusätzliches
+Tool-Call-Event. Die Funktion kann in `appsettings.json` über `Logging:McpCallLogging`
+deaktiviert werden; fehlt der Schlüssel, ist sie aktiviert. Ein anderer JSON-Typ als
+Boolean ist ein harter Startfehler.
+
 ### Daemon-Pipe-Vertrag (Transport-Grundlage)
 
 Die Pipe-/Handshake-Grundlage liegt unter `Mcp/Daemon/` und wird vom internen

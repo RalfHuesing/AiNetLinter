@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Lifetime;
 
@@ -49,6 +50,7 @@ internal sealed class ParentProcessWatchdog : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(pollingInterval));
         }
 
+        Log.Debug("MCP-Parent-Watchdog gestartet (ParentPid={ParentPid}, PollingMs={PollingMs})", parentProcessId, effectiveInterval.TotalMilliseconds);
         return new ParentProcessWatchdog(parentProcessId, shutdownSource, effectiveInterval, report);
     }
 
@@ -65,6 +67,7 @@ internal sealed class ParentProcessWatchdog : IAsyncDisposable
         {
         }
         monitorSource.Dispose();
+        Log.Debug("MCP-Parent-Watchdog beendet (ParentPid={ParentPid}, ShutdownRequested={ShutdownRequested})", parentProcessId, Volatile.Read(ref shutdownRequested) != 0);
     }
 
     private async Task MonitorLoopAsync()
@@ -132,6 +135,7 @@ internal sealed class ParentProcessWatchdog : IAsyncDisposable
     {
         if (Interlocked.Exchange(ref shutdownRequested, 1) != 0) return;
 
+        Log.Information("MCP-Parent-Watchdog loest Abbruch aus (ParentPid={ParentPid}, Grund={Reason})", parentProcessId, reason);
         report?.Invoke($"[INFO]: {reason} MCP-Server wird sauber beendet.");
         try
         {

@@ -13,7 +13,8 @@ namespace AiNetLinter.Logging;
 internal sealed record LoggingConfig(
     string MinimumLevel,
     string Directory,
-    int RetainedFileCount)
+    int RetainedFileCount,
+    bool McpCallLogging = true)
 {
     internal const string DefaultMinimumLevel = "Debug";
     internal const string DefaultDirectoryName = "logs";

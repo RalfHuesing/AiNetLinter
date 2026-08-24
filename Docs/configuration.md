@@ -1667,9 +1667,10 @@ ainetlinter --config rules.json --path . --ignore-suppressions cs,razor
 ## 14. System-Logging (`appsettings.json`)
 
 AiNetLinter schreibt ein gemeinsames prozessinternes System-Logging (Serilog, Datei-Sink):
-Es protokolliert Prozess- und Verbindungs-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente, Daemon-Connect-or-Start,
-Handshake-Ergebnisse inklusive Ablehnungen (Versionskonflikt, Protokollversion),
-Pipe-Pump-Fehler, Idle-Exit und Exit-Codes. Damit sind Client-/Transport-Probleme
+Es protokolliert Prozess- und Verbindungs-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente,
+CLI-Parsefehler, Daemon-Connect-or-Start, Handshake-Ergebnisse inklusive Ablehnungen
+(Versionskonflikt, Protokollversion), MCP-Session-Enden und -Ausnahmen, Parent-Watchdog-Abbrüche,
+Pipe-Pump-Enden mit Ursache, Idle-Exit und Exit-Codes. Damit sind Client-/Transport-Probleme
 (z. B. „Transport closed" einzelner MCP-Clients) nachvollziehbar, ohne stderr zu belasten.
 
 ### Konfigurationsdatei
@@ -1684,7 +1685,8 @@ fallen). Auch dieser Fehler wird in die gemeinsame System-Logdatei geschrieben.
   "Logging": {
     "MinimumLevel": "Debug",
     "Directory": "logs",
-    "RetainedFileCount": 14
+    "RetainedFileCount": 14,
+    "McpCallLogging": true
   }
 }
 ```
@@ -1694,20 +1696,32 @@ fallen). Auch dieser Fehler wird in die gemeinsame System-Logdatei geschrieben.
 | `MinimumLevel` | `Debug` | `Verbose`, `Debug`, `Information`, `Warning`, `Error`, `Fatal` |
 | `Directory` | `logs` | Log-Verzeichnis, relativ zur EXE (absoluter Pfad erlaubt) |
 | `RetainedFileCount` | `14` | Anzahl behaltener Tagesdateien (1–365) |
+| `McpCallLogging` | `true` | Genau ein Serilog-Event je abgeschlossenem MCP-Tool-Call; ohne Argumente/Response-Payloads |
 
 Unbekannte Schlüssel innerhalb des `Logging`-Abschnitts sind ebenfalls ein harter Fehler.
+Ein vorhandener `McpCallLogging`-Wert muss JSON-Boolean sein; andere Typen führen zum harten
+Startfehler. Fehlt der Schlüssel, bleibt MCP-Call-Logging aktiviert.
+
+### MCP-Tool-Call-Logging
+
+Bei aktiviertem `Logging:McpCallLogging` schreibt der tatsächliche MCP-SDK-Server nach jedem
+abgeschlossenen Tool-Call genau ein Event mit `ToolName`, `DurationMs` und `IsError`. Bei
+`IsError=true` kommt `ErrorCode` hinzu; im Daemon-Modus wird zusätzlich `ConnectionId` als
+Serilog-Property geschrieben. Es werden weder Argumente noch Response-Payloads protokolliert.
+Der ThinClient reicht MCP-Bytes nur durch und schreibt kein zweites Call-Event. Die Events
+landen in derselben Tagesdatei wie das übrige System-Logging.
 
 ### Log-Format und Ablage
 
-Täglich rollende Dateien `ainetlinter-<yyyy-MM-dd>.log` im konfigurierten Verzeichnis:
+Täglich rollende Dateien `ainetlinter-<yyyyMMdd>.log` im konfigurierten Verzeichnis:
 
 ```
 2026-08-24 20:31:37.233 +02:00 [INF] [thin-client] System-Logging initialisiert (Level=Debug, ...)
 2026-08-24 20:31:38.499 +02:00 [INF] [daemon] Daemon: Handshake fuer Verbindung 1 abgeschlossen (Status="Accepted", ClientPid=13336, AktiveVerbindungen=1)
 ```
 
-Das Feld hinter dem Level ist die Prozessrolle: `cli`, `thin-client`, `daemon` oder
-`mcp-server`. Thin-Client und Daemon schreiben in dieselbe Tagesdatei (gemeinsam
+Das Feld hinter dem Level ist die Prozessrolle: `cli`, `thin-client` oder `daemon`.
+Thin-Client und Daemon schreiben in dieselbe Tagesdatei (gemeinsam
 genutzter Sink), sodass eine Client-Session über beide Prozesse hinweg lesbar ist.
 Alle Diagnoseausgaben der Konsole (`[INFO]`, `[WARN]`, `[ERROR]`, `[FATAL ERROR]`)
 werden zusätzlich ins Log gespiegelt — das Log ist damit die vollständige Diagnose-

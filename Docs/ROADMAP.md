@@ -417,7 +417,7 @@ Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projek
 
 ## MCP-Codegraph-Server (EPIC-01..08)
 
-Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitstellt (historischer Stand nach EPIC-08: 13 Tools). Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus. EPIC-01 bis EPIC-07 wurden mit dem damaligen Stand von 9 Tools umgesetzt; EPIC-08 erweiterte den Symbolgraphen um `get_symbol_body` sowie `depth`/DI-Hinweis-Erweiterungen, EPIC-09 um das Call-Log. Vollständige, aktuelle Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
+Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitstellt (historischer Stand nach EPIC-08: 13 Tools). Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus. EPIC-01 bis EPIC-07 wurden mit dem damaligen Stand von 9 Tools umgesetzt; EPIC-08 erweiterte den Symbolgraphen um `get_symbol_body` sowie `depth`/DI-Hinweis-Erweiterungen, EPIC-09 um das System-Log-Call-Logging. Vollständige, aktuelle Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
 ### EPIC-A — Projektregistry und transportneutrales Multi-Solution-Routing (umgesetzt am 2026-08-24)
 
@@ -844,8 +844,12 @@ Lifecycle aller Prozessrollen in einer gemeinsamen Tagesdatei sichtbar macht:
 - [x] **Lifecycle-Instrumentierung:** Prozessstart (PID, Rolle, Version, Argumente),
   Daemon-Connect-or-Start inklusive detached Spawn, Handshake-Ergebnisse mit
   Client-PID/Versionen/Konfigurationsabweichungen, Ablehnungen (Versionskonflikt,
-  Protokollversion), Pipe-Pump-Fehler mit Replay-Fenster, Idle-Exit und Exit-Codes
-  beider Prozesse.
+  Protokollversion), MCP-Session-Enden und -Ausnahmen, Parent-Watchdog-Abbrüche,
+  Pipe-Pump-Ende mit Ursache und Replay-Fenster, Idle-Exit sowie Exit-Codes beider Prozesse.
+- [x] **MCP-Tool-Call-Logging:** `Logging:McpCallLogging` ist standardmäßig aktiv (fehlender
+  Schlüssel = `true`) und schreibt genau ein Event je abgeschlossenem Tool-Call mit
+  `ToolName`, `DurationMs`, `IsError` sowie bei Fehlern `ErrorCode`; Daemon-Events tragen
+  `ConnectionId`. Argumente, Response-Payloads und ThinClient-Duplikate werden nicht geloggt.
 - [x] **Konsolen-Spiegelung:** Alle `[INFO]`-/`[WARN]`-/`[ERROR]`-/`[FATAL ERROR]`-Diagnose-
   zeilen von `LinterConsole`/`McpLintConsole` werden severity-klassifiziert ins Log gespiegelt
   ([FATAL ERROR]→Fatal, [ERROR]→Error, [WARN]→Warning, [INFO]→Information).

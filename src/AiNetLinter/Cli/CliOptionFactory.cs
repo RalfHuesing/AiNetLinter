@@ -14,6 +14,7 @@ internal static class CliOptionFactory
     // Optionsnamen als Konstanten fuer Stellen, die Flags ohne Option-Objekt uebergeben
     // (z. B. der detached Daemon-Spawn): Parsing und Spawn bleiben so konsistent.
     internal const string DaemonStart = "--daemon-start";
+    internal const string McpServer = "--mcp-server";
     internal const string McpProjectTtlMinutes = "--mcp-project-ttl-minutes";
     internal const string McpMaxProjects = "--mcp-max-projects";
     internal const string McpDaemonIdleExitMinutes = "--mcp-daemon-idle-exit-minutes";
@@ -205,7 +206,7 @@ internal static class CliOptionFactory
         Description = "Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.",
     };
 
-    internal static Option<bool> CreateMcpServerOption() => new("--mcp-server")
+    internal static Option<bool> CreateMcpServerOption() => new(McpServer)
     {
         Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder Tool-Aufruf adressiert per projectRoot einen Projekt-Key aus der Definitionsdatei ainetlinter.project.json im Projektroot.",
     };

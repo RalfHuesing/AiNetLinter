@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
+using AiNetLinter.Logging;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Mcp.Projects;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using Serilog;
 
 namespace AiNetLinter.Commands;
 
@@ -51,7 +53,8 @@ internal static class McpServerCommand
             IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
 
         var services = new ServiceCollection();
-        services.AddMcpServer();
+        var serverBuilder = services.AddMcpServer();
+        McpCallLoggingFilter.Configure(serverBuilder);
 
         using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
@@ -68,10 +71,18 @@ internal static class McpServerCommand
         await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);
         try
         {
+            Log.Debug("MCP-Session startet (ConnectionId=none, Transport=stdio)");
             await server.RunAsync(lifetime.Token);
+            Log.Debug("MCP-Session normal beendet (ConnectionId=none, Transport=stdio)");
         }
         catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
         {
+            Log.Information("MCP-Session abgebrochen (ConnectionId=none, Ursache=LifetimeCancellation)");
+        }
+        catch (Exception exception)
+        {
+            Log.Error(exception, "MCP-Session mit Ausnahme beendet (ConnectionId=none, Transport=stdio)");
+            throw;
         }
 
         return 0;

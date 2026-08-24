@@ -145,7 +145,7 @@ Registrierung im MCP-Host (Claude Code, Cursor, eigene Agent-Loops):
 }
 ```
 
-Vollständige Tool-Referenz (Parameter, Trunkierung, Error-Codes, Call-Log): [Docs/agent-api.md#mcp-server-modus](Docs/agent-api.md#mcp-server-modus). Registrierungs-Anleitung inkl. Mehrdeutigkeits-Behandlung und Tool-vs-`rg`-Empfehlung: [Docs/integration.md#mcp-server-registrieren](Docs/integration.md#mcp-server-registrieren).
+Vollständige Tool-Referenz (Parameter, Trunkierung, Error-Codes und System-Log-Call-Events): [Docs/agent-api.md#mcp-server-modus](Docs/agent-api.md#mcp-server-modus). Registrierungs-Anleitung inkl. Mehrdeutigkeits-Behandlung und Tool-vs-`rg`-Empfehlung: [Docs/integration.md#mcp-server-registrieren](Docs/integration.md#mcp-server-registrieren).
 
 `search_pattern` behält den Legacy-Text und liefert zusätzlich ein strukturiertes Ergebnis mit
 solution-relativen Pfaden, Positionen, Match-Bereichen, Kontext und Vollständigkeitsstatus.
@@ -170,7 +170,7 @@ gekennzeichnet, während mehrdeutige oder außerhalb des Roslyn-Snapshots liegen
 | **Globales Scope-Filtering** (`--project`, `--namespace`) | Eingrenzung der Analyse auf bestimmte Projekte oder C#-Namespaces (inkl. Wildcard-Unterstützung und Ausschluss-Shortcut für Test-Projekte). |
 | **Suppression-Bypass** (`--ignore-suppressions`) | Umgeht Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) dynamisch beim Linter-Lauf für konfigurierte Sprachklassen (`all`, `cs`/`c#`, `razor`, `js`, `css`). |
 | **Web-Asset-Linting** (CSS, JS, Razor) | Analyse für CSS (ExCSS), JS (Esprima) und Razor: Dateigrößen-Limits, ES6-Modul-Pflicht, Verbot globaler `window`-Zuweisungen, HTML-Verschachtelungstiefe, Control-Flow-Blöcke, Komponenten-Parameter, Ternaries in HTML-Attributen. Opt-in über `Web.IsEnabled = true`. |
-| **System-Logging** (`appsettings.json` → `logs/`) | Gemeinsames prozessinternes Serilog-Datei-Logging des Prozess-/Verbindungs-Lifecycle (Start, Handshake, Pipe-Fehler, Idle-Exit, Exit-Codes) für CLI, Thin-Client und Daemon in einer Tagesdatei — ohne stdout/stderr-Belastung. Level/Verzeichnis/Aufbewahrung konfigurierbar; Details: [Docs/configuration.md](Docs/configuration.md), Abschnitt „System-Logging". |
+| **System-Logging** (`appsettings.json` → `logs/`) | Gemeinsames prozessinternes Serilog-Datei-Logging des Prozess-/Verbindungs-Lifecycle und abgeschlossener MCP-Tool-Calls für CLI, Thin-Client und Daemon in einer Tagesdatei — ohne stdout/stderr-Belastung. Level/Verzeichnis/Aufbewahrung/Call-Logging konfigurierbar; Details: [Docs/configuration.md](Docs/configuration.md), Abschnitt „System-Logging“. |
 
 Vollständige, aktuelle Regel-Liste: `ainetlinter --list-rules`. Vollständige Konfigurationsreferenz: [Docs/configuration.md](Docs/configuration.md).
 

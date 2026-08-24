@@ -89,18 +89,24 @@ internal static class LoggingConfigLoader
             retainedFileCount = ReadInt(retainedElement, 1, 365, path);
         }
 
+        var mcpCallLogging = true;
+        if (section.TryGetProperty("McpCallLogging", out var mcpCallLoggingElement))
+        {
+            mcpCallLogging = ReadBool(mcpCallLoggingElement, path);
+        }
+
         ValidateLevel(minimumLevel, path);
-        return new LoggingConfig(minimumLevel, directory, retainedFileCount);
+        return new LoggingConfig(minimumLevel, directory, retainedFileCount, mcpCallLogging);
     }
 
     private static void ValidateKeys(JsonElement section, string path)
     {
         foreach (var property in section.EnumerateObject())
         {
-            if (property.Name is not ("MinimumLevel" or "Directory" or "RetainedFileCount"))
+            if (property.Name is not ("MinimumLevel" or "Directory" or "RetainedFileCount" or "McpCallLogging"))
             {
                 throw new InvalidDataException(
-                    $"[CONFIG]: Unbekannter Schluessel '{SectionName}:{property.Name}' ({path}). Gueltige Schluessel: MinimumLevel, Directory, RetainedFileCount.");
+                    $"[CONFIG]: Unbekannter Schluessel '{SectionName}:{property.Name}' ({path}). Gueltige Schluessel: MinimumLevel, Directory, RetainedFileCount, McpCallLogging.");
             }
         }
     }
@@ -150,5 +156,16 @@ internal static class LoggingConfigLoader
         }
 
         return value;
+    }
+
+    private static bool ReadBool(JsonElement element, string path)
+    {
+        if (element.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+        {
+            throw new InvalidDataException(
+                $"[CONFIG]: '{SectionName}:McpCallLogging' muss ein boolescher Wert sein ({path}).");
+        }
+
+        return element.GetBoolean();
     }
 }

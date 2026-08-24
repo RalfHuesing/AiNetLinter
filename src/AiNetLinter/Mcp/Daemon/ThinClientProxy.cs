@@ -89,7 +89,7 @@ internal static class ThinClientProxy
                         connection.Pipe.Stream,
                         new DaemonPumpOptions(context.Session.PumpIdleTimeout, replayFrame),
                         context.Token).ConfigureAwait(false);
-                    Log.Information("ThinClient: Pump beendet (Completed={Completed}, Attempt={Attempt}, DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", pumpResult.Completed, attempt, connection.ProcessId, connection.ConnectionId);
+                    Log.Information("ThinClient: Pump beendet (Completed={Completed}, Ursache={TerminationReason}, FailureType={FailureType}, FailureMessage={FailureMessage}, Attempt={Attempt}, DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", pumpResult.Completed, pumpResult.TerminationReason, pumpResult.Failure?.GetType().Name, pumpResult.Failure?.Message, attempt, connection.ProcessId, connection.ConnectionId);
                     if (pumpResult.Completed) return 0;
 
                     ReportPumpFailure(context.Console, attempt, connection, pumpResult.Failure);
