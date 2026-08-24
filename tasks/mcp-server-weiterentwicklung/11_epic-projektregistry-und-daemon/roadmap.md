@@ -194,25 +194,27 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
       Registry wandert in einen geteilten Prozess; Clients verbinden sich über einen
       Thin-Client-Stdio-Prozess, am Toolvertrag ändert sich nichts. Voraussetzung:
       EPIC-A komplett abgeschlossen und grün. Vollständiger Umfang: `konzept.md`
-      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-009**
-      (JIT-Start mit der fachlichen Transport-/Handshake-Grundlage und
-      in-proc Contract-Tests; weitere Steps werden erst nach dem tatsächlichen
-      Ergebnis dieses Steps geplant).
-  - [ ] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
+      B.1–B.7. Dimensioniert für 3–5 Steps. **Status: in Arbeit → step-010**
+      (Transport-/Handshake-Grundlage in step-009 approved; step-010 bündelt nun
+      DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup).
+  - [x] B.2 Transport (`Mcp/Daemon/`): Named Pipe `ainetlinter.analyzer.v1.<username>`
         (+ ACL auf aktuellen User), newline-delimited JSON, je Verbindung ein async
         Read/Write-Loop; Disconnect bricht in-flight Calls DER Verbindung ab —
-        Registry und Keys bleiben davon unberührt und warm.
-  - [ ] B.2 Handshake: hello/welcome mit Protokoll-/Versionsvergleich; `shutdown` als
+        Registry und Keys bleiben davon unberührt und warm. **Erledigt → step-009
+        (approved).**
+  - [x] B.2 Handshake: hello/welcome mit Protokoll-/Versionsvergleich; `shutdown` als
         Pipe-Level-Kommando, nur bei null weiteren Verbindungen — sonst Abbruch mit
         `VERSION_CONFLICT` (Anti-Ping-Pong); `welcome` trägt die effektive
         Daemon-Konfiguration → `[WARN]` + Observability-Ereignis bei Divergenz.
+        **Erledigt → step-009 (approved).**
   - [ ] B.3 DaemonHost (`--daemon-start`, intern, in `--help` als `[internal]`):
         Registry + MCP-Session je Verbindung gegen die geteilte Registry; Idle-Exit
         (Default 10 Min, keine Clients + idle) graceful inkl. Dispose aller Keys +
         MRU-Persistierung; laufende Loads/Warmups verschieben den Exit; MRU-Warmup
         gebunden (max 2 parallele Loads), interaktiver Load wartet nie dahinter; tote
         MRU-Pfade verworfen UND aus dem State entfernt; Doppelstart → sauberer
-        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon.
+        stderr-Fehler + Exit-Code ≠ 0; KEIN Parent-Reaper im Daemon. **In Arbeit →
+        step-010.**
   - [ ] B.2/B.3 ThinClient (`ThinClientProxy`/`ThinClientLauncher`): nach außen
         identisches `--mcp-server`; intern Connect-or-Start-Race (Connect first,
         detached Spawn `UseShellExecute=false`/`CreateNoWindow`, Retry-Fenster;
@@ -249,3 +251,9 @@ Der Step-Modus-Planer wählt daraus gezielt die zum Step passenden Dateien
         (Abschnitt „Daemon-Modus": Verhalten, Update-Handling, Debug-Escape),
         `Docs/configuration.md` (`--mcp-daemon-idle-exit-minutes`), `Docs/ROADMAP.md`,
         `README.md` (kurzer Abschnitt zum neuen Nutzungsmodell).
+
+  - **Step-009-Abschluss (2026-08-24):** Transport und Pipe-Level-Handshake sind
+    laut Review `approved` umgesetzt; der bestehende `--mcp-server`-Stdio-Pfad
+    bleibt unverändert. Der nächste fachliche Cluster ist B.3 DaemonHost mit
+    Lifecycle-/Idle-Exit-Vertrag und B.4 MRU-Warmstart in step-010; ThinClient,
+    Health-Wiring und Clientregistrierungs-Migration folgen erst danach.
