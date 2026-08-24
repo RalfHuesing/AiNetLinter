@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-24T12:15:00+02:00
+last_updated: 2026-08-24T17:35:00+02:00
 ---
 
 # Tech-Debt-Log: 11_epic-projektregistry-und-daemon
@@ -38,6 +38,8 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | TD-006 | `src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs` + `src/AiNetLinter.TestKit/TestConfigFactory.cs` | niedrig | nein | Exact-Duplikat der leeren Config-Erzeugung in getrennten Test-/TestKit-Grenzen; gemeinsame Ablage braucht eine Abhängigkeitsentscheidung |
 | TD-007 | `src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs`, `McpRawWireTestHarness.cs` + Legacy-MCP-Prozesstests | niedrig | nein | Abdeckungsasymmetrie nach ThinClient-Umstellung: Bestandssuiten fixiert im Escape-Pfad, produktiver Daemon-Pfad nur durch wenige dedizierte Contracts gedeckt |
 | TD-008 | `src/AiNetLinter.IntegrationTests/**` (benutzergebundener Pipe-Endpunkt) | mittel | nein | Suite-weite Flakiness-Quelle: überlebende Fremd-Daemons am gemeinsamen Endpunkt stören parallele Integrationsläufe (empirisch belegt) — suite-weites Cleanup/Gating-Fixture fehlt |
+| TD-009 | `src/AiNetLinter/Mcp/*ToolRegistrations.cs` + `OverviewResourceRegistration.cs` (+ Prosa in `ServerInstructions`) | niedrig | nein | Jeder MCP-Toolname liegt als Literal an Registrierung UND Overview-Tabelle (plus Prosa-Nennungen); Rename-Drift Registrierung↔Tabelle ist zwar testbewacht, bleibt aber Doppel-Pflege |
+| TD-010 | `Docs/agent-api.md:834` | niedrig | nein | Fehlertabelle beschreibt `AMBIGUOUS_SOLUTION` als aktiv, obwohl kein Emitter mehr existiert (seit EPIC-A-Wiring) — Verstoß gegen Dokumentations-Objektivität §1 |
 
 ## Einträge
 
@@ -215,4 +217,24 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   oder dedizierter Test-Endpunkt via Env), bevor weitere Daemon-Pfad-Tests
   dazukommen; Serialisierungsverbote von Richtlinien §4 bleiben gewahrt.
 - **Auto-Fixable:** nein — Architektur- und Isolationsentscheidung.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-009 — MCP-Toolnamen doppelt gepflegt: Registrierung ↔ Overview-Tabelle (+ Prosa) [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-015 (Kritiker-Review vom 2026-08-24; vom Coder im step-result.md als systemische Beobachtung gemeldet)
+- **Ort:** `src/AiNetLinter/Mcp/AnalysisToolRegistrations.cs` und die übrigen Tool-Registrierungsklassen sowie `src/AiNetLinter/Mcp/OverviewResourceRegistration.cs` (`ToolSummaries`); zusätzlich Prosanennungen von Toolnamen (z. B. Workflow-Zeilen in `ServerInstructions.Text`, Doku).
+- **Befund:** Jeder der ~24 MCP-Toolnamen liegt als String-Literal an mindestens zwei unabhängigen Stellen (Registrierung + Overview-Tabelle), teils auch in Prosa-Workflowtexten. Ein Rename erfordert parallele Pflege; das Drift-Audit flaggte nur `get_class_structure`, weil der Classifier ältere Namen whitelistet — das Muster ist aber codebase-weit. **Mildern:** `OverviewResourceRegistrationTests.ToolSummaries_MatchesRegisteredToolNames` (FastTests/Mcp/OverviewResourceRegistrationTests.cs:100) prüft die Mengengleichheit der Namen gegen die echte `ToolCollection` — Registrierungs↔Tabelle-Drift fällt sofort als roter FastTest auf, nicht erst zur Laufzeit. Verbleibender Rest: Wartungsaufwand je Rename und ungeschützte Prosa-Nennungen.
+- **Warum nicht sofort gefixt:** Step-015 durfte nur Funde aus den drei Audit-Läufen fixen; ein Einzelfix des einen geflaggten Paares wäre Inkonsistenz (korrekt als No-op dokumentiert). Die Wahl des Mechanismus — Namenskonstanten, generierte Overview-Tabelle oder nur Prosa-Absicherung per Test — ist eine Architektur-/Testdesign-Entscheidung.
+- **Vorschlag:** In einem späteren Infrastruktur-/Refactoring-Step zentrale Namensquelle oder Generierung der Overview-Tabelle umsetzen und Prosa-Toolnennungen testabsichern.
+- **Auto-Fixable:** nein — Mechanismuswahl mit Architektur-Ermessen.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-010 — Stale Doku-Zeile `AMBIGUOUS_SOLUTION` in Docs/agent-api.md [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-015 (Kritiker-Review vom 2026-08-24; vom Coder im step-result.md gemeldet)
+- **Ort:** `Docs/agent-api.md:834` (Fehlertabelle „Bedeutung im MCP-Kontext")
+- **Befund:** Die Zeile beschreibt `AMBIGUOUS_SOLUTION` als aktiven Fehlercode („Batch-Modus: mehrere `.sln`/`.slnx` im `cwd` ohne `--path`"). Im Code existiert seit dem EPIC-A-Wiring (Commit `ccf7b33a`, dort fiel auch der assertierende E2E-Test weg) kein Emitter mehr; step-015 entfernte lediglich die verwaiste Konstante `LinterErrorCodes.AmbiguousSolution`. Das ist ein Verstoß gegen Richtlinien §1 Dokumentations-Objektivität („Nur Implementiertes dokumentieren") — aber NICHT eine unvollständige Ausführung von step-015: die Zeile war vor dem Step bereits stale, der Plan schloss Doku-Sync explizit aus, und die §4-Update-Pflicht greift weder nach Dateiliste (`agent-api.md` fehlt) noch nach Anlass (Totcode-Entfernung = keine Feature-/Konfigurationsänderung). Der zweite Halbsatz der Zeile („MCP lehnt `--path` stattdessen per Hard-Cut ab") ist korrekt und zu erhalten.
+- **Warum nicht sofort gefixt:** Außerhalb des Step-Scopes; die korrekte Ersatzformulierung verlangt die Verifikation des heutigen Batch-Restverhaltens bei mehreren Solutions im cwd (nicht durch diesen Review geleistet) plus Formulierungsurteil.
+- **Vorschlag:** In einem Doku-Pflicht-Step die Tabellenzeile an das tatsächliche Verhalten anpassen (Hard-Cut-Halbsatz behalten, `AMBIGUOUS_SOLUTION` entfernen bzw. als historisch kennzeichnen) und stichprobenartig die übrige Tabelle gegen `McpToolResults`/`LinterErrorCodes` prüfen.
+- **Auto-Fixable:** nein — Inhaltliche Verifikation des Batch-Restverhaltens und Formulierungsurteil nötig, kein blindes Edit.
 - **Status:** offen  # offen | erledigt | verworfen

@@ -2,7 +2,7 @@
 status: done (pending audit)  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T14:22:00+02:00
+last_updated: 2026-08-24T14:55:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-015
@@ -22,17 +22,16 @@ current_step: step-015
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 15 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-015` (in_progress — Task-weites Drift-Audit
-  find_duplicates/find_magic_values/find_dead_code inkl. Bereinigung;
-  konsolidierter Plan direkt durch den Orchestrator gemäß Nutzervorgabe;
-  danach globaler Abschluss)
+- **Aktueller Schritt:** `step-015` (done — Drift-Audit approved;
+  alle Roadmap-Epics abgehakt; nächster Punkt: globaler Kritiker-Lauf,
+  dann task-summary.md und Task-Abschluss)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T14:22:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T14:55:00+02:00
 
 ## Check-in / Wiederaufnahme
 
@@ -86,7 +85,7 @@ Qualitätsstandards (TreatWarningsAsErrors, DoD je Epic, Testkatalog) unverände
 | step-012 | EPIC-B | done | Direkte Prozess-Contracts für Daemon-Doppelstart und MCP-Pipe | step-011 | ffb60157 | 2026-08-24 (approved) | ffb60157 |
 | step-013 | EPIC-B | done | ThinClient: Connect-or-Start, opake Pump, Retry/Hänger, Reaper/Escape, Health und Abschlussmigration | - | b9605ea5 | 2026-08-24 (issues; Korrektur step-014 approved) | b9605ea5 / 759da1bf |
 | step-014 | EPIC-B | done | Step-013-Korrektur: fehlende Contract-Nachweise (F1) und erreichbare Timeout-Diagnostik (F2) | step-013 | 683a3e4f | 2026-08-24 (approved) | 683a3e4f / 26898fba |
-| step-015 | EPIC-B | in_progress | Task-weites Drift-Audit: Duplicates, Magic Values, Dead Code — prüfen und bereinigen | - | - | - | - |
+| step-015 | EPIC-B | done | Task-weites Drift-Audit: Duplicates, Magic Values, Dead Code — prüfen und bereinigen | - | 7a1431d9 | 2026-08-24 (approved) | 7a1431d9 / 9e12a0a3 |
 
 ## Config (optional)
 
