@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-24T01:15:00+02:00
+last_updated: 2026-08-24T14:30:00+02:00
 ---
 
 # CodeMap: 11_epic-projektregistry-und-daemon
@@ -59,14 +59,15 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 ### Produktionscode — direkt betroffen
 
 - **`src/AiNetLinter/Program.cs`** — Einstieg: CLI-Parsing → `LinterArgs` →
-  Routing (Batch vs. Standalone-Commands); hier erhält der MCP-Zweig später
-  das `--daemon-start`-Routing (Konzept-Strukturbaum: ÄNDERN). (zuletzt: initial)
+  Routing (Batch, Standalone-Commands, stdio-MCP und interner DaemonHost über
+  `--daemon-start`). (zuletzt: step-010)
 - **`src/AiNetLinter/Cli/`** (`CliOptions.cs`, `CliOptionFactory.cs`,
   `CliCommandBuilder.cs`, `LinterArgs.cs`) — System.CommandLine-Argumentparsing;
   Anker für den harten Cut (`--path`/`--config` im MCP-Zweig als harter Fehler
   ablehnen) und die neuen statischen Flags `--mcp-project-ttl-minutes`,
-  `--mcp-max-projects`, `--mcp-daemon-idle-exit-minutes`; die beiden Registry-
-  Flags sind in step-003 verdrahtet. (zuletzt: step-003)
+  `--mcp-max-projects`, `--daemon-start` und `--mcp-daemon-idle-exit-minutes`;
+  Registry-Flags aus step-003 und der interne Daemonpfad aus step-010 sind
+  verdrahtet. (zuletzt: step-010)
 - **`src/AiNetLinter/Commands/McpServerCommand.cs`** — statischer MCP-Einstieg
   (`RunAsync` hält heute DIE eine `McpCodeGraphServer`-Instanz); `ResolveConfig`/
   `ResolveMaxLineCount` delegieren seit step-001 auf `ProjectInstanceFactory.MaterializeRules`
@@ -145,8 +146,9 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   `ProjectRegistryOptions.BeforeCreationReservation` ist der ausdrücklich test-only
   Seam für das deterministische Lookup→Reservation-Interleaving sowie der
   test-only `BeforePublishCreation`-Seam für kontrollierte Publish-Races. (zuletzt: step-007)
-- **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection und
-  unabhängige Handshake-Verträge für die spätere Daemon-Verdrahtung. (zuletzt: step-009)
+- **`src/AiNetLinter/Mcp/Daemon/`** — Pipe-Endpoint, NDJSON-Connection,
+  unabhängige Handshake-Verträge sowie `DaemonHost`, Registry-Fassade und
+  debounced MRU-State für den internen Lifecycle. (zuletzt: step-010)
 
 ### Tests
 
@@ -168,7 +170,8 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
   mit Factory-/Load-/Dispose-Zählern und Other-Root-Prüfung; der vollständige
   Nicht-Stress-Lauf umfasst 1693 grüne Tests. (zuletzt: step-009)
 - **`src/AiNetLinter.FastTests/Mcp/Daemon/`** — in-proc Contract-Tests für
-  Handshake-Zustände, Pipe-Framing, Benutzerbindung und isolierte Cancellation. (zuletzt: step-009)
+  Handshake-Zustände, Pipe-Framing, Benutzerbindung, isolierte Cancellation,
+  Host-Idle-Exit, MRU-Persistenz und Warmup-Begrenzung. (zuletzt: step-010)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryPublishRaceTests.cs`** — separater test-only PublishCreation-Race-Harness für Loser-/Winner-Disposal und den Registry-Lock-Probe. (zuletzt: step-007)
 - **`src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs`** —
   gemeinsame FakeClock-/Factory-Doubles mit serveridentitätsbezogener Disposal-Beobachtung für die Registry-Tests. (zuletzt: step-007)
@@ -203,5 +206,6 @@ Einträge bis auf weiteres „(zuletzt: initial)"):
 - **`AiNetLinter.slnx` / `rules.json` (Repo-Root)** — Solution + Regelwerk dieses
   Repos; das eigene `ainetlinter.project.json` (Epic-A-Migration) zeigt genau darauf.
   (zuletzt: initial)
-- **`90_bewusst-nicht-umsetzen/Konzept.md`** — Entscheidungsregister; erhält die
-  Wiederöffnungsvermerke §D.4 (Epic A) und §C.5 (Epic B). (zuletzt: initial)
+- **`90_bewusst-nicht-umsetzen/Konzept.md`** — Entscheidungsregister; enthält
+  den Wiederöffnungsvermerk §C.5 zum internen Host-Lifecycle und den weiterhin
+  ausgeklammerten externen Daemon-Verträgen. (zuletzt: step-010)

@@ -99,6 +99,11 @@ aktualisiert (Datei-`mtime` + SHA-256-Hash-Vergleich, kein Komplett-Reload).
 `--path` und `--config` sind im MCP-Modus nicht zulässig; die Registry verwendet
 standardmäßig 45 Minuten Idle-TTL und höchstens 4 Projekt-Keys.
 
+Für den internen Daemon-Lifecycle kann `--daemon-start` verwendet werden. Der
+Host nutzt den Named-Pipe-Handshake, beendet sich standardmäßig nach 10 Minuten
+Leerlauf und wärmt bis zu zwei MRU-Projekte vor. Der externe ThinClient und
+Connect-or-Start folgen später; `--mcp-server` bleibt der stdio-basierte Einstieg.
+
 Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist auf `tools/list` und `ainetlinter://overview`, statt die Toolliste zu duplizieren.
 
 Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und beendet sich bei dessen Ende sauber. Mit `--parent-pid <pid>` kann die zu überwachende Prozess-ID für Wrapper-Skripte oder Spezialumgebungen explizit gesetzt werden.

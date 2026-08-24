@@ -126,10 +126,15 @@ semantische Auflösung. `metrics_tree`, `get_index_scope` und `get_hotspots` dec
 Orientierungsbedarf ab.
 **Entscheidung:** nicht implementieren.
 
-### C.5 Kein Multi-Agent-Installer & kein Detached-Daemon
-Unnötige Komplexität: `ainetlinter --mcp-server` (stdio) reicht für alle gängigen Clients;
-der residente Workspace mit Staleness-Check benötigt keine Daemon-Infrastruktur.
-**Entscheidung:** nicht implementieren.
+### C.5 Kein Multi-Agent-Installer & kein unbegründeter Detached-Daemon
+Der interne `--daemon-start`-Host ist für den geplanten Named-Pipe-Lifecycle mit
+Idle-Exit und MRU-Warmup umgesetzt. Das öffnet nicht automatisch die externe
+Client-Integration: ThinClient, Connect-or-Start, Client-Registrierungen,
+Stdio-Pump und Parent-Reaper-Vererbung bleiben bewusst spätere Schritte.
+Ein Windows-Service, Autostart oder Multi-Agent-Installer wird weiterhin nicht
+implementiert.
+**Entscheidung:** Host-Lifecycle umsetzen; externe Detached-Daemon-Verankerung
+und Installer nicht vorwegnehmen.
 
 ### C.6 Keine Cloud-/Enterprise-Features (Multi-Tenancy, OAuth, OTel-Export, Cluster)
 AiNetLinter ist ein schlankes lokales Entwickler- und Agenten-Tool, kein Cloud-Service.

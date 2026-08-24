@@ -96,6 +96,8 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
 | `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
 | `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
+| `--daemon-start` | bool | Startet den internen Named-Pipe-Daemonpfad (nicht für externe Client-Registrierungen) |
+| `--mcp-daemon-idle-exit-minutes <minuten>` | decimal | Idle-Exit des internen DaemonHosts (Standard 10 Minuten) |
 | `--analyze-mcp-log <pfad|verzeichnis|glob>` | string | Wertet MCP-Call-Logs offline über alle passenden `.jsonl`-Dateien aus; Feedback-Dateien werden ausgeschlossen |
 | `--format <text|json>` | string | Ausgabeformat für `--analyze-mcp-log` (Standard: `text`; nur gemeinsam mit `--analyze-mcp-log`) |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
@@ -226,12 +228,20 @@ MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält u
 
 Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
+Der interne Entwicklungsstart `--daemon-start` ist davon getrennt. Er startet den
+`DaemonHost` mit Named-Pipe-Handshake, geteilter Projektregistry und einer MCP-
+Session je Pipe-Verbindung. Nach standardmäßig 10 Minuten ohne Verbindungen,
+aktive Loads oder Warmups beendet sich der Host; bis zu zwei zuletzt verwendete
+Projekte werden aus dem MRU-Zustand vorgeladen. Der externe ThinClient und
+Connect-or-Start-Verdrahtung folgen in einem späteren Step. `--mcp-server` bleibt
+der unveränderte stdio-Einstieg.
+
 ### Daemon-Pipe-Vertrag (Transport-Grundlage)
 
-Die wiederverwendbare Pipe-/Handshake-Grundlage liegt unter
-`Mcp/Daemon/`; sie ist in diesem Stand noch nicht in `--mcp-server` oder einen
-Daemon-Prozess verdrahtet. Der bestehende MCP-SDK-Handshake über stdio bleibt
-unverändert.
+Die Pipe-/Handshake-Grundlage liegt unter `Mcp/Daemon/` und wird vom internen
+`--daemon-start`-Pfad für den `DaemonHost` verwendet. Der bestehende MCP-SDK-
+Handshake über `--mcp-server`/stdio bleibt unverändert; ThinClient und externe
+Connect-or-Start-Registrierung sind bewusst noch nicht verdrahtet.
 
 - Der Named-Pipe-Endpunkt lautet ausschließlich
   `ainetlinter.analyzer.v1.<username>` für den aktuellen Windows-Benutzer.

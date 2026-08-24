@@ -435,6 +435,16 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   Repo-/Hermes-Registrierungen und Entscheidungsregister steht in
   `tasks/mcp-server-weiterentwicklung/11_epic-projektregistry-und-daemon/step-008/step-result.md`.
 
+### EPIC-B — DaemonHost-Lifecycle, Idle-Exit und MRU-Warmup (Step-010 umgesetzt am 2026-08-24)
+
+- [x] Interner `--daemon-start`-Pfad mit Named-Pipe-Akzeptanz, Pipe-Level-
+  Handshake, geteilter Projektregistry und einer MCP-SDK-Session je Verbindung.
+- [x] Idle-Exit mit injizierbarer Zeitquelle; aktive Verbindungen, Loads und
+  Warmups verhindern den Exit. Standardwert: 10 Minuten.
+- [x] Debounced MRU-State unter `%LOCALAPPDATA%` mit tolerantem Laden und
+  maximal zwei parallelen Warmups; der externe ThinClient, Connect-or-Start,
+  Stdio-Pump und Parent-Reaper-Vererbung bleiben spätere Schritte.
+
 ### Abgeschlossen
 
 - [x] **EPIC-01 — CLI-Flag:** `--mcp-server` als neuer Server-Start, stdio-Transport, JSON-RPC-Handshake.

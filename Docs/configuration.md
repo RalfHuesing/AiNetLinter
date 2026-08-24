@@ -1175,6 +1175,8 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--parent-pid <pid>` (MCP-Modus): Überwacht die angegebene Parent-Prozess-ID und beendet den MCP-Server bei deren Ende sauber. Ohne Angabe wird die Parent-PID automatisch über die Betriebssystem-Schnittstelle ermittelt.
 - `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten, mit Dezimalpunkt im InvariantCulture-Format (Standard: `45`).
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
+- `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry.
+- `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts im InvariantCulture-Format (Standard: `10`).
 - `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-agent-rules` oder `--sync-agent-rules-only`: Prüft die Cursor-Regeldatei. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
 - `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
 - `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
