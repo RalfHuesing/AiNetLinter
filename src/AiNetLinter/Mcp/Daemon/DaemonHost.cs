@@ -8,19 +8,21 @@ namespace AiNetLinter.Mcp.Daemon;
 internal sealed record DaemonHostOptions(
     IDaemonRegistry Registry,
     MruStateStore MruState,
-    DaemonPipeTransport Transport,
+    IDaemonPipeTransport Transport,
     TimeProvider Clock,
     TimeSpan IdleExit,
     EffectiveDaemonConfiguration Configuration,
     ILintConsole Console,
     Func<DaemonPipeConnection, Task> SessionRunner,
     IDaemonIdentityProvider? IdentityProvider = null,
-    TimeSpan? IdlePollInterval = null);
+    TimeSpan? IdlePollInterval = null,
+    IDaemonInstanceLock? InstanceLock = null);
 
 internal sealed class DaemonHost : IAsyncDisposable
 {
     private static readonly TimeSpan DefaultIdlePollInterval = TimeSpan.FromSeconds(1);
     private readonly DaemonHostOptions options;
+    private readonly IDaemonInstanceLock instanceLock;
     private readonly object lifecycleGate = new();
     private readonly Dictionary<int, Task> connections = [];
     private readonly Dictionary<int, DaemonPipeConnection> connectionHandles = [];
@@ -42,6 +44,7 @@ internal sealed class DaemonHost : IAsyncDisposable
         }
 
         this.options = options;
+        instanceLock = options.InstanceLock ?? new DaemonInstanceLock(options.Transport.Endpoint.PipeName);
         idleSince = options.Clock.GetUtcNow();
     }
 
@@ -85,6 +88,11 @@ internal sealed class DaemonHost : IAsyncDisposable
 
     internal async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
+        if (!TryAcquireInstanceLock())
+        {
+            return 1;
+        }
+
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             shutdownSource.Token);
@@ -135,6 +143,7 @@ internal sealed class DaemonHost : IAsyncDisposable
         await options.MruState.DisposeAsync().ConfigureAwait(false);
         warmupSlots.Dispose();
         shutdownSource.Dispose();
+        instanceLock.Dispose();
     }
 
     private async Task<int> AcceptLoopAsync(DaemonHandshake handshake, CancellationToken cancellationToken)
@@ -163,19 +172,22 @@ internal sealed class DaemonHost : IAsyncDisposable
     private void RegisterConnection(DaemonPipeConnection connection, DaemonHandshake handshake)
     {
         var connectionId = Interlocked.Increment(ref nextConnectionId);
-        RegisterClient();
-        var task = HandleConnectionAsync(connection, handshake, connectionId);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (lifecycleGate)
         {
-            connections[connectionId] = task;
+            RegisterClientLocked();
+            connections[connectionId] = completion.Task;
             connectionHandles[connectionId] = connection;
         }
+
+        _ = HandleConnectionAsync(connection, handshake, connectionId, completion);
     }
 
     private async Task HandleConnectionAsync(
         DaemonPipeConnection connection,
         DaemonHandshake handshake,
-        int connectionId)
+        int connectionId,
+        TaskCompletionSource completion)
     {
         try
         {
@@ -211,12 +223,7 @@ internal sealed class DaemonHost : IAsyncDisposable
         }
         finally
         {
-            lock (lifecycleGate)
-            {
-                connections.Remove(connectionId);
-                connectionHandles.Remove(connectionId);
-            }
-            UnregisterClient();
+            CompleteConnection(connectionId, completion);
         }
     }
 
@@ -346,24 +353,71 @@ internal sealed class DaemonHost : IAsyncDisposable
 
     private void RegisterClient()
     {
-        if (Interlocked.Increment(ref clientCount) == 1)
+        lock (lifecycleGate)
         {
-            lock (lifecycleGate)
-            {
-                idleSince = null;
-            }
+            RegisterClientLocked();
         }
     }
 
     private void UnregisterClient()
     {
-        if (Interlocked.Decrement(ref clientCount) == 0)
+        lock (lifecycleGate)
         {
-            lock (lifecycleGate)
+            if (clientCount == 0)
+            {
+                return;
+            }
+
+            clientCount--;
+            if (clientCount == 0)
             {
                 idleSince = options.Clock.GetUtcNow();
             }
         }
+    }
+
+    private bool TryAcquireInstanceLock()
+    {
+        try
+        {
+            if (instanceLock.TryAcquire())
+            {
+                return true;
+            }
+
+            options.Console.WriteError(
+                $"[ERROR]: Daemon fuer Pipe-Endpunkt '{options.Transport.Endpoint.PipeName}' laeuft bereits.");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            options.Console.WriteError($"[ERROR]: Daemon-Lock konnte nicht erworben werden: {exception.Message}");
+            return false;
+        }
+    }
+
+    private void RegisterClientLocked()
+    {
+        clientCount++;
+        idleSince = null;
+    }
+
+    private void CompleteConnection(int connectionId, TaskCompletionSource completion)
+    {
+        bool wasRegistered;
+        lock (lifecycleGate)
+        {
+            wasRegistered = connections.Remove(connectionId) || connectionHandles.Remove(connectionId);
+            connections.Remove(connectionId);
+            connectionHandles.Remove(connectionId);
+        }
+
+        if (wasRegistered)
+        {
+            UnregisterClient();
+        }
+
+        completion.TrySetResult();
     }
 
     private void TouchResidentProjects()

@@ -43,6 +43,44 @@ public sealed class MruStateStoreTests
         Assert.Empty(store.Read(4));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-json")]
+    public async Task DisposeAfterEmptyOrCorruptRead_WritesValidEmptyArray(string content)
+    {
+        using var temp = TestTempDirectory.Create("daemon-mru-");
+        var path = temp.CreateFile("daemon-state.json", content);
+        var store = CreateStore(path, new MruTestClock());
+
+        Assert.Empty(store.Read(4));
+        await store.DisposeAsync();
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        Assert.Equal(JsonValueKind.Array, document.RootElement.ValueKind);
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task ReadAndRemove_CanonicalizesAliasAndPersistsItsRemoval()
+    {
+        using var temp = TestTempDirectory.Create("daemon-mru-");
+        var path = temp.GetPath("daemon-state.json");
+        var root = Path.Combine(temp.DirectoryPath, "project");
+        var alias = Path.Combine(root, ".");
+        var json = JsonSerializer.Serialize(new[] { new MruStateEntry(alias, new DateTime(2026, 1, 1)) });
+        File.WriteAllText(path, json);
+
+        var store = CreateStore(path, new MruTestClock());
+        var entries = store.Read(4);
+        Assert.Equal(Path.GetFullPath(root), entries.Single().RootPath);
+
+        store.Remove(alias);
+        await store.DisposeAsync();
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
     [Fact]
     public async Task Write_IsDebouncedAndRemoveUpdatesState()
     {

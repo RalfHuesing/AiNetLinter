@@ -58,7 +58,7 @@ internal static class DaemonHostCommand
         ProjectRegistry registry) =>
         connection => RunMcpSessionAsync(connection, registry);
 
-    private static async Task RunMcpSessionAsync(
+    internal static async Task RunMcpSessionAsync(
         DaemonPipeConnection connection,
         ProjectRegistry registry)
     {

@@ -60,31 +60,42 @@ internal sealed class MruStateStore : IAsyncDisposable
 
         try
         {
-            if (!File.Exists(filePath)) return [];
+            if (!File.Exists(filePath))
+            {
+                ReplaceEntries([], normalizationRequired: false);
+                return [];
+            }
+
             var json = File.ReadAllText(filePath);
-            if (string.IsNullOrWhiteSpace(json)) return [];
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                ReplaceEntries([], normalizationRequired: true);
+                return [];
+            }
+
             var loaded = JsonSerializer.Deserialize<List<MruStateEntry>>(json);
-            if (loaded is null) return [];
+            if (loaded is null)
+            {
+                ReplaceEntries([], normalizationRequired: true);
+                return [];
+            }
 
             var valid = loaded
-                .Where(IsValidEntry)
+                .Select(TryNormalizeEntry)
+                .Where(entry => entry is not null)
+                .Select(entry => entry!)
                 .GroupBy(entry => entry.RootPath, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.OrderByDescending(entry => entry.LastUsedUtc).First())
                 .OrderByDescending(entry => entry.LastUsedUtc)
                 .Take(maxProjects)
                 .ToList();
-            lock (gate)
-            {
-                entries.Clear();
-                foreach (var entry in valid)
-                {
-                    entries[entry.RootPath] = entry;
-                }
-            }
+
+            ReplaceEntries(valid, normalizationRequired: valid.Count != loaded.Count);
             return valid;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
+            ReplaceEntries([], normalizationRequired: true);
             report($"[WARN]: MRU-State konnte nicht gelesen werden und wird ignoriert: {exception.Message}");
             return [];
         }
@@ -185,7 +196,7 @@ internal sealed class MruStateStore : IAsyncDisposable
             if (disposed) return;
             disposed = true;
             timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            shouldFlush = dirty;
+            shouldFlush = true;
         }
 
         if (shouldFlush)
@@ -232,17 +243,40 @@ internal sealed class MruStateStore : IAsyncDisposable
             .ToList();
     }
 
-    private static bool IsValidEntry(MruStateEntry entry)
+    private void ReplaceEntries(
+        IReadOnlyCollection<MruStateEntry> loaded,
+        bool normalizationRequired)
     {
-        return !string.IsNullOrWhiteSpace(entry.RootPath)
-            && Path.IsPathRooted(entry.RootPath)
-            && entry.LastUsedUtc != default;
+        lock (gate)
+        {
+            entries.Clear();
+            foreach (var entry in loaded)
+            {
+                entries[entry.RootPath] = entry;
+            }
+
+            dirty = normalizationRequired;
+            lastTouchUtc = normalizationRequired ? clock.GetUtcNow() : null;
+        }
+    }
+
+    private static MruStateEntry? TryNormalizeEntry(MruStateEntry entry)
+    {
+        var canonicalRoot = CanonicalizeRoot(entry.RootPath);
+        return canonicalRoot is null || entry.LastUsedUtc == default
+            ? null
+            : entry with { RootPath = canonicalRoot };
     }
 
     private static string? CanonicalizeRoot(string rootPath)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Path.IsPathRooted(rootPath)) return null;
-        return Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        var fullPath = Path.GetFullPath(rootPath);
+        var root = Path.GetPathRoot(fullPath);
+        return string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase)
+            ? root
+            : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
     private static void TryDeleteTemporaryFile(string path)

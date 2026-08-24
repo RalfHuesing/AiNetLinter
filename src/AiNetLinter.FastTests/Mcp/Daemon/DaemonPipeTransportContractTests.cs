@@ -30,6 +30,36 @@ public sealed class DaemonPipeTransportContractTests
     }
 
     [Fact]
+    public async Task InstanceLock_AllowsOneOwnerAndReleasesForNextOwner()
+    {
+        var pipeName = "daemon-lock-tests-" + Guid.NewGuid().ToString("N");
+        var acquired = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var owner = Task.Run(async () =>
+        {
+            using var first = new DaemonInstanceLock(pipeName);
+            Assert.True(first.TryAcquire());
+            acquired.SetResult();
+            await release.Task;
+        });
+
+        await acquired.Task;
+        try
+        {
+            using var second = new DaemonInstanceLock(pipeName);
+            Assert.False(second.TryAcquire());
+        }
+        finally
+        {
+            release.SetResult();
+            await owner;
+        }
+
+        using var third = new DaemonInstanceLock(pipeName);
+        Assert.True(third.TryAcquire());
+    }
+
+    [Fact]
     public async Task Frame_RoundTripsOneJsonObjectPerLineWithoutChangingBytes()
     {
         var payload = Encoding.UTF8.GetBytes("{ \"jsonrpc\": \"2.0\", \"id\": 7, \"text\": \"Grüße\" }");

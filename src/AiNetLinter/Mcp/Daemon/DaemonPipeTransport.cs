@@ -25,7 +25,14 @@ internal sealed record DaemonPipeEndpoint(
         ForUser(DaemonProtocol.CurrentUserName);
 }
 
-internal sealed class DaemonPipeTransport
+internal interface IDaemonPipeTransport
+{
+    DaemonPipeEndpoint Endpoint { get; }
+
+    ValueTask<DaemonPipeConnection> AcceptAsync(CancellationToken cancellationToken);
+}
+
+internal sealed class DaemonPipeTransport : IDaemonPipeTransport
 {
     internal DaemonPipeTransport(Func<string>? userNameProvider = null)
     {
@@ -34,6 +41,8 @@ internal sealed class DaemonPipeTransport
     }
 
     internal DaemonPipeEndpoint Endpoint { get; }
+
+    DaemonPipeEndpoint IDaemonPipeTransport.Endpoint => Endpoint;
 
     internal NamedPipeServerStream CreateServerStream() => new(
         Endpoint.PipeName,
@@ -68,6 +77,9 @@ internal sealed class DaemonPipeTransport
             throw;
         }
     }
+
+    ValueTask<DaemonPipeConnection> IDaemonPipeTransport.AcceptAsync(CancellationToken cancellationToken) =>
+        AcceptAsync(cancellationToken);
 
     internal async ValueTask<DaemonPipeConnection> ConnectAsync(CancellationToken cancellationToken)
     {
