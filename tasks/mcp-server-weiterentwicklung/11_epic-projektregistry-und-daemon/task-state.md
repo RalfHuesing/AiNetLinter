@@ -1,8 +1,8 @@
 ---
-status: done (pending audit)  # executing | done | aborted
+status: done  # executing | done | aborted
 task: 11_epic-projektregistry-und-daemon
 started_at: 2026-08-23T12:48:00+02:00
-last_updated: 2026-08-24T14:55:00+02:00
+last_updated: 2026-08-24T15:40:00+02:00
 rules_dir: .agents/rules  # aus konzept.md Frontmatter übernommen (siehe ../spec.md §3.1)
 total_steps: 15  # Summe aller Steps inkl. Korrekturen — Basis für den weichen Deckel (siehe Config, ../spec.md §10.5)
 current_step: step-015
@@ -12,8 +12,8 @@ current_step: step-015
 
 ## Übersicht
 
-- **Task-Status:** `done (pending audit)` — Check-in nach Coder-Lauf;
-  Kritiker-Abnahme von Step-013 steht aus (siehe `resume-note.md`).
+- **Task-Status:** `done` — globaler Kritiker-Lauf 2026-08-24 mit Verdict
+  `done`; Details und offene Punkte in `task-summary.md`.
 - **Nutzer-Scope:** vollständigen Task einschließlich EPIC-A und EPIC-B
   umsetzen; nicht nach dem Abschluss von EPIC-A stoppen.
 - **Konfliktregel:** Review-Forderungen gegen inzwischen erreichte Architektur
@@ -22,16 +22,14 @@ current_step: step-015
   sofern keine Nutzerentscheidung für diesen Schritt erforderlich ist.
 - **Steps gesamt:** 15 (regulär + Korrekturen — weicher Check-in bei
   jedem Vielfachen von `soft_step_checkin_interval`, siehe Config)
-- **Aktueller Schritt:** `step-015` (done — Drift-Audit approved;
-  alle Roadmap-Epics abgehakt; nächster Punkt: globaler Kritiker-Lauf,
-  dann task-summary.md und Task-Abschluss)
+- **Aktueller Schritt:** keiner — Task abgeschlossen (globaler Kritiker-Lauf `done`)
 - **Roadmap:** siehe `roadmap.md` für den Epic-Fortschritt
 - **Persistierter Initialauftrag:** siehe `initial-prompt.md`; bei
   Kontextkompaktierung zuerst gemeinsam mit diesem State und dem aktuellen
   Step-Plan lesen.
 - **Tech-Debt:** siehe `tech-debt.md` für gesammelte, bewusst nicht gefixte Funde
 - **Gestartet:** 2026-08-23T12:48:00+02:00
-- **Zuletzt aktualisiert:** 2026-08-24T14:55:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-24T15:40:00+02:00
 
 ## Check-in / Wiederaufnahme
 
