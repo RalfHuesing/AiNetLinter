@@ -76,6 +76,8 @@ internal sealed record DaemonWelcome(
 {
     [JsonPropertyName("type")]
     public string Type => DaemonProtocol.Welcome;
+
+    public int ConnectionId { get; init; }
 }
 
 internal sealed record DaemonShutdown(string Reason)

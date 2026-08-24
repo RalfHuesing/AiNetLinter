@@ -48,6 +48,10 @@ public sealed class McpServerCommandErrorHandlingTests
                 Command = exePath,
                 Arguments = ["--mcp-server"],
                 WorkingDirectory = tempDir,
+                EnvironmentVariables = new Dictionary<string, string?>
+                {
+                    ["AINETLINTER_NO_DAEMON"] = "1",
+                },
             });
 
             // 60s statt 30s: das Budget deckt Gate-Wartezeit + echten Subprozess-Start +
@@ -94,6 +98,10 @@ public sealed class McpServerCommandErrorHandlingTests
             Command = exePath,
             Arguments = ["--mcp-server"],
             WorkingDirectory = fixture.RootPath,
+            EnvironmentVariables = new Dictionary<string, string?>
+            {
+                ["AINETLINTER_NO_DAEMON"] = "1",
+            },
         });
 
         // 60s statt 30s, damit der Subprozess unter Volllauf-Last sicher handshaken kann.

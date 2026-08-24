@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,6 +38,10 @@ public sealed class McpHandshakeToolRegistrationTests
             Command = exePath,
             Arguments = ["--mcp-server"],
             WorkingDirectory = fixtureRoot,
+            EnvironmentVariables = new Dictionary<string, string?>
+            {
+                ["AINETLINTER_NO_DAEMON"] = "1",
+            },
         });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

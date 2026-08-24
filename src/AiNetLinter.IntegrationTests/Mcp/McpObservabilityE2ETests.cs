@@ -39,6 +39,10 @@ public sealed class McpObservabilityE2ETests
             Command = exePath,
             Arguments = ["--mcp-server", "--mcp-log", logDir],
             WorkingDirectory = fixtureRoot,
+            EnvironmentVariables = new Dictionary<string, string?>
+            {
+                ["AINETLINTER_NO_DAEMON"] = "1",
+            },
         });
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

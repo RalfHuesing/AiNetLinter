@@ -31,10 +31,11 @@ internal static class ServerMaintenanceToolRegistrations
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider = null)
+        IServiceProvider? serviceProvider = null,
+        Daemon.DaemonRuntimeContext? runtimeContext = null)
     {
         AddReloadConfig(tools, registry);
-        AddGetServerHealth(tools, registry, serviceProvider);
+        AddGetServerHealth(tools, registry, serviceProvider, runtimeContext);
         AddReportObservabilityFeedback(tools, serviceProvider);
     }
 
@@ -65,12 +66,15 @@ internal static class ServerMaintenanceToolRegistrations
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        IServiceProvider? serviceProvider)
+        IServiceProvider? serviceProvider,
+        Daemon.DaemonRuntimeContext? runtimeContext)
     {
         var obsService = serviceProvider?.GetService<IMcpObservabilityService>();
         tools.Add(McpServerTool.Create(
             async (string? projectRoot = null, CancellationToken ct = default) =>
-                await GetServerHealthTool.ExecuteAsync(registry, obsService, projectRoot),
+                await GetServerHealthTool.ExecuteAsync(
+                    registry,
+                    new GetServerHealthOptions(obsService, projectRoot, RuntimeContext: runtimeContext)),
             new McpServerToolCreateOptions
             {
                 Name = "get_server_health",

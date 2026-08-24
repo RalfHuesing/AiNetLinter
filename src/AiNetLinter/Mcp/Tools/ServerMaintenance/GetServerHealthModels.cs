@@ -39,7 +39,17 @@ internal sealed record ProjectHealthEntry(
 internal sealed record ServerHealthAggregatePayload(
     string Version,
     IReadOnlyList<ProjectHealthEntry> Projects,
-    CallLogPayload? CallLog);
+    CallLogPayload? CallLog,
+    DaemonHealthPayload? Daemon = null);
+
+internal sealed record DaemonHealthPayload(
+    string Mode,
+    int ConnectionId,
+    int Connections,
+    int ProcessId,
+    double UptimeSeconds,
+    IReadOnlyList<string> Keys,
+    string DaemonVersion);
 
 /// <summary>
 /// Call-Log-Aggregat-Teil von <see cref="ServerHealthAggregatePayload"/>. Die Werte stammen aus dem

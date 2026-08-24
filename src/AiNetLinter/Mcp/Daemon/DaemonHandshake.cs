@@ -1,7 +1,5 @@
 #nullable enable
 
-using System.Reflection;
-
 namespace AiNetLinter.Mcp.Daemon;
 
 internal interface IDaemonIdentityProvider
@@ -13,8 +11,7 @@ internal sealed class CurrentDaemonIdentityProvider : IDaemonIdentityProvider
 {
     public DaemonIdentity GetIdentity()
     {
-        var version = typeof(CurrentDaemonIdentityProvider).Assembly
-            .GetName().Version?.ToString() ?? "unknown";
+        var version = McpServerOptionsFactory.GetServerVersion();
         return new DaemonIdentity(version, version, Environment.ProcessId);
     }
 }

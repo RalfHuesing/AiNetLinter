@@ -79,7 +79,7 @@ internal static class DaemonProcessContractHarness
         DaemonProcessSpec spec,
         CancellationToken cancellationToken)
     {
-        var executableVersion = typeof(DaemonHost).Assembly.GetName().Version?.ToString() ?? "unknown";
+        var executableVersion = McpServerOptionsFactory.GetServerVersion();
         await connection.WriteJsonFrameAsync(
             new DaemonHello(executableVersion, Environment.ProcessId, spec.Configuration),
             cancellationToken).ConfigureAwait(false);

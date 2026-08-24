@@ -6,11 +6,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Observability;
 using ModelContextProtocol.Protocol;
 using RalfHuesing.Mcp.Observability;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
+
+internal sealed record GetServerHealthOptions(
+    IMcpObservabilityService? ObservabilityService = null,
+    string? ProjectRoot = null,
+    string? ObservabilityLogPath = null,
+    DaemonRuntimeContext? RuntimeContext = null);
 
 /// <summary>
 /// MCP-Tool <c>get_server_health</c>: Diagnose-Schnappschuss der residenten Projekt-Keys —
@@ -28,34 +35,37 @@ internal static class GetServerHealthTool
         ProjectRegistry registry,
         IMcpObservabilityService? observabilityService = null,
         string? projectRoot = null,
-        string? observabilityLogPath = null)
+        string? observabilityLogPath = null) =>
+        ExecuteAsync(registry, new GetServerHealthOptions(observabilityService, projectRoot, observabilityLogPath));
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        ProjectRegistry registry,
+        GetServerHealthOptions options)
     {
-        IReadOnlyList<ProjectSnapshot> snapshots;
-        if (projectRoot is not null)
+        ArgumentNullException.ThrowIfNull(options);
+        if (options.ProjectRoot is not null)
         {
-            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.ProjectRoot);
             if (guard is not null)
             {
                 return Task.FromResult(McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint));
             }
 
-            var snapshot = registry.FindSnapshot(projectRoot);
-            if (snapshot is null) return Task.FromResult(ProjectNotInitialized(projectRoot));
-            snapshots = [snapshot];
-        }
-        else
-        {
-            snapshots = registry.Snapshots();
+            var snapshot = registry.FindSnapshot(options.ProjectRoot);
+            if (snapshot is null) return Task.FromResult(ProjectNotInitialized(options.ProjectRoot));
+            return Task.FromResult(BuildResult([snapshot], options));
         }
 
-        return Task.FromResult(BuildResult(snapshots, observabilityService, observabilityLogPath));
+        return Task.FromResult(BuildResult(registry.Snapshots(), options));
     }
 
     private static CallToolResult BuildResult(
         IReadOnlyList<ProjectSnapshot> snapshots,
-        IMcpObservabilityService? observabilityService,
-        string? observabilityLogPath)
+        GetServerHealthOptions options)
     {
+        var observabilityService = options.ObservabilityService;
+        var observabilityLogPath = options.ObservabilityLogPath;
+        var runtimeContext = options.RuntimeContext;
         var isEnabled = observabilityService is null || observabilityService.IsEnabled;
         var effectiveLogPath = observabilityLogPath ?? observabilityService?.CurrentLogFilePath;
         var callLogResult = isEnabled ? McpLogAnalyzer.TryAnalyze(effectiveLogPath ?? string.Empty) : null;
@@ -65,6 +75,8 @@ internal static class GetServerHealthTool
         sb.AppendLine("# AiNetLinter MCP-Server — Health");
         sb.AppendLine();
         sb.AppendLine($"- Version: {McpServerOptionsFactory.GetServerVersion()}");
+        var daemonPayload = runtimeContext is null ? null : CreateDaemonPayload(runtimeContext);
+        AppendDaemonSection(sb, daemonPayload);
         sb.AppendLine();
         sb.AppendLine($"## Projekte ({snapshots.Count})");
         sb.AppendLine();
@@ -78,7 +90,8 @@ internal static class GetServerHealthTool
         var payload = new ServerHealthAggregatePayload(
             Version: McpServerOptionsFactory.GetServerVersion(),
             Projects: entries,
-            CallLog: callLogPayload);
+            CallLog: callLogPayload,
+            Daemon: daemonPayload);
         return McpToolResults.Text(sb.ToString().TrimEnd(), payload);
     }
 
@@ -205,5 +218,31 @@ internal static class GetServerHealthTool
             ? "keine"
             : string.Join(", ", callLog.CallCountsByTool.Select(item => $"{item.Key}={item.Value}")));
         return builder.ToString();
+    }
+
+    private static DaemonHealthPayload CreateDaemonPayload(DaemonRuntimeContext context)
+    {
+        var snapshot = context.Snapshot;
+        return new DaemonHealthPayload(
+            context.Mode,
+            context.ConnectionId,
+            snapshot.Connections,
+            snapshot.ProcessId,
+            snapshot.Uptime.TotalSeconds,
+            snapshot.Keys,
+            snapshot.DaemonVersion);
+    }
+
+    private static void AppendDaemonSection(StringBuilder builder, DaemonHealthPayload? daemon)
+    {
+        if (daemon is null) return;
+        builder.AppendLine($"- Mode: {daemon.Mode}");
+        builder.AppendLine($"- Connections: {daemon.Connections}");
+        builder.AppendLine($"- PID: {daemon.ProcessId}");
+        builder.AppendLine($"- Daemon-Uptime: {FormatUptime(TimeSpan.FromSeconds(daemon.UptimeSeconds))}");
+        builder.AppendLine($"- Daemon-Keys: {(daemon.Keys.Count == 0 ? "keine" : string.Join(", ", daemon.Keys))}");
+        builder.AppendLine($"- Daemon-Version: {daemon.DaemonVersion}");
+        builder.AppendLine($"- connectionId: {daemon.ConnectionId}");
+        builder.AppendLine();
     }
 }

@@ -63,8 +63,15 @@ internal static class DaemonHostCommand
         ProjectRegistry registry)
     {
         var services = new ServiceCollection();
-        services.AddMcpServer().WithObservability(
-            McpServerCommand.ResolveObservabilityOptions(null, null));
+        var runtimeContext = connection.RuntimeContext;
+        var observabilityOptions = McpServerCommand.ResolveObservabilityOptions(null, null);
+        if (runtimeContext is not null)
+        {
+            observabilityOptions.ServerName = $"{McpServerOptionsFactory.ServerName}-daemon-c{runtimeContext.ConnectionId}";
+            observabilityOptions.ServerVersion = $"{McpServerOptionsFactory.GetServerVersion()}; mode=daemon; connectionId={runtimeContext.ConnectionId}";
+        }
+
+        services.AddMcpServer().WithObservability(observabilityOptions);
         await using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         serverOptions.ServerInfo = new Implementation
@@ -73,7 +80,7 @@ internal static class DaemonHostCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, serviceProvider);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, serviceProvider, runtimeContext);
         serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StreamServerTransport(connection.Stream, connection.Stream);

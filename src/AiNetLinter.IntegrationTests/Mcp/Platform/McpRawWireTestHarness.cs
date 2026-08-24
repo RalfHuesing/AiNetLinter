@@ -32,7 +32,10 @@ internal static class McpRawWireTestHarness
     }
 
     internal static async Task<List<string>> RunAndCollectStdoutAsync(
-        string targetDirectory, string[] frames, TimeSpan? interFrameDelay = null)
+        string targetDirectory,
+        string[] frames,
+        TimeSpan? interFrameDelay = null,
+        bool noDaemon = true)
     {
         McpFixtureProjectDefinition.Ensure(targetDirectory);
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
@@ -55,6 +58,17 @@ internal static class McpRawWireTestHarness
             WorkingDirectory = targetDirectory,
         };
         psi.ArgumentList.Add("--mcp-server");
+        // Der Raw-Wire-Harness nutzt bewusst den ThinClient; ein kurzer Idle-Exit
+        // verhindert, dass der testweise Daemon nach dem Prozessende Build-Artefakte sperrt.
+        if (noDaemon)
+        {
+            psi.Environment["AINETLINTER_NO_DAEMON"] = "1";
+        }
+        else
+        {
+            psi.ArgumentList.Add("--mcp-daemon-idle-exit-minutes");
+            psi.ArgumentList.Add("0.01");
+        }
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("AiNetLinter-Subprozess konnte nicht gestartet werden.");
@@ -114,6 +128,9 @@ internal static class McpRawWireTestHarness
                 return frame;
 
             var parameters = root["params"]?.AsObject();
+            if (string.Equals(parameters?["name"]?.GetValue<string>(), "get_server_health", StringComparison.Ordinal))
+                return frame;
+
             var arguments = parameters?["arguments"]?.AsObject();
             if (arguments is null || arguments.ContainsKey("projectRoot")) return frame;
 

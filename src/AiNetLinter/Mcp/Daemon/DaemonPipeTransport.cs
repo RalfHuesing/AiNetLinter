@@ -201,6 +201,8 @@ internal sealed class DaemonPipeConnection : IAsyncDisposable
 
     internal CancellationToken CancellationToken => cancellation.Token;
 
+    internal DaemonRuntimeContext? RuntimeContext { get; set; }
+
     internal void Disconnect()
     {
         lock (lifecycleGate)

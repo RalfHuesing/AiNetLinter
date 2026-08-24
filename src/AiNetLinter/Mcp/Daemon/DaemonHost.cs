@@ -34,6 +34,7 @@ internal sealed class DaemonHost : IAsyncDisposable
     private int clientCount;
     private int activeWarmups;
     private int disposed;
+    private readonly DateTimeOffset startedAt;
 
     internal DaemonHost(DaemonHostOptions options)
     {
@@ -45,7 +46,8 @@ internal sealed class DaemonHost : IAsyncDisposable
 
         this.options = options;
         instanceLock = options.InstanceLock ?? new DaemonInstanceLock(options.Transport.Endpoint.PipeName);
-        idleSince = options.Clock.GetUtcNow();
+        startedAt = options.Clock.GetUtcNow();
+        idleSince = startedAt;
     }
 
     internal int ActiveConnectionCount
@@ -197,9 +199,26 @@ internal sealed class DaemonHost : IAsyncDisposable
 
             var otherConnections = Math.Max(0, ActiveConnectionCount - 1);
             var result = handshake.HandleHello(hello, otherConnections);
+            if (result.IsAccepted && result.Welcome is not null)
+            {
+                result = result with
+                {
+                    Welcome = result.Welcome with
+                    {
+                        ConnectionId = connectionId,
+                    },
+                };
+            }
+
             await WriteHandshakeResultAsync(activeConnection, result).ConfigureAwait(false);
+            if (result.Status == DaemonHandshakeStatus.ShutdownRequested)
+            {
+                shutdownSource.Cancel();
+            }
+
             if (!result.IsAccepted) return;
 
+            activeConnection.RuntimeContext = CreateRuntimeContext(connectionId);
             await options.SessionRunner(activeConnection).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (connection.CancellationToken.IsCancellationRequested)
@@ -426,5 +445,19 @@ internal sealed class DaemonHost : IAsyncDisposable
         {
             options.MruState.Touch(snapshot.RootPath, snapshot.LastUsedUtc);
         }
+    }
+
+    private DaemonRuntimeContext CreateRuntimeContext(int connectionId) =>
+        new(connectionId, SnapshotRuntime);
+
+    private DaemonRuntimeSnapshot SnapshotRuntime()
+    {
+        var keys = options.Registry.Snapshots().Select(snapshot => snapshot.RootPath).ToArray();
+        return new DaemonRuntimeSnapshot(
+            ActiveConnectionCount,
+            Environment.ProcessId,
+            options.Clock.GetUtcNow() - startedAt,
+            keys,
+            McpServerOptionsFactory.GetServerVersion());
     }
 }

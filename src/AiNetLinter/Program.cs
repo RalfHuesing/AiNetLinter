@@ -42,7 +42,7 @@ public static class Program
 
                 // Schneller Pfad: --mcp-server. Kein stdout-Header, da das JSON-RPC-Framing
                 // des MCP-Protokolls auf stdin/stdout laeuft und sonst zerstoert wuerde.
-                if (linterArgs.McpServer) return await McpServerCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
+                if (linterArgs.McpServer) return await ThinClientProxy.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
 
                 if (linterArgs.DaemonStart) return await DaemonHostCommand.RunAsync(linterArgs, cts.Token, McpLintConsole.Instance);
 

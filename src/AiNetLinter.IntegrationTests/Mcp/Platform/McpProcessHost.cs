@@ -61,6 +61,10 @@ internal sealed class McpProcessHost : IAsyncDisposable
                         Command = exePath,
                         Arguments = ["--mcp-server"],
                         WorkingDirectory = target.RootPath,
+                        EnvironmentVariables = new Dictionary<string, string?>
+                        {
+                            ["AINETLINTER_NO_DAEMON"] = "1",
+                        },
                     });
                     using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                     timeoutSource.CancelAfter(timeout);
