@@ -2,7 +2,7 @@
 task: 11_epic-projektregistry-und-daemon
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-24T01:15:00+02:00
+last_updated: 2026-08-24T12:15:00+02:00
 ---
 
 # Tech-Debt-Log: 11_epic-projektregistry-und-daemon
@@ -36,6 +36,7 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
 | TD-004 | `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | mittel | nein | Soft-Cap: bei nur-busy Register wächst der Bestand über MaxProjects; TTL-Tick reklamiert Überhang nicht aktiv — Kapazitätsentscheidung fehlt bis Epic B |
 | TD-005 | `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` + `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` | niedrig | nein | Disposal faulted Loads über den Sync-Eviction-Pfad schreibt [WARN] auf den nicht injizierbaren Console-Kanal (verwandt TD-002) |
 | TD-006 | `src/AiNetLinter.FastTests/Mcp/Projects/ProjectRegistryTestDoubles.cs` + `src/AiNetLinter.TestKit/TestConfigFactory.cs` | niedrig | nein | Exact-Duplikat der leeren Config-Erzeugung in getrennten Test-/TestKit-Grenzen; gemeinsame Ablage braucht eine Abhängigkeitsentscheidung |
+| TD-007 | `src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs`, `McpRawWireTestHarness.cs` + Legacy-MCP-Prozesstests | niedrig | nein | Abdeckungsasymmetrie nach ThinClient-Umstellung: Bestandssuiten fixiert im Escape-Pfad, produktiver Daemon-Pfad nur durch wenige dedizierte Contracts gedeckt |
 
 ## Einträge
 
@@ -156,4 +157,36 @@ eigener Sweep. Default bei Unsicherheit ist `nein`.
   `TrackingServerFactory` die öffentliche TestKit-Fabrik verwenden kann, ohne
   Test-Intent oder Projektabhängigkeiten zu verschieben.
 - **Auto-Fixable:** nein — Testinfrastruktur-/Abhängigkeitsentscheidung.
+- **Status:** offen  # offen | erledigt | verworfen
+
+### TD-007 — Abdeckungsasymmetrie: Bestands-MCP-Suiten fixiert im Escape-Pfad [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-013 (Kritiker-Review vom 2026-08-24)
+- **Ort:** `src/AiNetLinter.IntegrationTests/Mcp/Platform/McpProcessHost.cs:61-68`
+  (env-Pinning `AINETLINTER_NO_DAEMON=1`), `McpRawWireTestHarness.cs`
+  (Default `noDaemon: true`) sowie die darauf aufsetzenden Bestandstests
+  (`McpHandshakeToolRegistrationTests`, `McpObservabilityE2ETests`,
+  `McpServerCommandErrorHandlingTests`, Framing-Tests).
+- **Befund:** Mit der ThinClient-Umstellung des normalen `--mcp-server`-Pfads
+  wurden die Legacy-MCP-Prozesstests bewusst und regelkonform (Richtlinien §4:
+  gezielte Isolation statt Collection-Serialisierung) auf den In-proc-Escape-
+  Pfad gepinnt, damit sie sich im Vollparallelauf nicht am gemeinsamen
+  benutzergebundenen Pipe-Endpunkt stören. Folge: Die breite Toolverhaltens-
+  regression läuft seither ausschließlich gegen den In-proc-Stack; der
+  produktive Daemon-Pfad (Spawn, Handshake, Pump, Retry) wird nur von wenigen
+  dedizierten Contracts abgedeckt (`ThinClientMcpProcessContractTests`,
+  `DaemonHostProcessContractTests`, `DaemonHostMcpProcessContractTests`).
+  Kein Defekt dieses Steps — eine dauerhafte Testdesign-Entscheidung, die
+  künftige Steps bewusst fortschreiben sollten.
+- **Warum nicht sofort gefixt:** Eine selektive Ausweitung der Daemon-Pfad-
+  Abdeckung (weitere `noDaemon: false`-Szenarien im Raw-Wire-Harness) muss
+  gegen die Endpunkt-Kollisionsgefahr im Parallellauf entworfen werden
+  (eigenständige Fixtures, kurzer Idle-Exit, ggf. Suite-Marker) — eine
+  Testarchitektur-Entscheidung mit Ermessen, kein mechanischer Fix und nicht
+  Teil des F1/F2-Korrekturumfangs von step-013.
+- **Vorschlag:** In einem späteren Step mit Testinfrastruktur-Fokus schrittweise
+  kollisionsfreie Daemon-Pfad-Szenarien ergänzen (Purity-All-Zeilen-Assertion
+  für `noDaemon: false`, Zwei-Clients-Varianten), ohne die Serialisierungs-
+  verbote von Richtlinien §4 zu verletzen.
+- **Auto-Fixable:** nein — Testdesign-/Isolationsentscheidung.
 - **Status:** offen  # offen | erledigt | verworfen
