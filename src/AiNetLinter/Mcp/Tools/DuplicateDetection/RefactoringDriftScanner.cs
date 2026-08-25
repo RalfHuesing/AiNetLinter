@@ -53,12 +53,10 @@ internal static class RefactoringDriftScanner
         var scanResult = await RefactoringDriftDetector.FindSimilarToAsync(solution, helper, callers, options, ct);
         if (scanResult is null)
         {
+            var eligibility = await DuplicateMethodCollector.GetEligibilityAsync(solution, helper, options, ct);
             return (null, McpToolResults.InvalidArgument(
-                $"helperSymbol '{input.HelperSymbol}' erfuellt die Fingerprint-Voraussetzungen der Engine nicht " +
-                $"(minTokens={options.MinTokens}, [GeneratedCode], ausgeschlossenes Verzeichnis " +
-                "(bin/obj/.ainetlinter/tests/Fixtures) oder ausserhalb des Solution-Verzeichnisses) — kein " +
-                "sinnvoller Aehnlichkeitsvergleich moeglich. minTokens senken oder Symbol-Fundort pruefen.",
-                hint: "minTokens pruefen oder eine Methode ausserhalb von generierten/Fixture-Verzeichnissen waehlen."));
+                DescribeFingerprintIneligibility(input.HelperSymbol!, options, eligibility),
+                hint: DescribeFingerprintHint(eligibility.Eligibility)));
         }
 
         var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);
@@ -76,6 +74,37 @@ internal static class RefactoringDriftScanner
         IPropertySymbol => "Property",
         IFieldSymbol => "Feld",
         _ => symbol.Kind.ToString(),
+    };
+
+    private static string DescribeFingerprintIneligibility(
+        string helperSymbol, DuplicateDetectionOptions options, MethodFingerprintEligibilityResult eligibility) =>
+        eligibility.Eligibility switch
+        {
+            MethodFingerprintEligibility.TooFewTokens =>
+                $"helperSymbol '{helperSymbol}' hat nur {eligibility.TokenCount} Body-Token; minTokens={options.MinTokens} ist nicht erreicht.",
+            MethodFingerprintEligibility.TooFewTokensForNgrams =>
+                $"helperSymbol '{helperSymbol}' hat nur {eligibility.TokenCount} Body-Token; ngramSize={options.NgramSize} ist nicht erreichbar.",
+            MethodFingerprintEligibility.GeneratedCode =>
+                $"helperSymbol '{helperSymbol}' ist mit GeneratedCode markiert und wird nicht fingerprinted.",
+            MethodFingerprintEligibility.OutsideScope =>
+                $"helperSymbol '{helperSymbol}' liegt ausserhalb von scopeDir und wird nicht fingerprinted.",
+            MethodFingerprintEligibility.OutsideScopeType =>
+                $"helperSymbol '{helperSymbol}' passt nicht zum gewaehlten scopeType und wird nicht fingerprinted.",
+            MethodFingerprintEligibility.PermanentlyExcludedPath =>
+                $"helperSymbol '{helperSymbol}' liegt in einem bewusst ausgeschlossenen Analysepfad und wird nicht fingerprinted.",
+            MethodFingerprintEligibility.SourceFileExcluded =>
+                $"helperSymbol '{helperSymbol}' liegt nicht in einer analysierbaren Solution-Quelldatei.",
+            _ =>
+                $"helperSymbol '{helperSymbol}' konnte nicht zu einem ausreichend grossen Fingerprint aufgeloest werden.",
+        };
+
+    private static string DescribeFingerprintHint(MethodFingerprintEligibility eligibility) => eligibility switch
+    {
+        MethodFingerprintEligibility.TooFewTokens or MethodFingerprintEligibility.TooFewTokensForNgrams =>
+            "minTokens senken oder einen umfangreicheren Helper waehlen.",
+        MethodFingerprintEligibility.OutsideScope or MethodFingerprintEligibility.OutsideScopeType =>
+            "scopeDir und scopeType pruefen oder einen passenden Helper waehlen.",
+        _ => "Den Quellpfad und die Eignung des Helper-Symbols pruefen.",
     };
 
     /// <summary>

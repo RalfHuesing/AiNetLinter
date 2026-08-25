@@ -42,6 +42,31 @@ internal sealed record DuplicateDetectionOptions(
     string? PathScopeFilter = null,
     string? ScopeType = null);
 
+/// <summary>
+/// Grund, aus dem eine aufgeloeste Helper-Methode keinen Fingerprint fuer die
+/// Duplikat- oder Refactoring-Drift-Erkennung liefern kann.
+/// </summary>
+internal enum MethodFingerprintEligibility
+{
+    Eligible,
+    SourceUnavailable,
+    SourceFileExcluded,
+    PermanentlyExcludedPath,
+    OutsideScope,
+    OutsideScopeType,
+    GeneratedCode,
+    TooFewTokens,
+    TooFewTokensForNgrams,
+}
+
+/// <summary>
+/// Ergebnis der zielgenauen Helper-Pruefung. <see cref="TokenCount"/> ist nur fuer
+/// tokenbezogene Ausschluesse gesetzt.
+/// </summary>
+internal sealed record MethodFingerprintEligibilityResult(
+    MethodFingerprintEligibility Eligibility,
+    int? TokenCount = null);
+
 /// <summary>Vom Ground-Truth-Beispiel abgeleitete Default-Werte — Quelle der Wahrheit fuer
 /// <see cref="Configuration.GlobalConfig"/>s <c>DuplicateCode*</c>-Property-Defaults und fuer
 /// Tests/Tool-Aufrufe ohne explizite Config.</summary>

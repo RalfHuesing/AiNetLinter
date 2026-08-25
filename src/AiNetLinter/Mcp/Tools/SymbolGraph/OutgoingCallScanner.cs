@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Core.DuplicateDetection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -18,7 +19,7 @@ internal static class OutgoingCallScanner
         foreach (var syntaxReference in symbol.DeclaringSyntaxReferences)
         {
             var declaration = await syntaxReference.GetSyntaxAsync(ct);
-            var body = GetBody(declaration);
+            var body = MethodBodyLocator.GetBody(declaration);
             if (body is null) continue;
 
             var document = solution.GetDocument(declaration.SyntaxTree);
@@ -32,14 +33,6 @@ internal static class OutgoingCallScanner
             .Select(pair => new OutgoingCallGroup(pair.Key, pair.Value))
             .ToList();
     }
-
-    private static SyntaxNode? GetBody(SyntaxNode declaration) => declaration switch
-    {
-        BaseMethodDeclarationSyntax method => method.Body ?? (SyntaxNode?)method.ExpressionBody,
-        AccessorDeclarationSyntax accessor => accessor.Body ?? (SyntaxNode?)accessor.ExpressionBody,
-        LocalFunctionStatementSyntax localFunction => localFunction.Body ?? (SyntaxNode?)localFunction.ExpressionBody,
-        _ => null,
-    };
 
     private static void AddOutgoingSymbols(
         SyntaxNode body,

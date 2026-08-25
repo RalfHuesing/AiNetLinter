@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Core.DuplicateDetection;
 
@@ -19,6 +18,33 @@ namespace AiNetLinter.Core.DuplicateDetection;
 /// </summary>
 internal static class DuplicateMethodCollector
 {
+    internal static async Task<MethodFingerprintEligibilityResult> GetEligibilityAsync(
+        Solution solution, IMethodSymbol method, DuplicateDetectionOptions options, CancellationToken ct)
+    {
+        var syntaxReference = method.DeclaringSyntaxReferences.FirstOrDefault();
+        if (syntaxReference is null) return new(MethodFingerprintEligibility.SourceUnavailable);
+
+        var declaration = await syntaxReference.GetSyntaxAsync(ct);
+        var document = solution.GetDocument(declaration.SyntaxTree);
+        if (document?.FilePath is not { } path) return new(MethodFingerprintEligibility.SourceUnavailable);
+
+        var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
+        if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) return new(MethodFingerprintEligibility.SourceFileExcluded);
+        if (IsPermanentlyExcludedPath(path)) return new(MethodFingerprintEligibility.PermanentlyExcludedPath);
+        if (!PathNormalizer.MatchesScope(path, options.PathScopeFilter)) return new(MethodFingerprintEligibility.OutsideScope);
+        if (!MatchesScopeType(document, path, options.ScopeType)) return new(MethodFingerprintEligibility.OutsideScopeType);
+        if (IsGenerated(method)) return new(MethodFingerprintEligibility.GeneratedCode);
+
+        var body = MethodBodyLocator.GetBody(declaration);
+        if (body is null) return new(MethodFingerprintEligibility.SourceUnavailable);
+
+        var tokenCount = body.DescendantTokens().Count();
+        if (tokenCount < options.MinTokens) return new(MethodFingerprintEligibility.TooFewTokens, tokenCount);
+        return tokenCount < options.NgramSize
+            ? new(MethodFingerprintEligibility.TooFewTokensForNgrams, tokenCount)
+            : new(MethodFingerprintEligibility.Eligible, tokenCount);
+    }
+
     internal static async Task<List<EligibleMethod>> CollectAsync(
         Solution solution, DuplicateDetectionOptions options, CancellationToken ct)
     {
@@ -94,16 +120,8 @@ internal static class DuplicateMethodCollector
     {
         foreach (var node in root.DescendantNodes())
         {
-            if (node is MethodDeclarationSyntax method)
-            {
-                var body = (SyntaxNode?)method.Body ?? method.ExpressionBody;
-                if (body is not null) yield return (method, body);
-            }
-            else if (node is LocalFunctionStatementSyntax localFunction)
-            {
-                var body = (SyntaxNode?)localFunction.Body ?? localFunction.ExpressionBody;
-                if (body is not null) yield return (localFunction, body);
-            }
+            var body = MethodBodyLocator.GetBody(node);
+            if (body is not null) yield return (node, body);
         }
     }
 
@@ -117,7 +135,9 @@ internal static class DuplicateMethodCollector
         var tokens = candidate.Body.DescendantTokens().ToList();
         if (tokens.Count < options.MinTokens) return null;
 
-        var lineNumber = candidate.Declaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+        var declarationLocation = symbol.Locations.FirstOrDefault(location => location.IsInSource);
+        var lineNumber = declarationLocation?.GetLineSpan().StartLinePosition.Line + 1
+            ?? candidate.Declaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
         return new EligibleMethod(
             filePath, lineNumber, symbol.ToDisplayString(), tokens.Count,
             candidate.Declaration, candidate.Body, symbol, semanticModel);

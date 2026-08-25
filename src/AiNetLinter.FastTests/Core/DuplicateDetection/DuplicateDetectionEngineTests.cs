@@ -33,6 +33,39 @@ public sealed partial class DuplicateDetectionEngineTests
     }
 
     [Fact]
+    public async Task ScanAsync_AttributedMethods_ReportMethodDeclarationLine()
+    {
+        const string source = """
+            public static class First
+            {
+                [System.Obsolete]
+                public static int ComputeFirst(int value)
+                {
+                    int a = value + 1; int b = a + 2; int c = b + 3; int d = c + 4; int e = d + 5;
+                    int f = e + 6; int g = f + 7; int h = g + 8; int i = h + 9; return i;
+                }
+            }
+
+            public static class Second
+            {
+                [System.Obsolete]
+                public static int ComputeSecond(int value)
+                {
+                    int a = value + 1; int b = a + 2; int c = b + 3; int d = c + 4; int e = d + 5;
+                    int f = e + 6; int g = f + 7; int h = g + 8; int i = h + 9; return i;
+                }
+            }
+            """;
+        using var testSolution = CreateSolution(("Methods.cs", source));
+
+        var result = await DuplicateDetectionEngine.ScanAsync(testSolution.Solution, DefaultOptions, CancellationToken.None);
+
+        var cluster = Assert.Single(result.Clusters);
+        Assert.Contains(cluster.Members, member => member.SignatureName.Contains("ComputeFirst") && member.LineNumber == 4);
+        Assert.Contains(cluster.Members, member => member.SignatureName.Contains("ComputeSecond") && member.LineNumber == 14);
+    }
+
+    [Fact]
     public async Task ScanAsync_OneStatementChanged_ClassifiesAsNear()
     {
         var variant = WithReplacedStatements([8], ["int i = a * 7;"]);

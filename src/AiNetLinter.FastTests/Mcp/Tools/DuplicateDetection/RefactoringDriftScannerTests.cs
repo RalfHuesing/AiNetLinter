@@ -191,6 +191,9 @@ public sealed class RefactoringDriftScannerTests
         Assert.Null(result);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("minTokens=30", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("Body-Token", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("ausgeschlossenes Verzeichnis", textContent.Text, System.StringComparison.Ordinal);
         Assert.NotEqual(true, error.IsError);
     }
 

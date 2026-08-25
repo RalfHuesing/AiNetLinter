@@ -197,28 +197,16 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         Assert.Contains("Keine Refactoring-Drift-Kandidaten", textContent.Text, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_CloneModeStillWorksUnaffectedByModeDispatch()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("clone")]
+    public async Task ExecuteAsync_DefaultAndCloneMode_ReturnClusters(string? mode)
     {
         using var context = CreateContext(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
         var state = context.CreateServer();
 
         var result = await DuplicateDetectionTool.ExecuteAsync(
-            state, new DuplicateDetectionInput(null, null, null, null, null, "clone", null), CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent!.Value.GetProperty("clusters").ValueKind);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_DefaultMode_BehavesLikeClone()
-    {
-        using var context = CreateContext(("A.cs", Helper), ("B.cs", Helper.Replace("OptionsHelper", "OtherHelper")), ("Stubs.cs", StubTypes));
-        var state = context.CreateServer();
-
-        var result = await DuplicateDetectionTool.ExecuteAsync(
-            state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
+            state, new DuplicateDetectionInput(null, null, null, null, null, mode, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
