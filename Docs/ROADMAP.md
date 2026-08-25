@@ -871,4 +871,25 @@ Vollständige Umstellung der vier MCP-Batch-Tools auf reine Array-Parameter und 
 
 ---
 
+## find_magic_values: False-Positive-Reduktion & Holder-Bewusstsein (Task 12)
+
+Generische False-Positive-Reduktion und Holder-Bewusstsein für das On-Demand-Audit-Tool `find_magic_values`:
+
+- [x] **M1 — Format-String-Heuristik geschärft:**
+  - Erkennung auf reine Datumspatterns (`yMdHmsftzF` + `:/-. ,`) umgestellt; schließt Substring-False-Positives in gewöhnlichen Wörtern (`Password`, `Message`, `Address`, `System.Collections.Immutable.dll`) aus.
+- [x] **M2 — Security-Heuristik 3 eingegrenzt:**
+  - Wert-Heuristik 3 auf exakte Gleichheit (`SecurityNameKeywords.Contains`) umgestellt; eliminiert Fehlalarme für Bezeichner wie `publicKeyToken` oder `CancellationToken`.
+- [x] **M3 — HTTP-Statuscodes kontextgebunden & Namens-Bug behoben:**
+  - Zahlen 100–599 werden nur noch in status-relevanten Kontexten (Vergleich/Switch/Parameter mit status/code oder `HttpStatusCode`-Typ) gemeldet. Unbekannte Statuscodes erzeugen keine Ziffern-Dopplungen (`Status150150`) mehr.
+- [x] **M4 — Well-known-Zahlen bereinigt:**
+  - Kontextfreie Zeitkonstanten (1000/24/60/360/1440/86400) ersatzlos gestrichen; Buffer-Größen (1024/2048/4096/8192) an Namenskontexte (`buffer`/`chunk`/`size`) gebunden.
+- [x] **M5 — Holder-Bewusstsein & feldspezifische Duplikaterkennung:**
+  - Schwellwerte (`double`/`float`/`decimal`) in statischen Holder-Klassen werden nicht mehr fälschlicherweise als Auslagerungskandidaten gemeldet.
+  - `DuplicateConstScanner` überspringt statische Holder-Klassen und gruppiert nach `(Type, FieldName, Value)`, um semantisch unverbundene Felder zu trennen.
+- [x] **M6 — Tool-Beschreibung & Tests:**
+  - Description von veralteten „No-op"-Aussagen für `includeSuppressed` und `changedOnly` bereinigt.
+  - 12 neue Verifikationstests in `FindMagicValuesScannerFalsePositiveTests` abgedeckt.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

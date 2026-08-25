@@ -150,9 +150,9 @@ public sealed class Foo
     }
 
     [Fact]
-    public async Task Classify_StandardCandidateExtras_TimeConstant1000()
+    public async Task Classify_StandardCandidateExtras_TimeConstant1000_NotReportedAsStandardCandidate()
     {
-        // 1000 ist MillisecondsPerSecond, sollte als standard_candidates klassifiziert werden.
+        // 1000 ohne Timeout-Aufruf-Kontext wird nicht mehr pauschal als standard_candidates gemeldet.
         const string source = @"
 namespace Test;
 public sealed class Foo
@@ -161,10 +161,7 @@ public sealed class Foo
 }";
         var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
-        var entry = Assert.Single(result.Payload!.MagicValues);
-        Assert.Equal("standard_candidates", entry.Category);
-        Assert.Equal("1000", entry.Value);
-        Assert.Contains("MillisecondsPerSecond", entry.Recommendation, StringComparison.Ordinal);
+        Assert.Empty(result.Payload!.MagicValues);
     }
 
     [Fact]

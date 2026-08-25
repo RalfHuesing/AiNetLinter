@@ -376,16 +376,30 @@ internal static class MagicValuesClassifier
         return false;
     }
 
+    private static bool LooksLikeDateFormatString(string value)
+    {
+        if (value.Length < 3) return false;
+        var patternLetters = 0;
+        foreach (var c in value)
+        {
+            if ("yMdHmsftzF".Contains(c, StringComparison.Ordinal))
+            {
+                patternLetters++;
+                continue;
+            }
+            if (!":/-. ,".Contains(c, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+        return patternLetters >= 3;
+    }
+
     private static bool LooksLikeFormatString(string value)
     {
         if (value.Length < 3) return false;
-        // Datumspatterns (z. B. 'yyyy-MM-dd', 'HH:mm:ss'): min. 2 Buchstaben aus y/M/d/H/m/s.
-        if (value.Contains("yyyy", StringComparison.Ordinal)
-            || value.Contains("MM", StringComparison.Ordinal)
-            || value.Contains("dd", StringComparison.Ordinal)
-            || value.Contains("HH", StringComparison.Ordinal)
-            || value.Contains("mm", StringComparison.Ordinal)
-            || value.Contains("ss", StringComparison.Ordinal))
+
+        if (LooksLikeDateFormatString(value))
         {
             return true;
         }

@@ -270,9 +270,10 @@ internal static class AnalysisToolRegistrations
         "security_candidates) filtert nach fachlichem Refactoring-Ziel, " +
         "minOccurrences (Default 1 — auch Einzelvorkommen), maxResults (Default 50), " +
         "ignoreNumbers (optional) ergaenzt die Trivial-Liste um projektspezifische Zahlen, " +
-        "includeTests (Default false), includeSuppressed (Default false; No-op in aktueller " +
-        "Version — Suppression-Logik kommt in einer Folgeversion), changedOnly (Default false; " +
-        "No-op in aktueller Version), scopeFilter (Projekt-Name oder Pfad-Substring).";
+        "includeTests (Default false), includeSuppressed (Default false; steuert, ob Fundstellen " +
+        "mit '// ainetlinter-disable MagicValues'-Kommentar unterdrueckt werden), changedOnly " +
+        "(Default false; schraenkt den Scan ueber Git-Diff auf geaenderte Dateien im Repository ein), " +
+        "scopeFilter (Projekt-Name oder Pfad-Substring).";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -21,7 +21,7 @@ internal static class DuplicateConstScanner
         IReadOnlyList<(Document Document, string FilePath)> matchingDocuments,
         CancellationToken ct)
     {
-        var groups = new Dictionary<(string Type, string Value), List<DuplicateConstEntry>>(EqualityComparer<(string, string)>.Default);
+        var groups = new Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>>();
 
         foreach (var (document, filePath) in matchingDocuments)
         {
@@ -35,7 +35,7 @@ internal static class DuplicateConstScanner
     private static async Task CollectFromDocumentAsync(
         Document document,
         string filePath,
-        Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups,
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
         CancellationToken ct)
     {
         if (document.SourceCodeKind != SourceCodeKind.Regular) return;
@@ -50,7 +50,7 @@ internal static class DuplicateConstScanner
 
     private static void EmitDuplicateConstGroups(
         List<RawMagicValue> sink,
-        Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
     {
         const int MinDifferentFiles = 2;
         foreach (var (key, entries) in groups)
@@ -80,14 +80,14 @@ internal static class DuplicateConstScanner
 
     private static RawMagicValue BuildDuplicateConstRawValue(
         DuplicateConstEntry entry,
-        (string Type, string Value) key,
+        (string Type, string FieldName, string Value) key,
         string recommendation)
     {
         var classification = new MagicValueClassification(
             true,
             MagicValueCategory.ConstantCandidates,
             recommendation,
-            $"Dupliziertes const-Feld '{entry.FieldName}' ({key.Type} = {key.Value})");
+            $"Dupliziertes const-Feld '{key.FieldName}' ({key.Type} = {key.Value})");
         var valueType = key.Type.Contains("string", StringComparison.OrdinalIgnoreCase)
             ? MagicValueValueType.String
             : MagicValueValueType.Number;
@@ -99,11 +99,12 @@ internal static class DuplicateConstScanner
     private static void CollectDuplicateConstFields(
         SyntaxNode root,
         string filePath,
-        Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
     {
         foreach (var fieldDecl in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
         {
             if (!IsConstFieldDeclaration(fieldDecl)) continue;
+            if (MagicValuesNumberClassifier.IsInStaticHolderType(fieldDecl)) continue;
             var typeText = fieldDecl.Declaration.Type.ToString();
             if (string.IsNullOrEmpty(typeText)) continue;
 
@@ -124,7 +125,7 @@ internal static class DuplicateConstScanner
         FieldDeclarationSyntax fieldDecl,
         string typeText,
         string filePath,
-        Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
     {
         if (variable.Initializer?.Value is not LiteralExpressionSyntax literal) return;
         var value = literal.Token.ValueText;
@@ -132,7 +133,8 @@ internal static class DuplicateConstScanner
 
         var entry = CreateDuplicateConstEntry(variable, fieldDecl, literal, filePath);
         if (entry is null) return;
-        AddToGroups(groups, (typeText, value), entry);
+        var fieldName = variable.Identifier.ValueText;
+        AddToGroups(groups, (typeText, fieldName, value), entry);
     }
 
     private static DuplicateConstEntry? CreateDuplicateConstEntry(
@@ -150,8 +152,8 @@ internal static class DuplicateConstScanner
     }
 
     private static void AddToGroups(
-        Dictionary<(string Type, string Value), List<DuplicateConstEntry>> groups,
-        (string Type, string Value) key,
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
+        (string Type, string FieldName, string Value) key,
         DuplicateConstEntry entry)
     {
         if (!groups.TryGetValue(key, out var list))

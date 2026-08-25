@@ -45,27 +45,21 @@ internal static class MagicValuesStringHeuristics
         "http://", "https://", "ftp://",
     };
 
-    // Well-known Buffer- und Zeit-Konstanten, die zwar nicht HTTP-Statuscodes sind, aber
-    // semantisch eindeutig (1024 = 1 KiB Buffer, 1000 = ms/Second, 86400 = s/Tag).
-    private static readonly HashSet<int> StandardExtraNumbers = new()
+    // Well-known Buffer-Konstanten, die semantisch eindeutig sind (1024 = 1 KiB Buffer).
+    // Zeit-Konstanten wurden ersatzlos gestrichen, da deren Bedeutung vom Kontext am Verwendungsort abhängt.
+    private static readonly HashSet<int> StandardBufferNumbers = new()
     {
-        1024, 2048, 4096, 8192, 1000, 24, 60, 360, 1440, 86400,
+        1024, 2048, 4096, 8192,
     };
 
-    // Empfehlungs-Mapping fuer die StandardExtraNumbers — wird im Recommendation-String
-    // verwendet, damit der Refactor-Hint lesbar bleibt (BufferSize vs. Time-Konstante).
-    private static readonly Dictionary<int, string> StandardExtraNames = new()
+    // Empfehlungs-Mapping fuer die StandardBufferNumbers — wird im Recommendation-String
+    // verwendet, damit der Refactor-Hint lesbar bleibt (BufferSize).
+    private static readonly Dictionary<int, string> StandardBufferNames = new()
     {
         [1024] = "BufferSize (1 KiB)",
         [2048] = "BufferSize (2 KiB)",
         [4096] = "BufferSize (4 KiB)",
         [8192] = "BufferSize (8 KiB)",
-        [1000] = "MillisecondsPerSecond",
-        [24] = "HoursPerDay",
-        [60] = "SecondsPerMinute",
-        [360] = "SecondsPerHour",
-        [1440] = "MinutesPerDay",
-        [86400] = "SecondsPerDay",
     };
 
     // Exception-Typen, die als Heuristik fuer User-Facing-Message-Texte gelten.
@@ -228,34 +222,34 @@ internal static class MagicValuesStringHeuristics
                 $"Hartcodiertes Secret/Credential (CWE-798, Symbol-Name '{symbolName}')");
         }
 
-        // Heuristik 3: der Literal-Wert selbst entspricht einem Security-Schluesselwort.
+        // Heuristik 3: der Literal-Wert selbst entspricht exakt einem Security-Schluesselwort.
         // Z. B. Connect("password") wo "password" direkt als Argument-Wert ein Secret
-        // andeutet. Bewusst eng gefasst (nur exakte Substring-Matches, keine Fuzzy-Suche),
-        // um die False-Positive-Quote niedrig zu halten.
-        if (SecurityNameKeywords.Any(k => literalText.Contains(k, StringComparison.OrdinalIgnoreCase)))
+        // andeutet. Bewusst auf exakte Gleichheit beschraenkt (OrdinalIgnoreCase),
+        // um False Positives wie 'publicKeyToken' oder 'CancellationToken' auszuschliessen.
+        if (SecurityNameKeywords.Contains(literalText))
         {
             return new MagicValueClassification(
                 true,
                 MagicValueCategory.SecurityCandidates,
                 "In Secret-Store/KeyVault auslagern",
-                $"Hartcodiertes Secret/Credential (CWE-798, Wert enthaelt '{literalText}')");
+                $"Hartcodiertes Secret/Credential (CWE-798, Wert entspricht '{literalText}')");
         }
 
         return null;
     }
 
-    /// <summary>Prueft, ob ein numerisches Literal einer Well-known Buffer- oder Zeit-Konstante
-    /// entspricht. Wird in <see cref="MagicValuesNumberClassifier.ClassifyNumber"/> am Ende
-    /// aufgerufen, wenn weder HTTP-Statuscode noch Timeout-Parameter noch Schwellenwert greifen.
-    /// Liefert <see langword="null"/>, wenn das Literal keine Standard-Konstante ist — dann
-    /// faellt der Aufrufer auf <c>NotMagic</c> zurueck.</summary>
+    /// <summary>Prueft, ob ein numerisches Literal einer Well-known Buffer-Konstante
+    /// entspricht (1024/2048/4096/8192) und im umgebenden Kontext einen entsprechenden
+    /// Bezeichner (buffer/chunk/size) traegt.</summary>
     internal static MagicValueClassification? ClassifyStandardCandidateExtras(
-        LiteralExpressionSyntax literal)
+        LiteralExpressionSyntax literal,
+        SemanticModel? model)
     {
         if (literal.Token.Value is not int value) return null;
-        if (!StandardExtraNumbers.Contains(value)) return null;
+        if (!StandardBufferNumbers.Contains(value)) return null;
+        if (!HasBufferContext(literal, model)) return null;
 
-        var name = StandardExtraNames.TryGetValue(value, out var mapped)
+        var name = StandardBufferNames.TryGetValue(value, out var mapped)
             ? mapped
             : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
@@ -263,7 +257,30 @@ internal static class MagicValuesStringHeuristics
             true,
             MagicValueCategory.StandardCandidates,
             $"NamedConstant ({name})",
-            "Well-known Konstante (Buffer-Groesse / Zeit-Konstante)");
+            "Well-known Buffer-Groesse");
+    }
+
+    private static bool HasBufferContext(LiteralExpressionSyntax literal, SemanticModel? model)
+    {
+        if (model is not null && MagicValuesNumberClassifier.TryResolveParameterName(literal, model) is { } paramName)
+        {
+            if (IsBufferIdentifier(paramName)) return true;
+        }
+
+        var surroundingName = ResolveSurroundingName(literal);
+        if (surroundingName is not null && IsBufferIdentifier(surroundingName))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsBufferIdentifier(string name)
+    {
+        return name.Contains("buffer", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("chunk", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("size", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Prueft, ob ein String-Literal als User-Facing Exception-Message fungiert.
@@ -319,7 +336,7 @@ internal static class MagicValuesStringHeuristics
         return null;
     }
 
-    /// <summary>Loest den umgebenden Symbol-Namen auf (Parameter, Variable, Feld, Argument mit
+    /// <summary>Loest den umgebenden Symbol-Namen auf (Parameter, Variable, Feld, Property, Argument mit
     /// NameColon). Liefert <see langword="null"/>, wenn keiner der Kontexte zutrifft.</summary>
     private static string? ResolveSurroundingName(LiteralExpressionSyntax literal)
     {
@@ -329,7 +346,7 @@ internal static class MagicValuesStringHeuristics
             return namedArg.NameColon!.Name.Identifier.ValueText;
         }
 
-        // Variable-Declarator: var password = "..."
+        // Variable-Declarator / Property / Parameter
         for (var current = literal.Parent; current is not null; current = current.Parent)
         {
             if (current is VariableDeclaratorSyntax declarator)
@@ -340,6 +357,11 @@ internal static class MagicValuesStringHeuristics
             if (current is ParameterSyntax parameter)
             {
                 return parameter.Identifier.ValueText;
+            }
+
+            if (current is PropertyDeclarationSyntax property)
+            {
+                return property.Identifier.ValueText;
             }
         }
 

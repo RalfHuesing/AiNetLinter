@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -129,12 +129,12 @@ public sealed class Foo
 namespace Test;
 public sealed class Foo
 {
-    public void M(int s)
+    public void M(int status)
     {
-        if (s == 200) { }
-        if (s == 301) { }
-        if (s == 404) { }
-        if (s == 500) { }
+        if (status == 200) { }
+        if (status == 301) { }
+        if (status == 404) { }
+        if (status == 500) { }
     }
 }";
         var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), ignoreNumbers: new HashSet<int> { 200, 301 });

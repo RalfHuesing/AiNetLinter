@@ -32,15 +32,16 @@ internal static class MagicValuesNumberClassifier
         LiteralExpressionSyntax literal,
         SemanticModel? model)
     {
-        // HTTP-Statuscode-Heuristik: 1xx/2xx/3xx/4xx/5xx in jedem nicht-trivialen Kontext.
-        // Der Wertebereich 100-599 ist sehr eng und semantisch eindeutig — selbst in einem
-        // Vergleichsausdruck (if (status == 404)) ist die Empfehlung StatusCodes.Status... wertvoll.
-        if (literal.Token.Value is int statusCode && IsHttpStatusCode(statusCode))
+        // HTTP-Statuscode-Heuristik: 1xx/2xx/3xx/4xx/5xx nur im status-relevanten Kontext
+        // (Vergleich gegen status/code, Parametername status/code, HttpStatusCode-Typ).
+        if (literal.Token.Value is int statusCode
+            && IsHttpStatusCode(statusCode)
+            && HasStatusCodeContext(literal, model))
         {
             return new MagicValueClassification(
                 true,
                 MagicValueCategory.StandardCandidates,
-                $"StatusCodes.Status{statusCode}{(statusCode >= 500 ? "InternalServerError" : ResolveStatusCodeName(statusCode))}",
+                FormatStatusCodeRecommendation(statusCode),
                 "HTTP-Statuscode-Literal");
         }
 
@@ -60,9 +61,10 @@ internal static class MagicValuesNumberClassifier
 
         // Schwellenwert-Heuristik: doubles/floats in const-/readonly-/static-Feld-Initialisierern
         // sind typischerweise Magic Thresholds (0.5, 0.19, 0.80) — sollen zentral definiert werden.
+        // Liegt das Feld bereits in einer statischen Holder-Klasse, ist die Empfehlung selbst-referenziell.
         if (literal.Token.Value is double or float or decimal)
         {
-            if (IsInConstFieldInitializer(literal))
+            if (IsInConstFieldInitializer(literal) && !IsInStaticHolderType(literal))
             {
                 return new MagicValueClassification(
                     true,
@@ -72,12 +74,8 @@ internal static class MagicValuesNumberClassifier
             }
         }
 
-        // Well-known Standard-Konstanten: Buffer-Groessen (1024/2048/4096/8192) und
-        // Zeit-Konstanten in Sekunden/Minuten/Stunden/Tagen (1000/24/60/360/1440/86400).
-        // Bewusst als eigener Pfad, damit z. B. Thread.Sleep(1000) trotz Timeout-Heuristik
-        // daneben als NamedConstant (MillisecondsPerSecond) gemeldet wird — das ist ein
-        // anderer Refactor-Hinweis (Constants.cs vs. appsettings.json).
-        if (MagicValuesStringHeuristics.ClassifyStandardCandidateExtras(literal) is { } standardClassification)
+        // Well-known Standard-Konstanten: Buffer-Groessen (1024/2048/4096/8192) mit Namenskontext.
+        if (MagicValuesStringHeuristics.ClassifyStandardCandidateExtras(literal, model) is { } standardClassification)
         {
             return standardClassification;
         }
@@ -91,27 +89,149 @@ internal static class MagicValuesNumberClassifier
         return (value / 100) is >= 1 and <= 5;
     }
 
-    internal static string ResolveStatusCodeName(int code) => code switch
+    internal static string? ResolveStatusCodeName(int code) => code switch
     {
+        100 => "Continue",
+        101 => "SwitchingProtocols",
         200 => "OK",
         201 => "Created",
+        202 => "Accepted",
         204 => "NoContent",
         301 => "MovedPermanently",
         302 => "Found",
         304 => "NotModified",
+        307 => "TemporaryRedirect",
+        308 => "PermanentRedirect",
         400 => "BadRequest",
         401 => "Unauthorized",
         403 => "Forbidden",
         404 => "NotFound",
+        405 => "MethodNotAllowed",
+        408 => "RequestTimeout",
         409 => "Conflict",
+        410 => "Gone",
+        415 => "UnsupportedMediaType",
         422 => "UnprocessableEntity",
         429 => "TooManyRequests",
         500 => "InternalServerError",
+        501 => "NotImplemented",
         502 => "BadGateway",
         503 => "ServiceUnavailable",
         504 => "GatewayTimeout",
-        _ => code.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        _ => null,
     };
+
+    private static string FormatStatusCodeRecommendation(int statusCode)
+    {
+        var name = ResolveStatusCodeName(statusCode);
+        return name is null
+            ? $"StatusCodes.Status{statusCode}"
+            : $"StatusCodes.Status{statusCode}{name}";
+    }
+
+    private static bool HasStatusCodeContext(LiteralExpressionSyntax literal, SemanticModel? model)
+    {
+        return HasStatusCodeSyntaxContext(literal)
+            || HasStatusCodeParameterContext(literal, model)
+            || HasStatusCodeSemanticContext(literal, model);
+    }
+
+    private static bool HasStatusCodeSyntaxContext(LiteralExpressionSyntax literal)
+    {
+        return HasStatusCodeComparisonContext(literal)
+            || HasStatusCodeSwitchContext(literal)
+            || HasStatusCodeDeclarationOrAssignmentContext(literal);
+    }
+
+    private static bool HasStatusCodeComparisonContext(LiteralExpressionSyntax literal)
+    {
+        if (literal.Parent is BinaryExpressionSyntax binary)
+        {
+            var other = binary.Left == literal ? binary.Right : binary.Left;
+            return IsStatusCodeIdentifier(other.ToString());
+        }
+
+        if (literal.Parent is ConstantPatternSyntax { Parent: IsPatternExpressionSyntax isPattern })
+        {
+            return IsStatusCodeIdentifier(isPattern.Expression.ToString());
+        }
+
+        return false;
+    }
+
+    private static bool HasStatusCodeSwitchContext(LiteralExpressionSyntax literal)
+    {
+        if (literal.Parent is CaseSwitchLabelSyntax
+            && literal.FirstAncestorOrSelf<SwitchStatementSyntax>() is { } switchStmt)
+        {
+            return IsStatusCodeIdentifier(switchStmt.Expression.ToString());
+        }
+
+        if (literal.Parent is ConstantPatternSyntax { Parent: SwitchExpressionArmSyntax }
+            && literal.FirstAncestorOrSelf<SwitchExpressionSyntax>() is { } switchExpr)
+        {
+            return IsStatusCodeIdentifier(switchExpr.GoverningExpression.ToString());
+        }
+
+        return false;
+    }
+
+    private static bool HasStatusCodeDeclarationOrAssignmentContext(LiteralExpressionSyntax literal)
+    {
+        if (literal.Parent is EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator })
+        {
+            return IsStatusCodeIdentifier(declarator.Identifier.ValueText);
+        }
+
+        if (literal.Parent is AssignmentExpressionSyntax assign && assign.Right == literal)
+        {
+            return IsStatusCodeIdentifier(assign.Left.ToString());
+        }
+
+        if (literal.Parent is PropertyDeclarationSyntax prop)
+        {
+            return IsStatusCodeIdentifier(prop.Identifier.ValueText);
+        }
+
+        return false;
+    }
+
+    private static bool HasStatusCodeParameterContext(LiteralExpressionSyntax literal, SemanticModel? model)
+    {
+        if (literal.Parent is ArgumentSyntax { NameColon: not null } namedArg
+            && IsStatusCodeIdentifier(namedArg.NameColon.Name.Identifier.ValueText))
+        {
+            return true;
+        }
+
+        if (model is not null && TryResolveParameterName(literal, model) is { } paramName)
+        {
+            return IsStatusCodeIdentifier(paramName);
+        }
+
+        return false;
+    }
+
+    private static bool HasStatusCodeSemanticContext(LiteralExpressionSyntax literal, SemanticModel? model)
+    {
+        if (model is null) return false;
+        var typeInfo = model.GetTypeInfo(literal);
+        return typeInfo.ConvertedType is { } targetType
+            && targetType.Name.Contains("HttpStatusCode", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsStatusCodeIdentifier(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        return name.Contains("status", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("code", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool IsInStaticHolderType(SyntaxNode node)
+    {
+        return node.FirstAncestorOrSelf<TypeDeclarationSyntax>() is { } typeDecl
+            && typeDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
+    }
 
     internal static bool IsInMethodCallArgument(LiteralExpressionSyntax literal)
     {

@@ -1,5 +1,5 @@
 ---
-status: ready (auditiert, umsetzbar)
+status: erledigt
 type: konzept
 project_kind: brownfield
 estimated_scope: medium

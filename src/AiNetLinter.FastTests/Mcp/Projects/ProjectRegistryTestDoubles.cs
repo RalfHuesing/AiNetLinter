@@ -5,6 +5,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
+using AiNetLinter.TestKit;
 
 namespace AiNetLinter.FastTests.Mcp.Projects;
 
@@ -127,9 +128,5 @@ internal sealed class TrackingServerFactory
         return disposalCounts.TryGetValue(server, out var count) ? count : 0;
     }
 
-    private static Config MinimalConfig() => new()
-    {
-        Global = new GlobalConfig(),
-        Metrics = new MetricsConfig(),
-    };
+    private static Config MinimalConfig() => TestConfigFactory.CreateEmpty();
 }
