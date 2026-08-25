@@ -38,9 +38,6 @@ public sealed class WiringContractTests
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
 
         Assert.Equal(26, tools.Count);
-        Assert.Equal(
-            OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
-            tools.Keys.ToHashSet());
 
         foreach (var tool in tools.Values)
         {

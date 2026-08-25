@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,56 +15,18 @@ namespace AiNetLinter.Mcp;
 /// <summary>
 /// Registriert die MCP-Resource <c>ainetlinter://overview</c> als Resource-Template mit dem
 /// Pflicht-Query-Parameter <c>projectRoot</c>: ein kurzer, bei jedem <c>resources/read</c>
-/// frisch generierter Markdown-Ueberblick fuer Agenten, die den Server noch nicht kennen —
-/// welche Tools es gibt (Kurzbeschreibung, nicht die volle Tool-Description) und mit welcher
-/// Solution/Config-Quelle der adressierte Key tatsaechlich laeuft. MCP-Resources nehmen keine
+/// frisch generierter Markdown-Status fuer Agenten, die den Server bereits adressieren — mit
+/// welcher Solution/Config-Quelle der adressierte Key tatsaechlich laeuft. MCP-Resources nehmen keine
 /// Tool-Argumente, daher adressiert der URL-kodierte Projektroot den Registry-Key; Guards und
 /// Fehlervertraege entsprechen denen der Tools (PROJECT_ROOT_REQUIRED/_INVALID,
-/// PROJECT_NOT_INITIALIZED). Ergaenzt <c>tools/list</c>, ersetzt es nicht — dort stehen die
-/// vollstaendigen Parameter-Schemas.
+/// PROJECT_NOT_INITIALIZED). Der Erstkontakt ohne Projektdefinition erfolgt ueber die direkte
+/// Resource <c>ainetlinter://agent-guide</c>; Tool-Schemas stehen in <c>tools/list</c>.
 /// </summary>
 internal static class OverviewResourceRegistration
 {
     // RFC-6570-Form-Expansion: ainetlinter://overview{?projectRoot} expandiert zu
     // ainetlinter://overview?projectRoot=<url-encoded>.
     private const string OverviewUriTemplate = "ainetlinter://overview{?projectRoot}";
-
-    /// <summary>
-    /// Kurzbeschreibungen aller registrierten Tools (ein Satz, keine Parameter-Details — die
-    /// liefert <c>tools/list</c>). Bewusst hier gepflegt statt aus den vollen Tool-Descriptions
-    /// abgeleitet (die sind fuer diesen Zweck zu lang) — <c>OverviewResourceRegistrationTests</c>
-    /// prueft die Namens-Parität gegen die tatsaechlich registrierten Tools, damit ein neues
-    /// oder umbenanntes Tool hier nicht stillschweigend fehlt.
-    /// </summary>
-    internal static readonly IReadOnlyList<(string Name, string Summary)> ToolSummaries =
-    [
-        ("find_symbol", "Sucht C#-Symbole (Klasse/Methode/Property/Interface) per Substring im Namen."),
-        ("find_references", "Findet Aufrufstellen eines C#-Symbols."),
-        ("get_call_tree", "Liefert den echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols (Eltern-Kind-Struktur, ASCII oder Mermaid)."),
-        ("get_impact", "Findet Aufrufstellen geaenderter Signaturen — per Git-Diff (Default: uncommittete Aenderungen) oder fuer ein einzelnes Symbol."),
-        ("get_type_hierarchy", "Liefert Basisklassen, Interfaces, abgeleitete Typen und heuristische DI-Registrierungen eines Typs."),
-        ("dependency_graph", "Liefert die Datei-/Typ-Abhaengigkeiten einer Datei oder eines Typs (eingehend/ausgehend/beides, echte SemanticModel-Typreferenzen)."),
-        ("get_file_skeleton", "Liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies) einer oder mehrerer C#-Dateien (Batch-Support)."),
-        ("get_class_structure", "Liefert eine tabellarische Member- und Zeilen-Uebersicht eines C#-Typs."),
-        ("get_symbol_body", "Liefert den Source-Body eines oder mehrerer C#-Symbole (Batch-Support) per stabiler ID oder Datei:Zeile:Spalte."),
-        ("get_violations", "Liefert aktuelle Lint-Regelverstoesse der geladenen Solution."),
-        ("safeguard", "Liefert einen deterministischen 0-10-Quality-Score inkl. Pass/Fail-Threshold, Top-Violations und Remediation-Hint."),
-        ("pattern_detect", "Gruppiert Lint-Regelverstoesse nach Pattern-Kategorie (god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy)."),
-        ("find_magic_values", "On-Demand-Audit nach Magic Values (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) in C#-Quellcode mit Ziel-Empfehlung (appsettings.json, Constants.cs, StatusCodes.StatusXXX...)."),
-        ("find_dead_code", "Findet unreferenzierten/toten Code (Typen, Methoden, Properties, Felder) mit Confidence-Stufen (high/low) und False-Positive-Schutz."),
-        ("get_index_scope", "Liefert eine Dateityp-Aufschluesselung der geladenen Solution."),
-        ("get_hotspots", "Liefert .cs-Dateien, die ihrem Zeilen-Limit nahekommen oder es ueberschreiten."),
-        ("metrics_tree", "Liefert einen ASCII-Baum mit aggregierten Werten pro Verzeichnisknoten (z. B. Code-Groesse, Kommentaranteil) zur Ebene-fuer-Ebene-Exploration."),
-        ("metrics_lookup", "Liefert punktgenaue Metriken (LOC, Komplexitaet, Parameter, AI-Context-Footprint) und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole (Batch-Support)."),
-        ("search_pattern", "Text- oder Regex-Suche ueber alle Dateitypen; enrichCSharp=true reichert sichtbare C#-Treffer opt-in innerhalb des geladenen Solution-/Projekt-Snapshots an, markiert ambiguous/unavailable und nennt bei Trunkierung die Folge: Pattern, Scope oder Limits verfeinern."),
-        ("reload_config", "Liest die rules.json zur Laufzeit neu ein, ohne Server-Neustart."),
-        ("get_server_health", "Liefert pro Projekt-Key LoadState, Uptime und Solution-Refreshes."),
-        ("get_namespace_tree", "Ermoeglicht hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte -> Namespaces -> Typen)."),
-        ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
-        ("get_feature_context", "Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken, Aufrufer, statische Test-Zuordnung, Violations) vor Edits."),
-        ("get_test_context", "Ermittelt statische Test-Zuordnungen, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol."),
-        ("report_observability_feedback", "Ermoeglicht Agenten, Fehler, unerwartete Ergebnisse oder Wuensche direkt zur Analyse ins Log zu melden."),
-    ];
 
     internal static void Register(McpServerResourceCollection resources, ProjectRegistry registry)
     {
@@ -75,9 +36,9 @@ internal static class OverviewResourceRegistration
             {
                 UriTemplate = OverviewUriTemplate,
                 Name = "overview",
-                Description = "Kurzueberblick fuer Agenten: alle Tools in einem Satz je Zeile, " +
-                    "plus aktueller Server-Status des adressierten Projekts (geladene Solution, " +
-                    "verwendete rules.json oder Default-Regeln). Pflicht: Query-Parameter " +
+                Description = "Projektstatus fuer Agenten (geladene Solution und Regelquelle). " +
+                    "Der Erstkontakt ohne Projektdefinition erfolgt ueber " +
+                    "ainetlinter://agent-guide. Pflicht: Query-Parameter " +
                     "projectRoot mit absolutem Projektroot (URL-kodiert). Bei jedem Read frisch generiert.",
                 MimeType = "text/markdown",
             }));
@@ -143,12 +104,11 @@ internal static class OverviewResourceRegistration
     internal static string BuildOverviewText(ProjectSnapshot snapshot)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# AiNetLinter MCP-Server — Kurzueberblick");
+        sb.AppendLine("# AiNetLinter MCP-Server — Projektstatus");
         sb.AppendLine();
         sb.AppendLine(
-            "AiNetLinter ist ein Roslyn-basierter C#-Linter. In diesem Prozess laeuft er als " +
-            "stdio-MCP-Server und macht die geladene .NET-Solution ueber die unten gelisteten " +
-            "Tools abfragbar.");
+            "AiNetLinter laeuft als stdio-MCP-Server und analysiert die adressierte " +
+            ".NET-Solution semantisch ueber Roslyn.");
         sb.AppendLine();
         sb.AppendLine($"## Server-Status (Projekt {snapshot.RootPath})");
         sb.AppendLine();
@@ -156,25 +116,12 @@ internal static class OverviewResourceRegistration
         sb.AppendLine($"- Regeln: {DescribeConfig(snapshot.Server)}");
         sb.AppendLine($"- Zuletzt genutzt (UTC): {snapshot.LastUsedUtc:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
-        sb.AppendLine($"## Tools ({ToolSummaries.Count})");
         sb.AppendLine();
-        foreach (var (name, summary) in ToolSummaries)
-        {
-            sb.AppendLine($"- `{name}` — {summary}");
-        }
+        sb.AppendLine("## Weiter");
         sb.AppendLine();
-        sb.AppendLine("## Empfohlene Workflows (Tool-Choreographie)");
-        sb.AppendLine();
-        sb.AppendLine("1. Code erkunden (Token-sparend statt ganzer File-Dumps):");
-        sb.AppendLine("   get_index_scope -> metrics_tree / get_hotspots -> get_file_skeleton / get_class_structure -> get_symbol_body");
-        sb.AppendLine("2. Refactoring & Impact pruefen (Semantisch statt Text-Grep):");
-        sb.AppendLine("   find_symbol -> find_references / get_call_tree -> get_impact / dependency_graph");
-        sb.AppendLine("3. Quality-Gate vor Commit (Inkrementell im RAM):");
-        sb.AppendLine("   safeguard (Score 0-10) -> get_violations -> find_magic_values / find_duplicates");
-        sb.AppendLine();
-        sb.AppendLine(
-            "Vollstaendige Parameter-Schemas liefert `tools/list`; diese Resource ist nur die " +
-            "Kurzuebersicht.");
+        sb.AppendLine("- Erstkontakt und Integration: `ainetlinter://agent-guide`");
+        sb.AppendLine("- Vollständige Tool- und Parameterschemas: `tools/list`");
+        sb.AppendLine("- Nach Änderungen: `get_impact` und `get_violations`");
         return sb.ToString().TrimEnd();
     }
 

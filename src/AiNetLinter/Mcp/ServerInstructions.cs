@@ -5,10 +5,9 @@ namespace AiNetLinter.Mcp;
 /// <summary>
 /// Zentrale globale Anleitung fuer die Discovery-Antworten des MCP-Servers. Das SDK stellt sie
 /// ueber <see cref="McpServerOptionsFactory"/> sowohl im Legacy-<c>initialize</c>-Handshake als
-/// auch in <c>server/discover</c> bereit. Tool-Schemas und die vollstaendige Kurzliste bleiben
-/// bewusst in <c>tools/list</c>, der kompakten Status je Projekt-Key in
-/// <c>ainetlinter://overview?projectRoot=...</c> — damit diese Angaben nicht in jedem globalen
-/// Instructions-Text dupliziert werden.
+/// auch in <c>server/discover</c> bereit. Der statische Erstkontakt-Leitfaden steht unter
+/// <c>ainetlinter://agent-guide</c>; der kompakte Status je Projekt-Key unter
+/// <c>ainetlinter://overview?projectRoot=...</c>. Tool-Schemas bleiben in <c>tools/list</c>.
 /// </summary>
 internal static class ServerInstructions
 {
@@ -23,12 +22,13 @@ internal static class ServerInstructions
         "\"solution\" und \"rules\"; Pfade gelten relativ zur Definitionsdatei. Fehlt oder ist " +
         "die Datei defekt, antwortet der Server deterministisch (PROJECT_NOT_INITIALIZED bzw. " +
         "RULES_INVALID) inklusive kopierfaehigem Template statt stillschweigenden Defaults.\n\n" +
+        "Neue Integration: zuerst ainetlinter://agent-guide lesen; den Projektstatus danach " +
+        "ueber ainetlinter://overview?projectRoot=<url-encoded> pruefen.\n\n" +
         "C#-Symbolgraph-Grenze: C#-Symbole ueber die semantischen Tools abfragen; fuer " +
         "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
         "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +
         "C#-Dokumente opt-in an; ambiguous/unavailable bleiben sichtbar.\n\n" +
-        "Schemas und Toolzwecke: tools/list. Kompakter Status je Key: " +
-        "ainetlinter://overview?projectRoot=<url-encoded>.\n\n" +
+        "Schemas und Toolzwecke: tools/list.\n\n" +
         "Sufficiency: Vollstaendige Ergebnisse nicht redundant per Read/Grep pruefen; bei " +
         "truncated Limits oder Scope verfeinern.\n\n" +
         "isError-Policy: isError=true ist nicht initialisierten Projekten, Sicherheitsverweigerung " +

@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp;
 using AiNetLinter.TestKit;
@@ -37,14 +36,6 @@ public sealed class McpServerOptionsFactoryTests
     {
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
-        var registeredNames = options.ToolCollection!
-            .Select(t => t.ProtocolTool.Name)
-            .ToHashSet(StringComparer.Ordinal);
-
-        Assert.Equal(
-            OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
-            registeredNames);
-
         Assert.InRange(
             Encoding.UTF8.GetByteCount(ServerInstructions.Text),
             1,
@@ -53,25 +44,12 @@ public sealed class McpServerOptionsFactoryTests
     }
 
     [Fact]
-    public void ToolRegistration_MatchesOverviewResourceTools()
-    {
-        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
-        var registeredNames = options.ToolCollection!
-            .Select(t => t.ProtocolTool.Name)
-            .ToHashSet(StringComparer.Ordinal);
-        var overviewNames = OverviewResourceRegistration.ToolSummaries
-            .Select(t => t.Name)
-            .ToHashSet(StringComparer.Ordinal);
-
-        Assert.Equal(registeredNames, overviewNames);
-    }
-
-    [Fact]
     public void Create_ServerInstructionsContainsWorkflowGuidance()
     {
         Assert.Contains("C#-Symbolgraph-Grenze", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter://overview", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("Sufficiency", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("isError=true", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_feature_context -> get_symbol_body", ServerInstructions.Text, StringComparison.Ordinal);

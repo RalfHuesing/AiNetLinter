@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
@@ -21,7 +19,8 @@ internal static class DocsCommand
         { "configuration", "Docs/configuration.md" },
         { "rationale", "Docs/rationale.md" },
         { "roadmap", "Docs/ROADMAP.md" },
-        { "rules-json", "rules.json" }
+        { "rules-json", "rules.json" },
+        { "mcp-workflow", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
     };
 
     /// <summary>
@@ -46,15 +45,14 @@ internal static class DocsCommand
             return 1;
         }
 
-        using var stream = typeof(DocsCommand).Assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
+        var text = EmbeddedResourceReader.TryRead(resourceName);
+        if (text is null)
         {
             c.WriteError($"[ERROR]: '{resourceName}' wurde nicht als eingebettete Ressource gefunden.");
             return 1;
         }
 
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        c.WriteLine(reader.ReadToEnd());
+        c.WriteLine(text);
         return 0;
     }
 

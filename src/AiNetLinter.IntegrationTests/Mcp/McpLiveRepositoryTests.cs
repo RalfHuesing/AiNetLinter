@@ -13,7 +13,7 @@ using Xunit;
 namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
-/// Live-Integrationstests fuer alle 10 MCP-Tools direkt gegen das eigene Repository.
+/// Live-Integrationstests fuer die MCP-Tools und Resources direkt gegen das eigene Repository.
 /// Nutzt <see cref="RepositoryMcpHostFixture"/> zur geteilten MCP-Prozessverbindung pro Assembly.
 /// </summary>
 [Trait("Category", "Dogfood")]
@@ -51,8 +51,10 @@ public sealed class McpLiveRepositoryTests
         var resources = await _fixture.Client.ListResourcesAsync();
         var tools = await _fixture.Client.ListToolsAsync();
         var readResult = await _fixture.Client.ReadResourceAsync(resourceUri);
+        var guideResult = await _fixture.Client.ReadResourceAsync("ainetlinter://agent-guide");
         var content = Assert.Single(readResult.Contents);
         var textContent = Assert.IsType<TextResourceContents>(content);
+        var guideContent = Assert.IsType<TextResourceContents>(Assert.Single(guideResult.Contents));
         var expectedToolGroups = new[]
         {
             new[] { "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph" },
@@ -64,7 +66,8 @@ public sealed class McpLiveRepositoryTests
         };
 
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?projectRoot}");
-        Assert.Empty(resources);
+        var guideResource = Assert.Single(resources);
+        Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
         Assert.Equal(26, tools.Count);
         Assert.Equal(
             expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal),
@@ -74,6 +77,9 @@ public sealed class McpLiveRepositoryTests
         Assert.Contains(repoRoot, textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Solution:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Regeln:", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("ainetlinter://agent-guide", guideContent.Uri);
+        Assert.Contains("ainetlinter.project.json", guideContent.Text, StringComparison.Ordinal);
+        Assert.Contains(".agents/rules", guideContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

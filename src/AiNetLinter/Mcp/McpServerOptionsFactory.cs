@@ -40,6 +40,7 @@ internal static class McpServerOptionsFactory
     internal static McpServerResourceCollection BuildResourceCollection(ProjectRegistry registry)
     {
         var resources = new McpServerResourceCollection();
+        McpAgentGuideRegistration.Register(resources);
         OverviewResourceRegistration.Register(resources, registry);
         return resources;
     }
