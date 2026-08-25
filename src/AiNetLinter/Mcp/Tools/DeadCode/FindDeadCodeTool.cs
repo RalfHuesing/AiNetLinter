@@ -67,7 +67,7 @@ internal static class FindDeadCodeTool
         }
 
         var reportText = FormatTextReport(result, args);
-        var finalText = result.IsTruncated || result.Summary.ScannedSymbols == 0
+        var finalText = result.IsTruncated || result.Summary.DocumentsInScope == 0
             ? reportText
             : McpSufficiencyHints.Append(reportText);
 
@@ -88,41 +88,72 @@ internal static class FindDeadCodeTool
         sb.AppendLine("Hinweis: Statische Dead-Code-Erkennung kann dynamische Bindungen (Reflection, DI, Serializer, Routing) nicht vollstaendig abbilden. Siehe 'limits' fuer Details.");
         sb.AppendLine();
 
-        if (result.Summary.ScannedSymbols == 0)
+        AppendResultDetails(sb, result, args);
+        AppendSummary(sb, result, args);
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private static void AppendResultDetails(StringBuilder sb, DeadCodeScanResult result, FindDeadCodeArgs args)
+    {
+        if (result.Summary.DocumentsInScope == 0)
         {
-            // Leerer Scope ist kein "kein toter Code"-Ergebnis: Ohne expliziten Hinweis wuerde ein
-            // Agent ein fehlendes Scope-Matching (oder via includeTests=false ausgeschlossene
-            // Testprojekte) als saubere Analyse missdeuten. Analog zum Empty-Scope-Pfad von
-            // get_violations; Sufficiency-Hint wird deshalb nicht angehaengt.
-            var scopeSuffix = string.IsNullOrWhiteSpace(args.ScopeFilter)
-                ? ""
-                : $" (Filter: '{args.ScopeFilter}')";
-            sb.AppendLine($"Keine Symbole im Scope gescannt{scopeSuffix}.");
-            sb.AppendLine("Der scopeFilter matcht keine Datei, oder der Scope besteht ausschliesslich aus Testprojekten (includeTests=false).");
-            sb.AppendLine("includeTests=true setzen oder den scopeFilter (Projekt-Name oder Pfad-Substring) anpassen.");
+            AppendEmptyScopeDetails(sb, args);
+            return;
         }
-        else if (result.DeadSymbols.Count == 0)
+
+        if (result.DeadSymbols.Count == 0)
         {
-            sb.AppendLine("Kein unreferenzierter Code im angegebenen Scope gefunden.");
+            AppendNoDeadCodeDetails(sb, result.Summary.DocumentsInScope, args.Mode);
+            return;
+        }
+
+        AppendDeadSymbols(sb, result);
+    }
+
+    private static void AppendEmptyScopeDetails(StringBuilder sb, FindDeadCodeArgs args)
+    {
+        var scopeSuffix = string.IsNullOrWhiteSpace(args.ScopeFilter)
+            ? ""
+            : $" (Filter: '{args.ScopeFilter}')";
+        sb.AppendLine($"Keine Symbole im Scope gescannt{scopeSuffix}.");
+        sb.AppendLine("Der scopeFilter matcht keine Datei, oder der Scope besteht ausschliesslich aus Testprojekten (includeTests=false).");
+        sb.AppendLine("includeTests=true setzen oder den scopeFilter (Projekt-Name oder Pfad-Substring) anpassen.");
+    }
+
+    private static void AppendNoDeadCodeDetails(StringBuilder sb, int documentsInScope, DeadCodeMode mode)
+    {
+        if (mode == DeadCodeMode.Locals)
+        {
+            sb.AppendLine($"Alle {documentsInScope} Zieldokumente im Scope wurden auf ungenutzte Locals und Felder geprueft; keine Compiler-Diagnose gefunden.");
         }
         else
         {
-            sb.AppendLine($"## Gefundene tote Symbole ({result.DeadSymbols.Count}{(result.IsTruncated ? " gezeigt" : "")})");
-            sb.AppendLine();
+            sb.AppendLine("Kein unreferenzierter Code im angegebenen Scope gefunden.");
+        }
+    }
 
-            foreach (var sym in result.DeadSymbols)
+    private static void AppendDeadSymbols(StringBuilder sb, DeadCodeScanResult result)
+    {
+        sb.AppendLine($"## Gefundene tote Symbole ({result.DeadSymbols.Count}{(result.IsTruncated ? " gezeigt" : "")})");
+        sb.AppendLine();
+
+        foreach (var sym in result.DeadSymbols)
+        {
+            sb.AppendLine($"- {sym.File}:{sym.Line}:{sym.Column} [{sym.Confidence.ToUpperInvariant()}] ({sym.Kind}, {sym.Accessibility}) - {sym.SymbolName} in '{sym.ContainerType}'");
+            sb.AppendLine($"  Grund: {sym.Reason}");
+            if (sym.LimitsApplies.Count > 0)
             {
-                sb.AppendLine($"- {sym.File}:{sym.Line}:{sym.Column} [{sym.Confidence.ToUpperInvariant()}] ({sym.Kind}, {sym.Accessibility}) - {sym.SymbolName} in '{sym.ContainerType}'");
-                sb.AppendLine($"  Grund: {sym.Reason}");
-                if (sym.LimitsApplies.Count > 0)
-                {
-                    sb.AppendLine($"  Limits: {string.Join(", ", sym.LimitsApplies)}");
-                }
+                sb.AppendLine($"  Limits: {string.Join(", ", sym.LimitsApplies)}");
             }
         }
+    }
 
+    private static void AppendSummary(StringBuilder sb, DeadCodeScanResult result, FindDeadCodeArgs args)
+    {
         sb.AppendLine();
         sb.AppendLine("## Zusammenfassung");
+        sb.AppendLine($"- Zieldokumente im Scope: {result.Summary.DocumentsInScope}");
         sb.AppendLine($"- Gescannt: {result.Summary.ScannedSymbols} Symbole");
         sb.AppendLine($"- Toter Code: {result.Summary.TotalDead} ({result.Summary.High} high, {result.Summary.Low} low)");
         if (result.Summary.ByKind.Count > 0)
@@ -137,7 +168,5 @@ internal static class FindDeadCodeTool
             sb.AppendLine();
             sb.AppendLine($"[HINWEIS]: Ergebnis wurde auf {args.MaxResults} Eintraege gekappt — maxResults erhoehen oder scopeFilter verfeinern.");
         }
-
-        return sb.ToString().TrimEnd();
     }
 }

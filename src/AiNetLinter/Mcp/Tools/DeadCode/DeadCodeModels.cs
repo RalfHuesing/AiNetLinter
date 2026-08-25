@@ -129,6 +129,7 @@ public sealed record DeadCodeEntry(
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
 /// </summary>
 public sealed record DeadCodeSummary(
+    [property: JsonPropertyName("documentsInScope")] int DocumentsInScope,
     [property: JsonPropertyName("scannedSymbols")] int ScannedSymbols,
     [property: JsonPropertyName("totalDead")] int TotalDead,
     [property: JsonPropertyName("high")] int High,
@@ -170,11 +171,16 @@ public static class DeadCodeLimits
     ];
 }
 
-internal sealed class DeadCodeScanContext(Microsoft.CodeAnalysis.Solution solution, string solutionDir, FindDeadCodeArgs args)
+internal sealed class DeadCodeScanContext(
+    Microsoft.CodeAnalysis.Solution solution,
+    string solutionDir,
+    FindDeadCodeArgs args,
+    int documentsInScope)
 {
     public Microsoft.CodeAnalysis.Solution Solution { get; } = solution;
     public string SolutionDir { get; } = solutionDir;
     public FindDeadCodeArgs Args { get; } = args;
+    public int DocumentsInScope { get; } = documentsInScope;
     public List<DeadCodeEntry> DeadSymbols { get; } = [];
     public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);

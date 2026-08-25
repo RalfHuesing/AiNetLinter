@@ -34,7 +34,7 @@ public static class FindDeadCodeScanner
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var candidateDocuments = CollectCandidateDocuments(solution, solutionDir, args);
-        var context = new DeadCodeScanContext(solution, solutionDir, args);
+        var context = new DeadCodeScanContext(solution, solutionDir, args, candidateDocuments.Count);
 
         foreach (var projectGroup in candidateDocuments.GroupBy(d => d.Project))
         {
@@ -367,6 +367,7 @@ public static class FindDeadCodeScanner
         var paginatedSymbols = isTruncated ? context.DeadSymbols.Take(context.Args.MaxResults).ToList() : context.DeadSymbols;
 
         var summary = new DeadCodeSummary(
+            DocumentsInScope: context.DocumentsInScope,
             ScannedSymbols: context.ScannedCount,
             TotalDead: totalDead,
             High: highCount,

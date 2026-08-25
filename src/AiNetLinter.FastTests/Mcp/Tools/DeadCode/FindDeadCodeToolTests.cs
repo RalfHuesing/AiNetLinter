@@ -7,6 +7,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.DeadCode;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -76,5 +77,26 @@ public sealed class FindDeadCodeToolTests
             "vollstaendig fuer den angefragten Scope",
             textContent.Text,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LocalsModeWithoutDiagnostics_ReportsCompletedDocumentScan()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("CleanProject", [("Clean.cs", """
+                public sealed class Clean
+                {
+                    public int Value => 1;
+                }
+                """)])));
+        var state = context.CreateServer();
+
+        var result = await FindDeadCodeTool.ExecuteAsync(
+            state, new FindDeadCodeToolArgs(Mode: "locals"), CancellationToken.None);
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Alle 1 Zieldokumente", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("keine Compiler-Diagnose", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Symbole im Scope gescannt", textContent.Text, StringComparison.Ordinal);
     }
 }
