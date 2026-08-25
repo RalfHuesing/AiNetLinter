@@ -69,38 +69,25 @@ verwenden neutrale, mehrprojektige C#-Solutions.
   Beschreibung, ist das akzeptiert (agentengerichteter Kontext); andernfalls bei der
   Umsetzung von Aufgabe 05 prüfen und hier dokumentieren.
 
-## Ausführungsreihenfolge
+## Ausführungsreihenfolge (Offene Tasks)
 
-| Reihenfolge | Aufgabe | Status | Priorität | Abhängigkeit | Herkunft |
-|---:|---|---|---|---|---|
-| — | Hybridsuche repositoryweit + Kontextbudget (Original: `../mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget/`) | **erledigt** (2026-08-21, Review approved) | P1 | 01–03 dort erledigt | mcp-agenten-effizienz/04 |
-| 1 | [01_observability-calllog-fix-und-auswertung.md](01_observability-calllog-fix-und-auswertung/Konzept.md) | offen | P1 | keine | Review-Finding |
-| 2 | [02_staleness-check-performance.md](02_staleness-check-performance/Konzept.md) | offen | P1 | keine | Review-Finding |
-| 3 | [03_get-impact-zum-diff-kontext-erweitern.md](03_get-impact-zum-diff-kontext-erweitern/Konzept.md) | offen | P2 | Hybridsuche (strukturierte transitive Ausgaben, dort erledigt als deren Aufgabe 03) | mcp-agenten-effizienz/05 |
-| 4 | [04_tool-annotations-korrekt-setzen.md](04_tool-annotations-korrekt-setzen/Konzept.md) | offen | P2 | Byte-Messhelper aus Hybridsuche-Initiative (erledigt) | mcp-agenten-effizienz/06 |
-| 5 | [05_wire-texte-mcp-intern-auf-englisch.md](05_wire-texte-mcp-intern-auf-englisch/Konzept.md) | offen | P2 | keine (Textumbau) | Review-Finding + Entscheidung |
-| 6 | [06_similar-names-naming-drift.md](06_similar-names-naming-drift/Konzept.md) | offen | P2 | empfohlen: nach 01 (Nutzungsdaten für Audit-Tools) | features/04 |
-| 7 | [07_tools-list-cachehinweise-setzen.md](07_tools-list-cachehinweise-setzen/Konzept.md) | offen | P3 | keine | mcp-agenten-effizienz/07 |
-| 8 | [08_config-resource-und-kleine-mcp-erweiterungen.md](08_config-resource-und-kleine-mcp-erweiterungen/Konzept.md) | offen | P3 | 01 (Loading-/Nutzungsevidenz für Teile 2+3) | Review-Finding |
-| 9 | [09_regel-design-audit-kandidaten.md](09_regel-design-audit-kandidaten/Konzept.md) | offen | P3 | 01 (Nutzungsevidenz), Hybridsuche | Review-Finding |
-| 10 | [10_architektur-monitoring.md](10_architektur-monitoring/Konzept.md) | offen | P3 | laufend, keine harte Abhängigkeit | Review-Finding |
-| 12 | [12_magic-values-false-positive-reduktion/Konzept.md](12_magic-values-false-positive-reduktion/Konzept.md) | **erledigt** (2026-08-25) | P2 | keine | MCP False-Positive-Audit |
-| 13 | [13_find-symbol-batch-namepatterns/Konzept.md](13_find-symbol-batch-namepatterns/Konzept.md) | **erledigt** (2026-08-25) | P1 | keine | MCP-Batch-Konsolidierung |
-| — | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen/Konzept.md) | Festlegung | P9 | fortlaufend | konsolidiert |
+| Reihenfolge | Aufgabe | Status | Priorität | Herkunft |
+|---:|---|---|---|---|
+| 1 | [04_tool-annotations-korrekt-setzen.md](04_tool-annotations-korrekt-setzen/Konzept.md) | offen | P2 | mcp-agenten-effizienz/06 |
+| 2 | [05_wire-texte-mcp-intern-auf-englisch.md](05_wire-texte-mcp-intern-auf-englisch/Konzept.md) | offen | P2 | Review-Finding + Entscheidung |
+| 3 | [06_similar-names-naming-drift.md](06_similar-names-naming-drift/Konzept.md) | offen | P2 | features/04 |
+| 4 | [07_tools-list-cachehinweise-setzen.md](07_tools-list-cachehinweise-setzen/Konzept.md) | offen | P3 | mcp-agenten-effizienz/07 |
+| 5 | [08_config-resource-und-kleine-mcp-erweiterungen.md](08_config-resource-und-kleine-mcp-erweiterungen/Konzept.md) | offen | P3 | Review-Finding |
+| 6 | [09_regel-design-audit-kandidaten.md](09_regel-design-audit-kandidaten/Konzept.md) | offen | P3 | Review-Finding |
+| 7 | [10_architektur-monitoring.md](10_architektur-monitoring/Konzept.md) | laufend | P3 | Review-Finding |
+| — | [90_bewusst-nicht-umsetzen.md](90_bewusst-nicht-umsetzen/Konzept.md) | Festlegung | P9 | konsolidiert |
 
 ## Begründung der Reihenfolge
 
-1. **01 vor fast allem:** Der `get_server_health`-Null-Bug ist ein Korrektheitsfix; die
-   Call-Log-Auswertung liefert die Nutzungsdaten, die mehrere spätere Entscheidungen
-   (Tool-Removal, Profile, Prompts, Regel-Priorisierung) erst entscheidungsfähig machen.
-2. **02 parallel zu 01 möglich:** Performance-Fix mit kleinem, isoliertem Scope; entlastet
-   jede fremde Codebase bei jedem Tool-Call.
-3. **03 und 04** setzen auf der abgeschlossenen Hybridsuche-Initiative auf und sind
-   unabhängig voneinander.
-4. **05** ist ein reiner Textumbau ohne Vertragsänderung — jederzeit einwerfbar, aber nach
-   01/02 priorisiert, weil Antworttexte (Loading, Fehler-Hints) von Agenten am häufigsten
-   gelesen werden.
-5. **06–10** sind eigenständig; 10 ist ein dauerhafter Monitoring-Auftrag, kein einmaliger Task.
+1. **04 (Tool-Annotations):** Definiert formale MCP-SDK-Annotations (ReadOnly, Idempotent etc.) für standardkonforme Host-Interaktion.
+2. **05 (Wire-Texte auf Englisch):** Stellt Tool-Beschreibungen und Antworttexte konsistent auf Englisch um.
+3. **06 (Similar Names):** Audit-Funktion für Naming-Drift auf Symbol-/Signatur-Ebene.
+4. **07–10:** Additive Optimierungen, Ressourcen und dauerhaftes Monitoring.
 
 ## Architektur- und Verfahrensentscheidungen (fortgeltend)
 
