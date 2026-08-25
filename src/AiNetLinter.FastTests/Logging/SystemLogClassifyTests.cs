@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Collections.Generic;
 using AiNetLinter.Logging;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -31,6 +32,110 @@ public sealed class SystemLogClassifyTests
         };
 
         Assert.Equal(McpCallLoggingFilter.UnknownErrorCode, McpCallLoggingFilter.ExtractErrorCode(result));
+    }
+
+    [Fact]
+    public void AnalyzeResult_RecoverableError_ExtrahierErrorCodeUndMessage()
+    {
+        var result = new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = "[ERROR]: SYMBOL_NOT_FOUND: Kein Symbol gefunden fuer Identifikator 'Foo'.\n  hint: find_symbol" }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.RecoverableError, details.Status);
+        Assert.Equal("SYMBOL_NOT_FOUND", details.ErrorCode);
+        Assert.Equal("Kein Symbol gefunden fuer Identifikator 'Foo'.", details.ErrorMessage);
+    }
+
+    [Fact]
+    public void AnalyzeResult_ProtocolError_ExtrahierErrorCodeUndMessage()
+    {
+        var result = new CallToolResult
+        {
+            IsError = true,
+            Content = [new TextContentBlock { Text = "[ERROR]: SOLUTION_NOT_LOADED: Solution ist nicht geladen\n  hint: Server-Log pruefen" }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.ProtocolError, details.Status);
+        Assert.Equal("SOLUTION_NOT_LOADED", details.ErrorCode);
+        Assert.Equal("Solution ist nicht geladen", details.ErrorMessage);
+    }
+
+    [Fact]
+    public void AnalyzeResult_Loading_ErkenntLadezustand()
+    {
+        var result = new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = "[INFO]: Server laedt die Solution noch. Bitte in wenigen Sekunden erneut versuchen." }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.Loading, details.Status);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("0 Treffer fuer das angegebene Pattern.")]
+    [InlineData("Keine Symbole gefunden.")]
+    [InlineData("Keine Code-Duplikate gefunden.")]
+    [InlineData("Keine Hotspots gefunden.")]
+    [InlineData("Keine Regelverstöße gefunden.")]
+    [InlineData("Keine Dateien im Scope.")]
+    [InlineData("0 Verstöße gefunden.")]
+    [InlineData("0 Verstoesse gefunden.")]
+    [InlineData("0 Referenzen")]
+    [InlineData("0 Duplikate")]
+    [InlineData("0 Funde")]
+    [InlineData("0 betroffene Symbole")]
+    [InlineData("0 Kanten")]
+    [InlineData("0 Magic Values")]
+    [InlineData("0 Symbole")]
+    public void AnalyzeResult_EmptyResults_ErkenntNullTreffer(string text)
+    {
+        var result = new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = text }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.Empty, details.Status);
+    }
+
+    [Fact]
+    public void AnalyzeResult_Success_NormalerErgebnisText()
+    {
+        var result = new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = "src/Foo.cs:10 - class: Foo\nsrc/Bar.cs:20 - class: Bar" }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.Success, details.Status);
+        Assert.Null(details.ErrorCode);
+    }
+
+    [Fact]
+    public void FormatArguments_VerschiedeneEingaben_KompaktesJson()
+    {
+        Assert.Equal("{}", McpCallLoggingFilter.FormatArguments(null));
+        Assert.Equal("{}", McpCallLoggingFilter.FormatArguments(new Dictionary<string, object?>()));
+
+        var dict = new Dictionary<string, object?>
+        {
+            ["namePattern"] = "TestService",
+            ["maxResults"] = 10,
+        };
+        var formatted = McpCallLoggingFilter.FormatArguments(dict);
+        Assert.Contains("namePattern", formatted);
+        Assert.Contains("TestService", formatted);
+        Assert.Contains("10", formatted);
     }
 
     [Theory]

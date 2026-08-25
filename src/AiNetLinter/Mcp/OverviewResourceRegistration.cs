@@ -64,6 +64,7 @@ internal static class OverviewResourceRegistration
         ("find_duplicates", "Findet Code-Duplikate (Token-basiertes Clone-Detection, Jaccard-N-Gram, Method-Granularitaet) als Cluster."),
         ("get_feature_context", "Composite One-Shot-Exploration fuer ein C#-Symbol (Deklaration, Metriken, Aufrufer, statische Test-Zuordnung, Violations) vor Edits."),
         ("get_test_context", "Ermittelt statische Test-Zuordnungen, Test-Klassen, Test-Methoden, Kategorien und Filterbefehle fuer ein C#-Symbol."),
+        ("report_observability_feedback", "Ermoeglicht Agenten, Fehler, unerwartete Ergebnisse oder Wuensche direkt zur Analyse ins Log zu melden."),
     ];
 
     internal static void Register(McpServerResourceCollection resources, ProjectRegistry registry)

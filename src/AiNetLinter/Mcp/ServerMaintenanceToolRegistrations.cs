@@ -33,6 +33,7 @@ internal static class ServerMaintenanceToolRegistrations
     {
         AddReloadConfig(tools, registry);
         AddGetServerHealth(tools, registry, runtimeContext);
+        AddReportObservabilityFeedback(tools);
     }
 
     private static void AddReloadConfig(
@@ -82,4 +83,41 @@ internal static class ServerMaintenanceToolRegistrations
         "LoadState, RefreshCount, Staleness, Uptime, LastGoodStateUtc/LastLoadError). Mit " +
         "projectRoot: nur dieser Key (absoluter Pfad, " +
         "Pflichtformat wie bei allen Tools).";
+
+    private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
+    {
+        tools.Add(McpServerTool.Create(
+            (string feedbackType,
+             string title,
+             string description,
+             string? relatedTool = null,
+             string? severity = "medium",
+             string? expectedBehavior = null,
+             string? actualBehavior = null,
+             string? additionalContext = null,
+             string? projectRoot = null,
+             CancellationToken ct = default) =>
+                ReportObservabilityFeedbackTool.ExecuteAsync(
+                    new ReportObservabilityFeedbackParameters(
+                        feedbackType,
+                        title,
+                        description,
+                        relatedTool,
+                        severity,
+                        expectedBehavior,
+                        actualBehavior,
+                        additionalContext,
+                        projectRoot)),
+            new McpServerToolCreateOptions
+            {
+                Name = "report_observability_feedback",
+                Description = ReportObservabilityFeedbackDescription,
+            }));
+    }
+
+    private const string ReportObservabilityFeedbackDescription =
+        "Wann nutzen: Ein MCP-Tool meldet einen Fehler, liefert unerwartete/verwirrende Ergebnisse, " +
+        "einen False Positive oder eine benoetigte Faehigkeit fehlt. Dieses Tool protokolliert das " +
+        "Feedback direkt in das System-Log von AiNetLinter zur Auswertung und Behebung. Nach dem " +
+        "Absenden mit dem besten verfuegbaren Workaround fortfahren.";
 }

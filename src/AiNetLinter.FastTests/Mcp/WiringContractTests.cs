@@ -37,7 +37,7 @@ public sealed class WiringContractTests
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
 
-        Assert.Equal(25, tools.Count);
+        Assert.Equal(26, tools.Count);
         Assert.Equal(
             OverviewResourceRegistration.ToolSummaries.Select(t => t.Name).ToHashSet(StringComparer.Ordinal),
             tools.Keys.ToHashSet());
@@ -45,7 +45,7 @@ public sealed class WiringContractTests
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
-            if (tool.Name == "get_server_health")
+            if (tool.Name is "get_server_health" or "report_observability_feedback")
             {
                 Assert.DoesNotContain("projectRoot", required);
                 Assert.Contains("\"projectRoot\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
