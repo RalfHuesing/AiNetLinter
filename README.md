@@ -100,7 +100,7 @@ zwischen stdin/stdout und Named Pipe gepumpt; Diagnose bleibt auf stderr.
 Debugging. Die ThinClient-Überwachung nutzt `--parent-pid`; der Daemon selbst
 erbt diesen Reaper nicht.
 
-Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist auf `tools/list` und `ainetlinter://overview`, statt die Toolliste zu duplizieren.
+Für Legacy-MCP liefert `initialize` die globale Server-Anleitung. MCP `2026-07-28` verwendet dafür `server/discover` mit Protokollversion, Client-Info und Client-Capabilities unter `params._meta`; Folge-Requests wie `tools/list` führen diese Metadaten weiter. Der globale Instructions-Text verweist bei neuer Integration zuerst auf `ainetlinter://agent-guide`, danach auf den Projektstatus unter `ainetlinter://overview` und auf `tools/list` für die Schemas.
 
 Im MCP-Modus überwacht der Server automatisch den aufrufenden Host-Prozess und beendet sich bei dessen Ende sauber. Mit `--parent-pid <pid>` kann die zu überwachende Prozess-ID für Wrapper-Skripte oder Spezialumgebungen explizit gesetzt werden.
 
@@ -178,13 +178,14 @@ Vollständige, aktuelle Regel-Liste: `ainetlinter --list-rules`. Vollständige K
 
 ## Dokumentation
 
-Alle Dokumente sind in die Binary eingebettet und ohne Netzzugriff per `ainetlinter --docs <name>` abrufbar (z. B. `ainetlinter --docs agent-api`).
+Alle Dokumente sind in die Binary eingebettet und ohne Netzzugriff per `ainetlinter --docs <name>` abrufbar (z. B. `ainetlinter --docs agent-api`). Der MCP-Agentenleitfaden ist zusätzlich als `ainetlinter://agent-guide` verfügbar.
 
 | Dokument | Inhalt |
 | :--- | :--- |
 | [Docs/agent-api.md](Docs/agent-api.md) | Agent-API: alle CLI-Flags, Workflows, Error-Format, Discovery-Commands, MCP-Tool-Referenz |
 | [Docs/configuration.md](Docs/configuration.md) | Vollständige Konfigurationsreferenz (`rules.json`-Schema, alle Regeln und Defaults) |
 | [Docs/integration.md](Docs/integration.md) | Schritt-für-Schritt-Integration in ein bestehendes Projekt, MCP-Server-Registrierung |
+| `.agents/rules/AiNetLinter-McpWorkflow.mdc` | Kompakter MCP-Agentenleitfaden für Integration und semantische Toolwahl (`ainetlinter --docs mcp-workflow`) |
 | [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen & wissenschaftliche Grundlagen |
 | [Docs/ROADMAP.md](Docs/ROADMAP.md) | Entwicklungshistorie nach Epics |
 

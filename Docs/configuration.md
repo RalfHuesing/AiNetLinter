@@ -31,7 +31,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
-- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung übertragen. Tool-Schemas bleiben in `tools/list`, die Kurzliste in `ainetlinter://overview`; das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
+- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung übertragen. Sie verweist bei neuer Integration auf `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 
 ---
 
@@ -1178,7 +1178,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts im InvariantCulture-Format (Standard: `10`).
 - `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-agent-rules` oder `--sync-agent-rules-only`: Prüft die Cursor-Regeldatei. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
 - `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
-- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
+- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`, `mcp-workflow`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
 - `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
 - `--list-rules` (Flag): Gibt alle bekannten Regeln als Tabelle aus (Optional).

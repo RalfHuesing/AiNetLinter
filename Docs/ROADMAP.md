@@ -449,6 +449,17 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   aktiv. Health weist Daemon-Modus, connectionId, PID, Uptime, Keys und Version
   aus; der Daemon selbst bleibt parent-ungebunden.
 
+### EPIC-C — Agent-Bootstrap und MCP-Resources (umgesetzt am 2026-08-25)
+
+- [x] Statischer Erstkontakt-Leitfaden `ainetlinter://agent-guide`, ohne
+  `projectRoot` lesbar und aus `AiNetLinter-McpWorkflow.mdc` eingebettet.
+- [x] Der Leitfaden beschreibt die Auswahl vorhandener oder Erzeugung einer
+  `rules.json`, die Pflichtdefinition `ainetlinter.project.json`, die MCP-
+  Registrierung sowie das Kopieren nach `.agents/rules` oder `.cursor/rules`.
+- [x] `ainetlinter --docs mcp-workflow` gibt denselben Leitfaden offline aus.
+- [x] `ainetlinter://overview?projectRoot=...` ist auf Projektstatus und nächste
+  Einstiegspunkte reduziert; Toolschemas bleiben in `tools/list`.
+
 ### Abgeschlossen
 
 - [x] **EPIC-01 — CLI-Flag:** `--mcp-server` als neuer Server-Start, stdio-Transport, JSON-RPC-Handshake.

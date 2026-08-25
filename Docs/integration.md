@@ -231,6 +231,38 @@ AiNetLinter.exe --describe-rule <Id>   ← Eine Regel vollständig erklären
 
 AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitzustellen (Claude Code, Cursor, eigene Agent-Loops). Vollständige Tool-Referenz, Trunkierungs-Format und Error-Codes: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
+### Agent-Bootstrap für ein neues Projekt
+
+Bei einem Auftrag wie „Integriere AiNetLinter in dieses Projekt“ soll der
+Agent zuerst den eingebetteten Leitfaden lesen:
+
+```text
+ainetlinter://agent-guide
+```
+
+Der Leitfaden ist auch offline verfügbar:
+
+```cmd
+ainetlinter.exe --docs mcp-workflow
+```
+
+Der Agent muss anschließend:
+
+1. die passende `.sln`- oder `.slnx`-Datei ermitteln;
+2. eine vorhandene Regeldatei weiterverwenden oder ohne Überschreiben eine
+   Ausgangsdatei über `ainetlinter --docs rules-json` erzeugen;
+3. im Projektroot `ainetlinter.project.json` mit den Pflichtfeldern `solution`
+   und `rules` anlegen bzw. validieren;
+4. `AiNetLinter-McpWorkflow.mdc` nach `.agents/rules` oder `.cursor/rules`
+   kopieren und dort nur eine vorhandene gleichnamige AiNetLinter-Datei ersetzen;
+5. die MCP-Registrierung mit `args: ["--mcp-server"]` prüfen und anschließend
+   `get_server_health` oder einen kleinen semantischen Tool-Call ausführen.
+
+Bei mehreren Solutions oder mehreren nicht eindeutig zuordenbaren Regeldateien
+fragt der Agent nach der Auswahl. Die autarke CLI-Integration als Test-/CI-
+Quality-Gate bleibt davon getrennt und wird in den vorherigen Abschnitten dieser
+Anleitung beschrieben.
+
 ### Registrierung im MCP-Host
 
 Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleicher JSON-Spec):
@@ -341,7 +373,7 @@ Damit können mehrere Projekt-Keys in einer Serverinstanz resident sein.
 
 Der Legacy-MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
 
-Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist nur auf C#-Symbolgraph/Fallback, `tools/list`, `ainetlinter://overview`, Sufficiency/Truncation, `isError` und kompakte Workflows; Tool-Schemas bleiben in `tools/list`. Die aktuelle Anleitung misst 724 UTF-8-Bytes und bleibt unter dem Engineering-Budget von 2.557 Bytes (Messung 2026-08-20).
+Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei neuer Integration auf `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Die aktuelle Anleitung bleibt unter dem Engineering-Budget von 2.557 Bytes.
 
 Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
 
@@ -362,7 +394,7 @@ Wenn der MCP-Server registriert ist, sollten Agent-Loops **folgende Reihenfolge*
 
 1. **Zuerst** symbolische Tools: `get_feature_context` (Composite One-Shot vor Edits/Refactoring), `get_test_context` (statische Test-Zuordnung & zugehörige Testmethoden), `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `get_symbol_body` (Body eines Symbols per stabiler ID), `metrics_lookup` (One-Shot-Metriken & Schwellwerte für ein Einzelsymbol), `find_references` / `get_impact` (Aufrufstellen, optional mit `depth`-Parameter für transitive Aggregation; jede erlaubte Tiefe liefert im Erfolgsfall strukturierte `callSites` und `completeness`), `get_type_hierarchy` (Vererbung inkl. heuristischer DI-Registrierungs-Hinweise), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
 2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.
-3. **Niemals** `rg` / `grep` für **C#-Symbole** (Klassen-, Methoden-, Property-Namen). Diese Tools durchsuchen Strings und Kommentare mit, produzieren False Positives in gleichnamigen Symbolen anderswo und liefern keine Typ-/Signatur-Information.
+3. **Ergänzend** `rg` / `grep` für **C#-Symbole** nur dann, wenn eine semantische MCP-Abfrage nicht passt oder konkrete Text-/Dateiarbeit gefragt ist. Für reine Symbol-, Referenz- und Impact-Fragen bleibt MCP die bevorzugte Quelle.
 
 Konkret:
 
@@ -376,13 +408,12 @@ Konkret:
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
 
-### Erstorientierung: Resource `ainetlinter://overview?projectRoot=<url-encoded>`
+### Erstorientierung: Resources
 
-Ein Agent, der den Server zum ersten Mal sieht, kann per `resources/read` mit
-einem URL-kodierten `projectRoot` einen kurzen Ueberblick abrufen: alle Tools in
-einem Satz sowie den Status des adressierten Keys. Beispiel:
-`{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
-Details: [Docs/agent-api.md](agent-api.md).
+Für eine neue Projektintegration zuerst `ainetlinter://agent-guide` ohne
+`projectRoot` lesen. Nach dem Anlegen der Projektdefinition liefert
+`ainetlinter://overview?projectRoot=<url-encoded>` nur noch die Statuskarte des
+adressierten Keys. Details: [Docs/agent-api.md](agent-api.md).
 
 ### Mehrere parallele Server-Instanzen
 

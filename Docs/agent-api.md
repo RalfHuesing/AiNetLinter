@@ -100,7 +100,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json; case-insensitive) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-workflow; case-insensitive) |
 | `--playbook <pfad>` | string | Repo-Playbook generieren |
 | `--sync-agent-rules` | bool | `.agents/rules/AiNetLinter.mdc` im Rahmen eines Linter-Laufs aktualisieren |
 | `--sync-agent-rules-only` | bool | Nur `.agents/rules/AiNetLinter.mdc` aktualisieren und Programm sofort beenden (schneller Pfad ohne Lint-Lauf) |
@@ -295,9 +295,11 @@ Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call lie
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, den Verweis auf `tools/list` und `ainetlinter://overview`, die Sufficiency-/Truncation-Regel, die `isError`-Policy und drei kompakte Startworkflows. Die vollständige Toolbeschreibung bleibt in `tools/list`; die vollständige Kurzliste und der Status stehen in der Overview-Resource.
+Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den MCP-Projektvertrag, den Erstkontakt über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Projektstatus steht in der Overview-Resource.
 
-Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes. Eine reproduzierte Messung vom 2026-08-20 ergab 724 Zeichen und 724 UTF-8-Bytes. Die Bytezahl wird mit `Encoding.UTF8.GetByteCount` bestimmt; daraus wird keine exakte Tokenersparnis abgeleitet.
+Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
+wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
+exakte Tokenersparnis abgeleitet.
 
 ### Tool-Referenz
 
@@ -645,15 +647,22 @@ Ausnahme: der `get_impact`-Zweig `detailLevel="change-context"` respektiert `max
 
 Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert das Tool eine trunkierte Datei-Liste der Nicht-C#-Treffer mit der Datei-Listen-Meta-Zeile (siehe oben). Empfohlener Folge-Schritt: `search_pattern` mit demselben Pattern aufrufen.
 
-### Resource `ainetlinter://overview?projectRoot=<url-encoded>`
+### Resources für Agenten
 
-Neben der Tool-Referenz stellt der Server eine MCP-Resource bereit — ein bei jedem `resources/read` frisch generiertes Markdown-Dokument mit drei Teilen:
+Für eine neue Integration ist die direkte Resource `ainetlinter://agent-guide`
+der erste Einstieg. Sie ist ohne `projectRoot` und damit auch ohne vorhandene
+`ainetlinter.project.json` lesbar. Ihr Inhalt entspricht der eingebetteten
+`AiNetLinter-McpWorkflow.mdc` und beschreibt Solution-/Regeldatei-Ermittlung,
+`ainetlinter.project.json`, MCP-Registrierung und das Kopieren der Regeldatei
+nach `.agents/rules` oder `.cursor/rules`. Abruf: `resources/read` mit
+`{"uri": "ainetlinter://agent-guide"}`.
 
-1. Kurzbeschreibung aller verfügbaren Tools (ein Satz je Tool, keine Parameter-Details — die liefert `tools/list`).
-2. Aktueller Server-Status: Pfad der geladenen Solution (oder Loading-/LoadFailed-Hinweis), der adressierte Projektroot und die tatsaechlich verwendete Regel-Quelle.
-3. Empfohlene Workflows: kompakte Tool-Choreographie für die drei typischen Agenten-Pfade (Code erkunden, Refactoring & Impact, Quality-Gate vor Commit).
-
-Gedacht als schneller Einstiegspunkt fuer einen Agenten, der den Server noch nicht kennt — Legacy-`initialize` und modernes `server/discover` weisen in `ServerInstructions` explizit auf die Resource hin. Der Query-Parameter adressiert den Projekt-Key und wird URL-dekodiert. Abruf: `resources/read` mit `{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
+Nach dem Bootstrap liefert die Status-Resource `ainetlinter://overview` unter
+`ainetlinter://overview?projectRoot=<url-encoded>` bei jedem `resources/read`
+eine frisch erzeugte kurze Statuskarte: Projektroot,
+geladene Solution, verwendete Regelquelle und nächste Einstiegspunkte. Die
+vollständigen Tool- und Parameterschemas stehen in `tools/list`. Beispiel:
+`{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
