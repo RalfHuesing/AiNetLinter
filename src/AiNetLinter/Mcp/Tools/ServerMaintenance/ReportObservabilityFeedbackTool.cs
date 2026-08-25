@@ -105,7 +105,7 @@ internal static class ReportObservabilityFeedbackTool
         string normalizedDesc,
         string normalizedSeverity)
     {
-        Log.Information(
+        const string template =
             "==================== AGENT FEEDBACK EMPFANGEN ====================\n" +
             "Typ:          {FeedbackType}\n" +
             "Schweregrad:  {Severity}\n" +
@@ -116,15 +116,27 @@ internal static class ReportObservabilityFeedbackTool
             "Erwartet:     {ExpectedBehavior}\n" +
             "Tatsaechlich: {ActualBehavior}\n" +
             "Kontext:      {AdditionalContext}\n" +
-            "==================================================================",
-            normalizedType,
-            normalizedSeverity,
-            normalizedTitle,
-            parameters.RelatedTool ?? "n/a",
-            parameters.ProjectRoot ?? "n/a",
-            normalizedDesc,
-            parameters.ExpectedBehavior ?? "n/a",
-            parameters.ActualBehavior ?? "n/a",
-            parameters.AdditionalContext ?? "n/a");
+            "==================================================================";
+
+        Action<string, object?[]> logAction = normalizedSeverity switch
+        {
+            "critical" or "high" or "error" => Log.Error,
+            "warn" or "warning" => Log.Warning,
+            _ => Log.Information
+        };
+
+        logAction(
+            template,
+            [
+                normalizedType,
+                normalizedSeverity,
+                normalizedTitle,
+                parameters.RelatedTool ?? "n/a",
+                parameters.ProjectRoot ?? "n/a",
+                normalizedDesc,
+                parameters.ExpectedBehavior ?? "n/a",
+                parameters.ActualBehavior ?? "n/a",
+                parameters.AdditionalContext ?? "n/a"
+            ]);
     }
 }

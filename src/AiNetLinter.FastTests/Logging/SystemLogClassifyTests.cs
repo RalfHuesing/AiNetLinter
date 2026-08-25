@@ -50,6 +50,21 @@ public sealed class SystemLogClassifyTests
     }
 
     [Fact]
+    public void AnalyzeResult_RecoverableError_MitFuehrendenLeerzeilen_ExtrahierErrorCode()
+    {
+        var result = new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = "\n  \n[ERROR]: INVALID_ARGUMENT: Pflichtparameter fehlt." }],
+        };
+
+        var details = McpCallLoggingFilter.AnalyzeResult(result);
+        Assert.Equal(McpCallStatus.RecoverableError, details.Status);
+        Assert.Equal("INVALID_ARGUMENT", details.ErrorCode);
+        Assert.Equal("Pflichtparameter fehlt.", details.ErrorMessage);
+    }
+
+    [Fact]
     public void AnalyzeResult_ProtocolError_ExtrahierErrorCodeUndMessage()
     {
         var result = new CallToolResult
@@ -95,6 +110,7 @@ public sealed class SystemLogClassifyTests
     [InlineData("0 Kanten")]
     [InlineData("0 Magic Values")]
     [InlineData("0 Symbole")]
+    [InlineData("[INFO]: Suche in Scope 'src' ausgefuehrt.\n0 Treffer gefunden.")]
     public void AnalyzeResult_EmptyResults_ErkenntNullTreffer(string text)
     {
         var result = new CallToolResult

@@ -11,15 +11,20 @@ namespace AiNetLinter.FastTests.Logging;
 [Trait("Category", "Unit")]
 public sealed class ReportObservabilityFeedbackToolTests
 {
-    [Fact]
-    public async Task ExecuteAsync_ValideEingabe_LiefertErfolgreicheMeldungUndPayload()
+    [Theory]
+    [InlineData("high")]
+    [InlineData("critical")]
+    [InlineData("warning")]
+    [InlineData("low")]
+    [InlineData("medium")]
+    public async Task ExecuteAsync_ValideEingabeMitVerschiedenenSeverities_LiefertErfolgreicheMeldungUndPayload(string severity)
     {
         var parameters = new ReportObservabilityFeedbackParameters(
             FeedbackType: "issue",
             Title: "Symbolaufloesung unvollstaendig",
             Description: "Methode 'Process' in Interface IFoo wurde nicht gefunden.",
             RelatedTool: "find_symbol",
-            Severity: "high",
+            Severity: severity,
             ExpectedBehavior: "Symbol wird zurueckgegeben",
             ActualBehavior: "0 Treffer",
             AdditionalContext: "Projekt verwendet Source Generator",

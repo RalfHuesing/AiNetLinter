@@ -116,8 +116,8 @@ internal static class ServerMaintenanceToolRegistrations
     }
 
     private const string ReportObservabilityFeedbackDescription =
-        "Wann nutzen: Ein MCP-Tool meldet einen Fehler, liefert unerwartete/verwirrende Ergebnisse, " +
-        "einen False Positive oder eine benoetigte Faehigkeit fehlt. Dieses Tool protokolliert das " +
-        "Feedback direkt in das System-Log von AiNetLinter zur Auswertung und Behebung. Nach dem " +
-        "Absenden mit dem besten verfuegbaren Workaround fortfahren.";
+        "Wann nutzen: Ein MCP-Tool meldet einen unerwarteten internen Fehler, liefert verwirrende " +
+        "Ausgaben, einen False Positive oder ein Feature fehlt. NICHT nutzen fuer normale " +
+        "Leermengen (z. B. Symbol/Datei existiert im Code nicht). Protokolliert das Feedback direkt " +
+        "in das System-Log zur Auswertung. Nach dem Absenden mit dem besten verfuegbaren Workaround fortfahren.";
 }

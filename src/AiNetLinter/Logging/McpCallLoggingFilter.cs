@@ -35,6 +35,16 @@ internal sealed record McpCallDetails(
     string? ErrorMessage = null);
 
 /// <summary>
+/// Interner Kontext fuer das Logging eines ausgefuehrten Tool-Calls.
+/// </summary>
+internal sealed record CallLogContext(
+    string ToolName,
+    string ArgumentsJson,
+    long DurationMs,
+    McpCallDetails Details,
+    int? ConnectionId);
+
+/// <summary>
 /// Protokolliert ausgefuehrte MCP-Tool-Aufrufe mit Argumenten, Laufzeit und Status-Klassifizierung
 /// in das Serilog-Systemlog.
 /// Analysiert Ergebnisse differenziert nach Success, 0-Treffern (Empty), Recoverable-Fehlern
@@ -81,24 +91,25 @@ internal static class McpCallLoggingFilter
                 {
                     var result = await next(context, cancellationToken).ConfigureAwait(false);
                     details = AnalyzeResult(result);
-                    WriteCompletedCall(
+                    var logContext = new CallLogContext(
                         context.Params.Name,
                         argumentsJson,
                         stopwatch.ElapsedMilliseconds,
                         details,
                         connectionId);
+                    WriteCompletedCall(logContext);
                     return result;
                 }
                 catch (Exception ex)
                 {
                     details = new McpCallDetails(McpCallStatus.Exception, ExceptionErrorCode, ex.Message);
-                    WriteCompletedCall(
+                    var logContext = new CallLogContext(
                         context.Params.Name,
                         argumentsJson,
                         stopwatch.ElapsedMilliseconds,
                         details,
-                        connectionId,
-                        ex);
+                        connectionId);
+                    WriteCompletedCall(logContext, ex);
                     throw;
                 }
             }));
@@ -197,29 +208,41 @@ internal static class McpCallLoggingFilter
 
     private static (string Code, string Message)? ParseStructuredError(string text)
     {
-        const string prefix = "[ERROR]: ";
-        if (!text.StartsWith(prefix, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(text))
         {
             return null;
         }
 
-        var afterPrefix = text.Substring(prefix.Length);
-        var firstLine = afterPrefix;
-        var newlineIndex = afterPrefix.IndexOfAny(['\r', '\n']);
-        if (newlineIndex >= 0)
+        const string prefix = "[ERROR]:";
+        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
         {
-            firstLine = afterPrefix.Substring(0, newlineIndex);
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            if (!trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                if (trimmed.StartsWith("[INFO]:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return null;
+            }
+
+            var afterPrefix = trimmed.Substring(prefix.Length).Trim();
+            var colonIndex = afterPrefix.IndexOf(':');
+            if (colonIndex > 0)
+            {
+                var code = afterPrefix.Substring(0, colonIndex).Trim();
+                var message = afterPrefix.Substring(colonIndex + 1).Trim();
+                return (code, message);
+            }
+
+            return (UnknownErrorCode, afterPrefix);
         }
 
-        var colonIndex = firstLine.IndexOf(':');
-        if (colonIndex > 0)
-        {
-            var code = firstLine.Substring(0, colonIndex).Trim();
-            var message = firstLine.Substring(colonIndex + 1).Trim();
-            return (code, message);
-        }
-
-        return (UnknownErrorCode, firstLine.Trim());
+        return null;
     }
 
     private static bool IsEmptyResult(string? firstText)
@@ -229,84 +252,83 @@ internal static class McpCallLoggingFilter
             return true;
         }
 
-        var trimmed = firstText.TrimStart();
-        if (ZeroHitPrefixes.Any(p => trimmed.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+        var lines = firstText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
         {
-            return true;
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            if (trimmed.StartsWith("[INFO]:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (ZeroHitPrefixes.Any(p => trimmed.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            if (trimmed.Contains("0 Treffer fuer das angegebene Pattern", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            break;
         }
 
-        return trimmed.Contains("0 Treffer fuer das angegebene Pattern", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
-    private static void WriteCompletedCall(
-        string toolName,
-        string argumentsJson,
-        long durationMs,
-        McpCallDetails details,
-        int? connectionId,
-        Exception? exception = null)
+    private static void WriteCompletedCall(CallLogContext context, Exception? exception = null)
     {
-        var logger = connectionId is { } id
+        var logger = context.ConnectionId is { } id
             ? Log.ForContext("ConnectionId", id)
             : Log.Logger;
 
-        switch (details.Status)
+        switch (context.Details.Status)
         {
             case McpCallStatus.RecoverableError:
-                LogRecoverableError(logger, toolName, durationMs, details, argumentsJson, connectionId);
+                LogRecoverableError(logger, context);
                 break;
 
             case McpCallStatus.ProtocolError:
             case McpCallStatus.Exception:
-                LogProtocolError(logger, toolName, durationMs, details, argumentsJson, connectionId, exception);
+                LogProtocolError(logger, context, exception);
                 break;
 
             case McpCallStatus.Empty:
-                LogStatus(logger, "[EMPTY]", toolName, durationMs, details, argumentsJson, connectionId);
+                LogStatus(logger, "[EMPTY]", context);
                 break;
 
             case McpCallStatus.Loading:
-                LogStatus(logger, "[LOADING]", toolName, durationMs, details, argumentsJson, connectionId);
+                LogStatus(logger, "[LOADING]", context);
                 break;
 
             case McpCallStatus.Success:
             default:
-                LogStatus(logger, "[SUCCESS]", toolName, durationMs, details, argumentsJson, connectionId);
+                LogStatus(logger, "[SUCCESS]", context);
                 break;
         }
     }
 
-    private static void LogRecoverableError(
-        ILogger logger,
-        string toolName,
-        long durationMs,
-        McpCallDetails details,
-        string argumentsJson,
-        int? connectionId)
+    private static void LogRecoverableError(ILogger logger, CallLogContext context)
     {
         logger.Warning(
             "MCP-Tool-Call [RECOVERABLE_ERROR]: ToolName={ToolName}, Status={Status}, DauerMs={DurationMs}, ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}, Arguments={Arguments}, ConnectionId={ConnectionId}",
-            toolName,
-            details.Status.ToString(),
-            durationMs,
-            details.ErrorCode ?? UnknownErrorCode,
-            details.ErrorMessage ?? string.Empty,
-            argumentsJson,
-            connectionId);
+            context.ToolName,
+            context.Details.Status.ToString(),
+            context.DurationMs,
+            context.Details.ErrorCode ?? UnknownErrorCode,
+            context.Details.ErrorMessage ?? string.Empty,
+            context.ArgumentsJson,
+            context.ConnectionId);
     }
 
-    private static void LogProtocolError(
-        ILogger logger,
-        string toolName,
-        long durationMs,
-        McpCallDetails details,
-        string argumentsJson,
-        int? connectionId,
-        Exception? exception)
+    private static void LogProtocolError(ILogger logger, CallLogContext context, Exception? exception)
     {
-        var tag = details.Status == McpCallStatus.Exception ? "EXCEPTION" : "PROTOCOL_ERROR";
-        var errorCode = details.ErrorCode ?? (details.Status == McpCallStatus.Exception ? ExceptionErrorCode : UnknownErrorCode);
-        var errorMessage = details.ErrorMessage ?? exception?.Message ?? string.Empty;
+        var tag = context.Details.Status == McpCallStatus.Exception ? "EXCEPTION" : "PROTOCOL_ERROR";
+        var errorCode = context.Details.ErrorCode ?? (context.Details.Status == McpCallStatus.Exception ? ExceptionErrorCode : UnknownErrorCode);
+        var errorMessage = context.Details.ErrorMessage ?? exception?.Message ?? string.Empty;
 
         if (exception is not null)
         {
@@ -314,45 +336,38 @@ internal static class McpCallLoggingFilter
                 exception,
                 "MCP-Tool-Call [{Tag}]: ToolName={ToolName}, Status={Status}, DauerMs={DurationMs}, ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}, Arguments={Arguments}, ConnectionId={ConnectionId}",
                 tag,
-                toolName,
-                details.Status.ToString(),
-                durationMs,
+                context.ToolName,
+                context.Details.Status.ToString(),
+                context.DurationMs,
                 errorCode,
                 errorMessage,
-                argumentsJson,
-                connectionId);
+                context.ArgumentsJson,
+                context.ConnectionId);
         }
         else
         {
             logger.Error(
                 "MCP-Tool-Call [{Tag}]: ToolName={ToolName}, Status={Status}, DauerMs={DurationMs}, ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}, Arguments={Arguments}, ConnectionId={ConnectionId}",
                 tag,
-                toolName,
-                details.Status.ToString(),
-                durationMs,
+                context.ToolName,
+                context.Details.Status.ToString(),
+                context.DurationMs,
                 errorCode,
                 errorMessage,
-                argumentsJson,
-                connectionId);
+                context.ArgumentsJson,
+                context.ConnectionId);
         }
     }
 
-    private static void LogStatus(
-        ILogger logger,
-        string tag,
-        string toolName,
-        long durationMs,
-        McpCallDetails details,
-        string argumentsJson,
-        int? connectionId)
+    private static void LogStatus(ILogger logger, string tag, CallLogContext context)
     {
         logger.Information(
             "MCP-Tool-Call {Tag}: ToolName={ToolName}, Status={Status}, DauerMs={DurationMs}, Arguments={Arguments}, ConnectionId={ConnectionId}",
             tag,
-            toolName,
-            details.Status.ToString(),
-            durationMs,
-            argumentsJson,
-            connectionId);
+            context.ToolName,
+            context.Details.Status.ToString(),
+            context.DurationMs,
+            context.ArgumentsJson,
+            context.ConnectionId);
     }
 }
