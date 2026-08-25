@@ -68,9 +68,9 @@ internal static class LinterRuleIds
     internal const string ForbiddenNamespaceDependency = "ForbiddenNamespaceDependency";
 
     // UI-Separation (UiSeparationConfig)
-    internal const string BlazorRequireCodeBehind = "BlazorRequireCodeBehind";
-    internal const string BlazorRequireCssIsolation = "BlazorRequireCssIsolation";
-    internal const string WpfRequireMinimalCodeBehind = "WpfRequireMinimalCodeBehind";
+    internal const string BlazorRequireCodeBehind = nameof(UiSeparationConfig.BlazorRequireCodeBehind);
+    internal const string BlazorRequireCssIsolation = nameof(UiSeparationConfig.BlazorRequireCssIsolation);
+    internal const string WpfRequireMinimalCodeBehind = nameof(UiSeparationConfig.WpfRequireMinimalCodeBehind);
 
     // Web-Analyse (CssConfig)
     internal const string CSS_MaxCssLineCount = "CSS_MaxCssLineCount";

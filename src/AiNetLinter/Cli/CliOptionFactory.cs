@@ -221,40 +221,26 @@ internal static class CliOptionFactory
         Description = "Optionale PID des Elternprozesses fuer den MCP-Lebenszyklus-Watchdog. Ohne diese Option wird die Parent-PID automatisch ermittelt.",
     };
 
-    internal static Option<decimal?> CreateMcpProjectTtlOption()
-    {
-        var option = new Option<decimal?>(McpProjectTtlMinutes)
-        {
-            Description = "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.",
-        };
-        option.CustomParser = result =>
-        {
-            var raw = result.Tokens.SingleOrDefault()?.Value;
-            if (decimal.TryParse(
-                    raw,
-                    NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
-                    CultureInfo.InvariantCulture,
-                    out var value))
-            {
-                return value;
-            }
-
-            result.AddError("Wert muss eine Dezimalzahl im InvariantCulture-Format sein.");
-            return null;
-        };
-        return option;
-    }
+    internal static Option<decimal?> CreateMcpProjectTtlOption() =>
+        CreateInvariantDecimalOption(
+            McpProjectTtlMinutes,
+            "Optionale Idle-TTL der Projekt-Registry in Minuten (Dezimalwerte, InvariantCulture, z. B. 0.05 fuer ca. 3 Sekunden). Ohne Flag gilt der Default von 45 Minuten.");
 
     internal static Option<int?> CreateMcpMaxProjectsOption() => new(McpMaxProjects)
     {
         Description = "Optionale maximale Anzahl residenter Projekt-Keys in der Projekt-Registry (LRU-Rahmen). Ohne Flag gilt der Default von 4.",
     };
 
-    internal static Option<decimal?> CreateMcpDaemonIdleExitOption()
+    internal static Option<decimal?> CreateMcpDaemonIdleExitOption() =>
+        CreateInvariantDecimalOption(
+            McpDaemonIdleExitMinutes,
+            "Idle-Exit des internen DaemonHosts in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt der Default von 10 Minuten.");
+
+    private static Option<decimal?> CreateInvariantDecimalOption(string name, string description)
     {
-        var option = new Option<decimal?>(McpDaemonIdleExitMinutes)
+        var option = new Option<decimal?>(name)
         {
-            Description = "Idle-Exit des internen DaemonHosts in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt der Default von 10 Minuten.",
+            Description = description,
         };
         option.CustomParser = result =>
         {

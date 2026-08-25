@@ -52,11 +52,11 @@ internal static class UiFileSeparationChecker
         if (config.BlazorRequireCodeBehind)
         {
             var codeBehindPath = razorFile + ".cs";
-            if (RazorHasInlineCode(fileContent) && !File.Exists(codeBehindPath) && !IsRazorSuppressed(fileContent, "BlazorRequireCodeBehind"))
+            if (RazorHasInlineCode(fileContent) && !File.Exists(codeBehindPath) && !IsRazorSuppressed(fileContent, LinterRuleIds.BlazorRequireCodeBehind))
             {
                 violations.Add(CreateViolation(
                     razorFile,
-                    "BlazorRequireCodeBehind",
+                    LinterRuleIds.BlazorRequireCodeBehind,
                     $"Die Razor-Komponente '{Path.GetFileName(razorFile)}' hat keine '{Path.GetFileName(codeBehindPath)}'-Begleitdatei.",
                     "Erstelle eine separate '.razor.cs'-Datei mit einer partial class fuer die Komponenten-Logik (MVVM/Code-Behind-Muster). " +
                     "Verschiebe alle '@code { }' Bloecke aus der '.razor'-Datei dorthin. " +

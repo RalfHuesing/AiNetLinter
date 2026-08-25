@@ -46,7 +46,7 @@ internal static class PostAnalysisChecks
         sw.Restart();
         RunAIContextFootprintCheck(state.SourceClasses, state.Violations, state.FileContents, config);
         sw.Stop();
-        p.RecordPostAnalysisStep("AIContextFootprint", sw.Elapsed.TotalMilliseconds);
+        p.RecordPostAnalysisStep(LinterRuleIds.AIContextFootprint, sw.Elapsed.TotalMilliseconds);
 
         sw.Restart();
         AddPartialClassViolations(state.PartialClassParts, state.Violations, config);
@@ -226,7 +226,7 @@ internal static class PostAnalysisChecks
 
         var footprint = cls.AIContextFootprint;
         if (footprint > effectiveConfig.Metrics.MaxAIContextFootprint &&
-            !IsSuppressedViolation(cls.FilePath, "AIContextFootprint", cls.LineNumber, fileContents))
+            !IsSuppressedViolation(cls.FilePath, LinterRuleIds.AIContextFootprint, cls.LineNumber, fileContents))
         {
             var detailsBuilder = new System.Text.StringBuilder();
             detailsBuilder.AppendLine($"{cls.Name} ({footprint} > {effectiveConfig.Metrics.MaxAIContextFootprint})");
@@ -244,7 +244,7 @@ internal static class PostAnalysisChecks
             {
                 FilePath = cls.FilePath,
                 LineNumber = cls.LineNumber,
-                RuleName = "AIContextFootprint",
+                RuleName = LinterRuleIds.AIContextFootprint,
                 Details = detailsBuilder.ToString().TrimEnd('\r', '\n'),
                 Guidance = "Fuehre fuer die groessten Abhaengigkeiten (s. Details oben) ein schlankes Interface ein, das nur die tatsaechlich genutzten Methoden deklariert, und injiziere dieses statt der konkreten Klasse. Alternativ: Splitte diese Klasse nach Verantwortlichkeiten. Hintergrund: LLM-Agenten uebersehen Invarianten bei mehr als ~2.500 transitiven Zeilen ('Lost in the Middle'-Effekt — U-foermige Attention-Kurve bleibt auch bei Modellen mit grossem Kontextfenster bestehen)."
             });
