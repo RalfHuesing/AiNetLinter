@@ -30,17 +30,17 @@ Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je To
 
 | Tool | isError=true Faelle | isError=false Faelle (recoverable) |
 |---|---|---|
-| `find_symbol` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`, catch-Block) | `INVALID_ARGUMENT` (fehlendes/leeres `namePattern`, unbekannter `kind`) |
+| `find_symbol` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`, catch-Block) | `INVALID_ARGUMENT` (fehlendes/leeres `namePatterns`, mehr als 10 Patterns, unbekannter `kind`) |
 | `find_references` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`); `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL` (ueber `ResolveSymbolAsync`); leere Treffermenge |
 | `get_impact` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (beide Parameter gesetzt); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (Symbol-Branch, wiederverwendet von `find_references`); `ANALYSIS_FAILED` (unaufloesbare `gitRef`); leere Treffermenge |
 | `get_type_hierarchy` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`, Identifikator ist kein Typ); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
 | `get_call_tree` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`, ungueltiger `direction`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
-| `get_file_skeleton` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `filePath`); `RESOURCE_NOT_FOUND` (Pfad matcht kein Dokument) |
+| `get_file_skeleton` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `filePaths`); `RESOURCE_NOT_FOUND` (Pfad matcht kein Dokument) |
 | `get_class_structure` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC` via `CompilationError`, catch-Block) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`, unbekannter `sortBy`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (ueber `FindReferencesTool.ResolveSymbolAsync`, wiederverwendet) |
 | `get_index_scope` | `SOLUTION_NOT_LOADED` | *(keine — Tool hat keine Argumente, daher keine erwartbare Fehlerbedingung ausser dem Solution-Zustand)* |
 | `get_hotspots` | `SOLUTION_NOT_LOADED` | leere Treffermenge (Scope-Filter matched keine Datei — eigene Textmeldung, kein `[ERROR]`-Code noetig) |
 | `get_violations` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in `LinterEngine.RunAsync`) | leere Treffermenge (0 Violations); Scope-Filter matched keine Datei |
-| `get_symbol_body` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifier`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
+| `get_symbol_body` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes/leeres `symbolIdentifiers`); `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL` (wiederverwendet) |
 | `search_pattern` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `pattern`, ungueltige Regex); leere Treffermenge (eigene "0 Treffer"-Textmeldung) |
 | `metrics_tree` | `SOLUTION_NOT_LOADED` | `INVALID_ARGUMENT` (fehlendes/leeres `mode`, unbekannter `mode`, `depth`/`top_n` ausserhalb Range, ungueltiger `file_filter`) |
 | `find_duplicates` | `SOLUTION_NOT_LOADED`; echte Malfunction (`WORKSPACE_DIAGNOSTIC`) | `INVALID_ARGUMENT` (fehlendes `helperSymbol` bei `mode=refactoring-drift`, ungueltiger `mode`/`similarityThreshold`, `minTokens`/`maxResults` < 1) |

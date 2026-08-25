@@ -13,8 +13,8 @@ namespace AiNetLinter.Mcp;
 /// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_skeleton</c>,
 /// <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
-/// eigener <c>AIContextFootprint</c> (siehe <c> nicht mit jedem neu registrierten Tool waechst
-/// JIT-Kontext). <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
+/// eigener <c>AIContextFootprint</c> nicht mit jedem neu registrierten Tool waechst.
+/// <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
 /// eigene <see cref="AnalysisToolRegistrations"/>-Klasse ausgelagert, weil ihr <c>LinterEngine</c>-
 /// bzw. Roslyn-Syntax-Pull-in den Footprint dieser Klasse ueber das 2500-Limit getrieben hat/haette.
 /// Alle Lambdas sind projektgebunden: <c>projectRoot</c> ist Pflicht und adressiert den

@@ -259,4 +259,15 @@ public sealed class FindSymbolToolTests
         var count = text.Split("Hinweis:").Length - 1;
         Assert.Equal(1, count);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_CanceledToken_StopsBeforeScanning()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greeter"], kind: null, maxResults: 50, cts.Token));
+    }
 }

@@ -131,7 +131,7 @@ internal static class McpToolResults
 
     /// <summary>
     /// Kurzform fuer den Fall, dass ein per Dateipfad angegebenes Tool-Argument (z. B.
-    /// <c>get_file_skeleton</c>s <c>filePath</c>) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
+    /// <c>get_file_skeleton</c>s <c>filePaths</c>-Array) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
     /// in der Solution aufloest. IsError=false (recoverable) — Pfad korrigieren oder find_symbol
     /// zur Orientierung nutzen.
     /// </summary>

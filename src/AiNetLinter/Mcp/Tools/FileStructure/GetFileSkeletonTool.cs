@@ -18,7 +18,7 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// <summary>
 /// MCP-Tool <c>get_file_skeleton</c>: liefert das Struktur-Skelett (Typen, Signaturen ohne Bodies)
 /// einer oder mehrerer C#-Dateien per relativem (oder absolutem) Dateipfad.
-/// Akzeptiert einzelne Dateipfade oder Batch-Arrays fuer effizientes Laden ganzer Ordner in einem Turn.
+/// Erwartet ausschliesslich das <c>filePaths</c>-Array; eine einzelne Datei ist ein Array-Eintrag.
 /// </summary>
 internal static class GetFileSkeletonTool
 {

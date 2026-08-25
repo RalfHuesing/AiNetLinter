@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.FileStructure;
@@ -15,12 +16,10 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <summary>
 /// Reine Symbol-Scan- und Format-Logik fuer <see cref="FindSymbolTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="FindSymbolTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c> klein bleibt 
-/// <see cref="SearchPatternScanner"/>,. Keine Abhaengigkeit von
-/// <see cref="McpCodeGraphServer"/> — direkt unit-testbar. Trunkierung des
+/// klein bleibt. Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
+/// Trunkierung des
 /// Haupt-Treffer-Outputs ueber <see cref="McpTruncation.TruncateLines"/>, Trunkierung der
-/// Miss-Hint-Datei-Liste ueber <see cref="McpTruncation.TruncateFileList"/>
-///.
+/// Miss-Hint-Datei-Liste ueber <see cref="McpTruncation.TruncateFileList"/>.
 /// </summary>
 internal static class FindSymbolScanner
 {
@@ -42,9 +41,10 @@ internal static class FindSymbolScanner
         Solution solution,
         string namePattern,
         string? kind,
-        int maxResults)
+        int maxResults,
+        CancellationToken ct = default)
     {
-        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults);
+        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults, ct);
         return text;
     }
 
@@ -60,13 +60,14 @@ internal static class FindSymbolScanner
         Solution solution,
         string namePattern,
         string? kind,
-        int maxResults)
+        int maxResults,
+        CancellationToken ct = default)
     {
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
             solution,
             name => name.Contains(namePattern, StringComparison.OrdinalIgnoreCase),
             SymbolFilter.TypeAndMember,
-            CancellationToken.None);
+            ct);
 
         var filtered = FilterByKind(symbols, kind).ToList();
         if (filtered.Count == 0)

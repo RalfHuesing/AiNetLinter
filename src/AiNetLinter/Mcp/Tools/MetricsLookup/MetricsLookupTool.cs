@@ -18,7 +18,7 @@ namespace AiNetLinter.Mcp.Tools.MetricsLookup;
 /// <summary>
 /// MCP-Tool <c>metrics_lookup</c>: liefert punktgenaue Metriken (LOC, Komplexität, Parameter,
 /// AIContextFootprint, Member-Statistiken) und Schwellwert-Abgleiche für ein oder mehrere C#-Symbole.
-/// Akzeptiert einzelne Identifiers oder Batch-Arrays fuer effizienten Schwellwert-Vergleich in 1 Turn.
+/// Erwartet ausschliesslich das <c>symbolIdentifiers</c>-Array; ein einzelnes Symbol ist ein Array-Eintrag.
 /// </summary>
 internal static class MetricsLookupTool
 {

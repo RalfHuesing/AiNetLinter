@@ -162,16 +162,17 @@ async (string projectRoot,
 
 ```json
 {
-  "Results": [
-    { "NamePattern": "Greeter", "Matches": [ /* SymbolLocationEntry[] */ ] },
-    { "NamePattern": "GreetingService", "Matches": [] }
+  "results": [
+    { "namePattern": "Greeter", "matches": [ /* SymbolLocationEntry[] */ ] },
+    { "namePattern": "GreetingService", "matches": [] }
   ]
 }
 ```
 
-  Schlüssel PascalCase konsistent zum Bestand (`Matches`-Payload /
-  `SymbolLocationEntry` serialisieren ebenfalls PascalCase). Kein Top-Level-
-  Array (Regression `McpToolResultsTests.Text_WithListPayload_StructuredContentIsJsonObjectNotArray`).
+  StructuredContent nutzt die zentrale MCP-CamelCase-Konvention
+  (`McpJsonOptions`); die DTO-Typen und die Properties bleiben im C#-Code
+  unverändert. Kein Top-Level-Array (Regression
+  `McpToolResultsTests.Text_WithListPayload_StructuredContentIsJsonObjectNotArray`).
 - Text-Antwort: Abschnitt pro Pattern mit Kopfzeile (dem angefragten
   Pattern), Trennmuster wie `MarkdownBuilder.Divider()` in
   `RenderSymbolBodiesAsync`; darunter das gewohnte

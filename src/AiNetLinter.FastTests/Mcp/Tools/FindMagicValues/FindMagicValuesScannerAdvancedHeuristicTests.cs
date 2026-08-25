@@ -10,7 +10,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 /// Erweiterte Heuristik-Tests fuer <see cref="FindMagicValuesScanner"/>: <c>nameof_candidates</c>
 /// (Symbol-Scope-Walk inkl. Parameter-, Variablen-, Property-, Methoden-, Typ- und
 /// Enum-Member-Bezeichner), <c>security_candidates</c> (Symbol-Name- und Praefix-Heuristik),
-/// <c>standard_candidates</c>-Erweiterung (Buffer/Zeit-Konstanten), duplizierte
+/// <c>standard_candidates</c>-Erweiterung (Buffer-Konstanten), duplizierte
 /// <c>const</c>-Felder, <c>enum_candidates</c> (if/switch-Kaskaden) und
 /// <c>localization_candidates</c> (Exception-Konstruktor-Argument). Aus
 /// <see cref="FindMagicValuesScannerHeuristicTests"/> in eine eigene Datei extrahiert, damit
@@ -229,7 +229,7 @@ public sealed class B
     {
         // Nur ein const-Feld mit Wert 12345 â€” Schwelle ist â‰¥ 2 Vorkommen in â‰¥ 2 Files,
         // also KEIN Duplikat-Fund. (Die Standard-Pipeline liefert ebenfalls keinen Fund,
-        // weil 12345 kein HTTP-Statuscode, keine Buffer/Zeit-Konstante und keine
+        // weil 12345 kein HTTP-Statuscode, keine Buffer-Konstante und keine
         // Schwellenwert-double/float/decimal ist.)
         const string source = @"
 namespace Test;

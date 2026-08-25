@@ -131,6 +131,35 @@ public sealed class Foo
     }
 
     [Fact]
+    public async Task Classify_HttpStatusCode_ArithmeticExpressionWithoutComparison_IsNotReported()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public int M(int status) => status + 404;
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+
+        Assert.Empty(result.Payload!.MagicValues);
+    }
+
+    [Fact]
+    public async Task Classify_HttpStatusCode_StatusPropertyInitializer_IsReported()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public int StatusCode { get; } = 404;
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("StatusCodes.Status404NotFound", entry.Recommendation);
+    }
+
+    [Fact]
     public async Task Classify_WellKnownNumbers_TimeConstantsWithoutContext_AreNotReported()
     {
         const string source = @"

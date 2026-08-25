@@ -19,9 +19,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// ueberschreibbar via <c>maxResults</c>. Argument-Validierung lebt im Tool (nicht im Scanner),
 /// damit der Scanner reine Daten bekommt und einfacher unit-testbar bleibt. Bewusst duenner
 /// Dispatch auf <see cref="FindSymbolScanner.FindMatchesAndFormat"/> — keine eigene Scan- oder
-/// Formatierungslogik, damit diese
-/// Klasse eigener <c>AIContextFootprint</c> (siehe <c> klein bleibt
-///.
+/// Formatierungslogik, damit diese Klasse klein bleibt.
 /// </summary>
 internal static class FindSymbolTool
 {
@@ -91,10 +89,11 @@ internal static class FindSymbolTool
 
             for (var i = 0; i < patterns.Count; i++)
             {
+                ct.ThrowIfCancellationRequested();
                 if (i > 0) mb.Divider();
                 var pattern = patterns[i];
                 var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
-                    solution, pattern, kind, normalizedMaxResults);
+                    solution, pattern, kind, normalizedMaxResults, ct);
                 results.Add(new FindSymbolPatternResultDto(pattern, entries));
 
                 mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
@@ -151,8 +150,8 @@ internal static class FindSymbolTool
         $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}";
 
     /// <summary>
-    /// Stellt einen
-    /// Compile-Fehler in mindestens einer Datei hat. Shared-Helper, weil das identische Muster in
+    /// Baut einen Warnhinweis, falls mindestens eine Datei einen Compile-Fehler hat. Shared-Helper,
+    /// weil das identische Muster in
     /// mehreren Tools verwendet wird (find_symbol, find_references, get_impact,
     /// get_type_hierarchy, search_pattern). Bei 0 Compile-Fehlern wird der Original-Text
     /// unveraendert zurueckgegeben.

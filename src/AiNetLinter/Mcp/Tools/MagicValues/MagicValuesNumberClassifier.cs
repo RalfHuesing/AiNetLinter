@@ -145,7 +145,8 @@ internal static class MagicValuesNumberClassifier
 
     private static bool HasStatusCodeComparisonContext(LiteralExpressionSyntax literal)
     {
-        if (literal.Parent is BinaryExpressionSyntax binary)
+        if (literal.Parent is BinaryExpressionSyntax binary
+            && IsStatusCodeComparisonOperator(binary.Kind()))
         {
             var other = binary.Left == literal ? binary.Right : binary.Left;
             return IsStatusCodeIdentifier(other.ToString());
@@ -188,12 +189,22 @@ internal static class MagicValuesNumberClassifier
             return IsStatusCodeIdentifier(assign.Left.ToString());
         }
 
-        if (literal.Parent is PropertyDeclarationSyntax prop)
+        if (literal.FirstAncestorOrSelf<PropertyDeclarationSyntax>() is { } prop)
         {
             return IsStatusCodeIdentifier(prop.Identifier.ValueText);
         }
 
         return false;
+    }
+
+    private static bool IsStatusCodeComparisonOperator(SyntaxKind kind)
+    {
+        return kind is SyntaxKind.EqualsExpression
+            or SyntaxKind.NotEqualsExpression
+            or SyntaxKind.LessThanExpression
+            or SyntaxKind.LessThanOrEqualExpression
+            or SyntaxKind.GreaterThanExpression
+            or SyntaxKind.GreaterThanOrEqualExpression;
     }
 
     private static bool HasStatusCodeParameterContext(LiteralExpressionSyntax literal, SemanticModel? model)

@@ -17,8 +17,8 @@ namespace AiNetLinter.Mcp.Tools;
 
 /// <summary>
 /// MCP-Tool <c>get_symbol_body</c>: liefert den vollstaendigen Body eines oder mehrerer C#-Symbole
-/// (Methode, Konstruktor, Property, Indexer, Event). Akzeptiert sowohl einzelne Identifiers als auch
-/// Batch-Arrays fuer effizientes Laden in einem einzigen Turn.
+/// (Methode, Konstruktor, Property, Indexer, Event). Erwartet ausschliesslich das
+/// <c>symbolIdentifiers</c>-Array; ein einzelnes Symbol ist ein Array-Eintrag.
 /// </summary>
 internal static class GetSymbolBodyTool
 {
