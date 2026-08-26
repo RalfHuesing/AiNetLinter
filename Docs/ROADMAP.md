@@ -440,10 +440,6 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   `ainetlinter://overview{?projectRoot}` registriert. Die C#-Live-Teststrecke
   prüft Discovery sowie den Read der URL-kodierten Repository-URI und bestätigt
   einen `text/markdown`-Snapshot mit Root-, Solution- und Regelstatus.
-- [x] Der Abschlussnachweis einschließlich Audit-Triage, read-only Prüfung der
-  Repo-/Hermes-Registrierungen und Entscheidungsregister steht in
-  `tasks/mcp-server-weiterentwicklung/11_epic-projektregistry-und-daemon/step-008/step-result.md`.
-
 ### EPIC-B — Geteilter Daemon mit ThinClient (umgesetzt am 2026-08-24)
 
 - [x] Interner `--daemon-start`-Pfad mit Named-Pipe-Akzeptanz, Pipe-Level-
