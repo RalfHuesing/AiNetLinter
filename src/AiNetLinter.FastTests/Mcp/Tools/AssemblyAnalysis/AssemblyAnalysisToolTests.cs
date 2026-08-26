@@ -60,6 +60,55 @@ public sealed class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public async Task InspectAssembly_SupportsExactTypeMultipleMemberFiltersAndParameterDetails()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-");
+        var assemblyPath = EmitAssembly(temp, "FilterProbe", """
+            namespace Probe.Api;
+            public sealed class PublicApi
+            {
+                public bool Save(bool abortOnWarning, ref int changeCount, string mode = "safe") => true;
+                public void SaveExtra() { }
+                public bool Validate() => true;
+            }
+            public sealed class PublicApiHelper
+            {
+                public void Save() { }
+            }
+            """);
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 10),
+            CancellationToken.None);
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+
+        var type = Assert.Single(payload.Types);
+        Assert.Equal(2, type.TotalMembers);
+        Assert.False(type.MembersTruncated);
+        Assert.DoesNotContain(type.Members, member => member.Name == "SaveExtra");
+        var save = Assert.Single(type.Members, member => member.Name == "Save");
+        Assert.Contains("abortOnWarning", save.Signature, StringComparison.Ordinal);
+        Assert.Equal(
+            ["abortOnWarning", "changeCount", "mode"],
+            save.Parameters.Select(parameter => parameter.Name).ToArray());
+        Assert.Equal("bool", save.Parameters[0].Type);
+        Assert.Equal("none", save.Parameters[0].RefKind);
+        Assert.Equal("ref", save.Parameters[1].RefKind);
+        Assert.True(save.Parameters[2].IsOptional);
+        Assert.Equal("\"safe\"", save.Parameters[2].DefaultValue);
+
+        var limitedResult = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 1),
+            CancellationToken.None);
+        var limitedType = Assert.Single(Deserialize<InspectAssemblyPayload>(limitedResult).Types);
+        Assert.Single(limitedType.Members);
+        Assert.Equal(2, limitedType.TotalMembers);
+        Assert.True(limitedType.MembersTruncated);
+    }
+
+    [Fact]
     public async Task InspectAssembly_UsesResultLimitAndIgnoresUnrelatedInvalidDlls()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
@@ -102,7 +151,7 @@ public sealed class AssemblyAnalysisToolTests
             namespace Probe.Extensions;
             public static class Extensions
             {
-                public static string Mark(this object value) => value.ToString()!;
+                public static string Mark(this object value, int count) => value.ToString()!;
                 public static string Other(this string value) => value;
                 public static T Generic<T>(this T value) where T : class => value;
                 public static string NotAnExtension(string value) => value;
@@ -115,6 +164,7 @@ public sealed class AssemblyAnalysisToolTests
         var extension = Assert.Single(payload.Extensions);
         Assert.Equal("Mark", extension.Name);
         Assert.Equal("not_decidable", extension.Applicability);
+        Assert.Equal(["value", "count"], extension.Parameters.Select(parameter => parameter.Name).ToArray());
         Assert.Equal("complete", payload.Completeness);
     }
 

@@ -21,7 +21,7 @@ internal static class FindAssemblyExtensionsTool
                 state,
                 arguments.AssemblyPath,
                 arguments.ReceiverType,
-                AssemblyAnalysisService.NormalizeMaxResults(arguments.MaxResults),
+                AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
                 ct,
                 (fullPath, context, maxResults) =>
                 {

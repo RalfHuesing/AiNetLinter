@@ -32,13 +32,16 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? memberName = null,
                 bool publicOnly = true,
                 int maxResults = AssemblyAnalysisService.DefaultMaxResults,
+                bool exactTypeName = false,
+                string[]? memberNames = null,
+                int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
                 CancellationToken ct = default) =>
                 projectRoot is null
-                    ? await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, @namespace, typeName, memberName, publicOnly, maxResults), ct)
+                    ? await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, @namespace, typeName, memberName, publicOnly, maxResults, exactTypeName, memberNames, maxMembers), ct)
                     : await ProjectToolCall.ExecuteAsync(
                         registry,
                         projectRoot,
-                        lease => InspectAssemblyTool.ExecuteAsync(lease.Server, new InspectAssemblyArguments(assemblyPath, @namespace, typeName, memberName, publicOnly, maxResults), ct)),
+                        lease => InspectAssemblyTool.ExecuteAsync(lease.Server, new InspectAssemblyArguments(assemblyPath, @namespace, typeName, memberName, publicOnly, maxResults, exactTypeName, memberNames, maxMembers), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("inspect_assembly", InspectAssemblyDescription)));
     }
 
@@ -47,7 +50,10 @@ internal static class AssemblyAnalysisToolRegistrations
         "über Roslyn untersuchen. assemblyPath ist Pflicht und muss absolut sein; projectRoot " +
         "ist optional und ordnet die Assembly gegen die geladene Consumer-Solution ein. " +
         "namespace, typeName und memberName filtern, publicOnly ist standardmäßig true, " +
-        "maxResults begrenzt deterministisch (Default 100, Maximum 1000). Identität, " +
+        "exactTypeName schaltet für typeName von Teiltext- auf Exaktsuche um, memberNames " +
+        "ergänzt den bestehenden Teiltextfilter memberName um eine exakte OR-Auswahl, " +
+        "maxResults begrenzt Typen deterministisch (Default 100, Maximum 1000), " +
+        "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identität, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
         "werden ausgegeben; bei fehlenden Abhängigkeiten lautet completeness partial. " +
         "Die DLL wird weder geladen noch ausgeführt.";
@@ -82,5 +88,6 @@ internal static class AssemblyAnalysisToolRegistrations
         "Generics, Constraints und Konvertierungen. extensionName und namespace filtern, " +
         "maxResults begrenzt deterministisch (Default 100, Maximum 1000). Die Antwort trennt " +
         "applicable, not_applicable und not_decidable und markiert fehlende Abhängigkeiten " +
-        "mit completeness partial. Die DLL wird weder geladen noch ausgeführt.";
+        "mit completeness partial. Methoden liefern zusätzlich strukturierte Parameterdaten. " +
+        "Die DLL wird weder geladen noch ausgeführt.";
 }

@@ -14,6 +14,8 @@ internal static class AssemblyAnalysisService
 {
     internal const int DefaultMaxResults = 100;
     internal const int MaxResults = 1000;
+    internal const int DefaultMaxMembers = 100;
+    internal const int MaxMembers = 1000;
 
     internal static bool TryValidatePath(string? assemblyPath, out string fullPath, out string error)
     {
@@ -55,8 +57,8 @@ internal static class AssemblyAnalysisService
         return true;
     }
 
-    internal static int NormalizeMaxResults(int requested) =>
-        Math.Clamp(requested, 1, MaxResults);
+    internal static int NormalizeLimit(int requested, int defaultValue, int maxValue) =>
+        requested <= 0 ? defaultValue : Math.Clamp(requested, 1, maxValue);
 
     internal static async Task<(AssemblyContext? Context, string? Error)> CreateContextAsync(
         string assemblyPath,
@@ -74,14 +76,14 @@ internal static class AssemblyAnalysisService
         var types = AssemblyAnalysisSymbolTraversal.GetAllTypes(context.Assembly.GlobalNamespace)
             .Where(type => !options.PublicOnly || IsPublicApi(type))
             .Where(type => MatchesNamespace(type, options.NamespaceFilter))
-            .Where(type => Matches(type.ToDisplayString(), options.TypeFilter))
+            .Where(type => MatchesType(type, options.TypeFilter, options.ExactTypeName))
             .OrderBy(type => type.ContainingNamespace.ToDisplayString(), StringComparer.Ordinal)
             .ThenBy(type => type.ToDisplayString(), StringComparer.Ordinal)
             .ToList();
 
         var limited = types.Take(options.MaxResults).ToList();
         var items = limited
-            .Select(type => ToTypeDto(type, options.MemberFilter, options.PublicOnly))
+            .Select(type => ToTypeDto(type, options))
             .ToList();
         var namespaces = types
             .Select(type => type.ContainingNamespace.ToDisplayString())
@@ -153,21 +155,25 @@ internal static class AssemblyAnalysisService
             receiverType,
             GenericParameters(method),
             Constraints(method.TypeParameters),
+            Parameters(method),
             applicability,
             reason,
             Attributes(method));
     }
 
-    private static AssemblyTypeDto ToTypeDto(INamedTypeSymbol type, string? memberFilter, bool publicOnly)
+    private static AssemblyTypeDto ToTypeDto(INamedTypeSymbol type, AssemblyInspectionOptions options)
     {
-        var members = type.GetMembers()
+        var matchingMembers = type.GetMembers()
             .Where(member => !member.IsImplicitlyDeclared)
             .Where(member => !IsAccessor(member))
-            .Where(member => !publicOnly || IsPublicApi(member))
-            .Where(member => Matches(member.Name, memberFilter))
+            .Where(member => !options.PublicOnly || IsPublicApi(member))
+            .Where(member => MatchesMember(member, options.MemberFilter, options.MemberNames))
             .Select(ToMemberDto)
             .OrderBy(member => member.Kind, StringComparer.Ordinal)
             .ThenBy(member => member.Signature, StringComparer.Ordinal)
+            .ToList();
+        var members = matchingMembers
+            .Take(options.MaxMembers)
             .ToList();
         return new AssemblyTypeDto(
             type.ContainingNamespace.ToDisplayString(),
@@ -175,7 +181,9 @@ internal static class AssemblyAnalysisService
             TypeKindName(type),
             type.DeclaredAccessibility.ToString(),
             members,
-            Attributes(type));
+            Attributes(type),
+            matchingMembers.Count,
+            members.Count < matchingMembers.Count);
     }
 
     private static AssemblyMemberDto ToMemberDto(ISymbol member)
@@ -186,13 +194,43 @@ internal static class AssemblyAnalysisService
             member.Name,
             member.DeclaredAccessibility.ToString(),
             method is null ? member.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) : MethodSignature(method),
+            method is null ? Array.Empty<AssemblyParameterDto>() : Parameters(method),
             method is null ? Array.Empty<string>() : GenericParameters(method),
             method is null ? Array.Empty<string>() : Constraints(method.TypeParameters),
             Attributes(member));
     }
 
-    private static string MethodSignature(IMethodSymbol method) =>
-        $"{method.ReturnType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)} {method.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}";
+    private static string MethodSignature(IMethodSymbol method)
+    {
+        var format = SymbolDisplayFormat.CSharpErrorMessageFormat.WithParameterOptions(
+            SymbolDisplayParameterOptions.IncludeType
+            | SymbolDisplayParameterOptions.IncludeName
+            | SymbolDisplayParameterOptions.IncludeParamsRefOut
+            | SymbolDisplayParameterOptions.IncludeOptionalBrackets);
+        return $"{method.ReturnType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)} {method.ToDisplayString(format)}";
+    }
+
+    private static IReadOnlyList<AssemblyParameterDto> Parameters(IMethodSymbol method) =>
+        method.Parameters.Select(parameter => new AssemblyParameterDto(
+            parameter.Name,
+            parameter.Type.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
+            parameter.RefKind.ToString().ToLowerInvariant(),
+            parameter.IsOptional,
+            DefaultValue(parameter))).ToList();
+
+    private static string? DefaultValue(IParameterSymbol parameter)
+    {
+        if (!parameter.HasExplicitDefaultValue) return null;
+        return parameter.ExplicitDefaultValue switch
+        {
+            null => "null",
+            string value => $"\"{value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)}\"",
+            char value => $"'{value}'",
+            bool value => value ? "true" : "false",
+            IFormattable value => value.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+            var value => value?.ToString(),
+        };
+    }
 
     private static IReadOnlyList<string> GenericParameters(IMethodSymbol method) =>
         method.TypeParameters.Select(parameter => parameter.Name).ToList();
@@ -228,6 +266,26 @@ internal static class AssemblyAnalysisService
 
     private static bool Matches(string value, string? filter) =>
         string.IsNullOrWhiteSpace(filter) || value.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool MatchesType(INamedTypeSymbol type, string? filter, bool exact)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return true;
+        var normalized = filter.Trim();
+        return exact
+            ? string.Equals(type.Name, normalized, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(type.ToDisplayString(), normalized, StringComparison.OrdinalIgnoreCase)
+            : Matches(type.ToDisplayString(), normalized);
+    }
+
+    private static bool MatchesMember(ISymbol member, string? filter, IReadOnlyList<string>? exactNames)
+    {
+        var hasSubstringFilter = !string.IsNullOrWhiteSpace(filter);
+        var hasExactNames = exactNames?.Any(name => !string.IsNullOrWhiteSpace(name)) == true;
+        if (!hasSubstringFilter && !hasExactNames) return true;
+        return (hasSubstringFilter && Matches(member.Name, filter))
+            || (hasExactNames && exactNames!.Any(name => !string.IsNullOrWhiteSpace(name)
+                && string.Equals(member.Name, name.Trim(), StringComparison.OrdinalIgnoreCase)));
+    }
 
     private static bool MatchesNamespace(INamedTypeSymbol type, string? filter) =>
         string.IsNullOrWhiteSpace(filter) || string.Equals(type.ContainingNamespace.ToDisplayString(), filter.Trim(), StringComparison.OrdinalIgnoreCase);

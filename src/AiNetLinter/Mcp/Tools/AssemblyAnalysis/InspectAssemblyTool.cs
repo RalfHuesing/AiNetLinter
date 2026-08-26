@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -23,13 +24,21 @@ internal static class InspectAssemblyTool
                 state,
                 arguments.AssemblyPath,
                 null,
-                AssemblyAnalysisService.NormalizeMaxResults(arguments.MaxResults),
+                AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
                 ct,
                 (fullPath, context, maxResults) =>
                 {
                     var selection = AssemblyAnalysisService.Inspect(
                         context,
-                        new AssemblyInspectionOptions(arguments.Namespace, arguments.TypeName, arguments.MemberName, arguments.PublicOnly, maxResults));
+                        new AssemblyInspectionOptions(
+                            arguments.Namespace,
+                            arguments.TypeName,
+                            arguments.MemberName,
+                            arguments.PublicOnly,
+                            arguments.ExactTypeName,
+                            arguments.MemberNames,
+                            maxResults,
+                            AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
                     var completeness = context.Diagnostics.Count == 0 ? "complete" : "partial";
                     var payload = new InspectAssemblyPayload(
                         fullPath,
@@ -48,6 +57,17 @@ internal static class InspectAssemblyTool
     private static string FormatText(InspectAssemblyPayload payload)
     {
         var builder = new StringBuilder();
+        AppendHeader(builder, payload);
+        AppendNamespaces(builder, payload.Namespaces);
+        AppendReferences(builder, payload.References);
+        AppendTypes(builder, payload);
+        AppendDiagnostics(builder, payload.Diagnostics);
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static void AppendHeader(StringBuilder builder, InspectAssemblyPayload payload)
+    {
         builder.AppendLine($"Assembly: `{payload.Identity?.Name ?? "unbekannt"}`");
         builder.AppendLine($"Pfad: `{payload.AssemblyPath}`");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
@@ -56,38 +76,46 @@ internal static class InspectAssemblyTool
         {
             builder.AppendLine($"Identität: {identity.Name}, Version {identity.Version}, Kultur {identity.Culture}");
         }
+    }
 
-        builder.AppendLine($"Öffentliche Namespaces: {payload.Namespaces.Count}");
-        foreach (var namespaceName in payload.Namespaces)
-        {
-            builder.AppendLine($"- `{namespaceName}`");
-        }
+    private static void AppendNamespaces(StringBuilder builder, IReadOnlyList<string> namespaces)
+    {
+        builder.AppendLine($"Öffentliche Namespaces: {namespaces.Count}");
+        foreach (var namespaceName in namespaces) builder.AppendLine($"- `{namespaceName}`");
+    }
 
-        builder.AppendLine($"Referenzen: {payload.References.Count}");
-        foreach (var reference in payload.References)
+    private static void AppendReferences(StringBuilder builder, IReadOnlyList<AssemblyReferenceDto> references)
+    {
+        builder.AppendLine($"Referenzen: {references.Count}");
+        foreach (var reference in references)
         {
             builder.AppendLine($"- {reference.Name}, Version {reference.Version} ({(reference.Resolved ? "aufgelöst" : "nicht aufgelöst")})");
         }
 
         builder.AppendLine();
+    }
+
+    private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload)
+    {
         builder.AppendLine($"Öffentliche API-Typen: {payload.Types.Count} von {payload.TotalTypes}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
-        foreach (var type in payload.Types)
-        {
-            var qualifiedName = string.IsNullOrEmpty(type.Namespace) ? type.Name : $"{type.Namespace}.{type.Name}";
-            builder.AppendLine($"- `{qualifiedName}` ({type.Kind}, {type.Accessibility})");
-            foreach (var member in type.Members)
-            {
-                builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
-            }
-        }
+        foreach (var type in payload.Types) AppendType(builder, type);
+    }
 
-        if (payload.Diagnostics.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("Diagnosen:");
-            foreach (var diagnostic in payload.Diagnostics) builder.AppendLine($"- {diagnostic}");
-        }
+    private static void AppendType(StringBuilder builder, AssemblyTypeDto type)
+    {
+        var qualifiedName = string.IsNullOrEmpty(type.Namespace) ? type.Name : $"{type.Namespace}.{type.Name}";
+        var memberCount = type.MembersTruncated
+            ? $", Member {type.Members.Count} von {type.TotalMembers} gezeigt"
+            : $", {type.TotalMembers} Member";
+        builder.AppendLine($"- `{qualifiedName}` ({type.Kind}, {type.Accessibility}{memberCount})");
+        foreach (var member in type.Members) builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
+    }
 
-        return builder.ToString().TrimEnd();
+    private static void AppendDiagnostics(StringBuilder builder, IReadOnlyList<string> diagnostics)
+    {
+        if (diagnostics.Count == 0) return;
+        builder.AppendLine();
+        builder.AppendLine("Diagnosen:");
+        foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
 }

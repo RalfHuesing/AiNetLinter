@@ -10,7 +10,10 @@ internal sealed record InspectAssemblyArguments(
     string? TypeName,
     string? MemberName,
     bool PublicOnly,
-    int MaxResults);
+    int MaxResults,
+    bool ExactTypeName = false,
+    IReadOnlyList<string>? MemberNames = null,
+    int MaxMembers = 0);
 
 internal sealed record FindAssemblyExtensionsArguments(
     string? AssemblyPath,
@@ -24,7 +27,10 @@ internal sealed record AssemblyInspectionOptions(
     string? TypeFilter,
     string? MemberFilter,
     bool PublicOnly,
-    int MaxResults);
+    bool ExactTypeName,
+    IReadOnlyList<string>? MemberNames,
+    int MaxResults,
+    int MaxMembers);
 
 internal sealed record AssemblyExtensionSearchOptions(
     string? ExtensionName,
@@ -59,9 +65,17 @@ internal sealed record AssemblyMemberDto(
     string Name,
     string Accessibility,
     string Signature,
+    IReadOnlyList<AssemblyParameterDto> Parameters,
     IReadOnlyList<string> GenericParameters,
     IReadOnlyList<string> Constraints,
     IReadOnlyList<string> Attributes);
+
+internal sealed record AssemblyParameterDto(
+    string Name,
+    string Type,
+    string RefKind,
+    bool IsOptional,
+    string? DefaultValue);
 
 internal sealed record AssemblyTypeDto(
     string Namespace,
@@ -69,7 +83,9 @@ internal sealed record AssemblyTypeDto(
     string Kind,
     string Accessibility,
     IReadOnlyList<AssemblyMemberDto> Members,
-    IReadOnlyList<string> Attributes);
+    IReadOnlyList<string> Attributes,
+    int TotalMembers = 0,
+    bool MembersTruncated = false);
 
 internal sealed record AssemblyExtensionDto(
     string Namespace,
@@ -79,6 +95,7 @@ internal sealed record AssemblyExtensionDto(
     string ReceiverType,
     IReadOnlyList<string> GenericParameters,
     IReadOnlyList<string> Constraints,
+    IReadOnlyList<AssemblyParameterDto> Parameters,
     string Applicability,
     string? ApplicabilityReason,
     IReadOnlyList<string> Attributes);

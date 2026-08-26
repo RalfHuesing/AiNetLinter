@@ -46,11 +46,19 @@ public sealed class McpServerAllToolsE2ETests
             "inspect_assembly",
             new Dictionary<string, object?>
             {
-                ["assemblyPath"] = typeof(McpCodeGraphServer).Assembly.Location
+                ["assemblyPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["typeName"] = nameof(McpCodeGraphServer),
+                ["publicOnly"] = false,
+                ["exactTypeName"] = true,
+                ["memberNames"] = new[] { "Dispose" },
+                ["maxMembers"] = 10
             });
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
+        var types = result.StructuredContent!.Value.GetProperty("types");
+        Assert.Single(types.EnumerateArray());
+        Assert.Equal(nameof(McpCodeGraphServer), types[0].GetProperty("name").GetString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Assembly:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);

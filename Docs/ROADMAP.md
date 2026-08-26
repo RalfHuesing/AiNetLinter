@@ -12,6 +12,10 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   `partial` ausgewiesen.
 - [x] Beide Tools arbeiten metadata-only ohne Runtime-Assembly-Laden oder Ausführung und
   liefern zusätzlich typisierte `structuredContent`-Payloads.
+- [x] `inspect_assembly` unterstützt generische Discovery-Steuerung ohne DLL-spezifische
+  Heuristiken: optionale Exaktsuche für Typnamen, exakte OR-Mehrfachauswahl für Member,
+  begrenzte Memberausgabe je Typ sowie strukturierte Parameterdaten aus dem Metadatenmodell
+  (Name, Typ, `ref`-Art, Optionalität und Defaultwert).
 
 ## MCP-Tool-Annotations (2026-08-26)
 

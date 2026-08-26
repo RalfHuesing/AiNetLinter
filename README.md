@@ -24,7 +24,7 @@ Zusammenhängen und dem aktuellen Regelstand bereit.
 | :--- | :--- | :--- |
 | Orientierung vor einem Edit | `get_feature_context`, `find_symbol`, `get_file_skeleton`, `get_symbol_body` | Deklarationen, Member-Struktur, Metriken, direkte Aufrufer, statische Test-Zuordnung und aktuelle Regelverstöße. |
 | Abhängigkeiten untersuchen | `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | Aufrufstellen, Aufrufer-/Aufgerufene-Bäume, Vererbung und semantische Typreferenzen. |
-| Externe APIs untersuchen | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API und klassische Extension-Methoden einer exakt angegebenen lokalen DLL metadata-only über Roslyn; optional gegen eine Consumer-Solution. |
+| Externe APIs untersuchen | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API und klassische Extension-Methoden einer exakt angegebenen lokalen DLL metadata-only über Roslyn; `inspect_assembly` unterstützt exakte Typauswahl, Mehrfachfilter, Member-Limits und strukturierte Parameterdaten; optional gegen eine Consumer-Solution. |
 | Änderung und Tests einordnen | `get_impact`, `get_test_context` | Betroffene Call-Sites; für Diff-Kontext auch geänderte Symbole, statische Test-Zuordnungen und ausführbare Testfilter. |
 | Nach einem Edit prüfen | `get_violations`, `metrics_lookup`, `safeguard` | Aktuelle Verstöße für einen Scope, Symbolmetriken mit Schwellwert-Abgleich sowie Score, Pass/Fail und deterministische Top-Befunde mit Gesamt-/Trunkierungsmetadaten. |
 | Repository-Audit | `metrics_tree`, `pattern_detect`, `find_duplicates`, `find_dead_code`, `find_magic_values` | Aggregierte Strukturmetriken und Kandidaten für konfigurierbare Pattern, Duplikate, unreferenzierten Code und Magic Values. |
@@ -128,8 +128,10 @@ Registrierung, Projektvertrag und Tool-vs.-Textsuche: [Docs/integration.md](Docs
 Für externe lokale DLLs stehen `inspect_assembly` und `find_assembly_extensions` bereit. Beide
 akzeptieren einen absoluten `assemblyPath` und führen die Assembly nicht aus. `projectRoot`
 ist optional; mit `receiverType` prüft die Extension-Suche die tatsächliche Roslyn-
-Anwendbarkeit im geladenen Consumer-Projekt. Unaufgelöste Abhängigkeiten werden als
-`partial` gekennzeichnet.
+Anwendbarkeit im geladenen Consumer-Projekt. `inspect_assembly` kann mit
+`exactTypeName`, `memberNames` und `maxMembers` große oder mehrdeutige APIs gezielt
+einschränken und liefert bei Methoden zusätzlich strukturierte Parameterdaten.
+Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet.
 
 ---
 
