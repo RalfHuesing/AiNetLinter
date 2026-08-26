@@ -2,10 +2,10 @@
 status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T22:02:09+02:00
+last_updated: 2026-08-26T22:12:07+02:00
 rules_dir: .agents/rules
-total_steps: 0
-current_step: null
+total_steps: 1
+current_step: step-001
 ---
 
 # Task State: get-file-tree
@@ -13,17 +13,18 @@ current_step: null
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 0
-- **Aktueller Schritt:** `null`
+- **Steps gesamt:** 1
+- **Aktueller Schritt:** `step-001`
 - **Roadmap:** wird im Roadmap-Modus erstellt
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T22:02:09+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T22:12:07+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
+| step-001 | EPIC-01 | in_progress | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | - | - | - |
 
 ## Config (optional)
 

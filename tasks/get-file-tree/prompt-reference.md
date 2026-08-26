@@ -28,6 +28,9 @@ fortgesetzt werden kann.
 - Dokumentation einschließlich der relevanten Agenten-/MCP-Workflow-Dokumente
   mit dem implementierten Verhalten synchronisieren.
 - Autonom und agentisch bis zum tatsächlichen Task-Abschluss arbeiten.
+- Für jede Rolle immer einen vollständig neuen Subagenten mit leerem
+  Kontextfenster starten; bestehende Subagenten niemals wiederbeleben oder
+  fortsetzen.
 
 ## Arbeitsanker
 
