@@ -87,6 +87,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
 | `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
 | `--daemon-start` | bool | Startet den internen Named-Pipe-Daemonpfad (nicht für externe Client-Registrierungen) |
+| `--daemon-instance <id>` | string | Isoliert Named-Pipe-Endpunkt, Startup-Gate und MRU-State pro Daemon-Instanz; nur im MCP-/Daemon-Modus, sichere ASCII-ID mit maximal 32 Zeichen, invariant lowercase normalisiert |
 | `--mcp-daemon-idle-exit-minutes <minuten>` | decimal | Idle-Exit des internen DaemonHosts (Standard 10 Minuten) |
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
@@ -176,6 +177,7 @@ Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Curs
 ```bash
 ainetlinter --mcp-server                         # projectRoot kommt je Tool-Aufruf
 ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-PID
+ainetlinter --mcp-server --daemon-instance beta   # isolierter MCP-Daemon-Endpunkt
 ```
 
 Bei Legacy-MCP `initialize` (Handshake) hält der Daemon mehrere Projekt-Keys
@@ -234,8 +236,10 @@ opak weiter.
 
 - Der Named-Pipe-Endpunkt lautet ausschließlich
   `ainetlinter.analyzer.v1.<username>` für den aktuellen Windows-Benutzer.
-  Der Server erstellt ihn mit `PipeOptions.CurrentUserOnly`; dadurch ist der
-  Pipe-Zugriff auf den aktuellen Benutzer begrenzt.
+  Mit `--daemon-instance <id>` wird `.<id>` angefügt; die ID wird invariant
+  in Kleinbuchstaben normalisiert, sodass `BETA` und `beta` dieselbe Instanz
+  adressieren. Der Server erstellt ihn mit `PipeOptions.CurrentUserOnly`;
+  dadurch ist der Pipe-Zugriff auf den aktuellen Benutzer begrenzt.
 - Jede Pipe-Nachricht ist genau ein JSON-Objekt in einer einzelnen
   newline-delimited-Zeile. Leere, mehrzeilige, ungültige oder nicht-objektartige
   Frames werden abgewiesen. Nach dem Pipe-Level-Handshake werden die MCP-/JSON-

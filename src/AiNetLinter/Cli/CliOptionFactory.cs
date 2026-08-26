@@ -18,6 +18,7 @@ internal static class CliOptionFactory
     internal const string McpProjectTtlMinutes = "--mcp-project-ttl-minutes";
     internal const string McpMaxProjects = "--mcp-max-projects";
     internal const string McpDaemonIdleExitMinutes = "--mcp-daemon-idle-exit-minutes";
+    internal const string DaemonInstance = "--daemon-instance";
 
     internal static Option<string?> CreateConfigOption() => new("--config", "-c")
     {
@@ -144,6 +145,26 @@ internal static class CliOptionFactory
         CreateInvariantDecimalOption(
             McpDaemonIdleExitMinutes,
             "Idle-Exit des internen DaemonHosts in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt der Default von 10 Minuten.");
+
+    internal static Option<string?> CreateDaemonInstanceOption()
+    {
+        var option = new Option<string?>(DaemonInstance)
+        {
+            Description = "Optionale isolierte Daemon-Instanz (ASCII-ID, maximal 32 Zeichen; nur im MCP-/Daemon-Modus).",
+        };
+        option.CustomParser = result =>
+        {
+            var value = result.Tokens.SingleOrDefault()?.Value;
+            var error = Mcp.Daemon.DaemonInstanceId.Validate(value);
+            if (error is not null)
+            {
+                result.AddError($"{DaemonInstance} {error}.");
+            }
+
+            return error is null ? Mcp.Daemon.DaemonInstanceId.Normalize(value) : value;
+        };
+        return option;
+    }
 
     private static Option<decimal?> CreateInvariantDecimalOption(string name, string description)
     {

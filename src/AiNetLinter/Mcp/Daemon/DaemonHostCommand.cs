@@ -31,7 +31,7 @@ internal static class DaemonHostCommand
         var maxProjects = args.McpMaxProjects ?? DaemonProtocol.DefaultMaxProjects;
         var idleMinutes = args.McpDaemonIdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes;
         var mru = new MruStateStore(new MruStateStoreOptions(
-            MruStateStore.DefaultFilePath,
+            MruStateStore.GetFilePath(args.DaemonInstance),
             TimeProvider.System,
             daemonConsole.WriteError,
             MaxProjects: maxProjects));
@@ -44,7 +44,7 @@ internal static class DaemonHostCommand
         var host = new DaemonHost(new DaemonHostOptions(
             registry,
             mru,
-            new DaemonPipeTransport(),
+            new DaemonPipeTransport(daemonInstance: args.DaemonInstance),
             TimeProvider.System,
             TimeSpan.FromMinutes((double)idleMinutes),
             new EffectiveDaemonConfiguration(maxProjects, idleMinutes),

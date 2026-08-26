@@ -5,7 +5,6 @@ namespace AiNetLinter.Mcp.Daemon;
 internal static class DaemonStartupGate
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(25);
-    private static readonly SemaphoreSlim LocalGate = new(1, 1);
 
     internal static async ValueTask<IAsyncDisposable> AcquireAsync(
         CancellationToken cancellationToken,
@@ -16,26 +15,32 @@ internal static class DaemonStartupGate
         CancellationToken cancellationToken,
         TimeSpan timeout,
         string userName)
+        => await AcquireAsync(cancellationToken, timeout, userName, null).ConfigureAwait(false);
+
+    internal static async ValueTask<IAsyncDisposable> AcquireAsync(
+        CancellationToken cancellationToken,
+        TimeSpan timeout,
+        string userName,
+        string? daemonInstance)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+        var normalizedInstance = DaemonInstanceId.Normalize(daemonInstance);
 
         using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         wait.CancelAfter(timeout);
 
-        var semaphore = new Semaphore(1, 1, GetName(userName));
-        var localAcquired = false;
+        var pipeName = DaemonProtocol.GetPipeName(userName, normalizedInstance);
+        var semaphore = new Semaphore(1, 1, GetName(pipeName));
         try
         {
-            await LocalGate.WaitAsync(wait.Token).ConfigureAwait(false);
-            localAcquired = true;
             while (true)
             {
                 var acquired = semaphore.WaitOne(0);
 
                 if (acquired)
                 {
-                    return new Lease(semaphore, LocalGate);
+                    return new Lease(semaphore);
                 }
 
                 await Task.Delay(PollInterval, wait.Token).ConfigureAwait(false);
@@ -44,21 +49,23 @@ internal static class DaemonStartupGate
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             semaphore.Dispose();
-            if (localAcquired) LocalGate.Release();
             throw new TimeoutException("Das Zeitlimit fuer den Daemon-Startup-Gate wurde ueberschritten.");
         }
         catch
         {
             semaphore.Dispose();
-            if (localAcquired) LocalGate.Release();
             throw;
         }
     }
 
-    private static string GetName(string userName) =>
-        $"Local\\AiNetLinter.Daemon.Start.{DaemonProtocol.GetPipeName(userName)}";
+    private static string GetName(string pipeName) =>
+        $"Local\\AiNetLinter.Daemon.Start.{pipeName}";
 
-    private sealed class Lease(Semaphore semaphore, SemaphoreSlim localGate) : IAsyncDisposable
+    // Der benannte Windows-Semaphore ist selbst die einzige Prozess- und
+    // Thread-uebergreifende Serialisierungsprimitive. Jeder Acquire-Aufruf besitzt
+    // seinen eigenen Handle und gibt ihn mit dem Lease deterministisch frei; dadurch
+    // entsteht kein unbounded lokaler Semaphore-Cache mit konkurrierender Entfernung.
+    private sealed class Lease(Semaphore semaphore) : IAsyncDisposable
     {
         private int disposed;
 
@@ -66,15 +73,8 @@ internal static class DaemonStartupGate
         {
             if (Interlocked.Exchange(ref disposed, 1) == 0)
             {
-                try
-                {
-                    semaphore.Release();
-                    semaphore.Dispose();
-                }
-                finally
-                {
-                    localGate.Release();
-                }
+                semaphore.Release();
+                semaphore.Dispose();
             }
 
             return ValueTask.CompletedTask;

@@ -120,6 +120,48 @@ public sealed class ProgramParsingTests
         Assert.Null(args.Validate());
     }
 
+    [Theory]
+    [InlineData("beta", "beta")]
+    [InlineData("Beta_2.prod", "beta_2.prod")]
+    public void CliCommandBuilder_ParsesAndNormalizes_DaemonInstance(string instance, string normalizedInstance)
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", "--daemon-instance", instance });
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(normalizedInstance, CliCommandBuilder.Parse(result, options).DaemonInstance);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("2beta")]
+    [InlineData("beta/one")]
+    [InlineData("beta one")]
+    [InlineData("betaä")]
+    [InlineData("abcdefghijklmnopqrstuvwxyz1234567890x")]
+    public void CliCommandBuilder_Rejects_InvalidDaemonInstance(string instance)
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[] { "--mcp-server", "--daemon-instance", instance });
+
+        Assert.NotEmpty(result.Errors);
+    }
+
+    [Fact]
+    public void LinterArgs_RejectsDaemonInstanceOutsideDaemonModes()
+    {
+        var args = new LinterArgs
+        {
+            TargetPath = ".",
+            DaemonInstance = "beta",
+            Verbose = false,
+        };
+
+        Assert.Contains("--daemon-instance", args.Validate(), StringComparison.Ordinal);
+        Assert.Contains("nur", args.Validate(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void LinterArgs_RejectsNonPositiveDaemonIdleExit()
     {

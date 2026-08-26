@@ -30,6 +30,17 @@ public sealed class DaemonPipeTransportContractTests
     }
 
     [Fact]
+    public void Endpoint_AppendsValidatedDaemonInstanceWithoutChangingDefault()
+    {
+        Assert.Equal(
+            "ainetlinter.analyzer.v1.alice",
+            DaemonPipeEndpoint.ForUser("alice").PipeName);
+        Assert.Equal(
+            "ainetlinter.analyzer.v1.alice.beta",
+            DaemonPipeEndpoint.ForUser("alice", "BETA").PipeName);
+    }
+
+    [Fact]
     public async Task InstanceLock_AllowsOneOwnerAndReleasesForNextOwner()
     {
         var pipeName = "daemon-lock-tests-" + Guid.NewGuid().ToString("N");
@@ -64,15 +75,43 @@ public sealed class DaemonPipeTransportContractTests
     {
         var userName = "startup-gate-tests-" + Guid.NewGuid().ToString("N");
         await using var first = await DaemonStartupGate
-            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName)
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName, "BETA")
             .ConfigureAwait(false);
 
         var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
             DaemonStartupGate
-                .AcquireAsync(CancellationToken.None, TimeSpan.FromMilliseconds(100), userName)
+                .AcquireAsync(CancellationToken.None, TimeSpan.FromMilliseconds(100), userName, "beta")
                 .AsTask()).ConfigureAwait(false);
 
         Assert.Contains("Startup-Gate", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartupGate_AllowsDifferentDaemonInstancesConcurrently()
+    {
+        var userName = "startup-gate-isolation-" + Guid.NewGuid().ToString("N");
+        await using var first = await DaemonStartupGate
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName, "beta")
+            .ConfigureAwait(false);
+
+        await using var second = await DaemonStartupGate
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName, "gamma")
+            .ConfigureAwait(false);
+    }
+
+    [Fact]
+    public async Task StartupGate_CanRecreateHandleAfterLeaseDisposal()
+    {
+        var userName = "startup-gate-recreate-" + Guid.NewGuid().ToString("N");
+        await using (var first = await DaemonStartupGate
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName, "beta")
+            .ConfigureAwait(false))
+        {
+        }
+
+        await using var second = await DaemonStartupGate
+            .AcquireAsync(CancellationToken.None, TimeSpan.FromSeconds(1), userName, "beta")
+            .ConfigureAwait(false);
     }
 
     [Fact]

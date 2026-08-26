@@ -1,5 +1,7 @@
 #nullable enable
 
+using AiNetLinter.Mcp.Daemon;
+
 namespace AiNetLinter.Cli;
 
 /// <summary>
@@ -106,6 +108,11 @@ public sealed class LinterArgs
     public decimal? McpDaemonIdleExitMinutes { get; init; }
 
     /// <summary>
+    /// Optionale sichere Kennung zur Trennung mehrerer lokaler Daemon-Endpunkte.
+    /// </summary>
+    public string? DaemonInstance { get; init; }
+
+    /// <summary>
     /// Optionale PID des Elternprozesses, dessen Ende den MCP-Server beendet.
     /// Bei <see langword="null"/> wird die PID automatisch ermittelt.
     /// </summary>
@@ -116,6 +123,12 @@ public sealed class LinterArgs
     /// </summary>
     public string? Validate()
     {
+        var daemonInstanceError = ValidateDaemonInstance();
+        if (daemonInstanceError is not null)
+        {
+            return daemonInstanceError;
+        }
+
         if (McpServer || DaemonStart)
         {
             var mcpError = ValidateMcpMode();
@@ -143,6 +156,19 @@ public sealed class LinterArgs
         }
 
         return null;
+    }
+
+    private string? ValidateDaemonInstance()
+    {
+        var formatError = DaemonInstanceId.Validate(DaemonInstance);
+        if (formatError is not null)
+        {
+            return $"[ERROR]: --daemon-instance {formatError}.";
+        }
+
+        return DaemonInstance is not null && !McpServer && !DaemonStart
+            ? "[ERROR]: --daemon-instance ist nur zusammen mit --mcp-server oder --daemon-start zulaessig."
+            : null;
     }
 
     private string? ValidateMcpMode()

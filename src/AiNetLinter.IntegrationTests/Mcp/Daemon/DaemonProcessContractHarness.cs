@@ -12,7 +12,8 @@ internal sealed record DaemonProcessSpec(
     string WorkingDirectory,
     string LocalAppData,
     decimal IdleExitMinutes,
-    int MaxProjects = 1)
+    int MaxProjects = 1,
+    string? DaemonInstance = null)
 {
     internal EffectiveDaemonConfiguration Configuration => new(
         MaxProjects,
@@ -86,8 +87,13 @@ internal static class DaemonProcessContractHarness
 
     internal static Task<DaemonPipeConnection> ConnectWhenReadyAsync(
         CancellationToken cancellationToken) =>
+        ConnectWhenReadyAsync(null, cancellationToken);
+
+    internal static Task<DaemonPipeConnection> ConnectWhenReadyAsync(
+        string? daemonInstance,
+        CancellationToken cancellationToken) =>
         McpProcessHost.ConnectWithRetryAsync(
-            token => ConnectAsync(token),
+            token => ConnectAsync(token, daemonInstance),
             ReadinessRetry,
             cancellationToken: cancellationToken);
 
@@ -116,9 +122,11 @@ internal static class DaemonProcessContractHarness
             .ConfigureAwait(false);
     }
 
-    private static async Task<DaemonPipeConnection> ConnectAsync(CancellationToken cancellationToken)
+    private static async Task<DaemonPipeConnection> ConnectAsync(
+        CancellationToken cancellationToken,
+        string? daemonInstance)
     {
-        var transport = new DaemonPipeTransport();
+        var transport = new DaemonPipeTransport(daemonInstance: daemonInstance);
         return await transport.ConnectAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -144,6 +152,11 @@ internal static class DaemonProcessContractHarness
         startInfo.ArgumentList.Add(spec.IdleExitMinutes.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add("--mcp-max-projects");
         startInfo.ArgumentList.Add(spec.MaxProjects.ToString(CultureInfo.InvariantCulture));
+        if (spec.DaemonInstance is not null)
+        {
+            startInfo.ArgumentList.Add("--daemon-instance");
+            startInfo.ArgumentList.Add(spec.DaemonInstance);
+        }
         startInfo.Environment["LOCALAPPDATA"] = spec.LocalAppData;
         return startInfo;
     }

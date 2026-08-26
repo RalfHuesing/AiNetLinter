@@ -263,6 +263,29 @@ Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleich
 }
 ```
 
+Für eine zweite, vom Default getrennte Daemon-Instanz kann die sichere
+Instanz-ID direkt in den MCP-Args angegeben werden:
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter-beta": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server", "--daemon-instance", "beta"]
+    }
+  }
+}
+```
+
+Ohne `--daemon-instance` bleibt der Endpunkt
+`ainetlinter.analyzer.v1.<username>`. Mit `beta` wird er zu
+`ainetlinter.analyzer.v1.<username>.beta`; auch Startup-Gate und MRU-State
+werden pro Instanz getrennt. Die ID muss mit einem ASCII-Buchstaben beginnen,
+darf danach nur ASCII-Buchstaben, Ziffern, `.`, `_` und `-` enthalten und ist
+auf 32 Zeichen begrenzt. Sie wird invariant in Kleinbuchstaben normalisiert;
+`BETA` und `beta` verwenden deshalb denselben Endpunkt, dasselbe Startup-Gate
+und dieselbe MRU-State-Datei.
+
 Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder Tool-Aufruf adressiert sein Projekt über den absoluten `projectRoot`.
 
 Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und
@@ -334,8 +357,13 @@ der ThinClient zuerst und startet den Host erst bei Bedarf. Mit
 werden.
 
 Die Grundlage verwendet den benutzergebundenen Named-Pipe-Namen
-`ainetlinter.analyzer.v1.<username>` mit `PipeOptions.CurrentUserOnly` und
-newline-delimited JSON-Objekten. Der Pipe-Level-Handshake ist von der
+`ainetlinter.analyzer.v1.<username>` mit `PipeOptions.CurrentUserOnly`; mit
+`--daemon-instance <id>` wird der Endpunkt um `.<id>` erweitert; die ID wird
+vorher invariant in Kleinbuchstaben normalisiert. Der ThinClient
+und der detached `--daemon-start` verwenden dabei dieselbe Instanz-ID. Der
+MRU-State bleibt ohne ID unter `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`;
+eine ID erhält eine eigene Datei wie `daemon-state.beta.json`. Beide verwenden
+newline-delimited JSON-Objekte. Der Pipe-Level-Handshake ist von der
 MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
 Versions-/PID-Daten und die effektive Daemon-Konfiguration. Eine unbekannte
 Protokollversion wird abgewiesen; ein Versions-Mismatch entscheidet bei null

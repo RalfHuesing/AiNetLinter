@@ -9,6 +9,19 @@ namespace AiNetLinter.FastTests.Mcp.Daemon;
 public sealed class MruStateStoreTests
 {
     [Fact]
+    public void FilePath_DefaultIsBackwardCompatibleAndInstanceSpecificPathsAreDistinct()
+    {
+        Assert.Equal(MruStateStore.DefaultFilePath, MruStateStore.GetFilePath(null));
+
+        var beta = MruStateStore.GetFilePath("BETA");
+        var gamma = MruStateStore.GetFilePath("gamma");
+
+        Assert.NotEqual(MruStateStore.DefaultFilePath, beta);
+        Assert.NotEqual(beta, gamma);
+        Assert.EndsWith("daemon-state.beta.json", beta, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Roundtrip_IsSortedDeduplicatedAndBounded()
     {
         using var temp = TestTempDirectory.Create("daemon-mru-");

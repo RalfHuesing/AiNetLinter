@@ -12,11 +12,11 @@ internal sealed record DaemonPipeEndpoint(
 {
     internal bool IsCurrentUserOnly => Options.HasFlag(PipeOptions.CurrentUserOnly);
 
-    internal static DaemonPipeEndpoint ForUser(string userName)
+    internal static DaemonPipeEndpoint ForUser(string userName, string? daemonInstance = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
         return new DaemonPipeEndpoint(
-            DaemonProtocol.GetPipeName(userName),
+            DaemonProtocol.GetPipeName(userName, daemonInstance),
             userName,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
     }
@@ -31,10 +31,10 @@ internal interface IDaemonPipeTransport
 
 internal sealed class DaemonPipeTransport : IDaemonPipeTransport
 {
-    internal DaemonPipeTransport(Func<string>? userNameProvider = null)
+    internal DaemonPipeTransport(Func<string>? userNameProvider = null, string? daemonInstance = null)
     {
         var resolveUserName = userNameProvider ?? (() => DaemonProtocol.CurrentUserName);
-        Endpoint = DaemonPipeEndpoint.ForUser(resolveUserName());
+        Endpoint = DaemonPipeEndpoint.ForUser(resolveUserName(), daemonInstance);
     }
 
     internal DaemonPipeEndpoint Endpoint { get; }

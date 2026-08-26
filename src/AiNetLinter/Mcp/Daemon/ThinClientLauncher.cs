@@ -10,7 +10,14 @@ namespace AiNetLinter.Mcp.Daemon;
 internal sealed record ThinClientLaunchOptions(
     decimal? ProjectTtlMinutes,
     int? MaxProjects,
-    decimal? IdleExitMinutes);
+    decimal? IdleExitMinutes,
+    string? DaemonInstance)
+{
+    internal ThinClientLaunchOptions(decimal? projectTtlMinutes, int? maxProjects, decimal? idleExitMinutes)
+        : this(projectTtlMinutes, maxProjects, idleExitMinutes, null)
+    {
+    }
+}
 
 internal static class ThinClientLauncher
 {
@@ -62,6 +69,7 @@ internal static class ThinClientLauncher
         AddOption(startInfo, CliOptionFactory.McpProjectTtlMinutes, options.ProjectTtlMinutes);
         AddOption(startInfo, CliOptionFactory.McpMaxProjects, options.MaxProjects);
         AddOption(startInfo, CliOptionFactory.McpDaemonIdleExitMinutes, options.IdleExitMinutes);
+        AddOption(startInfo, CliOptionFactory.DaemonInstance, DaemonInstanceId.Normalize(options.DaemonInstance));
         return startInfo;
     }
 

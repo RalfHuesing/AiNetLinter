@@ -45,13 +45,18 @@ internal sealed class MruStateStore : IAsyncDisposable
         timer = new Timer(static state => ((MruStateStore)state!).ScheduleWrite(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
-    internal static string DefaultFilePath
+    internal static string DefaultFilePath => GetFilePath(null);
+
+    internal static string GetFilePath(string? daemonInstance)
     {
-        get
+        var normalizedInstance = DaemonInstanceId.Normalize(daemonInstance);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (normalizedInstance is null)
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return Path.Combine(localAppData, "RalfHuesing", "AiNetLinter", "daemon-state.json");
         }
+
+        return Path.Combine(localAppData, "RalfHuesing", "AiNetLinter", $"daemon-state.{normalizedInstance}.json");
     }
 
     internal IReadOnlyList<MruStateEntry> Read(int maxProjects)

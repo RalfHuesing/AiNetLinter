@@ -26,6 +26,7 @@ internal static class CliCommandBuilder
             options.McpMaxProjects,
             options.DaemonStart,
             options.McpDaemonIdleExitMinutes,
+            options.DaemonInstance,
         };
 
         return (root, options);
@@ -58,7 +59,8 @@ internal static class CliCommandBuilder
             CliOptionFactory.CreateMcpProjectTtlOption(),
             CliOptionFactory.CreateMcpMaxProjectsOption(),
             CliOptionFactory.CreateDaemonStartOption(),
-            CliOptionFactory.CreateMcpDaemonIdleExitOption());
+            CliOptionFactory.CreateMcpDaemonIdleExitOption(),
+            CliOptionFactory.CreateDaemonInstanceOption());
     }
 
     internal static CliParsedArgs Parse(ParseResult parseResult, CliOptions options)
@@ -92,6 +94,7 @@ internal static class CliCommandBuilder
             McpProjectTtlMinutes: parseResult.GetValue(options.McpProjectTtlMinutes),
             McpMaxProjects: parseResult.GetValue(options.McpMaxProjects),
             DaemonStart: parseResult.GetValue(options.DaemonStart),
-            McpDaemonIdleExitMinutes: parseResult.GetValue(options.McpDaemonIdleExitMinutes));
+            McpDaemonIdleExitMinutes: parseResult.GetValue(options.McpDaemonIdleExitMinutes),
+            DaemonInstance: parseResult.GetValue(options.DaemonInstance));
     }
 }

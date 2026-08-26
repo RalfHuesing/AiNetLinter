@@ -14,7 +14,7 @@ public sealed class ThinClientContractTests
     [Fact]
     public void Launcher_ForwardsDaemonFlagsWithoutOwningStdoutOrStderr()
     {
-        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(3.5m, 2, 0.25m));
+        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(3.5m, 2, 0.25m, "BETA"));
 
         Assert.False(startInfo.UseShellExecute);
         Assert.True(startInfo.CreateNoWindow);
@@ -25,6 +25,9 @@ public sealed class ThinClientContractTests
         Assert.Contains("--mcp-project-ttl-minutes", startInfo.ArgumentList);
         Assert.Contains("--mcp-max-projects", startInfo.ArgumentList);
         Assert.Contains("--mcp-daemon-idle-exit-minutes", startInfo.ArgumentList);
+        var instanceIndex = startInfo.ArgumentList.IndexOf("--daemon-instance");
+        Assert.True(instanceIndex >= 0);
+        Assert.Equal("beta", startInfo.ArgumentList[instanceIndex + 1]);
     }
 
     [Fact]

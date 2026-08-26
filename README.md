@@ -68,6 +68,26 @@ Registrierung in einem MCP-Host:
 }
 ```
 
+Für eine getrennte Daemon-Instanz kann die Registrierung eine sichere ID
+angeben:
+
+```json
+{
+  "mcpServers": {
+    "ainetlinter-beta": {
+      "command": "ainetlinter",
+      "args": ["--mcp-server", "--daemon-instance", "beta"]
+    }
+  }
+}
+```
+
+Die ID beginnt mit einem ASCII-Buchstaben, enthält danach nur ASCII-
+Buchstaben, Ziffern sowie `.`, `_` oder `-` und ist maximal 32 Zeichen lang.
+Die ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und `beta`
+verwenden deshalb denselben Named-Pipe-Endpunkt. Ohne ID bleibt der bisherige
+Named-Pipe-Endpunkt unverändert.
+
 Jeder projektbezogene Tool-Aufruf erhält einen absoluten `projectRoot`. Im
 Projektroot liegt die Definition der Solution und Regeldatei:
 

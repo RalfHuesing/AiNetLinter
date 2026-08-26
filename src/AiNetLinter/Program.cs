@@ -137,6 +137,7 @@ public static class Program
             McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
             McpMaxProjects = parsed.McpMaxProjects,
             McpDaemonIdleExitMinutes = parsed.McpDaemonIdleExitMinutes,
+            DaemonInstance = parsed.DaemonInstance,
         };
     }
 
@@ -159,6 +160,16 @@ public static class Program
 
     private static int? TryRunStandaloneCommand(LinterArgs args)
     {
+        if (args.DaemonInstance is not null && !args.McpServer && !args.DaemonStart)
+        {
+            var validationError = args.Validate();
+            if (validationError is not null)
+            {
+                Console.Error.WriteLine(validationError);
+                return 1;
+            }
+        }
+
         if (args.Docs != null) return DocsCommand.Run(args.Docs);
         if (args.ListRules) return ListRulesCommand.ListAll();
         if (args.DescribeRule != null) return ListRulesCommand.DescribeOne(args.DescribeRule);

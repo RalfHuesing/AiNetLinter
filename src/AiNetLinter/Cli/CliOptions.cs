@@ -32,7 +32,8 @@ internal sealed record CliOptions(
     Option<decimal?> McpProjectTtlMinutes,
     Option<int?> McpMaxProjects,
     Option<bool> DaemonStart,
-    Option<decimal?> McpDaemonIdleExitMinutes);
+    Option<decimal?> McpDaemonIdleExitMinutes,
+    Option<string?> DaemonInstance);
 
 /// <summary>
 /// Aufgeloeste Output-Optionen (Verbose).
@@ -86,4 +87,5 @@ internal sealed record CliParsedArgs(
     decimal? McpProjectTtlMinutes,
     int? McpMaxProjects,
     bool DaemonStart,
-    decimal? McpDaemonIdleExitMinutes);
+    decimal? McpDaemonIdleExitMinutes,
+    string? DaemonInstance);

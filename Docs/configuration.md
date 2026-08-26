@@ -1162,6 +1162,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten (Standard: `45`).
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
 - `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry.
+- `--daemon-instance <id>` (MCP-/Daemon-Modus): Isoliert den Named-Pipe-Endpunkt und den MRU-State pro Instanz. Die ID beginnt mit einem ASCII-Buchstaben, enthält danach nur ASCII-Buchstaben, Ziffern sowie `.`, `_` oder `-` und ist auf 32 Zeichen begrenzt. Für Windows-Namensvergleiche wird sie invariant in Kleinbuchstaben normalisiert. Ohne diese Option bleibt der bisherige Endpunkt und State-Pfad aktiv. Außerhalb des MCP-/Daemon-Modus wird die Option abgelehnt.
 - `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts (Standard: `10`).
 - `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus. Für die MCP-Integration stehen `mcp-bootstrap` (einmaliger Bootstrap) und `mcp-rule` (dauerhafte Agentenregel) bereit.
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).

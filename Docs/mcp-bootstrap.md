@@ -31,9 +31,18 @@ Wiederherstellung einer fehlenden Projektinitialisierung gelesen.
    verfügbar.
 5. Falls der MCP-Server noch nicht registriert ist, verwende die
    Host-Konfiguration mit `ainetlinter` und `args: ["--mcp-server"]`.
+   Für eine getrennte lokale Daemon-Instanz ergänzt du beispielsweise
+   `--daemon-instance`, `beta`:
+
+   ```json
+   { "command": "ainetlinter", "args": ["--mcp-server", "--daemon-instance", "beta"] }
+   ```
    Wenn unten ein dynamischer Laufzeitblock ausgegeben wird, verwende dessen
    `command` und `args`; `--path` und `--config` gehören nicht in diese
    Registrierung.
+
+   Die Instanz-ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und
+   `beta` adressieren daher dieselbe Windows-Instanz.
 6. Prüfe die Einrichtung mit `get_server_health` oder einem kleinen
    semantischen Tool-Aufruf gegen den absoluten Projektroot.
 

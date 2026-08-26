@@ -18,7 +18,9 @@ internal sealed record ThinClientSessionOptions(
     TimeSpan PumpIdleTimeout,
     Stream StandardInput,
     Stream StandardOutput,
-    Func<CancellationToken, TimeSpan, ValueTask<IAsyncDisposable>>? AcquireStartupGateAsync = null)
+    Func<CancellationToken, TimeSpan, ValueTask<IAsyncDisposable>>? AcquireStartupGateAsync = null,
+    Func<string?, CancellationToken, ValueTask<DaemonPipeConnection>>? ConnectForInstanceAsync = null,
+    Func<CancellationToken, TimeSpan, string?, ValueTask<IAsyncDisposable>>? AcquireStartupGateForInstanceAsync = null)
 {
     internal static ThinClientSessionOptions Default(TimeSpan pumpIdleTimeout) => new(
         cancellationToken => new DaemonPipeTransport().ConnectAsync(cancellationToken),
@@ -26,7 +28,13 @@ internal sealed record ThinClientSessionOptions(
         pumpIdleTimeout,
         Console.OpenStandardInput(),
         Console.OpenStandardOutput(),
-        DaemonStartupGate.AcquireAsync);
+        null,
+        (instance, cancellationToken) => new DaemonPipeTransport(daemonInstance: instance).ConnectAsync(cancellationToken),
+        (cancellationToken, timeout, instance) => DaemonStartupGate.AcquireAsync(
+            cancellationToken,
+            timeout,
+            DaemonProtocol.CurrentUserName,
+            instance));
 }
 
 internal sealed record ThinClientSessionContext(
@@ -120,12 +128,18 @@ internal static class ThinClientProxy
     private static ThinClientLaunchOptions CreateLaunchOptions(LinterArgs args) => new(
         args.McpProjectTtlMinutes,
         args.McpMaxProjects,
-        args.McpDaemonIdleExitMinutes);
+        args.McpDaemonIdleExitMinutes,
+        args.DaemonInstance);
 
     internal static async Task<ThinClientConnection> ConnectOrStartAsync(
         ThinClientLaunchOptions options,
         ThinClientSessionContext context)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(context);
+        options = NormalizeLaunchOptions(options);
+        ValidateInstanceSeams(options, context.Session);
+
         var firstAttempt = await TryConnectFirstAsync(options, context).ConfigureAwait(false);
         if (firstAttempt.Connection is not null)
         {
@@ -134,25 +148,29 @@ internal static class ThinClientProxy
         }
 
         Log.Information("ThinClient: Kein Daemon erreichbar ({Reason}) - starte detached", firstAttempt.Failure?.GetType().Name ?? "unbekannt");
-        var acquireStartupGate = context.Session.AcquireStartupGateAsync ?? DaemonStartupGate.AcquireAsync;
-        await using var startupGate = await acquireStartupGate(context.Token, ReadinessTimeout).ConfigureAwait(false);
-
-        var recheck = await TryConnectFirstAsync(options, context, reportFailure: false).ConfigureAwait(false);
-        if (recheck.Connection is not null)
+        var startupGate = context.Session.AcquireStartupGateForInstanceAsync is { } gateForInstance
+            ? await gateForInstance(context.Token, ReadinessTimeout, options.DaemonInstance).ConfigureAwait(false)
+            : await DaemonStartupGate.AcquireAsync(context.Token, ReadinessTimeout, DaemonProtocol.CurrentUserName, options.DaemonInstance).ConfigureAwait(false);
+        await using (startupGate.ConfigureAwait(false))
         {
-            Log.Information("ThinClient: Mit bestehendem Daemon verbunden (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", recheck.Connection.ProcessId, recheck.Connection.ConnectionId);
-            return recheck.Connection;
-        }
 
-        if (!context.Session.StartDetached(options, context.Console.WriteError))
-        {
-            Log.Error("ThinClient: Detached-Start fehlgeschlagen, ExitCode=2");
-            throw firstAttempt.Failure ?? new IOException("Der Daemon konnte nicht gestartet werden.");
-        }
+            var recheck = await TryConnectFirstAsync(options, context, reportFailure: false).ConfigureAwait(false);
+            if (recheck.Connection is not null)
+            {
+                Log.Information("ThinClient: Mit bestehendem Daemon verbunden (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", recheck.Connection.ProcessId, recheck.Connection.ConnectionId);
+                return recheck.Connection;
+            }
 
-        var connection = await WaitForReadinessAsync(options, context).ConfigureAwait(false);
-        Log.Information("ThinClient: Daemon nach Start bereit (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", connection.ProcessId, connection.ConnectionId);
-        return connection;
+            if (!context.Session.StartDetached(options, context.Console.WriteError))
+            {
+                Log.Error("ThinClient: Detached-Start fehlgeschlagen, ExitCode=2");
+                throw firstAttempt.Failure ?? new IOException("Der Daemon konnte nicht gestartet werden.");
+            }
+
+            var connection = await WaitForReadinessAsync(options, context).ConfigureAwait(false);
+            Log.Information("ThinClient: Daemon nach Start bereit (DaemonPid={DaemonPid}, ConnectionId={ConnectionId})", connection.ProcessId, connection.ConnectionId);
+            return connection;
+        }
     }
 
     private static async Task<ConnectAttempt> TryConnectFirstAsync(
@@ -228,7 +246,12 @@ internal static class ThinClientProxy
     {
         using var connect = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         connect.CancelAfter(timeout);
-        var pipe = await context.Session.ConnectAsync(connect.Token).ConfigureAwait(false);
+        var pipe = context.Session.ConnectForInstanceAsync is { } connectForInstance
+            ? await connectForInstance(options.DaemonInstance, connect.Token).ConfigureAwait(false)
+            : options.DaemonInstance is null
+                ? await context.Session.ConnectAsync(connect.Token).ConfigureAwait(false)
+                : throw new InvalidOperationException(
+                    "Der ThinClient-Test-/Transportpfad unterstützt --daemon-instance nicht.");
         try
         {
             var hello = new DaemonHello(
@@ -294,6 +317,31 @@ internal static class ThinClientProxy
         new(
             options.MaxProjects ?? DaemonProtocol.DefaultMaxProjects,
             options.IdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes);
+
+    private static ThinClientLaunchOptions NormalizeLaunchOptions(ThinClientLaunchOptions options) =>
+        options with { DaemonInstance = DaemonInstanceId.Normalize(options.DaemonInstance) };
+
+    private static void ValidateInstanceSeams(
+        ThinClientLaunchOptions options,
+        ThinClientSessionOptions session)
+    {
+        if (options.DaemonInstance is null)
+        {
+            return;
+        }
+
+        if (session.ConnectForInstanceAsync is null)
+        {
+            throw new InvalidOperationException(
+                "Der ThinClient-Test-/Transportpfad muss für --daemon-instance ConnectForInstanceAsync bereitstellen.");
+        }
+
+        if (session.AcquireStartupGateForInstanceAsync is null)
+        {
+            throw new InvalidOperationException(
+                "Der ThinClient-Test-/Transportpfad muss für --daemon-instance AcquireStartupGateForInstanceAsync bereitstellen.");
+        }
+    }
 
     private static void ReportPumpFailure(
         ILintConsole console,

@@ -94,6 +94,68 @@ public sealed class ThinClientConnectOrStartTests
         Assert.True(transport.ConnectAttempts > 2, $"Erwartete mehr als zwei Verbindungsversuche, gemessen {transport.ConnectAttempts}.");
     }
 
+    [Fact]
+    public async Task ConnectOrStart_ForwardsInstanceToTransportAndStartupGate()
+    {
+        var transport = new ScriptedMockPipeTransport(initialConnectFailures: 2);
+        var console = new RecordingLintConsole();
+        string? connectedInstance = null;
+        string? gatedInstance = null;
+        using var startupGate = new TestStartupGate();
+
+        var session = new ThinClientSessionOptions(
+            transport.ConnectAsync,
+            (_, _) => true,
+            TimeSpan.FromSeconds(30),
+            new Pipe().Reader.AsStream(),
+            new Pipe().Writer.AsStream(),
+            ConnectForInstanceAsync: (instance, cancellationToken) =>
+            {
+                connectedInstance = instance;
+                return transport.ConnectAsync(cancellationToken);
+            },
+            AcquireStartupGateForInstanceAsync: (cancellationToken, timeout, instance) =>
+            {
+                gatedInstance = instance;
+                return startupGate.AcquireAsync(cancellationToken, timeout);
+            });
+
+        var context = new ThinClientSessionContext(CancellationToken.None, console, session);
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            new ThinClientLaunchOptions(null, null, null, "BETA"),
+            context).ConfigureAwait(false);
+        try
+        {
+            Assert.Equal("beta", connectedInstance);
+            Assert.Equal("beta", gatedInstance);
+        }
+        finally
+        {
+            await connection.Pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_RejectsLegacySeamsForInstanceInsteadOfUsingDefaultPipeOrGate()
+    {
+        var transport = new ScriptedMockPipeTransport(initialConnectFailures: 0);
+        var console = new RecordingLintConsole();
+        var spawnCount = 0;
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ThinClientProxy.ConnectOrStartAsync(
+                new ThinClientLaunchOptions(null, null, null, "beta"),
+                CreateContext(console, transport, (_, _) =>
+                {
+                    Interlocked.Increment(ref spawnCount);
+                    return true;
+                }))).ConfigureAwait(false);
+
+        Assert.Contains("ConnectForInstanceAsync", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, transport.ConnectAttempts);
+        Assert.Equal(0, Volatile.Read(ref spawnCount));
+    }
+
     private static ThinClientLaunchOptions CreateLaunchOptions() =>
         new(null, null, null);
 

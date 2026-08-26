@@ -464,6 +464,10 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   Replay-Retry, ThinClient-Parent-Reaper und `AINETLINTER_NO_DAEMON=1` sind
   aktiv. Health weist Daemon-Modus, connectionId, PID, Uptime, Keys und Version
   aus; der Daemon selbst bleibt parent-ungebunden.
+- [x] Optionale `--daemon-instance <id>`-Kennung isoliert Named-Pipe-Endpunkt,
+  Startup-Gate und MRU-State pro Instanz. Ohne Kennung bleiben der bestehende
+  Pipe-Name und `daemon-state.json` kompatibel; IDs werden invariant in
+  Kleinbuchstaben normalisiert und der Pipe-Level-Handshake bleibt unverändert.
 
 ### EPIC-C — Agent-Bootstrap und MCP-Resources (umgesetzt am 2026-08-25)
 

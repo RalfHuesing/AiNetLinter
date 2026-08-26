@@ -28,10 +28,13 @@ internal static class DaemonProtocol
 
     internal static string CurrentUserName => Environment.UserName;
 
-    internal static string GetPipeName(string userName)
+    internal static string GetPipeName(string userName, string? daemonInstance = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
-        return PipeNamePrefix + userName;
+        var normalizedInstance = DaemonInstanceId.Normalize(daemonInstance);
+        return normalizedInstance is null
+            ? PipeNamePrefix + userName
+            : PipeNamePrefix + userName + "." + normalizedInstance;
     }
 }
 
