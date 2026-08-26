@@ -452,12 +452,12 @@
         "MaxAIContextFootprint": 2830
       }
     },
-    "src/AiNetLinter/Mcp/OverviewResourceRegistration.cs": {
+    "src/AiNetLinter/Mcp/Registration/OverviewResourceRegistration.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2650
       }
     },
-    "src/AiNetLinter/Mcp/SymbolGraphToolRegistrations.cs": {
+    "src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2900
       }
@@ -512,12 +512,12 @@
         "MaxAIContextFootprint": 2700
       }
     },
-    "src/AiNetLinter/Mcp/SymbolBodyToolRegistrations.cs": {
+    "src/AiNetLinter/Mcp/Registration/SymbolBodyToolRegistrations.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2830
       }
     },
-    "src/AiNetLinter/Mcp/ServerMaintenanceToolRegistrations.cs": {
+    "src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs": {
       "Metrics": {
         "MaxAIContextFootprint": 2860
       }

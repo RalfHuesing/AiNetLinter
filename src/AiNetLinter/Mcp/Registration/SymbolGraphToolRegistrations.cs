@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
@@ -9,7 +10,7 @@ using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert die sechs reinen Symbolgraph-Tools (<c>find_symbol</c>, <c>find_references</c>,

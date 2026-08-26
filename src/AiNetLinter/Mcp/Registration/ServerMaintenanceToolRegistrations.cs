@@ -3,12 +3,13 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert die server-eigenen Wartungs-/Diagnose-Tools (<c>reload_config</c>,

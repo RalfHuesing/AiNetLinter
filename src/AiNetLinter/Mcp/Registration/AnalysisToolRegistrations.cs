@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
@@ -15,7 +16,7 @@ using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Mcp.Tools.TestContext;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>safeguard</c>,

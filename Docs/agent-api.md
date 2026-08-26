@@ -457,7 +457,7 @@ Vertragsregeln:
 - **Die Testinformationen sind eine statische Zuordnung** (siehe Notiz unter der Tool-Tabelle) — keine Laufzeit-Coverage, keine Coverage-Dateien.
 - **Multi-Hunk-Container-Regel:** Die innerste Deklaration wird dateiweit ueber alle Hunks entschieden. Trifft ein Hunk einen Member und ein zweiter Hunk derselben Datei die Deklarationszeile des enthaltenen Typs, erscheint nur der Member.
 
-**`safeguard` — Structured Output im Detail:** Der Score aggregiert drei Komponenten deterministisch aus dem aktuellen Solution-Zustand — Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`), sowie ein Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). `StructuredContent` liefert:
+**`safeguard` — Structured Output im Detail:** Der Score aggregiert deterministisch aus dem aktuellen Solution-Zustand Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `rules.json`) sowie einen Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). Die Top-Einträge in `violations` enthalten jeweils Datei, Zeile, Regel, Severity, Details als Problemtext und konkrete Guidance. `totalViolationCount` zählt alle Violations vor der `maxViolations`-Auswahl; `shownViolationCount` zählt die ausgegebenen Top-Einträge; `violationsTruncated` ist `true`, wenn die Ausgabe wegen `maxViolations` gekürzt wurde. `StructuredContent` liefert:
 
 ```json
 {
@@ -467,14 +467,22 @@ Vertragsregeln:
   "violations": [
     { "filePath": "...", "lineNumber": 42, "ruleName": "...", "details": "...", "severity": "warning", "guidance": "..." }
   ],
+  "totalViolationCount": 1,
+  "shownViolationCount": 1,
+  "violationsTruncated": false,
   "remediation": {
     "topIssue": "...",
     "actionableSteps": ["..."],
     "documentationHint": "Docs/configuration.md"
   },
-  "summary": "Safeguard-Score: 10.00/10 (Threshold 8.00) — PASS. 0 Top-Verstoesse, 178 Klassen analysiert."
+  "summary": "Safeguard-Score: 10.00/10 (Threshold 8.00) — PASS. 1 Verstoß, 178 Klassen analysiert."
 }
 ```
+
+Die Text-Antwort wiederholt die Top-Auswahl als `Top-Befunde` mit den Labels
+`Problem`, `Datei`, `Zeile`, `Regel`, `Severity` und `Guidance`. Bei einer
+Kürzung nennt die Summary zusätzlich `Top-Auswahl wegen maxViolations` und fordert
+für die vollständige Liste zum Aufruf von `get_violations` auf.
 
 `IsError` ist ausschließlich bei einer echten Malfunction `true` (LinterEngine-Fehler oder ein Projekt, das trotz `SupportsCompilation == true` auch nach internen Retries keine Compilation liefert) — ein normaler Score-Output mit `passed: false` ist kein Fehler, sondern das erwartete Quality-Gate-Ergebnis.
 

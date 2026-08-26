@@ -2,12 +2,13 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert das einzelne Duplicate-Detection-Tool (<c>find_duplicates</c>) an der von

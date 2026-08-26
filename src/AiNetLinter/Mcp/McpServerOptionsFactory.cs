@@ -2,6 +2,7 @@
 
 using System.Reflection;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Registration;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;

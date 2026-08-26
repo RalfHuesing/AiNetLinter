@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.TestKit;
 using Xunit;
 

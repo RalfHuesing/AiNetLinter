@@ -2,12 +2,13 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_skeleton</c>,

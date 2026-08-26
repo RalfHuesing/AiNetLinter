@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,9 +58,7 @@ internal static class SafeguardTool
         }
 
         var score = result.Score!;
-        var text = $"{score.Summary}\n\n" +
-            "[HINWEIS]: Diese Daten sind vollstaendig fuer den angefragten " +
-            "Scope — kein zusaetzliches Read/Grep noetig.";
+        var text = score.Summary + BuildTopViolationText(score) + "\n\n" + BuildSufficiencyHint(score);
         return new CallToolResult
         {
             IsError = false,
@@ -67,6 +66,21 @@ internal static class SafeguardTool
             StructuredContent = JsonSerializer.SerializeToElement(score, McpJsonOptions.Default),
         };
     }
+
+    private static string BuildTopViolationText(ScoreResult score)
+        => score.Violations.Count == 0
+            ? string.Empty
+            : "\n\nTop-Befunde:\n" + string.Join("\n", score.Violations.Select((violation, index) =>
+                $"{index + 1}. Problem: {violation.Details}; Datei: {violation.FilePath}; " +
+                $"Zeile: {violation.LineNumber}; Regel: {violation.RuleName}; " +
+                $"Severity: {violation.Severity}; Guidance: {violation.Guidance}"));
+
+    private static string BuildSufficiencyHint(ScoreResult score)
+        => score.ViolationsTruncated
+            ? "[HINWEIS]: Angezeigt wird nur die deterministische Top-Auswahl wegen " +
+              "maxViolations. Für vollständige Violations im Scope get_violations aufrufen."
+            : "[HINWEIS]: Diese Daten sind vollständig für den angefragten Scope — kein zusätzliches " +
+              "Read/Grep nötig.";
 }
 
 /// <summary>

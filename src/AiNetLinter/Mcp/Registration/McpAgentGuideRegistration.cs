@@ -1,11 +1,12 @@
 #nullable enable
 
 using System;
+using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert den statischen Erstkontakt-Leitfaden für Agenten, bevor ein Projekt-Key

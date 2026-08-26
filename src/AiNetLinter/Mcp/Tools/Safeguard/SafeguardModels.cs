@@ -63,7 +63,10 @@ internal sealed record ScoreResult(
     double Threshold,
     IReadOnlyList<ViolationEntry> Violations,
     RemediationHint Remediation,
-    string Summary);
+    string Summary,
+    int TotalViolationCount = 0,
+    int ShownViolationCount = 0,
+    bool ViolationsTruncated = false);
 
 /// <summary>
 /// 1:1-Mapping aus <see cref="RuleViolation"/> fuer den JSON-Schema-Output:

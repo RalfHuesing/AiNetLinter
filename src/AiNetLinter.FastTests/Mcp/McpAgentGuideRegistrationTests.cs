@@ -2,6 +2,7 @@
 
 using System;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Registration;
 using ModelContextProtocol.Protocol;
 using Xunit;
 

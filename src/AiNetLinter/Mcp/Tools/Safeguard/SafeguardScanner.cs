@@ -189,7 +189,13 @@ internal static class SafeguardScanner
             .ToList();
 
         var remediation = BuildRemediation(sortedViolations, p.Config);
-        var summary = BuildSummary(score, p.Threshold, passed, sortedViolations, p.Classes, p.Config);
+        var summary = BuildSummary(
+            score,
+            p.Threshold,
+            passed,
+            p.Violations.Count,
+            sortedViolations.Count,
+            p.Classes);
 
         return new ScoreResult(
             Passed: passed,
@@ -197,7 +203,10 @@ internal static class SafeguardScanner
             Threshold: p.Threshold,
             Violations: sortedViolations,
             Remediation: remediation,
-            Summary: summary);
+            Summary: summary,
+            TotalViolationCount: p.Violations.Count,
+            ShownViolationCount: sortedViolations.Count,
+            ViolationsTruncated: sortedViolations.Count < p.Violations.Count);
     }
 
     /// <summary>
@@ -297,16 +306,25 @@ internal static class SafeguardScanner
         double score,
         double threshold,
         bool passed,
-        IReadOnlyList<ViolationEntry> topViolations,
-        IReadOnlyList<ScannedClass> classes,
-        Config config)
+        int totalViolationCount,
+        int shownViolationCount,
+        IReadOnlyList<ScannedClass> classes)
     {
         var classCount = classes.Count;
-        var violationCount = topViolations.Count;
         var verdict = passed ? "PASS" : "FAIL";
+        var violationSummary = totalViolationCount == shownViolationCount
+            ? FormatViolationCount(totalViolationCount)
+            : $"{shownViolationCount} von {totalViolationCount} Verstößen (Top-Auswahl wegen maxViolations)";
         return $"Safeguard-Score: {score:F2}/10 (Threshold {threshold:F2}) — {verdict}. " +
-               $"{violationCount} Top-Verstoesse, {classCount} Klassen analysiert.";
+               $"{violationSummary}, {classCount} Klassen analysiert.";
     }
+
+    private static string FormatViolationCount(int count)
+        => count switch
+        {
+            1 => "1 Verstoß",
+            _ => $"{count} Verstöße",
+        };
 
     /// <summary>Lookup-Tabelle pro bekannter Regel-ID; vermeidet <c>MaxSwitchArms</c>-Verstoss
     /// und ermoeglicht das Hinzufuegen weiterer Regeln ohne Steuerungslogik-Aenderung.

@@ -233,6 +233,9 @@ public sealed class McpLiveRepositoryTests
         Assert.True(json.ContainsKey("score"));
         Assert.True(json.ContainsKey("threshold"));
         Assert.True(json.ContainsKey("violations"));
+        Assert.True(json.ContainsKey("totalViolationCount"));
+        Assert.True(json.ContainsKey("shownViolationCount"));
+        Assert.True(json.ContainsKey("violationsTruncated"));
         Assert.True(json.ContainsKey("remediation"));
         Assert.True(json.ContainsKey("summary"));
         Assert.IsType<JsonArray>(json["violations"]);

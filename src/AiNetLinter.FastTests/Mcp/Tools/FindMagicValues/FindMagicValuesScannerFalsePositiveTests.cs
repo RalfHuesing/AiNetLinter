@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using Microsoft.CodeAnalysis;
 using Xunit;

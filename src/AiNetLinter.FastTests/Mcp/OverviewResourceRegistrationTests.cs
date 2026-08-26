@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;

@@ -8,6 +8,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;

@@ -65,6 +65,56 @@ public sealed class SafeguardToolTests
         Assert.NotNull(json["violations"]);
         Assert.NotNull(json["remediation"]);
         Assert.NotNull(json["summary"]);
+        Assert.NotNull(json["totalViolationCount"]);
+        Assert.NotNull(json["shownViolationCount"]);
+        Assert.NotNull(json["violationsTruncated"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LoadedSolution_ListsTopViolationDetailsInTextAndStructuredOutput()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Top-Befunde:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Problem:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Datei:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Zeile:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Regel:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Severity:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Guidance:", textContent.Text, StringComparison.Ordinal);
+
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        var violations = (JsonArray)json["violations"]!;
+        Assert.NotEmpty(violations);
+        var topViolation = Assert.IsType<JsonObject>(violations[0]);
+        Assert.NotNull(topViolation["filePath"]);
+        Assert.NotNull(topViolation["lineNumber"]);
+        Assert.NotNull(topViolation["ruleName"]);
+        Assert.NotNull(topViolation["details"]);
+        Assert.NotNull(topViolation["severity"]);
+        Assert.NotNull(topViolation["guidance"]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxViolations_ReportsTotalAndTruncationMetadata()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 0, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        Assert.True((int)json["totalViolationCount"]! > 0);
+        Assert.Equal(0, (int)json["shownViolationCount"]!);
+        Assert.True((bool)json["violationsTruncated"]!);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Top-Auswahl wegen maxViolations", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("get_violations aufrufen", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
