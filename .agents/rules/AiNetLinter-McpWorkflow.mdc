@@ -1,50 +1,23 @@
 ---
-description: Kompakter Workflow für die semantische .NET-Analyse mit dem AiNetLinter-MCP-Server.
+description: Dauerhafte Nutzungsregeln für die semantische .NET-Analyse mit dem AiNetLinter-MCP-Server.
 globs: *
 alwaysApply: true
 ---
-# AiNetLinter MCP-Workflow
+# AiNetLinter MCP-Nutzung
 
 AiNetLinter analysiert .NET-Solutions mit Roslyn. Für semantische Fragen zu
-C#-Code die MCP-Tools bevorzugen; sie kennen Symbole, Typen und Referenzen.
+C#-Code die AiNetLinter-MCP-Tools bevorzugen; sie kennen Symbole, Typen,
+Referenzen und Abhängigkeiten.
 
-## AiNetLinter in ein Projekt integrieren
+## Standard
 
-Wenn der Auftrag lautet, AiNetLinter in ein Projekt zu integrieren:
+- Für jeden projektbezogenen MCP-Tool-Aufruf den absoluten `projectRoot`
+  mitsenden. `get_server_health` darf ohne Projektfilter verwendet werden.
+- Die aktuellen Tool- und Parameterschemas über `tools/list` prüfen.
+- Nach vollständigen Ergebnissen nicht redundant mit Read/Grep nachprüfen; bei
+  Trunkierung den Scope oder die Limits des MCP-Aufrufs verfeinern.
 
-1. Ermittle den Projektroot und die zugehörige `.sln`- oder `.slnx`-Datei.
-   Bei mehreren möglichen Solutions nicht raten, sondern die Auswahl klären.
-2. Suche nach einer bestehenden Regeldatei. Eine vorhandene `rules.json` oder
-   projektspezifische Regeldatei nicht überschreiben. Gibt es keine, erzeuge
-   eine Ausgangsdatei aus `ainetlinter --docs rules-json`.
-3. Lege im Projektroot `ainetlinter.project.json` an oder prüfe die vorhandene
-   Datei. Sie muss auf genau diese Solution und Regeldatei zeigen.
-4. Kopiere diese Datei als `AiNetLinter-McpWorkflow.mdc` in das Regelverzeichnis
-   des verwendeten Hosts: `.agents/rules` oder `.cursor/rules`. Ein vorhandenes
-   gleichnamiges AiNetLinter-Dokument gezielt aktualisieren, andere MCP-Regeln
-   nicht überschreiben.
-5. Falls der MCP-Server noch nicht registriert ist, verwende die Host-Konfiguration
-   mit `ainetlinter` und `args: ["--mcp-server"]`. `--path` und `--config` gehören
-   nicht in diese Registrierung. Danach mit `get_server_health` oder einem
-   kleinen semantischen Tool-Aufruf gegen den absoluten Projektroot prüfen.
-
-## Projektvertrag
-
-Jeder projektbezogene Tool-Aufruf erhält den absoluten `projectRoot`. Im
-Projektroot muss `ainetlinter.project.json` liegen:
-
-```json
-{
-  "solution": "src/MeinProjekt.slnx",
-  "rules": "rules.json"
-}
-```
-
-Beide Felder sind Pflicht; relative Pfade gelten ab dieser Datei. Im MCP-Modus
-keine `--path`- oder `--config`-Argumente registrieren. Bei
-`PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` zuerst diese Definition prüfen.
-
-## Entscheidungshilfe
+## Werkzeugwahl
 
 | Anliegen | Zuerst verwenden |
 | :--- | :--- |
@@ -53,13 +26,15 @@ keine `--path`- oder `--config`-Argumente registrieren. Bei
 | Aufrufer, Abhängigkeiten oder Tests prüfen | `find_references`, `get_impact`, `dependency_graph`, `get_test_context` |
 | Nach C#-Änderungen gezielt prüfen | `get_impact`, `get_violations`; bei Bedarf `metrics_lookup` |
 | Vor größerem Abschluss auditieren | `safeguard`; passend zum Risiko `find_duplicates`, `find_dead_code` oder `find_magic_values` |
-| Toolfehler, unerwartetes Ergebnis oder fehlende Analysefähigkeit melden | `report_observability_feedback` |
+| Toolfehler oder fehlende Analysefähigkeit melden | `report_observability_feedback` |
 
-`rg`/`grep` und `search_pattern` bleiben erlaubt: für Nicht-C#-Dateien,
-Konfiguration, Kommentare, exakte Textmuster und konkrete Datei-/Zeilenarbeit.
-Sie ergänzen MCP, ersetzen aber keine semantische Symbol-, Referenz- oder
-Impact-Analyse. Vollständige MCP-Ergebnisse nicht ohne Anlass erneut per
-Textsuche nachvollziehen; bei Trunkierung Scope oder Limits verfeinern.
+`rg`/`grep`, Read und interne Agenten-Tools bleiben erlaubt und sind für
+Nicht-C#-Dateien, Konfiguration, Kommentare, exakte Textmuster sowie konkrete
+Datei-/Zeilenarbeit geeignet. Sie ersetzen bei C#-Symbol-, Referenz- und
+Impact-Fragen nicht die semantische MCP-Analyse. `search_pattern` ist der
+MCP-Weg für repositoryweite Textsuche und Nicht-C#-Dateien.
 
-Parameter und alle Tools: `tools/list`. Aktueller Projektstatus:
-`ainetlinter://overview?projectRoot=<url-encoded>`.
+Bei `PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` nicht ungefragt eine
+Projektintegration durchführen. Nur bei einem ausdrücklichen
+Integrationsauftrag den einmaligen Leitfaden über `ainetlinter://agent-guide`
+lesen; er enthält den Bootstrap-Ablauf und die dauerhafte Regeldatei.

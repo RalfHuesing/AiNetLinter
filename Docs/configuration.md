@@ -29,7 +29,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
-- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung übertragen. Sie verweist bei neuer Integration auf `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
+- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 
 ## 3. Konfiguration (`rules.json`)
 
@@ -1160,7 +1160,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
 - `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry.
 - `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts (Standard: `10`).
-- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus.
+- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus. Für die MCP-Integration stehen `mcp-bootstrap` (einmaliger Bootstrap) und `mcp-rule` (dauerhafte Agentenregel) bereit; `mcp-workflow` bleibt als Legacy-Alias für `mcp-bootstrap` verfügbar.
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
 - `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten (Standard: `60`).
 - `--list-rules` (Flag): Gibt alle bekannten Regeln als Tabelle aus (Optional).

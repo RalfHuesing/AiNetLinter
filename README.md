@@ -79,8 +79,14 @@ Projektroot liegt die Definition der Solution und Regeldatei:
 
 Diese Datei heißt `ainetlinter.project.json`; ihre Pfade werden relativ zu ihr
 aufgelöst. Im MCP-Modus gehören `--path` und `--config` nicht in die
-Registrierung. `ainetlinter://agent-guide` stellt den Agentenleitfaden bereit;
-`tools/list` liefert die aktuellen Tool- und Parameterschemas.
+Registrierung. `ainetlinter://agent-guide` stellt den einmaligen Bootstrap-
+Leitfaden samt dauerhafter Agentenregel bereit; `tools/list` liefert die
+aktuellen Tool- und Parameterschemas.
+
+Die dauerhafte MCP-Regel wird nur für die bevorzugte Werkzeugwahl geladen. Der
+vollständige Bootstrap ist bei einer neuen Integration einmalig über
+`ainetlinter://agent-guide` oder offline mit `ainetlinter --docs mcp-bootstrap`
+abzurufen.
 
 Registrierung, Projektvertrag und Tool-vs.-Textsuche: [Docs/integration.md](Docs/integration.md#mcp-server-registrieren).
 
@@ -107,6 +113,7 @@ Die Dokumente sind in die Binary eingebettet und können ohne Netzzugriff über
 | :--- | :--- |
 | [Docs/agent-api.md](Docs/agent-api.md) | Alle CLI-Flags, MCP-Tools, Parameter, Output- und Fehlerverträge. |
 | [Docs/integration.md](Docs/integration.md) | Integration in ein bestehendes Projekt, Baseline und MCP-Registrierung. |
+| [Docs/mcp-bootstrap.md](Docs/mcp-bootstrap.md) | Einmaliger Bootstrap für die MCP-Integration eines Projekts. |
 | [Docs/configuration.md](Docs/configuration.md) | `rules.json`-Schema, Regeln, Defaults und Deployment-Hinweise. |
 | [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen und Quellen zur Regelauswahl. |
 | [Docs/ROADMAP.md](Docs/ROADMAP.md) | Entwicklungshistorie und abgeschlossene Vorhaben. |

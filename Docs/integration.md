@@ -225,34 +225,29 @@ AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Ros
 ### Agent-Bootstrap für ein neues Projekt
 
 Bei einem Auftrag wie „Integriere AiNetLinter in dieses Projekt“ soll der
-Agent zuerst den eingebetteten Leitfaden lesen:
+Agent den Bootstrap genau einmal pro Projekt lesen:
 
 ```text
 ainetlinter://agent-guide
 ```
 
-Der Leitfaden ist auch offline verfügbar:
+Der Leitfaden enthält den vollständigen Ablauf für Solution, Regeldatei,
+`ainetlinter.project.json`, MCP-Registrierung und die dauerhafte
+`AiNetLinter-McpWorkflow.mdc`. Der Bootstrap ist auch offline verfügbar:
 
 ```cmd
-ainetlinter.exe --docs mcp-workflow
+ainetlinter.exe --docs mcp-bootstrap
 ```
 
-Der Agent muss anschließend:
+Die dauerhafte Regeldatei kann offline separat mit
+`ainetlinter.exe --docs mcp-rule` ausgegeben werden.
 
-1. die passende `.sln`- oder `.slnx`-Datei ermitteln;
-2. eine vorhandene Regeldatei weiterverwenden oder ohne Überschreiben eine
-   Ausgangsdatei über `ainetlinter --docs rules-json` erzeugen;
-3. im Projektroot `ainetlinter.project.json` mit den Pflichtfeldern `solution`
-   und `rules` anlegen bzw. validieren;
-4. `AiNetLinter-McpWorkflow.mdc` nach `.agents/rules` oder `.cursor/rules`
-   kopieren und dort nur eine vorhandene gleichnamige AiNetLinter-Datei ersetzen;
-5. die MCP-Registrierung mit `args: ["--mcp-server"]` prüfen und anschließend
-   `get_server_health` oder einen kleinen semantischen Tool-Call ausführen.
-
-Bei mehreren Solutions oder mehreren nicht eindeutig zuordenbaren Regeldateien
-fragt der Agent nach der Auswahl. Die autarke CLI-Integration als Test-/CI-
-Quality-Gate bleibt davon getrennt und wird in den vorherigen Abschnitten dieser
-Anleitung beschrieben.
+Nach erfolgreicher Einrichtung wird der Bootstrap nicht in jedem Arbeitskontext
+erneut ausgeführt. Die dauerhafte Regel enthält nur die bevorzugte
+MCP-Werkzeugwahl; die autarke CLI-Integration als Test-/CI-Quality-Gate bleibt
+davon getrennt und wird in den vorherigen Abschnitten dieser Anleitung
+beschrieben. `mcp-workflow` bleibt als Legacy-Alias für den Bootstrap-Aufruf
+verfügbar.
 
 ### Registrierung im MCP-Host
 
@@ -364,7 +359,7 @@ Damit können mehrere Projekt-Keys in einer Serverinstanz resident sein.
 
 Der Legacy-MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
 
-Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei neuer Integration auf `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Die aktuelle Anleitung bleibt unter dem Engineering-Budget von 2.557 Bytes.
+Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Der globale Text enthält keinen vollständigen Bootstrap und bleibt unter dem Engineering-Budget von 2.557 Bytes.
 
 Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
 
@@ -401,7 +396,7 @@ Konkret:
 
 ### Erstorientierung: Resources
 
-Für eine neue Projektintegration zuerst `ainetlinter://agent-guide` ohne
+Für eine neue Projektintegration `ainetlinter://agent-guide` genau einmal ohne
 `projectRoot` lesen. Nach dem Anlegen der Projektdefinition liefert
 `ainetlinter://overview?projectRoot=<url-encoded>` nur noch die Statuskarte des
 adressierten Keys. Details: [Docs/agent-api.md](agent-api.md).

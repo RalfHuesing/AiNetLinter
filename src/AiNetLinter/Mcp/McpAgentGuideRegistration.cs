@@ -9,15 +9,17 @@ namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Registriert den statischen Erstkontakt-Leitfaden für Agenten, bevor ein Projekt-Key
-/// geladen werden kann. Der Inhalt stammt aus der eingebetteten AiNetLinter-MCP-Regeldatei.
+/// geladen werden kann. Der Bootstrap stammt aus einer eigenen Dokumentationsressource; die
+/// anschließende dauerhafte Agentenregel wird separat eingebettet angehängt.
 /// </summary>
 internal static class McpAgentGuideRegistration
 {
     internal const string Uri = "ainetlinter://agent-guide";
-    internal const string EmbeddedResourceName = "AgentRules/AiNetLinter-McpWorkflow.mdc";
+    internal const string BootstrapResourceName = "Docs/mcp-bootstrap.md";
+    internal const string WorkflowResourceName = "AgentRules/AiNetLinter-McpWorkflow.mdc";
 
     private static readonly Lazy<string> GuideText = new(
-        () => EmbeddedResourceReader.ReadRequired(EmbeddedResourceName));
+        BuildGuideText);
 
     internal static void Register(McpServerResourceCollection resources)
     {
@@ -44,4 +46,11 @@ internal static class McpAgentGuideRegistration
             },
         ],
     };
+
+    private static string BuildGuideText()
+    {
+        var bootstrap = EmbeddedResourceReader.ReadRequired(BootstrapResourceName).TrimEnd();
+        var workflow = EmbeddedResourceReader.ReadRequired(WorkflowResourceName).Trim();
+        return bootstrap + "\n\n---\n\n## Dauerhafte Agentenregel\n\n" + workflow;
+    }
 }

@@ -91,7 +91,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-workflow; case-insensitive) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-bootstrap, mcp-rule; `mcp-workflow` bleibt als Legacy-Alias verfügbar; case-insensitive) |
 
 ## Strukturiertes Error-Format (L9)
 
@@ -269,7 +269,7 @@ Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call lie
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den MCP-Projektvertrag, den Erstkontakt über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Projektstatus steht in der Overview-Resource.
+Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `projectRoot`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Projektstatus steht in der Overview-Resource.
 
 Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
 wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
@@ -627,10 +627,13 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 Für eine neue Integration ist die direkte Resource `ainetlinter://agent-guide`
 der erste Einstieg. Sie ist ohne `projectRoot` und damit auch ohne vorhandene
 `ainetlinter.project.json` lesbar. Ihr Inhalt entspricht der eingebetteten
-`AiNetLinter-McpWorkflow.mdc` und beschreibt Solution-/Regeldatei-Ermittlung,
-`ainetlinter.project.json`, MCP-Registrierung und das Kopieren der Regeldatei
-nach `.agents/rules` oder `.cursor/rules`. Abruf: `resources/read` mit
-`{"uri": "ainetlinter://agent-guide"}`.
+Bootstrap-Dokumentation `Docs/mcp-bootstrap.md` und enthält anschließend die
+separat eingebettete dauerhafte `AiNetLinter-McpWorkflow.mdc`. Sie beschreibt
+Solution-/Regeldatei-Ermittlung, `ainetlinter.project.json`, MCP-Registrierung
+und das Kopieren der Regeldatei nach `.agents/rules` oder `.cursor/rules`.
+Abruf: `resources/read` mit `{"uri": "ainetlinter://agent-guide"}`. Offline
+stehen `ainetlinter --docs mcp-bootstrap` für den Bootstrap und
+`ainetlinter --docs mcp-rule` für die dauerhafte Regel zur Verfügung.
 
 Nach dem Bootstrap liefert die Status-Resource `ainetlinter://overview` unter
 `ainetlinter://overview?projectRoot=<url-encoded>` bei jedem `resources/read`

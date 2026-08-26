@@ -19,10 +19,19 @@ public sealed class McpAgentGuideRegistrationTests
 
         Assert.Equal(McpAgentGuideRegistration.Uri, content.Uri);
         Assert.Equal("text/markdown", content.MimeType);
+        Assert.Contains("AiNetLinter MCP-Bootstrap", content.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter.project.json", content.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter --docs rules-json", content.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", content.Text, StringComparison.Ordinal);
         Assert.Contains(".cursor/rules", content.Text, StringComparison.Ordinal);
+        Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
+        Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
         Assert.Contains("report_observability_feedback", content.Text, StringComparison.Ordinal);
+
+        var workflowStart = content.Text.IndexOf("## Dauerhafte Agentenregel", StringComparison.Ordinal);
+        Assert.True(workflowStart >= 0);
+        var workflow = content.Text[workflowStart..];
+        Assert.DoesNotContain("## Ablauf", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("ainetlinter.project.json", workflow, StringComparison.Ordinal);
     }
 }

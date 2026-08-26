@@ -25,6 +25,8 @@ public sealed class DocsCommandTests
     [InlineData("rationale")]
     [InlineData("roadmap")]
     [InlineData("rules-json")]
+    [InlineData("mcp-bootstrap")]
+    [InlineData("mcp-rule")]
     [InlineData("mcp-workflow")]
     [InlineData("Readme")]
     [InlineData("AGENT-API")]
@@ -95,6 +97,8 @@ public sealed class DocsCommandTests
             Assert.Contains("- rationale", output);
             Assert.Contains("- roadmap", output);
             Assert.Contains("- rules-json", output);
+            Assert.Contains("- mcp-bootstrap", output);
+            Assert.Contains("- mcp-rule", output);
             Assert.Contains("- mcp-workflow", output);
         }
         finally

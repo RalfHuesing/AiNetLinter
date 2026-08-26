@@ -20,7 +20,10 @@ internal static class DocsCommand
         { "rationale", "Docs/rationale.md" },
         { "roadmap", "Docs/ROADMAP.md" },
         { "rules-json", "rules.json" },
-        { "mcp-workflow", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
+        { "mcp-bootstrap", "Docs/mcp-bootstrap.md" },
+        { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" },
+        // Kompatibilitätsalias für den bisherigen Namen des Bootstrap-Leitfadens.
+        { "mcp-workflow", "Docs/mcp-bootstrap.md" }
     };
 
     /// <summary>

@@ -447,11 +447,14 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 ### EPIC-C — Agent-Bootstrap und MCP-Resources (umgesetzt am 2026-08-25)
 
 - [x] Statischer Erstkontakt-Leitfaden `ainetlinter://agent-guide`, ohne
-  `projectRoot` lesbar und aus `AiNetLinter-McpWorkflow.mdc` eingebettet.
+  `projectRoot` lesbar und aus einer eigenen Bootstrap-Dokumentation sowie
+  der separat eingebetteten dauerhaften MCP-Regel aufgebaut.
 - [x] Der Leitfaden beschreibt die Auswahl vorhandener oder Erzeugung einer
   `rules.json`, die Pflichtdefinition `ainetlinter.project.json`, die MCP-
   Registrierung sowie das Kopieren nach `.agents/rules` oder `.cursor/rules`.
-- [x] `ainetlinter --docs mcp-workflow` gibt denselben Leitfaden offline aus.
+- [x] `ainetlinter --docs mcp-bootstrap` gibt den einmaligen Bootstrap offline
+  aus; `ainetlinter --docs mcp-rule` gibt die dauerhaft geladene Regel aus.
+  `mcp-workflow` bleibt als Legacy-Alias für den Bootstrap verfügbar.
 - [x] `ainetlinter://overview?projectRoot=...` ist auf Projektstatus und nächste
   Einstiegspunkte reduziert; Toolschemas bleiben in `tools/list`.
 

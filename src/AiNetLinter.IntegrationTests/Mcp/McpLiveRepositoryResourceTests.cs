@@ -55,7 +55,9 @@ public sealed class McpLiveRepositoryResourceTests
         Assert.Contains("- Solution:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Regeln:", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("ainetlinter://agent-guide", guideContent.Uri);
+        Assert.Contains("AiNetLinter MCP-Bootstrap", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter.project.json", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", guideContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Dauerhafte Agentenregel", guideContent.Text, StringComparison.Ordinal);
     }
 }

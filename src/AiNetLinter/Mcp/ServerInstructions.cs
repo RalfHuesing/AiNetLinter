@@ -18,12 +18,9 @@ internal static class ServerInstructions
         "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM Tool-Aufruf ist projectRoot " +
         "beizufuegen: ein absoluter Projektroot-Pfad. Einzige Ausnahme: der optionale " +
         "get_server_health-Filter.\n\n" +
-        "Initialisierung: Im Projektroot liegt ainetlinter.project.json mit den Pflichtfeldern " +
-        "\"solution\" und \"rules\"; Pfade gelten relativ zur Definitionsdatei. Fehlt oder ist " +
-        "die Datei defekt, antwortet der Server deterministisch (PROJECT_NOT_INITIALIZED bzw. " +
-        "RULES_INVALID) inklusive kopierfaehigem Template statt stillschweigenden Defaults.\n\n" +
-        "Neue Integration: zuerst ainetlinter://agent-guide lesen; den Projektstatus danach " +
-        "ueber ainetlinter://overview?projectRoot=<url-encoded> pruefen.\n\n" +
+        "Neue Integration nur bei ausdruecklichem Auftrag: ainetlinter://agent-guide lesen; " +
+        "den Projektstatus danach ueber ainetlinter://overview?projectRoot=<url-encoded> pruefen. " +
+        "PROJECT_NOT_INITIALIZED und RULES_INVALID bleiben deterministische Fehler.\n\n" +
         "C#-Symbolgraph-Grenze: C#-Symbole ueber die semantischen Tools abfragen; fuer " +
         "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
         "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +

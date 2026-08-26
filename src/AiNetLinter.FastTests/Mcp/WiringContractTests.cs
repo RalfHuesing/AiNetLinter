@@ -89,10 +89,9 @@ public sealed class WiringContractTests
 
         Assert.True(byteCount <= ServerInstructions.MaxUtf8Bytes, $"Instructions-Budget gerissen: {byteCount} > {ServerInstructions.MaxUtf8Bytes}");
         Assert.Contains("projectRoot", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("solution", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("rules", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
     }
 
     [Fact]

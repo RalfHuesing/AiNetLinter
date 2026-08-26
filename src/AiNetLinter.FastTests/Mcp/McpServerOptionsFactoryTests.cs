@@ -10,7 +10,8 @@ namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsFactory"/>: zentraler Instructions-Vertrag
-/// (projectRoot-Pflicht + Definitionsdatei) inkl. UTF8-Budget und Toolbestands-Paritaet.
+/// (projectRoot-Pflicht + kompakter Bootstrap-Verweis) inkl. UTF8-Budget und
+/// Toolbestands-Paritaet.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpServerOptionsFactoryTests
@@ -22,7 +23,6 @@ public sealed class McpServerOptionsFactoryTests
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
         Assert.Contains("projectRoot", options.ServerInstructions, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter.project.json", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);
@@ -58,5 +58,7 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("enrichCSharp=true", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("RULES_INVALID", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("PROJECT_NOT_INITIALIZED", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("kopierfaehigem Template", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }
