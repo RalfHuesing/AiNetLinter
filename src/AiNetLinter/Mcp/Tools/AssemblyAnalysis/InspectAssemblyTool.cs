@@ -18,38 +18,31 @@ internal static class InspectAssemblyTool
         InspectAssemblyArguments arguments,
         CancellationToken ct)
     {
-        if (!AssemblyAnalysisService.TryValidatePath(arguments.AssemblyPath, out var fullPath, out var pathError))
-        {
-            return McpToolResults.InvalidArgument(pathError, "assemblyPath muss ein existierender absoluter lokaler .dll-Pfad sein.");
-        }
-
-        var normalizedMaxResults = AssemblyAnalysisService.NormalizeMaxResults(arguments.MaxResults);
-        if (state?.LoadState == ServerLoadState.Loading)
-        {
-            return McpToolResults.Loading();
-        }
-
-        var (context, error) = await AssemblyAnalysisService.CreateContextAsync(fullPath, state?.GetCurrentSolution(), receiverType: null, ct);
-        if (context is null)
-        {
-            return McpToolResults.CompilationError(error ?? "Assembly konnte nicht analysiert werden.", fullPath);
-        }
-
-        var selection = AssemblyAnalysisService.Inspect(
-            context,
-            new AssemblyInspectionOptions(arguments.Namespace, arguments.TypeName, arguments.MemberName, arguments.PublicOnly, normalizedMaxResults));
-        var completeness = context.Diagnostics.Count == 0 ? "complete" : "partial";
-        var payload = new InspectAssemblyPayload(
-            fullPath,
-            context.Identity,
-            selection.Namespaces,
-            context.References,
-            selection.Items,
-            context.Diagnostics,
-            completeness,
-            selection.Truncated,
-            selection.Total);
-        return McpToolResults.Text(FormatText(payload), payload);
+        return await AssemblyAnalysisToolSupport.ExecuteAsync(
+            new AssemblyToolExecutionParameters(
+                state,
+                arguments.AssemblyPath,
+                null,
+                AssemblyAnalysisService.NormalizeMaxResults(arguments.MaxResults),
+                ct,
+                (fullPath, context, maxResults) =>
+                {
+                    var selection = AssemblyAnalysisService.Inspect(
+                        context,
+                        new AssemblyInspectionOptions(arguments.Namespace, arguments.TypeName, arguments.MemberName, arguments.PublicOnly, maxResults));
+                    var completeness = context.Diagnostics.Count == 0 ? "complete" : "partial";
+                    var payload = new InspectAssemblyPayload(
+                        fullPath,
+                        context.Identity,
+                        selection.Namespaces,
+                        context.References,
+                        selection.Items,
+                        context.Diagnostics,
+                        completeness,
+                        selection.Truncated,
+                        selection.Total);
+                    return McpToolResults.Text(FormatText(payload), payload);
+                }));
     }
 
     private static string FormatText(InspectAssemblyPayload payload)

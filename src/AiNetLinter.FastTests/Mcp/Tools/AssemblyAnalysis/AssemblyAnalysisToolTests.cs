@@ -52,6 +52,7 @@ public sealed class AssemblyAnalysisToolTests
         Assert.Contains("Probe.Api", payload.Namespaces);
         Assert.Contains(type.Members, member => member.Name == "Name" && member.Kind == "property");
         Assert.Contains(type.Members, member => member.Name == "Changed" && member.Kind == "event");
+        Assert.DoesNotContain(type.Members, member => member.Name is "get_Name" or "set_Name" or "add_Changed");
         Assert.Equal(3, type.Members.Count(member => member.Name is "Convert" or "Echo"));
         Assert.Contains(type.Members, member => member.Name == "Echo" && member.GenericParameters.Contains("T") && member.Constraints.Any(constraint => constraint.StartsWith("T:", StringComparison.Ordinal)));
         Assert.Contains(type.Attributes, attribute => attribute.Contains("Obsolete", StringComparison.Ordinal));

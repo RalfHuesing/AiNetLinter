@@ -162,6 +162,7 @@ internal static class AssemblyAnalysisService
     {
         var members = type.GetMembers()
             .Where(member => !member.IsImplicitlyDeclared)
+            .Where(member => !IsAccessor(member))
             .Where(member => !publicOnly || IsPublicApi(member))
             .Where(member => Matches(member.Name, memberFilter))
             .Select(ToMemberDto)
@@ -268,6 +269,12 @@ internal static class AssemblyAnalysisService
         IFieldSymbol => "field",
         IEventSymbol => "event",
         _ => member.Kind.ToString().ToLowerInvariant(),
+    };
+
+    private static bool IsAccessor(ISymbol member) => member is IMethodSymbol
+    {
+        MethodKind: MethodKind.PropertyGet or MethodKind.PropertySet or
+            MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise,
     };
 
 }
