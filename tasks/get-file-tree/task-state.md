@@ -1,8 +1,8 @@
 ---
-status: executing
+status: blocked
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T23:14:21+02:00
+last_updated: 2026-08-26T23:42:18+02:00
 rules_dir: .agents/rules
 total_steps: 3
 current_step: step-003
@@ -12,13 +12,13 @@ current_step: step-003
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `blocked`
 - **Steps gesamt:** 3
 - **Aktueller Schritt:** `step-003`
 - **Roadmap:** aktiv, unverändert
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T23:14:21+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T23:42:18+02:00
 
 ## Steps
 
@@ -26,7 +26,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
-| step-003 | EPIC-02 | in_progress | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | - | ausstehend | - |
+| step-003 | EPIC-02 | blocked | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | ausstehend | 5b8e4472 |
 
 ## Config (optional)
 
@@ -63,3 +63,13 @@ Nach Nutzerklärung bleibt die Record-Erweiterung erhalten; die abgestimmte
 
 Der Gate-Blocker ist durch Step 002 aufgelöst; Step 001 und Step 002 sind
 unabhängig geprüft und approved.
+
+## Blocker
+
+Step 003 ist wegen externer Testinfrastruktur pausiert. Der Coder meldete drei
+Abbrüche im vollständigen Integration-Gate beim Warten auf
+`SubprocessLifetimeGate` beziehungsweise beim Named-Pipe-/Daemon-Connect
+(`OperationCanceledException`). Build, vollständiger Fast-Gate und gezielte
+Integrationstests sind grün; für die unabhängige Kritikerprüfung und die
+Fortsetzung ist ein erfolgreicher vollständiger Integration-Gate-Lauf bei
+verfügbarer Infrastruktur erforderlich.
