@@ -1,0 +1,773 @@
+---
+status: ready
+type: konzept
+project_kind: brownfield
+estimated_scope: epic
+rules_dir: .agents/rules
+last_updated: 2026-08-26
+open_questions:
+  - ILSpy-/ICSharpCode.Decompiler-Version und Wiederverwendung des vorhandenen manuellen Decompilers
+  - Exakter Regel-/Config-Vertrag fuer Lint-Tools auf dekompilierten Assemblies
+---
+
+# Konzept: Einheitliches Roslyn-Analyseziel für Projekte und dekompilierte Assemblies
+
+## Intention
+
+AiNetLinter soll eine lokale .NET-DLL für die semantische Analyse so behandeln können
+wie das Quellcodeprojekt, aus dem sie entstanden ist. Bei einem Quellcodeprojekt lädt
+AiNetLinter die vorhandene Solution und ihre Documents. Bei einer Assembly wird der
+Quellcode transparent aus der DLL dekompiliert, in einem synthetischen Roslyn-Project
+materialisiert und anschließend über dieselben Roslyn-Funktionen analysiert.
+
+Für einen Agenten soll der Ablauf dadurch direkt sein:
+
+1. Der Agent entdeckt beispielsweise `bar.dll`.
+2. Er ruft ein beliebiges passendes Roslyn-Tool mit dieser DLL als Analyseziel auf.
+3. AiNetLinter erzeugt oder verwendet transparent die dekompilierte Roslyn-Session.
+4. Weitere Fragen zu Symbolen, Bodies, Referenzen, Aufrufbäumen und Metriken verwenden
+   dieselbe residente Session.
+
+Eine Assembly benötigt dafür **keine** `ainetlinter.project.json`. Diese Datei bleibt
+der Konfigurationsvertrag für ein `project`-Target. Die Assembly-Analyse muss auch für
+DLLs aus unbekannten Projekten und außerhalb eines bekannten Repositorys funktionieren.
+
+Das Ziel ist nicht, den ursprünglichen Quellcode zu behaupten. Ergebnisse aus einer
+Dekompilation müssen als solche erkennbar sein und bei unvollständiger
+Abhängigkeitsauflösung oder problematischer Decompilation einen partiellen Zustand
+melden.
+
+## Kurzentscheidung
+
+Alle Roslyn-orientierten MCP-Tools erhalten in einem harten API-Schnitt ein einheitliches
+Target-Schema:
+
+```json
+{
+  "targetType": "project",
+  "targetPath": "C:\\Daten\\MeineAnwendung"
+}
+```
+
+oder:
+
+```json
+{
+  "targetType": "assembly",
+  "targetPath": "D:\\Vendor\\bar.dll"
+}
+```
+
+`targetPath` ist bei `project` ein absoluter Projektroot und bei `assembly` ein
+absoluter Pfad zu einer existierenden `.dll`. Die beiden Parameter sind in allen
+projekt-/roslynbezogenen Tools Pflicht. Der bisherige Parameter `projectRoot` wird
+nicht parallel weitergeführt; ebenso bleiben `assemblyPath` plus optionalem
+`projectRoot` nicht als zweite API bestehen.
+
+Die Wire-API bleibt bewusst flach, weil sie für MCP-Tool-Schemas und Agenten leicht
+lesbar ist. Intern wird sie sofort in einen unveränderlichen `AnalysisTarget`-Record
+überführt. Es wird keine Migrationserkennung und kein dualer Dispatch eingeführt.
+
+## Befund im aktuellen AiNetLinter
+
+Der aktuelle MCP-Daemon hält pro kanonisiertem `projectRoot` einen residenten Key im
+`ProjectRegistry`. Ein `ProjectLease` schützt den Zugriff; `McpCodeGraphServer` hält
+die geladene Roslyn-Solution, den `SourceFileCatalog` und den Staleness-Zustand. Die
+Solution wird bei Zugriff über mtime/hash-basierte Dokumentprüfungen inkrementell
+aktualisiert. TTL, LRU-Druck, Creation Barriers und In-Flight-Leases sind bereits Teil
+des Projektlebenszyklus.
+
+Der aktuelle Assembly-Bereich unter
+`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` arbeitet dagegen anders:
+
+- `AssemblyAnalysisContextFactory` liest PE-Metadaten und baut eine
+  `CSharpCompilation` aus MetadataReferences.
+- `InspectAssemblyTool` und `FindAssemblyExtensionsTool` erhalten heute
+  `assemblyPath` und optional `projectRoot`.
+- Die DLL wird metadata-only untersucht; es existiert kein dekompiliertes C#-Document,
+  kein langlebiges Assembly-Roslyn-Project und kein Assembly-Eintrag im Daemon-Registry-
+  Lifecycle.
+- Bei Consumer-Analysen kann der bestehende Code eine Compilation aus einer geladenen
+  Solution verwenden. Das ist ein spezieller Pfad, keine allgemeine Target-Abstraktion.
+
+Der neue Task ersetzt diesen Unterschied auf der Session-Ebene. Die vorhandene
+metadata-only Auflösung bleibt als Bestandteil der Assembly-Session nützlich, darf
+aber nicht länger das primäre Modell für Assembly-Tools sein.
+
+## Scope
+
+### Muss-Haben
+
+- Harter MCP-Vertrag mit `targetType` und `targetPath` für alle Roslyn-/Projekt-Tools.
+- `targetType=project` routet zur bestehenden Solution-/Projekt-Session.
+- `targetType=assembly` routet zu einer langlebigen Assembly-Session.
+- Keine Änderung oder Anlage einer `ainetlinter.project.json` für eine DLL.
+- Statische Decompilation ohne Assembly-Ausführung und ohne `AssemblyLoadContext`.
+- Persistenter Decompilation-Cache mit Hash-/Versionsprüfung.
+- Synthetisches Roslyn-`Project` in einem residenten `AdhocWorkspace`.
+- Roslyn-Documents aus dekompilierten C#-Dateien, vorzugsweise auf Typ-/Modulgranularität.
+- MetadataReferences für das Target, seine erreichbaren Abhängigkeiten und die
+  benötigten Framework-Assemblies.
+- Source-/IL-Origin-Mapping für Diagnose, Symbolidentität und Benutzerantworten.
+- Wiederverwendung der gemeinsamen Toollogik für Symbolsuche, Bodies, Struktur,
+  Referenzen, Call Trees, Dependency Graph und Metriken.
+- Expliziter `complete`-/`partial`-/`degraded`-Vertrag bei fehlenden Referenzen,
+  Decompiler-Warnungen oder unvollständigen Ergebnissen.
+- Daemon-Health für residente Projekt- und Assembly-Sessions.
+- Separate Kapazitätsgrenzen für Projekt-Sessions und Assembly-Sessions.
+- Concurrent-Load-, Refresh-, Eviction- und Cache-Korruptions-Tests.
+
+### Bewusst nicht im ersten Umfang
+
+- Rekonstruktion des originalen Buildprozesses oder der ursprünglichen Projektdateien.
+- Ausführung von Code aus der DLL.
+- Änderung oder Rückschreiben von dekompiliertem Code in die Assembly.
+- Automatische Ermittlung eines Consumer-Projekts als versteckter zweiter Target-Kontext.
+- Vollständige Wiederherstellung von PDB-, SourceLink- oder Originaldateinamen-Garantien.
+- Behauptung, dass der erzeugte C#-Code mit der Originalquelle identisch ist.
+- Projektweite Git-Diff-Analysen für eine standalone Assembly.
+- Testzuordnung zu Tests, die nicht Bestandteil der Assembly-Session sind.
+- Ein allumfassender abstrakter Framework-Layer für beliebige zukünftige Artefakte.
+
+## Target-Vertrag
+
+### MCP-Wire-API
+
+Jedes Tool, das heute den projektgebundenen `projectRoot`-Dispatch nutzt, wird auf
+folgende Pflichtparameter umgestellt:
+
+```text
+targetType: "project" | "assembly"
+targetPath: string
+```
+
+Beispiele:
+
+```json
+{
+  "targetType": "assembly",
+  "targetPath": "D:\\Programme\\ThirdParty\\bar.dll",
+  "namePatterns": ["Save"]
+}
+```
+
+```json
+{
+  "targetType": "project",
+  "targetPath": "C:\\Daten\\MeineAnwendung",
+  "symbolIdentifier": "M:MeineAnwendung.BelegService.Save"
+}
+```
+
+Die semantischen Zusatzparameter eines Tools bleiben erhalten. Nur der gemeinsame
+Target-Teil wird ersetzt. Pfade werden absolut verlangt und vor dem Registry-Zugriff
+kanonisiert. Ein `project`-Target muss weiterhin über die Projektdefinition eine
+Solution und Regeldatei auflösen können. Ein `assembly`-Target prüft eine existierende
+`.dll` und benötigt keine Projektdefinition.
+
+`get_server_health` ist ein Maintenance-Tool und darf weiterhin ohne Target den
+gesamten Daemon-Status liefern. Mit einem Target soll es gezielt genau diese
+Projekt- oder Assembly-Session anzeigen.
+
+### Interne Modelle
+
+```csharp
+internal enum AnalysisTargetKind
+{
+    Project,
+    Assembly,
+}
+
+internal sealed record AnalysisTarget(
+    AnalysisTargetKind Kind,
+    string CanonicalPath);
+
+internal sealed record AnalysisTargetRequest(
+    string? TargetType,
+    string? TargetPath);
+
+internal sealed record AnalysisOrigin(
+    string Kind,
+    string SourcePath,
+    string? ContentHash,
+    string? GeneratedPath,
+    string? MetadataToken,
+    string Confidence);
+```
+
+`AnalysisTargetRequest` ist nur das Eingabe-/Validierungsmodell. Nach erfolgreicher
+Validierung sollen Analyzer ausschließlich `AnalysisTarget` oder eine residente
+`AnalysisSession` sehen. Dadurch verteilt sich die Prüfung von `targetType` und
+Pfadsemantik nicht über alle Toolregistrierungen.
+
+## Zielarchitektur
+
+```text
+MCP Tool Call
+    |
+    v
+AnalysisTargetRequest
+    |
+    v
+AnalysisTargetResolver
+    |
+    v
+AnalysisRegistry -- Lease / TTL / LRU / Creation Barrier
+    |
+    +-- ProjectAnalysisSession
+    |     `-- bestehender McpCodeGraphServer + MSBuildWorkspace/Solution
+    |
+    `-- AssemblyAnalysisSession
+          +-- AssemblyFingerprint
+          +-- DecompilationCache
+          +-- AdhocWorkspace
+          +-- synthetisches Roslyn-Project
+          +-- MetadataReferenceResolver
+          `-- Origin-/IL-Mapping
+```
+
+### Gemeinsame Session-Oberfläche
+
+Die bestehende `McpCodeGraphServer`-Klasse soll nicht mit allen Assembly-Sonderfällen
+aufgefüllt werden. Stattdessen wird eine kleine gemeinsame Session-Schnittstelle für
+den zentralen Dispatch eingeführt:
+
+```csharp
+internal interface IAnalysisSession : IDisposable, IAsyncDisposable
+{
+    AnalysisTarget Target { get; }
+    ServerLoadState LoadState { get; }
+    bool IsLoaded { get; }
+    DateTime? LastGoodStateUtc { get; }
+    string? LastLoadError { get; }
+    Solution? GetCurrentSolution();
+    AnalysisOrigin Origin { get; }
+}
+```
+
+Die Oberfläche soll klein bleiben. Config-, Console-, Catalog- und Linter-spezifische
+Details werden über einen zweiten, ebenfalls kleinen Session-Kontext oder bestehende
+Services geliefert. Kein DI-Container und kein generischer Objektgraph nur zur
+Abstraktion werden eingeführt.
+
+Der zentrale Dispatch wird konzeptionell von `ProjectToolCall` zu einem allgemeinen
+`AnalysisToolCall`:
+
+```csharp
+internal static async Task<CallToolResult> ExecuteAsync(
+    AnalysisRegistry registry,
+    AnalysisTargetRequest request,
+    Func<AnalysisLease, Task<CallToolResult>> call)
+{
+    var target = AnalysisTargetResolver.Resolve(request);
+    if (!target.Succeeded)
+    {
+        return target.Error!;
+    }
+
+    var leaseResult = registry.Lease(target.Value!);
+    if (!leaseResult.Succeeded || leaseResult.Lease is null)
+    {
+        return leaseResult.Error!;
+    }
+
+    using var lease = leaseResult.Lease;
+    return await lease.ExecuteAsync(call).ConfigureAwait(false);
+}
+```
+
+Der konkrete Result-Typ ist ein Implementierungsdetail. Entscheidend ist, dass alle
+Toolregistrierungen denselben Target-/Lease-Pfad verwenden und nicht mehr selbst
+zwischen `projectRoot is null` und standalone Assembly verzweigen.
+
+### Registry und Lebensdauer
+
+Die aktuelle `ProjectRegistry` ist fachlich künftig eine Registry für Analyseziele.
+Für den harten Schnitt gibt es zwei mögliche interne Ausprägungen:
+
+1. `ProjectRegistry` wird zu `AnalysisRegistry` umbenannt und erhält polymorphe
+   Session-Factories.
+2. Eine kleine `AnalysisRegistry` koordiniert getrennte Projekt- und Assembly-Maps.
+
+Empfohlen ist Variante 2, weil die Ressourcen- und Fehlersemantik beider Sessionarten
+unterschiedlich ist. Der gemeinsame Registry-Code bleibt trotzdem zentral für Lease,
+Creation Barrier, TTL, LRU und Dispose.
+
+Assemblys sollen nicht die bestehende `MaxProjects`-Grenze verbrauchen. Es braucht
+separate Optionen, beispielsweise:
+
+```csharp
+internal sealed record AnalysisRegistryOptions(
+    int MaxProjects,
+    int MaxAssemblies,
+    TimeSpan ProjectIdleTtl,
+    TimeSpan AssemblyIdleTtl);
+```
+
+Ein neuer Assembly-Aufruf darf nicht synchron auf die vollständige Decompilation
+blockieren. Wie beim bestehenden Solution-Load wird eine Session resident registriert,
+der Load läuft als Task und liefert währenddessen einen stabilen `Loading`-Zustand.
+Mehrere gleichzeitige Aufrufe derselben DLL teilen sich denselben Load.
+
+## Assembly-Session
+
+### Fingerprint und Cache-Key
+
+Der Dateiname oder die Assembly-Version allein reicht nicht zur Invalidierung. Der
+Cache-Key muss mindestens enthalten:
+
+```text
+kanonischer DLL-Pfad
++ SHA-256 der DLL-Bytes
++ Decompiler-Version
++ Decompiler-Optionen
++ Format-/Schema-Version des Cache-Manifests
+```
+
+mtime und Dateigröße dürfen als schneller Vorcheck verwendet werden. Sobald sich einer
+der Vorwerte ändert, wird der Inhalt gehasht. Gleicher Inhalt bei neuer mtime erzeugt
+keine neue Decompilation.
+
+Da DLLs außerhalb eines Repositorys liegen können, soll der persistente Cache nicht
+ungefragt im fremden Projekt angelegt werden. Standardmäßig eignet sich ein
+benutzerbezogener Windows-Cache unterhalb von `%LOCALAPPDATA%\\AiNetLinter`, mit
+hashbasierten Unterordnern. Ein späterer expliziter Cache-Root kann additiv konfiguriert
+werden.
+
+Beispiel:
+
+```text
+%LOCALAPPDATA%\\AiNetLinter\\decompilation\\
+  8f34...\\
+    manifest.json
+    source\\Namespace\\BelegService.cs
+    source\\Namespace\\Beleg.cs
+    origin.json
+```
+
+Das Manifest enthält mindestens:
+
+- Originalpfad, Dateigröße, mtime und SHA-256
+- Assembly-Identität und Referenzliste
+- Decompiler-Version, Optionen und Cache-Schema-Version
+- erzeugte Dateien und Quelltext-Encoding
+- Decompiler-Warnungen und Fehler
+- verwendete Referenzpfade und nicht auflösbare Referenzen
+- Erstellungszeit und letzter Zugriff
+- Status `complete`, `partial` oder `failed`
+
+Cache-Einträge werden in einem temporären Verzeichnis aufgebaut und anschließend
+atomar veröffentlicht. Ein beschädigter oder unvollständiger Eintrag wird nicht als
+gültige Session adoptiert, sondern neu erzeugt.
+
+### Decompilation
+
+Die Decompilation wird hinter einer kleinen Adaptergrenze gekapselt. Die konkrete
+ILSpy-/ICSharpCode.Decompiler-API darf nicht in allen Roslyn-Tools auftauchen.
+
+```csharp
+internal sealed record DecompilationRequest(
+    string AssemblyPath,
+    string CacheDirectory,
+    string DecompilerVersion,
+    CancellationToken CancellationToken);
+
+internal sealed record DecompilationResult(
+    IReadOnlyList<DecompiledDocument> Documents,
+    IReadOnlyList<string> Warnings,
+    IReadOnlyList<string> Errors,
+    bool IsComplete);
+
+internal sealed record DecompiledDocument(
+    string GeneratedPath,
+    string TypeMetadataName,
+    string CSharpSource,
+    string? MetadataToken);
+```
+
+Der Adapter soll nach Möglichkeit die vorhandene manuelle Decompiler-Logik oder deren
+bewährte Einstellungen wiederverwenden. Er darf die DLL nicht laden oder ausführen.
+Ein Timeout und eine Cancellation-Grenze sind erforderlich, damit eine problematische
+oder obfuskierte Assembly den Daemon nicht dauerhaft blockiert.
+
+### Synthetisches Roslyn-Project
+
+Die Assembly-Session baut nach erfolgreicher oder partiell erfolgreicher Decompilation
+ein `AdhocWorkspace`-Project. Das Project ist kein MSBuild-Projekt und benötigt keine
+`.csproj`-Datei.
+
+```csharp
+var projectId = ProjectId.CreateNewId("decompiled-assembly");
+var projectInfo = ProjectInfo.Create(
+    projectId,
+    VersionStamp.Create(),
+    name: assemblyIdentity.Name,
+    assemblyName: assemblyIdentity.Name,
+    language: LanguageNames.CSharp,
+    filePath: generatedProjectPath,
+    compilationOptions: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary),
+    metadataReferences: references);
+
+var solution = workspace.AddProject(projectInfo).Solution;
+foreach (var document in decompiledDocuments)
+{
+    solution = solution.AddDocument(
+        DocumentId.CreateNewId(projectId),
+        Path.GetFileName(document.GeneratedPath),
+        SourceText.From(document.CSharpSource, Encoding.UTF8),
+        filePath: document.GeneratedPath);
+}
+```
+
+Die tatsächliche Erzeugung soll einen passenden `ParseOptions`-/`CompilationOptions`-
+Stand setzen, damit moderne C#-Syntax des Decompilers vom Roslyn-Parser akzeptiert
+wird. Ein Dokument pro Typ oder sinnvoller Decompiler-Einheit erleichtert
+`get_symbol_body`, Dateifundstellen und Source-/Origin-Mapping. Ein einziger großer
+Assembly-Text ist für Folgeabfragen und Antwortlimits ungünstig.
+
+### Referenzauflösung
+
+Die Referenzauflösung bleibt best effort, aber deterministisch und sichtbar:
+
+1. Target-Assembly selbst als `MetadataReference`.
+2. Referenzierte DLLs aus dem Verzeichnis der Target-Assembly.
+3. Framework-Assemblies aus den verfügbaren Trusted Platform Assemblies bzw. einem
+   passend ermittelten Target Framework.
+4. Optional vorhandene, maschinenlesbare Dependency-Informationen wie eine passende
+   `.deps.json`, sofern sie ohne Codeausführung ausgewertet werden kann.
+5. Keine Reflection- oder Runtime-Ausführung zur Auflösung.
+
+Die bestehende Logik aus `AssemblyAnalysisContextFactory` für PEReader,
+Assembly-Identitäten, lokale Abhängigkeiten und `MetadataReference.CreateFromFile`
+ist hierfür wiederverwendbar und wird in einen eigenständigen
+`AssemblyReferenceResolver` überführt.
+
+Unaufgelöste Abhängigkeiten dürfen die Session nicht pauschal verwerfen. Roslyn kann
+den dekompilierten Code teilweise analysieren; die Antwort erhält Diagnosen und den
+Zustand `partial`.
+
+## Staleness und atomarer Session-Wechsel
+
+Die Assembly-Session benötigt eine eigene Variante des bestehenden Datei-Zustands:
+
+```csharp
+internal sealed record AssemblyFileState(
+    DateTime MtimeUtc,
+    long Length,
+    string Sha256,
+    string DecompilerVersion,
+    string CacheKey);
+```
+
+Beim Zugriff:
+
+1. Existenz und mtime/Größe der DLL prüfen.
+2. Bei unveränderten Vorwerten die residente `Solution` verwenden.
+3. Bei Änderungen den SHA-256 neu berechnen.
+4. Bei gleichem Hash nur den bekannten Zustand aktualisieren.
+5. Bei neuem Hash eine neue Cache-/Roslyn-Generation bauen.
+6. Erst nach vollständigem Aufbau die neue Generation unter einem Lock veröffentlichen.
+
+Laufende Leases dürfen auf der alten Generation fertig werden. Eine halbfertige
+Decompilation darf niemals in die von anderen Tool-Aufrufen sichtbare `Solution`
+gelangen. Bei einem Refresh-Fehler bleibt der letzte gute Stand verfügbar und die
+Antwort trägt analog zum bestehenden degradierten Solution-Zustand eine Warnung.
+
+## Roslyn-Parität und Toolsemantik
+
+Der gemeinsame Kern soll für beide Target-Arten dieselben `Solution`-/`Project`-/
+`Document`-/`SemanticModel`-Pipelines verwenden. Die Bedeutung einzelner Tools hat
+aber eine explizite Grenze:
+
+| Toolgruppe | `project` | `assembly` |
+|---|---|---|
+| `find_symbol`, Skeleton, Klassenstruktur | vollständige Solution-/Projektansicht | dekompilierte Typen und Member, inklusive interner Typen sofern erzeugt |
+| `get_symbol_body` | Original-Source-Body | dekompilierter Body mit Origin-Hinweis |
+| `find_references`, `get_call_tree` | Solution-Graph | Graph innerhalb der Assembly; externe Ziele nur als Metadaten-/External-Nodes |
+| `dependency_graph` | Projekt-/Dateiabhängigkeiten | dekompilierte Dokumente und Assembly-Referenzen |
+| Metriken | Quellcode-Documents | dekompilierte Documents, als `origin=decompiled` markiert |
+| `get_violations`, `pattern_detect` | Projektregeln aus der Projektconfig | nur mit explizitem Assembly-Regelprofil oder klar ausgewiesenem Default |
+| Testkontext | Tests der geladenen Solution | `not_available`, sofern kein Test-Target Bestandteil der Session ist |
+| Git-/Change-Impact | Git-Diff und Solution-Kontext | `not_available` für standalone DLLs; kein erfundener Diff |
+| `safeguard` | Quality Gate der Solution | nur, wenn ein definierter Assembly-Scanvertrag existiert |
+
+„Gleich funktionieren“ bedeutet damit: Die Kernabfragen verwenden denselben Roslyn-
+Codepfad und dieselben Symbol-/Result-Modelle. Es bedeutet nicht, dass eine DLL
+nachträglich Git-Historie, Tests oder ursprüngliche Projektregeln besitzt.
+
+### Symbolidentität und Origin
+
+Ein Pfad in einem Cacheordner ist kein ausreichender stabiler Symbolidentifikator.
+Assembly-Symbole benötigen deshalb eine Target-/Generationsherkunft, beispielsweise:
+
+```text
+assembly:<sha256>:T:Vendor.BelegService
+assembly:<sha256>:M:Vendor.BelegService.Save
+```
+
+Die bestehende Roslyn-DocumentationCommentId kann weiterhin als lokaler Symbol-
+Identifikator dienen, muss aber zusammen mit Target-Identität oder Assembly-Origin
+interpretiert werden. Antworten sollen mindestens diese Metadaten liefern:
+
+```json
+{
+  "origin": {
+    "kind": "decompiled",
+    "sourcePath": "D:/Vendor/bar.dll",
+    "contentHash": "8f34...",
+    "generatedPath": ".../source/Vendor/BelegService.cs",
+    "confidence": "medium"
+  }
+}
+```
+
+So kann ein Agent erkennen, dass ein Body dekompiliert wurde, und bei einer später
+geänderten DLL nicht blind eine alte Symbol-ID wiederverwenden.
+
+## Umgang mit den bestehenden Assembly-Tools
+
+`inspect_assembly` und `find_assembly_extensions` werden im harten Schnitt nicht als
+separate metadata-only Parallelwelt erhalten. Sie verwenden künftig den gemeinsamen
+Assembly-Session-Dispatcher und den dekompilierten Roslyn-Graph.
+
+Für `inspect_assembly` bleibt eine assembly-spezifische API sinnvoll, wenn sie die
+Assembly-Identität, Referenzen und den öffentlichen API-Überblick kompakt ausgibt. Sie
+verwendet dann dieselbe Session wie `find_symbol` und `get_class_structure`.
+
+Der heutige optionale Consumer-`projectRoot`-Pfad von `find_assembly_extensions` wird
+nicht als versteckter zweiter Target-Kontext weitergeführt. Ohne Consumer-Target kann
+die Assembly ihre Extensions und Signaturen liefern; die konkrete Anwendbarkeit für
+einen Receiver ist nur dann entscheidbar, wenn der benötigte Receiver-/Referenzkontext
+in der Assembly-Session vorhanden ist. Eine spätere Frage „wo wird diese Extension in
+Projekt X verwendet?“ ist eine explizite Cross-Target-Abfrage und kein Grund, jedes
+Tool mit zwei unklaren Roots zu versehen.
+
+## Fehler-, Sicherheits- und Vertrauensvertrag
+
+### Keine Codeausführung
+
+- Keine `Assembly.Load`, kein `AssemblyLoadContext`, keine Reflection-Ausführung.
+- PEReader, ILSpy-Decompiler und Roslyn-MetadataReferences arbeiten statisch.
+- DLL, PDB, `.deps.json` und benachbarte Referenzen gelten als untrusted input.
+- Decompiler-Aufruf erhält Cancellation, Timeout und Größen-/Komplexitätsgrenzen.
+- Parser-/Decompiler-Ausnahmen werden in einen kontrollierten Sessionfehler oder einen
+  partiellen Zustand übersetzt.
+
+### Vertrauensstufen
+
+Die Antwort sollte zwischen folgenden Fällen unterscheiden:
+
+```text
+complete:        Decompilation und benötigte Referenzen erfolgreich
+partial:         C# erzeugt, aber Referenzen oder Teilbereiche fehlen
+degraded:        letzter guter Stand nach fehlgeschlagenem Refresh
+failed:          kein analysierbarer Roslyn-Stand vorhanden
+```
+
+Die Sprache in Toolbeschreibungen und Antworten muss klar zwischen „dekompiliert“ und
+„Originalquelle“ unterscheiden. Bei transformiertem Compiler-Code, Obfuscation,
+fehlenden PDBs oder dynamischer Reflection können Aussagen unvollständig sein.
+
+## Vorgeschlagene Code-Struktur
+
+```text
+src/AiNetLinter/Mcp/Analysis/
+├── AnalysisTarget.cs
+├── AnalysisTargetResolver.cs
+├── AnalysisRegistry.cs
+├── AnalysisLease.cs
+├── AnalysisSessionState.cs
+└── AnalysisToolCall.cs
+
+src/AiNetLinter/Mcp/Projects/
+├── ProjectAnalysisSession.cs       (Adapter um den bestehenden Project-Server)
+└── ProjectSessionFactory.cs
+
+src/AiNetLinter/Mcp/Assemblies/
+├── AssemblyAnalysisSession.cs
+├── AssemblySessionFactory.cs
+├── AssemblyFingerprint.cs
+├── AssemblyDecompilationCache.cs
+├── AssemblyDecompilationAdapter.cs
+├── AssemblyReferenceResolver.cs
+├── AssemblyOriginMap.cs
+└── AssemblySessionHealth.cs
+```
+
+Die endgültige Ordnerstruktur darf an die aktuelle Toolorganisation angepasst werden.
+Die fachlichen Grenzen sollen aber erhalten bleiben:
+
+- Target-/Lease-/Registry-Code kennt keine ILSpy-Details.
+- Decompiler- und Cache-Code kennt keine Toolnamen wie `find_symbol`.
+- Roslyn-Scanner erhalten eine gemeinsame Session-/Solution-Sicht.
+- Assembly-Health und Cache-Warnungen werden nicht als normale Lint-Violations
+  missbraucht.
+
+## MCP-Registrierung
+
+Statt der aktuellen Form:
+
+```csharp
+async (string projectRoot, ...) =>
+    await ProjectToolCall.ExecuteAsync(registry, projectRoot, ...)
+```
+
+werden die Registrierungen gleichförmig:
+
+```csharp
+async (
+    string targetType,
+    string targetPath,
+    string? symbolIdentifier = null,
+    CancellationToken ct = default) =>
+    await AnalysisToolCall.ExecuteAsync(
+        registry,
+        new AnalysisTargetRequest(targetType, targetPath),
+        lease => FindReferencesTool.ExecuteAsync(
+            lease.Session,
+            symbolIdentifier,
+            ct))
+```
+
+Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
+
+- `targetType=project` für eine Source-Solution;
+- `targetType=assembly` für eine einzelne DLL;
+- für Assemblys ist keine `ainetlinter.project.json` erforderlich;
+- der Agent soll bei einer spontan entdeckten DLL direkt den Assembly-Target-Aufruf
+  verwenden;
+- Ergebnisse können dekompiliert und daher partiell oder interpretiert sein.
+
+## Implementierungsplan
+
+### Schritt 1: Target-Vertrag und zentrale Dispatch-Grenze
+
+- `AnalysisTargetKind`, `AnalysisTargetRequest` und `AnalysisTargetResolver` einführen.
+- `targetType`/`targetPath` in allen betroffenen MCP-Tool-Schemas verbindlich machen.
+- `projectRoot` aus den Tool-Signaturen entfernen.
+- `ProjectToolCall` zu `AnalysisToolCall` umbauen oder als allgemeine Dispatchklasse
+  ersetzen.
+- Projekt-Target zunächst fachlich unverändert über die bestehende
+  `ProjectDefinitionLoader`-/`ProjectRegistry`-Logik laden.
+- Alle vorhandenen Wiring-, Schema- und E2E-Tests auf den neuen Vertrag umstellen.
+
+### Schritt 2: Gemeinsame Session-Sicht
+
+- Gemeinsame `IAnalysisSession`-/Lease-Sicht mit minimaler Oberfläche einführen.
+- Bestehenden `McpCodeGraphServer` als Project-Session adaptieren.
+- Scanner und Resolver, die heute konkret `McpCodeGraphServer` erwarten, auf die
+  gemeinsame Session-Sicht oder einen kleinen `AnalysisSessionContext` umstellen.
+- Keine doppelte projekt- und assemblyspezifische Implementierung derselben Roslyn-
+  Symbol-/Referenzlogik erzeugen.
+
+### Schritt 3: Assembly-Fingerprint und persistenter Decompilation-Cache
+
+- Pfad-, Existenz-, DLL- und Fingerprint-Validierung zentralisieren.
+- Cache-Root und Manifestformat festlegen.
+- SHA-256, Decompiler-Version, Optionen und Cache-Schema in den Cache-Key aufnehmen.
+- Atomare Erstellung, Wiederverwendung, beschädigte Einträge und Cancellation testen.
+
+### Schritt 4: Langlebige Assembly-Session
+
+- `AssemblyAnalysisSession` mit Load-State, Last-Good-State, Diagnostics und Dispose
+  implementieren.
+- Creation Barrier und Assembly-Lease in die Analysis-Registry integrieren.
+- Separate TTL-/LRU-/Kapazitätswerte für Assemblys vorsehen.
+- `get_server_health` um Target-Art, Cache-Key, Hash, Decompilerstatus und Warnungen
+  erweitern.
+
+### Schritt 5: Decompilation und synthetisches Roslyn-Project
+
+- ILSpy-/Decompiler-Adapter mit statischem Resolver und Timeout integrieren.
+- Decompilierte Documents und Origin-Map erzeugen.
+- `AdhocWorkspace`-Project mit deterministischen Parse-/Compilation-Optionen aufbauen.
+- Framework- und Assembly-Referenzen mit der vorhandenen metadata-only Logik verbinden.
+- Decompiler- und Compilation-Diagnosen in einen gemeinsamen partiellen Status überführen.
+
+### Schritt 6: Gemeinsame Toolpfade aktivieren
+
+- Zuerst `find_symbol`, `get_file_skeleton`, `get_class_structure`, `get_symbol_body`,
+  `find_references`, `get_call_tree`, `dependency_graph` und Metriken auf Assembly-
+  Sessions ausführen.
+- Bestehende `inspect_assembly`- und `find_assembly_extensions`-Funktionen auf die
+  gemeinsame Session umstellen.
+- Symbolidentitäten, Generated Paths und Origin-Metadaten in die vorhandenen Result-
+  Modelle integrieren.
+- Danach gezielt Regeln, Violations, Dead Code und Pattern-Tools für Assemblys
+  aktivieren oder mit einem klaren `not_available`-/`context_required`-Vertrag versehen.
+
+### Schritt 7: Dokumentation und Abschlussverifikation
+
+- `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md`, `README.md`,
+  `Docs/ROADMAP.md` und ggf. `Docs/rationale.md` gegen den implementierten Vertrag
+  aktualisieren.
+- Toolbeschreibungen und MCP-Bootstrap auf `targetType`/`targetPath` aktualisieren.
+- Cache-, Sicherheits- und Vertrauensgrenzen dokumentieren.
+- Vollständige nicht-Stress-Testläufe beider Zieltestprojekte sowie `dotnet build`
+  ausführen.
+- Vor Abschluss des größeren Tasks den projektinternen DRY-/Drift-Audit ausführen.
+
+## Teststrategie für die spätere Umsetzung
+
+### Unit-/Component-Tests
+
+- Target-Parsing: gültige und ungültige Kombinationen, absoluter Pfad, falsche DLL-
+  Extension, Verzeichnis als Assembly-Target.
+- `project` lädt weiterhin die Definitionsdatei; `assembly` verlangt sie nicht.
+- Fingerprint erkennt DLL-Änderung, mtime-only Änderung und identische Bytes.
+- Cache-Key ändert sich bei Decompiler-/Schema-Version, nicht bei bloßer Cache-Lesung.
+- Manifest wird bei Teilfehlern nicht als vollständiger Eintrag adoptiert.
+- Decompiler-Warnungen führen zu `partial`, nicht zu stillen Leertreffern.
+- Synthetisches Roslyn-Project liefert SyntaxTree, SemanticModel und Symbolauflösung.
+- Origin-Mapping verweist auf DLL, Hash und generierten Pfad.
+- Keine Testausführung lädt die untersuchte DLL in den Prozess.
+
+### Integration-/MCP-Tests
+
+- Ein unbekannter absoluter DLL-Pfad kann ohne `ainetlinter.project.json` per MCP
+  analysiert werden.
+- Zwei parallele Erstaufrufe erzeugen nur eine Assembly-Session.
+- Ein zweiter Aufruf verwendet den residenten Workspace und dekompiliert nicht erneut.
+- Eine geänderte DLL erzeugt eine neue Generation; laufende alte Leases bleiben gültig.
+- Assembly-Session kann per TTL/LRU entfernt und aus dem Cache erneut aufgebaut werden.
+- Health listet Projekt- und Assembly-Sessions getrennt.
+- Tool-Responses markieren dekompilierte Herkunft und partielle Referenzen.
+- Projekt-Tools mit `targetType=project` und Assembly-Tools mit `targetType=assembly`
+  werden über denselben MCP-Dispatch verifiziert.
+- Bestehende Stress-Tests bleiben ausdrücklich außerhalb der normalen Abschlussläufe.
+
+## Definition of Done
+
+Der Task ist fachlich erfüllt, wenn:
+
+- ein Agent eine unbekannte `bar.dll` direkt als `targetType=assembly` adressieren kann;
+- dafür keine Projektdefinition und keine manuelle Cachepflege erforderlich ist;
+- dieselben zentralen Roslyn-Funktionen für Project- und Assembly-Targets arbeiten;
+- die DLL statisch dekompiliert und als residenter Roslyn-Workspace verfügbar ist;
+- wiederholte Aufrufe Cache und Workspace verwenden;
+- DLL-Änderungen über Fingerprint erkannt und atomar als neue Generation geladen werden;
+- fehlende Abhängigkeiten und Decompilergrenzen sichtbar statt verschluckt werden;
+- keine untersuchte DLL geladen oder ausgeführt wird;
+- Project- und Assembly-Sessions getrennte Lebensdauer-/Kapazitätsbudgets besitzen;
+- Symbol-, Body-, Referenz- und Call-Tree-Antworten ihre dekompilierte Herkunft erkennen
+  lassen;
+- der harte MCP-Vertrag vollständig dokumentiert, getestet und ohne Legacy-Parameter
+  implementiert ist.
+
+## Risiken und Leitplanken
+
+- **Decompiler ist nicht Wahrheit:** Jede Verhaltensaussage aus C# muss als
+  dekompiliert/partiell kenntlich bleiben. Für niedrige Ebenen muss IL als ergänzende
+  Origin- oder Diagnoseansicht verfügbar bleiben.
+- **Abhängigkeitsauflösung:** Ohne Consumer-Projekt können Typen fehlen. Das ist ein
+  sichtbarer partieller Zustand und kein Anlass für stillschweigende Fallback-Symbole.
+- **Speicherverbrauch:** Decompilation plus Roslyn-SemanticModels kann bei vielen DLLs
+  teuer sein. Separate Assembly-Limits, TTL, LRU und Cache-Reuse sind Pflicht.
+- **Problematische Eingaben:** Obfuskierte, beschädigte oder sehr große Assemblys
+  benötigen Timeout, Cancellation und kontrollierte Fehlerpfade.
+- **Linter-Regeln:** Projektregeln und Tests sind nicht automatisch Eigenschaften einer
+  standalone DLL. Regel- und Quality-Gate-Tools brauchen einen expliziten Vertrag.
+- **Symbolstabilität:** Cachepfade und Zeilennummern ändern sich bei neuer Decompilation.
+  Target-Hash und Origin müssen deshalb Teil der Folgeabfrage-Semantik sein.
+- **Architekturdrift:** Die gemeinsame Session-Oberfläche soll klein bleiben. Sie darf
+  nicht zu einer neuen Plugin-Architektur oder einem dynamischen Ladeframework werden.
