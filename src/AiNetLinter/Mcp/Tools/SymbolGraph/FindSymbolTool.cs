@@ -31,7 +31,7 @@ internal static class FindSymbolTool
     /// </summary>
     private static readonly HashSet<string> ValidKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "klasse", "interface", "method", "methode", "property",
+        "class", "klasse", "interface", "method", "methode", "property", "record",
     };
 
     internal const int MaxPatternsPerCall = 10;
@@ -73,7 +73,7 @@ internal static class FindSymbolTool
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 $"Unbekannter kind-Filter '{kind}'.",
-                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property.");
+                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property, Record/record.");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;

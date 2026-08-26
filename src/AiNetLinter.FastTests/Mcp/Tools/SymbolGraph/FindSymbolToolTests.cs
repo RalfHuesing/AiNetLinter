@@ -98,6 +98,23 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_RecordKindFilter_ReturnsRecordsOnly()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greeting"], kind: "record", maxResults: 50, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
+            result.StructuredContent!.Value.GetRawText(),
+            McpJsonOptions.Default);
+        Assert.NotNull(batch);
+        var matches = Assert.Single(batch!.Results).Matches;
+        var match = Assert.Single(matches);
+        Assert.Equal("record", match.Kind);
+        Assert.Contains("GreetingRecord", match.Name, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MultiplePatterns_ReturnsSectionsWithDividers()
     {
         using var fixture = new McpInMemoryTestContext();

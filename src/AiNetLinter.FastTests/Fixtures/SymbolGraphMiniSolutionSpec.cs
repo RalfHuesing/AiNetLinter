@@ -25,6 +25,15 @@ internal static class SymbolGraphMiniSolutionSpec
                 public string Prefix { get; set; } = "Hi";
             }
             """),
+        ("Records.cs", """
+            namespace SymbolGraphMini;
+
+            public class GreetingClass
+            {
+            }
+
+            public record GreetingRecord(string Text);
+            """),
         ("Caller.cs", """
             namespace SymbolGraphMini;
 

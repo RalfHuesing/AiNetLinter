@@ -57,7 +57,8 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
         "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern (auch fuer genau einen Namen; " +
         "Batch loest N sequentielle Calls ab, max. 10 pro Call). Beispiel: namePatterns: [\"Greeter\"], " +
-        "kind: \"Class\". Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien.";
+        "kind: \"Class\" oder \"record\" (auch Methoden, Properties und Interfaces). Bei 0 C#-Treffern " +
+        "Hinweis auf Textfunde in Nicht-C#-Dateien.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
