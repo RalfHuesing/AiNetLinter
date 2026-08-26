@@ -2,10 +2,10 @@
 status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T23:03:18+02:00
+last_updated: 2026-08-26T23:14:21+02:00
 rules_dir: .agents/rules
-total_steps: 2
-current_step: step-002
+total_steps: 3
+current_step: step-003
 ---
 
 # Task State: get-file-tree
@@ -13,12 +13,12 @@ current_step: step-002
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 2
-- **Aktueller Schritt:** `step-002`
+- **Steps gesamt:** 3
+- **Aktueller Schritt:** `step-003`
 - **Roadmap:** aktiv, unverändert
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T23:03:18+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T23:14:21+02:00
 
 ## Steps
 
@@ -26,6 +26,7 @@ current_step: step-002
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
+| step-003 | EPIC-02 | in_progress | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | - | ausstehend | - |
 
 ## Config (optional)
 
