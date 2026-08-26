@@ -2,7 +2,7 @@
 status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T22:12:07+02:00
+last_updated: 2026-08-26T22:36:10+02:00
 rules_dir: .agents/rules
 total_steps: 1
 current_step: step-001
@@ -18,13 +18,13 @@ current_step: step-001
 - **Roadmap:** wird im Roadmap-Modus erstellt
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T22:12:07+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T22:36:10+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
-| step-001 | EPIC-01 | in_progress | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | - | - | - |
+| step-001 | EPIC-01 | blocked | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | ausstehend | 2bd4cb38 |
 
 ## Config (optional)
 
@@ -51,3 +51,11 @@ model_kritiker: nicht festgelegt
 - Korrektur-Kettenbudget und weicher Check-in gemäß Drift-Loop-Spezifikation.
 - Infrastruktur-/Inhalts-Blocker werden nicht eigenmächtig übergangen.
 - Tech-Debt löst keinen automatischen Step aus.
+
+## Aktueller Hinweis
+
+Der Coder meldete einen Inhalts-Blocker im vollständigen Fast-Gate: zwei
+unveränderte Hotspots-Tests erwarten fünf Dokumente, während die vom Nutzer
+gewünschte `find_symbol`-Record-Erweiterung sechs Fixture-Dokumente erzeugt.
+Nach Nutzerklärung bleibt die Record-Erweiterung erhalten; die abgestimmte
+Testannahme wird in einem separaten, gezielten Folgeschritt behandelt.
