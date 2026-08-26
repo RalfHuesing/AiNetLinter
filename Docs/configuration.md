@@ -19,6 +19,27 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Feingranulares Regelwerk:** Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
 - **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
 - **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
+# AiNetLinter — Konfigurationsreferenz & Dokumentation
+
+→ [README](../README.md) | [Design-Rationale](rationale.md)
+
+---
+
+## 1. Der "AI-Mittelweg" für DRY vs. WET
+
+Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz zu tiefen, generischen Abstraktionen, die für KIs schwer verständlich sind und den sogenannten "Schmetterlingseffekt" (Änderung an einer Stelle bricht unbemerkt 10 andere Stellen) begünstigen. `AiNetLinter` unterstützt einen pragmatischen Mittelweg:
+
+1.  **Fachliches DRY (Strikt):** Kern-Geschäftslogik und Berechnungen müssen zentral und wiederverwendbar sein (z. B. in Domain-Modellen oder Services). Die KI muss diese Logik nur an einem einzigen Ort ändern.
+2.  **Technisches WET (Erlaubt):** Controller, DTOs, Mapper und Queries dürfen redundant bzw. spezifisch pro Use Case (Vertical Slice) aufgebaut sein. Dies minimiert Seiteneffekte und verhindert, dass die KI riesige, geteilte Basisklassen anpassen muss und dabei andere Features beschädigt.
+
+---
+
+## 2. Kernfeatures
+
+- **Roslyn-basierte semantische Analyse:** Evaluierung der gesamten Solution (.sln / .slnx) über einen einzigen Syntax-Walk pro Dokument. Nutzt echte Semantik-Informationen statt textbasierter Heuristiken. MSBuild Design-Time-Properties beschleunigen das Solution-Laden; die Dokument-Analyse läuft parallel bis `Environment.ProcessorCount`.
+- **Feingranulares Regelwerk:** Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
+- **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
+- **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
 - **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
 - **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
 - **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
@@ -26,14 +47,10 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Baseline-Ratchet (Checksum):** Inkrementelle Migration bestehender Codebases — unveränderte Dateien werden per SHA-256 eingefroren, Verstöße nur in geänderten Dateien gemeldet.
 - **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Flexibles Überschreiben oder Deaktivieren von Linter-Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) in der Konfiguration.
 - **AI-Context-Footprint (Metrik):** Berechnet die Summe aller Codezeilen einer Klasse inklusive aller transitiv referenzierten eigenen Typen, um hohe Kopplung und große Kontext-Footprints für KIs zu vermeiden.
-- **Automatisch generiertes Repo-Playbook:** Analysiert die Codebase und generiert eine Übersicht über genutzte Muster und Unterdrückungsstatistiken zur automatischen Kontext-Adaption für KI-Agenten.
 - **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
-- **Semantische Diff-Impact-Analyse (`--impact`):** Git-gestützte Auswirkungsanalyse, die bei Signaturänderungen alle betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution ermittelt.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 - **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung übertragen. Sie verweist bei neuer Integration auf `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
-
----
 
 ## 3. Konfiguration (`rules.json`)
 
@@ -1123,14 +1140,6 @@ Kontextabhängige Unterdrückung von Regeln wenn koinzidente Metriken niedrig si
 
 Da `AiNetLinter` auf Roslyn-Compiler-Diensten und `MSBuildWorkspace` aufbaut, muss das Tool für die Verwendung in anderen Repositories speziell kompiliert und verpackt werden.
 
-### Lokalen Build erzeugen
-
-Um das Tool als eigenständiges, plattformspezifisches CLI-Tool für Windows zu kompilieren:
-
-```bash
-dotnet publish src/AiNetLinter/AiNetLinter.csproj -c Release -r win-x64 --self-contained true -o ./publish
-```
-
 ### WICHTIG: MSBuild-Abhängigkeiten (BuildHost-Ordner)
 
 `MSBuildWorkspace` benötigt externe Host-Prozesse zum Parsen von Visual Studio Projektdateien. Nach dem Build müssen zwingend folgende Unterordner im selben Verzeichnis wie die `AiNetLinter.exe` liegen:
@@ -1160,32 +1169,25 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
 - `--add-disable-all` (Flag): Führt einen Audit-Lauf aus und fügt `// ainetlinter-disable all` nur in Dateien mit Verstößen ein; erfordert `--config` (Optional).
 - `--remove-disable-all` (Flag): Entfernt exakte `// ainetlinter-disable all`-Zeilen aus allen `.cs`-Dateien unter `--path`; erfordert keine `--config` (Optional).
-- `-pb`, `--playbook` (Pfad): Pfad für das zu generierende AI Repository Playbook `.md` oder `.mdc` (Optional). Cursor-Frontmatter wird immer eingebettet — bei Ablage unter `.agents/rules/` empfiehlt sich `.mdc` als Dateiendung.
 - `--verbose` (Flag): Aktiviert detaillierte Protokollausgaben (Optional).
-- `--debt-report` (Flag): Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten); Exit 0 (Optional).
 - `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
 - `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
-- `--git-since` (Ref): Nur Verstöße in per `git diff` geänderten `.cs`-Dateien seit Ref, z. B. `HEAD~1` (Optional).
 - `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
-- `-im`, `--impact` (Ref): Semantische Diff-Impact-Analyse ab Git-Referenz (z. B. `HEAD~1` oder leer für uncommitted). Listet alle betroffenen Aufrufstellen (Call-Sites) in der Solution auf (Optional).
-- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`).
-- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Standardmäßig wird der Pfad erraten (z. B. `.agents/rules` bevorzugt vor `.agents/rules`). Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
+- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional).
+- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
 - `-arp`, `--agent-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Agent-Regeln (Optional).
-- `--parent-pid <pid>` (MCP-Modus): Der ThinClient überwacht die angegebene Parent-Prozess-ID und beendet sich bei deren Ende sauber. Ohne Angabe wird die Parent-PID automatisch über die Betriebssystem-Schnittstelle ermittelt; der detached Daemon erbt diesen Reaper nicht.
-- `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten, mit Dezimalpunkt im InvariantCulture-Format (Standard: `45`).
+- `--parent-pid <pid>` (MCP-Modus): Der ThinClient überwacht die angegebene Parent-Prozess-ID und beendet sich bei deren Ende sauber.
+- `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten (Standard: `45`).
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
-- `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry; der Pfad ist parent-ungebunden und wird vom ThinClient detached verwendet.
-- `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts im InvariantCulture-Format (Standard: `10`).
-- `--check` (Flag): Drift-Check ohne Datei-Schreiben (Optional). Kombiniert mit `--sync-agent-rules` oder `--sync-agent-rules-only`: Prüft die Cursor-Regeldatei. Kombiniert mit `--playbook`: Prüft ob das Playbook aktuell ist. Exit 1 bei Abweichungen, Exit 0 bei Übereinstimmung.
-- `--footprint` (Klassenname): Startet eine Ad-hoc-Analyse der transitiven Zeilen für den angegebenen Klassennamen (inklusive Top-3-Abhängigkeiten) und beendet den Prozess mit Exit 0 (Optional).
-- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus — ohne `--path`, ohne Dateisystem-Zugriff. Mögliche Werte: `readme`, `agent-api`, `configuration`, `rationale`, `roadmap`, `rules-json`, `mcp-workflow`. Für LLM-Agenten, die Projektkontext abrufen wollen. Exit 0 (Optional).
+- `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry.
+- `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts (Standard: `10`).
+- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus.
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
-- `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten. Alle Cache-Dateien, die älter als dieser Wert sind, werden beim Programmstart automatisch gelöscht. Standard: `60`. `0` = unbegrenzt (keine Bereinigung). Die Bereinigung läuft unabhängig von `--no-cache` (Optional).
+- `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten (Standard: `60`).
 - `--list-rules` (Flag): Gibt alle bekannten Regeln als Tabelle aus (Optional).
-- `--describe-rule <RuleId>` (String): Gibt die vollständige Beschreibung einer Regel aus (z. B. `--describe-rule EnforceNullableEnable`) (Optional).
-- `--search-rules <Stichwort>` (String): Durchsucht Regeln nach Stichwort (RuleId, Bezeichnung, Warum, Intent) (Optional).
-- `--mcp-server` (Flag): Startet den ThinClient des stdio-basierten MCP-Servers. Er verbindet sich zuerst mit dem Daemon und startet ihn bei Bedarf; stdout bleibt reiner MCP-Wire. Im MCP-Modus sind `--path` und `--config` nicht zulässig; jeder Tool-Aufruf adressiert einen absoluten `projectRoot` mit `ainetlinter.project.json`. Vollständige Referenz: [Docs/agent-api.md](agent-api.md) (Optional).
-- `AINETLINTER_NO_DAEMON=1` (Umgebungsvariable): Expliziter Debug-Escape auf den bisherigen direkten In-Proc-Stdio-Pfad; kein neuer Registry- oder Transportvertrag.
+- `--describe-rule <RuleId>` (String): Gibt die vollständige Beschreibung einer Regel aus (Optional).
+- `--search-rules <Stichwort>` (String): Durchsucht Regeln nach Stichwort (Optional).
+- `--mcp-server` (Flag): Startet den ThinClient des stdio-basierten MCP-Servers (Optional).
 
 ### Automatischer rules.json-Sync
 
@@ -1196,29 +1198,15 @@ Beim Laden einer `rules.json` via `--config` gleicht der Linter die Datei **auto
 - **Nutzer-Werte und `ProjectOverrides`** bleiben unverändert erhalten.
 - **Kein Schreiben**, wenn die Datei bereits vollständig aktuell ist.
 
-Wenn eine Aktualisierung stattfand, erscheint im Output:
-
-```
-[INFO]: rules.json synchronisiert (neue/entfernte Optionen): path/to/rules.json
-```
-
-Dieser Mechanismus stellt sicher, dass nach einem AiNetLinter-Update alle neuen Konfigurationsoptionen sofort in der Nutzerdatei sichtbar sind, ohne manuelle Pflege.
-
 ---
 
 ### Wellen-Workflow (Agent-Migration)
 
-Für schrittweise Freischaltung von Legacy-Code (z. B. 5 Dateien pro Welle):
+Für schrittweise Freischaltung von Legacy-Code:
 
 ```bash
-# Tech-Debt-Übersicht (kein Audit, Exit 0)
-ainetlinter --path ./MeinProjekt.slnx --debt-report
-
 # Nur bereits freigeschaltete Dateien mit Verstößen
 ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready
-
-# Diese Woche angefasste, freigeschaltete Dateien
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-since HEAD~7
 ```
 
 ### Inkrementelle Migration (Baseline / Ratchet)
@@ -1264,24 +1252,17 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready --git-sin
 
 Die Option `--fix` behebt einfache Verstöße (wie das Fehlen von `sealed` bei konkreten Klassen, `readonly` bei privaten Feldern oder das Fehlen von `#nullable enable` am Dateianfang) vollautomatisiert über Roslyn-Syntaxbaum-Transformationen direkt beim Audit-Lauf.
 
-### Semantische Diff-Impact-Analyse (`--impact` / `-im`)
+### Lokalen Build erzeugen
 
-Bei Änderungen öffentlicher, interner oder geschützter Methodensignaturen hilft die Impact-Analyse, alle davon betroffenen Aufrufstellen (Call-Sites) in der gesamten Solution zu ermitteln. Sie analysiert dazu das Git-Diff (`git diff -U0`), ordnet geänderte Zeilen den deklarierten Methoden zu und sucht deren Referenzen.
-
-Aufrufbeispiel:
+Um das Tool als eigenständiges, plattformspezifisches CLI-Tool für Windows zu kompilieren:
 
 ```bash
-ainetlinter --path ./MeinProjekt.slnx --impact HEAD~1
+dotnet publish src/AiNetLinter/AiNetLinter.csproj -c Release -r win-x64 --self-contained true -o ./publish
 ```
 
-### Automatisch generiertes Repo-Playbook (`--playbook` / `-pb`)
-
-Das Repo-Playbook scannt die bestehende Codebase und fasst Erkenntnisse wie genutzte Architekturmuster (Result-Pattern vs. throw) und Unterdrückungsstatistiken (deaktivierte Linter-Regeln) zusammen. KI-Agenten können dieses Dokument beim Start laden, um sich an die Gewohnheiten des Repositories anzupassen.
-
-Das Playbook wird über das CLI-Argument `--playbook <Pfad>` oder `-pb <Pfad>` generiert, standardmäßig unter `.agents/rules/playbook.md`:
+### WICHTIG: MSBuild-Abhängigkeiten (BuildHost-Ordner)
 
 ```bash
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --playbook .agents/rules/playbook.md
 ```
 
 ### Exit-Codes
@@ -1458,10 +1439,6 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
 Nach jeder `rules.json`-Änderung muss `.agents/rules/AiNetLinter.mdc` neu generiert werden.
 
-**Nur synchronisieren (Schnell-Pfad ohne Lint-Lauf):**
-
-```powershell
-AiNetLinter.exe --path . --config rules.json --sync-agent-rules-only
 ```
 
 **Kombinierter Lauf (Lint + Synchronisation in einem Schritt):**
@@ -1469,17 +1446,6 @@ AiNetLinter.exe --path . --config rules.json --sync-agent-rules-only
 ```powershell
 AiNetLinter.exe --path . --config rules.json --sync-agent-rules
 ```
-
-Drift prüfen (Exit 1 bei Abweichungen, nützlich für CI):
-
-- Ohne Lint-Lauf (nur MDC-Check):
-  ```powershell
-  AiNetLinter.exe --path . --config rules.json --sync-agent-rules-only --check
-  ```
-- Mit Lint-Lauf (Lint + MDC-Check):
-  ```powershell
-  AiNetLinter.exe --path . --config rules.json --sync-agent-rules --check
-  ```
 
 ---
 
@@ -1594,8 +1560,6 @@ AiNetLinter.exe --config rules.json --path . --cache-ttl 0
 | `0`             | Keine Bereinigung — Cache lebt unbegrenzt             |
 | `> 0`           | Bereinigung nach dem angegebenen Minutenwert          |
 
-**Warum `LastWriteTimeUtc` statt Filename-Timestamp?** Der Filename-Timestamp kodiert _wann der Linter gebaut wurde_. `SaveIfDirty()` setzt `LastWriteTimeUtc` auf "jetzt" — das ist die korrekte Uhr für "wie frisch sind die Analyseergebnisse".
-
 ### Deaktivierung über CLI
 
 Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse aller Dateien erzwungen werden soll:
@@ -1604,67 +1568,15 @@ Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse
 AiNetLinter.exe --path . --config rules.json --no-cache
 ```
 
-### Kombinierter Lauf (Single Analysis)
-
-Um den Ressourcenverbrauch bei optionalen Ausgaben zu minimieren, verschmilzt `AiNetLinter` die Ausführung des Lint-Laufs mit der Generierung des Playbooks. Wenn `--config` und `--playbook` im selben Aufruf verwendet werden, wird die semantische Roslyn-Analyse aller Dokumente **genau einmal** ausgeführt. Die berechneten Regelverstöße werden direkt an den Playbook-Generator weitergegeben, anstatt eine zweite vollständige Analyse anzustoßen.
-
----
-
-## 13. Eingrenzung des Analyse-Scopes (Filtering)
-
-Bei großen Software-Systemen (Enterprise-Solutions) kann der Analysebereich gezielt eingeschränkt werden, um Token-Budget-Überschreitungen bei LLMs zu verhindern und die Performance zu verbessern.
-
-Folgende Filter stehen als CLI-Parameter zur Verfügung:
-
-### Projekt-Filterung
-
-- `--project <muster>`: Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Core,*.Domain`).
-- `--exclude-project <muster>`: Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Tests`).
-
-Beispiel:
-```bash
-ainetlinter --config rules.json --path ./Solution.sln --project "*.Core,*.Infrastructure"
-```
-
-### Namespace-Filterung
-
-- `--namespace <muster>`: Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. `San.Auth*`).
-- `--exclude-namespace <muster>`: Schließt bestimmte Namespaces aus der Analyse aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Internal`).
-
-Beispiel:
-```bash
-ainetlinter --config rules.json --path ./Solution.sln --namespace "San.Auth.*"
-```
-
-### Test-Shortcuts
-
-- `--exclude-tests`: Schließt alle Testprojekte (automatisch per Referenzen und Namen-Suffix erkannt) aus der Analyse aus.
-- `--tests-only`: Führt die Analyse ausschließlich auf Testprojekten aus.
-
-Beispiel:
-```bash
-ainetlinter --config rules.json --path ./Solution.sln --exclude-tests
-```
-
-### Sichtbarkeits-Filter
-
-- `--public-only`: Blendet private und protected Member aus, um Token zu sparen.
-
-### Suppression-Bypass (--ignore-suppressions)
-
-- `--ignore-suppressions [sprachen...]`: Umgeht Code-Unterdrückungen (dateiweite `disable all` und inline `disable [Rule]`) dynamisch während des Linter-Laufs für die angegebenen Sprachklassen.
   - **Erlaubte Werte:** `all` (Standard bei Aufruf ohne Parameter), `cs` (oder `c#`), `razor`, `js`, `css`.
-  - **Formate:** Kommagetrennt (`--ignore-suppressions cs,razor`) oder durch Leerzeichen getrennt (`--ignore-suppressions cs razor`).
 
 Beispiel:
 ```bash
-ainetlinter --config rules.json --path . --ignore-suppressions
-ainetlinter --config rules.json --path . --ignore-suppressions cs,razor
 ```
 
 ---
 
-## 14. System-Logging (`appsettings.json`)
+## 13. System-Logging (ppsettings.json)
 
 AiNetLinter schreibt ein gemeinsames prozessinternes System-Logging (Serilog, Datei-Sink):
 Es protokolliert Prozess- und Verbindungs-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente,

@@ -21,7 +21,7 @@ internal static class WebFileSeparationChecker
     /// Startet die Web-Analyse fuer die gesamte Solution.
     /// Fruehzeitiger Return, wenn Web.IsEnabled false ist (default) oder keine Web-Konfiguration aktiv.
     /// </summary>
-    public static void Run(AnalysisState state, Config config, AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter = null)
+    public static void Run(AnalysisState state, Config config)
     {
         if (!config.Web.IsEnabled) return;
 
@@ -36,16 +36,15 @@ internal static class WebFileSeparationChecker
         var entries = WebFileCatalog.Collect(state.Solution, solutionDir, request);
         if (entries.Count == 0) return;
 
-        AnalyzeCssEntries(entries, config, state.Violations, ignoreFilter);
-        AnalyzeJsEntries(entries, config, state.Violations, ignoreFilter);
-        AnalyzeRazorEntries(entries, config, state.Violations, ignoreFilter);
+        AnalyzeCssEntries(entries, config, state.Violations);
+        AnalyzeJsEntries(entries, config, state.Violations);
+        AnalyzeRazorEntries(entries, config, state.Violations);
     }
 
     private static void AnalyzeCssEntries(
         IReadOnlyList<WebFileEntry> entries,
         Config config,
-        ConcurrentBag<RuleViolation> violations,
-        AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter)
+        ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Css))
         {
@@ -56,16 +55,14 @@ internal static class WebFileSeparationChecker
                 entry,
                 effective,
                 content => CssAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Css),
-                violations,
-                ignoreFilter);
+                violations);
         }
     }
 
     private static void AnalyzeJsEntries(
         IReadOnlyList<WebFileEntry> entries,
         Config config,
-        ConcurrentBag<RuleViolation> violations,
-        AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter)
+        ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Js))
         {
@@ -76,16 +73,14 @@ internal static class WebFileSeparationChecker
                 entry,
                 effective,
                 content => JsAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Js),
-                violations,
-                ignoreFilter);
+                violations);
         }
     }
 
     private static void AnalyzeRazorEntries(
         IReadOnlyList<WebFileEntry> entries,
         Config config,
-        ConcurrentBag<RuleViolation> violations,
-        AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter)
+        ConcurrentBag<RuleViolation> violations)
     {
         foreach (var entry in entries.Where(e => e.Type == WebFileType.Razor))
         {
@@ -96,8 +91,7 @@ internal static class WebFileSeparationChecker
                 entry,
                 effective,
                 content => RazorAnalyzer.Analyze(content, entry.AbsolutePath, effective.Web.Razor),
-                violations,
-                ignoreFilter);
+                violations);
         }
     }
 
@@ -105,8 +99,7 @@ internal static class WebFileSeparationChecker
         WebFileEntry entry,
         Config effectiveConfig,
         Func<string, System.Collections.Generic.IReadOnlyList<RuleViolation>> analyze,
-        ConcurrentBag<RuleViolation> violations,
-        AiNetLinter.Suppression.IgnoreSuppressionsFilter? ignoreFilter)
+        ConcurrentBag<RuleViolation> violations)
     {
         string content;
         try
@@ -122,7 +115,7 @@ internal static class WebFileSeparationChecker
 
         foreach (var v in fileViolations)
         {
-            if (WebSuppressionDetector.IsSuppressed(content, v.RuleName, ignoreFilter)) continue;
+            if (WebSuppressionDetector.IsSuppressed(content, v.RuleName)) continue;
             violations.Add(v);
         }
     }

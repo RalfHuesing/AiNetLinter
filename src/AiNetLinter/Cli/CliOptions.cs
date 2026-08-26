@@ -10,37 +10,23 @@ namespace AiNetLinter.Cli;
 internal sealed record CliOptions(
     Option<string?> Config,
     Option<string?> Path,
-    Option<string?> Playbook,
     Option<bool> Verbose,
     Option<string?> CreateBaseline,
     Option<string?> Baseline,
     Option<bool> AddDisableAll,
     Option<bool> RemoveDisableAll,
-    Option<bool> DebtReport,
     Option<bool> WaveReady,
     Option<bool> OnlyChanged,
-    Option<string?> GitSince,
     Option<bool> Fix,
-    Option<string?> Impact,
     Option<bool> SyncAgentRules,
     Option<bool> SyncAgentRulesOnly,
     Option<string?> AgentRulesPath,
-    Option<bool> Check,
     Option<bool> NoCache,
     Option<int> CacheTtl,
-    Option<string?> Footprint,
     Option<string?> Docs,
     Option<bool> ListRules,
     Option<string?> DescribeRule,
     Option<string?> SearchRules,
-    Option<string[]> IncludeProjects,
-    Option<string[]> ExcludeProjects,
-    Option<string[]> IncludeNamespaces,
-    Option<string[]> ExcludeNamespaces,
-    Option<bool> ExcludeTests,
-    Option<bool> TestsOnly,
-    Option<bool> PublicOnly,
-    Option<string[]> IgnoreSuppressions,
     Option<bool> McpServer,
     Option<int?> ParentPid,
     Option<decimal?> McpProjectTtlMinutes,
@@ -49,10 +35,9 @@ internal sealed record CliOptions(
     Option<decimal?> McpDaemonIdleExitMinutes);
 
 /// <summary>
-/// Aufgeloeste Output-Optionen (Playbook, Verbose).
+/// Aufgeloeste Output-Optionen (Verbose).
 /// </summary>
 internal sealed record CliOutputOptions(
-    string? PlaybookPath,
     bool Verbose);
 
 /// <summary>
@@ -71,18 +56,10 @@ internal sealed record CliMaintenanceOptions(
     bool RemoveDisableAll);
 
 /// <summary>
-/// Aufgeloeste Scope-Optionen (WaveReady, GitSince).
+/// Aufgeloeste Scope-Optionen (WaveReady).
 /// </summary>
 internal sealed record CliScopeOptions(
-    bool WaveReady,
-    string? GitSince);
-
-/// <summary>
-/// Aufgeloeste Impact-Optionen (HasImpact, ImpactRef).
-/// </summary>
-internal sealed record CliImpactOptions(
-    bool HasImpact,
-    string? ImpactRef);
+    bool WaveReady);
 
 /// <summary>
 /// Vollstaendig aufgeloestes ParsedArgs-Aggregat nach dem CLI-Parse-Schritt.
@@ -94,28 +71,16 @@ internal sealed record CliParsedArgs(
     CliBaselineOptions Baseline,
     CliMaintenanceOptions Maintenance,
     CliScopeOptions Scope,
-    bool DebtReport,
     bool Fix,
-    CliImpactOptions Impact,
     bool SyncAgentRules,
     bool SyncAgentRulesOnly,
     string? AgentRulesPath,
-    bool Check,
     bool NoCache,
     int CacheTtlMinutes,
-    string? Footprint,
     string? Docs,
     bool ListRules,
     string? DescribeRule,
     string? SearchRules,
-    IReadOnlyList<string> IncludeProjects,
-    IReadOnlyList<string> ExcludeProjects,
-    IReadOnlyList<string> IncludeNamespaces,
-    IReadOnlyList<string> ExcludeNamespaces,
-    bool ExcludeTests,
-    bool TestsOnly,
-    bool PublicOnly,
-    IReadOnlyList<string>? IgnoreSuppressions,
     bool McpServer,
     int? ParentPid,
     decimal? McpProjectTtlMinutes,

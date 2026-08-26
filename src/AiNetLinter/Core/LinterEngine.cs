@@ -31,15 +31,12 @@ public sealed class LinterEngine
     private readonly IPerformanceProfiler _profiler;
     private readonly ILintConsole _console;
 
-    private readonly LinterArgs? _args;
-
     internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null, LinterArgs? args = null)
     {
         _config = config;
         _rulesJsonContent = rulesJsonContent;
         _profiler = profiler ?? NullPerformanceProfiler.Instance;
         _console = console ?? LinterConsole.Instance;
-        _args = args;
     }
 
     /// <summary>
@@ -168,7 +165,7 @@ public sealed class LinterEngine
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
         var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
-        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes, _args, _config);
+        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes, _config);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(ct), (item, token) =>
             AnalyzeWorkItemAsync(item, state, cache, projectsNeedingRestore, token));
@@ -179,26 +176,22 @@ public sealed class LinterEngine
         SourceFileCatalog? catalog,
         string? solutionDir,
         IReadOnlyList<string> testSuffixes,
-        LinterArgs? args,
         Config config)
     {
         if (catalog != null)
         {
-            return await catalog.CollectDocumentWorkItemsAsync(args, config);
+            return await catalog.CollectDocumentWorkItemsAsync(config);
         }
 
-        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes, args, config);
+        return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes);
     }
 
     private static async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsFromSolutionAsync(
         Solution solution,
         string? solutionDir,
-        IReadOnlyList<string> testSuffixes,
-        LinterArgs? args,
-        Config config)
+        IReadOnlyList<string> testSuffixes)
     {
         var tasks = solution.Projects
-            .Where(project => args == null || SourceFileCatalog.ShouldIncludeProject(project, args, config))
             .Select(project => CollectProjectDocumentsAsync(project, solutionDir, testSuffixes));
         var results = await Task.WhenAll(tasks);
 
@@ -281,7 +274,7 @@ public sealed class LinterEngine
         var projectHasLoadDiagnostics = projectsNeedingRestore.Contains(document.Project.Id);
         var context = new DocumentContext(filePath, semanticModel, isTestFile, effectiveConfig, document.Project.Name, projectHasLoadDiagnostics);
 
-        var analyzer = new LinterAnalyzer(new AnalyzerArgs(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName, context.ProjectHasLoadDiagnostics), _args);
+        var analyzer = new LinterAnalyzer(new AnalyzerArgs(context.FilePath, context.SemanticModel, context.EffectiveConfig, context.IsTestFile, context.ProjectName, context.ProjectHasLoadDiagnostics));
         analyzer.RunAnalysis();
         CollectAnalyzerResults(analyzer, context, state);
 

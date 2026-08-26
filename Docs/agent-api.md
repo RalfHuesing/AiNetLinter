@@ -38,18 +38,53 @@ ainetlinter --docs rules-json > rules.json
 ```
 Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
 
+# AiNetLinter — Agent-API Referenz
+
+Kompakte Referenz für AI-Agenten. Alle CLI-Flags, Workflows und das strukturierte Error-Format.
+
+---
+
+## Discovery-Commands
+
+Regeln entdecken ohne Lint-Lauf (kein `--path` nötig):
+
+```bash
+# Alle Regeln als Markdown-Tabelle:
+ainetlinter --list-rules
+
+# Eine Regel vollständig beschreiben (Warum, Alternativen, Auto-Fix):
+ainetlinter --describe-rule <RuleId>
+# Beispiel:
+ainetlinter --describe-rule EnforceSealedClasses
+
+# Regeln nach Begriff durchsuchen (RuleId, Beschreibung, Intent):
+ainetlinter --search-rules <Begriff>
+# Beispiele:
+ainetlinter --search-rules "komplexitaet"
+ainetlinter --search-rules "sealed"
+ainetlinter --search-rules "agent"
+
+# Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
+ainetlinter --docs configuration
+```
+
+---
+
+## Lint-Workflows
+
+### Schritt 1: Startkonfiguration holen
+```bash
+ainetlinter --docs rules-json > rules.json
+```
+Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
+
 ### Workflow 1 — Lint + Fix
 
 ```bash
 # Schritt 1: Lint-Lauf
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
 
-# Schritt 2: Violations pruefen, auto-fixbare erkennen ([auto-fix] im Output)
-
-# Schritt 3: Dry-Run des Auto-Fixers (--check kombiniert mit --fix simuliert, ohne Dateien zu schreiben)
-ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix --check
-
-# Schritt 4: Fix anwenden
+# Schritt 2: Fix anwenden
 ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix
 ```
 
@@ -81,14 +116,10 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--baseline <pfad>` | string | Baseline-Datei für Ratchet-Modus. Bei erkannter Checksum-Abweichung wird die Datei automatisch neu geschrieben (kein separater Update-Befehl nötig) |
 | `--create-baseline <pfad>` | string | Neue Baseline anlegen |
 | `--verbose` | bool | Detaillierte Ausgabe aktivieren |
-| `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung). Kombiniert mit `--fix`: simuliert den Auto-Fixer, ohne Dateien zu schreiben (`[DRY-RUN]`-Ausgabe statt tatsächlicher Änderung) |
 | `--add-disable-all` | bool | Fügt `// ainetlinter-disable all` in allen Dateien mit Verstößen ein |
 | `--remove-disable-all` | bool | Entfernt alle `// ainetlinter-disable all`-Zeilen unter `--path` |
-| `--debt-report` | bool | Tech-Debt-Report (Disable-all nach Ordner, wave-ready Kandidaten) |
 | `--wave-ready` | bool | Zeigt nur Verstöße in Dateien ohne `// ainetlinter-disable all` |
 | `--only-changed` | bool | Nur Verstöße in gegenüber der Baseline geänderten Dateien (erfordert `--baseline`) |
-| `--git-since <ref>` | string | Beschränkt die Analyse auf seit `<ref>` geänderte Dateien (Git) |
-| `--footprint <Klasse>` | string | Detaillierte AI-Context-Footprint-Auswertung für eine Klasse (Top-3-Abhängigkeiten) |
 | `--no-cache` | bool | Deaktiviert den Analyse-Cache für diesen Lauf |
 | `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
 | `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
@@ -101,26 +132,6 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
 | `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-workflow; case-insensitive) |
-| `--playbook <pfad>` | string | Repo-Playbook generieren |
-| `--sync-agent-rules` | bool | `.agents/rules/AiNetLinter.mdc` im Rahmen eines Linter-Laufs aktualisieren |
-| `--sync-agent-rules-only` | bool | Nur `.agents/rules/AiNetLinter.mdc` aktualisieren und Programm sofort beenden (schneller Pfad ohne Lint-Lauf) |
-| `--agent-rules-path <pfad>` / `-arp <pfad>` | string | Custom-Pfad (.mdc-Datei oder Verzeichnis) für die Synchronisation der Agent-Regeln (Optional) |
-| `--impact <typ>` | string | Impact-Analyse für einen Typ |
-| `--debt-report` | bool | Tech-Debt-Report generieren |
-| `--check` | bool | Drift-Prüfung (exit 1 bei Abweichung) |
-| `--project <muster>` | string[] | Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Core,*.Domain`) |
-| `--exclude-project <muster>` | string[] | Schließt bestimmte Projekte aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Tests`) |
-| `--namespace <muster>` | string[] | Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt, z. B. `San.Auth*`) |
-| `--exclude-namespace <muster>` | string[] | Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt, z. B. `*.Internal`) |
-| `--exclude-tests` | bool | Shortcut, um alle automatisch erkannten Testprojekte auszublenden |
-| `--tests-only` | bool | Shortcut, um ausschließlich Testprojekte zu analysieren |
-| `--public-only` | bool | Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen |
-| `--ignore-suppressions [sprachen...]` | string[] | Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) umgehen (`all`, `cs`/`c#`, `razor`, `js`, `css`). Default: `all`. |
-
----
-
-## Strukturiertes Error-Format (L9)
-
 Fehlermeldungen sind maschinenlesbar:
 
 ```

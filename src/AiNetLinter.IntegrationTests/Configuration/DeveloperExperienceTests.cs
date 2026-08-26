@@ -16,8 +16,6 @@ using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Configuration;
 
-// @covers RepoPlaybookGenerator
-// @covers PlaybookSyntaxWalker
 // @covers AIContextFootprintCalculator
 // @covers ProjectConfigResolver
 // @covers ConfigLoader
@@ -155,84 +153,6 @@ public sealed class DeveloperExperienceTests
         // Der Code-String hat 10 Zeilen. Da beide Klassen in derselben Datei liegen und DependencyA referenziert wird,
         // wird TargetClass und DependencyA geladen, die in derselben Datei liegen. Die Datei hat 10 Zeilen.
         Assert.Equal(10, linesCount);
-    }
-
-    [Fact]
-    public async Task RepoPlaybookGenerator_ScansAndGeneratesMarkdown()
-    {
-        const string source = """
-            // ainetlinter-disable EnforceSemanticNaming
-            namespace TestNamespace;
-            public class WorkClass
-            {
-                public string GetResult()
-                {
-                    throw new System.Exception();
-                }
-            }
-            """;
-
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var projectInfo = ProjectInfo.Create(projectId, VersionStamp.Create(), "PlaybookProj", "PlaybookProj", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        var docId = DocumentId.CreateNewId(projectId);
-        solution = solution.AddDocument(docId, "WorkClass.cs", source);
-
-        using var tempDir = TestTempDirectory.Create("playbook-");
-        var tempPath = tempDir.GetPath("playbook.md");
-        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath);
-
-        Assert.True(File.Exists(tempPath));
-        var content = File.ReadAllText(tempPath);
-        Assert.Contains("AI Repository Playbook", content);
-        Assert.Contains("EnforceSemanticNaming:** 1 mal deaktiviert.", content);
-        Assert.Contains("Kontrollfluss-Exceptions:** 1", content);
-    }
-
-    [Fact]
-    public async Task RepoPlaybookGenerator_WithAllowedException_FiltersThrowFromMetric()
-    {
-        const string source = """
-            namespace TestNamespace;
-            public class WorkClass
-            {
-                public string GetResult()
-                {
-                    throw new System.ArgumentNullException();
-                }
-            }
-            """;
-
-        var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var projectInfo = ProjectInfo.Create(projectId, VersionStamp.Create(), "PlaybookProj", "PlaybookProj", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        var docId = DocumentId.CreateNewId(projectId);
-        solution = solution.AddDocument(docId, "WorkClass.cs", source);
-
-        var config = TestHelper.CreateDefaultConfig() with
-        {
-            Global = new GlobalConfig
-            {
-                AllowedExceptions = new[] { "ArgumentNullException" }
-            },
-        };
-
-        using var tempDir = TestTempDirectory.Create("playbook-");
-        var tempPath = tempDir.GetPath("playbook.md");
-        await RepoPlaybookGenerator.GenerateAsync(solution, tempPath, new PlaybookOptions(Config: config));
-
-        Assert.True(File.Exists(tempPath));
-        var content = File.ReadAllText(tempPath);
-        // Since ArgumentNullException is allowed, the throws count should be 0.
-        Assert.Contains("Kontrollfluss-Exceptions:** 0", content);
     }
 
     [Fact]

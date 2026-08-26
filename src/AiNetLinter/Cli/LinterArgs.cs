@@ -16,8 +16,6 @@ public sealed class LinterArgs
     /// </summary>
     public required bool Verbose { get; init; }
 
-    public string? PlaybookPath { get; init; }
-
     public string? CreateBaselinePath { get; init; }
 
     public string? BaselinePath { get; init; }
@@ -35,31 +33,14 @@ public sealed class LinterArgs
     public bool RemoveDisableAll { get; init; }
 
     /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob ein Bericht ueber die technische Schuld ausgegeben werden soll.
-    /// </summary>
-    public bool DebtReport { get; init; }
-
-    /// <summary>
     /// Holt oder setzt einen Wert, der angibt, ob die Analyse im Wave-Ready-Modus ausgefuehrt werden soll.
     /// </summary>
     public bool WaveReady { get; init; }
-
-    public string? GitSince { get; init; }
 
     /// <summary>
     /// Holt oder setzt einen Wert, der angibt, ob gefundene einfache Verstoesse automatisch behoben werden sollen.
     /// </summary>
     public bool Fix { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob eine semantische Diff-Impact-Analyse ausgefuehrt werden soll.
-    /// </summary>
-    public bool HasImpact { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt die optionale Git-Referenz, die fuer die Diff-Impact-Analyse genutzt wird.
-    /// </summary>
-    public string? ImpactRef { get; init; }
 
     /// <summary>
     /// Holt oder setzt einen Wert, der angibt, ob Agent-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
@@ -77,11 +58,6 @@ public sealed class LinterArgs
     public string? AgentRulesPath { get; init; }
 
     /// <summary>
-    /// Gibt an, ob nur auf Drift geprueft werden soll, ohne Dateien zu schreiben (gilt fuer --fix, --sync-agent-rules und --playbook).
-    /// </summary>
-    public bool Check { get; init; }
-
-    /// <summary>
     /// Deaktiviert den Analyse-Cache (erzwingt vollständige Neu-Analyse aller Dateien).
     /// </summary>
     public bool NoCache { get; init; }
@@ -90,8 +66,6 @@ public sealed class LinterArgs
     /// Cache-Lebensdauer in Minuten. 0 = unbegrenzt. Standard: 60.
     /// </summary>
     public int CacheTtlMinutes { get; init; } = 60;
-
-    public string? Footprint { get; init; }
 
     public string? Docs { get; init; }
 
@@ -103,46 +77,6 @@ public sealed class LinterArgs
     public string? DescribeRule { get; init; }
 
     public string? SearchRules { get; init; }
-
-    /// <summary>
-    /// Filtert die Analyse auf bestimmte Projektnamen (kommagetrennt, Glob-Muster erlaubt).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> IncludeProjects { get; init; } = [];
-
-    /// <summary>
-    /// Schließt bestimmte Projekte von der Analyse aus (kommagetrennt, Glob-Muster erlaubt).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> ExcludeProjects { get; init; } = [];
-
-    /// <summary>
-    /// Filtert die Analyse auf bestimmte C#-Namespaces (kommagetrennt, Glob-Muster erlaubt).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> IncludeNamespaces { get; init; } = [];
-
-    /// <summary>
-    /// Schließt bestimmte Namespaces aus (kommagetrennt, Glob-Muster erlaubt).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> ExcludeNamespaces { get; init; } = [];
-
-    /// <summary>
-    /// Shortcut, um alle automatisch erkannten Testprojekte auszublenden.
-    /// </summary>
-    public bool ExcludeTests { get; init; }
-
-    /// <summary>
-    /// Shortcut, um ausschließlich Testprojekte zu analysieren.
-    /// </summary>
-    public bool TestsOnly { get; init; }
-
-    /// <summary>
-    /// Blendet private und protected Member in Maps (wie skeleton) aus, um Token zu sparen.
-    /// </summary>
-    public bool PublicOnly { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt die Sprachen, für die Suppressions während der Analyse ignoriert werden sollen (null = nicht aktiv).
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string>? IgnoreSuppressions { get; init; }
 
     /// <summary>
     /// Gibt an, ob statt eines Batch-Laufs ein stdio-basierter MCP-Server (Model Context Protocol) gestartet werden soll.
@@ -178,35 +112,6 @@ public sealed class LinterArgs
     public int? ParentPid { get; init; }
 
     /// <summary>
-    /// Liefert die normalisierten und kanonischen Sprach-Identifier für --ignore-suppressions (z. B. 'c#' -> 'cs').
-    /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> GetNormalizedIgnoreSuppressions()
-    {
-        if (IgnoreSuppressions == null || IgnoreSuppressions.Count == 0) return System.Array.Empty<string>();
-
-        var set = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        foreach (var item in IgnoreSuppressions)
-        {
-            if (string.IsNullOrWhiteSpace(item)) continue;
-            var token = item.Trim().ToLowerInvariant();
-            if (token == "c#") token = "cs";
-            set.Add(token);
-        }
-
-        if (set.Contains("all"))
-        {
-            return new[] { "all" };
-        }
-
-        var result = new System.Collections.Generic.List<string>();
-        foreach (var lang in new[] { "cs", "razor", "js", "css" })
-        {
-            if (set.Contains(lang)) result.Add(lang);
-        }
-        return result;
-    }
-
-    /// <summary>
     /// Validiert Pflicht-Beziehungen zwischen Optionen. Gibt einen Fehlertext zurueck, falls eine Constraint verletzt ist.
     /// </summary>
     public string? Validate()
@@ -237,7 +142,7 @@ public sealed class LinterArgs
             return "[ERROR]: --parent-pid muss eine positive Prozess-ID sein.";
         }
 
-        return ValidateIgnoreSuppressions();
+        return null;
     }
 
     private string? ValidateMcpMode()
@@ -286,21 +191,6 @@ public sealed class LinterArgs
 
     private bool HasStandaloneCommand() =>
         Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart || SyncAgentRulesOnly;
-
-    private string? ValidateIgnoreSuppressions()
-    {
-        if (IgnoreSuppressions == null) return null;
-
-        var allowed = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "all", "cs", "c#", "razor", "js", "css" };
-        foreach (var lang in IgnoreSuppressions)
-        {
-            if (string.IsNullOrWhiteSpace(lang) || !allowed.Contains(lang.Trim()))
-            {
-                return $"[ERROR]: Ungueltige Sprache fuer --ignore-suppressions: '{lang}'. Erlaubte Werte: all, cs, c#, razor, js, css.";
-            }
-        }
-        return null;
-    }
 
     private bool HasConflictingModeOptions()
     {

@@ -11,12 +11,12 @@ using AiNetLinter.Output;
 namespace AiNetLinter.Commands;
 
 /// <summary>
-/// Synchronisiert oder prüft die Agent-Regeldateien (.mdc) aus der aktuellen Konfiguration.
+/// Synchronisiert die Agent-Regeldateien (.mdc) aus der aktuellen Konfiguration.
 /// </summary>
 internal static class SyncAgentRulesCommand
 {
     /// <summary>
-    /// Führt die Agent-Regeln-Synchronisation oder Drift-Prüfung aus.
+    /// Führt die Agent-Regeln-Synchronisation aus.
     /// </summary>
     internal static int Run(LinterArgs args, ILintConsole? console = null)
     {
@@ -34,11 +34,6 @@ internal static class SyncAgentRulesCommand
 
         bool hasBaseline = AgentRulesGenerator.DetectBaselineUsage(baseDir, args.BaselinePath);
         var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json", hasBaseline: hasBaseline);
-
-        if (args.Check)
-        {
-            return RunCheck(mdcPath, content, c);
-        }
 
         return RunWrite(agentRulesDir, mdcPath, content, c);
     }
@@ -67,31 +62,6 @@ internal static class SyncAgentRulesCommand
         }
 
         return ConfigLoader.TryLoadConfig(discovered, isRequired: true);
-    }
-
-    private static int RunCheck(string mdcPath, string content, ILintConsole c)
-    {
-        if (!File.Exists(mdcPath))
-        {
-            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ResourceNotFound,
-                "Agent-Regeldatei existiert nicht.",
-                context: mdcPath,
-                hint: "Agent-Regeln mit --sync-agent-rules-only (ohne --check) erzeugen."));
-            return 1;
-        }
-
-        var existing = File.ReadAllText(mdcPath, Encoding.UTF8);
-        if (existing != content)
-        {
-            c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.DriftDetected,
-                "Agent-Regeln stimmen nicht mit der gespeicherten Datei ueberein.",
-                context: mdcPath,
-                hint: "Agent-Regeln mit --sync-agent-rules-only (ohne --check) aktualisieren."));
-            return 1;
-        }
-
-        c.WriteLine("[OK]: Agent-Regeln sind aktuell.");
-        return 0;
     }
 
     private static int RunWrite(string agentRulesDir, string mdcPath, string content, ILintConsole c)

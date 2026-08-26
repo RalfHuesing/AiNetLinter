@@ -7,7 +7,7 @@ namespace AiNetLinter.Core;
 /// <summary>
 /// Ermittelt das Wurzelverzeichnis eines Git-Repositories (Verzeichnis mit <c>.git</c>-Unterordner)
 /// ausgehend von einem Datei- oder Verzeichnispfad — zentraler Helper statt separater Implementierungen
-/// in <see cref="DiffImpactAnalyzer"/> und <see cref="AiNetLinter.Scope.GitChangedFilesResolver"/>.
+/// in <see cref="DiffImpactAnalyzer"/>.
 /// </summary>
 internal static class GitRepositoryLocator
 {

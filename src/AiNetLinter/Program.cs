@@ -95,8 +95,7 @@ public static class Program
 
         if (linterArgs.Docs == null)
         {
-            var ignoreNotice = FormatIgnoreSuppressionsHeaderNotice(linterArgs);
-            Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}{ignoreNotice}");
+            Console.WriteLine($"# Run: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         }
 
         return await ExecuteLinterAsync(linterArgs, cancellationToken).ConfigureAwait(false);
@@ -116,37 +115,22 @@ public static class Program
             ConfigPath = parsed.ConfigPath,
             TargetPath = parsed.TargetPath,
             Verbose = parsed.Output.Verbose,
-            PlaybookPath = parsed.Output.PlaybookPath,
             CreateBaselinePath = parsed.Baseline.CreateBaselinePath,
             BaselinePath = parsed.Baseline.BaselinePath,
             OnlyChanged = parsed.Baseline.OnlyChanged,
             AddDisableAll = parsed.Maintenance.AddDisableAll,
             RemoveDisableAll = parsed.Maintenance.RemoveDisableAll,
             WaveReady = parsed.Scope.WaveReady,
-            GitSince = parsed.Scope.GitSince,
-            DebtReport = parsed.DebtReport,
             Fix = parsed.Fix,
-            HasImpact = parsed.Impact.HasImpact,
-            ImpactRef = parsed.Impact.ImpactRef,
             SyncAgentRules = parsed.SyncAgentRules,
             SyncAgentRulesOnly = parsed.SyncAgentRulesOnly,
             AgentRulesPath = parsed.AgentRulesPath,
-            Check = parsed.Check,
             NoCache = parsed.NoCache,
             CacheTtlMinutes = parsed.CacheTtlMinutes,
-            Footprint = parsed.Footprint,
             Docs = parsed.Docs,
             ListRules = parsed.ListRules,
             DescribeRule = parsed.DescribeRule,
             SearchRules = parsed.SearchRules,
-            IncludeProjects = parsed.IncludeProjects,
-            ExcludeProjects = parsed.ExcludeProjects,
-            IncludeNamespaces = parsed.IncludeNamespaces,
-            ExcludeNamespaces = parsed.ExcludeNamespaces,
-            ExcludeTests = parsed.ExcludeTests,
-            TestsOnly = parsed.TestsOnly,
-            PublicOnly = parsed.PublicOnly,
-            IgnoreSuppressions = parsed.IgnoreSuppressions,
             McpServer = parsed.McpServer,
             DaemonStart = parsed.DaemonStart,
             ParentPid = parsed.ParentPid,
@@ -164,19 +148,11 @@ public static class Program
         var validationError = ValidateArgs(args);
         if (validationError.HasValue) return validationError.Value;
 
-        if (args.Check && args.PlaybookPath != null) return await PlaybookCheckCommand.RunAsync(args, ct);
-
         // Schneller Pfad: --sync-agent-rules-only.
         if (args.SyncAgentRulesOnly) return SyncAgentRulesCommand.Run(args);
 
-        if (args.Footprint != null) return await FootprintCommand.RunAsync(args, ct);
-
         var maintenanceResult = await MaintenanceCommand.TryRunAsync(args, ct);
         if (maintenanceResult.HasValue) return maintenanceResult.Value;
-
-        if (args.DebtReport) return await DebtReportCommand.RunAsync(args, ct);
-
-        if (args.HasImpact) return await ImpactCommand.RunAsync(args, ct);
 
         return await AuditCommand.RunAsync(args, ct);
     }
@@ -199,12 +175,5 @@ public static class Program
             return 1;
         }
         return null;
-    }
-
-    private static string FormatIgnoreSuppressionsHeaderNotice(LinterArgs args)
-    {
-        var normalized = args.GetNormalizedIgnoreSuppressions();
-        if (normalized.Count == 0) return "";
-        return $" [Ignore-Suppressions: {string.Join(", ", normalized)}]";
     }
 }

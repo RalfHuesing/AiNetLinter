@@ -66,43 +66,6 @@ public sealed class CliFixtureIntegrationTests
         Assert.True(File.Exists(expectedMdcPath), $"MDC-Datei wurde nicht erzeugt unter: {expectedMdcPath}");
     }
 
-    [Fact]
-    public async Task GeneratePlaybook_WithCheckFlag_ReturnsOkWhenUpToDate()
-    {
-        using var workspace = new BaselineMiniFixtureWorkspace();
-        using var tempDir = TestTempDirectory.Create("fixture-pb-");
-        var tempPlaybookPath = tempDir.GetPath("playbook.md");
-
-        // Erst generieren
-        var genArgs = new LinterArgs
-        {
-            TargetPath = workspace.RootPath,
-            Verbose = false,
-            ConfigPath = workspace.ConfigPath,
-            PlaybookPath = tempPlaybookPath,
-        };
-        var genConsole = new RecordingLintConsole();
-        var genExitCode = await AuditCommand.RunAsync(genArgs, default, genConsole);
-        Assert.Equal(1, genExitCode); // BaselineMini hat Violations, aber Playbook wird erzeugt
-
-        Assert.True(File.Exists(tempPlaybookPath));
-
-        // Dann prüfen (--check)
-        var checkArgs = new LinterArgs
-        {
-            TargetPath = workspace.RootPath,
-            Verbose = false,
-            ConfigPath = workspace.ConfigPath,
-            PlaybookPath = tempPlaybookPath,
-            Check = true,
-        };
-        var checkConsole = new RecordingLintConsole();
-        var checkExitCode = await PlaybookCheckCommand.RunAsync(checkArgs, default, checkConsole);
-
-        Assert.True(checkExitCode == 0,
-            $"--playbook --check sollte Exit 0 liefern. Output: {checkConsole.OutputText}\nError: {checkConsole.ErrorText}");
-        Assert.Contains("[OK]", checkConsole.OutputText);
-    }
 
     [Fact]
     public async Task RunLinterCli_WithInvalidConfig_ReturnsErrorExitCode()

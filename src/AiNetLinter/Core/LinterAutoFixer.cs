@@ -32,7 +32,7 @@ internal sealed class LinterAutoFixer
         ILintConsole? console = null)
     {
         var baseTypes = await CollectBaseTypesAsync(solution);
-        var context = new FixContext(baseTypes, options.Verbose, options.DryRun, console ?? LinterConsole.Instance);
+        var context = new FixContext(baseTypes, options.Verbose, console ?? LinterConsole.Instance);
         var currentSolution = solution;
         int fixedCount = 0;
 
@@ -104,12 +104,6 @@ internal sealed class LinterAutoFixer
         var oldText = await document.GetTextAsync();
         var newText = await updatedDoc.GetTextAsync();
         if (oldText.ToString() == newText.ToString()) return (solution, 0);
-
-        if (context.DryRun)
-        {
-            context.Console.WriteLine($"[DRY-RUN]: Würde {fixedCount} Fix(es) anwenden auf: {document.Name}");
-            return (solution, fixedCount);
-        }
 
         await File.WriteAllTextAsync(document.FilePath, newText.ToString(), newText.Encoding ?? Encoding.UTF8);
         LogFixApplied(document.Name, context.Verbose, context.Console);
@@ -304,11 +298,10 @@ internal sealed class LinterAutoFixer
     private sealed record FixContext(
         HashSet<INamedTypeSymbol> BaseTypes,
         bool Verbose,
-        bool DryRun,
         ILintConsole Console);
 }
 
 /// <summary>
 /// Optionen für <see cref="LinterAutoFixer.FixAsync"/>.
 /// </summary>
-internal sealed record FixOptions(bool Verbose, bool DryRun = false);
+internal sealed record FixOptions(bool Verbose);

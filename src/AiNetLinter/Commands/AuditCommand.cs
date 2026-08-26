@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -12,11 +11,9 @@ using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Diagnostics;
-using AiNetLinter.Generators;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using AiNetLinter.Scope;
-using AiNetLinter.Suppression;
 
 namespace AiNetLinter.Commands;
 
@@ -66,7 +63,7 @@ internal static class AuditCommand
             profiler.StopPhase("DocumentAnalysis");
 
             profiler.StartPhase("OptionalOutputs");
-            var optionalExitCode = await GenerateOptionalOutputsAsync(currentCatalog2.Solution, ctx, violations);
+            var optionalExitCode = GenerateOptionalOutputs(ctx);
             profiler.StopPhase("OptionalOutputs");
 
             var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
@@ -85,9 +82,8 @@ internal static class AuditCommand
     private static async Task<int> RunAuditWithBaselineAsync(AuditRunContext ctx, SourceFileCatalog catalog, CancellationToken ct)
     {
         var profiler = ctx.Profiler;
-        // Baseline-Pfad bleibt unverändert, um Regressionsrisiken zu vermeiden.
         profiler.StartPhase("OptionalOutputs");
-        var optionalExitCode = await GenerateOptionalOutputsAsync(catalog.Solution, ctx);
+        var optionalExitCode = GenerateOptionalOutputs(ctx);
         profiler.StopPhase("OptionalOutputs");
 
         profiler.StartPhase("AutoFix");
@@ -124,7 +120,7 @@ internal static class AuditCommand
         }
 
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
-        var currentChecksums = catalog.ComputeChecksums(outputRoot, config, args);
+        var currentChecksums = catalog.ComputeChecksums(outputRoot, config);
         var comparison = BaselineComparer.Compare(storedBaseline, currentChecksums);
 
         string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
@@ -143,18 +139,10 @@ internal static class AuditCommand
         return WriteViolationsAndExit(scoped, outputRoot, ctx);
     }
 
-    private static async Task<int> GenerateOptionalOutputsAsync(
-        Solution solution,
-        AuditRunContext ctx,
-        IReadOnlyCollection<RuleViolation>? violations = null)
+    private static int GenerateOptionalOutputs(AuditRunContext ctx)
     {
-        var (args, config, _, c) = ctx;
+        var (args, _, _, c) = ctx;
         int exitCode = 0;
-
-        if (args.PlaybookPath != null)
-        {
-            await TryGeneratePlaybookAsync(solution, args.PlaybookPath, new PlaybookOptions(args.Verbose, config, args.ConfigPath ?? "rules.json", violations), c);
-        }
 
         if (args.SyncAgentRules)
         {
@@ -188,16 +176,7 @@ internal static class AuditCommand
         var engine = new LinterEngine(config, rulesJsonContent, profiler, c, args);
         var initialViolations = await engine.RunAsync(catalog, args.NoCache, args.CacheTtlMinutes, ct);
         var (fixedCount, updatedSolution) = await LinterAutoFixer.FixAsync(
-            catalog.Solution, initialViolations, new FixOptions(args.Verbose, args.Check), c);
-
-        if (args.Check)
-        {
-            if (fixedCount > 0)
-            {
-                c.WriteLine($"[DRY-RUN]: {fixedCount} einfache Regelverstoesse wuerden automatisch behoben.");
-            }
-            return (catalog, false);
-        }
+            catalog.Solution, initialViolations, new FixOptions(args.Verbose), c);
 
         if (fixedCount > 0)
         {
@@ -208,42 +187,17 @@ internal static class AuditCommand
         return (catalog, false);
     }
 
-    private static async Task TryGeneratePlaybookAsync(
-        Solution solution,
-        string playbookPath,
-        PlaybookOptions options,
-        ILintConsole c)
-    {
-        try
-        {
-            if (options.Verbose)
-            {
-                c.WriteLine($"[INFO]: Generiere Repo-Playbook unter: {playbookPath}");
-            }
-            await RepoPlaybookGenerator.GenerateAsync(solution, playbookPath, options);
-        }
-        catch (Exception ex)
-        {
-            c.WriteError($"[ERROR]: Fehler beim Generieren des Repo-Playbooks: {ex.Message}");
-        }
-    }
-
     private static IReadOnlyCollection<RuleViolation> ApplyScopeFilters(
         IReadOnlyCollection<RuleViolation> violations,
         LinterArgs args,
         string outputRoot,
         IReadOnlyCollection<string> onlyChangedFiles)
     {
-        var gitFiles = args.GitSince != null
-            ? GitChangedFilesResolver.ResolveSince(args.TargetPath, args.GitSince)
-            : [];
-
         var changedFiles = args.OnlyChanged ? onlyChangedFiles : [];
 
         return ViolationScopeFilter.Apply(violations, new ViolationScopeOptions
         {
             WaveReady = args.WaveReady,
-            GitChangedFiles = gitFiles,
             OnlyChangedFiles = changedFiles,
         }, outputRoot);
     }

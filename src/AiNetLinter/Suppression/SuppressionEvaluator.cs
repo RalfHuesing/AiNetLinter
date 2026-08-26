@@ -14,19 +14,9 @@ public static class SuppressionEvaluator
     /// <param name="fileContent">Der gesamte Inhalt der Datei als Zeichenkette.</param>
     /// <param name="ruleName">Der Name der zu prüfenden Regel.</param>
     /// <param name="lineNumber">Die Zeilennummer des Verstoßes.</param>
-    /// <param name="ignoreSuppressions">Optionale Liste von zu ignorierenden Sprachen (z. B. "cs", "all").</param>
     /// <returns>True, wenn der Verstoß unterdrückt ist; andernfalls False.</returns>
-    public static bool IsSuppressed(string fileContent, string ruleName, int lineNumber, System.Collections.Generic.IReadOnlyList<string>? ignoreSuppressions = null)
+    public static bool IsSuppressed(string fileContent, string ruleName, int lineNumber)
     {
-        if (ignoreSuppressions != null && ignoreSuppressions.Count > 0)
-        {
-            var filter = new IgnoreSuppressionsFilter(ignoreSuppressions);
-            if (filter.ShouldIgnoreSuppression("cs"))
-            {
-                return false;
-            }
-        }
-
         var lines = fileContent.Split('\n');
 
         foreach (var line in lines)
@@ -44,10 +34,4 @@ public static class SuppressionEvaluator
 
         return SuppressionCommentParser.MatchesRule(lines[lineNumber - 1], ruleName);
     }
-
-    /// <summary>
-    /// Prüft, ob ein Verstoß für die angegebene Regel unterdrückt ist unter Berücksichtigung eines Bypass-Filters.
-    /// </summary>
-    public static bool IsSuppressed(string fileContent, string ruleName, int lineNumber, IgnoreSuppressionsFilter? ignoreFilter) =>
-        IsSuppressed(fileContent, ruleName, lineNumber, ignoreFilter?.ActiveLanguages);
 }

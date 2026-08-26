@@ -12,7 +12,6 @@ namespace AiNetLinter.FastTests.Configuration;
 // @covers TestCoverageResolver
 // @covers TestCoverageCollector
 // @covers PartialClassLineAggregator
-// @covers GitChangedFilesResolver
 [Trait("Category", "Unit")]
 public sealed class AgentFeaturesTests
 {
@@ -179,7 +178,6 @@ public sealed class AgentFeaturesTests
         _ = typeof(TestCoverageResolver);
         _ = typeof(TestCoverageCollector);
         _ = typeof(PartialClassLineAggregator);
-        _ = typeof(GitChangedFilesResolver);
 
         var index = new TestCoverageIndex();
         index.AddReferencedType("CircuitAiChatHubClient");

@@ -93,8 +93,7 @@ internal static class GetFileSkeletonTool
             return null;
         }
 
-        var args = new LinterArgs { TargetPath = "", Verbose = false };
-        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document, solutionDir, args, ct);
+        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document, solutionDir, ct);
 
         var fileWarning = McpCompileDiagnostics.FormatFileWarning(
             diagnosticsByFile.GetValueOrDefault(absolutePath, []));

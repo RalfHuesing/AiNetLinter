@@ -487,7 +487,7 @@ internal sealed record CallSiteEntry(string FilePath, int Line, string SymbolNam
 /// <summary>
 /// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest
 /// werden konnte (Tippfehler, geloeschter Branch, unbekannte Commit-Ref). Getrennt von einem
-/// leeren-aber-validen Diff, damit Aufrufer (CLI <c>--impact</c>, MCP <c>get_impact</c>) einen
+/// leeren-aber-validen Diff, damit Aufrufer (MCP <c>get_impact</c>) einen
 /// falschen gitRef nicht mit "keine Aenderungen" verwechseln.
 /// </summary>
 internal sealed class GitDiffFailedException(string gitRef, string gitStdErr) : Exception(gitStdErr)

@@ -1,118 +1,35 @@
 #nullable enable
 
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
-using AiNetLinter.Baseline;
 using AiNetLinter.Output;
-using AiNetLinter.Configuration;
-using AiNetLinter.Cli;
 
 namespace AiNetLinter.Maps.Skeleton;
 
 /// <summary>
-/// Lädt eine Solution via MSBuildWorkspace und erzeugt eine Skeleton Map für LLM-Audits.
+/// Extrahiert Skeleton-Informationen für Dokumente.
 /// </summary>
 internal static class SkeletonMapBuilder
 {
-    internal static async Task<int> BuildAsync(
-        string targetPath,
-        Config config,
-        ILintConsole console,
-        LinterArgs args,
-        CancellationToken ct = default)
-    {
-        using SourceFileCatalog catalog = await SourceFileCatalog.LoadAsync(targetPath, ct);
-        var solutionPath = catalog.Solution.FilePath ?? targetPath;
-        return await BuildAsync(
-            catalog.Solution,
-            new SkeletonMapBuildRequest(solutionPath, config, console, args),
-            ct);
-    }
-
-    internal static async Task<int> BuildAsync(
-        Solution solution,
-        SkeletonMapBuildRequest request,
-        CancellationToken ct = default)
-    {
-        var solutionDir = Path.GetDirectoryName(request.SolutionPath);
-        if (string.IsNullOrEmpty(solutionDir))
-        {
-            solutionDir = Directory.GetCurrentDirectory();
-        }
-        var types = await ExtractTypesAsync(solution, solutionDir, request.Args, request.Config, ct);
-
-        var markdown = SkeletonMarkdownRenderer.Render(types, request.SolutionPath, DateTimeOffset.Now);
-        request.Console.WriteLine(markdown);
-        return 0;
-    }
-
-    private static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractTypesAsync(
-        Solution solution,
-        string solutionDir,
-        LinterArgs args,
-        Config config,
-        CancellationToken ct)
-    {
-        var allTypes = new System.Collections.Concurrent.ConcurrentBag<SkeletonTypeInfo>();
-        var documents = CollectDocuments(solution, solutionDir, args, config);
-
-        await Parallel.ForEachAsync(documents, new ParallelOptions
-        {
-            MaxDegreeOfParallelism = Environment.ProcessorCount,
-            CancellationToken = ct,
-        }, async (doc, token) =>
-        {
-            var docTypes = await ExtractFromDocumentAsync(doc, solutionDir, args, token);
-            foreach (var t in docTypes)
-                allTypes.Add(t);
-        });
-
-        return [.. allTypes];
-    }
-
-    private static IReadOnlyList<Document> CollectDocuments(Solution solution, string solutionDir, LinterArgs args, Config config)
-    {
-        return solution.Projects
-            .Where(project => SourceFileCatalog.ShouldIncludeProject(project, args, config))
-            .SelectMany(p => p.Documents)
-            .Where(d => SourceFileCatalog.IsValidDocument(d, solutionDir))
-            .ToList();
-    }
-
     /// <summary>
-    /// Extrahiert die Skeleton-Typen eines einzelnen Dokuments. Wird auch von
+    /// Extrahiert die Skeleton-Typen eines einzelnen Dokuments. Wird von
     /// <see cref="AiNetLinter.Mcp.Tools.GetFileSkeletonTool"/> (MCP) fuer die Einzeldatei-Extraktion
-    /// wiederverwendet.
+    /// verwendet.
     /// </summary>
     internal static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
         Document document,
         string solutionDir,
-        LinterArgs args,
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
         var semanticModel = await document.GetSemanticModelAsync(ct);
         if (semanticModel == null) return [];
 
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? document.Name);
-        var walker = new SkeletonSyntaxWalker(
-            semanticModel,
-            relativePath,
-            args.IncludeNamespaces,
-            args.ExcludeNamespaces,
-            args.PublicOnly);
+        var walker = new SkeletonSyntaxWalker(semanticModel, relativePath);
         var root = await semanticModel.SyntaxTree.GetRootAsync(ct);
         walker.Visit(root);
         return walker.Types;
     }
 }
-
-internal sealed record SkeletonMapBuildRequest(
-    string SolutionPath,
-    Config Config,
-    ILintConsole Console,
-    LinterArgs Args);

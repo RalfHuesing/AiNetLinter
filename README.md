@@ -43,10 +43,9 @@ ainetlinter --config rules.json --path .\src\MeinProjekt.slnx
 Der Lauf liefert Exit-Code `0` ohne neue Verstöße und `1`, wenn Verstöße
 gefunden wurden. Weitere CLI-Funktionen sind unter anderem:
 
-- `--fix --check` und `--fix` für die Vorschau und Anwendung einfacher Roslyn-basierter Fixes;
+- `--fix` für die Anwendung einfacher Roslyn-basierter Fixes;
 - `--create-baseline` und `--baseline` für inkrementelle Einführung in bestehenden Code;
-- `--impact` für eine semantische Diff-Impact-Analyse;
-- `--playbook` und `--sync-agent-rules` für aus dem Repository bzw. der Konfiguration erzeugte Agenten-Kontexte;
+- `--sync-agent-rules` und `--sync-agent-rules-only` für aus der Konfiguration erzeugte Agenten-Regeln;
 - `--list-rules`, `--describe-rule` und `--docs` zur Discovery ohne Lint-Lauf.
 
 Parameter, Exit-Codes und vollständige Workflows: [Docs/agent-api.md](Docs/agent-api.md).

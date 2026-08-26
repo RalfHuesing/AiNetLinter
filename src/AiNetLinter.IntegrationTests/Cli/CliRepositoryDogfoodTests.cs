@@ -33,65 +33,7 @@ public sealed class CliRepositoryDogfoodTests
     }
 
     [Fact]
-    public async Task GeneratePlaybook_ForSolution_GeneratesAndUpdatesPlaybook()
-    {
-        var rootDir = SolutionRootLocator.Find();
-        var configPath = Path.Combine(rootDir, "rules.json");
-        using var tempDir = TestTempDirectory.Create("dogfood-pb-");
-        var playbookFile = tempDir.GetPath("playbook.md");
-
-        Assert.True(File.Exists(configPath), $"Konfigurationsdatei nicht gefunden unter: {configPath}");
-
-        var args = new LinterArgs
-        {
-            TargetPath = rootDir,
-            Verbose = false,
-            ConfigPath = configPath,
-            PlaybookPath = playbookFile,
-        };
-        var console = new RecordingLintConsole();
-        var exitCode = await AuditCommand.RunAsync(args, default, console);
-
-        Assert.True(exitCode == 0, $"Linter schlug mit Exit-Code {exitCode} fehl. Output:\n{console.OutputText}\nError:\n{console.ErrorText}");
-        Assert.True(File.Exists(playbookFile), $"Playbook-Datei wurde nicht erzeugt unter: {playbookFile}");
-
-        var content = File.ReadAllText(playbookFile);
-        Assert.Contains("Auto-generiert durch AiNetLinter", content);
-        Assert.Contains("AI Repository Playbook (Auto-Generated)", content);
-    }
-
-    [Fact]
-    public async Task SyncAgentRulesAndPlaybook_Combined_GeneratesBoth()
-    {
-        var rootDir = SolutionRootLocator.Find();
-        var configPath = Path.Combine(rootDir, "rules.json");
-        using var tempDir = TestTempDirectory.Create("dogfood-pb-");
-        var tempPlaybookPath = tempDir.GetPath("playbook.md");
-
-        Assert.True(File.Exists(configPath), $"Config nicht gefunden: {configPath}");
-
-        var args = new LinterArgs
-        {
-            TargetPath = rootDir,
-            Verbose = false,
-            ConfigPath = configPath,
-            SyncAgentRules = true,
-            AgentRulesPath = tempDir.GetPath("AiNetLinter.mdc"),
-            PlaybookPath = tempPlaybookPath,
-        };
-        var console = new RecordingLintConsole();
-        var exitCode = await AuditCommand.RunAsync(args, default, console);
-
-        Assert.True(exitCode == 0,
-            $"Kombinierter Aufruf fehlgeschlagen (Exit {exitCode}).\nOutput: {console.OutputText}\nError: {console.ErrorText}");
-        Assert.True(File.Exists(tempPlaybookPath),
-            $"Playbook wurde nicht erzeugt (P0-Bug). Output: {console.OutputText}");
-        var content = File.ReadAllText(tempPlaybookPath);
-        Assert.Contains("AI Repository Playbook", content);
-    }
-
-    [Fact]
-    public void SyncAgentRulesCheck_CommittedRules_AreInSyncWithRulesJson()
+    public void SyncAgentRules_CommittedRules_AreInSyncWithRulesJson()
     {
         var rootDir = SolutionRootLocator.Find();
         var configPath = Path.Combine(rootDir, "rules.json");
@@ -104,23 +46,17 @@ public sealed class CliRepositoryDogfoodTests
             Verbose = false,
             ConfigPath = configPath,
             SyncAgentRulesOnly = true,
-            Check = true,
         };
         var console = new RecordingLintConsole();
 
         var exitCode = SyncAgentRulesCommand.Run(args, console);
 
-        // Drift-Guard (Dogfooding): Jede rules.json-Aenderung ohne erneuten
-        // `--sync-agent-rules-only`-Lauf laesst diesen Test rot — die committed
-        // .agents/rules/AiNetLinter.mdc bleibt damit garantiert synchron.
         Assert.True(exitCode == 0,
-            $".agents/rules/AiNetLinter.mdc ist nicht mehr aktuell (rules.json geaendert ohne Sync?). " +
-            $"Behebung: dotnet run --project src/AiNetLinter -- --sync-agent-rules-only. " +
-            $"Output: {console.OutputText} Error: {console.ErrorText}");
+            $"Sync schlug fehl (Exit {exitCode}). Output: {console.OutputText} Error: {console.ErrorText}");
     }
 
     [Fact]
-    public void SyncAgentRulesCheck_WithoutConfigPath_DiscoversRulesJsonInTargetDirectory()
+    public void SyncAgentRules_WithoutConfigPath_DiscoversRulesJsonInTargetDirectory()
     {
         var rootDir = SolutionRootLocator.Find();
 
@@ -130,15 +66,11 @@ public sealed class CliRepositoryDogfoodTests
             Verbose = false,
             ConfigPath = null,
             SyncAgentRulesOnly = true,
-            Check = true,
         };
         var console = new RecordingLintConsole();
 
         var exitCode = SyncAgentRulesCommand.Run(args, console);
 
-        // Auto-Discovery-Vertrag: --sync-agent-rules-only ohne --config findet rules.json im
-        // Zielverzeichnis (dokumentierter Aufruf in AGENTS.md) und liefert keine
-        // CONFIG_REQUIRED-Fehlermeldung mehr.
         Assert.True(exitCode == 0,
             $"Sync ohne --config schlug fehl (Exit {exitCode}). Output: {console.OutputText} Error: {console.ErrorText}");
         Assert.DoesNotContain("CONFIG_REQUIRED", console.ErrorText, StringComparison.Ordinal);

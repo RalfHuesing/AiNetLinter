@@ -61,7 +61,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Maschinenlesbare Verträge (Contracts):** Unterstützung strukturierter Typ-Verträge (durch Prüfung von \*ValueObject Suffix)
 - [x] **Traceability-Graphen (Entfernt):** Analyse von Seiteneffekten bei Code-Änderungen (Generierung von Mermaid-Projekt-Abhängigkeitsgraphen)
 - [x] **Static Test Sentinel:** Statische Test-Präsenzprüfung für hochrelevante Codeabschnitte
-- [x] **Granularer Bypass-Modus für Suppressions (`--ignore-suppressions`):** umgesetzt, siehe Epic 12.
+- [x] **Granularer Bypass-Modus für Suppressions (`Suppression-Bypass (historisch)`):** umgesetzt, siehe Epic 12.
 
 ---
 
@@ -126,7 +126,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] **Dateiweites Disable-all (`// ainetlinter-disable all`):** Deaktiviert alle Regeln für eine gesamte Quelldatei.
 - [x] **CLI Bulk-Suppression (`--add-disable-all`):** Fügt den Disable-all-Kommentar nur in Dateien mit Audit-Verstößen ein.
 - [x] **CLI Bulk-Entfernung (`--remove-disable-all`):** Entfernt exakte `// ainetlinter-disable all`-Zeilen per Regex aus allen `.cs`-Dateien unter `--path`.
-- [x] **CLI Granularer Suppression-Bypass (`--ignore-suppressions`):** Dynamisches Umgehen von Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) beim Linter-Lauf mit granularen Sprachfiltern (`all`, `cs`/`c#`, `razor`, `js`, `css`).
+- [x] **CLI Granularer Suppression-Bypass (`Suppression-Bypass (historisch)`):** Dynamisches Umgehen von Code-Unterdrückungen (`disable all` und inline `disable [Rule]`) beim Linter-Lauf mit granularen Sprachfiltern (`all`, `cs`/`c#`, `razor`, `js`, `css`).
 - [x] **Projektbasierte Test-Dateierkennung:** Bestimme Testprojekte dynamisch durch Analyse ihrer referenzierten Test-Assemblies (`xunit`, `nunit` etc.) im MSBuild-Projekt, um fragile Dateipfad-Heuristiken abzulösen.
 - [x] **LLM-optimierte CLI-Textausgabe:** Kompakte, token-effiziente Standardausgabe mit relativem Pfad (Basis `--path`), sortierten Einzeilern, LLM-Anweisungsheader und relativem SARIF-URI statt absoluter `file://`-Pfade.
 - [x] **Parallele Dokument-Analyse & MSBuild Design-Time-Properties:** `MSBuildWorkspace` mit `DesignTimeBuild`/`SkipCompilerExecution` für schnelleres Laden; parallele Roslyn-Analyse aller `.cs`-Dokumente mit thread-sicheren Sammlungen (`ConcurrentBag`/`ConcurrentDictionary`).
@@ -194,9 +194,8 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
 - [x] **OCE-Catch-Allowlist:** `AllowCancellationShutdownCatch` für Host-Shutdown mit `OperationCanceledException` + Filter
 - [x] **Erweiterbare Silent-Catch-Allowlist:** `AllowedSilentCatchExceptionTypes` für projektspezifische Exception-Typen (z. B. Blazor `JSDisconnectedException`)
 - [x] **MaxMethodParameterCount Override-Exemption:** `override`- und Interface-Implementierungen ausgenommen (Signatur nicht änderbar)
-- [x] **MaxMethodParameterCount Accessibility-Differenzierung:** `MaxMethodParameterCountAllowPrivate` (vollständige Ausnahme) und `MaxMethodParameterCountForNonPublic` (relaxiertes Limit) für `private`/`protected` Methoden
-- [x] **Tech-Debt-Report (`--debt-report`):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
-- [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`), `--git-since`
+- [x] **Tech-Debt-Report (historisch):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
+- [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`)
 - [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in rules.json, Intent-Spalte in Summary, SARIF level
 - [x] **Minimal-API-[AsParameters]-Check:** Opt-in via `EnforceMinimalApiAsParameters`
 - [x] **Partial-Class-Aggregation:** `AggregatePartialClassLineCount` summiert Zeilen über partial-Teile
@@ -256,9 +255,9 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Namespace-Abhängigkeiten mit Wildcards:** Glob-Matching für verbotene Namespace-Kopplungen.
 - [x] **Auto-Fixer sealed nested classes:** Erweiterung des automatischen Sealing auf private verschachtelte Klassen.
 - [x] **Agent-Rules Generator Overhaul:** Vollständiges Rendern aller globalen Schalter, Metadaten-Tags und tabellarische Darstellung der `ProjectOverrides`.
-- [x] **Schnellerer Rules-Sync & CLI `--check`:** Direkter Konfigurations-Check und Drift-Erkennung ohne Laden der Solution (Exit 1 bei Abweichung).
-- [x] **Detaillierter Footprint & Debug-CLI:** `--footprint <Klassenname>` mit Auswertung der Top-3 Abhängigkeiten zur RAG-Optimierung.
-- [x] **Repo-Playbook-Generator Erweiterung:** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
+- [x] **Schnellerer Rules-Sync:** Direkter Konfigurations-Sync ohne Laden der Solution.
+- [x] **Detaillierter Footprint:** Auswertung der Top-3 Abhängigkeiten zur RAG-Optimierung.
+- [x] **Repo-Playbook-Generator Erweiterung (historisch):** Frontmatter (`alwaysApply: false`), Migrations-Status, Architektur-Slices und LLM-Prioritäten nach Intent.
 
 ---
 
@@ -395,15 +394,14 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ---
 
-## Epic 32: Globales Projekt- & Namespace-Filtering
+## Epic 32: Globales Projekt- & Namespace-Filtering (historisch)
 
-Einführung von globalen Filter-Parametern zur Eingrenzung des Analyse-Scopes bei großen Software-Systemen.
+Einführung von globalen Filter-Parametern zur Eingrenzung des Analyse-Scopes bei großen Software-Systemen (in Folge-Refactoring bereinigt zugunsten von rules.json ProjectOverrides und MCP Scoping).
 
-- [x] **CLI-Optionen:** Integration der Parameter `--project`, `--exclude-project`, `--namespace`, `--exclude-namespace`, `--exclude-tests`, `--tests-only` und `--public-only` in die CLI-Infrastruktur (`LinterArgs`, `CliOptionFactory`, `CliOptions`, `CliCommandBuilder`, `Program`).
+- [x] **CLI-Optionen:** Integration von Scope-Filtern in die CLI-Infrastruktur (`LinterArgs`, `CliOptionFactory`, `CliOptions`, `CliCommandBuilder`, `Program`).
 - [x] **Projekt- und Testfilterung:** Dynamische Filterung der Projekte in `SourceFileCatalog` und `LinterEngine` bei der Document-Sammlung zur Optimierung von Performance und CI-Zeiten.
 - [x] **Namespace-Filterung:** Dynamischer Ausschluss von C#-Typdeklarationen in Walks & Checks (`LinterAnalyzer`, `SkeletonSyntaxWalker`), um Kontext-Überlastung bei LLMs zu verhindern.
-- [x] **Sichtbarkeits-Filterung:** Filterung nicht-öffentlicher Member bei der Skeleton-Map-Generierung (`--public-only`).
-- [x] **Dokumentation:** Aktualisierung der CLI-Tabellen und Hinzufügen von Scope-Filtering Handbüchern in `agent-api.md`, `configuration.md`, `README.md` und `ROADMAP.md`.
+- [x] **Sichtbarkeits-Filterung:** Filterung nicht-öffentlicher Member bei der Skeleton-Map-Generierung.
 ## Epic 33: Bedingte Baseline-Dokumentation in Agent-Rules (`--sync-agent-rules`)
 
 Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projekt-agnostische Erklärung der Baseline-Mechanik (`--create-baseline`), wenn im Zielprojekt eine Baseline verwendet wird.

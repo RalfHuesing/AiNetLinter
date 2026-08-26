@@ -5,7 +5,7 @@ using AiNetLinter.Suppression;
 namespace AiNetLinter.Scope;
 
 /// <summary>
-/// Filtert Verstöße nach Wellen-Workflow-Kriterien (wave-ready, git, only-changed).
+/// Filtert Verstöße nach Wellen-Workflow-Kriterien (wave-ready, only-changed).
 /// </summary>
 public static class ViolationScopeFilter
 {
@@ -22,12 +22,6 @@ public static class ViolationScopeFilter
         if (options.WaveReady)
         {
             result = result.Where(v => !IsDisableAllFile(v.FilePath));
-        }
-
-        if (options.GitChangedFiles.Count > 0)
-        {
-            var changed = new HashSet<string>(options.GitChangedFiles, StringComparer.OrdinalIgnoreCase);
-            result = result.Where(v => changed.Contains(NormalizeForCompare(v.FilePath, outputRoot)));
         }
 
         if (options.OnlyChangedFiles.Count > 0)
@@ -52,6 +46,5 @@ public static class ViolationScopeFilter
 public sealed record ViolationScopeOptions
 {
     public bool WaveReady { get; init; }
-    public IReadOnlyCollection<string> GitChangedFiles { get; init; } = Array.Empty<string>();
     public IReadOnlyCollection<string> OnlyChangedFiles { get; init; } = Array.Empty<string>();
 }

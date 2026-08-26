@@ -138,31 +138,22 @@ Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar,
 
 Für andere Agent-Hosts (z. B. Cursor: `.cursor/rules/AiNetLinter.mdc`) den Zielpfad über `--agent-rules-path <Verzeichnis-oder-Datei>` setzen — Default ist ausschliesslich `.agents/rules/AiNetLinter.mdc`, es wird kein zweiter Pfad automatisch mitgeschrieben.
 
-Optional: Playbook erzeugen (Repo-Statistik, Migrations-Status):
+Agent-Regeln synchronisieren:
 
-```
---playbook .agents/rules/playbook.md
-```
-
-Drift-Check in CI (ohne Datei zu schreiben):
-
-- Nur Agent-Regeln prüfen (schneller Pfad ohne Lint-Lauf):
+- Nur Agent-Regeln aktualisieren (schneller Pfad ohne Lint-Lauf):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules-only --check
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules-only
   ```
   Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis gesucht.
-- Kombinierter Lauf (Linter-Prüfung + Agent-Regeln prüfen):
+- Kombinierter Lauf (Linter-Prüfung + Agent-Regeln aktualisieren):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules --check
+  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules
   ```
-
-Exit 1 wenn `.agents/rules/AiNetLinter.mdc` veraltet ist oder (im kombinierten Lauf) Code-Verstöße vorliegen.
 
 > [!NOTE]
 > Die generierte Regeldatei enthält bewusst **keinen Versionsstempel** — sie beschreibt die aktiven
-> Regeln, nicht die Generator-Version. Damit entsteht keine Drift durch Release-Bumps, und ein
-> Drift-Check schlägt ausschließlich bei echten Regeländerungen an (das AiNetLinter-Repository
-> sichert dies zusätzlich über einen Dogfood-Integrationstest ab).
+> Regeln, nicht die Generator-Version. Damit entsteht keine Drift durch Release-Bumps (das
+> AiNetLinter-Repository sichert dies zusätzlich über einen Dogfood-Integrationstest ab).
 
 ---
 

@@ -19,25 +19,16 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
     private readonly string _relativePath;
     private readonly List<SkeletonTypeInfo> _types = [];
     private string _currentNamespace = "";
-    private readonly IReadOnlyList<string> _includeNamespaces;
-    private readonly IReadOnlyList<string> _excludeNamespaces;
-    private readonly bool _publicOnly;
 
     public IReadOnlyList<SkeletonTypeInfo> Types => _types;
 
     internal SkeletonSyntaxWalker(
         SemanticModel semanticModel,
-        string relativePath,
-        IReadOnlyList<string> includeNamespaces,
-        IReadOnlyList<string> excludeNamespaces,
-        bool publicOnly)
+        string relativePath)
         : base(SyntaxWalkerDepth.Node)
     {
         _semanticModel = semanticModel;
         _relativePath = relativePath;
-        _includeNamespaces = includeNamespaces;
-        _excludeNamespaces = excludeNamespaces;
-        _publicOnly = publicOnly;
     }
 
     public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
@@ -56,32 +47,32 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
-        if (IsNestedType(node) || !IsNamespaceAllowed()) return;
+        if (IsNestedType(node)) return;
         _types.Add(BuildTypeInfo("class", node));
     }
 
     public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
     {
-        if (IsNestedType(node) || !IsNamespaceAllowed()) return;
+        if (IsNestedType(node)) return;
         var kind = node.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record";
         _types.Add(BuildTypeInfo(kind, node));
     }
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
-        if (IsNestedType(node) || !IsNamespaceAllowed()) return;
+        if (IsNestedType(node)) return;
         _types.Add(BuildTypeInfo("interface", node));
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
-        if (IsNestedType(node) || !IsNamespaceAllowed()) return;
+        if (IsNestedType(node)) return;
         _types.Add(BuildTypeInfo("struct", node));
     }
 
     public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
     {
-        if (IsNestedType(node) || !IsNamespaceAllowed()) return;
+        if (IsNestedType(node)) return;
         var typeSymbol = _semanticModel.GetDeclaredSymbol(node);
         var typeId = typeSymbol.TryGetDocCommentId();
         var members = node.Members
@@ -142,11 +133,6 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
             typeId);
     }
 
-    private bool IsNamespaceAllowed()
-    {
-        return NamespaceFilter.IsNamespaceAllowed(_currentNamespace, _includeNamespaces, _excludeNamespaces);
-    }
-
     private static string? BuildBaseTypesDisplay(TypeDeclarationSyntax node, ISymbol? typeSymbol)
     {
         if (node.BaseList != null)
@@ -158,53 +144,6 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
         return null;
     }
 
-    private static SyntaxTokenList GetModifiers(MemberDeclarationSyntax member)
-    {
-        return member switch
-        {
-            FieldDeclarationSyntax f => f.Modifiers,
-            ConstructorDeclarationSyntax c => c.Modifiers,
-            PropertyDeclarationSyntax p => p.Modifiers,
-            MethodDeclarationSyntax m => m.Modifiers,
-            EventFieldDeclarationSyntax e => e.Modifiers,
-            _ => default
-        };
-    }
-
-    private static bool HasPublicOrInternalModifier(SyntaxTokenList modifiers)
-    {
-        return modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword) || mod.IsKind(SyntaxKind.InternalKeyword));
-    }
-
-    private static bool IsExplicitInterfaceImplementation(MemberDeclarationSyntax member)
-    {
-        if (member is MethodDeclarationSyntax method)
-        {
-            return method.ExplicitInterfaceSpecifier != null;
-        }
-        if (member is PropertyDeclarationSyntax prop)
-        {
-            return prop.ExplicitInterfaceSpecifier != null;
-        }
-        return false;
-    }
-
-    private static bool IsPublicOrInternal(MemberDeclarationSyntax member, SyntaxNode parent)
-    {
-        if (parent is InterfaceDeclarationSyntax)
-        {
-            return true;
-        }
-
-        var modifiers = GetModifiers(member);
-        if (HasPublicOrInternalModifier(modifiers))
-        {
-            return true;
-        }
-
-        return IsExplicitInterfaceImplementation(member);
-    }
-
     private List<SkeletonMemberInfo> ExtractMembers(
         SyntaxNode parent,
         SyntaxList<MemberDeclarationSyntax> members,
@@ -214,11 +153,6 @@ internal sealed class SkeletonSyntaxWalker : CSharpSyntaxWalker
 
         foreach (var member in members)
         {
-            if (_publicOnly && !IsPublicOrInternal(member, parent))
-            {
-                continue;
-            }
-
             var info = member switch
             {
                 FieldDeclarationSyntax f       => BuildFieldInfo(f),

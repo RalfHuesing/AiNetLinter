@@ -33,8 +33,7 @@ public sealed class SkeletonStableIdTests : IDisposable
             .FirstOrDefault(d => (d.FilePath ?? "").EndsWith("Greeter.cs", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(document);
 
-        var args = new LinterArgs { TargetPath = "", Verbose = false };
-        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document!, solutionDir, args, CancellationToken.None);
+        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document!, solutionDir, CancellationToken.None);
 
         var greeter = types.FirstOrDefault(t => t.Name == "Greeter");
         Assert.NotNull(greeter);
