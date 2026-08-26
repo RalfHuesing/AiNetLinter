@@ -11,6 +11,8 @@ open_questions:
   - Verbindliches Modell fuer Assembly-zu-Quellcode-Matches inklusive Versions-/Commit-Nachweis
   - Aufteilung zwischen projektlokaler Konfiguration und globalem Source-/Repository-Register
   - Gitea-Discovery, Klonen, Authentifizierung und Cache-Lebenszyklus fuer bekannte Quellcode-Repositories
+  - Identitaet und Freigabepolicy fuer gemeinsame Source-Snapshots bei dirty/unbuilt Arbeitsstaenden
+  - Alias-/Lease-Modell fuer direkte DLL-Targets, Projektabhaengigkeiten und gemeinsame Roslyn-Snapshots
 ---
 
 # Konzept: Einheitliches Roslyn-Analyseziel für Projekte und dekompilierte Assemblies
@@ -175,6 +177,117 @@ plausibel aussehende, aber zur DLL nicht passende Quelle analysiert wird. Beide 
 enden anschließend in derselben Roslyn-/MCP-Schicht und liefern explizit `origin` und
 `confidence` zurück.
 
+## Brainstorming: Gemeinsame DLLs, Buildpfad und Arbeitszustand
+
+Dieser Abschnitt hält den Praxisfall bewusst nur halb fest. Er ist eine
+Arbeitsannahme für die nächste Überarbeitung und noch keine abschließende
+Konfigurationsentscheidung.
+
+### `projektA` und `core.dll` gleichzeitig bearbeiten
+
+Ein typischer Fall ist:
+
+```text
+Agent 1: projektA.exe analysieren oder ändern
+Agent 2: core.dll / Core-Quellcode analysieren oder ändern
+```
+
+Wenn beide Aufrufe dieselbe Core-Quellversion meinen, sollte `core.dll` im Daemon
+nicht zweimal als voneinander unabhängige Roslyn-Welt materialisiert werden. Dafür
+reicht ein Registry-Key aus dem DLL-Pfad nicht aus. Zusätzlich braucht es eine
+kanonische Source-Snapshot-Identität, beispielsweise:
+
+```text
+Repository-URL + Commit/Tag + Source-Project-Pfad + Target-Framework + Source-Hash
+```
+
+Die direkte Analyse von `core.dll` und die Auflösung von `core.dll` aus `projektA`
+werden dann als zwei Target-Aliase auf denselben Source-Snapshot geführt. Die
+Roslyn-Dokumente und SemanticModels der Core-Quelle können geteilt werden. Der
+Consumer-Kontext von `projektA` bleibt trotzdem separat, weil dort zusätzlich die
+Abhängigkeiten, Konfiguration und Fragen des Projekts A gelten.
+
+Das ist eine wichtige Präzisierung von „einmal im Daemon“: Nicht zwingend die
+vollständige `projektA`-Session und die vollständige Core-Session sind identisch,
+sondern die darunterliegende kanonische Source-/Roslyn-Repräsentation von Core wird
+geteilt. So bleiben Target, Source-Herkunft und Consumer-Kontext getrennt, ohne die
+gleiche Quelle doppelt zu laden.
+
+### Der gemeinsame Buildpfad
+
+Dass alle DLLs in dasselbe Verzeichnis gebaut werden, ist praktisch, darf aber nicht
+als Identität der Quelle interpretiert werden. Das Verzeichnis ist nur der Fundort
+des Artefakts. Für die Zuordnung müssen mindestens kanonischer Pfad, Binary-Hash,
+Assembly-Identität und die ermittelte Source-Snapshot-Identität berücksichtigt werden.
+
+Das schützt insbesondere vor diesem Zustand:
+
+1. `core.dll` wird aus einem unfertigen oder anderen Arbeitsstand in den gemeinsamen
+   Buildpfad geschrieben.
+2. `projektA` löst dieselbe Datei auf und erwartet daraus eine bestimmte Core-Version.
+3. Ein weiterer Agent sieht nur den Pfad und würde fälschlich annehmen, die Quelle sei
+   eindeutig.
+
+Der Daemon sollte bei jeder relevanten Änderung des Artefakts den Binary-Fingerprint
+   prüfen. Ein geänderter Buildoutput darf keinen alten Source-Match weiterverwenden.
+Wenn Binary und Source-Snapshot nicht nachweisbar zusammengehören, ist ein sichtbarer
+   `mismatch`-/`partial`-Zustand besser als eine stillschweigend gemeinsam genutzte,
+   falsche Roslyn-Quelle.
+
+### Uncommitted Source und nicht gebauter Arbeitsstand
+
+Ein direkt bearbeiteter Core-Checkout kann Änderungen enthalten, die noch nicht
+gebaut oder committed wurden. In diesem Zustand gibt es ohne Buildmanifest oder
+zusätzlichen Nachweis keine sichere Verbindung zwischen dem aktuellen Quelltext und
+der DLL im gemeinsamen Buildpfad. Das Konzept sollte diesen Fall nicht durch
+Heuristiken „lösen“.
+
+Als praktische Arbeitsregel bietet sich an:
+
+- Der kanonische, zwischen Projekten teilbare Source-Snapshot ist ein sauberer,
+  synchronisierter Commit.
+- Ein dirty oder nicht gebauter Checkout ist ein lokaler, instabiler Arbeitsstand und
+  darf nicht still mit einer DLL oder einer anderen Session vereinigt werden.
+- Wenn ein Agent diesen Zustand trotzdem analysiert, muss die Antwort den dirty bzw.
+  nicht verifizierten Ursprung sichtbar machen; ein Fehlschlag oder Fallback auf die
+  tatsächliche DLL-Decompilation ist akzeptabel.
+
+Damit wird nicht verhindert, dass parallel an `core.dll` gearbeitet wird. Es wird nur
+vermieden, dass der Daemon aus einem zufälligen gemeinsamen Buildoutput eine falsche
+Identität konstruiert. Für den normalen Arbeitsablauf ist die beabsichtigte Wahrheit:
+Core fertigstellen, committen, nach Gitea synchronisieren und diesen Stand aus den
+anderen Projekten wiederverwenden.
+
+### Gitea als gemeinsame Wahrheit
+
+Wenn `projektA` eine eigene `foo.dll` referenziert, deren Quellcode lokal gerade nicht
+vorhanden ist, kann die Source-Auflösung über das globale Repository-Register den
+passenden Gitea-Eintrag verwenden. Der Quellcode wird dann als definierter Snapshot
+bereitgestellt und in derselben Source-/Roslyn-Registry wiederverwendet wie bei einer
+direkten Analyse von `foo.dll`.
+
+Gitea ist dabei die gemeinsame Quelle für den Quellcode, aber ein Repositoryname
+allein beweist noch nicht, welche DLL-Version dazugehört. Nach Möglichkeit müssen
+Commit/Tag oder ein anderer reproduzierbarer Versionsbezug mitgeführt werden. Falls
+der Arbeitsprozess diese Verbindung bewusst über synchronisierte Commits herstellt,
+ist das eine zulässige organisatorische Vereinfachung; technisch sollte die Antwort
+die verbleibende Sicherheit trotzdem als `confidence` ausweisen.
+
+### Branches als bewusste Grenze
+
+Branches werden in diesem Konzept nicht als eigene Analyse-Dimension modelliert. Die
+stabile Identität ist der konkrete Commit bzw. Source-Snapshot; ein Branchname ist nur
+eine bewegliche Referenz darauf. Das deckt den normalen Ablauf ab, in dem Änderungen
+fertiggestellt, committed und über Gitea synchronisiert werden.
+
+Ein Wechsel zwischen parallelen oder lokalen Branch-Arbeitsständen ist damit kein
+versprochenes Szenario. Der Daemon kann einen neuen Commit als neue Source-Identität
+behandeln oder einen Refresh wegen Dirty-/Mismatch-Zustand ablehnen. Er muss nicht
+versuchen, zwei widersprüchliche Core-Stände automatisch zu verschmelzen oder beim
+Zurückwechseln die vorherige Bedeutung zu erraten. Dieses „geht in diesem Sonderfall
+nicht zuverlässig“ ist eine bewusste Grenze zugunsten eines nachvollziehbaren
+Normalfalls.
+
 ## Kurzentscheidung
 
 Alle Roslyn-orientierten MCP-Tools erhalten in einem harten API-Schnitt ein einheitliches
@@ -246,6 +359,8 @@ aber nicht länger das primäre Modell für Assembly-Tools sein.
   Source-Auflösung und Dekompilations-Fallback.
 - Deterministischer Source-Match mit Assembly-/Projektidentität, Quellcodeversion und
   sichtbarer Match-Confidence.
+- Gemeinsame Source-Snapshot-Registry, damit mehrere Target-Aliase denselben
+  verifizierten Quellstand nur einmal als Roslyn-Quelle materialisieren.
 - Keine Pflicht zur Änderung oder Anlage einer `ainetlinter.project.json` für eine DLL;
   optionale Source-Mappings bleiben möglich.
 - Statische Decompilation ohne Assembly-Ausführung und ohne `AssemblyLoadContext`.
@@ -481,6 +596,13 @@ Ein neuer Assembly-Aufruf darf nicht synchron auf die vollständige Decompilatio
 blockieren. Wie beim bestehenden Solution-Load wird eine Session resident registriert,
 der Load läuft als Task und liefert währenddessen einen stabilen `Loading`-Zustand.
 Mehrere gleichzeitige Aufrufe derselben DLL teilen sich denselben Load.
+
+Die Registry für Target-Leases und die Registry für Source-Snapshots sollten dabei
+konzeptionell getrennt bleiben. Mehrere Targets können auf denselben
+Source-Snapshot-Key zeigen, während ihre Consumer-Kontexte unterschiedliche Leases
+erhalten. Für eine source-backed `core.dll` ist das die Grundlage dafür, dass ein
+direkter Assembly-Aufruf und die Auflösung aus `projektA` dieselben Core-Documents und
+SemanticModels wiederverwenden können.
 
 ## Assembly-Session
 
@@ -938,6 +1060,8 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
 - `project` lädt weiterhin die Definitionsdatei; `assembly` verlangt sie nicht.
 - Source-Match: exakter Commit-/Projekt-Treffer, mehrdeutiger Repositoryname,
   Versionskonflikt, fehlender Treffer und korrekter Fallback auf Dekompilation.
+- Direkter `core.dll`-Aufruf und die Auflösung derselben DLL aus `projektA` verwenden
+  denselben Source-Snapshot und materialisieren Core nicht doppelt.
 - Projektlokale Overrides und globale Source-Einträge werden mit definierter Priorität
   ausgewertet; mehrere Projektroots können denselben Core-Source-Snapshot verwenden.
 - Ein Repository-Treffer ohne konkretes Source-Project oder ohne Versionsnachweis wird
@@ -959,6 +1083,8 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
   und dekompiliert nicht.
 - Mehrere Projekte können eine gemeinsame Core-Quelle referenzieren, ohne die
   Source-Version eines anderen Projekts zu überschreiben.
+- Direkte DLL-Targets und abhängige Projekt-Targets teilen bei identischer
+  Source-Snapshot-Identität die zugrunde liegende Roslyn-Repräsentation.
 - Ein konfiguriertes Gitea-Repository kann reproduzierbar über URL und Commit als
   Source-Snapshot bereitgestellt werden.
 - Zwei parallele Erstaufrufe erzeugen nur eine Assembly-Session.
@@ -979,6 +1105,8 @@ Der Task ist fachlich erfüllt, wenn:
 - dafür keine Projektdefinition und keine manuelle Cachepflege erforderlich ist;
 - eine Assembly bei nachgewiesenem Match aus dem zugehörigen Quellcode und sonst aus
   einer statischen Dekompilation analysiert wird;
+- identische Source-Snapshots über mehrere Target-Aliase nur einmal materialisiert
+  werden, während Consumer-Kontexte getrennt bleiben;
 - Assembly-/Repository-Matches die konkrete Source-Projekt- und Versionsidentität
   berücksichtigen und ihre Evidenz offenlegen;
 - dieselben zentralen Roslyn-Funktionen für Project- und Assembly-Targets arbeiten;
