@@ -2,7 +2,7 @@
 status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T22:55:14+02:00
+last_updated: 2026-08-26T23:03:18+02:00
 rules_dir: .agents/rules
 total_steps: 2
 current_step: step-002
@@ -18,14 +18,14 @@ current_step: step-002
 - **Roadmap:** aktiv, unverändert
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T22:55:14+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T23:03:18+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
-| step-002 | EPIC-01 | done (pending audit) | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | ausstehend | 6854158b |
+| step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
 
 ## Config (optional)
 
@@ -60,5 +60,5 @@ unveränderte Hotspots-Tests erwarten fünf Dokumente, während die vom Nutzer
 gewünschte `find_symbol`-Record-Erweiterung sechs Fixture-Dokumente erzeugt.
 Nach Nutzerklärung bleibt die Record-Erweiterung erhalten; die abgestimmte
 
-Der Gate-Blocker ist durch Step 002 aufgelöst; Step 001 und Step 002 warten
-noch auf die unabhängige Kritikerprüfung.
+Der Gate-Blocker ist durch Step 002 aufgelöst; Step 001 und Step 002 sind
+unabhängig geprüft und approved.
