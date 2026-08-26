@@ -21,9 +21,7 @@ internal static class DocsCommand
         { "roadmap", "Docs/ROADMAP.md" },
         { "rules-json", "rules.json" },
         { "mcp-bootstrap", "Docs/mcp-bootstrap.md" },
-        { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" },
-        // Kompatibilitätsalias für den bisherigen Namen des Bootstrap-Leitfadens.
-        { "mcp-workflow", "Docs/mcp-bootstrap.md" }
+        { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
     };
 
     /// <summary>

@@ -1160,7 +1160,7 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
 - `--daemon-start` (interner MCP-Modus): Startet den Named-Pipe-DaemonHost mit geteilter Projektregistry.
 - `--mcp-daemon-idle-exit-minutes <minuten>` (interner MCP-Modus): Idle-Exit des DaemonHosts (Standard: `10`).
-- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus. Für die MCP-Integration stehen `mcp-bootstrap` (einmaliger Bootstrap) und `mcp-rule` (dauerhafte Agentenregel) bereit; `mcp-workflow` bleibt als Legacy-Alias für `mcp-bootstrap` verfügbar.
+- `--docs <name>` / `-d <name>` (String): Gibt die eingebettete Dokumentation direkt auf stdout aus. Für die MCP-Integration stehen `mcp-bootstrap` (einmaliger Bootstrap) und `mcp-rule` (dauerhafte Agentenregel) bereit.
 - `--no-cache` (Flag): Erzwingt eine vollständige Neu-Analyse aller Dateien (deaktiviert den Analyse-Cache) (Optional).
 - `--cache-ttl` (Minuten): Cache-Lebensdauer in Minuten (Standard: `60`).
 - `--list-rules` (Flag): Gibt alle bekannten Regeln als Tabelle aus (Optional).

@@ -246,8 +246,7 @@ Nach erfolgreicher Einrichtung wird der Bootstrap nicht in jedem Arbeitskontext
 erneut ausgeführt. Die dauerhafte Regel enthält nur die bevorzugte
 MCP-Werkzeugwahl; die autarke CLI-Integration als Test-/CI-Quality-Gate bleibt
 davon getrennt und wird in den vorherigen Abschnitten dieser Anleitung
-beschrieben. `mcp-workflow` bleibt als Legacy-Alias für den Bootstrap-Aufruf
-verfügbar.
+beschrieben.
 
 ### Registrierung im MCP-Host
 

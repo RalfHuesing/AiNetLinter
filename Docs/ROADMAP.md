@@ -454,7 +454,6 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   Registrierung sowie das Kopieren nach `.agents/rules` oder `.cursor/rules`.
 - [x] `ainetlinter --docs mcp-bootstrap` gibt den einmaligen Bootstrap offline
   aus; `ainetlinter --docs mcp-rule` gibt die dauerhaft geladene Regel aus.
-  `mcp-workflow` bleibt als Legacy-Alias für den Bootstrap verfügbar.
 - [x] `ainetlinter://overview?projectRoot=...` ist auf Projektstatus und nächste
   Einstiegspunkte reduziert; Toolschemas bleiben in `tools/list`.
 

@@ -86,7 +86,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-bootstrap, mcp-rule; case-insensitive). 'mcp-bootstrap' erklaert die einmalige MCP-Projektintegration; 'mcp-workflow' bleibt als Legacy-Alias verfuegbar.",
+        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-bootstrap, mcp-rule; case-insensitive). 'mcp-bootstrap' erklaert die einmalige MCP-Projektintegration.",
     };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")

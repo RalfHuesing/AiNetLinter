@@ -27,7 +27,6 @@ public sealed class DocsCommandTests
     [InlineData("rules-json")]
     [InlineData("mcp-bootstrap")]
     [InlineData("mcp-rule")]
-    [InlineData("mcp-workflow")]
     [InlineData("Readme")]
     [InlineData("AGENT-API")]
     [InlineData("Configuration")]
@@ -47,6 +46,25 @@ public sealed class DocsCommandTests
         finally
         {
             Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public void Run_WithRemovedMcpWorkflowName_ReturnsOne()
+    {
+        var originalError = Console.Error;
+        using var writer = new StringWriter();
+        Console.SetError(writer);
+        try
+        {
+            var result = DocsCommand.Run("mcp-workflow");
+
+            Assert.Equal(1, result);
+            Assert.Contains("wurde nicht gefunden", writer.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetError(originalError);
         }
     }
 
@@ -99,7 +117,7 @@ public sealed class DocsCommandTests
             Assert.Contains("- rules-json", output);
             Assert.Contains("- mcp-bootstrap", output);
             Assert.Contains("- mcp-rule", output);
-            Assert.Contains("- mcp-workflow", output);
+            Assert.DoesNotContain("- mcp-workflow", output);
         }
         finally
         {
