@@ -162,7 +162,7 @@ internal static class AssemblyAnalysisService
     {
         var members = type.GetMembers()
             .Where(member => !member.IsImplicitlyDeclared)
-            .Where(member => !IsAccessor(member))
+            .Where(member => !IsAccessor(type, member))
             .Where(member => !publicOnly || IsPublicApi(member))
             .Where(member => Matches(member.Name, memberFilter))
             .Select(ToMemberDto)
@@ -271,11 +271,26 @@ internal static class AssemblyAnalysisService
         _ => member.Kind.ToString().ToLowerInvariant(),
     };
 
-    private static bool IsAccessor(ISymbol member) => member is IMethodSymbol
+    private static bool IsAccessor(INamedTypeSymbol containingType, ISymbol member)
     {
-        MethodKind: MethodKind.PropertyGet or MethodKind.PropertySet or
-            MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise,
-    };
+        if (member is not IMethodSymbol method) return false;
+        if (method.MethodKind is MethodKind.PropertyGet or MethodKind.PropertySet or
+            MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise)
+        {
+            return true;
+        }
+
+        var declaredMemberName = method.Name.StartsWith("get_", StringComparison.Ordinal)
+            || method.Name.StartsWith("set_", StringComparison.Ordinal)
+            || method.Name.StartsWith("add_", StringComparison.Ordinal)
+            || method.Name.StartsWith("remove_", StringComparison.Ordinal)
+            || method.Name.StartsWith("raise_", StringComparison.Ordinal)
+                ? method.Name[4..]
+                : null;
+        return declaredMemberName is not null
+            && containingType.GetMembers(declaredMemberName)
+                .Any(candidate => candidate is IPropertySymbol or IEventSymbol);
+    }
 
 }
 
