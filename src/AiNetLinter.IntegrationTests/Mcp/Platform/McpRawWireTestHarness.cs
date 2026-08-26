@@ -20,6 +20,54 @@ internal sealed record McpRawWireRunResult(
 
 internal static class McpRawWireTestHarness
 {
+    private const string LegacyProtocolVersion = "2024-11-05";
+    private const string ModernProtocolVersion = "2026-07-28";
+    private const string ClientName = "FramingTestClient";
+    private const string ClientVersion = "1.0.0";
+
+    internal static string[] BuildDiscoveryFrames(bool modern)
+    {
+        var meta = new Dictionary<string, object?>
+        {
+            ["io.modelcontextprotocol/protocolVersion"] = ModernProtocolVersion,
+            ["io.modelcontextprotocol/clientInfo"] = new { name = ClientName, version = ClientVersion },
+            ["io.modelcontextprotocol/clientCapabilities"] = new { },
+        };
+        var discoveryFrame = modern
+            ? JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "server/discover",
+                @params = new { _meta = meta },
+            })
+            : JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "initialize",
+                @params = new
+                {
+                    protocolVersion = LegacyProtocolVersion,
+                    capabilities = new { },
+                    clientInfo = new { name = ClientName, version = ClientVersion },
+                },
+            });
+        var toolsListFrame = modern
+            ? JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 2,
+                method = "tools/list",
+                @params = new { _meta = meta },
+            })
+            : JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2, method = "tools/list" });
+        var initializedFrame = JsonSerializer.Serialize(new { jsonrpc = "2.0", method = "notifications/initialized" });
+        return modern
+            ? new[] { discoveryFrame, toolsListFrame }
+            : new[] { discoveryFrame, initializedFrame, toolsListFrame };
+    }
+
     internal static JsonElement FindResponse(IEnumerable<string> lines, int id)
     {
         foreach (var line in lines)

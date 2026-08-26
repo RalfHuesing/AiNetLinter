@@ -83,6 +83,12 @@ Registrierung. `ainetlinter://agent-guide` stellt den einmaligen Bootstrap-
 Leitfaden samt dauerhafter Agentenregel bereit; `tools/list` liefert die
 aktuellen Tool- und Parameterschemas.
 
+Die Tools liefern außerdem fachliche MCP-Annotations: Analyse- und Health-Abfragen
+sind read-only, `reload_config` ist idempotent, und
+`report_observability_feedback` ist nicht idempotent. Diese Werte sind Hinweise für
+Hosts und keine Sicherheitsgarantie; Berechtigungs- und Pfadprüfungen bleiben davon
+unabhängig.
+
 Die dauerhafte MCP-Regel wird nur für die bevorzugte Werkzeugwahl geladen. Der
 vollständige Bootstrap ist bei einer neuen Integration einmalig über
 `ainetlinter://agent-guide` oder offline mit `ainetlinter --docs mcp-bootstrap`

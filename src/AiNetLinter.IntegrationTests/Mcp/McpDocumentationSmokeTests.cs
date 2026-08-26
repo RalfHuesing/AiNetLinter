@@ -83,5 +83,7 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("enrichCSharp", docText, StringComparison.Ordinal);
         Assert.Contains("ambiguous", docText, StringComparison.Ordinal);
         Assert.Contains("unavailable", docText, StringComparison.Ordinal);
+        Assert.Contains("Tool-Annotations", docText, StringComparison.Ordinal);
+        Assert.Contains("keine Sicherheitsgarantie", docText, StringComparison.Ordinal);
     }
 }

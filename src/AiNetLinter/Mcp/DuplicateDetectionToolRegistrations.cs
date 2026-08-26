@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
 using ModelContextProtocol.Server;
 
@@ -39,11 +40,7 @@ internal static class DuplicateDetectionToolRegistrations
                             minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
                         return DuplicateDetectionTool.ExecuteAsync(lease.Server, input, ct);
                     }),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_duplicates",
-                Description = FindDuplicatesDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("find_duplicates", FindDuplicatesDescription)));
     }
 
     private const string FindDuplicatesDescription =

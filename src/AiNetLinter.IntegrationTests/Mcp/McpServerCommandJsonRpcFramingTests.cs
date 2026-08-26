@@ -29,6 +29,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
 {
     private const string ProtocolVersion = "2024-11-05";
     private const string ModernProtocolVersion = "2026-07-28";
+    private const int AnnotationPayloadBaselineUtf8Bytes = 20836;
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
     private readonly ITestOutputHelper output;
@@ -310,12 +311,19 @@ public sealed class McpServerCommandJsonRpcFramingTests
         output.WriteLine($"Modern discovery: {modern.DiscoveryPayload}");
         output.WriteLine($"Modern tools/list: {modern.ToolsListPayload}");
         output.WriteLine($"Instructions: {legacy.InstructionsSize}");
+        output.WriteLine(
+            $"Annotation payload delta (Legacy tools/list): " +
+            $"{legacy.ToolsListPayload.Utf8Bytes - AnnotationPayloadBaselineUtf8Bytes:+#;-#;0} UTF-8-Bytes " +
+            $"({AnnotationPayloadBaselineUtf8Bytes} -> {legacy.ToolsListPayload.Utf8Bytes}; " +
+            "Baseline 2026-08-20)");
     }
 
     private static async Task<McpWireDiscoverySnapshot> ReadDiscoverySnapshotAsync(
         string targetDirectory, bool modern)
     {
-        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(targetDirectory, BuildDiscoveryFrames(modern));
+        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            targetDirectory,
+            McpRawWireTestHarness.BuildDiscoveryFrames(modern));
         var discoveryResponse = McpRawWireTestHarness.FindResponse(lines, 1);
         var toolsResponse = McpRawWireTestHarness.FindResponse(lines, 2);
         Assert.Equal("2.0", discoveryResponse.GetProperty("jsonrpc").GetString());
@@ -355,49 +363,6 @@ public sealed class McpServerCommandJsonRpcFramingTests
             instructionSize,
             McpPayloadMeasurement.MeasureJson(discoveryResponse),
             McpPayloadMeasurement.MeasureJson(toolsResponse));
-    }
-
-    private static string[] BuildDiscoveryFrames(bool modern)
-    {
-        var meta = new Dictionary<string, object?>
-        {
-            ["io.modelcontextprotocol/protocolVersion"] = ModernProtocolVersion,
-            ["io.modelcontextprotocol/clientInfo"] = new { name = ClientName, version = ClientVersion },
-            ["io.modelcontextprotocol/clientCapabilities"] = new { },
-        };
-        var discoveryFrame = modern
-            ? JsonSerializer.Serialize(new
-            {
-                jsonrpc = "2.0",
-                id = 1,
-                method = "server/discover",
-                @params = new { _meta = meta },
-            })
-            : JsonSerializer.Serialize(new
-            {
-                jsonrpc = "2.0",
-                id = 1,
-                method = "initialize",
-                @params = new
-                {
-                    protocolVersion = ProtocolVersion,
-                    capabilities = new { },
-                    clientInfo = new { name = ClientName, version = ClientVersion },
-                },
-            });
-        var toolsListFrame = modern
-            ? JsonSerializer.Serialize(new
-            {
-                jsonrpc = "2.0",
-                id = 2,
-                method = "tools/list",
-                @params = new { _meta = meta },
-            })
-            : JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 2, method = "tools/list" });
-        var initializedFrame = JsonSerializer.Serialize(new { jsonrpc = "2.0", method = "notifications/initialized" });
-        return modern
-            ? new[] { discoveryFrame, toolsListFrame }
-            : new[] { discoveryFrame, initializedFrame, toolsListFrame };
     }
 
     private static async Task<IReadOnlySet<string>> GetRegisteredToolNames()

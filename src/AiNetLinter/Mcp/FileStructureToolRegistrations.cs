@@ -57,11 +57,7 @@ internal static class FileStructureToolRegistrations
                         var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
                         return GetNamespaceTreeTool.ExecuteAsync(lease.Server, input, ct);
                     }),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_namespace_tree",
-                Description = GetNamespaceTreeDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
 
     private static readonly string GetNamespaceTreeDescription =
@@ -83,11 +79,7 @@ internal static class FileStructureToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_class_structure",
-                Description = GetClassStructureDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
 
     private static readonly string GetClassStructureDescription =
@@ -109,11 +101,7 @@ internal static class FileStructureToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_file_skeleton",
-                Description = GetFileSkeletonDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
     private const string GetFileSkeletonDescription =
@@ -131,11 +119,7 @@ internal static class FileStructureToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetIndexScopeTool.ExecuteAsync(lease.Server, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_index_scope",
-                Description = GetIndexScopeDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_index_scope", GetIndexScopeDescription)));
     }
 
     private const string GetIndexScopeDescription =
@@ -153,11 +137,7 @@ internal static class FileStructureToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetHotspotsTool.ExecuteAsync(lease.Server, scopeFilter, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_hotspots",
-                Description = GetHotspotsDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_hotspots", GetHotspotsDescription)));
     }
 
     private const string GetHotspotsDescription =

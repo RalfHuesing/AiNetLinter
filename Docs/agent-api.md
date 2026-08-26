@@ -275,6 +275,23 @@ Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
 wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
 exakte Tokenersparnis abgeleitet.
 
+### Tool-Annotations
+
+`tools/list` enthält für jedes registrierte Tool die vier MCP-Hinweise
+`readOnlyHint`, `destructiveHint`, `idempotentHint` und `openWorldHint`. Analyse-,
+Symbol-, Metrik- und Health-Abfragen liefern `true/false/true/false`,
+`reload_config` `false/false/true/false` und
+`report_observability_feedback` `false/false/false/false` (jeweils in der genannten
+Reihenfolge). Die Hints beschreiben erwartete Seiteneffekte und die geschlossene
+Systemgrenze; sie sind keine Zugriffssteuerung und keine Sicherheitsgarantie und
+ersetzen keine Berechtigungs- oder Pfadprüfung. Legacy-`initialize` und modernes `server/discover` übertragen für
+`tools/list` dieselben Annotationen.
+
+Die Annotationen vergrößern den gemessenen Legacy-`tools/list`-Payload von 20.836
+auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
+über `McpPayloadMeasurement`). Der moderne Payload beträgt in derselben Prüfung
+27.034 UTF-8-Bytes. Daraus wird keine Tokenersparnis abgeleitet.
+
 ### Tool-Referenz
 
 Für jedes projektgebundene Tool ist `projectRoot` der erste Pflichtparameter;

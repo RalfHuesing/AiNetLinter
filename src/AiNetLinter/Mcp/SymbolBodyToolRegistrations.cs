@@ -37,11 +37,7 @@ internal static class SymbolBodyToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_symbol_body",
-                Description = GetSymbolBodyDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 
     private const string GetSymbolBodyDescription =

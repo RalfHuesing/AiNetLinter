@@ -49,11 +49,7 @@ internal static class SymbolGraphToolRegistrations
                     registry,
                     projectRoot,
                     lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_symbol",
-                Description = FindSymbolDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
 
     private const string FindSymbolDescription =
@@ -72,11 +68,7 @@ internal static class SymbolGraphToolRegistrations
                     registry,
                     projectRoot,
                     lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_references",
-                Description = FindReferencesDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("find_references", FindReferencesDescription)));
     }
 
     private const string FindReferencesDescription =
@@ -98,11 +90,7 @@ internal static class SymbolGraphToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_call_tree",
-                Description = GetCallTreeDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }
 
     private const string GetCallTreeDescription =
@@ -131,11 +119,7 @@ internal static class SymbolGraphToolRegistrations
                         lease.Server,
                         new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
                         ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_impact",
-                Description = GetImpactDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_impact", GetImpactDescription)));
     }
 
     private const string GetImpactDescription =
@@ -164,11 +148,7 @@ internal static class SymbolGraphToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_type_hierarchy",
-                Description = GetTypeHierarchyDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
     }
 
     private const string GetTypeHierarchyDescription =
@@ -189,11 +169,7 @@ internal static class SymbolGraphToolRegistrations
                     registry,
                     projectRoot,
                     lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "dependency_graph",
-                Description = DependencyGraphDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("dependency_graph", DependencyGraphDescription)));
     }
 
     private const string DependencyGraphDescription =

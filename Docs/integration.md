@@ -291,6 +291,27 @@ optionalen Filter weglassen und aggregiert ohne Filter alle residenten Keys.
 
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
+### MCP-Tool-Annotations
+
+Jedes Tool trägt in `tools/list` explizite MCP-Annotations. Die Analyse-, Symbol-,
+Metrik- und Health-Abfragen sind als `readOnlyHint=true`,
+`destructiveHint=false`, `idempotentHint=true` und `openWorldHint=false` markiert.
+`reload_config` ist `false/false/true/false`,
+`report_observability_feedback` `false/false/false/false` (Reihenfolge wie oben).
+`get_impact` bleibt closed-world, weil Git nur lokal gegen das geladene Repository
+gelesen wird; auch `search_pattern` und `reload_config` bleiben durch ihre
+Solution-/Sicherheitsgrenzen closed-world.
+
+Diese Werte sind standardisierte Hinweise für Hostentscheidungen, keine
+Zugriffssteuerung und keine Sicherheitsgarantie. Unvertrauenswürdige Server können
+Annotations falsch setzen; tatsächliche Berechtigungs- und Pfadprüfungen bleiben
+unabhängig davon aktiv.
+
+Die Raw-Wire-Messung über `McpPayloadMeasurement` ergab für Legacy-`tools/list`
+20.836 Bytes vor und 26.887 Bytes nach der Annotationserweiterung, also +6.051
+UTF-8-Bytes. Der moderne `tools/list`-Payload beträgt 27.034 UTF-8-Bytes. Die
+Werte sind Byte-Messungen, keine Token-Schätzungen.
+
 **`args: ["--mcp-server"]` ist die empfohlene Registrierung.** Der Server
 liest die Regeldatei aus `ainetlinter.project.json`; fehlt die Definition oder
 ist sie ungültig, liefert der adressierte Key einen deterministischen Fehler

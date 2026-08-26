@@ -46,11 +46,7 @@ internal static class ServerMaintenanceToolRegistrations
                     registry,
                     projectRoot,
                     lease => ReloadConfigTool.ExecuteAsync(lease.Server, lease.Definition.RulesPath, configPath, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "reload_config",
-                Description = ReloadConfigDescription,
-            }));
+            McpToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));
     }
 
     private const string ReloadConfigDescription =
@@ -70,11 +66,7 @@ internal static class ServerMaintenanceToolRegistrations
                 await GetServerHealthTool.ExecuteAsync(
                     registry,
                     new GetServerHealthOptions(projectRoot, runtimeContext)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_server_health",
-                Description = GetServerHealthDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_server_health", GetServerHealthDescription)));
     }
 
     private const string GetServerHealthDescription =
@@ -108,11 +100,7 @@ internal static class ServerMaintenanceToolRegistrations
                         actualBehavior,
                         additionalContext,
                         projectRoot)),
-            new McpServerToolCreateOptions
-            {
-                Name = "report_observability_feedback",
-                Description = ReportObservabilityFeedbackDescription,
-            }));
+            McpToolRegistrationOptions.FeedbackTool("report_observability_feedback", ReportObservabilityFeedbackDescription)));
     }
 
     private const string ReportObservabilityFeedbackDescription =

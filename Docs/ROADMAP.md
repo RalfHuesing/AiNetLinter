@@ -2,6 +2,20 @@
 
 Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Projekts und teilt die Features in logische Epics und Kapitel auf. Sie dient als Arbeitsgrundlage für die schrittweise Implementierung.
 
+## MCP-Tool-Annotations (2026-08-26)
+
+- [x] Alle 26 registrierten Tools verwenden einen zentralen Options-Helper mit
+  expliziten `readOnlyHint`, `destructiveHint`, `idempotentHint` und
+  `openWorldHint`-Werten.
+- [x] `reload_config` und `report_observability_feedback` sind als eigene
+  Seiteneffektprofile klassifiziert; ein zentraler Vertragstest schlägt bei neuen,
+  nicht klassifizierten Toolnamen fehl.
+- [x] Legacy- und moderner Raw-Wire-`tools/list`-Test prüfen die semantisch gleichen
+  Annotationen exemplarisch und für den vollständigen registrierten Bestand.
+- [x] Payload-Messung: 20.836 → 26.887 UTF-8-Bytes im Legacy-`tools/list`-Response
+  (Delta +6.051 Bytes); der moderne Response misst 27.034 Bytes. Die Annotationen
+  sind Hinweise und keine Security-Garantie.
+
 ---
 
 ## Epic 1: Bootstrapping & Infrastruktur

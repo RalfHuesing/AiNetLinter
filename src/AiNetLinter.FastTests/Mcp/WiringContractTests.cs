@@ -21,7 +21,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Vertragstests des Registry-Wirings: eingefrorener 25er-Toolbestand mit projectRoot-Pflicht
+/// Vertragstests des Registry-Wirings: eingefrorener 26er-Toolbestand mit projectRoot-Pflicht
 /// (einzige Ausnahme: get_server_health-Filter optional),
 /// Defense-in-Depth-Guards am ProjectToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
 /// RULES_INVALID statt Default-Fallback, Health-Aggregation je Key, Overview-Template-Aufloesung,
@@ -52,6 +52,68 @@ public sealed class WiringContractTests
                 Assert.Contains("projectRoot", required);
             }
         }
+    }
+
+    [Fact]
+    public async Task ToolCollection_ClassifiesEveryRegisteredToolWithExplicitAnnotations()
+    {
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var tools = McpServerOptionsFactory.BuildToolCollection(registry)
+            .ToDictionary(tool => tool.ProtocolTool.Name, StringComparer.Ordinal);
+
+        Assert.Equal(
+            ExpectedToolAnnotations.Keys.OrderBy(name => name, StringComparer.Ordinal),
+            tools.Keys.OrderBy(name => name, StringComparer.Ordinal));
+
+        foreach (var (name, expected) in ExpectedToolAnnotations)
+        {
+            var annotations = tools[name].ProtocolTool.Annotations;
+            Assert.NotNull(annotations);
+            Assert.Equal(expected.ReadOnly, annotations!.ReadOnlyHint);
+            Assert.Equal(expected.Destructive, annotations.DestructiveHint);
+            Assert.Equal(expected.Idempotent, annotations.IdempotentHint);
+            Assert.Equal(expected.OpenWorld, annotations.OpenWorldHint);
+        }
+    }
+
+    private static readonly IReadOnlyDictionary<string, ToolAnnotationExpectation> ExpectedToolAnnotations =
+        new Dictionary<string, ToolAnnotationExpectation>(StringComparer.Ordinal)
+        {
+            ["dependency_graph"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_dead_code"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_duplicates"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_magic_values"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_references"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_symbol"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_call_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_class_structure"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_feature_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_file_skeleton"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_hotspots"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_index_scope"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_namespace_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_server_health"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_symbol_body"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_test_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_type_hierarchy"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_impact"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_violations"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["metrics_lookup"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["metrics_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["pattern_detect"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["reload_config"] = new(false, false, true, false),
+            ["report_observability_feedback"] = new(false, false, false, false),
+            ["safeguard"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["search_pattern"] = ToolAnnotationExpectation.ReadOnlyProfile,
+        };
+
+    private readonly record struct ToolAnnotationExpectation(
+        bool ReadOnly,
+        bool Destructive,
+        bool Idempotent,
+        bool OpenWorld)
+    {
+        internal static ToolAnnotationExpectation ReadOnlyProfile => new(true, false, true, false);
     }
 
     [Fact]

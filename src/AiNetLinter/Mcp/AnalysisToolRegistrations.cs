@@ -56,11 +56,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_violations",
-                Description = GetViolationsDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_violations", GetViolationsDescription)));
     }
 
     private const string GetViolationsDescription =
@@ -79,11 +75,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => SafeguardTool.ExecuteAsync(lease.Server, scopeFilter, minScore, maxViolations, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "safeguard",
-                Description = SafeguardDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("safeguard", SafeguardDescription)));
     }
 
     private const string SafeguardDescription =
@@ -128,11 +120,7 @@ internal static class AnalysisToolRegistrations
                             excludePatterns,
                             enrichCSharp),
                         ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "search_pattern",
-                Description = SearchPatternDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("search_pattern", SearchPatternDescription)));
     }
 
     private const string SearchPatternDescription =
@@ -155,11 +143,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "metrics_tree",
-                Description = MetricsTreeDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("metrics_tree", MetricsTreeDescription)));
     }
 
     private const string MetricsTreeDescription =
@@ -179,11 +163,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "metrics_lookup",
-                Description = MetricsLookupDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
 
     private const string MetricsLookupDescription =
@@ -204,11 +184,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter, maxResultsPerPattern, ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "pattern_detect",
-                Description = PatternDetectDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("pattern_detect", PatternDetectDescription)));
     }
 
     private const string PatternDetectDescription =
@@ -254,11 +230,7 @@ internal static class AnalysisToolRegistrations
                             ChangedOnly: changedOnly);
                         return FindMagicValuesTool.ExecuteAsync(lease.Server, effective, ct);
                     }),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_magic_values",
-                Description = FindMagicValuesDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("find_magic_values", FindMagicValuesDescription)));
     }
 
     private const string FindMagicValuesDescription =
@@ -305,11 +277,7 @@ internal static class AnalysisToolRegistrations
                             MaxResults: maxResults);
                         return FindDeadCodeTool.ExecuteAsync(lease.Server, effective, ct);
                     }),
-            new McpServerToolCreateOptions
-            {
-                Name = "find_dead_code",
-                Description = FindDeadCodeDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("find_dead_code", FindDeadCodeDescription)));
     }
 
     private const string FindDeadCodeDescription =
@@ -331,11 +299,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetFeatureContextTool.ExecuteAsync(lease.Server, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_feature_context",
-                Description = GetFeatureContextDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
 
     private const string GetFeatureContextDescription =
@@ -355,11 +319,7 @@ internal static class AnalysisToolRegistrations
                     registry,
                     projectRoot,
                     lease => GetTestContextTool.ExecuteAsync(lease.Server, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct)),
-            new McpServerToolCreateOptions
-            {
-                Name = "get_test_context",
-                Description = GetTestContextDescription,
-            }));
+            McpToolRegistrationOptions.ReadOnlyTool("get_test_context", GetTestContextDescription)));
     }
 
     private const string GetTestContextDescription =
