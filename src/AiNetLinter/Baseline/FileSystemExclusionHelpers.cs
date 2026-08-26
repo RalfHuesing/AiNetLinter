@@ -94,18 +94,24 @@ internal static class FileSystemExclusionHelpers
     }
 
     /// <summary>
+    /// Traversiert die Wurzelverzeichnisse mit konfigurierbarer Tiefe und Cancellation.
+    /// Der Options-Einstieg besucht alle Dateien und verwendet die zentralen
+    /// Ausschluss- und Reparse-Point-Regeln.
+    /// </summary>
+    /// <param name="roots">Wurzelverzeichnisse (z. B. Projektverzeichnis-Vereinigung).</param>
+    /// <param name="options">Tiefe, Ausschlüsse und Cancellation des Walks.</param>
+    /// <param name="visitDirectory">Callback je besuchtem Verzeichnis.</param>
+    /// <param name="visitFile">Optional: Callback je gefundenem Dateipfad.</param>
+    internal static TreeWalkStats WalkFilteredTree(
+        IEnumerable<string> roots,
+        FileSystemWalkOptions options,
+        Action<string>? visitDirectory,
+        Action<string>? visitFile)
+        => WalkFilteredTreeCore(roots, options, "*", (visitDirectory, visitFile));
+
+    /// <summary>
     /// Rekursive Tiefen-Traversierung der Wurzelverzeichnisse unter den projektweiten
-    /// Suchregeln (eine Kern-Implementierung für Max-mtime-Walk und Datei-Sweep):
-    /// - <see cref="FileAttributes.ReparsePoint"/>-Verzeichnisse werden nie betreten —
-    ///   Junction-/Symlink-Zyklen können die Traversierung nicht aufblähen oder endlos laufen
-    ///   lassen (Konzept 02, B).
-    /// - Verzeichnisse mit ausgeschlossenem Namen (<see cref="SearchExcludedDirectories"/>,
-    ///   z. B. <c>.git</c>, <c>obj</c>, <c>node_modules</c>) werden samt Teilbaum übersprungen
-    ///   (Konzept 02, D) — es entsteht keine eigene vierte Ausschlussliste.
-    /// - Verschachtelte Wurzeln werden dedupliziert (die umfassende Wurzel deckt die
-    ///   enthaltene ab).
-    /// - Ein unzugänglicher Teilbaum erzeugt genau eine Warnung und bricht den Gesamtwalk
-    ///   NICHT ab (Konzept 02, C).
+    /// Suchregeln mit dem bestehenden Datei-Pattern-Vertrag.
     /// </summary>
     /// <param name="roots">Wurzelverzeichnisse (z. B. Projektverzeichnis-Vereinigung).</param>
     /// <param name="filePattern">Optional: Suchpattern für Datei-Besuche (z. B. <c>*.cs</c>);
@@ -118,34 +124,64 @@ internal static class FileSystemExclusionHelpers
         string? filePattern,
         Action<string>? visitDirectory,
         Action<string>? visitFile)
-    {
-        var warnings = new List<string>();
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pending = new Stack<string>();
+        => WalkFilteredTreeCore(
+            roots,
+            FileSystemWalkOptions.Default(CancellationToken.None),
+            filePattern,
+            (visitDirectory, visitFile));
 
+    private static TreeWalkStats WalkFilteredTreeCore(
+        IEnumerable<string> roots,
+        FileSystemWalkOptions options,
+        string? filePattern,
+        (Action<string>? VisitDirectory, Action<string>? VisitFile) callbacks)
+    {
+        var context = new WalkContext(options);
+        EnqueueRoots(roots, context);
+
+        while (context.PendingDirectories.Count > 0)
+        {
+            if (context.IsCancellationRequested) break;
+
+            var entry = context.PendingDirectories.Pop();
+            if (!context.VisitedDirectories.Add(NormalizeForDedup(entry.Directory))) continue;
+            ProcessDirectory(entry, filePattern, callbacks, context);
+        }
+
+        return context.CreateStats();
+    }
+
+    private static void EnqueueRoots(IEnumerable<string> roots, WalkContext context)
+    {
         foreach (var root in GetDistinctTopLevelRoots(roots))
         {
-            pending.Push(root);
+            if (context.IsCancellationRequested) break;
+            context.PendingDirectories.Push((root, 0));
         }
+    }
 
-        while (pending.Count > 0)
+    private static void ProcessDirectory(
+        (string Directory, int Depth) entry,
+        string? filePattern,
+        (Action<string>? VisitDirectory, Action<string>? VisitFile) callbacks,
+        WalkContext context)
+    {
+        List<string>? subDirectories = entry.Depth >= context.Options.MaxDepth
+            ? []
+            : TryEnumerateSubDirectories(entry.Directory, context.Warnings);
+        if (subDirectories == null || context.IsCancellationRequested) return;
+
+        var visitDirectory = callbacks.VisitDirectory;
+        if (visitDirectory != null)
         {
-            var directory = pending.Pop();
-            if (!visited.Add(NormalizeForDedup(directory))) continue;
-
-            var subDirectories = TryEnumerateSubDirectories(directory, warnings);
-            if (subDirectories == null) continue;
-
-            if (visitDirectory != null)
-            {
-                VisitSafely(visitDirectory, directory, warnings);
-            }
-
-            VisitFilesIfRequested(directory, filePattern, visitFile, warnings);
-            PushTraversableSubDirectories(subDirectories, pending, warnings);
+            VisitSafely(visitDirectory, entry.Directory, context.Warnings);
         }
 
-        return new TreeWalkStats(warnings);
+        if (context.IsCancellationRequested) return;
+        VisitFilesIfRequested(entry.Directory, filePattern, callbacks.VisitFile, context);
+        if (context.IsCancellationRequested || entry.Depth >= context.Options.MaxDepth) return;
+
+        PushTraversableSubDirectories(subDirectories, entry.Depth, context);
     }
 
     /// <summary>Listet die direkten Unter Verzeichnisse auf; liefert <see langword="null"/>, wenn
@@ -167,46 +203,54 @@ internal static class FileSystemExclusionHelpers
         string directory,
         string? filePattern,
         Action<string>? visitFile,
-        List<string> warnings)
+        WalkContext context)
     {
-        if (visitFile == null || filePattern == null) return;
+        if (visitFile == null || filePattern == null || context.IsCancellationRequested) return;
 
-        IEnumerable<string> files;
         try
         {
-            files = Directory.EnumerateFiles(directory, filePattern, SearchOption.TopDirectoryOnly);
+            foreach (var file in Directory.EnumerateFiles(directory, filePattern, SearchOption.TopDirectoryOnly))
+            {
+                if (context.IsCancellationRequested) return;
+                VisitSafely(visitFile, file, context.Warnings);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            warnings.Add($"{directory}: {ex.Message}");
-            return;
-        }
-
-        foreach (var file in files)
-        {
-            VisitSafely(visitFile, file, warnings);
+            context.Warnings.Add($"{directory}: {ex.Message}");
         }
     }
 
     private static void PushTraversableSubDirectories(
         List<string> subDirectories,
-        Stack<string> pending,
-        List<string> warnings)
+        int depth,
+        WalkContext context)
     {
         foreach (var subDirectory in subDirectories)
         {
-            if (IsExcludedDirectoryName(Path.GetFileName(subDirectory))) continue;
-            try
+            if (context.IsCancellationRequested) return;
+            if (context.Options.SkipExcludedDirectories && IsExcludedDirectoryName(Path.GetFileName(subDirectory)))
             {
-                if (!IsTraversableSubDirectory(new DirectoryInfo(subDirectory).Attributes)) continue;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                warnings.Add($"{subDirectory}: {ex.Message}");
+                context.SkippedExcludedDirectoryCount++;
                 continue;
             }
 
-            pending.Push(subDirectory);
+            try
+            {
+                if (!IsTraversableSubDirectory(new DirectoryInfo(subDirectory).Attributes))
+                {
+                    context.SkippedReparsePointCount++;
+                    continue;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                context.Warnings.Add($"{subDirectory}: {ex.Message}");
+                continue;
+            }
+
+            if (context.IsCancellationRequested) return;
+            context.PendingDirectories.Push((subDirectory, depth + 1));
         }
     }
 
@@ -297,6 +341,46 @@ internal static class FileSystemExclusionHelpers
                 yield return enumerator.Current;
             }
         }
+    }
+
+    private sealed class WalkContext
+    {
+        internal WalkContext(FileSystemWalkOptions options)
+        {
+            Options = options;
+            Warnings = [];
+            VisitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            PendingDirectories = [];
+            CancellationRequested = options.CancellationToken.IsCancellationRequested;
+        }
+
+        internal FileSystemWalkOptions Options { get; }
+        internal List<string> Warnings { get; }
+        internal HashSet<string> VisitedDirectories { get; }
+        internal Stack<(string Directory, int Depth)> PendingDirectories { get; }
+        internal bool CancellationRequested { get; private set; }
+        internal int SkippedExcludedDirectoryCount { get; set; }
+        internal int SkippedReparsePointCount { get; set; }
+
+        internal bool IsCancellationRequested
+        {
+            get
+            {
+                if (Options.CancellationToken.IsCancellationRequested)
+                {
+                    CancellationRequested = true;
+                }
+
+                return CancellationRequested;
+            }
+        }
+
+        internal TreeWalkStats CreateStats() => new(Warnings)
+        {
+            CancellationRequested = CancellationRequested,
+            SkippedExcludedDirectoryCount = SkippedExcludedDirectoryCount,
+            SkippedReparsePointCount = SkippedReparsePointCount,
+        };
     }
 }
 

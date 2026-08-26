@@ -1,9 +1,12 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using AiNetLinter.Baseline;
+using AiNetLinter.TestKit;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Baseline;
@@ -96,5 +99,26 @@ public sealed class FileSystemExclusionHelpersTests
         Assert.Contains(keep, filtered);
         Assert.DoesNotContain(generated, filtered);
         Assert.DoesNotContain(generatedBin, filtered);
+    }
+
+    [Fact]
+    public void WalkWithOptions_SkipsExcludedSubtreeAndReportsSkipCount()
+    {
+        using var temp = TestTempDirectory.Create("ainetlinter-fseh-walk-");
+        var visibleFile = temp.CreateFile(Path.Combine("src", "Project", "Keep.cs"));
+        temp.CreateFile(Path.Combine("obj", "Generated.cs"));
+        var visitedDirectories = new List<string>();
+        var visitedFiles = new List<string>();
+
+        var stats = FileSystemExclusionHelpers.WalkFilteredTree(
+            [temp.DirectoryPath],
+            FileSystemWalkOptions.ForFileTree(null, CancellationToken.None),
+            visitedDirectories.Add,
+            visitedFiles.Add);
+
+        Assert.Contains(visibleFile, visitedFiles);
+        Assert.DoesNotContain(visitedDirectories, path => path.Contains("obj", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(1, stats.SkippedExcludedDirectoryCount);
+        Assert.Empty(stats.Warnings);
     }
 }

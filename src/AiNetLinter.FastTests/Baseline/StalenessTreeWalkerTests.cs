@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using AiNetLinter.Baseline;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -38,14 +39,69 @@ public sealed class StalenessTreeWalkerTests
         var visited = new List<string>();
         var stats = FileSystemExclusionHelpers.WalkFilteredTree(
             [root],
-            filePattern: null,
+            FileSystemWalkOptions.ForFileTree(null, CancellationToken.None),
             visitDirectory: visited.Add,
             visitFile: null);
 
         Assert.DoesNotContain(visited, d => d.Contains(".git", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(Path.Combine(root, "src"), visited);
         Assert.Contains(sourceDir, visited);
+        Assert.Equal(1, stats.SkippedExcludedDirectoryCount);
         Assert.Empty(stats.Warnings);
+    }
+
+    [Fact]
+    public void Walk_MaxDepth_VisitsFilesAtLimitButNotDeeperDirectories()
+    {
+        using var tempDir = TestTempDirectory.Create("staleness-walk-depth-");
+        var rootFile = tempDir.CreateFile("Root.cs");
+        var levelOneFile = tempDir.CreateFile(Path.Combine("one", "LevelOne.cs"));
+        var levelTwoFile = tempDir.CreateFile(Path.Combine("one", "two", "LevelTwo.cs"));
+        var visitedFiles = new List<string>();
+
+        var stats = FileSystemExclusionHelpers.WalkFilteredTree(
+            [tempDir.DirectoryPath],
+            FileSystemWalkOptions.ForFileTree(1, CancellationToken.None),
+            visitDirectory: null,
+            visitFile: visitedFiles.Add);
+
+        Assert.Contains(rootFile, visitedFiles);
+        Assert.Contains(levelOneFile, visitedFiles);
+        Assert.DoesNotContain(levelTwoFile, visitedFiles);
+        Assert.False(stats.CancellationRequested);
+        Assert.Empty(stats.Warnings);
+    }
+
+    [Fact]
+    public void Walk_Cancellation_ReturnsPartialStatsBeforeFurtherCallbacks()
+    {
+        using var tempDir = TestTempDirectory.Create("staleness-walk-cancel-");
+        tempDir.CreateFile(Path.Combine("child", "Nested.cs"));
+        using var cancellation = new CancellationTokenSource();
+        var visitedDirectories = new List<string>();
+        var visitedFiles = new List<string>();
+
+        var stats = FileSystemExclusionHelpers.WalkFilteredTree(
+            [tempDir.DirectoryPath],
+            FileSystemWalkOptions.ForFileTree(null, cancellation.Token),
+            visitDirectory: directory =>
+            {
+                visitedDirectories.Add(directory);
+                cancellation.Cancel();
+            },
+            visitFile: visitedFiles.Add);
+
+        Assert.Equal([tempDir.DirectoryPath], visitedDirectories);
+        Assert.Empty(visitedFiles);
+        Assert.True(stats.CancellationRequested);
+        Assert.Empty(stats.Warnings);
+    }
+
+    [Fact]
+    public void FileTreeOptions_NegativeMaxDepth_IsRejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            FileSystemWalkOptions.ForFileTree(-1, CancellationToken.None));
     }
 
     [Fact]

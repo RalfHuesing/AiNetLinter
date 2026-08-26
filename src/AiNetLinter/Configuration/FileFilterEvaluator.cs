@@ -48,27 +48,12 @@ internal static class FileFilterEvaluator
     }
 
     private static bool MatchesGlob(string input, string pattern)
-    {
-        var regex = "^" + Regex.Escape(pattern)
-            .Replace("\\*", ".*")
-            .Replace("\\?", ".") + "$";
-        return Regex.IsMatch(input, regex, RegexOptions.IgnoreCase);
-    }
+        => PathGlobMatcher.Matches(input, pattern);
 
     /// <summary>
     /// Public Variante von MatchesGlob fuer andere Module (z. B. WebFileCatalog), die gegen
     /// relative Pfade oder freie Texte globben wollen. Erlaubt "**"-Segmente.
     /// </summary>
     public static bool MatchesGlobForWeb(string input, string pattern)
-    {
-        if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(pattern)) return false;
-        var normalizedInput = input.Replace('\\', '/');
-        var normalizedPattern = pattern.Replace('\\', '/');
-        var regexPattern = "^" +
-            Regex.Escape(normalizedPattern)
-                 .Replace("\\*\\*", ".*")
-                 .Replace("\\*", "[^/]*")
-            + "$";
-        return Regex.IsMatch(normalizedInput, regexPattern, RegexOptions.IgnoreCase);
-    }
+        => PathGlobMatcher.Matches(input, pattern);
 }

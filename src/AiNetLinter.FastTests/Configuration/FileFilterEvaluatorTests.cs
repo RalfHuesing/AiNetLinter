@@ -100,6 +100,35 @@ public sealed class FileFilterEvaluatorTests
         Assert.Equal(expectedExcluded, result);
     }
 
+    [Theory]
+    [InlineData("Report1.cs", "Report?.cs", true)]
+    [InlineData("Report10.cs", "Report?.cs", false)]
+    public void FileFilterEvaluator_ExcludeFilePatterns_UsesSingleCharacterGlob(
+        string fileName,
+        string pattern,
+        bool expectedExcluded)
+    {
+        var filters = new FileFiltersConfig
+        {
+            ExcludeFilePatterns = new[] { pattern },
+            ExcludeDirectoryPatterns = Array.Empty<string>()
+        };
+
+        Assert.Equal(expectedExcluded, FileFilterEvaluator.IsExcluded(fileName, filters));
+    }
+
+    [Theory]
+    [InlineData("README.md", "**/README.md", true)]
+    [InlineData("src\\Docs\\README.md", "src/**/README.md", true)]
+    [InlineData("src/Docs/README.md", "src/*.md", false)]
+    public void FileFilterEvaluator_MatchesGlobForWeb_DelegatesPathGlobSemantics(
+        string input,
+        string pattern,
+        bool expectedMatch)
+    {
+        Assert.Equal(expectedMatch, FileFilterEvaluator.MatchesGlobForWeb(input, pattern));
+    }
+
     [Fact]
     public async Task LinterEngine_WithExcludedFile_SkipsAnalysisAndReturnsNoViolations()
     {

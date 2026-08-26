@@ -13,4 +13,10 @@ namespace AiNetLinter.Baseline;
 internal sealed record TreeWalkStats(IReadOnlyList<string> Warnings)
 {
     internal int InaccessibleSubtreeCount => Warnings.Count;
+
+    internal bool CancellationRequested { get; init; }
+
+    internal int SkippedExcludedDirectoryCount { get; init; }
+
+    internal int SkippedReparsePointCount { get; init; }
 }
