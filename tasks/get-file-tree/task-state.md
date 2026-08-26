@@ -2,10 +2,10 @@
 status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T22:36:10+02:00
+last_updated: 2026-08-26T22:41:02+02:00
 rules_dir: .agents/rules
-total_steps: 1
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: get-file-tree
@@ -13,18 +13,19 @@ current_step: step-001
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 1
-- **Aktueller Schritt:** `step-001`
-- **Roadmap:** wird im Roadmap-Modus erstellt
+- **Steps gesamt:** 2
+- **Aktueller Schritt:** `step-002`
+- **Roadmap:** aktiv, unverändert
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
-- **Zuletzt aktualisiert:** 2026-08-26T22:36:10+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T22:41:02+02:00
 
 ## Steps
 
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | blocked | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | ausstehend | 2bd4cb38 |
+| step-002 | EPIC-01 | in_progress | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | - | ausstehend | - |
 
 ## Config (optional)
 
