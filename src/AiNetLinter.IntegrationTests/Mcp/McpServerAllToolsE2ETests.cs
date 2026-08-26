@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
@@ -61,7 +62,22 @@ public sealed class McpServerAllToolsE2ETests
         Assert.Equal(nameof(McpCodeGraphServer), types[0].GetProperty("name").GetString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Assembly:", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("API-Typen:", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Öffentliche Namespaces:", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_RegistrationAdvertisesGenericFiltersAndParameterMetadata()
+    {
+        var tool = Assert.Single((await _fixture.Client.ListToolsAsync())
+            .Where(candidate => candidate.ProtocolTool.Name == "inspect_assembly"));
+        var schema = tool.ProtocolTool.InputSchema.ToString();
+
+        Assert.Contains("exactTypeName", schema, StringComparison.Ordinal);
+        Assert.Contains("memberNames", schema, StringComparison.Ordinal);
+        Assert.Contains("maxMembers", schema, StringComparison.Ordinal);
+        Assert.Contains("strukturierte Parameterdaten", tool.ProtocolTool.Description, StringComparison.Ordinal);
     }
 
     [Fact]

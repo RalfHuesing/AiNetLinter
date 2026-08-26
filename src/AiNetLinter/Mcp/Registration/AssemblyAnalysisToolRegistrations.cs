@@ -55,7 +55,9 @@ internal static class AssemblyAnalysisToolRegistrations
         "maxResults begrenzt Typen deterministisch (Default 100, Maximum 1000), " +
         "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identität, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
-        "werden ausgegeben; bei fehlenden Abhängigkeiten lautet completeness partial. " +
+        "werden ausgegeben; Methoden und Indexer liefern zusätzlich strukturierte " +
+        "Parameterdaten. Bei " +
+        "fehlenden Abhängigkeiten lautet completeness partial. " +
         "Die DLL wird weder geladen noch ausgeführt.";
 
     private static void AddFindAssemblyExtensions(

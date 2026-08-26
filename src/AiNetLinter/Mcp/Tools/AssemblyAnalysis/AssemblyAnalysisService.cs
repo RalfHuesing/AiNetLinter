@@ -155,7 +155,7 @@ internal static class AssemblyAnalysisService
             receiverType,
             GenericParameters(method),
             Constraints(method.TypeParameters),
-            Parameters(method),
+            Parameters(method.Parameters),
             applicability,
             reason,
             Attributes(method));
@@ -189,12 +189,18 @@ internal static class AssemblyAnalysisService
     private static AssemblyMemberDto ToMemberDto(ISymbol member)
     {
         var method = member as IMethodSymbol;
+        var parameters = member switch
+        {
+            IMethodSymbol methodSymbol => Parameters(methodSymbol.Parameters),
+            IPropertySymbol propertySymbol => Parameters(propertySymbol.Parameters),
+            _ => Array.Empty<AssemblyParameterDto>(),
+        };
         return new AssemblyMemberDto(
             MemberKind(member),
             member.Name,
             member.DeclaredAccessibility.ToString(),
             method is null ? member.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) : MethodSignature(method),
-            method is null ? Array.Empty<AssemblyParameterDto>() : Parameters(method),
+            parameters,
             method is null ? Array.Empty<string>() : GenericParameters(method),
             method is null ? Array.Empty<string>() : Constraints(method.TypeParameters),
             Attributes(member));
@@ -210,26 +216,33 @@ internal static class AssemblyAnalysisService
         return $"{method.ReturnType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)} {method.ToDisplayString(format)}";
     }
 
-    private static IReadOnlyList<AssemblyParameterDto> Parameters(IMethodSymbol method) =>
-        method.Parameters.Select(parameter => new AssemblyParameterDto(
+    private static IReadOnlyList<AssemblyParameterDto> Parameters(IEnumerable<IParameterSymbol> parameters) =>
+        parameters.Select(parameter => new AssemblyParameterDto(
             parameter.Name,
             parameter.Type.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
-            parameter.RefKind.ToString().ToLowerInvariant(),
+            RefKindName(parameter.RefKind),
             parameter.IsOptional,
             DefaultValue(parameter))).ToList();
+
+    private static string RefKindName(RefKind refKind) =>
+        refKind switch
+        {
+            RefKind.None => "none",
+            RefKind.Ref => "ref",
+            RefKind.Out => "out",
+            RefKind.In => "in",
+            RefKind.RefReadOnly or RefKind.RefReadOnlyParameter => "ref readonly",
+            _ => refKind.ToString().ToLowerInvariant(),
+        };
 
     private static string? DefaultValue(IParameterSymbol parameter)
     {
         if (!parameter.HasExplicitDefaultValue) return null;
-        return parameter.ExplicitDefaultValue switch
-        {
-            null => "null",
-            string value => $"\"{value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)}\"",
-            char value => $"'{value}'",
-            bool value => value ? "true" : "false",
-            IFormattable value => value.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
-            var value => value?.ToString(),
-        };
+        return SymbolDisplay.FormatPrimitive(
+                   parameter.ExplicitDefaultValue,
+                   quoteStrings: true,
+                   useHexadecimalNumbers: false)
+               ?? parameter.ExplicitDefaultValue?.ToString();
     }
 
     private static IReadOnlyList<string> GenericParameters(IMethodSymbol method) =>

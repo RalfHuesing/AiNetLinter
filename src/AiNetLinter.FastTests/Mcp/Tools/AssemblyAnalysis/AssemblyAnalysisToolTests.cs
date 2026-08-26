@@ -68,6 +68,10 @@ public sealed class AssemblyAnalysisToolTests
             public sealed class PublicApi
             {
                 public bool Save(bool abortOnWarning, ref int changeCount, string mode = "safe") => true;
+                public static ref readonly int ReadOnly(ref readonly int value) => ref value;
+                public void Escaped(string value = "line\n\t", char quote = '\'') { }
+                public void NullDefault(string? value = null) { }
+                public string this[int index] => index.ToString();
                 public void SaveExtra() { }
                 public bool Validate() => true;
             }
@@ -97,6 +101,23 @@ public sealed class AssemblyAnalysisToolTests
         Assert.Equal("ref", save.Parameters[1].RefKind);
         Assert.True(save.Parameters[2].IsOptional);
         Assert.Equal("\"safe\"", save.Parameters[2].DefaultValue);
+
+        var metadataResult = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["ReadOnly", "Escaped", "NullDefault", "this[]"], 10),
+            CancellationToken.None);
+        var metadataType = Assert.Single(Deserialize<InspectAssemblyPayload>(metadataResult).Types);
+        var readOnly = Assert.Single(metadataType.Members, member => member.Name == "ReadOnly");
+        Assert.Equal("ref readonly", readOnly.Parameters[0].RefKind);
+        var escaped = Assert.Single(metadataType.Members, member => member.Name == "Escaped");
+        Assert.Equal("\"line\\n\\t\"", escaped.Parameters[0].DefaultValue);
+        Assert.Equal("'\\''", escaped.Parameters[1].DefaultValue);
+        var nullDefault = Assert.Single(metadataType.Members, member => member.Name == "NullDefault");
+        Assert.Equal("null", nullDefault.Parameters[0].DefaultValue);
+        var indexer = Assert.Single(metadataType.Members, member => member.Name == "this[]");
+        Assert.Equal("property", indexer.Kind);
+        Assert.Equal("index", indexer.Parameters[0].Name);
+        Assert.Equal("int", indexer.Parameters[0].Type);
 
         var limitedResult = await InspectAssemblyTool.ExecuteAsync(
             null,

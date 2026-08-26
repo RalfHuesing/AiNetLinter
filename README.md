@@ -130,7 +130,7 @@ akzeptieren einen absoluten `assemblyPath` und führen die Assembly nicht aus. `
 ist optional; mit `receiverType` prüft die Extension-Suche die tatsächliche Roslyn-
 Anwendbarkeit im geladenen Consumer-Projekt. `inspect_assembly` kann mit
 `exactTypeName`, `memberNames` und `maxMembers` große oder mehrdeutige APIs gezielt
-einschränken und liefert bei Methoden zusätzlich strukturierte Parameterdaten.
+einschränken und liefert bei Methoden und Indexern zusätzlich strukturierte Parameterdaten.
 Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet.
 
 ---

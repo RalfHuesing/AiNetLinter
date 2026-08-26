@@ -50,17 +50,17 @@ internal static class InspectAssemblyTool
                         completeness,
                         selection.Truncated,
                         selection.Total);
-                    return McpToolResults.Text(FormatText(payload), payload);
+                    return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
                 }));
     }
 
-    private static string FormatText(InspectAssemblyPayload payload)
+    private static string FormatText(InspectAssemblyPayload payload, bool publicOnly)
     {
         var builder = new StringBuilder();
         AppendHeader(builder, payload);
-        AppendNamespaces(builder, payload.Namespaces);
+        AppendNamespaces(builder, payload.Namespaces, publicOnly);
         AppendReferences(builder, payload.References);
-        AppendTypes(builder, payload);
+        AppendTypes(builder, payload, publicOnly);
         AppendDiagnostics(builder, payload.Diagnostics);
 
         return builder.ToString().TrimEnd();
@@ -78,9 +78,9 @@ internal static class InspectAssemblyTool
         }
     }
 
-    private static void AppendNamespaces(StringBuilder builder, IReadOnlyList<string> namespaces)
+    private static void AppendNamespaces(StringBuilder builder, IReadOnlyList<string> namespaces, bool publicOnly)
     {
-        builder.AppendLine($"Öffentliche Namespaces: {namespaces.Count}");
+        builder.AppendLine($"{VisibilityLabel(publicOnly)}Namespaces: {namespaces.Count}");
         foreach (var namespaceName in namespaces) builder.AppendLine($"- `{namespaceName}`");
     }
 
@@ -95,11 +95,13 @@ internal static class InspectAssemblyTool
         builder.AppendLine();
     }
 
-    private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload)
+    private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload, bool publicOnly)
     {
-        builder.AppendLine($"Öffentliche API-Typen: {payload.Types.Count} von {payload.TotalTypes}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
+        builder.AppendLine($"{VisibilityLabel(publicOnly)}API-Typen: {payload.Types.Count} von {payload.TotalTypes}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
         foreach (var type in payload.Types) AppendType(builder, type);
     }
+
+    private static string VisibilityLabel(bool publicOnly) => publicOnly ? "Öffentliche " : string.Empty;
 
     private static void AppendType(StringBuilder builder, AssemblyTypeDto type)
     {

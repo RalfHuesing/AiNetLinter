@@ -349,7 +349,7 @@ Trunkierungsmetadaten; die Extension-Payload kennzeichnet die Roslyn-Anwendbarke
 die Member je Typ. `typeName` bleibt standardmäßig eine Teiltextsuche; mit
 `exactTypeName=true` wird gegen den einfachen oder vollqualifizierten Typnamen verglichen.
 `memberName` bleibt eine Teiltextsuche. `memberNames` ergänzt sie um eine exakte
-ODER-Auswahl. Die Member eines Typs enthalten bei Methoden zusätzlich:
+ODER-Auswahl. Die Member eines Typs enthalten bei Methoden und Indexern zusätzlich:
 
 ```json
 {
