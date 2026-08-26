@@ -20,19 +20,13 @@ internal static class ProjectToolCall
         string? projectRoot,
         Func<ProjectLease, Task<CallToolResult>> call)
     {
-        var guard = GuardRequiredAbsoluteRoot(projectRoot);
-        if (guard is not null)
+        var leaseResolution = ResolveLease(registry, projectRoot);
+        if (leaseResolution.Error is not null)
         {
-            return GuardResult(guard);
+            return leaseResolution.Error;
         }
 
-        var leaseResult = registry.Lease(projectRoot!);
-        if (!leaseResult.Succeeded || leaseResult.Lease is null)
-        {
-            return McpToolResults.Recoverable(leaseResult.ErrorCode!, leaseResult.ErrorMessage!, hint: RecoverHint(leaseResult.ErrorCode!));
-        }
-
-        using var lease = leaseResult.Lease;
+        using var lease = leaseResolution.Lease!;
         var server = lease.Server;
         switch (server.LoadState)
         {
@@ -46,6 +40,42 @@ internal static class ProjectToolCall
 
         var result = await call(lease);
         return WithDegradedHeader(server, result);
+    }
+
+    internal static async Task<CallToolResult> ExecuteFilesystemAsync(
+        ProjectRegistry registry,
+        string? projectRoot,
+        Func<ProjectLease, Task<CallToolResult>> call)
+    {
+        var leaseResolution = ResolveLease(registry, projectRoot);
+        if (leaseResolution.Error is not null)
+        {
+            return leaseResolution.Error;
+        }
+
+        using var lease = leaseResolution.Lease!;
+        return await call(lease);
+    }
+
+    private static LeaseResolution ResolveLease(ProjectRegistry registry, string? projectRoot)
+    {
+        var guard = GuardRequiredAbsoluteRoot(projectRoot);
+        if (guard is not null)
+        {
+            return new(null, GuardResult(guard));
+        }
+
+        var leaseResult = registry.Lease(projectRoot!);
+        if (!leaseResult.Succeeded || leaseResult.Lease is null)
+        {
+            var error = McpToolResults.Recoverable(
+                leaseResult.ErrorCode!,
+                leaseResult.ErrorMessage!,
+                hint: RecoverHint(leaseResult.ErrorCode!));
+            return new(null, error);
+        }
+
+        return new(leaseResult.Lease, null);
     }
 
     /// <summary>Der SDK-Schema-Check ist der Normalfall; dieser Code-Guard ist die
@@ -136,4 +166,6 @@ internal static class ProjectToolCall
             _ => null,
         };
     }
+
+    private sealed record LeaseResolution(ProjectLease? Lease, CallToolResult? Error);
 }
