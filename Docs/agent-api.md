@@ -296,11 +296,15 @@ auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
 
 Für jedes projektgebundene Tool ist `projectRoot` der erste Pflichtparameter;
 die folgenden Zeilen listen die jeweiligen fachlichen Zusatzparameter. Die
-einzige Tool-Ausnahme ist `get_server_health` mit optionalem Filter.
+Assembly-Tools sind bewusst zusätzlich ohne `projectRoot` für eine isolierte DLL-
+Analyse aufrufbar; bei gesetztem `projectRoot` nutzen sie den Consumer-Kontext.
+Die übrige Tool-Ausnahme ist `get_server_health` mit optionalem Filter.
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :--- | :---: |
 | `get_namespace_tree` | `project?` (Projektname/Substring), `namespacePrefix?` (Start-Namespace), `depth?` (1-3, Default 1), `includeTypes?` (Default true), `kind?` (class/interface/record/struct/enum/all, Default all), `maxResults?` (Default 50, Cap 200) | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit) | ja | ja |
+| `inspect_assembly` | `assemblyPath` (Pflicht, absoluter lokaler `.dll`-Pfad), `projectRoot?` (optionale Consumer-Solution), `namespace?`, `typeName?`, `memberName?`, `publicOnly?` (Default `true`), `maxResults?` (Default 100, Cap 1000) | Assembly-Identität/-Referenzen sowie gefilterte Typen und Member (Methoden inkl. Rückgabetyp, Parameter, Generics/Constraints, Properties, Felder, Events, Attribute); `completeness` ist bei Diagnosen `partial` | nein | ja |
+| `find_assembly_extensions` | `assemblyPath` (Pflicht, absoluter lokaler `.dll`-Pfad), `projectRoot?`, `receiverType?`, `extensionName?`, `namespace?`, `maxResults?` (Default 100, Cap 1000) | Klassische C#-Extensions über `IMethodSymbol.IsExtensionMethod`; mit `receiverType` unterscheidet die Antwort `applicable`, `not_applicable` und `not_decidable` anhand von Roslyn-Reduktion, Generics, Constraints und Konvertierungen | nein | ja |
 | `find_symbol` | `namePatterns` (Array von Namens-Mustern, max. 10 pro Call; auch fuer genau einen Namen), `kind?` (Klasse/Methode/Property/Interface), `maxResults?` (Default 50) | Fundstellen als `Datei:Zeile - Kind: Signatur` je Pattern; StructuredContent liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`) | ja | ja |
 | `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen | ja | ja |
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`) | Echter Aufrufer- oder Aufgerufene-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; `incoming` fragt, wer das Symbol aufruft, `outgoing` fragt, welche Source-Symbole es aufruft, `both` liefert beide Richtungen abwechselnd, damit `topN` nicht eine Richtung vollständig aus der sichtbaren Ebene verdrängt; Traversierung hart begrenzt auf 250 Knoten | ja | ja |
@@ -330,6 +334,12 @@ einzige Tool-Ausnahme ist `get_server_health` mit optionalem Filter.
 Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
 
 ### Structured Output
+
+Die Assembly-Tools liefern zusätzlich strukturierte Payloads: `inspect_assembly` verwendet
+`InspectAssemblyPayload`, `find_assembly_extensions` verwendet
+`FindAssemblyExtensionsPayload`. Beide enthalten `completeness`, Diagnosen und die
+Trunkierungsmetadaten; die Extension-Payload kennzeichnet die Roslyn-Anwendbarkeit als
+`applicable`, `not_applicable` oder `not_decidable`.
 
 Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `report_observability_feedback`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt im Default `detailLevel="callers"` seine bestehende `CallSiteEntry`-Form, mit `detailLevel="change-context"` liefert er stattdessen ein eigenes Payload-Objekt (siehe Detailabschnitt unten).
 

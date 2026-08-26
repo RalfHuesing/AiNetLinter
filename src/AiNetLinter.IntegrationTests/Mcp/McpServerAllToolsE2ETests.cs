@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.Mcp;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -36,6 +37,23 @@ public sealed class McpServerAllToolsE2ETests
             });
 
         Assert.Contains("Greeter", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_StandaloneCallReturnsStructuredMetadata()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["assemblyPath"] = typeof(McpCodeGraphServer).Assembly.Location
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Assembly:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

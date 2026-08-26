@@ -2,9 +2,20 @@
 
 Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Projekts und teilt die Features in logische Epics und Kapitel auf. Sie dient als Arbeitsgrundlage für die schrittweise Implementierung.
 
+## Metadata-only Assembly-Analyse (2026-08-26)
+
+- [x] `inspect_assembly` listet die gefilterte öffentliche API einer absoluten lokalen DLL
+  inklusive Assembly-Identität, Referenzen, Typen, Membern, Generics, Constraints,
+  Attributen, Diagnosen und deterministischer Ergebnisgrenze.
+- [x] `find_assembly_extensions` erkennt klassische Roslyn-Extensions und prüft optional
+  ihre Anwendbarkeit gegen einen Consumer-Typ; unvollständige Referenzauflösung wird als
+  `partial` ausgewiesen.
+- [x] Beide Tools arbeiten metadata-only ohne Runtime-Assembly-Laden oder Ausführung und
+  liefern zusätzlich typisierte `structuredContent`-Payloads.
+
 ## MCP-Tool-Annotations (2026-08-26)
 
-- [x] Alle 26 registrierten Tools verwenden einen zentralen Options-Helper mit
+- [x] Alle 28 registrierten Tools verwenden einen zentralen Options-Helper mit
   expliziten `readOnlyHint`, `destructiveHint`, `idempotentHint` und
   `openWorldHint`-Werten.
 - [x] `reload_config` und `report_observability_feedback` sind als eigene
@@ -12,9 +23,9 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   nicht klassifizierten Toolnamen fehl.
 - [x] Legacy- und moderner Raw-Wire-`tools/list`-Test prüfen die semantisch gleichen
   Annotationen exemplarisch und für den vollständigen registrierten Bestand.
-- [x] Payload-Messung: 20.836 → 26.887 UTF-8-Bytes im Legacy-`tools/list`-Response
-  (Delta +6.051 Bytes); der moderne Response misst 27.034 Bytes. Die Annotationen
-  sind Hinweise und keine Security-Garantie.
+- [x] Historische Payload-Messung des 26er-Toolbestands: 20.836 → 26.887 UTF-8-Bytes
+  im Legacy-`tools/list`-Response (Delta +6.051 Bytes); der moderne Response misst
+  27.034 Bytes. Die Annotationen sind Hinweise und keine Security-Garantie.
 
 ---
 

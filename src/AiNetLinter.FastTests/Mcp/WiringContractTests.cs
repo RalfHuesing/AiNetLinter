@@ -22,7 +22,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Vertragstests des Registry-Wirings: eingefrorener 26er-Toolbestand mit projectRoot-Pflicht
+/// Vertragstests des Registry-Wirings: eingefrorener 28er-Toolbestand mit projectRoot-Pflicht
 /// (einzige Ausnahme: get_server_health-Filter optional),
 /// Defense-in-Depth-Guards am ProjectToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
 /// RULES_INVALID statt Default-Fallback, Health-Aggregation je Key, Overview-Template-Aufloesung,
@@ -38,12 +38,12 @@ public sealed class WiringContractTests
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
 
-        Assert.Equal(26, tools.Count);
+        Assert.Equal(28, tools.Count);
 
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
-            if (tool.Name is "get_server_health" or "report_observability_feedback")
+            if (tool.Name is "get_server_health" or "report_observability_feedback" or "inspect_assembly" or "find_assembly_extensions")
             {
                 Assert.DoesNotContain("projectRoot", required);
                 Assert.Contains("\"projectRoot\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
@@ -81,6 +81,7 @@ public sealed class WiringContractTests
         new Dictionary<string, ToolAnnotationExpectation>(StringComparer.Ordinal)
         {
             ["dependency_graph"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["find_assembly_extensions"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_dead_code"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_duplicates"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_magic_values"] = ToolAnnotationExpectation.ReadOnlyProfile,
@@ -106,6 +107,7 @@ public sealed class WiringContractTests
             ["report_observability_feedback"] = new(false, false, false, false),
             ["safeguard"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["search_pattern"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["inspect_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,
         };
 
     private readonly record struct ToolAnnotationExpectation(
@@ -315,11 +317,16 @@ public sealed class WiringContractTests
         Assert.NotNull(server.LastGoodStateUtc);
         Assert.Contains("Simulierter Refresh-Fehler", server.LastLoadError, StringComparison.Ordinal);
 
-        var degraded = await ProjectToolCall.ExecuteAsync(registry, root, _ => Task.FromResult(McpToolResults.Text("kernantwort")));
+        var degraded = await ProjectToolCall.ExecuteAsync(
+            registry,
+            root,
+            _ => Task.FromResult(McpToolResults.Text("kernantwort", new { value = "payload" })));
         var degradedText = TextOf(degraded);
         Assert.StartsWith("[WARN]", degradedText, StringComparison.Ordinal);
         Assert.Contains("letzten guten Solution-Stand", degradedText, StringComparison.Ordinal);
         Assert.Contains("kernantwort", degradedText, StringComparison.Ordinal);
+        Assert.NotNull(degraded.StructuredContent);
+        Assert.Equal("payload", degraded.StructuredContent!.Value.GetProperty("value").GetString());
 
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.False(server.HasDegradedAnswerState);

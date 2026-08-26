@@ -116,7 +116,12 @@ internal static class ProjectToolCall
             content.Add(block is TextContentBlock text ? new TextContentBlock { Text = header + text.Text } : block);
         }
 
-        return new CallToolResult { IsError = result.IsError, Content = content };
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = content,
+            StructuredContent = result.StructuredContent,
+        };
     }
 
     internal static string? RecoverHint(string errorCode)
