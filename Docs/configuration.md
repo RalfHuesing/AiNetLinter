@@ -31,6 +31,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 - **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 - **MCP-Tool-Annotations:** `tools/list` beschreibt für jedes Tool explizit Read-only-, Destructive-, Idempotenz- und Open-World-Hinweise. Diese Werte sind Protokollhinweise für Hosts und keine Zugriffssteuerung; sie werden nicht über `rules.json` konfiguriert.
+- **MCP-Regelkonfiguration-Resource:** `ainetlinter://rules{?projectRoot}` stellt die effektive Konfiguration des adressierten Registry-Keys als frisch generiertes Markdown bereit. Die Ausgabe enthält Herkunft, aktive/deaktivierte Regeln und effektive Metrik-Schwellwerte; sie liest den atomaren Config-Snapshot der residenten MCP-Instanz.
 
 ## 3. Konfiguration (`rules.json`)
 

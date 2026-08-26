@@ -433,7 +433,7 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 - [x] Eine `ainetlinter.project.json` mit den Pflichtfeldern `solution` und
   `rules` bindet beide Pfade relativ zur Definitionsdatei; MCP-Registrierungen
   verwenden nur `command` und `--mcp-server`.
-- [x] Die MCP-Tools und die Overview-Resource adressieren Projekte über einen
+- [x] Die MCP-Tools sowie die Overview- und Regelkonfigurations-Resources adressieren Projekte über einen
   absoluten `projectRoot` und nutzen die projektbezogene Registry mit Lease-,
   Load- und Eviction-Verträgen.
 - [x] Die Overview ist als Resource-Template
@@ -470,6 +470,9 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
   aus; `ainetlinter --docs mcp-rule` gibt die dauerhaft geladene Regel aus.
 - [x] `ainetlinter://overview?projectRoot=...` ist auf Projektstatus und nächste
   Einstiegspunkte reduziert; Toolschemas bleiben in `tools/list`.
+- [x] `ainetlinter://rules?projectRoot=...` liefert bei jedem Read eine Markdown-
+  Karte aus dem effektiven Config-Snapshot des adressierten Registry-Keys mit
+  Konfigurationsherkunft, aktiven Regeln und Metrik-Schwellwerten.
 
 ### Abgeschlossen
 

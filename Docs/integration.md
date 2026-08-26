@@ -426,7 +426,9 @@ Konkret:
 Für eine neue Projektintegration `ainetlinter://agent-guide` genau einmal ohne
 `projectRoot` lesen. Nach dem Anlegen der Projektdefinition liefert
 `ainetlinter://overview?projectRoot=<url-encoded>` nur noch die Statuskarte des
-adressierten Keys. Details: [Docs/agent-api.md](agent-api.md).
+adressierten Keys. `ainetlinter://rules?projectRoot=<url-encoded>` liefert zusätzlich
+die frisch aus dem effektiven Config-Snapshot erzeugte Regelkarte mit Herkunft,
+aktiven Regeln und Schwellwerten. Details: [Docs/agent-api.md](agent-api.md).
 
 ### Mehrere parallele Server-Instanzen
 

@@ -27,12 +27,15 @@ public sealed class McpLiveRepositoryResourceTests
     {
         var repoRoot = SolutionRootLocator.Find();
         var resourceUri = $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(repoRoot)}";
+        var rulesResourceUri = $"ainetlinter://rules?projectRoot={Uri.EscapeDataString(repoRoot)}";
         var templates = await _fixture.Client.ListResourceTemplatesAsync();
         var resources = await _fixture.Client.ListResourcesAsync();
         var tools = await _fixture.Client.ListToolsAsync();
         var readResult = await _fixture.Client.ReadResourceAsync(resourceUri);
+        var rulesReadResult = await _fixture.Client.ReadResourceAsync(rulesResourceUri);
         var guideResult = await _fixture.Client.ReadResourceAsync("ainetlinter://agent-guide");
         var textContent = Assert.IsType<TextResourceContents>(Assert.Single(readResult.Contents));
+        var rulesContent = Assert.IsType<TextResourceContents>(Assert.Single(rulesReadResult.Contents));
         var guideContent = Assert.IsType<TextResourceContents>(Assert.Single(guideResult.Contents));
         var expectedToolGroups = new[]
         {
@@ -45,6 +48,7 @@ public sealed class McpLiveRepositoryResourceTests
         };
 
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?projectRoot}");
+        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?projectRoot}");
         var guideResource = Assert.Single(resources);
         Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
         Assert.Equal(26, tools.Count);
@@ -54,6 +58,13 @@ public sealed class McpLiveRepositoryResourceTests
         Assert.Contains(repoRoot, textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Solution:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Regeln:", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal(rulesResourceUri, rulesContent.Uri);
+        Assert.Equal("text/markdown", rulesContent.MimeType);
+        Assert.Contains("# AiNetLinter — effektive Regelkonfiguration", rulesContent.Text, StringComparison.Ordinal);
+        Assert.Contains("- Konfigurationsquelle:", rulesContent.Text, StringComparison.Ordinal);
+        Assert.Contains("## Aktive Regeln", rulesContent.Text, StringComparison.Ordinal);
+        Assert.Contains("## Effektive Schwellwerte", rulesContent.Text, StringComparison.Ordinal);
+        Assert.Contains("| `MaxLineCount` | 500 | aktiv |", rulesContent.Text, StringComparison.Ordinal);
         Assert.Equal("ainetlinter://agent-guide", guideContent.Uri);
         Assert.Contains("AiNetLinter MCP-Bootstrap", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter.project.json", guideContent.Text, StringComparison.Ordinal);

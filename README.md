@@ -81,7 +81,10 @@ Diese Datei heißt `ainetlinter.project.json`; ihre Pfade werden relativ zu ihr
 aufgelöst. Im MCP-Modus gehören `--path` und `--config` nicht in die
 Registrierung. `ainetlinter://agent-guide` stellt den einmaligen Bootstrap-
 Leitfaden samt dauerhafter Agentenregel bereit; `tools/list` liefert die
-aktuellen Tool- und Parameterschemas.
+aktuellen Tool- und Parameterschemas. Die Resource
+`ainetlinter://rules?projectRoot=<url-encoded>` liefert pro adressiertem
+Projekt-Key die frisch generierte effektive Regelkonfiguration mit Herkunft,
+aktiven Regeln und Metrik-Schwellwerten.
 
 Die Tools liefern außerdem fachliche MCP-Annotations: Analyse- und Health-Abfragen
 sind read-only, `reload_config` ist idempotent, und

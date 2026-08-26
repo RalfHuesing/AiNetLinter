@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -52,35 +51,7 @@ internal static class OverviewResourceRegistration
         ProjectRegistry registry,
         string? projectRoot,
         Func<ProjectSnapshot, ReadResourceResult> render)
-    {
-        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
-        if (guard is not null)
-        {
-            throw new McpException(ProjectToolCall.FormatGuard(guard));
-        }
-
-        var leaseResult = registry.Lease(projectRoot!);
-        if (!leaseResult.Succeeded || leaseResult.Lease is null)
-        {
-            throw new McpException(LinterErrorFormatter.Format(
-                leaseResult.ErrorCode!,
-                leaseResult.ErrorMessage!,
-                hint: ProjectToolCall.RecoverHint(leaseResult.ErrorCode!)));
-        }
-
-        using var lease = leaseResult.Lease;
-        if (lease.Server.LoadState == ServerLoadState.LoadFailed)
-        {
-            var failure = ProjectToolCall.BuildLoadFailure(lease.Server, lease);
-            throw new McpException(LinterErrorFormatter.Format(
-                ProjectErrorCodes.ProjectLoadFailed,
-                failure.Message,
-                context: failure.Context,
-                hint: failure.Hint));
-        }
-
-        return render(registry.SnapshotFor(lease));
-    }
+        => ProjectResourceLease.Execute(registry, projectRoot, render);
 
     private static string BuildCanonicalUri(string projectRoot) =>
         $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(projectRoot)}";

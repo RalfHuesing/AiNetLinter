@@ -667,6 +667,16 @@ geladene Solution, verwendete Regelquelle und nächste Einstiegspunkte. Die
 vollständigen Tool- und Parameterschemas stehen in `tools/list`. Beispiel:
 `{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
 
+Die Resource `ainetlinter://rules{?projectRoot}` liefert für denselben adressierten
+Projekt-Key bei jedem `resources/read` eine frisch aus dessen atomarem Config-Snapshot
+generierte Markdown-Karte. Sie enthält die Konfigurationsherkunft (eingebaute Defaults
+oder aufgelöster `rules.json`-Pfad), aktive und deaktivierte Regeln sowie die effektiven
+Metrik-Schwellwerte. Projekt- und Pfad-Overrides werden als vorhandene Muster ausgewiesen;
+die konkrete Anwendung erfolgt weiterhin pro Roslyn-Projekt bzw. Datei. Beispiel:
+`{"uri": "ainetlinter://rules?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
+Die Ausgabe spiegelt auch Änderungen wider, die über `reload_config` in denselben
+residenten Projekt-Key geladen wurden.
+
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
 Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Bereits ein einziger `Console.WriteLine(...)`-Call aus irgendeiner wiederverwendeten CLI-Klasse wuerde das Framing der gesamten Session zerstoeren, weil die naechste JSON-RPC-Zeile von einem nicht-JSON-Leak praefixiert waere und der MCP-Host den Frame nicht mehr parsen kann.

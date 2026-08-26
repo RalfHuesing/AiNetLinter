@@ -43,6 +43,7 @@ internal static class McpServerOptionsFactory
         var resources = new McpServerResourceCollection();
         McpAgentGuideRegistration.Register(resources);
         OverviewResourceRegistration.Register(resources, registry);
+        RulesResourceRegistration.Register(resources, registry);
         return resources;
     }
 
