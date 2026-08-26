@@ -32,6 +32,16 @@ fortgesetzt werden kann.
   Kontextfenster starten; bestehende Subagenten niemals wiederbeleben oder
   fortsetzen.
 
+## Nachtrag des Nutzers (2026-08-26T22:33:50+02:00)
+
+Die Änderung aus Commit `1ee21426` (`fix: Record-Filter für find_symbol
+freischalten`) wurde vom Nutzer bewusst eingebracht und ist gewünscht. Die
+zusätzliche `Records.cs`-Fixture-Datei und die daraus resultierende Dokumentzahl
+sechs sind daher als gültiger aktueller Bestand zu behandeln, nicht als
+unbeabsichtigte Abweichung oder Grund, diese Änderung zurückzunehmen. Veraltete
+Hotspots-Testannahmen dürfen bei der Verifikation nur gezielt an diesen
+gewünschten Bestand angepasst werden.
+
 ## Arbeitsanker
 
 - Konzept: `tasks/get-file-tree/Konzept.md` (`status: ready`)
