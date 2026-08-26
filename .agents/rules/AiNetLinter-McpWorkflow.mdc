@@ -6,16 +6,29 @@ alwaysApply: true
 # AiNetLinter MCP-Nutzung
 
 AiNetLinter analysiert .NET-Solutions mit Roslyn. Für semantische Fragen zu
-C#-Code die AiNetLinter-MCP-Tools bevorzugen; sie kennen Symbole, Typen,
+C#-Code gelten die folgenden verbindlichen Prioritäten; die AiNetLinter-MCP-
+Tools kennen Symbole, Typen,
 Referenzen und Abhängigkeiten.
+
+## Verbindliche Priorität
+
+Bei jeder Aufgabe, die C#-Symbole, Typen, Aufrufer, Referenzen, Abhängigkeiten,
+Impact, Codeverständnis oder Regelverstöße betrifft, MUSS zuerst das passende
+AiNetLinter-MCP-Tool aufgerufen werden. Die Werkzeugwahl richtet sich nach der
+Tabelle unten; `rg`/`grep`/Read oder interne Agenten-Tools dürfen ergänzend für
+konkreten Edit-/Diff-Kontext und exakte Textarbeit verwendet werden, ersetzen
+aber nicht die semantische MCP-Abfrage.
 
 ## Standard
 
 - Für jeden projektbezogenen MCP-Tool-Aufruf den absoluten `projectRoot`
   mitsenden. `get_server_health` darf ohne Projektfilter verwendet werden.
-- Die aktuellen Tool- und Parameterschemas über `tools/list` prüfen.
-- Nach vollständigen Ergebnissen nicht redundant mit Read/Grep nachprüfen; bei
-  Trunkierung den Scope oder die Limits des MCP-Aufrufs verfeinern.
+- Die aktuellen Tool- und Parameterschemas aus der MCP-Tooldefinition verwenden
+  (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
+  Toolschemas.
+- Nach einem vollständigen MCP-Ergebnis dieselbe semantische Frage nicht
+  redundant mit Read/rg/grep nachprüfen; bei Trunkierung den Scope oder die
+  Limits des MCP-Aufrufs verfeinern.
 
 ## Werkzeugwahl
 

@@ -26,6 +26,7 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains(".cursor/rules", content.Text, StringComparison.Ordinal);
         Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
         Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
+        Assert.Contains("MUSS zuerst das passende", content.Text, StringComparison.Ordinal);
         Assert.Contains("report_observability_feedback", content.Text, StringComparison.Ordinal);
 
         var workflowStart = content.Text.IndexOf("## Dauerhafte Agentenregel", StringComparison.Ordinal);
