@@ -1542,15 +1542,9 @@ Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse
 AiNetLinter.exe --path . --config rules.json --no-cache
 ```
 
-  - **Erlaubte Werte:** `all` (Standard bei Aufruf ohne Parameter), `cs` (oder `c#`), `razor`, `js`, `css`.
-
-Beispiel:
-```bash
-```
-
 ---
 
-## 13. System-Logging (ppsettings.json)
+## 13. System-Logging (`appsettings.json`)
 
 AiNetLinter schreibt ein gemeinsames prozessinternes System-Logging (Serilog, Datei-Sink):
 Es protokolliert Prozess- und Verbindungs-Lifecycle — Prozessstart mit Rolle/PID/Version/Argumente,
