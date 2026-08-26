@@ -108,7 +108,7 @@ public sealed class GetHotspotsToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Gescannt: 5 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Gescannt: 6 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class GetHotspotsToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Gescannt: 5 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Gescannt: 6 .cs-Dateien", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
