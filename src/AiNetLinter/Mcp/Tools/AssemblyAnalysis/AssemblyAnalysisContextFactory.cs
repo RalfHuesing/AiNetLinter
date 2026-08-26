@@ -28,7 +28,9 @@ internal static class AssemblyAnalysisContextFactory
         var consumer = consumerSolution is null
             ? new ConsumerSelection(null, null, null)
             : await FindConsumerCompilationAsync(consumerSolution, assemblyPath, metadata.Identity, receiverType, diagnostics, ct);
-        var compilation = consumer.Compilation ?? CreateStandaloneCompilation(assemblyPath, metadata.References, diagnostics);
+        var compilation = consumer.Compilation is null
+            ? CreateStandaloneCompilation(assemblyPath, metadata.References, diagnostics)
+            : AddAssemblyDirectoryDependencies(consumer.Compilation, assemblyPath, metadata.References, diagnostics);
         var targetReference = FindTargetReference(compilation, assemblyPath, metadata.Identity);
         if (targetReference is null)
         {
@@ -169,6 +171,47 @@ internal static class AssemblyAnalysisContextFactory
             "AiNetLinter.AssemblyMetadataInspection",
             references: references,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+    }
+
+    private static Compilation AddAssemblyDirectoryDependencies(
+        Compilation compilation,
+        string assemblyPath,
+        IReadOnlyList<AssemblyReferenceDto> assemblyReferences,
+        List<string> diagnostics)
+    {
+        var directory = Path.GetDirectoryName(assemblyPath);
+        var trustedPlatformAssemblies = GetTrustedPlatformAssemblyPaths();
+        foreach (var reference in assemblyReferences)
+        {
+            if (compilation.References
+                .Select(reference => compilation.GetAssemblyOrModuleSymbol(reference) as IAssemblySymbol)
+                .Any(symbol => symbol is not null && IsSameIdentity(symbol.Identity, reference)))
+            {
+                continue;
+            }
+
+            var candidate = FindReferencePath(directory, reference.Name, trustedPlatformAssemblies);
+            if (candidate is null || compilation.References
+                .OfType<PortableExecutableReference>()
+                .Any(existing => existing.FilePath is not null && string.Equals(
+                    Path.GetFullPath(existing.FilePath),
+                    candidate,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            try
+            {
+                compilation = compilation.AddReferences(MetadataReference.CreateFromFile(candidate));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException)
+            {
+                diagnostics.Add($"Referenz konnte nicht geladen werden: {candidate}: {ex.Message}");
+            }
+        }
+
+        return compilation;
     }
 
     private static MetadataReference? FindTargetReference(

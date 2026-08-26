@@ -148,6 +148,33 @@ public sealed class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public async Task InspectAssembly_WithConsumerSolution_ResolvesAssemblyDirectoryDependencies()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-");
+        var dependencyPath = EmitAssembly(temp, "ConsumerDependency", "namespace Dependency; public sealed class Value { }");
+        var assemblyPath = EmitAssembly(
+            temp,
+            "ConsumerTarget",
+            "namespace Target; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
+            dependencyPath);
+        using var consumer = RoslynTestSolutionFactory.CreateSolution(
+            Path.Combine(temp.DirectoryPath, "Consumer.slnx"),
+            new ProjectSpec("Consumer", [("Consumer.cs", "namespace Consumer; public sealed class Marker { }")]));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: consumer.Solution)));
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            server,
+            new InspectAssemblyArguments(assemblyPath, null, "UsesDependency", null, true, 100),
+            CancellationToken.None);
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+
+        Assert.Equal("complete", payload.Completeness);
+        Assert.DoesNotContain(payload.Diagnostics, diagnostic => diagnostic.Contains("ConsumerDependency", StringComparison.Ordinal));
+        Assert.Contains(payload.References, reference => reference.Name == "ConsumerDependency" && reference.Resolved);
+    }
+
+    [Fact]
     public async Task InspectAssembly_MissingDependencyMarksPartialResult()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
