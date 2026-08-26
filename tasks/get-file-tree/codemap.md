@@ -2,7 +2,7 @@
 task: get-file-tree
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-26T22:05:00+02:00
+last_updated: 2026-08-26T22:30:29+02:00
 ---
 
 # CodeMap: get-file-tree
@@ -15,9 +15,10 @@ aus dem aktuellen Bestand gelesen.
 ## Karte
 
 - **`src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs`** — Bestehende Sammelstelle für dateistrukturorientierte MCP-Registrierungen und `projectRoot`-gebundene Tool-Lambdas.
-- **`src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs`** — Gemeinsamer Root-Guard-, Registry-Lease- und Load-State-Dispatch, der um den filesystem-only Pfad ergänzt werden soll.
+- **`src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs`** — Gemeinsamer Root-Guard-, Registry-Lease- und Load-State-Dispatch mit separatem filesystem-only Callback-Einstieg. (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs`** — Projekt-Key-Auflösung, Lease-Lifetime und residenter Serverzustand für die projektgebundene MCP-Adressierung.
-- **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — Bestehende File-Structure-Tools, Scanner-/Record-Muster und die Abgrenzung zwischen Roslyn-Dokumenten und physischer Enumeration.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — File-Structure-Tools, Scanner-/Record-Muster und der boundary-sichere Root-Resolver für die spätere physische Enumeration. (zuletzt: step-001)
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/FileTreePathResolver.cs`** — Lexikalischer Resolver für den effektiven File-Tree-Root innerhalb des registrierten Projektroots. (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeTool.cs`** — Dünnes Tool-Dispatch-Muster für eine dateistrukturorientierte Antwort mit Structured Content und Serverzustand.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeScanner.cs`** — Scanner-/Record-Ablage innerhalb des File-Structure-Bereichs als strukturelle Referenz.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/SolutionFileWalker.cs`** — Roslyn-Document-Walker als bewusste Abgrenzungsreferenz, nicht als physischer File-Tree-Collector.
@@ -31,8 +32,9 @@ aus dem aktuellen Bestand gelesen.
 - **`src/AiNetLinter/Mcp/Tools/McpToolRegistrationOptions.cs`** — Zentrale Annotation-Profile für read-only, idempotente und closed-world MCP-Tools.
 - **`src/AiNetLinter.FastTests/Baseline/StalenessTreeWalkerTests.cs`** — Component-Tests für Ausschlüsse, Root-Deduplizierung, Warnungen und Reparse-Point-Entscheidungen.
 - **`src/AiNetLinter.FastTests/Configuration/FileFilterEvaluatorTests.cs`** — Unit-Tests für case-insensitive Datei- und Verzeichnisfiltersemantik.
-- **`src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`** — Gefrorener Toolbestand, `projectRoot`-Pflicht und Annotation-/Dispatch-Verträge.
+- **`src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`** — Gefrorener Toolbestand, `projectRoot`-Pflicht sowie Registry-, Load-State- und Filesystem-Dispatch-Verträge. (zuletzt: step-001)
 - **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/`** — Component-Testbereich für bestehende File-Structure-Toolverträge und spätere File-Tree-Logik.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/FileTreePathResolverTests.cs`** — Unit-Testanker für relative Root-Auflösung und Boundary-Fälle des File-Tree-Resolvers. (zuletzt: step-001)
 - **`src/AiNetLinter.IntegrationTests/Baseline/FileSystemExclusionHelpersTests.cs`** — Integrationstests für generierte Pfade, sichere Enumeration und zentrale Ausschlussannahmen.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpHandshakeToolRegistrationTests.cs`** — Echte MCP-Handshake-/`tools/list`-Registrierungsprüfung gegen eine Mini-Solution.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Wire- und projektgebundene Toolverträge einschließlich Fehler-/Loading-Zuständen.
