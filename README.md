@@ -88,6 +88,11 @@ vollständige Bootstrap ist bei einer neuen Integration einmalig über
 `ainetlinter://agent-guide` oder offline mit `ainetlinter --docs mcp-bootstrap`
 abzurufen.
 
+Die laufenden Bootstrap-Ausgaben ergänzen einen dynamischen
+Registrierungsblock mit dem tatsächlichen Pfad des aktuellen AiNetLinter-
+Prozesses. Verwende diesen absoluten `command`-Pfad, wenn der MCP-Host
+`ainetlinter` nicht über `PATH` auflösen kann.
+
 Registrierung, Projektvertrag und Tool-vs.-Textsuche: [Docs/integration.md](Docs/integration.md#mcp-server-registrieren).
 
 ---

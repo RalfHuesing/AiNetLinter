@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Commands;
@@ -53,7 +54,9 @@ internal static class DocsCommand
             return 1;
         }
 
-        c.WriteLine(text);
+        c.WriteLine(key.Equals("mcp-bootstrap", StringComparison.OrdinalIgnoreCase)
+            ? McpRegistrationInstructions.AppendRuntimeBlock(text)
+            : text);
         return 0;
     }
 

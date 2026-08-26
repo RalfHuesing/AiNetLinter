@@ -24,6 +24,8 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("ainetlinter --docs rules-json", content.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", content.Text, StringComparison.Ordinal);
         Assert.Contains(".cursor/rules", content.Text, StringComparison.Ordinal);
+        Assert.Contains("## Laufzeitpfad des MCP-Servers", content.Text, StringComparison.Ordinal);
+        Assert.Contains("--mcp-server", content.Text, StringComparison.Ordinal);
         Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
         Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
         Assert.Contains("MUSS zuerst das passende", content.Text, StringComparison.Ordinal);

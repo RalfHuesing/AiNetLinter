@@ -31,7 +31,9 @@ Wiederherstellung einer fehlenden Projektinitialisierung gelesen.
    verfügbar.
 5. Falls der MCP-Server noch nicht registriert ist, verwende die
    Host-Konfiguration mit `ainetlinter` und `args: ["--mcp-server"]`.
-   `--path` und `--config` gehören nicht in diese Registrierung.
+   Wenn unten ein dynamischer Laufzeitblock ausgegeben wird, verwende dessen
+   `command` und `args`; `--path` und `--config` gehören nicht in diese
+   Registrierung.
 6. Prüfe die Einrichtung mit `get_server_health` oder einem kleinen
    semantischen Tool-Aufruf gegen den absoluten Projektroot.
 
@@ -39,6 +41,13 @@ Bei mehreren Solutions oder mehreren nicht eindeutig zuordenbaren
 Regeldateien die Auswahl vor dem Schreiben klären. Nach erfolgreicher
 Einrichtung ist dieser Bootstrap abgeschlossen; im normalen Arbeitskontext
 reicht die dauerhafte `AiNetLinter-McpWorkflow.mdc`.
+
+Die von einer laufenden AiNetLinter-Instanz gelieferte Fassung dieses
+Bootstrap-Leitfadens ergänzt am Ende der Ausgabe einen
+dynamischen Registrierungsblock. Er enthält den tatsächlichen Startpfad des
+aktuellen Prozesses und ist für MCP-Hosts zu verwenden, die `ainetlinter` nicht
+über `PATH` auflösen können. Die statische Vorlage bleibt mit dem
+PATH-basierten Beispiel oben portabel.
 
 ## MCP-Projektvertrag
 

@@ -50,6 +50,27 @@ public sealed class DocsCommandTests
     }
 
     [Fact]
+    public void Run_WithMcpBootstrap_IncludesRuntimeRegistration()
+    {
+        var originalOut = Console.Out;
+        using var writer = new StringWriter();
+        Console.SetOut(writer);
+        try
+        {
+            var result = DocsCommand.Run("mcp-bootstrap");
+
+            Assert.Equal(0, result);
+            var output = writer.ToString();
+            Assert.Contains("## Laufzeitpfad des MCP-Servers", output, StringComparison.Ordinal);
+            Assert.Contains("--mcp-server", output, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
     public void Run_WithRemovedMcpWorkflowName_ReturnsOne()
     {
         var originalError = Console.Error;

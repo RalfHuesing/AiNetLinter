@@ -51,6 +51,8 @@ internal static class McpAgentGuideRegistration
     {
         var bootstrap = EmbeddedResourceReader.ReadRequired(BootstrapResourceName).TrimEnd();
         var workflow = EmbeddedResourceReader.ReadRequired(WorkflowResourceName).Trim();
-        return bootstrap + "\n\n---\n\n## Dauerhafte Agentenregel\n\n" + workflow;
+        var runtimeRegistration = McpRegistrationInstructions.BuildRuntimeBlock();
+        return bootstrap + "\n\n" + runtimeRegistration +
+               "\n\n---\n\n## Dauerhafte Agentenregel\n\n" + workflow;
     }
 }

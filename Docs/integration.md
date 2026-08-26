@@ -265,6 +265,13 @@ Standard-`mcpServers`-Block (Claude Code, Cursor und andere MCP-Hosts mit gleich
 
 Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder Tool-Aufruf adressiert sein Projekt über den absoluten `projectRoot`.
 
+Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und
+`ainetlinter --docs mcp-bootstrap` enthält zusätzlich einen
+`## Laufzeitpfad des MCP-Servers`-Block mit dem tatsächlich ermittelten
+`command`-Pfad. Verwende diesen Block, wenn der Host `ainetlinter` nicht über
+`PATH` findet. Wird AiNetLinter über `dotnet` gestartet, enthält der Block die
+AiNetLinter-DLL als erstes Argument.
+
 ### Projektdefinition
 
 Im adressierten Projektroot liegt `ainetlinter.project.json`:
