@@ -36,6 +36,8 @@ aber nicht die semantische MCP-Abfrage.
 | :--- | :--- |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
 | Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
+| Öffentliche API einer lokalen .NET-DLL untersuchen | `inspect_assembly` |
+| Klassische Extension-Methoden einer lokalen .NET-DLL prüfen | `find_assembly_extensions` |
 | Aufrufer, Abhängigkeiten oder Tests prüfen | `find_references`, `get_impact`, `dependency_graph`, `get_test_context` |
 | Nach C#-Änderungen gezielt prüfen | `get_impact`, `get_violations`; bei Bedarf `metrics_lookup` |
 | Vor größerem Abschluss auditieren | `safeguard`; passend zum Risiko `find_duplicates`, `find_dead_code` oder `find_magic_values` |
@@ -46,6 +48,13 @@ Nicht-C#-Dateien, Konfiguration, Kommentare, exakte Textmuster sowie konkrete
 Datei-/Zeilenarbeit geeignet. Sie ersetzen bei C#-Symbol-, Referenz- und
 Impact-Fragen nicht die semantische MCP-Analyse. `search_pattern` ist der
 MCP-Weg für repositoryweite Textsuche und Nicht-C#-Dateien.
+
+Für beide Assembly-Tools ist `assemblyPath` ein absoluter, lokaler DLL-Pfad;
+`projectRoot` ist optional und liefert den Consumer-Kontext. Die Analyse ist
+metadata-only und führt die DLL nicht aus. Bei `inspect_assembly` zuerst die
+öffentliche API untersuchen; `find_assembly_extensions` prüft klassische C#-
+Extensions und kann mit `receiverType` die Roslyn-Anwendbarkeit bewerten.
+`completeness` sowie Trunkierungsangaben beachten.
 
 Bei `PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` nicht ungefragt eine
 Projektintegration durchführen. Nur bei einem ausdrücklichen
