@@ -1,0 +1,45 @@
+---
+task: get-file-tree
+type: codemap
+maintained_by: planer, coder, kritiker
+last_updated: 2026-08-26T22:05:00+02:00
+---
+
+# CodeMap: get-file-tree
+
+Task-scoped Landkarte — existiert nur für diesen Task und enthält nur die
+Bestandsbereiche, die für die geplante physische MCP-Dateilandkarte relevant
+sind. Die Einträge sind Pointer; Details werden im jeweiligen Step-Modus direkt
+aus dem aktuellen Bestand gelesen.
+
+## Karte
+
+- **`src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs`** — Bestehende Sammelstelle für dateistrukturorientierte MCP-Registrierungen und `projectRoot`-gebundene Tool-Lambdas.
+- **`src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs`** — Gemeinsamer Root-Guard-, Registry-Lease- und Load-State-Dispatch, der um den filesystem-only Pfad ergänzt werden soll.
+- **`src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs`** — Projekt-Key-Auflösung, Lease-Lifetime und residenter Serverzustand für die projektgebundene MCP-Adressierung.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — Bestehende File-Structure-Tools, Scanner-/Record-Muster und die Abgrenzung zwischen Roslyn-Dokumenten und physischer Enumeration.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeTool.cs`** — Dünnes Tool-Dispatch-Muster für eine dateistrukturorientierte Antwort mit Structured Content und Serverzustand.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeScanner.cs`** — Scanner-/Record-Ablage innerhalb des File-Structure-Bereichs als strukturelle Referenz.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/SolutionFileWalker.cs`** — Roslyn-Document-Walker als bewusste Abgrenzungsreferenz, nicht als physischer File-Tree-Collector.
+- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — Zentrale physische Traversierung, Standardausschlüsse, Reparse-Point-Schutz, Deduplizierung und partielle Walk-Warnungen.
+- **`src/AiNetLinter/Baseline/TreeWalkStats.cs`** — Gemeinsames Warnungs- und Unzugänglichkeitsmodell des physischen Walks.
+- **`src/AiNetLinter/Configuration/FileFilterEvaluator.cs`** — Bestehende Glob- und Ausschlusssemantik, deren wiederverwendbarer Kern die neue Pfadfilterung tragen soll.
+- **`src/AiNetLinter/Configuration/Config.ValueTypes.cs`** — Bestehendes `FileFiltersConfig`-Modell als Referenz für zentrale Datei-/Verzeichnisfilter.
+- **`src/AiNetLinter/Output/PathNormalizer.cs`** — Pfadseparator- und Output-Konventionen; der neue Resolver muss zusätzlich eine echte Root-Grenze gewährleisten.
+- **`src/AiNetLinter/Mcp/McpToolResults.cs`** — Gemeinsamer Recoverable-/Error- und Structured-Content-Vertrag für MCP-Antworten.
+- **`src/AiNetLinter/Mcp/McpTruncation.cs`** — Vorhandenes Trunkierungsprinzip als Referenz für die eigene strukturierte Completeness-Antwort.
+- **`src/AiNetLinter/Mcp/Tools/McpToolRegistrationOptions.cs`** — Zentrale Annotation-Profile für read-only, idempotente und closed-world MCP-Tools.
+- **`src/AiNetLinter.FastTests/Baseline/StalenessTreeWalkerTests.cs`** — Component-Tests für Ausschlüsse, Root-Deduplizierung, Warnungen und Reparse-Point-Entscheidungen.
+- **`src/AiNetLinter.FastTests/Configuration/FileFilterEvaluatorTests.cs`** — Unit-Tests für case-insensitive Datei- und Verzeichnisfiltersemantik.
+- **`src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`** — Gefrorener Toolbestand, `projectRoot`-Pflicht und Annotation-/Dispatch-Verträge.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/`** — Component-Testbereich für bestehende File-Structure-Toolverträge und spätere File-Tree-Logik.
+- **`src/AiNetLinter.IntegrationTests/Baseline/FileSystemExclusionHelpersTests.cs`** — Integrationstests für generierte Pfade, sichere Enumeration und zentrale Ausschlussannahmen.
+- **`src/AiNetLinter.IntegrationTests/Mcp/McpHandshakeToolRegistrationTests.cs`** — Echte MCP-Handshake-/`tools/list`-Registrierungsprüfung gegen eine Mini-Solution.
+- **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Wire- und projektgebundene Toolverträge einschließlich Fehler-/Loading-Zuständen.
+- **`src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs`** — Stable-Dogfood-Teststrecke gegen das AiNetLinter-Repository.
+- **`src/AiNetLinter.IntegrationTests/Mcp/Platform/`** — Prozess-, Read-only- und Repository-MCP-Fixtures für Integrationstests.
+- **`src/AiNetLinter.TestKit/TestTempDirectory.cs`** — Zentrale, git-ignorierte Testtemp-Infrastruktur für künstliche Dateibäume und Zugriffs-/Trunkierungsfälle.
+- **`Directory.Build.props`, `Directory.Packages.props`, `AiNetLinter.slnx`** — Globale .NET-10-/Nullable-/Warnings-as-errors-/Package- und Solution-Konfiguration.
+- **`src/AiNetLinter/*.csproj`, `src/AiNetLinter.FastTests/*.csproj`, `src/AiNetLinter.IntegrationTests/*.csproj`, `src/AiNetLinter.TestKit/*.csproj`** — Projektabhängigkeiten, xUnit-v3-Testaufteilung und Referenzgrenzen für Produktion und Verifikation.
+- **`.runsettings` und `tests/AiNetLinter.TestProject.props`** — Gemeinsame Testausgabe- und Testprojekt-Einstellungen.
+- **`Docs/agent-api.md`, `Docs/integration.md`, `README.md`, `Docs/ROADMAP.md`** — Produktdokumentation für MCP-Toolreferenz, Projektintegration, Agentenorientierung und Entwicklungshistorie.

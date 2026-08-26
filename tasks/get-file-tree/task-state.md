@@ -1,0 +1,52 @@
+---
+status: executing
+task: get-file-tree
+started_at: 2026-08-26T22:02:09+02:00
+last_updated: 2026-08-26T22:02:09+02:00
+rules_dir: .agents/rules
+total_steps: 0
+current_step: null
+---
+
+# Task State: get-file-tree
+
+## Übersicht
+
+- **Task-Status:** `executing`
+- **Steps gesamt:** 0
+- **Aktueller Schritt:** `null`
+- **Roadmap:** wird im Roadmap-Modus erstellt
+- **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
+- **Gestartet:** 2026-08-26T22:02:09+02:00
+- **Zuletzt aktualisiert:** 2026-08-26T22:02:09+02:00
+
+## Steps
+
+| Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
+|------|------|--------|-------|----------|-------|----------|--------|
+
+## Config (optional)
+
+Der Nutzer wünscht größere, in sich geschlossene Coding-Pakete. Der Coder führt
+den vollständigen Test-Gate-Lauf vor seinem Commit aus; der Kritiker prüft den
+übergebenen grünen Nachweis und wiederholt diesen Lauf nicht, sofern keine
+konkrete Unklarheit oder ein Fehlerverdacht besteht.
+
+```
+max_fix_rounds_per_step: 3
+soft_step_checkin_interval: 40
+max_batch_items: 8
+max_batch_diff_lines: 40
+build_command: aus roadmap.md Tech-Stack-Notiz
+test_command: aus roadmap.md Tech-Stack-Notiz
+target_branch: aktueller Branch
+model_planer: nicht festgelegt
+model_coder: nicht festgelegt
+model_kritiker: nicht festgelegt
+```
+
+## Abbruch-/Pause-Bedingungen
+
+- Korrektur-Kettenbudget und weicher Check-in gemäß Drift-Loop-Spezifikation.
+- Infrastruktur-/Inhalts-Blocker werden nicht eigenmächtig übergangen.
+- Tech-Debt löst keinen automatischen Step aus.
