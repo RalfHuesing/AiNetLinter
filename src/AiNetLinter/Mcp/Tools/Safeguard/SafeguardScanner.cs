@@ -124,8 +124,7 @@ internal static class SafeguardScanner
                 config: concreteConfig,
                 rulesJsonContent: null,
                 profiler: null,
-                console: console,
-                args: null);
+                console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
 
             // Im selben try/catch wie die LinterEngine: ein kompilierbares Projekt, das auch nach

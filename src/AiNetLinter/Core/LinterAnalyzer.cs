@@ -9,7 +9,6 @@ using AiNetLinter.Core.Checkers;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using AiNetLinter.Suppression;
-using AiNetLinter.Cli;
 
 namespace AiNetLinter.Core;
 
@@ -21,7 +20,7 @@ public sealed class LinterAnalyzer : CSharpSyntaxWalker
     public List<ClassInfo> Classes => _ctx.Classes;
     public List<PartialClassPart> PartialClassParts => _ctx.PartialClassParts;
 
-    internal LinterAnalyzer(AnalyzerArgs args, LinterArgs? linterArgs = null)
+    internal LinterAnalyzer(AnalyzerArgs args)
         : base(SyntaxWalkerDepth.Node)
     {
         _ctx = new CheckerContext(args.FilePath, args.Config, args.SemanticModel, args.ProjectName,

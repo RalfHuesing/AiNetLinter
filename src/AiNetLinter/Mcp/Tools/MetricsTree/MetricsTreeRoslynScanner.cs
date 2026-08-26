@@ -75,7 +75,7 @@ internal static class MetricsTreeRoslynScanner
         // wird projektweit ausschliesslich von Config implementiert, der Downcast ist nicht spekulativ.
         var concreteConfig = (Config)scan.Config;
         var engine = new LinterEngine(
-            config: concreteConfig, rulesJsonContent: null, profiler: null, console: scan.Console, args: null);
+            config: concreteConfig, rulesJsonContent: null, profiler: null, console: scan.Console);
         var violations = await engine.RunAsync(scan.Solution, noCache: true, cacheTtlMinutes: 0, scan.CancellationToken);
 
         var byFile = violations

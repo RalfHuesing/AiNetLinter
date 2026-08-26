@@ -11,7 +11,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 ### Schlüsselkomponenten:
 - **Engine & Core CLI**: `src/AiNetLinter/`
   - `Cli/`: Argument-Parsing und CLI-Optionen System (System.CommandLine basiert).
-  - `Generators/`: SyntaxWalker, Agent-Rules Sync, Skeleton Map & Playbook Generierung.
+  - `Generators/`: SyntaxWalker, Agent-Rules Sync und Skeleton Map.
   - `Rules/`: Roslyn-basierte Regel-Implementierungen.
   - `Diagnostics/`: Performance-Profiler und Messungen.
 - **Fast Tests**: `src/AiNetLinter.FastTests/` (xUnit, Unit- und Component-Tests, rein in-memory / Roslyn Adhoc-Workspaces, < 10s Laufzeit).

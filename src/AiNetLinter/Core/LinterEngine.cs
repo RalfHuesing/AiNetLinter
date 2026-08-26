@@ -13,7 +13,6 @@ using AiNetLinter.Output;
 using AiNetLinter.Suppression;
 using AiNetLinter.Metrics;
 using AiNetLinter.Cache;
-using AiNetLinter.Cli;
 
 [assembly: InternalsVisibleTo("AiNetLinter.FastTests")]
 [assembly: InternalsVisibleTo("AiNetLinter.IntegrationTests")]
@@ -31,7 +30,7 @@ public sealed class LinterEngine
     private readonly IPerformanceProfiler _profiler;
     private readonly ILintConsole _console;
 
-    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null, LinterArgs? args = null)
+    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
     {
         _config = config;
         _rulesJsonContent = rulesJsonContent;
@@ -165,7 +164,7 @@ public sealed class LinterEngine
     {
         var solutionDir = Path.GetDirectoryName(state.Solution.FilePath);
         var testSuffixes = _config.TestSentinel.TestProjectNameSuffixes;
-        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes, _config);
+        var workItems = await ResolveWorkItemsAsync(state.Solution, catalog, solutionDir, testSuffixes);
 
         await Parallel.ForEachAsync(workItems, CreateParallelOptions(ct), (item, token) =>
             AnalyzeWorkItemAsync(item, state, cache, projectsNeedingRestore, token));
@@ -175,12 +174,11 @@ public sealed class LinterEngine
         Solution solution,
         SourceFileCatalog? catalog,
         string? solutionDir,
-        IReadOnlyList<string> testSuffixes,
-        Config config)
+        IReadOnlyList<string> testSuffixes)
     {
         if (catalog != null)
         {
-            return await catalog.CollectDocumentWorkItemsAsync(config);
+            return await catalog.CollectDocumentWorkItemsAsync();
         }
 
         return await CollectDocumentWorkItemsFromSolutionAsync(solution, solutionDir, testSuffixes);

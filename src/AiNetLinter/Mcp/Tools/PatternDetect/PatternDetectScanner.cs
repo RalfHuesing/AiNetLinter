@@ -49,8 +49,7 @@ internal static class PatternDetectScanner
                 config: concreteConfig,
                 rulesJsonContent: null,
                 profiler: null,
-                console: console,
-                args: null);
+                console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

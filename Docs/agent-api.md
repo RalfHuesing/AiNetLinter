@@ -38,46 +38,6 @@ ainetlinter --docs rules-json > rules.json
 ```
 Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
 
-# AiNetLinter — Agent-API Referenz
-
-Kompakte Referenz für AI-Agenten. Alle CLI-Flags, Workflows und das strukturierte Error-Format.
-
----
-
-## Discovery-Commands
-
-Regeln entdecken ohne Lint-Lauf (kein `--path` nötig):
-
-```bash
-# Alle Regeln als Markdown-Tabelle:
-ainetlinter --list-rules
-
-# Eine Regel vollständig beschreiben (Warum, Alternativen, Auto-Fix):
-ainetlinter --describe-rule <RuleId>
-# Beispiel:
-ainetlinter --describe-rule EnforceSealedClasses
-
-# Regeln nach Begriff durchsuchen (RuleId, Beschreibung, Intent):
-ainetlinter --search-rules <Begriff>
-# Beispiele:
-ainetlinter --search-rules "komplexitaet"
-ainetlinter --search-rules "sealed"
-ainetlinter --search-rules "agent"
-
-# Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
-ainetlinter --docs configuration
-```
-
----
-
-## Lint-Workflows
-
-### Schritt 1: Startkonfiguration holen
-```bash
-ainetlinter --docs rules-json > rules.json
-```
-Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
-
 ### Workflow 1 — Lint + Fix
 
 ```bash
@@ -132,6 +92,9 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
 | `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-workflow; case-insensitive) |
+
+## Strukturiertes Error-Format (L9)
+
 Fehlermeldungen sind maschinenlesbar:
 
 ```

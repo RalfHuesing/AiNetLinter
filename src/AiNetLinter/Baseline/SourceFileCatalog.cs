@@ -96,7 +96,7 @@ public sealed class SourceFileCatalog : IDisposable
     /// <summary>
     /// Sammelt Dokumente für die parallele Linter-Analyse.
     /// </summary>
-    public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync(Config? config = null)
+    public async Task<IReadOnlyList<CatalogDocumentWorkItem>> CollectDocumentWorkItemsAsync()
     {
         var solutionDir = Path.GetDirectoryName(Solution.FilePath);
         var tasks = Solution.Projects

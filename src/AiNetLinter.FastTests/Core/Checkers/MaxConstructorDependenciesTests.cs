@@ -370,10 +370,9 @@ public sealed record RunOptions(
     bool OnlyChanged = false,
     bool CheckOnly = false,
     bool ReadmeOnly = false,
-    string? GitSince = null,
     string? BaselinePath = null,
-    string? PlaybookPath = null,
-    string? GraphPath = null,
+    string? OutputPath = null,
+    string? CacheKey = null,
     string OutputFormat = ""text"")
 {
     public static RunOptions Default { get; } = new();

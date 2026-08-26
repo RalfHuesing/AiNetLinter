@@ -6,6 +6,8 @@ using Xunit;
 
 namespace AiNetLinter.FastTests.Cli;
 
+// @covers LinterArgs
+
 [Trait("Category", "Unit")]
 public sealed class ProgramParsingTests
 {

@@ -227,9 +227,9 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 ## Epic 19: AI-Developer Experience (AI-DX) & Tooling
 
 - [x] **AI-Context-Footprint (Metrik):** Berechnung der transitiven Quellcodezeilen aller Klassenabhängigkeiten. Traversiert die Symbolabhängigkeiten über das semantische Modell und summiert die Zeilenlängen der Quelldateien.
-- [x] **Automatisch generiertes Repo-Playbook:** Generierung einer Übersicht über aktive Suppression-Regeln und genutzte Entwurfsmuster in `.agents/rules/playbook.md`. Wertet Suppression-Häufigkeiten und genutzte Syntaxpatterns (z. B. Vorhandensein des Result-Patterns) global aus.
+- [x] **Automatisch generiertes Repo-Playbook (historisch):** Früheres Artefakt zur Zusammenfassung von Suppressions und Entwurfsmustern; im aktuellen Agenten-Workflow durch MCP-Projektstatus und Live-Tools ersetzt.
 - [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI, via `CodeFixProvider`/`Workspace.TryApplyChanges`.
-- [x] **Semantische Diff-Impact-Analyse:** Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites in anderen Projekten, via `GitChangedFilesResolver` und `SymbolFinder.FindReferencesAsync`.
+- [x] **Semantische Diff-Impact-Analyse:** Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites über das MCP-Tool `get_impact` mit `DiffImpactAnalyzer` und `SymbolFinder.FindReferencesAsync`.
 - [x] **Dynamischer, LLM-orientierter Codegraph (Entfernt):** Generierte einen Software-Abhängigkeitsgraphen im Mermaid-Format aus Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld-/Konstruktor-Abhängigkeiten.
 - [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
 - [x] **`find_magic_values` MCP-Tool (On-Demand-Magic-Value-Audit):** 20. MCP-Tool — Roslyn-basierter On-Demand-Audit über alle `.cs`-Dokumente der Solution, klassifiziert Literale (URLs, Pfade, Connection-Strings, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) mit Ziel-Empfehlungen (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX...`). Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter, `ignoreNumbers`-Erweiterung. Erweiterte Heuristiken (`enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates`, duplizierte `private const`-Erkennung, Suppression via `SyntaxTrivia`, `changedOnly`) sind in einer Folgeversion geplant. Stand 2026-08-14.
@@ -396,12 +396,9 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ## Epic 32: Globales Projekt- & Namespace-Filtering (historisch)
 
-Einführung von globalen Filter-Parametern zur Eingrenzung des Analyse-Scopes bei großen Software-Systemen (in Folge-Refactoring bereinigt zugunsten von rules.json ProjectOverrides und MCP Scoping).
+Die frühere CLI-Filterung des Analyse-Scopes wurde im Folge-Refactoring ersatzlos entfernt. Aktuelle Einschränkungen erfolgen über `rules.json`-ProjectOverrides sowie MCP-Scopes.
 
-- [x] **CLI-Optionen:** Integration von Scope-Filtern in die CLI-Infrastruktur (`LinterArgs`, `CliOptionFactory`, `CliOptions`, `CliCommandBuilder`, `Program`).
-- [x] **Projekt- und Testfilterung:** Dynamische Filterung der Projekte in `SourceFileCatalog` und `LinterEngine` bei der Document-Sammlung zur Optimierung von Performance und CI-Zeiten.
-- [x] **Namespace-Filterung:** Dynamischer Ausschluss von C#-Typdeklarationen in Walks & Checks (`LinterAnalyzer`, `SkeletonSyntaxWalker`), um Kontext-Überlastung bei LLMs zu verhindern.
-- [x] **Sichtbarkeits-Filterung:** Filterung nicht-öffentlicher Member bei der Skeleton-Map-Generierung.
+- [x] **Historische Scope-Filterung:** Die frühere CLI-Infrastruktur, Projekt-/Test- und Namespace-Filterung sowie die optionale Sichtbarkeitsfilterung wurden entfernt.
 ## Epic 33: Bedingte Baseline-Dokumentation in Agent-Rules (`--sync-agent-rules`)
 
 Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projekt-agnostische Erklärung der Baseline-Mechanik (`--create-baseline`), wenn im Zielprojekt eine Baseline verwendet wird.
@@ -672,7 +669,7 @@ strukturell nur zufaellig aehnliche Testmethoden (parametrisierte Szenario-Varia
 
 - [x] Produktionscode: `SyncAgentRulesCommand`/`AgentRulesGenerator.ResolveBaseDirectory`,
   `BoolParameterChecker.CheckMethod`/`CheckConstructor`, `DiffImpactAnalyzer`/
-  `GitChangedFilesResolver.FindGitRoot` (neu: `GitRepositoryLocator`), `DiffImpactAnalyzer`/
+  `GitRepositoryLocator`, `DiffImpactAnalyzer`/
   `LinterAutoFixer.FindDocumentByPath`, `HotspotMapBuilder`/`GetHotspotsScanner.AppendSection`
   (neu: `Output.HotspotSectionFormatter`), `GetViolationsScanner`/`MetricsTreeRoslynScanner`/
   `SafeguardScanner.ResolveSeverity` (neu: `RuleRegistry.ResolveSeverity`), `CssAnalyzer`/

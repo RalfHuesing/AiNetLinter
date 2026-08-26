@@ -135,8 +135,7 @@ internal static class GetViolationsScanner
             config: concreteConfig,
             rulesJsonContent: null,
             profiler: null,
-            console: console,
-            args: null);
+            console: console);
         return await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
     }
 

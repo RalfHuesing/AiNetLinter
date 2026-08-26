@@ -19,13 +19,12 @@ namespace AiNetLinter.IntegrationTests.Configuration;
 // @covers AIContextFootprintCalculator
 // @covers ProjectConfigResolver
 // @covers ConfigLoader
-// @covers ImpactExecutor
 // @covers PostAnalysisChecks
 // @covers TestDetector
 // @covers AgentRulesGenerator
 
 /// <summary>
-/// Tests für die neuen Developer-Experience-Features (Project Overrides, AI-Context-Footprint, Repo-Playbook).
+/// Tests für Project Overrides und den AI-Context-Footprint.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class DeveloperExperienceTests

@@ -19,27 +19,6 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Feingranulares Regelwerk:** Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
 - **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
 - **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
-# AiNetLinter — Konfigurationsreferenz & Dokumentation
-
-→ [README](../README.md) | [Design-Rationale](rationale.md)
-
----
-
-## 1. Der "AI-Mittelweg" für DRY vs. WET
-
-Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz zu tiefen, generischen Abstraktionen, die für KIs schwer verständlich sind und den sogenannten "Schmetterlingseffekt" (Änderung an einer Stelle bricht unbemerkt 10 andere Stellen) begünstigen. `AiNetLinter` unterstützt einen pragmatischen Mittelweg:
-
-1.  **Fachliches DRY (Strikt):** Kern-Geschäftslogik und Berechnungen müssen zentral und wiederverwendbar sein (z. B. in Domain-Modellen oder Services). Die KI muss diese Logik nur an einem einzigen Ort ändern.
-2.  **Technisches WET (Erlaubt):** Controller, DTOs, Mapper und Queries dürfen redundant bzw. spezifisch pro Use Case (Vertical Slice) aufgebaut sein. Dies minimiert Seiteneffekte und verhindert, dass die KI riesige, geteilte Basisklassen anpassen muss und dabei andere Features beschädigt.
-
----
-
-## 2. Kernfeatures
-
-- **Roslyn-basierte semantische Analyse:** Evaluierung der gesamten Solution (.sln / .slnx) über einen einzigen Syntax-Walk pro Dokument. Nutzt echte Semantik-Informationen statt textbasierter Heuristiken. MSBuild Design-Time-Properties beschleunigen das Solution-Laden; die Dokument-Analyse läuft parallel bis `Environment.ProcessorCount`.
-- **Feingranulares Regelwerk:** Regeln für Klassendesign (Sealed, Value Objects, Vererbungstiefe), Variablen/Typen (kein `dynamic`, keine `out`-Parameter, Nullable Context) und Code-Komplexität (McCabe, SonarSource).
-- **PascalCase- & Namensvalidierung:** Typprüfung auf PascalCase-Konventionen sowie Erkennung nicht-semantischer Bezeichner (z. B. `data`, `temp`, `obj`).
-- **LSP-Dokumentationstests:** Erzwingt die Verwendung von XML-Docs (`/// <summary>`) auf öffentlichen APIs.
 - **Static Test Sentinel:** Statische Test-Präsenzprüfung für komplexe Quellcodeabschnitte anhand von Metadaten-Scans auf referenzierte Testbibliotheken (xunit, nunit etc.).
 - **Namespace-Abhängigkeitsprüfung (Vertical Slices):** Verhindert unerlaubte slice-übergreifende Abhängigkeiten, auch bei vollqualifizierten Typnamen.
 - **Warnungs-Unterdrückung (Suppression):** Flexibles Deaktivieren von Linter-Warnungen über inline Kommentare wie `// ainetlinter-disable [RuleName]`, dateiweit oder komplett per `// ainetlinter-disable all`.
@@ -521,7 +500,7 @@ public sealed record RunOptions(
     bool DryRun = false,
     string? OutputPath = null,
     string? BaselinePath = null,
-    string? PlaybookPath = null,
+    string? CacheKey = null,
     string OutputFormat = "text")
 {
     public static RunOptions Default { get; } = new();
@@ -1260,11 +1239,6 @@ Um das Tool als eigenständiges, plattformspezifisches CLI-Tool für Windows zu 
 dotnet publish src/AiNetLinter/AiNetLinter.csproj -c Release -r win-x64 --self-contained true -o ./publish
 ```
 
-### WICHTIG: MSBuild-Abhängigkeiten (BuildHost-Ordner)
-
-```bash
-```
-
 ### Exit-Codes
 
 - `0`: Erfolg (Keine Regelverstöße gefunden).
@@ -1403,8 +1377,8 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 1. **Vor einer Änderung:** Kontext aus generierten Artefakten laden
 
    ```
-   Docs/playbook.md           — Architektur-Status, Top-Verstöße
-   .agents/rules/AiNetLinter.mdc  — Aktive Regeln und Limits
+   ainetlinter://overview?projectRoot=<Projektroot> — Live-Projektstatus
+   .agents/rules/AiNetLinter.mdc                    — Aktive Regeln und Limits
    ```
 
 2. **Nach einer Änderung:** Linter ausführen
