@@ -82,11 +82,15 @@ internal static class FileStructureToolRegistrations
 
     private const string GetFileTreeDescription =
         "Wann nutzen: physische Dateilandkarte eines registrierten Projektroots als ersten " +
-        "Discovery-Schritt fuer Agenten. root ist relativ zu projectRoot; view ist summary, tree " +
-        "(Default) oder files. includeExtensions und fileFilter (Pfad-Glob, keine Inhaltssuche) " +
-        "filtern, excludePatterns ergaenzen die aktiven Standardausschluesse. maxDepth begrenzt " +
-        "den Scan, treeDepth nur die Baumdarstellung, maxResults die Dateiliste. " +
-        "completeness macht Trunkierung und partielle Dateisystemfehler sichtbar.";
+        "Discovery-Schritt fuer Agenten. root, fileFilter und excludePatterns sind relativ zu " +
+        "projectRoot; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view ist summary, tree " +
+        "(Default) oder files. includeExtensions akzeptiert Extensionen wie .cs oder * und " +
+        "wird mit fileFilter kombiniert. maxDepth und treeDepth liegen zwischen 0 und 32, " +
+        "treeDepth steuert nur die Baumdarstellung, maxResults liegt zwischen 1 und 2000 und " +
+        "begrenzt die Dateiliste. sortBy ist path (Default), size_desc oder extension. " +
+        "includeMetadata steuert per-Datei-Groessen, includeLineCount ist opt-in. " +
+        "completeness macht Trunkierung und partielle Dateisystemfehler sichtbar; " +
+        "structuredContent liegt unter fileTree.";
 
     private static void AddGetNamespaceTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -394,9 +394,10 @@ internal sealed record FileTreeFileEntry(
     int Depth);
 ```
 
-Bei `includeMetadata=false` wird `SizeBytes` pro Dateieintrag als `null`
-ausgegeben. Die Summary- und Directory-Aggregate bleiben trotzdem erhalten,
-weil sie für Sortierung und Agentenorientierung benötigt werden.
+Bei `includeMetadata=false` wird `SizeBytes` pro Dateieintrag intern nicht gesetzt
+und wegen der gemeinsamen MCP-JSON-Optionen im ausgegebenen `structuredContent`
+ausgelassen. Die Summary- und Directory-Aggregate bleiben trotzdem erhalten, weil
+sie für Sortierung und Agentenorientierung benötigt werden.
 
 `LastWriteTime` wird nicht standardmäßig aufgenommen. Zeitstempel sind für eine
 statische Projektlandkarte meist nicht semantisch relevant und machen Antworten
