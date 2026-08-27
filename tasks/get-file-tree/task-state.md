@@ -76,3 +76,13 @@ Test-Endpunkt belegen. Das suiteweite `SubprocessLifetimeGate` erlaubt acht
 langlebige Prozesse, weil ein paralleler Daemon-Vertrag zwei Prozesse halten
 kann. Der Step bleibt bis zur unabhängigen Code-/Regel-/Konzeptprüfung auf
 `done (pending audit)`.
+
+## Tooling-Hinweis
+
+Der für den Abschluss eines größeren Tasks vorgeschriebene `drift-audit`-Skill
+wurde nach dem Testfix gestartet. Der dafür ausschließlich zulässige
+AiNetLinter-MCP-Aufruf `find_duplicates` scheiterte unmittelbar mit `Transport
+closed`; der anschließende Observability-Feedback-Aufruf scheiterte am selben
+Transportzustand. Der bereits dokumentierte Audit von Step 003 bleibt erhalten;
+der Abschlussstatus wartet wegen dieses MCP-Tooling-Blockers weiterhin auf den
+neuen Audit.

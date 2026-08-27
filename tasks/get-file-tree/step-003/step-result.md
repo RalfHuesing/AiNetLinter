@@ -102,3 +102,9 @@ Dogfood-Vertrag ist zusätzlich isoliert mit 1/1 grün gelaufen.
 - Vollständiger Fast-Gate ohne Stress: 1.826/1.826 bestanden.
 - Vollständiger Integration-Gate ohne Stress: 358/358 bestanden, 0 übersprungen.
 - Externe Installations-Daemons wurden nicht beendet.
+
+Der nach dem Testfix erneut gestartete `drift-audit`-Skill konnte nicht
+abgeschlossen werden: `find_duplicates` und der anschließende
+Observability-Feedback-Aufruf des AiNetLinter-MCP-Servers meldeten unmittelbar
+`Transport closed`. Eine lokale Ersatzsuche wurde gemäß Skill-Vorgabe nicht
+verwendet; deshalb bleibt der Step auf `done (pending audit)`.
