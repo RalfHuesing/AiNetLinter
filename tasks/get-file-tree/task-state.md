@@ -1,8 +1,8 @@
 ---
-status: blocked
+status: executing
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-26T23:42:18+02:00
+last_updated: 2026-08-27T08:37:34+02:00
 rules_dir: .agents/rules
 total_steps: 3
 current_step: step-003
@@ -12,7 +12,7 @@ current_step: step-003
 
 ## Übersicht
 
-- **Task-Status:** `blocked`
+- **Task-Status:** `executing`
 - **Steps gesamt:** 3
 - **Aktueller Schritt:** `step-003`
 - **Roadmap:** aktiv, unverändert
@@ -26,7 +26,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
-| step-003 | EPIC-02 | blocked | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | ausstehend | 5b8e4472 |
+| step-003 | EPIC-02 | done (pending audit) | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | ausstehend | 5b8e4472 + 0a45dc16 |
 
 ## Config (optional)
 
@@ -62,14 +62,17 @@ gewünschte `find_symbol`-Record-Erweiterung sechs Fixture-Dokumente erzeugt.
 Nach Nutzerklärung bleibt die Record-Erweiterung erhalten; die abgestimmte
 
 Der Gate-Blocker ist durch Step 002 aufgelöst; Step 001 und Step 002 sind
-unabhängig geprüft und approved.
+unabhängig geprüft und approved. Die ursprüngliche Step-003-Testblockade wurde
+am 2026-08-27 durch testprozess-isolierte Daemon-Instanzen und ein deadlock-sicheres
+Prozessbudget behoben. Der vollständige Fast-Gate (1.826/1.826) und der
+vollständige Integration-Gate ohne Stress (358/358, 0 übersprungen) sind grün.
 
 ## Blocker
 
-Step 003 ist wegen externer Testinfrastruktur pausiert. Der Coder meldete drei
-Abbrüche im vollständigen Integration-Gate beim Warten auf
-`SubprocessLifetimeGate` beziehungsweise beim Named-Pipe-/Daemon-Connect
-(`OperationCanceledException`). Build, vollständiger Fast-Gate und gezielte
-Integrationstests sind grün; für die unabhängige Kritikerprüfung und die
-Fortsetzung ist ein erfolgreicher vollständiger Integration-Gate-Lauf bei
-verfügbarer Infrastruktur erforderlich.
+Kein aktiver Test-Infrastruktur-Blocker. Die Integrationstests verwenden für
+MCP-/Daemon-Prozessverträge eine pro Testprozess eindeutige `daemon-instance`
+(`tests-<TestRunner-PID>`), sodass externe Installationen nicht mehr den
+Test-Endpunkt belegen. Das suiteweite `SubprocessLifetimeGate` erlaubt acht
+langlebige Prozesse, weil ein paralleler Daemon-Vertrag zwei Prozesse halten
+kann. Der Step bleibt bis zur unabhängigen Code-/Regel-/Konzeptprüfung auf
+`done (pending audit)`.

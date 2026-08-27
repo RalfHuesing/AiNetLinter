@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: 'done (pending audit)'
 type: step-result
 task: get-file-tree
 step: 003
@@ -10,8 +10,9 @@ coded_by_model: GPT-5 (Codex)
 coded_by_model_knowledge_cutoff: nicht im Systemkontext angegeben
 coded_at: 2026-08-26T23:32:10+02:00
 code_commit_hash: 5b8e4472814480b6973732bcd08c430d76d612be
-status_after: blocked
-blocker_category: infrastructure
+test_infrastructure_fix_commit_hash: 0a45dc16
+status_after: 'done (pending audit)'
+blocker_category: none
 ---
 
 # Result Step 003: Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren
@@ -19,6 +20,19 @@ blocker_category: infrastructure
 ## Zusammenfassung
 
 Die gemeinsame Walk-Grundlage unterstützt jetzt interne Optionen für Tiefe, Standardausschlüsse und Cancellation sowie unveränderliche Skip-/Partial-Statistiken; der bestehende Datei-Pattern-Walk und `SafeEnumerateFiles*` bleiben kompatibel. Die Glob-Übersetzung liegt zentral in `PathGlobMatcher`, auf den beide `FileFilterEvaluator`-Einstiege delegieren. Unit-, Component- und physische Integrationstests decken die neuen Entscheidungen und die Legacy-Abgrenzung ab.
+
+## Nachtrag: Integrationstest-Blocker behoben
+
+Die zuvor kollidierenden MCP-/Daemon-Vertragstests verwenden nun eine pro
+Testprozess eindeutige `daemon-instance` (`tests-<TestRunner-PID>`). Dadurch
+bleiben externe AiNetLinter-Installationen und bewusst laufende Benutzer-Daemons
+unangetastet, während Janitor, Daemon-Host und ThinClient denselben isolierten
+Test-Endpunkt verwenden. Das suiteweite `SubprocessLifetimeGate` wurde auf acht
+Slots erhöht: Bei vier parallelen xUnit-Testfällen kann ein Daemon-Vertrag zwei
+langlebige Prozesse gleichzeitig halten.
+
+Der zusätzliche Testinfrastruktur-Fix ist in Folgecommit `0a45dc16` zu diesem
+Step gesichert.
 
 ## Geänderte Dateien
 
@@ -53,14 +67,22 @@ Die gemeinsame Walk-Grundlage unterstützt jetzt interne Optionen für Tiefe, St
 dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~StalenessTreeWalkerTests|FullyQualifiedName~PathGlobMatcherTests|FullyQualifiedName~FileFilterEvaluatorTests" --no-restore → grün (36 Tests, 0 Fehler)
 dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~SearchPatternScannerTests|FullyQualifiedName~SearchPatternScannerEvaluationTests" --no-restore → grün (19 Tests, 0 Fehler)
 dotnet test src/AiNetLinter.IntegrationTests --filter "FullyQualifiedName~FileSystemExclusionHelpersTests" --no-restore → grün (9 Tests, 0 Fehler)
-dotnet build → grün (0 Warnungen, 0 Fehler)
+dotnet build → grün (0 Warnungen, 0 Fehler) (vor dem Testinfrastruktur-Fix)
 dotnet test src/AiNetLinter.FastTests --filter Category!=Stress → grün (1.826 Tests, 0 Fehler)
-dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress → rot (351 Tests grün, 3 Fehler, 4 übersprungen; Infrastruktur-Cancellation)
+dotnet test src/AiNetLinter.IntegrationTests --filter "FullyQualifiedName~Mcp.Daemon" → grün (8 Tests, 0 Fehler, 0 übersprungen)
+dotnet test src/AiNetLinter.IntegrationTests --filter "FullyQualifiedName~CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess" → grün (1 Test, 0 Fehler)
+dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress → grün (358 Tests, 0 Fehler, 0 übersprungen)
+dotnet build --no-restore → final grün (0 Warnungen, 0 Fehler)
+dotnet test src/AiNetLinter.FastTests --filter Category!=Stress --no-restore → final grün (1.826 Tests, 0 Fehler, 0 übersprungen)
 ```
 
 ## Abweichungen vom Plan
 
-Die Code- und Teständerungen entsprechen dem Plan. Der vorgeschriebene Integration-Gate-Lauf konnte wegen drei Infrastrukturabbrüchen in `SubprocessLifetimeGate` beziehungsweise Named-Pipe-/Daemon-Verbindungen nicht grün beendet werden; deshalb bleibt der Step gemäß Coder-Skill `blocked` statt `done (pending audit)`. Es wurde kein Reparaturversuch außerhalb des Step-Scopes und kein erneuter Vollauf gestartet.
+Die Code- und Teständerungen entsprechen dem Plan. Die Testinfrastruktur musste
+im Step-Scope nachgebessert werden, weil externe Daemons den Default-Endpunkt
+belegten und das ursprüngliche Prozessbudget bei parallelen Zwei-Prozess-Verträgen
+eine Warteschleife zuließ. Nach der Reparatur ist der vorgeschriebene vollständige
+Integration-Gate-Lauf grün.
 
 ## Beobachtungen
 
@@ -68,14 +90,15 @@ Der Drift-Audit mit `find_duplicates(scopeDir="src", minTokens=20, similarityThr
 
 ## Bekannte Unschärfen
 
-Der Codepfad und alle gezielten Tests sind grün; die drei fehlgeschlagenen Integrationstests betreffen ausschließlich die gemeinsam ausgelastete Prozess-/Semaphore-/Named-Pipe-Testinfrastruktur. Eine abschließende Gate-Bestätigung benötigt einen erneuten Lauf bei verfügbarer Integrationstest-Infrastruktur.
+Der Codepfad und alle gezielten Tests sind grün. Der vollständige Fast-Gate ist
+mit 1.826/1.826 Tests grün; der vollständige Integration-Gate ohne Stress ist
+mit 358/358 Tests, 0 Fehlern und 0 Überspringungen grün. Der einzelne
+Dogfood-Vertrag ist zusätzlich isoliert mit 1/1 grün gelaufen.
 
-## Falls Status `blocked`
+## Verifikation des Blocker-Fixes
 
-**Blocker-Art:** `infrastructure`
-
-**Blockiert weil:** Der einzige vollständige Integration-Gate-Lauf brach drei Prozess-/Daemon-Tests wegen `OperationCanceledException` beim Warten auf `SubprocessLifetimeGate` beziehungsweise beim Named-Pipe-Connect ab.
-
-**Brauche von Nutzer:** Freigabe beziehungsweise verfügbare Infrastruktur für die abschließende Wiederholung des Integration-Gates.
-
-**Aktueller Stand:** Code und Tests sind im Code-Commit gesichert; Build, vollständiges Fast-Gate, gezielte Integrationstests und MCP-Violationsprüfung sind grün, nur der vollständige Integration-Gate-Lauf ist infrastrukturell blockiert.
+- Daemon-Vertragsslice: 8/8 bestanden, 0 übersprungen.
+- Dogfood-Single-Test: 1/1 bestanden.
+- Vollständiger Fast-Gate ohne Stress: 1.826/1.826 bestanden.
+- Vollständiger Integration-Gate ohne Stress: 358/358 bestanden, 0 übersprungen.
+- Externe Installations-Daemons wurden nicht beendet.
