@@ -34,6 +34,7 @@ aber nicht die semantische MCP-Abfrage.
 
 | Anliegen | Zuerst verwenden |
 | :--- | :--- |
+| Physische Projektstruktur und Nicht-C#-Dateien entdecken | `get_file_tree` |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
 | Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
 | Öffentliche API einer lokalen .NET-DLL untersuchen | `inspect_assembly` |
@@ -43,11 +44,14 @@ aber nicht die semantische MCP-Abfrage.
 | Vor größerem Abschluss auditieren | `safeguard`; passend zum Risiko `find_duplicates`, `find_dead_code` oder `find_magic_values` |
 | Toolfehler oder fehlende Analysefähigkeit melden | `report_observability_feedback` |
 
-`rg`/`grep`, Read und interne Agenten-Tools bleiben erlaubt und sind für
-Nicht-C#-Dateien, Konfiguration, Kommentare, exakte Textmuster sowie konkrete
-Datei-/Zeilenarbeit geeignet. Sie ersetzen bei C#-Symbol-, Referenz- und
-Impact-Fragen nicht die semantische MCP-Analyse. `search_pattern` ist der
-MCP-Weg für repositoryweite Textsuche und Nicht-C#-Dateien.
+`get_file_tree` ist der erste Discovery-Schritt für die physische Projektstruktur:
+Er liefert relative Pfade, Verzeichnisaggregation, optionale Metadaten und
+sichtbare Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
+Roslyn-Solutionindexes. Danach sind `get_index_scope` (Indexabdeckung),
+`search_pattern` (Inhalt/Text) und die semantischen C#-Tools gezielt einzusetzen.
+`rg`/`grep`, Read und interne Agenten-Tools bleiben für konkrete Edit-/Diff-
+Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
+C#-Symbol-, Referenz- und Impact-Fragen nicht die semantische MCP-Analyse.
 
 Für beide Assembly-Tools ist `assemblyPath` ein absoluter, lokaler DLL-Pfad;
 `projectRoot` ist optional und liefert den Consumer-Kontext. Die Analyse ist

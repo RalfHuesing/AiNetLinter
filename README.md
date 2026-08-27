@@ -22,6 +22,7 @@ Zusammenhängen und dem aktuellen Regelstand bereit.
 
 | Arbeitsphase | Abfragen | Gelieferte Informationen |
 | :--- | :--- | :--- |
+| Physische Orientierung | `get_file_tree` | Relative Dateien/Verzeichnisse, Extension-/Größenaggregation, optionale Filter und sichtbare Completeness-/Trunkierungsangaben — unabhängig vom Roslyn-Index. |
 | Orientierung vor einem Edit | `get_feature_context`, `find_symbol`, `get_file_skeleton`, `get_symbol_body` | Deklarationen, Member-Struktur, Metriken, direkte Aufrufer, statische Test-Zuordnung und aktuelle Regelverstöße. |
 | Abhängigkeiten untersuchen | `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | Aufrufstellen, Aufrufer-/Aufgerufene-Bäume, Vererbung und semantische Typreferenzen. |
 | Externe APIs untersuchen | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API und klassische Extension-Methoden einer exakt angegebenen lokalen DLL metadata-only über Roslyn; `inspect_assembly` unterstützt exakte Typauswahl, Mehrfachfilter, Member-Limits und strukturierte Parameterdaten; optional gegen eine Consumer-Solution. |
@@ -29,9 +30,10 @@ Zusammenhängen und dem aktuellen Regelstand bereit.
 | Nach einem Edit prüfen | `get_violations`, `metrics_lookup`, `safeguard` | Aktuelle Verstöße für einen Scope, Symbolmetriken mit Schwellwert-Abgleich sowie Score, Pass/Fail und deterministische Top-Befunde mit Gesamt-/Trunkierungsmetadaten. |
 | Repository-Audit | `metrics_tree`, `pattern_detect`, `find_duplicates`, `find_dead_code`, `find_magic_values` | Aggregierte Strukturmetriken und Kandidaten für konfigurierbare Pattern, Duplikate, unreferenzierten Code und Magic Values. |
 
-Für Textmuster, Konfiguration und Nicht-C#-Dateien stehen `search_pattern` und
-bei lokaler Datei-/Zeilenarbeit auch `rg` zur Verfügung. Symbol-, Referenz- und
-Impact-Fragen werden über die Roslyn-basierten MCP-Tools beantwortet.
+Für Textmuster, Konfiguration und Nicht-C#-Dateiinhalte steht nach der physischen
+Orientierung mit `get_file_tree` das `search_pattern`-Tool bereit; bei lokaler
+Datei-/Zeilenarbeit auch `rg`. Symbol-, Referenz- und Impact-Fragen werden über
+die Roslyn-basierten MCP-Tools beantwortet.
 
 ---
 

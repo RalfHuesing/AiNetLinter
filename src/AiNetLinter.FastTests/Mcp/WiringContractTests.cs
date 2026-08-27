@@ -18,11 +18,10 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Xunit;
-
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Vertragstests des Registry-Wirings: eingefrorener 28er-Toolbestand mit projectRoot-Pflicht
+/// Vertragstests des Registry-Wirings: eingefrorener 29er-Toolbestand mit projectRoot-Pflicht
 /// (einzige Ausnahme: get_server_health-Filter optional),
 /// Defense-in-Depth-Guards am ProjectToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
 /// RULES_INVALID statt Default-Fallback, Health-Aggregation je Key, Overview-Template-Aufloesung,
@@ -37,7 +36,7 @@ public sealed class WiringContractTests
     {
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(28, tools.Count);
+        Assert.Equal(29, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -86,6 +85,7 @@ public sealed class WiringContractTests
             ["get_call_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_class_structure"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_feature_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_file_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_file_skeleton"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_hotspots"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_index_scope"] = ToolAnnotationExpectation.ReadOnlyProfile,

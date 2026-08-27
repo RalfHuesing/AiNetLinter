@@ -11,8 +11,8 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
-/// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_skeleton</c>,
-/// <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// Registriert die dateistruktur-orientierten Tools (aktuell <c>get_file_tree</c>,
+/// <c>get_file_skeleton</c>, <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
 /// eigener <c>AIContextFootprint</c> nicht mit jedem neu registrierten Tool waechst.
 /// <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
@@ -33,11 +33,60 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         AddGetNamespaceTree(tools, registry);
+        AddGetFileTree(tools, registry);
         AddGetFileSkeleton(tools, registry);
         AddGetClassStructure(tools, registry);
         AddGetIndexScope(tools, registry);
         AddGetHotspots(tools, registry);
     }
+
+    private static void AddGetFileTree(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry)
+    {
+        tools.Add(McpServerTool.Create(
+            async (
+                string projectRoot,
+                string? root = null,
+                string view = "tree",
+                string[]? includeExtensions = null,
+                string? fileFilter = null,
+                string[]? excludePatterns = null,
+                int? maxDepth = null,
+                int treeDepth = 2,
+                int maxResults = GetFileTreeTool.DefaultMaxResults,
+                string sortBy = "path",
+                bool includeMetadata = true,
+                bool includeLineCount = false,
+                CancellationToken ct = default) =>
+                await ProjectToolCall.ExecuteFilesystemAsync(
+                    registry,
+                    projectRoot,
+                    _ => GetFileTreeTool.ExecuteAsync(
+                        projectRoot,
+                        new GetFileTreeInput(
+                            root ?? ".",
+                            view,
+                            includeExtensions,
+                            fileFilter,
+                            excludePatterns,
+                            maxDepth,
+                            treeDepth,
+                            maxResults,
+                            sortBy,
+                            includeMetadata,
+                            includeLineCount),
+                        ct)),
+            McpToolRegistrationOptions.ReadOnlyTool("get_file_tree", GetFileTreeDescription)));
+    }
+
+    private const string GetFileTreeDescription =
+        "Wann nutzen: physische Dateilandkarte eines registrierten Projektroots als ersten " +
+        "Discovery-Schritt fuer Agenten. root ist relativ zu projectRoot; view ist summary, tree " +
+        "(Default) oder files. includeExtensions und fileFilter (Pfad-Glob, keine Inhaltssuche) " +
+        "filtern, excludePatterns ergaenzen die aktiven Standardausschluesse. maxDepth begrenzt " +
+        "den Scan, treeDepth nur die Baumdarstellung, maxResults die Dateiliste. " +
+        "completeness macht Trunkierung und partielle Dateisystemfehler sichtbar.";
 
     private static void AddGetNamespaceTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

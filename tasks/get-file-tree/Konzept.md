@@ -389,10 +389,14 @@ Vorgeschlagene interne Struktur:
 internal sealed record FileTreeFileEntry(
     string Path,
     string? Extension,
-    long SizeBytes,
+    long? SizeBytes,
     int? LineCount,
     int Depth);
 ```
+
+Bei `includeMetadata=false` wird `SizeBytes` pro Dateieintrag als `null`
+ausgegeben. Die Summary- und Directory-Aggregate bleiben trotzdem erhalten,
+weil sie für Sortierung und Agentenorientierung benötigt werden.
 
 `LastWriteTime` wird nicht standardmäßig aufgenommen. Zeitstempel sind für eine
 statische Projektlandkarte meist nicht semantisch relevant und machen Antworten

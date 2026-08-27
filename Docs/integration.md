@@ -431,7 +431,15 @@ Auto-Discovery.
 
 ### Tool-vs-`rg`-Empfehlung für Agent-Loops
 
-Wenn der MCP-Server registriert ist, sollten Agent-Loops **folgende Reihenfolge** einhalten:
+Beginne bei physischer Discovery mit `get_file_tree`: Das read-only Tool liefert
+relative Pfade, Verzeichnis-/Extension-Aggregation und sichtbare
+Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
+Roslyn-Solutionindexes. `view=files` eignet sich als Folgeaufruf, wenn Pfade an
+`search_pattern` oder `get_file_skeleton` weitergegeben werden sollen. Ein
+valider `projectRoot` genügt auch während eines laufenden oder fehlgeschlagenen
+Solution-Loads, weil die Enumeration unabhängig vom Roslyn-Snapshot arbeitet.
+
+Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 
 1. **Zuerst** symbolische Tools: `get_feature_context` (Composite One-Shot vor Edits/Refactoring), `get_test_context` (statische Test-Zuordnung & zugehörige Testmethoden), `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `get_symbol_body` (Body eines Symbols per stabiler ID), `metrics_lookup` (One-Shot-Metriken & Schwellwerte für ein Einzelsymbol), `find_references` / `get_impact` (Aufrufstellen, optional mit `depth`-Parameter für transitive Aggregation; jede erlaubte Tiefe liefert im Erfolgsfall strukturierte `callSites` und `completeness`), `get_type_hierarchy` (Vererbung inkl. heuristischer DI-Registrierungs-Hinweise), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
 2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.

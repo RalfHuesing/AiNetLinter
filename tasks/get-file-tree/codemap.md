@@ -2,7 +2,7 @@
 task: get-file-tree
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-26T23:32:10+02:00
+last_updated: 2026-08-27
 ---
 
 # CodeMap: get-file-tree
@@ -19,6 +19,12 @@ aus dem aktuellen Bestand gelesen.
 - **`src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs`** — Projekt-Key-Auflösung, Lease-Lifetime und residenter Serverzustand für die projektgebundene MCP-Adressierung.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — File-Structure-Tools, Scanner-/Record-Muster und der boundary-sichere Root-Resolver für die spätere physische Enumeration. (zuletzt: step-001)
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/FileTreePathResolver.cs`** — Lexikalischer Resolver für den effektiven File-Tree-Root innerhalb des registrierten Projektroots. (zuletzt: step-001)
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTreeTool.cs`** — Read-only MCP-Dispatch für Validierung, filesystem-only Execution und gemeinsamen Text-/Structured-Content-Vertrag.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTreeInputValidator.cs`** — Boundary-, View-, Sort-, Budget-, Extension- und Glob-Validierung mit recoverable MCP-Fehlern.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTreeScanner.cs`** — Einmaliger physischer Walk mit Filtern, Aggregation, Sortierung und Completeness-Metadaten.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTreeRecords.cs`** — Strukturierte File-, Directory-, Summary- und Completeness-Payloads.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTreeRenderer.cs`** — Kompakte `summary`-/`tree`-/`files`-Textdarstellung aus demselben Scanresult.
+- **`src/AiNetLinter/Mcp/Tools/FileStructure/FileTreeFilter.cs`** — Extension-Normalisierung und relative Pfad-Globfilter für den physischen Scan.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeTool.cs`** — Dünnes Tool-Dispatch-Muster für eine dateistrukturorientierte Antwort mit Structured Content und Serverzustand.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/GetIndexScopeScanner.cs`** — Scanner-/Record-Ablage innerhalb des File-Structure-Bereichs als strukturelle Referenz.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/SolutionFileWalker.cs`** — Roslyn-Document-Walker als bewusste Abgrenzungsreferenz, nicht als physischer File-Tree-Collector.
@@ -36,10 +42,11 @@ aus dem aktuellen Bestand gelesen.
 - **`src/AiNetLinter.FastTests/Configuration/PathGlobMatcherTests.cs`** — Unit-Tests für die zentrale `*`/`?`/`**`-Pfad-Globsemantik. (zuletzt: step-003)
 - **`src/AiNetLinter.FastTests/Configuration/FileFilterEvaluatorTests.cs`** — Unit-Tests für case-insensitive Datei-/Verzeichnisfilter und delegierte Glob-Regressionsfälle. (zuletzt: step-003)
 - **`src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`** — Gefrorener Toolbestand, `projectRoot`-Pflicht sowie Registry-, Load-State- und Filesystem-Dispatch-Verträge. (zuletzt: step-001)
-- **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/`** — Component-Testbereich für bestehende File-Structure-Toolverträge und spätere File-Tree-Logik.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/`** — Unit-/Component-Testbereich für Resolver, File-Tree-Scan und MCP-Fehler-/Payloadverträge.
 - **`src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/FileTreePathResolverTests.cs`** — Unit-Testanker für relative Root-Auflösung und Boundary-Fälle des File-Tree-Resolvers. (zuletzt: step-001)
 - **`src/AiNetLinter.IntegrationTests/Baseline/FileSystemExclusionHelpersTests.cs`** — Integrationstests für generierte Pfade, sichere Enumeration und den physischen Options-Walk mit zentralen Ausschlüssen. (zuletzt: step-003)
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpHandshakeToolRegistrationTests.cs`** — Echte MCP-Handshake-/`tools/list`-Registrierungsprüfung gegen eine Mini-Solution.
+- **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — Echte MCP-Subprozessprüfung des `get_file_tree`-Aufrufs einschließlich physischer Treffer und `fileTree`-Structured-Content.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpServerCommandContractTests.cs`** — MCP-Wire- und projektgebundene Toolverträge einschließlich Fehler-/Loading-Zuständen.
 - **`src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs`** — Stable-Dogfood-Teststrecke gegen das AiNetLinter-Repository.
 - **`src/AiNetLinter.IntegrationTests/Mcp/Platform/`** — Prozess-, Read-only- und Repository-MCP-Fixtures für Integrationstests.

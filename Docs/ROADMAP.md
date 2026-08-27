@@ -19,7 +19,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## MCP-Tool-Annotations (2026-08-26)
 
-- [x] Alle 28 registrierten Tools verwenden einen zentralen Options-Helper mit
+- [x] Alle 29 registrierten Tools verwenden einen zentralen Options-Helper mit
   expliziten `readOnlyHint`, `destructiveHint`, `idempotentHint` und
   `openWorldHint`-Werten.
 - [x] `reload_config` und `report_observability_feedback` sind als eigene
@@ -506,6 +506,12 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 ### Nächste Phase — P0/P1-Rest-Erweiterungen (Konzept Z. 207-324)
 
 Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. Jede hat eigenes Risiko und bekommt eine eigene Planungs-Einheit:
+
+- **Physische Dateilandkarte `get_file_tree`** — read-only MCP-Discovery für
+  projektgebundene physische Dateien und Verzeichnisse mit Root-Grenze,
+  Standardausschlüssen, Extension-/Pfad-Globfiltern, `summary`-/`tree`-/`files`-
+  Sichten und sichtbarer Completeness. Status: **umgesetzt am 2026-08-27**
+  (Aufgabe `tasks/get-file-tree`).
 
 - **Trunkierung + `maxResults` für alle Listen-Tools** — `find_symbol`, `find_references`, `get_impact`, `search_pattern` mit `maxResults`-Parameter (Default 50) und einheitlicher Meta-Zeile. Status: **bereits umgesetzt** in 002/004/005; bleibt hier als Referenz.
 - **Regel-ID in `get_violations`-Ausgabe** — jeder Verstoß trägt seine Regel-ID, kein `agent_hint`-Feld nötig. Status: **bereits umgesetzt** in 001; bleibt hier als Referenz.

@@ -1,9 +1,9 @@
 ---
-status: active
+status: complete
 task: get-file-tree
 derived_from: Konzept.md
 created_at: 2026-08-26T22:05:00+02:00
-last_updated: 2026-08-26T23:10:33+02:00
+last_updated: 2026-08-27
 created_by_model: GPT-5 (Codex)
 created_by_model_knowledge_cutoff: nicht im Systemkontext angegeben
 ---
@@ -36,6 +36,6 @@ Aus den Build-/Test-Konfigurationen und den Projektregeln abgeleitet:
 ## Epics
 
 - [x] **EPIC-01: Projektgebundener Dateisystemzugang** — Den bestehenden `projectRoot`-/Registry-Vertrag um einen eng begrenzten filesystem-only Dispatch und einen boundary-sicheren relativen `root`-Resolver erweitern, sodass physische Enumeration unabhängig von Roslyn-Loading möglich wird und bestehende Roslyn-Toolverträge unverändert bleiben (`Konzept.md`, „MCP- und Projektvertrag“, „Sicherheitskonzept“). Erledigt durch Step 001 und den Gate-Folgeschritt 002; beide Reviews sind `approved`.
-- [ ] **EPIC-02: Gemeinsame Walk- und Filtergrundlage** — In Arbeit → Step 003: Den zentralen physischen Walk um Optionen für Tiefe, Cancellation, Standardausschlüsse, Reparse-Point-Schutz und partielle Warnungen ergänzen und Glob-/Pfadsemantik DRY wiederverwenden bzw. neutral extrahieren; bestehende Aufrufer und ihre Tests bleiben semantisch kompatibel (`Konzept.md`, „Wiederverwendung vorhandener Infrastruktur“).
-- [ ] **EPIC-03: File-Tree-Scan und Antwortmodell** — Den physischen Einmal-Walk mit Input-Validierung, Extension-/Pfadfiltern, Ausschlüssen, Größen-/Verzeichnisaggregation, stabiler Sortierung, Antwortlimits und Completeness-Metadaten als unveränderliches Scanresult modellieren und die `summary`-, `tree`- und `files`-Sichten aus diesem Resultat ableiten (`Konzept.md`, „Vorgeschlagener MCP-Vertrag“ bis „Fehler- und Completeness-Vertrag“).
-- [ ] **EPIC-04: MCP-Wiring, Verifikation und Produktdokumentation** — `get_file_tree` in der vorhandenen File-Structure-Gruppe als read-only/idempotentes Tool mit konsistenter Text-/Structured-Content-Antwort registrieren und die Unit-, Integrations-, MCP-Vertrags- und stabile Dogfood-Abdeckung sowie die betroffenen MCP-Dokumente synchronisieren (`Konzept.md`, „Registrierung und Wiring“, „Tests und Verifikation“ und „Dokumentation und Release-Folgen“).
+- [x] **EPIC-02: Gemeinsame Walk- und Filtergrundlage** — Durch Step 003 umgesetzt: Der zentrale physische Walk unterstützt Tiefe, Cancellation, Standardausschlüsse, Reparse-Point-Schutz und partielle Warnungen; die Glob-/Pfadsemantik wird DRY wiederverwendet.
+- [x] **EPIC-03: File-Tree-Scan und Antwortmodell** — Der physische Einmal-Walk besitzt Input-Validierung, Extension-/Pfadfilter, Ausschlüsse, Größen-/Verzeichnisaggregation, stabile Sortierung, Antwortlimits und Completeness-Metadaten. `summary`, `tree` und `files` werden aus demselben Scanresult abgeleitet.
+- [x] **EPIC-04: MCP-Wiring, Verifikation und Produktdokumentation** — `get_file_tree` ist in der File-Structure-Gruppe als read-only/idempotentes Tool registriert. Unit-, Component-, MCP-Handshake-, Integrations- und Vertragsabdeckung sowie die betroffenen MCP-/Agent-Dokumente sind synchronisiert.

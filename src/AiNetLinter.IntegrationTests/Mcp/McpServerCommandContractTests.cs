@@ -105,7 +105,7 @@ public sealed class McpServerCommandContractTests
     public async Task RunAsync_ValidFixture_ServerRespondsWithAllTools()
     {
         var tools = await (await fixture.GetHostAsync()).ListToolsAsync();
-        Assert.Equal(28, tools.Count);
+        Assert.Equal(29, tools.Count);
     }
 
     [Fact]
@@ -195,6 +195,33 @@ public sealed class McpServerCommandContractTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature() =>
         await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" } }, "Greet");
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_GetFileTreeDiscoversPhysicalFilesAndStructuredPayload()
+    {
+        var host = await fixture.GetHostAsync();
+        var result = await host.CallToolAsync(
+            "get_file_tree",
+            new Dictionary<string, object?>
+            {
+                ["root"] = "src/SymbolGraphMini",
+                ["view"] = "files",
+                ["includeExtensions"] = new[] { ".cs" },
+                ["fileFilter"] = "**/*.cs",
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("get_file_tree: root=src/SymbolGraphMini view=files", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value.GetProperty("fileTree");
+        Assert.Equal("files", payload.GetProperty("view").GetString());
+        Assert.True(payload.GetProperty("summary").GetProperty("matchedFileCount").GetInt32() >= 3);
+        Assert.Contains(
+            payload.GetProperty("files").EnumerateArray(),
+            file => file.GetProperty("path").GetString()?.EndsWith("Greeter.cs", StringComparison.Ordinal) == true);
+    }
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>

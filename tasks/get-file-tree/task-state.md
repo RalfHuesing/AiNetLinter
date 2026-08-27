@@ -2,10 +2,10 @@
 status: complete
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-27T08:47:47+02:00
+last_updated: 2026-08-27
 rules_dir: .agents/rules
-total_steps: 3
-current_step: step-003
+total_steps: 4
+current_step: step-004
 ---
 
 # Task State: get-file-tree
@@ -13,9 +13,9 @@ current_step: step-003
 ## Übersicht
 
 - **Task-Status:** `complete`
-- **Steps gesamt:** 3
-- **Aktueller Schritt:** `step-003`
-- **Roadmap:** aktiv, unverändert
+- **Steps gesamt:** 4
+- **Aktueller Schritt:** `step-004`
+- **Roadmap:** abgeschlossen, inklusive EPIC-02/03/04
 - **Tech-Debt:** wird beim ersten Kritiker-Review angelegt
 - **Gestartet:** 2026-08-26T22:02:09+02:00
 - **Zuletzt aktualisiert:** 2026-08-26T23:42:18+02:00
@@ -27,6 +27,7 @@ current_step: step-003
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
 | step-003 | EPIC-02 | done | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | approved (direkt) | 5b8e4472 + 0a45dc16 |
+| step-004 | EPIC-03/04 | done | Physischer File-Tree-Scan, MCP-Wiring, Audit und Produktdokumentation | - | f4768502ba00 | direkt verifiziert | f4768502ba00 |
 
 ## Config (optional)
 
@@ -56,7 +57,7 @@ model_kritiker: nicht festgelegt
 
 ## Aktueller Hinweis
 
-Der Coder meldete einen Inhalts-Blocker im vollständigen Fast-Gate: zwei
+Der frühere Coder meldete einen Inhalts-Blocker im vollständigen Fast-Gate: zwei
 unveränderte Hotspots-Tests erwarten fünf Dokumente, während die vom Nutzer
 gewünschte `find_symbol`-Record-Erweiterung sechs Fixture-Dokumente erzeugt.
 Nach Nutzerklärung bleibt die Record-Erweiterung erhalten; die abgestimmte
@@ -66,6 +67,8 @@ unabhängig geprüft und approved. Die ursprüngliche Step-003-Testblockade wurd
 am 2026-08-27 durch testprozess-isolierte Daemon-Instanzen und ein deadlock-sicheres
 Prozessbudget behoben. Der vollständige Fast-Gate (1.826/1.826) und der
 vollständige Integration-Gate ohne Stress (358/358, 0 übersprungen) sind grün.
+Der aktuelle vollständige Abschluss-Gate ist mit FastTests 1.840/1.840 und
+IntegrationTests ohne Stress 359/359 grün; der Build ist warnungs- und fehlerfrei.
 
 ## Blocker
 
@@ -75,6 +78,11 @@ MCP-/Daemon-Prozessverträge eine pro Testprozess eindeutige `daemon-instance`
 Test-Endpunkt belegen. Das suiteweite `SubprocessLifetimeGate` erlaubt acht
 langlebige Prozesse, weil ein paralleler Daemon-Vertrag zwei Prozesse halten
 kann. Der Step ist nach Drift-Audit, Feature-Tests und Vollgates abgeschlossen.
+Der aktuelle Abschluss ergänzt `get_file_tree` als physischen, Roslyn-
+unabhängigen Discovery-Schritt. Der verbundene laufende MCP-Prozess hatte beim
+Audit noch seinen alten `tools/list`-Katalog; die neue Registrierung ist im
+Quellcode und im echten MCP-Subprozess verifiziert und wird nach Reconnect/
+Neustart sichtbar.
 
 ## Tooling-Hinweis
 

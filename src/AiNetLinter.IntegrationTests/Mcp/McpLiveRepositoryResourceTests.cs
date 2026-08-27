@@ -41,7 +41,7 @@ public sealed class McpLiveRepositoryResourceTests
         {
             new[] { "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph" },
             new[] { "get_symbol_body" },
-            new[] { "get_namespace_tree", "get_class_structure", "get_file_skeleton", "get_index_scope", "get_hotspots" },
+            new[] { "get_namespace_tree", "get_class_structure", "get_file_tree", "get_file_skeleton", "get_index_scope", "get_hotspots" },
             new[] { "get_violations", "safeguard", "search_pattern", "metrics_tree", "metrics_lookup", "pattern_detect", "find_magic_values", "find_dead_code", "get_feature_context", "get_test_context" },
             new[] { "find_duplicates", "inspect_assembly", "find_assembly_extensions" },
             new[] { "reload_config", "get_server_health", "report_observability_feedback" }
@@ -51,7 +51,7 @@ public sealed class McpLiveRepositoryResourceTests
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?projectRoot}");
         var guideResource = Assert.Single(resources);
         Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
-        Assert.Equal(28, tools.Count);
+        Assert.Equal(29, tools.Count);
         Assert.Equal(expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal), tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal));
         Assert.Equal(resourceUri, textContent.Uri);
         Assert.Equal("text/markdown", textContent.MimeType);
